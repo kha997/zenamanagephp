@@ -10,6 +10,7 @@ use App\Models\DesignItem;
 use App\Models\Document;
 use App\Models\Opportunity;
 use App\Models\Project;
+use App\Models\Quote;
 use App\Models\Tenant;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
@@ -61,6 +62,16 @@ class PortalDashboardController extends Controller
             ->where('status', '!=', ContractPayment::STATUS_PAID)
             ->sum('amount');
 
+        /** @var \Illuminate\Database\Eloquent\Collection<int, Quote> $quotes */
+        $quotes = Quote::query()
+            ->join('opportunities', 'opportunities.id', '=', 'quotes.opportunity_id')
+            ->where('quotes.tenant_id', $tenant->id)
+            ->where('opportunities.account_id', $account->id)
+            ->where('quotes.status', '!=', Quote::STATUS_DRAFT)
+            ->orderByDesc('quotes.sent_at')
+            ->select('quotes.*')
+            ->get();
+
         return view('portal.dashboard', [
             'tenant' => $tenant,
             'projects' => $projects,
@@ -68,6 +79,7 @@ class PortalDashboardController extends Controller
             'documents' => $documents,
             'contracts' => $contracts,
             'outstandingBalance' => $outstandingBalance,
+            'quotes' => $quotes,
         ]);
     }
 }

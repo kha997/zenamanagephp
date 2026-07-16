@@ -5335,18 +5335,6 @@ parameters:
 			path: app/Http/Controllers/Api/DeliverableTemplateController.php
 
 		-
-			message: '#^Call to an undefined static method App\\Models\\DeliverableTemplate\:\:create\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 1
-			path: app/Http/Controllers/Api/DeliverableTemplateController.php
-
-		-
-			message: '#^Call to an undefined static method App\\Models\\DeliverableTemplateVersion\:\:create\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 2
-			path: app/Http/Controllers/Api/DeliverableTemplateController.php
-
-		-
 			message: '#^Cannot call method fill\(\) on stdClass\.$#'
 			identifier: method.nonObject
 			count: 1
@@ -6717,7 +6705,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$external_quote_id\.$#'
 			identifier: property.notFound
-			count: 2
+			count: 1
 			path: app/Http/Controllers/Api/OpportunityController.php
 
 		-
@@ -6741,7 +6729,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$id\.$#'
 			identifier: property.notFound
-			count: 3
+			count: 4
 			path: app/Http/Controllers/Api/OpportunityController.php
 
 		-
@@ -9083,18 +9071,6 @@ parameters:
 			identifier: staticMethod.notFound
 			count: 1
 			path: app/Http/Controllers/Api/WidgetController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\DeliverableTemplateVersion\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Controllers/Api/WorkInstanceController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\DeliverableTemplateVersion\:\:\$semver\.$#'
-			identifier: property.notFound
-			count: 3
-			path: app/Http/Controllers/Api/WorkInstanceController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\WorkInstance\:\:\$created_at\.$#'
@@ -13797,7 +13773,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$id\.$#'
 			identifier: property.notFound
-			count: 1
+			count: 3
 			path: app/Http/Controllers/Web/CrmPageController.php
 
 		-
@@ -13813,9 +13789,21 @@ parameters:
 			path: app/Http/Controllers/Web/CrmPageController.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\Quote\:\:\$opportunity\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:id\(\)\.$#'
+			identifier: method.notFound
+			count: 8
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
 			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
 			identifier: method.notFound
-			count: 6
+			count: 15
 			path: app/Http/Controllers/Web/CrmPageController.php
 
 		-
@@ -22677,12 +22665,6 @@ parameters:
 		-
 			message: '#^Method App\\Models\\DeliverableTemplateVersion\:\:updater\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
 			identifier: missingType.generics
-			count: 1
-			path: app/Models/DeliverableTemplateVersion.php
-
-		-
-			message: '#^Property App\\Models\\DeliverableTemplateVersion\:\:\$casts type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
 			count: 1
 			path: app/Models/DeliverableTemplateVersion.php
 
@@ -44327,18 +44309,6 @@ parameters:
 			identifier: staticMethod.void
 			count: 1
 			path: app/Services/WebSocketService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\DeliverableTemplateVersion\:\:\$semver\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkInstanceExportBundleService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\DeliverableTemplateVersion\:\:\$storage_path\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkInstanceExportBundleService.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\WorkInstance\:\:\$id\.$#'

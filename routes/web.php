@@ -1026,6 +1026,16 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/crm/opportunities/{id}/boq-link', [App\Http\Controllers\Web\CrmPageController::class, 'linkBoqProject'])->middleware('rbac:crm.manage')->name('crm.opportunities.boq-link');
     Route::post('/crm/opportunities/{id}/boq-sync', [App\Http\Controllers\Web\CrmPageController::class, 'syncBoqQuote'])->middleware('rbac:crm.manage')->name('crm.opportunities.boq-sync');
     Route::post('/crm/opportunities/{id}/create-contract', [App\Http\Controllers\Web\CrmPageController::class, 'createContract'])->middleware('rbac:crm.manage')->name('crm.opportunities.create-contract');
+    // Native quotes
+    Route::get('/crm/quotes/{id}', [App\Http\Controllers\Web\CrmPageController::class, 'showQuote'])->middleware('rbac:crm.view')->name('crm.quotes.show');
+    Route::post('/crm/opportunities/{id}/quotes', [App\Http\Controllers\Web\CrmPageController::class, 'storeQuote'])->middleware('rbac:crm.manage')->name('crm.opportunities.quotes.store');
+    Route::post('/crm/quotes/{id}/lines', [App\Http\Controllers\Web\CrmPageController::class, 'saveQuoteLines'])->middleware('rbac:crm.manage')->name('crm.quotes.lines.save');
+    Route::post('/crm/quotes/{id}/send', [App\Http\Controllers\Web\CrmPageController::class, 'sendQuote'])->middleware('rbac:crm.manage')->name('crm.quotes.send');
+    Route::post('/crm/quotes/{id}/accept', [App\Http\Controllers\Web\CrmPageController::class, 'acceptQuote'])->middleware('rbac:crm.manage')->name('crm.quotes.accept');
+    Route::post('/crm/quotes/{id}/reject', [App\Http\Controllers\Web\CrmPageController::class, 'rejectQuote'])->middleware('rbac:crm.manage')->name('crm.quotes.reject');
+    Route::post('/crm/quotes/{id}/revise', [App\Http\Controllers\Web\CrmPageController::class, 'reviseQuote'])->middleware('rbac:crm.manage')->name('crm.quotes.revise');
+    Route::post('/crm/quotes/{id}/commercial', [App\Http\Controllers\Web\CrmPageController::class, 'saveQuoteCommercial'])->middleware('rbac:crm.manage')->name('crm.quotes.commercial');
+    Route::get('/crm/quotes/{id}/pdf', [App\Http\Controllers\Web\CrmPageController::class, 'quotePdf'])->middleware('rbac:crm.view')->name('crm.quotes.pdf');
     Route::get('/crm/reports', [App\Http\Controllers\Web\CrmReportController::class, 'index'])->middleware('rbac:crm.view')->name('crm.reports');
 });
 
@@ -1041,6 +1051,11 @@ Route::prefix('portal/{tenantSlug}')->as('portal.')->middleware(['web'])->group(
         Route::get('/design-items/{id}', [App\Http\Controllers\Web\Portal\PortalDesignItemController::class, 'show'])->name('design-items.show');
         Route::post('/design-items/{id}/approve', [App\Http\Controllers\Web\Portal\PortalDesignItemController::class, 'approve'])->middleware('throttle:portal-actions')->name('design-items.approve');
         Route::post('/design-items/{id}/request-revision', [App\Http\Controllers\Web\Portal\PortalDesignItemController::class, 'requestRevision'])->middleware('throttle:portal-actions')->name('design-items.request-revision');
+
+        Route::get('/quotes/{id}', [App\Http\Controllers\Web\Portal\PortalQuoteController::class, 'show'])->name('quotes.show');
+        Route::get('/quotes/{id}/pdf', [App\Http\Controllers\Web\Portal\PortalQuoteController::class, 'pdf'])->name('quotes.pdf');
+        Route::post('/quotes/{id}/accept', [App\Http\Controllers\Web\Portal\PortalQuoteController::class, 'accept'])->middleware('throttle:portal-actions')->name('quotes.accept');
+        Route::post('/quotes/{id}/reject', [App\Http\Controllers\Web\Portal\PortalQuoteController::class, 'reject'])->middleware('throttle:portal-actions')->name('quotes.reject');
     });
 });
 

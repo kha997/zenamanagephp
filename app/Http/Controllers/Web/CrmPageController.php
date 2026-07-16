@@ -8,16 +8,22 @@ use App\Http\Controllers\Api\OpportunityController as ApiOpportunityController;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Web\Concerns\DelegatesToApiControllers;
 use App\Models\Account;
+use App\Models\EventRecord;
 use App\Models\Lead;
 use App\Models\Opportunity;
+use App\Models\Quote;
+use App\Models\QuoteLineItem;
 use App\Models\User;
 use App\Services\AiAssistService;
 use App\Services\ZenaBoqIntegrationService;
+use App\Services\DeliverablePdfExportService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Throwable;
 
 class CrmPageController extends Controller
@@ -369,5 +375,346 @@ class CrmPageController extends Controller
         }
 
         return $this->handleMutationResponse($response, route('operator.crm.opportunities.show', $id), 'Đã tạo hợp đồng');
+    }
+
+    // ── Native Quotes ────────────────────────────────────────────────
+
+    public function showQuote(string $id): View
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+
+        $quote = Quote::query()
+            ->join('opportunities', 'opportunities.id', '=', 'quotes.opportunity_id')
+            ->where('quotes.id', $id)
+            ->where('quotes.tenant_id', $tenantId)
+            ->select('quotes.*')
+            ->firstOrFail();
+
+        $this->authorize('view', $quote);
+
+        return view('crm.quote-show', compact('quote'));
+    }
+
+    public function storeQuote(Request $request, string $id): RedirectResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+
+        $opp = Opportunity::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey($id)
+            ->first();
+
+        if (!$opp instanceof Opportunity) {
+            return back()->with('error', 'Không tìm thấy cơ hội.');
+        }
+
+        $quote = Quote::query()->create([
+            'tenant_id' => $tenantId,
+            'opportunity_id' => (string) $opp->id,
+            'quote_number' => Quote::nextNumber($tenantId),
+            'revision_no' => Quote::nextRevision((string) $opp->id),
+            'status' => Quote::STATUS_DRAFT,
+            'created_by' => (string) auth()->id(),
+        ]);
+
+        return redirect()->route('operator.crm.quotes.show', $quote->id);
+    }
+
+    public function saveQuoteLines(Request $request, string $id): RedirectResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+
+        $quote = Quote::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey($id)
+            ->first();
+
+        if (!$quote instanceof Quote) {
+            return back()->with('error', 'Không tìm thấy báo giá.');
+        }
+
+        if ($quote->status !== Quote::STATUS_DRAFT) {
+            return back()->with('error', 'Chỉ có thể chỉnh sửa dòng khi ở trạng thái nháp.');
+        }
+
+        $validated = $request->validate([
+            'lines' => ['required', 'array', 'min:1'],
+            'lines.*.name' => ['required', 'string', 'max:255'],
+            'lines.*.unit' => ['required', 'string', 'max:30'],
+            'lines.*.quantity' => ['required', 'numeric', 'gt:0'],
+            'lines.*.unit_price' => ['required', 'numeric', 'min:0'],
+            'lines.*.price_note' => ['nullable', 'string', 'max:500'],
+            'lines.*.code' => ['nullable', 'string', 'max:50'],
+        ]);
+
+        DB::transaction(function () use ($quote, $validated, $tenantId) {
+            QuoteLineItem::query()
+                ->where('quote_id', $quote->id)
+                ->where('tenant_id', $tenantId)
+                ->delete();
+
+            $subtotal = 0;
+
+            foreach ($validated['lines'] as $index => $line) {
+                $amount = round((float) $line['quantity'] * (float) $line['unit_price'], 2);
+                $subtotal += $amount;
+
+                QuoteLineItem::query()->create([
+                    'tenant_id' => $tenantId,
+                    'quote_id' => (string) $quote->id,
+                    'sort_order' => $index + 1,
+                    'code' => $line['code'] ?? null,
+                    'name' => $line['name'],
+                    'unit' => $line['unit'],
+                    'quantity' => $line['quantity'],
+                    'unit_price' => $line['unit_price'],
+                    'amount' => $amount,
+                    'price_note' => $line['price_note'] ?? null,
+                ]);
+            }
+
+            $totals = Quote::computeTotals($subtotal, (float) $quote->discount_percent, (float) $quote->vat_percent);
+            $quote->update(array_merge(['subtotal' => $subtotal], $totals));
+        });
+
+        return back()->with('success', 'Đã lưu dòng báo giá.');
+    }
+
+    public function sendQuote(Request $request, string $id): RedirectResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+
+        $quote = Quote::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey($id)
+            ->first();
+
+        if (!$quote instanceof Quote) {
+            return back()->with('error', 'Không tìm thấy báo giá.');
+        }
+
+        if (!Quote::canTransition($quote->status, Quote::STATUS_SENT)) {
+            return back()->with('error', 'Không thể chuyển trạng thái.');
+        }
+
+        $hasLines = QuoteLineItem::query()
+            ->where('quote_id', $quote->id)
+            ->where('tenant_id', $tenantId)
+            ->exists();
+
+        if (!$hasLines) {
+            return back()->with('error', 'Cần ít nhất một dòng để gửi báo giá.');
+        }
+
+        $subtotal = QuoteLineItem::query()
+            ->where('quote_id', $quote->id)
+            ->where('tenant_id', $tenantId)
+            ->sum('amount');
+
+        $totals = Quote::computeTotals($subtotal, (float) $quote->discount_percent, (float) $quote->vat_percent);
+        $quote->update([
+            'status' => Quote::STATUS_SENT,
+            'sent_at' => now(),
+            'subtotal' => $subtotal,
+        ] + $totals);
+
+        EventRecord::query()->create([
+            'tenant_id' => $tenantId,
+            'aggregate_type' => 'quote',
+            'aggregate_id' => (string) $quote->id,
+            'event_key' => 'quote.sent',
+            'actor_user_id' => auth()->id() ? (string) auth()->id() : null,
+            'payload' => ['quote_number' => $quote->quote_number],
+            'occurred_at' => now(),
+        ]);
+
+        return back()->with('success', 'Đã gửi báo giá.');
+    }
+
+    public function acceptQuote(Request $request, string $id): RedirectResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+
+        $quote = Quote::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey($id)
+            ->first();
+
+        if (!$quote instanceof Quote) {
+            return back()->with('error', 'Không tìm thấy báo giá.');
+        }
+
+        if (!Quote::canTransition($quote->status, Quote::STATUS_ACCEPTED)) {
+            return back()->with('error', 'Không thể chuyển trạng thái.');
+        }
+
+        try {
+            app(\App\Services\QuoteLifecycleService::class)->accept($quote, [
+                'actor_user_id' => auth()->id() ? (string) auth()->id() : null,
+                'source' => 'operator',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Đã chấp nhận báo giá.');
+    }
+
+    public function rejectQuote(Request $request, string $id): RedirectResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+
+        $quote = Quote::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey($id)
+            ->first();
+
+        if (!$quote instanceof Quote) {
+            return back()->with('error', 'Không tìm thấy báo giá.');
+        }
+
+        if (!Quote::canTransition($quote->status, Quote::STATUS_REJECTED)) {
+            return back()->with('error', 'Không thể chuyển trạng thái.');
+        }
+
+        try {
+            app(\App\Services\QuoteLifecycleService::class)->reject($quote, [
+                'actor_user_id' => auth()->id() ? (string) auth()->id() : null,
+                'source' => 'operator',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Đã từ chối báo giá.');
+    }
+
+    public function reviseQuote(Request $request, string $id): RedirectResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+
+        $original = Quote::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey($id)
+            ->first();
+
+        if (!$original instanceof Quote) {
+            return back()->with('error', 'Không tìm thấy báo giá.');
+        }
+
+        $newQuote = DB::transaction(function () use ($original, $tenantId) {
+            $newQuote = Quote::query()->create([
+                'tenant_id' => $tenantId,
+                'opportunity_id' => $original->opportunity_id,
+                'quote_number' => Quote::nextNumber($tenantId),
+                'revision_no' => Quote::nextRevision($original->opportunity_id),
+                'status' => Quote::STATUS_DRAFT,
+                'notes' => $original->notes,
+                'created_by' => (string) auth()->id(),
+                'discount_percent' => $original->discount_percent,
+                'vat_percent' => $original->vat_percent,
+                'payment_terms' => $original->payment_terms,
+            ]);
+
+            $lines = QuoteLineItem::query()
+                ->where('quote_id', $original->id)
+                ->where('tenant_id', $tenantId)
+                ->orderBy('sort_order')
+                ->get();
+
+            foreach ($lines as $line) {
+                QuoteLineItem::query()->create([
+                    'tenant_id' => $tenantId,
+                    'quote_id' => (string) $newQuote->id,
+                    'sort_order' => $line->sort_order,
+                    'code' => $line->code,
+                    'name' => $line->name,
+                    'unit' => $line->unit,
+                    'quantity' => $line->quantity,
+                    'unit_price' => $line->unit_price,
+                    'amount' => $line->amount,
+                    'price_note' => $line->price_note,
+                ]);
+            }
+
+            $subtotal = (float) $lines->sum('amount');
+            $totals = Quote::computeTotals($subtotal, (float) $newQuote->discount_percent, (float) $newQuote->vat_percent);
+            $newQuote->update(array_merge(['subtotal' => $subtotal], $totals));
+
+            return $newQuote;
+        });
+
+        return redirect()->route('operator.crm.quotes.show', $newQuote->id);
+    }
+
+    public function saveQuoteCommercial(Request $request, string $id): RedirectResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+
+        $quote = Quote::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey($id)
+            ->first();
+
+        if (!$quote instanceof Quote) {
+            return back()->with('error', 'Không tìm thấy báo giá.');
+        }
+
+        $this->authorize('update', $quote);
+
+        $validated = $request->validate([
+            'discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'vat_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'valid_until' => ['nullable', 'date'],
+            'payment_terms' => ['nullable', 'string', 'max:500'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $discountPercent = (float) ($validated['discount_percent'] ?? $quote->discount_percent);
+        $vatPercent = (float) ($validated['vat_percent'] ?? $quote->vat_percent);
+        $totals = Quote::computeTotals((float) $quote->subtotal, $discountPercent, $vatPercent);
+
+        $quote->update(array_merge($validated, $totals));
+
+        return back()->with('success', 'Đã lưu thông tin thương mại.');
+    }
+
+    public function quotePdf(string $id, DeliverablePdfExportService $pdfService): SymfonyResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+
+        $quote = Quote::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey($id)
+            ->first();
+
+        if (!$quote instanceof Quote) {
+            abort(404);
+        }
+
+        $lines = $quote->lines()->get();
+        $account = $quote->opportunity?->account;
+        $opportunity = $quote->opportunity;
+
+        $html = view('crm.quote-pdf', [
+            'quote' => $quote,
+            'lines' => $lines,
+            'account' => $account,
+            'opportunity' => $opportunity,
+            'amountInWords' => \App\Support\VietnameseMoneyWords::toWords((float) $quote->total),
+        ])->render();
+
+        try {
+            $pdfBytes = $pdfService->render($html);
+        } catch (\App\Exceptions\DeliverablePdfExportUnavailableException) {
+            return back()->with('error', 'Không thể tạo PDF báo giá vào lúc này.');
+        }
+
+        $filename = 'bao-gia-' . $quote->quote_number . '.pdf';
+
+        return response($pdfBytes, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $filename . '"',
+        ]);
     }
 }

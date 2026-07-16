@@ -9,6 +9,7 @@ use App\Models\DesignItem;
 use App\Models\Document;
 use App\Models\Opportunity;
 use App\Models\Project;
+use App\Models\Quote;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -169,5 +170,109 @@ class PortalDashboardTest extends TestCase
         $this->get(route('portal.dashboard', ['tenantSlug' => 'zena-dash3']))
             ->assertOk()
             ->assertSee('Chưa có dự án');
+    }
+
+    public function test_dashboard_shows_sent_quote_for_account_opportunity(): void
+    {
+        $tenant = Tenant::factory()->create(['slug' => 'zena-dash4']);
+        $staffUser = User::factory()->create(['tenant_id' => (string) $tenant->id]);
+
+        $account = Account::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'account_type' => Account::TYPE_INDIVIDUAL,
+            'display_name' => 'Khach hang quote dash',
+            'email' => 'quotedash@example.com',
+            'status' => Account::STATUS_ACTIVE,
+        ]);
+
+        $opportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Co hoi co bao gia',
+            'service_category' => 'architecture',
+            'pipeline_stage' => Opportunity::STAGE_WON,
+            'sales_owner_id' => (string) $staffUser->id,
+            'created_by' => (string) $staffUser->id,
+        ]);
+
+        Quote::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'opportunity_id' => (string) $opportunity->id,
+            'quote_number' => 'BQ-DASH-001',
+            'revision_no' => 1,
+            'status' => Quote::STATUS_SENT,
+            'subtotal' => 15000000,
+            'total' => 15000000,
+            'sent_at' => now(),
+            'created_by' => (string) $staffUser->id,
+        ]);
+
+        Quote::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'opportunity_id' => (string) $opportunity->id,
+            'quote_number' => 'BQ-DASH-002',
+            'revision_no' => 2,
+            'status' => Quote::STATUS_DRAFT,
+            'subtotal' => 5000000,
+            'total' => 5000000,
+            'created_by' => (string) $staffUser->id,
+        ]);
+
+        $this->actingAs($account, 'client');
+
+        $response = $this->get(route('portal.dashboard', ['tenantSlug' => 'zena-dash4']));
+        $response->assertOk();
+        $response->assertSee('BQ-DASH-001');
+        $response->assertSee('15.000.000', false);
+        $response->assertDontSee('BQ-DASH-002');
+    }
+
+    public function test_dashboard_does_not_show_other_accounts_quotes(): void
+    {
+        $tenant = Tenant::factory()->create(['slug' => 'zena-dash5']);
+        $staffUser = User::factory()->create(['tenant_id' => (string) $tenant->id]);
+
+        $account = Account::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'account_type' => Account::TYPE_INDIVIDUAL,
+            'display_name' => 'Khach hang A quote',
+            'email' => 'a-quote@example.com',
+            'status' => Account::STATUS_ACTIVE,
+        ]);
+
+        $otherAccount = Account::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'account_type' => Account::TYPE_INDIVIDUAL,
+            'display_name' => 'Khach hang B quote',
+            'email' => 'b-quote@example.com',
+            'status' => Account::STATUS_ACTIVE,
+        ]);
+
+        $otherOpportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'account_id' => (string) $otherAccount->id,
+            'opportunity_name' => 'Co hoi cua B',
+            'service_category' => 'architecture',
+            'pipeline_stage' => Opportunity::STAGE_WON,
+            'sales_owner_id' => (string) $staffUser->id,
+            'created_by' => (string) $staffUser->id,
+        ]);
+
+        Quote::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'opportunity_id' => (string) $otherOpportunity->id,
+            'quote_number' => 'BQ-OTHER-001',
+            'revision_no' => 1,
+            'status' => Quote::STATUS_SENT,
+            'subtotal' => 20000000,
+            'sent_at' => now(),
+            'created_by' => (string) $staffUser->id,
+        ]);
+
+        $this->actingAs($account, 'client');
+
+        $response = $this->get(route('portal.dashboard', ['tenantSlug' => 'zena-dash5']));
+        $response->assertOk();
+        $response->assertDontSee('BQ-OTHER-001');
     }
 }

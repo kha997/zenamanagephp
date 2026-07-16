@@ -176,6 +176,10 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'site_diary.create', 'module' => 'site_diary', 'action' => 'create', 'description' => 'Create, update and submit daily site diaries'],
         ['code' => 'site_diary.approve', 'module' => 'site_diary', 'action' => 'approve', 'description' => 'Approve submitted site diaries'],
 
+        // Knowledge base (internal SOP/checklist/lessons-learned library)
+        ['code' => 'knowledge.view', 'module' => 'knowledge', 'action' => 'view', 'description' => 'View published SOPs, checklists and lessons learned'],
+        ['code' => 'knowledge.manage', 'module' => 'knowledge', 'action' => 'manage', 'description' => 'Create, edit, publish and delete knowledge base articles'],
+
         // CRM (lead inbox, accounts, opportunities — spec crm-zena)
         ['code' => 'crm.view', 'module' => 'crm', 'action' => 'view', 'description' => 'View CRM leads, accounts and opportunities'],
         ['code' => 'crm.manage', 'module' => 'crm', 'action' => 'manage', 'description' => 'Create/update leads, accounts, opportunities and move pipeline stages'],

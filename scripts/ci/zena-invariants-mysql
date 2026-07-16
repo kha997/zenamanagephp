@@ -115,4 +115,4 @@ mkdir -p resources/views storage/framework/views storage/framework/cache bootstr
 php artisan optimize:clear
 php artisan migrate:fresh --force
 php artisan migrate:status
-php artisan test --group=zena-invariants -v
+php artisan test --group=zena-invariants

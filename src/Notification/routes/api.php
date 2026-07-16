@@ -40,7 +40,7 @@ Route::prefix('v1/notifications')
         
         // Notification action routes
         Route::post('/{id}/mark-read', [NotificationController::class, 'markAsRead'])
-            ->name('notifications.mark-read')
+            ->name('notifications.mark-read.post')
             ->where('id', '[0-9A-Za-z]+');
         
         Route::put('/{id}/read', [NotificationController::class, 'markAsRead'])

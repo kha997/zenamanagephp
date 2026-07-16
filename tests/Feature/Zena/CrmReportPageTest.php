@@ -7,6 +7,9 @@ use App\Models\Account;
 use App\Models\Opportunity;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Models\Contract;
+use App\Models\ContractPayment;
+use App\Models\Project;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
@@ -68,6 +71,79 @@ class CrmReportPageTest extends TestCase
         $this->actingAs($noAccess)
             ->get(route('operator.crm.reports'), $headers)
             ->assertForbidden();
+    }
+
+    public function test_report_page_shows_aging_bucket_labels_and_amounts(): void
+    {
+        $project = Project::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'name' => 'Du an bao cao',
+            'code' => 'PRJ-RPT01',
+            'status' => 'planning',
+        ]);
+        $contract = Contract::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'project_id' => (string) $project->id,
+            'code' => 'CTR-RPT01',
+            'title' => 'Hop dong bao cao',
+        ]);
+
+        ContractPayment::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'contract_id' => (string) $contract->id,
+            'name' => 'Not due payment',
+            'amount' => 5000000,
+            'status' => ContractPayment::STATUS_PLANNED,
+            'due_date' => now()->addDays(10),
+        ]);
+        ContractPayment::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'contract_id' => (string) $contract->id,
+            'name' => 'Overdue 1-30',
+            'amount' => 8000000,
+            'status' => ContractPayment::STATUS_PLANNED,
+            'due_date' => now()->subDays(15),
+        ]);
+        ContractPayment::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'contract_id' => (string) $contract->id,
+            'name' => 'Overdue 31-60',
+            'amount' => 12000000,
+            'status' => ContractPayment::STATUS_PLANNED,
+            'due_date' => now()->subDays(50),
+        ]);
+        ContractPayment::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'contract_id' => (string) $contract->id,
+            'name' => 'Overdue 61-90',
+            'amount' => 15000000,
+            'status' => ContractPayment::STATUS_PLANNED,
+            'due_date' => now()->subDays(80),
+        ]);
+        ContractPayment::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'contract_id' => (string) $contract->id,
+            'name' => 'Overdue over 90',
+            'amount' => 20000000,
+            'status' => ContractPayment::STATUS_PLANNED,
+            'due_date' => now()->subDays(120),
+        ]);
+
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $this->actingAs($this->viewer)
+            ->get(route('operator.crm.reports'), $headers)
+            ->assertOk()
+            ->assertSee('Chưa đến hạn', false)
+            ->assertSee('Quá hạn 1-30 ngày', false)
+            ->assertSee('Quá hạn 31-60 ngày', false)
+            ->assertSee('Quá hạn 61-90 ngày', false)
+            ->assertSee('Quá hạn trên 90 ngày', false)
+            ->assertSee('5.000.000', false)
+            ->assertSee('8.000.000', false)
+            ->assertSee('12.000.000', false)
+            ->assertSee('15.000.000', false)
+            ->assertSee('20.000.000', false);
     }
 
     public function test_report_page_is_tenant_isolated(): void

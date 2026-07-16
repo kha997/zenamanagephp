@@ -56,8 +56,8 @@ class QuoteContextProvider implements DocumentContextProvider
             'quote_number' => (string) $quote->quote_number,
             'revision_no' => (string) $quote->revision_no,
             'status_label' => $this->statusLabel($quote->status),
-            'account_name' => (string) ($quote->opportunity?->account?->display_name ?? ''),
-            'opportunity_name' => (string) ($quote->opportunity?->opportunity_name ?? ''),
+            'account_name' => (string) ($quote->opportunity?->account->display_name ?? ''),
+            'opportunity_name' => (string) ($quote->opportunity->opportunity_name ?? ''),
             'valid_until' => $quote->valid_until?->format('d/m/Y') ?? '',
             'subtotal' => number_format((float) $quote->subtotal, 2, '.', ','),
             'discount_percent' => number_format((float) $quote->discount_percent, 2, '.', ','),
@@ -109,7 +109,10 @@ class QuoteContextProvider implements DocumentContextProvider
         };
     }
 
-    private function renderLinesTable($lines): string
+    /**
+     * @param \Illuminate\Database\Eloquent\Collection<int, \App\Models\QuoteLineItem> $lines
+     */
+    private function renderLinesTable(\Illuminate\Database\Eloquent\Collection $lines): string
     {
         if ($lines->isEmpty()) {
             return '<table style="width:100%;border-collapse:collapse;"><tr><td style="padding:8px;border:1px solid #ddd;">Chưa có dòng báo giá</td></tr></table>';
@@ -129,8 +132,8 @@ class QuoteContextProvider implements DocumentContextProvider
         $index = 1;
         foreach ($lines as $item) {
             $quantity = (float) $item->quantity;
-            $unitPrice = $item->unit_price !== null ? (float) $item->unit_price : null;
-            $amount = $unitPrice !== null ? $quantity * $unitPrice : null;
+            $unitPrice = (float) $item->unit_price;
+            $amount = $quantity * $unitPrice;
 
             $html .= '<tr>';
             $html .= '<td style="padding:6px;border:1px solid #ddd;text-align:center;">' . $index . '</td>';
@@ -138,8 +141,8 @@ class QuoteContextProvider implements DocumentContextProvider
             $html .= '<td style="padding:6px;border:1px solid #ddd;">' . htmlspecialchars((string) $item->name) . '</td>';
             $html .= '<td style="padding:6px;border:1px solid #ddd;text-align:right;">' . htmlspecialchars((string) $item->unit) . '</td>';
             $html .= '<td style="padding:6px;border:1px solid #ddd;text-align:right;">' . number_format($quantity, 2) . '</td>';
-            $html .= '<td style="padding:6px;border:1px solid #ddd;text-align:right;">' . ($unitPrice !== null ? number_format($unitPrice, 0, '.', ',') : '-') . '</td>';
-            $html .= '<td style="padding:6px;border:1px solid #ddd;text-align:right;">' . ($amount !== null ? number_format($amount, 0, '.', ',') : '-') . '</td>';
+            $html .= '<td style="padding:6px;border:1px solid #ddd;text-align:right;">' . number_format($unitPrice, 0, '.', ',') . '</td>';
+            $html .= '<td style="padding:6px;border:1px solid #ddd;text-align:right;">' . number_format($amount, 0, '.', ',') . '</td>';
             $html .= '</tr>';
 
             $index++;

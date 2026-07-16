@@ -733,8 +733,11 @@ class CrmPageController extends Controller
 
     public function renderQuoteDocument(string $id, string $template, DeliverableTemplateVersionService $versionService, DocumentContextRegistry $contextRegistry, DeliverablePdfExportService $pdfService): SymfonyResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        /** @var \App\Models\User $authUser */
+        $authUser = \Illuminate\Support\Facades\Auth::user();
+        $tenantId = (string) $authUser->tenant_id;
 
+        /** @var Quote $quote */
         $quote = Quote::query()
             ->join('opportunities', 'opportunities.id', '=', 'quotes.opportunity_id')
             ->where('quotes.id', $id)

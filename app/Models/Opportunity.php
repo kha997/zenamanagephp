@@ -9,6 +9,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Opportunity — trung tâm pipeline sale (spec crm-zena: 14 stage).
+ *
+ * @property string $opportunity_name
+ * @property-read Account|null $account
  */
 class Opportunity extends Model
 {

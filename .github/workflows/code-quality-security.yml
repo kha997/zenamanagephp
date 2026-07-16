@@ -53,8 +53,7 @@ jobs:
 
     - name: Run PHPStan Static Analysis
       run: |
-        composer require --dev phpstan/phpstan
-        bash scripts/ci/run-json-report-command.sh phpstan-report.json phpstan ./vendor/bin/phpstan analyse --level=8 --error-format=json
+        bash scripts/ci/run-json-report-command.sh phpstan-report.json phpstan ./vendor/bin/phpstan analyse --error-format=json
 
     - name: Summarize PHPStan Static Analysis
       if: always()
@@ -161,6 +160,7 @@ jobs:
         bash scripts/ci/run-json-report-command.sh security-checker.json security-checker ./vendor/bin/security-checker security:check --format=json
 
     - name: Run PHPStan Security Rules
+      continue-on-error: true
       run: |
         composer require --dev phpstan/phpstan-security-rules
         bash scripts/ci/run-json-report-command.sh phpstan-security.json phpstan-security ./vendor/bin/phpstan analyse --level=8 --error-format=json

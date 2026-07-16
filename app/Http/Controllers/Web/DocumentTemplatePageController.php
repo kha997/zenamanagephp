@@ -16,7 +16,7 @@ use Illuminate\Support\Str;
 
 class DocumentTemplatePageController extends Controller
 {
-    private const VALID_CONTEXTS = ['contract', 'certificate', 'project'];
+    private const VALID_CONTEXTS = ['contract', 'certificate', 'project', 'quote'];
 
     public function __construct(
         private readonly DocumentContextRegistry $contextRegistry,
@@ -56,7 +56,7 @@ class DocumentTemplatePageController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'context' => ['required', 'in:contract,certificate,project'],
+            'context' => ['required', 'in:contract,certificate,project,quote'],
             'html_body' => ['required', 'string', 'max:204800'],
         ]);
 

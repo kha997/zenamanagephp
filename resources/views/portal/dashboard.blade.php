@@ -113,6 +113,38 @@
 
         <x-ui.card title="Công nợ">
             <x-ui.field-value label="Số dư còn lại" :value="number_format($outstandingBalance, 0, ',', '.') . '₫'" />
+
+            @if ($paymentSchedule->isNotEmpty())
+                <div class="mt-4">
+                    <h3 class="text-sm font-semibold text-slate-700 mb-2">Các đợt thanh toán còn lại</h3>
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-slate-500">
+                                <th class="pb-2">Đợt</th>
+                                <th class="pb-2 text-right">Số tiền</th>
+                                <th class="pb-2 text-right">Hạn thanh toán</th>
+                                <th class="pb-2 text-right">Trạng thái</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($paymentSchedule as $payment)
+                                <tr class="border-t border-slate-100">
+                                    <td class="py-2">{{ $payment->name }}</td>
+                                    <td class="py-2 text-right">{{ number_format((float) $payment->amount, 0, ',', '.') }}₫</td>
+                                    <td class="py-2 text-right">{{ \Carbon\Carbon::parse($payment->due_date)->format('d/m/Y') }}</td>
+                                    <td class="py-2 text-right">
+                                        @if (\Carbon\Carbon::parse($payment->due_date)->lt(now()))
+                                            <span class="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Quá hạn</span>
+                                        @else
+                                            <span class="rounded bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800">Chưa đến hạn</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
         </x-ui.card>
     </div>
 @endsection

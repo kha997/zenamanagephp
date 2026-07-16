@@ -35,6 +35,13 @@
                 <x-ui.field-value label="Quá hạn" :value="number_format($outstandingDebt['overdue_total'], 0, ',', '.') . '₫'" />
                 <x-ui.field-value label="Số khoản quá hạn" :value="(string) $outstandingDebt['overdue_count']" />
             </div>
+            <div class="mt-4 grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
+                <x-ui.field-value label="Chưa đến hạn" :value="number_format($outstandingDebt['aging']['not_due'], 0, ',', '.') . '₫'" />
+                <x-ui.field-value label="Quá hạn 1-30 ngày" :value="number_format($outstandingDebt['aging']['due_1_30'], 0, ',', '.') . '₫'" />
+                <x-ui.field-value label="Quá hạn 31-60 ngày" :value="number_format($outstandingDebt['aging']['due_31_60'], 0, ',', '.') . '₫'" />
+                <x-ui.field-value label="Quá hạn 61-90 ngày" :value="number_format($outstandingDebt['aging']['due_61_90'], 0, ',', '.') . '₫'" />
+                <x-ui.field-value label="Quá hạn trên 90 ngày" :value="number_format($outstandingDebt['aging']['due_over_90'], 0, ',', '.') . '₫'" />
+            </div>
         </x-ui.card>
 
         <x-ui.card title="Hiệu quả sale">

@@ -406,6 +406,7 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             });
         });
 
+
         // Change Requests routes
         Route::group(['prefix' => 'change-requests'], function () {
             Route::get('/', [\App\Http\Controllers\Api\ChangeRequestController::class, 'index'])->middleware('rbac:change-request.view')->name('change-requests.index');

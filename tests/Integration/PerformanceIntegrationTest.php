@@ -508,7 +508,10 @@ class PerformanceIntegrationTest extends TestCase
         echo "Widget Data Load Time: {$dataExecutionTime}ms\n";
     }
 
-    /** @test */
+    /**
+     * @test
+     * @group stress
+     */
     public function it_can_handle_stress_testing()
     {
         if (!env('RUN_STRESS_TESTS')) {

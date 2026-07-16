@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Services\UserManagementService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Src\Foundation\Utils\JSendResponse;
@@ -136,8 +137,12 @@ class UserController extends Controller
      */
     private function hasPermission(Request $request, string $permission): bool
     {
-        // TODO: Implement permission checking logic
-        // This should integrate with your RBAC system
-        return true; // Temporary implementation
+        $user = $request->user();
+
+        if (!$user instanceof User) {
+            return false;
+        }
+
+        return $user->hasPermission($permission);
     }
 }

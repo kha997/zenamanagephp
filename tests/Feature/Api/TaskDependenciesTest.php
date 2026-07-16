@@ -9,7 +9,6 @@ use App\Models\Task;
 use App\Models\TaskDependency;
 use App\Models\User;
 use App\Models\Project;
-use App\Models\Task;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Tests\Traits\RouteNameTrait;

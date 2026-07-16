@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  *
  * @property string $id
  * @property string $tenant_id
+ * @property string $display_name
  */
 class Account extends Model implements AuthenticatableContract
 {

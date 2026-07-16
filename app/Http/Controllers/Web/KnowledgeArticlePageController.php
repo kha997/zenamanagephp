@@ -4,19 +4,21 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\KnowledgeArticle;
+use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class KnowledgeArticlePageController extends Controller
 {
     public function index(Request $request): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = $this->currentTenantId();
 
         $query = KnowledgeArticle::query()->where('tenant_id', $tenantId);
 
-        if (!auth()->user()?->hasPermission('knowledge.manage') || $request->query('status') !== 'draft') {
+        if (!$this->currentUserCanManage() || $request->query('status') !== 'draft') {
             $query->where('status', KnowledgeArticle::STATUS_PUBLISHED);
         }
 
@@ -53,8 +55,8 @@ class KnowledgeArticlePageController extends Controller
     {
         $validated = $this->validatePayload($request);
 
-        $tenantId = (string) auth()->user()?->tenant_id;
-        $userId = (string) auth()->id();
+        $tenantId = $this->currentTenantId();
+        $userId = $this->currentUserId();
 
         $article = KnowledgeArticle::query()->create([
             'tenant_id' => $tenantId,
@@ -75,10 +77,8 @@ class KnowledgeArticlePageController extends Controller
 
     public function show(string $id): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
-
         $article = KnowledgeArticle::query()
-            ->where('tenant_id', $tenantId)
+            ->where('tenant_id', $this->currentTenantId())
             ->with(['project:id,tenant_id,name', 'creator:id,name'])
             ->findOrFail($id);
 
@@ -87,9 +87,7 @@ class KnowledgeArticlePageController extends Controller
 
     public function edit(string $id): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
-
-        $article = KnowledgeArticle::query()->where('tenant_id', $tenantId)->findOrFail($id);
+        $article = KnowledgeArticle::query()->where('tenant_id', $this->currentTenantId())->findOrFail($id);
 
         if ($article->status !== KnowledgeArticle::STATUS_DRAFT) {
             abort(404);
@@ -103,9 +101,7 @@ class KnowledgeArticlePageController extends Controller
 
     public function update(Request $request, string $id): RedirectResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
-
-        $article = KnowledgeArticle::query()->where('tenant_id', $tenantId)->findOrFail($id);
+        $article = KnowledgeArticle::query()->where('tenant_id', $this->currentTenantId())->findOrFail($id);
 
         if ($article->status !== KnowledgeArticle::STATUS_DRAFT) {
             return back()->with('error', 'Chỉ có thể sửa bản nháp.');
@@ -120,7 +116,7 @@ class KnowledgeArticlePageController extends Controller
             'checklist_items' => $validated['checklist_items'] ?? null,
             'tags' => $validated['tags'] ?? null,
             'project_id' => $validated['project_id'] ?? null,
-            'updated_by' => (string) auth()->id(),
+            'updated_by' => $this->currentUserId(),
         ]);
 
         return redirect()->route('operator.knowledge.show', $article->id)->with('success', 'Đã lưu.');
@@ -128,9 +124,7 @@ class KnowledgeArticlePageController extends Controller
 
     public function publish(string $id): RedirectResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
-
-        $article = KnowledgeArticle::query()->where('tenant_id', $tenantId)->findOrFail($id);
+        $article = KnowledgeArticle::query()->where('tenant_id', $this->currentTenantId())->findOrFail($id);
 
         if (!KnowledgeArticle::canTransition($article->status, KnowledgeArticle::STATUS_PUBLISHED)) {
             return back()->with('error', 'Không thể xuất bản.');
@@ -154,9 +148,7 @@ class KnowledgeArticlePageController extends Controller
 
     public function unpublish(string $id): RedirectResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
-
-        $article = KnowledgeArticle::query()->where('tenant_id', $tenantId)->findOrFail($id);
+        $article = KnowledgeArticle::query()->where('tenant_id', $this->currentTenantId())->findOrFail($id);
 
         if (!KnowledgeArticle::canTransition($article->status, KnowledgeArticle::STATUS_DRAFT)) {
             return back()->with('error', 'Không thể gỡ xuất bản.');
@@ -169,9 +161,7 @@ class KnowledgeArticlePageController extends Controller
 
     public function destroy(string $id): RedirectResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
-
-        $article = KnowledgeArticle::query()->where('tenant_id', $tenantId)->findOrFail($id);
+        $article = KnowledgeArticle::query()->where('tenant_id', $this->currentTenantId())->findOrFail($id);
 
         if ($article->status !== KnowledgeArticle::STATUS_DRAFT) {
             return back()->with('error', 'Chỉ có thể xóa bản nháp.');
@@ -207,5 +197,29 @@ class KnowledgeArticlePageController extends Controller
         }
 
         return $validated;
+    }
+
+    private function currentTenantId(): string
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        return (string) $user->tenant_id;
+    }
+
+    private function currentUserId(): string
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        return (string) $user->id;
+    }
+
+    private function currentUserCanManage(): bool
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        return (bool) $user?->hasPermission('knowledge.manage');
     }
 }

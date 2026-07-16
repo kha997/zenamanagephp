@@ -68,6 +68,7 @@ class KnowledgeArticle extends Model
         'updated_by',
     ];
 
+    /** @var array{checklist_items: string, tags: string, published_at: string} */
     protected $casts = [
         'checklist_items' => 'array',
         'tags' => 'array',
@@ -79,26 +80,37 @@ class KnowledgeArticle extends Model
         return in_array($to, self::TRANSITIONS[$from] ?? [], true);
     }
 
+    /** @return BelongsTo<Project, $this> */
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function updater(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
     }
 
+    /**
+     * @param Builder<KnowledgeArticle> $query
+     * @return Builder<KnowledgeArticle>
+     */
     public function scopeOfType(Builder $query, string $type): Builder
     {
         return $query->where('type', $type);
     }
 
+    /**
+     * @param Builder<KnowledgeArticle> $query
+     * @return Builder<KnowledgeArticle>
+     */
     public function scopePublished(Builder $query): Builder
     {
         return $query->where('status', self::STATUS_PUBLISHED);

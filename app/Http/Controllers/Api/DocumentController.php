@@ -7,7 +7,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Src\DocumentManagement\Models\Document;
+use App\Models\Document;
 
 class DocumentController extends Controller
 {

@@ -54,7 +54,21 @@ jobs:
         run: npm ci
 
       - name: Run staging smoke
-        run: bash scripts/smoke_staging.sh
+        # Retries guard against a verified GitHub-side runner-image regression,
+        # not an app bug: every historical SIGSEGV of `php artisan serve` on
+        # this job traced to ubuntu24/20260714.240.1 (kernel 6.17.0-1020-azure);
+        # 17/17 reruns on the prior image (20260705.232.1, kernel ...1018-azure)
+        # were clean. Root-cause writeup: PR #152 discussion, 2026-07-16.
+        # Remove this retry once GitHub's runner pool is confirmed stable again.
+        run: |
+          for attempt in 1 2 3; do
+            if bash scripts/smoke_staging.sh; then
+              exit 0
+            fi
+            echo "::warning::staging smoke attempt ${attempt} failed, retrying if attempts remain"
+            sleep 5
+          done
+          exit 1
 
       - name: Upload smoke report
         if: always()

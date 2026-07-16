@@ -40,6 +40,18 @@ $legacyAllowlist = [
         'use App\\Models\\Document;',
         'use App\\Models\\Project;',
     ],
+    // Src\DocumentManagement\Models\Document lacks TenantScope, SoftDeletes,
+    // and several fillable columns (document_type, file_path, metadata, ...)
+    // that these controllers depend on. Swapping the import silently breaks
+    // tenant isolation and drops fields on mass-assignment. Keeping the
+    // App\Models\Document import here is intentional until the src model is
+    // brought to parity (see docs/engineering/domain-ownership.md).
+    'app/Http/Controllers/Api/DocumentController.php' => [
+        'use App\\Models\\Document;',
+    ],
+    'app/Http/Controllers/Web/DocumentController.php' => [
+        'use App\\Models\\Document;',
+    ],
 ];
 
 $canonicalModules = [];

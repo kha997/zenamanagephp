@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\Support\SSOT\FixtureFactory;
 
+/**
+ * @group performance
+ */
 class BulkOperationsBasicTest extends TestCase
 {
     use RefreshDatabase, FixtureFactory;

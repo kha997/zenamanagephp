@@ -4,8 +4,8 @@ namespace Tests\Feature\Api;
 
 use App\Models\Role;
 use App\Models\User;
-use App\Models\ZenaProject;
-use App\Models\ZenaSubmittal;
+use App\Models\Project;
+use App\Models\Submittal;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\DB;
@@ -31,7 +31,7 @@ class SubmittalApiTest extends TestCase
         parent::setUp();
 
         $this->user = User::factory()->create();
-        $this->project = ZenaProject::factory()->create([
+        $this->project = Project::factory()->create([
             'created_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
         ]);
@@ -47,7 +47,7 @@ class SubmittalApiTest extends TestCase
      */
     public function test_can_get_submittal_list()
     {
-        ZenaSubmittal::factory()->count(3)->create([
+        Submittal::factory()->count(3)->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
         ]);
@@ -153,7 +153,7 @@ class SubmittalApiTest extends TestCase
      */
     public function test_can_review_submittal()
     {
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'submitted',
@@ -188,7 +188,7 @@ class SubmittalApiTest extends TestCase
      */
     public function test_can_approve_submittal()
     {
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'pending_review',
@@ -223,7 +223,7 @@ class SubmittalApiTest extends TestCase
      */
     public function test_can_reject_submittal()
     {
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'pending_review',
@@ -260,7 +260,7 @@ class SubmittalApiTest extends TestCase
      */
     public function test_can_update_submittal()
     {
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
         ]);
@@ -293,7 +293,7 @@ class SubmittalApiTest extends TestCase
      */
     public function test_can_delete_submittal()
     {
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
         ]);
@@ -320,6 +320,96 @@ class SubmittalApiTest extends TestCase
         foreach (['project_id', 'title', 'description', 'submittal_type'] as $field) {
             $this->assertArrayHasKey($field, $errors);
         }
+    }
+
+    public function test_cannot_submit_already_submitted_submittal(): void
+    {
+        $submittal = Submittal::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+            'status' => 'submitted',
+        ]);
+
+        $response = $this->withZenaAuth()->postJson($this->zena('submittals.submit', ['id' => $submittal->id]));
+
+        $response->assertStatus(400);
+    }
+
+    public function test_cannot_approve_draft_submittal(): void
+    {
+        $submittal = Submittal::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+            'status' => 'draft',
+        ]);
+
+        $response = $this->withZenaAuth()->postJson($this->zena('submittals.approve', ['id' => $submittal->id]), [
+            'approval_comments' => 'Should not work',
+        ]);
+
+        $response->assertStatus(400);
+        $this->assertDatabaseHas('submittals', ['id' => $submittal->id, 'status' => 'draft']);
+    }
+
+    public function test_cannot_reject_draft_submittal(): void
+    {
+        $submittal = Submittal::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+            'status' => 'draft',
+        ]);
+
+        $response = $this->withZenaAuth()->postJson($this->zena('submittals.reject', ['id' => $submittal->id]), [
+            'rejection_reason' => 'Should not work',
+        ]);
+
+        $response->assertStatus(400);
+        $this->assertDatabaseHas('submittals', ['id' => $submittal->id, 'status' => 'draft']);
+    }
+
+    public function test_cannot_mutate_status_via_update(): void
+    {
+        $submittal = Submittal::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+            'status' => 'draft',
+        ]);
+
+        $response = $this->withZenaAuth()->putJson($this->zena('submittals.update', ['id' => $submittal->id]), [
+            'status' => 'approved',
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertDatabaseHas('submittals', ['id' => $submittal->id, 'status' => 'draft']);
+    }
+
+    public function test_document_can_be_linked_to_submittal(): void
+    {
+        $submittal = Submittal::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
+            'status' => 'draft',
+        ]);
+
+        $documents = \App\Models\Document::where('linked_entity_type', 'submittal')
+            ->where('linked_entity_id', $submittal->id)
+            ->get();
+
+        $this->assertCount(0, $documents);
+
+        \App\Models\Document::factory()->create([
+            'tenant_id' => $this->user->tenant_id,
+            'project_id' => $submittal->project_id,
+            'linked_entity_type' => \App\Models\Document::ENTITY_TYPE_SUBMITTAL,
+            'linked_entity_id' => $submittal->id,
+        ]);
+
+        $linked = \App\Models\Document::where('linked_entity_type', 'submittal')
+            ->where('linked_entity_id', $submittal->id)
+            ->get();
+
+        $this->assertCount(1, $linked);
     }
 
     /**
@@ -379,7 +469,7 @@ class SubmittalApiTest extends TestCase
         $user->roles()->syncWithoutDetaching($role->id);
     }
 
-    private function syncZenaProjectRecord(ZenaProject $project): void
+    private function syncZenaProjectRecord(Project $project): void
     {
         DB::table('zena_projects')->updateOrInsert(
             ['id' => $project->id],

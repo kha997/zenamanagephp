@@ -127,6 +127,9 @@ jobs:
       run: |
         composer audit || true
 
+    - name: Run Deptrac (architecture boundaries)
+      run: composer deptrac
+
     - name: Run SSOT Lint
       run: composer ssot:lint
 

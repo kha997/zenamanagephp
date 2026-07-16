@@ -180,7 +180,7 @@ class EmailTracking extends Model
     public function getDeliveryTime(): ?int
     {
         if ($this->sent_at && $this->delivered_at) {
-            return $this->delivered_at->diffInSeconds($this->sent_at);
+            return (int) round($this->delivered_at->diffInSeconds($this->sent_at));
         }
         return null;
     }
@@ -191,7 +191,7 @@ class EmailTracking extends Model
     public function getTimeToOpen(): ?int
     {
         if ($this->sent_at && $this->opened_at) {
-            return $this->opened_at->diffInSeconds($this->sent_at);
+            return (int) round($this->opened_at->diffInSeconds($this->sent_at));
         }
         return null;
     }
@@ -202,7 +202,7 @@ class EmailTracking extends Model
     public function getTimeToClick(): ?int
     {
         if ($this->sent_at && $this->clicked_at) {
-            return $this->clicked_at->diffInSeconds($this->sent_at);
+            return (int) round($this->clicked_at->diffInSeconds($this->sent_at));
         }
         return null;
     }

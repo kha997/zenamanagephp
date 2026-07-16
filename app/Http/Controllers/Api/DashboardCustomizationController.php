@@ -88,6 +88,16 @@ class DashboardCustomizationController extends Controller
                 'error' => $e->getMessage()
             ]);
 
+            // Permission denials respond 404 (anti-enumeration): the widget is
+            // simply "not available" from this user's perspective.
+            if (str_contains($e->getMessage(), 'does not have permission')) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 'error',
+                    'message' => 'Widget not found or not available',
+                ], 404);
+            }
+
             $payload = [
                 'success' => false,
                 'message' => 'Failed to add widget to dashboard',

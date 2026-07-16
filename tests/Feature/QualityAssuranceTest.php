@@ -16,6 +16,9 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Tests\Traits\RouteNameTrait;
 
+/**
+ * @group performance
+ */
 class QualityAssuranceTest extends TestCase
 {
     use RefreshDatabase, WithFaker, RouteNameTrait;

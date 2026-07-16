@@ -1,143 +1,73 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Task Detail - ZENA</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8f9fa; color: #333; }
-        .app-container { display: flex; min-height: 100vh; }
-        .sidebar { width: 250px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; position: fixed; height: 100vh; overflow-y: auto; z-index: 1000; }
-        .sidebar-header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .logo { font-size: 1.5rem; font-weight: bold; color: white; text-decoration: none; }
-        .sidebar-nav { padding: 20px 0; }
-        .nav-item { margin-bottom: 5px; }
-        .nav-link { display: flex; align-items: center; padding: 12px 20px; color: white; text-decoration: none; transition: all 0.3s; }
-        .nav-link:hover { background: rgba(255,255,255,0.1); }
-        .nav-link.active { background: rgba(255,255,255,0.2); }
-        .nav-icon { margin-right: 10px; width: 20px; }
-        .main-content { margin-left: 250px; flex: 1; padding: 20px; }
-        .header { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .header-content { display: flex; justify-content: space-between; align-items: center; }
-        .page-title { font-size: 2rem; color: #333; }
-        .user-info { display: flex; align-items: center; gap: 10px; }
-        .role-badge { background: #8b5cf6; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; margin-left: 10px; }
-        .task-header { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .task-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .task-name { font-size: 1.8rem; font-weight: bold; color: #333; }
-        .task-status { padding: 6px 12px; border-radius: 20px; font-size: 0.9rem; font-weight: 600; }
-        .status-in-progress { background: #dbeafe; color: #1e40af; }
-        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; font-size: 0.9rem; transition: all 0.3s; margin-right: 10px; }
-        .btn-primary { background: #8b5cf6; color: white; }
-        .btn-primary:hover { background: #7c3aed; }
-        .btn-secondary { background: #6c757d; color: white; }
-        .btn-secondary:hover { background: #5a6268; }
-        .task-details { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .detail-row { display: flex; margin-bottom: 15px; }
-        .detail-label { font-weight: 600; width: 150px; color: #374151; }
-        .detail-value { color: #666; }
-    </style>
-</head>
-<body>
-    <div class="app-container">
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <a href="/dashboard" class="logo">🚀 ZENA</a>
+@extends('layouts.operator')
+
+@section('title', ($task->name ?? $task->title) . ' — Chi tiết công việc')
+@section('page_title', 'Chi tiết công việc')
+
+@section('content')
+    <x-ui.page-header
+        title="{{ $task->name ?? $task->title }}"
+        description="Thuộc dự án: {{ $task->project?->name ?? '—' }}"
+    >
+        <x-ui.button-link href="/app/tasks" variant="secondary">Quay lại</x-ui.button-link>
+        <x-ui.button-link href="/app/tasks/{{ $task->id }}/edit">Sửa công việc</x-ui.button-link>
+    </x-ui.page-header>
+
+    <x-ui.card title="Thông tin công việc">
+        <div class="operator-form-grid">
+            <x-ui.field-value label="Trạng thái">
+                <x-ui.status-badge :status="$task->status" />
+            </x-ui.field-value>
+            <x-ui.field-value label="Ưu tiên" :value="$task->priority ?? '—'" />
+            <x-ui.field-value label="Tiến độ" :value="((int) $task->progress_percent) . '%'" />
+            <x-ui.field-value label="Bắt đầu" :value="$task->start_date ? \Illuminate\Support\Carbon::parse($task->start_date)->format('d/m/Y') : '—'" />
+            <x-ui.field-value label="Kết thúc" :value="$task->end_date ? \Illuminate\Support\Carbon::parse($task->end_date)->format('d/m/Y') : '—'" />
+            <x-ui.field-value label="Dự án">
+                @if ($task->project)
+                    <a href="/app/projects/{{ $task->project->id }}" class="operator-link">{{ $task->project->name }}</a>
+                @else
+                    —
+                @endif
+            </x-ui.field-value>
+        </div>
+
+        @if ($task->description)
+            <p class="mt-4 whitespace-pre-line text-sm text-slate-700">{{ $task->description }}</p>
+        @endif
+    </x-ui.card>
+
+    {{-- Khối vướng mắc --}}
+    @if (auth()->user()?->hasPermission('task.update'))
+        @if ($task->blocked_at)
+            <div class="rounded border border-red-200 bg-red-50 p-4">
+                <div class="mb-2 font-semibold text-red-700">Đang vướng</div>
+                <p class="mb-2 text-sm text-red-800">{{ $task->blocker_note }}</p>
+                <p class="mb-3 text-xs text-red-500">Ghi nhận lúc {{ optional($task->blocked_at)->format('d/m/Y H:i') }}</p>
+                <form method="POST" action="{{ route('app.tasks.unblock', $task->id) }}">
+                    @csrf
+                    <button type="submit" class="inline-flex items-center rounded bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700">Gỡ vướng</button>
+                </form>
             </div>
-            <nav class="sidebar-nav">
-                <ul>
-                    <li class="nav-item"><a href="/dashboard" class="nav-link"><i class="fas fa-tachometer-alt nav-icon"></i>Dashboard</a></li>
-                    <li class="nav-item"><a href="/dashboard/sales" class="nav-link"><i class="fas fa-chart-line nav-icon"></i>Sales Analytics</a></li>
-                    <li class="nav-item"><a href="/dashboard/users" class="nav-link"><i class="fas fa-users nav-icon"></i>User Management</a></li>
-                    <li class="nav-item"><a href="/dashboard/performance" class="nav-link"><i class="fas fa-tachometer-alt nav-icon"></i>Performance</a></li>
-                    <li class="nav-item"><a href="/dashboard/marketing" class="nav-link"><i class="fas fa-bullhorn nav-icon"></i>Marketing</a></li>
-                    <li class="nav-item"><a href="/dashboard/financial" class="nav-link"><i class="fas fa-dollar-sign nav-icon"></i>Financial</a></li>
-                    <li class="nav-item"><a href="/app/projects" class="nav-link"><i class="fas fa-project-diagram nav-icon"></i>Projects</a></li>
-                    <li class="nav-item"><a href="/app/tasks" class="nav-link active"><i class="fas fa-tasks nav-icon"></i>Tasks</a></li>
-                    <li class="nav-item"><a href="/team" class="nav-link"><i class="fas fa-users nav-icon"></i>Team</a></li>
-                    <li class="nav-item"><a href="/admin" class="nav-link"><i class="fas fa-cog nav-icon"></i>Admin</a></li>
-                </ul>
-            </nav>
-        </aside>
-        <main class="main-content">
-            <div class="header">
-                <div class="header-content">
-                    <h1 class="page-title">📋 Task Detail</h1>
-                    <div class="user-info">
-                        <span>Xin chào, User!</span>
-                        <span class="role-badge">Project Manager</span>
+        @else
+            <x-ui.card title="Báo vướng">
+                <form method="POST" action="{{ route('app.tasks.block', $task->id) }}" class="flex flex-wrap items-end gap-3">
+                    @csrf
+                    <div class="operator-field flex-1 min-w-64">
+                        <label for="blocker_note">Nội dung vướng mắc</label>
+                        <textarea id="blocker_note" name="blocker_note" rows="2" maxlength="1000" class="operator-input" required placeholder="Mô tả vấn đề đang gặp...">{{ old('blocker_note') }}</textarea>
                     </div>
-                </div>
-            </div>
-            <div class="task-header">
-                <div class="task-title">
-                    <div>
-                        <span class="task-name">Design UI Mockups</span>
-                    </div>
-                    <span class="task-status status-in-progress">In Progress</span>
-                </div>
-                <div style="margin: 15px 0;">
-                    <strong>Project:</strong> Villa Project Alpha | 
-                    <strong>Assignee:</strong> Sarah Johnson | 
-                    <strong>Priority:</strong> High
-                </div>
-                <div style="display: flex; gap: 10px;">
-                    <button class="btn btn-primary" onclick="editTask()">
-                        <i class="fas fa-edit"></i> Edit Task
-                    </button>
-                    <button class="btn btn-secondary" onclick="changeStatus()">
-                        <i class="fas fa-check"></i> Change Status
-                    </button>
-                    <button class="btn btn-secondary" onclick="addComment()">
-                        <i class="fas fa-comment"></i> Add Comment
-                    </button>
-                </div>
-            </div>
-            <div class="task-details">
-                <h3 style="margin-bottom: 20px;">Task Details</h3>
-                <div class="detail-row">
-                    <div class="detail-label">Description:</div>
-                    <div class="detail-value">Create comprehensive UI mockups for the villa project including all rooms, exterior design, and landscaping features.</div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-label">Due Date:</div>
-                    <div class="detail-value">January 20, 2025</div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-label">Progress:</div>
-                    <div class="detail-value">75% Complete</div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-label">Estimated Hours:</div>
-                    <div class="detail-value">40 hours</div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-label">Spent Hours:</div>
-                    <div class="detail-value">30 hours</div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-label">Created:</div>
-                    <div class="detail-value">January 10, 2025</div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-label">Last Updated:</div>
-                    <div class="detail-value">January 15, 2025</div>
-                </div>
-            </div>
-        </main>
+                    <button type="submit" class="operator-button operator-button-primary">Báo vướng</button>
+                </form>
+            </x-ui.card>
+        @endif
+    @elseif ($task->blocked_at)
+        <div class="rounded border border-red-200 bg-red-50 p-4">
+            <div class="mb-1 font-semibold text-red-700">Đang vướng</div>
+            <p class="text-sm text-red-800">{{ $task->blocker_note }}</p>
+        </div>
+    @endif
+
+    <div class="flex flex-wrap gap-3">
+        <x-ui.button-link href="/app/tasks/{{ $task->id }}/documents" variant="secondary">Tài liệu</x-ui.button-link>
+        <x-ui.button-link href="/app/tasks/{{ $task->id }}/history" variant="secondary">Lịch sử</x-ui.button-link>
     </div>
-    <script>
-        function editTask() {
-            window.location.href = "/app/tasks/{{ $task->id }}/edit";
-        }
-        function changeStatus() {
-            alert("Change status functionality will be implemented");
-        }
-        function addComment() {
-            alert("Add comment functionality will be implemented");
-        }
-    </script>
-</body>
-</html>
+@endsection

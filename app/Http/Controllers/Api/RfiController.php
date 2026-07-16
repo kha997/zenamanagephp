@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class RfiController extends ApiBaseController
@@ -462,16 +463,19 @@ class RfiController extends ApiBaseController
      */
     private function generateRfiNumber(string $projectId): string
     {
-        $project = Project::find($projectId);
-        $projectCode = $project ? strtoupper(substr($project->name, 0, 3)) : 'PRJ';
-        
-        $lastRfi = Rfi::where('project_id', $projectId)
-            ->orderBy('created_at', 'desc')
-            ->first();
-        
-        $sequence = $lastRfi ? (int)substr($lastRfi->rfi_number, -4) + 1 : 1;
-        
-        return $projectCode . '-RFI-' . str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
+        return DB::transaction(function () use ($projectId): string {
+            $project = Project::find($projectId);
+            $projectCode = $project ? strtoupper(substr($project->name, 0, 3)) : 'PRJ';
+
+            $lastRfi = Rfi::where('project_id', $projectId)
+                ->orderBy('created_at', 'desc')
+                ->lockForUpdate()
+                ->first();
+
+            $sequence = $lastRfi ? (int) substr($lastRfi->rfi_number, -4) + 1 : 1;
+
+            return $projectCode . '-RFI-' . str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
+        });
     }
 
     private function tenantId(): string

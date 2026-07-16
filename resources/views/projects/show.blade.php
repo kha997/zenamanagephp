@@ -1,204 +1,121 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project Details - {{ $project->name }}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-</head>
-<body class="bg-gray-50">
-    <div class="min-h-screen">
-        <!-- Header -->
-        <div class="bg-white shadow-sm border-b">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center py-4">
-                    <div class="flex items-center space-x-4">
-                        <a href="{{ route('app.projects') }}" class="text-gray-500 hover:text-gray-700">
-                            <i class="fas fa-arrow-left"></i>
-                        </a>
-                        <h1 class="text-2xl font-bold text-gray-900">{{ $project->name }}</h1>
-                        <span class="px-2 py-1 text-xs font-semibold rounded-full 
-                            @if($project->status === 'active') bg-green-100 text-green-800
-                            @elseif($project->status === 'draft') bg-yellow-100 text-yellow-800
-                            @elseif($project->status === 'completed') bg-blue-100 text-blue-800
-                            @else bg-gray-100 text-gray-800
-                            @endif">
-                            {{ ucfirst($project->status) }}
-                        </span>
-                    </div>
-                    <div class="flex space-x-2">
-                        <a href="{{ route('app.projects.edit', $project) }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-                            <i class="fas fa-edit mr-2"></i>Edit Project
-                        </a>
-                    </div>
+@extends('layouts.operator')
+
+@section('title', $project->name . ' — Chi tiết dự án')
+@section('page_title', 'Chi tiết dự án')
+
+@section('content')
+    <x-ui.page-header
+        title="{{ $project->name }}"
+        description="Project Details — {{ $project->code ?? '' }}"
+    >
+        <x-ui.button-link :href="route('app.projects')" variant="secondary">Quay lại</x-ui.button-link>
+        <x-ui.button-link href="/app/projects/{{ $project->id }}/edit">Sửa dự án</x-ui.button-link>
+        @if ($projectTemplates->isNotEmpty())
+            <div x-data="{ open: false }" class="relative inline-block">
+                <button @click="open = !open" type="button" class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">Biểu mẫu ▾</button>
+                <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 z-50 mt-1 w-56 rounded-md border border-slate-200 bg-white shadow-lg">
+                    @foreach ($projectTemplates as $tpl)
+                        <a href="{{ route('app.projects.documents.render', [$project->id, $tpl->id]) }}" class="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">{{ $tpl->name }}</a>
+                    @endforeach
                 </div>
             </div>
+        @endif
+    </x-ui.page-header>
+
+    <x-ui.card title="Thông tin chung">
+        <div class="operator-form-grid">
+            <x-ui.field-value label="Mã dự án" :value="$project->code ?? '—'" />
+            <x-ui.field-value label="Trạng thái">
+                <x-ui.status-badge :status="$project->status" />
+            </x-ui.field-value>
+            <x-ui.field-value label="Tiến độ" :value="((int) $project->progress) . '%'" />
+            <x-ui.field-value label="Quản lý dự án" :value="$project->manager?->name ?? '—'" />
+            <x-ui.field-value label="Khách hàng" :value="$project->client?->name ?? '—'" />
+            <x-ui.field-value label="Bắt đầu" :value="$project->start_date ? \Illuminate\Support\Carbon::parse($project->start_date)->format('d/m/Y') : '—'" />
+            <x-ui.field-value label="Kết thúc" :value="$project->end_date ? \Illuminate\Support\Carbon::parse($project->end_date)->format('d/m/Y') : '—'" />
+            <x-ui.field-value label="Ngân sách" :value="$project->budget_total ? number_format((float) $project->budget_total, 0, ',', '.') : '—'" />
         </div>
 
-        <!-- Main Content -->
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- Project Info -->
-                <div class="lg:col-span-2 space-y-6">
-                    <!-- Basic Info -->
-                    <div class="bg-white rounded-lg shadow-sm p-6">
-                        <h2 class="text-lg font-semibold text-gray-900 mb-4">Project Information</h2>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="text-sm font-medium text-gray-500">Project Code</label>
-                                <p class="text-gray-900">{{ $project->code }}</p>
-                            </div>
-                            <div>
-                                <label class="text-sm font-medium text-gray-500">Status</label>
-                                <p class="text-gray-900">{{ ucfirst($project->status) }}</p>
-                            </div>
-                            <div>
-                                <label class="text-sm font-medium text-gray-500">Start Date</label>
-                                <p class="text-gray-900">{{ $project->start_date ? $project->start_date->format('M d, Y') : 'Not set' }}</p>
-                            </div>
-                            <div>
-                                <label class="text-sm font-medium text-gray-500">End Date</label>
-                                <p class="text-gray-900">{{ $project->end_date ? $project->end_date->format('M d, Y') : 'Not set' }}</p>
-                            </div>
-                            <div>
-                                <label class="text-sm font-medium text-gray-500">Budget</label>
-                                <p class="text-gray-900">${{ number_format($project->budget_total, 2) }}</p>
-                            </div>
-                            <div>
-                                <label class="text-sm font-medium text-gray-500">Progress</label>
-                                <p class="text-gray-900">{{ $project->progress }}%</p>
-                            </div>
-                        </div>
-                        
-                        @if($project->description)
-                        <div class="mt-4">
-                            <label class="text-sm font-medium text-gray-500">Description</label>
-                            <p class="text-gray-900 mt-1">{{ $project->description }}</p>
-                        </div>
-                        @endif
-                    </div>
+        @if ($project->description)
+            <p class="mt-4 whitespace-pre-line text-sm text-slate-700">{{ $project->description }}</p>
+        @endif
+    </x-ui.card>
 
-                    <!-- Team Members -->
-                    <div class="bg-white rounded-lg shadow-sm p-6">
-                        <h2 class="text-lg font-semibold text-gray-900 mb-4">Team Members</h2>
-                        <div class="space-y-3">
-                            @if($project->manager)
-                            <div class="flex items-center space-x-3">
-                                <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                                    {{ substr($project->manager->name, 0, 1) }}
-                                </div>
-                                <div>
-                                    <p class="font-medium text-gray-900">{{ $project->manager->name }}</p>
-                                    <p class="text-sm text-gray-500">Project Manager</p>
-                                </div>
-                            </div>
-                            @endif
-                            
-                            @if($project->client)
-                            <div class="flex items-center space-x-3">
-                                <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                                    {{ substr($project->client->name, 0, 1) }}
-                                </div>
-                                <div>
-                                    <p class="font-medium text-gray-900">{{ $project->client->name }}</p>
-                                    <p class="text-sm text-gray-500">Client</p>
-                                </div>
-                            </div>
-                            @endif
-                        </div>
-                    </div>
+    <x-ui.card title="Công việc ({{ $project->tasks->count() }})">
+        <div class="mb-3">
+            <x-ui.button-link href="/app/tasks/create?project_id={{ $project->id }}">Thêm công việc</x-ui.button-link>
+        </div>
 
-                    <!-- Tasks -->
-                    <div class="bg-white rounded-lg shadow-sm p-6">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-lg font-semibold text-gray-900">Tasks</h2>
-                            <a href="{{ route('app.tasks.create', ['project_id' => $project->id]) }}" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
-                                <i class="fas fa-plus mr-1"></i>Add Task
-                            </a>
-                        </div>
-                        
-                        @if($project->tasks && $project->tasks->count() > 0)
-                        <div class="space-y-3">
-                            @foreach($project->tasks as $task)
-                            <div class="border rounded-lg p-4">
-                                <div class="flex justify-between items-start">
-                                    <div>
-                                        <h3 class="font-medium text-gray-900">{{ $task->name }}</h3>
-                                        <p class="text-sm text-gray-500">{{ $task->description }}</p>
-                                    </div>
-                                    <span class="px-2 py-1 text-xs font-semibold rounded-full 
-                                        @if($task->status === 'done') bg-green-100 text-green-800
-                                        @elseif($task->status === 'in_progress') bg-blue-100 text-blue-800
-                                        @else bg-gray-100 text-gray-800
-                                        @endif">
-                                        {{ ucfirst($task->status) }}
-                                    </span>
-                                </div>
-                            </div>
-                            @endforeach
-                        </div>
-                        @else
-                        <p class="text-gray-500 text-center py-8">No tasks yet. <a href="{{ route('app.tasks.create', ['project_id' => $project->id]) }}" class="text-blue-600 hover:text-blue-800">Create the first task</a></p>
-                        @endif
-                    </div>
-                </div>
+        @if ($project->tasks->isEmpty())
+            <p class="text-sm text-slate-500">Dự án chưa có công việc nào.</p>
+        @else
+            <x-ui.data-table :headers="['Công việc', 'Trạng thái', 'Tiến độ', 'Kết thúc']">
+                @foreach ($project->tasks as $task)
+                    <tr>
+                        <td>
+                            <a href="/app/tasks/{{ $task->id }}" class="operator-link font-medium">{{ $task->name ?? $task->title }}</a>
+                        </td>
+                        <td><x-ui.status-badge :status="$task->status" /></td>
+                        <td class="text-sm text-slate-600">{{ (int) $task->progress_percent }}%</td>
+                        <td class="text-sm text-slate-600">{{ $task->end_date ? \Illuminate\Support\Carbon::parse($task->end_date)->format('d/m/Y') : '—' }}</td>
+                    </tr>
+                @endforeach
+            </x-ui.data-table>
+        @endif
+    </x-ui.card>
 
-                <!-- Sidebar -->
-                <div class="space-y-6">
-                    <!-- Progress -->
-                    <div class="bg-white rounded-lg shadow-sm p-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Progress</h3>
-                        <div class="space-y-4">
-                            <div>
-                                <div class="flex justify-between text-sm mb-1">
-                                    <span class="text-gray-600">Overall Progress</span>
-                                    <span class="text-gray-900">{{ $project->progress }}%</span>
-                                </div>
-                                <div class="w-full bg-gray-200 rounded-full h-2">
-                                    <div class="bg-blue-600 h-2 rounded-full" style="width: {{ $project->progress }}%"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+    @if ($documentChecklist !== null)
+        <x-ui.card title="Checklist tài liệu">
+            @if (empty($documentChecklist))
+                <p class="text-sm text-slate-500">Không có yêu cầu tài liệu nào cho dự án này.</p>
+            @else
+                <x-ui.data-table :headers="['Bước', 'Yêu cầu', 'Còn thiếu']">
+                    @foreach ($documentChecklist as $row)
+                        <tr>
+                            <td class="font-medium text-slate-900">{{ $row['step_name'] }}</td>
+                            <td class="text-sm text-slate-600">{{ implode(', ', $row['required']) }}</td>
+                            <td class="text-sm">
+                                @if (empty($row['missing']))
+                                    <span class="text-emerald-600">Đủ</span>
+                                @else
+                                    <span class="text-amber-600">{{ implode(', ', $row['missing']) }}</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @endforeach
+                </x-ui.data-table>
+            @endif
+        </x-ui.card>
+    @endif
 
-                    <!-- Quick Actions -->
-                    <div class="bg-white rounded-lg shadow-sm p-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-                        <div class="space-y-2">
-                            <a href="{{ route('app.tasks.create', ['project_id' => $project->id]) }}" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center">
-                                <i class="fas fa-plus mr-2"></i>Add Task
-                            </a>
-                            <a href="{{ route('app.documents.create', ['project_id' => $project->id]) }}" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center justify-center">
-                                <i class="fas fa-upload mr-2"></i>Upload Document
-                            </a>
-                            <a href="{{ route('app.projects.edit', $project) }}" class="w-full bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 flex items-center justify-center">
-                                <i class="fas fa-edit mr-2"></i>Edit Project
-                            </a>
-                        </div>
-                    </div>
+    @include('projects._design-progress', ['designItems' => $designItems, 'blockedItems' => $blockedItems, 'tasks' => $sectionTasks])
 
-                    <!-- Project Stats -->
-                    <div class="bg-white rounded-lg shadow-sm p-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Statistics</h3>
-                        <div class="space-y-3">
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Total Tasks</span>
-                                <span class="font-semibold text-gray-900">{{ $project->tasks ? $project->tasks->count() : 0 }}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Completed</span>
-                                <span class="font-semibold text-green-600">{{ $project->tasks ? $project->tasks->where('status', 'done')->count() : 0 }}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">In Progress</span>
-                                <span class="font-semibold text-blue-600">{{ $project->tasks ? $project->tasks->where('status', 'in_progress')->count() : 0 }}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <x-ui.card title="Hợp đồng & tài chính">
+        @forelse ($contracts as $contract)
+            <div class="flex flex-wrap items-center gap-2 border-b border-slate-100 py-2 text-sm">
+                <a href="{{ route('operator.contracts.show', $contract->id) }}" class="font-medium">{{ $contract->code }}</a>
+                <span class="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-700">{{ $contract->typeLabel() }}</span>
+                <x-ui.status-badge :status="$contract->status" />
+                <span>Giá trị: {{ number_format((float) $contract->total_value) }}</span>
+                <span class="text-emerald-700">Đã thu: {{ number_format((float) ($contract->paid_total ?? 0)) }}</span>
+                <span class="text-red-700">Đã chi: {{ number_format((float) ($contract->expense_total ?? 0)) }}</span>
+                <span class="text-slate-500">Còn phải thu: {{ number_format((float) $contract->total_value - (float) ($contract->paid_total ?? 0)) }}</span>
             </div>
-        </div>
+        @empty
+            <p class="text-sm text-slate-500">Chưa có hợp đồng.</p>
+        @endforelse
+        @if ($contracts->isNotEmpty())
+            <div class="mt-2 border-t border-slate-200 pt-2 text-sm font-medium">
+                Tổng: {{ number_format((float) $contracts->sum('total_value')) }}
+                · Đã thu {{ number_format((float) $contracts->sum('paid_total')) }}
+                · Đã chi {{ number_format((float) $contracts->sum('expense_total')) }}
+            </div>
+        @endif
+    </x-ui.card>
+
+    <div class="flex flex-wrap gap-3">
+        <x-ui.button-link href="/app/projects/{{ $project->id }}/documents" variant="secondary">Tài liệu dự án</x-ui.button-link>
+        <x-ui.button-link href="/app/projects/{{ $project->id }}/history" variant="secondary">Lịch sử</x-ui.button-link>
+        <x-ui.button-link :href="route('operator.schedule.index', ['project_id' => $project->id])" variant="secondary">Gantt tiến độ</x-ui.button-link>
     </div>
-</body>
-</html>
+@endsection

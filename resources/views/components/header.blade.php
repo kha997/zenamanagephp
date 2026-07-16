@@ -40,8 +40,8 @@
             <!-- User Greeting (for non-admin pages) -->
             <div class="hidden md:block flex-1 flex justify-center" x-show="!isAdminPage">
                 <h3 class="text-lg font-semibold text-gray-800">
-                    <span class="text-blue-600">Xin chào,</span> 
-                    <span class="text-gray-900" x-text="userName || 'John Doe'">John Doe</span>
+                    <span class="text-blue-600">Xin chào,</span>
+                    <span class="text-gray-900">{{ auth()->user()?->name ?? 'User' }}</span>
                 </h3>
             </div>
 
@@ -60,7 +60,6 @@
                 <div class="relative" x-data="{ open: false }">
                     <button @click="open = !open" class="relative p-2 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg">
                         <i class="fas fa-bell text-lg"></i>
-                        <span class="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">3</span>
                     </button>
                     
                     <!-- Notification Dropdown -->
@@ -76,42 +75,7 @@
                             <h3 class="text-lg font-semibold text-gray-900">Notifications</h3>
                         </div>
                         <div class="max-h-64 overflow-y-auto">
-                            <div class="p-4 hover:bg-gray-50 border-b border-gray-100">
-                                <div class="flex items-start space-x-3">
-                                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                        <i class="fas fa-project-diagram text-blue-600 text-sm"></i>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <p class="text-sm font-medium text-gray-900">New Project Assigned</p>
-                                        <p class="text-xs text-gray-500">You have been assigned to "Website Redesign" project</p>
-                                        <p class="text-xs text-gray-400 mt-1">2 minutes ago</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="p-4 hover:bg-gray-50 border-b border-gray-100">
-                                <div class="flex items-start space-x-3">
-                                    <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                                        <i class="fas fa-check text-green-600 text-sm"></i>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <p class="text-sm font-medium text-gray-900">Task Completed</p>
-                                        <p class="text-xs text-gray-500">"Update Documentation" has been completed</p>
-                                        <p class="text-xs text-gray-400 mt-1">1 hour ago</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="p-4 hover:bg-gray-50">
-                                <div class="flex items-start space-x-3">
-                                    <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                                        <i class="fas fa-exclamation-triangle text-yellow-600 text-sm"></i>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <p class="text-sm font-medium text-gray-900">Deadline Approaching</p>
-                                        <p class="text-xs text-gray-500">"Mobile App Development" deadline in 2 days</p>
-                                        <p class="text-xs text-gray-400 mt-1">3 hours ago</p>
-                                    </div>
-                                </div>
-                            </div>
+                            <div class="p-4 text-sm text-gray-500">Không có thông báo mới.</div>
                         </div>
                         <div class="p-4 border-t border-gray-200">
                             <a href="/app/notifications" class="text-sm text-blue-600 hover:text-blue-800 font-medium">View all notifications</a>
@@ -123,11 +87,11 @@
                 <div class="relative" x-data="{ open: false }">
                     <button @click="open = !open" class="flex items-center space-x-3 text-gray-700 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg p-2">
                         <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                            <span class="text-white text-sm font-bold">JD</span>
+                            <span class="text-white text-sm font-bold">{{ strtoupper(mb_substr(auth()->user()?->name ?? 'U', 0, 1)) }}</span>
                         </div>
                         <div class="hidden md:block text-left">
-                            <p class="text-sm font-medium text-gray-900">John Doe</p>
-                            <p class="text-xs text-gray-500">Project Manager</p>
+                            <p class="text-sm font-medium text-gray-900">{{ auth()->user()?->name ?? 'User' }}</p>
+                            <p class="text-xs text-gray-500">{{ auth()->user()?->role ?? '' }}</p>
                         </div>
                         <i class="fas fa-chevron-down text-gray-400 text-xs"></i>
                     </button>
@@ -144,12 +108,12 @@
                         <div class="p-4 border-b border-gray-200">
                             <div class="flex items-center space-x-3">
                                 <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
-                                    <span class="text-white font-bold">JD</span>
+                                    <span class="text-white font-bold">{{ strtoupper(mb_substr(auth()->user()?->name ?? 'U', 0, 1)) }}</span>
                                 </div>
                                 <div>
-                                    <p class="text-sm font-medium text-gray-900">John Doe</p>
-                                    <p class="text-xs text-gray-500">john.doe@company.com</p>
-                                    <p class="text-xs text-blue-600">Project Manager</p>
+                                    <p class="text-sm font-medium text-gray-900">{{ auth()->user()?->name ?? 'User' }}</p>
+                                    <p class="text-xs text-gray-500">{{ auth()->user()?->email ?? '' }}</p>
+                                    <p class="text-xs text-blue-600">{{ auth()->user()?->role ?? '' }}</p>
                                 </div>
                             </div>
                         </div>
@@ -195,7 +159,7 @@
 document.addEventListener('alpine:init', () => {
     Alpine.data('headerComponent', () => ({
         // mobileMenuOpen removed - no longer needed
-        userName: 'John Doe',
+        userName: @json(auth()->user()?->name ?? 'User'),
         
         get isAdminPage() {
             return window.location.pathname.startsWith('/admin');
@@ -218,12 +182,12 @@ document.addEventListener('alpine:init', () => {
                 } else if (window.Auth && window.Auth.user && window.Auth.user.name) {
                     this.userName = window.Auth.user.name;
                 } else {
-                    // Default to John Doe
-                    this.userName = 'John Doe';
+                    // Default to —
+                    this.userName = '—';
                 }
             } catch (error) {
                 console.log('Using default user name');
-                this.userName = 'John Doe';
+                this.userName = '—';
             }
         }
     }));

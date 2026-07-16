@@ -57,7 +57,7 @@ class SiteEngineerDashboardController extends Controller
                     'name' => $project->name,
                     'status' => $project->status,
                     'progress' => $project->progress_percentage ?? 0,
-                    'site_tasks' => $project->tasks()->where('assigned_to', $user->id)->count(),
+                    'site_tasks' => $project->tasks()->where('assignee_id', $user->id)->count(),
                 ];
             }),
             'summary' => [

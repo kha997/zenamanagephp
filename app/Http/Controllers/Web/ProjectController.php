@@ -7,9 +7,17 @@ use Illuminate\View\View;
 
 
 use App\Http\Controllers\Controller; // Thêm import này
+use App\Models\DeliverableTemplate;
 use App\Models\User;
+use App\Services\DeliverablePdfExportService;
+use App\Services\DeliverableTemplateVersionService;
+use App\Services\DocumentChecklistService;
+use App\Services\DocumentContext\DocumentContextRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Src\CoreProject\Models\Project;
 use Src\RBAC\Middleware\RBACMiddleware;
 
@@ -20,6 +28,8 @@ use Src\RBAC\Middleware\RBACMiddleware;
  */
 class ProjectController extends Controller // Thêm extends Controller
 {
+    use \App\Http\Controllers\Web\Concerns\DelegatesToApiControllers;
+
     // Xóa constructor middleware
     // public function __construct()
     // {
@@ -56,6 +66,10 @@ class ProjectController extends Controller // Thêm extends Controller
             'currentRoute' => 'projects',
             'user' => $user,
             'tenant' => $user?->tenant,
+            'users' => User::query()
+                ->where('tenant_id', $user?->tenant_id)
+                ->orderBy('name')
+                ->get(['id', 'name']),
         ]);
     }
 
@@ -81,40 +95,39 @@ class ProjectController extends Controller // Thêm extends Controller
         ]);
     }
 
-    /**
-     * Tạo project mới
-     *
-     * @param StoreProjectRequest $request
-     * @return JsonResponse
-     */
-    public function store(StoreProjectRequest $request): JsonResponse
-    {
+    public function store(
+        Request $request,
+        \App\Http\Controllers\Api\ProjectController $apiController
+    ): \Illuminate\Http\RedirectResponse {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:2000'],
+            'start_date' => ['required', 'date'],
+            'end_date' => ['required', 'date', 'after:start_date'],
+            'status' => ['nullable', 'string'],
+            'priority' => ['nullable', 'string'],
+            'budget_planned' => ['nullable', 'numeric', 'min:0'],
+            'pm_id' => ['nullable', 'string'],
+            'client_id' => ['nullable', 'string'],
+        ]);
+
         try {
-            $projectData = $request->validated();
-            $projectData['tenant_id'] = $request->user('api')->tenant_id ?? 1; // Thêm 'api' guard
-            
-            // Tạo project từ template nếu có
-            if (isset($projectData['work_template_id'])) {
-                $templateId = $projectData['work_template_id'];
-                unset($projectData['work_template_id']);
-                
-                $project = Project::createFromTemplate($templateId, $projectData);
-            } else {
-                $project = Project::create($projectData);
-            }
-            
-            $project->load(['rootComponents', 'tasks']);
+            $apiRequest = \App\Http\Requests\ProjectFormRequest::createFrom(
+                $this->buildApiRequest($request, array_filter($validated, fn ($value) => $value !== null))
+            );
+            $apiRequest->setContainer(app())->setRedirector(app('redirect'));
+            $apiRequest->validateResolved();
 
-            // Dispatch event
-            event(new \Src\CoreProject\Events\ProjectCreated($project));
-
-            return JSendResponse::success([
-                'project' => new ProjectResource($project),
-                'message' => 'Dự án đã được tạo thành công.'
-            ], 201);
-        } catch (\Exception $e) {
-            return JSendResponse::error('Không thể tạo dự án: ' . $e->getMessage(), 500);
+            $response = $apiController->store($apiRequest);
+        } catch (\Illuminate\Auth\Access\AuthorizationException) {
+            return back()->withInput()->with('error', 'Bạn không có quyền thực hiện thao tác này.');
+        } catch (\Illuminate\Validation\ValidationException $exception) {
+            return back()->withErrors($exception->errors())->withInput();
+        } catch (\Throwable) {
+            return back()->withInput()->with('error', 'Không thể xử lý yêu cầu.');
         }
+
+        return $this->handleMutationResponse($response, route('app.projects'), 'Đã tạo dự án');
     }
 
     /**
@@ -137,49 +150,109 @@ class ProjectController extends Controller // Thêm extends Controller
                 ->where('tenant_id', $user?->tenant_id)
                 ->findOrFail($projectId);
 
+            $documentChecklist = $user?->hasPermission('work.view')
+                ? (new DocumentChecklistService())->buildReport($project)
+                : null;
+
+            $designItems = \App\Models\DesignItem::query()
+                ->where('project_id', (string) $project->id)
+                ->with('assignee:id,name')
+                ->orderBy('created_at')
+                ->get();
+
+            // Load tasks qua model canonical App\Models\Task — relation
+            // $project->tasks() trỏ về Src\CoreProject\Models\Task (legacy,
+            // không có relation assignee) nên không dùng cho khối này.
+            $sectionTasks = \App\Models\Task::query()
+                ->where('tenant_id', (string) $user?->tenant_id)
+                ->where('project_id', (string) $project->id)
+                ->with('assignee:id,name')
+                ->orderBy('created_at')
+                ->get();
+
+            $blockedItems = collect()
+                ->concat($designItems->whereNotNull('blocked_at')->map(fn ($i) => [
+                    'type' => 'Hạng mục thiết kế',
+                    'name' => $i->name,
+                    'note' => $i->blocker_note,
+                    'blocked_at' => $i->blocked_at,
+                ]))
+                ->concat($sectionTasks->whereNotNull('blocked_at')->map(fn ($t) => [
+                    'type' => 'Công việc',
+                    'name' => $t->title ?? $t->name,
+                    'note' => $t->blocker_note,
+                    'blocked_at' => $t->blocked_at,
+                ]))
+                ->sortByDesc('blocked_at')
+                ->values();
+
+            $contracts = \App\Models\Contract::query()
+                ->where('project_id', (string) $project->id)
+                ->withSum(['payments as paid_total' => fn ($q) => $q->where('status', \App\Models\ContractPayment::STATUS_PAID)], 'amount')
+                ->withSum('expenses as expense_total', 'amount')
+                ->orderBy('created_at')
+                ->get();
+
+            $projectTemplates = \App\Models\DeliverableTemplate::query()
+                ->where('tenant_id', $user?->tenant_id)
+                ->where('context', 'project')
+                ->with('latestPublishedVersion')
+                ->get()
+                ->filter(fn ($t) => $t->latestPublishedVersion !== null)
+                ->values();
+
             return view('projects.show', [
                 'project' => $project,
+                'documentChecklist' => $documentChecklist,
+                'designItems' => $designItems,
+                'blockedItems' => $blockedItems,
+                'sectionTasks' => $sectionTasks,
+                'contracts' => $contracts,
+                'projectTemplates' => $projectTemplates,
             ]);
         } catch (\Throwable $e) {
             abort(404, 'Dự án không tồn tại.');
         }
     }
 
-    /**
-     * Cập nhật thông tin project
-     *
-     * @param UpdateProjectRequest $request
-     * @param int $projectId
-     * @return JsonResponse
-     */
-    public function update(UpdateProjectRequest $request, string $projectId): JsonResponse // Đổi từ int thành string
-    {
+    public function update(
+        Request $request,
+        string $projectId,
+        \App\Http\Controllers\Api\ProjectController $apiController
+    ): \Illuminate\Http\RedirectResponse {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:2000'],
+            'start_date' => ['required', 'date'],
+            'end_date' => ['required', 'date', 'after:start_date'],
+            'status' => ['nullable', 'string'],
+            'priority' => ['nullable', 'string'],
+            'budget_planned' => ['nullable', 'numeric', 'min:0'],
+            'pm_id' => ['nullable', 'string'],
+            'client_id' => ['nullable', 'string'],
+        ]);
+
         try {
-            $project = Project::findOrFail($projectId);
-            $oldData = $project->toArray();
-            
-            $project->update($request->validated());
-            $project->load(['rootComponents', 'tasks']);
+            $apiRequest = \App\Http\Requests\ProjectFormRequest::createFrom(
+                $this->buildApiRequest($request, array_filter($validated, fn ($value) => $value !== null))
+            );
+            $apiRequest->setContainer(app())->setRedirector(app('redirect'));
+            $apiRequest->validateResolved();
 
-            // Dispatch event nếu có thay đổi về progress hoặc cost
-            $changedFields = array_keys($request->validated());
-            if (array_intersect($changedFields, ['progress', 'actual_cost', 'status'])) {
-                event(new \Src\CoreProject\Events\ProjectUpdated(
-                    $project,
-                    $oldData,
-                    $changedFields
-                ));
-            }
-
-            return JSendResponse::success([
-                'project' => new ProjectResource($project),
-                'message' => 'Dự án đã được cập nhật thành công.'
-            ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return JSendResponse::error('Dự án không tồn tại.', 404);
-        } catch (\Exception $e) {
-            return JSendResponse::error('Không thể cập nhật dự án: ' . $e->getMessage(), 500);
+            $response = $apiController->update($apiRequest, $projectId);
+        } catch (\Illuminate\Auth\Access\AuthorizationException) {
+            return back()->withInput()->with('error', 'Bạn không có quyền thực hiện thao tác này.');
+        } catch (\Illuminate\Validation\ValidationException $exception) {
+            return back()->withErrors($exception->errors())->withInput();
+        } catch (\Throwable) {
+            return back()->withInput()->with('error', 'Không thể xử lý yêu cầu.');
         }
+
+        return $this->handleMutationResponse(
+            $response,
+            '/app/projects/' . $projectId,
+            'Đã cập nhật dự án'
+        );
     }
 
     /**
@@ -270,5 +343,36 @@ class ProjectController extends Controller // Thêm extends Controller
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể tính toán lại chi phí: ' . $e->getMessage(), 500);
         }
+    }
+
+    public function renderProjectDocument(string $projectId, string $template, DeliverableTemplateVersionService $versionService, DocumentContextRegistry $contextRegistry, DeliverablePdfExportService $pdfService): SymfonyResponse
+    {
+        $user = Auth::user();
+        $project = AppProject::query()->where('tenant_id', $user?->tenant_id)->findOrFail($projectId);
+
+        $tpl = DeliverableTemplate::query()
+            ->where('tenant_id', $user?->tenant_id)
+            ->where('context', 'project')
+            ->findOrFail($template);
+
+        $version = $tpl->latestPublishedVersion()->first();
+        if ($version === null) {
+            abort(404);
+        }
+
+        $html = (string) Storage::disk('local')->get($version->storage_path);
+        $context = $contextRegistry->get('project')->build($project);
+        $rendered = $versionService->renderHtml($html, $context);
+
+        try {
+            $pdfBytes = $pdfService->render($rendered);
+        } catch (\App\Exceptions\DeliverablePdfExportUnavailableException) {
+            return back()->with('error', 'Không thể tạo PDF vào lúc này.');
+        }
+
+        return response($pdfBytes, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . Str::slug($tpl->name) . '-' . ($project->code ?? 'du-an') . '.pdf"',
+        ]);
     }
 }

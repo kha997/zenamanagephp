@@ -1210,7 +1210,6 @@ jobs:
       run: composer audit || true
 
     - name: Run PHPStan Static Analysis
-      continue-on-error: true
       run: |
         echo "::group::PHPStan static analysis"
         bash scripts/ci/run-json-report-command.sh phpstan-report.json phpstan ./vendor/bin/phpstan analyse --error-format=json

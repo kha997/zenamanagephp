@@ -33,7 +33,6 @@ return [
 
     'allowed_origins_patterns' => [
         '/^https:\/\/.*\.zenamanage\.com$/',
-        '/^https:\/\/.*\.yourdomain\.com$/',
     ],
 
     'allowed_headers' => [

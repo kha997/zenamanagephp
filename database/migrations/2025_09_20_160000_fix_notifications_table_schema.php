@@ -19,6 +19,16 @@ return new class extends Migration
         }
         
         if (Schema::hasColumn('notifications', 'is_read')) {
+            // SQLite native DROP COLUMN (Laravel 11+) refuses to drop a column
+            // still referenced by an index — drop legacy indexes first.
+            foreach (['zena_notifications_is_read_index', 'notifications_is_read_index'] as $legacyIndex) {
+                if ($this->indexExists($legacyIndex)) {
+                    Schema::table('notifications', function (Blueprint $table) use ($legacyIndex) {
+                        $table->dropIndex($legacyIndex);
+                    });
+                }
+            }
+
             Schema::table('notifications', function (Blueprint $table) {
                 $table->dropColumn('is_read');
             });

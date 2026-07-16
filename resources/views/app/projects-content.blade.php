@@ -2282,8 +2282,8 @@ function projectsPage() {
                 // Fallback to mock data
                 this.filterOptions = {
                     pms: [
-                        { id: 1, name: 'John Doe' },
-                        { id: 2, name: 'Jane Smith' },
+                        { id: 1, name: '—' },
+                        { id: 2, name: '—' },
                         { id: 3, name: 'Mike Johnson' }
                     ],
                     clients: [
@@ -3352,7 +3352,7 @@ function projectsPage() {
                     details: [
                         { key: 'Previous Status', value: 'Planning' },
                         { key: 'New Status', value: 'Active' },
-                        { key: 'Updated By', value: 'John Doe' }
+                        { key: 'Updated By', value: '—' }
                     ]
                 },
                 {
@@ -3397,7 +3397,7 @@ function projectsPage() {
                     details: [
                         { key: 'Previous Budget', value: '$35,000' },
                         { key: 'New Budget', value: '$50,000' },
-                        { key: 'Updated By', value: 'Jane Smith' }
+                        { key: 'Updated By', value: '—' }
                     ]
                 },
                 {

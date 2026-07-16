@@ -246,6 +246,7 @@ class LegacyRouteRollbackTest extends TestCase
     /**
      * Test rollback performance
      */
+    /** @group performance */
     public function test_rollback_performance()
     {
         $this->apiAs($this->user, $this->tenant);

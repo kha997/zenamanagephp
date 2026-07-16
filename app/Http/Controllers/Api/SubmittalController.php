@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class SubmittalController extends ApiBaseController
@@ -191,7 +192,7 @@ class SubmittalController extends ApiBaseController
                 'project:id,name',
                 'submittedBy:id,name',
                 'reviewedBy:id,name',
-                'attachments',
+                'documents',
             ]);
 
             return $this->successResponse($submittal, 'Submittal retrieved successfully');
@@ -224,7 +225,7 @@ class SubmittalController extends ApiBaseController
                 'due_date' => 'nullable|date',
                 'contractor' => 'nullable|string|max:255',
                 'manufacturer' => 'nullable|string|max:255',
-                'status' => 'sometimes|in:draft,submitted,pending_review,approved,rejected,revised',
+                'status' => 'prohibited',
             ]);
 
             if ($validator->fails()) {
@@ -348,6 +349,10 @@ class SubmittalController extends ApiBaseController
 
             $submittal = $this->submittalForTenant($id);
 
+            if (!in_array($submittal->status, [\App\Models\Submittal::STATUS_SUBMITTED, \App\Models\Submittal::STATUS_PENDING_REVIEW], true)) {
+                return $this->errorResponse('Only submitted or pending_review submittals can be reviewed', 400);
+            }
+
             $reviewStatus = $request->input('review_status') ?? $request->input('status');
             $reviewComments = $request->input('review_comments') ?? $request->input('review_notes');
 
@@ -407,6 +412,10 @@ class SubmittalController extends ApiBaseController
 
             $submittal = $this->submittalForTenant($id);
 
+            if (!in_array($submittal->status, [\App\Models\Submittal::STATUS_SUBMITTED, \App\Models\Submittal::STATUS_PENDING_REVIEW], true)) {
+                return $this->errorResponse('Only submitted or pending_review submittals can be approved', 400);
+            }
+
             $validator = Validator::make($request->all(), [
                 'approval_comments' => 'nullable|string',
             ]);
@@ -456,6 +465,10 @@ class SubmittalController extends ApiBaseController
 
             $submittal = $this->submittalForTenant($id);
 
+            if (!in_array($submittal->status, [\App\Models\Submittal::STATUS_SUBMITTED, \App\Models\Submittal::STATUS_PENDING_REVIEW], true)) {
+                return $this->errorResponse('Only submitted or pending_review submittals can be rejected', 400);
+            }
+
             $validator = Validator::make($request->all(), [
                 'rejection_reason' => 'required|string',
                 'rejection_comments' => 'nullable|string',
@@ -498,17 +511,20 @@ class SubmittalController extends ApiBaseController
      */
     private function generateSubmittalNumber(string $projectId, ?Project $project = null): string
     {
-        $project ??= $this->projectForTenant($projectId);
-        $projectCode = $project ? strtoupper(substr($project->name, 0, 3)) : 'PRJ';
-        
-        $lastSubmittal = Submittal::where('tenant_id', $this->tenantId())
-            ->where('project_id', $projectId)
-            ->orderBy('created_at', 'desc')
-            ->first();
-        
-        $sequence = $lastSubmittal ? (int)substr($lastSubmittal->submittal_number, -4) + 1 : 1;
-        
-        return $projectCode . '-SUB-' . sprintf('%04d', $sequence);
+        return DB::transaction(function () use ($projectId, $project): string {
+            $project ??= $this->projectForTenant($projectId);
+            $projectCode = $project ? strtoupper(substr($project->name, 0, 3)) : 'PRJ';
+
+            $lastSubmittal = Submittal::where('tenant_id', $this->tenantId())
+                ->where('project_id', $projectId)
+                ->orderBy('created_at', 'desc')
+                ->lockForUpdate()
+                ->first();
+
+            $sequence = $lastSubmittal ? (int) substr($lastSubmittal->submittal_number, -4) + 1 : 1;
+
+            return $projectCode . '-SUB-' . sprintf('%04d', $sequence);
+        });
     }
 
     private function projectForTenant(string $projectId): ?Project

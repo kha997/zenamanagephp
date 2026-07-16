@@ -32,6 +32,16 @@ class AuthServiceProvider extends ServiceProvider
         'App\Models\Template' => 'App\Policies\TemplatePolicy',
         'App\Models\Invitation' => 'App\Policies\InvitationPolicy',
         'App\Models\SidebarConfig' => 'App\Policies\SidebarConfigPolicy',
+        'App\Models\MaterialRequest' => 'App\Policies\MaterialRequestPolicy',
+        'App\Models\MaterialReceipt' => 'App\Policies\MaterialReceiptPolicy',
+        'App\Models\MaterialReceiptChecklist' => 'App\Policies\MaterialReceiptChecklistPolicy',
+        'App\Models\MaterialReceiptLine' => 'App\Policies\MaterialReceiptLinePolicy',
+        'App\Models\SiteDiary' => 'App\Policies\SiteDiaryPolicy',
+        'App\Models\WebhookEndpoint' => 'App\Policies\WebhookEndpointPolicy',
+        'App\Models\Lead' => 'App\Policies\LeadPolicy',
+        'App\Models\Account' => 'App\Policies\AccountPolicy',
+        'App\Models\Opportunity' => 'App\Policies\OpportunityPolicy',
+        'App\Models\DesignItem' => 'App\Policies\DesignItemPolicy',
     ];
 
     /**

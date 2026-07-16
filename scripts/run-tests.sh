@@ -92,7 +92,7 @@ run_final_tests() {
     
     cd "$PROJECT_DIR"
     
-    if php artisan test --testsuite="Final Testing" --coverage-html="$COVERAGE_DIR/final" --log-junit="$TEST_RESULTS_DIR/final-tests.xml"; then
+    if php artisan test tests/Feature/FinalSystemTest.php tests/Feature/PerformanceTest.php tests/Feature/SecurityTest.php tests/Feature/QualityAssuranceTest.php --coverage-html="$COVERAGE_DIR/final" --log-junit="$TEST_RESULTS_DIR/final-tests.xml"; then
         success "Final tests passed"
     else
         error "Final tests failed"

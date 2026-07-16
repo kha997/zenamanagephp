@@ -35,10 +35,10 @@ class ProjectService
         // Create project
         $project = $this->projectRepository->create([
             'name' => $data['name'],
-            'description' => $data['description'],
+            'description' => $data['description'] ?? null,
             'code' => $data['code'],
-            'status' => 'planning',
-            'budget_total' => $data['budget_total'] ?? 0,
+            'status' => $data['status'] ?? 'planning',
+            'budget_total' => $data['budget_total'] ?? ($data['budget_planned'] ?? 0),
             'start_date' => $data['start_date'] ?? null,
             'end_date' => $data['end_date'] ?? null,
             'user_id' => $userId,

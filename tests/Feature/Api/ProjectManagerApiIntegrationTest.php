@@ -280,6 +280,7 @@ class ProjectManagerApiIntegrationTest extends TestCase
     /**
      * Test performance of project manager dashboard stats endpoint
      */
+    /** @group performance */
     public function test_project_manager_dashboard_stats_performance()
     {
         // Create multiple projects and tasks for performance testing
@@ -315,6 +316,7 @@ class ProjectManagerApiIntegrationTest extends TestCase
     /**
      * Test performance of project manager dashboard timeline endpoint
      */
+    /** @group performance */
     public function test_project_manager_dashboard_timeline_performance()
     {
         // Create multiple projects for performance testing

@@ -99,7 +99,7 @@ class ChangeRequestResource extends JsonResource
      */
     private function getDaysSinceCreated(): int
     {
-        return $this->created_at->diffInDays(now());
+        return (int) round($this->created_at->diffInDays(now()));
     }
     
     /**
@@ -111,7 +111,7 @@ class ChangeRequestResource extends JsonResource
             return null;
         }
         
-        return $this->decided_at->diffInDays(now());
+        return (int) round($this->decided_at->diffInDays(now()));
     }
 
     private function canBeEdited(): bool

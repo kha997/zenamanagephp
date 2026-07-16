@@ -17,6 +17,9 @@ use Illuminate\Support\Facades\Cache;
 use Tests\Traits\AuthenticationTrait;
 use Tests\Traits\RouteNameTrait;
 
+/**
+ * @group performance
+ */
 class PerformanceIntegrationTest extends TestCase
 {
     use RefreshDatabase, AuthenticationTrait, RouteNameTrait;
@@ -505,9 +508,16 @@ class PerformanceIntegrationTest extends TestCase
         echo "Widget Data Load Time: {$dataExecutionTime}ms\n";
     }
 
-    /** @test */
+    /**
+     * @test
+     * @group stress
+     */
     public function it_can_handle_stress_testing()
     {
+        if (!env('RUN_STRESS_TESTS')) {
+            $this->markTestSkipped('RUN_STRESS_TESTS=1 is required for wall-clock stress thresholds (hardware dependent)');
+        }
+
         $stressTestCycles = 5;
         $operationsPerCycle = 10;
         

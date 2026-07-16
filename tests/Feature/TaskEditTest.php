@@ -46,6 +46,7 @@ class TaskEditTest extends TestCase
 
         $this->task = Task::create([
             'id' => '01k5e5nty3m1059pcyymbkgqt8',
+            'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'name' => 'Test Task',
             'description' => 'Test task description',

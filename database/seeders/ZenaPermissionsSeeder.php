@@ -90,6 +90,10 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'template.publish', 'module' => 'template', 'action' => 'publish', 'description' => 'Publish immutable template versions'],
         ['code' => 'template.apply', 'module' => 'template', 'action' => 'apply', 'description' => 'Apply a published template version to a project'],
 
+        // Document templates (thư viện biểu mẫu)
+        ['code' => 'document_template.view', 'module' => 'document_template', 'action' => 'view', 'description' => 'View document templates'],
+        ['code' => 'document_template.manage', 'module' => 'document_template', 'action' => 'manage', 'description' => 'Create, edit, publish document templates'],
+
         // Work instances
         ['code' => 'work.view', 'module' => 'work', 'action' => 'view', 'description' => 'View work instances'],
         ['code' => 'work.update', 'module' => 'work', 'action' => 'update', 'description' => 'Update work instance steps and values'],
@@ -105,6 +109,14 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'contract.payment.create', 'module' => 'contract', 'action' => 'payment.create', 'description' => 'Create contract payments'],
         ['code' => 'contract.payment.update', 'module' => 'contract', 'action' => 'payment.update', 'description' => 'Update contract payments'],
         ['code' => 'contract.payment.delete', 'module' => 'contract', 'action' => 'payment.delete', 'description' => 'Delete contract payments'],
+        ['code' => 'contract.expense.view', 'module' => 'contract', 'action' => 'expense.view', 'description' => 'View contract expenses'],
+        ['code' => 'contract.expense.create', 'module' => 'contract', 'action' => 'expense.create', 'description' => 'Create contract expenses'],
+        ['code' => 'contract.expense.delete', 'module' => 'contract', 'action' => 'expense.delete', 'description' => 'Delete contract expenses'],
+
+        // Payment certificates (IPC)
+        ['code' => 'payment_certificate.view', 'module' => 'payment_certificate', 'action' => 'view', 'description' => 'View payment certificates'],
+        ['code' => 'payment_certificate.create', 'module' => 'payment_certificate', 'action' => 'create', 'description' => 'Create and edit payment certificates'],
+        ['code' => 'payment_certificate.approve', 'module' => 'payment_certificate', 'action' => 'approve', 'description' => 'Approve payment certificates'],
 
         // Task management
         ['code' => 'task.view', 'module' => 'task', 'action' => 'view', 'description' => 'View tasks'],
@@ -115,6 +127,7 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'task.dependencies.view', 'module' => 'task', 'action' => 'dependencies.view', 'description' => 'View task dependencies'],
         ['code' => 'task.dependencies.add', 'module' => 'task', 'action' => 'dependencies.add', 'description' => 'Add task dependencies'],
         ['code' => 'task.dependencies.remove', 'module' => 'task', 'action' => 'dependencies.remove', 'description' => 'Remove task dependencies'],
+        ['code' => 'task.escalate-overdue', 'module' => 'task', 'action' => 'escalate-overdue', 'description' => 'Escalate overdue CAPA task'],
 
         // Document management
         ['code' => 'document.view', 'module' => 'document', 'action' => 'view', 'description' => 'View documents'],
@@ -140,6 +153,47 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'boq.update', 'module' => 'boq', 'action' => 'update', 'description' => 'Update canonical BOQs and nested line items'],
         ['code' => 'boq.delete', 'module' => 'boq', 'action' => 'delete', 'description' => 'Delete canonical BOQs and nested line items'],
 
+        // Material requests (procurement workflow)
+        ['code' => 'material.read', 'module' => 'material', 'action' => 'read', 'description' => 'View material requests'],
+        ['code' => 'material.request', 'module' => 'material', 'action' => 'request', 'description' => 'Create and update material requests'],
+        ['code' => 'material.approve', 'module' => 'material', 'action' => 'approve', 'description' => 'Approve or reject material requests'],
+        ['code' => 'material.receive', 'module' => 'material', 'action' => 'receive', 'description' => 'Fulfill/receive approved material requests'],
+
+        // Material receipts (delivery + acceptance)
+        ['code' => 'material-receipt.view', 'module' => 'material-receipt', 'action' => 'view', 'description' => 'View material delivery receipts'],
+        ['code' => 'material-receipt.create', 'module' => 'material-receipt', 'action' => 'create', 'description' => 'Create and update material delivery receipts'],
+
+        // Material receipt checklists (acceptance evidence)
+        ['code' => 'material-receipt-checklist.view', 'module' => 'material-receipt-checklist', 'action' => 'view', 'description' => 'View acceptance checklists for receipts'],
+        ['code' => 'material-receipt-checklist.create', 'module' => 'material-receipt-checklist', 'action' => 'create', 'description' => 'Create acceptance checklists for receipts'],
+
+        // Material receipt lines (line items received)
+        ['code' => 'material-receipt-line.view', 'module' => 'material-receipt-line', 'action' => 'view', 'description' => 'View material receipt line items'],
+        ['code' => 'material-receipt-line.create', 'module' => 'material-receipt-line', 'action' => 'create', 'description' => 'Create and update material receipt line items'],
+
+        // Site diaries (daily site logs)
+        ['code' => 'site_diary.view', 'module' => 'site_diary', 'action' => 'view', 'description' => 'View daily site diaries'],
+        ['code' => 'site_diary.create', 'module' => 'site_diary', 'action' => 'create', 'description' => 'Create, update and submit daily site diaries'],
+        ['code' => 'site_diary.approve', 'module' => 'site_diary', 'action' => 'approve', 'description' => 'Approve submitted site diaries'],
+
+        // CRM (lead inbox, accounts, opportunities — spec crm-zena)
+        ['code' => 'crm.view', 'module' => 'crm', 'action' => 'view', 'description' => 'View CRM leads, accounts and opportunities'],
+        ['code' => 'crm.manage', 'module' => 'crm', 'action' => 'manage', 'description' => 'Create/update leads, accounts, opportunities and move pipeline stages'],
+        ['code' => 'crm.convert', 'module' => 'crm', 'action' => 'convert', 'description' => 'Convert won opportunities into projects'],
+        ['code' => 'ai.suggest', 'module' => 'ai', 'action' => 'suggest', 'description' => 'Request AI-generated suggestions (e.g. lead-conversion service category and scope summary)'],
+
+        // Design work management (design-item kanban — spec zena-ops-roadmap Phase 1)
+        ['code' => 'design-item.view', 'module' => 'design-item', 'action' => 'view', 'description' => 'View design items and their review status'],
+        ['code' => 'design-item.manage', 'module' => 'design-item', 'action' => 'manage', 'description' => 'Create/update design items, change review status, upload files'],
+
+        // Reports
+        ['code' => 'report.view', 'module' => 'report', 'action' => 'view', 'description' => 'View report export page'],
+        ['code' => 'report.export', 'module' => 'report', 'action' => 'export', 'description' => 'Export tenant data to CSV reports'],
+
+        // Webhooks (external integrations)
+        ['code' => 'webhook.view', 'module' => 'webhook', 'action' => 'view', 'description' => 'View webhook endpoints'],
+        ['code' => 'webhook.manage', 'module' => 'webhook', 'action' => 'manage', 'description' => 'Create, toggle and delete webhook endpoints'],
+
         // Notification management
         ['code' => 'notification.view', 'module' => 'notification', 'action' => 'view', 'description' => 'View notifications'],
         ['code' => 'notification.create', 'module' => 'notification', 'action' => 'create', 'description' => 'Send notifications'],
@@ -147,6 +201,13 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'notification.mark-all-read', 'module' => 'notification', 'action' => 'mark-all-read', 'description' => 'Mark all notifications as read'],
         ['code' => 'notification.delete', 'module' => 'notification', 'action' => 'delete', 'description' => 'Delete notifications'],
         ['code' => 'notification.stats', 'module' => 'notification', 'action' => 'stats', 'description' => 'Read notification metrics'],
+
+        // Alert taxonomy (S6.2)
+        ['code' => 'alert.view', 'module' => 'alert', 'action' => 'view', 'description' => 'View dashboard alerts'],
+        ['code' => 'alert.read', 'module' => 'alert', 'action' => 'read', 'description' => 'Mark alert as read'],
+
+        // Event record outbox (S6.3)
+        ['code' => 'event-record.view', 'module' => 'event-record', 'action' => 'view', 'description' => 'Read event records for replayability'],
 
         // Application settings
         ['code' => 'settings.general.read', 'module' => 'settings', 'action' => 'general.read', 'description' => 'View general settings'],

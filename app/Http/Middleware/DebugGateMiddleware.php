@@ -15,9 +15,9 @@ class DebugGateMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Allow debug routes only in non-production environments
-        if (app()->environment('production')) {
-            abort(404, 'Debug routes not available in production');
+        // Allow debug routes only in explicitly safe environments
+        if (!app()->environment(['local', 'testing', 'development'])) {
+            abort(404, 'Debug routes not available in this environment');
         }
 
         return $next($request);

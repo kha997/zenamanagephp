@@ -236,8 +236,12 @@ Route::middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function 
                 return response()->json(['status' => 'error', 'message' => 'Title is required'], 400);
             }
 
-            if (!$documentType) {
-                return response()->json(['status' => 'error', 'message' => 'Document type is required'], 400);
+            $validTypes = \App\Models\Document::VALID_DOCUMENT_TYPES;
+            if (!$documentType || !in_array($documentType, $validTypes, true)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Invalid document_type. Allowed: ' . implode(', ', $validTypes),
+                ], 422);
             }
 
             if (!$file) {

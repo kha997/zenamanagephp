@@ -1,155 +1,73 @@
-@extends('layouts.app-layout')
+@extends('layouts.operator')
 
-@section('title', 'Dashboard - ZenaManage')
+@section('title', 'Bảng điều hành dự án')
+@section('page_title', 'Bảng điều hành dự án')
 
 @section('content')
-<div x-data="dashboardComponent()" x-init="init()" class="min-h-screen bg-gray-50">
-    <!-- Page Header -->
-    <div class="bg-white shadow-sm border-b">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
-                    <p class="text-gray-600 mt-1">Welcome back, John Doe! Here's what's happening with your projects.</p>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                        <i class="fas fa-plus mr-2"></i>New Project
-                    </button>
-                </div>
-            </div>
-        </div>
+    <x-ui.page-header
+        title="Bảng điều hành dự án"
+        description="Tổng quan dự án, công việc và hoạt động gần đây trong tenant của bạn."
+    />
+
+    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4 mb-6">
+        <x-ui.card>
+            <div class="text-sm font-medium text-slate-500">Công việc đang mở</div>
+            <div class="mt-1 text-3xl font-bold text-slate-900">{{ $dashboardStats['activeTasks'] }}</div>
+            <a href="{{ route('app.tasks') }}" class="operator-link text-sm">Mở danh sách →</a>
+        </x-ui.card>
+        <x-ui.card>
+            <div class="text-sm font-medium text-slate-500">Hoàn thành hôm nay</div>
+            <div class="mt-1 text-3xl font-bold text-slate-900">{{ $dashboardStats['completedToday'] }}</div>
+            <div class="text-sm text-slate-500">Tỷ lệ hoàn thành: {{ $dashboardStats['completionRate'] }}</div>
+        </x-ui.card>
+        <x-ui.card>
+            <div class="text-sm font-medium text-slate-500">Thành viên</div>
+            <div class="mt-1 text-3xl font-bold text-slate-900">{{ $dashboardStats['teamMembers'] }}</div>
+            <a href="{{ route('app.team.index') }}" class="operator-link text-sm">Xem nhóm →</a>
+        </x-ui.card>
+        <x-ui.card>
+            <div class="text-sm font-medium text-slate-500">Dự án</div>
+            <div class="mt-1 text-3xl font-bold text-slate-900">{{ $dashboardStats['projects'] }}</div>
+            <a href="{{ route('app.projects') }}" class="operator-link text-sm">Mở danh sách →</a>
+        </x-ui.card>
     </div>
 
-    <!-- Main Content -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-all duration-300">
-                <div class="flex items-center">
-                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-project-diagram text-blue-600 text-xl"></i>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600">Active Projects</p>
-                        <p class="text-2xl font-bold text-gray-900">12</p>
-                        <p class="text-xs text-green-600">+2 from last month</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-all duration-300">
-                <div class="flex items-center">
-                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-tasks text-green-600 text-xl"></i>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600">Completed Tasks</p>
-                        <p class="text-2xl font-bold text-gray-900">48</p>
-                        <p class="text-xs text-green-600">+15 this week</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-all duration-300">
-                <div class="flex items-center">
-                    <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-users text-purple-600 text-xl"></i>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600">Team Members</p>
-                        <p class="text-2xl font-bold text-gray-900">24</p>
-                        <p class="text-xs text-gray-500">No change</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-all duration-300">
-                <div class="flex items-center">
-                    <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-clock text-orange-600 text-xl"></i>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600">Hours Logged</p>
-                        <p class="text-2xl font-bold text-gray-900">156</p>
-                        <p class="text-xs text-green-600">+8 this week</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="grid gap-6 xl:grid-cols-2">
+        <x-ui.card title="Dự án cập nhật gần đây">
+            @if ($recentProjects->isEmpty())
+                <p class="text-sm text-slate-500">Chưa có dự án.</p>
+            @else
+                <x-ui.data-table :headers="['Dự án', 'Trạng thái', 'Tiến độ']">
+                    @foreach ($recentProjects as $project)
+                        <tr>
+                            <td>
+                                <a href="{{ route('app.projects.show', $project->id) }}" class="operator-link font-medium">{{ $project->name }}</a>
+                                <div class="text-sm text-slate-500">{{ $project->code }}</div>
+                            </td>
+                            <td><x-ui.status-badge :status="$project->status" /></td>
+                            <td class="text-sm text-slate-600">{{ (int) $project->progress }}%</td>
+                        </tr>
+                    @endforeach
+                </x-ui.data-table>
+            @endif
+        </x-ui.card>
 
-        <!-- Recent Projects -->
-        <div class="bg-white rounded-lg shadow-lg p-6">
-            <div class="flex items-center justify-between mb-6">
-                <h2 class="text-lg font-semibold text-gray-900">Recent Projects</h2>
-                <a href="/app/projects" class="text-blue-600 hover:text-blue-800 text-sm font-medium">View All</a>
-            </div>
-            <div class="space-y-4">
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div class="flex items-center space-x-4">
-                        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-project-diagram text-blue-600"></i>
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-medium text-gray-900">Website Redesign</h3>
-                            <p class="text-xs text-gray-500">Due in 3 days</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <div class="w-20 bg-gray-200 rounded-full h-2">
-                            <div class="bg-blue-500 h-2 rounded-full" style="width: 75%"></div>
-                        </div>
-                        <span class="text-xs text-gray-500">75%</span>
-                    </div>
+        <x-ui.card title="Hoạt động gần đây">
+            @if ($recentEvents->isEmpty())
+                <p class="text-sm text-slate-500">Chưa có sự kiện nào được ghi nhận.</p>
+            @else
+                <ul class="space-y-3">
+                    @foreach ($recentEvents as $event)
+                        <li class="text-sm">
+                            <span class="font-medium text-slate-900">{{ $event->event_key }}</span>
+                            <span class="text-slate-500">— {{ $event->actor?->name ?? 'Hệ thống' }} · {{ optional($event->occurred_at)->format('d/m/Y H:i') }}</span>
+                        </li>
+                    @endforeach
+                </ul>
+                <div class="mt-3">
+                    <a href="{{ route('operator.activity-feed.index') }}" class="operator-link text-sm">Xem toàn bộ nhật ký hoạt động →</a>
                 </div>
-                
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div class="flex items-center space-x-4">
-                        <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-mobile-alt text-green-600"></i>
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-medium text-gray-900">Mobile App Development</h3>
-                            <p class="text-xs text-gray-500">Due in 1 week</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <div class="w-20 bg-gray-200 rounded-full h-2">
-                            <div class="bg-green-500 h-2 rounded-full" style="width: 45%"></div>
-                        </div>
-                        <span class="text-xs text-gray-500">45%</span>
-                    </div>
-                </div>
-                
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div class="flex items-center space-x-4">
-                        <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-database text-purple-600"></i>
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-medium text-gray-900">Database Migration</h3>
-                            <p class="text-xs text-gray-500">Due in 2 weeks</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <div class="w-20 bg-gray-200 rounded-full h-2">
-                            <div class="bg-purple-500 h-2 rounded-full" style="width: 20%"></div>
-                        </div>
-                        <span class="text-xs text-gray-500">20%</span>
-                    </div>
-                </div>
-            </div>
-        </div>
+            @endif
+        </x-ui.card>
     </div>
-</div>
-
-<script>
-function dashboardComponent() {
-    return {
-        init() {
-            console.log('Dashboard component initialized');
-        }
-    }
-}
-</script>
 @endsection

@@ -8,6 +8,18 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property string $id ULID primary key
+ * @property string $tenant_id Tenant ULID
+ * @property string $boq_id BOQ ULID
+ * @property string|null $component_id Component ULID
+ * @property string $code Line item code
+ * @property string $name Line item name
+ * @property string|null $description Description
+ * @property float $quantity Quantity
+ * @property string $unit Unit of measurement
+ * @property float|null $unit_price Unit price
+ */
 class BoqLineItem extends Model
 {
     use HasUlids, HasFactory, TenantScope;
@@ -27,6 +39,7 @@ class BoqLineItem extends Model
         'description',
         'quantity',
         'unit',
+        'unit_price',
     ];
 
     protected $casts = [
@@ -38,6 +51,7 @@ class BoqLineItem extends Model
         'description' => 'string',
         'quantity' => 'float',
         'unit' => 'string',
+        'unit_price' => 'float',
     ];
 
     public function boq(): BelongsTo

@@ -220,6 +220,17 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::put('/{id}', [\App\Http\Controllers\Api\ProjectController::class, 'update'])->middleware('rbac:project.update')->name('projects.update');
             Route::delete('/{id}', [\App\Http\Controllers\Api\ProjectController::class, 'destroy'])->middleware('rbac:project.delete')->name('projects.destroy');
             Route::post('/{id}/apply-template', [\App\Http\Controllers\Api\WorkTemplateController::class, 'applyToProject'])->middleware('rbac:template.apply')->name('projects.apply-template');
+
+            Route::group(['prefix' => '/{project}/contracts', 'as' => 'projects.contracts.'], function () {
+                Route::get('/', [\App\Http\Controllers\Api\ContractController::class, 'index'])->middleware('rbac:contract.view')->name('index');
+                Route::post('/', [\App\Http\Controllers\Api\ContractController::class, 'store'])->middleware('rbac:contract.create')->name('store');
+                Route::get('/{contract}', [\App\Http\Controllers\Api\ContractController::class, 'show'])->middleware('rbac:contract.view')->name('show');
+                Route::put('/{contract}', [\App\Http\Controllers\Api\ContractController::class, 'update'])->middleware('rbac:contract.update')->name('update');
+                Route::delete('/{contract}', [\App\Http\Controllers\Api\ContractController::class, 'destroy'])->middleware('rbac:contract.delete')->name('destroy');
+                Route::get('/{contract}/material-receipts', [\App\Http\Controllers\Api\ContractController::class, 'materialReceipts'])->middleware('rbac:contract.view')->name('material-receipts.index');
+                Route::get('/{contract}/cost-summary', [\App\Http\Controllers\Api\ContractController::class, 'costSummary'])->middleware('rbac:contract.view')->name('cost-summary.show');
+                Route::get('/{contract}/pdf', [\App\Http\Controllers\Api\ContractController::class, 'pdf'])->middleware('rbac:contract.view')->name('pdf');
+            });
         });
 
         Route::group(['prefix' => 'components'], function () {
@@ -258,6 +269,7 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::get('/{id}/dependencies', [\App\Http\Controllers\Api\TaskController::class, 'getDependencies'])->middleware('rbac:task.dependencies.view')->name('tasks.dependencies');
             Route::post('/{id}/dependencies', [\App\Http\Controllers\Api\TaskController::class, 'addDependency'])->middleware('rbac:task.dependencies.add')->name('tasks.add-dependency');
             Route::delete('/{id}/dependencies/{dependencyId}', [\App\Http\Controllers\Api\TaskController::class, 'removeDependency'])->middleware('rbac:task.dependencies.remove')->name('tasks.remove-dependency');
+            Route::post('/{id}/escalate-overdue', [\App\Http\Controllers\Api\TaskController::class, 'escalateOverdue'])->middleware('rbac:task.escalate-overdue')->name('tasks.escalate-overdue');
         });
 
         // RFI (Request for Information) routes
@@ -315,6 +327,85 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::put('/{boq}/line-items/{lineItem}', [\App\Http\Controllers\Api\BoqLineItemController::class, 'update'])->middleware('rbac:boq.update')->name('boqs.line-items.update');
             Route::delete('/{boq}/line-items/{lineItem}', [\App\Http\Controllers\Api\BoqLineItemController::class, 'destroy'])->middleware('rbac:boq.delete')->name('boqs.line-items.destroy');
         });
+
+        // Material Requests (procurement workflow)
+        Route::group(['prefix' => 'material-requests'], function () {
+            Route::get('/', [\App\Http\Controllers\Api\MaterialRequestController::class, 'index'])->middleware('rbac:material.read')->name('material-requests.index');
+            Route::post('/', [\App\Http\Controllers\Api\MaterialRequestController::class, 'store'])->middleware('rbac:material.request')->name('material-requests.store');
+            Route::get('/{id}', [\App\Http\Controllers\Api\MaterialRequestController::class, 'show'])->middleware('rbac:material.read')->name('material-requests.show');
+            Route::put('/{id}', [\App\Http\Controllers\Api\MaterialRequestController::class, 'update'])->middleware('rbac:material.request')->name('material-requests.update');
+            Route::get('/{id}/receipts', [\App\Http\Controllers\Api\MaterialRequestController::class, 'receipts'])->middleware('rbac:material.read')->name('material-requests.receipts');
+            Route::post('/{id}/submit', [\App\Http\Controllers\Api\MaterialRequestController::class, 'submit'])->middleware('rbac:material.request')->name('material-requests.submit');
+            Route::post('/{id}/approve', [\App\Http\Controllers\Api\MaterialRequestController::class, 'approve'])->middleware('rbac:material.approve')->name('material-requests.approve');
+            Route::post('/{id}/reject', [\App\Http\Controllers\Api\MaterialRequestController::class, 'reject'])->middleware('rbac:material.approve')->name('material-requests.reject');
+            Route::post('/{id}/fulfill', [\App\Http\Controllers\Api\MaterialRequestController::class, 'fulfill'])->middleware('rbac:material.receive')->name('material-requests.fulfill');
+        });
+
+        // Design Item (design-item kanban — spec zena-ops-roadmap Phase 1)
+        Route::group(['prefix' => 'design-items'], function () {
+            Route::get('/', [\App\Http\Controllers\Api\DesignItemController::class, 'index'])->middleware('rbac:design-item.view')->name('design-items.index');
+            Route::post('/', [\App\Http\Controllers\Api\DesignItemController::class, 'store'])->middleware('rbac:design-item.manage')->name('design-items.store');
+            Route::get('/{id}', [\App\Http\Controllers\Api\DesignItemController::class, 'show'])->middleware('rbac:design-item.view')->name('design-items.show');
+            Route::put('/{id}', [\App\Http\Controllers\Api\DesignItemController::class, 'update'])->middleware('rbac:design-item.manage')->name('design-items.update');
+            Route::post('/{id}/status', [\App\Http\Controllers\Api\DesignItemController::class, 'updateStatus'])->middleware('rbac:design-item.manage')->name('design-items.status');
+            Route::post('/{id}/documents', [\App\Http\Controllers\Api\DesignItemController::class, 'uploadDocument'])->middleware('rbac:design-item.manage')->name('design-items.documents.store');
+            Route::get('/{id}/documents', [\App\Http\Controllers\Api\DesignItemController::class, 'listDocuments'])->middleware('rbac:design-item.view')->name('design-items.documents.index');
+        });
+
+        // CRM (lead inbox → account/opportunity → project; spec crm-zena)
+        Route::group(['prefix' => 'crm'], function () {
+            Route::get('/leads', [\App\Http\Controllers\Api\LeadController::class, 'index'])->middleware('rbac:crm.view')->name('crm.leads.index');
+            Route::post('/leads', [\App\Http\Controllers\Api\LeadController::class, 'store'])->middleware('rbac:crm.manage')->name('crm.leads.store');
+            Route::post('/leads/{id}/convert', [\App\Http\Controllers\Api\LeadController::class, 'convert'])->middleware('rbac:crm.manage')->name('crm.leads.convert');
+            Route::post('/leads/{id}/discard', [\App\Http\Controllers\Api\LeadController::class, 'discard'])->middleware('rbac:crm.manage')->name('crm.leads.discard');
+
+            Route::get('/accounts', [\App\Http\Controllers\Api\AccountController::class, 'index'])->middleware('rbac:crm.view')->name('crm.accounts.index');
+            Route::post('/accounts', [\App\Http\Controllers\Api\AccountController::class, 'store'])->middleware('rbac:crm.manage')->name('crm.accounts.store');
+            Route::get('/accounts/{id}', [\App\Http\Controllers\Api\AccountController::class, 'show'])->middleware('rbac:crm.view')->name('crm.accounts.show');
+            Route::put('/accounts/{id}', [\App\Http\Controllers\Api\AccountController::class, 'update'])->middleware('rbac:crm.manage')->name('crm.accounts.update');
+
+            Route::get('/opportunities', [\App\Http\Controllers\Api\OpportunityController::class, 'index'])->middleware('rbac:crm.view')->name('crm.opportunities.index');
+            Route::post('/opportunities', [\App\Http\Controllers\Api\OpportunityController::class, 'store'])->middleware('rbac:crm.manage')->name('crm.opportunities.store');
+            Route::get('/opportunities/{id}', [\App\Http\Controllers\Api\OpportunityController::class, 'show'])->middleware('rbac:crm.view')->name('crm.opportunities.show');
+            Route::put('/opportunities/{id}', [\App\Http\Controllers\Api\OpportunityController::class, 'update'])->middleware('rbac:crm.manage')->name('crm.opportunities.update');
+            Route::post('/opportunities/{id}/stage', [\App\Http\Controllers\Api\OpportunityController::class, 'updateStage'])->middleware('rbac:crm.manage')->name('crm.opportunities.stage');
+            Route::post('/opportunities/{id}/convert', [\App\Http\Controllers\Api\OpportunityController::class, 'convert'])->middleware('rbac:crm.convert')->name('crm.opportunities.convert');
+            Route::post('/opportunities/{id}/boq-link', [\App\Http\Controllers\Api\OpportunityController::class, 'linkExternalBoqProject'])->middleware('rbac:crm.manage')->name('crm.opportunities.boq-link');
+            Route::post('/opportunities/{id}/boq-sync', [\App\Http\Controllers\Api\OpportunityController::class, 'syncExternalQuote'])->middleware('rbac:crm.manage')->name('crm.opportunities.boq-sync');
+            Route::post('/opportunities/{id}/create-contract', [\App\Http\Controllers\Api\OpportunityController::class, 'createContract'])->middleware('rbac:crm.manage')->name('crm.opportunities.create-contract');
+        });
+
+        // Site Diaries (daily site logs)
+        Route::group(['prefix' => 'site-diaries'], function () {
+            Route::get('/', [\App\Http\Controllers\Api\SiteDiaryController::class, 'index'])->middleware('rbac:site_diary.view')->name('site-diaries.index');
+            Route::post('/', [\App\Http\Controllers\Api\SiteDiaryController::class, 'store'])->middleware('rbac:site_diary.create')->name('site-diaries.store');
+            Route::get('/{id}', [\App\Http\Controllers\Api\SiteDiaryController::class, 'show'])->middleware('rbac:site_diary.view')->name('site-diaries.show');
+            Route::put('/{id}', [\App\Http\Controllers\Api\SiteDiaryController::class, 'update'])->middleware('rbac:site_diary.create')->name('site-diaries.update');
+            Route::post('/{id}/submit', [\App\Http\Controllers\Api\SiteDiaryController::class, 'submit'])->middleware('rbac:site_diary.create')->name('site-diaries.submit');
+            Route::post('/{id}/approve', [\App\Http\Controllers\Api\SiteDiaryController::class, 'approve'])->middleware('rbac:site_diary.approve')->name('site-diaries.approve');
+        });
+
+        // Material Receipts (delivery + acceptance checklist)
+        Route::group(['prefix' => 'material-receipts'], function () {
+            Route::get('/', [\App\Http\Controllers\Api\MaterialReceiptController::class, 'index'])->middleware('rbac:material-receipt.view')->name('material-receipts.index');
+            Route::post('/', [\App\Http\Controllers\Api\MaterialReceiptController::class, 'store'])->middleware('rbac:material-receipt.create')->name('material-receipts.store');
+            Route::get('/{id}', [\App\Http\Controllers\Api\MaterialReceiptController::class, 'show'])->middleware('rbac:material-receipt.view')->name('material-receipts.show');
+            Route::put('/{id}', [\App\Http\Controllers\Api\MaterialReceiptController::class, 'update'])->middleware('rbac:material-receipt.create')->name('material-receipts.update');
+            Route::get('/{id}/material-request', [\App\Http\Controllers\Api\MaterialReceiptController::class, 'materialRequest'])->middleware('rbac:material-receipt.view')->name('material-receipts.material-request');
+
+            Route::group(['prefix' => '/{receipt}/checklists'], function () {
+                Route::post('/', [\App\Http\Controllers\Api\MaterialReceiptChecklistController::class, 'store'])->middleware('rbac:material-receipt-checklist.create')->name('material-receipts.checklists.store');
+                Route::get('/{checklist}', [\App\Http\Controllers\Api\MaterialReceiptChecklistController::class, 'show'])->middleware('rbac:material-receipt-checklist.view')->name('material-receipts.checklists.show');
+            });
+
+            Route::group(['prefix' => '/{receipt}/lines'], function () {
+                Route::get('/', [\App\Http\Controllers\Api\MaterialReceiptLineController::class, 'index'])->middleware('rbac:material-receipt-line.view')->name('material-receipts.lines.index');
+                Route::post('/', [\App\Http\Controllers\Api\MaterialReceiptLineController::class, 'store'])->middleware('rbac:material-receipt-line.create')->name('material-receipts.lines.store');
+                Route::get('/{line}', [\App\Http\Controllers\Api\MaterialReceiptLineController::class, 'show'])->middleware('rbac:material-receipt-line.view')->name('material-receipts.lines.show');
+                Route::put('/{line}', [\App\Http\Controllers\Api\MaterialReceiptLineController::class, 'update'])->middleware('rbac:material-receipt-line.create')->name('material-receipts.lines.update');
+            });
+        });
+
 
         // Change Requests routes
         Route::group(['prefix' => 'change-requests'], function () {
@@ -422,5 +513,18 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
         // Template package import/export routes
         Route::get('/export-template-package/{wtId}', [\App\Http\Controllers\Api\WorkTemplateController::class, 'exportTemplatePackage'])->middleware('rbac:template.view')->name('work-templates.package.export');
         Route::post('/import-template-package', [\App\Http\Controllers\Api\WorkTemplateController::class, 'importTemplatePackage'])->middleware('rbac:template.edit_draft')->name('work-templates.package.import');
+
+        // Alert taxonomy routes (S6.2)
+        Route::prefix('alerts')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\AlertController::class, 'index'])->middleware('rbac:alert.view')->name('alerts.index');
+            Route::get('/{id}', [\App\Http\Controllers\Api\AlertController::class, 'show'])->middleware('rbac:alert.view')->name('alerts.show');
+            Route::put('/{id}/read', [\App\Http\Controllers\Api\AlertController::class, 'markAsRead'])->middleware('rbac:alert.read')->name('alerts.mark-read');
+        });
+
+        // Event record outbox routes (S6.3)
+        Route::prefix('event-records')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\EventRecordController::class, 'index'])->middleware('rbac:event-record.view')->name('event-records.index');
+            Route::get('/{id}', [\App\Http\Controllers\Api\EventRecordController::class, 'show'])->middleware('rbac:event-record.view')->name('event-records.show');
+        });
     });
 });

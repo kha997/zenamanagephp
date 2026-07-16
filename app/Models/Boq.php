@@ -9,6 +9,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property string $id ULID primary key
+ * @property string $tenant_id Tenant ULID
+ * @property string $project_id Project ULID
+ * @property string|null $contract_id Contract ULID
+ * @property string $code BOQ code
+ * @property string $name BOQ name
+ * @property string|null $description BOQ description
+ */
 class Boq extends Model
 {
     use HasUlids, HasFactory, TenantScope;
@@ -22,6 +31,7 @@ class Boq extends Model
     protected $fillable = [
         'tenant_id',
         'project_id',
+        'contract_id',
         'code',
         'name',
         'description',
@@ -30,6 +40,7 @@ class Boq extends Model
     protected $casts = [
         'tenant_id' => 'string',
         'project_id' => 'string',
+        'contract_id' => 'string',
         'code' => 'string',
         'name' => 'string',
         'description' => 'string',
@@ -38,6 +49,12 @@ class Boq extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    /** @return BelongsTo<Contract, $this> */
+    public function contract(): BelongsTo
+    {
+        return $this->belongsTo(Contract::class);
     }
 
     public function lineItems(): HasMany

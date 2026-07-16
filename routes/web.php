@@ -55,6 +55,19 @@ Route::middleware(['legacy.gone', 'legacy.redirect', 'legacy.route'])->group(fun
 
 // Simple Authentication Routes (available in local/testing environments only)
 if (app()->environment(['local', 'testing'])) {
+    Route::get('/local/dev-login/operator', function (Illuminate\Http\Request $request) {
+        $email = $request->query('email', '');
+        $user = \App\Models\User::where('email', $email)->whereNotNull('tenant_id')->first();
+
+        if (!$user) {
+            return response("No tenant-backed user found for [{$email}].", 404);
+        }
+
+        Auth::login($user);
+
+        return redirect()->route('operator.dashboard');
+    })->name('local.dev-login.operator');
+
     Route::get('/login', function () {
         return view('auth.login');
     })->name('login');
@@ -76,14 +89,11 @@ if (app()->environment(['local', 'testing'])) {
 Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function () {
     $universalFrameHardeningStack = ['tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'];
 
-    // KPI Routes
-    Route::middleware($universalFrameHardeningStack)->group(function () {
-        Route::get('/kpis', [App\Http\Controllers\KpiController::class, 'index'])->name('api.kpis.index');
-        Route::get('/kpis/preferences', [App\Http\Controllers\KpiController::class, 'preferences'])->name('api.kpis.preferences');
-        Route::post('/kpis/preferences', [App\Http\Controllers\KpiController::class, 'savePreferences'])->name('api.kpis.save-preferences');
-        Route::post('/kpis/refresh', [App\Http\Controllers\KpiController::class, 'refresh'])->name('api.kpis.refresh');
-        Route::get('/kpis/stats', [App\Http\Controllers\KpiController::class, 'stats'])->name('api.kpis.stats');
-    });
+    // KPI routes removed 2026-07-12: KpiController/KpiService served 100% hardcoded
+    // mock values behind a real RBAC gate. Real KPI data now lives at
+    // App\Services\BusinessKpiService, consumed by operator.crm.reports
+    // (Web\CrmReportController). The dead classes remain on disk (unrouted,
+    // no consumer) pending a cleanup pass with file-delete permission.
     
     // Alert Routes
     Route::middleware($universalFrameHardeningStack)->group(function () {
@@ -103,14 +113,9 @@ Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function ()
     });
     
     // Smart Tools Routes
-    // Search Routes
-    Route::middleware($universalFrameHardeningStack)->group(function () {
-        Route::post('/search', [App\Http\Controllers\SearchController::class, 'search'])->name('api.search.index');
-        Route::get('/search/suggestions', [App\Http\Controllers\SearchController::class, 'suggestions'])->name('api.search.suggestions');
-        Route::get('/search/recent', [App\Http\Controllers\SearchController::class, 'recent'])->name('api.search.recent');
-        Route::post('/search/recent', [App\Http\Controllers\SearchController::class, 'saveRecent'])->name('api.search.save-recent');
-    });
-    
+    // Search: dùng operator search thật tại route operator.search.index
+    // (mock SearchService/SearchController đã xóa)
+
     // Filter Routes
     Route::middleware($universalFrameHardeningStack)->group(function () {
         Route::get('/filters/presets', [App\Http\Controllers\FilterController::class, 'presets'])->name('api.filters.presets');
@@ -130,18 +135,8 @@ Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function ()
         Route::get('/analysis/{context}/insights', [App\Http\Controllers\AnalysisController::class, 'insights'])->name('api.analysis.insights');
     });
     
-    // Export Routes
-    Route::middleware($universalFrameHardeningStack)->group(function () {
-        Route::post('/export', [App\Http\Controllers\ExportController::class, 'index'])->name('api.export.index');
-        Route::post('/export/projects', [App\Http\Controllers\ExportController::class, 'projects'])->name('api.export.projects');
-        Route::post('/export/tasks', [App\Http\Controllers\ExportController::class, 'tasks'])->name('api.export.tasks');
-        Route::post('/export/documents', [App\Http\Controllers\ExportController::class, 'documents'])->name('api.export.documents');
-        Route::post('/export/users', [App\Http\Controllers\ExportController::class, 'users'])->name('api.export.users');
-        Route::post('/export/tenants', [App\Http\Controllers\ExportController::class, 'tenants'])->name('api.export.tenants');
-        Route::get('/export/history', [App\Http\Controllers\ExportController::class, 'history'])->name('api.export.history');
-        Route::delete('/export/{filename}', [App\Http\Controllers\ExportController::class, 'delete'])->name('api.export.delete');
-        Route::post('/export/clean-old', [App\Http\Controllers\ExportController::class, 'cleanOld'])->name('api.export.clean-old');
-    });
+    // Export: dùng operator report export thật tại route operator.reports.export
+    // (mock ExportService/ExportController đã xóa)
 });
 
     // Accessibility API Routes (moved to /api/v1/accessibility)
@@ -186,18 +181,8 @@ Route::prefix('api/v1/final-integration')->middleware(['auth', 'tenant.isolation
     Route::get('/launch-report', [App\Http\Controllers\FinalIntegrationController::class, 'generateLaunchReport'])->name('api.final-integration.launch-report');
 });
 
-// App Routes (Tenant-scoped with auth + tenant.isolation middleware)
-Route::get('/app/projects', function() {
-    return view('app.projects');
-})->middleware(['auth', 'tenant.isolation'])->name('app.projects');
-
-Route::get('/app/tasks', function() {
-    return view('app.tasks');
-})->middleware(['auth', 'tenant.isolation'])->name('app.tasks');
-
-Route::get('/app/calendar', function() {
-    return view('app.calendar');
-})->middleware(['auth', 'tenant.isolation'])->name('app.calendar');
+// App routes are defined once in the canonical `Route::prefix('app')` group
+// further below — earlier duplicate closure definitions were removed.
 
 // Admin Routes (System-wide with auth + rbac:admin middleware)
 Route::get('/admin/dashboard', function() {
@@ -218,48 +203,38 @@ if (app()->environment(['local', 'testing'])) {
         return view('admin.dashboard');
     })->name('admin-dashboard-complete');
 
-    Route::get('/projects-complete', function () {
-        return view('app.projects');
-    })->name('projects-complete');
-
-    Route::get('/tasks-complete', function () {
-        return view('app.tasks');
-    })->name('tasks-complete');
-
-    Route::get('/calendar-complete', function () {
-        return view('app.calendar');
-    })->name('calendar-complete');
+    Route::get('/projects-complete', fn () => redirect()->route('app.projects'))->name('projects-complete');
+    Route::get('/tasks-complete', fn () => redirect()->route('app.tasks'))->name('tasks-complete');
+    Route::get('/calendar-complete', fn () => redirect()->route('app.calendar'))->name('calendar-complete');
 }
 
-// Tailwind CSS Test Route
-Route::get('/test-tailwind', function() {
-    return view('test-tailwind');
-})->name('test-tailwind');
+// Test/demo view routes — local and testing environments only
+if (app()->environment(['local', 'testing'])) {
+    Route::get('/test-tailwind', function() {
+        return view('test-tailwind');
+    })->name('test-tailwind');
+
+    Route::get('/test-css-inline', function() {
+        return view('test-css-inline');
+    })->name('test-css-inline');
+
+    Route::get('/admin-layout-system', function() {
+        return view('admin.dashboard-layout-system-standalone');
+    })->name('admin-layout-system');
+}
 
 // Enhanced Admin Dashboard Route
 Route::get('/admin-dashboard-enhanced', function() {
     return view('admin.dashboard-enhanced');
-})->name('admin-dashboard-enhanced');
+})->middleware(['auth', 'tenant.isolation', 'rbac:admin'])->name('admin-dashboard-enhanced');
 
 // Enhanced Projects Management Route
 Route::get('/projects-enhanced', function() {
     return view('app.projects-enhanced');
-})->name('projects-enhanced');
+})->middleware(['auth', 'tenant.isolation'])->name('projects-enhanced');
 
-// CSS Inline Test Route
-Route::get('/test-css-inline', function() {
-    return view('test-css-inline');
-})->name('test-css-inline');
-
-// Layout System Test Route
-Route::get('/admin-layout-system', function() {
-    return view('admin.dashboard-layout-system-standalone');
-})->name('admin-layout-system');
-
-// Admin Users Management Route
-Route::get('/admin/users', function() {
-    return view('admin.users');
-})->name('admin-users');
+// REMOVED: unauthenticated standalone /admin/users — protected equivalent
+// exists in the admin group below (route name admin-users)
 
 // MOVED: Debug Login Route moved to /_debug namespace
 
@@ -381,19 +356,20 @@ Route::get('/admin/users', function() {
 
     // App Routes (tenant-scoped, auth + tenant isolation enforced)
     Route::prefix('app')->name('app.')->middleware(['auth', 'tenant.isolation'])->group(function () {
-        // Dashboard route - AUTH TEMPORARILY DISABLED due to auth() helper issues
         Route::get('/dashboard', [App\Http\Controllers\Web\AppController::class, 'dashboard'])->name('dashboard');
-        
+
         Route::get('/projects', [App\Http\Controllers\Web\AppController::class, 'projects'])->name('projects');
         Route::get('/projects/create', [App\Http\Controllers\Web\ProjectController::class, 'create'])->name('projects.create');
-        // POST /projects - MOVED TO API: /api/v1/projects
+        // Web store/update delegate sang Api\ProjectController (business logic ở API)
+        Route::post('/projects', [App\Http\Controllers\Web\ProjectController::class, 'store'])->middleware('rbac:project.write')->name('projects.store');
         Route::get('/projects/{project}', [App\Http\Controllers\Web\ProjectController::class, 'show'])->name('projects.show');
         Route::get('/projects/{project}/edit', [App\Http\Controllers\Web\ProjectController::class, 'edit'])->name('projects.edit');
-        // PUT /projects/{project} - MOVED TO API: /api/v1/projects/{project}
+        Route::put('/projects/{project}', [App\Http\Controllers\Web\ProjectController::class, 'update'])->middleware('rbac:project.write')->name('projects.update');
         // DELETE /projects/{project} - MOVED TO API: /api/v1/projects/{project}
     
     // Project sub-resources
     Route::get('/projects/{project}/documents', [App\Http\Controllers\Web\ProjectController::class, 'documents'])->name('projects.documents');
+    Route::get('/projects/{project}/documents/{template}', [App\Http\Controllers\Web\ProjectController::class, 'renderProjectDocument'])->middleware('rbac:project.view')->name('projects.documents.render');
     Route::get('/projects/{project}/history', [App\Http\Controllers\Web\ProjectController::class, 'history'])->name('projects.history');
     Route::get('/projects/{project}/design', function ($project) {
         return view('projects.design-project', compact('project'));
@@ -402,13 +378,19 @@ Route::get('/admin/users', function() {
         return view('projects.construction-project', compact('project'));
     })->name('projects.construction');
     
+    // Calendar
+    Route::get('/calendar', [App\Http\Controllers\Web\AppController::class, 'calendar'])->name('calendar');
+
     // Tasks Routes
     Route::get('/tasks', [App\Http\Controllers\Web\AppController::class, 'tasks'])->name('tasks');
     Route::get('/tasks/create', [App\Http\Controllers\Web\TaskController::class, 'create'])->name('tasks.create');
-    // POST /tasks - MOVED TO API: /api/v1/tasks
+    // Web store/update delegate sang Api\TaskController (business logic ở API)
+    Route::post('/tasks', [App\Http\Controllers\Web\TaskController::class, 'store'])->middleware('rbac:task.create')->name('tasks.store');
     Route::get('/tasks/{task}', [App\Http\Controllers\Web\TaskController::class, 'show'])->name('tasks.show');
     Route::get('/tasks/{task}/edit', [App\Http\Controllers\Web\TaskController::class, 'edit'])->name('tasks.edit');
-    // PUT /tasks/{task} - MOVED TO API: /api/v1/tasks/{task}
+    Route::put('/tasks/{task}', [App\Http\Controllers\Web\TaskController::class, 'update'])->middleware('rbac:task.update')->name('tasks.update');
+    Route::post('/tasks/{task}/block', [App\Http\Controllers\Web\TaskController::class, 'block'])->middleware('rbac:task.update')->name('tasks.block');
+    Route::post('/tasks/{task}/unblock', [App\Http\Controllers\Web\TaskController::class, 'unblock'])->middleware('rbac:task.update')->name('tasks.unblock');
     // DELETE /tasks/{task} - MOVED TO API: /api/v1/tasks/{task}
     
     // Task actions (PATCH for state changes)
@@ -424,11 +406,17 @@ Route::get('/admin/users', function() {
     // Documents Routes
     Route::get('/documents', [App\Http\Controllers\Web\DocumentController::class, 'index'])->name('documents');
     Route::get('/documents/create', [App\Http\Controllers\Web\DocumentController::class, 'create'])->name('documents.create');
+    Route::post('/documents', [App\Http\Controllers\Web\DocumentController::class, 'store'])->middleware('rbac:document.create')->name('documents.store');
     Route::get('/documents/approvals', [App\Http\Controllers\Web\DocumentController::class, 'approvals'])->name('documents.approvals');
     
         // Team Routes
         Route::get('/team', function () {
-            return view('team.index');
+            return view('app.team', [
+                'users' => App\Models\User::query()
+                    ->where('tenant_id', (string) auth()->user()?->tenant_id)
+                    ->orderBy('name')
+                    ->get(['id', 'tenant_id', 'name', 'email', 'role', 'is_active', 'created_at']),
+            ]);
         })->middleware('can:viewAny,' . Team::class)->name('team.index');
     Route::get('/team/users', [App\Http\Controllers\App\TeamUsersController::class, 'index'])->name('team.users.index');
     Route::get('/team/invite', function () {
@@ -437,7 +425,12 @@ Route::get('/admin/users', function() {
     
     // Templates Routes
     Route::get('/templates', function () {
-        return view('templates.index');
+        return view('templates.index', [
+            'templates' => App\Models\Template::query()
+                ->orderByDesc('updated_at')
+                ->limit(100)
+                ->get(),
+        ]);
     })->name('templates');
     Route::get('/templates/builder', function () {
         return view('templates.builder');
@@ -471,7 +464,7 @@ Route::get('/admin/users', function() {
     
     // Profile Routes
     Route::get('/profile', function () {
-        return view('profile.index');
+        return view('app.profile');
     })->name('profile');
 });
 
@@ -839,11 +832,217 @@ Route::permanentRedirect('/performance/clear-caches', '/api/v1/admin/perf/clear-
 //     Route::get('/api/dashboard/metrics', [DashboardController::class, 'metrics'])->name('dashboard.metrics');
 // });
 
-Route::post('/api/upload', [UploadController::class, 'store']);
-Route::get('/api/websocket/auth', [WebSocketAuthController::class, 'authenticate']);
-Route::post('/api/widgets', [WidgetController::class, 'store'])->name('api.legacy.widgets.store');
-Route::put('/api/widgets/{widget}', [WidgetController::class, 'update'])->name('api.legacy.widgets.update');
-Route::delete('/api/widgets/{widget}', [WidgetController::class, 'destroy'])->name('api.legacy.widgets.destroy');
+Route::post('/api/upload', [UploadController::class, 'store'])->middleware(['auth']);
+Route::get('/api/websocket/auth', [WebSocketAuthController::class, 'authenticate'])->middleware(['auth']);
+// No tenant.isolation/rbac:* middleware here — verified 2026-07-12 this is NOT an
+// IDOR: WidgetController checks $widget->user_id === $user->id (and, for store,
+// $dashboard->user_id === $user->id) directly in the controller body, independent
+// of tenant middleware. See tests/Feature/LegacyWidgetOwnershipTest.php for the
+// regression coverage proving cross-user/cross-tenant access is denied.
+Route::middleware(['auth'])->group(function () {
+    Route::post('/api/widgets', [WidgetController::class, 'store'])->name('api.legacy.widgets.store');
+    Route::put('/api/widgets/{widget}', [WidgetController::class, 'update'])->name('api.legacy.widgets.update');
+    Route::delete('/api/widgets/{widget}', [WidgetController::class, 'destroy'])->name('api.legacy.widgets.destroy');
+});
+
+// Operator (Procurement) Routes — canonical web UI for procurement zone
+Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolation'])->group(function () {
+    Route::get('/', App\Http\Controllers\Web\ProcurementDashboardController::class)->name('dashboard');
+
+    // Material Requests — deliberately no rbac:* route middleware: every action is
+    // gated by App\Policies\MaterialRequestPolicy (index/store authorize() directly
+    // in this controller; submit/approve via the delegated Api\MaterialRequestController
+    // call, caught here as AuthorizationException for a friendly redirect+flash message
+    // instead of a raw JSON 403). Verified 2026-07-12: adding rbac:* middleware here
+    // would short-circuit before that catch block and replace the friendly UX with a
+    // raw JSON 403 body — confirmed by a real regression against
+    // OperatorProcurementUiTest::test_operator_actions_fail_safely_for_authenticated_users_without_required_permission.
+    Route::get('/material-requests', [App\Http\Controllers\Web\MaterialRequestPageController::class, 'index'])->name('material-requests.index');
+    Route::get('/material-requests/create', [App\Http\Controllers\Web\MaterialRequestPageController::class, 'create'])->name('material-requests.create');
+    Route::post('/material-requests', [App\Http\Controllers\Web\MaterialRequestPageController::class, 'store'])->name('material-requests.store');
+    Route::post('/material-requests/{id}/submit', [App\Http\Controllers\Web\MaterialRequestPageController::class, 'submit'])->name('material-requests.submit');
+    Route::post('/material-requests/{id}/approve', [App\Http\Controllers\Web\MaterialRequestPageController::class, 'approve'])->name('material-requests.approve');
+
+    // RFIs
+    Route::get('/rfis', [App\Http\Controllers\Web\RfiPageController::class, 'index'])->middleware('rbac:rfi.view')->name('rfis.index');
+    Route::get('/rfis/create', [App\Http\Controllers\Web\RfiPageController::class, 'create'])->middleware('rbac:rfi.create')->name('rfis.create');
+    Route::post('/rfis', [App\Http\Controllers\Web\RfiPageController::class, 'store'])->middleware('rbac:rfi.create')->name('rfis.store');
+    Route::get('/rfis/{id}', [App\Http\Controllers\Web\RfiPageController::class, 'show'])->middleware('rbac:rfi.view')->name('rfis.show');
+    Route::post('/rfis/{id}/respond', [App\Http\Controllers\Web\RfiPageController::class, 'respond'])->middleware('rbac:rfi.respond')->name('rfis.respond');
+    Route::post('/rfis/{id}/close', [App\Http\Controllers\Web\RfiPageController::class, 'close'])->middleware('rbac:rfi.close')->name('rfis.close');
+
+    // Submittals
+    Route::get('/submittals', [App\Http\Controllers\Web\SubmittalPageController::class, 'index'])->middleware('rbac:submittal.view')->name('submittals.index');
+    Route::get('/submittals/create', [App\Http\Controllers\Web\SubmittalPageController::class, 'create'])->middleware('rbac:submittal.create')->name('submittals.create');
+    Route::post('/submittals', [App\Http\Controllers\Web\SubmittalPageController::class, 'store'])->middleware('rbac:submittal.create')->name('submittals.store');
+    Route::get('/submittals/{id}', [App\Http\Controllers\Web\SubmittalPageController::class, 'show'])->middleware('rbac:submittal.view')->name('submittals.show');
+    Route::post('/submittals/{id}/submit', [App\Http\Controllers\Web\SubmittalPageController::class, 'submit'])->middleware('rbac:submittal.submit')->name('submittals.submit');
+    Route::post('/submittals/{id}/approve', [App\Http\Controllers\Web\SubmittalPageController::class, 'approve'])->middleware('rbac:submittal.approve')->name('submittals.approve');
+    Route::post('/submittals/{id}/reject', [App\Http\Controllers\Web\SubmittalPageController::class, 'reject'])->middleware('rbac:submittal.reject')->name('submittals.reject');
+
+    // Change Requests
+    Route::get('/change-requests', [App\Http\Controllers\Web\ChangeRequestPageController::class, 'index'])->middleware('rbac:change-request.view')->name('change-requests.index');
+    Route::get('/change-requests/create', [App\Http\Controllers\Web\ChangeRequestPageController::class, 'create'])->middleware('rbac:change-request.create')->name('change-requests.create');
+    Route::post('/change-requests', [App\Http\Controllers\Web\ChangeRequestPageController::class, 'store'])->middleware('rbac:change-request.create')->name('change-requests.store');
+    Route::get('/change-requests/{id}', [App\Http\Controllers\Web\ChangeRequestPageController::class, 'show'])->middleware('rbac:change-request.view')->name('change-requests.show');
+    Route::post('/change-requests/{id}/submit', [App\Http\Controllers\Web\ChangeRequestPageController::class, 'submit'])->middleware('rbac:change-request.submit')->name('change-requests.submit');
+    Route::post('/change-requests/{id}/approve', [App\Http\Controllers\Web\ChangeRequestPageController::class, 'approve'])->middleware('rbac:change-request.approve')->name('change-requests.approve');
+    Route::post('/change-requests/{id}/reject', [App\Http\Controllers\Web\ChangeRequestPageController::class, 'reject'])->middleware('rbac:change-request.reject')->name('change-requests.reject');
+
+    // BOQs
+    Route::get('/boqs', [App\Http\Controllers\Web\BoqPageController::class, 'index'])->middleware('rbac:boq.view')->name('boqs.index');
+    Route::get('/boqs/create', [App\Http\Controllers\Web\BoqPageController::class, 'create'])->middleware('rbac:boq.create')->name('boqs.create');
+    Route::post('/boqs', [App\Http\Controllers\Web\BoqPageController::class, 'store'])->middleware('rbac:boq.create')->name('boqs.store');
+    Route::get('/boqs/{id}', [App\Http\Controllers\Web\BoqPageController::class, 'show'])->middleware('rbac:boq.view')->name('boqs.show');
+    Route::post('/boqs/{boq}/lines', [App\Http\Controllers\Web\BoqPageController::class, 'storeLine'])->middleware('rbac:boq.create')->name('boqs.lines.store');
+
+    // Vendors
+    Route::get('/vendors', [App\Http\Controllers\Web\VendorPageController::class, 'index'])->middleware('rbac:vendor.view')->name('vendors.index');
+    Route::get('/vendors/create', [App\Http\Controllers\Web\VendorPageController::class, 'create'])->middleware('rbac:vendor.create')->name('vendors.create');
+    Route::post('/vendors', [App\Http\Controllers\Web\VendorPageController::class, 'store'])->middleware('rbac:vendor.create')->name('vendors.store');
+    Route::get('/vendors/{id}', [App\Http\Controllers\Web\VendorPageController::class, 'show'])->middleware('rbac:vendor.view')->name('vendors.show');
+
+    // Contracts
+    Route::get('/contracts', [App\Http\Controllers\Web\ContractPageController::class, 'index'])->middleware('rbac:contract.view')->name('contracts.index');
+    Route::get('/contracts/create', [App\Http\Controllers\Web\ContractPageController::class, 'create'])->middleware('rbac:contract.create')->name('contracts.create');
+    Route::post('/contracts', [App\Http\Controllers\Web\ContractPageController::class, 'store'])->middleware('rbac:contract.create')->name('contracts.store');
+    Route::get('/contracts/{id}', [App\Http\Controllers\Web\ContractPageController::class, 'show'])->middleware('rbac:contract.view')->name('contracts.show');
+    Route::get('/contracts/{id}/pdf', [App\Http\Controllers\Web\ContractPageController::class, 'downloadPdf'])->middleware('rbac:contract.view')->name('contracts.pdf');
+    Route::post('/contracts/{id}/expenses', [App\Http\Controllers\Web\ContractPageController::class, 'storeExpense'])->middleware('rbac:contract.expense.create')->name('contracts.expenses.store');
+    Route::post('/contracts/{id}/finance-settings', [App\Http\Controllers\Web\ContractPageController::class, 'updateFinanceSettings'])->middleware('rbac:contract.update')->name('contracts.finance-settings.update');
+    Route::post('/contracts/{id}/expenses/{expense}/delete', [App\Http\Controllers\Web\ContractPageController::class, 'deleteExpense'])->middleware('rbac:contract.expense.delete')->name('contracts.expenses.delete');
+
+    // BOQ lines (contract-scoped)
+    Route::post('/contracts/{id}/boq-lines', [App\Http\Controllers\Web\ContractPageController::class, 'storeBoqLine'])->middleware('rbac:contract.update')->name('contracts.boq-lines.store');
+    Route::post('/contracts/{id}/boq-lines/{line}/update', [App\Http\Controllers\Web\ContractPageController::class, 'updateBoqLine'])->middleware('rbac:contract.update')->name('contracts.boq-lines.update');
+    Route::post('/contracts/{id}/boq-lines/{line}/delete', [App\Http\Controllers\Web\ContractPageController::class, 'deleteBoqLine'])->middleware('rbac:contract.update')->name('contracts.boq-lines.delete');
+
+    // Payment certificates
+    Route::post('/contracts/{id}/certificates', [App\Http\Controllers\Web\ContractPageController::class, 'storeCertificate'])->middleware('rbac:payment_certificate.create')->name('contracts.certificates.store');
+    Route::get('/contracts/{id}/certificates/{certificate}', [App\Http\Controllers\Web\ContractPageController::class, 'showCertificate'])->middleware('rbac:payment_certificate.view')->name('contracts.certificates.show');
+    Route::post('/contracts/{id}/certificates/{certificate}/lines', [App\Http\Controllers\Web\ContractPageController::class, 'saveCertificateLines'])->middleware('rbac:payment_certificate.create')->name('contracts.certificates.lines.save');
+    Route::post('/contracts/{id}/certificates/{certificate}/submit', [App\Http\Controllers\Web\ContractPageController::class, 'submitCertificate'])->middleware('rbac:payment_certificate.create')->name('contracts.certificates.submit');
+    Route::post('/contracts/{id}/certificates/{certificate}/approve', [App\Http\Controllers\Web\ContractPageController::class, 'approveCertificate'])->middleware('rbac:payment_certificate.approve')->name('contracts.certificates.approve');
+    Route::get('/contracts/{id}/certificates/{certificate}/pdf', [App\Http\Controllers\Web\ContractPageController::class, 'certificatePdf'])->middleware('rbac:payment_certificate.view')->name('contracts.certificates.pdf');
+    Route::get('/contracts/{id}/certificates/{certificate}/documents/{template}', [App\Http\Controllers\Web\ContractPageController::class, 'renderCertificateDocument'])->middleware('rbac:payment_certificate.view')->name('contracts.certificates.documents.render');
+
+    // BOQ PDF
+    Route::get('/contracts/{id}/boq-pdf', [App\Http\Controllers\Web\ContractPageController::class, 'boqPdf'])->middleware('rbac:contract.view')->name('contracts.boq.pdf');
+
+    // Document template render
+    Route::get('/contracts/{id}/documents/{template}', [App\Http\Controllers\Web\ContractPageController::class, 'renderContractDocument'])->middleware('rbac:contract.view')->name('contracts.documents.render');
+
+    // Inspections
+    Route::get('/inspections', [App\Http\Controllers\Web\InspectionPageController::class, 'index'])->middleware('rbac:inspection.view')->name('inspections.index');
+    Route::get('/inspections/create', [App\Http\Controllers\Web\InspectionPageController::class, 'create'])->middleware('rbac:inspection.create')->name('inspections.create');
+    Route::post('/inspections', [App\Http\Controllers\Web\InspectionPageController::class, 'store'])->middleware('rbac:inspection.create')->name('inspections.store');
+    Route::get('/inspections/{id}', [App\Http\Controllers\Web\InspectionPageController::class, 'show'])->middleware('rbac:inspection.view')->name('inspections.show');
+    Route::post('/inspections/{id}/conduct', [App\Http\Controllers\Web\InspectionPageController::class, 'conduct'])->middleware('rbac:inspection.conduct')->name('inspections.conduct');
+    Route::post('/inspections/{id}/complete', [App\Http\Controllers\Web\InspectionPageController::class, 'complete'])->middleware('rbac:inspection.complete')->name('inspections.complete');
+    Route::post('/inspections/{inspection}/ncrs', [App\Http\Controllers\Web\InspectionPageController::class, 'storeNcr'])->middleware('rbac:inspection.create')->name('inspections.ncrs.store');
+    Route::get('/inspections/{inspection}/ncrs/{ncr}', [App\Http\Controllers\Web\InspectionPageController::class, 'showNcr'])->middleware('rbac:inspection.view')->name('inspections.ncrs.show');
+    Route::post('/inspections/{inspection}/ncrs/{ncr}/status', [App\Http\Controllers\Web\InspectionPageController::class, 'updateNcrStatus'])->middleware('rbac:inspection.edit')->name('inspections.ncrs.update-status');
+
+    // Materials
+    Route::get('/materials', [App\Http\Controllers\Web\MaterialPageController::class, 'index'])->middleware('rbac:material.view')->name('materials.index');
+    Route::get('/materials/create', [App\Http\Controllers\Web\MaterialPageController::class, 'create'])->middleware('rbac:material.create')->name('materials.create');
+    Route::post('/materials', [App\Http\Controllers\Web\MaterialPageController::class, 'store'])->middleware('rbac:material.create')->name('materials.store');
+    Route::get('/materials/{id}', [App\Http\Controllers\Web\MaterialPageController::class, 'show'])->middleware('rbac:material.view')->name('materials.show');
+
+    // Schedule / Gantt (tiến độ dự án)
+    Route::get('/schedule', [App\Http\Controllers\Web\SchedulePageController::class, 'index'])->middleware('rbac:task.view')->name('schedule.index');
+    Route::post('/schedule/tasks', [App\Http\Controllers\Web\SchedulePageController::class, 'storeTask'])->middleware('rbac:task.create')->name('schedule.tasks.store');
+    Route::post('/schedule/tasks/{id}', [App\Http\Controllers\Web\SchedulePageController::class, 'updateTask'])->middleware('rbac:task.update')->name('schedule.tasks.update');
+    Route::delete('/schedule/tasks/{id}', [App\Http\Controllers\Web\SchedulePageController::class, 'destroyTask'])->middleware('rbac:task.delete')->name('schedule.tasks.destroy');
+
+    // Reports (xuất báo cáo)
+    Route::get('/reports', [App\Http\Controllers\Web\ReportPageController::class, 'index'])->middleware('rbac:report.view')->name('reports.index');
+    Route::post('/reports/export', [App\Http\Controllers\Web\ReportPageController::class, 'export'])->middleware('rbac:report.export')->name('reports.export');
+
+    // Webhooks (tích hợp hệ thống ngoài)
+    Route::get('/webhooks', [App\Http\Controllers\Web\WebhookPageController::class, 'index'])->middleware('rbac:webhook.view')->name('webhooks.index');
+    Route::post('/webhooks', [App\Http\Controllers\Web\WebhookPageController::class, 'store'])->middleware('rbac:webhook.manage')->name('webhooks.store');
+    Route::post('/webhooks/{id}/toggle', [App\Http\Controllers\Web\WebhookPageController::class, 'toggle'])->middleware('rbac:webhook.manage')->name('webhooks.toggle');
+    Route::delete('/webhooks/{id}', [App\Http\Controllers\Web\WebhookPageController::class, 'destroy'])->middleware('rbac:webhook.manage')->name('webhooks.destroy');
+
+    // API tokens (Sanctum personal tokens — user manages own tokens)
+    Route::get('/api-tokens', [App\Http\Controllers\Web\ApiTokenPageController::class, 'index'])->name('api-tokens.index');
+    Route::post('/api-tokens', [App\Http\Controllers\Web\ApiTokenPageController::class, 'store'])->middleware('throttle:6,1')->name('api-tokens.store');
+    Route::delete('/api-tokens/{id}', [App\Http\Controllers\Web\ApiTokenPageController::class, 'destroy'])->name('api-tokens.destroy');
+
+    // Global Search (tìm kiếm xuyên module)
+    Route::get('/search', [App\Http\Controllers\Web\GlobalSearchPageController::class, 'index'])->name('search.index');
+
+    // Activity Feed (nhật ký hoạt động)
+    Route::get('/activity-feed', [App\Http\Controllers\Web\ActivityFeedPageController::class, 'index'])->middleware('rbac:event-record.view')->name('activity-feed.index');
+
+    // Site Diaries (nhật ký công trường)
+    Route::get('/site-diaries', [App\Http\Controllers\Web\SiteDiaryPageController::class, 'index'])->middleware('rbac:site_diary.view')->name('site-diaries.index');
+    Route::get('/site-diaries/create', [App\Http\Controllers\Web\SiteDiaryPageController::class, 'create'])->middleware('rbac:site_diary.create')->name('site-diaries.create');
+    Route::post('/site-diaries', [App\Http\Controllers\Web\SiteDiaryPageController::class, 'store'])->middleware('rbac:site_diary.create')->name('site-diaries.store');
+    Route::get('/site-diaries/{id}', [App\Http\Controllers\Web\SiteDiaryPageController::class, 'show'])->middleware('rbac:site_diary.view')->name('site-diaries.show');
+    Route::post('/site-diaries/{id}/submit', [App\Http\Controllers\Web\SiteDiaryPageController::class, 'submit'])->middleware('rbac:site_diary.create')->name('site-diaries.submit');
+    Route::post('/site-diaries/{id}/approve', [App\Http\Controllers\Web\SiteDiaryPageController::class, 'approve'])->middleware('rbac:site_diary.approve')->name('site-diaries.approve');
+
+    // Receipts
+    Route::get('/receipts', [App\Http\Controllers\Web\ReceiptPageController::class, 'index'])->name('receipts.index');
+    Route::get('/receipts/create', [App\Http\Controllers\Web\ReceiptPageController::class, 'create'])->name('receipts.create');
+    Route::post('/receipts', [App\Http\Controllers\Web\ReceiptPageController::class, 'store'])->name('receipts.store');
+    Route::get('/receipts/{receipt}', [App\Http\Controllers\Web\ReceiptPageController::class, 'show'])->name('receipts.show');
+    Route::post('/receipts/{receipt}/lines', [App\Http\Controllers\Web\ReceiptPageController::class, 'storeLine'])->name('receipts.lines.store');
+
+    // Design Item (design-item kanban — spec zena-ops-roadmap Phase 1)
+    Route::get('/design-items', [App\Http\Controllers\Web\DesignItemPageController::class, 'index'])->middleware('rbac:design-item.view')->name('design-items.index');
+    Route::get('/design-items/create', [App\Http\Controllers\Web\DesignItemPageController::class, 'create'])->middleware('rbac:design-item.manage')->name('design-items.create');
+    Route::post('/design-items', [App\Http\Controllers\Web\DesignItemPageController::class, 'store'])->middleware('rbac:design-item.manage')->name('design-items.store');
+    Route::get('/design-items/{id}', [App\Http\Controllers\Web\DesignItemPageController::class, 'show'])->middleware('rbac:design-item.view')->name('design-items.show');
+    Route::post('/design-items/{id}/status', [App\Http\Controllers\Web\DesignItemPageController::class, 'updateStatus'])->middleware('rbac:design-item.manage')->name('design-items.status');
+    Route::post('/design-items/{id}/documents', [App\Http\Controllers\Web\DesignItemPageController::class, 'uploadDocument'])->middleware('rbac:design-item.manage')->name('design-items.documents.store');
+    Route::post('/design-items/{id}/block', [App\Http\Controllers\Web\DesignItemPageController::class, 'block'])->middleware('rbac:design-item.manage')->name('design-items.block');
+    Route::post('/design-items/{id}/unblock', [App\Http\Controllers\Web\DesignItemPageController::class, 'unblock'])->middleware('rbac:design-item.manage')->name('design-items.unblock');
+    Route::post('/design-items/suggest-description', [App\Http\Controllers\Web\DesignItemPageController::class, 'suggestDescription'])->middleware(['rbac:design-item.manage', 'rbac:ai.suggest', 'throttle:ai-suggest'])->name('design-items.suggest-description');
+
+    // Document Templates (Thư viện biểu mẫu)
+    Route::get('/document-templates', [App\Http\Controllers\Web\DocumentTemplatePageController::class, 'index'])->middleware('rbac:document_template.view')->name('document-templates.index');
+    Route::get('/document-templates/create', [App\Http\Controllers\Web\DocumentTemplatePageController::class, 'create'])->middleware('rbac:document_template.manage')->name('document-templates.create');
+    Route::post('/document-templates', [App\Http\Controllers\Web\DocumentTemplatePageController::class, 'store'])->middleware('rbac:document_template.manage')->name('document-templates.store');
+    Route::get('/document-templates/{id}/edit', [App\Http\Controllers\Web\DocumentTemplatePageController::class, 'edit'])->middleware('rbac:document_template.manage')->name('document-templates.edit');
+    Route::post('/document-templates/{id}', [App\Http\Controllers\Web\DocumentTemplatePageController::class, 'update'])->middleware('rbac:document_template.manage')->name('document-templates.update');
+    Route::post('/document-templates/{id}/preview', [App\Http\Controllers\Web\DocumentTemplatePageController::class, 'preview'])->middleware('rbac:document_template.view')->name('document-templates.preview');
+    Route::post('/document-templates/{id}/publish', [App\Http\Controllers\Web\DocumentTemplatePageController::class, 'publish'])->middleware('rbac:document_template.manage')->name('document-templates.publish');
+
+    // CRM (lead inbox → account/opportunity → project; spec crm-zena)
+    Route::get('/crm', [App\Http\Controllers\Web\CrmPageController::class, 'index'])->middleware('rbac:crm.view')->name('crm.index');
+    Route::get('/crm/leads', [App\Http\Controllers\Web\CrmPageController::class, 'leads'])->middleware('rbac:crm.view')->name('crm.leads');
+    Route::post('/crm/leads', [App\Http\Controllers\Web\CrmPageController::class, 'storeLead'])->middleware('rbac:crm.manage')->name('crm.leads.store');
+    Route::post('/crm/leads/{id}/convert', [App\Http\Controllers\Web\CrmPageController::class, 'convertLead'])->middleware('rbac:crm.manage')->name('crm.leads.convert');
+    Route::post('/crm/leads/{id}/discard', [App\Http\Controllers\Web\CrmPageController::class, 'discardLead'])->middleware('rbac:crm.manage')->name('crm.leads.discard');
+    Route::post('/crm/leads/{id}/suggest-conversion', [App\Http\Controllers\Web\CrmPageController::class, 'suggestLeadConversion'])->middleware(['rbac:crm.manage', 'rbac:ai.suggest', 'throttle:ai-suggest'])->name('crm.leads.suggest-conversion');
+    Route::get('/crm/accounts', [App\Http\Controllers\Web\CrmPageController::class, 'accounts'])->middleware('rbac:crm.view')->name('crm.accounts');
+    Route::post('/crm/accounts', [App\Http\Controllers\Web\CrmPageController::class, 'storeAccount'])->middleware('rbac:crm.manage')->name('crm.accounts.store');
+    Route::get('/crm/opportunities/{id}', [App\Http\Controllers\Web\CrmPageController::class, 'showOpportunity'])->middleware('rbac:crm.view')->name('crm.opportunities.show');
+    Route::post('/crm/opportunities/{id}/stage', [App\Http\Controllers\Web\CrmPageController::class, 'updateStage'])->middleware('rbac:crm.manage')->name('crm.opportunities.stage');
+    Route::post('/crm/opportunities/{id}/convert', [App\Http\Controllers\Web\CrmPageController::class, 'convertOpportunity'])->middleware('rbac:crm.convert')->name('crm.opportunities.convert');
+    Route::post('/crm/opportunities/{id}/boq-link', [App\Http\Controllers\Web\CrmPageController::class, 'linkBoqProject'])->middleware('rbac:crm.manage')->name('crm.opportunities.boq-link');
+    Route::post('/crm/opportunities/{id}/boq-sync', [App\Http\Controllers\Web\CrmPageController::class, 'syncBoqQuote'])->middleware('rbac:crm.manage')->name('crm.opportunities.boq-sync');
+    Route::post('/crm/opportunities/{id}/create-contract', [App\Http\Controllers\Web\CrmPageController::class, 'createContract'])->middleware('rbac:crm.manage')->name('crm.opportunities.create-contract');
+    Route::get('/crm/reports', [App\Http\Controllers\Web\CrmReportController::class, 'index'])->middleware('rbac:crm.view')->name('crm.reports');
+});
+
+Route::prefix('portal/{tenantSlug}')->as('portal.')->middleware(['web'])->group(function () {
+    Route::get('/login', [App\Http\Controllers\Web\Portal\PortalAuthController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [App\Http\Controllers\Web\Portal\PortalAuthController::class, 'sendLoginLink'])->middleware('throttle:6,1')->name('login.send');
+    Route::get('/login/{token}', [App\Http\Controllers\Web\Portal\PortalAuthController::class, 'verify'])->middleware('throttle:10,1')->name('login.verify');
+    Route::post('/logout', [App\Http\Controllers\Web\Portal\PortalAuthController::class, 'logout'])->name('logout');
+
+    Route::middleware(['portal.auth'])->group(function () {
+        Route::get('/dashboard', [App\Http\Controllers\Web\Portal\PortalDashboardController::class, 'index'])->name('dashboard');
+
+        Route::get('/design-items/{id}', [App\Http\Controllers\Web\Portal\PortalDesignItemController::class, 'show'])->name('design-items.show');
+        Route::post('/design-items/{id}/approve', [App\Http\Controllers\Web\Portal\PortalDesignItemController::class, 'approve'])->middleware('throttle:portal-actions')->name('design-items.approve');
+        Route::post('/design-items/{id}/request-revision', [App\Http\Controllers\Web\Portal\PortalDesignItemController::class, 'requestRevision'])->middleware('throttle:portal-actions')->name('design-items.request-revision');
+    });
+});
 
 Route::middleware(['web', 'auth:sanctum', 'tenant.isolation', 'rbac'])->prefix('api')->as('api.legacy.')->group(function () {
     Route::get('/dashboards', [DashboardResourceController::class, 'index'])->middleware('throttle:dashboards')->name('dashboards.index');

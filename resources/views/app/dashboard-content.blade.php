@@ -310,14 +310,19 @@ function cleanDashboard() {
     return {
         loading: true,
         error: null,
-        data: {
+        data: Object.assign({
             activeTasks: 0,
             completedToday: 0,
             teamMembers: 0,
             projects: 0,
             activity: [],
             alerts: [],
-            quickActions: [],
+            quickActions: [
+                { id: 1, label: 'New Project', icon: 'fas fa-plus', action: 'create_project' },
+                { id: 2, label: 'Add Task', icon: 'fas fa-tasks', action: 'add_task' },
+                { id: 3, label: 'Invite Team', icon: 'fas fa-user-plus', action: 'invite_team' },
+                { id: 4, label: 'Upload File', icon: 'fas fa-upload', action: 'upload_file' }
+            ],
             notifications: [],
             // Extended KPIs
             activeTasksGrowth: 0,
@@ -332,11 +337,12 @@ function cleanDashboard() {
             overdueProjects: 0,
             documents: 0,
             pendingReviews: 0
-        },
+        }, @json($dashboardStats ?? [])),
 
         init() {
-            console.log('🚀 Clean Dashboard initialized');
-            this.loadData();
+            // Stats được render sẵn từ server (AppController::dashboard)
+            this.loading = false;
+            this.$nextTick(() => this.initCharts());
         },
 
         async loadData() {
@@ -358,29 +364,14 @@ function cleanDashboard() {
                 if (result.status === 'success' && result.data) {
                     this.data = {
                         // Basic KPIs
-                        activeTasks: result.data.stats?.totalTasks || 15,
-                        completedToday: result.data.stats?.completedTasks || 8,
-                        teamMembers: result.data.stats?.teamMembers || 5,
-                        projects: result.data.stats?.totalProjects || 7,
+                        activeTasks: result.data.stats?.totalTasks || 0,
+                        completedToday: result.data.stats?.completedTasks || 0,
+                        teamMembers: result.data.stats?.teamMembers || 0,
+                        projects: result.data.stats?.totalProjects || 0,
                         activity: result.data.recentActivity || [],
                         
                         // Alerts
-                        alerts: result.data.alerts || [
-                            {
-                                id: 1,
-                                title: 'Project Deadline Approaching',
-                                message: 'Project Alpha deadline is in 3 days',
-                                created_at: '2 hours ago',
-                                action_url: '/app/projects/alpha'
-                            },
-                            {
-                                id: 2,
-                                title: 'Budget Overrun Warning',
-                                message: 'Project Beta has exceeded 90% of budget',
-                                created_at: '4 hours ago',
-                                action_url: '/app/projects/beta'
-                            }
-                        ],
+                        alerts: result.data.alerts || [],
                         
                         // Quick Actions
                         quickActions: result.data.quickActions || [
@@ -391,32 +382,7 @@ function cleanDashboard() {
                         ],
                         
                         // Notifications
-                        notifications: result.data.notifications || [
-                            {
-                                id: 1,
-                                title: 'Task Completed',
-                                message: 'John Doe completed "Design Review" task',
-                                icon: 'fas fa-check-circle',
-                                read: false,
-                                created_at: '1 hour ago'
-                            },
-                            {
-                                id: 2,
-                                title: 'New Comment',
-                                message: 'Jane Smith commented on Project Alpha',
-                                icon: 'fas fa-comment',
-                                read: false,
-                                created_at: '3 hours ago'
-                            },
-                            {
-                                id: 3,
-                                title: 'Document Uploaded',
-                                message: 'New document uploaded to Project Beta',
-                                icon: 'fas fa-file-alt',
-                                read: true,
-                                created_at: '5 hours ago'
-                            }
-                        ],
+                        notifications: result.data.notifications || [],
                         
                         // Extended KPIs
                         activeTasksGrowth: result.data.stats?.activeTasksGrowth || 12,
@@ -445,56 +411,7 @@ function cleanDashboard() {
             } catch (err) {
                 console.error('❌ Error loading data:', err);
                 this.error = err.message;
-                
-                // Fallback data
-                this.data = {
-                    activeTasks: 15,
-                    completedToday: 8,
-                    teamMembers: 5,
-                    projects: 7,
-                    activity: [
-                        { id: 1, description: 'Task completed', user: 'John Doe', time: '2 hours ago' },
-                        { id: 2, description: 'Project created', user: 'Jane Smith', time: '4 hours ago' }
-                    ],
-                    alerts: [
-                        {
-                            id: 1,
-                            title: 'Project Deadline Approaching',
-                            message: 'Project Alpha deadline is in 3 days',
-                            created_at: '2 hours ago',
-                            action_url: '/app/projects/alpha'
-                        }
-                    ],
-                    quickActions: [
-                        { id: 1, label: 'New Project', icon: 'fas fa-plus', action: 'create_project' },
-                        { id: 2, label: 'Add Task', icon: 'fas fa-tasks', action: 'add_task' },
-                        { id: 3, label: 'Invite Team', icon: 'fas fa-user-plus', action: 'invite_team' },
-                        { id: 4, label: 'Upload File', icon: 'fas fa-upload', action: 'upload_file' }
-                    ],
-                    notifications: [
-                        {
-                            id: 1,
-                            title: 'Task Completed',
-                            message: 'John Doe completed "Design Review" task',
-                            icon: 'fas fa-check-circle',
-                            read: false,
-                            created_at: '1 hour ago'
-                        }
-                    ],
-                    activeTasksGrowth: 12,
-                    completionRate: '85%',
-                    activeMembers: 3,
-                    onTimeRate: '78%',
-                    budgetUsage: '75%',
-                    totalBudget: 50000,
-                    healthScore: '90%',
-                    atRiskProjects: 1,
-                    overdueItems: 2,
-                    overdueProjects: 1,
-                    documents: 24,
-                    pendingReviews: 3
-                };
-                
+                // Giữ nguyên số liệu server-rendered — không dùng mock fallback
             } finally {
                 this.loading = false;
             }

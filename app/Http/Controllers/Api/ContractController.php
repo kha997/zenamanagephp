@@ -2,11 +2,16 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\DeliverablePdfExportUnavailableException;
 use App\Models\Contract;
+use App\Models\MaterialReceipt;
+use App\Models\MaterialReceiptLine;
 use App\Models\Project;
+use App\Services\DeliverablePdfExportService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -120,6 +125,7 @@ class ContractController extends BaseApiController
                 Rule::unique('contracts', 'code')->where('tenant_id', $tenantId),
             ],
             'title' => ['required', 'string', 'max:255'],
+            'contract_type' => ['nullable', Rule::in(Contract::VALID_TYPES)],
             'status' => ['nullable', Rule::in(Contract::VALID_STATUSES)],
             'currency' => ['nullable', 'string', 'size:3'],
             'total_value' => ['nullable', 'numeric', 'min:0'],
@@ -139,6 +145,7 @@ class ContractController extends BaseApiController
             'project_id' => $project,
             'code' => strtoupper((string) $request->string('code')),
             'title' => $request->string('title')->value(),
+            'contract_type' => (string) $request->input('contract_type', Contract::TYPE_OTHER),
             'status' => (string) $request->input('status', Contract::STATUS_DRAFT),
             'currency' => strtoupper((string) $request->input('currency', 'USD')),
             'total_value' => (float) $request->input('total_value', 0),
@@ -231,5 +238,104 @@ class ContractController extends BaseApiController
         $contractModel->delete();
 
         return $this->successResponse(null, 'Contract deleted successfully');
+    }
+
+    public function materialReceipts(Request $request, string $project, string $contract): JsonResponse
+    {
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === '') {
+            return $this->errorResponse('Tenant context missing', 400);
+        }
+
+        try {
+            $contractModel = $this->findContractOrFail($tenantId, $project, $contract);
+        } catch (ModelNotFoundException) {
+            return $this->notFound('Contract not found');
+        }
+
+        $this->authorize('view', $contractModel);
+
+        $receipts = MaterialReceipt::query()
+            ->where('tenant_id', $tenantId)
+            ->where('project_id', $project)
+            ->where('contract_id', $contractModel->id)
+            ->orderByDesc('created_at')
+            ->get();
+
+        return $this->successResponse($receipts, 'Mapped receipts retrieved successfully');
+    }
+
+    public function costSummary(Request $request, string $project, string $contract): JsonResponse
+    {
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === '') {
+            return $this->errorResponse('Tenant context missing', 400);
+        }
+
+        try {
+            $contractModel = $this->findContractOrFail($tenantId, $project, $contract);
+        } catch (ModelNotFoundException) {
+            return $this->notFound('Contract not found');
+        }
+
+        $this->authorize('view', $contractModel);
+
+        $receiptIds = MaterialReceipt::query()
+            ->where('tenant_id', $tenantId)
+            ->where('project_id', $project)
+            ->where('contract_id', $contractModel->id)
+            ->pluck('id');
+
+        $lines = MaterialReceiptLine::query()
+            ->whereIn('material_receipt_id', $receiptIds)
+            ->get();
+
+        $pricedLines = $lines->filter(fn ($l) => $l->unit_cost !== null);
+        $unpricedLines = $lines->filter(fn ($l) => $l->unit_cost === null);
+
+        $pricedTotal = $pricedLines->sum(fn ($l) => (float) $l->quantity_received * (float) $l->unit_cost);
+
+        return $this->successResponse([
+            'project_id' => $project,
+            'contract_id' => (string) $contractModel->id,
+            'summary' => [
+                'mapped_receipt_count' => $receiptIds->count(),
+                'line_count' => $lines->count(),
+                'priced_line_count' => $pricedLines->count(),
+                'unpriced_line_count' => $unpricedLines->count(),
+                'priced_line_cost_total' => round($pricedTotal, 2),
+            ],
+        ], 'Cost summary retrieved successfully');
+    }
+
+    public function pdf(Request $request, string $project, string $contract, DeliverablePdfExportService $pdfService): JsonResponse|Response
+    {
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === '') {
+            return $this->errorResponse('Tenant context missing', 400);
+        }
+
+        try {
+            $contractModel = $this->findContractOrFail($tenantId, $project, $contract);
+        } catch (ModelNotFoundException) {
+            return $this->notFound('Contract not found');
+        }
+
+        $this->authorize('view', $contractModel);
+
+        $html = view('contracts.pdf', ['contract' => $contractModel])->render();
+
+        try {
+            $pdf = $pdfService->render($html, [], [
+                'generated_at' => now()->toIso8601String(),
+            ]);
+        } catch (DeliverablePdfExportUnavailableException $exception) {
+            return $this->errorResponse($exception->getMessage(), 501);
+        }
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="hop-dong-' . $contractModel->code . '.pdf"',
+        ]);
     }
 }

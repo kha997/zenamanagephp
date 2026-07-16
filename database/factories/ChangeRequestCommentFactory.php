@@ -3,7 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\ChangeRequestComment;
-use App\Models\ZenaChangeRequest;
+use App\Models\ChangeRequest;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -23,7 +23,7 @@ class ChangeRequestCommentFactory extends Factory
     {
         return [
             'id' => $this->faker->unique()->regexify('[0-9A-Za-z]{26}'),
-            'change_request_id' => ZenaChangeRequest::factory(),
+            'change_request_id' => ChangeRequest::factory(),
             'user_id' => User::factory(),
             'comment' => $this->faker->paragraphs(2, true),
             'parent_id' => null,

@@ -52,7 +52,6 @@ jobs:
       run: composer install --prefer-dist --no-progress --no-suggest
 
     - name: Run PHPStan Static Analysis
-      continue-on-error: true
       run: |
         composer require --dev phpstan/phpstan
         bash scripts/ci/run-json-report-command.sh phpstan-report.json phpstan ./vendor/bin/phpstan analyse --level=8 --error-format=json
@@ -162,7 +161,6 @@ jobs:
         bash scripts/ci/run-json-report-command.sh security-checker.json security-checker ./vendor/bin/security-checker security:check --format=json
 
     - name: Run PHPStan Security Rules
-      continue-on-error: true
       run: |
         composer require --dev phpstan/phpstan-security-rules
         bash scripts/ci/run-json-report-command.sh phpstan-security.json phpstan-security ./vendor/bin/phpstan analyse --level=8 --error-format=json

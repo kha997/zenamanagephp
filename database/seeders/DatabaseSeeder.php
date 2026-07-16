@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             // Core Data
             TenantSeeder::class,
+            ZenaBoqTenantSeeder::class,
             UserSeeder::class,
             
             // RBAC System

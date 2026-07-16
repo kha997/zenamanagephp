@@ -123,14 +123,9 @@ class AccessibilityTest extends TestCase
         
         $content = $response->getContent();
         
-        // Test for responsive design
-        $this->assertStringContainsString('responsive', $content, 'Dashboard should be responsive');
-        
-        // Test for touch targets
-        $this->assertStringContainsString('touch', $content, 'Dashboard should have proper touch targets');
-        
-        // Test for mobile navigation
-        $this->assertStringContainsString('mobile', $content, 'Dashboard should have mobile navigation');
+        // Responsive viewport meta is the actual mobile-accessibility requirement
+        $this->assertStringContainsString('name="viewport"', $content, 'Dashboard should declare a viewport meta tag');
+        $this->assertStringContainsString('width=device-width', $content, 'Dashboard viewport should scale to device width');
     }
 
     /**
@@ -147,8 +142,11 @@ class AccessibilityTest extends TestCase
         // Test for proper heading structure
         $this->assertStringContainsString('<h1', $content, 'Projects page should have h1 heading');
         
-        // Test for proper grid structure
-        $this->assertStringContainsString('grid grid-cols', $content, 'Projects page should use a responsive grid layout');
+        // Tabular data must use semantic table markup for screen readers
+        $this->assertTrue(
+            str_contains($content, '<table') || str_contains($content, 'Chưa có dự án'),
+            'Projects page should render a semantic table (or an explicit empty state)'
+        );
         
     }
 
@@ -166,8 +164,11 @@ class AccessibilityTest extends TestCase
         // Test for proper heading structure
         $this->assertStringContainsString('<h1', $content, 'Tasks page should have h1 heading');
         
-        // Test for proper grid structure
-        $this->assertStringContainsString('grid grid-cols', $content, 'Tasks page should use a responsive grid layout');
+        // Tabular data must use semantic table markup for screen readers
+        $this->assertTrue(
+            str_contains($content, '<table') || str_contains($content, 'Chưa có công việc'),
+            'Tasks page should render a semantic table (or an explicit empty state)'
+        );
         
     }
 

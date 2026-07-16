@@ -50,6 +50,7 @@ class Task extends Model
     public $incrementing = false;
     
     protected $fillable = [
+        'tenant_id',
         'project_id',
         'component_id',
         'phase_id',

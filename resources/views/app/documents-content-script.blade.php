@@ -51,7 +51,7 @@ function documentsPage() {
                         size: 2048576, // 2MB
                         status: 'approved',
                         uploadedAt: '2024-01-15',
-                        uploadedBy: 'John Doe',
+                        uploadedBy: '—',
                         project: 'Website Redesign'
                     },
                     {
@@ -63,7 +63,7 @@ function documentsPage() {
                         size: 5242880, // 5MB
                         status: 'review',
                         uploadedAt: '2024-01-14',
-                        uploadedBy: 'Jane Smith',
+                        uploadedBy: '—',
                         project: 'Website Redesign'
                     },
                     {

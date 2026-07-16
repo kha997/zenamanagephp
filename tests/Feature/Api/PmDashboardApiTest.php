@@ -1,0 +1,346 @@
+<?php declare(strict_types=1);
+
+namespace Tests\Feature\Api;
+
+use App\Models\Project;
+use App\Models\ProjectMilestone;
+use App\Models\Rfi;
+use App\Models\Role;
+use App\Models\Task;
+use App\Models\Tenant;
+use App\Models\User;
+use App\Models\UserRoleProject;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+use Tests\Traits\AuthenticationTestTrait;
+
+class PmDashboardApiTest extends TestCase
+{
+    use RefreshDatabase;
+    use AuthenticationTestTrait;
+
+    protected Tenant $tenant;
+    protected User $actor;
+    protected array $headers;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->tenant = Tenant::factory()->create();
+        $this->actor = $this->createTenantUser($this->tenant, [], ['admin'], [
+            'pm.dashboard',
+            'pm.progress',
+        ]);
+
+        $token = $this->apiLoginToken($this->actor, $this->tenant);
+        $this->headers = $this->authHeadersForUser($this->actor, $token);
+    }
+
+    public function test_pm_dashboard_exposes_minimal_pm_widget_from_pm_scoped_project_task_and_rfi_facts(): void
+    {
+        $project = $this->createAssignedProject('PM dashboard project', Project::STATUS_ACTIVE);
+        $otherAssignedProject = $this->createAssignedProject('Second PM dashboard project', Project::STATUS_COMPLETED);
+
+        $this->createTask($project, [
+            'status' => Task::STATUS_PENDING,
+            'end_date' => now()->subDay(),
+        ]);
+        $this->createTask($project, [
+            'status' => Task::STATUS_COMPLETED,
+            'end_date' => now()->subDays(2),
+        ]);
+        $this->createTask($otherAssignedProject, [
+            'status' => Task::STATUS_IN_PROGRESS,
+            'end_date' => now()->addDay(),
+        ]);
+        $this->createTask($project, [
+            'status' => Task::STATUS_CANCELLED,
+            'end_date' => now()->subDays(3),
+        ]);
+
+        $foreignTenant = Tenant::factory()->create();
+        $foreignActor = $this->createTenantUser($foreignTenant, [], ['admin'], []);
+        $foreignProject = Project::factory()->create([
+            'tenant_id' => (string) $foreignTenant->id,
+            'created_by' => (string) $foreignActor->id,
+            'pm_id' => (string) $foreignActor->id,
+            'name' => 'Foreign PM project',
+            'status' => Project::STATUS_ACTIVE,
+        ]);
+        Task::factory()->create([
+            'tenant_id' => (string) $foreignTenant->id,
+            'project_id' => (string) $foreignProject->id,
+            'created_by' => (string) $foreignActor->id,
+            'assigned_to' => (string) $foreignActor->id,
+            'status' => Task::STATUS_PENDING,
+            'end_date' => now()->subDay(),
+        ]);
+
+        Rfi::factory()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'project_id' => (string) $project->id,
+            'created_by' => (string) $this->actor->id,
+            'assigned_to' => (string) $this->actor->id,
+            'status' => 'pending',
+        ]);
+        Rfi::factory()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'project_id' => (string) $otherAssignedProject->id,
+            'created_by' => (string) $this->actor->id,
+            'assigned_to' => (string) $this->actor->id,
+            'status' => 'pending',
+        ]);
+        Rfi::factory()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'project_id' => (string) $project->id,
+            'created_by' => (string) $this->actor->id,
+            'assigned_to' => (string) $this->actor->id,
+            'status' => 'closed',
+        ]);
+        Rfi::factory()->create([
+            'tenant_id' => (string) $foreignTenant->id,
+            'project_id' => (string) $foreignProject->id,
+            'created_by' => (string) $foreignActor->id,
+            'assigned_to' => (string) $foreignActor->id,
+            'status' => 'pending',
+        ]);
+
+        $response = $this->withHeaders($this->headers)
+            ->getJson(route('api.zena.pm.dashboard', [], false));
+
+        $response->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('data.pm_widget.widget_key', 'pm_summary')
+            ->assertJsonPath('data.pm_widget.projects.total', 2)
+            ->assertJsonPath('data.pm_widget.projects.active', 1)
+            ->assertJsonPath('data.pm_widget.projects.completed', 1)
+            ->assertJsonPath('data.pm_widget.tasks.total', 4)
+            ->assertJsonPath('data.pm_widget.tasks.completed', 1)
+            ->assertJsonPath('data.pm_widget.tasks.overdue', 1)
+            ->assertJsonPath('data.pm_widget.rfis.pending', 2)
+            ->assertJsonMissingPath('data.pm_widget.alerts')
+            ->assertJsonMissingPath('data.pm_widget.notification_rules')
+            ->assertJsonMissingPath('data.pm_widget.event_records')
+            ->assertJsonMissingPath('data.qc_widget')
+            ->assertJsonMissingPath('data.designer_widget');
+    }
+
+    public function test_pm_dashboard_widget_is_zero_safe_and_project_scoped(): void
+    {
+        $project = $this->createAssignedProject('Scoped PM project', Project::STATUS_ACTIVE);
+        $otherProject = $this->createAssignedProject('Excluded PM project', Project::STATUS_COMPLETED);
+
+        $this->createTask($project, [
+            'status' => Task::STATUS_PENDING,
+            'end_date' => now()->subDay(),
+        ]);
+        $this->createTask($otherProject, [
+            'status' => Task::STATUS_COMPLETED,
+            'end_date' => now()->subDay(),
+        ]);
+
+        Rfi::factory()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'project_id' => (string) $project->id,
+            'created_by' => (string) $this->actor->id,
+            'assigned_to' => (string) $this->actor->id,
+            'status' => 'pending',
+        ]);
+        Rfi::factory()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'project_id' => (string) $otherProject->id,
+            'created_by' => (string) $this->actor->id,
+            'assigned_to' => (string) $this->actor->id,
+            'status' => 'pending',
+        ]);
+
+        $this->withHeaders($this->headers)
+            ->getJson(route('api.zena.pm.dashboard', ['project_id' => (string) $project->id], false))
+            ->assertOk()
+            ->assertJsonPath('data.pm_widget.widget_key', 'pm_summary')
+            ->assertJsonPath('data.pm_widget.projects.total', 1)
+            ->assertJsonPath('data.pm_widget.projects.active', 1)
+            ->assertJsonPath('data.pm_widget.projects.completed', 0)
+            ->assertJsonPath('data.pm_widget.tasks.total', 1)
+            ->assertJsonPath('data.pm_widget.tasks.completed', 0)
+            ->assertJsonPath('data.pm_widget.tasks.overdue', 1)
+            ->assertJsonPath('data.pm_widget.rfis.pending', 1);
+
+        $emptyProject = $this->createAssignedProject('Empty PM project', Project::STATUS_PLANNING);
+
+        $this->withHeaders($this->headers)
+            ->getJson(route('api.zena.pm.dashboard', ['project_id' => (string) $emptyProject->id], false))
+            ->assertOk()
+            ->assertJsonPath('data.pm_widget.widget_key', 'pm_summary')
+            ->assertJsonPath('data.pm_widget.projects.total', 1)
+            ->assertJsonPath('data.pm_widget.tasks.total', 0)
+            ->assertJsonPath('data.pm_widget.tasks.overdue', 0)
+            ->assertJsonPath('data.pm_widget.rfis.pending', 0);
+    }
+
+    public function test_pm_progress_route_returns_schema_backed_projection_for_accessible_project(): void
+    {
+        $project = $this->createAssignedProject('PM progress project', Project::STATUS_ACTIVE);
+        $project->forceFill([
+            'budget_total' => 100000,
+            'budget_actual' => 25000,
+            'start_date' => now()->subDays(10)->toDateString(),
+            'end_date' => now()->addDays(10)->toDateString(),
+        ])->save();
+
+        $this->createTask($project, [
+            'status' => Task::STATUS_COMPLETED,
+            'end_date' => now()->subDays(3),
+        ]);
+        $this->createTask($project, [
+            'status' => Task::STATUS_IN_PROGRESS,
+            'end_date' => now()->subDay(),
+        ]);
+        $this->createTask($project, [
+            'status' => Task::STATUS_PENDING,
+            'end_date' => now()->addDays(2),
+        ]);
+        $this->createTask($project, [
+            'status' => Task::STATUS_CANCELLED,
+            'end_date' => now()->subDays(2),
+        ]);
+
+        ProjectMilestone::query()->create([
+            'project_id' => (string) $project->id,
+            'name' => 'Foundation complete',
+            'status' => ProjectMilestone::STATUS_COMPLETED,
+            'target_date' => now()->subDays(5)->toDateString(),
+            'completed_date' => now()->subDays(4)->toDateString(),
+            'created_by' => (string) $this->actor->id,
+        ]);
+        $upcomingMilestone = ProjectMilestone::query()->create([
+            'project_id' => (string) $project->id,
+            'name' => 'Frame inspection',
+            'status' => ProjectMilestone::STATUS_PENDING,
+            'target_date' => now()->addDays(3)->toDateString(),
+            'created_by' => (string) $this->actor->id,
+        ]);
+        ProjectMilestone::query()->create([
+            'project_id' => (string) $project->id,
+            'name' => 'Delayed handoff',
+            'status' => ProjectMilestone::STATUS_OVERDUE,
+            'target_date' => now()->subDay()->toDateString(),
+            'created_by' => (string) $this->actor->id,
+        ]);
+
+        $this->withHeaders($this->headers)
+            ->getJson(route('api.zena.pm.progress', ['project_id' => (string) $project->id], false))
+            ->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('data.project.id', (string) $project->id)
+            ->assertJsonPath('data.project.name', 'PM progress project')
+            ->assertJsonPath('data.overall_progress', 25)
+            ->assertJsonPath('data.task_progress.total', 4)
+            ->assertJsonPath('data.task_progress.completed', 1)
+            ->assertJsonPath('data.task_progress.in_progress', 1)
+            ->assertJsonPath('data.task_progress.pending', 1)
+            ->assertJsonPath('data.task_progress.overdue', 1)
+            ->assertJsonPath('data.milestone_progress.total_milestones', 3)
+            ->assertJsonPath('data.milestone_progress.completed_milestones', 1)
+            ->assertJsonPath('data.milestone_progress.pending_milestones', 1)
+            ->assertJsonPath('data.milestone_progress.overdue_milestones', 1)
+            ->assertJsonPath('data.milestone_progress.completion_rate', 33.33)
+            ->assertJsonCount(2, 'data.milestone_progress.upcoming_milestones')
+            ->assertJsonPath('data.milestone_progress.upcoming_milestones.0.name', 'Delayed handoff')
+            ->assertJsonPath('data.milestone_progress.upcoming_milestones.1.id', (string) $upcomingMilestone->id)
+            ->assertJsonPath('data.budget_progress.total_budget', 100000)
+            ->assertJsonPath('data.budget_progress.spent_amount', 25000)
+            ->assertJsonPath('data.budget_progress.remaining_amount', 75000)
+            ->assertJsonPath('data.budget_progress.percentage_spent', 25)
+            ->assertJsonPath('data.timeline_progress.total_days', 20)
+            ->assertJsonPath('data.timeline_progress.days_elapsed', 10)
+            ->assertJsonPath('data.timeline_progress.percentage_elapsed', 50);
+    }
+
+    public function test_pm_progress_route_requires_project_id_and_hides_inaccessible_projects(): void
+    {
+        $project = $this->createAssignedProject('Accessible PM progress project', Project::STATUS_ACTIVE);
+
+        $this->withHeaders($this->headers)
+            ->getJson(route('api.zena.pm.progress', [], false))
+            ->assertStatus(400)
+            ->assertJsonPath('message', 'Project ID is required');
+
+        $foreignTenant = Tenant::factory()->create();
+        $foreignActor = $this->createTenantUser($foreignTenant, [], ['admin'], []);
+        $foreignProject = Project::factory()->create([
+            'tenant_id' => (string) $foreignTenant->id,
+            'created_by' => (string) $foreignActor->id,
+            'pm_id' => (string) $foreignActor->id,
+            'name' => 'Foreign progress project',
+            'status' => Project::STATUS_ACTIVE,
+        ]);
+
+        $this->withHeaders($this->headers)
+            ->getJson(route('api.zena.pm.progress', ['project_id' => (string) $foreignProject->id], false))
+            ->assertStatus(404)
+            ->assertJsonPath('message', 'Project not found or access denied');
+
+        $this->withHeaders($this->headers)
+            ->getJson(route('api.zena.pm.progress', ['project_id' => (string) $project->id], false))
+            ->assertOk()
+            ->assertJsonPath('data.project.id', (string) $project->id);
+    }
+
+    public function test_pm_progress_route_requires_project_membership_even_within_same_tenant(): void
+    {
+        $sameTenantProject = Project::factory()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'created_by' => (string) $this->actor->id,
+            'pm_id' => (string) $this->actor->id,
+            'name' => 'Same-tenant unassigned project',
+            'status' => Project::STATUS_ACTIVE,
+        ]);
+
+        $this->withHeaders($this->headers)
+            ->getJson(route('api.zena.pm.progress', ['project_id' => (string) $sameTenantProject->id], false))
+            ->assertStatus(404)
+            ->assertJsonPath('message', 'Project not found or access denied');
+    }
+
+    private function createAssignedProject(string $name, string $status): Project
+    {
+        $project = Project::factory()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'created_by' => (string) $this->actor->id,
+            'pm_id' => (string) $this->actor->id,
+            'name' => $name,
+            'status' => $status,
+        ]);
+
+        $role = Role::firstOrCreate(
+            ['name' => 'project_manager'],
+            [
+                'scope' => 'system',
+                'description' => 'Project Manager',
+                'is_active' => true,
+            ]
+        );
+
+        UserRoleProject::query()->create([
+            'project_id' => (string) $project->id,
+            'user_id' => (string) $this->actor->id,
+            'role_id' => (string) $role->id,
+        ]);
+
+        return $project;
+    }
+
+    private function createTask(Project $project, array $overrides = []): Task
+    {
+        return Task::factory()->create(array_merge([
+            'tenant_id' => (string) $this->tenant->id,
+            'project_id' => (string) $project->id,
+            'created_by' => (string) $this->actor->id,
+            'assigned_to' => (string) $this->actor->id,
+            'status' => Task::STATUS_PENDING,
+            'end_date' => now()->addDay(),
+        ], $overrides));
+    }
+}

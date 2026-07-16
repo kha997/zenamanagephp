@@ -295,15 +295,16 @@ class ChangeRequestApiTest extends TestCase
         $response = $this->withHeaders($this->headers)
             ->postJson('/api/zena/change-requests', []);
 
+        // Laravel 11+: framework ships built-in English validation messages
         $response->assertStatus(422)
                  ->assertJsonPath('status', 'error')
-                 ->assertJsonPath('error.details.data.project_id.0', 'validation.required')
-                 ->assertJsonPath('error.details.data.title.0', 'validation.required')
-                 ->assertJsonPath('error.details.data.description.0', 'validation.required')
-                 ->assertJsonPath('error.details.data.change_type.0', 'validation.required')
-                 ->assertJsonPath('error.details.data.impact_analysis.0', 'validation.required')
-                 ->assertJsonPath('error.details.data.priority.0', 'validation.required')
-                 ->assertJsonPath('error.details.data.justification.0', 'validation.required');
+                 ->assertJsonPath('error.details.data.project_id.0', 'The project id field is required.')
+                 ->assertJsonPath('error.details.data.title.0', 'The title field is required.')
+                 ->assertJsonPath('error.details.data.description.0', 'The description field is required.')
+                 ->assertJsonPath('error.details.data.change_type.0', 'The change type field is required.')
+                 ->assertJsonPath('error.details.data.impact_analysis.0', 'The impact analysis field is required.')
+                 ->assertJsonPath('error.details.data.priority.0', 'The priority field is required.')
+                 ->assertJsonPath('error.details.data.justification.0', 'The justification field is required.');
     }
 
     /**
@@ -707,7 +708,7 @@ class ChangeRequestApiTest extends TestCase
 
         $response->assertStatus(422)
             ->assertJsonPath('status', 'error')
-            ->assertJsonPath('error.details.data.status.0', 'validation.prohibited');
+            ->assertJsonPath('error.details.data.status.0', 'The status field is prohibited.');
 
         $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,

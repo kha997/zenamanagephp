@@ -194,7 +194,7 @@ class CalendarEvent extends Model
      */
     public function getDurationInMinutes(): int
     {
-        return $this->start_time->diffInMinutes($this->end_time);
+        return (int) round($this->start_time->diffInMinutes($this->end_time));
     }
 
     /**

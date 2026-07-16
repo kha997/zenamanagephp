@@ -3,7 +3,7 @@
 ## 1. Project Header
 
 - Project: Build zena webapp / zenamanage-golden
-- Last updated: 2026-03-29
+- Last updated: 2026-07-08
 - Branch: main
 - Goal: deploy the real webapp and do not change domain/app logic just to pass test/CI
 
@@ -26,6 +26,54 @@ For `S5.2`, the narrowed execution round is now proved: NCR ownership remains on
 - Do not change domain/app logic just to pass test or CI.
 
 ## 4. Recent Locked Rounds
+
+### Round 25
+
+- Date: 2026-07-08
+- Scope: framework modernization Laravel 9 → 12 + dependency security closure
+- Outcome: locked runtime slice
+- Key files:
+  - `composer.json` / `composer.lock` (framework ^12.0, sanctum ^4, dusk ^8, collision ^8, phpunit ^11, php-jwt ^7, php ^8.2)
+  - `phpunit.xml` (migrated to PHPUnit 10+ schema)
+  - `database/migrations/2025_09_19_174648_rename_zena_tables_to_standard_names.php` (native Schema::getIndexes replaces removed Doctrine API)
+  - `database/migrations/2025_09_20_160000_fix_notifications_table_schema.php` (drop legacy is_read indexes before native SQLite DROP COLUMN)
+- Evidence:
+  - `php artisan --version` -> Laravel Framework 12.63.0
+  - `composer audit` -> 0 security advisories (was 35 at round start)
+  - JWT surface proof: `php artisan test --filter="RefreshToken|AuthService|ZenaAuth"` -> 23 passed (php-jwt v6 → v7; HS256 encode/decode API unchanged)
+  - operator UI smoke: 5/5 per hop (L10, L11, L12)
+- Deferred:
+  - React/TypeScript layer removal (still CI-coupled)
+  - realtime/PWA/Gantt/BIM feature tracks
+- Notes:
+  - Upgrade path was staged 9→10→11→12 with a full-suite gate at 10 and smoke gates at 11/12; only the two migration fixes above required app-code changes across all three hops.
+
+### Round 24
+
+- Date: 2026-07-08
+- Scope: Operator web UI rollout (all 11 business modules) + security hardening + suite stabilization
+- Outcome: locked runtime slice
+- Key files:
+  - `routes/web.php` (operator.* route family with mirrored `rbac:*` middleware)
+  - `app/Http/Controllers/Web/*PageController.php` (RFI, Submittal, ChangeRequest, Boq, Vendor, Contract, Inspection, Material + Concerns/DelegatesToApiControllers trait)
+  - `resources/views/{rfis,submittals,change-requests,boqs,vendors,contracts,inspections,materials}/`
+  - `resources/css/operator.css` (design-token SSOT), `resources/views/layouts/operator.blade.php`
+  - `app/Http/Controllers/Api/UploadController.php`, `app/Http/Middleware/DebugGateMiddleware.php`, `config/cors.php`, `config/session.php` (security patches)
+  - `tests/Feature/Zena/Operator*UiTest.php` (35 tests)
+- Evidence:
+  - head reviewed: `a6f3ed798bd0139247de8b5b7e54b1763a620b41`
+  - runtime truth: `php artisan route:list --name=operator` shows the full web owner family for dashboard, material-requests, receipts, materials, vendors, boqs (+line-items), contracts, inspections (+ncrs), rfis, submittals, change-requests
+  - UI proof: `php artisan test --filter=Operator` -> 35 passed
+  - suite proof: `php artisan test` -> 1317 passed, 11 skipped, 0 failed
+  - dependency proof: `composer audit` advisories reduced 35 -> 24 after guzzle/psr7/aws-sdk/php-jwt/commonmark updates; framework pinned `^9.52`
+- Deferred:
+  - Laravel 10+ upgrade (required to clear remaining 24 advisories; Laravel 9 EOL)
+  - React/TypeScript layer removal (CI `production.yml`/`system-smoke.yml` still run jest against it)
+  - admin/app layout-zone migration to operator design system
+  - realtime updates, PWA offline, Gantt/BIM viewers
+- Notes:
+  - Web page controllers delegate all writes to the canonical `/api/zena/*` controllers via a shared request-forwarding trait; web routes carry the same `rbac:*` middleware as the API since those controllers enforce RBAC at route level.
+  - Operator dashboard aggregates procurement, document-workflow, quality, and commercial KPIs with overdue/open badges.
 
 ### Round 23
 

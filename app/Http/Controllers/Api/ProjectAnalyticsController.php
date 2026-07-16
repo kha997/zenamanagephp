@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Src\CoreProject\Models\LegacyProjectAdapter as Project;
+use App\Models\Project;
 use App\Models\ProjectMilestone;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;

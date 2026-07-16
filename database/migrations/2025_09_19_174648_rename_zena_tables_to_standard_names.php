@@ -90,12 +90,11 @@ return new class extends Migration
             return;
         }
 
-        $connection = Schema::getConnection();
-        $schemaManager = $connection->getDoctrineSchemaManager();
-        $indexes = $schemaManager->listTableIndexes($table);
+        // Laravel 11+: use the native schema builder (Doctrine DBAL removed)
+        $indexNames = array_column(Schema::getIndexes($table), 'name');
 
-        $hasOld = isset($indexes[$from]);
-        $hasNew = isset($indexes[$to]);
+        $hasOld = in_array($from, $indexNames, true);
+        $hasNew = in_array($to, $indexNames, true);
 
         if (!$hasOld && !$hasNew) {
             return;

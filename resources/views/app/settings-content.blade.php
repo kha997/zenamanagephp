@@ -8,7 +8,7 @@
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Full Name</label>
-                    <input type="text" value="John Doe" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    <input type="text" value="—" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Email</label>

@@ -31,11 +31,8 @@ class SecurityHeadersMiddleware
             "form-action 'self'"
         );
 
-        // CORS Headers
-        $response->headers->set('Access-Control-Allow-Origin', config('cors.allowed_origins', '*'));
-        $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-        $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-TOKEN, X-Requested-With');
-        $response->headers->set('Access-Control-Allow-Credentials', 'true');
+        // CORS is handled exclusively by Illuminate\Http\Middleware\HandleCors
+        // (global middleware) using config/cors.php — do not set CORS headers here.
 
         // Security Headers
         $response->headers->set('X-Frame-Options', 'DENY');

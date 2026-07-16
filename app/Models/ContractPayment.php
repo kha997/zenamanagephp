@@ -8,6 +8,17 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property string $id ULID primary key
+ * @property string $tenant_id Tenant ULID
+ * @property string $contract_id Contract ULID
+ * @property string $name Payment name
+ * @property float $amount Payment amount
+ * @property string $status Payment status (planned|paid|overdue)
+ * @property \Carbon\Carbon|null $due_date Due date
+ * @property \Carbon\Carbon|null $paid_at Paid timestamp
+ * @property string|null $note Note
+ */
 class ContractPayment extends Model
 {
     use HasUlids, HasFactory, TenantScope;

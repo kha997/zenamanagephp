@@ -28,12 +28,14 @@ class WorkTemplateStep extends Model
         'assignee_rule_json',
         'sla_hours',
         'config_json',
+        'required_document_types',
     ];
 
     protected $casts = [
         'depends_on' => 'array',
         'assignee_rule_json' => 'array',
         'config_json' => 'array',
+        'required_document_types' => 'array',
     ];
 
     public function version(): BelongsTo

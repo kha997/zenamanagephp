@@ -14,7 +14,7 @@ class TasksContractParityAuditInvariantTest extends TestCase
         $zenaRoutes = $this->routesByPrefix('api/zena/tasks');
         $v1CrudRoutes = $this->routesByPrefix('api/v1/tasks');
 
-        $this->assertCount(9, $zenaRoutes);
+        $this->assertCount(10, $zenaRoutes);
         $this->assertSame([
             'DELETE api/zena/tasks/{id}',
             'DELETE api/zena/tasks/{id}/dependencies/{dependencyId}',
@@ -24,6 +24,7 @@ class TasksContractParityAuditInvariantTest extends TestCase
             'PATCH api/zena/tasks/{id}/status',
             'POST api/zena/tasks',
             'POST api/zena/tasks/{id}/dependencies',
+            'POST api/zena/tasks/{id}/escalate-overdue',
             'PUT api/zena/tasks/{id}',
         ], $this->methodUriPairs($zenaRoutes));
 

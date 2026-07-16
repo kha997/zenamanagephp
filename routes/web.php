@@ -1032,6 +1032,7 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::get('/crm/accounts', [App\Http\Controllers\Web\CrmPageController::class, 'accounts'])->middleware('rbac:crm.view')->name('crm.accounts');
     Route::post('/crm/accounts', [App\Http\Controllers\Web\CrmPageController::class, 'storeAccount'])->middleware('rbac:crm.manage')->name('crm.accounts.store');
     Route::get('/crm/opportunities/{id}', [App\Http\Controllers\Web\CrmPageController::class, 'showOpportunity'])->middleware('rbac:crm.view')->name('crm.opportunities.show');
+    Route::post('/crm/opportunities/{id}/appointments', [App\Http\Controllers\Web\CrmPageController::class, 'storeAppointment'])->middleware('rbac:crm.manage')->name('crm.opportunities.appointments.store');
     Route::post('/crm/opportunities/{id}/stage', [App\Http\Controllers\Web\CrmPageController::class, 'updateStage'])->middleware('rbac:crm.manage')->name('crm.opportunities.stage');
     Route::post('/crm/opportunities/{id}/convert', [App\Http\Controllers\Web\CrmPageController::class, 'convertOpportunity'])->middleware('rbac:crm.convert')->name('crm.opportunities.convert');
     Route::post('/crm/opportunities/{id}/boq-link', [App\Http\Controllers\Web\CrmPageController::class, 'linkBoqProject'])->middleware('rbac:crm.manage')->name('crm.opportunities.boq-link');
@@ -1046,6 +1047,9 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/crm/quotes/{id}/reject', [App\Http\Controllers\Web\CrmPageController::class, 'rejectQuote'])->middleware('rbac:crm.manage')->name('crm.quotes.reject');
     Route::post('/crm/quotes/{id}/revise', [App\Http\Controllers\Web\CrmPageController::class, 'reviseQuote'])->middleware('rbac:crm.manage')->name('crm.quotes.revise');
     Route::post('/crm/quotes/{id}/commercial', [App\Http\Controllers\Web\CrmPageController::class, 'saveQuoteCommercial'])->middleware('rbac:crm.manage')->name('crm.quotes.commercial');
+    Route::post('/crm/appointments/{id}/complete', [App\Http\Controllers\Web\CrmPageController::class, 'completeAppointment'])->middleware('rbac:crm.manage')->name('crm.appointments.complete');
+    Route::post('/crm/appointments/{id}/cancel', [App\Http\Controllers\Web\CrmPageController::class, 'cancelAppointment'])->middleware('rbac:crm.manage')->name('crm.appointments.cancel');
+    Route::post('/crm/appointments/{id}/reschedule', [App\Http\Controllers\Web\CrmPageController::class, 'rescheduleAppointment'])->middleware('rbac:crm.manage')->name('crm.appointments.reschedule');
     Route::get('/crm/quotes/{id}/pdf', [App\Http\Controllers\Web\CrmPageController::class, 'quotePdf'])->middleware('rbac:crm.view')->name('crm.quotes.pdf');
     Route::get('/crm/quotes/{id}/render/{template}', [App\Http\Controllers\Web\CrmPageController::class, 'renderQuoteDocument'])->middleware('rbac:crm.view')->name('crm.quotes.render-document');
     Route::get('/crm/reports', [App\Http\Controllers\Web\CrmReportController::class, 'index'])->middleware('rbac:crm.view')->name('crm.reports');

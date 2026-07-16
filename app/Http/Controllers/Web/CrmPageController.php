@@ -12,6 +12,7 @@ use App\Models\DeliverableTemplate;
 use App\Models\EventRecord;
 use App\Models\Lead;
 use App\Models\Opportunity;
+use App\Models\OpportunityAppointment;
 use App\Models\Quote;
 use App\Models\QuoteLineItem;
 use App\Models\User;
@@ -227,6 +228,12 @@ class CrmPageController extends Controller
                 ->where('tenant_id', $tenantId)
                 ->orderBy('name')
                 ->get(['id', 'name']),
+            'appointments' => OpportunityAppointment::query()
+                ->where('tenant_id', $tenantId)
+                ->where('opportunity_id', $id)
+                ->with('assignee:id,name')
+                ->orderByDesc('scheduled_at')
+                ->get(),
             'events' => \App\Models\EventRecord::query()
                 ->where('tenant_id', $tenantId)
                 ->where('aggregate_type', 'opportunity')
@@ -431,6 +438,208 @@ class CrmPageController extends Controller
         ]);
 
         return redirect()->route('operator.crm.quotes.show', $quote->id);
+    }
+
+    public function storeAppointment(Request $request, string $id): RedirectResponse
+    {
+        $user = $request->user();
+        if (!$user instanceof User) {
+            abort(403);
+        }
+
+        $tenantId = (string) $user->tenant_id;
+        $actorUserId = (string) $user->id;
+
+        $opportunity = Opportunity::query()
+            ->where('tenant_id', $tenantId)
+            ->findOrFail($id);
+
+        $validated = $request->validate([
+            'type' => ['required', 'string', 'in:' . implode(',', OpportunityAppointment::VALID_TYPES)],
+            'scheduled_at' => ['required', 'date', 'after:now'],
+            'location' => ['nullable', 'string', 'max:255'],
+            'assigned_to' => ['nullable', 'string'],
+        ]);
+
+        if (($validated['assigned_to'] ?? null) !== null) {
+            $assigneeExists = User::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey($validated['assigned_to'])
+                ->exists();
+
+            if (!$assigneeExists) {
+                return back()->withInput()->withErrors(['assigned_to' => 'Người phụ trách không hợp lệ.']);
+            }
+        }
+
+        $appointment = OpportunityAppointment::query()->create([
+            'tenant_id' => $tenantId,
+            'opportunity_id' => (string) $opportunity->getKey(),
+            'type' => $validated['type'],
+            'scheduled_at' => $validated['scheduled_at'],
+            'location' => $validated['location'] ?? null,
+            'assigned_to' => $validated['assigned_to'] ?? null,
+            'status' => OpportunityAppointment::STATUS_SCHEDULED,
+            'created_by' => $actorUserId,
+        ]);
+
+        EventRecord::query()->create([
+            'tenant_id' => $tenantId,
+            'aggregate_type' => 'opportunity_appointment',
+            'aggregate_id' => (string) $appointment->id,
+            'event_key' => 'opportunity_appointment.scheduled',
+            'actor_user_id' => $actorUserId,
+            'payload' => [
+                'opportunity_id' => (string) $opportunity->getKey(),
+                'type' => $appointment->type,
+                'scheduled_at' => $appointment->scheduled_at->toIso8601String(),
+            ],
+            'occurred_at' => now(),
+        ]);
+
+        return back()->with('success', 'Đã đặt lịch hẹn.');
+    }
+
+    public function completeAppointment(Request $request, string $id): RedirectResponse
+    {
+        $user = $request->user();
+        if (!$user instanceof User) {
+            abort(403);
+        }
+
+        $tenantId = (string) $user->tenant_id;
+        $actorUserId = (string) $user->id;
+
+        $validated = $request->validate([
+            'outcome_notes' => ['required', 'string'],
+        ]);
+
+        $appointment = OpportunityAppointment::query()
+            ->where('tenant_id', $tenantId)
+            ->findOrFail($id);
+
+        if (!OpportunityAppointment::canTransition($appointment->status, OpportunityAppointment::STATUS_COMPLETED)) {
+            return back()->with('error', 'Không thể chuyển trạng thái.');
+        }
+
+        $appointment->update([
+            'status' => OpportunityAppointment::STATUS_COMPLETED,
+            'outcome_notes' => $validated['outcome_notes'],
+        ]);
+
+        EventRecord::query()->create([
+            'tenant_id' => $tenantId,
+            'aggregate_type' => 'opportunity_appointment',
+            'aggregate_id' => (string) $appointment->id,
+            'event_key' => 'opportunity_appointment.completed',
+            'actor_user_id' => $actorUserId,
+            'payload' => [
+                'opportunity_id' => (string) $appointment->opportunity_id,
+                'status' => OpportunityAppointment::STATUS_COMPLETED,
+            ],
+            'occurred_at' => now(),
+        ]);
+
+        return back()->with('success', 'Đã hoàn thành lịch hẹn.');
+    }
+
+    public function cancelAppointment(Request $request, string $id): RedirectResponse
+    {
+        $user = $request->user();
+        if (!$user instanceof User) {
+            abort(403);
+        }
+
+        $tenantId = (string) $user->tenant_id;
+        $actorUserId = (string) $user->id;
+
+        $validated = $request->validate([
+            'outcome_notes' => ['nullable', 'string'],
+        ]);
+
+        $appointment = OpportunityAppointment::query()
+            ->where('tenant_id', $tenantId)
+            ->findOrFail($id);
+
+        if (!OpportunityAppointment::canTransition($appointment->status, OpportunityAppointment::STATUS_CANCELLED)) {
+            return back()->with('error', 'Không thể chuyển trạng thái.');
+        }
+
+        $appointment->update([
+            'status' => OpportunityAppointment::STATUS_CANCELLED,
+            'outcome_notes' => $validated['outcome_notes'] ?? null,
+        ]);
+
+        EventRecord::query()->create([
+            'tenant_id' => $tenantId,
+            'aggregate_type' => 'opportunity_appointment',
+            'aggregate_id' => (string) $appointment->id,
+            'event_key' => 'opportunity_appointment.cancelled',
+            'actor_user_id' => $actorUserId,
+            'payload' => [
+                'opportunity_id' => (string) $appointment->opportunity_id,
+                'status' => OpportunityAppointment::STATUS_CANCELLED,
+            ],
+            'occurred_at' => now(),
+        ]);
+
+        return back()->with('success', 'Đã hủy lịch hẹn.');
+    }
+
+    public function rescheduleAppointment(Request $request, string $id): RedirectResponse
+    {
+        $user = $request->user();
+        if (!$user instanceof User) {
+            abort(403);
+        }
+
+        $tenantId = (string) $user->tenant_id;
+        $actorUserId = (string) $user->id;
+
+        $validated = $request->validate([
+            'scheduled_at' => ['required', 'date', 'after:now'],
+        ]);
+
+        $appointment = OpportunityAppointment::query()
+            ->where('tenant_id', $tenantId)
+            ->findOrFail($id);
+
+        if (!OpportunityAppointment::canTransition($appointment->status, OpportunityAppointment::STATUS_RESCHEDULED)) {
+            return back()->with('error', 'Không thể chuyển trạng thái.');
+        }
+
+        DB::transaction(function () use ($actorUserId, $appointment, $tenantId, $validated) {
+            $replacement = OpportunityAppointment::query()->create([
+                'tenant_id' => $tenantId,
+                'opportunity_id' => (string) $appointment->opportunity_id,
+                'type' => $appointment->type,
+                'scheduled_at' => $validated['scheduled_at'],
+                'location' => $appointment->location,
+                'assigned_to' => $appointment->assigned_to,
+                'status' => OpportunityAppointment::STATUS_SCHEDULED,
+                'created_by' => $actorUserId,
+            ]);
+
+            $appointment->update([
+                'status' => OpportunityAppointment::STATUS_RESCHEDULED,
+            ]);
+
+            EventRecord::query()->create([
+                'tenant_id' => $tenantId,
+                'aggregate_type' => 'opportunity_appointment',
+                'aggregate_id' => (string) $appointment->id,
+                'event_key' => 'opportunity_appointment.rescheduled',
+                'actor_user_id' => $actorUserId,
+                'payload' => [
+                    'opportunity_id' => (string) $appointment->opportunity_id,
+                    'replacement_appointment_id' => (string) $replacement->id,
+                    'status' => OpportunityAppointment::STATUS_RESCHEDULED,
+                ],
+                'occurred_at' => now(),
+            ]);
+        });
+
+        return back()->with('success', 'Đã dời lịch hẹn.');
     }
 
     public function saveQuoteLines(Request $request, string $id): RedirectResponse

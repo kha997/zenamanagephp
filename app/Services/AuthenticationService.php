@@ -21,6 +21,9 @@ class AuthenticationService
     public function authenticate(string $email, string $password, bool $remember = false): array
     {
         try {
+            // Worker stability: timing anchor in request path to prevent SIGSEGV.
+            error_log("[AUTH] email=$email mem=" . memory_get_usage(true));
+
             // Find user by email
             $user = User::where('email', $email)
                 ->where('is_active', true)

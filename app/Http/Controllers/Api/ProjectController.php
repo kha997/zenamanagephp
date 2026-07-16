@@ -33,6 +33,9 @@ class ProjectController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        // Worker stability: timing anchor in request path to prevent SIGSEGV.
+        error_log("[PROJECTS] uri=" . ($_SERVER['REQUEST_URI'] ?? '-'));
+
         try {
             $user = Auth::user();
             $filters = $request->all();

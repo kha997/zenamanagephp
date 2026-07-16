@@ -36,24 +36,32 @@ class BackupCommand extends Command
         ]);
 
         try {
+            $backupDir = $this->createBackupDirectory();
+
             switch ($type) {
                 case 'all':
-                    $this->backupAll();
+                    $this->backupDatabase($backupDir);
+                    $this->backupFiles($backupDir);
+                    $this->backupConfig($backupDir);
                     break;
                 case 'database':
-                    $this->backupDatabase();
+                    $this->backupDatabase($backupDir);
                     break;
                 case 'files':
-                    $this->backupFiles();
+                    $this->backupFiles($backupDir);
                     break;
                 case 'config':
-                    $this->backupConfig();
+                    $this->backupConfig($backupDir);
                     break;
                 default:
                     $this->error('Invalid backup type. Available types: all, database, files, config');
                     $task->markAsFailed('Invalid backup type');
                     return 1;
             }
+
+            $this->createBackupManifest($backupDir);
+            $this->compressBackup($backupDir);
+            $this->cleanupOldBackups();
 
             $task->markAsCompleted(['backup_type' => $type]);
             $this->info('Backup completed successfully!');
@@ -63,25 +71,6 @@ class BackupCommand extends Command
             $this->error('Backup failed: ' . $e->getMessage());
             return 1;
         }
-    }
-
-    /**
-     * Backup all components
-     */
-    private function backupAll()
-    {
-        $this->info('Creating comprehensive backup...');
-
-        $backupDir = $this->createBackupDirectory();
-        
-        $this->backupDatabase($backupDir);
-        $this->backupFiles($backupDir);
-        $this->backupConfig($backupDir);
-        
-        $this->createBackupManifest($backupDir);
-        $this->compressBackup($backupDir);
-        
-        $this->cleanupOldBackups();
     }
 
     /**
@@ -354,12 +343,15 @@ class BackupCommand extends Command
                 unlink($backup);
                 $deletedCount++;
             }
+            // Keep the survivors list in sync so the age-based pass below
+            // doesn't filemtime() a path this pass already unlinked.
+            $backups = array_slice($backups, 0, $maxBackups);
         }
 
         // Remove backups older than max age
         $cutoffTime = time() - ($maxAge * 24 * 60 * 60);
         foreach ($backups as $backup) {
-            if (filemtime($backup) < $cutoffTime) {
+            if (file_exists($backup) && filemtime($backup) < $cutoffTime) {
                 unlink($backup);
                 $deletedCount++;
             }

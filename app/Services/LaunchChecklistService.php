@@ -9,6 +9,10 @@ use Illuminate\Support\Facades\Artisan;
 
 class LaunchChecklistService
 {
+    // backup:run is scheduled daily (full) + every 6h (database-only); allow
+    // slack for a missed run before flagging the backup system as unhealthy.
+    private const BACKUP_FRESHNESS_WINDOW_SECONDS = 60 * 60 * 48;
+
     public function getLaunchStatus(): array
     {
         return [
@@ -303,8 +307,13 @@ class LaunchChecklistService
 
     private function checkSslCertificate(): bool
     {
-        // Simulate SSL check
-        return true;
+        // Only production traffic needs to be HTTPS-terminated; local/staging
+        // frequently run over plain HTTP and that's fine.
+        if (config('app.env') !== 'production') {
+            return true;
+        }
+
+        return str_starts_with((string) config('app.url'), 'https://');
     }
 
     private function checkErrorLogging(): bool
@@ -314,8 +323,26 @@ class LaunchChecklistService
 
     private function checkBackupSystem(): bool
     {
-        // Simulate backup system check
-        return true;
+        // Real evidence that `backup:run` (scheduled in Console\Kernel) has
+        // actually produced an archive recently — not just that the command
+        // exists. A stale or missing archive means the scheduler is likely
+        // disabled (ENABLE_SCHEDULER=false) or backups are silently failing.
+        $latest = $this->getLatestBackupTimestamp();
+
+        return $latest !== null && (time() - $latest) < self::BACKUP_FRESHNESS_WINDOW_SECONDS;
+    }
+
+    private function getLatestBackupTimestamp(): ?int
+    {
+        $backups = glob(storage_path('backups') . '/backup_*.tar.gz') ?: [];
+
+        if (empty($backups)) {
+            return null;
+        }
+
+        $timestamps = array_filter(array_map('filemtime', $backups));
+
+        return empty($timestamps) ? null : max($timestamps);
     }
 
     private function checkMonitoringSetup(): bool
@@ -421,8 +448,11 @@ class LaunchChecklistService
 
     private function checkBackupSystemConfigured(): bool
     {
-        // Simulate backup system check
-        return true;
+        // "Configured" (infra wired up) is weaker than checkBackupSystem()
+        // (evidence it actually ran) — useful right after a fresh deploy,
+        // before the first scheduled backup has fired.
+        return config('app.enable_scheduler') === true
+            && class_exists(\App\Console\Commands\BackupCommand::class);
     }
 
     private function checkMonitoringActive(): bool

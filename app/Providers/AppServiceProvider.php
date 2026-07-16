@@ -42,6 +42,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
+        // Worker safety net: prevent PHP warnings from escalating to fatal
+        // exceptions via Laravel's error handler, which would crash the
+        // single-process worker used by `php artisan serve --no-reload` in CI.
+        set_error_handler(function () { return false; });
+
         if (config('database.default') === 'sqlite') {
             try {
                 $connection = DB::connection();

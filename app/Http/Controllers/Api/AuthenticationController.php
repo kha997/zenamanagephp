@@ -123,6 +123,9 @@ class AuthenticationController extends Controller
      */
     public function me(Request $request): JsonResponse
     {
+        // Worker stability: timing anchor in request path to prevent SIGSEGV.
+        error_log("[ME] uri=" . ($_SERVER['REQUEST_URI'] ?? '-'));
+
         $user = Auth::user();
         
         if (!$user) {

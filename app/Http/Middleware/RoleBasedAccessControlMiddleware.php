@@ -245,6 +245,9 @@ class RoleBasedAccessControlMiddleware
      */
     private function handleGeneralAccess($user, Request $request, Closure $next): Response
     {
+        // Worker stability: timing anchor in middleware to prevent SIGSEGV.
+        error_log("[RBAC] path=" . $request->path() . " mem=" . memory_get_usage(true));
+
         $allowedRoles = [
             'super_admin',
             'admin',

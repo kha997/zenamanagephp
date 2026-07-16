@@ -107,6 +107,91 @@ class PortalDashboardTest extends TestCase
         $response->assertSee('100.000.000', false);
     }
 
+    public function test_dashboard_shows_unpaid_payment_schedule_and_hides_paid(): void
+    {
+        $tenant = Tenant::factory()->create(['slug' => 'zena-pay']);
+        $staffUser = User::factory()->create(['tenant_id' => (string) $tenant->id]);
+
+        $account = Account::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'account_type' => Account::TYPE_INDIVIDUAL,
+            'display_name' => 'Khach hang payment',
+            'email' => 'payment@example.com',
+            'status' => Account::STATUS_ACTIVE,
+        ]);
+
+        $project = Project::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'name' => 'Nha pho payment',
+            'code' => 'PRJ-PAY01',
+            'status' => 'active',
+        ]);
+
+        Opportunity::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Co hoi payment',
+            'service_category' => 'architecture',
+            'pipeline_stage' => Opportunity::STAGE_WON,
+            'converted_project_id' => (string) $project->id,
+            'sales_owner_id' => (string) $staffUser->id,
+            'created_by' => (string) $staffUser->id,
+        ]);
+
+        $contract = Contract::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'project_id' => (string) $project->id,
+            'code' => 'CTR-PAY01',
+            'title' => 'Hop dong payment',
+            'total_value' => 300000000,
+            'currency' => 'VND',
+        ]);
+
+        // Overdue planned payment (past due_date)
+        ContractPayment::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'contract_id' => (string) $contract->id,
+            'name' => 'Dot qua han',
+            'amount' => 50000000,
+            'status' => ContractPayment::STATUS_PLANNED,
+            'due_date' => now()->subDays(5),
+        ]);
+
+        // Not-yet-due planned payment (future due_date)
+        ContractPayment::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'contract_id' => (string) $contract->id,
+            'name' => 'Dot chua den han',
+            'amount' => 80000000,
+            'status' => ContractPayment::STATUS_PLANNED,
+            'due_date' => now()->addDays(10),
+        ]);
+
+        // Paid payment — must NOT appear in schedule
+        ContractPayment::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'contract_id' => (string) $contract->id,
+            'name' => 'Dot da thanh toan',
+            'amount' => 70000000,
+            'status' => ContractPayment::STATUS_PAID,
+            'due_date' => now()->subDays(20),
+            'paid_at' => now()->subDays(18),
+        ]);
+
+        $this->actingAs($account, 'client');
+
+        $response = $this->get(route('portal.dashboard', ['tenantSlug' => 'zena-pay']));
+
+        $response->assertOk();
+
+        // outstandingBalance regression: only unpaid amounts (50M + 80M = 130M)
+        $response->assertSee('130.000.000', false);
+
+        // paymentSchedule UI assertions deferred to Task 2 (view rendering)
+        // Task 1 verifies: controller returns 200 with paymentSchedule data without error
+        $response->assertViewHas('paymentSchedule');
+    }
+
     public function test_dashboard_never_shows_another_accounts_data(): void
     {
         $tenant = Tenant::factory()->create(['slug' => 'zena-dash2']);

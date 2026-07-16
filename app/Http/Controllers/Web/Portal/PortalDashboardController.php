@@ -62,6 +62,13 @@ class PortalDashboardController extends Controller
             ->where('status', '!=', ContractPayment::STATUS_PAID)
             ->sum('amount');
 
+        $paymentSchedule = ContractPayment::query()
+            ->where('tenant_id', $tenant->id)
+            ->whereIn('contract_id', $contracts->pluck('id'))
+            ->where('status', '!=', ContractPayment::STATUS_PAID)
+            ->orderBy('due_date')
+            ->get(['id', 'contract_id', 'name', 'amount', 'due_date', 'status']);
+
         /** @var \Illuminate\Database\Eloquent\Collection<int, Quote> $quotes */
         $quotes = Quote::query()
             ->join('opportunities', 'opportunities.id', '=', 'quotes.opportunity_id')
@@ -79,6 +86,7 @@ class PortalDashboardController extends Controller
             'documents' => $documents,
             'contracts' => $contracts,
             'outstandingBalance' => $outstandingBalance,
+            'paymentSchedule' => $paymentSchedule,
             'quotes' => $quotes,
         ]);
     }

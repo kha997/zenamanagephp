@@ -33,9 +33,6 @@ class ProjectController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        // Worker stability: timing anchor in request path to prevent SIGSEGV.
-        error_log("[PROJECTS] uri=" . ($_SERVER['REQUEST_URI'] ?? '-'));
-
         try {
             $user = Auth::user();
             $filters = $request->all();
@@ -50,13 +47,11 @@ class ProjectController extends Controller
             
             return $this->zenaSuccessResponse($projects);
             
-        } catch (\Throwable $e) {
-            Log::error("Failed to retrieve projects", [
-                'class' => get_class($e),
+        } catch (\Exception $e) {
+            Log::error('Failed to get projects', [
                 'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
                 'user_id' => Auth::id(),
+                'filters' => $request->all()
             ]);
             
             return response()->json([

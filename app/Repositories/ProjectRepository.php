@@ -30,11 +30,9 @@ class ProjectRepository
             'documents',
         ];
 
-        $resolved = array_values(array_filter($candidates, function (string $relation): bool {
+        return array_values(array_filter($candidates, function (string $relation): bool {
             return method_exists($this->model, $relation);
         }));
-
-        return $resolved;
     }
 
     /**
@@ -76,9 +74,7 @@ class ProjectRepository
             $query->where('end_date', '<=', $filters['end_date']);
         }
 
-        $query->with($this->defaultWith());
-
-        return $query->paginate($perPage);
+        return $query->with($this->defaultWith())->paginate($perPage);
     }
 
     /**

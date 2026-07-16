@@ -29,9 +29,6 @@ class AuthenticationController extends Controller
      */
     public function login(Request $request): JsonResponse
     {
-        // Worker stability: timing anchor in request path to prevent SIGSEGV.
-        error_log("[LOGIN] uri=" . ($_SERVER['REQUEST_URI'] ?? '-'));
-
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required|string|min:6',
@@ -123,9 +120,6 @@ class AuthenticationController extends Controller
      */
     public function me(Request $request): JsonResponse
     {
-        // Worker stability: timing anchor in request path to prevent SIGSEGV.
-        error_log("[ME] uri=" . ($_SERVER['REQUEST_URI'] ?? '-'));
-
         $user = Auth::user();
         
         if (!$user) {

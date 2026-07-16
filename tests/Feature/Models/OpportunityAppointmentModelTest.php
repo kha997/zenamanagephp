@@ -115,4 +115,20 @@ class OpportunityAppointmentModelTest extends TestCase
             }
         }
     }
+
+    public function test_factory_defaults_created_by_within_the_same_tenant(): void
+    {
+        $tenant = Tenant::factory()->create();
+        [$opportunity] = $this->makeOpportunity($tenant);
+
+        $appointment = OpportunityAppointment::factory()->create([
+            'tenant_id' => (string) $tenant->id,
+            'opportunity_id' => (string) $opportunity->id,
+        ]);
+
+        $createdBy = User::query()->findOrFail($appointment->created_by);
+
+        $this->assertSame((string) $tenant->id, (string) $appointment->tenant_id);
+        $this->assertSame((string) $appointment->tenant_id, (string) $createdBy->tenant_id);
+    }
 }

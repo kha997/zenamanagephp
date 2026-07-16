@@ -23,7 +23,7 @@ class OpportunityAppointmentFactory extends Factory
             'assigned_to' => null,
             'status' => OpportunityAppointment::STATUS_SCHEDULED,
             'outcome_notes' => null,
-            'created_by' => User::factory(),
+            'created_by' => fn (array $attributes) => User::factory()->forTenant((string) $attributes['tenant_id']),
         ];
     }
 }

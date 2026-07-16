@@ -1047,6 +1047,7 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/crm/quotes/{id}/revise', [App\Http\Controllers\Web\CrmPageController::class, 'reviseQuote'])->middleware('rbac:crm.manage')->name('crm.quotes.revise');
     Route::post('/crm/quotes/{id}/commercial', [App\Http\Controllers\Web\CrmPageController::class, 'saveQuoteCommercial'])->middleware('rbac:crm.manage')->name('crm.quotes.commercial');
     Route::get('/crm/quotes/{id}/pdf', [App\Http\Controllers\Web\CrmPageController::class, 'quotePdf'])->middleware('rbac:crm.view')->name('crm.quotes.pdf');
+    Route::get('/crm/quotes/{id}/render/{template}', [App\Http\Controllers\Web\CrmPageController::class, 'renderQuoteDocument'])->middleware('rbac:crm.view')->name('crm.quotes.render-document');
     Route::get('/crm/reports', [App\Http\Controllers\Web\CrmReportController::class, 'index'])->middleware('rbac:crm.view')->name('crm.reports');
 });
 

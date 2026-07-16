@@ -46,6 +46,16 @@ class CrmPageController extends Controller
         'Thua / Nurture' => [Opportunity::STAGE_LOST, Opportunity::STAGE_NO_BID, Opportunity::STAGE_NURTURE],
     ];
 
+    private function tenantId(): string
+    {
+        return (string) auth()->user()?->tenant_id;
+    }
+
+    private function actorUserId(): string
+    {
+        return (string) auth()->id();
+    }
+
     public function index(): View
     {
         $this->authorize('viewAny', Opportunity::class);
@@ -417,7 +427,7 @@ class CrmPageController extends Controller
 
     public function storeQuote(Request $request, string $id): RedirectResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = $this->tenantId();
 
         $opp = Opportunity::query()
             ->where('tenant_id', $tenantId)
@@ -434,7 +444,7 @@ class CrmPageController extends Controller
             'quote_number' => Quote::nextNumber($tenantId),
             'revision_no' => Quote::nextRevision((string) $opp->id),
             'status' => Quote::STATUS_DRAFT,
-            'created_by' => (string) auth()->id(),
+            'created_by' => $this->actorUserId(),
         ]);
 
         return redirect()->route('operator.crm.quotes.show', $quote->id);
@@ -442,13 +452,8 @@ class CrmPageController extends Controller
 
     public function storeAppointment(Request $request, string $id): RedirectResponse
     {
-        $user = $request->user();
-        if (!$user instanceof User) {
-            abort(403);
-        }
-
-        $tenantId = (string) $user->tenant_id;
-        $actorUserId = (string) $user->id;
+        $tenantId = $this->tenantId();
+        $actorUserId = $this->actorUserId();
 
         $opportunity = Opportunity::query()
             ->where('tenant_id', $tenantId)
@@ -502,13 +507,8 @@ class CrmPageController extends Controller
 
     public function completeAppointment(Request $request, string $id): RedirectResponse
     {
-        $user = $request->user();
-        if (!$user instanceof User) {
-            abort(403);
-        }
-
-        $tenantId = (string) $user->tenant_id;
-        $actorUserId = (string) $user->id;
+        $tenantId = $this->tenantId();
+        $actorUserId = $this->actorUserId();
 
         $validated = $request->validate([
             'outcome_notes' => ['required', 'string'],
@@ -545,13 +545,8 @@ class CrmPageController extends Controller
 
     public function cancelAppointment(Request $request, string $id): RedirectResponse
     {
-        $user = $request->user();
-        if (!$user instanceof User) {
-            abort(403);
-        }
-
-        $tenantId = (string) $user->tenant_id;
-        $actorUserId = (string) $user->id;
+        $tenantId = $this->tenantId();
+        $actorUserId = $this->actorUserId();
 
         $validated = $request->validate([
             'outcome_notes' => ['nullable', 'string'],
@@ -588,13 +583,8 @@ class CrmPageController extends Controller
 
     public function rescheduleAppointment(Request $request, string $id): RedirectResponse
     {
-        $user = $request->user();
-        if (!$user instanceof User) {
-            abort(403);
-        }
-
-        $tenantId = (string) $user->tenant_id;
-        $actorUserId = (string) $user->id;
+        $tenantId = $this->tenantId();
+        $actorUserId = $this->actorUserId();
 
         $validated = $request->validate([
             'scheduled_at' => ['required', 'date', 'after:now'],

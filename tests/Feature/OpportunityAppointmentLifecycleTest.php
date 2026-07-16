@@ -225,6 +225,30 @@ class OpportunityAppointmentLifecycleTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_store_rejects_assigned_to_from_another_tenant(): void
+    {
+        $tenantA = Tenant::factory()->create();
+        ['user' => $userA, 'opportunity' => $opportunity] = $this->makeOpportunity($tenantA);
+
+        $tenantB = Tenant::factory()->create();
+        $foreignAssignee = $this->createTenantUser($tenantB, ['name' => 'Foreign Assignee'], ['sales'], ['crm.view', 'crm.manage']);
+
+        $response = $this->actingAs($userA)
+            ->from(route('operator.crm.opportunities.show', $opportunity->id))
+            ->post(route('operator.crm.opportunities.appointments.store', $opportunity->id), [
+                'type' => OpportunityAppointment::TYPE_CONSULTATION,
+                'scheduled_at' => Carbon::now()->addDay()->format('Y-m-d H:i:s'),
+                'assigned_to' => (string) $foreignAssignee->id,
+            ]);
+
+        $response->assertRedirect(route('operator.crm.opportunities.show', $opportunity->id));
+        $response->assertSessionHasErrors(['assigned_to']);
+
+        $this->assertSame(0, OpportunityAppointment::query()
+            ->where('opportunity_id', (string) $opportunity->id)
+            ->count());
+    }
+
     public function test_team_member_without_manage_cannot_mutate_appointments(): void
     {
         $tenant = Tenant::factory()->create();

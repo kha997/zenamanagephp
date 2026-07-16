@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\OpportunityController as ApiOpportunityController;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Web\Concerns\DelegatesToApiControllers;
 use App\Models\Account;
+use App\Models\DeliverableTemplate;
 use App\Models\EventRecord;
 use App\Models\Lead;
 use App\Models\Opportunity;
@@ -15,14 +16,18 @@ use App\Models\Quote;
 use App\Models\QuoteLineItem;
 use App\Models\User;
 use App\Services\AiAssistService;
+use App\Services\DocumentContext\DocumentContextRegistry;
 use App\Services\ZenaBoqIntegrationService;
 use App\Services\DeliverablePdfExportService;
+use App\Services\DeliverableTemplateVersionService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Throwable;
 
@@ -392,7 +397,15 @@ class CrmPageController extends Controller
 
         $this->authorize('view', $quote);
 
-        return view('crm.quote-show', compact('quote'));
+        $quoteTemplates = \App\Models\DeliverableTemplate::query()
+            ->where('tenant_id', $tenantId)
+            ->where('context', 'quote')
+            ->with('latestPublishedVersion')
+            ->get()
+            ->filter(fn ($t) => $t->latestPublishedVersion !== null)
+            ->values();
+
+        return view('crm.quote-show', compact('quote', 'quoteTemplates'));
     }
 
     public function storeQuote(Request $request, string $id): RedirectResponse
@@ -715,6 +728,43 @@ class CrmPageController extends Controller
         return response($pdfBytes, 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="' . $filename . '"',
+        ]);
+    }
+
+    public function renderQuoteDocument(string $id, string $template, DeliverableTemplateVersionService $versionService, DocumentContextRegistry $contextRegistry, DeliverablePdfExportService $pdfService): SymfonyResponse
+    {
+        /** @var \App\Models\User $authUser */
+        $authUser = \Illuminate\Support\Facades\Auth::user();
+        $tenantId = (string) $authUser->tenant_id;
+
+        /** @var Quote $quote */
+        $quote = Quote::query()
+            ->join('opportunities', 'opportunities.id', '=', 'quotes.opportunity_id')
+            ->where('quotes.id', $id)
+            ->where('quotes.tenant_id', $tenantId)
+            ->select('quotes.*')
+            ->firstOrFail();
+
+        $tpl = DeliverableTemplate::query()->where('tenant_id', $tenantId)->where('context', 'quote')->findOrFail($template);
+
+        $version = $tpl->latestPublishedVersion()->first();
+        if ($version === null) {
+            abort(404);
+        }
+
+        $html = (string) Storage::disk('local')->get($version->storage_path);
+        $context = $contextRegistry->get('quote')->build($quote);
+        $rendered = $versionService->renderHtml($html, $context);
+
+        try {
+            $pdfBytes = $pdfService->render($rendered);
+        } catch (\App\Exceptions\DeliverablePdfExportUnavailableException) {
+            return back()->with('error', 'Không thể tạo PDF vào lúc này.');
+        }
+
+        return response($pdfBytes, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="bao-gia-' . Str::slug($tpl->name) . '-' . $quote->quote_number . '.pdf"',
         ]);
     }
 }

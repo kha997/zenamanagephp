@@ -15,6 +15,7 @@ use App\Services\DocumentContext\ContractContextProvider;
 use App\Services\DocumentContext\CertificateContextProvider;
 use App\Services\DocumentContext\DocumentContextRegistry;
 use App\Services\DocumentContext\ProjectContextProvider;
+use App\Services\DocumentContext\QuoteContextProvider;
 use App\Services\PaymentCertificateSummaryService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -35,11 +36,13 @@ class DocumentContextProvidersTest extends TestCase
         $summaryService = new PaymentCertificateSummaryService();
         $certificateProvider = new CertificateContextProvider($contractProvider, $summaryService);
         $projectProvider = new ProjectContextProvider();
+        $quoteProvider = new QuoteContextProvider();
 
         $this->registry = new DocumentContextRegistry([
             $contractProvider,
             $certificateProvider,
             $projectProvider,
+            $quoteProvider,
         ]);
     }
 
@@ -48,7 +51,8 @@ class DocumentContextProvidersTest extends TestCase
         $this->assertInstanceOf(ContractContextProvider::class, $this->registry->get('contract'));
         $this->assertInstanceOf(CertificateContextProvider::class, $this->registry->get('certificate'));
         $this->assertInstanceOf(ProjectContextProvider::class, $this->registry->get('project'));
-        $this->assertCount(3, $this->registry->all());
+        $this->assertInstanceOf(QuoteContextProvider::class, $this->registry->get('quote'));
+        $this->assertCount(4, $this->registry->all());
     }
 
     public function test_registry_throws_for_unknown_slug(): void
@@ -337,6 +341,7 @@ class DocumentContextProvidersTest extends TestCase
             new ContractContextProvider(),
             new CertificateContextProvider(new ContractContextProvider(), new PaymentCertificateSummaryService()),
             new ProjectContextProvider(),
+            new QuoteContextProvider(),
         ];
 
         foreach ($providers as $provider) {

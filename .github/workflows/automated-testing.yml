@@ -657,7 +657,7 @@ jobs:
     - name: 🧪 Fast API tests
       run: |
         echo "::group::Fast API tests"
-        php artisan test tests/Feature/Api -v --stop-on-failure --exclude-group=slow
+        php artisan test tests/Feature/Api --stop-on-failure --exclude-group=slow
         echo "::endgroup::"
 
     - name: Failure context
@@ -693,7 +693,7 @@ jobs:
           echo "- Suite: ${SUITE_NAME:-n/a}"
           echo "- DB connection: ${DB_CONNECTION:-n/a}"
           echo "- Docs lint: executed"
-          echo "- Command: php artisan test tests/Feature/Api -v --stop-on-failure --exclude-group=slow"
+          echo "- Command: php artisan test tests/Feature/Api --stop-on-failure --exclude-group=slow"
         } >> "$GITHUB_STEP_SUMMARY"
 
   api-tests-slow:
@@ -793,7 +793,7 @@ jobs:
     - name: 🧪 Slow API tests
       run: |
         echo "::group::Slow API tests"
-        php artisan test tests/Feature/Api -v --stop-on-failure --group=slow
+        php artisan test tests/Feature/Api --stop-on-failure --group=slow
         echo "::endgroup::"
 
     - name: Failure context
@@ -829,7 +829,7 @@ jobs:
           echo "- Suite: ${SUITE_NAME:-n/a}"
           echo "- DB connection: ${DB_CONNECTION:-n/a}"
           echo "- Docs lint: executed"
-          echo "- Command: php artisan test tests/Feature/Api -v --stop-on-failure --group=slow"
+          echo "- Command: php artisan test tests/Feature/Api --stop-on-failure --group=slow"
         } >> "$GITHUB_STEP_SUMMARY"
 
   integration-tests:

@@ -1011,6 +1011,17 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/document-templates/{id}/preview', [App\Http\Controllers\Web\DocumentTemplatePageController::class, 'preview'])->middleware('rbac:document_template.view')->name('document-templates.preview');
     Route::post('/document-templates/{id}/publish', [App\Http\Controllers\Web\DocumentTemplatePageController::class, 'publish'])->middleware('rbac:document_template.manage')->name('document-templates.publish');
 
+    // Knowledge base (SOP / checklist / lessons learned)
+    Route::get('/knowledge', [App\Http\Controllers\Web\KnowledgeArticlePageController::class, 'index'])->middleware('rbac:knowledge.view')->name('knowledge.index');
+    Route::get('/knowledge/create', [App\Http\Controllers\Web\KnowledgeArticlePageController::class, 'create'])->middleware('rbac:knowledge.manage')->name('knowledge.create');
+    Route::post('/knowledge', [App\Http\Controllers\Web\KnowledgeArticlePageController::class, 'store'])->middleware('rbac:knowledge.manage')->name('knowledge.store');
+    Route::get('/knowledge/{id}', [App\Http\Controllers\Web\KnowledgeArticlePageController::class, 'show'])->middleware('rbac:knowledge.view')->name('knowledge.show');
+    Route::get('/knowledge/{id}/edit', [App\Http\Controllers\Web\KnowledgeArticlePageController::class, 'edit'])->middleware('rbac:knowledge.manage')->name('knowledge.edit');
+    Route::post('/knowledge/{id}', [App\Http\Controllers\Web\KnowledgeArticlePageController::class, 'update'])->middleware('rbac:knowledge.manage')->name('knowledge.update');
+    Route::post('/knowledge/{id}/publish', [App\Http\Controllers\Web\KnowledgeArticlePageController::class, 'publish'])->middleware('rbac:knowledge.manage')->name('knowledge.publish');
+    Route::post('/knowledge/{id}/unpublish', [App\Http\Controllers\Web\KnowledgeArticlePageController::class, 'unpublish'])->middleware('rbac:knowledge.manage')->name('knowledge.unpublish');
+    Route::delete('/knowledge/{id}', [App\Http\Controllers\Web\KnowledgeArticlePageController::class, 'destroy'])->middleware('rbac:knowledge.manage')->name('knowledge.destroy');
+
     // CRM (lead inbox → account/opportunity → project; spec crm-zena)
     Route::get('/crm', [App\Http\Controllers\Web\CrmPageController::class, 'index'])->middleware('rbac:crm.view')->name('crm.index');
     Route::get('/crm/leads', [App\Http\Controllers\Web\CrmPageController::class, 'leads'])->middleware('rbac:crm.view')->name('crm.leads');
@@ -1036,6 +1047,7 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/crm/quotes/{id}/revise', [App\Http\Controllers\Web\CrmPageController::class, 'reviseQuote'])->middleware('rbac:crm.manage')->name('crm.quotes.revise');
     Route::post('/crm/quotes/{id}/commercial', [App\Http\Controllers\Web\CrmPageController::class, 'saveQuoteCommercial'])->middleware('rbac:crm.manage')->name('crm.quotes.commercial');
     Route::get('/crm/quotes/{id}/pdf', [App\Http\Controllers\Web\CrmPageController::class, 'quotePdf'])->middleware('rbac:crm.view')->name('crm.quotes.pdf');
+    Route::get('/crm/quotes/{id}/render/{template}', [App\Http\Controllers\Web\CrmPageController::class, 'renderQuoteDocument'])->middleware('rbac:crm.view')->name('crm.quotes.render-document');
     Route::get('/crm/reports', [App\Http\Controllers\Web\CrmReportController::class, 'index'])->middleware('rbac:crm.view')->name('crm.reports');
 });
 

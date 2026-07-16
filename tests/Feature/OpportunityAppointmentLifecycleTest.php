@@ -262,4 +262,43 @@ class OpportunityAppointmentLifecycleTest extends TestCase
             ])
             ->assertForbidden();
     }
+
+    public function test_opportunity_show_renders_appointment_card_with_expected_labels_and_actions(): void
+    {
+        $tenant = Tenant::factory()->create();
+        ['user' => $user, 'opportunity' => $opportunity] = $this->makeOpportunity($tenant);
+        $assignee = $this->createTenantUser($tenant, ['name' => 'Appointment Assignee'], ['sales'], ['crm.view', 'crm.manage']);
+
+        $scheduled = $this->makeAppointment($tenant, $opportunity, $user, OpportunityAppointment::STATUS_SCHEDULED, [
+            'type' => OpportunityAppointment::TYPE_CONSULTATION,
+            'assigned_to' => (string) $assignee->id,
+        ]);
+
+        $completed = $this->makeAppointment($tenant, $opportunity, $user, OpportunityAppointment::STATUS_COMPLETED, [
+            'type' => OpportunityAppointment::TYPE_SURVEY,
+            'scheduled_at' => Carbon::now()->addDays(2),
+            'outcome_notes' => 'Survey completed with site constraints noted.',
+            'assigned_to' => (string) $assignee->id,
+        ]);
+
+        $response = $this->actingAs($user)
+            ->get(route('operator.crm.opportunities.show', $opportunity->id));
+
+        $response->assertOk();
+        $response->assertSeeText('Lịch hẹn');
+        $response->assertSeeText('Tư vấn');
+        $response->assertSeeText('Khảo sát');
+        $response->assertDontSee('>consultation<', false);
+        $response->assertDontSee('>survey<', false);
+        $response->assertSeeText('Hoàn thành');
+        $response->assertSeeText('Hủy');
+        $response->assertSeeText('Dời lịch');
+        $response->assertSeeText('Survey completed with site constraints noted.');
+        $response->assertSee(route('operator.crm.appointments.complete', $scheduled->id), false);
+        $response->assertSee(route('operator.crm.appointments.cancel', $scheduled->id), false);
+        $response->assertSee(route('operator.crm.appointments.reschedule', $scheduled->id), false);
+        $response->assertDontSee(route('operator.crm.appointments.complete', $completed->id), false);
+        $response->assertDontSee(route('operator.crm.appointments.cancel', $completed->id), false);
+        $response->assertDontSee(route('operator.crm.appointments.reschedule', $completed->id), false);
+    }
 }

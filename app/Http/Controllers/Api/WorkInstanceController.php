@@ -184,7 +184,7 @@ class WorkInstanceController extends BaseApiController
 
             $directory = sprintf('work-instances/%s/steps/%s/attachments', $instance->id, $step->id);
             $storedFilename = (string) \Illuminate\Support\Str::ulid() . '.' . $file->getClientOriginalExtension();
-            $storedPath = Storage::disk('local')->putFileAs($directory, $file, $storedFilename);
+            $storedPath = Storage::disk(config('filesystems.default', 'local'))->putFileAs($directory, $file, $storedFilename);
 
             if ($storedPath === false) {
                 return $this->serverError('Failed to store attachment');

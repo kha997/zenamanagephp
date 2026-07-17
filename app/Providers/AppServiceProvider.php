@@ -9,6 +9,7 @@ use App\Services\DocumentContext\ContractContextProvider;
 use App\Services\DocumentContext\CertificateContextProvider;
 use App\Services\DocumentContext\DocumentContextRegistry;
 use App\Services\DocumentContext\ProjectContextProvider;
+use App\Services\DocumentContext\QuoteContextProvider;
 use App\Services\PaymentCertificateSummaryService;
 use Illuminate\Auth\RequestGuard;
 use Illuminate\Support\Facades\Auth;
@@ -29,6 +30,7 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(ContractContextProvider::class),
                 $app->make(CertificateContextProvider::class),
                 $app->make(ProjectContextProvider::class),
+                $app->make(QuoteContextProvider::class),
             ]);
         });
 

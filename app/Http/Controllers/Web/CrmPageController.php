@@ -8,21 +8,27 @@ use App\Http\Controllers\Api\OpportunityController as ApiOpportunityController;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Web\Concerns\DelegatesToApiControllers;
 use App\Models\Account;
+use App\Models\DeliverableTemplate;
 use App\Models\EventRecord;
 use App\Models\Lead;
 use App\Models\Opportunity;
+use App\Models\OpportunityAppointment;
 use App\Models\Quote;
 use App\Models\QuoteLineItem;
 use App\Models\User;
 use App\Services\AiAssistService;
+use App\Services\DocumentContext\DocumentContextRegistry;
 use App\Services\ZenaBoqIntegrationService;
 use App\Services\DeliverablePdfExportService;
+use App\Services\DeliverableTemplateVersionService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Throwable;
 
@@ -39,6 +45,16 @@ class CrmPageController extends Controller
         'Thắng' => [Opportunity::STAGE_WON],
         'Thua / Nurture' => [Opportunity::STAGE_LOST, Opportunity::STAGE_NO_BID, Opportunity::STAGE_NURTURE],
     ];
+
+    private function tenantId(): string
+    {
+        return (string) auth()->user()?->tenant_id;
+    }
+
+    private function actorUserId(): string
+    {
+        return (string) auth()->id();
+    }
 
     public function index(): View
     {
@@ -222,6 +238,12 @@ class CrmPageController extends Controller
                 ->where('tenant_id', $tenantId)
                 ->orderBy('name')
                 ->get(['id', 'name']),
+            'appointments' => OpportunityAppointment::query()
+                ->where('tenant_id', $tenantId)
+                ->where('opportunity_id', $id)
+                ->with('assignee:id,name')
+                ->orderByDesc('scheduled_at')
+                ->get(),
             'events' => \App\Models\EventRecord::query()
                 ->where('tenant_id', $tenantId)
                 ->where('aggregate_type', 'opportunity')
@@ -392,12 +414,20 @@ class CrmPageController extends Controller
 
         $this->authorize('view', $quote);
 
-        return view('crm.quote-show', compact('quote'));
+        $quoteTemplates = \App\Models\DeliverableTemplate::query()
+            ->where('tenant_id', $tenantId)
+            ->where('context', 'quote')
+            ->with('latestPublishedVersion')
+            ->get()
+            ->filter(fn ($t) => $t->latestPublishedVersion !== null)
+            ->values();
+
+        return view('crm.quote-show', compact('quote', 'quoteTemplates'));
     }
 
     public function storeQuote(Request $request, string $id): RedirectResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = $this->tenantId();
 
         $opp = Opportunity::query()
             ->where('tenant_id', $tenantId)
@@ -414,10 +444,192 @@ class CrmPageController extends Controller
             'quote_number' => Quote::nextNumber($tenantId),
             'revision_no' => Quote::nextRevision((string) $opp->id),
             'status' => Quote::STATUS_DRAFT,
-            'created_by' => (string) auth()->id(),
+            'created_by' => $this->actorUserId(),
         ]);
 
         return redirect()->route('operator.crm.quotes.show', $quote->id);
+    }
+
+    public function storeAppointment(Request $request, string $id): RedirectResponse
+    {
+        $tenantId = $this->tenantId();
+        $actorUserId = $this->actorUserId();
+
+        $opportunity = Opportunity::query()
+            ->where('tenant_id', $tenantId)
+            ->findOrFail($id);
+
+        $validated = $request->validate([
+            'type' => ['required', 'string', 'in:' . implode(',', OpportunityAppointment::VALID_TYPES)],
+            'scheduled_at' => ['required', 'date', 'after:now'],
+            'location' => ['nullable', 'string', 'max:255'],
+            'assigned_to' => ['nullable', 'string'],
+        ]);
+
+        if (($validated['assigned_to'] ?? null) !== null) {
+            $assigneeExists = User::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey($validated['assigned_to'])
+                ->exists();
+
+            if (!$assigneeExists) {
+                return back()->withInput()->withErrors(['assigned_to' => 'Người phụ trách không hợp lệ.']);
+            }
+        }
+
+        $appointment = OpportunityAppointment::query()->create([
+            'tenant_id' => $tenantId,
+            'opportunity_id' => (string) $opportunity->getKey(),
+            'type' => $validated['type'],
+            'scheduled_at' => $validated['scheduled_at'],
+            'location' => $validated['location'] ?? null,
+            'assigned_to' => $validated['assigned_to'] ?? null,
+            'status' => OpportunityAppointment::STATUS_SCHEDULED,
+            'created_by' => $actorUserId,
+        ]);
+
+        EventRecord::query()->create([
+            'tenant_id' => $tenantId,
+            'aggregate_type' => 'opportunity_appointment',
+            'aggregate_id' => (string) $appointment->id,
+            'event_key' => 'opportunity_appointment.scheduled',
+            'actor_user_id' => $actorUserId,
+            'payload' => [
+                'opportunity_id' => (string) $opportunity->getKey(),
+                'type' => $appointment->type,
+                'scheduled_at' => $appointment->scheduled_at->toIso8601String(),
+            ],
+            'occurred_at' => now(),
+        ]);
+
+        return back()->with('success', 'Đã đặt lịch hẹn.');
+    }
+
+    public function completeAppointment(Request $request, string $id): RedirectResponse
+    {
+        $tenantId = $this->tenantId();
+        $actorUserId = $this->actorUserId();
+
+        $validated = $request->validate([
+            'outcome_notes' => ['required', 'string'],
+        ]);
+
+        $appointment = OpportunityAppointment::query()
+            ->where('tenant_id', $tenantId)
+            ->findOrFail($id);
+
+        if (!OpportunityAppointment::canTransition($appointment->status, OpportunityAppointment::STATUS_COMPLETED)) {
+            return back()->with('error', 'Không thể chuyển trạng thái.');
+        }
+
+        $appointment->update([
+            'status' => OpportunityAppointment::STATUS_COMPLETED,
+            'outcome_notes' => $validated['outcome_notes'],
+        ]);
+
+        EventRecord::query()->create([
+            'tenant_id' => $tenantId,
+            'aggregate_type' => 'opportunity_appointment',
+            'aggregate_id' => (string) $appointment->id,
+            'event_key' => 'opportunity_appointment.completed',
+            'actor_user_id' => $actorUserId,
+            'payload' => [
+                'opportunity_id' => (string) $appointment->opportunity_id,
+                'status' => OpportunityAppointment::STATUS_COMPLETED,
+            ],
+            'occurred_at' => now(),
+        ]);
+
+        return back()->with('success', 'Đã hoàn thành lịch hẹn.');
+    }
+
+    public function cancelAppointment(Request $request, string $id): RedirectResponse
+    {
+        $tenantId = $this->tenantId();
+        $actorUserId = $this->actorUserId();
+
+        $validated = $request->validate([
+            'outcome_notes' => ['nullable', 'string'],
+        ]);
+
+        $appointment = OpportunityAppointment::query()
+            ->where('tenant_id', $tenantId)
+            ->findOrFail($id);
+
+        if (!OpportunityAppointment::canTransition($appointment->status, OpportunityAppointment::STATUS_CANCELLED)) {
+            return back()->with('error', 'Không thể chuyển trạng thái.');
+        }
+
+        $appointment->update([
+            'status' => OpportunityAppointment::STATUS_CANCELLED,
+            'outcome_notes' => $validated['outcome_notes'] ?? null,
+        ]);
+
+        EventRecord::query()->create([
+            'tenant_id' => $tenantId,
+            'aggregate_type' => 'opportunity_appointment',
+            'aggregate_id' => (string) $appointment->id,
+            'event_key' => 'opportunity_appointment.cancelled',
+            'actor_user_id' => $actorUserId,
+            'payload' => [
+                'opportunity_id' => (string) $appointment->opportunity_id,
+                'status' => OpportunityAppointment::STATUS_CANCELLED,
+            ],
+            'occurred_at' => now(),
+        ]);
+
+        return back()->with('success', 'Đã hủy lịch hẹn.');
+    }
+
+    public function rescheduleAppointment(Request $request, string $id): RedirectResponse
+    {
+        $tenantId = $this->tenantId();
+        $actorUserId = $this->actorUserId();
+
+        $validated = $request->validate([
+            'scheduled_at' => ['required', 'date', 'after:now'],
+        ]);
+
+        $appointment = OpportunityAppointment::query()
+            ->where('tenant_id', $tenantId)
+            ->findOrFail($id);
+
+        if (!OpportunityAppointment::canTransition($appointment->status, OpportunityAppointment::STATUS_RESCHEDULED)) {
+            return back()->with('error', 'Không thể chuyển trạng thái.');
+        }
+
+        DB::transaction(function () use ($actorUserId, $appointment, $tenantId, $validated) {
+            $replacement = OpportunityAppointment::query()->create([
+                'tenant_id' => $tenantId,
+                'opportunity_id' => (string) $appointment->opportunity_id,
+                'type' => $appointment->type,
+                'scheduled_at' => $validated['scheduled_at'],
+                'location' => $appointment->location,
+                'assigned_to' => $appointment->assigned_to,
+                'status' => OpportunityAppointment::STATUS_SCHEDULED,
+                'created_by' => $actorUserId,
+            ]);
+
+            $appointment->update([
+                'status' => OpportunityAppointment::STATUS_RESCHEDULED,
+            ]);
+
+            EventRecord::query()->create([
+                'tenant_id' => $tenantId,
+                'aggregate_type' => 'opportunity_appointment',
+                'aggregate_id' => (string) $appointment->id,
+                'event_key' => 'opportunity_appointment.rescheduled',
+                'actor_user_id' => $actorUserId,
+                'payload' => [
+                    'opportunity_id' => (string) $appointment->opportunity_id,
+                    'replacement_appointment_id' => (string) $replacement->id,
+                    'status' => OpportunityAppointment::STATUS_RESCHEDULED,
+                ],
+                'occurred_at' => now(),
+            ]);
+        });
+
+        return back()->with('success', 'Đã dời lịch hẹn.');
     }
 
     public function saveQuoteLines(Request $request, string $id): RedirectResponse
@@ -715,6 +927,43 @@ class CrmPageController extends Controller
         return response($pdfBytes, 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="' . $filename . '"',
+        ]);
+    }
+
+    public function renderQuoteDocument(string $id, string $template, DeliverableTemplateVersionService $versionService, DocumentContextRegistry $contextRegistry, DeliverablePdfExportService $pdfService): SymfonyResponse
+    {
+        /** @var \App\Models\User $authUser */
+        $authUser = \Illuminate\Support\Facades\Auth::user();
+        $tenantId = (string) $authUser->tenant_id;
+
+        /** @var Quote $quote */
+        $quote = Quote::query()
+            ->join('opportunities', 'opportunities.id', '=', 'quotes.opportunity_id')
+            ->where('quotes.id', $id)
+            ->where('quotes.tenant_id', $tenantId)
+            ->select('quotes.*')
+            ->firstOrFail();
+
+        $tpl = DeliverableTemplate::query()->where('tenant_id', $tenantId)->where('context', 'quote')->findOrFail($template);
+
+        $version = $tpl->latestPublishedVersion()->first();
+        if ($version === null) {
+            abort(404);
+        }
+
+        $html = (string) Storage::disk('local')->get($version->storage_path);
+        $context = $contextRegistry->get('quote')->build($quote);
+        $rendered = $versionService->renderHtml($html, $context);
+
+        try {
+            $pdfBytes = $pdfService->render($rendered);
+        } catch (\App\Exceptions\DeliverablePdfExportUnavailableException) {
+            return back()->with('error', 'Không thể tạo PDF vào lúc này.');
+        }
+
+        return response($pdfBytes, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="bao-gia-' . Str::slug($tpl->name) . '-' . $quote->quote_number . '.pdf"',
         ]);
     }
 }

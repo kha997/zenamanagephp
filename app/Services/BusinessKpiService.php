@@ -55,7 +55,7 @@ class BusinessKpiService
     }
 
     /**
-     * @return array{total: float, overdue_total: float, overdue_count: int}
+     * @return array{total: float, overdue_total: float, overdue_count: int, aging: array{not_due: float, due_1_30: float, due_31_60: float, due_61_90: float, due_over_90: float}}
      */
     public function outstandingDebt(string $tenantId): array
     {
@@ -64,14 +64,41 @@ class BusinessKpiService
                 ->where('tenant_id', $tenantId)
                 ->where('status', '!=', ContractPayment::STATUS_PAID);
 
-            $total = (float) (clone $unpaid)->sum('amount');
+            $payments = (clone $unpaid)->get();
 
-            $overdue = (clone $unpaid)->where('due_date', '<', now());
+            $total = (float) $payments->sum('amount');
+            $overdue = $payments->filter(fn ($p) => $p->due_date < now());
+
+            $aging = [
+                'not_due' => 0.0,
+                'due_1_30' => 0.0,
+                'due_31_60' => 0.0,
+                'due_61_90' => 0.0,
+                'due_over_90' => 0.0,
+            ];
+
+            foreach ($payments as $payment) {
+                $daysOverdue = now()->diffInDays($payment->due_date, false) * -1;
+                $amount = (float) $payment->amount;
+
+                if ($daysOverdue <= 0) {
+                    $aging['not_due'] += $amount;
+                } elseif ($daysOverdue <= 30) {
+                    $aging['due_1_30'] += $amount;
+                } elseif ($daysOverdue <= 60) {
+                    $aging['due_31_60'] += $amount;
+                } elseif ($daysOverdue <= 90) {
+                    $aging['due_61_90'] += $amount;
+                } else {
+                    $aging['due_over_90'] += $amount;
+                }
+            }
 
             return [
                 'total' => $total,
-                'overdue_total' => (float) (clone $overdue)->sum('amount'),
-                'overdue_count' => (int) $overdue->count(),
+                'overdue_total' => (float) $overdue->sum('amount'),
+                'overdue_count' => $overdue->count(),
+                'aging' => $aging,
             ];
         });
     }

@@ -55,4 +55,4 @@ touch "$DB_DATABASE"
 trap 'rm -f "$DB_DATABASE"' EXIT
 
 php artisan migrate:fresh --force
-php artisan test --group=zena-invariants -v
+php artisan test --group=zena-invariants

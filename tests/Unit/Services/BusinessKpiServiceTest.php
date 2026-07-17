@@ -190,6 +190,76 @@ class BusinessKpiServiceTest extends TestCase
         $this->assertArrayNotHasKey(Opportunity::STAGE_WON, $result);
     }
 
+    public function test_outstanding_debt_aging_buckets_group_correctly(): void
+    {
+        $project = Project::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'name' => 'Du an Aging',
+            'code' => 'PRJ-AGING1',
+            'status' => 'planning',
+        ]);
+        $contract = Contract::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'project_id' => (string) $project->id,
+            'code' => 'CTR-AGING1',
+            'title' => 'Hop dong Aging',
+        ]);
+
+        ContractPayment::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'contract_id' => (string) $contract->id,
+            'name' => 'Not due',
+            'amount' => 1000000,
+            'status' => ContractPayment::STATUS_PLANNED,
+            'due_date' => now()->addDays(5),
+        ]);
+        ContractPayment::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'contract_id' => (string) $contract->id,
+            'name' => 'Due 1-30',
+            'amount' => 2000000,
+            'status' => ContractPayment::STATUS_PLANNED,
+            'due_date' => now()->subDays(10),
+        ]);
+        ContractPayment::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'contract_id' => (string) $contract->id,
+            'name' => 'Due 31-60',
+            'amount' => 3000000,
+            'status' => ContractPayment::STATUS_PLANNED,
+            'due_date' => now()->subDays(45),
+        ]);
+        ContractPayment::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'contract_id' => (string) $contract->id,
+            'name' => 'Due 61-90',
+            'amount' => 4000000,
+            'status' => ContractPayment::STATUS_PLANNED,
+            'due_date' => now()->subDays(75),
+        ]);
+        ContractPayment::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'contract_id' => (string) $contract->id,
+            'name' => 'Due over 90',
+            'amount' => 5000000,
+            'status' => ContractPayment::STATUS_PLANNED,
+            'due_date' => now()->subDays(120),
+        ]);
+
+        $result = $this->service->outstandingDebt((string) $this->tenant->id);
+
+        $this->assertSame(15000000.0, $result['total']);
+        $this->assertSame(14000000.0, $result['overdue_total']);
+        $this->assertSame(4, $result['overdue_count']);
+
+        $this->assertArrayHasKey('aging', $result);
+        $this->assertSame(1000000.0, $result['aging']['not_due']);
+        $this->assertSame(2000000.0, $result['aging']['due_1_30']);
+        $this->assertSame(3000000.0, $result['aging']['due_31_60']);
+        $this->assertSame(4000000.0, $result['aging']['due_61_90']);
+        $this->assertSame(5000000.0, $result['aging']['due_over_90']);
+    }
+
     public function test_results_are_cached_for_60_seconds(): void
     {
         $this->createOpportunity(['pipeline_stage' => Opportunity::STAGE_WON, 'estimated_fee' => 10000000]);

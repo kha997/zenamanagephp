@@ -23,7 +23,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property float $vat_amount
  * @property float $total
  * @property string|null $payment_terms
- * @property string|null $valid_until
+ * @property \Carbon\Carbon|null $valid_until
  * @property string|null $notes
  * @property \Carbon\Carbon|null $sent_at
  * @property \Carbon\Carbon|null $decided_at

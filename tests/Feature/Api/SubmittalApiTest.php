@@ -50,6 +50,7 @@ class SubmittalApiTest extends TestCase
         Submittal::factory()->count(3)->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
         ]);
 
         $response = $this->withZenaAuth()->getJson($this->zena('submittals.index'));
@@ -156,6 +157,7 @@ class SubmittalApiTest extends TestCase
         $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
             'status' => 'submitted',
         ]);
 
@@ -191,6 +193,7 @@ class SubmittalApiTest extends TestCase
         $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
             'status' => 'pending_review',
         ]);
 
@@ -226,6 +229,7 @@ class SubmittalApiTest extends TestCase
         $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
             'status' => 'pending_review',
         ]);
 
@@ -263,6 +267,7 @@ class SubmittalApiTest extends TestCase
         $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
         ]);
 
         $updateData = [
@@ -296,6 +301,7 @@ class SubmittalApiTest extends TestCase
         $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
         ]);
 
         $response = $this->withZenaAuth()->deleteJson($this->zena('submittals.destroy', ['id' => $submittal->id]));
@@ -327,6 +333,7 @@ class SubmittalApiTest extends TestCase
         $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
             'status' => 'submitted',
         ]);
 
@@ -340,6 +347,7 @@ class SubmittalApiTest extends TestCase
         $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
             'status' => 'draft',
         ]);
 
@@ -356,6 +364,7 @@ class SubmittalApiTest extends TestCase
         $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
             'status' => 'draft',
         ]);
 
@@ -372,6 +381,7 @@ class SubmittalApiTest extends TestCase
         $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
             'status' => 'draft',
         ]);
 

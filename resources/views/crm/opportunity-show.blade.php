@@ -11,6 +11,16 @@
         'negotiation' => 'Đàm phán', 'contracting' => 'Soạn hợp đồng',
         'won' => 'Thắng', 'lost' => 'Thua', 'nurture' => 'Nuôi dưỡng', 'no_bid' => 'Không tham gia',
     ];
+    $appointmentTypeLabels = [
+        'consultation' => 'Tư vấn',
+        'survey' => 'Khảo sát',
+    ];
+    $appointmentStatusMeta = [
+        'scheduled' => ['label' => 'Đã đặt lịch', 'classes' => 'bg-amber-100 text-amber-800'],
+        'completed' => ['label' => 'Hoàn thành', 'classes' => 'bg-emerald-100 text-emerald-800'],
+        'cancelled' => ['label' => 'Đã hủy', 'classes' => 'bg-rose-100 text-rose-800'],
+        'rescheduled' => ['label' => 'Đã dời lịch', 'classes' => 'bg-slate-200 text-slate-600'],
+    ];
 @endphp
 
 @section('content')
@@ -105,6 +115,129 @@
             </form>
         </x-ui.card>
     @endif
+
+    <x-ui.card title="Lịch hẹn">
+        @if ($appointments->isEmpty())
+            <p class="text-sm text-slate-500">Chưa có lịch hẹn.</p>
+        @else
+            <div class="overflow-x-auto">
+                <table class="operator-table text-sm">
+                    <thead>
+                        <tr>
+                            <th>Loại</th>
+                            <th>Ngày giờ</th>
+                            <th>Người phụ trách</th>
+                            <th>Trạng thái</th>
+                            <th>Kết quả</th>
+                            @if (auth()->user()?->hasPermission('crm.manage'))
+                                <th></th>
+                            @endif
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($appointments as $appointment)
+                            @php
+                                $statusMeta = $appointmentStatusMeta[$appointment->status] ?? ['label' => $appointment->status, 'classes' => 'bg-slate-100 text-slate-700'];
+                            @endphp
+                            <tr>
+                                <td class="font-medium">{{ $appointmentTypeLabels[$appointment->type] ?? $appointment->type }}</td>
+                                <td>
+                                    <div>{{ optional($appointment->scheduled_at)->format('d/m/Y H:i') ?? '—' }}</div>
+                                    @if ($appointment->location)
+                                        <div class="text-xs text-slate-500">{{ $appointment->location }}</div>
+                                    @endif
+                                </td>
+                                <td>{{ $appointment->assignee?->name ?? '—' }}</td>
+                                <td>
+                                    <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide {{ $statusMeta['classes'] }}">
+                                        {{ $statusMeta['label'] }}
+                                    </span>
+                                </td>
+                                <td class="whitespace-pre-line text-sm text-slate-600">{{ $appointment->outcome_notes ?: '—' }}</td>
+                                @if (auth()->user()?->hasPermission('crm.manage'))
+                                    <td class="align-top">
+                                        @if ($appointment->status === \App\Models\OpportunityAppointment::STATUS_SCHEDULED)
+                                            <div class="flex min-w-72 flex-col gap-3">
+                                                <form method="POST" action="{{ route('operator.crm.appointments.complete', $appointment->id) }}" class="space-y-2">
+                                                    @csrf
+                                                    <div class="operator-field">
+                                                        <label for="complete_outcome_notes_{{ $appointment->id }}">Kết quả hoàn thành</label>
+                                                        <textarea id="complete_outcome_notes_{{ $appointment->id }}" name="outcome_notes" class="operator-input" rows="2" required>{{ old('outcome_notes') }}</textarea>
+                                                    </div>
+                                                    <button type="submit" class="operator-button operator-button-primary">Hoàn thành</button>
+                                                </form>
+
+                                                <form method="POST" action="{{ route('operator.crm.appointments.cancel', $appointment->id) }}" class="space-y-2" onsubmit="return confirm('Hủy lịch hẹn này?')">
+                                                    @csrf
+                                                    <div class="operator-field">
+                                                        <label for="cancel_outcome_notes_{{ $appointment->id }}">Lý do hủy</label>
+                                                        <textarea id="cancel_outcome_notes_{{ $appointment->id }}" name="outcome_notes" class="operator-input" rows="2">{{ old('outcome_notes') }}</textarea>
+                                                    </div>
+                                                    <button type="submit" class="operator-button">Hủy</button>
+                                                </form>
+
+                                                <form method="POST" action="{{ route('operator.crm.appointments.reschedule', $appointment->id) }}" class="space-y-2">
+                                                    @csrf
+                                                    <div class="operator-field">
+                                                        <label for="reschedule_scheduled_at_{{ $appointment->id }}">Ngày giờ mới</label>
+                                                        <input
+                                                            id="reschedule_scheduled_at_{{ $appointment->id }}"
+                                                            name="scheduled_at"
+                                                            type="datetime-local"
+                                                            class="operator-input"
+                                                            value="{{ old('scheduled_at', optional($appointment->scheduled_at)->format('Y-m-d\\TH:i')) }}"
+                                                            required
+                                                        >
+                                                    </div>
+                                                    <button type="submit" class="operator-button">Dời lịch</button>
+                                                </form>
+                                            </div>
+                                        @endif
+                                    </td>
+                                @endif
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+
+        @if (auth()->user()?->hasPermission('crm.manage'))
+            <form method="POST" action="{{ route('operator.crm.opportunities.appointments.store', $opportunity->id) }}" class="mt-4 space-y-3">
+                @csrf
+                <p class="text-sm font-semibold text-slate-900">Đặt lịch mới</p>
+                <div class="operator-form-grid">
+                    <div class="operator-field">
+                        <label for="appointment_type">Loại</label>
+                        <select id="appointment_type" name="type" class="operator-select" required>
+                            <option value="">Chọn loại</option>
+                            @foreach ($appointmentTypeLabels as $value => $label)
+                                <option value="{{ $value }}" @selected(old('type') === $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="operator-field">
+                        <label for="appointment_scheduled_at">Ngày giờ</label>
+                        <input id="appointment_scheduled_at" name="scheduled_at" type="datetime-local" class="operator-input" value="{{ old('scheduled_at') }}" required>
+                    </div>
+                    <div class="operator-field">
+                        <label for="appointment_location">Địa điểm</label>
+                        <input id="appointment_location" name="location" type="text" class="operator-input" value="{{ old('location') }}">
+                    </div>
+                    <div class="operator-field">
+                        <label for="appointment_assigned_to">Người phụ trách</label>
+                        <select id="appointment_assigned_to" name="assigned_to" class="operator-select">
+                            <option value="">Chưa phân công</option>
+                            @foreach ($users as $userOption)
+                                <option value="{{ $userOption->id }}" @selected(old('assigned_to') === (string) $userOption->id)>{{ $userOption->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="operator-button operator-button-primary">Đặt lịch</button>
+            </form>
+        @endif
+    </x-ui.card>
 
     @if ($boqIntegrationEnabled)
         <x-ui.card title="Báo giá — zena-boq-core">

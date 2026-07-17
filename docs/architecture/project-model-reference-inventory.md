@@ -37,7 +37,7 @@ imports ZenaProject). None are production request-handling code.
 
 ## `Src\CoreProject\Models\LegacyProjectAdapter` (7 files — resolved by Task 1 of this plan)
 
-- `src/CoreProject/Models/LegacyProjectAdapter.php` (the class itself — stays, now fully unreferenced)
+- `src/CoreProject/Models/LegacyProjectAdapter.php` (the class itself — removed, was fully unreferenced dead code)
 - `app/Http/Controllers/Api/ProjectAnalyticsController.php` — migrated to `App\Models\Project` (Task 1)
 - `app/Http/Controllers/Api/ProjectManagerController.php` — migrated to `App\Models\Project` (Task 1)
 - `app/Http/Controllers/Api/ProjectMilestoneController.php` — migrated to `App\Models\Project` (Task 1)

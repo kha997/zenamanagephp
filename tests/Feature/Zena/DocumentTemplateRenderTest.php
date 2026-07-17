@@ -3,10 +3,14 @@
 namespace Tests\Feature\Zena;
 
 use App\Http\Middleware\RoleBasedAccessControlMiddleware;
+use App\Models\Account;
 use App\Models\Contract;
 use App\Models\DeliverableTemplate;
 use App\Models\DeliverableTemplateVersion;
+use App\Models\Opportunity;
+use App\Models\Quote;
 use App\Models\Tenant;
+use App\Services\DeliverablePdfExportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -349,5 +353,126 @@ class DocumentTemplateRenderTest extends TestCase
         $this->actingAs($user)
             ->get(route('operator.contracts.show', $contract->id), $headers)
             ->assertStatus(200);
+    }
+
+    private function makeQuote(Tenant $tenant, \App\Models\User $user): Quote
+    {
+        $account = Account::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'display_name' => 'Test Account',
+        ]);
+
+        $opportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Test Opp',
+            'pipeline_stage' => Opportunity::STAGE_NEW_LEAD,
+            'sales_owner_id' => (string) $user->id,
+            'created_by' => (string) $user->id,
+        ]);
+
+        return Quote::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'opportunity_id' => (string) $opportunity->id,
+            'quote_number' => Quote::nextNumber((string) $tenant->id),
+            'revision_no' => Quote::nextRevision((string) $opportunity->id),
+            'status' => Quote::STATUS_SENT,
+            'subtotal' => 27500000,
+            'valid_until' => now()->addDays(30),
+            'created_by' => (string) $user->id,
+        ]);
+    }
+
+    public function test_quote_render_downloads_pdf_from_custom_template(): void
+    {
+        $this->app->bind(DeliverablePdfExportService::class, function () {
+            return new class extends DeliverablePdfExportService {
+                public function render(string $html, array $options = [], array $documentMeta = []): string
+                {
+                    return '%PDF-1.4 fake-quote-render-bytes:' . $html;
+                }
+            };
+        });
+
+        $tenant = Tenant::factory()->create();
+        $user = $this->createTenantUser($tenant, [], ['member'], ['crm.view']);
+        $headers = ['X-Tenant-ID' => (string) $tenant->id];
+
+        $quote = $this->makeQuote($tenant, $user);
+
+        $html = '<h1>{{quote_number}}</h1><p>{{account_name}} - {{total}}</p>';
+        $htmlPath = 'deliverable-templates/' . $tenant->id . '/test-quote/render.html';
+        Storage::disk('local')->put($htmlPath, $html);
+
+        $template = DeliverableTemplate::factory()->create([
+            'tenant_id' => (string) $tenant->id,
+            'context' => 'quote',
+            'status' => 'published',
+        ]);
+
+        DeliverableTemplateVersion::create([
+            'tenant_id' => (string) $tenant->id,
+            'deliverable_template_id' => $template->id,
+            'version' => '1.0.0',
+            'semver' => '1.0.0',
+            'storage_path' => $htmlPath,
+            'checksum_sha256' => hash('sha256', $html),
+            'mime' => 'text/html',
+            'size' => strlen($html),
+            'placeholders_spec_json' => ['schema_version' => '1.0.0', 'placeholders' => []],
+            'published_at' => now(),
+            'created_by' => (string) $user->id,
+            'updated_by' => (string) $user->id,
+        ]);
+
+        $response = $this->actingAs($user)
+            ->get(route('operator.crm.quotes.render-document', [$quote->id, $template->id]), $headers);
+
+        $response->assertOk();
+        $this->assertSame('application/pdf', $response->headers->get('Content-Type'));
+        $this->assertStringContainsString('fake-quote-render-bytes', $response->getContent());
+        $this->assertStringContainsString((string) $quote->quote_number, $response->getContent());
+        $this->assertStringContainsString('Test Account', $response->getContent());
+        $this->assertStringNotContainsString('{{quote_number}}', $response->getContent());
+    }
+
+    public function test_quote_render_404_for_unpublished_template(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = $this->createTenantUser($tenant, [], ['member'], ['crm.view']);
+        $headers = ['X-Tenant-ID' => (string) $tenant->id];
+
+        $quote = $this->makeQuote($tenant, $user);
+
+        $template = DeliverableTemplate::factory()->create([
+            'tenant_id' => (string) $tenant->id,
+            'context' => 'quote',
+            'status' => 'draft',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('operator.crm.quotes.render-document', [$quote->id, $template->id]), $headers)
+            ->assertStatus(404);
+    }
+
+    public function test_quote_render_404_for_cross_tenant_quote(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $otherTenant = Tenant::factory()->create();
+        $user = $this->createTenantUser($tenant, [], ['member'], ['crm.view']);
+        $otherUser = $this->createTenantUser($otherTenant, [], ['member'], ['crm.view']);
+        $headers = ['X-Tenant-ID' => (string) $tenant->id];
+
+        $otherQuote = $this->makeQuote($otherTenant, $otherUser);
+
+        $template = DeliverableTemplate::factory()->create([
+            'tenant_id' => (string) $tenant->id,
+            'context' => 'quote',
+            'status' => 'published',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('operator.crm.quotes.render-document', [$otherQuote->id, $template->id]), $headers)
+            ->assertStatus(404);
     }
 }

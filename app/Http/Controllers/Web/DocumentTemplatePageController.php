@@ -245,7 +245,7 @@ class DocumentTemplatePageController extends Controller
             Str::lower((string) Str::ulid())
         );
 
-        Storage::disk('local')->put($path, $htmlBody);
+        Storage::disk(config('filesystems.default', 'local'))->put($path, $htmlBody);
 
         $checksum = $this->versionService->computeChecksum($htmlBody);
         $placeholdersSpec = $this->versionService->normalizePlaceholdersSpec(null, $htmlBody);

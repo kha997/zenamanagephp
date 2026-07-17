@@ -309,7 +309,7 @@ class DesignItemController extends BaseApiController
 
         $directory = sprintf('design-items/%s', $item->id);
         $storedFilename = (string) Str::ulid() . '.' . $file->getClientOriginalExtension();
-        $storedPath = Storage::disk('local')->putFileAs($directory, $file, $storedFilename);
+        $storedPath = Storage::disk(config('filesystems.default', 'local'))->putFileAs($directory, $file, $storedFilename);
 
         if ($storedPath === false) {
             return $this->serverError('Failed to store file');

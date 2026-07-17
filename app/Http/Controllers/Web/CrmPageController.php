@@ -657,6 +657,9 @@ class CrmPageController extends Controller
             'lines.*.unit_price' => ['required', 'numeric', 'min:0'],
             'lines.*.price_note' => ['nullable', 'string', 'max:500'],
             'lines.*.code' => ['nullable', 'string', 'max:50'],
+            'lines.*.benchmark_type' => ['nullable', 'string', \Illuminate\Validation\Rule::in(\App\Models\PriceReferenceEntry::VALID_BENCHMARK_TYPES)],
+            'lines.*.evidence_note' => ['nullable', 'string', 'max:500'],
+            'lines.*.evidence_date' => ['nullable', 'date', 'before_or_equal:today'],
         ]);
 
         DB::transaction(function () use ($quote, $validated, $tenantId) {
@@ -683,6 +686,20 @@ class CrmPageController extends Controller
                     'amount' => $amount,
                     'price_note' => $line['price_note'] ?? null,
                 ]);
+
+                if (!empty($line['benchmark_type']) && !empty($line['code'])) {
+                    \App\Models\PriceReferenceEntry::create([
+                        'tenant_id' => $tenantId,
+                        'work_item_code' => $line['code'],
+                        'work_item_name' => $line['name'],
+                        'unit' => $line['unit'],
+                        'unit_price' => $line['unit_price'],
+                        'benchmark_type' => $line['benchmark_type'],
+                        'evidence_note' => $line['evidence_note'] ?? null,
+                        'evidenced_at' => $line['evidence_date'] ?? now()->toDateString(),
+                        'created_by' => (string) auth()->id(),
+                    ]);
+                }
             }
 
             $totals = Quote::computeTotals($subtotal, (float) $quote->discount_percent, (float) $quote->vat_percent);

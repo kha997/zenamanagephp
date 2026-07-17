@@ -47,7 +47,13 @@ jobs:
 
           php artisan key:generate --ansi || true
 
-          # Force testing env (MySQL service)
+          # Force testing env (MySQL service). This workflow has no Redis
+          # service, so also pin cache/session to file — .env.example now
+          # defaults them to redis for production (see PR #188), but that
+          # requires infra this job doesn't provision.
+          sed -i 's/^CACHE_DRIVER=.*/CACHE_DRIVER=file/' .env .env.testing
+          sed -i 's/^SESSION_DRIVER=.*/SESSION_DRIVER=file/' .env .env.testing
+
           {
             echo "APP_ENV=testing"
             echo "APP_DEBUG=true"

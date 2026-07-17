@@ -23,7 +23,8 @@
         "ramsey/uuid": "^4.9",
         "ratchet/pawl": "^0.4.3",
         "ratchet/rfc6455": "^0.4.0",
-        "react/socket": "^1.16"
+        "react/socket": "^1.16",
+        "sentry/sentry-laravel": "^4.27"
     },
     "require-dev": {
         "deptrac/deptrac": "^4.6",

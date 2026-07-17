@@ -4,6 +4,7 @@ namespace Tests\Feature\Api;
 
 use App\Models\Permission;
 use App\Models\Role;
+use App\Models\Tenant;
 use App\Models\User;
 use App\Models\Project;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -226,17 +227,20 @@ class SecurityTest extends TestCase
      */
     public function test_multi_tenant_isolation()
     {
-        $tenant1User = User::factory()->create(['tenant_id' => 1]);
-        $tenant2User = User::factory()->create(['tenant_id' => 2]);
+        $tenant1 = Tenant::factory()->create();
+        $tenant2 = Tenant::factory()->create();
+
+        $tenant1User = User::factory()->create(['tenant_id' => $tenant1->id]);
+        $tenant2User = User::factory()->create(['tenant_id' => $tenant2->id]);
 
         $tenant1Project = Project::factory()->create([
             'created_by' => $tenant1User->id,
-            'tenant_id' => 1,
+            'tenant_id' => $tenant1->id,
         ]);
 
         $tenant2Project = Project::factory()->create([
             'created_by' => $tenant2User->id,
-            'tenant_id' => 2,
+            'tenant_id' => $tenant2->id,
         ]);
 
         $tenant1Headers = [

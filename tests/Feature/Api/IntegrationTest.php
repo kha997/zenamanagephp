@@ -230,6 +230,7 @@ class IntegrationTest extends TestCase
     {
         // Create Submittal
         $submittal = Submittal::factory()->create([
+            'tenant_id' => $this->user->tenant_id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'draft'

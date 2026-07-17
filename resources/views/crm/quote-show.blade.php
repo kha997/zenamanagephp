@@ -224,7 +224,16 @@
         @endif
     @endif
 
-    {{-- PDF link will be added in Task 4 --}}
+    {{-- Document Templates --}}
+    @if (!empty($quoteTemplates) && $quoteTemplates->isNotEmpty())
+        <x-ui.card title="Xuất theo biểu mẫu">
+            <div class="flex flex-wrap gap-2">
+                @foreach ($quoteTemplates as $tpl)
+                    <a href="{{ route('operator.crm.quotes.render-document', [$quote->id, $tpl->id]) }}" class="operator-button">{{ $tpl->name }}</a>
+                @endforeach
+            </div>
+        </x-ui.card>
+    @endif
 @endsection
 
 @push('scripts')

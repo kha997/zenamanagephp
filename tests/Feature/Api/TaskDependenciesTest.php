@@ -302,7 +302,7 @@ class TaskDependenciesTest extends TestCase
         ]);
 
         $response->assertStatus(422)
-                ->assertJsonValidationErrors(['dependency_id']);
+                ->assertJsonValidationErrors(['dependency_id'], 'error.details.data');
     }
 
     /**

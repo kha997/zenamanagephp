@@ -191,7 +191,7 @@ class DeliverableTemplateController extends BaseApiController
                     Str::lower((string) Str::ulid())
                 );
 
-                Storage::disk('local')->put($path, $html);
+                Storage::disk(config('filesystems.default', 'local'))->put($path, $html);
 
                 if ($draft) {
                     if ($draft->storage_path !== '') {

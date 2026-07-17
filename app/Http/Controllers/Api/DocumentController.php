@@ -329,7 +329,7 @@ class DocumentController extends Controller
             $path = 'documents/' . $document->project_id . '/' . $filename;
             
             // Store file
-            $storedPath = Storage::disk('local')->putFileAs(
+            $storedPath = Storage::disk(config('filesystems.default', 'local'))->putFileAs(
                 'documents/' . $document->project_id,
                 $file,
                 $filename

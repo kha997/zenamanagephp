@@ -54,7 +54,9 @@ class Handler extends ExceptionHandler
     public function register()
     {
         $this->reportable(function (Throwable $e) {
-            
+            if (app()->bound(\Sentry\State\HubInterface::class) && $this->shouldReport($e)) {
+                \Sentry\captureException($e);
+            }
         });
 
         $this->renderable(function (AuthenticationException $exception, Request $request) {

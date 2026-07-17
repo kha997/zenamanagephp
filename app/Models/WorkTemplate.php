@@ -8,10 +8,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class WorkTemplate extends Model
 {
-    use HasUlids, HasFactory, TenantScope;
+    use HasUlids, HasFactory, TenantScope, SoftDeletes;
 
     protected $table = 'work_templates';
     protected $keyType = 'string';
@@ -25,6 +26,7 @@ class WorkTemplate extends Model
         'status',
         'created_by',
         'updated_by',
+        'deleted_by',
     ];
 
     public function versions(): HasMany

@@ -13,7 +13,10 @@ use App\Models\WorkInstanceStep;
 use App\Models\WorkTemplate;
 use App\Models\WorkTemplateField;
 use App\Models\WorkTemplateStep;
+use App\Models\WorkTemplateTaskAssignment;
+use App\Models\WorkTemplateTrigger;
 use App\Models\WorkTemplateVersion;
+use App\Services\WorkTemplateCrudService;
 use App\Services\WorkTemplatePackageService;
 use App\Services\ZenaAuditLogger;
 use Carbon\CarbonImmutable;
@@ -31,17 +34,35 @@ class WorkTemplateController extends BaseApiController
 {
     public function __construct(
         private ZenaAuditLogger $auditLogger,
-        private WorkTemplatePackageService $templatePackageService
+        private WorkTemplatePackageService $templatePackageService,
+        private WorkTemplateCrudService $crudService
     )
     {
     }
 
     public function index(Request $request): JsonResponse
     {
-        $templates = WorkTemplate::query()
+        $query = WorkTemplate::query()
             ->where('tenant_id', $this->tenantId())
-            ->orderByDesc('created_at')
-            ->paginate(min((int) $request->integer('per_page', 15), $this->maxLimit));
+            ->orderByDesc('created_at');
+
+        $includes = array_filter(array_map('trim', explode(',', (string) $request->query('include', ''))));
+
+        if (!empty($includes)) {
+            $query->with([
+                'versions.steps.fields',
+                'versions.phases.tasks.checklistItems',
+                'versions.phases.tasks.requiredDocuments',
+                'versions.phases.tasks.assignments',
+                'versions.phases.tasks.triggers',
+            ]);
+        }
+
+        $templates = $query->paginate(min((int) $request->integer('per_page', 15), $this->maxLimit));
+
+        if (!empty($includes)) {
+            $templates->through(fn (WorkTemplate $template): array => $this->templateResponsePayload($template));
+        }
 
         return $this->listSuccessResponse($templates, 'Work templates retrieved successfully');
     }
@@ -49,24 +70,209 @@ class WorkTemplateController extends BaseApiController
     public function show(string $id): JsonResponse
     {
         try {
-            $template = $this->loadCanonicalTemplateRelations(
-                $this->templateForTenant($id)->firstOrFail()
-            );
+            $template = $this->loadCanonicalTemplateRelations($this->templateForTenant($id)->firstOrFail());
 
-            return $this->successResponse($template, 'Work template retrieved successfully');
+            return $this->successResponse(
+                $this->templateResponsePayload($template),
+                'Work template retrieved successfully'
+            );
         } catch (ModelNotFoundException) {
             return $this->notFound('Work template not found');
         }
     }
 
+    public function showVersion(string $id, string $versionId): JsonResponse
+    {
+        try {
+            $template = $this->templateForTenant($id)->firstOrFail();
+
+            $version = WorkTemplateVersion::query()
+                ->where('tenant_id', $this->tenantId())
+                ->where('work_template_id', $template->id)
+                ->whereKey($versionId)
+                ->with(['steps.fields', 'phases.tasks.checklistItems', 'phases.tasks.requiredDocuments', 'phases.tasks.assignments', 'phases.tasks.triggers'])
+                ->firstOrFail();
+
+            return $this->successResponse(
+                $this->versionResponsePayload($version),
+                'Work template version retrieved successfully'
+            );
+        } catch (ModelNotFoundException) {
+            return $this->notFound('Work template version not found');
+        }
+    }
+
+    /**
+     * Merge the raw Eloquent shape (the frozen V1 contract other tests/
+     * clients depend on — steps.*.step_key, content_json.steps, etc.) with
+     * the cleaner V2 serialization (draft_version/published_versions with
+     * renamed keys) on top. Custom keys win where they overlap; nothing
+     * that already worked for V1 disappears.
+     */
+    private function templateResponsePayload(WorkTemplate $template): array
+    {
+        $serialized = $this->crudService->serializeTemplate($template, false);
+
+        return array_merge($template->toArray(), [
+            'draft_version' => $serialized['draft_version'],
+            'published_versions' => $serialized['published_versions'],
+        ]);
+    }
+
+    private function versionResponsePayload(WorkTemplateVersion $version): array
+    {
+        return array_merge($version->toArray(), $this->crudService->serializeVersion($version));
+    }
+
+    public function destroy(Request $request, string $id): JsonResponse
+    {
+        try {
+            $template = $this->templateForTenant($id)->firstOrFail();
+        } catch (ModelNotFoundException) {
+            return $this->notFound('Work template not found');
+        }
+
+        $tenantId = $this->tenantId();
+        $userId = (string) Auth::id();
+
+        $this->crudService->deleteTemplate($template, $userId);
+
+        $this->auditLogger->log(
+            $request,
+            'zena.work-template.delete',
+            'work_template',
+            (string) $template->id,
+            200,
+            null,
+            $tenantId,
+            $userId
+        );
+
+        return $this->successResponse(null, 'Work template deleted successfully');
+    }
+
     public function store(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), array_merge([
             'code' => 'required|string|max:100',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'status' => 'nullable|in:draft,published,archived',
             'content_json' => 'nullable|array',
+        ], $this->stepValidationRules(), $this->phaseValidationRules()));
+
+        if ($validator->fails()) {
+            return $this->validationError($validator->errors());
+        }
+
+        $tenantId = $this->tenantId();
+        $userId = (string) Auth::id();
+
+        $exists = WorkTemplate::query()
+            ->where('tenant_id', $tenantId)
+            ->where('code', $request->string('code')->toString())
+            ->exists();
+
+        if ($exists) {
+            return $this->errorResponse('Template code already exists in this tenant', 422);
+        }
+
+        $template = $this->crudService->createTemplate($request, $tenantId, $userId);
+
+        $this->auditLogger->log(
+            $request,
+            'zena.work-template.create',
+            'work_template',
+            (string) $template->id,
+            201,
+            null,
+            $tenantId,
+            $userId
+        );
+
+        return $this->successResponse(
+            $this->templateResponsePayload($template),
+            'Work template created successfully',
+            201
+        );
+    }
+
+    public function update(Request $request, string $id): JsonResponse
+    {
+        $validator = Validator::make($request->all(), array_merge([
+            'name' => 'sometimes|string|max:255',
+            'description' => 'nullable|string',
+            'status' => 'sometimes|in:draft,published,archived',
+            'content_json' => 'nullable|array',
+        ], $this->stepValidationRules(), $this->phaseValidationRules()));
+
+        if ($validator->fails()) {
+            return $this->validationError($validator->errors());
+        }
+
+        try {
+            $tenantId = $this->tenantId();
+            $userId = (string) Auth::id();
+            $template = $this->templateForTenant($id)->firstOrFail();
+
+            $updatedTemplate = $this->crudService->updateTemplate($request, $template, $tenantId, $userId);
+
+            $this->auditLogger->log(
+                $request,
+                'zena.work-template.update',
+                'work_template',
+                (string) $updatedTemplate->id,
+                200,
+                null,
+                $tenantId,
+                $userId
+            );
+
+            return $this->successResponse(
+                $this->templateResponsePayload($updatedTemplate),
+                'Work template updated successfully'
+            );
+        } catch (ModelNotFoundException) {
+            return $this->notFound('Work template not found');
+        }
+    }
+
+    public function publish(Request $request, string $id): JsonResponse
+    {
+        try {
+            $tenantId = $this->tenantId();
+            $userId = (string) Auth::id();
+
+            $template = $this->templateForTenant($id)->firstOrFail();
+
+            $publishedVersion = $this->crudService->publishTemplate($template, $tenantId, $userId);
+
+            $this->auditLogger->log(
+                $request,
+                'zena.work-template.publish',
+                'work_template',
+                (string) $template->id,
+                200,
+                null,
+                $tenantId,
+                $userId,
+                ['entity_id' => (string) $publishedVersion->id]
+            );
+
+            return $this->successResponse(
+                $this->versionResponsePayload($publishedVersion),
+                'Work template published successfully'
+            );
+        } catch (ModelNotFoundException) {
+            return $this->notFound('Work template not found');
+        } catch (\RuntimeException $exception) {
+            return $this->errorResponse($exception->getMessage(), 422);
+        }
+    }
+
+    private function stepValidationRules(): array
+    {
+        return [
             'steps' => 'nullable|array',
             'steps.*.key' => 'required_with:steps|string|max:100',
             'steps.*.name' => 'nullable|string|max:255',
@@ -88,201 +294,68 @@ class WorkTemplateController extends BaseApiController
             'steps.*.required_document_types.*' => ['string', Rule::in(Document::VALID_DOCUMENT_TYPES)],
             'approvals' => 'nullable|array',
             'rules' => 'nullable|array',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->validationError($validator->errors());
-        }
-
-        $tenantId = $this->tenantId();
-        $userId = (string) Auth::id();
-
-        $exists = WorkTemplate::query()
-            ->where('tenant_id', $tenantId)
-            ->where('code', $request->string('code')->toString())
-            ->exists();
-
-        if ($exists) {
-            return $this->errorResponse('Template code already exists in this tenant', 422);
-        }
-
-        $content = $this->buildContentPayload($request);
-
-        $template = DB::transaction(function () use ($request, $tenantId, $userId, $content): WorkTemplate {
-            $template = WorkTemplate::create([
-                'tenant_id' => $tenantId,
-                'code' => $request->string('code')->toString(),
-                'name' => $request->string('name')->toString(),
-                'description' => $request->input('description'),
-                'status' => $request->input('status', 'draft'),
-                'created_by' => $userId,
-                'updated_by' => $userId,
-            ]);
-
-            $version = WorkTemplateVersion::create([
-                'tenant_id' => $tenantId,
-                'work_template_id' => $template->id,
-                'semver' => $this->nextDraftSemver($template),
-                'content_json' => $content,
-                'is_immutable' => false,
-                'created_by' => $userId,
-                'updated_by' => $userId,
-            ]);
-
-            $this->syncStepsAndFields($version, $content['steps'] ?? []);
-
-            return $this->loadCanonicalTemplateRelations($template->fresh());
-        });
-
-        $this->auditLogger->log(
-            $request,
-            'zena.work-template.create',
-            'work_template',
-            (string) $template->id,
-            201,
-            null,
-            $tenantId,
-            $userId
-        );
-
-        return $this->successResponse($template, 'Work template created successfully', 201);
+        ];
     }
 
-    public function update(Request $request, string $id): JsonResponse
+    private function phaseValidationRules(): array
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'sometimes|string|max:255',
-            'description' => 'nullable|string',
-            'status' => 'sometimes|in:draft,published,archived',
-            'content_json' => 'nullable|array',
-            'steps' => 'nullable|array',
-            'steps.*.key' => 'required_with:steps|string|max:100',
-            'steps.*.name' => 'nullable|string|max:255',
-            'steps.*.type' => 'required_with:steps|string|max:100',
-            'steps.*.order' => 'required_with:steps|integer|min:1',
-            'steps.*.depends_on' => 'nullable|array',
-            'steps.*.assignee_rule' => 'nullable|array',
-            'steps.*.sla_hours' => 'nullable|integer|min:0',
-            'steps.*.fields' => 'nullable|array',
-            'steps.*.required_document_types' => 'nullable|array',
-            'steps.*.required_document_types.*' => ['string', Rule::in(Document::VALID_DOCUMENT_TYPES)],
-            'approvals' => 'nullable|array',
-            'rules' => 'nullable|array',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->validationError($validator->errors());
-        }
-
-        try {
-            $tenantId = $this->tenantId();
-            $userId = (string) Auth::id();
-            $template = $this->templateForTenant($id)->firstOrFail();
-
-            $updatedTemplate = DB::transaction(function () use ($request, $template, $tenantId, $userId): WorkTemplate {
-                $template->fill($request->only(['name', 'description', 'status']));
-                $template->updated_by = $userId;
-                $template->save();
-
-                $draft = WorkTemplateVersion::query()
-                    ->where('tenant_id', $tenantId)
-                    ->where('work_template_id', $template->id)
-                    ->whereNull('published_at')
-                    ->orderByDesc('created_at')
-                    ->first();
-
-                if (!$draft) {
-                    $draft = $this->createDraftFromLatestPublished($template, $tenantId, $userId);
-                }
-
-                $content = $this->buildContentPayload($request, $draft->content_json ?? []);
-                $draft->fill([
-                    'content_json' => $content,
-                    'updated_by' => $userId,
-                ]);
-                $draft->save();
-
-                $this->syncStepsAndFields($draft, $content['steps'] ?? []);
-
-                return $this->loadCanonicalTemplateRelations($template->fresh());
-            });
-
-            $this->auditLogger->log(
-                $request,
-                'zena.work-template.update',
-                'work_template',
-                (string) $updatedTemplate->id,
-                200,
-                null,
-                $tenantId,
-                $userId
-            );
-
-            return $this->successResponse($updatedTemplate, 'Work template updated successfully');
-        } catch (ModelNotFoundException) {
-            return $this->notFound('Work template not found');
-        }
-    }
-
-    public function publish(Request $request, string $id): JsonResponse
-    {
-        try {
-            $tenantId = $this->tenantId();
-            $userId = (string) Auth::id();
-
-            $template = $this->templateForTenant($id)->firstOrFail();
-
-            $publishedVersion = DB::transaction(function () use ($template, $tenantId, $userId): WorkTemplateVersion {
-                $draft = WorkTemplateVersion::query()
-                    ->where('tenant_id', $tenantId)
-                    ->where('work_template_id', $template->id)
-                    ->whereNull('published_at')
-                    ->orderByDesc('created_at')
-                    ->first();
-
-                if (!$draft) {
-                    throw new \RuntimeException('No draft version available to publish');
-                }
-
-                $published = WorkTemplateVersion::create([
-                    'tenant_id' => $tenantId,
-                    'work_template_id' => $template->id,
-                    'semver' => $this->nextPublishedSemver($template),
-                    'content_json' => $draft->content_json,
-                    'is_immutable' => true,
-                    'published_at' => now(),
-                    'published_by' => $userId,
-                    'created_by' => $userId,
-                    'updated_by' => $userId,
-                ]);
-
-                $this->cloneStepsAndFields($draft, $published);
-
-                $template->status = 'published';
-                $template->updated_by = $userId;
-                $template->save();
-
-                return $published->load('steps.fields');
-            });
-
-            $this->auditLogger->log(
-                $request,
-                'zena.work-template.publish',
-                'work_template',
-                (string) $template->id,
-                200,
-                null,
-                $tenantId,
-                $userId,
-                ['entity_id' => (string) $publishedVersion->id]
-            );
-
-            return $this->successResponse($publishedVersion, 'Work template published successfully');
-        } catch (ModelNotFoundException) {
-            return $this->notFound('Work template not found');
-        } catch (\RuntimeException $exception) {
-            return $this->errorResponse($exception->getMessage(), 422);
-        }
+        return [
+            'phases' => 'nullable|array',
+            'phases.*.key' => 'required_with:phases|string|max:100|distinct',
+            'phases.*.name' => 'required_with:phases|string|max:255',
+            'phases.*.order' => 'required_with:phases|integer|min:1|distinct',
+            'phases.*.description' => 'nullable|string',
+            'phases.*.default_offset_days' => 'nullable|integer|min:0',
+            'phases.*.tasks' => 'nullable|array',
+            'phases.*.tasks.*.key' => 'required_with:phases.*.tasks|string|max:100',
+            'phases.*.tasks.*.name' => 'required_with:phases.*.tasks|string|max:255',
+            'phases.*.tasks.*.task_type' => 'required_with:phases.*.tasks|string|max:100',
+            'phases.*.tasks.*.order' => 'required_with:phases.*.tasks|integer|min:1',
+            'phases.*.tasks.*.default_duration_days' => 'nullable|integer|min:0',
+            'phases.*.tasks.*.is_required' => 'nullable|boolean',
+            'phases.*.tasks.*.checklist_items' => 'nullable|array',
+            'phases.*.tasks.*.checklist_items.*.key' => 'required_with:phases.*.tasks.*.checklist_items|string|max:100',
+            'phases.*.tasks.*.checklist_items.*.label' => 'required_with:phases.*.tasks.*.checklist_items|string|max:255',
+            'phases.*.tasks.*.checklist_items.*.order' => 'required_with:phases.*.tasks.*.checklist_items|integer|min:1',
+            'phases.*.tasks.*.checklist_items.*.is_required' => 'nullable|boolean',
+            'phases.*.tasks.*.required_documents' => 'nullable|array',
+            'phases.*.tasks.*.required_documents.*.key' => 'required_with:phases.*.tasks.*.required_documents|string|max:100',
+            'phases.*.tasks.*.required_documents.*.document_type' => [
+                'required_with:phases.*.tasks.*.required_documents',
+                'string',
+                Rule::in(Document::VALID_DOCUMENT_TYPES),
+            ],
+            'phases.*.tasks.*.required_documents.*.name' => 'required_with:phases.*.tasks.*.required_documents|string|max:255',
+            'phases.*.tasks.*.required_documents.*.order' => 'required_with:phases.*.tasks.*.required_documents|integer|min:1',
+            'phases.*.tasks.*.required_documents.*.is_required' => 'nullable|boolean',
+            'phases.*.tasks.*.required_documents.*.checklist_item_key' => 'nullable|string|max:100',
+            'phases.*.tasks.*.assignments' => 'nullable|array',
+            'phases.*.tasks.*.assignments.*.key' => 'required_with:phases.*.tasks.*.assignments|string|max:100',
+            'phases.*.tasks.*.assignments.*.assignment_type' => [
+                'required_with:phases.*.tasks.*.assignments',
+                Rule::in(WorkTemplateTaskAssignment::VALID_ASSIGNMENT_TYPES),
+            ],
+            'phases.*.tasks.*.assignments.*.role_code' => 'required_with:phases.*.tasks.*.assignments|string|max:100',
+            'phases.*.tasks.*.assignments.*.approval_order' => [
+                'nullable',
+                'integer',
+                'min:1',
+                'required_if:phases.*.tasks.*.assignments.*.assignment_type,' . WorkTemplateTaskAssignment::ASSIGNMENT_TYPE_APPROVER,
+            ],
+            'phases.*.tasks.*.assignments.*.is_required' => 'nullable|boolean',
+            'phases.*.tasks.*.triggers' => 'nullable|array',
+            'phases.*.tasks.*.triggers.*.key' => 'required_with:phases.*.tasks.*.triggers|string|max:100',
+            'phases.*.tasks.*.triggers.*.event' => [
+                'required_with:phases.*.tasks.*.triggers',
+                Rule::in(WorkTemplateTrigger::VALID_EVENTS),
+            ],
+            'phases.*.tasks.*.triggers.*.action' => [
+                'required_with:phases.*.tasks.*.triggers',
+                Rule::in(WorkTemplateTrigger::VALID_ACTIONS),
+            ],
+            'phases.*.tasks.*.triggers.*.trigger_order' => 'required_with:phases.*.tasks.*.triggers|integer|min:1',
+            'phases.*.tasks.*.triggers.*.is_active' => 'nullable|boolean',
+        ];
     }
 
     public function preview(Request $request, string $id): JsonResponse
@@ -862,7 +935,13 @@ class WorkTemplateController extends BaseApiController
     {
         return $template->load([
             'versions' => fn ($query) => $query
-                ->with('steps.fields')
+                ->with([
+                    'steps.fields',
+                    'phases.tasks.checklistItems',
+                    'phases.tasks.requiredDocuments',
+                    'phases.tasks.assignments',
+                    'phases.tasks.triggers',
+                ])
                 ->orderByDesc('created_at'),
         ]);
     }

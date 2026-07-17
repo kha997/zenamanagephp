@@ -18,17 +18,23 @@ class LaunchChecklistServiceBackupTest extends TestCase
         if (!is_dir($this->backupDir)) {
             mkdir($this->backupDir, 0755, true);
         }
-        foreach (glob($this->backupDir . '/backup_*.tar.gz') ?: [] as $file) {
-            unlink($file);
-        }
+        $this->cleanBackupDir();
     }
 
     protected function tearDown(): void
     {
-        foreach (glob($this->backupDir . '/backup_*.tar.gz') ?: [] as $file) {
+        $this->cleanBackupDir();
+        parent::tearDown();
+    }
+
+    private function cleanBackupDir(): void
+    {
+        foreach (glob($this->backupDir . '/backup_*') ?: [] as $path) {
+            is_dir($path) ? rmdir($path) : unlink($path);
+        }
+        foreach (glob($this->backupDir . '/*.sql*') ?: [] as $file) {
             unlink($file);
         }
-        parent::tearDown();
     }
 
     private function callPrivate(string $method): bool
@@ -76,12 +82,17 @@ class LaunchChecklistServiceBackupTest extends TestCase
         $this->assertFalse($this->callPrivate('checkSslCertificate'));
     }
 
-    public function test_check_ssl_certificate_passes_with_https_in_production(): void
+    public function test_check_ssl_certificate_fails_when_handshake_target_is_unreachable(): void
     {
+        // No real production TLS endpoint to test against here — this just
+        // confirms the https-scheme production path attempts a real check
+        // (and fails closed) rather than blindly returning true like the
+        // old stub did. A live positive-path handshake isn't practical to
+        // unit test without a mock TLS server.
         Config::set('app.env', 'production');
-        Config::set('app.url', 'https://zena.example.com');
+        Config::set('app.url', 'https://zena-unreachable.invalid');
 
-        $this->assertTrue($this->callPrivate('checkSslCertificate'));
+        $this->assertFalse($this->callPrivate('checkSslCertificate'));
     }
 
     public function test_check_backup_system_configured_requires_scheduler_enabled(): void
@@ -93,5 +104,19 @@ class LaunchChecklistServiceBackupTest extends TestCase
         Config::set('app.enable_scheduler', true);
 
         $this->assertTrue($this->callPrivate('checkBackupSystemConfigured'));
+    }
+
+    public function test_check_backup_system_matches_uncompressed_backup_directories(): void
+    {
+        // Older/interrupted `--type=database` runs (pre cleanup fix) leave a
+        // bare backup_TIMESTAMP directory instead of a .tar.gz archive.
+        mkdir($this->backupDir . '/backup_2026-07-17_02-00-00', 0755, true);
+
+        $this->assertTrue($this->callPrivate('checkBackupSystem'));
+    }
+
+    public function test_setup_backup_system_succeeds_when_dir_writable_and_deps_present(): void
+    {
+        $this->assertTrue($this->callPrivate('setupBackupSystem'));
     }
 }

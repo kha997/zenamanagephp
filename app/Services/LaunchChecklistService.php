@@ -13,6 +13,10 @@ class LaunchChecklistService
     // slack for a missed run before flagging the backup system as unhealthy.
     private const BACKUP_FRESHNESS_WINDOW_SECONDS = 60 * 60 * 48;
 
+    // A live TLS handshake is too slow/network-dependent to run on every
+    // readiness-score request — cache the verdict and re-check periodically.
+    private const SSL_CHECK_CACHE_TTL_SECONDS = 60 * 60 * 6;
+
     public function getLaunchStatus(): array
     {
         return [
@@ -313,7 +317,73 @@ class LaunchChecklistService
             return true;
         }
 
-        return str_starts_with((string) config('app.url'), 'https://');
+        $appUrl = (string) config('app.url');
+        if (!str_starts_with($appUrl, 'https://')) {
+            return false;
+        }
+
+        $host = parse_url($appUrl, PHP_URL_HOST);
+        if (!$host) {
+            return false;
+        }
+
+        // A real TLS handshake is slow and network-dependent — cache the
+        // verdict instead of paying that cost on every readiness check.
+        return Cache::remember(
+            "launch_checklist:ssl_certificate:{$host}",
+            self::SSL_CHECK_CACHE_TTL_SECONDS,
+            fn () => $this->verifySslCertificate($host)
+        );
+    }
+
+    private function verifySslCertificate(string $host): bool
+    {
+        $context = stream_context_create(['ssl' => [
+            'capture_peer_cert' => true,
+            'verify_peer' => true,
+            'verify_peer_name' => true,
+            'timeout' => 5,
+        ]]);
+
+        $stream = @stream_socket_client(
+            "ssl://{$host}:443",
+            $errno,
+            $errstr,
+            5,
+            STREAM_CLIENT_CONNECT,
+            $context
+        );
+
+        if (!$stream) {
+            Log::warning("SSL check failed for {$host}: {$errstr}");
+            return false;
+        }
+
+        $peerCert = stream_context_get_params($stream)['options']['ssl']['peer_certificate'] ?? null;
+        fclose($stream);
+
+        if (!$peerCert) {
+            return false;
+        }
+
+        $certInfo = openssl_x509_parse($peerCert);
+        if (!$certInfo) {
+            return false;
+        }
+
+        $expiresAt = $certInfo['validTo_time_t'] ?? 0;
+        $daysRemaining = (int) ceil(($expiresAt - time()) / 86400);
+
+        if ($daysRemaining <= 0) {
+            Log::error("SSL certificate for {$host} has expired");
+            return false;
+        }
+
+        if ($daysRemaining < 14) {
+            Log::warning("SSL certificate for {$host} expires in {$daysRemaining} days");
+        }
+
+        return true;
     }
 
     private function checkErrorLogging(): bool
@@ -334,15 +404,24 @@ class LaunchChecklistService
 
     private function getLatestBackupTimestamp(): ?int
     {
-        $backups = glob(storage_path('backups') . '/backup_*.tar.gz') ?: [];
+        $backupDir = storage_path('backups');
 
-        if (empty($backups)) {
-            return null;
+        // Match every artifact `backup:run` can produce: the compressed
+        // archive from a normal run, plus raw .sql/.sql.gz in case a run
+        // was interrupted before compression (see BackupCommand cleanup fix).
+        $patterns = ['/backup_*.tar.gz', '/backup_*', '/*.sql', '/*.sql.gz'];
+
+        $newest = null;
+        foreach ($patterns as $pattern) {
+            foreach (glob($backupDir . $pattern) ?: [] as $path) {
+                $mtime = filemtime($path);
+                if ($mtime !== false && ($newest === null || $mtime > $newest)) {
+                    $newest = $mtime;
+                }
+            }
         }
 
-        $timestamps = array_filter(array_map('filemtime', $backups));
-
-        return empty($timestamps) ? null : max($timestamps);
+        return $newest;
     }
 
     private function checkMonitoringSetup(): bool
@@ -413,7 +492,28 @@ class LaunchChecklistService
 
     private function setupBackupSystem(): bool
     {
-        // Simulate backup system setup
+        $backupDir = storage_path('backups');
+
+        if (!is_dir($backupDir) && !@mkdir($backupDir, 0755, true)) {
+            Log::error('Failed to create backup directory: ' . $backupDir);
+            return false;
+        }
+
+        if (!is_writable($backupDir)) {
+            Log::error('Backup directory is not writable: ' . $backupDir);
+            return false;
+        }
+
+        if (!class_exists(\App\Console\Commands\BackupCommand::class)) {
+            Log::error('BackupCommand class not found');
+            return false;
+        }
+
+        if (!file_exists(config_path('backup.php'))) {
+            Log::error('backup.php config not found');
+            return false;
+        }
+
         return true;
     }
 
@@ -450,9 +550,13 @@ class LaunchChecklistService
     {
         // "Configured" (infra wired up) is weaker than checkBackupSystem()
         // (evidence it actually ran) — useful right after a fresh deploy,
-        // before the first scheduled backup has fired.
+        // before the first scheduled backup has fired. Checks both that the
+        // scheduler is actually on (the real gap this service used to hide —
+        // see .env.example) and that the command/config/dir are all present.
         return config('app.enable_scheduler') === true
-            && class_exists(\App\Console\Commands\BackupCommand::class);
+            && class_exists(\App\Console\Commands\BackupCommand::class)
+            && file_exists(config_path('backup.php'))
+            && is_dir(storage_path('backups'));
     }
 
     private function checkMonitoringActive(): bool

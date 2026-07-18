@@ -361,7 +361,7 @@
             </div>
             <div class="operator-field w-32">
                 <label>Ngày chứng cứ</label>
-                <input type="date" name="lines[${index}][evidence_date]" class="operator-input">
+                <input type="date" name="lines[${index}][evidence_date]" class="operator-input" max="${new Date().toISOString().slice(0, 10)}">
             </div>
             <div class="w-full text-sm text-gray-500 price-reference-hint" id="price-reference-hint-${index}"></div>
             <button type="button" class="operator-button text-xs" onclick="showPriceReferenceHistory(${index})">Xem lịch sử giá</button>

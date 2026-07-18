@@ -657,6 +657,9 @@ class CrmPageController extends Controller
             'lines.*.unit_price' => ['required', 'numeric', 'min:0'],
             'lines.*.price_note' => ['nullable', 'string', 'max:500'],
             'lines.*.code' => ['nullable', 'string', 'max:50'],
+            'lines.*.benchmark_type' => ['nullable', 'string', \Illuminate\Validation\Rule::in(\App\Models\PriceReferenceEntry::VALID_BENCHMARK_TYPES)],
+            'lines.*.evidence_note' => ['nullable', 'string', 'max:500'],
+            'lines.*.evidence_date' => ['nullable', 'date', 'before_or_equal:today'],
         ]);
 
         DB::transaction(function () use ($quote, $validated, $tenantId) {
@@ -683,6 +686,20 @@ class CrmPageController extends Controller
                     'amount' => $amount,
                     'price_note' => $line['price_note'] ?? null,
                 ]);
+
+                if (!empty($line['benchmark_type']) && !empty($line['code'])) {
+                    \App\Models\PriceReferenceEntry::create([
+                        'tenant_id' => $tenantId,
+                        'work_item_code' => $line['code'],
+                        'work_item_name' => $line['name'],
+                        'unit' => $line['unit'],
+                        'unit_price' => $line['unit_price'],
+                        'benchmark_type' => $line['benchmark_type'],
+                        'evidence_note' => $line['evidence_note'] ?? null,
+                        'evidenced_at' => $line['evidence_date'] ?? now()->toDateString(),
+                        'created_by' => (string) auth()->id(),
+                    ]);
+                }
             }
 
             $totals = Quote::computeTotals($subtotal, (float) $quote->discount_percent, (float) $quote->vat_percent);
@@ -690,6 +707,56 @@ class CrmPageController extends Controller
         });
 
         return back()->with('success', 'Đã lưu dòng báo giá.');
+    }
+
+    public function lookupPriceReference(Request $request): JsonResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+        $code = (string) $request->query('code', '');
+        $unit = (string) $request->query('unit', '');
+
+        if ($code === '' || $unit === '') {
+            return response()->json(['data' => null]);
+        }
+
+        $entry = \App\Models\PriceReferenceEntry::latestFor($tenantId, $code, $unit);
+
+        if (!$entry) {
+            return response()->json(['data' => null]);
+        }
+
+        return response()->json(['data' => $this->serializePriceReferenceEntry($entry)]);
+    }
+
+    public function priceReferenceHistory(Request $request): JsonResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+        $code = (string) $request->query('code', '');
+        $unit = (string) $request->query('unit', '');
+
+        $entries = \App\Models\PriceReferenceEntry::query()
+            ->where('tenant_id', $tenantId)
+            ->where('work_item_code', $code)
+            ->where('unit', $unit)
+            ->orderByDesc('evidenced_at')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn (\App\Models\PriceReferenceEntry $entry) => $this->serializePriceReferenceEntry($entry))
+            ->values();
+
+        return response()->json(['data' => $entries]);
+    }
+
+    /** @return array{unit_price: float, benchmark_type: string, benchmark_type_label: string, evidence_note: string|null, evidenced_at: string} */
+    private function serializePriceReferenceEntry(\App\Models\PriceReferenceEntry $entry): array
+    {
+        return [
+            'unit_price' => $entry->unit_price,
+            'benchmark_type' => $entry->benchmark_type,
+            'benchmark_type_label' => \App\Models\PriceReferenceEntry::BENCHMARK_TYPE_LABELS[$entry->benchmark_type] ?? $entry->benchmark_type,
+            'evidence_note' => $entry->evidence_note,
+            'evidenced_at' => $entry->evidenced_at->format('Y-m-d'),
+        ];
     }
 
     public function sendQuote(Request $request, string $id): RedirectResponse

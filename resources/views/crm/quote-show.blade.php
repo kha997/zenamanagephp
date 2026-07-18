@@ -142,9 +142,13 @@
                                     <label>Tên</label>
                                     <input type="text" name="lines[{{ $i }}][name]" value="{{ $line->name }}" class="operator-input" required>
                                 </div>
+                                <div class="operator-field w-24">
+                                    <label>Mã công tác</label>
+                                    <input type="text" name="lines[{{ $i }}][code]" value="{{ $line->code }}" class="operator-input line-code-input" data-index="{{ $i }}" oninput="lookupPriceReference({{ $i }})">
+                                </div>
                                 <div class="operator-field w-20">
                                     <label>ĐVT</label>
-                                    <input type="text" name="lines[{{ $i }}][unit]" value="{{ $line->unit }}" class="operator-input" required>
+                                    <input type="text" name="lines[{{ $i }}][unit]" value="{{ $line->unit }}" class="operator-input" required oninput="lookupPriceReference({{ $i }})">
                                 </div>
                                 <div class="operator-field w-24">
                                     <label>KL</label>
@@ -158,7 +162,25 @@
                                     <label>Ghi chú đơn giá</label>
                                     <input type="text" name="lines[{{ $i }}][price_note]" value="{{ $line->price_note }}" class="operator-input">
                                 </div>
-                                <input type="hidden" name="lines[{{ $i }}][code]" value="{{ $line->code }}">
+                                <div class="operator-field w-40">
+                                    <label>Nguồn giá (tuỳ chọn)</label>
+                                    <select name="lines[{{ $i }}][benchmark_type]" class="operator-input">
+                                        <option value="">— Không lưu chứng cứ —</option>
+                                        @foreach (\App\Models\PriceReferenceEntry::BENCHMARK_TYPE_LABELS as $value => $label)
+                                            <option value="{{ $value }}">{{ $label }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="operator-field flex-1 min-w-32">
+                                    <label>Ghi chú chứng cứ</label>
+                                    <input type="text" name="lines[{{ $i }}][evidence_note]" class="operator-input">
+                                </div>
+                                <div class="operator-field w-32">
+                                    <label>Ngày chứng cứ</label>
+                                    <input type="date" name="lines[{{ $i }}][evidence_date]" class="operator-input" max="{{ now()->format('Y-m-d') }}">
+                                </div>
+                                <div class="w-full text-sm text-gray-500 price-reference-hint" id="price-reference-hint-{{ $i }}"></div>
+                                <button type="button" class="operator-button text-xs" onclick="showPriceReferenceHistory({{ $i }})">Xem lịch sử giá</button>
                             </div>
                         @endforeach
                     </div>
@@ -238,6 +260,62 @@
 
 @push('scripts')
 <script>
+    window.zenaBenchmarkTypeOptions = `@foreach (\App\Models\PriceReferenceEntry::BENCHMARK_TYPE_LABELS as $value => $label)<option value="{{ $value }}">{{ $label }}</option>@endforeach`;
+
+    let lookupDebounceTimers = {};
+
+    function lookupPriceReference(index) {
+        clearTimeout(lookupDebounceTimers[index]);
+        lookupDebounceTimers[index] = setTimeout(() => {
+            const row = document.querySelector(`.line-row[data-index="${index}"]`) || document.querySelector(`.line-code-input[data-index="${index}"]`).closest('.line-row');
+            const codeInput = row.querySelector(`[name="lines[${index}][code]"]`);
+            const unitInput = row.querySelector(`[name="lines[${index}][unit]"]`);
+            const priceInput = row.querySelector(`[name="lines[${index}][unit_price]"]`);
+            const hint = document.getElementById(`price-reference-hint-${index}`);
+
+            const code = codeInput.value.trim();
+            const unit = unitInput.value.trim();
+            if (!code || !unit) {
+                hint.textContent = '';
+                return;
+            }
+
+            fetch(`{{ route('operator.crm.price-references.lookup') }}?code=${encodeURIComponent(code)}&unit=${encodeURIComponent(unit)}`)
+                .then(r => r.json())
+                .then(({ data }) => {
+                    if (!data) {
+                        hint.textContent = '';
+                        return;
+                    }
+                    if (!priceInput.value) {
+                        priceInput.value = data.unit_price;
+                    }
+                    hint.textContent = `Tham chiếu: ${data.unit_price.toLocaleString('vi-VN')}đ — ${data.benchmark_type_label}, ${data.evidenced_at}`;
+                });
+        }, 400);
+    }
+
+    function showPriceReferenceHistory(index) {
+        const row = document.querySelector(`.line-code-input[data-index="${index}"]`).closest('.line-row');
+        const code = row.querySelector(`[name="lines[${index}][code]"]`).value.trim();
+        const unit = row.querySelector(`[name="lines[${index}][unit]"]`).value.trim();
+        if (!code || !unit) {
+            alert('Cần nhập mã công tác và đơn vị tính trước.');
+            return;
+        }
+
+        fetch(`{{ route('operator.crm.price-references.history') }}?code=${encodeURIComponent(code)}&unit=${encodeURIComponent(unit)}`)
+            .then(r => r.json())
+            .then(({ data }) => {
+                if (!data.length) {
+                    alert('Chưa có lịch sử giá cho công tác này.');
+                    return;
+                }
+                const lines = data.map(e => `${e.evidenced_at} — ${e.unit_price.toLocaleString('vi-VN')}đ — ${e.benchmark_type_label}${e.evidence_note ? ' — ' + e.evidence_note : ''}`);
+                alert('Lịch sử giá:\n\n' + lines.join('\n'));
+            });
+    }
+
     function addLine() {
         const container = document.getElementById('lines-container');
         const index = container.querySelectorAll('.line-row').length;
@@ -250,9 +328,13 @@
                 <label>Tên</label>
                 <input type="text" name="lines[${index}][name]" class="operator-input" required>
             </div>
+            <div class="operator-field w-24">
+                <label>Mã công tác</label>
+                <input type="text" name="lines[${index}][code]" class="operator-input line-code-input" data-index="${index}" oninput="lookupPriceReference(${index})">
+            </div>
             <div class="operator-field w-20">
                 <label>ĐVT</label>
-                <input type="text" name="lines[${index}][unit]" class="operator-input" required>
+                <input type="text" name="lines[${index}][unit]" class="operator-input" required oninput="lookupPriceReference(${index})">
             </div>
             <div class="operator-field w-24">
                 <label>KL</label>
@@ -266,7 +348,23 @@
                 <label>Ghi chú đơn giá</label>
                 <input type="text" name="lines[${index}][price_note]" class="operator-input">
             </div>
-            <input type="hidden" name="lines[${index}][code]" value="">
+            <div class="operator-field w-40">
+                <label>Nguồn giá (tuỳ chọn)</label>
+                <select name="lines[${index}][benchmark_type]" class="operator-input">
+                    <option value="">— Không lưu chứng cứ —</option>
+                    ${window.zenaBenchmarkTypeOptions}
+                </select>
+            </div>
+            <div class="operator-field flex-1 min-w-32">
+                <label>Ghi chú chứng cứ</label>
+                <input type="text" name="lines[${index}][evidence_note]" class="operator-input">
+            </div>
+            <div class="operator-field w-32">
+                <label>Ngày chứng cứ</label>
+                <input type="date" name="lines[${index}][evidence_date]" class="operator-input" max="${new Date().toISOString().slice(0, 10)}">
+            </div>
+            <div class="w-full text-sm text-gray-500 price-reference-hint" id="price-reference-hint-${index}"></div>
+            <button type="button" class="operator-button text-xs" onclick="showPriceReferenceHistory(${index})">Xem lịch sử giá</button>
         `;
         container.appendChild(row);
     }

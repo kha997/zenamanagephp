@@ -1042,6 +1042,8 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::get('/crm/quotes/{id}', [App\Http\Controllers\Web\CrmPageController::class, 'showQuote'])->middleware('rbac:crm.view')->name('crm.quotes.show');
     Route::post('/crm/opportunities/{id}/quotes', [App\Http\Controllers\Web\CrmPageController::class, 'storeQuote'])->middleware('rbac:crm.manage')->name('crm.opportunities.quotes.store');
     Route::post('/crm/quotes/{id}/lines', [App\Http\Controllers\Web\CrmPageController::class, 'saveQuoteLines'])->middleware('rbac:crm.manage')->name('crm.quotes.lines.save');
+    Route::get('/crm/price-references/lookup', [App\Http\Controllers\Web\CrmPageController::class, 'lookupPriceReference'])->middleware('rbac:crm.view')->name('crm.price-references.lookup');
+    Route::get('/crm/price-references/history', [App\Http\Controllers\Web\CrmPageController::class, 'priceReferenceHistory'])->middleware('rbac:crm.view')->name('crm.price-references.history');
     Route::post('/crm/quotes/{id}/send', [App\Http\Controllers\Web\CrmPageController::class, 'sendQuote'])->middleware('rbac:crm.manage')->name('crm.quotes.send');
     Route::post('/crm/quotes/{id}/accept', [App\Http\Controllers\Web\CrmPageController::class, 'acceptQuote'])->middleware('rbac:crm.manage')->name('crm.quotes.accept');
     Route::post('/crm/quotes/{id}/reject', [App\Http\Controllers\Web\CrmPageController::class, 'rejectQuote'])->middleware('rbac:crm.manage')->name('crm.quotes.reject');

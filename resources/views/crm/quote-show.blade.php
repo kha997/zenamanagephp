@@ -148,7 +148,7 @@
                                 </div>
                                 <div class="operator-field w-20">
                                     <label>ĐVT</label>
-                                    <input type="text" name="lines[{{ $i }}][unit]" value="{{ $line->unit }}" class="operator-input" required>
+                                    <input type="text" name="lines[{{ $i }}][unit]" value="{{ $line->unit }}" class="operator-input" required oninput="lookupPriceReference({{ $i }})">
                                 </div>
                                 <div class="operator-field w-24">
                                     <label>KL</label>
@@ -334,7 +334,7 @@
             </div>
             <div class="operator-field w-20">
                 <label>ĐVT</label>
-                <input type="text" name="lines[${index}][unit]" class="operator-input" required>
+                <input type="text" name="lines[${index}][unit]" class="operator-input" required oninput="lookupPriceReference(${index})">
             </div>
             <div class="operator-field w-24">
                 <label>KL</label>

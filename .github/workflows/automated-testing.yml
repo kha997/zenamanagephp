@@ -344,6 +344,8 @@ jobs:
       run: |
         echo "::group::Environment prep"
         cp .env.example .env
+        sed -i 's/^CACHE_DRIVER=.*/CACHE_DRIVER=file/' .env
+        sed -i 's/^SESSION_DRIVER=.*/SESSION_DRIVER=file/' .env
         php artisan key:generate
         for i in {1..30}; do
           if mysqladmin ping -h 127.0.0.1 -proot --silent; then

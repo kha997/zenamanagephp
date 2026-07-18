@@ -297,7 +297,7 @@ class NotificationController extends ApiBaseController
             ];
 
             // Use Redis pub/sub to communicate with WebSocket server
-            \Cache::store('redis')->publish('websocket_broadcast', json_encode([
+            \Illuminate\Support\Facades\Redis::publish('websocket_broadcast', json_encode([
                 'user_id' => $notification->user_id,
                 'message' => $message
             ]));

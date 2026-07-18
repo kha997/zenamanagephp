@@ -8,7 +8,7 @@
         title="Tạo dự án"
         description="Nhập thông tin dự án mới."
     >
-        <x-ui.button-link :href="route('app.projects')" variant="secondary">Quay lại</x-ui.button-link>
+        <x-ui.button-link :href="route('app.projects')" variant="secondary" dusk="project-cancel">Quay lại</x-ui.button-link>
     </x-ui.page-header>
 
     <x-ui.card title="Thông tin dự án">
@@ -33,7 +33,7 @@
 
                 <div class="operator-field">
                     <label for="status">Trạng thái</label>
-                    <select id="status" name="status" class="operator-select">
+                    <select id="status" name="status" class="operator-select" dusk="project-status">
                         @foreach (['planning' => 'Lập kế hoạch', 'active' => 'Đang chạy', 'on_hold' => 'Tạm dừng', 'completed' => 'Hoàn thành'] as $value => $label)
                             <option value="{{ $value }}" @selected(old('status', 'planning') === $value)>{{ $label }}</option>
                         @endforeach
@@ -42,12 +42,12 @@
 
                 <div class="operator-field">
                     <label for="start_date">Bắt đầu <span class="text-rose-600">*</span></label>
-                    <input id="start_date" name="start_date" type="date" class="operator-input" value="{{ old('start_date') }}" required>
+                    <input id="start_date" name="start_date" type="date" class="operator-input" value="{{ old('start_date') }}" required dusk="project-start-date">
                 </div>
 
                 <div class="operator-field">
                     <label for="end_date">Kết thúc <span class="text-rose-600">*</span></label>
-                    <input id="end_date" name="end_date" type="date" class="operator-input" value="{{ old('end_date') }}" required>
+                    <input id="end_date" name="end_date" type="date" class="operator-input" value="{{ old('end_date') }}" required dusk="project-end-date">
                 </div>
 
                 <div class="operator-field">
@@ -78,7 +78,7 @@
 
             <div class="operator-field">
                 <label for="description">Mô tả</label>
-                <textarea id="description" name="description" class="operator-textarea">{{ old('description') }}</textarea>
+                <textarea id="description" name="description" class="operator-textarea" dusk="project-description">{{ old('description') }}</textarea>
             </div>
 
             <button type="submit" class="operator-button operator-button-primary" dusk="project-submit">Tạo dự án</button>

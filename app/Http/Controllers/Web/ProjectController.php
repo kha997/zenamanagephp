@@ -215,6 +215,31 @@ class ProjectController extends Controller // Thêm extends Controller
         }
     }
 
+    public function storeBaseline(Request $request, string $projectId): \Illuminate\Http\RedirectResponse
+    {
+        $validated = $request->validate([
+            'type' => ['required', 'in:contract,execution'],
+            'note' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        // Tenant gate TRƯỚC khi gọi service: bảng baselines không có tenant_id,
+        // và BaselineService chỉ findOrFail trơn theo project id.
+        $project = AppProject::query()
+            ->where('tenant_id', (string) Auth::user()?->tenant_id)
+            ->findOrFail($projectId);
+
+        app(\Src\CoreProject\Services\BaselineService::class)->createBaselineFromProject(
+            (string) $project->id,
+            $validated['type'],
+            (string) Auth::id(),
+            $validated['note'] ?? null
+        );
+
+        return redirect()
+            ->route('app.projects.show', $project->id)
+            ->with('success', 'Đã chốt kế hoạch gốc (phiên bản mới).');
+    }
+
     public function update(
         Request $request,
         string $projectId,

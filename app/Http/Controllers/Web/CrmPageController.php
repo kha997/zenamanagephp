@@ -26,6 +26,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -48,19 +49,19 @@ class CrmPageController extends Controller
 
     private function tenantId(): string
     {
-        return (string) auth()->user()?->tenant_id;
+        return (string) Auth::user()?->tenant_id;
     }
 
     private function actorUserId(): string
     {
-        return (string) auth()->id();
+        return (string) Auth::id();
     }
 
     public function index(): View
     {
         $this->authorize('viewAny', Opportunity::class);
 
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $opportunities = Opportunity::query()
             ->forTenant($tenantId)
@@ -88,7 +89,7 @@ class CrmPageController extends Controller
     {
         $this->authorize('viewAny', Lead::class);
 
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         return view('crm.leads', [
             'leads' => Lead::query()
@@ -160,7 +161,7 @@ class CrmPageController extends Controller
 
     public function suggestLeadConversion(Request $request, string $id, AiAssistService $aiAssistService): JsonResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $lead = Lead::query()->forTenant($tenantId)->whereKey($id)->first();
 
@@ -253,7 +254,7 @@ class CrmPageController extends Controller
 
     public function summarizeOpportunity(Request $request, string $id, AiAssistService $aiAssistService): JsonResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $opportunity = \App\Models\Opportunity::query()->forTenant($tenantId)->whereKey($id)->first();
 
@@ -285,7 +286,7 @@ class CrmPageController extends Controller
     {
         $this->authorize('viewAny', Account::class);
 
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         return view('crm.accounts', [
             'accounts' => Account::query()
@@ -320,7 +321,7 @@ class CrmPageController extends Controller
 
     public function showOpportunity(string $id, ZenaBoqIntegrationService $boqService): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $opportunity = Opportunity::query()
             ->forTenant($tenantId)
@@ -333,7 +334,7 @@ class CrmPageController extends Controller
             'opportunity' => $opportunity,
             'boqIntegrationEnabled' => $boqService->isTenantAuthorized($tenantId),
             'boqCard' => $this->buildBoqCardViewModel($opportunity),
-            'canManageBoq' => (bool) auth()->user()?->hasPermission('crm.manage'),
+            'canManageBoq' => (bool) Auth::user()?->hasPermission('crm.manage'),
             'contractCard' => $this->buildContractCardViewModel($opportunity),
             'users' => User::query()
                 ->where('tenant_id', $tenantId)
@@ -504,7 +505,7 @@ class CrmPageController extends Controller
 
     public function showQuote(string $id): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $quote = Quote::query()
             ->join('opportunities', 'opportunities.id', '=', 'quotes.opportunity_id')
@@ -735,7 +736,7 @@ class CrmPageController extends Controller
 
     public function saveQuoteLines(Request $request, string $id): RedirectResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $quote = Quote::query()
             ->where('tenant_id', $tenantId)
@@ -798,7 +799,7 @@ class CrmPageController extends Controller
                         'benchmark_type' => $line['benchmark_type'],
                         'evidence_note' => $line['evidence_note'] ?? null,
                         'evidenced_at' => $line['evidence_date'] ?? now()->toDateString(),
-                        'created_by' => (string) auth()->id(),
+                        'created_by' => (string) Auth::id(),
                     ]);
                 }
             }
@@ -812,7 +813,7 @@ class CrmPageController extends Controller
 
     public function lookupPriceReference(Request $request): JsonResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
         $code = (string) $request->query('code', '');
         $unit = (string) $request->query('unit', '');
 
@@ -831,7 +832,7 @@ class CrmPageController extends Controller
 
     public function priceReferenceHistory(Request $request): JsonResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
         $code = (string) $request->query('code', '');
         $unit = (string) $request->query('unit', '');
 
@@ -862,7 +863,7 @@ class CrmPageController extends Controller
 
     public function sendQuote(Request $request, string $id): RedirectResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $quote = Quote::query()
             ->where('tenant_id', $tenantId)
@@ -903,7 +904,7 @@ class CrmPageController extends Controller
             'aggregate_type' => 'quote',
             'aggregate_id' => (string) $quote->id,
             'event_key' => 'quote.sent',
-            'actor_user_id' => auth()->id() ? (string) auth()->id() : null,
+            'actor_user_id' => Auth::id() ? (string) Auth::id() : null,
             'payload' => ['quote_number' => $quote->quote_number],
             'occurred_at' => now(),
         ]);
@@ -913,7 +914,7 @@ class CrmPageController extends Controller
 
     public function acceptQuote(Request $request, string $id): RedirectResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $quote = Quote::query()
             ->where('tenant_id', $tenantId)
@@ -930,7 +931,7 @@ class CrmPageController extends Controller
 
         try {
             app(\App\Services\QuoteLifecycleService::class)->accept($quote, [
-                'actor_user_id' => auth()->id() ? (string) auth()->id() : null,
+                'actor_user_id' => Auth::id() ? (string) Auth::id() : null,
                 'source' => 'operator',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -942,7 +943,7 @@ class CrmPageController extends Controller
 
     public function rejectQuote(Request $request, string $id): RedirectResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $quote = Quote::query()
             ->where('tenant_id', $tenantId)
@@ -959,7 +960,7 @@ class CrmPageController extends Controller
 
         try {
             app(\App\Services\QuoteLifecycleService::class)->reject($quote, [
-                'actor_user_id' => auth()->id() ? (string) auth()->id() : null,
+                'actor_user_id' => Auth::id() ? (string) Auth::id() : null,
                 'source' => 'operator',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -971,7 +972,7 @@ class CrmPageController extends Controller
 
     public function reviseQuote(Request $request, string $id): RedirectResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $original = Quote::query()
             ->where('tenant_id', $tenantId)
@@ -990,7 +991,7 @@ class CrmPageController extends Controller
                 'revision_no' => Quote::nextRevision($original->opportunity_id),
                 'status' => Quote::STATUS_DRAFT,
                 'notes' => $original->notes,
-                'created_by' => (string) auth()->id(),
+                'created_by' => (string) Auth::id(),
                 'discount_percent' => $original->discount_percent,
                 'vat_percent' => $original->vat_percent,
                 'payment_terms' => $original->payment_terms,
@@ -1029,7 +1030,7 @@ class CrmPageController extends Controller
 
     public function saveQuoteCommercial(Request $request, string $id): RedirectResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $quote = Quote::query()
             ->where('tenant_id', $tenantId)
@@ -1061,7 +1062,7 @@ class CrmPageController extends Controller
 
     public function quotePdf(string $id, DeliverablePdfExportService $pdfService): SymfonyResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $quote = Quote::query()
             ->where('tenant_id', $tenantId)

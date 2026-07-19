@@ -417,7 +417,7 @@ class ContractPageController extends Controller
     }
 
     /**
-     * Get tenant_id from authenticated user via Auth facade (avoids auth() helper baseline inflation).
+     * Get tenant_id from authenticated user via Auth facade (avoids the auth helper's baseline inflation).
      */
     private function currentTenantId(): string
     {

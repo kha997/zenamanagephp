@@ -347,6 +347,18 @@
         @endif
     </x-ui.card>
 
+    @if (auth()->user()?->hasPermission('ai.suggest'))
+        <x-ui.card title="Tóm tắt AI">
+            <div data-ai-summary data-opportunity-id="{{ $opportunity->id }}">
+                <p class="text-sm text-slate-500">AI tóm tắt cơ hội này từ lead gốc, lịch hẹn và báo giá — dùng để chuẩn bị trước cuộc gặp khách.</p>
+                <button type="button" class="operator-button operator-button-secondary mt-2" data-ai-summary-trigger>Tạo tóm tắt</button>
+                <span class="text-xs text-slate-500" data-ai-summary-status></span>
+                <div class="mt-3 hidden whitespace-pre-line text-sm text-slate-700" data-ai-summary-result></div>
+                <p class="mt-2 hidden text-xs text-slate-400" data-ai-summary-caption></p>
+            </div>
+        </x-ui.card>
+    @endif
+
     @if ($contractCard !== null)
         <x-ui.card title="Hợp đồng">
             @if ($contractCard['has_drift'])

@@ -280,4 +280,72 @@ class AiAssistServiceTest extends TestCase
 
         $this->assertNull((new AiAssistService())->suggestDesignItemDescription('concept', 'architecture'));
     }
+
+    public function test_summarize_opportunity_returns_summary(): void
+    {
+        config(['ai.anthropic_api_key' => 'test-key']);
+        Http::fake([
+            'https://api.anthropic.com/v1/messages' => Http::response([
+                'content' => [[
+                    'type' => 'tool_use',
+                    'name' => 'summarize_opportunity',
+                    'input' => ['summary' => "- Cơ hội nội thất, giai đoạn proposal_sent\n- Đã có 2 cuộc hẹn"],
+                ]],
+            ], 200),
+        ]);
+
+        $result = (new \App\Services\AiAssistService())->summarizeOpportunity([
+            'opportunity' => ['service_category' => 'interior', 'pipeline_stage' => 'proposal_sent'],
+            'appointments' => [],
+            'quotes' => [],
+        ]);
+
+        $this->assertIsArray($result);
+        $this->assertStringContainsString('proposal_sent', $result['summary']);
+    }
+
+    public function test_summarize_opportunity_returns_null_without_api_key(): void
+    {
+        config(['ai.anthropic_api_key' => '']);
+
+        $result = (new \App\Services\AiAssistService())->summarizeOpportunity([
+            'opportunity' => ['service_category' => 'interior'],
+        ]);
+
+        $this->assertNull($result);
+    }
+
+    public function test_summarize_opportunity_returns_null_on_api_error(): void
+    {
+        config(['ai.anthropic_api_key' => 'test-key']);
+        Http::fake([
+            'https://api.anthropic.com/v1/messages' => Http::response(['error' => 'overloaded'], 529),
+        ]);
+
+        $result = (new \App\Services\AiAssistService())->summarizeOpportunity([
+            'opportunity' => ['service_category' => 'interior'],
+        ]);
+
+        $this->assertNull($result);
+    }
+
+    public function test_summarize_opportunity_returns_null_on_empty_summary(): void
+    {
+        config(['ai.anthropic_api_key' => 'test-key']);
+        Http::fake([
+            'https://api.anthropic.com/v1/messages' => Http::response([
+                'content' => [[
+                    'type' => 'tool_use',
+                    'name' => 'summarize_opportunity',
+                    'input' => ['summary' => '   '],
+                ]],
+            ], 200),
+        ]);
+
+        $result = (new \App\Services\AiAssistService())->summarizeOpportunity([
+            'opportunity' => ['service_category' => 'interior'],
+        ]);
+
+        $this->assertNull($result);
+    }
 }

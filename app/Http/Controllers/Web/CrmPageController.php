@@ -251,6 +251,36 @@ class CrmPageController extends Controller
         ];
     }
 
+    public function summarizeOpportunity(Request $request, string $id, AiAssistService $aiAssistService): JsonResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+
+        $opportunity = \App\Models\Opportunity::query()->forTenant($tenantId)->whereKey($id)->first();
+
+        if (!$opportunity instanceof \App\Models\Opportunity) {
+            return response()->json(['success' => false, 'message' => 'Opportunity not found'], 404);
+        }
+
+        $summary = $aiAssistService->summarizeOpportunity(
+            $this->buildOpportunitySummaryContext($opportunity)
+        );
+
+        if ($summary === null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể tạo tóm tắt lúc này.',
+            ], 503);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'summary' => $summary['summary'],
+                'generated_at' => now()->toIso8601String(),
+            ],
+        ]);
+    }
+
     public function accounts(): View
     {
         $this->authorize('viewAny', Account::class);

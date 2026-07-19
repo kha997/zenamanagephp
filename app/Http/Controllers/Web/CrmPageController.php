@@ -180,6 +180,77 @@ class CrmPageController extends Controller
         return response()->json(['success' => true, 'data' => $suggestion]);
     }
 
+    /**
+     * Build the anonymized context sent to the AI for an opportunity summary.
+     * STRICT WHITELIST (spec: 2026-07-19-goal8-opportunity-ai-summary-design.md, "Data policy"):
+     * never include opportunity_name, appointment location, or any account identity field.
+     * tests/Unit/OpportunitySummaryContextTest.php asserts the exact key set.
+     *
+     * @return array{opportunity: array<string, mixed>, lead_origin: array<string, mixed>|null, appointments: list<array<string, mixed>>, quotes: list<array<string, mixed>>}
+     */
+    public function buildOpportunitySummaryContext(\App\Models\Opportunity $opportunity): array
+    {
+        $tenantId = (string) $opportunity->tenant_id;
+
+        $lead = \App\Models\Lead::query()
+            ->where('tenant_id', $tenantId)
+            ->where('converted_opportunity_id', (string) $opportunity->id)
+            ->first();
+
+        $appointments = \App\Models\OpportunityAppointment::query()
+            ->where('tenant_id', $tenantId)
+            ->where('opportunity_id', (string) $opportunity->id)
+            ->orderBy('scheduled_at')
+            ->get()
+            ->map(fn (\App\Models\OpportunityAppointment $a) => [
+                'type' => $a->type,
+                'scheduled_at' => $a->scheduled_at?->toDateTimeString(),
+                'status' => $a->status,
+                'outcome_notes' => $a->outcome_notes,
+            ])
+            ->values()
+            ->all();
+
+        $quotes = \App\Models\Quote::query()
+            ->where('tenant_id', $tenantId)
+            ->where('opportunity_id', (string) $opportunity->id)
+            ->orderBy('created_at')
+            ->get()
+            ->map(fn (\App\Models\Quote $q) => [
+                'quote_number' => $q->quote_number,
+                'revision_no' => $q->revision_no,
+                'status' => $q->status,
+                'total' => $q->total,
+                'sent_at' => $q->sent_at?->toDateTimeString(),
+                'decided_at' => $q->decided_at?->toDateTimeString(),
+                'valid_until' => $q->valid_until?->toDateString(),
+            ])
+            ->values()
+            ->all();
+
+        return [
+            'opportunity' => [
+                'service_category' => $opportunity->service_category,
+                'service_scope_summary' => $opportunity->service_scope_summary,
+                'pipeline_stage' => $opportunity->pipeline_stage,
+                'forecast_category' => $opportunity->forecast_category,
+                'estimated_fee' => $opportunity->estimated_fee,
+                'estimated_project_value' => $opportunity->estimated_project_value,
+                'probability' => $opportunity->probability,
+                'expected_close_date' => $opportunity->expected_close_date,
+                'priority' => $opportunity->priority,
+                'lost_reason' => $opportunity->lost_reason,
+                'created_at' => $opportunity->created_at?->toDateTimeString(),
+            ],
+            'lead_origin' => $lead === null ? null : [
+                'project_description' => $lead->project_description,
+                'created_at' => $lead->created_at?->toDateTimeString(),
+            ],
+            'appointments' => $appointments,
+            'quotes' => $quotes,
+        ];
+    }
+
     public function accounts(): View
     {
         $this->authorize('viewAny', Account::class);

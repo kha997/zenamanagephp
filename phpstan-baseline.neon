@@ -13807,15 +13807,15 @@ parameters:
 			path: app/Http/Controllers/Web/CrmPageController.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:id\(\)\.$#'
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Authenticatable\:\:hasPermission\(\)\.$#'
 			identifier: method.notFound
-			count: 9
+			count: 1
 			path: app/Http/Controllers/Web/CrmPageController.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
-			identifier: method.notFound
-			count: 18
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 17
 			path: app/Http/Controllers/Web/CrmPageController.php
 
 		-

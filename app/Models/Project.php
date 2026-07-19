@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -303,6 +304,16 @@ class Project extends Model
     public function baselines(): HasMany
     {
         return $this->hasMany(\Src\CoreProject\Models\Baseline::class);
+    }
+
+    /**
+     * Kế hoạch gốc chốt gần nhất (mọi loại) — dùng cho cờ trễ tiến độ.
+     * Dùng App\Models\Baseline (canonical); bảng baselines không có tenant_id
+     * nên mọi truy cập phải đi qua Project đã tenant-check.
+     */
+    public function latestBaseline(): HasOne
+    {
+        return $this->hasOne(\App\Models\Baseline::class, 'project_id')->latestOfMany('created_at');
     }
 
     /**

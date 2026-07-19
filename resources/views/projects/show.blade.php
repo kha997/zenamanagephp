@@ -41,6 +41,48 @@
         @endif
     </x-ui.card>
 
+    <x-ui.card title="Kế hoạch gốc">
+        @if (session('success'))
+            <p class="mb-2 text-sm text-emerald-700">{{ session('success') }}</p>
+        @endif
+
+        @if ($delay['baseline'] !== null)
+            <div class="operator-form-grid">
+                <x-ui.field-value label="Bắt đầu (chốt)" :value="\Illuminate\Support\Carbon::parse($delay['baseline']->start_date)->format('d/m/Y')" />
+                <x-ui.field-value label="Kết thúc (chốt)" :value="\Illuminate\Support\Carbon::parse($delay['baseline']->end_date)->format('d/m/Y')" />
+                <x-ui.field-value label="Loại" :value="$delay['baseline']->type === 'contract' ? 'Hợp đồng' : 'Thực thi'" />
+                <x-ui.field-value label="Phiên bản" :value="'v' . $delay['baseline']->version" />
+                <x-ui.field-value label="Người chốt" :value="$delay['baseline']->creator?->name ?? '—'" />
+                <x-ui.field-value label="Chốt lúc" :value="$delay['baseline']->created_at?->format('d/m/Y H:i') ?? '—'" />
+            </div>
+            @if ($delay['baseline']->note)
+                <p class="mt-2 text-sm text-slate-600">{{ $delay['baseline']->note }}</p>
+            @endif
+            <div class="mt-3">@include('projects._delay-badge', ['delay' => $delay])</div>
+        @else
+            <p class="text-sm text-slate-500">Chưa chốt kế hoạch gốc — cờ trễ tiến độ chỉ hoạt động sau khi chốt.</p>
+        @endif
+
+        @if (auth()->user()?->hasPermission('project.update'))
+            <form method="POST" action="{{ route('app.projects.baseline.store', $project->id) }}" class="mt-4 flex flex-wrap items-end gap-2">
+                @csrf
+                <div class="operator-field w-40">
+                    <label for="baseline_type">Loại kế hoạch</label>
+                    <select id="baseline_type" name="type" class="operator-select">
+                        <option value="execution">Thực thi</option>
+                        <option value="contract">Hợp đồng</option>
+                    </select>
+                </div>
+                <div class="operator-field flex-1 min-w-48">
+                    <label for="baseline_note">Ghi chú / lý do chốt {{ $delay['baseline'] !== null ? 'lại' : '' }}</label>
+                    <input id="baseline_note" name="note" type="text" class="operator-input" maxlength="1000">
+                </div>
+                <button type="submit" class="operator-button operator-button-secondary">Chốt kế hoạch từ ngày hiện tại</button>
+            </form>
+            @error('type')<p class="mt-1 text-sm text-rose-600">{{ $message }}</p>@enderror
+        @endif
+    </x-ui.card>
+
     <x-ui.card title="Công việc ({{ $project->tasks->count() }})">
         <div class="mb-3">
             <x-ui.button-link href="/app/tasks/create?project_id={{ $project->id }}">Thêm công việc</x-ui.button-link>

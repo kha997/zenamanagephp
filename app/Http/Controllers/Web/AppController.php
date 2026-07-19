@@ -57,11 +57,19 @@ class AppController extends Controller
     {
         $tenantId = (string) Auth::user()?->tenant_id;
 
+        $projects = Project::query()
+            ->where('tenant_id', $tenantId)
+            ->with('latestBaseline')
+            ->orderByDesc('updated_at')
+            ->get(['id', 'tenant_id', 'name', 'code', 'status', 'progress', 'start_date', 'end_date', 'budget_total']);
+
+        $delays = $projects->mapWithKeys(fn (Project $p) => [
+            (string) $p->id => \App\Services\ProjectDelayStatus::evaluate($p, $p->latestBaseline),
+        ]);
+
         return view('app.projects', [
-            'projects' => Project::query()
-                ->where('tenant_id', $tenantId)
-                ->orderByDesc('updated_at')
-                ->get(['id', 'tenant_id', 'name', 'code', 'status', 'progress', 'start_date', 'end_date', 'budget_total']),
+            'projects' => $projects,
+            'delays' => $delays,
         ]);
     }
 

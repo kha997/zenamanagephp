@@ -20,7 +20,7 @@
         </x-ui.empty-state>
     @else
         <x-ui.card>
-            <x-ui.data-table :headers="['Dự án', 'Trạng thái', 'Tiến độ', 'Bắt đầu', 'Kết thúc', 'Ngân sách']">
+            <x-ui.data-table :headers="['Dự án', 'Trạng thái', 'Tiến độ', 'Tiến độ KH', 'Bắt đầu', 'Kết thúc', 'Ngân sách']">
                 @foreach ($projects as $project)
                     <tr>
                         <td>
@@ -29,6 +29,7 @@
                         </td>
                         <td><x-ui.status-badge :status="$project->status" /></td>
                         <td class="text-sm text-slate-600">{{ (int) $project->progress }}%</td>
+                        <td>@include('projects._delay-badge', ['delay' => $delays[(string) $project->id]])</td>
                         <td class="text-sm text-slate-600">{{ $project->start_date ? \Illuminate\Support\Carbon::parse($project->start_date)->format('d/m/Y') : '—' }}</td>
                         <td class="text-sm text-slate-600">{{ $project->end_date ? \Illuminate\Support\Carbon::parse($project->end_date)->format('d/m/Y') : '—' }}</td>
                         <td class="text-sm text-slate-600">{{ $project->budget_total ? number_format((float) $project->budget_total, 0, ',', '.') : '—' }}</td>

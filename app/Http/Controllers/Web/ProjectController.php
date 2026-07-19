@@ -201,6 +201,12 @@ class ProjectController extends Controller // Thêm extends Controller
                 ->filter(fn ($t) => $t->latestPublishedVersion !== null)
                 ->values();
 
+            $latestBaseline = \App\Models\Baseline::query()
+                ->where('project_id', (string) $project->id)
+                ->orderByDesc('created_at')
+                ->first();
+            $delay = \App\Services\ProjectDelayStatus::evaluate($project, $latestBaseline);
+
             return view('projects.show', [
                 'project' => $project,
                 'documentChecklist' => $documentChecklist,
@@ -209,10 +215,36 @@ class ProjectController extends Controller // Thêm extends Controller
                 'sectionTasks' => $sectionTasks,
                 'contracts' => $contracts,
                 'projectTemplates' => $projectTemplates,
+                'delay' => $delay,
             ]);
         } catch (\Throwable $e) {
             abort(404, 'Dự án không tồn tại.');
         }
+    }
+
+    public function storeBaseline(Request $request, string $projectId): \Illuminate\Http\RedirectResponse
+    {
+        $validated = $request->validate([
+            'type' => ['required', 'in:contract,execution'],
+            'note' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        // Tenant gate TRƯỚC khi gọi service: bảng baselines không có tenant_id,
+        // và BaselineService chỉ findOrFail trơn theo project id.
+        $project = AppProject::query()
+            ->where('tenant_id', (string) Auth::user()?->tenant_id)
+            ->findOrFail($projectId);
+
+        app(\Src\CoreProject\Services\BaselineService::class)->createBaselineFromProject(
+            (string) $project->id,
+            $validated['type'],
+            (string) Auth::id(),
+            $validated['note'] ?? null
+        );
+
+        return redirect()
+            ->route('app.projects.show', $project->id)
+            ->with('success', 'Đã chốt kế hoạch gốc (phiên bản mới).');
     }
 
     public function update(

@@ -365,8 +365,9 @@ Route::get('/projects-enhanced', function() {
         Route::get('/projects/{project}', [App\Http\Controllers\Web\ProjectController::class, 'show'])->name('projects.show');
         Route::get('/projects/{project}/edit', [App\Http\Controllers\Web\ProjectController::class, 'edit'])->name('projects.edit');
         Route::put('/projects/{project}', [App\Http\Controllers\Web\ProjectController::class, 'update'])->middleware('rbac:project.write')->name('projects.update');
+        Route::post('/projects/{project}/baseline', [App\Http\Controllers\Web\ProjectController::class, 'storeBaseline'])->middleware('rbac:project.update')->name('projects.baseline.store');
         // DELETE /projects/{project} - MOVED TO API: /api/v1/projects/{project}
-    
+
     // Project sub-resources
     Route::get('/projects/{project}/documents', [App\Http\Controllers\Web\ProjectController::class, 'documents'])->name('projects.documents');
     Route::get('/projects/{project}/documents/{template}', [App\Http\Controllers\Web\ProjectController::class, 'renderProjectDocument'])->middleware('rbac:project.view')->name('projects.documents.render');

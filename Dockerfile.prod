@@ -10,20 +10,21 @@ COPY composer.json composer.lock ./
 # Install dependencies
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
-# Node.js stage
+# Node.js stage — builds the Laravel Vite assets (public/build)
 FROM node:18-alpine AS node-stage
 
 # Set working directory
 WORKDIR /app
 
 # Copy package files
-COPY frontend/package*.json ./
+COPY package*.json ./
 
 # Install dependencies needed for the production asset build
 RUN npm ci
 
-# Copy source code
-COPY frontend/ ./
+# Copy build inputs (vite/tailwind configs + resources; tailwind scans blade files)
+COPY vite.config.js tailwind.config.js postcss.config.js ./
+COPY resources/ ./resources/
 
 # Build assets
 RUN npm run build
@@ -86,7 +87,7 @@ COPY . .
 COPY --from=composer-stage /app/vendor ./vendor
 
 # Copy built assets
-COPY --from=node-stage /app/dist ./public/dist
+COPY --from=node-stage /app/public/build ./public/build
 
 # Create necessary directories
 RUN mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views \

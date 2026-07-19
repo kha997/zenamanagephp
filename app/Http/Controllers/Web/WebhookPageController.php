@@ -7,6 +7,7 @@ use App\Models\WebhookEndpoint;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
 class WebhookPageController extends Controller
@@ -15,7 +16,7 @@ class WebhookPageController extends Controller
     {
         $this->authorize('viewAny', WebhookEndpoint::class);
 
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         return view('webhooks.index', [
             'endpoints' => WebhookEndpoint::query()
@@ -58,13 +59,13 @@ class WebhookPageController extends Controller
         $secret = Str::random(48);
 
         WebhookEndpoint::query()->create([
-            'tenant_id' => (string) auth()->user()?->tenant_id,
+            'tenant_id' => (string) Auth::user()?->tenant_id,
             'name' => $validated['name'],
             'url' => $validated['url'],
             'secret' => $secret,
             'event_keys' => $eventKeys,
             'is_active' => true,
-            'created_by' => (string) auth()->id(),
+            'created_by' => (string) Auth::id(),
         ]);
 
         return redirect(route('operator.webhooks.index'))
@@ -97,7 +98,7 @@ class WebhookPageController extends Controller
     private function findTenantEndpoint(string $id): WebhookEndpoint
     {
         return WebhookEndpoint::query()
-            ->forTenant((string) auth()->user()?->tenant_id)
+            ->forTenant((string) Auth::user()?->tenant_id)
             ->findOrFail($id);
     }
 }

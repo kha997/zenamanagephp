@@ -13,6 +13,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Throwable;
 
 class InspectionPageController extends Controller
@@ -21,7 +22,7 @@ class InspectionPageController extends Controller
 
     public function index(Request $request): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $query = QcInspection::query()
             ->where('tenant_id', $tenantId)
@@ -44,7 +45,7 @@ class InspectionPageController extends Controller
 
     public function create(): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         return view('inspections.create', [
             'qcPlans' => QcPlan::query()
@@ -93,7 +94,7 @@ class InspectionPageController extends Controller
 
     public function show(string $id): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $inspection = QcInspection::query()
             ->where('tenant_id', $tenantId)
@@ -141,7 +142,7 @@ class InspectionPageController extends Controller
 
     public function showNcr(string $inspection, string $ncr): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $ncrModel = Ncr::query()
             ->where('tenant_id', $tenantId)

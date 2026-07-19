@@ -9,6 +9,7 @@ use App\Services\TaskService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 use Src\CoreProject\Models\Project;
 use Src\CoreProject\Models\Task;
@@ -89,7 +90,7 @@ class TaskController extends Controller
     {
         try {
             $projects = Project::query()
-                ->where('tenant_id', (string) \Auth::user()?->tenant_id)
+                ->where('tenant_id', (string) Auth::user()?->tenant_id)
                 ->select('id', 'name')
                 ->get();
             $projectId = $request->get('project_id');
@@ -141,7 +142,7 @@ class TaskController extends Controller
     {
         try {
             $task = Task::with(['project'])
-                ->where('tenant_id', (string) \Auth::user()?->tenant_id)
+                ->where('tenant_id', (string) Auth::user()?->tenant_id)
                 ->findOrFail($taskId);
             
             return view('tasks.show', compact('task'));
@@ -163,7 +164,7 @@ class TaskController extends Controller
     public function edit(string $taskId): View
     {
         try {
-            $tenantId = (string) \Auth::user()?->tenant_id;
+            $tenantId = (string) Auth::user()?->tenant_id;
             $task = Task::query()->where('tenant_id', $tenantId)->findOrFail($taskId);
             $projects = Project::query()->where('tenant_id', $tenantId)->select('id', 'name')->get();
 
@@ -280,13 +281,13 @@ class TaskController extends Controller
         $request->validate(['blocker_note' => ['required', 'string', 'max:1000']]);
 
         $task = \App\Models\Task::query()
-            ->where('tenant_id', (string) auth()->user()?->tenant_id)
+            ->where('tenant_id', (string) Auth::user()?->tenant_id)
             ->findOrFail($taskId);
 
         $task->forceFill([
             'blocked_at' => now(),
             'blocker_note' => (string) $request->string('blocker_note'),
-            'blocked_by' => (string) auth()->id(),
+            'blocked_by' => (string) Auth::id(),
         ])->save();
 
         return back()->with('success', 'Đã đánh dấu công việc đang vướng.');
@@ -295,7 +296,7 @@ class TaskController extends Controller
     public function unblock(string $taskId): RedirectResponse
     {
         $task = \App\Models\Task::query()
-            ->where('tenant_id', (string) auth()->user()?->tenant_id)
+            ->where('tenant_id', (string) Auth::user()?->tenant_id)
             ->findOrFail($taskId);
 
         $task->forceFill(['blocked_at' => null, 'blocker_note' => null, 'blocked_by' => null])->save();

@@ -31,7 +31,7 @@ class ContractPageController extends Controller
 
     public function index(Request $request): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $query = Contract::query()
             ->where('tenant_id', $tenantId)
@@ -57,7 +57,7 @@ class ContractPageController extends Controller
 
     public function create(): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         return view('contracts.create', [
             'projects' => Project::query()
@@ -116,7 +116,7 @@ class ContractPageController extends Controller
             'description' => ['required', 'string', 'max:1000'],
         ]);
 
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
         $contract = Contract::query()->where('tenant_id', $tenantId)->findOrFail($id);
 
         \App\Models\ContractExpense::query()->create([
@@ -126,7 +126,7 @@ class ContractPageController extends Controller
             'amount' => (float) $validated['amount'],
             'category' => $validated['category'],
             'description' => $validated['description'],
-            'recorded_by' => (string) auth()->id(),
+            'recorded_by' => (string) Auth::id(),
         ]);
 
         return back()->with('success', 'Đã ghi khoản chi.');
@@ -134,7 +134,7 @@ class ContractPageController extends Controller
 
     public function deleteExpense(string $id, string $expense): RedirectResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
         $contract = Contract::query()->where('tenant_id', $tenantId)->findOrFail($id);
 
         \App\Models\ContractExpense::query()
@@ -148,7 +148,7 @@ class ContractPageController extends Controller
 
     public function show(Request $request, string $id, ApiContractController $apiController): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $contract = Contract::query()
             ->where('tenant_id', $tenantId)
@@ -301,7 +301,7 @@ class ContractPageController extends Controller
 
     public function downloadPdf(Request $request, string $id, ApiContractController $apiController, DeliverablePdfExportService $pdfService): SymfonyResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $contract = Contract::query()
             ->where('tenant_id', $tenantId)

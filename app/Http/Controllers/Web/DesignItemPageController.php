@@ -17,6 +17,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Throwable;
@@ -39,7 +40,7 @@ class DesignItemPageController extends Controller
     {
         $this->authorize('viewAny', DesignItem::class);
 
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $items = DesignItem::query()
             ->forTenant($tenantId)
@@ -63,7 +64,7 @@ class DesignItemPageController extends Controller
     {
         $this->authorize('create', DesignItem::class);
 
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         return view('design-items.create', [
             'projects' => Project::query()->where('tenant_id', $tenantId)->orderBy('name')->get(['id', 'name']),
@@ -72,7 +73,7 @@ class DesignItemPageController extends Controller
 
     public function suggestDescription(Request $request, AiAssistService $aiAssistService): JsonResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $validator = Validator::make($request->all(), [
             'project_id' => [
@@ -141,7 +142,7 @@ class DesignItemPageController extends Controller
 
     public function show(string $id): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $item = DesignItem::query()
             ->forTenant($tenantId)
@@ -173,13 +174,13 @@ class DesignItemPageController extends Controller
     {
         $request->validate(['blocker_note' => ['required', 'string', 'max:1000']]);
 
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
         $item = DesignItem::query()->forTenant($tenantId)->findOrFail($id);
 
         $item->forceFill([
             'blocked_at' => now(),
             'blocker_note' => (string) $request->string('blocker_note'),
-            'blocked_by' => (string) auth()->id(),
+            'blocked_by' => (string) Auth::id(),
         ])->save();
 
         return back()->with('success', 'Đã đánh dấu hạng mục thiết kế đang vướng.');
@@ -187,7 +188,7 @@ class DesignItemPageController extends Controller
 
     public function unblock(string $id): RedirectResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
         $item = DesignItem::query()->forTenant($tenantId)->findOrFail($id);
 
         $item->forceFill(['blocked_at' => null, 'blocker_note' => null, 'blocked_by' => null])->save();

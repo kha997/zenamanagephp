@@ -13717,14 +13717,8 @@ parameters:
 			path: app/Http/Controllers/Web/ContractPageController.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:id\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Controllers/Web/ContractPageController.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
-			identifier: method.notFound
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			identifier: property.notFound
 			count: 6
 			path: app/Http/Controllers/Web/ContractPageController.php
 
@@ -13957,8 +13951,8 @@ parameters:
 			path: app/Http/Controllers/Web/DesignItemPageController.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
-			identifier: method.notFound
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			identifier: property.notFound
 			count: 6
 			path: app/Http/Controllers/Web/DesignItemPageController.php
 
@@ -14383,8 +14377,8 @@ parameters:
 			path: app/Http/Controllers/Web/InspectionPageController.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
-			identifier: method.notFound
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			identifier: property.notFound
 			count: 4
 			path: app/Http/Controllers/Web/InspectionPageController.php
 
@@ -15319,8 +15313,8 @@ parameters:
 			path: app/Http/Controllers/Web/WorkloadPageController.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
-			identifier: method.notFound
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			identifier: property.notFound
 			count: 3
 			path: app/Http/Controllers/Web/SiteDiaryPageController.php
 
@@ -15343,8 +15337,8 @@ parameters:
 			path: app/Http/Controllers/Web/SiteDiaryPageController.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
-			identifier: method.notFound
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			identifier: property.notFound
 			count: 3
 			path: app/Http/Controllers/Web/SubmittalPageController.php
 
@@ -15529,15 +15523,9 @@ parameters:
 			path: app/Http/Controllers/Web/TaskController.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:id\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Controllers/Web/TaskController.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
-			identifier: method.notFound
-			count: 2
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 5
 			path: app/Http/Controllers/Web/TaskController.php
 
 		-
@@ -15562,12 +15550,6 @@ parameters:
 			message: '#^Call to static method error\(\) on an unknown class Log\.$#'
 			identifier: class.notFound
 			count: 1
-			path: app/Http/Controllers/Web/TaskController.php
-
-		-
-			message: '#^Call to static method user\(\) on an unknown class Auth\.$#'
-			identifier: class.notFound
-			count: 3
 			path: app/Http/Controllers/Web/TaskController.php
 
 		-
@@ -15685,14 +15667,8 @@ parameters:
 			path: app/Http/Controllers/Web/WebhookPageController.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:id\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Controllers/Web/WebhookPageController.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
-			identifier: method.notFound
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			identifier: property.notFound
 			count: 3
 			path: app/Http/Controllers/Web/WebhookPageController.php
 

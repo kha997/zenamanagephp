@@ -1,5 +1,38 @@
 # Z.E.N.A Project Management - Go-Live Checklist
 
+> **Cập nhật 2026-07-19** — phần này thay thế vai trò "checklist sống" của tài liệu; danh sách generic phía dưới giữ nguyên để tham khảo. Nguồn: tổng rà production-readiness 19/07 (đối chiếu code thật trên `main`).
+
+## ✅ Đã xác minh sẵn sàng (không cần làm lại)
+
+| Hạng mục | Bằng chứng trong code |
+|---|---|
+| Backup tự động + kiểm tra thật | `Kernel.php` schedule `backup:run` (all + database); `LaunchChecklistService::checkBackupSystem()` kiểm tra file thật (từ PR #181) |
+| Error tracking | Sentry tích hợp (`Handler::reportable` + `HubInterface` guard, PR #187); no-op an toàn khi thiếu DSN |
+| Queue worker + scheduler | `docker/supervisor/supervisord.conf`: đủ 4 process `php-fpm`/`nginx`/`laravel-worker`/`laravel-schedule` |
+| Redis cache/session | Store `redis` trong `config/cache.php` đã sửa đúng chuẩn (PR #191); defaults redis từ PR #188 |
+| Launch checklist tự kiểm | `LaunchChecklistService` 20 check đều là kiểm tra thật, không stub |
+| Deploy pipeline | `.github/workflows/production.yml` deploy qua SSH, tự skip an toàn khi thiếu secrets |
+| Debug routes | `DebugGateMiddleware` chặn 404 ngoài môi trường local/testing/development |
+
+## 🔧 Cấu hình BẮT BUỘC khi deploy production (.env prod)
+
+| Biến | Giá trị prod | Ghi chú |
+|---|---|---|
+| `APP_ENV` | `production` | Đồng thời khoá `_debug` routes |
+| `APP_DEBUG` | `false` | |
+| `QUEUE_CONNECTION` | `redis` | Worker đã chạy sẵn trong supervisor — default `sync` chỉ dành cho dev |
+| `CACHE_DRIVER` / `SESSION_DRIVER` | `redis` | Cần Redis service thật |
+| `MAIL_*` | SMTP thật | Default hiện là `mailpit` (dev); mail mời user/portal login phụ thuộc cái này |
+| `SENTRY_LARAVEL_DSN` | DSN môi trường prod | + `SENTRY_ENVIRONMENT=production` |
+| Secrets GitHub cho deploy | `SSH_*` theo `production.yml` | Workflow tự liệt kê secret thiếu trong log |
+
+## 🟠 Việc còn mở (theo dõi đến khi đóng)
+
+- [ ] **npm audit critical** — PR #197 (bump lockfile, mở khoá gate `security-scan` của Production Deployment)
+- [ ] **Auth Guard Lint 166 lỗi** — đang sửa theo 3 đợt cơ giới (batch 1: `CrmPageController`)
+- [ ] **Vite 4→8 major upgrade** — 3 finding npm còn lại (high vite / moderate esbuild / low laravel-vite-plugin) cần bump major + Node mới trong CI; tách thành task riêng, không chặn gate critical
+- [ ] Flake CI hạ tầng (staging-smoke SIGSEGV, browser-tests connection-refused) — playbook: re-run trước, chỉ debug khi fail 3 lần cùng chữ ký
+
 ## 🔒 Security Checklist
 
 ### Application Security

@@ -960,6 +960,7 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     // Reports (xuất báo cáo)
     Route::get('/reports', [App\Http\Controllers\Web\ReportPageController::class, 'index'])->middleware('rbac:report.view')->name('reports.index');
     Route::post('/reports/export', [App\Http\Controllers\Web\ReportPageController::class, 'export'])->middleware('rbac:report.export')->name('reports.export');
+    Route::get('/reports/cashflow', [App\Http\Controllers\Web\ReportPageController::class, 'cashflow'])->middleware('rbac:report.view')->name('reports.cashflow');
 
     // Webhooks (tích hợp hệ thống ngoài)
     Route::get('/webhooks', [App\Http\Controllers\Web\WebhookPageController::class, 'index'])->middleware('rbac:webhook.view')->name('webhooks.index');

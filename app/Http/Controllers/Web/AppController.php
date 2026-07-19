@@ -73,17 +73,29 @@ class AppController extends Controller
         ]);
     }
 
-    public function tasks()
+    public function tasks(Request $request)
     {
         $tenantId = (string) Auth::user()?->tenant_id;
 
+        $assignedTo = (string) $request->query('assigned_to', '');
+        if ($assignedTo !== '' && !User::query()->where('tenant_id', $tenantId)->whereKey($assignedTo)->exists()) {
+            $assignedTo = '';
+        }
+
+        $tasksQuery = Task::query()
+            ->where('tenant_id', $tenantId)
+            ->with(['project:id,tenant_id,name,code', 'assignee:id,name'])
+            ->orderByDesc('updated_at')
+            ->limit(200);
+
+        if ($assignedTo !== '') {
+            $tasksQuery->where('assigned_to', $assignedTo);
+        }
+
         return view('app.tasks', [
-            'tasks' => Task::query()
-                ->where('tenant_id', $tenantId)
-                ->with('project:id,tenant_id,name,code')
-                ->orderByDesc('updated_at')
-                ->limit(200)
-                ->get(['id', 'tenant_id', 'project_id', 'name', 'title', 'status', 'priority', 'progress_percent', 'start_date', 'end_date', 'blocked_at']),
+            'tasks' => $tasksQuery->get(['id', 'tenant_id', 'project_id', 'name', 'title', 'status', 'priority', 'progress_percent', 'start_date', 'end_date', 'blocked_at', 'assigned_to']),
+            'tenantUsers' => User::query()->where('tenant_id', $tenantId)->orderBy('name')->get(['id', 'tenant_id', 'name']),
+            'assignedTo' => $assignedTo,
         ]);
     }
 

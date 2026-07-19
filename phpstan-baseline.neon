@@ -15267,6 +15267,48 @@ parameters:
 		-
 			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
 			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Web/WorkloadPageController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Query\\Builder\:\:with\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Http/Controllers/Web/WorkloadPageController.php
+
+		-
+			message: '#^Using nullsafe property access \"\?\-\>name\" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Http/Controllers/Web/WorkloadPageController.php
+
+		-
+			message: '#^Offset ''assigned_to'' on \*NEVER\* on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Http/Controllers/Web/WorkloadPageController.php
+
+		-
+			message: '#^Unable to resolve the template type TGroupKey in call to method Illuminate\\Support\\Collection\<\*NEVER\*,\*NEVER\*\>\:\:groupBy\(\)$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Http/Controllers/Web/WorkloadPageController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,stdClass\>\:\:map\(\) expects callable\(stdClass, int\)\: array\{user\: App\\Models\\User, items\: Illuminate\\Support\\Collection\<int, array\<string, mixed\>\>, open_count\: int\<0, max\>, overdue_count\: int\<0, max\>, blocked_count\: int\<0, max\>\}, Closure\(App\\Models\\User\)\: array\{user\: App\\Models\\User, items\: Illuminate\\Support\\Collection\<int, array\<string, mixed\>\>, open_count\: int\<0, max\>, overdue_count\: int\<0, max\>, blocked_count\: int\<0, max\>\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/WorkloadPageController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Web\\WorkloadPageController\:\:index\(\) should return Illuminate\\View\\View but returns Illuminate\\Contracts\\View\\View\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/Web/WorkloadPageController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
+			identifier: method.notFound
 			count: 3
 			path: app/Http/Controllers/Web/SiteDiaryPageController.php
 

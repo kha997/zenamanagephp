@@ -6,13 +6,13 @@ use App\Http\Controllers\Controller;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-
+use Illuminate\Support\Facades\Auth;
 class ApiTokenPageController extends Controller
 {
     public function index(): View
     {
         return view('api-tokens.index', [
-            'tokens' => auth()->user()->tokens()
+            'tokens' => Auth::user()->tokens()
                 ->orderByDesc('created_at')
                 ->get(['id', 'name', 'last_used_at', 'created_at']),
         ]);

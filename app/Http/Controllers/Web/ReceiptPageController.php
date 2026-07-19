@@ -17,6 +17,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Throwable;
 
 class ReceiptPageController extends Controller
@@ -25,7 +26,7 @@ class ReceiptPageController extends Controller
     {
         $this->authorize('viewAny', MaterialReceipt::class);
 
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         return view('receipts.index', [
             'receipts' => MaterialReceipt::query()
@@ -45,7 +46,7 @@ class ReceiptPageController extends Controller
     {
         $this->authorize('create', MaterialReceipt::class);
 
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         return view('receipts.create', [
             'projects' => Project::query()
@@ -107,7 +108,7 @@ class ReceiptPageController extends Controller
 
     public function show(Request $request, string $receipt, ApiContractController $contractController): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $receiptModel = MaterialReceipt::query()
             ->where('tenant_id', $tenantId)

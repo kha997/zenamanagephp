@@ -14,6 +14,7 @@ use App\Models\Task;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportPageController extends Controller
@@ -29,7 +30,7 @@ class ReportPageController extends Controller
 
     public function index(): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         return view('reports.index', [
             'datasets' => self::DATASETS,
@@ -42,7 +43,7 @@ class ReportPageController extends Controller
 
     public function cashflow(): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         // Cửa sổ 12 tháng: 9 tháng trước -> 2 tháng tới (spec: Definitions).
         $start = Carbon::now()->startOfMonth()->subMonths(9);
@@ -125,7 +126,7 @@ class ReportPageController extends Controller
             'project_id' => ['nullable', 'string'],
         ]);
 
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
         $dataset = (string) $validated['dataset'];
         $projectId = (string) ($validated['project_id'] ?? '');
 

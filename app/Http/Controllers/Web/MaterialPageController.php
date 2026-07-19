@@ -10,6 +10,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Throwable;
 
 class MaterialPageController extends Controller
@@ -18,7 +19,7 @@ class MaterialPageController extends Controller
 
     public function index(Request $request): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $query = Material::query()->where('tenant_id', $tenantId);
 
@@ -66,7 +67,7 @@ class MaterialPageController extends Controller
 
     public function show(string $id): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $material = Material::query()
             ->where('tenant_id', $tenantId)

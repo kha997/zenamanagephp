@@ -11,6 +11,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Throwable;
 
 class SiteDiaryPageController extends Controller
@@ -21,7 +22,7 @@ class SiteDiaryPageController extends Controller
     {
         $this->authorize('viewAny', SiteDiary::class);
 
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $query = SiteDiary::query()
             ->forTenant($tenantId)
@@ -53,7 +54,7 @@ class SiteDiaryPageController extends Controller
     {
         $this->authorize('create', SiteDiary::class);
 
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         return view('site-diaries.create', [
             'projects' => Project::query()
@@ -65,7 +66,7 @@ class SiteDiaryPageController extends Controller
 
     public function show(string $id): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $siteDiary = SiteDiary::query()
             ->forTenant($tenantId)

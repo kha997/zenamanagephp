@@ -9,7 +9,7 @@ use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
-
+use Illuminate\Support\Facades\Auth;
 /**
  * Trang "Khối lượng công việc" — việc đang mở (Task + Hạng mục thiết kế)
  * nhóm theo người, sắp theo tải giảm dần.
@@ -19,7 +19,7 @@ class WorkloadPageController extends Controller
 {
     public function index(): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
         $today = Carbon::now()->startOfDay();
 
         $users = User::query()

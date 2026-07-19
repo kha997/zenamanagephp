@@ -14,7 +14,7 @@ use App\Models\Submittal;
 use App\Models\Vendor;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
-
+use Illuminate\Support\Facades\Auth;
 class GlobalSearchPageController extends Controller
 {
     private const RESULT_LIMIT = 10;
@@ -22,7 +22,7 @@ class GlobalSearchPageController extends Controller
     public function index(Request $request): View
     {
         $term = trim((string) $request->query('q', ''));
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $results = [];
 

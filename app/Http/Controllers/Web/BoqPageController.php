@@ -12,6 +12,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Throwable;
 
 class BoqPageController extends Controller
@@ -20,7 +21,7 @@ class BoqPageController extends Controller
 
     public function index(Request $request): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $query = Boq::query()
             ->where('tenant_id', $tenantId)
@@ -42,7 +43,7 @@ class BoqPageController extends Controller
 
     public function create(): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         return view('boqs.create', [
             'projects' => Project::query()
@@ -86,7 +87,7 @@ class BoqPageController extends Controller
 
     public function show(string $id): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $boq = Boq::query()
             ->where('tenant_id', $tenantId)

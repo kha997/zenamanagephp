@@ -12,14 +12,14 @@ use App\Models\QcInspection;
 use App\Models\Rfi;
 use App\Models\Submittal;
 use Illuminate\Contracts\View\View;
-
+use Illuminate\Support\Facades\Auth;
 class ProcurementDashboardController extends Controller
 {
     public function __invoke(): View
     {
         $this->authorize('viewAny', MaterialRequest::class);
 
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $requestCount = MaterialRequest::query()
             ->whereHas('project', function ($query) use ($tenantId): void {

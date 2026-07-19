@@ -11,6 +11,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 use Throwable;
 
 class MaterialRequestPageController extends Controller
@@ -19,7 +20,7 @@ class MaterialRequestPageController extends Controller
     {
         $this->authorize('viewAny', MaterialRequest::class);
 
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $materialRequests = MaterialRequest::query()
             ->with('project:id,tenant_id,name,code')
@@ -38,7 +39,7 @@ class MaterialRequestPageController extends Controller
     {
         $this->authorize('create', MaterialRequest::class);
 
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         return view('material-requests.create', [
             'projects' => Project::query()

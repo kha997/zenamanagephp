@@ -12,13 +12,14 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Throwable;
 
 class RfiPageController extends Controller
 {
     public function index(Request $request): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $query = Rfi::query()
             ->where('tenant_id', $tenantId)
@@ -48,7 +49,7 @@ class RfiPageController extends Controller
 
     public function create(): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         return view('rfis.create', [
             'projects' => Project::query()
@@ -101,7 +102,7 @@ class RfiPageController extends Controller
 
     public function show(string $id): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         $rfi = Rfi::query()
             ->where('tenant_id', $tenantId)

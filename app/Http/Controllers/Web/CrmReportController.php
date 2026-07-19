@@ -5,12 +5,12 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Services\BusinessKpiService;
 use Illuminate\Contracts\View\View;
-
+use Illuminate\Support\Facades\Auth;
 class CrmReportController extends Controller
 {
     public function index(BusinessKpiService $kpiService): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = (string) Auth::user()?->tenant_id;
 
         return view('crm.report', [
             'monthlyRevenue' => $kpiService->monthlyRevenue($tenantId),

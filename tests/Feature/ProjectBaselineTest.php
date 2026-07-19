@@ -109,4 +109,33 @@ class ProjectBaselineTest extends TestCase
 
         $this->assertDatabaseCount('baselines', 0);
     }
+
+    public function test_project_show_renders_baseline_card_and_delay_badge(): void
+    {
+        $this->actingAs($this->manager)->post(
+            route('app.projects.baseline.store', $this->project->id),
+            ['type' => 'execution', 'note' => 'Chốt lần đầu']
+        );
+
+        $response = $this->actingAs($this->manager)->get(
+            route('app.projects.show', $this->project->id)
+        );
+
+        $response->assertOk();
+        $response->assertSee('Kế hoạch gốc');
+        $response->assertSee('Chốt lần đầu');
+        // Project end (2026-12-31) equals committed end → on track.
+        $response->assertSee('Đúng tiến độ');
+    }
+
+    public function test_project_show_offers_commit_button_when_no_baseline(): void
+    {
+        $response = $this->actingAs($this->manager)->get(
+            route('app.projects.show', $this->project->id)
+        );
+
+        $response->assertOk();
+        $response->assertSee('Chưa chốt kế hoạch gốc');
+        $response->assertSee('Chốt kế hoạch từ ngày hiện tại');
+    }
 }

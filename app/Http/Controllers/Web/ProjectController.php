@@ -201,6 +201,12 @@ class ProjectController extends Controller // Thêm extends Controller
                 ->filter(fn ($t) => $t->latestPublishedVersion !== null)
                 ->values();
 
+            $latestBaseline = \App\Models\Baseline::query()
+                ->where('project_id', (string) $project->id)
+                ->orderByDesc('created_at')
+                ->first();
+            $delay = \App\Services\ProjectDelayStatus::evaluate($project, $latestBaseline);
+
             return view('projects.show', [
                 'project' => $project,
                 'documentChecklist' => $documentChecklist,
@@ -209,6 +215,7 @@ class ProjectController extends Controller // Thêm extends Controller
                 'sectionTasks' => $sectionTasks,
                 'contracts' => $contracts,
                 'projectTemplates' => $projectTemplates,
+                'delay' => $delay,
             ]);
         } catch (\Throwable $e) {
             abort(404, 'Dự án không tồn tại.');

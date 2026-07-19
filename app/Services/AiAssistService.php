@@ -18,6 +18,7 @@ class AiAssistService
     private const ENDPOINT = 'https://api.anthropic.com/v1/messages';
     private const TOOL_NAME = 'suggest_lead_conversion';
     private const DESIGN_ITEM_TOOL_NAME = 'suggest_design_item_description';
+    private const SUMMARY_TOOL_NAME = 'summarize_opportunity';
 
     /**
      * @return array{service_category: string, scope_summary: string}|null
@@ -148,6 +149,86 @@ class AiAssistService
             return ['description' => $description];
         } catch (Throwable $e) {
             Log::error('ai_assist.design_item_suggestion_exception', ['error' => $e->getMessage()]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Summarize an anonymized CRM opportunity context for pre-meeting preparation.
+     * The caller (CrmPageController::buildOpportunitySummaryContext) is responsible for
+     * anonymization — this method sends $context verbatim as JSON and must only ever
+     * receive already-whitelisted data.
+     *
+     * @param array<string, mixed> $context
+     * @return array{summary: string}|null
+     */
+    public function summarizeOpportunity(array $context): ?array
+    {
+        $apiKey = (string) config('ai.anthropic_api_key');
+
+        if ($apiKey === '' || $context === []) {
+            return null;
+        }
+
+        try {
+            $response = Http::timeout(10)
+                ->withHeaders([
+                    'x-api-key' => $apiKey,
+                    'anthropic-version' => '2023-06-01',
+                    'content-type' => 'application/json',
+                ])
+                ->post(self::ENDPOINT, [
+                    'model' => (string) config('ai.model', 'claude-haiku-4-5-20251001'),
+                    'max_tokens' => 1024,
+                    'system' => 'Bạn tóm tắt một cơ hội bán hàng (CRM) cho người sale chuẩn bị gặp khách. '
+                        . 'Viết tiếng Việt, 5-7 gạch đầu dòng, theo khung: tình trạng hiện tại → lịch sử tương tác → tình trạng báo giá → điểm cần lưu ý trước cuộc gặp. '
+                        . 'CHỈ dùng dữ kiện được cung cấp trong JSON. KHÔNG suy diễn hay bịa số liệu. '
+                        . 'Dữ kiện nào thiếu thì ghi "chưa có thông tin".',
+                    'tools' => [[
+                        'name' => self::SUMMARY_TOOL_NAME,
+                        'description' => 'Return the Vietnamese pre-meeting summary of the CRM opportunity.',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'summary' => [
+                                    'type' => 'string',
+                                    'description' => '5-7 Vietnamese bullet lines summarizing the opportunity.',
+                                ],
+                            ],
+                            'required' => ['summary'],
+                        ],
+                    ]],
+                    'tool_choice' => ['type' => 'tool', 'name' => self::SUMMARY_TOOL_NAME],
+                    'messages' => [[
+                        'role' => 'user',
+                        'content' => (string) json_encode($context, JSON_UNESCAPED_UNICODE),
+                    ]],
+                ]);
+
+            if (!$response->successful()) {
+                Log::warning('ai_assist.opportunity_summary_failed', ['status' => $response->status()]);
+
+                return null;
+            }
+
+            $input = $this->extractToolUseInput($response->json('content', []), self::SUMMARY_TOOL_NAME);
+
+            if ($input === null) {
+                return null;
+            }
+
+            $summary = trim((string) ($input['summary'] ?? ''));
+
+            if ($summary === '') {
+                Log::warning('ai_assist.opportunity_summary_invalid_output');
+
+                return null;
+            }
+
+            return ['summary' => $summary];
+        } catch (Throwable $e) {
+            Log::error('ai_assist.opportunity_summary_exception', ['error' => $e->getMessage()]);
 
             return null;
         }

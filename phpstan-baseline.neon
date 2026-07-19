@@ -13749,7 +13749,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Models\\Lead\:\:\$project_description\.$#'
 			identifier: property.notFound
-			count: 1
+			count: 2
 			path: app/Http/Controllers/Web/CrmPageController.php
 
 		-
@@ -13773,19 +13773,19 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$id\.$#'
 			identifier: property.notFound
-			count: 3
+			count: 6
 			path: app/Http/Controllers/Web/CrmPageController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$pipeline_stage\.$#'
 			identifier: property.notFound
-			count: 1
+			count: 2
 			path: app/Http/Controllers/Web/CrmPageController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$tenant_id\.$#'
 			identifier: property.notFound
-			count: 1
+			count: 2
 			path: app/Http/Controllers/Web/CrmPageController.php
 
 		-
@@ -13803,7 +13803,7 @@ parameters:
 		-
 			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
 			identifier: method.notFound
-			count: 17
+			count: 18
 			path: app/Http/Controllers/Web/CrmPageController.php
 
 		-
@@ -13833,7 +13833,7 @@ parameters:
 		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<App\\Models\\Opportunity\>\:\:forTenant\(\)\.$#'
 			identifier: method.notFound
-			count: 2
+			count: 3
 			path: app/Http/Controllers/Web/CrmPageController.php
 
 		-
@@ -13845,6 +13845,90 @@ parameters:
 		-
 			message: '#^Method App\\Http\\Controllers\\Web\\CrmPageController\:\:buildApiRequest\(\) has parameter \$payload with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$service_category\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$service_scope_summary\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$forecast_category\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$estimated_fee\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$estimated_project_value\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$probability\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$expected_close_date\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$priority\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$lost_reason\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Lead\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,stdClass\>\:\:map\(\) expects callable\(stdClass, int\)\: array\{type\: string, scheduled_at\: string, status\: string, outcome_notes\: string\|null\}, Closure\(App\\Models\\OpportunityAppointment\)\: array\{type\: string, scheduled_at\: string, status\: string, outcome_notes\: string\|null\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,stdClass\>\:\:map\(\) expects callable\(stdClass, int\)\: array\{quote_number\: string, revision_no\: int, status\: string, total\: float, sent_at\: string\|null, decided_at\: string\|null, valid_until\: string\|null\}, Closure\(App\\Models\\Quote\)\: array\{quote_number\: string, revision_no\: int, status\: string, total\: float, sent_at\: string\|null, decided_at\: string\|null, valid_until\: string\|null\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Using nullsafe method call on non-nullable type Carbon\\Carbon\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Http/Controllers/Web/CrmPageController.php
 

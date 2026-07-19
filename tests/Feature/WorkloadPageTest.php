@@ -142,4 +142,40 @@ class WorkloadPageTest extends TestCase
         $response->assertSee('Kiến Trúc Sư A');
         $response->assertSee('0 đang mở');
     }
+
+    public function test_tasks_list_shows_assignee_column(): void
+    {
+        $this->openTask(['name' => 'Task có người nhận', 'title' => 'Task có người nhận']);
+
+        $response = $this->actingAs($this->viewer)->get(route('app.tasks'));
+
+        $response->assertOk();
+        $response->assertSee('Người phụ trách');
+        $response->assertSee('Kiến Trúc Sư A');
+    }
+
+    public function test_tasks_list_filters_by_assignee(): void
+    {
+        $other = $this->createTenantUser($this->tenant, ['name' => 'Người Khác B'], ['member'], []);
+        $this->openTask(['name' => 'Việc của A', 'title' => 'Việc của A']);
+        $this->openTask(['name' => 'Việc của B', 'title' => 'Việc của B', 'assigned_to' => (string) $other->id]);
+
+        $response = $this->actingAs($this->viewer)->get(route('app.tasks', ['assigned_to' => (string) $this->worker->id]));
+
+        $response->assertOk();
+        $response->assertSee('Việc của A');
+        $response->assertDontSee('Việc của B');
+    }
+
+    public function test_tasks_list_ignores_foreign_tenant_assignee_filter(): void
+    {
+        $otherTenant = Tenant::factory()->create();
+        $foreign = $this->createTenantUser($otherTenant, [], ['member'], []);
+        $this->openTask(['name' => 'Việc của A', 'title' => 'Việc của A']);
+
+        $response = $this->actingAs($this->viewer)->get(route('app.tasks', ['assigned_to' => (string) $foreign->id]));
+
+        $response->assertOk();
+        $response->assertSee('Việc của A');
+    }
 }

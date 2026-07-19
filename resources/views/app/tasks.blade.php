@@ -11,6 +11,19 @@
         <x-ui.button-link :href="route('app.tasks.create')">Tạo công việc</x-ui.button-link>
     </x-ui.page-header>
 
+    <form method="GET" action="{{ route('app.tasks') }}" class="mb-4 flex items-end gap-2">
+        <div class="operator-field w-64">
+            <label for="assigned_to">Người phụ trách</label>
+            <select id="assigned_to" name="assigned_to" class="operator-select">
+                <option value="">Tất cả</option>
+                @foreach ($tenantUsers as $tenantUser)
+                    <option value="{{ $tenantUser->id }}" @selected($assignedTo === (string) $tenantUser->id)>{{ $tenantUser->name }}</option>
+                @endforeach
+            </select>
+        </div>
+        <button type="submit" class="operator-button operator-button-secondary">Lọc</button>
+    </form>
+
     @if ($tasks->isEmpty())
         <x-ui.empty-state
             title="Chưa có công việc"
@@ -20,13 +33,14 @@
         </x-ui.empty-state>
     @else
         <x-ui.card>
-            <x-ui.data-table :headers="['Công việc', 'Dự án', 'Trạng thái', 'Ưu tiên', 'Tiến độ', 'Kết thúc']">
+            <x-ui.data-table :headers="['Công việc', 'Dự án', 'Người phụ trách', 'Trạng thái', 'Ưu tiên', 'Tiến độ', 'Kết thúc']">
                 @foreach ($tasks as $task)
                     <tr>
                         <td>
                             <a href="{{ route('app.tasks.show', $task->id) }}" class="operator-link font-medium">{{ $task->name ?? $task->title }}</a>
                         </td>
                         <td class="text-sm text-slate-600">{{ $task->project?->name ?? '—' }}</td>
+                        <td class="text-sm text-slate-600">{{ $task->assignee?->name ?? '—' }}</td>
                         <td>
                             <x-ui.status-badge :status="$task->status" />
                             @if ($task->blocked_at)

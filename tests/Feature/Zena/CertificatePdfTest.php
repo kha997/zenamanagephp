@@ -141,8 +141,10 @@ class CertificatePdfTest extends TestCase
         $this->assertStringContainsString('Móng cọc BT', $html);
         $this->assertStringContainsString('Giữ lại', $html);
         $this->assertStringContainsString('Đề nghị thanh toán', $html);
-        $this->assertStringContainsString($this->contract->client_name, $html);
-        $this->assertStringContainsString($this->tenant->name, $html);
+        // Blade {{ }} escapes HTML entities: faker names containing quotes/ampersands
+        // (e.g. "O'Kon & Sons") appear as &#039;/&amp; in output — assert the escaped form.
+        $this->assertStringContainsString(e($this->contract->client_name), $html);
+        $this->assertStringContainsString(e($this->tenant->name), $html);
     }
 
     // ─── Endpoint tests ───────────────────────────────────────────────

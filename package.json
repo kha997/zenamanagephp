@@ -3,18 +3,10 @@
   "version": "1.0.0",
   "description": "Dashboard System for ZenaManage",
   "scripts": {
-    "test": "npx jest --config frontend/jest.config.js --runInBand --no-cache",
-    "test:watch": "npx jest --config frontend/jest.config.js --runInBand --no-cache --watch",
-    "test:coverage": "npx jest --config frontend/jest.config.js --runInBand --no-cache --coverage",
-    "test:ci": "npx jest --config frontend/jest.config.js --runInBand --no-cache --ci --coverage --watchAll=false",
-    "test:unit": "npx jest --config frontend/jest.config.js --runInBand --no-cache --testPathPattern=__tests__",
-    "test:integration": "npx jest --config frontend/jest.config.js --runInBand --no-cache --testPathPattern=integration",
-    "test:e2e": "npx jest --config frontend/jest.config.js --runInBand --no-cache --testPathPattern=e2e",
     "build": "vite build",
     "dev": "vite",
     "preview": "vite preview",
     "test:e2e:smoke": "npm run test:e2e",
-    "test:e2e:smoke:finance": "npm run test:e2e",
     "pw:install": "playwright install --with-deps chromium",
     "pw:install:chromium": "playwright install chromium"
   },
@@ -29,20 +21,10 @@
   },
   "devDependencies": {
     "@tailwindcss/forms": "^0.5.11",
-    "@testing-library/jest-dom": "^6.1.4",
-    "@testing-library/react": "^14.1.2",
-    "@testing-library/user-event": "^14.5.1",
-    "@types/jest": "^29.5.8",
-    "@types/react": "^18.2.37",
-    "@types/react-dom": "^18.2.15",
     "autoprefixer": "^10.5.2",
-    "jest": "^29.7.0",
-    "jest-environment-jsdom": "^29.7.0",
     "laravel-vite-plugin": "^0.8.1",
     "postcss": "^8.5.16",
     "tailwindcss": "^3.4.19",
-    "ts-jest": "^29.1.1",
-    "typescript": "^5.2.2",
     "vite": "^4.5.0"
   }
 }

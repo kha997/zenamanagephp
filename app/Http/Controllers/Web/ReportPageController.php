@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Models\ContractExpense;
+use App\Models\ContractPayment;
 use App\Models\MaterialRequest;
 use App\Models\Ncr;
 use App\Models\Project;
@@ -11,6 +13,7 @@ use App\Models\SiteDiary;
 use App\Models\Task;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportPageController extends Controller
@@ -34,6 +37,84 @@ class ReportPageController extends Controller
                 ->where('tenant_id', $tenantId)
                 ->orderBy('name')
                 ->get(['id', 'tenant_id', 'name', 'code']),
+        ]);
+    }
+
+    public function cashflow(): View
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+
+        // Cửa sổ 12 tháng: 9 tháng trước -> 2 tháng tới (spec: Definitions).
+        $start = Carbon::now()->startOfMonth()->subMonths(9);
+        $months = [];
+        $cursor = $start->copy();
+        for ($i = 0; $i < 12; $i++) {
+            $months[$cursor->format('Y-m')] = ['thu' => 0.0, 'chi' => 0.0, 'cho_thu' => 0.0];
+            $cursor = $cursor->addMonth();
+        }
+
+        $payments = ContractPayment::query()
+            ->where('tenant_id', $tenantId)
+            ->get(['id', 'tenant_id', 'amount', 'status', 'due_date', 'paid_at']);
+
+        foreach ($payments as $payment) {
+            if ($payment->status === ContractPayment::STATUS_PAID) {
+                $date = $payment->paid_at ?? $payment->due_date;
+                if ($date === null) {
+                    continue;
+                }
+                $month = $date->format('Y-m');
+                if (isset($months[$month])) {
+                    $months[$month]['thu'] += (float) $payment->amount;
+                }
+            } else {
+                if ($payment->due_date === null) {
+                    continue;
+                }
+                $month = $payment->due_date->format('Y-m');
+                if (isset($months[$month])) {
+                    $months[$month]['cho_thu'] += (float) $payment->amount;
+                }
+            }
+        }
+
+        $expenses = ContractExpense::query()
+            ->where('tenant_id', $tenantId)
+            ->get(['id', 'tenant_id', 'amount', 'expense_date']);
+
+        foreach ($expenses as $expense) {
+            if ($expense->expense_date === null) {
+                continue;
+            }
+            $month = $expense->expense_date->format('Y-m');
+            if (isset($months[$month])) {
+                $months[$month]['chi'] += (float) $expense->amount;
+            }
+        }
+
+        $rows = [];
+        $cumulative = 0.0;
+        $hasAny = false;
+        foreach ($months as $month => $sums) {
+            $net = $sums['thu'] - $sums['chi'];
+            $cumulative += $net;
+            if ($sums['thu'] > 0 || $sums['chi'] > 0 || $sums['cho_thu'] > 0) {
+                $hasAny = true;
+            }
+            $rows[] = [
+                'month' => $month,
+                'thu' => $sums['thu'],
+                'chi' => $sums['chi'],
+                'net' => $net,
+                'cumulative' => $cumulative,
+                'cho_thu' => $sums['cho_thu'],
+            ];
+        }
+
+        return view('reports.cashflow', [
+            'rows' => $rows,
+            'hasAny' => $hasAny,
+            'currentMonth' => Carbon::now()->format('Y-m'),
         ]);
     }
 

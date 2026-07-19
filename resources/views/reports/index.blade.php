@@ -46,4 +46,9 @@
             <button type="submit" class="operator-button operator-button-primary">Tải CSV</button>
         </form>
     </x-ui.card>
+
+    <x-ui.card title="Báo cáo dòng tiền">
+        <p class="mb-2 text-sm text-slate-600">Thu thực / chi thực / ròng / lũy kế theo tháng, kèm khoản chờ thu từ các hợp đồng.</p>
+        <x-ui.button-link :href="route('operator.reports.cashflow')" variant="secondary">Mở Dòng tiền</x-ui.button-link>
+    </x-ui.card>
 @endsection

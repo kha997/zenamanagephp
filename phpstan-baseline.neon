@@ -15165,7 +15165,7 @@ parameters:
 		-
 			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
 			identifier: method.notFound
-			count: 2
+			count: 3
 			path: app/Http/Controllers/Web/ReportPageController.php
 
 		-
@@ -15226,6 +15226,18 @@ parameters:
 			message: '#^Return type of call to method Illuminate\\Support\\LazyCollection\<int,stdClass\>\:\:map\(\) contains unresolvable type\.$#'
 			identifier: method.unresolvableReturnType
 			count: 5
+			path: app/Http/Controllers/Web/ReportPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ContractExpense\:\:\$expense_date\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/ReportPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ContractExpense\:\:\$amount\.$#'
+			identifier: property.notFound
+			count: 1
 			path: app/Http/Controllers/Web/ReportPageController.php
 
 		-

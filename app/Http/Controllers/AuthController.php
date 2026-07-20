@@ -36,14 +36,14 @@ class AuthController extends Controller
             $request->session()->regenerate();
             RateLimiter::clear($throttleKey);
 
-            $user = Auth::user();
-            
-            // Redirect based on user role
-            if ($user->isSuperAdmin()) {
-                return redirect()->intended('/admin');
-            } else {
-                return redirect()->intended('/app/dashboard');
-            }
+            // /admin requires a real super_admin role that no seeded account
+            // currently has (RoleSeeder creates "System Admin", a different,
+            // permission-scoped role - see app/Traits/HasRoles.php::isSuperAdmin()).
+            // Sending users there produces a silent 403. Everyone lands on the
+            // operator dashboard, which already covers workload/projects/
+            // contracts/etc.; /admin remains reachable only via its own
+            // rbac:admin gate for whoever actually qualifies.
+            return redirect()->intended('/app/dashboard');
         }
 
         // If authentication fails, try demo users
@@ -90,12 +90,7 @@ class AuthController extends Controller
             Auth::login($user);
             $request->session()->regenerate();
 
-            // Redirect based on role
-            if ($user->isSuperAdmin()) {
-                return redirect()->intended('/admin');
-            } else {
-                return redirect()->intended('/app/dashboard');
-            }
+            return redirect()->intended('/app/dashboard');
         }
 
         RateLimiter::hit($throttleKey, 60);

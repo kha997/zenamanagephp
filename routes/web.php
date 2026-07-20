@@ -784,7 +784,7 @@ Route::prefix('_debug')->middleware([\App\Http\Middleware\DebugGateMiddleware::c
         \Illuminate\Support\Facades\Auth::login($user);
         request()->session()->regenerate();
 
-        return $user->isSuperAdmin() ? redirect('/admin') : redirect('/app/dashboard');
+        return redirect('/app/dashboard');
     });
 });
 

@@ -15313,6 +15313,12 @@ parameters:
 			path: app/Http/Controllers/Web/WorkloadPageController.php
 
 		-
+			message: '#^Method App\\Http\\Controllers\\Web\\WorkloadPageController\:\:myWork\(\) should return Illuminate\\View\\View but returns Illuminate\\Contracts\\View\\View\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/Web/WorkloadPageController.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
 			identifier: property.notFound
 			count: 3
@@ -46305,7 +46311,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
 			identifier: property.notFound
-			count: 1
+			count: 2
 			path: app/Http/Controllers/Web/WorkloadPageController.php
 
 		-

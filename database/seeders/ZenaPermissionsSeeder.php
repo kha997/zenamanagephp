@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Permission;
+use App\Models\Role;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Seeder;
 
@@ -286,5 +287,30 @@ class ZenaPermissionsSeeder extends Seeder
 
             Permission::updateOrCreate([$lookupColumn => $permissionKey], $attributes);
         }
+
+        $this->grantTemplateApplyToProjectManager();
+    }
+
+    /**
+     * PM cần chọn & áp dụng WorkTemplate cho dự án — không cần quyền soạn thảo
+     * (template.edit_draft/publish/delete vẫn admin-only qua ZenaAdminRolePermissionSeeder).
+     */
+    private function grantTemplateApplyToProjectManager(): void
+    {
+        $pmRole = Role::where('name', 'Project Manager')->first();
+
+        if (!$pmRole) {
+            return;
+        }
+
+        $permissionIds = Permission::whereIn('code', ['template.view', 'template.apply'])
+            ->pluck('id')
+            ->all();
+
+        if (empty($permissionIds)) {
+            return;
+        }
+
+        $pmRole->permissions()->syncWithoutDetaching($permissionIds);
     }
 }

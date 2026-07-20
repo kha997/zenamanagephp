@@ -12,7 +12,9 @@ Backend `WorkTemplate` v2 (`App\Models\WorkTemplate` + `App\Http\Controllers\Api
 
 ## Quyền (RBAC)
 
-- Thêm `template.view` và `template.apply` vào role **Project Manager** trong `PermissionSeeder.php` (hiện 2 mã này chỉ gán cho System Admin qua `ZenaAdminRolePermissionSeeder`). Không cấp `template.edit_draft`/`template.publish`/`template.delete` cho PM.
+- **KHÔNG** sửa `PermissionSeeder.php` cho việc này — `DatabaseSeeder` chạy `PermissionSeeder` (thứ tự #29) **trước** `ZenaPermissionsSeeder` (#30), nơi thực sự tạo permission `template.view`/`template.apply` (kèm `name = code` đúng, cột mà `User::hasPermission()` — method thật, override trait — check). Nếu gán role trong `PermissionSeeder.php`, trên DB seed-từ-đầu (`migrate:fresh --seed`, CI, deploy mới) 2 permission này CHƯA TỒN TẠI ở thời điểm đó → `sync()` bỏ qua im lặng, không gán được gì (dev DB hiện tại "chạy đúng" chỉ vì đã seed cũ từ trước, không phản ánh đúng hành vi seed mới).
+  **Sửa đúng chỗ:** thêm bước gán `template.view` + `template.apply` cho role **Project Manager** ngay trong `ZenaPermissionsSeeder::run()`, sau khi vòng lặp `updateOrCreate` các permission đã chạy xong (cùng file, chạy sau khi permission vừa được tạo với `name=code` chuẩn, không có hazard thứ tự). Không cấp `template.edit_draft`/`template.publish`/`template.delete` cho PM.
+  **Nợ kỹ thuật phát hiện kèm theo (KHÔNG sửa trong slice này):** `PermissionSeeder.php` hiện có cùng hazard thứ tự này với các mã đã thêm ở PR#209 hôm nay (`task.view`, `crm.view`, `material.view`...) — trên DB seed-từ-đầu, Project Member có thể KHÔNG có các quyền đó dù PR#209 đã merge. Cần audit riêng, ghi vào memory để theo dõi.
 - Route Web dùng **`middleware('rbac:template.apply')`** (và `rbac:template.view` cho endpoint danh sách) — **không** dùng `$this->authorize()`, vì `TemplatePolicy` hiện gắn với `App\Models\Template` (model legacy khác), không phải `App\Models\WorkTemplate`. Thêm `WorkTemplatePolicy` mới nằm ngoài phạm vi slice này.
 - Khối UI trên `projects/show.blade.php` chỉ hiện khi `auth()->user()?->hasPermission('template.apply')`.
 
@@ -20,15 +22,17 @@ Backend `WorkTemplate` v2 (`App\Models\WorkTemplate` + `App\Http\Controllers\Api
 
 **Web controller mới** `App\Http\Controllers\Web\WorkTemplateApplyController` — façade mỏng, session-auth, KHÔNG qua `auth:sanctum`:
 
-- `GET /app/projects/{project}/work-templates` (`middleware('rbac:template.view')`)
-  Query trực tiếp: `WorkTemplate::where('tenant_id', $tenantId)->whereHas('publishedVersions')->with(['publishedVersions' => fn ($q) => $q->latest('published_at')->limit(1)])->get()`.
-  Trả về mỗi template kèm `latest_published_version_id` (id của bản publish mới nhất) — **không** lọc theo cột `status` của `WorkTemplate` (có thể lệch với version thật), lọc theo sự tồn tại của `WorkTemplateVersion.published_at != null` qua relation `publishedVersions()` đã có sẵn trên model.
+- `GET /app/projects/{project}/work-templates` (`middleware(['rbac:template.view', 'tenant.isolation'])`)
+  Query: `WorkTemplate::where('tenant_id', $tenantId)->whereHas('publishedVersions')->with('publishedVersions')->get()`, sau đó resolve bản mới nhất bằng PHP: `$template->publishedVersions->sortByDesc('published_at')->first()`. **Không** dùng `limit(1)` trong eager-load closure — `publishedVersions()` kế thừa `orderByDesc('created_at')` từ `versions()`, không phải sắp theo `published_at`, và model chưa có quan hệ `latestOfMany()`; sort bằng PHP sau khi eager-load tránh phụ thuộc thứ tự cột sai và tránh khác biệt hành vi subquery giữa sqlite (test) và MySQL (CI parity).
+  Trả về mỗi template kèm `latest_published_version_id` (id của bản publish mới nhất vừa resolve) — **không** lọc theo cột `status` của `WorkTemplate` (có thể lệch với version thật), lọc theo sự tồn tại của `WorkTemplateVersion.published_at != null` qua relation `publishedVersions()` đã có sẵn trên model.
 
-- `POST /app/projects/{project}/work-templates/preview` (`middleware('rbac:template.apply')`)
+- `POST /app/projects/{project}/work-templates/preview` (`middleware(['rbac:template.apply', 'tenant.isolation'])`)
   Nhận `work_template_id` (hoặc `work_template_version_id`), **delegate** sang `app(\App\Http\Controllers\Api\WorkTemplateController::class)->applyToProject($request, $projectId)` sau khi ép `$request->merge(['dry_run' => true])`. Không gọi endpoint `preview()` riêng của API controller (endpoint đó theo một nhánh code khác, không đi qua đúng logic duplicate/summary/would_create của apply thật — dùng `applyToProject(dry_run=true)` để đảm bảo parity 100% giữa preview và apply thật).
 
-- `POST /app/projects/{project}/work-templates/apply` (`middleware('rbac:template.apply')`)
+- `POST /app/projects/{project}/work-templates/apply` (`middleware(['rbac:template.apply', 'tenant.isolation'])`)
   Giống hệt trên nhưng ép `dry_run=false` — tạo thật.
+
+**Bắt buộc gắn `tenant.isolation` (`TenantIsolationMiddleware`) vào cả 3 route Web này** — không chỉ `rbac:*`. Lý do: `Api\WorkTemplateController::tenantId()` (dòng 949) đọc `request()->attributes->get('tenant_id')`, thuộc tính này **chỉ được set bởi `TenantIsolationMiddleware`** (đang chạy trong route group `auth:sanctum` của API, không tự động có ở route Web). Nếu thiếu middleware này, gọi `applyToProject()` từ Web controller sẽ ném thẳng `RuntimeException('Tenant context missing')`. Đã xác minh `TenantIsolationMiddleware::handle()` dùng `Auth::user()` (dòng 28) — hoạt động bình thường với session/web guard, không phụ thuộc Sanctum, nên gắn an toàn vào route Web.
 
 Không tách logic `buildTemplateApplicationPlan` ra service riêng trong slice này (đó là "Cleaner later" — xem mục Alternatives).
 
@@ -67,6 +71,7 @@ Luồng:
 5. User không có `template.apply` → 403 ở cả 2 route preview/apply.
 6. User không có `template.view` → 403 ở route danh sách.
 7. Sau khi apply, load lại `projects/show` (`GET /app/projects/{project}`) → card "Công việc" hiển thị đúng task mới tạo (assert `assertSee` tên task) — xác nhận sửa `$sectionTasks` hoạt động.
+8. Test riêng cho seeder (`tests/Unit/Seeders/ZenaPermissionsSeederTest.php` hoặc tương đương): chạy `$this->seed()` (toàn bộ `DatabaseSeeder`, mô phỏng đúng seed-từ-đầu) rồi assert role "Project Manager" có cả `template.view` và `template.apply` — test này phải seed-từ-đầu thật (không dựa vào DB đã seed sẵn) để bắt đúng hazard thứ tự đã tìm ra.
 
 ## Alternatives (không chọn cho slice này)
 

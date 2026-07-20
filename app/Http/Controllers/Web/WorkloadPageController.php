@@ -14,18 +14,73 @@ use Illuminate\Support\Facades\Auth;
  * Trang "Khối lượng công việc" — việc đang mở (Task + Hạng mục thiết kế)
  * nhóm theo người, sắp theo tải giảm dần.
  * Spec: docs/superpowers/specs/2026-07-19-workload-view-design.md
+ *
+ * myWork() là góc nhìn cá nhân của cùng dữ liệu — chỉ việc của
+ * người đang đăng nhập, không có khối "Chưa phân công".
+ * Spec: docs/superpowers/specs/2026-07-20-my-work-page-design.md
  */
 class WorkloadPageController extends Controller
 {
     public function index(): View
     {
         $tenantId = (string) Auth::user()?->tenant_id;
-        $today = Carbon::now()->startOfDay();
 
         $users = User::query()
             ->where('tenant_id', $tenantId)
             ->orderBy('name')
             ->get(['id', 'tenant_id', 'name']);
+
+        $items = $this->collectOpenItems($tenantId);
+
+        $grouped = $items->groupBy(fn (array $i) => $i['assigned_to'] ?? '__unassigned');
+
+        $blocks = $users
+            ->map(function (User $user) use ($grouped): array {
+                /** @var Collection<int, array<string, mixed>> $list */
+                $list = $grouped->get((string) $user->id, collect())->values();
+
+                return [
+                    'user' => $user,
+                    'items' => $list,
+                    'open_count' => $list->count(),
+                    'overdue_count' => $list->where('is_overdue', true)->count(),
+                    'blocked_count' => $list->where('is_blocked', true)->count(),
+                ];
+            })
+            ->sortByDesc('open_count')
+            ->values();
+
+        $unassigned = $grouped->get('__unassigned', collect())->values();
+
+        return view('app.workload', [
+            'blocks' => $blocks,
+            'unassigned' => $unassigned,
+        ]);
+    }
+
+    public function myWork(): View
+    {
+        $tenantId = (string) Auth::user()?->tenant_id;
+        $userId = (string) Auth::id();
+
+        $items = $this->collectOpenItems($tenantId)
+            ->where('assigned_to', $userId)
+            ->values();
+
+        return view('app.my-work', [
+            'items' => $items,
+            'open_count' => $items->count(),
+            'overdue_count' => $items->where('is_overdue', true)->count(),
+            'blocked_count' => $items->where('is_blocked', true)->count(),
+        ]);
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function collectOpenItems(string $tenantId): Collection
+    {
+        $today = Carbon::now()->startOfDay();
 
         $tasks = Task::query()
             ->where('tenant_id', $tenantId)
@@ -72,29 +127,6 @@ class WorkloadPageController extends Controller
             ]);
         }
 
-        $grouped = $items->groupBy(fn (array $i) => $i['assigned_to'] ?? '__unassigned');
-
-        $blocks = $users
-            ->map(function (User $user) use ($grouped): array {
-                /** @var Collection<int, array<string, mixed>> $list */
-                $list = $grouped->get((string) $user->id, collect())->values();
-
-                return [
-                    'user' => $user,
-                    'items' => $list,
-                    'open_count' => $list->count(),
-                    'overdue_count' => $list->where('is_overdue', true)->count(),
-                    'blocked_count' => $list->where('is_blocked', true)->count(),
-                ];
-            })
-            ->sortByDesc('open_count')
-            ->values();
-
-        $unassigned = $grouped->get('__unassigned', collect())->values();
-
-        return view('app.workload', [
-            'blocks' => $blocks,
-            'unassigned' => $unassigned,
-        ]);
+        return $items;
     }
 }

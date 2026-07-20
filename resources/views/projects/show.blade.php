@@ -83,16 +83,18 @@
         @endif
     </x-ui.card>
 
-    <x-ui.card title="Công việc ({{ $project->tasks->count() }})">
+    @include('projects._apply-work-template', ['project' => $project])
+
+    <x-ui.card title="Công việc ({{ $sectionTasks->count() }})">
         <div class="mb-3">
             <x-ui.button-link href="/app/tasks/create?project_id={{ $project->id }}">Thêm công việc</x-ui.button-link>
         </div>
 
-        @if ($project->tasks->isEmpty())
+        @if ($sectionTasks->isEmpty())
             <p class="text-sm text-slate-500">Dự án chưa có công việc nào.</p>
         @else
             <x-ui.data-table :headers="['Công việc', 'Trạng thái', 'Tiến độ', 'Kết thúc']">
-                @foreach ($project->tasks as $task)
+                @foreach ($sectionTasks as $task)
                     <tr>
                         <td>
                             <a href="/app/tasks/{{ $task->id }}" class="operator-link font-medium">{{ $task->name ?? $task->title }}</a>

@@ -138,7 +138,21 @@ class PermissionSeeder extends Seeder
                 'settings.general.read',
                 'settings.security.read',
                 'user-preferences.read',
-                'interaction_log.create', 'interaction_log.read'
+                'interaction_log.create', 'interaction_log.read',
+                // Các mục nav "Tổng quan"/"Kinh doanh" gate theo bộ mã .view mới hơn
+                // (task.view, crm.view, ...) khác với bộ .read/.create/.update ở trên -
+                // thiếu các dòng này khiến Project Member bị 403 ở gần hết trang chính
+                // (phát hiện 2026-07-20 khi kiểm thử thật với designer@zena.local).
+                'task.view', 'crm.view', 'material.view', 'vendor.view',
+                'boq.view', 'contract.view', 'event-record.view',
+                // Phát hiện đợt 2 (cùng ngày): các trang này gate bằng Policy
+                // ($this->authorize() trong controller) đọc thẳng permission,
+                // không qua middleware rbac: nên đợt rà đầu (grep theo route
+                // middleware) bỏ sót. webhook.view CỐ Ý không thêm - đó là cấu
+                // hình tích hợp hệ thống, thuộc phạm vi admin, không phải việc
+                // thường ngày của nhân viên.
+                'design-item.view', 'material.read', 'site_diary.view',
+                'material-receipt.view',
             ])->get();
             $memberRole->permissions()->sync($memberPermissions->pluck('id'));
         }

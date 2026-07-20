@@ -138,7 +138,13 @@ class PermissionSeeder extends Seeder
                 'settings.general.read',
                 'settings.security.read',
                 'user-preferences.read',
-                'interaction_log.create', 'interaction_log.read'
+                'interaction_log.create', 'interaction_log.read',
+                // Các mục nav "Tổng quan"/"Kinh doanh" gate theo bộ mã .view mới hơn
+                // (task.view, crm.view, ...) khác với bộ .read/.create/.update ở trên -
+                // thiếu các dòng này khiến Project Member bị 403 ở gần hết trang chính
+                // (phát hiện 2026-07-20 khi kiểm thử thật với designer@zena.local).
+                'task.view', 'crm.view', 'material.view', 'vendor.view',
+                'boq.view', 'contract.view', 'event-record.view',
             ])->get();
             $memberRole->permissions()->sync($memberPermissions->pluck('id'));
         }

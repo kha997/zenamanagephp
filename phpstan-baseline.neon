@@ -46323,7 +46323,7 @@ parameters:
 		-
 			message: '#^Call to an undefined static method App\\Models\\User\:\:where\(\)\.$#'
 			identifier: staticMethod.notFound
-			count: 1
+			count: 2
 			path: routes/web.php
 
 		-

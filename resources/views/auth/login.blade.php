@@ -135,18 +135,18 @@
             <h1>ZenaManage</h1>
         </div>
         
-        {{-- @if(session('success'))
+        @if(session('success'))
             <div class="alert alert-success">
                 {{ session('success') }}
             </div>
         @endif
-        
+
         @if(session('error'))
             <div class="alert alert-error">
                 {{ session('error') }}
             </div>
         @endif
-        
+
         @if($errors->any())
             <div class="alert alert-error">
                 <ul style="margin: 0; padding-left: 1rem;">
@@ -155,8 +155,8 @@
                     @endforeach
                 </ul>
             </div>
-        @endif --}} <!-- Temporarily commented out for debugging -->
-        
+        @endif
+
         <form method="POST" action="/login">
             @csrf
             <div class="form-group">
@@ -172,18 +172,31 @@
             <button type="submit" class="btn">Login</button>
         </form>
         
-        <div class="demo-users">
-            <h3>Demo Users (Click to login):</h3>
-            <a href="/_debug/test-login/superadmin@zena.com" class="demo-user">
-                🔑 Super Admin (superadmin@zena.com)
-            </a>
-            <a href="/_debug/test-login/pm@zena.com" class="demo-user">
-                👨‍💼 Project Manager (pm@zena.com)
-            </a>
-            <a href="/_debug/test-login/user@zena.com" class="demo-user">
-                👤 Regular User (user@zena.com)
-            </a>
-        </div>
+        {{-- Chỉ hiện ở local/testing/development (DebugGateMiddleware) — khớp UserSeeder thật, mật khẩu chung "password" --}}
+        @if(app()->environment(['local', 'testing', 'development']))
+            <div class="demo-users">
+                <h3>Demo Users (Click to login):</h3>
+                <a href="/_debug/test-login/admin@zena.local" class="demo-user">
+                    🔑 Admin (admin@zena.local)
+                </a>
+                <a href="/_debug/test-login/pm@zena.local" class="demo-user">
+                    👨‍💼 Project Manager (pm@zena.local)
+                </a>
+                <a href="/_debug/test-login/designer@zena.local" class="demo-user">
+                    🎨 Designer (designer@zena.local)
+                </a>
+                <a href="/_debug/test-login/site@zena.local" class="demo-user">
+                    🏗️ Site Engineer (site@zena.local)
+                </a>
+                <a href="/_debug/test-login/qc@zena.local" class="demo-user">
+                    ✅ QC (qc@zena.local)
+                </a>
+                <a href="/_debug/test-login/finance@zena.local" class="demo-user">
+                    💰 Finance (finance@zena.local)
+                </a>
+                <p style="margin-top:0.75rem;font-size:0.85rem;color:#666;">Mật khẩu cho form ở trên: <code>password</code></p>
+            </div>
+        @endif
     </div>
 </body>
 </html>

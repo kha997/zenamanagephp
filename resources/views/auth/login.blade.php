@@ -166,7 +166,12 @@
             
             <div class="form-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
+                <div style="position:relative;">
+                    <input type="password" id="password" name="password" required style="padding-right:2.5rem;">
+                    <button type="button" onclick="var p=document.getElementById('password'); var isHidden = p.type==='password'; p.type = isHidden ? 'text' : 'password'; this.textContent = isHidden ? '🙈' : '👁️';"
+                            aria-label="Hiện/ẩn mật khẩu"
+                            style="position:absolute;right:0.5rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:1.1rem;line-height:1;padding:0.25rem;">👁️</button>
+                </div>
             </div>
             
             <button type="submit" class="btn">Login</button>

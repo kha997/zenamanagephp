@@ -185,8 +185,12 @@
                     <input type="search" name="q" value="{{ request()->routeIs('operator.search.*') ? request('q') : '' }}"
                            class="operator-input" placeholder="Tìm kiếm dự án, RFI, hợp đồng, vật tư..." aria-label="Tìm kiếm toàn hệ thống">
                 </form>
-                <div class="operator-topbar-user">
-                    {{ auth()->user()?->name ?? 'Operator' }}
+                <div class="operator-topbar-user" style="display:flex;align-items:center;gap:0.75rem;">
+                    <span>{{ auth()->user()?->name ?? 'Operator' }}</span>
+                    <form method="POST" action="{{ route('logout.post') }}">
+                        @csrf
+                        <button type="submit" class="operator-link" style="background:none;border:none;padding:0;cursor:pointer;font:inherit;">Đăng xuất</button>
+                    </form>
                 </div>
             </header>
 

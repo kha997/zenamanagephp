@@ -368,6 +368,10 @@ Route::get('/projects-enhanced', function() {
         Route::post('/projects/{project}/baseline', [App\Http\Controllers\Web\ProjectController::class, 'storeBaseline'])->middleware('rbac:project.update')->name('projects.baseline.store');
         // DELETE /projects/{project} - MOVED TO API: /api/v1/projects/{project}
 
+        Route::get('/projects/{project}/work-templates', [App\Http\Controllers\Web\WorkTemplateApplyController::class, 'templates'])->middleware('rbac:template.view')->name('projects.work-templates.index');
+        Route::post('/projects/{project}/work-templates/preview', [App\Http\Controllers\Web\WorkTemplateApplyController::class, 'preview'])->middleware('rbac:template.apply')->name('projects.work-templates.preview');
+        Route::post('/projects/{project}/work-templates/apply', [App\Http\Controllers\Web\WorkTemplateApplyController::class, 'apply'])->middleware('rbac:template.apply')->name('projects.work-templates.apply');
+
     // Project sub-resources
     Route::get('/projects/{project}/documents', [App\Http\Controllers\Web\ProjectController::class, 'documents'])->name('projects.documents');
     Route::get('/projects/{project}/documents/{template}', [App\Http\Controllers\Web\ProjectController::class, 'renderProjectDocument'])->middleware('rbac:project.view')->name('projects.documents.render');

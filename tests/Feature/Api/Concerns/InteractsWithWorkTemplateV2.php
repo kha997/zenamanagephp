@@ -13,6 +13,7 @@ use App\Models\WorkTemplateTask;
 use App\Models\WorkTemplateTaskAssignment;
 use App\Models\WorkTemplateTrigger;
 use App\Models\WorkTemplateVersion;
+use App\Models\WorkTemplateStep;
 use Tests\Traits\RouteNameTrait;
 use Tests\Traits\TenantUserFactoryTrait;
 
@@ -150,6 +151,27 @@ trait InteractsWithWorkTemplateV2
             'phase_order' => 1,
             'created_by' => (string) $user->id,
             'updated_by' => (string) $user->id,
+        ]);
+
+        WorkTemplateStep::factory()->create([
+            'tenant_id' => (string) $tenant->id,
+            'work_template_version_id' => (string) $version->id,
+            'step_key' => 'submit-drawings',
+            'name' => 'Submit Drawings',
+            'type' => 'task',
+            'step_order' => 1,
+            'depends_on' => [],
+            'assignee_rule_json' => ['role' => 'project_manager'],
+            'config_json' => [
+                'phase_key' => 'design',
+                'phase_name' => 'Design',
+                'checklist_items' => [
+                    ['key' => 'cover-sheet', 'label' => 'Cover sheet attached', 'required' => true],
+                ],
+                'required_docs' => [
+                    ['key' => 'design-drawing', 'label' => 'Design Drawing', 'required' => true],
+                ],
+            ],
         ]);
 
         $task = WorkTemplateTask::factory()->create([

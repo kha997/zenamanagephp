@@ -83,6 +83,8 @@
         @endif
     </x-ui.card>
 
+    @include('projects._apply-work-template', ['project' => $project])
+
     <x-ui.card title="Công việc ({{ $sectionTasks->count() }})">
         <div class="mb-3">
             <x-ui.button-link href="/app/tasks/create?project_id={{ $project->id }}">Thêm công việc</x-ui.button-link>

@@ -773,29 +773,18 @@ Route::prefix('_debug')->middleware([\App\Http\Middleware\DebugGateMiddleware::c
         return '<h1>Tenant Dashboard Test</h1><p>This is a simple test page for tenant dashboard.</p>';
     })->name('debug.tenant-dashboard-test');
     
-    // Debug Login Route (for testing)
-    Route::get('/test-login/{email}', function($email) {
-        $demoUsers = [
-            'superadmin@zena.com' => ['name' => 'Super Admin', 'role' => 'super_admin'],
-            'pm@zena.com' => ['name' => 'Project Manager', 'role' => 'project_manager'],
-            'user@zena.com' => ['name' => 'Regular User', 'role' => 'user'],
-        ];
-        
-        if (isset($demoUsers[$email])) {
-            $userData = $demoUsers[$email];
-            
-            // Create a simple session-based login
-            session(['user' => [
-                'email' => $email,
-                'name' => $userData['name'],
-                'role' => $userData['role'],
-                'logged_in' => true
-            ]]);
-            
-            return redirect('/admin');
+    // Debug Login Route (for local dev quick-login only, gated by DebugGateMiddleware)
+    Route::get('/test-login/{email}', function (string $email) {
+        $user = \App\Models\User::where('email', $email)->first();
+
+        if (!$user) {
+            return "No such user: {$email}. Run php artisan db:seed (UserSeeder) first.";
         }
-        
-        return 'Invalid email for debug login';
+
+        \Illuminate\Support\Facades\Auth::login($user);
+        request()->session()->regenerate();
+
+        return $user->isSuperAdmin() ? redirect('/admin') : redirect('/app/dashboard');
     });
 });
 

@@ -7,6 +7,7 @@ use App\Models\Project;
 use App\Models\Submittal;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Models\Vendor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use Tests\Traits\TenantUserFactoryTrait;
@@ -153,5 +154,45 @@ class OperatorSubmittalUiTest extends TestCase
 
         $submittal->refresh();
         $this->assertSame('submitted', (string) $submittal->status);
+    }
+
+    public function test_create_page_lists_active_tenant_vendors_in_selects(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        Vendor::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'code' => 'VD-001',
+            'name' => 'Công ty Thép Hòa Phát',
+            'is_active' => true,
+        ]);
+        Vendor::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'code' => 'VD-002',
+            'name' => 'Vendor Ngừng Hoạt Động',
+            'is_active' => false,
+        ]);
+
+        $foreignTenant = Tenant::factory()->create();
+        Vendor::query()->create([
+            'tenant_id' => (string) $foreignTenant->id,
+            'code' => 'VD-F01',
+            'name' => 'Vendor Tenant Khác',
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->get(route('operator.submittals.create'), $headers)
+            ->assertOk();
+
+        $response->assertSee('Công ty Thép Hòa Phát (VD-001)');
+        $response->assertSee('— Chọn nhà cung cấp —');
+        $response->assertDontSee('Vendor Ngừng Hoạt Động');
+        $response->assertDontSee('Vendor Tenant Khác');
+        // 2 field đã là select, không còn input text tự do.
+        $response->assertSee('<select id="contractor"', false);
+        $response->assertSee('<select id="manufacturer"', false);
+        $response->assertDontSee('<input id="contractor"', false);
+        $response->assertDontSee('<input id="manufacturer"', false);
     }
 }

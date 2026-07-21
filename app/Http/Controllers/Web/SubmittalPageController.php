@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\SubmittalController as ApiSubmittalController;
 use App\Http\Controllers\Controller;
 use App\Models\Project;
 use App\Models\Submittal;
+use App\Models\Vendor;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -52,6 +53,11 @@ class SubmittalPageController extends Controller
                 ->where('tenant_id', $tenantId)
                 ->orderBy('name')
                 ->get(['id', 'tenant_id', 'name', 'code']),
+            'vendors' => Vendor::query()
+                ->where('tenant_id', $tenantId)
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'tenant_id', 'code', 'name']),
         ]);
     }
 

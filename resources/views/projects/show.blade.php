@@ -10,16 +10,10 @@
     >
         <x-ui.button-link :href="route('app.projects')" variant="secondary">Quay lại</x-ui.button-link>
         <x-ui.button-link href="/app/projects/{{ $project->id }}/edit">Sửa dự án</x-ui.button-link>
-        @if ($projectTemplates->isNotEmpty())
-            <div x-data="{ open: false }" class="relative inline-block">
-                <button @click="open = !open" type="button" class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">Biểu mẫu ▾</button>
-                <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 z-50 mt-1 w-56 rounded-md border border-slate-200 bg-white shadow-lg">
-                    @foreach ($projectTemplates as $tpl)
-                        <a href="{{ route('app.projects.documents.render', [$project->id, $tpl->id]) }}" class="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">{{ $tpl->name }}</a>
-                    @endforeach
-                </div>
-            </div>
-        @endif
+        <x-ui.template-dropdown :links="$projectTemplates->map(fn ($tpl) => [
+            'label' => $tpl->name,
+            'href' => route('app.projects.documents.render', [$project->id, $tpl->id]),
+        ])->all()" />
     </x-ui.page-header>
 
     <x-ui.card title="Thông tin chung">

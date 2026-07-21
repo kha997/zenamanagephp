@@ -361,10 +361,10 @@ Route::get('/projects-enhanced', function() {
         Route::get('/projects', [App\Http\Controllers\Web\AppController::class, 'projects'])->name('projects');
         Route::get('/projects/create', [App\Http\Controllers\Web\ProjectController::class, 'create'])->name('projects.create');
         // Web store/update delegate sang Api\ProjectController (business logic ở API)
-        Route::post('/projects', [App\Http\Controllers\Web\ProjectController::class, 'store'])->middleware('rbac:project.write')->name('projects.store');
+        Route::post('/projects', [App\Http\Controllers\Web\ProjectController::class, 'store'])->middleware('rbac:project.create')->name('projects.store');
         Route::get('/projects/{project}', [App\Http\Controllers\Web\ProjectController::class, 'show'])->name('projects.show');
         Route::get('/projects/{project}/edit', [App\Http\Controllers\Web\ProjectController::class, 'edit'])->name('projects.edit');
-        Route::put('/projects/{project}', [App\Http\Controllers\Web\ProjectController::class, 'update'])->middleware('rbac:project.write')->name('projects.update');
+        Route::put('/projects/{project}', [App\Http\Controllers\Web\ProjectController::class, 'update'])->middleware('rbac:project.update')->name('projects.update');
         Route::post('/projects/{project}/baseline', [App\Http\Controllers\Web\ProjectController::class, 'storeBaseline'])->middleware('rbac:project.update')->name('projects.baseline.store');
         // DELETE /projects/{project} - MOVED TO API: /api/v1/projects/{project}
 
@@ -373,9 +373,9 @@ Route::get('/projects-enhanced', function() {
         Route::post('/projects/{project}/work-templates/apply', [App\Http\Controllers\Web\WorkTemplateApplyController::class, 'apply'])->middleware('rbac:template.apply')->name('projects.work-templates.apply');
 
     // Project sub-resources
-    Route::get('/projects/{project}/documents', [App\Http\Controllers\Web\ProjectController::class, 'documents'])->name('projects.documents');
+    // (route projects.documents + projects.history đã gỡ 21/07: method controller
+    // bị xoá từ commit cleanup cũ → 500, view đích là mock demo chết)
     Route::get('/projects/{project}/documents/{template}', [App\Http\Controllers\Web\ProjectController::class, 'renderProjectDocument'])->middleware('rbac:project.view')->name('projects.documents.render');
-    Route::get('/projects/{project}/history', [App\Http\Controllers\Web\ProjectController::class, 'history'])->name('projects.history');
     Route::get('/projects/{project}/design', function ($project) {
         return view('projects.design-project', compact('project'));
     })->name('projects.design');

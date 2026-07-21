@@ -27,7 +27,9 @@ class ProjectApiTest extends TestCase
         parent::setUp();
 
         $this->tenant = Tenant::factory()->create();
-        $this->user = $this->createTenantUser($this->tenant);
+        $this->user = $this->createTenantUser($this->tenant, [], null, [
+            'project.view', 'project.create', 'project.update', 'project.delete',
+        ]);
         $this->apiAs($this->user, $this->tenant);
     }
     

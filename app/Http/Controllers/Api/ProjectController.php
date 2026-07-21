@@ -147,7 +147,7 @@ class ProjectController extends Controller
             $user = Auth::user();
             
             // Check permission
-            if (!$user->hasPermission('project.write')) {
+            if (!$user->hasPermission('project.create')) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Insufficient permissions to create projects'
@@ -207,7 +207,7 @@ class ProjectController extends Controller
             }
             
             // Check permission
-            if (!$user->hasPermission('project.write')) {
+            if (!$user->hasPermission('project.update')) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Insufficient permissions to update projects'
@@ -265,7 +265,7 @@ class ProjectController extends Controller
             }
             
             // Check permission
-            if (!$user->hasPermission('project.write')) {
+            if (!$user->hasPermission('project.delete')) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Insufficient permissions to delete projects'
@@ -323,7 +323,7 @@ class ProjectController extends Controller
             }
             
             // Check permission
-            if (!$user->hasPermission('project.write')) {
+            if (!$user->hasPermission('project.update')) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Insufficient permissions to update project status'
@@ -437,7 +437,7 @@ class ProjectController extends Controller
             }
             
             // Check permission
-            if (!$user->hasPermission('project.write')) {
+            if (!$user->hasPermission('project.update')) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Insufficient permissions to recalculate progress'
@@ -499,7 +499,7 @@ class ProjectController extends Controller
             }
             
             // Check permission
-            if (!$user->hasPermission('project.write')) {
+            if (!$user->hasPermission('project.update')) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Insufficient permissions to recalculate actual cost'

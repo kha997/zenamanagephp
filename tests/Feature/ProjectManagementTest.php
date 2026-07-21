@@ -13,12 +13,12 @@ class ProjectManagementTest extends TestCase
         $user = User::factory()->for($tenant)->create();
         
         $permission = Permission::firstOrCreate(
-            ['code' => 'project.write'],
+            ['code' => 'project.create'],
             [
-                'name' => 'project.write',
+                'name' => 'project.create',
                 'module' => 'project',
-                'action' => 'write',
-                'description' => 'Write projects',
+                'action' => 'create',
+                'description' => 'Create projects',
             ]
         );
 

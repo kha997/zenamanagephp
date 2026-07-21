@@ -93,5 +93,50 @@
 
             <button type="submit" class="operator-button operator-button-primary">Tạo nhật ký</button>
         </form>
+
+        <script>
+            (function () {
+                var autofillByProject = @js($autofillByProject);
+                var fieldIds = ['weather', 'temperature', 'manpower_count', 'equipment_used'];
+                var touched = {};
+
+                fieldIds.forEach(function (fieldId) {
+                    touched[fieldId] = false;
+                    var el = document.getElementById(fieldId);
+                    if (!el) {
+                        return;
+                    }
+                    el.addEventListener('input', function () {
+                        touched[fieldId] = true;
+                    });
+                });
+
+                var projectSelect = document.getElementById('project_id');
+                if (!projectSelect) {
+                    return;
+                }
+
+                projectSelect.addEventListener('change', function () {
+                    var data = autofillByProject[projectSelect.value];
+                    if (!data) {
+                        return;
+                    }
+
+                    fieldIds.forEach(function (fieldId) {
+                        if (touched[fieldId]) {
+                            return;
+                        }
+                        if (!(fieldId in data) || data[fieldId] === null) {
+                            return;
+                        }
+
+                        var el = document.getElementById(fieldId);
+                        if (el) {
+                            el.value = data[fieldId];
+                        }
+                    });
+                });
+            })();
+        </script>
     </x-ui.card>
 @endsection

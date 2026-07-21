@@ -46,6 +46,8 @@ class ProjectApplyWorkTemplateUiTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Áp dụng mẫu công việc');
+        $response->assertSee('data-work-template-apply', false);
+        $response->assertDontSee('x-data', false);
     }
 
     public function test_apply_template_card_hidden_when_user_lacks_permission(): void

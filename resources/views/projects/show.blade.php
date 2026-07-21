@@ -152,8 +152,6 @@
     </x-ui.card>
 
     <div class="flex flex-wrap gap-3">
-        <x-ui.button-link href="/app/projects/{{ $project->id }}/documents" variant="secondary">Tài liệu dự án</x-ui.button-link>
-        <x-ui.button-link href="/app/projects/{{ $project->id }}/history" variant="secondary">Lịch sử</x-ui.button-link>
         <x-ui.button-link :href="route('operator.schedule.index', ['project_id' => $project->id])" variant="secondary">Gantt tiến độ</x-ui.button-link>
     </div>
 @endsection

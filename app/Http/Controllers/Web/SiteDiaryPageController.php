@@ -56,11 +56,29 @@ class SiteDiaryPageController extends Controller
 
         $tenantId = (string) Auth::user()?->tenant_id;
 
+        $autofillByProject = SiteDiary::query()
+            ->forTenant($tenantId)
+            ->orderByDesc('diary_date')
+            ->orderByDesc('created_at')
+            ->get(['project_id', 'weather', 'temperature', 'manpower_count', 'equipment_used'])
+            ->groupBy('project_id')
+            ->map(fn ($diaries) => $diaries->first())
+            ->mapWithKeys(fn (SiteDiary $diary, string $projectId) => [
+                $projectId => [
+                    'weather' => $diary->weather,
+                    'temperature' => $diary->temperature,
+                    'manpower_count' => $diary->manpower_count,
+                    'equipment_used' => $diary->equipment_used,
+                ],
+            ])
+            ->all();
+
         return view('site-diaries.create', [
             'projects' => Project::query()
                 ->where('tenant_id', $tenantId)
                 ->orderBy('name')
                 ->get(['id', 'tenant_id', 'name', 'code']),
+            'autofillByProject' => $autofillByProject,
         ]);
     }
 

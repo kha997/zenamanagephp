@@ -29,15 +29,19 @@ Không có route/API/permission/migration mới. Chỉ sửa `SiteDiaryPageContr
    - `orderByDesc('diary_date')->orderByDesc('created_at')`, lấy record đầu tiên mỗi `project_id`.
    - Không lọc theo `status` (draft/submitted/approved đều tính) — thông tin thời tiết/thiết bị vẫn đúng dù nhật ký chưa được duyệt.
    - Chỉ select 4 cột cần autofill (`weather`, `temperature`, `manpower_count`, `equipment_used`) + `project_id`.
-2. Build mảng liên kết `[project_id => ['weather' => ..., 'temperature' => ..., 'manpower_count' => ..., 'equipment_used' => ...]]`. Dự án chưa có nhật ký nào thì không có key trong mảng.
-3. Truyền cho view dưới dạng biến `$autofillByProject`; view `json_encode()` trực tiếp vào một `x-data` Alpine.js (không cần endpoint AJAX riêng — số dự án mỗi tenant trong ứng dụng này không lớn).
+2. Query cụ thể: lấy toàn bộ `SiteDiary` của tenant (`forTenant($tenantId)`), select `project_id, weather, temperature, manpower_count, equipment_used, diary_date, created_at`, order `orderByDesc('diary_date')->orderByDesc('created_at')`, sau đó dùng Collection `->groupBy('project_id')->map->first()` để lấy bản ghi mới nhất mỗi dự án (đúng giả định volume nhỏ/tenant, tránh SQL `GROUP BY` mơ hồ hoặc window function không cần thiết ở quy mô này).
+3. Build mảng liên kết `[project_id => ['weather' => ..., 'temperature' => ..., 'manpower_count' => ..., 'equipment_used' => ...]]`. Dự án chưa có nhật ký nào thì không có key trong mảng.
+4. Truyền cho view dưới dạng biến `$autofillByProject` (mảng PHP thường, không JSON-encode ở controller).
 
-## UI Behavior (Alpine.js)
+## UI Behavior (Vanilla JS, không dùng Alpine)
 
-- Form thêm `x-data` chứa: `autofillByProject` (từ JSON truyền vào), và cờ "touched" cho từng field trong nhóm autofill (`weatherTouched`, `temperatureTouched`, `manpowerTouched`, `equipmentTouched`), mặc định `false`.
-- Mỗi input trong 4 field autofill gắn `@input` set cờ touched tương ứng thành `true` (đánh dấu người dùng đã tự gõ).
-- Dropdown `project_id` gắn `@change`: tra `autofillByProject[project_id]`; với mỗi field trong nhóm, chỉ gán giá trị nếu cờ touched tương ứng là `false`. Field không có trong `autofillByProject[project_id]` (dự án mới, chưa có diary trước) thì bỏ qua, giữ nguyên giá trị hiện tại.
-- Sự kiện `@change` chỉ bắn khi người dùng chủ động thao tác dropdown — không bắn khi trang load lần đầu, kể cả khi `old('project_id')` đã có sẵn giá trị (trường hợp `back()->withInput()` sau lỗi validate). Nhờ vậy giá trị `old()` của các field autofill không bị autofill JS ghi đè khi hiển thị lại form sau lỗi.
+`layouts/operator.blade.php` hiện KHÔNG load Alpine.js (không có script CDN, `package.json` không có `alpinejs`) — chỉ nạp vài file JS riêng qua `@vite` (theo pattern `money-format.js`, `ai-lead-suggest.js`...). Vì vậy view này dùng **vanilla JS scoped trong `<script>` cuối trang**, không thêm Alpine mới cho operator surface:
+
+- Blade nhúng dữ liệu an toàn bằng `@js($autofillByProject)` (Laravel helper escape đúng cho HTML/JS context) thay vì gọi `json_encode()` thủ công: `const autofillByProject = @js($autofillByProject);`.
+- Script gắn `change` listener lên `#project_id`, và `input` listener lên từng field trong nhóm autofill (`#weather`, `#temperature`, `#manpower_count`, `#equipment_used`) để set cờ "touched" tương ứng (object JS đơn giản, không cần framework).
+- Khi `#project_id` đổi: tra `autofillByProject[projectId]`; với mỗi field trong nhóm, chỉ gán `.value` nếu cờ touched tương ứng là `false`. Field không có trong `autofillByProject[projectId]` (dự án mới, chưa có diary trước) thì bỏ qua, giữ nguyên giá trị hiện tại.
+- Listener `change` chỉ bắn khi người dùng chủ động thao tác dropdown — không bắn khi trang load lần đầu, kể cả khi `old('project_id')` đã có sẵn giá trị (trường hợp `back()->withInput()` sau lỗi validate). Nhờ vậy giá trị `old()` của các field autofill không bị autofill JS ghi đè khi hiển thị lại form sau lỗi.
+- **Lưu ý phát hiện thêm (không thuộc phạm vi spec này):** `resources/views/projects/_apply-work-template.blade.php` (PR#210) dùng `x-data`/`x-init` Alpine nhưng `layouts.operator` không load Alpine ở đâu — khả năng cao tính năng "Áp dụng mẫu công việc" đang không chạy JS trên trình duyệt thật. Ghi nhận làm nợ kỹ thuật cần điều tra riêng, không sửa trong scope này.
 
 ## Edge Cases
 
@@ -51,8 +55,8 @@ Không có route/API/permission/migration mới. Chỉ sửa `SiteDiaryPageContr
 
 ## Testing
 
-- Feature test mới (hoặc bổ sung vào `SiteDiaryApiTest`/test tương ứng của Web controller): assert view `site-diaries.create` nhận `autofillByProject` đúng giá trị 4 field từ bản ghi `SiteDiary` mới nhất (theo `diary_date` rồi `created_at`) của từng dự án; dự án không có diary nào thì không có key trong mảng; đảm bảo tenant isolation (không lộ dữ liệu tenant khác).
-- Không có hạ tầng test JS trong repo — hành vi Alpine.js (touched-guard, autofill on change) sẽ verify bằng browser thủ công sau khi implement, không viết test tự động cho phần này.
+- Bổ sung test vào `tests/Feature/Zena/OperatorSiteOpsUiTest.php` (không phải `SiteDiaryApiTest` — requirement chính là view `create` nhận đúng `autofillByProject`, không phải hành vi API): assert `GET operator.site-diaries.create` trả về view với `autofillByProject` đúng giá trị 4 field từ bản ghi `SiteDiary` mới nhất (theo `diary_date` rồi `created_at`) của từng dự án; dự án không có diary nào thì không có key trong mảng; đảm bảo tenant isolation (không lộ dữ liệu tenant khác — seed 1 diary ở tenant khác, assert không xuất hiện trong `autofillByProject`).
+- Không có hạ tầng test JS trong repo — hành vi vanilla JS (touched-guard, autofill on change) sẽ verify bằng browser thủ công sau khi implement, không viết test tự động cho phần này.
 
 ## Out of Scope
 

@@ -30,10 +30,7 @@ trait TenantUserFactoryTrait
 
     private function assignApiRoles(User $user, array $roles = [], array $permissions = []): void
     {
-        // project.read/project.write là mã legacy KHÔNG có trong ZenaPermissionsSeeder —
-        // giữ lại vì vài API controller cũ (Milestone/Template) còn check chúng; các mã
-        // canonical (view/create/update/delete) là taxonomy thật của seeder.
-        $defaultPermissions = ['project.read', 'project.write', 'project.view', 'project.create', 'project.update', 'project.delete'];
+        $defaultPermissions = ['project.read', 'project.write'];
         $permissions = array_unique(array_merge($defaultPermissions, $permissions));
 
         foreach ($roles as $roleName) {

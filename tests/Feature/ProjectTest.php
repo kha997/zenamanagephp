@@ -41,6 +41,9 @@ class ProjectTest extends TestCase
             'projects.update' => 'update',
             'projects.delete' => 'delete',
             'project.write' => 'write',
+            'project.create' => 'create',
+            'project.update' => 'update',
+            'project.delete' => 'delete',
         ];
 
         $permissionIds = [];

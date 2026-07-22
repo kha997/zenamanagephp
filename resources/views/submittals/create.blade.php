@@ -64,12 +64,30 @@
 
                 <div class="operator-field">
                     <label for="contractor">Nhà thầu</label>
-                    <input id="contractor" name="contractor" type="text" class="operator-input" value="{{ old('contractor') }}">
+                    <select id="contractor" name="contractor" class="operator-select">
+                        <option value="">— Chọn nhà cung cấp —</option>
+                        @foreach ($vendors as $vendor)
+                            <option value="{{ $vendor->name }}" @selected(old('contractor') === $vendor->name)>{{ $vendor->name }}{{ $vendor->code ? ' (' . $vendor->code . ')' : '' }}</option>
+                        @endforeach
+                    </select>
+                    @if (auth()->user()?->hasPermission('vendor.create'))
+                        <a href="{{ route('operator.vendors.create') }}" target="_blank" class="text-sm text-teal-700 hover:underline">+ Thêm nhà cung cấp</a>
+                    @endif
+                    @error('contractor')<span class="text-sm text-rose-600">{{ $message }}</span>@enderror
                 </div>
 
                 <div class="operator-field">
                     <label for="manufacturer">Nhà sản xuất</label>
-                    <input id="manufacturer" name="manufacturer" type="text" class="operator-input" value="{{ old('manufacturer') }}">
+                    <select id="manufacturer" name="manufacturer" class="operator-select">
+                        <option value="">— Chọn nhà cung cấp —</option>
+                        @foreach ($vendors as $vendor)
+                            <option value="{{ $vendor->name }}" @selected(old('manufacturer') === $vendor->name)>{{ $vendor->name }}{{ $vendor->code ? ' (' . $vendor->code . ')' : '' }}</option>
+                        @endforeach
+                    </select>
+                    @if (auth()->user()?->hasPermission('vendor.create'))
+                        <a href="{{ route('operator.vendors.create') }}" target="_blank" class="text-sm text-teal-700 hover:underline">+ Thêm nhà cung cấp</a>
+                    @endif
+                    @error('manufacturer')<span class="text-sm text-rose-600">{{ $message }}</span>@enderror
                 </div>
             </div>
 

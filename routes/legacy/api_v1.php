@@ -102,9 +102,10 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('team', App\Http\Controllers\Api\App\TeamController::class);
         Route::post('/team/invite', [App\Http\Controllers\Api\App\TeamController::class, 'invite']);
         
-        // Templates API
-        Route::apiResource('templates', App\Http\Controllers\Api\App\TemplateController::class);
-        
+        // (Templates API route đã gỡ 22/07: App\Http\Controllers\Api\App\TemplateController
+        // bị xoá — file legacy này vốn không được load, nhưng PHPStan vẫn quét nên
+        // reference tới class đã xoá phải dọn theo)
+
         // Settings API
         Route::get('/settings', [App\Http\Controllers\Api\App\SettingsController::class, 'index']);
         Route::patch('/settings', [App\Http\Controllers\Api\App\SettingsController::class, 'update']);

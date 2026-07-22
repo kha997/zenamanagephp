@@ -222,7 +222,7 @@
                         @csrf
                         <div class="operator-field">
                             <label for="boq_code" class="text-xs">Mã</label>
-                            <input id="boq_code" name="code" type="text" class="operator-input" value="{{ old('boq_code') }}" maxlength="100" required>
+                            <input id="boq_code" name="code" type="text" class="operator-input" value="{{ old('boq_code', 'BOQ-' . now()->format('Ymd') . '-' . strtoupper(Str::random(4))) }}" maxlength="100" required>
                         </div>
                         <div class="operator-field">
                             <label for="boq_name" class="text-xs">Tên</label>

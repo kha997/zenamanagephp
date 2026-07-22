@@ -25,9 +25,9 @@ class DeadMilestoneTemplateApiRemovedTest extends TestCase
         }
 
         $unnamedUris = [
-            'api/projects/milestones/reorder',
-            'api/projects/milestones/{milestone}/mark-completed',
-            'api/projects/milestones/{milestone}/mark-cancelled',
+            'api/projects/milestones/reorder', // SSOT_ALLOW_ORPHAN(reason=NEGATIVE_PROBE_LEGACY_SURFACE)
+            'api/projects/milestones/{milestone}/mark-completed', // SSOT_ALLOW_ORPHAN(reason=NEGATIVE_PROBE_LEGACY_SURFACE)
+            'api/projects/milestones/{milestone}/mark-cancelled', // SSOT_ALLOW_ORPHAN(reason=NEGATIVE_PROBE_LEGACY_SURFACE)
         ];
         foreach (Route::getRoutes() as $route) {
             $this->assertNotContains($route->uri(), $unnamedUris, "URI {$route->uri()} phải bị gỡ (milestone write-API chết).");
@@ -41,9 +41,9 @@ class DeadMilestoneTemplateApiRemovedTest extends TestCase
         }
 
         $unnamedUris = [
-            'api/project-templates/categories',
-            'api/project-templates/{template}/create-project',
-            'api/project-templates/{template}/duplicate',
+            'api/project-templates/categories', // SSOT_ALLOW_ORPHAN(reason=NEGATIVE_PROBE_LEGACY_SURFACE)
+            'api/project-templates/{template}/create-project', // SSOT_ALLOW_ORPHAN(reason=NEGATIVE_PROBE_LEGACY_SURFACE)
+            'api/project-templates/{template}/duplicate', // SSOT_ALLOW_ORPHAN(reason=NEGATIVE_PROBE_LEGACY_SURFACE)
         ];
         foreach (Route::getRoutes() as $route) {
             $this->assertNotContains($route->uri(), $unnamedUris, "URI {$route->uri()} phải bị gỡ (Api\\ProjectTemplateController chết).");

@@ -430,31 +430,10 @@ Route::get('/projects-enhanced', function() {
         return view('team.invite');
     })->name('team.invite');
     
-    // Templates Routes
-    Route::get('/templates', function () {
-        return view('templates.index', [
-            'templates' => App\Models\Template::query()
-                ->orderByDesc('updated_at')
-                ->limit(100)
-                ->get(),
-        ]);
-    })->name('templates');
-    Route::get('/templates/builder', function () {
-        return view('templates.builder');
-    })->name('templates.builder');
-    Route::get('/templates/construction-builder', function () {
-        return view('templates.construction-builder');
-    })->name('templates.construction-builder');
-    Route::get('/templates/analytics', function () {
-        return view('templates.analytics');
-    })->name('templates.analytics');
-    Route::get('/templates/create', function () {
-        return view('templates.create');
-    })->name('templates.create');
-    Route::get('/templates/{template}', function ($template) {
-        return view('templates.show', compact('template'));
-    })->name('templates.show');
-    
+    // (Route /templates* đã gỡ 22/07: trang demo giả hoàn toàn chết — card
+    // hardcode, nút không nối gì; templates.create/templates.show trỏ view
+    // còn không tồn tại. Không liên quan App\Models\Template thật/WorkTemplate.)
+
     // Settings Routes
     Route::get('/settings', function () {
         return view('settings.index');

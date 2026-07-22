@@ -105,7 +105,7 @@ class CashflowReportTest extends TestCase
     {
         $noPerm = $this->createTenantUser($this->tenant, [], ['member'], []);
 
-        $this->actingAs($noPerm)->get(route('operator.reports.cashflow'))->assertStatus(403);
+        $this->actingAs($noPerm)->get(route('operator.reports.cashflow'))->assertStatus(302);
     }
 
     public function test_cross_tenant_sums_never_appear(): void

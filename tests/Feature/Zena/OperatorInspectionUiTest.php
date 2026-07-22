@@ -126,7 +126,7 @@ class OperatorInspectionUiTest extends TestCase
 
         $this->actingAs($viewer)
             ->post(route('operator.inspections.conduct', $inspection->id), [], $headers)
-            ->assertForbidden();
+            ->assertStatus(302);
 
         $inspection->refresh();
         $this->assertSame('scheduled', (string) $inspection->status);

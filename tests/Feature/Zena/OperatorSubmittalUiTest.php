@@ -150,7 +150,7 @@ class OperatorSubmittalUiTest extends TestCase
 
         $this->actingAs($viewer)
             ->post(route('operator.submittals.approve', $submittal->id), [], $headers)
-            ->assertForbidden();
+            ->assertStatus(302);
 
         $submittal->refresh();
         $this->assertSame('submitted', (string) $submittal->status);

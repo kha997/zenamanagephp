@@ -204,7 +204,7 @@ class ButtonAuthorizationTest extends TestCase
 
         // Test admin access (should be denied)
         $response = $this->get('/admin/dashboard');
-        $response->assertStatus(403);
+        $response->assertStatus(302);
     }
 
     /**
@@ -228,7 +228,7 @@ class ButtonAuthorizationTest extends TestCase
 
         // Test admin access (should be denied)
         $response = $this->get('/admin/dashboard');
-        $response->assertStatus(403);
+        $response->assertStatus(302);
     }
 
     /**
@@ -252,7 +252,7 @@ class ButtonAuthorizationTest extends TestCase
 
         // Test admin access (should be denied)
         $response = $this->get('/admin/dashboard');
-        $response->assertStatus(403);
+        $response->assertStatus(302);
     }
 
     /**
@@ -276,7 +276,7 @@ class ButtonAuthorizationTest extends TestCase
 
         // Test admin access (should be denied)
         $response = $this->get('/admin/dashboard');
-        $response->assertStatus(403);
+        $response->assertStatus(302);
     }
 
     /**
@@ -300,7 +300,7 @@ class ButtonAuthorizationTest extends TestCase
 
         // Test admin access (should be denied)
         $response = $this->get('/admin/dashboard');
-        $response->assertStatus(403);
+        $response->assertStatus(302);
     }
 
     /**

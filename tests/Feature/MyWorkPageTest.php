@@ -114,7 +114,7 @@ class MyWorkPageTest extends TestCase
     {
         $noPerm = $this->createTenantUser($this->tenant, [], ['member'], []);
 
-        $this->actingAs($noPerm)->get(route('app.my-work.index'))->assertStatus(403);
+        $this->actingAs($noPerm)->get(route('app.my-work.index'))->assertStatus(302);
     }
 
     public function test_cross_tenant_items_never_render(): void

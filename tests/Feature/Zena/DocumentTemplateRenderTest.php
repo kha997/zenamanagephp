@@ -44,7 +44,7 @@ class DocumentTemplateRenderTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('operator.contracts.documents.render', [$contract->id, $template->id]), $headers)
-            ->assertStatus(403);
+            ->assertStatus(302);
     }
 
     public function test_contract_render_downloads_pdf(): void

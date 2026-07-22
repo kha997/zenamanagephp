@@ -34,7 +34,7 @@ class DocumentTemplateLibraryTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('operator.document-templates.index'), $headers)
-            ->assertStatus(403);
+            ->assertStatus(302);
     }
 
     public function test_index_lists_templates_for_tenant(): void

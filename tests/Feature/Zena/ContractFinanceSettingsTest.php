@@ -172,6 +172,6 @@ class ContractFinanceSettingsTest extends TestCase
             'retention_percent' => 5,
             'advance_amount' => 100000000,
             'advance_recovery_percent' => 20,
-        ], $h)->assertForbidden();
+        ], $h)->assertStatus(302);
     }
 }

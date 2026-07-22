@@ -358,7 +358,7 @@ class OperatorPlatformUiTest extends TestCase
                 'project_id' => (string) $this->project->id,
                 'name' => 'Viewer must not create this',
             ])
-            ->assertStatus(403);
+            ->assertStatus(302);
 
         $this->actingAs($viewer)
             ->withHeaders($headers)
@@ -367,7 +367,7 @@ class OperatorPlatformUiTest extends TestCase
                 'start_date' => '2026-08-01',
                 'end_date' => '2026-09-01',
             ])
-            ->assertStatus(403);
+            ->assertStatus(302);
 
         $this->assertSame(0, Task::query()->where('name', 'Viewer must not create this')->count());
     }

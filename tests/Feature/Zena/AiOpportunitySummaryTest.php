@@ -97,7 +97,7 @@ class AiOpportunitySummaryTest extends TestCase
 
         $this->actingAs($viewer)->post(
             route('operator.crm.opportunities.ai-summary', $this->opportunity->id)
-        )->assertStatus(403);
+        )->assertStatus(302);
     }
 
     public function test_requires_crm_view_permission(): void
@@ -106,7 +106,7 @@ class AiOpportunitySummaryTest extends TestCase
 
         $this->actingAs($noCrm)->post(
             route('operator.crm.opportunities.ai-summary', $this->opportunity->id)
-        )->assertStatus(403);
+        )->assertStatus(302);
     }
 
     public function test_returns_404_for_other_tenants_opportunity(): void

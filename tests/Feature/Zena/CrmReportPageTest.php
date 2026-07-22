@@ -70,7 +70,7 @@ class CrmReportPageTest extends TestCase
 
         $this->actingAs($noAccess)
             ->get(route('operator.crm.reports'), $headers)
-            ->assertForbidden();
+            ->assertStatus(302);
     }
 
     public function test_report_page_shows_aging_bucket_labels_and_amounts(): void

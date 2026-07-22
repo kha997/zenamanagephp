@@ -30,10 +30,14 @@ class RoleBasedAccessControlMiddleware
         $user = Auth::user();
         
         if (!$user) {
-            return ErrorEnvelopeService::authenticationError(
-                'User not authenticated',
-                ErrorEnvelopeService::getCurrentRequestId()
-            );
+            if ($request->expectsJson()) {
+                return ErrorEnvelopeService::authenticationError(
+                    'User not authenticated',
+                    ErrorEnvelopeService::getCurrentRequestId()
+                );
+            }
+
+            return redirect()->guest(route('login'))->with('error', 'Vui lòng đăng nhập để tiếp tục.');
         }
         
         $headerTenantId = trim((string) $request->header('X-Tenant-ID'));
@@ -44,11 +48,12 @@ class RoleBasedAccessControlMiddleware
 
         if (!$tenantId) {
             if ($headerTenantId === '') {
-                return ErrorEnvelopeService::error(
+                return $this->deny(
+                    $request,
                     'TENANT_REQUIRED',
                     'X-Tenant-ID header is required',
-                    [],
                     400,
+                    'Yêu cầu không hợp lệ, vui lòng thử lại.',
                     ErrorEnvelopeService::getCurrentRequestId()
                 );
             }
@@ -81,8 +86,12 @@ class RoleBasedAccessControlMiddleware
                 'ip' => $request->ip()
             ]);
             
-            return ErrorEnvelopeService::authorizationError(
+            return $this->deny(
+                $request,
+                'E403.AUTHORIZATION',
                 'You do not have permission to access this resource',
+                403,
+                'Bạn không có quyền thực hiện thao tác này.',
                 ErrorEnvelopeService::getCurrentRequestId()
             );
         }
@@ -268,11 +277,12 @@ class RoleBasedAccessControlMiddleware
                 'roles' => method_exists($user, 'getRoleNames') ? $user->getRoleNames() : []
             ]);
 
-            return ErrorEnvelopeService::error(
+            return $this->deny(
+                $request,
                 'RBAC_ACCESS_DENIED',
                 'You do not have sufficient RBAC assignments to access this resource',
-                [],
                 403,
+                'Bạn không có quyền thực hiện thao tác này.',
                 ErrorEnvelopeService::getCurrentRequestId()
             );
         }
@@ -281,6 +291,21 @@ class RoleBasedAccessControlMiddleware
         $request->attributes->set('access_granted', true);
 
         return $next($request);
+    }
+
+    /**
+     * Content-negotiated denial response: JSON envelope for API/AJAX callers
+     * (unchanged), friendly redirect + flash for plain browser navigation.
+     *
+     * @param array<string, mixed> $details
+     */
+    private function deny(Request $request, string $code, string $jsonMessage, int $statusCode, string $webMessage, ?string $requestId = null, array $details = []): Response
+    {
+        if ($request->expectsJson()) {
+            return ErrorEnvelopeService::error($code, $jsonMessage, $details, $statusCode, $requestId);
+        }
+
+        return redirect()->back()->with('error', $webMessage);
     }
 
     /**

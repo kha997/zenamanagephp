@@ -138,7 +138,7 @@ class AiLeadSuggestionTest extends TestCase
                 $headers
             );
 
-        $response->assertForbidden();
+        $response->assertStatus(302);
         Http::assertNothingSent();
     }
 
@@ -156,7 +156,7 @@ class AiLeadSuggestionTest extends TestCase
                 $headers
             );
 
-        $response->assertForbidden();
+        $response->assertStatus(302);
         Http::assertNothingSent();
     }
 

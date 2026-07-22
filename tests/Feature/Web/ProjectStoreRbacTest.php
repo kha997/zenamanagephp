@@ -74,7 +74,7 @@ class ProjectStoreRbacTest extends TestCase
             'name' => 'Dự án không được phép',
             'start_date' => '2026-08-01',
             'end_date' => '2026-12-31',
-        ])->assertStatus(403);
+        ])->assertStatus(302);
 
         $this->assertFalse(
             Project::query()->where('name', 'Dự án không được phép')->exists()

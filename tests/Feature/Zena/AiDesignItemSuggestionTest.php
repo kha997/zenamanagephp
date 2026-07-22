@@ -152,7 +152,7 @@ class AiDesignItemSuggestionTest extends TestCase
                 'item_type' => 'concept',
             ], $headers);
 
-        $response->assertForbidden();
+        $response->assertStatus(302);
         Http::assertNothingSent();
     }
 
@@ -172,7 +172,7 @@ class AiDesignItemSuggestionTest extends TestCase
                 'item_type' => 'concept',
             ], $headers);
 
-        $response->assertForbidden();
+        $response->assertStatus(302);
         Http::assertNothingSent();
     }
 

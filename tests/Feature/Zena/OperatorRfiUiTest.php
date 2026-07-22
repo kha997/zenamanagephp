@@ -153,7 +153,7 @@ class OperatorRfiUiTest extends TestCase
 
         $this->actingAs($viewer)
             ->post(route('operator.rfis.respond', $rfi->id), ['response' => 'Attempt'], $headers)
-            ->assertForbidden();
+            ->assertStatus(302);
 
         $rfi->refresh();
         $this->assertSame('open', (string) $rfi->status);

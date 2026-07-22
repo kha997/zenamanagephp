@@ -102,7 +102,7 @@ class QuoteCommercialEndpointTest extends TestCase
 
         $this->post(route('operator.crm.quotes.commercial', $quote->id), [
             'discount_percent' => 5,
-        ])->assertForbidden();
+        ])->assertStatus(302);
     }
 
     public function test_validation_rejects_discount_over_100(): void

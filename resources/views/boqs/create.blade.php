@@ -41,7 +41,7 @@
 
                 <div class="operator-field">
                     <label for="code">Mã BOQ <span class="text-rose-600">*</span></label>
-                    <input id="code" name="code" type="text" class="operator-input" value="{{ old('code') }}" maxlength="100" required placeholder="VD: BOQ-001">
+                    <input id="code" name="code" type="text" class="operator-input" value="{{ old('code', 'BOQ-' . now()->format('Ymd') . '-' . strtoupper(Str::random(4))) }}" maxlength="100" required placeholder="VD: BOQ-001">
                     @error('code')<span class="text-sm text-rose-600">{{ $message }}</span>@enderror
                 </div>
             </div>

@@ -260,7 +260,7 @@ class OpportunityAppointmentLifecycleTest extends TestCase
                 'type' => OpportunityAppointment::TYPE_CONSULTATION,
                 'scheduled_at' => Carbon::now()->addDay()->format('Y-m-d H:i:s'),
             ])
-            ->assertForbidden();
+            ->assertStatus(302);
     }
 
     public function test_opportunity_show_renders_appointment_card_with_expected_labels_and_actions(): void

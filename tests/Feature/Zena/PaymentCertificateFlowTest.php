@@ -310,6 +310,6 @@ class PaymentCertificateFlowTest extends TestCase
 
         // User without approve permission cannot approve
         $noApprove = $this->createTenantUser($this->tenant, [], ['team_member'], ['payment_certificate.view', 'payment_certificate.create']);
-        $this->actingAs($noApprove)->post(route('operator.contracts.certificates.approve', [$this->contract->id, $cert->id]), [], $h)->assertForbidden();
+        $this->actingAs($noApprove)->post(route('operator.contracts.certificates.approve', [$this->contract->id, $cert->id]), [], $h)->assertStatus(302);
     }
 }

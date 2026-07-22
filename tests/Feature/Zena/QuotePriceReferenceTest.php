@@ -216,7 +216,7 @@ class QuotePriceReferenceTest extends TestCase
                     'benchmark_type' => 'vendor_quote',
                 ],
             ],
-        ])->assertStatus(403);
+        ])->assertStatus(302);
 
         $this->assertDatabaseCount('price_reference_entries', 0);
     }

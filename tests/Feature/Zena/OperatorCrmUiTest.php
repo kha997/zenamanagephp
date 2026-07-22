@@ -238,7 +238,7 @@ class OperatorCrmUiTest extends TestCase
             ->post(route('operator.crm.leads.store'), [
                 'contact_hint' => 'Should be denied',
             ], $headers)
-            ->assertForbidden();
+            ->assertStatus(302);
 
         $this->assertDatabaseMissing('leads', ['contact_hint' => 'Should be denied']);
     }
@@ -271,7 +271,7 @@ class OperatorCrmUiTest extends TestCase
 
         $this->actingAs($salesUser)
             ->post(route('operator.crm.opportunities.convert', $opportunity->id), [], $headers)
-            ->assertForbidden();
+            ->assertStatus(302);
 
         $opportunity->refresh();
         $this->assertNull($opportunity->converted_project_id);

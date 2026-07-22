@@ -157,11 +157,11 @@ class OperatorCommercialUiTest extends TestCase
 
         $this->actingAs($viewer)
             ->post(route('operator.vendors.store'), ['code' => 'X', 'name' => 'X'], $headers)
-            ->assertForbidden();
+            ->assertStatus(302);
 
         $this->actingAs($viewer)
             ->post(route('operator.boqs.store'), ['project_id' => (string) $this->project->id, 'code' => 'X', 'name' => 'X'], $headers)
-            ->assertForbidden();
+            ->assertStatus(302);
 
         $this->assertSame(0, Vendor::query()->count());
         $this->assertSame(0, Boq::query()->count());

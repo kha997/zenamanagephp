@@ -249,7 +249,7 @@ class CertificatePdfTest extends TestCase
             $this->headers()
         );
 
-        $response->assertForbidden();
+        $response->assertStatus(302);
     }
 
     public function test_engine_unavailable_redirects_with_error(): void

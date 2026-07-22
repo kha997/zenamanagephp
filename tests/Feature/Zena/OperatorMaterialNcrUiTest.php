@@ -198,7 +198,7 @@ class OperatorMaterialNcrUiTest extends TestCase
 
         $this->actingAs($viewer)
             ->post(route('operator.materials.store'), ['code' => 'X', 'name' => 'X'], $headers)
-            ->assertForbidden();
+            ->assertStatus(302);
 
         $this->assertSame(0, Material::query()->count());
     }

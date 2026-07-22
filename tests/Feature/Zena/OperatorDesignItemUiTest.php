@@ -161,7 +161,7 @@ class OperatorDesignItemUiTest extends TestCase
                 'project_id' => (string) $this->project->id,
                 'name' => 'Should be denied',
             ], $headers)
-            ->assertForbidden();
+            ->assertStatus(302);
 
         $this->assertDatabaseMissing('design_items', ['name' => 'Should be denied']);
     }

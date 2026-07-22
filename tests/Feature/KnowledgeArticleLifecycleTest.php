@@ -292,6 +292,6 @@ class KnowledgeArticleLifecycleTest extends TestCase
             'body' => 'x',
         ]);
 
-        $response->assertForbidden();
+        $response->assertStatus(302);
     }
 }

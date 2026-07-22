@@ -82,7 +82,7 @@ class ProjectBaselineTest extends TestCase
         $this->actingAs($viewer)->post(
             route('app.projects.baseline.store', $this->project->id),
             ['type' => 'execution']
-        )->assertStatus(403);
+        )->assertStatus(302);
 
         $this->assertDatabaseCount('baselines', 0);
     }

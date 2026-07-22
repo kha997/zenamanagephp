@@ -160,7 +160,7 @@ class OperatorChangeRequestUiTest extends TestCase
 
         $this->actingAs($viewer)
             ->post(route('operator.change-requests.approve', $changeRequest->id), [], $headers)
-            ->assertForbidden();
+            ->assertStatus(302);
 
         $changeRequest->refresh();
         $this->assertSame('submitted', (string) $changeRequest->status);

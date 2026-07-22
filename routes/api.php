@@ -270,23 +270,11 @@ Route::group([], function () {
             Route::post('{project}/status', [\App\Http\Controllers\Api\ProjectController::class, 'updateStatus']);
             Route::get('statistics', [\App\Http\Controllers\Api\ProjectController::class, 'statistics']);
             Route::get('dropdown', [\App\Http\Controllers\Api\ProjectController::class, 'dropdown']);
-            
-            // Project Milestones Routes
-            Route::apiResource('milestones', \App\Http\Controllers\Api\ProjectMilestoneController::class);
-            Route::prefix('milestones')->group(function () {
-                Route::post('{milestone}/mark-completed', [\App\Http\Controllers\Api\ProjectMilestoneController::class, 'markCompleted']);
-                Route::post('{milestone}/mark-cancelled', [\App\Http\Controllers\Api\ProjectMilestoneController::class, 'markCancelled']);
-                Route::post('reorder', [\App\Http\Controllers\Api\ProjectMilestoneController::class, 'reorder']);
-            });
         });
 
-        // Project Templates Routes
-        Route::apiResource('project-templates', \App\Http\Controllers\Api\ProjectTemplateController::class);
-        Route::prefix('project-templates')->group(function () {
-            Route::post('{template}/create-project', [\App\Http\Controllers\Api\ProjectTemplateController::class, 'createProject']);
-            Route::post('{template}/duplicate', [\App\Http\Controllers\Api\ProjectTemplateController::class, 'duplicate']);
-            Route::get('categories', [\App\Http\Controllers\Api\ProjectTemplateController::class, 'categories']);
-        });
+        // (Route milestones + project-templates đã gỡ 22/07: Api\ProjectMilestoneController
+        // và Api\ProjectTemplateController đều chưa từng hoạt động đúng — xem
+        // docs/superpowers/specs/2026-07-22-dead-milestone-template-api-removal-design.md)
 
         // Project Analytics Routes
         Route::prefix('analytics')->group(function () {

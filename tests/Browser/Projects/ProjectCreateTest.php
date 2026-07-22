@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Browser\Projects;
 
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Models\UserRole;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Dusk\Browser;
@@ -35,6 +38,19 @@ class ProjectCreateTest extends DuskTestCase
             'password' => Hash::make('password'),
             'tenant_id' => $this->tenant->id,
         ]);
+
+        // test_project_create_submit_flow does a real POST /app/projects, gated
+        // by rbac:project.create — this user had zero roles/permissions before,
+        // which only "passed" by accident pre-PR#220 (a raw JSON 403 left the
+        // browser sitting at the POST-target URL /app/projects, coincidentally
+        // matching waitForLocation). Grant the permission the flow actually needs.
+        $role = Role::factory()->create(['name' => 'Dusk Project Creator ' . uniqid()]);
+        $permission = Permission::firstOrCreate(
+            ['code' => 'project.create'],
+            ['name' => 'project.create', 'module' => 'project', 'action' => 'create']
+        );
+        $role->permissions()->sync([$permission->id]);
+        UserRole::create(['user_id' => (string) $this->user->id, 'role_id' => (string) $role->id]);
     }
 
     public function test_project_create_page_renders(): void

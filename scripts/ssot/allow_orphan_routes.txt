@@ -3,3 +3,9 @@
 /api/v1/nonexistent-endpoint|reason=NEGATIVE_PROBE_NONEXISTENT_ENDPOINT
 /api/v1/auth/oidc|reason=NEGATIVE_PROBE_SECURITY_TRAVERSAL
 /api/v1/documents/non-existent-document/revert|reason=NEGATIVE_PROBE_UNSUPPORTED_ENDPOINT
+/api/projects/milestones/reorder|reason=NEGATIVE_PROBE_LEGACY_SURFACE
+/api/projects/milestones/{milestone}/mark-completed|reason=NEGATIVE_PROBE_LEGACY_SURFACE
+/api/projects/milestones/{milestone}/mark-cancelled|reason=NEGATIVE_PROBE_LEGACY_SURFACE
+/api/project-templates/categories|reason=NEGATIVE_PROBE_LEGACY_SURFACE
+/api/project-templates/{template}/create-project|reason=NEGATIVE_PROBE_LEGACY_SURFACE
+/api/project-templates/{template}/duplicate|reason=NEGATIVE_PROBE_LEGACY_SURFACE

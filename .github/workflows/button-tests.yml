@@ -354,15 +354,26 @@ jobs:
         # Start PHP built-in server with absolute docroot + router
         # Force Laravel to load .env.testing (APP_ENV=testing) to match migrate/seed steps.
         # Also raise execution/socket timeouts to avoid killing the server on slow first boot.
-        APP_ENV=testing APP_DEBUG=true nohup php \
-          -d pcov.enabled=0 \
-          -d xdebug.mode=off \
-          -d opcache.enable_cli=0 \
-          -d pcre.jit=0 \
-          -d max_execution_time=120 \
-          -d default_socket_timeout=120 \
-          -S 127.0.0.1:8000 -t "$GITHUB_WORKSPACE/public" /tmp/dusk-router.php \
-          >/tmp/laravel-serve.log 2>&1 &
+        # Supervisor loop: php -S segfaults intermittently on GH runners (known image
+        # issue — serve log ends mid-request with no error). One silent death used to
+        # kill the whole Dusk run with ERR_CONNECTION_REFUSED on every later test;
+        # respawning keeps the suite alive. PID file tracks the supervisor (stays
+        # alive across respawns) so existing health checks keep working.
+        APP_ENV=testing APP_DEBUG=true nohup bash -c '
+          while true; do
+            php \
+              -d pcov.enabled=0 \
+              -d xdebug.mode=off \
+              -d opcache.enable_cli=0 \
+              -d pcre.jit=0 \
+              -d max_execution_time=120 \
+              -d default_socket_timeout=120 \
+              -S 127.0.0.1:8000 -t "$GITHUB_WORKSPACE/public" /tmp/dusk-router.php \
+              >>/tmp/laravel-serve.log 2>&1
+            echo "[supervisor] php -S exited (code $?) at $(date -u +%H:%M:%S) - respawning" >> /tmp/laravel-serve.log
+            sleep 1
+          done
+        ' >/dev/null 2>&1 &
         echo $! > /tmp/laravel-serve.pid
         sleep 1
         echo "serve pid=$(cat /tmp/laravel-serve.pid)"

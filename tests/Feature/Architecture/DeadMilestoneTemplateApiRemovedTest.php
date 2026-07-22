@@ -76,4 +76,32 @@ class DeadMilestoneTemplateApiRemovedTest extends TestCase
             'Migration 2024_02_15 là schema thật đang dùng — không được xoá.'
         );
     }
+
+    /**
+     * Bug thật tự bắt trong CI (MySQL SQLSTATE HY000 error 3730) sau khi gỡ
+     * migration 2025_09_16: up() của nó là no-op vĩnh viễn (đã verify), nhưng
+     * down() của nó lại có logic thật — drop template_tasks/zena_template_tasks
+     * (có FK trỏ vào project_templates) TRƯỚC KHI drop project_templates, tránh
+     * lỗi FK constraint. Logic đó đã chuyển sang down() của migration 2024_02_15
+     * (giữ lại) — guard này chặn ai đó lỡ tay rút gọn về Schema::dropIfExists
+     * đơn thuần một lần nữa.
+     */
+    public function test_kept_migration_down_drops_dependent_tables_before_project_templates(): void
+    {
+        $source = File::get(database_path('migrations/2024_02_15_000001_create_project_templates_table.php'));
+
+        $downStart = strpos($source, 'public function down');
+        $this->assertIsInt($downStart, 'Migration phải có method down().');
+        $downBody = substr($source, $downStart);
+
+        $templateTasksPos = strpos($downBody, "'template_tasks'");
+        $zenaTemplateTasksPos = strpos($downBody, "'zena_template_tasks'");
+        $projectTemplatesDropPos = strpos($downBody, "dropIfExists('project_templates')");
+
+        $this->assertNotFalse($templateTasksPos, 'down() phải drop template_tasks trước project_templates (FK dependency).');
+        $this->assertNotFalse($zenaTemplateTasksPos, 'down() phải drop zena_template_tasks trước project_templates (FK dependency).');
+        $this->assertNotFalse($projectTemplatesDropPos, 'down() phải drop project_templates.');
+        $this->assertLessThan($projectTemplatesDropPos, $templateTasksPos, 'template_tasks phải drop TRƯỚC project_templates, không thì MySQL ném lỗi 3730.');
+        $this->assertLessThan($projectTemplatesDropPos, $zenaTemplateTasksPos, 'zena_template_tasks phải drop TRƯỚC project_templates, không thì MySQL ném lỗi 3730.');
+    }
 }

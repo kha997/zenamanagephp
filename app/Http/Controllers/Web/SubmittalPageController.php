@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Throwable;
 
 class SubmittalPageController extends Controller
@@ -70,8 +71,12 @@ class SubmittalPageController extends Controller
             'submittal_type' => ['required', 'in:shop_drawing,material_sample,product_data,test_report,other'],
             'specification_section' => ['nullable', 'string', 'max:255'],
             'due_date' => ['nullable', 'date'],
-            'contractor' => ['nullable', 'string', 'max:255'],
-            'manufacturer' => ['nullable', 'string', 'max:255'],
+            'contractor' => ['nullable', 'string', 'max:255',
+                Rule::exists('vendors', 'name')->where('tenant_id', (string) Auth::user()?->tenant_id),
+            ],
+            'manufacturer' => ['nullable', 'string', 'max:255',
+                Rule::exists('vendors', 'name')->where('tenant_id', (string) Auth::user()?->tenant_id),
+            ],
         ]);
 
         $validated = array_filter($validated, static fn ($value) => $value !== null && $value !== '');

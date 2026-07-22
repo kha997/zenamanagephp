@@ -156,6 +156,81 @@ class OperatorSubmittalUiTest extends TestCase
         $this->assertSame('submitted', (string) $submittal->status);
     }
 
+    public function test_store_accepts_valid_tenant_vendor_and_rejects_unknown_name(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        Vendor::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'code' => 'VD-010',
+            'name' => 'Nhà Thầu Hợp Lệ',
+            'is_active' => true,
+        ]);
+
+        // Establish session so csrf_token() is available for subsequent POSTs.
+        $this->actingAs($this->user)
+            ->get(route('operator.submittals.create'), $headers)
+            ->assertOk();
+
+        $valid = $this->actingAs($this->user)
+            ->post(route('operator.submittals.store'), [
+                'project_id' => (string) $this->project->id,
+                'title' => 'Submittal có vendor hợp lệ',
+                'description' => 'Kiểm tra select vendor.',
+                'submittal_type' => 'material_sample',
+                'contractor' => 'Nhà Thầu Hợp Lệ',
+            ], $headers);
+
+        $submittal = Submittal::query()->where('title', 'Submittal có vendor hợp lệ')->firstOrFail();
+        $valid->assertRedirect(route('operator.submittals.show', $submittal->id));
+        $this->assertSame('Nhà Thầu Hợp Lệ', (string) $submittal->contractor);
+
+        $invalid = $this->actingAs($this->user)
+            ->post(route('operator.submittals.store'), [
+                'project_id' => (string) $this->project->id,
+                'title' => 'Submittal vendor lạ',
+                'description' => 'Tên không có trong danh sách.',
+                'submittal_type' => 'material_sample',
+                'manufacturer' => 'Vendor Không Tồn Tại',
+            ], $headers);
+
+        $invalid->assertSessionHasErrors('manufacturer');
+        $this->assertFalse(
+            Submittal::query()->where('title', 'Submittal vendor lạ')->exists(),
+            'Submittal không được tạo khi manufacturer không khớp vendor nào của tenant.'
+        );
+    }
+
+    public function test_store_rejects_vendor_name_belonging_to_another_tenant(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $foreignTenant = Tenant::factory()->create();
+        Vendor::query()->create([
+            'tenant_id' => (string) $foreignTenant->id,
+            'code' => 'VD-F99',
+            'name' => 'Vendor Của Tenant Khác',
+            'is_active' => true,
+        ]);
+
+        // Establish session so csrf_token() is available for subsequent POSTs.
+        $this->actingAs($this->user)
+            ->get(route('operator.submittals.create'), $headers)
+            ->assertOk();
+
+        $response = $this->actingAs($this->user)
+            ->post(route('operator.submittals.store'), [
+                'project_id' => (string) $this->project->id,
+                'title' => 'Submittal vendor tenant khác',
+                'description' => 'Tên vendor thuộc tenant khác phải bị chặn.',
+                'submittal_type' => 'material_sample',
+                'contractor' => 'Vendor Của Tenant Khác',
+            ], $headers);
+
+        $response->assertSessionHasErrors('contractor');
+        $this->assertFalse(Submittal::query()->where('title', 'Submittal vendor tenant khác')->exists());
+    }
+
     public function test_create_page_lists_active_tenant_vendors_in_selects(): void
     {
         $headers = ['X-Tenant-ID' => (string) $this->tenant->id];

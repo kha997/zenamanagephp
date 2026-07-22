@@ -296,6 +296,8 @@ class RoleBasedAccessControlMiddleware
     /**
      * Content-negotiated denial response: JSON envelope for API/AJAX callers
      * (unchanged), friendly redirect + flash for plain browser navigation.
+     *
+     * @param array<string, mixed> $details
      */
     private function deny(Request $request, string $code, string $jsonMessage, int $statusCode, string $webMessage, ?string $requestId = null, array $details = []): Response
     {

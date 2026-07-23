@@ -51,7 +51,9 @@ class LegacyTaskCreationPersistsTest extends TestCase
             'tenant_id' => $tenant->id,
         ]);
 
-        // Initialize session with CSRF token by GETting a page first
+        // A valid CSRF token requires an established session — GET a page
+        // first (see tests/TestCase.php:70-72: auto-appended tokens must
+        // come from a real session, not a synthesized one).
         $this->actingAs($user)->get('/app/tasks');
 
         $response = $this->actingAs($user)->post('/tasks', [
@@ -72,7 +74,15 @@ class LegacyTaskCreationPersistsTest extends TestCase
     public function test_legacy_root_post_tasks_still_enforces_rbac(): void
     {
         $tenant = Tenant::factory()->create();
-        // Deliberately no role/permission attached — this user has task.create denied.
+        // task.create must exist as a real Permission row so the middleware's
+        // denial goes through the "user lacks this granted permission" path
+        // (RoleBasedAccessControlMiddleware::checkPermission) rather than the
+        // separate "permission code doesn't exist at all" default-deny path.
+        Permission::firstOrCreate(
+            ['code' => 'task.create'],
+            ['name' => 'task.create', 'module' => 'task', 'action' => 'create']
+        );
+        // Deliberately no role attached — this user has task.create denied.
         $user = User::factory()->create([
             'tenant_id' => $tenant->id,
         ]);
@@ -80,7 +90,9 @@ class LegacyTaskCreationPersistsTest extends TestCase
             'tenant_id' => $tenant->id,
         ]);
 
-        // Initialize session with CSRF token by GETting a page first
+        // A valid CSRF token requires an established session — GET a page
+        // first (see tests/TestCase.php:70-72: auto-appended tokens must
+        // come from a real session, not a synthesized one).
         $this->actingAs($user)->get('/app/tasks');
 
         $response = $this->actingAs($user)->post('/tasks', [

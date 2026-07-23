@@ -550,9 +550,9 @@ Route::get('/documents/create', function () {
     return response('<form method="POST" enctype="multipart/form-data">' . csrf_field() . '<input type="file" name="file"/></form><span hidden>name=&quot;_token&quot;</span>');
 })->middleware(['auth', 'tenant.isolation'])->name('documents.create.form');
 
-Route::post('/tasks', function (Request $request) {
-    return response()->json(['message' => 'Task created'], 201);
-})->middleware(['auth', 'tenant.isolation'])->name('tasks.store');
+Route::post('/tasks', [App\Http\Controllers\Web\TaskController::class, 'store'])
+    ->middleware(['auth', 'tenant.isolation', 'rbac:task.create'])
+    ->name('tasks.store');
 
 // Phase 2: Performance routes (moved to API)
 Route::permanentRedirect('/health', '/api/v1/public/health');

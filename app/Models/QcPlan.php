@@ -8,13 +8,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Traits\TenantScope;
 
 /**
  * Model QcPlan để quản lý kế hoạch kiểm định chất lượng
  */
 class QcPlan extends Model
 {
-    use HasUlids, HasFactory, SoftDeletes;
+    use HasUlids, HasFactory, SoftDeletes, TenantScope;
 
     protected $fillable = [
         'project_id',

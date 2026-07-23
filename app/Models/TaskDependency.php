@@ -5,9 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Traits\TenantScope;
 
 class TaskDependency extends Model
 {
+    use TenantScope;
 
     protected $table = 'task_dependencies';
     

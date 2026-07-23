@@ -7,13 +7,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Traits\TenantScope;
 
 /**
  * Model Ncr để quản lý Non-Conformance Reports
  */
 class Ncr extends Model
 {
-    use HasUlids, HasFactory, SoftDeletes;
+    use HasUlids, HasFactory, SoftDeletes, TenantScope;
 
     protected $fillable = [
         'project_id',

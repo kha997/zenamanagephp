@@ -17,6 +17,7 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
+/.worktrees
 
 /storage/backups/
 # runtime contents of storage/framework are ignored via per-directory

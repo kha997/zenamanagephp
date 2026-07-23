@@ -113,4 +113,31 @@ class AudTenantScopeCoverageTest extends TestCase
 
         $this->assertSame(1, TaskDependency::count(), 'TenantScope should hide tenant B\'s dependency row.');
     }
+
+    public function test_task_assignment_created_without_explicit_tenant_id_is_still_visible_after_scoping(): void
+    {
+        $tenantA = Tenant::factory()->create();
+        $task = Task::factory()->create(['tenant_id' => $tenantA->id]);
+        $user = User::factory()->create(['tenant_id' => $tenantA->id]);
+
+        app()->instance('current_tenant_id', $tenantA->id);
+
+        // Mirrors real call sites (TaskController, TaskAssignmentController):
+        // no tenant_id passed explicitly.
+        $assignment = TaskAssignment::create([
+            'task_id' => $task->id,
+            'user_id' => $user->id,
+            'assignment_type' => TaskAssignment::TYPE_USER,
+            'role' => TaskAssignment::ROLE_ASSIGNEE,
+            'assigned_at' => now(),
+        ]);
+
+        $this->assertNotNull($assignment->tenant_id, 'tenant_id should be auto-populated from the related Task.');
+        $this->assertSame($tenantA->id, $assignment->tenant_id);
+
+        $visible = TaskAssignment::where('task_id', $task->id)->get();
+
+        $this->assertCount(1, $visible, 'Assignment created without explicit tenant_id should still be visible after TenantScope filters.');
+        $this->assertNotNull(TaskAssignment::find($assignment->id));
+    }
 }

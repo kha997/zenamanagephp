@@ -19,6 +19,7 @@ class TaskAssignment extends Model
 
     protected $fillable = [
         'task_id',
+        'tenant_id',
         'user_id',
         'team_id',
         'assignment_type',
@@ -90,6 +91,29 @@ class TaskAssignment extends Model
         self::TYPE_USER,
         self::TYPE_TEAM,
     ];
+
+    /**
+     * Boot the model.
+     *
+     * Auto-populates tenant_id from the related Task when it is not
+     * explicitly set on creation. This is a safety net for call sites
+     * (e.g. TaskController, TaskAssignmentController) that create
+     * assignments without passing tenant_id directly — without this,
+     * TenantScope's global scope would silently hide the new row from
+     * every subsequent tenant-scoped read.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (TaskAssignment $assignment): void {
+            if (empty($assignment->tenant_id) && !empty($assignment->task_id)) {
+                $task = Task::withoutGlobalScopes()->find($assignment->task_id);
+
+                if ($task && !empty($task->tenant_id)) {
+                    $assignment->tenant_id = $task->tenant_id;
+                }
+            }
+        });
+    }
 
     /**
      * RELATIONSHIPS

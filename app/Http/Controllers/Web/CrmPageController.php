@@ -124,6 +124,26 @@ class CrmPageController extends Controller
         return $this->handleMutationResponse($response, route('operator.crm.leads'), 'Đã ghi nhận lead');
     }
 
+    public function updateLead(Request $request, string $id, ApiLeadController $apiController): RedirectResponse
+    {
+        $validated = $request->validate([
+            'contact_hint' => ['required', 'string', 'max:255'],
+            'project_description' => ['nullable', 'string', 'max:5000'],
+            'source' => ['nullable', 'string'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        try {
+            $response = $apiController->update($this->buildApiRequest($request, array_filter($validated, fn ($value) => $value !== null)), $id);
+        } catch (AuthorizationException) {
+            return back()->withInput()->with('error', 'Bạn không có quyền thực hiện thao tác này.');
+        } catch (Throwable) {
+            return back()->withInput()->with('error', 'Không thể xử lý yêu cầu.');
+        }
+
+        return $this->handleMutationResponse($response, route('operator.crm.leads'), 'Đã cập nhật lead');
+    }
+
     public function convertLead(Request $request, string $id, ApiLeadController $apiController): RedirectResponse
     {
         $validated = $request->validate([

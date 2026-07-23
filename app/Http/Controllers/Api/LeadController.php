@@ -145,6 +145,64 @@ class LeadController extends BaseApiController
         );
     }
 
+    public function update(Request $request, string $id): JsonResponse
+    {
+        if (!Auth::check()) {
+            return $this->unauthorized('Authentication required');
+        }
+
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === '') {
+            return $this->errorResponse('Tenant context missing', 400);
+        }
+
+        $lead = $this->scopedQuery($tenantId)->whereKey($id)->first();
+
+        if (!$lead instanceof Lead) {
+            return $this->notFound('Lead not found');
+        }
+
+        $this->authorize('update', $lead);
+
+        if ((string) $lead->status !== Lead::STATUS_NEW) {
+            return $this->validationError([
+                'status' => ['Only new leads can be edited.'],
+            ]);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'contact_hint' => ['required', 'string', 'max:255'],
+            'project_description' => ['nullable', 'string', 'max:5000'],
+            'source' => ['nullable', Rule::in(Lead::VALID_SOURCES)],
+            'notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationError($validator->errors());
+        }
+
+        $lead->contact_hint = (string) $request->input('contact_hint');
+        $lead->project_description = $request->input('project_description');
+        $lead->source = (string) $request->input('source', $lead->source);
+        $lead->notes = $request->input('notes');
+        $lead->save();
+
+        EventRecord::query()->create([
+            'tenant_id' => $tenantId,
+            'aggregate_type' => 'lead',
+            'aggregate_id' => (string) $lead->id,
+            'event_key' => 'crm.lead.updated',
+            'actor_user_id' => (string) Auth::id(),
+            'payload' => ['contact_hint' => $lead->contact_hint, 'source' => $lead->source],
+            'occurred_at' => now(),
+        ]);
+
+        return $this->zenaSuccessResponse(
+            $this->serialize($lead->fresh() ?? $lead),
+            'Lead updated successfully'
+        );
+    }
+
     public function discard(Request $request, string $id): JsonResponse
     {
         if (!Auth::check()) {

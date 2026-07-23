@@ -1002,6 +1002,7 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::get('/crm', [App\Http\Controllers\Web\CrmPageController::class, 'index'])->middleware('rbac:crm.view')->name('crm.index');
     Route::get('/crm/leads', [App\Http\Controllers\Web\CrmPageController::class, 'leads'])->middleware('rbac:crm.view')->name('crm.leads');
     Route::post('/crm/leads', [App\Http\Controllers\Web\CrmPageController::class, 'storeLead'])->middleware('rbac:crm.manage')->name('crm.leads.store');
+    Route::put('/crm/leads/{id}', [App\Http\Controllers\Web\CrmPageController::class, 'updateLead'])->middleware('rbac:crm.manage')->name('crm.leads.update');
     Route::post('/crm/leads/{id}/convert', [App\Http\Controllers\Web\CrmPageController::class, 'convertLead'])->middleware('rbac:crm.manage')->name('crm.leads.convert');
     Route::post('/crm/leads/{id}/discard', [App\Http\Controllers\Web\CrmPageController::class, 'discardLead'])->middleware('rbac:crm.manage')->name('crm.leads.discard');
     Route::post('/crm/leads/{id}/suggest-conversion', [App\Http\Controllers\Web\CrmPageController::class, 'suggestLeadConversion'])->middleware(['rbac:crm.manage', 'rbac:ai.suggest', 'throttle:ai-suggest'])->name('crm.leads.suggest-conversion');

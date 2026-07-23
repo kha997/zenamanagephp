@@ -8,16 +8,16 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * EVIDENCE TEST — not a regression guard, not shipped as a permanent suite member.
- *
- * Verifies AUD-03 from docs/audits/2026-07-23-end-to-end-operational-audit.md:
- * "Project::increment('end_date', $days) — cộng số nguyên vào cột DATE, khả năng
- * lỗi số học thay vì cộng ngày" (app/Http/Controllers/Api/ChangeRequestController.php:700).
+ * Regression guard for AUD-03 (docs/audits/2026-07-23-end-to-end-operational-audit.md):
+ * proves Project::end_date advances by the correct number of calendar days via
+ * the Carbon-parse-then-save pattern now used in ChangeRequestController::approve(),
+ * instead of Eloquent's increment() (which threw a TypeError against the
+ * `date`-cast attribute — Carbon + int is not a valid PHP operation).
  *
  * This test does NOT go through the ChangeRequest approval endpoint — it isolates
- * the exact ORM call the controller makes (`$project->increment('end_date', $days)`)
- * against the actual `projects.end_date` DATE column, on this repo's real test
- * driver (sqlite, per .env.testing). No production code is modified.
+ * the exact assignment pattern the controller now uses, against the actual
+ * `projects.end_date` DATE column, on this repo's real test driver (sqlite,
+ * per .env.testing).
  */
 class AudChangeRequestEndDateIncrementTest extends TestCase
 {

@@ -107,14 +107,52 @@ class ProjectCreateTest extends DuskTestCase
                 ->visit('/app/projects/create')
                 ->waitFor('@project-name', 10)
                 ->type('@project-name', 'Browser Create Project')
-                ->type('@project-description', 'Evidence-based submit flow test')
-                ->type('@project-start-date', $today)
-                ->type('@project-end-date', $nextWeek)
-                ->select('@project-status', 'active')
+                ->type('@project-description', 'Evidence-based submit flow test');
+
+            // Native <input type="date"> must NOT be filled via type(): Dusk's
+            // type() sends the ISO "Y-m-d" string as raw keystrokes, and the
+            // widget's MM/DD/YYYY segment auto-advance consumes the leading
+            // year digit as a (invalid, auto-completed) month digit, then
+            // overflows the remaining digits into the year segment —
+            // confirmed by reproduction: typing "2026-07-23" this way can
+            // produce a garbled value like "60723-02-02" instead of
+            // "2026-07-23", which fails the server's "end after start" date
+            // validation and hangs waitForLocation() waiting for a redirect
+            // that never happens. Setting .value directly (spec-guaranteed
+            // ISO format, locale-independent) plus firing input/change so
+            // the form treats the field as touched is the reliable way to
+            // fill a date input in Dusk.
+            $this->setNativeDateInput($browser, '@project-start-date', $today);
+            $this->setNativeDateInput($browser, '@project-end-date', $nextWeek);
+
+            $browser->select('@project-status', 'active')
                 ->type('@project-budget-total', '50000')
                 ->click('@project-submit')
                 ->waitForLocation('/app/projects', 10)
                 ->assertPathIs('/app/projects');
         });
+    }
+
+    /**
+     * Reliably set a native <input type="date"> value in a Dusk test.
+     *
+     * Dusk's type() sends raw keystrokes, which native date-input widgets
+     * split across MM/DD/YYYY segments in a way that garbles an ISO
+     * "Y-m-d" string (see test_project_create_submit_flow for the full
+     * explanation). The DOM .value property of a date input is always
+     * "Y-m-d" regardless of display locale, so setting it directly and
+     * firing input/change is reliable.
+     */
+    private function setNativeDateInput(Browser $browser, string $duskSelector, string $isoDate): void
+    {
+        $cssSelector = str_starts_with($duskSelector, '@')
+            ? '[dusk="' . substr($duskSelector, 1) . '"]'
+            : $duskSelector;
+
+        $browser->script([
+            "document.querySelector('{$cssSelector}').value = '{$isoDate}'",
+            "document.querySelector('{$cssSelector}').dispatchEvent(new Event('input', {bubbles: true}))",
+            "document.querySelector('{$cssSelector}').dispatchEvent(new Event('change', {bubbles: true}))",
+        ]);
     }
 }

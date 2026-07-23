@@ -6147,7 +6147,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Models\\Lead\:\:\$contact_hint\.$#'
 			identifier: property.notFound
-			count: 1
+			count: 2
 			path: app/Http/Controllers/Api/LeadController.php
 
 		-
@@ -6159,25 +6159,25 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Models\\Lead\:\:\$id\.$#'
 			identifier: property.notFound
-			count: 2
+			count: 3
 			path: app/Http/Controllers/Api/LeadController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Lead\:\:\$project_description\.$#'
 			identifier: property.notFound
-			count: 1
+			count: 2
 			path: app/Http/Controllers/Api/LeadController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Lead\:\:\$source\.$#'
 			identifier: property.notFound
-			count: 2
+			count: 4
 			path: app/Http/Controllers/Api/LeadController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Lead\:\:\$status\.$#'
 			identifier: property.notFound
-			count: 4
+			count: 5
 			path: app/Http/Controllers/Api/LeadController.php
 
 		-

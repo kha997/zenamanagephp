@@ -6163,6 +6163,12 @@ parameters:
 			path: app/Http/Controllers/Api/LeadController.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\Lead\:\:\$notes\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/LeadController.php
+
+		-
 			message: '#^Access to an undefined property App\\Models\\Lead\:\:\$project_description\.$#'
 			identifier: property.notFound
 			count: 2

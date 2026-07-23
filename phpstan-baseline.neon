@@ -8359,6 +8359,18 @@ parameters:
 			path: app/Http/Controllers/Api/SupportTicketController.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\SupportTicket\:\:\$user_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/SupportTicketController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\SupportTicket\:\:\$assigned_to\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/SupportTicketController.php
+
+		-
 			message: '#^Call to an undefined static method App\\Models\\SupportTicket\:\:create\(\)\.$#'
 			identifier: staticMethod.notFound
 			count: 1
@@ -27397,6 +27409,18 @@ parameters:
 			path: app/Models/TaskAssignment.php
 
 		-
+			message: '#^Call to an undefined static method App\\Models\\Task\:\:withoutGlobalScopes\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Models/TaskAssignment.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\TaskAssignment\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/TaskAssignment.php
+
+		-
 			message: '#^Method App\\Models\\TaskCompensation\:\:contract\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
 			identifier: missingType.generics
 			count: 1
@@ -46215,13 +46239,13 @@ parameters:
 		-
 			message: '#^Call to an undefined static method App\\Models\\Role\:\:where\(\)\.$#'
 			identifier: staticMethod.notFound
-			count: 1
+			count: 2
 			path: database/seeders/ZenaPermissionsSeeder.php
 
 		-
 			message: '#^Call to an undefined static method App\\Models\\Permission\:\:whereIn\(\)\.$#'
 			identifier: staticMethod.notFound
-			count: 1
+			count: 2
 			path: database/seeders/ZenaPermissionsSeeder.php
 
 		-

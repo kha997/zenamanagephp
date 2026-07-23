@@ -53,6 +53,26 @@ class ButtonAuthorizationTest extends TestCase
             ]);
         }
 
+        // TeamPolicy checks hasPermission('team.view') (not the plain `role`
+        // string column used above), matching the real seeded-role/permission
+        // path a production admin actually goes through -- see
+        // app/Policies/TeamPolicy.php. Grant it explicitly to the roles this
+        // suite expects to reach /app/team (super_admin/admin/pm); designer/
+        // engineer/guest are deliberately left without it so their existing
+        // "team access should be denied" assertions keep holding.
+        $teamViewPermission = Permission::firstOrCreate(
+            ['code' => 'team.view'],
+            ['name' => 'team.view', 'module' => 'team', 'action' => 'view']
+        );
+        foreach (['super_admin', 'admin', 'pm'] as $roleWithTeamAccess) {
+            $accessRole = Role::firstOrCreate(
+                ['name' => 'Button Auth Test ' . $roleWithTeamAccess . ' ' . uniqid()],
+                ['scope' => 'tenant', 'allow_override' => false, 'is_active' => true]
+            );
+            $accessRole->permissions()->syncWithoutDetaching($teamViewPermission->id);
+            $this->users[$roleWithTeamAccess]->roles()->syncWithoutDetaching($accessRole->id);
+        }
+
         // Create test project
         $this->project = Project::factory()->create([
             'tenant_id' => $this->tenant->id,

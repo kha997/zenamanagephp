@@ -15,7 +15,7 @@ class TeamPolicy
      */
     public function viewAny(User $user)
     {
-        return $user->hasRole(['super_admin', 'admin', 'pm']);
+        return $user->hasPermission('team.view');
     }
 
     /**
@@ -28,8 +28,8 @@ class TeamPolicy
             return false;
         }
 
-        // Check if user is team member or has management role
-        return $user->hasRole(['super_admin', 'admin', 'pm']) || 
+        // Check if user has view permission or is a team member
+        return $user->hasPermission('team.view') ||
                $team->members()->where('user_id', $user->id)->exists();
     }
 
@@ -38,7 +38,7 @@ class TeamPolicy
      */
     public function create(User $user)
     {
-        return $user->hasRole(['super_admin', 'admin', 'pm']);
+        return $user->hasPermission('team.create');
     }
 
     /**
@@ -51,8 +51,8 @@ class TeamPolicy
             return false;
         }
 
-        // Check if user is team leader or has management role
-        return $user->hasRole(['super_admin', 'admin', 'pm']) || 
+        // Check if user has update permission or is team leader
+        return $user->hasPermission('team.update') ||
                $team->members()->where('user_id', $user->id)->where('role', 'leader')->exists();
     }
 
@@ -66,8 +66,7 @@ class TeamPolicy
             return false;
         }
 
-        // Only super_admin and admin can delete teams
-        return $user->hasRole(['super_admin', 'admin']);
+        return $user->hasPermission('team.delete');
     }
 
     /**
@@ -80,8 +79,8 @@ class TeamPolicy
             return false;
         }
 
-        // Check if user is team leader or has management role
-        return $user->hasRole(['super_admin', 'admin', 'pm']) || 
+        // Check if user has member-management permission or is team leader
+        return $user->hasPermission('team.member.add') ||
                $team->members()->where('user_id', $user->id)->where('role', 'leader')->exists();
     }
 
@@ -95,8 +94,8 @@ class TeamPolicy
             return false;
         }
 
-        // Check if user is team leader or has management role
-        return $user->hasRole(['super_admin', 'admin', 'pm']) || 
+        // Check if user has member-management permission or is team leader
+        return $user->hasPermission('team.member.remove') ||
                $team->members()->where('user_id', $user->id)->where('role', 'leader')->exists();
     }
 
@@ -110,8 +109,8 @@ class TeamPolicy
             return false;
         }
 
-        // Only team leaders and management can assign roles
-        return $user->hasRole(['super_admin', 'admin', 'pm']) || 
+        // Only permission holders and team leaders can assign roles
+        return $user->hasPermission('team.member.update-role') ||
                $team->members()->where('user_id', $user->id)->where('role', 'leader')->exists();
     }
 

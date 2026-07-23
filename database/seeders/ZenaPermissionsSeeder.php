@@ -289,6 +289,7 @@ class ZenaPermissionsSeeder extends Seeder
         }
 
         $this->grantTemplateApplyToProjectManager();
+        $this->grantChangeRequestPermissionsToProjectManager();
     }
 
     /**
@@ -304,6 +305,43 @@ class ZenaPermissionsSeeder extends Seeder
         }
 
         $permissionIds = Permission::whereIn('code', ['template.view', 'template.apply'])
+            ->pluck('id')
+            ->all();
+
+        if (empty($permissionIds)) {
+            return;
+        }
+
+        $pmRole->permissions()->syncWithoutDetaching($permissionIds);
+    }
+
+    /**
+     * PM cần tạo/xem/duyệt/từ chối Change Request cho dự án mình quản lý --
+     * mirrors the intent already expressed (but never actually enforced, due
+     * to AUD-22's PermissionSeeder name-column bug) by the legacy
+     * change_request.{create,read,approve,reject} grant in PermissionSeeder.
+     *
+     * Scope note: deliberately does NOT include change-request.submit or
+     * change-request.apply -- PM can create/approve/reject but not move a CR
+     * to submitted status themselves, nor apply an approved one. Confirm
+     * with business whether this separation-of-duties is intentional before
+     * widening (see AUD-22/AUD-23 in
+     * docs/audits/2026-07-23-end-to-end-operational-audit.md).
+     */
+    private function grantChangeRequestPermissionsToProjectManager(): void
+    {
+        $pmRole = Role::where('name', 'Project Manager')->first();
+
+        if (!$pmRole) {
+            return;
+        }
+
+        $permissionIds = Permission::whereIn('code', [
+            'change-request.view',
+            'change-request.create',
+            'change-request.approve',
+            'change-request.reject',
+        ])
             ->pluck('id')
             ->all();
 

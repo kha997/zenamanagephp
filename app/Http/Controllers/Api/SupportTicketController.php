@@ -108,12 +108,27 @@ class SupportTicketController extends Controller
             return ErrorEnvelopeService::notFoundError('Support ticket', ErrorEnvelopeService::getCurrentRequestId());
         }
 
+        $user = $request->user();
+        $isOwner = $user && (string) $user->id === (string) $ticket->user_id;
+        $isAssignee = $user && $ticket->assigned_to && (string) $user->id === (string) $ticket->assigned_to;
+        $isStaffManager = $user && $user->hasAnyRole(['super_admin', 'admin']);
+
+        if (!$isOwner && !$isAssignee && !$isStaffManager) {
+            return ErrorEnvelopeService::error(
+                'FORBIDDEN',
+                'You do not have permission to update this ticket',
+                [],
+                403,
+                ErrorEnvelopeService::getCurrentRequestId()
+            );
+        }
+
         $payload = $request->validate([
             'status' => 'required|string',
             'assigned_to' => 'nullable|string',
         ]);
 
-        if ($payload['assigned_to']) {
+        if (!empty($payload['assigned_to'] ?? null)) {
             $assignedTo = User::where('id', $payload['assigned_to'])
                 ->where('tenant_id', $tenantId)
                 ->first();

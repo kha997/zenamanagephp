@@ -85,7 +85,7 @@ class PermissionSeeder extends Seeder
         foreach ($permissions as $permData) {
             Permission::firstOrCreate(
                 ['code' => $permData['code']],
-                $permData
+                $permData + ['name' => $permData['code']]
             );
         }
 

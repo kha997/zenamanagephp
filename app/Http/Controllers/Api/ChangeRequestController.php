@@ -697,7 +697,9 @@ class ChangeRequestController extends BaseApiController
                         $project->increment('budget_total', $request->input('approved_cost'));
                     }
                     if ($request->input('approved_schedule_days')) {
-                        $project->increment('end_date', $request->input('approved_schedule_days'));
+                        $project->end_date = \Carbon\Carbon::parse($project->end_date)
+                            ->addDays((int) $request->input('approved_schedule_days'));
+                        $project->save();
                     }
                 }
             }

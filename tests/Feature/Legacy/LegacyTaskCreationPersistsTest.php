@@ -88,7 +88,11 @@ class LegacyTaskCreationPersistsTest extends TestCase
             'name' => 'Should be blocked',
         ]);
 
-        $response->assertStatus(403);
+        // RoleBasedAccessControlMiddleware::deny() sends non-JSON (web) requests
+        // a redirect back with a flash error, not a raw 403 — see
+        // app/Http/Middleware/RoleBasedAccessControlMiddleware.php.
+        $response->assertRedirect();
+        $response->assertSessionHas('error');
         $this->assertDatabaseMissing('tasks', [
             'name' => 'Should be blocked',
         ]);

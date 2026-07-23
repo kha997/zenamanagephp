@@ -61,6 +61,21 @@
                         <td>
                             @if ($lead->status === 'new')
                                 <details>
+                                    <summary class="operator-link cursor-pointer text-sm">Sửa</summary>
+                                    <form method="POST" action="{{ route('operator.crm.leads.update', $lead->id) }}" class="mt-2 space-y-2">
+                                        @csrf
+                                        @method('PUT')
+                                        <input name="contact_hint" type="text" class="operator-input" placeholder="Liên hệ (tên/SĐT/Zalo) *" value="{{ $lead->contact_hint }}" required>
+                                        <select name="source" class="operator-select">
+                                            @foreach (['zalo' => 'Zalo', 'facebook' => 'Facebook', 'hotline' => 'Hotline', 'referral' => 'Giới thiệu', 'website' => 'Website', 'walk_in' => 'Ghé văn phòng', 'other' => 'Khác'] as $value => $label)
+                                                <option value="{{ $value }}" @selected($lead->source === $value)>{{ $label }}</option>
+                                            @endforeach
+                                        </select>
+                                        <textarea name="project_description" class="operator-textarea" placeholder="Mô tả nhu cầu">{{ $lead->project_description }}</textarea>
+                                        <button type="submit" class="operator-button operator-button-primary">Lưu</button>
+                                    </form>
+                                </details>
+                                <details>
                                     <summary class="operator-link cursor-pointer text-sm">Chuyển thành cơ hội</summary>
                                     <form method="POST" action="{{ route('operator.crm.leads.convert', $lead->id) }}" class="mt-2 space-y-2" data-ai-lead-suggest-form data-lead-id="{{ $lead->id }}">
                                         @csrf

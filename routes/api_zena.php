@@ -358,6 +358,7 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
         Route::group(['prefix' => 'crm'], function () {
             Route::get('/leads', [\App\Http\Controllers\Api\LeadController::class, 'index'])->middleware('rbac:crm.view')->name('crm.leads.index');
             Route::post('/leads', [\App\Http\Controllers\Api\LeadController::class, 'store'])->middleware('rbac:crm.manage')->name('crm.leads.store');
+            Route::put('/leads/{id}', [\App\Http\Controllers\Api\LeadController::class, 'update'])->middleware('rbac:crm.manage')->name('crm.leads.update');
             Route::post('/leads/{id}/convert', [\App\Http\Controllers\Api\LeadController::class, 'convert'])->middleware('rbac:crm.manage')->name('crm.leads.convert');
             Route::post('/leads/{id}/discard', [\App\Http\Controllers\Api\LeadController::class, 'discard'])->middleware('rbac:crm.manage')->name('crm.leads.discard');
 

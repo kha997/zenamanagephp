@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\SubmittalTransitionConflictException;
+use App\Exceptions\SubmittalTransitionNotAllowedException;
 use App\Http\Controllers\Api\BaseApiController as ApiBaseController;
 use App\Models\Project;
 use App\Models\Submittal;
+use App\Services\SubmittalLifecycleService;
 use App\Services\ZenaAuditLogger;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
@@ -13,11 +17,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class SubmittalController extends ApiBaseController
 {
-    public function __construct(private ZenaAuditLogger $auditLogger)
-    {
+    public function __construct(
+        private ZenaAuditLogger $auditLogger,
+        private SubmittalLifecycleService $lifecycle
+    ) {
     }
 
     private function tenantId(): string
@@ -67,10 +74,12 @@ class SubmittalController extends ApiBaseController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
+
+            $this->authorize('viewAny', Submittal::class);
 
             $query = $this->submittalQuery();
 
@@ -105,6 +114,8 @@ class SubmittalController extends ApiBaseController
             $submittals = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
             return $this->listSuccessResponse($submittals, 'Submittals retrieved successfully');
+        } catch (AuthorizationException $e) {
+            return $this->errorResponse($e->getMessage() ?: 'Forbidden', 403);
         } catch (\Exception $e) {
             return $this->serverError('Failed to retrieve submittals: ' . $e->getMessage());
         }
@@ -117,10 +128,12 @@ class SubmittalController extends ApiBaseController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
+
+            $this->authorize('create', Submittal::class);
 
             $validator = Validator::make($request->all(), [
                 'project_id' => 'required|exists:projects,id',
@@ -171,6 +184,8 @@ class SubmittalController extends ApiBaseController
             );
 
             return $this->successResponse($submittal, 'Submittal created successfully', 201);
+        } catch (AuthorizationException $e) {
+            return $this->errorResponse($e->getMessage() ?: 'Forbidden', 403);
         } catch (\Exception $e) {
             return $this->serverError('Failed to create submittal: ' . $e->getMessage());
         }
@@ -183,7 +198,7 @@ class SubmittalController extends ApiBaseController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
@@ -195,7 +210,11 @@ class SubmittalController extends ApiBaseController
                 'documents',
             ]);
 
+            $this->authorize('view', $submittal);
+
             return $this->successResponse($submittal, 'Submittal retrieved successfully');
+        } catch (AuthorizationException $e) {
+            return $this->errorResponse($e->getMessage() ?: 'Forbidden', 403);
         } catch (ModelNotFoundException $e) {
             return $this->notFound('Submittal not found');
         } catch (\Exception $e) {
@@ -210,12 +229,13 @@ class SubmittalController extends ApiBaseController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
 
             $submittal = $this->submittalForTenant($id);
+            $this->authorize('update', $submittal);
 
             $validator = Validator::make($request->all(), [
                 'title' => 'sometimes|string|max:255',
@@ -232,10 +252,12 @@ class SubmittalController extends ApiBaseController
                 return $this->validationError($validator->errors());
             }
 
-            $submittal->update($request->only([
+            $data = $request->only([
                 'title', 'description', 'submittal_type', 'specification_section',
-                'due_date', 'contractor', 'manufacturer', 'status'
-            ]));
+                'due_date', 'contractor', 'manufacturer',
+            ]);
+
+            $submittal = $this->lifecycle->updateContent($submittal, $data, ['actor_user_id' => $user->id]);
 
             $submittal->load(['project:id,name', 'submittedBy:id,name', 'reviewedBy:id,name']);
 
@@ -250,6 +272,10 @@ class SubmittalController extends ApiBaseController
             );
 
             return $this->successResponse($submittal, 'Submittal updated successfully');
+        } catch (AuthorizationException $e) {
+            return $this->errorResponse($e->getMessage() ?: 'Forbidden', 403);
+        } catch (SubmittalTransitionNotAllowedException $e) {
+            return $this->validationError(['status' => [$e->getMessage()]]);
         } catch (ModelNotFoundException $e) {
             return $this->notFound('Submittal not found');
         } catch (\Exception $e) {
@@ -264,12 +290,17 @@ class SubmittalController extends ApiBaseController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
 
             $submittal = $this->submittalForTenant($id);
+            $this->authorize('delete', $submittal);
+
+            if ($submittal->status !== Submittal::STATUS_DRAFT) {
+                return $this->errorResponse('Only draft submittals can be deleted', 400);
+            }
 
             $projectId = $submittal->project_id;
             $submittal->delete();
@@ -285,6 +316,8 @@ class SubmittalController extends ApiBaseController
             );
 
             return $this->successResponse(null, 'Submittal deleted successfully');
+        } catch (AuthorizationException $e) {
+            return $this->errorResponse($e->getMessage() ?: 'Forbidden', 403);
         } catch (ModelNotFoundException $e) {
             return $this->notFound('Submittal not found');
         } catch (\Exception $e) {
@@ -299,20 +332,29 @@ class SubmittalController extends ApiBaseController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
 
             $submittal = $this->submittalForTenant($id);
+            $this->authorize('submit', $submittal);
 
-            if ($submittal->status !== 'draft') {
-                return $this->errorResponse('Only draft submittals can be submitted', 400);
+            $validator = Validator::make($request->all(), [
+                'revision_summary' => [
+                    Rule::requiredIf($submittal->status === Submittal::STATUS_REVISING),
+                    'nullable',
+                    'string',
+                ],
+            ]);
+
+            if ($validator->fails()) {
+                return $this->validationError($validator->errors());
             }
 
-            $submittal->update([
-                'status' => 'submitted',
-                'submitted_at' => now(),
+            $submittal = $this->lifecycle->submit($submittal, [
+                'actor_user_id' => $user->id,
+                'revision_summary' => $request->input('revision_summary'),
             ]);
 
             $submittal->load(['project:id,name', 'submittedBy:id,name']);
@@ -328,10 +370,52 @@ class SubmittalController extends ApiBaseController
             );
 
             return $this->successResponse($submittal, 'Submittal submitted successfully');
+        } catch (AuthorizationException $e) {
+            return $this->errorResponse($e->getMessage() ?: 'Forbidden', 403);
+        } catch (SubmittalTransitionNotAllowedException $e) {
+            return $this->errorResponse($e->getMessage(), 400);
         } catch (ModelNotFoundException $e) {
             return $this->notFound('Submittal not found');
         } catch (\Exception $e) {
             return $this->serverError('Failed to submit submittal: ' . $e->getMessage());
+        }
+    }
+
+    public function startRevision(Request $request, string $id): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+
+            if (!$user) {
+                return $this->unauthorized('Authentication required');
+            }
+
+            $submittal = $this->submittalForTenant($id);
+            $this->authorize('startRevision', $submittal);
+
+            $submittal = $this->lifecycle->startRevision($submittal, ['actor_user_id' => $user->id]);
+
+            $submittal->load(['project:id,name', 'submittedBy:id,name']);
+
+            $this->auditLogger->log(
+                $request,
+                'zena.submittal.start_revision',
+                'submittal',
+                (string) $submittal->id,
+                200,
+                $submittal->project_id,
+                $this->tenantId()
+            );
+
+            return $this->successResponse($submittal, 'Submittal reopened for revision');
+        } catch (AuthorizationException $e) {
+            return $this->errorResponse($e->getMessage() ?: 'Forbidden', 403);
+        } catch (SubmittalTransitionNotAllowedException $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        } catch (ModelNotFoundException $e) {
+            return $this->notFound('Submittal not found');
+        } catch (\Exception $e) {
+            return $this->serverError('Failed to start revision: ' . $e->getMessage());
         }
     }
 
@@ -342,16 +426,12 @@ class SubmittalController extends ApiBaseController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
 
             $submittal = $this->submittalForTenant($id);
-
-            if (!in_array($submittal->status, [\App\Models\Submittal::STATUS_SUBMITTED, \App\Models\Submittal::STATUS_PENDING_REVIEW], true)) {
-                return $this->errorResponse('Only submitted or pending_review submittals can be reviewed', 400);
-            }
 
             $reviewStatus = $request->input('review_status') ?? $request->input('status');
             $reviewComments = $request->input('review_comments') ?? $request->input('review_notes');
@@ -361,7 +441,7 @@ class SubmittalController extends ApiBaseController
                 'review_comments' => $reviewComments,
                 'review_notes' => $request->input('review_notes'),
             ], [
-                'review_status' => 'required|in:approved,rejected,revised',
+                'review_status' => 'required|in:approved,rejected',
                 'review_comments' => 'required|string',
                 'review_notes' => 'nullable|string',
             ]);
@@ -370,13 +450,24 @@ class SubmittalController extends ApiBaseController
                 return $this->validationError($validator->errors());
             }
 
-            $submittal->update([
-                'status' => $reviewStatus,
+            $ability = $reviewStatus === 'approved' ? 'approve' : 'reject';
+            $this->authorize($ability, $submittal);
+
+            $context = ['actor_user_id' => $user->id];
+
+            $submittal = $reviewStatus === 'approved'
+                ? $this->lifecycle->approve($submittal, $context + ['approval_comments' => $reviewComments])
+                : $this->lifecycle->reject($submittal, $context + [
+                    'rejection_reason' => $reviewComments,
+                    'rejection_comments' => $request->input('review_notes'),
+                ]);
+
+            $submittal->forceFill([
                 'review_comments' => $reviewComments,
                 'review_notes' => $request->input('review_notes'),
                 'reviewed_by' => $user->id,
                 'reviewed_at' => now(),
-            ]);
+            ])->save();
 
             $submittal->load(['project:id,name', 'submittedBy:id,name', 'reviewedBy:id,name']);
 
@@ -391,6 +482,12 @@ class SubmittalController extends ApiBaseController
             );
 
             return $this->successResponse($submittal, 'Submittal reviewed successfully');
+        } catch (AuthorizationException $e) {
+            return $this->errorResponse($e->getMessage() ?: 'Forbidden', 403);
+        } catch (SubmittalTransitionNotAllowedException $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        } catch (SubmittalTransitionConflictException $e) {
+            return $this->errorResponse($e->getMessage(), 409);
         } catch (ModelNotFoundException $e) {
             return $this->notFound('Submittal not found');
         } catch (\Exception $e) {
@@ -405,16 +502,13 @@ class SubmittalController extends ApiBaseController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
 
             $submittal = $this->submittalForTenant($id);
-
-            if (!in_array($submittal->status, [\App\Models\Submittal::STATUS_SUBMITTED, \App\Models\Submittal::STATUS_PENDING_REVIEW], true)) {
-                return $this->errorResponse('Only submitted or pending_review submittals can be approved', 400);
-            }
+            $this->authorize('approve', $submittal);
 
             $validator = Validator::make($request->all(), [
                 'approval_comments' => 'nullable|string',
@@ -424,11 +518,9 @@ class SubmittalController extends ApiBaseController
                 return $this->validationError($validator->errors());
             }
 
-            $submittal->update([
-                'status' => 'approved',
+            $submittal = $this->lifecycle->approve($submittal, [
+                'actor_user_id' => $user->id,
                 'approval_comments' => $request->input('approval_comments'),
-                'approved_by' => $user->id,
-                'approved_at' => now(),
             ]);
 
             $submittal->load(['project:id,name', 'submittedBy:id,name', 'reviewedBy:id,name']);
@@ -444,6 +536,12 @@ class SubmittalController extends ApiBaseController
             );
 
             return $this->successResponse($submittal, 'Submittal approved successfully');
+        } catch (AuthorizationException $e) {
+            return $this->errorResponse($e->getMessage() ?: 'Forbidden', 403);
+        } catch (SubmittalTransitionNotAllowedException $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        } catch (SubmittalTransitionConflictException $e) {
+            return $this->errorResponse($e->getMessage(), 409);
         } catch (ModelNotFoundException $e) {
             return $this->notFound('Submittal not found');
         } catch (\Exception $e) {
@@ -458,16 +556,13 @@ class SubmittalController extends ApiBaseController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
 
             $submittal = $this->submittalForTenant($id);
-
-            if (!in_array($submittal->status, [\App\Models\Submittal::STATUS_SUBMITTED, \App\Models\Submittal::STATUS_PENDING_REVIEW], true)) {
-                return $this->errorResponse('Only submitted or pending_review submittals can be rejected', 400);
-            }
+            $this->authorize('reject', $submittal);
 
             $validator = Validator::make($request->all(), [
                 'rejection_reason' => 'required|string',
@@ -478,12 +573,10 @@ class SubmittalController extends ApiBaseController
                 return $this->validationError($validator->errors());
             }
 
-            $submittal->update([
-                'status' => 'rejected',
+            $submittal = $this->lifecycle->reject($submittal, [
+                'actor_user_id' => $user->id,
                 'rejection_reason' => $request->input('rejection_reason'),
                 'rejection_comments' => $request->input('rejection_comments'),
-                'rejected_by' => $user->id,
-                'rejected_at' => now(),
             ]);
 
             $submittal->load(['project:id,name', 'submittedBy:id,name', 'reviewedBy:id,name']);
@@ -499,6 +592,12 @@ class SubmittalController extends ApiBaseController
             );
 
             return $this->successResponse($submittal, 'Submittal rejected successfully');
+        } catch (AuthorizationException $e) {
+            return $this->errorResponse($e->getMessage() ?: 'Forbidden', 403);
+        } catch (SubmittalTransitionNotAllowedException $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        } catch (SubmittalTransitionConflictException $e) {
+            return $this->errorResponse($e->getMessage(), 409);
         } catch (ModelNotFoundException $e) {
             return $this->notFound('Submittal not found');
         } catch (\Exception $e) {

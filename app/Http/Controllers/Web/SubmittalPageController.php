@@ -163,6 +163,22 @@ class SubmittalPageController extends Controller
         return redirect()->route('operator.submittals.show', $id)->with('success', 'Đã lưu thay đổi');
     }
 
+    public function startRevision(Request $request, string $id): RedirectResponse
+    {
+        $submittal = $this->submittalForTenant($id);
+        $this->authorize('startRevision', $submittal);
+
+        try {
+            /** @var \App\Models\User $user */
+            $user = Auth::user();
+            $this->lifecycle->startRevision($submittal, ['actor_user_id' => $user->id]);
+        } catch (SubmittalTransitionNotAllowedException $e) {
+            return back()->with('error', 'Chỉ hồ sơ bị từ chối mới mở lại để sửa được.');
+        }
+
+        return redirect()->route('operator.submittals.show', $id)->with('success', 'Đã mở lại để sửa');
+    }
+
     public function submit(Request $request, string $id, ApiSubmittalController $apiController): RedirectResponse
     {
         try {

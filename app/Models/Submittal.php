@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Traits\TenantScope;
 use Illuminate\Support\Str;
 
@@ -56,6 +57,7 @@ class Submittal extends Model
         'rejection_comments',
         'created_by',
         'attachments',
+        'current_revision_no',
     ];
 
     public const STATUS_DRAFT = 'draft';
@@ -63,20 +65,25 @@ class Submittal extends Model
     public const STATUS_PENDING_REVIEW = 'pending_review';
     public const STATUS_APPROVED = 'approved';
     public const STATUS_REJECTED = 'rejected';
-    public const STATUS_REVISED = 'revised';
+    public const STATUS_REVISING = 'revising';
 
-    public const STATUS_TRANSITIONS = [
-        self::STATUS_DRAFT         => [self::STATUS_SUBMITTED],
-        self::STATUS_SUBMITTED     => [self::STATUS_PENDING_REVIEW, self::STATUS_APPROVED, self::STATUS_REJECTED, self::STATUS_REVISED],
-        self::STATUS_PENDING_REVIEW => [self::STATUS_APPROVED, self::STATUS_REJECTED],
-        self::STATUS_APPROVED      => [],
-        self::STATUS_REJECTED      => [],
-        self::STATUS_REVISED       => [self::STATUS_SUBMITTED],
+    /** @var array<string, list<string>> */
+    public const TRANSITIONS = [
+        self::STATUS_DRAFT     => [self::STATUS_SUBMITTED],
+        self::STATUS_SUBMITTED => [self::STATUS_APPROVED, self::STATUS_REJECTED],
+        self::STATUS_REJECTED  => [self::STATUS_REVISING],
+        self::STATUS_REVISING  => [self::STATUS_SUBMITTED],
+        self::STATUS_APPROVED  => [],
     ];
+
+    public static function canTransition(string $from, string $to): bool
+    {
+        return in_array($to, self::TRANSITIONS[$from] ?? [], true);
+    }
 
     public function canTransitionTo(string $newStatus): bool
     {
-        return in_array($newStatus, self::STATUS_TRANSITIONS[$this->status] ?? [], true);
+        return self::canTransition($this->status, $newStatus);
     }
 
     protected $casts = [
@@ -86,6 +93,7 @@ class Submittal extends Model
         'approved_at' => 'datetime',
         'rejected_at' => 'datetime',
         'attachments' => 'array',
+        'current_revision_no' => 'integer',
     ];
 
     /**
@@ -139,7 +147,7 @@ class Submittal extends Model
             'pending_review' => 'bg-yellow-100 text-yellow-800',
             'approved' => 'bg-green-100 text-green-800',
             'rejected' => 'bg-red-100 text-red-800',
-            'revised' => 'bg-purple-100 text-purple-800',
+            'revising' => 'bg-purple-100 text-purple-800',
             default => 'bg-gray-100 text-gray-800',
         };
     }
@@ -149,7 +157,7 @@ class Submittal extends Model
      */
     public function getIsOverdueAttribute(): bool
     {
-        return $this->due_date && $this->due_date->isPast() && !in_array($this->status, ['approved', 'rejected', 'revised']);
+        return $this->due_date && $this->due_date->isPast() && !in_array($this->status, ['approved', 'rejected'], true);
     }
 
     /**
@@ -166,7 +174,7 @@ class Submittal extends Model
     public function scopeOverdue($query)
     {
         return $query->where('due_date', '<', now())
-            ->whereNotIn('status', ['approved', 'rejected', 'revised']);
+            ->whereNotIn('status', ['approved', 'rejected']);
     }
 
     /**
@@ -181,5 +189,15 @@ class Submittal extends Model
     {
         return $this->hasMany(Document::class, 'linked_entity_id')
             ->where('linked_entity_type', Document::ENTITY_TYPE_SUBMITTAL);
+    }
+
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(SubmittalRevision::class, 'submittal_id')->orderBy('revision_no');
+    }
+
+    public function currentRevision(): HasOne
+    {
+        return $this->hasOne(SubmittalRevision::class, 'submittal_id')->ofMany('revision_no', 'max');
     }
 }

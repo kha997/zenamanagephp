@@ -24,7 +24,7 @@ class SubmittalFactory extends Factory
             'pending_review',
             'approved',
             'rejected',
-            'revised',
+            'revising',
         ];
         $types = [
             'construction_material',

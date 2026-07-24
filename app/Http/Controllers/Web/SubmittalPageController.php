@@ -2,22 +2,30 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Exceptions\SubmittalTransitionNotAllowedException;
 use App\Http\Controllers\Api\SubmittalController as ApiSubmittalController;
 use App\Http\Controllers\Controller;
 use App\Models\Project;
 use App\Models\Submittal;
 use App\Models\Vendor;
+use App\Services\SubmittalLifecycleService;
+use App\Support\SubmittalContentRules;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Throwable;
 
 class SubmittalPageController extends Controller
 {
+    public function __construct(private SubmittalLifecycleService $lifecycle)
+    {
+    }
+
     public function index(Request $request): View
     {
         $tenantId = (string) Auth::user()?->tenant_id;
@@ -116,6 +124,43 @@ class SubmittalPageController extends Controller
                 ->orderBy('name')
                 ->get(['id', 'tenant_id', 'code', 'name']),
         ]);
+    }
+
+    public function update(Request $request, string $id): RedirectResponse
+    {
+        $submittal = $this->submittalForTenant($id);
+        $this->authorize('update', $submittal);
+
+        $tenantId = (string) Auth::user()?->tenant_id;
+        $rules = SubmittalContentRules::rules();
+
+        if ($request->input('contractor') !== $submittal->contractor) {
+            $rules['contractor'][] = Rule::exists('vendors', 'name')->where('tenant_id', $tenantId);
+        }
+        if ($request->input('manufacturer') !== $submittal->manufacturer) {
+            $rules['manufacturer'][] = Rule::exists('vendors', 'name')->where('tenant_id', $tenantId);
+        }
+
+        $validator = Validator::make($request->all(), $rules);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator, 'submittalUpdate')->withInput();
+        }
+
+        $data = $request->only([
+            'title', 'description', 'submittal_type', 'specification_section',
+            'due_date', 'contractor', 'manufacturer',
+        ]);
+
+        try {
+            /** @var \App\Models\User $user */
+            $user = Auth::user();
+            $this->lifecycle->updateContent($submittal, $data, ['actor_user_id' => $user->id]);
+        } catch (SubmittalTransitionNotAllowedException $e) {
+            return back()->with('error', 'Không thể sửa nội dung ở trạng thái hiện tại.');
+        }
+
+        return redirect()->route('operator.submittals.show', $id)->with('success', 'Đã lưu thay đổi');
     }
 
     public function submit(Request $request, string $id, ApiSubmittalController $apiController): RedirectResponse

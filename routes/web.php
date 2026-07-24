@@ -851,6 +851,7 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::get('/submittals/create', [App\Http\Controllers\Web\SubmittalPageController::class, 'create'])->middleware('rbac:submittal.create')->name('submittals.create');
     Route::post('/submittals', [App\Http\Controllers\Web\SubmittalPageController::class, 'store'])->middleware('rbac:submittal.create')->name('submittals.store');
     Route::get('/submittals/{id}', [App\Http\Controllers\Web\SubmittalPageController::class, 'show'])->middleware('rbac:submittal.view')->name('submittals.show');
+    Route::put('/submittals/{id}', [App\Http\Controllers\Web\SubmittalPageController::class, 'update'])->middleware('rbac:submittal.edit')->name('submittals.update');
     Route::post('/submittals/{id}/submit', [App\Http\Controllers\Web\SubmittalPageController::class, 'submit'])->middleware('rbac:submittal.submit')->name('submittals.submit');
     Route::post('/submittals/{id}/approve', [App\Http\Controllers\Web\SubmittalPageController::class, 'approve'])->middleware('rbac:submittal.approve')->name('submittals.approve');
     Route::post('/submittals/{id}/reject', [App\Http\Controllers\Web\SubmittalPageController::class, 'reject'])->middleware('rbac:submittal.reject')->name('submittals.reject');

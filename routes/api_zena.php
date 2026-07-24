@@ -295,6 +295,7 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::put('/{id}', [\App\Http\Controllers\Api\SubmittalController::class, 'update'])->middleware('rbac:submittal.edit')->name('submittals.update');
             Route::delete('/{id}', [\App\Http\Controllers\Api\SubmittalController::class, 'destroy'])->middleware('rbac:submittal.delete')->name('submittals.destroy');
             Route::post('/{id}/submit', [\App\Http\Controllers\Api\SubmittalController::class, 'submit'])->middleware('rbac:submittal.submit')->name('submittals.submit');
+            Route::post('/{id}/start-revision', [\App\Http\Controllers\Api\SubmittalController::class, 'startRevision'])->middleware('rbac:submittal.submit')->name('submittals.start-revision');
             Route::post('/{id}/review', [\App\Http\Controllers\Api\SubmittalController::class, 'review'])->middleware('rbac:submittal.review')->name('submittals.review');
             Route::post('/{id}/approve', [\App\Http\Controllers\Api\SubmittalController::class, 'approve'])->middleware('rbac:submittal.approve')->name('submittals.approve');
             Route::post('/{id}/reject', [\App\Http\Controllers\Api\SubmittalController::class, 'reject'])->middleware('rbac:submittal.reject')->name('submittals.reject');

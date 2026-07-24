@@ -63,6 +63,7 @@ class PerformanceTest extends TestCase
 
         $this->tenant = $this->apiFeatureTenant;
         $this->user = $this->apiFeatureUser;
+        $this->grantAdditionalPermissions($this->user, ['submittal.view']);
 
         $this->project = Project::factory()->create([
             'tenant_id' => $this->tenant->id,
@@ -338,4 +339,26 @@ class PerformanceTest extends TestCase
         return $response->json('data', []);
     }
 
+    /**
+     * @param list<string> $permissionNames
+     */
+    private function grantAdditionalPermissions(User $user, array $permissionNames): void
+    {
+        foreach ($user->roles as $role) {
+            foreach ($permissionNames as $permissionName) {
+                $parts = explode('.', $permissionName);
+                $permission = \App\Models\Permission::firstOrCreate(
+                    ['name' => $permissionName],
+                    [
+                        'code' => $permissionName,
+                        'module' => $parts[0] ?? $permissionName,
+                        'action' => $parts[1] ?? '*',
+                        'description' => ucfirst(str_replace('.', ' ', $permissionName)),
+                    ]
+                );
+
+                $role->permissions()->syncWithoutDetaching($permission->id);
+            }
+        }
+    }
 }

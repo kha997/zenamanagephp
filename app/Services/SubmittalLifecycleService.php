@@ -20,6 +20,7 @@ class SubmittalLifecycleService
     public function updateContent(Submittal $submittal, array $data, array $context): Submittal
     {
         DB::transaction(function () use ($submittal, $data, $context) {
+            /** @var Submittal $locked */
             $locked = Submittal::query()
                 ->where('id', $submittal->id)
                 ->where('tenant_id', $submittal->tenant_id)
@@ -68,6 +69,7 @@ class SubmittalLifecycleService
         $isResubmit = false;
 
         DB::transaction(function () use ($submittal, $context, &$isResubmit) {
+            /** @var Submittal $locked */
             $locked = Submittal::query()
                 ->where('id', $submittal->id)
                 ->where('tenant_id', $submittal->tenant_id)
@@ -163,6 +165,7 @@ class SubmittalLifecycleService
         ?string $decisionComments = null
     ): Submittal {
         DB::transaction(function () use ($submittal, $context, $targetStatus, $decision, $comments, $decisionComments) {
+            /** @var Submittal $locked */
             $locked = Submittal::query()
                 ->where('id', $submittal->id)
                 ->where('tenant_id', $submittal->tenant_id)
@@ -233,6 +236,7 @@ class SubmittalLifecycleService
     public function startRevision(Submittal $submittal, array $context): Submittal
     {
         DB::transaction(function () use ($submittal, $context) {
+            /** @var Submittal $locked */
             $locked = Submittal::query()
                 ->where('id', $submittal->id)
                 ->where('tenant_id', $submittal->tenant_id)

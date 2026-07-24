@@ -28,7 +28,20 @@ class SubmittalLifecycleService
                 );
             }
 
-            $locked->update($data);
+            $allowedFields = array_flip([
+                'title',
+                'description',
+                'submittal_type',
+                'specification_section',
+                'due_date',
+                'contractor',
+                'manufacturer',
+                'file_url',
+                'attachments',
+            ]);
+            $safeData = array_intersect_key($data, $allowedFields);
+
+            $locked->update($safeData);
 
             EventRecord::query()->create([
                 'tenant_id' => (string) $locked->tenant_id,
@@ -37,7 +50,7 @@ class SubmittalLifecycleService
                 'aggregate_id' => (string) $locked->id,
                 'event_key' => 'submittal.content_updated',
                 'actor_user_id' => $context['actor_user_id'] ?? null,
-                'payload' => ['fields' => array_keys($data)],
+                'payload' => ['fields' => array_keys($safeData)],
                 'occurred_at' => now(),
             ]);
 
@@ -47,9 +60,9 @@ class SubmittalLifecycleService
 
     public function submit(Submittal $submittal, array $context): Submittal
     {
-        $isResubmit = $submittal->status === Submittal::STATUS_REVISING;
+        $isResubmit = false;
 
-        $submittal = DB::transaction(function () use ($submittal, $context) {
+        $submittal = DB::transaction(function () use ($submittal, $context, &$isResubmit) {
             $locked = Submittal::query()
                 ->where('id', $submittal->id)
                 ->where('tenant_id', $submittal->tenant_id)
@@ -97,6 +110,8 @@ class SubmittalLifecycleService
                 'payload' => ['revision_no' => $nextRevisionNo],
                 'occurred_at' => now(),
             ]);
+
+            $isResubmit = $nextRevisionNo > 1;
 
             return $locked->fresh();
         });

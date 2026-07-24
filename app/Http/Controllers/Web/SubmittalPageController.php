@@ -105,18 +105,17 @@ class SubmittalPageController extends Controller
 
     public function show(string $id): View
     {
+        $submittal = $this->submittalForTenant($id);
         $tenantId = (string) Auth::user()?->tenant_id;
 
-        $submittal = Submittal::query()
-            ->where('tenant_id', $tenantId)
-            ->with([
-                'project:id,tenant_id,name,code',
-                'submittedBy:id,name',
-                'reviewedBy:id,name',
-            ])
-            ->findOrFail($id);
-
-        return view('submittals.show', ['submittal' => $submittal]);
+        return view('submittals.show', [
+            'submittal' => $submittal,
+            'vendors' => Vendor::query()
+                ->where('tenant_id', $tenantId)
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'tenant_id', 'code', 'name']),
+        ]);
     }
 
     public function submit(Request $request, string $id, ApiSubmittalController $apiController): RedirectResponse
@@ -129,7 +128,7 @@ class SubmittalPageController extends Controller
             return back()->with('error', 'Không thể xử lý yêu cầu.');
         }
 
-        return $this->handleMutationResponse($response, route('operator.submittals.show', $id), 'Đã gửi duyệt');
+        return $this->handleMutationResponse($response, route('operator.submittals.show', $id), 'Đã gửi duyệt', 'submittalResubmit');
     }
 
     public function approve(Request $request, string $id, ApiSubmittalController $apiController): RedirectResponse
@@ -190,21 +189,36 @@ class SubmittalPageController extends Controller
         return $apiRequest;
     }
 
-    private function handleMutationResponse(JsonResponse $response, string $successUrl, string $successMessage): RedirectResponse
+    private function submittalForTenant(string $id): Submittal
+    {
+        $tenantId = (string) Auth::user()?->tenant_id;
+
+        return Submittal::query()
+            ->where('tenant_id', $tenantId)
+            ->with([
+                'project:id,tenant_id,name,code',
+                'submittedBy:id,name',
+                'reviewedBy:id,name',
+                'rejectedBy:id,name',
+            ])
+            ->findOrFail($id);
+    }
+
+    private function handleMutationResponse(JsonResponse $response, string $successUrl, string $successMessage, ?string $errorBag = null): RedirectResponse
     {
         if ($response->getStatusCode() >= 200 && $response->getStatusCode() < 300) {
             return redirect($successUrl)->with('success', $successMessage);
         }
 
-        return $this->handleErrorResponse($response);
+        return $this->handleErrorResponse($response, $errorBag);
     }
 
-    private function handleErrorResponse(JsonResponse $response): RedirectResponse
+    private function handleErrorResponse(JsonResponse $response, ?string $errorBag = null): RedirectResponse
     {
         $payload = $response->getData(true);
 
         if ($response->getStatusCode() === 422 && isset($payload['data']) && is_array($payload['data'])) {
-            return back()->withErrors($payload['data'])->withInput();
+            return back()->withErrors($payload['data'], $errorBag ?? 'default')->withInput();
         }
 
         return back()

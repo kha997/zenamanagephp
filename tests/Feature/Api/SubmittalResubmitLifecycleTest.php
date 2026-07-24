@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 use Tests\Traits\RouteNameTrait;
 
@@ -103,8 +104,20 @@ class SubmittalResubmitLifecycleTest extends TestCase
         ])->assertStatus(200);
     }
 
-    // 3. Double-submit
-    public function test_double_submit_after_revising_only_creates_one_new_revision(): void
+    // 3. Repeated submit call (sequential double-click / idempotency-under-repeated-call).
+    //
+    // True concurrent-request testing (two parallel processes racing on the same
+    // row lock) isn't attempted here: this test suite is synchronous, single-process
+    // PHPUnit with no precedent anywhere in tests/ for process forking (grep -rn
+    // "pcntl_fork|Process::start" tests/ returns nothing). The row-lock behavior
+    // itself is proven directly at the service layer by
+    // test_approve_conflicts_when_revision_already_decided in
+    // tests/Feature/Services/SubmittalLifecycleServiceDecisionTest.php, which
+    // manipulates the DB to simulate a decision made by another process mid-flight.
+    // This test instead verifies the real, valuable guarantee available at this
+    // layer: calling submit() twice in a row (e.g. a double-click) only ever
+    // creates one new revision.
+    public function test_repeated_submit_call_after_revising_only_creates_one_new_revision(): void
     {
         $submittal = $this->makeSubmittedSubmittal();
         $this->withZenaAuth()->postJson($this->zena('submittals.reject', ['id' => $submittal->id]), [
@@ -169,39 +182,76 @@ class SubmittalResubmitLifecycleTest extends TestCase
             ->assertStatus(404);
     }
 
-    // 6. Authorization
+    // 6. Authorization — each of the five mutating submittal permissions must be
+    // independently enforced: a user granted every OTHER submittal permission
+    // still gets 403 on the one endpoint whose permission they lack.
     public function test_actions_denied_without_matching_permission(): void
     {
         $tenant = $this->user->tenant_id;
-        $role = Role::firstOrCreate(
-            ['name' => 'submittal_viewer_only'],
-            ['scope' => Role::SCOPE_SYSTEM, 'allow_override' => true, 'is_active' => true]
-        );
-
-        $viewer = User::factory()->create(['tenant_id' => $tenant]);
-        $viewer->roles()->syncWithoutDetaching($role->id);
-        $viewerToken = $this->loginZenaUser($viewer);
-        $viewerHeaders = [
-            'Authorization' => 'Bearer ' . $viewerToken,
-            'X-Tenant-ID' => (string) $tenant,
-            'Accept' => 'application/json',
+        $allSubmittalPermissions = [
+            'submittal.view', 'submittal.create', 'submittal.edit', 'submittal.delete',
+            'submittal.submit', 'submittal.approve', 'submittal.reject',
         ];
 
-        $submittal = $this->makeSubmittedSubmittal();
+        $cases = [
+            ['permission' => 'submittal.edit', 'method' => 'putJson', 'route' => 'submittals.update', 'payload' => ['title' => 'x'], 'status' => 'draft'],
+            ['permission' => 'submittal.submit', 'method' => 'postJson', 'route' => 'submittals.submit', 'payload' => [], 'status' => 'draft'],
+            ['permission' => 'submittal.approve', 'method' => 'postJson', 'route' => 'submittals.approve', 'payload' => [], 'status' => 'submitted'],
+            ['permission' => 'submittal.reject', 'method' => 'postJson', 'route' => 'submittals.reject', 'payload' => ['rejection_reason' => 'x'], 'status' => 'submitted'],
+            ['permission' => 'submittal.delete', 'method' => 'deleteJson', 'route' => 'submittals.destroy', 'payload' => [], 'status' => 'draft'],
+        ];
 
-        // See test_cross_tenant_access_returns_404 for why this is required: the
-        // sanctum RequestGuard memoizes the user resolved during
-        // makeSubmittedSubmittal() above (as $this->user) for the rest of this
-        // test process unless the guard cache is cleared.
-        app('auth')->forgetGuards();
+        foreach ($cases as $case) {
+            $grantedPermissions = array_values(array_diff($allSubmittalPermissions, [$case['permission']]));
 
-        $this->withHeaders($viewerHeaders)
-            ->postJson($this->zena('submittals.approve', ['id' => $submittal->id]))
-            ->assertStatus(403);
+            $role = Role::create([
+                'name' => 'submittal_partial_' . str_replace('.', '_', $case['permission']),
+                'scope' => Role::SCOPE_SYSTEM,
+                'allow_override' => true,
+                'is_active' => true,
+            ]);
+
+            foreach ($grantedPermissions as $permissionName) {
+                $parts = explode('.', $permissionName);
+                $permission = \App\Models\Permission::firstOrCreate(['name' => $permissionName], [
+                    'code' => $permissionName,
+                    'module' => $parts[0] ?? $permissionName,
+                    'action' => $parts[1] ?? '*',
+                    'description' => ucfirst(str_replace('.', ' ', $permissionName)),
+                ]);
+                $role->permissions()->syncWithoutDetaching($permission->id);
+            }
+
+            $viewer = User::factory()->create(['tenant_id' => $tenant]);
+            $viewer->roles()->syncWithoutDetaching($role->id);
+            $viewerToken = $this->loginZenaUser($viewer);
+            $viewerHeaders = [
+                'Authorization' => 'Bearer ' . $viewerToken,
+                'X-Tenant-ID' => (string) $tenant,
+                'Accept' => 'application/json',
+            ];
+
+            $submittal = Submittal::factory()->create([
+                'project_id' => $this->project->id,
+                'created_by' => $this->user->id,
+                'tenant_id' => $tenant,
+                'status' => $case['status'],
+            ]);
+
+            // See test_cross_tenant_access_returns_404 for why this is required: the
+            // sanctum RequestGuard memoizes the resolved user for the rest of this
+            // test process unless the guard cache is cleared between identities.
+            app('auth')->forgetGuards();
+
+            $method = $case['method'];
+            $this->withHeaders($viewerHeaders)
+                ->{$method}($this->zena($case['route'], ['id' => $submittal->id]), $case['payload'])
+                ->assertStatus(403);
+        }
     }
 
-    // 7. Notification after commit
-    public function test_resubmit_notifies_last_rejector_and_logs_failure_gracefully(): void
+    // 7a. Notification after commit — happy path
+    public function test_resubmit_notifies_last_rejector(): void
     {
         $submittal = $this->makeSubmittedSubmittal();
 
@@ -220,6 +270,53 @@ class SubmittalResubmitLifecycleTest extends TestCase
             'user_id' => $this->user->id,
             'type' => 'submittal_resubmitted',
         ]);
+    }
+
+    // 7b. Notification after commit — creation failure is caught and logged, not
+    // swallowed silently, and the request still succeeds (notification runs after
+    // commit; a notification failure must never roll back or fail the resubmit).
+    public function test_resubmit_notification_failure_is_logged_not_swallowed(): void
+    {
+        Log::spy();
+
+        \App\Models\Notification::creating(function () {
+            throw new \RuntimeException('simulated notification failure');
+        });
+
+        $submittal = $this->makeSubmittedSubmittal();
+
+        $this->withZenaAuth()->postJson($this->zena('submittals.reject', ['id' => $submittal->id]), [
+            'rejection_reason' => 'Missing details',
+        ])->assertStatus(200);
+
+        $this->withZenaAuth()->postJson($this->zena('submittals.start-revision', ['id' => $submittal->id]))->assertStatus(200);
+
+        $response = $this->withZenaAuth()->postJson($this->zena('submittals.submit', ['id' => $submittal->id]), [
+            'revision_summary' => 'Added missing details',
+        ]);
+
+        $response->assertStatus(200);
+
+        Log::shouldHaveReceived('error')
+            ->once()
+            ->withArgs(function (string $message, array $context) use ($submittal) {
+                return $message === 'submittal.notification_failed'
+                    && ($context['submittal_id'] ?? null) === $submittal->id;
+            });
+    }
+
+    protected function tearDown(): void
+    {
+        // The `Notification::creating` listener registered in
+        // test_resubmit_notification_failure_is_logged_not_swallowed() above is a
+        // static Eloquent event binding that otherwise persists for the rest of
+        // the test process (PHPUnit runs test methods in one process), which
+        // would silently break every other test in this class that creates a
+        // Notification. Flush it after every test in this class as a blanket
+        // safeguard, regardless of declaration order.
+        \App\Models\Notification::flushEventListeners();
+
+        parent::tearDown();
     }
 
     // 8. Approved terminal

@@ -123,6 +123,147 @@ class SubmittalLifecycleService
         return $submittal;
     }
 
+    public function approve(Submittal $submittal, array $context): Submittal
+    {
+        return $this->decide(
+            $submittal,
+            $context,
+            Submittal::STATUS_APPROVED,
+            'approved',
+            $context['approval_comments'] ?? null
+        );
+    }
+
+    public function reject(Submittal $submittal, array $context): Submittal
+    {
+        return $this->decide(
+            $submittal,
+            $context,
+            Submittal::STATUS_REJECTED,
+            'rejected',
+            $context['rejection_reason'] ?? null,
+            $context['rejection_comments'] ?? null
+        );
+    }
+
+    private function decide(
+        Submittal $submittal,
+        array $context,
+        string $targetStatus,
+        string $decision,
+        ?string $comments,
+        ?string $decisionComments = null
+    ): Submittal {
+        return DB::transaction(function () use ($submittal, $context, $targetStatus, $decision, $comments, $decisionComments) {
+            $locked = Submittal::query()
+                ->where('id', $submittal->id)
+                ->where('tenant_id', $submittal->tenant_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (!Submittal::canTransition($locked->status, $targetStatus)) {
+                throw new SubmittalTransitionNotAllowedException(
+                    "Chỉ submitted mới có thể chuyển sang {$targetStatus}."
+                );
+            }
+
+            $revision = SubmittalRevision::query()
+                ->where('submittal_id', $locked->id)
+                ->where('revision_no', $locked->current_revision_no)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$revision) {
+                throw new SubmittalTransitionConflictException('Không tìm thấy revision đang chờ quyết định.');
+            }
+
+            $affected = SubmittalRevision::query()
+                ->where('id', $revision->id)
+                ->whereNull('decision')
+                ->update([
+                    'decision' => $decision,
+                    'decided_by' => $context['actor_user_id'] ?? null,
+                    'decided_at' => now(),
+                    'decision_comments' => $decisionComments ?? $comments,
+                ]);
+
+            if ($affected === 0) {
+                throw new SubmittalTransitionConflictException('Revision đã có quyết định trước đó.');
+            }
+
+            $mirror = ['status' => $targetStatus];
+
+            if ($decision === 'approved') {
+                $mirror['approved_by'] = $context['actor_user_id'] ?? null;
+                $mirror['approved_at'] = now();
+                $mirror['approval_comments'] = $comments;
+            } else {
+                $mirror['rejected_by'] = $context['actor_user_id'] ?? null;
+                $mirror['rejected_at'] = now();
+                $mirror['rejection_reason'] = $comments;
+                $mirror['rejection_comments'] = $decisionComments;
+            }
+
+            $locked->update($mirror);
+
+            EventRecord::query()->create([
+                'tenant_id' => (string) $locked->tenant_id,
+                'project_id' => $locked->project_id,
+                'aggregate_type' => 'submittal',
+                'aggregate_id' => (string) $locked->id,
+                'event_key' => "submittal.{$decision}",
+                'actor_user_id' => $context['actor_user_id'] ?? null,
+                'payload' => ['revision_no' => $locked->current_revision_no],
+                'occurred_at' => now(),
+            ]);
+
+            return $locked->fresh();
+        });
+    }
+
+    public function startRevision(Submittal $submittal, array $context): Submittal
+    {
+        return DB::transaction(function () use ($submittal, $context) {
+            $locked = Submittal::query()
+                ->where('id', $submittal->id)
+                ->where('tenant_id', $submittal->tenant_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (!Submittal::canTransition($locked->status, Submittal::STATUS_REVISING)) {
+                throw new SubmittalTransitionNotAllowedException(
+                    'Chỉ rejected mới mở lại để sửa được.'
+                );
+            }
+
+            $lastRevision = SubmittalRevision::query()
+                ->where('submittal_id', $locked->id)
+                ->orderByDesc('revision_no')
+                ->first();
+
+            $locked->update([
+                'status' => Submittal::STATUS_REVISING,
+                'title' => $lastRevision->title ?? $locked->title,
+                'description' => $lastRevision->description ?? $locked->description,
+                'file_url' => $lastRevision->file_url ?? $locked->file_url,
+                'attachments' => $lastRevision->attachment_manifest ?? $locked->attachments,
+            ]);
+
+            EventRecord::query()->create([
+                'tenant_id' => (string) $locked->tenant_id,
+                'project_id' => $locked->project_id,
+                'aggregate_type' => 'submittal',
+                'aggregate_id' => (string) $locked->id,
+                'event_key' => 'submittal.revision_started',
+                'actor_user_id' => $context['actor_user_id'] ?? null,
+                'payload' => [],
+                'occurred_at' => now(),
+            ]);
+
+            return $locked->fresh();
+        });
+    }
+
     private function notifyLastRejector(Submittal $submittal): void
     {
         try {

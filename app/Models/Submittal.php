@@ -11,6 +11,40 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Traits\TenantScope;
 use Illuminate\Support\Str;
 
+/**
+ * @property string $id
+ * @property string $tenant_id
+ * @property string $project_id
+ * @property string $submittal_number
+ * @property string|null $package_no
+ * @property string $title
+ * @property string $description
+ * @property string $submittal_type
+ * @property string|null $specification_section
+ * @property string $status
+ * @property \Illuminate\Support\Carbon|null $due_date
+ * @property string|null $contractor
+ * @property string|null $manufacturer
+ * @property string|null $file_url
+ * @property string|null $submitted_by
+ * @property \Carbon\Carbon|null $submitted_at
+ * @property string|null $reviewed_by
+ * @property \Carbon\Carbon|null $reviewed_at
+ * @property string|null $review_comments
+ * @property string|null $review_notes
+ * @property string|null $approved_by
+ * @property \Carbon\Carbon|null $approved_at
+ * @property string|null $approval_comments
+ * @property string|null $rejected_by
+ * @property \Carbon\Carbon|null $rejected_at
+ * @property string|null $rejection_reason
+ * @property string|null $rejection_comments
+ * @property string|null $created_by
+ * @property array<int, mixed>|null $attachments
+ * @property int|null $current_revision_no
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, SubmittalRevision> $revisions
+ * @property-read SubmittalRevision|null $currentRevision
+ */
 class Submittal extends Model
 {
     use HasFactory, TenantScope;
@@ -191,13 +225,17 @@ class Submittal extends Model
             ->where('linked_entity_type', Document::ENTITY_TYPE_SUBMITTAL);
     }
 
+    /** @return HasMany<SubmittalRevision, $this> */
     public function revisions(): HasMany
     {
+        /** @phpstan-ignore return.type */
         return $this->hasMany(SubmittalRevision::class, 'submittal_id')->orderBy('revision_no');
     }
 
+    /** @return HasOne<SubmittalRevision, $this> */
     public function currentRevision(): HasOne
     {
+        /** @phpstan-ignore return.type */
         return $this->hasOne(SubmittalRevision::class, 'submittal_id')->ofMany('revision_no', 'max');
     }
 }

@@ -13,9 +13,13 @@ use Illuminate\Support\Facades\Log;
 
 class SubmittalLifecycleService
 {
+    /**
+     * @param array<string, mixed> $data
+     * @param array<string, mixed> $context
+     */
     public function updateContent(Submittal $submittal, array $data, array $context): Submittal
     {
-        return DB::transaction(function () use ($submittal, $data, $context) {
+        DB::transaction(function () use ($submittal, $data, $context) {
             $locked = Submittal::query()
                 ->where('id', $submittal->id)
                 ->where('tenant_id', $submittal->tenant_id)
@@ -53,16 +57,17 @@ class SubmittalLifecycleService
                 'payload' => ['fields' => array_keys($safeData)],
                 'occurred_at' => now(),
             ]);
-
-            return $locked->fresh();
         });
+
+        return $submittal->fresh();
     }
 
+    /** @param array<string, mixed> $context */
     public function submit(Submittal $submittal, array $context): Submittal
     {
         $isResubmit = false;
 
-        $submittal = DB::transaction(function () use ($submittal, $context, &$isResubmit) {
+        DB::transaction(function () use ($submittal, $context, &$isResubmit) {
             $locked = Submittal::query()
                 ->where('id', $submittal->id)
                 ->where('tenant_id', $submittal->tenant_id)
@@ -112,17 +117,18 @@ class SubmittalLifecycleService
             ]);
 
             $isResubmit = $nextRevisionNo > 1;
-
-            return $locked->fresh();
         });
 
+        $fresh = $submittal->fresh();
+
         if ($isResubmit) {
-            $this->notifyLastRejector($submittal);
+            $this->notifyLastRejector($fresh);
         }
 
-        return $submittal;
+        return $fresh;
     }
 
+    /** @param array<string, mixed> $context */
     public function approve(Submittal $submittal, array $context): Submittal
     {
         return $this->decide(
@@ -134,6 +140,7 @@ class SubmittalLifecycleService
         );
     }
 
+    /** @param array<string, mixed> $context */
     public function reject(Submittal $submittal, array $context): Submittal
     {
         return $this->decide(
@@ -146,6 +153,7 @@ class SubmittalLifecycleService
         );
     }
 
+    /** @param array<string, mixed> $context */
     private function decide(
         Submittal $submittal,
         array $context,
@@ -154,7 +162,7 @@ class SubmittalLifecycleService
         ?string $comments,
         ?string $decisionComments = null
     ): Submittal {
-        return DB::transaction(function () use ($submittal, $context, $targetStatus, $decision, $comments, $decisionComments) {
+        DB::transaction(function () use ($submittal, $context, $targetStatus, $decision, $comments, $decisionComments) {
             $locked = Submittal::query()
                 ->where('id', $submittal->id)
                 ->where('tenant_id', $submittal->tenant_id)
@@ -216,14 +224,15 @@ class SubmittalLifecycleService
                 'payload' => ['revision_no' => $locked->current_revision_no],
                 'occurred_at' => now(),
             ]);
-
-            return $locked->fresh();
         });
+
+        return $submittal->fresh();
     }
 
+    /** @param array<string, mixed> $context */
     public function startRevision(Submittal $submittal, array $context): Submittal
     {
-        return DB::transaction(function () use ($submittal, $context) {
+        DB::transaction(function () use ($submittal, $context) {
             $locked = Submittal::query()
                 ->where('id', $submittal->id)
                 ->where('tenant_id', $submittal->tenant_id)
@@ -259,9 +268,9 @@ class SubmittalLifecycleService
                 'payload' => [],
                 'occurred_at' => now(),
             ]);
-
-            return $locked->fresh();
         });
+
+        return $submittal->fresh();
     }
 
     private function notifyLastRejector(Submittal $submittal): void

@@ -79,6 +79,8 @@ class SubmittalController extends ApiBaseController
                 return $this->unauthorized('Authentication required');
             }
 
+            /** @var \App\Models\User $user */
+
             $this->authorize('viewAny', Submittal::class);
 
             $query = $this->submittalQuery();
@@ -132,6 +134,8 @@ class SubmittalController extends ApiBaseController
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
+
+            /** @var \App\Models\User $user */
 
             $this->authorize('create', Submittal::class);
 
@@ -203,6 +207,8 @@ class SubmittalController extends ApiBaseController
                 return $this->unauthorized('Authentication required');
             }
 
+            /** @var \App\Models\User $user */
+
             $submittal = $this->submittalForTenant($id, [
                 'project:id,name',
                 'submittedBy:id,name',
@@ -233,6 +239,8 @@ class SubmittalController extends ApiBaseController
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
+
+            /** @var \App\Models\User $user */
 
             $submittal = $this->submittalForTenant($id);
             $this->authorize('update', $submittal);
@@ -295,6 +303,8 @@ class SubmittalController extends ApiBaseController
                 return $this->unauthorized('Authentication required');
             }
 
+            /** @var \App\Models\User $user */
+
             $submittal = $this->submittalForTenant($id);
             $this->authorize('delete', $submittal);
 
@@ -336,6 +346,8 @@ class SubmittalController extends ApiBaseController
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
+
+            /** @var \App\Models\User $user */
 
             $submittal = $this->submittalForTenant($id);
             $this->authorize('submit', $submittal);
@@ -390,6 +402,8 @@ class SubmittalController extends ApiBaseController
                 return $this->unauthorized('Authentication required');
             }
 
+            /** @var \App\Models\User $user */
+
             $submittal = $this->submittalForTenant($id);
             $this->authorize('startRevision', $submittal);
 
@@ -430,6 +444,8 @@ class SubmittalController extends ApiBaseController
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
+
+            /** @var \App\Models\User $user */
 
             $submittal = $this->submittalForTenant($id);
 
@@ -507,6 +523,8 @@ class SubmittalController extends ApiBaseController
                 return $this->unauthorized('Authentication required');
             }
 
+            /** @var \App\Models\User $user */
+
             $submittal = $this->submittalForTenant($id);
             $this->authorize('approve', $submittal);
 
@@ -560,6 +578,8 @@ class SubmittalController extends ApiBaseController
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
+
+            /** @var \App\Models\User $user */
 
             $submittal = $this->submittalForTenant($id);
             $this->authorize('reject', $submittal);

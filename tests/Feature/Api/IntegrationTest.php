@@ -32,6 +32,9 @@ class IntegrationTest extends TestCase
 
         $this->apiActingAsTenantAdmin();
         $this->user = $this->apiFeatureUser;
+        $this->grantAdditionalPermissions($this->user, [
+            'submittal.create', 'submittal.view', 'submittal.submit', 'submittal.approve', 'submittal.reject',
+        ]);
         $this->project = Project::factory()->create([
             'created_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
@@ -471,4 +474,26 @@ class IntegrationTest extends TestCase
         $this->assertEquals($this->user->id, $changeRequest->requested_by);
     }
 
+    /**
+     * @param list<string> $permissionNames
+     */
+    private function grantAdditionalPermissions(User $user, array $permissionNames): void
+    {
+        foreach ($user->roles as $role) {
+            foreach ($permissionNames as $permissionName) {
+                $parts = explode('.', $permissionName);
+                $permission = \App\Models\Permission::firstOrCreate(
+                    ['name' => $permissionName],
+                    [
+                        'code' => $permissionName,
+                        'module' => $parts[0] ?? $permissionName,
+                        'action' => $parts[1] ?? '*',
+                        'description' => ucfirst(str_replace('.', ' ', $permissionName)),
+                    ]
+                );
+
+                $role->permissions()->syncWithoutDetaching($permission->id);
+            }
+        }
+    }
 }

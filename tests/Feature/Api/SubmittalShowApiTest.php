@@ -103,6 +103,22 @@ class SubmittalShowApiTest extends TestCase
             'is_active' => true,
         ]);
 
+        $permissionNames = [
+            'submittal.view', 'submittal.create', 'submittal.edit', 'submittal.delete',
+            'submittal.submit', 'submittal.review', 'submittal.approve', 'submittal.reject',
+        ];
+
+        foreach ($permissionNames as $permissionName) {
+            $parts = explode('.', $permissionName);
+            $permission = \App\Models\Permission::firstOrCreate(['name' => $permissionName], [
+                'code' => $permissionName,
+                'module' => $parts[0] ?? $permissionName,
+                'action' => $parts[1] ?? '*',
+                'description' => ucfirst(str_replace('.', ' ', $permissionName)),
+            ]);
+            $role->permissions()->syncWithoutDetaching($permission->id);
+        }
+
         $user->roles()->syncWithoutDetaching($role->id);
     }
 

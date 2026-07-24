@@ -158,8 +158,11 @@ class SubmittalApiTest extends TestCase
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
-            'status' => 'submitted',
+            'status' => 'draft',
         ]);
+
+        $this->withZenaAuth()->postJson($this->zena('submittals.submit', ['id' => $submittal->id]))
+            ->assertStatus(200);
 
         $reviewData = [
             'review_notes' => 'This submittal looks good',
@@ -194,8 +197,11 @@ class SubmittalApiTest extends TestCase
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
-            'status' => 'pending_review',
+            'status' => 'draft',
         ]);
+
+        $this->withZenaAuth()->postJson($this->zena('submittals.submit', ['id' => $submittal->id]))
+            ->assertStatus(200);
 
         $approvalData = [
             'approval_comments' => 'Approved with minor comments',
@@ -230,8 +236,11 @@ class SubmittalApiTest extends TestCase
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
-            'status' => 'pending_review',
+            'status' => 'draft',
         ]);
+
+        $this->withZenaAuth()->postJson($this->zena('submittals.submit', ['id' => $submittal->id]))
+            ->assertStatus(200);
 
         $rejectionData = [
             'rejection_reason' => 'Does not meet specifications',
@@ -268,6 +277,7 @@ class SubmittalApiTest extends TestCase
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
+            'status' => 'draft',
         ]);
 
         $updateData = [
@@ -302,6 +312,7 @@ class SubmittalApiTest extends TestCase
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
+            'status' => 'draft',
         ]);
 
         $response = $this->withZenaAuth()->deleteJson($this->zena('submittals.destroy', ['id' => $submittal->id]));
@@ -475,6 +486,22 @@ class SubmittalApiTest extends TestCase
             'allow_override' => true,
             'is_active' => true,
         ]);
+
+        $permissionNames = [
+            'submittal.view', 'submittal.create', 'submittal.edit', 'submittal.delete',
+            'submittal.submit', 'submittal.review', 'submittal.approve', 'submittal.reject',
+        ];
+
+        foreach ($permissionNames as $permissionName) {
+            $parts = explode('.', $permissionName);
+            $permission = \App\Models\Permission::firstOrCreate(['name' => $permissionName], [
+                'code' => $permissionName,
+                'module' => $parts[0] ?? $permissionName,
+                'action' => $parts[1] ?? '*',
+                'description' => ucfirst(str_replace('.', ' ', $permissionName)),
+            ]);
+            $role->permissions()->syncWithoutDetaching($permission->id);
+        }
 
         $user->roles()->syncWithoutDetaching($role->id);
     }

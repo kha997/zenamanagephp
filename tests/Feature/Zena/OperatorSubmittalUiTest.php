@@ -93,17 +93,26 @@ class OperatorSubmittalUiTest extends TestCase
     {
         $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
 
-        $submittal = Submittal::query()->create([
-            'id' => (string) \Illuminate\Support\Str::ulid(),
-            'tenant_id' => (string) $this->tenant->id,
-            'project_id' => (string) $this->project->id,
-            'title' => 'Steel shop drawing',
-            'description' => 'Level 2 framing.',
-            'submittal_type' => 'shop_drawing',
-            'status' => 'submitted',
-            'submitted_by' => (string) $this->user->id,
-            'submittal_number' => 'SUB-UI-001',
-        ]);
+        // Establish session so csrf_token() is available for the subsequent POST.
+        $this->actingAs($this->user)
+            ->get(route('operator.submittals.create'), $headers);
+
+        $create = $this->actingAs($this->user)
+            ->post(route('operator.submittals.store'), [
+                'project_id' => (string) $this->project->id,
+                'title' => 'Steel shop drawing',
+                'description' => 'Level 2 framing.',
+                'submittal_type' => 'shop_drawing',
+            ], $headers);
+
+        $submittal = Submittal::query()->firstOrFail();
+        $create->assertRedirect(route('operator.submittals.show', $submittal->id));
+
+        $submit = $this->actingAs($this->user)
+            ->post(route('operator.submittals.submit', $submittal->id), [], $headers);
+        $submit->assertRedirect(route('operator.submittals.show', $submittal->id));
+        $submittal->refresh();
+        $this->assertSame('submitted', (string) $submittal->status);
 
         $this->actingAs($this->user)
             ->get(route('operator.submittals.show', $submittal->id), $headers)

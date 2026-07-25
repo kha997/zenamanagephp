@@ -181,8 +181,12 @@ class SubmittalPageController extends Controller
 
     public function submit(Request $request, string $id, ApiSubmittalController $apiController): RedirectResponse
     {
+        $payload = $request->validate([
+            'revision_summary' => ['nullable', 'string'],
+        ]);
+
         try {
-            $response = $apiController->submit($this->buildApiRequest($request), $id);
+            $response = $apiController->submit($this->buildApiRequest($request, array_filter($payload)), $id);
         } catch (AuthorizationException) {
             return back()->with('error', 'Bạn không có quyền thực hiện thao tác này.');
         } catch (Throwable) {

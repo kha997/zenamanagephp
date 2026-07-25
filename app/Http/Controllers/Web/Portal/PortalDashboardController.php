@@ -12,6 +12,12 @@ use App\Models\Opportunity;
 use App\Models\Project;
 use App\Models\Quote;
 use App\Models\Tenant;
+use App\Support\Dashboard\Availability;
+use App\Support\Dashboard\Freshness;
+use App\Support\Dashboard\MetricGuard;
+use App\Support\Dashboard\MetricResult;
+use App\Support\Dashboard\Reliability;
+use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 
@@ -62,6 +68,8 @@ class PortalDashboardController extends Controller
             ->where('status', '!=', ContractPayment::STATUS_PAID)
             ->sum('amount');
 
+        $outstandingBalanceMetric = $this->computeOutstandingBalanceMetric($tenant->id, $contracts->pluck('id')->all(), $outstandingBalance);
+
         $paymentSchedule = ContractPayment::query()
             ->where('tenant_id', $tenant->id)
             ->whereIn('contract_id', $contracts->pluck('id'))
@@ -86,8 +94,56 @@ class PortalDashboardController extends Controller
             'documents' => $documents,
             'contracts' => $contracts,
             'outstandingBalance' => $outstandingBalance,
+            'outstandingBalanceMetric' => $outstandingBalanceMetric,
             'paymentSchedule' => $paymentSchedule,
             'quotes' => $quotes,
         ]);
+    }
+
+    /**
+     * @param array<int, string> $contractIds
+     */
+    private function computeOutstandingBalanceMetric(string $tenantId, array $contractIds, float $alreadyComputedSum): MetricResult
+    {
+        $label = 'Giá trị theo lịch chưa ghi nhận thanh toán';
+
+        return MetricGuard::wrap(
+            'outstandingBalance',
+            ['tenant_id' => $tenantId],
+            $label,
+            function () use ($tenantId, $contractIds, $alreadyComputedSum, $label) {
+                $scheduleCount = ContractPayment::query()
+                    ->where('tenant_id', $tenantId)
+                    ->whereIn('contract_id', $contractIds)
+                    ->count();
+
+                if ($scheduleCount === 0) {
+                    return new MetricResult(
+                        value: null,
+                        availability: Availability::NO_DATA,
+                        reliability: Reliability::LIMITED,
+                        freshness: Freshness::UNKNOWN,
+                        asOf: null,
+                        label: $label,
+                        explanation: 'Chưa có lịch thanh toán nào được thiết lập cho dự án này.',
+                    );
+                }
+
+                $asOf = ContractPayment::query()
+                    ->where('tenant_id', $tenantId)
+                    ->whereIn('contract_id', $contractIds)
+                    ->max('updated_at');
+
+                return new MetricResult(
+                    value: $alreadyComputedSum,
+                    availability: Availability::AVAILABLE,
+                    reliability: Reliability::LIMITED,
+                    freshness: Freshness::UNKNOWN,
+                    asOf: $asOf ? Carbon::parse($asOf) : null,
+                    label: $label,
+                    explanation: "Số liệu này cộng tất cả các khoản thanh toán theo lịch hợp đồng chưa được đánh dấu 'đã thanh toán', kể cả các khoản chưa tới hạn. Hệ thống hiện chưa ghi nhận thanh toán từng phần, nên số liệu này không phải công nợ thực tế đã xác nhận.",
+                );
+            },
+        );
     }
 }

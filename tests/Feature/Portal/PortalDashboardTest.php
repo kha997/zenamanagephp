@@ -434,4 +434,62 @@ class PortalDashboardTest extends TestCase
         $response->assertOk();
         $response->assertDontSee('BQ-OTHER-001');
     }
+
+    public function test_dashboard_shows_scheduled_unpaid_label_and_explanation_not_confirmed_debt_wording(): void
+    {
+        $tenant = Tenant::factory()->create(['slug' => 'zena-dash-2']);
+        $staffUser = User::factory()->create(['tenant_id' => (string) $tenant->id]);
+
+        $account = Account::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'account_type' => Account::TYPE_INDIVIDUAL,
+            'display_name' => 'Khach hang label test',
+            'email' => 'label-test@example.com',
+            'status' => Account::STATUS_ACTIVE,
+        ]);
+
+        $project = Project::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'name' => 'Du an label test',
+            'code' => 'PRJ-LABEL1',
+            'status' => 'active',
+        ]);
+
+        Opportunity::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Co hoi label test',
+            'service_category' => 'architecture',
+            'pipeline_stage' => Opportunity::STAGE_WON,
+            'converted_project_id' => (string) $project->id,
+            'sales_owner_id' => (string) $staffUser->id,
+            'created_by' => (string) $staffUser->id,
+        ]);
+
+        $contract = Contract::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'project_id' => (string) $project->id,
+            'code' => 'CTR-LABEL1',
+            'title' => 'Hop dong label test',
+            'total_value' => 100000000,
+            'currency' => 'VND',
+            'status' => 'active',
+        ]);
+
+        ContractPayment::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'contract_id' => (string) $contract->id,
+            'name' => 'Dot 1',
+            'amount' => 30000000,
+            'due_date' => now()->addDays(30)->toDateString(),
+            'status' => ContractPayment::STATUS_PLANNED,
+        ]);
+
+        $response = $this->actingAs($account, 'client')->get('/portal/zena-dash-2/dashboard');
+
+        $response->assertOk();
+        $response->assertSee('Giá trị theo lịch chưa ghi nhận thanh toán');
+        $response->assertDontSee('Số dư còn lại');
+        $response->assertSee('chưa ghi nhận thanh toán từng phần', false);
+    }
 }

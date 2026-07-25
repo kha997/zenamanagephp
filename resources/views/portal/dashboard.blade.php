@@ -112,7 +112,13 @@
         </x-ui.card>
 
         <x-ui.card title="Công nợ">
-            <x-ui.field-value label="Số dư còn lại" :value="number_format($outstandingBalance, 0, ',', '.') . '₫'" />
+            <x-ui.field-value
+                :label="$outstandingBalanceMetric->label"
+                :value="$outstandingBalanceMetric->value !== null ? number_format($outstandingBalanceMetric->value, 0, ',', '.') . '₫' : null"
+            />
+            @if ($outstandingBalanceMetric->explanation)
+                <p class="mt-1 text-xs text-slate-500">{{ $outstandingBalanceMetric->explanation }}</p>
+            @endif
 
             @if ($paymentSchedule->isNotEmpty())
                 <div class="mt-4">

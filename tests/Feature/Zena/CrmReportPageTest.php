@@ -63,6 +63,60 @@ class CrmReportPageTest extends TestCase
             ->assertSee('123.000.000', false);
     }
 
+    public function test_report_page_relabels_outstanding_debt_total_as_scheduled_unpaid(): void
+    {
+        $account = Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_type' => Account::TYPE_INDIVIDUAL,
+            'display_name' => 'Khach hang label test',
+            'status' => Account::STATUS_ACTIVE,
+        ]);
+
+        $project = Project::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'name' => 'Du an label test',
+            'code' => 'PRJ-CRMLABEL',
+            'status' => 'active',
+        ]);
+
+        $contract = Contract::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'project_id' => (string) $project->id,
+            'code' => 'CTR-CRMLABEL',
+            'title' => 'Hop dong label test',
+            'total_value' => 50000000,
+            'currency' => 'VND',
+            'status' => 'active',
+        ]);
+
+        ContractPayment::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'contract_id' => (string) $contract->id,
+            'name' => 'Dot 1',
+            'amount' => 20000000,
+            'due_date' => now()->addDays(15)->toDateString(),
+            'status' => ContractPayment::STATUS_PLANNED,
+        ]);
+
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $this->actingAs($this->viewer)
+            ->get(route('operator.crm.reports'), $headers)
+            ->assertOk()
+            ->assertSee('Giá trị theo lịch chưa ghi nhận thanh toán')
+            ->assertDontSee('Tổng công nợ');
+    }
+
+    public function test_report_page_shows_no_data_when_tenant_has_no_payment_schedule(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $this->actingAs($this->viewer)
+            ->get(route('operator.crm.reports'), $headers)
+            ->assertOk()
+            ->assertSee('Chưa có lịch thanh toán');
+    }
+
     public function test_report_page_requires_crm_view_permission(): void
     {
         $noAccess = $this->createTenantUser($this->tenant, [], ['staff'], []);

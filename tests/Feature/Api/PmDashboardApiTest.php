@@ -248,6 +248,9 @@ class PmDashboardApiTest extends TestCase
             ->assertJsonPath('data.milestone_progress.pending_milestones', 1)
             ->assertJsonPath('data.milestone_progress.overdue_milestones', 1)
             ->assertJsonPath('data.milestone_progress.completion_rate', 33.33)
+            ->assertJsonPath('data.milestone_progress_meta.value', 33.33)
+            ->assertJsonPath('data.milestone_progress_meta.availability', 'AVAILABLE')
+            ->assertJsonPath('data.milestone_progress_meta.reliability', 'LEGACY')
             ->assertJsonCount(2, 'data.milestone_progress.upcoming_milestones')
             ->assertJsonPath('data.milestone_progress.upcoming_milestones.0.name', 'Delayed handoff')
             ->assertJsonPath('data.milestone_progress.upcoming_milestones.1.id', (string) $upcomingMilestone->id)
@@ -320,6 +323,18 @@ class PmDashboardApiTest extends TestCase
             ->assertJsonPath('data.overall_progress_meta.freshness', 'UNKNOWN')
             ->assertJsonPath('data.overall_progress_meta.as_of', null)
             ->assertJsonPath('data.overall_progress_meta.explanation', 'Dự án chưa có công việc (Task) nào được tạo.');
+    }
+
+    public function test_milestone_progress_meta_is_no_data_and_legacy_when_project_has_no_milestones(): void
+    {
+        $project = $this->createAssignedProject('No milestone project', Project::STATUS_ACTIVE);
+
+        $this->withHeaders($this->headers)
+            ->getJson(route('api.zena.pm.progress', ['project_id' => (string) $project->id], false))
+            ->assertOk()
+            ->assertJsonPath('data.milestone_progress_meta.value', null)
+            ->assertJsonPath('data.milestone_progress_meta.availability', 'NO_DATA')
+            ->assertJsonPath('data.milestone_progress_meta.reliability', 'LEGACY');
     }
 
     private function createAssignedProject(string $name, string $status): Project

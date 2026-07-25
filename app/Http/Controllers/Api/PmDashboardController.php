@@ -97,6 +97,7 @@ class PmDashboardController extends Controller
             'overall_progress_meta' => $this->computeOverallProgressMeta($projectId)->toArray(),
             'task_progress' => $this->computeTaskProgress($projectId),
             'milestone_progress' => $this->computeMilestoneProgress($projectId),
+            'milestone_progress_meta' => $this->computeMilestoneProgressMeta($projectId)->toArray(),
             'budget_progress' => $this->computeBudgetProgress($project),
             'timeline_progress' => $this->computeTimelineProgress($project),
         ]);
@@ -221,6 +222,49 @@ class PmDashboardController extends Controller
             'completion_rate' => $completionRate,
             'upcoming_milestones' => $upcoming,
         ];
+    }
+
+    private function computeMilestoneProgressMeta(string $projectId): MetricResult
+    {
+        $label = 'Tỷ lệ hoàn thành mốc tiến độ';
+
+        return MetricGuard::wrap(
+            'milestone_progress',
+            ['project_id' => $projectId, 'tenant_id' => (string) Auth::user()?->tenant_id],
+            $label,
+            function () use ($projectId, $label) {
+                $total = ProjectMilestone::where('project_id', $projectId)->count();
+
+                if ($total === 0) {
+                    return new MetricResult(
+                        value: null,
+                        availability: Availability::NO_DATA,
+                        reliability: Reliability::LEGACY,
+                        freshness: Freshness::UNKNOWN,
+                        asOf: null,
+                        label: $label,
+                        explanation: 'Dự án chưa có mốc tiến độ (Milestone) nào được tạo. Nguồn dữ liệu này không còn kênh cập nhật chính thức.',
+                    );
+                }
+
+                $completed = ProjectMilestone::where('project_id', $projectId)
+                    ->where('status', ProjectMilestone::STATUS_COMPLETED)
+                    ->count();
+
+                $value = round(($completed / $total) * 100, 2);
+                $asOf = ProjectMilestone::where('project_id', $projectId)->max('updated_at');
+
+                return new MetricResult(
+                    value: $value,
+                    availability: Availability::AVAILABLE,
+                    reliability: Reliability::LEGACY,
+                    freshness: Freshness::UNKNOWN,
+                    asOf: $asOf ? Carbon::parse($asOf) : null,
+                    label: $label,
+                    explanation: 'Dữ liệu lịch sử — không còn kênh cập nhật chính thức.',
+                );
+            },
+        );
     }
 
     private function computeBudgetProgress(Project $project): array

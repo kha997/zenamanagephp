@@ -236,6 +236,8 @@ class PmDashboardApiTest extends TestCase
             ->assertJsonPath('data.project.id', (string) $project->id)
             ->assertJsonPath('data.project.name', 'PM progress project')
             ->assertJsonPath('data.overall_progress', 25)
+            ->assertJsonPath('data.overall_progress_meta.value', 25)
+            ->assertJsonPath('data.overall_progress_meta.availability', 'AVAILABLE')
             ->assertJsonPath('data.task_progress.total', 4)
             ->assertJsonPath('data.task_progress.completed', 1)
             ->assertJsonPath('data.task_progress.in_progress', 1)
@@ -302,6 +304,22 @@ class PmDashboardApiTest extends TestCase
             ->getJson(route('api.zena.pm.progress', ['project_id' => (string) $sameTenantProject->id], false))
             ->assertStatus(404)
             ->assertJsonPath('message', 'Project not found or access denied');
+    }
+
+    public function test_overall_progress_meta_is_no_data_when_project_has_no_tasks(): void
+    {
+        $project = $this->createAssignedProject('Empty progress project', Project::STATUS_ACTIVE);
+
+        $this->withHeaders($this->headers)
+            ->getJson(route('api.zena.pm.progress', ['project_id' => (string) $project->id], false))
+            ->assertOk()
+            ->assertJsonPath('data.overall_progress', 0)
+            ->assertJsonPath('data.overall_progress_meta.value', null)
+            ->assertJsonPath('data.overall_progress_meta.availability', 'NO_DATA')
+            ->assertJsonPath('data.overall_progress_meta.reliability', 'RELIABLE')
+            ->assertJsonPath('data.overall_progress_meta.freshness', 'UNKNOWN')
+            ->assertJsonPath('data.overall_progress_meta.as_of', null)
+            ->assertJsonPath('data.overall_progress_meta.explanation', 'Dự án chưa có công việc (Task) nào được tạo.');
     }
 
     private function createAssignedProject(string $name, string $status): Project

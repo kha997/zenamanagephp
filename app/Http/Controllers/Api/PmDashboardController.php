@@ -9,6 +9,12 @@ use App\Models\ProjectMilestone;
 use App\Models\Rfi;
 use App\Models\Task;
 use App\Models\UserRoleProject;
+use App\Support\Dashboard\Availability;
+use App\Support\Dashboard\Freshness;
+use App\Support\Dashboard\MetricGuard;
+use App\Support\Dashboard\MetricResult;
+use App\Support\Dashboard\Reliability;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -88,6 +94,7 @@ class PmDashboardController extends Controller
                 'status' => $project->status,
             ],
             'overall_progress' => $this->computeOverallProgress($projectId),
+            'overall_progress_meta' => $this->computeOverallProgressMeta($projectId)->toArray(),
             'task_progress' => $this->computeTaskProgress($projectId),
             'milestone_progress' => $this->computeMilestoneProgress($projectId),
             'budget_progress' => $this->computeBudgetProgress($project),
@@ -119,6 +126,49 @@ class PmDashboardController extends Controller
             ->count();
 
         return round(($completed / $total) * 100, 2);
+    }
+
+    private function computeOverallProgressMeta(string $projectId): MetricResult
+    {
+        $label = 'Tiến độ công việc (Task)';
+
+        return MetricGuard::wrap(
+            'overall_progress',
+            ['project_id' => $projectId, 'tenant_id' => (string) Auth::user()?->tenant_id],
+            $label,
+            function () use ($projectId, $label) {
+                $total = Task::where('project_id', $projectId)->count();
+
+                if ($total === 0) {
+                    return new MetricResult(
+                        value: null,
+                        availability: Availability::NO_DATA,
+                        reliability: Reliability::RELIABLE,
+                        freshness: Freshness::UNKNOWN,
+                        asOf: null,
+                        label: $label,
+                        explanation: 'Dự án chưa có công việc (Task) nào được tạo.',
+                    );
+                }
+
+                $completed = Task::where('project_id', $projectId)
+                    ->where('status', Task::STATUS_COMPLETED)
+                    ->count();
+
+                $value = round(($completed / $total) * 100, 2);
+                $asOf = Task::where('project_id', $projectId)->max('updated_at');
+
+                return new MetricResult(
+                    value: $value,
+                    availability: Availability::AVAILABLE,
+                    reliability: Reliability::RELIABLE,
+                    freshness: Freshness::UNKNOWN,
+                    asOf: $asOf ? Carbon::parse($asOf) : null,
+                    label: $label,
+                    explanation: null,
+                );
+            },
+        );
     }
 
     private function computeTaskProgress(string $projectId): array

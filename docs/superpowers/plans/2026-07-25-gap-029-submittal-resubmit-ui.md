@@ -1688,3 +1688,12 @@ grep -rn "ApiSubmittalController" app/Http/Controllers/Web/SubmittalPageControll
 ```
 
 Expected: full suite green; the `grep` should show exactly 4 remaining usages (`store`, `submit`, `approve`, `reject` — the untouched proxied methods per spec §10), confirming `update()`/`startRevision()` never reference `ApiSubmittalController`.
+
+## Manual acceptance checklist (spec §9)
+
+- [ ] Open a `rejected` submittal as a user with `submittal.submit`: "Mở lại để sửa" is visible and clickable; after clicking, status shows `revising`, "Sửa nội dung" card appears pre-filled with the last-submitted (rejected) content.
+- [ ] Edit a field in "Sửa nội dung", observe "Gửi lại" become disabled and the warning line appear, without reloading the page.
+- [ ] Click "Lưu thay đổi", observe redirect back to the same page with a success flash, "Gửi lại" re-enabled, warning gone.
+- [ ] Type into `revision_summary`, click "Gửi lại": status returns to `submitted`.
+- [ ] As a user with only `submittal.view` (no `submittal.edit`/`submittal.submit`): open the same submittal, confirm none of "Sửa nội dung"/"Mở lại để sửa"/"Gửi lại" render.
+- [ ] Select a vendor from the `contractor` dropdown, save, then deactivate that vendor (`is_active = false`) directly in DB/admin, reload the edit page: confirm the current vendor still shows selected (as a synthesized "(không còn hoạt động)" option) rather than blank.

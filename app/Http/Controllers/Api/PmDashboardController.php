@@ -101,6 +101,7 @@ class PmDashboardController extends Controller
             'budget_progress' => $this->computeBudgetProgress($project),
             'budget_progress_meta' => $this->computeBudgetProgressMeta($project)->toArray(),
             'timeline_progress' => $this->computeTimelineProgress($project),
+            'timeline_progress_meta' => $this->computeTimelineProgressMeta($project)->toArray(),
         ]);
     }
 
@@ -349,5 +350,47 @@ class PmDashboardController extends Controller
             'total_days' => $totalDays,
             'percentage_elapsed' => $pct,
         ];
+    }
+
+    private function computeTimelineProgressMeta(Project $project): MetricResult
+    {
+        $label = 'Tỷ lệ thời gian kế hoạch đã trôi qua';
+
+        return MetricGuard::wrap(
+            'timeline_progress',
+            ['project_id' => (string) $project->id, 'tenant_id' => (string) Auth::user()?->tenant_id],
+            $label,
+            function () use ($project, $label) {
+                if (!$project->start_date || !$project->end_date) {
+                    return new MetricResult(
+                        value: null,
+                        availability: Availability::NOT_APPLICABLE,
+                        reliability: Reliability::RELIABLE,
+                        freshness: Freshness::UNKNOWN,
+                        asOf: null,
+                        label: $label,
+                        explanation: 'Dự án chưa nhập đủ ngày bắt đầu/kết thúc kế hoạch.',
+                    );
+                }
+
+                $start = $project->start_date;
+                $end = $project->end_date;
+                $now = now()->startOfDay();
+
+                $totalDays = (int) $start->diffInDays($end);
+                $elapsedDays = (int) $start->diffInDays($now);
+                $value = $totalDays > 0 ? round(min(($elapsedDays / $totalDays) * 100, 100), 2) : 0.0;
+
+                return new MetricResult(
+                    value: $value,
+                    availability: Availability::AVAILABLE,
+                    reliability: Reliability::RELIABLE,
+                    freshness: Freshness::UNKNOWN,
+                    asOf: null,
+                    label: $label,
+                    explanation: null,
+                );
+            },
+        );
     }
 }

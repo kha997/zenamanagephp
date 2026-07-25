@@ -262,7 +262,28 @@ class PmDashboardApiTest extends TestCase
             ->assertJsonPath('data.budget_progress_meta.availability', 'AVAILABLE')
             ->assertJsonPath('data.timeline_progress.total_days', 20)
             ->assertJsonPath('data.timeline_progress.days_elapsed', 10)
-            ->assertJsonPath('data.timeline_progress.percentage_elapsed', 50);
+            ->assertJsonPath('data.timeline_progress.percentage_elapsed', 50)
+            ->assertJsonPath('data.timeline_progress_meta.value', 50)
+            ->assertJsonPath('data.timeline_progress_meta.availability', 'AVAILABLE')
+            ->assertJsonPath('data.timeline_progress_meta.label', 'Tỷ lệ thời gian kế hoạch đã trôi qua');
+    }
+
+    public function test_timeline_progress_meta_is_not_applicable_when_dates_missing(): void
+    {
+        $project = $this->createAssignedProject('No dates project', Project::STATUS_ACTIVE, [
+            'start_date' => null,
+            'end_date' => null,
+        ]);
+
+        $this->withHeaders($this->headers)
+            ->getJson(route('api.zena.pm.progress', ['project_id' => (string) $project->id], false))
+            ->assertOk()
+            ->assertJsonPath('data.timeline_progress.percentage_elapsed', 0)
+            ->assertJsonPath('data.timeline_progress_meta.value', null)
+            ->assertJsonPath('data.timeline_progress_meta.availability', 'NOT_APPLICABLE')
+            ->assertJsonPath('data.timeline_progress_meta.reliability', 'RELIABLE')
+            ->assertJsonPath('data.timeline_progress_meta.label', 'Tỷ lệ thời gian kế hoạch đã trôi qua')
+            ->assertJsonPath('data.timeline_progress_meta.as_of', null);
     }
 
     public function test_pm_progress_route_requires_project_id_and_hides_inaccessible_projects(): void

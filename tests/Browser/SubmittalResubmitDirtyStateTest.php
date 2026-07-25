@@ -64,7 +64,7 @@ class SubmittalResubmitDirtyStateTest extends DuskTestCase
                 ->assertDisabled('#resubmit-button')
                 ->assertVisible('#unsaved-changes-warning')
                 ->press('Lưu thay đổi')
-                ->waitForLocation('/submittals/' . $submittal->id)
+                ->waitForRoute('operator.submittals.show', $submittal->id)
                 ->assertNotDisabled('#resubmit-button');
         });
     }

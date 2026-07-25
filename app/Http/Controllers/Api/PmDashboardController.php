@@ -99,6 +99,7 @@ class PmDashboardController extends Controller
             'milestone_progress' => $this->computeMilestoneProgress($projectId),
             'milestone_progress_meta' => $this->computeMilestoneProgressMeta($projectId)->toArray(),
             'budget_progress' => $this->computeBudgetProgress($project),
+            'budget_progress_meta' => $this->computeBudgetProgressMeta($project)->toArray(),
             'timeline_progress' => $this->computeTimelineProgress($project),
         ]);
     }
@@ -280,6 +281,45 @@ class PmDashboardController extends Controller
             'remaining_amount' => $remaining,
             'percentage_spent' => $pct,
         ];
+    }
+
+    private function computeBudgetProgressMeta(Project $project): MetricResult
+    {
+        $label = 'Tỷ lệ ngân sách đã chi';
+
+        return MetricGuard::wrap(
+            'budget_progress',
+            ['project_id' => (string) $project->id, 'tenant_id' => (string) Auth::user()?->tenant_id],
+            $label,
+            function () use ($project, $label) {
+                $total = (float) ($project->budget_total ?? 0);
+
+                if ($total <= 0) {
+                    return new MetricResult(
+                        value: null,
+                        availability: Availability::NOT_APPLICABLE,
+                        reliability: Reliability::RELIABLE,
+                        freshness: Freshness::UNKNOWN,
+                        asOf: null,
+                        label: $label,
+                        explanation: 'Dự án chưa nhập ngân sách.',
+                    );
+                }
+
+                $spent = (float) ($project->budget_actual ?? 0);
+                $value = round(($spent / $total) * 100, 2);
+
+                return new MetricResult(
+                    value: $value,
+                    availability: Availability::AVAILABLE,
+                    reliability: Reliability::RELIABLE,
+                    freshness: Freshness::UNKNOWN,
+                    asOf: $project->updated_at,
+                    label: $label,
+                    explanation: null,
+                );
+            },
+        );
     }
 
     private function computeTimelineProgress(Project $project): array

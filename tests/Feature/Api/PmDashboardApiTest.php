@@ -258,6 +258,8 @@ class PmDashboardApiTest extends TestCase
             ->assertJsonPath('data.budget_progress.spent_amount', 25000)
             ->assertJsonPath('data.budget_progress.remaining_amount', 75000)
             ->assertJsonPath('data.budget_progress.percentage_spent', 25)
+            ->assertJsonPath('data.budget_progress_meta.value', 25)
+            ->assertJsonPath('data.budget_progress_meta.availability', 'AVAILABLE')
             ->assertJsonPath('data.timeline_progress.total_days', 20)
             ->assertJsonPath('data.timeline_progress.days_elapsed', 10)
             ->assertJsonPath('data.timeline_progress.percentage_elapsed', 50);
@@ -337,15 +339,28 @@ class PmDashboardApiTest extends TestCase
             ->assertJsonPath('data.milestone_progress_meta.reliability', 'LEGACY');
     }
 
-    private function createAssignedProject(string $name, string $status): Project
+    public function test_budget_progress_meta_is_not_applicable_when_no_budget_entered(): void
     {
-        $project = Project::factory()->create([
+        $project = $this->createAssignedProject('No budget project', Project::STATUS_ACTIVE, ['budget_actual' => 0]);
+
+        $this->withHeaders($this->headers)
+            ->getJson(route('api.zena.pm.progress', ['project_id' => (string) $project->id], false))
+            ->assertOk()
+            ->assertJsonPath('data.budget_progress', ['total_budget' => 0, 'spent_amount' => 0, 'remaining_amount' => 0, 'percentage_spent' => 0])
+            ->assertJsonPath('data.budget_progress_meta.value', null)
+            ->assertJsonPath('data.budget_progress_meta.availability', 'NOT_APPLICABLE')
+            ->assertJsonPath('data.budget_progress_meta.reliability', 'RELIABLE');
+    }
+
+    private function createAssignedProject(string $name, string $status, array $attributes = []): Project
+    {
+        $project = Project::factory()->create(array_merge([
             'tenant_id' => (string) $this->tenant->id,
             'created_by' => (string) $this->actor->id,
             'pm_id' => (string) $this->actor->id,
             'name' => $name,
             'status' => $status,
-        ]);
+        ], $attributes));
 
         $role = Role::firstOrCreate(
             ['name' => 'project_manager'],

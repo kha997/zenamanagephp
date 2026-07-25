@@ -9,6 +9,7 @@ use App\Models\Project;
 use App\Models\Submittal;
 use App\Services\SubmittalLifecycleService;
 use App\Services\ZenaAuditLogger;
+use App\Support\SubmittalContentRules;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -245,16 +246,10 @@ class SubmittalController extends ApiBaseController
             $submittal = $this->submittalForTenant($id);
             $this->authorize('update', $submittal);
 
-            $validator = Validator::make($request->all(), [
-                'title' => 'sometimes|string|max:255',
-                'description' => 'sometimes|string',
-                'submittal_type' => 'sometimes|in:shop_drawing,material_sample,product_data,test_report,other',
-                'specification_section' => 'nullable|string|max:255',
-                'due_date' => 'nullable|date',
-                'contractor' => 'nullable|string|max:255',
-                'manufacturer' => 'nullable|string|max:255',
-                'status' => 'prohibited',
-            ]);
+            $validator = Validator::make(
+                $request->all(),
+                SubmittalContentRules::rules() + ['status' => 'prohibited']
+            );
 
             if ($validator->fails()) {
                 return $this->validationError($validator->errors());

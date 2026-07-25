@@ -131,7 +131,9 @@ class SubmittalPageController extends Controller
         $submittal = $this->submittalForTenant($id);
         $this->authorize('update', $submittal);
 
-        $tenantId = (string) Auth::user()?->tenant_id;
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $tenantId = (string) $user->tenant_id;
         $rules = SubmittalContentRules::rules();
 
         if ($request->input('contractor') !== $submittal->contractor) {
@@ -153,8 +155,6 @@ class SubmittalPageController extends Controller
         ]);
 
         try {
-            /** @var \App\Models\User $user */
-            $user = Auth::user();
             $this->lifecycle->updateContent($submittal, $data, ['actor_user_id' => $user->id]);
         } catch (SubmittalTransitionNotAllowedException $e) {
             return back()->with('error', 'Không thể sửa nội dung ở trạng thái hiện tại.');
@@ -256,7 +256,9 @@ class SubmittalPageController extends Controller
 
     private function submittalForTenant(string $id): Submittal
     {
-        $tenantId = (string) Auth::user()?->tenant_id;
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+        $tenantId = (string) $user?->tenant_id;
 
         return Submittal::query()
             ->where('tenant_id', $tenantId)

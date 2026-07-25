@@ -178,6 +178,7 @@
                 </div>
             </x-ui.card>
 
+            @if (in_array($submittal->status, ['draft', 'revising', 'rejected'], true))
             <x-ui.card title="Thao tác">
                 @can('submit', $submittal)
                     @if ($submittal->status === 'draft')
@@ -219,6 +220,7 @@
                     @endif
                 @endcan
             </x-ui.card>
+            @endif
         </div>
     </div>
 

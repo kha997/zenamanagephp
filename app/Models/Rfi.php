@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Exceptions\RfiEscalationIntegrityException;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -40,6 +41,7 @@ class Rfi extends Model
         'escalation_reason',
         'escalated_by',
         'escalated_at',
+        'current_escalation_id',
         'closed_by',
         'closed_at',
         'attachments',
@@ -125,6 +127,37 @@ class Rfi extends Model
     public function escalatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'escalated_by');
+    }
+
+    /**
+     * Get the currently active escalation, if any.
+     */
+    public function currentEscalation(): BelongsTo
+    {
+        return $this->belongsTo(RfiEscalation::class, 'current_escalation_id');
+    }
+
+    /**
+     * Guard against a corrupted current_escalation_id pointer: it must be null, or point to an
+     * escalation belonging to THIS rfi, THIS tenant, and still unresolved.
+     */
+    public function assertEscalationPointerIntegrity(): void
+    {
+        if ($this->current_escalation_id === null) {
+            return;
+        }
+
+        $escalation = RfiEscalation::find($this->current_escalation_id);
+
+        if (!$escalation
+            || $escalation->rfi_id !== $this->id
+            || $escalation->tenant_id !== $this->tenant_id
+            || $escalation->resolved_at !== null
+        ) {
+            throw new RfiEscalationIntegrityException(
+                "RFI {$this->id} current_escalation_id points to an invalid escalation (missing, cross-RFI, cross-tenant, or already resolved)."
+            );
+        }
     }
 
     /**

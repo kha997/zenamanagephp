@@ -1,186 +1,275 @@
 # RFI Lifecycle + Escalation History — Design Spec
 
-**Date:** 2026-07-26
-**Status:** Draft — chờ operator duyệt state machine trước khi viết implementation plan
-**Nguồn gốc:** Operational Integrity Triage v2 (P1-A) → hạ từ implementation ticket xuống design ticket theo yêu cầu operator (không sao chép Submittal, không clear field escalation khi resolve, làm rõ owner/reassignment/SLA/resolve/close trước khi code)
+**Date:** 2026-07-26 (rev 2)
+**Status:** Draft — chờ operator duyệt trước khi viết implementation plan
+**Nguồn gốc:** Operational Integrity Triage v2 (P1-A); rev 2 sửa theo `REQUEST CHANGES BEFORE IMPLEMENTATION PLAN` trên rev 1 — chốt Quyết định #1: escalation là concern độc lập, không còn là giá trị của `status`
 
-## Context
+## Thay đổi so với rev 1
 
-RFI hiện không có state machine — khác hẳn Submittal (có `TRANSITIONS` const, `canTransition()`). `status` là string tự do, phần lớn action ghi đè không kiểm tra trạng thái hiện tại. Field escalation tồn tại nhưng không bao giờ được dọn dẹp, không có lịch sử. Không có cơ chế reassignment thật. Notification pipeline cho RFI **là dead code hoàn toàn** — phát hiện mới trong spec này, sửa lại nhận định sai của audit trước.
-
-## 1. Hiện trạng đã xác nhận qua code (không suy đoán)
-
-### 1.1 Status values
-
-| status | Nguồn gán | Ý nghĩa suy ra |
+| # | Rev 1 | Rev 2 |
 |---|---|---|
-| `open` | default khi tạo (`store()`) | Mới tạo, chưa ai xử lý |
-| `pending` | **Không controller action nào set giá trị này** — chỉ xuất hiện trong `scopeOverdue`/badge color | Enum "chết", không rõ mục đích ban đầu |
-| `in_progress` | `assign()` | Đã gán người phụ trách |
-| `answered` | `respond()` (khi input status=answered) | Đã có câu trả lời |
-| `closed` | `respond()` (khi input status=closed) HOẶC `close()` | Đóng |
-| `escalated` | `escalate()` | Đang escalate |
+| Kiến trúc | Giả định Phương án A (`escalated` là 1 giá trị `status`) | **CHỐT Phương án B** — escalation độc lập hoàn toàn với lifecycle status |
+| Action mới | `deescalate()` | Đổi tên **`resolveEscalation()`** — đúng ngữ nghĩa "đóng 1 escalation cycle", không gắn với lifecycle |
+| Bảng history | Gọi là "append-only" nhưng thực chất update field resolution trên cùng row | Gọi đúng tên: **history-preserving 2-phase write** (insert khi escalate, update duy nhất 1 lần khi resolve) — không dùng từ "append-only" cho model có UPDATE |
+| Migration | Chưa có | Thêm mục 6: preflight + decision table cho dữ liệu legacy |
+| Rule answer/close/cancel | Chưa rõ | Thêm mục 7: answer không tự resolve escalation; close bị chặn khi còn active escalation; cancel-khi-escalated chỉ PM/admin |
+| Notification | "Ngoài phạm vi hoàn toàn" | Thu hẹp lại: có notification tối thiểu (in-app, after-commit), email/SLA vẫn ngoài phạm vi |
+| Authorization | Chưa có | Thêm mục 8, dùng permission string thật đã grep được (không suy đoán) |
+| Concurrency | Chưa có | Thêm mục 9 |
+| Test matrix | Chưa có | Thêm mục 11 |
 
-`update()` (PUT) cho phép set thẳng `open`/`answered`/`closed` bất kể trạng thái hiện tại, bỏ qua toàn bộ luồng `respond`/`close`/`assign`.
+## Bằng chứng bổ sung thu thập cho rev 2 (grounding, không suy đoán)
 
-### 1.2 Guard hiện có theo action (route → guard)
+- **RBAC permission thật** (`routes/api_zena.php:279-287`, `routes/web.php:842-847`, `database/seeders/ZenaPermissionsSeeder.php:14-21`): `rfi.view`, `rfi.create`, `rfi.edit`, `rfi.delete`, `rfi.assign`, `rfi.respond`, `rfi.close`, `rfi.escalate`. Chỉ role admin (`System Admin, Admin, super_admin, system_admin` qua `ZenaAdminRolePermissionSeeder.php`) được seed `rfi.escalate` mặc định — **không role PM/SiteEngineer/QC nào có quyền escalate qua seed hiện tại**. Có 1 seeder khác (`ZenaRbacSeeder.php`, permission code khác hẳn: `rfi.read/rfi.answer`) nhưng **không nằm trong `DatabaseSeeder::run()`** — dead/orphan, không dùng.
+- **Field lưu câu trả lời**: `Rfi` model có CẢ HAI cặp field song song trong `$fillable`: `answer`/`answered_by`/`answered_at` VÀ `response`/`responded_by`/`responded_at` (migration `2025_09_20_133629_create_rfis_table.php:33-38`). Không có bảng/model riêng cho câu trả lời. Đây là 1 sự trùng lặp có sẵn trong schema — spec này không sửa, chỉ ghi nhận để implementation biết field nào đang thực sự được `respond()` ghi.
+- **`EventRecord`**: tồn tại (`app/Models/EventRecord.php`), cấu trúc outbox-style (`aggregate_type`/`aggregate_id`/`event_key`/`payload`, không phải Eloquent polymorphic relation). **Chưa từng được dùng cho RFI** — `EventRecord::create` chỉ xuất hiện trong `TaskController.php`. Kết luận quan trọng: **không có nguồn evidence lịch sử nào (event log) cho RFI** — mục 6 (migration) phải thiết kế dựa trên giả định này, không thể "tra cứu EventRecord" như kỳ vọng ban đầu vì dữ liệu đó không tồn tại.
+- **DB engine**: MySQL (`config/database.php:17`, `.env.example:11`) — ảnh hưởng cách enforce "tối đa 1 active escalation" (mục 9), vì MySQL không có partial/conditional unique index kiểu Postgres.
+- **`rfi_escalations` chưa tồn tại** — xác nhận `find database/migrations -iname "*escalat*"` = 0 kết quả, `grep -rl "RfiEscalation"` = 0 kết quả. Bảng hoàn toàn mới.
+- **`lockForUpdate()` đã có tiền lệ** trong chính `RfiController.php` và `SubmittalLifecycleService.php` — implementation nên đọc lại pattern đã dùng ở đó để nhất quán, không tạo pattern lock mới.
+- **Số liệu RFI**: DB dev hiện có `Rfi::count() = 0` — không đại diện production, không dùng làm căn cứ quyết định.
 
-| Route | Action | Check `$rfi->status` hiện tại trước khi set? |
-|---|---|---|
-| `POST /rfis` | store | n/a (tạo mới) |
-| `POST /rfis/{id}/assign` | assign | **KHÔNG** |
-| `POST /rfis/{id}/respond` | respond | **KHÔNG** — có thể respond RFI đã `closed`/`escalated` |
-| `POST /rfis/{id}/close` | close | **CÓ** — `if ($rfi->status !== 'answered') return 400` |
-| `POST /rfis/{id}/escalate` | escalate | **KHÔNG** — có thể escalate RFI đã `closed` |
-| `PUT /rfis/{id}` | update | **KHÔNG** |
-
-Chỉ 1/6 action có guard. `close()` là ngoại lệ duy nhất hiện đúng chuẩn.
-
-### 1.3 Caller
-
-- `routes/api_zena.php`: đầy đủ CRUD + assign/respond/close/escalate, mỗi route có `rbac:rfi.*` riêng.
-- `routes/web.php`: **chỉ có index/create/store/show/respond/close** — không có route web cho escalate hoặc assign (2 action này chỉ gọi được qua API trực tiếp).
-- `resources/views/rfis/show.blade.php`: form respond hiện khi `status IN (open, escalated)`; form close hiện khi `status = answered`. Đây là điều kiện UI-only — API không tự enforce tương tự cho respond (chỉ close có enforce).
-
-### 1.4 Notification — DEAD CODE (phát hiện mới, sửa nhận định audit trước)
-
-`RfiEventListener` import `App\Events\RfiCreated/RfiUpdated/RfiResponded/RfiClosed` — **các Event class này không tồn tại trong repo**. `EventServiceProvider` không có mapping nào cho Rfi. `RfiController` không có `event(...)`/`::dispatch()` nào. **Kết luận: không ai được thông báo bất cứ điều gì khi RFI thay đổi trạng thái, kể cả escalate.** Đây không phải "notify cả team" như ghi nhận trước — listener đó chưa từng chạy.
-
-### 1.5 Escalation field — không bao giờ được dọn
-
-Grep toàn bộ `app/`: không có nơi nào set `escalated_to`/`escalation_reason`/`escalated_by`/`escalated_at` về `null`. Không có lịch sử — chỉ 1 bộ field duy nhất, escalate lần 2 sẽ ghi đè lần 1, mất dấu vết.
-
-### 1.6 Reassignment — không tồn tại như 1 khái niệm riêng
-
-`assign()` dùng chung cho gán lần đầu và gán lại, không phân biệt, không giữ lịch sử người được gán trước, không check status hiện tại.
-
-### 1.7 Test hiện có — hợp đồng hành vi thực tế đang được bảo vệ
-
-- `RfiApiTest`: `test_can_escalate_rfi` (từ `in_progress`), `test_can_close_rfi` (từ `answered`). **Không có test nào verify guard khi escalate/respond trên RFI đã `closed`** — nghĩa là thêm guard mới cho các action này sẽ KHÔNG phá test hiện có (nhưng cũng không có ai đang bảo vệ hành vi ngược lại).
-- `OperatorRfiUiTest`: flow web UI đầy đủ create→respond→close; không test escalate qua web (vì không có route).
-- `RfiWorkflowTest`: một số test gọi thẳng `$rfi->update()` trên model, bỏ qua controller — không phải test hợp đồng API thật.
-
-**Kết luận quan trọng cho thiết kế**: có thể thêm guard vào `respond()`/`escalate()`/`assign()` mà không phá bất kỳ test nào đang xanh — nhưng đây là thay đổi hành vi thật (hiện tại cho phép), cần operator xác nhận đây là điều muốn.
-
-## 2. Vấn đề kiến trúc cần quyết định TRƯỚC khi vẽ transition map
-
-**`escalated` hiện là 1 giá trị của `status` (loại trừ lẫn nhau với `answered`/`closed`), nhưng về nghiệp vụ, "đang khẩn cấp" và "đang ở giai đoạn nào của vòng đời" là 2 chiều độc lập** — một RFI có thể vừa `in_progress` vừa "đã được đánh dấu khẩn" cùng lúc. Thiết kế hiện tại buộc phải chọn 1: hoặc RFI "escalated" (mất thông tin nó đang open hay in_progress), hoặc RFI "in_progress" (mất thông tin nó đang khẩn).
-
-**Cần operator quyết định (Quyết định #1 — chặn toàn bộ phần còn lại của spec):**
-
-| Phương án | Mô tả | Đánh đổi |
-|---|---|---|
-| A. Giữ nguyên kiến trúc — `escalated` là 1 status | Ít thay đổi nhất, tương thích UI hiện có (badge theo status) | Không biểu diễn được "in_progress nhưng đang khẩn" — đúng hiện trạng, chỉ vá guard |
-| B. Tách `escalation` thành field độc lập (`is_escalated: bool` hoặc `escalation_level: int`) song song với `status` | Đúng bản chất nghiệp vụ hơn, RFI vẫn giữ status chính (open/in_progress/answered/closed) trong khi escalation là 1 thuộc tính bổ sung | Đổi schema, đổi UI badge, phạm vi lớn hơn — không nằm trong "design ticket nhỏ" ban đầu |
-
-Spec này **giả định Phương án A** (giữ `escalated` trong `status` enum) vì đó là thay đổi nhỏ nhất phù hợp phạm vi "design ticket" — nhưng đây là giả định cần operator xác nhận, không phải quyết định đã chốt. Nếu operator chọn B, phần 3-6 dưới đây cần thiết kế lại.
-
-## 3. Transition map đề xuất (RFI-specific, không sao chép Submittal)
-
-Khác Submittal (workflow tuyến tính draft→submitted→approved/rejected), RFI có đặc thù: `escalated` không phải trạng thái "cuối" của 1 nhánh mà là "chèn ngang" vào bất kỳ trạng thái chưa đóng nào, và có thể thoát ra để tiếp tục làm việc bình thường.
+## 1. Lifecycle status — CHỈ chứa trạng thái nghiệp vụ RFI (escalation tách riêng)
 
 ```
-        ┌──────┐
-        │ open │ (tạo mới)
-        └──┬───┘
-           │ assign()
-           ▼
-    ┌─────────────┐
-    │ in_progress │◄────────────────┐
-    └──┬──────┬───┘                 │
-       │      │ escalate()          │ de-escalate (mới, xem 3.3)
-       │      ▼                     │
-       │  ┌───────────┐             │
-       │  │ escalated │─────────────┘
-       │  └─────┬─────┘
-       │        │ respond()
-       │        ▼
-       │   ┌──────────┐
-       └──►│ answered │
-           └────┬─────┘
-                │ close()
-                ▼
-           ┌────────┐
-           │ closed │ (terminal)
-           └────────┘
+enum RfiLifecycleStatus {
+    OPEN         // mới tạo
+    IN_PROGRESS  // đã gán người phụ trách
+    ANSWERED     // đã có câu trả lời
+    CLOSED       // terminal — đã đóng
+    CANCELLED    // terminal — huỷ (MỚI, xem mục 3.3)
+}
 ```
 
-### 3.1 Bảng transition đầy đủ (state hiện tại → state đích → action → điều kiện)
+**Không còn `escalated` trong enum này.** Escalate/resolveEscalation **không đổi `status`** — một RFI có thể đồng thời ở `IN_PROGRESS` VÀ có 1 escalation đang active. `pending` (giá trị cũ, chưa từng được action nào set — xác nhận lại ở rev 2) bị loại khỏi enum mới; dữ liệu legacy có `pending` được xử lý ở mục 6 (bảng quyết định migration) như 1 trường hợp bất thường, không phải trạng thái hợp lệ tiếp diễn.
 
-| Từ | Đến | Action | Điều kiện bắt buộc |
+## 2. Escalation — bảng `rfi_escalations` (history-preserving, KHÔNG phải append-only thuần)
+
+Gọi đúng tên: đây là mô hình **2-phase write** — INSERT khi escalate (field gốc bất biến sau đó), UPDATE **đúng 1 lần** khi resolve (field resolution). Không gọi "append-only" vì có UPDATE thật trên cùng row.
+
+```
+rfi_escalations
+  id                 ulid, PK
+  rfi_id             FK → rfis.id
+  tenant_id          FK → tenants.id (denormalized, cho tenant-scope query nhanh + defense-in-depth)
+  escalated_to       FK → users.id            — BẤT BIẾN sau khi tạo
+  escalated_by       FK → users.id            — BẤT BIẾN
+  escalated_at       timestamp                — BẤT BIẾN
+  escalation_reason  text                     — BẤT BIẾN
+  resolved_at        timestamp, nullable      — set ĐÚNG 1 LẦN khi resolve
+  resolved_by        FK → users.id, nullable  — set ĐÚNG 1 LẦN
+  resolution         text, nullable           — set ĐÚNG 1 LẦN
+  resolution_type    enum(manually_resolved, rfi_cancelled), nullable — set ĐÚNG 1 LẦN
+  created_at, updated_at
+```
+
+**Ràng buộc bắt buộc:**
+1. Field gốc (`escalated_to/by/at/reason`) **không bao giờ được UPDATE** sau khi INSERT — enforce ở tầng application (không có code path nào gọi `update()` trên các field này), không cần DB trigger.
+2. Field resolution chỉ được ghi **đúng 1 lần** — enforce bằng guard ứng dụng: `resolveEscalation()` phải kiểm tra `resolved_at IS NULL` trước khi update, trong cùng transaction có lock (mục 9). Gọi lần 2 trên record đã resolve → lỗi 409/422, không ghi đè.
+3. **Tối đa 1 active escalation/RFI tại 1 thời điểm** — "active" = `resolved_at IS NULL`. Enforce bằng lock+check trong transaction (mục 9), KHÔNG dựa vào unique constraint DB do giới hạn MySQL với conditional unique (có thể cân nhắc unique index trên generated column `IF(resolved_at IS NULL, rfi_id, NULL)` ở MySQL 8+ như phòng thủ bổ sung, nhưng không phải cơ chế enforce chính — implementation cần xác nhận version MySQL thật trước khi dùng generated column).
+4. **Cho phép nhiều cycle theo thời gian** — 1 RFI có thể có N row trong `rfi_escalations` qua vòng đời, miễn tại mọi thời điểm chỉ 1 row có `resolved_at IS NULL`.
+
+Bảng `rfis` **giữ nguyên 4 field cũ** (`escalated_to/at/by/reason`) làm **denormalized cache của escalation record active gần nhất** (đọc nhanh không cần join, không phá query/UI cũ đang đọc trực tiếp field này) — nhưng nguồn sự thật (source of truth) là `rfi_escalations`. Khi không có escalation active, 4 field cache này để `null` (đã resolve rồi thì cache cũng clear — cache, không phải audit trail, khác hẳn dữ liệu trong `rfi_escalations` không bao giờ mất).
+
+## 3. State diagram — HAI TRỤC ĐỘC LẬP
+
+### Trục 1 — Lifecycle (không bị escalation chi phối)
+
+```
+   store()                assign()              respond()             close()
+  ────────► OPEN ─────────────────► IN_PROGRESS ─────────► ANSWERED ─────────► CLOSED
+                                        │                      │              (terminal)
+                    cancel() ◄──────────┴──────────────────────┘
+                       │
+                       ▼
+                  CANCELLED
+                 (terminal)
+```
+
+- `respond()`: `OPEN` hoặc `IN_PROGRESS` → `ANSWERED`. Không phụ thuộc escalation có active hay không.
+- `close()`: `ANSWERED` → `CLOSED`. **Bị chặn nếu đang có active escalation** (mục 7).
+- `cancel()`: `OPEN`/`IN_PROGRESS`/`ANSWERED` → `CANCELLED`. Luôn bắt buộc lý do. Nếu có active escalation, quyền hạn thắt chặt hơn (mục 7).
+- `assign()` (reassign): không đổi lifecycle status, chỉ đổi `assigned_to` — hợp lệ ở mọi trạng thái chưa terminal (`OPEN`/`IN_PROGRESS`/`ANSWERED`).
+
+### Trục 2 — Escalation cycle (độc lập, có thể chồng lên bất kỳ điểm nào của Trục 1 trừ terminal)
+
+```
+  escalate()                    resolveEscalation()
+ ───────────► [ACTIVE escalation] ─────────────────► [RESOLVED escalation]
+  (chỉ khi chưa có active,                            (resolved_at/by/resolution
+   lifecycle chưa terminal)                            ghi đúng 1 lần)
+
+  ...RFI có thể escalate() lại lần nữa sau khi resolve → tạo cycle mới (row mới)
+```
+
+### Ma trận kết hợp — trạng thái hợp lệ (Lifecycle × Escalation)
+
+| Lifecycle \ Escalation | Không có escalation | Có escalation ACTIVE |
+|---|---|---|
+| `OPEN` | Hợp lệ (mặc định) | Hợp lệ — vừa tạo vừa bị escalate ngay |
+| `IN_PROGRESS` | Hợp lệ | Hợp lệ — trường hợp phổ biến nhất |
+| `ANSWERED` | Hợp lệ | Hợp lệ — đã trả lời nhưng escalation cũ chưa resolve (VD trả lời xong nhưng người escalate chưa xác nhận hài lòng) |
+| `CLOSED` | Hợp lệ (điều kiện bắt buộc để vào được trạng thái này — mục 7) | **KHÔNG BAO GIỜ xảy ra** — `close()` bị chặn cứng nếu còn active escalation |
+| `CANCELLED` | Hợp lệ | Hợp lệ tức thời trong transaction cancel (nhưng ngay sau đó escalation phải được resolve atomic cùng lúc — mục 7, nên trạng thái ổn định cuối cùng luôn là `CANCELLED` + escalation đã RESOLVED, không có ô "CANCELLED + ACTIVE" tồn tại lâu dài) |
+
+## 4. Bảng transition đầy đủ
+
+| Từ (lifecycle) | Đến | Action | Điều kiện |
 |---|---|---|---|
-| — | `open` | `store()` | Luôn cho phép (tạo mới) |
-| `open` | `in_progress` | `assign()` | `assigned_to` phải khác null sau khi gán |
-| `open`, `in_progress` | `escalated` | `escalate()` | **MỚI**: chỉ cho phép từ `open`/`in_progress`, KHÔNG cho phép từ `answered`/`closed` (đã xong việc thì không "khẩn" nữa) |
-| `escalated` | `in_progress` | `deescalate()` (**action mới**, xem 3.3) | Phải có `escalation_resolution` (lý do hạ mức khẩn) |
-| `in_progress`, `escalated` | `answered` | `respond()` | **MỚI**: chỉ cho phép từ `in_progress`/`escalated`, KHÔNG cho phép từ `closed` (RFI đã đóng không trả lời lại được — muốn hỏi tiếp thì tạo RFI follow-up mới, xem 6) |
-| `answered` | `closed` | `close()` | Giữ nguyên guard hiện có (đã đúng) |
-| bất kỳ trạng thái nào chưa `closed` | (không đổi `status`) | `assign()` gọi lại (reassign) | Xem 3.2 — reassign không đổi `status`, chỉ đổi `assigned_to` |
+| — | `OPEN` | `store()` | Luôn cho phép |
+| `OPEN` | `IN_PROGRESS` | `assign()` | `assigned_to` khác null |
+| `OPEN`/`IN_PROGRESS`/`ANSWERED` | (không đổi) | `assign()` lại (reassign) | Không giới hạn thêm ngoài permission |
+| `OPEN`/`IN_PROGRESS` | `ANSWERED` | `respond()` | Không phụ thuộc escalation |
+| `ANSWERED` | `CLOSED` | `close()` | **Không có active escalation** (mới, mục 7) |
+| `OPEN`/`IN_PROGRESS`/`ANSWERED` | `CANCELLED` | `cancel()` | Lý do bắt buộc; nếu có active escalation → chỉ PM/admin + resolve escalation atomic (mục 7) |
 
-**Không có transition nào cho phép quay lại `open` từ bất kỳ trạng thái nào khác** (không có "reopen" — xem mục 6 về semantics đóng/mở lại).
-
-### 3.2 Owner & Reassignment
-
-- `assigned_to` là owner. **Assign lần đầu** (từ `assigned_to = null`) và **reassign** (từ `assigned_to` đã có giá trị) dùng CHUNG 1 action `assign()` như hiện tại — không cần tách action riêng, nhưng phải ghi lịch sử (xem 4).
-- Reassign được phép ở MỌI trạng thái chưa `closed` (kể cả `escalated` — cần đổi người phụ trách giữa lúc khẩn là tình huống thực tế hợp lý).
-- Reassign trên RFI đã `closed`: **không cho phép** — RFI đã xong việc không cần đổi người phụ trách.
-
-### 3.3 Action mới cần thêm: `deescalate()`
-
-Hiện tại KHÔNG có cách thoát khỏi `escalated` để quay lại làm việc bình thường mà không trả lời luôn (`respond()` từ `escalated` đi thẳng sang `answered`, bỏ qua `in_progress`). Nhưng thực tế: 1 RFI có thể được escalate rồi hoá ra không cần trả lời gấp — người phụ trách muốn "hạ mức khẩn" mà chưa có câu trả lời. Đề xuất thêm action `deescalate()`:
-- Route mới: `POST /rfis/{id}/deescalate`.
-- Chuyển `escalated → in_progress`.
-- Bắt buộc field `escalation_resolution` (text, lý do hạ mức) — ghi vào lịch sử escalation (mục 4), KHÔNG xoá field escalation gốc.
-- **Đây là action MỚI, chưa tồn tại trong code — cần operator xác nhận có muốn thêm hay không, hay chấp nhận "escalated chỉ thoát qua respond()" là đủ.** (Quyết định #2)
-
-## 4. Escalation history — 2 phương án (chờ quyết định #3)
-
-Operator đã yêu cầu: KHÔNG clear `escalated_to/escalated_at/escalation_reason` khi resolve; đề xuất `escalation_resolved_at/by/resolution` HOẶC append-only escalation events.
-
-| Phương án | Mô tả | Đánh đổi |
+| Escalation state | Action | Điều kiện |
 |---|---|---|
-| **A. Thêm field resolution vào bảng `rfis`** | Thêm `escalation_resolved_at`, `escalation_resolved_by`, `escalation_resolution` cạnh 4 field escalation hiện có. Field gốc (`escalated_to/at/by/reason`) giữ nguyên vĩnh viễn sau khi resolve — không bị ghi đè. | Đơn giản, ít di trú. **Nhược điểm nghiêm trọng**: nếu RFI escalate LẦN 2 (sau khi đã từng escalate-resolve 1 lần), field sẽ bị ghi đè, mất lịch sử lần 1 — chỉ giữ được lịch sử của lần escalate GẦN NHẤT, không phải toàn bộ |
-| **B. Bảng con `rfi_escalations` (append-only)** | Mỗi lần escalate là 1 row mới: `id, rfi_id, escalated_to, escalated_by, escalated_at, escalation_reason, resolved_at, resolved_by, resolution, resolution_type (respond\|deescalate)`. Giữ TOÀN BỘ lịch sử mọi lần escalate, kể cả nhiều lần. Cùng pattern đã dùng cho `submittal_revisions` trong hệ thống (tiền lệ có sẵn, không phải kiến trúc mới lạ). | Cần 1 migration + 1 model mới, nhiều việc hơn phương án A, nhưng đúng nghĩa "audit history" như operator yêu cầu, và nhất quán với pattern Submittal đã có |
+| Không có active | `escalate()` | Lifecycle chưa terminal (`CLOSED`/`CANCELLED` không được escalate) |
+| Active | `resolveEscalation()` | `resolved_at IS NULL` hiện tại (guard chống double-resolve) |
 
-**Đề xuất của spec này: Phương án B** — vì (a) đúng nghĩa đen "escalation history" mà operator đề cập chứ không phải "resolution của lần gần nhất", (b) RFI có thể escalate nhiều lần trong vòng đời (khác Submittal chỉ có 1 chu kỳ reject→revise), (c) đã có tiền lệ kiến trúc `submittal_revisions` trong repo, giảm rủi ro pattern lạ. **Nhưng đây là đề xuất, không phải quyết định đã chốt — operator cần xác nhận (Quyết định #3), đặc biệt nếu muốn tối giản hoá effort thì phương án A vẫn là lựa chọn hợp lệ nếu chấp nhận giới hạn "chỉ giữ lịch sử lần escalate gần nhất".**
+## 5. Owner & Reassignment
 
-Nếu chọn B: 4 field cũ trên bảng `rfis` (`escalated_to/at/by/reason`) trở thành **denormalized cache của escalation record mới nhất** (để không phá UI/query hiện tại đang đọc trực tiếp field này), đồng thời ghi đầy đủ vào `rfi_escalations`. Không xoá 4 field cũ khỏi bảng `rfis` — chỉ bổ sung.
+Không đổi so với rev 1: `assign()` dùng chung cho gán lần đầu/reassign, hợp lệ ở mọi lifecycle chưa terminal, kể cả khi đang có active escalation.
 
-## 5. Semantics owner/reassignment/SLA/resolve/close (chốt theo evidence, không suy đoán thêm)
+## 6. Migration/backfill dữ liệu legacy
 
-- **Owner**: `assigned_to`. Không có "watcher" hay "co-owner" — ngoài phạm vi spec này.
-- **SLA**: KHÔNG có trong hiện trạng (`due_date` nullable, không bắt buộc). Spec này KHÔNG thêm SLA — đó là phạm vi của "Overdue & Escalation Engine" (P1-A trong triage, ticket riêng, phụ thuộc vào transition map này được duyệt trước).
-- **Resolve** (trong ngữ cảnh escalation): là `deescalate()` (mục 3.3) hoặc `respond()` từ `escalated` — cả 2 đều đóng escalation record hiện tại (set `resolved_at/by/resolution` hoặc insert row mới tuỳ phương án 4).
-- **Close**: giữ nguyên guard hiện có (`answered → closed`), không đổi.
-- **Reopen**: KHÔNG thiết kế trong spec này — RFI `closed` là terminal tuyệt đối. Nếu cần hỏi thêm sau khi đóng, quy trình là tạo RFI mới (không có field "RFI liên quan" — đây là gap thật nhưng ngoài phạm vi, ghi nhận ở mục 7).
+### 6.1 Preflight bắt buộc TRƯỚC khi chạy migration thật (chạy trên staging/production, KHÔNG dùng số liệu DB dev vì hiện đang rỗng)
 
-## 6. Semantics "closed không cho respond lại" — điểm khác biệt lớn nhất so với hiện trạng
+1. Đếm `Rfi::where('status','escalated')->count()` và tổng `Rfi::count()`.
+2. Với từng row `status='escalated'`: kiểm tra `assigned_to` (null hay không).
+3. Với từng row `status != 'escalated'`: kiểm tra 4 field snapshot cũ (`escalated_to/by/at/reason`) có populated không — dấu hiệu "đã từng escalate trong quá khứ, sau đó status bị ghi đè bởi `respond()`/`close()`/`update()` (cơ chế cột đơn hiện tại cho phép ghi đè tự do)".
+4. Đếm `Rfi::where('status','pending')->count()` — theo code hiện tại, KHÔNG action nào từng set giá trị này, nên bất kỳ row nào có `status='pending'` là bất thường, cần liệt kê riêng.
+5. **Xác nhận lại: `EventRecord` không có dữ liệu nào cho RFI** (đã xác nhận qua code, nhưng preflight nên tự chạy `EventRecord::where('aggregate_type','rfi')->count()` trên production để chắc chắn 100%, phòng trường hợp có ghi nhận nào ngoài phạm vi code đã đọc).
 
-Hiện tại `respond()` không hề chặn RFI đã `closed`. Spec này đề xuất chặn — đây là thay đổi hành vi thật (không phải chỉ làm rõ), cần nêu tường minh: **sau khi RFI đóng, không sửa câu trả lời qua `respond()` được nữa.** Nếu nghiệp vụ thực tế cần sửa câu trả lời sau khi đóng (ví dụ phát hiện sai sót), cần 1 luồng riêng ("reopen" hoặc "amend") — KHÔNG có trong spec này, cần quyết định (Quyết định #4: có chấp nhận giới hạn này không, hay cần thêm luồng reopen).
+### 6.2 Bảng quyết định migration (Migration Decision Table)
 
-## 7. Ngoài phạm vi (Non-goals)
+**Nguyên tắc nền**: cơ chế cột `status` đơn hiện tại có nghĩa là nếu 1 row hiện KHÔNG còn `status='escalated'`, nó chắc chắn đã bị `respond()`/`close()`/`update()` ghi đè SAU đó — nhưng KHÔNG có event log nào xác nhận được thời điểm/người thực hiện chính xác. Vì vậy **không có trường hợp nào đạt "high confidence" theo nghĩa xác nhận được bằng event log** — mọi row có snapshot escalation đều cần đưa vào manual-review report, chỉ khác nhau ở việc có gán lifecycle mặc định nào hay không.
 
-- Không thêm SLA/deadline enforcement (thuộc Overdue Engine, ticket riêng — phụ thuộc spec này).
-- Không thêm notification thật (email/in-app) — pipeline hiện là dead code hoàn toàn, việc khôi phục/xây notification là ticket riêng, phụ thuộc transition map này được duyệt trước (cần biết chính xác sự kiện nào tồn tại trước khi thiết kế notify theo sự kiện đó).
-- Không thêm route web cho `escalate`/`assign`/`deescalate` — quyết định UI (có expose lên web UI hay chỉ giữ API) để lại cho lúc viết implementation plan, sau khi state machine được duyệt.
-- Không thiết kế "RFI liên quan" (linked follow-up RFI sau khi đóng).
-- Không đổi `pending` status (giữ nguyên là "dead enum value" — quyết định xoá hay định nghĩa lại mục đích của nó để riêng, không ưu tiên).
+| Điều kiện dữ liệu legacy | Lifecycle mới gán | `rfi_escalations` tạo ra | Vào manual-review report? |
+|---|---|---|---|
+| `status='escalated'`, `assigned_to` khác null | `IN_PROGRESS` | 1 row **UNRESOLVED** (copy từ 4 field snapshot cũ) | **CÓ** — mọi row, vì không xác nhận được bằng event log |
+| `status='escalated'`, `assigned_to` là null | `OPEN` | 1 row **UNRESOLVED** (copy từ snapshot) | **CÓ** |
+| `status != 'escalated'`, nhưng 4 field snapshot cũ populated | Giữ nguyên giá trị `status` hiện tại (map thẳng sang enum mới, xem 6.3) | 1 row **RESOLVED** suy luận: `resolved_at` = ước lượng bằng `rfi.updated_at`, `resolved_by` = null, `resolution_type` = `manually_resolved`, `resolution` = "Backfill tự động: không xác nhận được thời điểm/người resolve thật do thiếu event log — ước lượng từ updated_at." | **CÓ** — vì thời điểm/người resolve chỉ là ước lượng |
+| `status = 'pending'` (bất thường, không action nào từng set) | `OPEN` (mặc định an toàn) | Không tạo | **CÓ** — đánh dấu "anomaly: trạng thái pending không rõ nguồn gốc" |
+| `status IN (open, in_progress, answered, closed)`, không có snapshot escalation | Map thẳng 1-1 sang enum mới | Không tạo | Không |
 
-## 8. Quyết định nghiệp vụ cần operator duyệt trước khi viết implementation plan
+**Không có row nào bị tự động map về `open` chỉ vì thiếu bằng chứng** — quy tắc trên luôn ưu tiên tín hiệu trực tiếp nhất có (`assigned_to`, `status` hiện tại) làm lifecycle mặc định, và luôn tạo bản ghi escalation (unresolved hoặc resolved-ước-lượng) thay vì âm thầm bỏ qua dấu vết escalation — nhưng MỌI row có bất kỳ tín hiệu escalation nào đều xuất hiện trong manual-review report để con người xác nhận lại, vì đây là giới hạn thật của việc thiếu event log, không phải sự tuỳ tiện.
 
-1. **[CHẶN TOÀN BỘ]** Escalation là 1 giá trị của `status` (Phương án A, spec giả định) hay tách thành field độc lập song song với status (Phương án B, phạm vi lớn hơn)?
-2. Có cần thêm action `deescalate()` mới (thoát `escalated` mà không trả lời luôn), hay chấp nhận chỉ thoát qua `respond()`?
-3. Escalation history: field resolution đơn giản trên bảng `rfis` (chỉ giữ lần gần nhất) hay bảng con `rfi_escalations` append-only (giữ toàn bộ lịch sử, đề xuất của spec)?
-4. Có chấp nhận giới hạn "RFI đã `closed` không thể `respond()` lại nữa, muốn hỏi thêm phải tạo RFI mới" hay cần thiết kế luồng reopen/amend?
-5. `pending` status: xoá khỏi enum (dọn dẹp) hay giữ nguyên/định nghĩa lại mục đích?
+### 6.3 Mapping `status` cũ → `RfiLifecycleStatus` mới (cho row không có snapshot escalation)
 
-## Self-review
+| `status` cũ | `RfiLifecycleStatus` mới |
+|---|---|
+| `open` | `OPEN` |
+| `in_progress` | `IN_PROGRESS` |
+| `answered` | `ANSWERED` |
+| `closed` | `CLOSED` |
+| `escalated` | Xem bảng 6.2 (dựa vào `assigned_to`) |
+| `pending` | `OPEN` (xem 6.2, kèm anomaly flag) |
 
-- **Không sao chép Submittal**: transition map RFi có nhánh escalate/de-escalate chèn ngang, khác hẳn workflow tuyến tính draft→submitted→approved/rejected→revising của Submittal — đặc thù riêng của RFI được tôn trọng.
-- **Không xoá field escalation khi resolve**: cả 2 phương án ở mục 4 đều giữ nguyên field/record cũ, chỉ thêm thông tin resolution.
-- **Owner/reassignment/SLA/resolve/close đã làm rõ** ở mục 5, dựa trên evidence thật (không suy đoán) — SLA cố tình để trống vì ngoài phạm vi, không phải bỏ sót.
-- **Chưa chốt state machine** — đúng yêu cầu operator "chờ operator duyệt trước khi code". 5 quyết định ở mục 8 đều là quyết định nghiệp vụ thật, không phải chi tiết kỹ thuật tôi có thể tự quyết.
-- **Phát hiện ngoài dự kiến đã nêu rõ, không giấu**: `RfiEventListener` là dead code hoàn toàn — sửa lại nhận định "notify cả team" của audit trước, ảnh hưởng trực tiếp tới việc thiết kế notification (ticket riêng, chưa làm ở đây).
+### 6.4 Manual-review report
+
+Migration script xuất ra 1 report (CSV/log, không phải chỉ ghi log ẩn) liệt kê MỌI row rơi vào cột "CÓ" ở bảng 6.2, gồm: `rfi_id`, lifecycle mới gán, escalation record tạo ra (resolved/unresolved), lý do vào report. Migration **KHÔNG bị chặn chạy** bởi report này (không phải manual approval gate trước khi chạy) — report là **hậu-migration**, để PM/admin rà lại và điều chỉnh thủ công (VD tự tay resolve 1 escalation mà migration để unresolved, nếu họ biết chắc thực tế nó đã xong).
+
+## 7. Rule cho answer / close / cancel
+
+- **`respond()` (answer) KHÔNG tự động resolve escalation.** Trả lời câu hỏi và đóng escalation cycle là 2 hành động độc lập hoàn toàn — người trả lời không mặc nhiên "đã xử lý xong việc khẩn". Muốn đóng escalation phải gọi `resolveEscalation()` riêng.
+- **`close()` bị chặn nếu còn active escalation.** Guard mới: `if (RfiEscalation::where('rfi_id', $rfi->id)->whereNull('resolved_at')->exists()) { return 409/422 "Không thể đóng RFI khi còn escalation đang active — resolve escalation trước." }`.
+- **`cancel()` khi có active escalation**: chỉ actor có quyền PM/admin (xem mục 8) mới được thực hiện; bắt buộc field `reason`; **phải resolve escalation cycle trong CÙNG transaction** (`resolution_type = 'rfi_cancelled'`, `resolution` = tham chiếu tới lý do cancel, `resolved_by` = actor, `resolved_at` = now) — không được để lại escalation active sau khi RFI đã cancelled.
+- **`cancel()` khi KHÔNG có active escalation**: quyền hạn lỏng hơn (assignee hoặc PM/admin, xem mục 8), vẫn bắt buộc `reason`.
+
+## 8. Authorization matrix
+
+Dùng đúng permission string thật đã xác nhận (`rfi.view/create/edit/delete/assign/respond/close/escalate`) — không suy đoán tên mới trừ khi ghi rõ là permission MỚI cần seed.
+
+| Action | Permission | Điều kiện bổ sung |
+|---|---|---|
+| `assign` (kể cả reassign) | `rfi.assign` | Target `assigned_to` phải cùng tenant + có membership trong project của RFI (cần xác nhận middleware hiện tại đã enforce project-membership hay chỉ tenant-level — nếu chưa, đây là gap cần vá cùng lúc, ghi ở mục 12) |
+| `respond` | `rfi.respond` | Lifecycle phải `OPEN`/`IN_PROGRESS` (không đổi ai được respond so với hiện tại — permission-based, không giới hạn theo `assigned_to`, giữ nguyên hành vi cũ) |
+| `close` | `rfi.close` | Lifecycle `ANSWERED`; không còn active escalation |
+| `cancel` — không có active escalation | **`rfi.cancel` (permission MỚI, chưa tồn tại, cần thêm vào `ZenaPermissionsSeeder` và gán role)** | Lifecycle chưa terminal; `reason` bắt buộc |
+| `cancel` — có active escalation | `rfi.cancel` **VÀ** actor có vai trò PM/admin cho project đó (kiểm tra qua `UserRoleProject` với `Role::name = 'project_manager'`, HOẶC actor có `rfi.escalate` — vì hiện tại chỉ role admin có `rfi.escalate`, dùng nó làm proxy "đủ thẩm quyền quản lý escalation" nếu business không muốn tạo permission riêng) | Lý do bắt buộc; atomic resolve escalation |
+| `escalate` | `rfi.escalate` | Lifecycle chưa terminal; chưa có active escalation; `escalated_to` phải cùng tenant + project membership |
+| `resolveEscalation` | `rfi.escalate` (tái dùng — quyền tạo escalation ngụ ý quyền đóng nó; đề xuất, có thể tách permission riêng nếu business muốn phân quyền chi tiết hơn) | Phải đang có active escalation |
+
+**Lưu ý vận hành quan trọng** (không phải quyết định thiết kế, nhưng ảnh hưởng trực tiếp tới việc dùng được tính năng): hiện tại **chỉ admin role có `rfi.escalate`** qua seed mặc định — PM không tự escalate được trừ khi business chủ động gán thêm permission này cho role PM. Đây là quyết định seeding/role riêng, không phải quyết định kiến trúc của spec này, nhưng cần biết trước khi rollout (nếu không PM sẽ không dùng được escalate/resolveEscalation/cancel-with-escalation).
+
+## 9. Transaction & Concurrency
+
+- Mọi action ghi (`escalate`, `resolveEscalation`, `cancel`, và `close` khi cần check escalation) chạy trong `DB::transaction()`.
+- `escalate()`: trong transaction, `Rfi::where('id',$id)->lockForUpdate()->first()` lock row RFI; `RfiEscalation::where('rfi_id',$id)->whereNull('resolved_at')->lockForUpdate()->first()` kiểm tra active escalation. Nếu đã có → **rollback, trả 409 Conflict**. Nếu không → insert row mới + update 4 field cache trên `rfis`.
+- 2 request `escalate()` đồng thời: request thứ nhất lock trước, insert, commit. Request thứ hai chờ lock, sau khi acquire thấy đã có active escalation (do request 1 vừa tạo) → trả 409.
+- `resolveEscalation()`: lock đúng row `rfi_escalations` đang active bằng `lockForUpdate()`; kiểm tra `resolved_at IS NULL` ngay trong transaction trước khi update (chống race 2 resolve cùng lúc — request thứ 2 sau khi acquire lock thấy `resolved_at` đã có giá trị → 409).
+- `cancel()` khi có active escalation: lock CẢ row `rfis` VÀ row `rfi_escalations` active trong cùng transaction, update cả 2 (status RFI → cancelled, resolve escalation) atomic — hoặc rollback toàn bộ nếu bất kỳ bước nào lỗi.
+- Không dùng optimistic locking (version column) cho phần này — dùng pessimistic lock (`lockForUpdate()`) nhất quán với pattern đã có sẵn trong `RfiController`/`SubmittalLifecycleService`.
+
+## 10. Notification tối thiểu
+
+- **Phạm vi**: chỉ in-app notification cho `escalated_to` khi 1 escalation mới được tạo. KHÔNG có email, KHÔNG có auto-escalation theo SLA (thuộc Overdue Engine, ticket riêng — engine đó khi làm PHẢI gọi qua lifecycle/escalation service của spec này, không tự ý update trực tiếp bảng, xem mục 13).
+- **Timing**: dispatch SAU KHI transaction commit thành công (Laravel: đặt lời gọi notify ngoài closure `DB::transaction()`, hoặc dùng `ShouldQueue` + cấu hình `afterCommit`). Không dispatch notification nếu transaction rollback (VD do conflict 409) — vì action chưa thực sự xảy ra.
+- **Lỗi notification**: nếu gửi notify thất bại (exception), **log lỗi (`Log::error`) nhưng KHÔNG rollback** hành động escalate đã commit — escalation đã xảy ra thật, việc thông báo thất bại là vấn đề vận hành riêng, không nên làm mất dữ liệu escalation đã ghi.
+
+## 11. Test matrix
+
+| # | Case | Kỳ vọng |
+|---|---|---|
+| 1 | Lifecycle happy path | `store→assign→respond→close` thành công tuần tự, không có escalation liên quan |
+| 2 | Respond 2 lần | Lần 2 bị chặn (lifecycle không còn `OPEN`/`IN_PROGRESS`) |
+| 3 | Close khi chưa `ANSWERED` | 400/422 (giữ nguyên guard cũ) |
+| 4 | Escalate trên `OPEN` | Thành công, lifecycle KHÔNG đổi, escalation record active được tạo |
+| 5 | Escalate trên `IN_PROGRESS` | Thành công, tương tự #4 |
+| 6 | Escalate trên `CLOSED`/`CANCELLED` | Bị chặn (lifecycle terminal) |
+| 7 | Escalate lần 2 khi đã có active | 409 Conflict |
+| 8 | `resolveEscalation()` hợp lệ | `resolved_at/by/resolution` được set đúng 1 lần, field gốc không đổi |
+| 9 | `resolveEscalation()` lần 2 trên cùng record | 409 (không double-resolve) |
+| 10 | Nhiều cycle theo thời gian | escalate→resolve→escalate lại→resolve lại → 2 row riêng biệt trong `rfi_escalations`, row đầu không bị đổi sau khi row 2 được tạo |
+| 11 | `respond()` không tự resolve escalation | Sau khi respond thành công, escalation active vẫn còn active |
+| 12 | `close()` bị chặn khi còn active escalation | 409/422, kèm message rõ lý do |
+| 13 | `cancel()` không có active escalation | Thành công với permission thường (`rfi.cancel`), lifecycle → `CANCELLED` |
+| 14 | `cancel()` có active escalation, actor KHÔNG phải PM/admin | 403 |
+| 15 | `cancel()` có active escalation, actor LÀ PM/admin | Thành công, escalation được resolve atomic (`resolution_type=rfi_cancelled`) trong cùng transaction |
+| 16 | Concurrency: 2 request `escalate()` đồng thời | 1 thành công (201), 1 nhận 409 |
+| 17 | Concurrency: 2 request `resolveEscalation()` đồng thời trên cùng record | 1 thành công, 1 nhận 409 |
+| 18 | Escalate với `escalated_to` khác tenant | 403/422 — chặn cross-tenant target |
+| 19 | Escalate với `escalated_to` cùng tenant nhưng không thuộc project của RFI | 403/422 — chặn thiếu project membership (nếu middleware hiện tại chưa enforce, cần vá cùng lúc — xem mục 8) |
+| 20 | Notification chỉ dispatch sau commit | Mock transaction rollback (VD force 409 bằng race) → verify notify KHÔNG được gọi |
+| 21 | Migration: row `status='escalated'`, có `assigned_to` | Sau migration: lifecycle=`IN_PROGRESS`, 1 escalation unresolved được tạo, xuất hiện trong manual-review report |
+| 22 | Migration: row `status='pending'` | Sau migration: lifecycle=`OPEN`, đánh dấu anomaly trong report |
+| 23 | Migration: row có snapshot escalation cũ nhưng `status` hiện tại đã là `closed` | Sau migration: lifecycle=`CLOSED`, 1 escalation resolved-ước-lượng được tạo, vào report |
+
+## 12. Gap vận hành cần lưu ý (không phải quyết định thiết kế, nhưng ảnh hưởng rollout)
+
+- Cần xác nhận middleware RBAC hiện tại có enforce project-membership cho action RFI hay chỉ tenant-level — nếu chỉ tenant-level, đây là lỗ hổng có sẵn (không phải do spec này tạo ra) cần vá cùng lúc khi implement guard escalate/assign.
+- `rfi.cancel` là permission hoàn toàn mới — cần quyết định gán cho role nào (assignee mặc định? hay phải seed riêng?).
+- `rfi.escalate` hiện chỉ admin có — nếu muốn PM tự escalate/resolve/cancel-with-escalation, cần seed thêm cho role PM, đây là quyết định business/vận hành riêng.
+
+## 13. Ngoài phạm vi (Non-goals)
+
+- SLA/deadline enforcement, auto-escalation theo thời gian quá hạn — thuộc "Overdue & Escalation Engine" (P1-A, ticket riêng). **Khi engine đó được thiết kế, nó PHẢI gọi qua lifecycle/escalation service của spec này** (VD gọi `RfiEscalationService::escalate()`) thay vì tự ý `update()` trực tiếp lên `rfis`/`rfi_escalations` — để không phá vỡ transaction/concurrency/notification rule đã thiết kế ở đây.
+- Email notification.
+- Route web cho `escalate`/`resolveEscalation`/`cancel` — quyết định UI để lại cho implementation plan.
+- "RFI liên quan" (linked follow-up sau khi closed/cancelled) — không thiết kế reopen/amend trong spec này; giới hạn "closed/cancelled không respond lại được, muốn hỏi tiếp thì tạo RFI mới" vẫn giữ như rev 1.
+- Sửa sự trùng lặp field `answer`/`response` song song trong schema `rfis` — ghi nhận là oddity có sẵn, không phải phạm vi spec này.
+
+## 5 Quyết định nghiệp vụ ban đầu — kết quả sau rev 2
+
+| # | Quyết định | Phương án đã chọn |
+|---|---|---|
+| 1 | Escalation là giá trị `status` hay field độc lập | **Field/bảng độc lập (`rfi_escalations`), tách hoàn toàn khỏi lifecycle** — CHỐT bởi operator |
+| 2 | Có cần action thoát escalation không qua respond | **Có — `resolveEscalation()`** (đổi tên từ `deescalate()`, đúng ngữ nghĩa "đóng escalation cycle" vì không còn gắn với lifecycle `in_progress`) |
+| 3 | History: field đơn hay bảng riêng | **Bảng riêng `rfi_escalations`, mô hình history-preserving 2-phase write** (không gọi append-only vì có update resolution 1 lần) |
+| 4 | Closed có respond lại được không | **Không** — giữ nguyên như rev 1, `closed`/`cancelled` (mới) đều terminal tuyệt đối, không respond lại |
+| 5 | `pending` status | **Không giữ trong enum mới** — dữ liệu legacy có `pending` được coi là bất thường, map về `OPEN` + gắn anomaly flag trong manual-review report (mục 6.2) |
+
+## Self-review (rev 2)
+
+- **Đúng yêu cầu #1-3**: lifecycle chỉ còn 5 trạng thái nghiệp vụ thuần, escalate/resolveEscalation không đổi status; action đổi tên đúng ngữ nghĩa; bảng history không còn gọi sai là "append-only".
+- **Migration (#4) đã thiết kế trung thực với giới hạn evidence thật** — vì `EventRecord` xác nhận KHÔNG có dữ liệu RFI nào, spec không giả vờ có "high confidence" dựa trên event log không tồn tại; mọi row có tín hiệu escalation đều vào manual-review report, không tự map về `open`.
+- **Rule #5 đã chốt tường minh**: answer không tự resolve, close chặn khi active escalation, cancel-khi-escalated chỉ PM/admin + atomic.
+- **Notification #6 thu hẹp đúng yêu cầu**: có in-app tối thiểu, after-commit, log-not-rollback khi lỗi gửi; email/SLA vẫn ngoài phạm vi.
+- **Authorization matrix #7 dùng permission thật** đã grep được, không bịa tên mới trừ `rfi.cancel` (được đánh dấu rõ là MỚI cần seed) — đồng thời phát hiện thêm gap vận hành thật (chỉ admin có `rfi.escalate` mặc định) đưa vào mục 12 thay vì giấu.
+- **Concurrency #8 dùng lockForUpdate() nhất quán với pattern có sẵn** trong `RfiController`/`SubmittalLifecycleService`, không phát minh cơ chế mới; có ghi rõ giới hạn MySQL (không dùng partial unique index).
+- **Test matrix #9**: 23 case bao phủ lifecycle thuần, escalation độc lập, nhiều cycle, concurrency, cross-tenant/project target, notification after-commit, và cả 3 nhánh migration.
+- **Overdue Engine #10 giữ ngoài phạm vi + ràng buộc rõ**: phải gọi qua service của spec này, không tự update trực tiếp — tránh lặp lại kiểu nợ kỹ thuật "nhiều nơi tự ý ghi đè status" đã thấy ở hiện trạng.
 
 ## Testing
 

@@ -2,30 +2,34 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Give RFI escalation its own history-preserving table (`rfi_escalations`) fully independent of the RFI's lifecycle `status`, add the guards/authorization/notification the current single-column design lacks, and migrate legacy `status=escalated`/`pending` data through an additive, operator-confirmed gate — without ever silently defaulting an ambiguous record or dropping legacy fields.
+**Goal:** Give RFI escalation its own history-preserving table (`rfi_escalations`) fully independent of the RFI's lifecycle `status`, centralize lifecycle transitions in a dedicated service, add the guards/authorization/notification the current single-column design lacks, and migrate legacy `status=escalated`/`pending` data through an additive, operator-confirmed gate — without ever silently defaulting an ambiguous record or dropping legacy fields or history.
 
-**Architecture:** `RfiEscalationService` owns every invariant on `rfi_escalations` (at most one active escalation per RFI, resolution fields written exactly once, both `rfis` and the active `rfi_escalations` row locked via `lockForUpdate()` inside `DB::transaction()`). `RfiController` gains authorization checks (PM-of-project or admin for escalate; target/PM/admin for resolve) and lifecycle guards (respond only from open/in_progress, close blocked while an escalation is active) but keeps its existing `try/catch` + `BaseApiController` response-helper style. A brand-new `RfiEscalatedNotification` (never touching the dead `RfiEventListener`) is dispatched after commit. Legacy data crosses over in three Artisan commands — preflight report, per-record operator confirmation, and a cutover gate that refuses to run while any record is unconfirmed.
+**Architecture:** Two services, two responsibilities. `RfiLifecycleService` is the sole source of truth for lifecycle transitions (`respond`, `close`, `cancel`, plus the `isTerminal()` predicate everyone else consults) — it depends on `RfiEscalationService` only to check "is there an active escalation" and to atomically resolve one during `cancel()`. `RfiEscalationService` owns only the escalation cycle (`escalate`, `resolveEscalation`, the active/resolved-once invariants) and knows nothing about lifecycle status. `RfiController` shrinks to authorization + validation + calling the right service. Legacy data crosses over through three Artisan commands (preflight report → per-record operator confirmation with a full source snapshot, not a boolean → cutover gate that refuses to run while any record is unconfirmed), and production rollback is a documented runbook that flips application behavior back without ever touching `rfi_escalations` data once it exists.
 
-**Tech Stack:** Laravel 12, MySQL, PHPUnit (`RefreshDatabase`), existing `Tests\Traits\{AuthenticationTestTrait,RouteNameTrait,TenantUserFactoryTrait}` test helpers, existing `App\Services\ZenaAuditLogger` audit-log convention.
+**Tech Stack:** Laravel 12, MySQL, PHPUnit (`RefreshDatabase`), existing `Tests\Traits\{AuthenticationTestTrait,RouteNameTrait,TenantUserFactoryTrait}` test helpers, existing `App\Services\ZenaAuditLogger` audit-log convention, `symfony/process` (ships with Laravel) for genuine two-connection concurrency tests.
 
 ## Global Constraints
 
-- Source spec: `docs/superpowers/specs/2026-07-26-rfi-lifecycle-escalation-design.md` (rev 3, commit `75ff0d69`, `APPROVED FOR WRITING-PLANS`).
+- Source spec: `docs/superpowers/specs/2026-07-26-rfi-lifecycle-escalation-design.md` (rev 3, commit `75ff0d69`, `APPROVED FOR WRITING-PLANS`), approved with 5 preflight amendments incorporated into this plan.
+- **`RfiLifecycleService` is the sole owner of lifecycle transitions** (`respond`, `close`, `cancel`, `isTerminal`). `RfiEscalationService` never checks or sets `rfis.status`. `RfiController` never contains transition logic — only validation, authorization, and a call into one of the two services.
 - **`rfi_escalations` is the source of truth.** `rfis.escalated_to/escalated_at/escalated_by/escalation_reason` are compatibility mirrors only — every write to them happens inside the same transaction as the `rfi_escalations` write that causes it. No task in this plan may add a reader that treats the mirror fields as authoritative.
-- **`rfis.current_escalation_id`** is the official pointer to the active escalation (`NULL` = none).
-- **Never drop `status=escalated`/`status=pending` from the database in the same step that creates the new schema.** The legacy deployment gate (Tasks 12-14) is additive; cutover (Task 14) only tightens *application-level* validation, it does not alter the `status` column type or drop any DB-level enum.
-- **Never drop the 4 legacy mirror fields in this plan.** Deprecation requires a separate reader inventory (spec §2.2) — out of scope here.
-- **No record may be auto-mapped to `open`/any lifecycle value without an explicit operator confirmation record.** The cutover command (Task 14) must refuse to run while any legacy record lacks a confirmation.
-- **`escalate()` and `resolveEscalation()` both lock the `rfis` row and the relevant `rfi_escalations` row inside one `DB::transaction()`.** Concurrent conflicting requests must receive HTTP 409, not a silent overwrite.
-- **Resolution fields (`resolved_at`, `resolved_by`, `resolution`, `resolution_type`) are written exactly once.** A second resolve attempt on the same record is a 409, not an update.
-- **Notifications dispatch only after the transaction that created the escalation commits**, and a failed notification send is logged, never rolled back, never re-attempted synchronously.
+- **`rfis.current_escalation_id`** is the official pointer to the active escalation (`NULL` = none) and must always satisfy: points to an escalation with the same `rfi_id`, the same `tenant_id`, and `resolved_at IS NULL`. Both services must guard this invariant explicitly, not just by construction.
+- **`rfi_escalations` rows are never deleted by application code**, and the `rfi_id` foreign key uses `RESTRICT` (not `CASCADE`) — hard-deleting an RFI that has escalation history must fail at the database level rather than silently destroying the audit trail.
+- **Never drop `status=escalated`/`status=pending` from the database in the same step that creates the new schema.** The legacy deployment gate (Tasks 15-17) is additive; cutover only tightens *application-level* validation.
+- **Never drop the 4 legacy mirror fields in this plan.**
+- **No record may be auto-mapped to `open`/any lifecycle value without an explicit operator confirmation record that stores the full source snapshot, the chosen lifecycle+escalation state, who confirmed it, when, and why** — not a boolean.
+- **Production rollback never runs a migration `down()` after real escalation data exists.** Rollback is an application-behavior flip (documented runbook, Task 17) — tables and data stay exactly as they are.
+- **`escalate()` and `resolveEscalation()` both lock the `rfis` row and the relevant `rfi_escalations` row inside one `DB::transaction()`.** This must be proven with two independent database connections against MySQL — a single PHPUnit process making two sequential calls is not acceptable evidence of the lock working, only of the application-level state check working.
+- **Resolution fields are written exactly once.** A second resolve attempt on the same record is a 409, not an update.
+- **Notifications dispatch only after the transaction that created the escalation commits for real** (not just "after the PHP closure returns without throwing" — the test must prove an actual rollback path yields zero notifications, not only the already-covered "second call throws before reaching the dispatch line" case).
 - **`RfiEventListener` and `App\Events\Rfi{Created,Updated,Responded,Closed}` are dead code and must not be resurrected, referenced, or "fixed" by any task in this plan.**
-- **Overdue & Escalation Engine (SLA/auto-escalation) is out of scope.** No task in this plan builds SLA logic; the design only requires that a *future* engine call `RfiEscalationService`, which this plan builds regardless.
-- Existing `RfiController` style must be preserved: `try { ... } catch (ModelNotFoundException $e) { ... } catch (\Exception $e) { ... }`, `BaseApiController` response helpers (`successResponse`, `errorResponse`, `validationError`, `notFound`, `unauthorized`, `serverError`), and a `ZenaAuditLogger->log($request, $action, 'rfi', $id, $statusCode, $projectId, $tenantId)` call on every state-changing action.
+- **Overdue & Escalation Engine (SLA/auto-escalation) is out of scope.**
+- v1 authorization (approved, unchanged from prior plan): only the project's PM or an admin may `escalate()`; the escalation target, the project's PM, or an admin may `resolveEscalation()`; `rfi.cancel` is seeded to PM and admin roles only; `close()` is blocked while an escalation is active; `cancel()` while an escalation is active must resolve that escalation atomically in the same transaction.
+- Existing `RfiController` style must be preserved: `try { ... } catch (ModelNotFoundException $e) { ... } catch (\Exception $e) { ... }`, `BaseApiController` response helpers, and a `ZenaAuditLogger->log(...)` call on every state-changing action.
 
 ---
 
-## Task 1: `rfi_escalations` table + `RfiEscalation` model
+## Task 1: `rfi_escalations` table + `RfiEscalation` model (restrict-on-delete)
 
 **Files:**
 - Create: `database/migrations/2026_07_26_090000_create_rfi_escalations_table.php`
@@ -33,7 +37,7 @@
 - Test: `tests/Unit/Models/RfiEscalationTest.php`
 
 **Interfaces:**
-- Produces: `App\Models\RfiEscalation` — ULID PK, fillable `rfi_id, tenant_id, escalated_to, escalated_by, escalated_at, escalation_reason, resolved_at, resolved_by, resolution, resolution_type`, constants `RfiEscalation::RESOLUTION_TYPE_MANUALLY_RESOLVED = 'manually_resolved'`, `RfiEscalation::RESOLUTION_TYPE_RFI_CANCELLED = 'rfi_cancelled'`. Consumed by Tasks 2-14.
+- Produces: `App\Models\RfiEscalation` — ULID PK, fillable `rfi_id, tenant_id, escalated_to, escalated_by, escalated_at, escalation_reason, resolved_at, resolved_by, resolution, resolution_type`, constants `RESOLUTION_TYPE_MANUALLY_RESOLVED = 'manually_resolved'`, `RESOLUTION_TYPE_RFI_CANCELLED = 'rfi_cancelled'`. Consumed by Tasks 2-17.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -79,7 +83,7 @@ class RfiEscalationTest extends TestCase
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `./vendor/bin/phpunit tests/Unit/Models/RfiEscalationTest.php`
-Expected: FAIL with "Class App\Models\RfiEscalation not found" (or table `rfi_escalations` doesn't exist).
+Expected: FAIL — "Class App\Models\RfiEscalation not found".
 
 - [ ] **Step 3: Write the migration**
 
@@ -110,7 +114,10 @@ return new class extends Migration
             $table->string('resolution_type')->nullable();
             $table->timestamps();
 
-            $table->foreign('rfi_id')->references('id')->on('rfis')->cascadeOnDelete();
+            // RESTRICT (the default when no onDelete is specified in MySQL/InnoDB): hard-deleting an
+            // RFI that has escalation history must fail at the DB level, never silently cascade away
+            // the audit trail. Do NOT add ->cascadeOnDelete() here.
+            $table->foreign('rfi_id')->references('id')->on('rfis');
             $table->foreign('tenant_id')->references('id')->on('tenants')->cascadeOnDelete();
             $table->foreign('escalated_to')->references('id')->on('users');
             $table->foreign('escalated_by')->references('id')->on('users');
@@ -201,29 +208,31 @@ Expected: PASS (2 tests).
 
 ```bash
 git add database/migrations/2026_07_26_090000_create_rfi_escalations_table.php app/Models/RfiEscalation.php tests/Unit/Models/RfiEscalationTest.php
-git commit -m "feat(rfi): add rfi_escalations table and model"
+git commit -m "feat(rfi): add rfi_escalations table (restrict-on-delete) and model"
 ```
 
 ---
 
-## Task 2: `rfis.current_escalation_id` + `Rfi::currentEscalation()`
+## Task 2: `rfis.current_escalation_id` + pointer integrity guard
 
 **Files:**
 - Create: `database/migrations/2026_07_26_090100_add_current_escalation_id_to_rfis_table.php`
 - Modify: `app/Models/Rfi.php`
-- Test: `tests/Unit/Models/RfiTest.php` (create if it doesn't exist)
+- Create: `app/Exceptions/RfiEscalationIntegrityException.php`
+- Test: `tests/Unit/Models/RfiTest.php`
 
 **Interfaces:**
 - Consumes: `App\Models\RfiEscalation` (Task 1).
-- Produces: `Rfi::currentEscalation(): BelongsTo` relation; `rfis.current_escalation_id` column. Consumed by Tasks 3-9.
+- Produces: `Rfi::currentEscalation(): BelongsTo`; `rfis.current_escalation_id` column; `App\Exceptions\RfiEscalationIntegrityException`; `Rfi::assertEscalationPointerIntegrity(): void` — throws unless `current_escalation_id` is null OR points to an escalation with matching `rfi_id`, matching `tenant_id`, and `resolved_at IS NULL`. Consumed by Tasks 3-4 (services call this before trusting the pointer), Task 11 (cross-tenant/cross-RFI regression tests).
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Write the failing tests**
 
 ```php
 <?php declare(strict_types=1);
 
 namespace Tests\Unit\Models;
 
+use App\Exceptions\RfiEscalationIntegrityException;
 use App\Models\Rfi;
 use App\Models\RfiEscalation;
 use App\Models\Project;
@@ -236,13 +245,9 @@ class RfiTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_current_escalation_relation_resolves_to_the_linked_escalation(): void
+    private function makeRfi(Tenant $tenant, Project $project, User $user, string $rfiNumber): Rfi
     {
-        $tenant = Tenant::factory()->create();
-        $project = Project::factory()->create(['tenant_id' => $tenant->id]);
-        $user = User::factory()->create(['tenant_id' => $tenant->id]);
-
-        $rfi = Rfi::create([
+        return Rfi::create([
             'tenant_id' => $tenant->id,
             'project_id' => $project->id,
             'title' => 'Test RFI',
@@ -250,33 +255,109 @@ class RfiTest extends TestCase
             'priority' => 'medium',
             'status' => 'open',
             'created_by' => $user->id,
-            'rfi_number' => 'TST-RFI-0001',
+            'rfi_number' => $rfiNumber,
         ]);
+    }
+
+    public function test_current_escalation_relation_resolves_to_the_linked_escalation(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $project = Project::factory()->create(['tenant_id' => $tenant->id]);
+        $user = User::factory()->create(['tenant_id' => $tenant->id]);
+        $rfi = $this->makeRfi($tenant, $project, $user, 'TST-RFI-0001');
 
         $this->assertNull($rfi->current_escalation_id);
         $this->assertNull($rfi->currentEscalation);
 
         $escalation = RfiEscalation::create([
-            'rfi_id' => $rfi->id,
-            'tenant_id' => $tenant->id,
-            'escalated_to' => $user->id,
-            'escalated_by' => $user->id,
-            'escalated_at' => now(),
-            'escalation_reason' => 'Urgent',
+            'rfi_id' => $rfi->id, 'tenant_id' => $tenant->id,
+            'escalated_to' => $user->id, 'escalated_by' => $user->id,
+            'escalated_at' => now(), 'escalation_reason' => 'Urgent',
         ]);
-
         $rfi->update(['current_escalation_id' => $escalation->id]);
         $rfi->refresh();
 
         $this->assertSame($escalation->id, $rfi->currentEscalation->id);
     }
+
+    public function test_assert_pointer_integrity_passes_when_null(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $project = Project::factory()->create(['tenant_id' => $tenant->id]);
+        $user = User::factory()->create(['tenant_id' => $tenant->id]);
+        $rfi = $this->makeRfi($tenant, $project, $user, 'TST-RFI-0002');
+
+        $rfi->assertEscalationPointerIntegrity();
+        $this->addToAssertionCount(1);
+    }
+
+    public function test_assert_pointer_integrity_rejects_pointer_to_another_rfis_escalation(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $project = Project::factory()->create(['tenant_id' => $tenant->id]);
+        $user = User::factory()->create(['tenant_id' => $tenant->id]);
+        $rfiA = $this->makeRfi($tenant, $project, $user, 'TST-RFI-0003');
+        $rfiB = $this->makeRfi($tenant, $project, $user, 'TST-RFI-0004');
+
+        $escalationForB = RfiEscalation::create([
+            'rfi_id' => $rfiB->id, 'tenant_id' => $tenant->id,
+            'escalated_to' => $user->id, 'escalated_by' => $user->id,
+            'escalated_at' => now(), 'escalation_reason' => 'Urgent',
+        ]);
+
+        // Simulate a corrupted pointer (bypassing the service) to prove the guard catches it.
+        $rfiA->current_escalation_id = $escalationForB->id;
+
+        $this->expectException(RfiEscalationIntegrityException::class);
+        $rfiA->assertEscalationPointerIntegrity();
+    }
+
+    public function test_assert_pointer_integrity_rejects_pointer_to_another_tenants_escalation(): void
+    {
+        $tenantA = Tenant::factory()->create();
+        $tenantB = Tenant::factory()->create();
+        $projectA = Project::factory()->create(['tenant_id' => $tenantA->id]);
+        $userA = User::factory()->create(['tenant_id' => $tenantA->id]);
+        $userB = User::factory()->create(['tenant_id' => $tenantB->id]);
+        $rfiA = $this->makeRfi($tenantA, $projectA, $userA, 'TST-RFI-0005');
+
+        $foreignEscalation = RfiEscalation::create([
+            'rfi_id' => $rfiA->id, 'tenant_id' => $tenantB->id, // deliberately wrong tenant
+            'escalated_to' => $userB->id, 'escalated_by' => $userB->id,
+            'escalated_at' => now(), 'escalation_reason' => 'Cross-tenant corruption',
+        ]);
+        $rfiA->current_escalation_id = $foreignEscalation->id;
+
+        $this->expectException(RfiEscalationIntegrityException::class);
+        $rfiA->assertEscalationPointerIntegrity();
+    }
+
+    public function test_assert_pointer_integrity_rejects_pointer_to_already_resolved_escalation(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $project = Project::factory()->create(['tenant_id' => $tenant->id]);
+        $user = User::factory()->create(['tenant_id' => $tenant->id]);
+        $rfi = $this->makeRfi($tenant, $project, $user, 'TST-RFI-0006');
+
+        $resolved = RfiEscalation::create([
+            'rfi_id' => $rfi->id, 'tenant_id' => $tenant->id,
+            'escalated_to' => $user->id, 'escalated_by' => $user->id,
+            'escalated_at' => now(), 'escalation_reason' => 'Urgent',
+            'resolved_at' => now(), 'resolved_by' => $user->id,
+            'resolution' => 'done', 'resolution_type' => RfiEscalation::RESOLUTION_TYPE_MANUALLY_RESOLVED,
+        ]);
+        $rfi->current_escalation_id = $resolved->id;
+
+        $this->expectException(RfiEscalationIntegrityException::class);
+        $rfi->assertEscalationPointerIntegrity();
+    }
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 2: Run tests to verify they fail**
 
 Run: `./vendor/bin/phpunit tests/Unit/Models/RfiTest.php`
-Expected: FAIL — column `current_escalation_id` does not exist.
+Expected: FAIL — column `current_escalation_id` and method `assertEscalationPointerIntegrity` do not exist.
 
 - [ ] **Step 3: Write the migration**
 
@@ -309,9 +390,23 @@ return new class extends Migration
 };
 ```
 
-- [ ] **Step 4: Add the relation and fillable entry to `Rfi`**
+- [ ] **Step 4: Write the exception**
 
-In `app/Models/Rfi.php`, add `'current_escalation_id',` to `$fillable` immediately after `'escalated_at',` (line 42), and add this method immediately after `escalatedBy()` (after line 128):
+`app/Exceptions/RfiEscalationIntegrityException.php`:
+
+```php
+<?php declare(strict_types=1);
+
+namespace App\Exceptions;
+
+class RfiEscalationIntegrityException extends \RuntimeException
+{
+}
+```
+
+- [ ] **Step 5: Add the fillable entry, relation, and guard to `Rfi`**
+
+In `app/Models/Rfi.php`, add `'current_escalation_id',` to `$fillable` immediately after `'escalated_at',` (line 42), add `use App\Exceptions\RfiEscalationIntegrityException;` to the top imports, and add these methods immediately after `escalatedBy()`:
 
 ```php
     /**
@@ -321,25 +416,46 @@ In `app/Models/Rfi.php`, add `'current_escalation_id',` to `$fillable` immediate
     {
         return $this->belongsTo(RfiEscalation::class, 'current_escalation_id');
     }
+
+    /**
+     * Guard against a corrupted current_escalation_id pointer: it must be null, or point to an
+     * escalation belonging to THIS rfi, THIS tenant, and still unresolved.
+     */
+    public function assertEscalationPointerIntegrity(): void
+    {
+        if ($this->current_escalation_id === null) {
+            return;
+        }
+
+        $escalation = RfiEscalation::find($this->current_escalation_id);
+
+        if (!$escalation
+            || $escalation->rfi_id !== $this->id
+            || $escalation->tenant_id !== $this->tenant_id
+            || $escalation->resolved_at !== null
+        ) {
+            throw new RfiEscalationIntegrityException(
+                "RFI {$this->id} current_escalation_id points to an invalid escalation (missing, cross-RFI, cross-tenant, or already resolved)."
+            );
+        }
+    }
 ```
 
-Add `use App\Models\RfiEscalation;`? Not needed — same namespace `App\Models`, no import required for `RfiEscalation::class` reference within the same namespace.
-
-- [ ] **Step 5: Run migration and test**
+- [ ] **Step 6: Run migration and tests**
 
 Run: `php artisan migrate && ./vendor/bin/phpunit tests/Unit/Models/RfiTest.php`
-Expected: PASS (1 test).
+Expected: PASS (5 tests).
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add database/migrations/2026_07_26_090100_add_current_escalation_id_to_rfis_table.php app/Models/Rfi.php tests/Unit/Models/RfiTest.php
-git commit -m "feat(rfi): add current_escalation_id pointer and Rfi::currentEscalation()"
+git add database/migrations/2026_07_26_090100_add_current_escalation_id_to_rfis_table.php app/Models/Rfi.php app/Exceptions/RfiEscalationIntegrityException.php tests/Unit/Models/RfiTest.php
+git commit -m "feat(rfi): add current_escalation_id pointer with cross-RFI/cross-tenant integrity guard"
 ```
 
 ---
 
-## Task 3: `RfiEscalationService::escalate()` — insert + lock + active-escalation guard
+## Task 3: `RfiEscalationService::escalate()` — escalation-cycle-only, no lifecycle awareness
 
 **Files:**
 - Create: `app/Services/RfiEscalationService.php`
@@ -347,8 +463,8 @@ git commit -m "feat(rfi): add current_escalation_id pointer and Rfi::currentEsca
 - Test: `tests/Unit/Services/RfiEscalationServiceTest.php`
 
 **Interfaces:**
-- Consumes: `App\Models\{Rfi, RfiEscalation}` (Tasks 1-2).
-- Produces: `App\Services\RfiEscalationService::escalate(Rfi $rfi, string $escalatedTo, string $escalatedBy, string $reason): RfiEscalation`, `::hasActiveEscalation(string $rfiId): bool`. `App\Exceptions\RfiEscalationConflictException extends \RuntimeException`. Consumed by Task 5 (controller wiring), Task 4 (resolveEscalation reuses the same class), Task 9 (cancel).
+- Consumes: `App\Models\{Rfi, RfiEscalation}` (Tasks 1-2), `Rfi::assertEscalationPointerIntegrity()` (Task 2).
+- Produces: `RfiEscalationService::escalate(Rfi, string, string, string): RfiEscalation`, `::hasActiveEscalation(string): bool`. `App\Exceptions\RfiEscalationConflictException`. **Contains zero references to `rfis.status` or any lifecycle concept — the terminal-status check happens in the controller via `RfiLifecycleService` (Task 5), not here.** Consumed by Task 6 (controller), Task 4 (resolveEscalation), Task 10 (cancel via `RfiLifecycleService`).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -370,10 +486,10 @@ class RfiEscalationServiceTest extends TestCase
 {
     use RefreshDatabase;
 
-    private RfiEscalationService $service;
-    private Rfi $rfi;
-    private User $escalator;
-    private User $target;
+    protected RfiEscalationService $service;
+    protected Rfi $rfi;
+    protected User $escalator;
+    protected User $target;
 
     protected function setUp(): void
     {
@@ -387,14 +503,9 @@ class RfiEscalationServiceTest extends TestCase
         $this->target = User::factory()->create(['tenant_id' => $tenant->id]);
 
         $this->rfi = Rfi::create([
-            'tenant_id' => $tenant->id,
-            'project_id' => $project->id,
-            'title' => 'Test RFI',
-            'description' => 'desc',
-            'priority' => 'medium',
-            'status' => 'open',
-            'created_by' => $this->escalator->id,
-            'rfi_number' => 'TST-RFI-0002',
+            'tenant_id' => $tenant->id, 'project_id' => $project->id, 'title' => 'Test RFI',
+            'description' => 'desc', 'priority' => 'medium', 'status' => 'open',
+            'created_by' => $this->escalator->id, 'rfi_number' => 'TST-RFI-0002',
         ]);
     }
 
@@ -409,6 +520,7 @@ class RfiEscalationServiceTest extends TestCase
         $this->assertSame($escalation->id, $this->rfi->current_escalation_id);
         $this->assertSame($this->target->id, $this->rfi->escalated_to);
         $this->assertSame('Needs urgent answer', $this->rfi->escalation_reason);
+        $this->rfi->assertEscalationPointerIntegrity();
     }
 
     public function test_escalate_throws_conflict_when_active_escalation_already_exists(): void
@@ -427,6 +539,14 @@ class RfiEscalationServiceTest extends TestCase
         $this->service->escalate($this->rfi, $this->target->id, $this->escalator->id, 'Urgent');
 
         $this->assertTrue($this->service->hasActiveEscalation($this->rfi->id));
+    }
+
+    public function test_service_never_reads_or_writes_rfi_status(): void
+    {
+        $reflection = new \ReflectionClass(\App\Services\RfiEscalationService::class);
+        $source = file_get_contents($reflection->getFileName());
+
+        $this->assertStringNotContainsString("'status'", $source, 'RfiEscalationService must not reference the rfis.status column — lifecycle belongs to RfiLifecycleService.');
     }
 }
 ```
@@ -462,6 +582,10 @@ use App\Models\Rfi;
 use App\Models\RfiEscalation;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Owns the escalation cycle ONLY. Knows nothing about RFI lifecycle status —
+ * that belongs to RfiLifecycleService.
+ */
 class RfiEscalationService
 {
     public function hasActiveEscalation(string $rfiId): bool
@@ -509,13 +633,13 @@ class RfiEscalationService
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `./vendor/bin/phpunit tests/Unit/Services/RfiEscalationServiceTest.php`
-Expected: PASS (3 tests).
+Expected: PASS (4 tests).
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add app/Services/RfiEscalationService.php app/Exceptions/RfiEscalationConflictException.php tests/Unit/Services/RfiEscalationServiceTest.php
-git commit -m "feat(rfi): add RfiEscalationService::escalate() with lock+active-escalation guard"
+git commit -m "feat(rfi): add RfiEscalationService::escalate(), scoped to escalation cycle only"
 ```
 
 ---
@@ -528,12 +652,12 @@ git commit -m "feat(rfi): add RfiEscalationService::escalate() with lock+active-
 - Modify: `tests/Unit/Services/RfiEscalationServiceTest.php`
 
 **Interfaces:**
-- Consumes: `RfiEscalationService::escalate()` (Task 3), `RfiEscalationConflictException` (Task 3).
-- Produces: `RfiEscalationService::resolveEscalation(Rfi $rfi, string $resolvedBy, string $resolution, string $resolutionType = RfiEscalation::RESOLUTION_TYPE_MANUALLY_RESOLVED): RfiEscalation`. `App\Exceptions\RfiEscalationNotFoundException`. Consumed by Task 6 (controller), Task 9 (cancel).
+- Consumes: `RfiEscalationService::escalate()` (Task 3).
+- Produces: `RfiEscalationService::resolveEscalation(Rfi, string, string, string = RfiEscalation::RESOLUTION_TYPE_MANUALLY_RESOLVED): RfiEscalation`. `App\Exceptions\RfiEscalationNotFoundException`. Consumed by Task 7 (controller), Task 10 (cancel).
 
 - [ ] **Step 1: Write the failing tests**
 
-Append to `tests/Unit/Services/RfiEscalationServiceTest.php` (add `use App\Exceptions\RfiEscalationNotFoundException;` and `use App\Models\RfiEscalation;` to the imports, then add these methods before the final closing `}`):
+Add `use App\Exceptions\RfiEscalationNotFoundException;` and `use App\Models\RfiEscalation;` to the imports of `tests/Unit/Services/RfiEscalationServiceTest.php`, then append before the final `}`:
 
 ```php
     public function test_resolve_escalation_sets_resolution_fields_once_and_clears_pointer(): void
@@ -569,14 +693,28 @@ Append to `tests/Unit/Services/RfiEscalationServiceTest.php` (add `use App\Excep
 
         $this->service->resolveEscalation($this->rfi, $this->escalator->id, 'No escalation to resolve');
     }
-```
 
-Also add `use App\Exceptions\RfiEscalationNotFoundException;` and `use App\Models\RfiEscalation;` near the top of the test file's `use` block.
+    public function test_resolve_escalation_rejects_corrupted_pointer_via_integrity_guard(): void
+    {
+        $otherRfi = Rfi::create([
+            'tenant_id' => $this->rfi->tenant_id, 'project_id' => $this->rfi->project_id,
+            'title' => 'Other RFI', 'description' => 'd', 'priority' => 'medium', 'status' => 'open',
+            'created_by' => $this->escalator->id, 'rfi_number' => 'TST-RFI-0099',
+        ]);
+        $escalationForOther = $this->service->escalate($otherRfi, $this->target->id, $this->escalator->id, 'Belongs to otherRfi');
+
+        // Corrupt this->rfi's pointer to point at otherRfi's escalation.
+        $this->rfi->update(['current_escalation_id' => $escalationForOther->id]);
+
+        $this->expectException(\App\Exceptions\RfiEscalationIntegrityException::class);
+        $this->service->resolveEscalation($this->rfi->fresh(), $this->target->id, 'Should be rejected by integrity guard');
+    }
+```
 
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `./vendor/bin/phpunit tests/Unit/Services/RfiEscalationServiceTest.php`
-Expected: FAIL — `resolveEscalation` method / `RfiEscalationNotFoundException` class not found.
+Expected: FAIL — `resolveEscalation` method / `RfiEscalationNotFoundException` not found.
 
 - [ ] **Step 3: Write the exception and service method**
 
@@ -592,7 +730,7 @@ class RfiEscalationNotFoundException extends \RuntimeException
 }
 ```
 
-Add to `app/Services/RfiEscalationService.php` (add `use App\Exceptions\RfiEscalationNotFoundException;` to the imports), a new method after `escalate()`:
+Add to `app/Services/RfiEscalationService.php` (add `use App\Exceptions\RfiEscalationNotFoundException;` to the imports):
 
 ```php
     public function resolveEscalation(
@@ -603,6 +741,8 @@ Add to `app/Services/RfiEscalationService.php` (add `use App\Exceptions\RfiEscal
     ): RfiEscalation {
         return DB::transaction(function () use ($rfi, $resolvedBy, $resolution, $resolutionType) {
             $lockedRfi = Rfi::where('id', $rfi->id)->lockForUpdate()->firstOrFail();
+
+            $lockedRfi->assertEscalationPointerIntegrity();
 
             if (!$lockedRfi->current_escalation_id) {
                 throw new RfiEscalationNotFoundException('This RFI has no active escalation.');
@@ -639,30 +779,315 @@ Add to `app/Services/RfiEscalationService.php` (add `use App\Exceptions\RfiEscal
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `./vendor/bin/phpunit tests/Unit/Services/RfiEscalationServiceTest.php`
-Expected: PASS (6 tests).
+Expected: PASS (8 tests).
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add app/Services/RfiEscalationService.php app/Exceptions/RfiEscalationNotFoundException.php tests/Unit/Services/RfiEscalationServiceTest.php
-git commit -m "feat(rfi): add RfiEscalationService::resolveEscalation() with double-resolve guard"
+git commit -m "feat(rfi): add resolveEscalation() with double-resolve guard and pointer integrity check"
 ```
 
 ---
 
-## Task 5: Wire `escalate()` into `RfiController` — authorization, active-user check, service call
+## Task 5: `RfiLifecycleService` — sole owner of lifecycle transitions
+
+**Files:**
+- Create: `app/Services/RfiLifecycleService.php`
+- Create: `app/Exceptions/RfiLifecycleTransitionException.php`
+- Test: `tests/Unit/Services/RfiLifecycleServiceTest.php`
+
+**Interfaces:**
+- Consumes: `RfiEscalationService::hasActiveEscalation()`, `::resolveEscalation()` (Tasks 3-4).
+- Produces: `RfiLifecycleService::isTerminal(Rfi): bool`, `::assertCanRespond(Rfi): void`, `::respond(Rfi, string $userId, string $response, string $status): Rfi`, `::assertCanClose(Rfi): void`, `::close(Rfi, string $userId): Rfi`, `::assertCanCancel(Rfi): void`, `::cancel(Rfi, string $userId, string $reason): Rfi`. `App\Exceptions\RfiLifecycleTransitionException`. Consumed by Tasks 8-10 (controller wiring).
+
+- [ ] **Step 1: Write the failing test**
+
+```php
+<?php declare(strict_types=1);
+
+namespace Tests\Unit\Services;
+
+use App\Exceptions\RfiLifecycleTransitionException;
+use App\Models\Project;
+use App\Models\Rfi;
+use App\Models\Tenant;
+use App\Models\User;
+use App\Services\RfiEscalationService;
+use App\Services\RfiLifecycleService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class RfiLifecycleServiceTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private RfiLifecycleService $lifecycle;
+    private RfiEscalationService $escalation;
+    private User $user;
+    private Tenant $tenant;
+    private Project $project;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->lifecycle = app(RfiLifecycleService::class);
+        $this->escalation = app(RfiEscalationService::class);
+
+        $this->tenant = Tenant::factory()->create();
+        $this->project = Project::factory()->create(['tenant_id' => $this->tenant->id]);
+        $this->user = User::factory()->create(['tenant_id' => $this->tenant->id]);
+    }
+
+    private function makeRfi(string $status, string $number): Rfi
+    {
+        return Rfi::create([
+            'tenant_id' => $this->tenant->id, 'project_id' => $this->project->id, 'title' => 'T',
+            'description' => 'd', 'priority' => 'medium', 'status' => $status,
+            'created_by' => $this->user->id, 'rfi_number' => $number,
+        ]);
+    }
+
+    public function test_is_terminal_true_only_for_closed_and_cancelled(): void
+    {
+        $this->assertFalse($this->lifecycle->isTerminal($this->makeRfi('open', 'T-0001')));
+        $this->assertFalse($this->lifecycle->isTerminal($this->makeRfi('in_progress', 'T-0002')));
+        $this->assertFalse($this->lifecycle->isTerminal($this->makeRfi('answered', 'T-0003')));
+        $this->assertTrue($this->lifecycle->isTerminal($this->makeRfi('closed', 'T-0004')));
+        $this->assertTrue($this->lifecycle->isTerminal($this->makeRfi('cancelled', 'T-0005')));
+    }
+
+    public function test_respond_succeeds_from_open_and_sets_answered(): void
+    {
+        $rfi = $this->makeRfi('open', 'T-0010');
+
+        $updated = $this->lifecycle->respond($rfi, $this->user->id, 'The answer', 'answered');
+
+        $this->assertSame('answered', $updated->status);
+    }
+
+    public function test_respond_rejected_when_closed(): void
+    {
+        $rfi = $this->makeRfi('closed', 'T-0011');
+
+        $this->expectException(RfiLifecycleTransitionException::class);
+        $this->lifecycle->respond($rfi, $this->user->id, 'Too late', 'answered');
+    }
+
+    public function test_close_rejected_when_not_answered(): void
+    {
+        $rfi = $this->makeRfi('open', 'T-0012');
+
+        $this->expectException(RfiLifecycleTransitionException::class);
+        $this->lifecycle->close($rfi, $this->user->id);
+    }
+
+    public function test_close_rejected_while_escalation_active(): void
+    {
+        $rfi = $this->makeRfi('answered', 'T-0013');
+        $target = User::factory()->create(['tenant_id' => $this->tenant->id]);
+        $this->escalation->escalate($rfi, $target->id, $this->user->id, 'Still open');
+
+        $this->expectException(RfiLifecycleTransitionException::class);
+        $this->lifecycle->close($rfi->fresh(), $this->user->id);
+    }
+
+    public function test_close_succeeds_when_answered_and_no_active_escalation(): void
+    {
+        $rfi = $this->makeRfi('answered', 'T-0014');
+
+        $updated = $this->lifecycle->close($rfi, $this->user->id);
+
+        $this->assertSame('closed', $updated->status);
+    }
+
+    public function test_cancel_without_active_escalation_succeeds(): void
+    {
+        $rfi = $this->makeRfi('open', 'T-0015');
+
+        $updated = $this->lifecycle->cancel($rfi, $this->user->id, 'No longer needed');
+
+        $this->assertSame('cancelled', $updated->status);
+    }
+
+    public function test_cancel_with_active_escalation_resolves_it_atomically(): void
+    {
+        $rfi = $this->makeRfi('open', 'T-0016');
+        $target = User::factory()->create(['tenant_id' => $this->tenant->id]);
+        $this->escalation->escalate($rfi, $target->id, $this->user->id, 'Urgent');
+
+        $updated = $this->lifecycle->cancel($rfi->fresh(), $this->user->id, 'Project cancelled');
+
+        $this->assertSame('cancelled', $updated->status);
+        $this->assertNull($updated->current_escalation_id);
+
+        $escalation = \App\Models\RfiEscalation::where('rfi_id', $rfi->id)->first();
+        $this->assertNotNull($escalation->resolved_at);
+        $this->assertSame(\App\Models\RfiEscalation::RESOLUTION_TYPE_RFI_CANCELLED, $escalation->resolution_type);
+    }
+
+    public function test_cancel_rejected_on_terminal_rfi(): void
+    {
+        $rfi = $this->makeRfi('closed', 'T-0017');
+
+        $this->expectException(RfiLifecycleTransitionException::class);
+        $this->lifecycle->cancel($rfi, $this->user->id, 'Too late');
+    }
+}
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `./vendor/bin/phpunit tests/Unit/Services/RfiLifecycleServiceTest.php`
+Expected: FAIL — "Class App\Services\RfiLifecycleService not found".
+
+- [ ] **Step 3: Write the exception and service**
+
+`app/Exceptions/RfiLifecycleTransitionException.php`:
+
+```php
+<?php declare(strict_types=1);
+
+namespace App\Exceptions;
+
+class RfiLifecycleTransitionException extends \RuntimeException
+{
+}
+```
+
+`app/Services/RfiLifecycleService.php`:
+
+```php
+<?php declare(strict_types=1);
+
+namespace App\Services;
+
+use App\Exceptions\RfiLifecycleTransitionException;
+use App\Models\Rfi;
+use App\Models\RfiEscalation;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * Sole owner of RFI lifecycle transitions (respond/close/cancel). Consults
+ * RfiEscalationService only for "is there an active escalation" and to
+ * atomically resolve one during cancel() — never touches rfi_escalations
+ * directly otherwise, and never sets escalation fields.
+ */
+class RfiLifecycleService
+{
+    private const TERMINAL_STATUSES = ['closed', 'cancelled'];
+
+    public function __construct(private readonly RfiEscalationService $escalationService)
+    {
+    }
+
+    public function isTerminal(Rfi $rfi): bool
+    {
+        return in_array($rfi->status, self::TERMINAL_STATUSES, true);
+    }
+
+    public function assertCanRespond(Rfi $rfi): void
+    {
+        if (!in_array($rfi->status, ['open', 'in_progress'], true)) {
+            throw new RfiLifecycleTransitionException('RFI can only be responded to while open or in progress.');
+        }
+    }
+
+    public function respond(Rfi $rfi, string $userId, string $response, string $status): Rfi
+    {
+        $this->assertCanRespond($rfi);
+
+        $rfi->update([
+            'response' => $response,
+            'status' => $status,
+            'responded_by' => $userId,
+            'responded_at' => now(),
+        ]);
+
+        return $rfi->fresh();
+    }
+
+    public function assertCanClose(Rfi $rfi): void
+    {
+        if ($rfi->status !== 'answered') {
+            throw new RfiLifecycleTransitionException('RFI must be answered before it can be closed.');
+        }
+
+        if ($this->escalationService->hasActiveEscalation($rfi->id)) {
+            throw new RfiLifecycleTransitionException('Cannot close an RFI while it has an active escalation — resolve the escalation first.');
+        }
+    }
+
+    public function close(Rfi $rfi, string $userId): Rfi
+    {
+        $this->assertCanClose($rfi);
+
+        $rfi->update([
+            'status' => 'closed',
+            'closed_by' => $userId,
+            'closed_at' => now(),
+        ]);
+
+        return $rfi->fresh();
+    }
+
+    public function assertCanCancel(Rfi $rfi): void
+    {
+        if ($this->isTerminal($rfi)) {
+            throw new RfiLifecycleTransitionException('RFI is already closed or cancelled.');
+        }
+    }
+
+    public function cancel(Rfi $rfi, string $userId, string $reason): Rfi
+    {
+        $this->assertCanCancel($rfi);
+
+        return DB::transaction(function () use ($rfi, $userId, $reason) {
+            if ($this->escalationService->hasActiveEscalation($rfi->id)) {
+                $this->escalationService->resolveEscalation(
+                    $rfi,
+                    $userId,
+                    'RFI cancelled: ' . $reason,
+                    RfiEscalation::RESOLUTION_TYPE_RFI_CANCELLED,
+                );
+            }
+
+            $rfi->fresh()->update(['status' => 'cancelled']);
+
+            return $rfi->fresh();
+        });
+    }
+}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `./vendor/bin/phpunit tests/Unit/Services/RfiLifecycleServiceTest.php`
+Expected: PASS (10 tests).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add app/Services/RfiLifecycleService.php app/Exceptions/RfiLifecycleTransitionException.php tests/Unit/Services/RfiLifecycleServiceTest.php
+git commit -m "feat(rfi): add RfiLifecycleService as sole owner of respond/close/cancel transitions"
+```
+
+---
+
+## Task 6: Wire `escalate()` into `RfiController` — authorization + service calls only
 
 **Files:**
 - Modify: `app/Http/Controllers/Api/RfiController.php`
 - Test: `tests/Feature/Api/RfiApiTest.php`
 
 **Interfaces:**
-- Consumes: `RfiEscalationService::escalate()` (Task 3), `RfiEscalationConflictException` (Task 3).
-- Produces: `RfiController::escalate()` (rewritten, same route `POST /rfis/{id}/escalate`), private helpers `actorIsProjectManagerOrAdminForProject(User, string $projectId): bool`, `userIsActive(User): bool`. Consumed by Task 6 (resolveEscalation reuses `actorIsProjectManagerOrAdminForProject`).
+- Consumes: `RfiEscalationService::escalate()` (Task 3), `RfiLifecycleService::isTerminal()` (Task 5).
+- Produces: `RfiController::escalate()` (rewritten), private helpers `actorIsProjectManagerOrAdminForProject(User, string): bool`, `userHasAdminRole(User): bool`, `userIsActive(User): bool`. Consumed by Tasks 7, 9, 10.
 
 - [ ] **Step 1: Write the failing tests**
 
-Add to `tests/Feature/Api/RfiApiTest.php` (read the file first to find where `test_can_escalate_rfi` lives and match its setup style — it uses `$this->apiActingAsTenantAdmin()` from `setUp()`; these new tests need a *non-admin* actor, so add `use Tests\Traits\TenantUserFactoryTrait;` to the class's trait list and these methods anywhere in the class body):
+Add to `tests/Feature/Api/RfiApiTest.php` (add `use Tests\Traits\TenantUserFactoryTrait;` to the class's trait list):
 
 ```php
     public function test_project_manager_can_escalate_rfi_in_their_project(): void
@@ -671,21 +1096,16 @@ Add to `tests/Feature/Api/RfiApiTest.php` (read the file first to find where `te
             ['name' => 'project_manager'],
             ['scope' => 'system', 'description' => 'Project Manager', 'is_active' => true],
         );
-        $pm = $this->apiFeatureUser; // tenant admin from setUp doubles as escalate target owner check below is not needed here
         $pmUser = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
         \App\Models\UserRoleProject::create([
-            'project_id' => $this->project->id,
-            'user_id' => $pmUser->id,
-            'role_id' => $pmRole->id,
+            'project_id' => $this->project->id, 'user_id' => $pmUser->id, 'role_id' => $pmRole->id,
         ]);
         $permission = \App\Models\Permission::where('code', 'rfi.escalate')->first();
         $pmRole->permissions()->syncWithoutDetaching([$permission->id]);
 
         $rfi = Rfi::factory()->create([
-            'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
-            'tenant_id' => $this->project->tenant_id,
-            'status' => 'open',
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
         ]);
         $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
 
@@ -705,15 +1125,12 @@ Add to `tests/Feature/Api/RfiApiTest.php` (read the file first to find where `te
     public function test_escalate_conflict_when_active_escalation_already_exists(): void
     {
         $rfi = Rfi::factory()->create([
-            'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
-            'tenant_id' => $this->project->tenant_id,
-            'status' => 'open',
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
         ]);
         $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
 
-        $payload = ['escalation_reason' => 'First', 'escalated_to' => $target->id];
-        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), $payload)->assertStatus(200);
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'First', 'escalated_to' => $target->id])->assertStatus(200);
 
         $response = $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Second', 'escalated_to' => $target->id]);
 
@@ -723,18 +1140,13 @@ Add to `tests/Feature/Api/RfiApiTest.php` (read the file first to find where `te
     public function test_escalate_rejects_target_from_another_tenant(): void
     {
         $rfi = Rfi::factory()->create([
-            'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
-            'tenant_id' => $this->project->tenant_id,
-            'status' => 'open',
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
         ]);
         $otherTenant = \App\Models\Tenant::factory()->create();
         $foreignTarget = User::factory()->create(['tenant_id' => $otherTenant->id, 'is_active' => true]);
 
-        $response = $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), [
-            'escalation_reason' => 'Urgent',
-            'escalated_to' => $foreignTarget->id,
-        ]);
+        $response = $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Urgent', 'escalated_to' => $foreignTarget->id]);
 
         $response->assertStatus(422);
     }
@@ -742,17 +1154,12 @@ Add to `tests/Feature/Api/RfiApiTest.php` (read the file first to find where `te
     public function test_escalate_rejects_deactivated_target(): void
     {
         $rfi = Rfi::factory()->create([
-            'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
-            'tenant_id' => $this->project->tenant_id,
-            'status' => 'open',
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
         ]);
         $inactiveTarget = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => false]);
 
-        $response = $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), [
-            'escalation_reason' => 'Urgent',
-            'escalated_to' => $inactiveTarget->id,
-        ]);
+        $response = $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Urgent', 'escalated_to' => $inactiveTarget->id]);
 
         $response->assertStatus(422);
     }
@@ -760,51 +1167,48 @@ Add to `tests/Feature/Api/RfiApiTest.php` (read the file first to find where `te
     public function test_escalate_blocked_on_closed_rfi(): void
     {
         $rfi = Rfi::factory()->create([
-            'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
-            'tenant_id' => $this->project->tenant_id,
-            'status' => 'closed',
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'closed',
         ]);
         $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
 
-        $response = $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), [
-            'escalation_reason' => 'Urgent',
-            'escalated_to' => $target->id,
-        ]);
+        $response = $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Urgent', 'escalated_to' => $target->id]);
 
         $response->assertStatus(422);
     }
 ```
 
-(Note: `test_can_escalate_rfi`, the pre-existing test asserting a plain `in_progress → escalated` status change via `apiActingAsTenantAdmin()`, will need its assertion updated in Step 3 below since `status` no longer becomes `escalated` — see that step.)
+(The pre-existing `test_can_escalate_rfi` will need its assertion updated in Step 3 to expect `current_escalation_id` non-null and `status` unchanged, instead of `status === 'escalated'`.)
 
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `./vendor/bin/phpunit tests/Feature/Api/RfiApiTest.php`
-Expected: FAIL — escalate still writes `status='escalated'` directly, no active-escalation conflict handling, no target validation.
+Expected: FAIL — escalate still writes `status='escalated'` directly, no conflict/target validation.
 
-- [ ] **Step 3: Rewrite `RfiController::escalate()` and fix the pre-existing test**
+- [ ] **Step 3: Rewrite `RfiController::escalate()`**
 
-In `app/Http/Controllers/Api/RfiController.php`, add these imports after the existing `use` block:
+In `app/Http/Controllers/Api/RfiController.php`, add imports after the existing `use` block:
 
 ```php
 use App\Exceptions\RfiEscalationConflictException;
 use App\Models\Role;
 use App\Models\UserRoleProject;
 use App\Services\RfiEscalationService;
+use App\Services\RfiLifecycleService;
 ```
 
-Change the constructor to inject the new service:
+Change the constructor:
 
 ```php
     public function __construct(
         private ZenaAuditLogger $auditLogger,
         private RfiEscalationService $escalationService,
+        private RfiLifecycleService $lifecycleService,
     ) {
     }
 ```
 
-Replace the entire `escalate()` method (lines 410-459) with:
+Replace the entire `escalate()` method (lines 410-459 of the pre-plan file) with:
 
 ```php
     /**
@@ -821,7 +1225,7 @@ Replace the entire `escalate()` method (lines 410-459) with:
 
             $rfi = $this->rfiForTenant($id);
 
-            if (in_array($rfi->status, ['closed', 'cancelled'], true)) {
+            if ($this->lifecycleService->isTerminal($rfi)) {
                 return $this->errorResponse('Cannot escalate a closed or cancelled RFI', 422);
             }
 
@@ -856,33 +1260,18 @@ Replace the entire `escalate()` method (lines 410-459) with:
 
             if (!UserRoleProject::where('project_id', $rfi->project_id)->where('user_id', $target->id)->exists()
                 && !$this->userHasAdminRole($target)) {
-                return $this->errorResponse('Escalation target must be a member of this RFI\'s project', 422);
+                return $this->errorResponse("Escalation target must be a member of this RFI's project", 422);
             }
 
             try {
-                $this->escalationService->escalate(
-                    $rfi,
-                    $target->id,
-                    $user->id,
-                    $request->input('escalation_reason'),
-                );
+                $this->escalationService->escalate($rfi, $target->id, $user->id, $request->input('escalation_reason'));
             } catch (RfiEscalationConflictException $e) {
                 return $this->errorResponse($e->getMessage(), 409);
             }
 
             $rfi->refresh()->load(['project:id,name', 'createdBy:id,name', 'assignedTo:id,name']);
 
-            $this->auditLogger->log(
-                $request,
-                'zena.rfi.escalate',
-                'rfi',
-                (string) $rfi->id,
-                200,
-                $rfi->project_id,
-                $this->tenantId()
-            );
-
-            RfiEscalatedNotificationDispatcher_PLACEHOLDER_REMOVED_IN_TASK_10:
+            $this->auditLogger->log($request, 'zena.rfi.escalate', 'rfi', (string) $rfi->id, 200, $rfi->project_id, $this->tenantId());
 
             return $this->successResponse($rfi, 'RFI escalated successfully');
         } catch (ModelNotFoundException $e) {
@@ -893,9 +1282,7 @@ Replace the entire `escalate()` method (lines 410-459) with:
     }
 ```
 
-Remove the stray label line `RfiEscalatedNotificationDispatcher_PLACEHOLDER_REMOVED_IN_TASK_10:` — it is not valid PHP and is only written here as a visual marker for where Task 10 inserts the notification dispatch call. Delete that entire line now so the file compiles; Task 10 will insert real code at that exact position (immediately after the `auditLogger->log(...)` call, before `return $this->successResponse(...)`).
-
-Add these three private helper methods at the end of the class, immediately before the final closing `}`:
+Add these private helper methods at the end of the class, immediately before the final closing `}`:
 
 ```php
     private function userIsActive(\App\Models\User $user): bool
@@ -921,23 +1308,23 @@ Add these three private helper methods at the end of the class, immediately befo
     }
 ```
 
-Now fix the pre-existing `test_can_escalate_rfi` test in `tests/Feature/Api/RfiApiTest.php`: read it, and change its assertion from expecting `$rfi->status === 'escalated'` to expecting `$rfi->status` unchanged (still whatever it was before, e.g. `'in_progress'`) and `$rfi->current_escalation_id` to be non-null instead. If the existing test's fixture user is the tenant admin (`apiActingAsTenantAdmin()`), no further change is needed since admins pass `actorIsProjectManagerOrAdminForProject()`; if the fixture RFI's target (`escalated_to` payload) is not tenant-scoped/active in the existing test, add `'tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true` to that target user's factory call.
+Now fix the pre-existing `test_can_escalate_rfi` in `tests/Feature/Api/RfiApiTest.php`: read it, and change its assertion to expect `$rfi->current_escalation_id` non-null and `$rfi->status` unchanged from its fixture value, instead of `status === 'escalated'`. If the fixture's `escalated_to` target user isn't tenant-scoped/active, add `'tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true` to that factory call.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `./vendor/bin/phpunit tests/Feature/Api/RfiApiTest.php`
-Expected: PASS, all tests in the file green including the corrected `test_can_escalate_rfi`.
+Expected: PASS, all tests green.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add app/Http/Controllers/Api/RfiController.php tests/Feature/Api/RfiApiTest.php
-git commit -m "feat(rfi): wire escalate() to RfiEscalationService with PM/admin authorization"
+git commit -m "feat(rfi): wire escalate() through RfiEscalationService + RfiLifecycleService::isTerminal()"
 ```
 
 ---
 
-## Task 6: New `POST /rfis/{id}/resolve-escalation` route + controller action
+## Task 7: `POST /rfis/{id}/resolve-escalation` route + controller action
 
 **Files:**
 - Modify: `routes/api_zena.php`
@@ -945,7 +1332,7 @@ git commit -m "feat(rfi): wire escalate() to RfiEscalationService with PM/admin 
 - Modify: `tests/Feature/Api/RfiApiTest.php`
 
 **Interfaces:**
-- Consumes: `RfiEscalationService::resolveEscalation()` (Task 4), `actorIsProjectManagerOrAdminForProject()`/`userIsActive()` (Task 5).
+- Consumes: `RfiEscalationService::resolveEscalation()` (Task 4), `actorIsProjectManagerOrAdminForProject()`/`userIsActive()` (Task 6).
 - Produces: route `rfis.resolve-escalation`, `RfiController::resolveEscalation()`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -956,27 +1343,18 @@ Add to `tests/Feature/Api/RfiApiTest.php`:
     public function test_escalation_target_can_resolve_their_own_escalation(): void
     {
         $rfi = Rfi::factory()->create([
-            'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
-            'tenant_id' => $this->project->tenant_id,
-            'status' => 'open',
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
         ]);
         $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
-        \App\Models\UserRoleProject::firstOrCreate(
-            ['project_id' => $this->project->id, 'user_id' => $target->id],
-            ['role_id' => \App\Models\Role::firstOrCreate(['name' => 'member'], ['scope' => 'system', 'description' => 'Member', 'is_active' => true])->id],
-        );
+        $memberRole = \App\Models\Role::firstOrCreate(['name' => 'member'], ['scope' => 'system', 'description' => 'Member', 'is_active' => true]);
+        \App\Models\UserRoleProject::firstOrCreate(['project_id' => $this->project->id, 'user_id' => $target->id], ['role_id' => $memberRole->id]);
 
-        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), [
-            'escalation_reason' => 'Urgent',
-            'escalated_to' => $target->id,
-        ])->assertStatus(200);
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Urgent', 'escalated_to' => $target->id])->assertStatus(200);
 
         $token = $this->apiLoginToken($target, $this->apiFeatureTenant);
         $response = $this->withHeaders($this->authHeadersForUser($target, $token))
-            ->postJson($this->zena('rfis.resolve-escalation', ['id' => $rfi->id]), [
-                'resolution' => 'Answered the client directly by phone',
-            ]);
+            ->postJson($this->zena('rfis.resolve-escalation', ['id' => $rfi->id]), ['resolution' => 'Answered the client directly by phone']);
 
         $response->assertStatus(200);
         $rfi->refresh();
@@ -986,23 +1364,16 @@ Add to `tests/Feature/Api/RfiApiTest.php`:
     public function test_resolve_escalation_by_unrelated_user_is_forbidden(): void
     {
         $rfi = Rfi::factory()->create([
-            'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
-            'tenant_id' => $this->project->tenant_id,
-            'status' => 'open',
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
         ]);
         $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
-        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), [
-            'escalation_reason' => 'Urgent',
-            'escalated_to' => $target->id,
-        ])->assertStatus(200);
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Urgent', 'escalated_to' => $target->id])->assertStatus(200);
 
         $unrelated = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
         $token = $this->apiLoginToken($unrelated, $this->apiFeatureTenant);
         $response = $this->withHeaders($this->authHeadersForUser($unrelated, $token))
-            ->postJson($this->zena('rfis.resolve-escalation', ['id' => $rfi->id]), [
-                'resolution' => 'Trying to resolve someone else\'s escalation',
-            ]);
+            ->postJson($this->zena('rfis.resolve-escalation', ['id' => $rfi->id]), ['resolution' => 'Trying to resolve someone else\'s escalation']);
 
         $response->assertStatus(403);
     }
@@ -1010,19 +1381,13 @@ Add to `tests/Feature/Api/RfiApiTest.php`:
     public function test_resolve_escalation_twice_returns_conflict(): void
     {
         $rfi = Rfi::factory()->create([
-            'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
-            'tenant_id' => $this->project->tenant_id,
-            'status' => 'open',
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
         ]);
         $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
-        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), [
-            'escalation_reason' => 'Urgent',
-            'escalated_to' => $target->id,
-        ])->assertStatus(200);
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Urgent', 'escalated_to' => $target->id])->assertStatus(200);
 
-        $this->apiPost($this->zena('rfis.resolve-escalation', ['id' => $rfi->id]), ['resolution' => 'First'])
-            ->assertStatus(200);
+        $this->apiPost($this->zena('rfis.resolve-escalation', ['id' => $rfi->id]), ['resolution' => 'First'])->assertStatus(200);
 
         $response = $this->apiPost($this->zena('rfis.resolve-escalation', ['id' => $rfi->id]), ['resolution' => 'Second attempt']);
 
@@ -1033,11 +1398,11 @@ Add to `tests/Feature/Api/RfiApiTest.php`:
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `./vendor/bin/phpunit tests/Feature/Api/RfiApiTest.php --filter resolve_escalation`
-Expected: FAIL — route `rfis.resolve-escalation` does not exist.
+Expected: FAIL — route does not exist.
 
 - [ ] **Step 3: Add the route**
 
-In `routes/api_zena.php`, add this line immediately after the `escalate` route (inside the same `rfis` group):
+In `routes/api_zena.php`, immediately after the `escalate` route inside the `rfis` group:
 
 ```php
             Route::post('/{id}/resolve-escalation', [\App\Http\Controllers\Api\RfiController::class, 'resolveEscalation'])->middleware('rbac:rfi.escalate')->name('rfis.resolve-escalation');
@@ -1045,7 +1410,7 @@ In `routes/api_zena.php`, add this line immediately after the `escalate` route (
 
 - [ ] **Step 4: Add the controller action**
 
-In `app/Http/Controllers/Api/RfiController.php`, add this method immediately after `escalate()`:
+Add to `app/Http/Controllers/Api/RfiController.php`, immediately after `escalate()`:
 
 ```php
     /**
@@ -1077,9 +1442,7 @@ In `app/Http/Controllers/Api/RfiController.php`, add this method immediately aft
                 return $this->errorResponse('Only the escalation target, project manager, or an admin can resolve this escalation', 403);
             }
 
-            $validator = Validator::make($request->all(), [
-                'resolution' => 'required|string',
-            ]);
+            $validator = Validator::make($request->all(), ['resolution' => 'required|string']);
 
             if ($validator->fails()) {
                 return $this->validationError($validator->errors());
@@ -1095,15 +1458,7 @@ In `app/Http/Controllers/Api/RfiController.php`, add this method immediately aft
 
             $rfi->refresh()->load(['project:id,name', 'createdBy:id,name', 'assignedTo:id,name']);
 
-            $this->auditLogger->log(
-                $request,
-                'zena.rfi.resolve_escalation',
-                'rfi',
-                (string) $rfi->id,
-                200,
-                $rfi->project_id,
-                $this->tenantId()
-            );
+            $this->auditLogger->log($request, 'zena.rfi.resolve_escalation', 'rfi', (string) $rfi->id, 200, $rfi->project_id, $this->tenantId());
 
             return $this->successResponse($rfi, 'Escalation resolved successfully');
         } catch (ModelNotFoundException $e) {
@@ -1128,15 +1483,15 @@ git commit -m "feat(rfi): add resolveEscalation() action open to target, project
 
 ---
 
-## Task 7: `respond()` lifecycle guard — only from `open`/`in_progress`
+## Task 8: Wire `respond()` through `RfiLifecycleService`
 
 **Files:**
 - Modify: `app/Http/Controllers/Api/RfiController.php`
 - Modify: `tests/Feature/Api/RfiApiTest.php`
 
 **Interfaces:**
-- Consumes: none new.
-- Produces: guard inside existing `RfiController::respond()`.
+- Consumes: `RfiLifecycleService::respond()`, `::assertCanRespond()` (Task 5).
+- Produces: `RfiController::respond()` (rewritten to delegate).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1146,16 +1501,11 @@ Add to `tests/Feature/Api/RfiApiTest.php`:
     public function test_cannot_respond_to_a_closed_rfi(): void
     {
         $rfi = Rfi::factory()->create([
-            'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
-            'tenant_id' => $this->project->tenant_id,
-            'status' => 'closed',
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'closed',
         ]);
 
-        $response = $this->apiPost($this->zena('rfis.respond', ['id' => $rfi->id]), [
-            'response' => 'Trying to respond after close',
-            'status' => 'answered',
-        ]);
+        $response = $this->apiPost($this->zena('rfis.respond', ['id' => $rfi->id]), ['response' => 'Trying to respond after close', 'status' => 'answered']);
 
         $response->assertStatus(422);
     }
@@ -1163,16 +1513,11 @@ Add to `tests/Feature/Api/RfiApiTest.php`:
     public function test_can_respond_to_an_open_rfi(): void
     {
         $rfi = Rfi::factory()->create([
-            'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
-            'tenant_id' => $this->project->tenant_id,
-            'status' => 'open',
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
         ]);
 
-        $response = $this->apiPost($this->zena('rfis.respond', ['id' => $rfi->id]), [
-            'response' => 'Here is the answer',
-            'status' => 'answered',
-        ]);
+        $response = $this->apiPost($this->zena('rfis.respond', ['id' => $rfi->id]), ['response' => 'Here is the answer', 'status' => 'answered']);
 
         $response->assertStatus(200);
     }
@@ -1183,91 +1528,30 @@ Add to `tests/Feature/Api/RfiApiTest.php`:
 Run: `./vendor/bin/phpunit tests/Feature/Api/RfiApiTest.php --filter respond`
 Expected: `test_cannot_respond_to_a_closed_rfi` FAILs (currently returns 200).
 
-- [ ] **Step 3: Add the guard**
+- [ ] **Step 3: Rewrite `respond()` to delegate**
 
-In `app/Http/Controllers/Api/RfiController.php`, in `respond()`, insert this check immediately after `$rfi = $this->rfiForTenant($id);` (before the `$validator = Validator::make(...)` line):
-
-```php
-            if (!in_array($rfi->status, ['open', 'in_progress'], true)) {
-                return $this->errorResponse('RFI can only be responded to while open or in progress', 422);
-            }
-```
-
-- [ ] **Step 4: Run tests to verify they pass**
-
-Run: `./vendor/bin/phpunit tests/Feature/Api/RfiApiTest.php`
-Expected: PASS, all tests green (verify the pre-existing `test_can_respond_to_rfi`-style test, if any, still uses an `open`/`in_progress` fixture).
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add app/Http/Controllers/Api/RfiController.php tests/Feature/Api/RfiApiTest.php
-git commit -m "feat(rfi): guard respond() to only accept open/in_progress RFIs"
-```
-
----
-
-## Task 8: `close()` blocked while an escalation is active
-
-**Files:**
-- Modify: `app/Http/Controllers/Api/RfiController.php`
-- Modify: `tests/Feature/Api/RfiApiTest.php`
-
-**Interfaces:**
-- Consumes: `RfiEscalationService::hasActiveEscalation()` (Task 3).
-- Produces: guard inside existing `RfiController::close()`.
-
-- [ ] **Step 1: Write the failing test**
-
-Add to `tests/Feature/Api/RfiApiTest.php`:
+Replace the body of `respond()` in `app/Http/Controllers/Api/RfiController.php` — keep the `$user`/auth check and `$rfi = $this->rfiForTenant($id);` lines, then replace everything from the `$validator = Validator::make(...)` line through the `$rfi->update([...]);` block with:
 
 ```php
-    public function test_cannot_close_rfi_while_escalation_is_active(): void
-    {
-        $rfi = Rfi::factory()->create([
-            'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
-            'tenant_id' => $this->project->tenant_id,
-            'status' => 'answered',
-        ]);
-        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
-        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), [
-            'escalation_reason' => 'Still need confirmation',
-            'escalated_to' => $target->id,
-        ])->assertStatus(200);
-
-        $response = $this->apiPost($this->zena('rfis.close', ['id' => $rfi->id]));
-
-        $response->assertStatus(409);
-    }
-```
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `./vendor/bin/phpunit tests/Feature/Api/RfiApiTest.php --filter test_cannot_close_rfi_while_escalation_is_active`
-Expected: FAIL (currently returns 200, closes the RFI regardless of escalation state).
-
-- [ ] **Step 3: Add the guard**
-
-In `app/Http/Controllers/Api/RfiController.php`, add `RfiEscalationService` usage (already injected via Task 5's constructor change) — in `close()`, replace:
-
-```php
-            if ($rfi->status !== 'answered') {
-                return $this->errorResponse('RFI must be answered before it can be closed', 400);
-            }
-```
-
-with:
-
-```php
-            if ($rfi->status !== 'answered') {
-                return $this->errorResponse('RFI must be answered before it can be closed', 400);
+            try {
+                $this->lifecycleService->assertCanRespond($rfi);
+            } catch (\App\Exceptions\RfiLifecycleTransitionException $e) {
+                return $this->errorResponse($e->getMessage(), 422);
             }
 
-            if ($this->escalationService->hasActiveEscalation($rfi->id)) {
-                return $this->errorResponse('Cannot close an RFI while it has an active escalation — resolve the escalation first', 409);
+            $validator = Validator::make($request->all(), [
+                'response' => 'required|string',
+                'status' => 'required|in:answered,closed',
+            ]);
+
+            if ($validator->fails()) {
+                return $this->validationError($validator->errors());
             }
+
+            $this->lifecycleService->respond($rfi, $user->id, $request->input('response'), $request->input('status'));
 ```
+
+(Keep the rest of the method — `$rfi->load([...])`, `$this->auditLogger->log(...)`, `return $this->successResponse(...)` — unchanged; `$rfi` is the same in-memory object updated by `respond()`'s `->update()` call, so `$rfi->load(...)` right after still works. Confirm `$rfi->refresh()` is not needed since `->update()` already refreshed the in-memory attributes on that instance.)
 
 - [ ] **Step 4: Run tests to verify they pass**
 
@@ -1278,12 +1562,88 @@ Expected: PASS, all tests green.
 
 ```bash
 git add app/Http/Controllers/Api/RfiController.php tests/Feature/Api/RfiApiTest.php
-git commit -m "feat(rfi): block close() while an escalation is active"
+git commit -m "feat(rfi): delegate respond() to RfiLifecycleService"
 ```
 
 ---
 
-## Task 9: `rfi.cancel` permission + `cancel()` action (PM/admin required while escalated, atomic resolve)
+## Task 9: Wire `close()` through `RfiLifecycleService`
+
+**Files:**
+- Modify: `app/Http/Controllers/Api/RfiController.php`
+- Modify: `tests/Feature/Api/RfiApiTest.php`
+
+**Interfaces:**
+- Consumes: `RfiLifecycleService::close()`, `::assertCanClose()` (Task 5).
+- Produces: `RfiController::close()` (rewritten to delegate).
+
+- [ ] **Step 1: Write the failing test**
+
+Add to `tests/Feature/Api/RfiApiTest.php`:
+
+```php
+    public function test_cannot_close_rfi_while_escalation_is_active(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'answered',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Still need confirmation', 'escalated_to' => $target->id])->assertStatus(200);
+
+        $response = $this->apiPost($this->zena('rfis.close', ['id' => $rfi->id]));
+
+        $response->assertStatus(409);
+    }
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `./vendor/bin/phpunit tests/Feature/Api/RfiApiTest.php --filter test_cannot_close_rfi_while_escalation_is_active`
+Expected: FAIL — currently returns 200.
+
+- [ ] **Step 3: Rewrite `close()` to delegate**
+
+Replace the body of `close()` — keep the auth check and `$rfi = $this->rfiForTenant($id);` lines, then replace:
+
+```php
+            if ($rfi->status !== 'answered') {
+                return $this->errorResponse('RFI must be answered before it can be closed', 400);
+            }
+
+            $rfi->update([
+                'status' => 'closed',
+                'closed_by' => $user->id,
+                'closed_at' => now(),
+            ]);
+```
+
+with:
+
+```php
+            try {
+                $this->lifecycleService->close($rfi, $user->id);
+            } catch (\App\Exceptions\RfiLifecycleTransitionException $e) {
+                $statusCode = str_contains($e->getMessage(), 'active escalation') ? 409 : 400;
+                return $this->errorResponse($e->getMessage(), $statusCode);
+            }
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `./vendor/bin/phpunit tests/Feature/Api/RfiApiTest.php`
+Expected: PASS, all tests green (both the pre-existing "must be answered" 400 case and the new "active escalation" 409 case).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add app/Http/Controllers/Api/RfiController.php tests/Feature/Api/RfiApiTest.php
+git commit -m "feat(rfi): delegate close() to RfiLifecycleService, block while escalation active"
+```
+
+---
+
+## Task 10: `rfi.cancel` permission + `cancel()` wired through `RfiLifecycleService`
 
 **Files:**
 - Modify: `database/seeders/ZenaPermissionsSeeder.php`
@@ -1292,7 +1652,7 @@ git commit -m "feat(rfi): block close() while an escalation is active"
 - Modify: `tests/Feature/Api/RfiApiTest.php`
 
 **Interfaces:**
-- Consumes: `RfiEscalationService::resolveEscalation()` (Task 4), `actorIsProjectManagerOrAdminForProject()` (Task 5).
+- Consumes: `RfiLifecycleService::cancel()`, `::assertCanCancel()` (Task 5), `RfiEscalationService::hasActiveEscalation()` (Task 3), `actorIsProjectManagerOrAdminForProject()` (Task 6).
 - Produces: permission `rfi.cancel`, route `rfis.cancel`, `RfiController::cancel()`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -1303,15 +1663,11 @@ Add to `tests/Feature/Api/RfiApiTest.php`:
     public function test_can_cancel_open_rfi_without_active_escalation(): void
     {
         $rfi = Rfi::factory()->create([
-            'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
-            'tenant_id' => $this->project->tenant_id,
-            'status' => 'open',
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
         ]);
 
-        $response = $this->apiPost($this->zena('rfis.cancel', ['id' => $rfi->id]), [
-            'reason' => 'Scope no longer applies',
-        ]);
+        $response = $this->apiPost($this->zena('rfis.cancel', ['id' => $rfi->id]), ['reason' => 'Scope no longer applies']);
 
         $response->assertStatus(200);
         $this->assertSame('cancelled', $rfi->fresh()->status);
@@ -1320,10 +1676,8 @@ Add to `tests/Feature/Api/RfiApiTest.php`:
     public function test_cancel_requires_reason(): void
     {
         $rfi = Rfi::factory()->create([
-            'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
-            'tenant_id' => $this->project->tenant_id,
-            'status' => 'open',
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
         ]);
 
         $response = $this->apiPost($this->zena('rfis.cancel', ['id' => $rfi->id]), []);
@@ -1334,21 +1688,13 @@ Add to `tests/Feature/Api/RfiApiTest.php`:
     public function test_cancel_with_active_escalation_requires_pm_or_admin_and_resolves_escalation_atomically(): void
     {
         $rfi = Rfi::factory()->create([
-            'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
-            'tenant_id' => $this->project->tenant_id,
-            'status' => 'open',
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
         ]);
         $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
-        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), [
-            'escalation_reason' => 'Urgent',
-            'escalated_to' => $target->id,
-        ])->assertStatus(200);
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Urgent', 'escalated_to' => $target->id])->assertStatus(200);
 
-        // Admin (apiFeatureUser via apiActingAsTenantAdmin) cancels while escalated.
-        $response = $this->apiPost($this->zena('rfis.cancel', ['id' => $rfi->id]), [
-            'reason' => 'Project cancelled by client',
-        ]);
+        $response = $this->apiPost($this->zena('rfis.cancel', ['id' => $rfi->id]), ['reason' => 'Project cancelled by client']);
 
         $response->assertStatus(200);
         $rfi->refresh();
@@ -1363,16 +1709,11 @@ Add to `tests/Feature/Api/RfiApiTest.php`:
     public function test_cancel_with_active_escalation_by_non_pm_non_admin_is_forbidden(): void
     {
         $rfi = Rfi::factory()->create([
-            'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
-            'tenant_id' => $this->project->tenant_id,
-            'status' => 'open',
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
         ]);
         $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
-        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), [
-            'escalation_reason' => 'Urgent',
-            'escalated_to' => $target->id,
-        ])->assertStatus(200);
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Urgent', 'escalated_to' => $target->id])->assertStatus(200);
 
         $regular = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
         $permission = \App\Models\Permission::where('code', 'rfi.cancel')->first();
@@ -1382,8 +1723,7 @@ Add to `tests/Feature/Api/RfiApiTest.php`:
 
         $token = $this->apiLoginToken($regular, $this->apiFeatureTenant);
         $response = $this->withHeaders($this->authHeadersForUser($regular, $token))
-            ->postJson($this->zena('rfis.cancel', ['id' => $rfi->id]), ['reason' => 'Trying to cancel'])
-            ;
+            ->postJson($this->zena('rfis.cancel', ['id' => $rfi->id]), ['reason' => 'Trying to cancel']);
 
         $response->assertStatus(403);
     }
@@ -1396,7 +1736,7 @@ Expected: FAIL — route `rfis.cancel` and permission `rfi.cancel` do not exist.
 
 - [ ] **Step 3: Add the permission**
 
-In `database/seeders/ZenaPermissionsSeeder.php`, add this line to the `RFIs` block of `CANONICAL_PERMISSIONS`, immediately after the `rfi.escalate` entry:
+In `database/seeders/ZenaPermissionsSeeder.php`, add immediately after the `rfi.escalate` entry:
 
 ```php
         ['code' => 'rfi.cancel', 'module' => 'rfi', 'action' => 'cancel', 'description' => 'Cancel an RFI'],
@@ -1404,7 +1744,7 @@ In `database/seeders/ZenaPermissionsSeeder.php`, add this line to the `RFIs` blo
 
 - [ ] **Step 4: Add the route**
 
-In `routes/api_zena.php`, add immediately after the `resolve-escalation` route added in Task 6:
+In `routes/api_zena.php`, immediately after the `resolve-escalation` route added in Task 7:
 
 ```php
             Route::post('/{id}/cancel', [\App\Http\Controllers\Api\RfiController::class, 'cancel'])->middleware('rbac:rfi.cancel')->name('rfis.cancel');
@@ -1429,54 +1769,32 @@ Add to `app/Http/Controllers/Api/RfiController.php`, immediately after `resolveE
 
             $rfi = $this->rfiForTenant($id);
 
-            if (in_array($rfi->status, ['closed', 'cancelled'], true)) {
-                return $this->errorResponse('RFI is already closed or cancelled', 422);
+            try {
+                $this->lifecycleService->assertCanCancel($rfi);
+            } catch (\App\Exceptions\RfiLifecycleTransitionException $e) {
+                return $this->errorResponse($e->getMessage(), 422);
             }
 
             if (!$this->userIsActive($user)) {
                 return $this->errorResponse('Deactivated users cannot cancel RFIs', 403);
             }
 
-            $validator = Validator::make($request->all(), [
-                'reason' => 'required|string',
-            ]);
+            $validator = Validator::make($request->all(), ['reason' => 'required|string']);
 
             if ($validator->fails()) {
                 return $this->validationError($validator->errors());
             }
 
-            $hasActiveEscalation = $this->escalationService->hasActiveEscalation($rfi->id);
-
-            if ($hasActiveEscalation && !$this->actorIsProjectManagerOrAdminForProject($user, $rfi->project_id)) {
+            if ($this->escalationService->hasActiveEscalation($rfi->id)
+                && !$this->actorIsProjectManagerOrAdminForProject($user, $rfi->project_id)) {
                 return $this->errorResponse('Only the project manager or an admin can cancel an RFI while it has an active escalation', 403);
             }
 
-            DB::transaction(function () use ($rfi, $user, $request, $hasActiveEscalation) {
-                if ($hasActiveEscalation) {
-                    $this->escalationService->resolveEscalation(
-                        $rfi,
-                        $user->id,
-                        'RFI cancelled: ' . $request->input('reason'),
-                        \App\Models\RfiEscalation::RESOLUTION_TYPE_RFI_CANCELLED,
-                    );
-                }
-
-                $rfi->fresh()->update([
-                    'status' => 'cancelled',
-                ]);
-            });
+            $this->lifecycleService->cancel($rfi, $user->id, $request->input('reason'));
 
             $rfi->refresh()->load(['project:id,name', 'createdBy:id,name', 'assignedTo:id,name']);
 
-            $this->auditLogger->log(
-                $request,
-                'zena.rfi.cancel',
-                'rfi',
-                (string) $rfi->id,
-                200,
-                $rfi->project_id,
-                $this->tenantId()
-            );
+            $this->auditLogger->log($request, 'zena.rfi.cancel', 'rfi', (string) $rfi->id, 200, $rfi->project_id, $this->tenantId());
 
             return $this->successResponse($rfi, 'RFI cancelled successfully');
         } catch (ModelNotFoundException $e) {
@@ -1489,19 +1807,19 @@ Add to `app/Http/Controllers/Api/RfiController.php`, immediately after `resolveE
 
 - [ ] **Step 6: Run tests to verify they pass**
 
-Run: `php artisan db:seed --class=ZenaPermissionsSeeder && ./vendor/bin/phpunit tests/Feature/Api/RfiApiTest.php`
-Expected: PASS, all tests green. (Note: `RefreshDatabase` re-runs seeders configured in `TestCase`/`DatabaseSeeder` per the test suite's existing convention — confirm `rfi.cancel` is present in the seeded permission set the tests already rely on before assuming a manual `db:seed` is needed in CI.)
+Run: `./vendor/bin/phpunit tests/Feature/Api/RfiApiTest.php`
+Expected: PASS, all tests green.
 
 - [ ] **Step 7: Commit**
 
 ```bash
 git add database/seeders/ZenaPermissionsSeeder.php routes/api_zena.php app/Http/Controllers/Api/RfiController.php tests/Feature/Api/RfiApiTest.php
-git commit -m "feat(rfi): add cancel() action with rfi.cancel permission and PM/admin escalation gate"
+git commit -m "feat(rfi): add cancel() delegating to RfiLifecycleService, PM/admin gate while escalated"
 ```
 
 ---
 
-## Task 10: Seed `rfi.escalate` for the PM role
+## Task 11: Seed `rfi.escalate`/`rfi.cancel` for the PM role
 
 **Files:**
 - Create: `database/seeders/ZenaProjectManagerRolePermissionSeeder.php`
@@ -1509,8 +1827,8 @@ git commit -m "feat(rfi): add cancel() action with rfi.cancel permission and PM/
 - Test: `tests/Unit/Seeders/ZenaProjectManagerRolePermissionSeederTest.php`
 
 **Interfaces:**
-- Consumes: `ZenaPermissionsSeeder::CANONICAL_PERMISSIONS` (existing).
-- Produces: `project_manager` role gains `rfi.escalate` (and `rfi.cancel` from Task 9) permission after seeding.
+- Consumes: `ZenaPermissionsSeeder::CANONICAL_PERMISSIONS` (existing + Task 10's `rfi.cancel` addition).
+- Produces: `project_manager` role gains `rfi.escalate` and `rfi.cancel`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1548,7 +1866,7 @@ class ZenaProjectManagerRolePermissionSeederTest extends TestCase
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `./vendor/bin/phpunit tests/Unit/Seeders/ZenaProjectManagerRolePermissionSeederTest.php`
-Expected: FAIL — "Class Database\Seeders\ZenaProjectManagerRolePermissionSeeder not found".
+Expected: FAIL — seeder class not found.
 
 - [ ] **Step 3: Write the seeder**
 
@@ -1589,7 +1907,7 @@ class ZenaProjectManagerRolePermissionSeeder extends Seeder
 }
 ```
 
-Add `Database\Seeders\ZenaProjectManagerRolePermissionSeeder::class` to the `$this->call([...])` list in `database/seeders/DatabaseSeeder.php`, immediately after `ZenaAdminRolePermissionSeeder::class`.
+Add `Database\Seeders\ZenaProjectManagerRolePermissionSeeder::class` to `DatabaseSeeder::run()`'s call list, immediately after `ZenaAdminRolePermissionSeeder::class`.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -1605,21 +1923,20 @@ git commit -m "feat(rfi): seed rfi.escalate and rfi.cancel permissions for the p
 
 ---
 
-## Task 11: `RfiEscalatedNotification` — brand-new class, after-commit dispatch, test queries the table
+## Task 12: `RfiEscalatedNotification` — after real commit, log-not-rollback, rollback-proves-no-notification
 
 **Files:**
 - Create: `app/Notifications/RfiEscalatedNotification.php`
 - Modify: `app/Services/RfiEscalationService.php`
-- Modify: `app/Http/Controllers/Api/RfiController.php`
 - Test: `tests/Feature/Api/RfiApiTest.php`
 
 **Interfaces:**
 - Consumes: `RfiEscalationService::escalate()` (Task 3).
-- Produces: `App\Notifications\RfiEscalatedNotification`, dispatched from `RfiEscalationService::escalate()` after the transaction commits.
+- Produces: `App\Notifications\RfiEscalatedNotification`.
 
-**Explicit constraint**: do NOT touch `app/Listeners/RfiEventListener.php` or `App\Events\Rfi*` — they stay dead. This is a wholly separate code path.
+**Explicit constraint**: do NOT touch `app/Listeners/RfiEventListener.php` or `App\Events\Rfi*`.
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Write the failing tests**
 
 Add to `tests/Feature/Api/RfiApiTest.php`:
 
@@ -1627,17 +1944,12 @@ Add to `tests/Feature/Api/RfiApiTest.php`:
     public function test_escalate_creates_an_in_app_notification_for_the_target_after_commit(): void
     {
         $rfi = Rfi::factory()->create([
-            'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
-            'tenant_id' => $this->project->tenant_id,
-            'status' => 'open',
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
         ]);
         $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
 
-        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), [
-            'escalation_reason' => 'Urgent',
-            'escalated_to' => $target->id,
-        ])->assertStatus(200);
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Urgent', 'escalated_to' => $target->id])->assertStatus(200);
 
         $this->assertDatabaseCount('notifications', 1);
         $this->assertDatabaseHas('notifications', [
@@ -1650,28 +1962,46 @@ Add to `tests/Feature/Api/RfiApiTest.php`:
     public function test_escalate_conflict_does_not_create_a_notification(): void
     {
         $rfi = Rfi::factory()->create([
-            'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
-            'tenant_id' => $this->project->tenant_id,
-            'status' => 'open',
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
         ]);
         $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
 
-        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), [
-            'escalation_reason' => 'First',
-            'escalated_to' => $target->id,
-        ])->assertStatus(200);
-
-        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), [
-            'escalation_reason' => 'Second (should conflict)',
-            'escalated_to' => $target->id,
-        ])->assertStatus(409);
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'First', 'escalated_to' => $target->id])->assertStatus(200);
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Second (should conflict)', 'escalated_to' => $target->id])->assertStatus(409);
 
         $this->assertDatabaseCount('notifications', 1);
     }
+
+    public function test_a_genuine_mid_transaction_failure_after_row_creation_prevents_notification(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+
+        $service = app(\App\Services\RfiEscalationService::class);
+
+        try {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($service, $rfi, $target) {
+                $service->escalate($rfi, $target->id, $this->user->id, 'Will be rolled back by an outer failure');
+                // Force the OUTER transaction to fail after the escalate() call's own inner
+                // transaction has already returned successfully, proving that a failure in the
+                // surrounding unit of work still results in zero notifications once everything
+                // truly rolls back to the savepoint that never gets released.
+                throw new \RuntimeException('Simulated outer failure after escalate() returned');
+            });
+        } catch (\RuntimeException $e) {
+            // expected
+        }
+
+        $this->assertDatabaseCount('rfi_escalations', 0);
+        $this->assertDatabaseCount('notifications', 0);
+    }
 ```
 
-(These tests require Laravel's standard `notifications` table migration to already exist — confirm via `php artisan migrate:status` before running; if absent, run `php artisan notifications:table && php artisan migrate` first as a prerequisite, not part of this task's own migration set since it's a Laravel framework table likely already present from another feature.)
+(Prerequisite: confirm the standard Laravel `notifications` table migration already exists via `php artisan migrate:status` — if absent, this is a framework table another feature should already have added; if genuinely missing, add `php artisan notifications:table && php artisan migrate` as a one-time step before this task, not as new plan-owned migration content.)
 
 - [ ] **Step 2: Run tests to verify they fail**
 
@@ -1723,7 +2053,7 @@ class RfiEscalatedNotification extends Notification implements ShouldQueue
 }
 ```
 
-- [ ] **Step 4: Dispatch after commit from the service**
+- [ ] **Step 4: Dispatch after real commit from the service**
 
 In `app/Services/RfiEscalationService.php`, add imports:
 
@@ -1733,25 +2063,42 @@ use App\Models\User;
 use Illuminate\Support\Facades\Log;
 ```
 
-Change `escalate()` to dispatch after the transaction commits — replace:
-
-```php
-    public function escalate(Rfi $rfi, string $escalatedTo, string $escalatedBy, string $reason): RfiEscalation
-    {
-        return DB::transaction(function () use ($rfi, $escalatedTo, $escalatedBy, $reason) {
-```
-
-with:
+Change `escalate()`'s signature line from `return DB::transaction(function () ...` to assign the result first, dispatch after, then return — the full method becomes:
 
 ```php
     public function escalate(Rfi $rfi, string $escalatedTo, string $escalatedBy, string $reason): RfiEscalation
     {
         $escalation = DB::transaction(function () use ($rfi, $escalatedTo, $escalatedBy, $reason) {
-```
+            $lockedRfi = Rfi::where('id', $rfi->id)->lockForUpdate()->firstOrFail();
 
-and change the closure's `return $escalation;` to just `return $escalation;` (unchanged), then after the closing `});` of the transaction, before the method's final `}`, add:
+            $activeExists = RfiEscalation::where('rfi_id', $lockedRfi->id)
+                ->whereNull('resolved_at')
+                ->lockForUpdate()
+                ->exists();
 
-```php
+            if ($activeExists) {
+                throw new RfiEscalationConflictException('An active escalation already exists for this RFI.');
+            }
+
+            $escalation = RfiEscalation::create([
+                'rfi_id' => $lockedRfi->id,
+                'tenant_id' => $lockedRfi->tenant_id,
+                'escalated_to' => $escalatedTo,
+                'escalated_by' => $escalatedBy,
+                'escalated_at' => now(),
+                'escalation_reason' => $reason,
+            ]);
+
+            $lockedRfi->update([
+                'current_escalation_id' => $escalation->id,
+                'escalated_to' => $escalation->escalated_to,
+                'escalated_by' => $escalation->escalated_by,
+                'escalated_at' => $escalation->escalated_at,
+                'escalation_reason' => $escalation->escalation_reason,
+            ]);
+
+            return $escalation;
+        });
 
         $this->dispatchEscalatedNotification($escalation);
 
@@ -1773,25 +2120,26 @@ and change the closure's `return $escalation;` to just `return $escalation;` (un
                 'exception' => $e->getMessage(),
             ]);
         }
+    }
 ```
 
-(Verify after editing that the method's final closing brace count is correct — `escalate()` now has: `$escalation = DB::transaction(...)`, then a call to `dispatchEscalatedNotification()`, then `return $escalation;`, then the method's closing `}`. `dispatchEscalatedNotification()` is a separate private method with its own `try/catch` and closing `}`.)
+(This replaces the entire body of `escalate()` from Task 3 — the transaction closure's internal logic is unchanged, only the wrapping return/dispatch sequencing is new. `dispatchEscalatedNotification()` runs strictly after `DB::transaction()` has returned, i.e. strictly after commit — it is never reached if the closure throws, which `test_escalate_conflict_does_not_create_a_notification` already proves, and `test_a_genuine_mid_transaction_failure_after_row_creation_prevents_notification` additionally proves that even when `escalate()`'s own inner transaction DID commit successfully and dispatch DID run, wrapping the whole call in an outer transaction that then fails causes the inner commit's effects — including the notification row itself, which is a real database write — to be rolled back along with everything else, because PHPUnit's `RefreshDatabase` test wrapper transaction means the "commit" `escalate()` performs is actually a released savepoint nested inside the outer test transaction; forcing the OUTER `DB::transaction()` call in the test to throw rolls back to a point before that savepoint was ever taken, undoing both the escalation row AND the notification row created inside it.)
 
 - [ ] **Step 5: Run tests to verify they pass**
 
 Run: `./vendor/bin/phpunit tests/Feature/Api/RfiApiTest.php`
-Expected: PASS, all tests green, including the two notification tests (the conflict test creates 0 additional notifications because the second `escalate()` call throws before `dispatchEscalatedNotification()` is ever reached — the exception propagates out of `DB::transaction()`'s closure before that line executes).
+Expected: PASS, all tests green, including all three notification tests.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add app/Notifications/RfiEscalatedNotification.php app/Services/RfiEscalationService.php app/Http/Controllers/Api/RfiController.php tests/Feature/Api/RfiApiTest.php
-git commit -m "feat(rfi): add RfiEscalatedNotification dispatched after commit, log-not-rollback on failure"
+git add app/Notifications/RfiEscalatedNotification.php app/Services/RfiEscalationService.php tests/Feature/Api/RfiApiTest.php
+git commit -m "feat(rfi): add RfiEscalatedNotification, after-commit dispatch, rollback-safety regression test"
 ```
 
 ---
 
-## Task 12: Legacy deployment gate — Preflight report command
+## Task 13: Legacy deployment gate — Preflight report command
 
 **Files:**
 - Create: `app/Console/Commands/RfiEscalationPreflightReport.php`
@@ -1799,7 +2147,7 @@ git commit -m "feat(rfi): add RfiEscalatedNotification dispatched after commit, 
 
 **Interfaces:**
 - Consumes: `App\Models\Rfi` (existing).
-- Produces: Artisan command `rfi:escalation-preflight-report {--output=}`. Consumed conceptually by Task 13 (operator reads the CSV it produces).
+- Produces: Artisan command `rfi:escalation-preflight-report {--output=}`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1857,8 +2205,7 @@ class RfiEscalationPreflightReportTest extends TestCase
         $outputPath = storage_path('app/test-preflight-report.csv');
         @unlink($outputPath);
 
-        $this->artisan('rfi:escalation-preflight-report', ['--output' => $outputPath])
-            ->assertExitCode(0);
+        $this->artisan('rfi:escalation-preflight-report', ['--output' => $outputPath])->assertExitCode(0);
 
         $this->assertFileExists($outputPath);
         $contents = file_get_contents($outputPath);
@@ -1877,7 +2224,7 @@ class RfiEscalationPreflightReportTest extends TestCase
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `./vendor/bin/phpunit tests/Feature/Console/RfiEscalationPreflightReportTest.php`
-Expected: FAIL — command `rfi:escalation-preflight-report` does not exist.
+Expected: FAIL — command does not exist.
 
 - [ ] **Step 3: Write the command**
 
@@ -1911,9 +2258,7 @@ class RfiEscalationPreflightReport extends Command
             }
         });
 
-        Rfi::where('status', '!=', 'escalated')
-            ->whereNotNull('escalated_to')
-            ->orderBy('id')
+        Rfi::where('status', '!=', 'escalated')->whereNotNull('escalated_to')->orderBy('id')
             ->chunk(200, function ($chunk) use (&$rows) {
                 foreach ($chunk as $rfi) {
                     $rows[] = [$rfi->id, $rfi->status, (string) $rfi->assigned_to, 'yes', $rfi->status, 'resolved_estimated', 'has escalation snapshot but status already moved on; resolved_at will be estimated from updated_at'];
@@ -1953,7 +2298,7 @@ git commit -m "feat(rfi): add legacy escalation preflight report command"
 
 ---
 
-## Task 13: Legacy deployment gate — confirmation tracking table + confirm command
+## Task 14: Legacy deployment gate — confirmation table with full source snapshot + confirm command
 
 **Files:**
 - Create: `database/migrations/2026_07_26_090200_create_rfi_legacy_migration_confirmations_table.php`
@@ -1963,9 +2308,9 @@ git commit -m "feat(rfi): add legacy escalation preflight report command"
 
 **Interfaces:**
 - Consumes: `App\Models\Rfi`, `App\Models\RfiEscalation` (Task 1).
-- Produces: table `rfi_legacy_migration_confirmations`, model `RfiLegacyMigrationConfirmation`, command `rfi:confirm-legacy-escalation`. Consumed by Task 14 (cutover checks this table).
+- Produces: table `rfi_legacy_migration_confirmations` (stores WHO/WHEN/WHAT/WHY/source-snapshot — not a boolean), model, command `rfi:confirm-legacy-escalation`. Consumed by Task 15 (cutover checks this table).
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Write the failing tests**
 
 ```php
 <?php declare(strict_types=1);
@@ -1984,7 +2329,7 @@ class RfiConfirmLegacyEscalationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_confirming_an_escalated_row_creates_unresolved_escalation_and_confirmation_record(): void
+    public function test_confirming_an_escalated_row_creates_unresolved_escalation_and_captures_full_snapshot(): void
     {
         $tenant = Tenant::factory()->create();
         $project = Project::factory()->create(['tenant_id' => $tenant->id]);
@@ -2003,12 +2348,22 @@ class RfiConfirmLegacyEscalationTest extends TestCase
             '--lifecycle' => 'in_progress',
             '--escalation' => 'unresolved',
             '--confirmed-by' => $user->id,
+            '--reason' => 'Confirmed with the assignee over Slack that this RFI is still actively being escalated.',
         ])->assertExitCode(0);
 
-        $this->assertDatabaseHas('rfi_legacy_migration_confirmations', [
-            'rfi_id' => $rfi->id,
-            'confirmed_by' => $user->id,
-        ]);
+        $confirmation = RfiLegacyMigrationConfirmation::where('rfi_id', $rfi->id)->first();
+        $this->assertNotNull($confirmation);
+        $this->assertSame($user->id, $confirmation->confirmed_by);
+        $this->assertNotNull($confirmation->confirmed_at);
+        $this->assertSame('in_progress', $confirmation->confirmed_lifecycle_status);
+        $this->assertSame('unresolved', $confirmation->confirmed_escalation_state);
+        $this->assertSame('Confirmed with the assignee over Slack that this RFI is still actively being escalated.', $confirmation->reason);
+
+        $this->assertNotNull($confirmation->source_snapshot);
+        $snapshot = json_decode($confirmation->source_snapshot, true);
+        $this->assertSame('escalated', $snapshot['status']);
+        $this->assertSame($user->id, $snapshot['assigned_to']);
+        $this->assertSame('legacy reason', $snapshot['escalation_reason']);
 
         $rfi->refresh();
         $this->assertSame('in_progress', $rfi->status);
@@ -2018,7 +2373,7 @@ class RfiConfirmLegacyEscalationTest extends TestCase
         $this->assertNull($escalation->resolved_at);
     }
 
-    public function test_confirming_a_pending_anomaly_maps_to_open_with_no_escalation(): void
+    public function test_confirmation_requires_a_reason(): void
     {
         $tenant = Tenant::factory()->create();
         $project = Project::factory()->create(['tenant_id' => $tenant->id]);
@@ -2035,12 +2390,7 @@ class RfiConfirmLegacyEscalationTest extends TestCase
             '--lifecycle' => 'open',
             '--escalation' => 'none',
             '--confirmed-by' => $user->id,
-        ])->assertExitCode(0);
-
-        $rfi->refresh();
-        $this->assertSame('open', $rfi->status);
-        $this->assertNull($rfi->current_escalation_id);
-        $this->assertSame(0, \App\Models\RfiEscalation::where('rfi_id', $rfi->id)->count());
+        ])->assertExitCode(1);
     }
 }
 ```
@@ -2072,7 +2422,8 @@ return new class extends Migration
             $table->timestamp('confirmed_at');
             $table->string('confirmed_lifecycle_status');
             $table->string('confirmed_escalation_state');
-            $table->text('notes')->nullable();
+            $table->text('reason');
+            $table->json('source_snapshot');
             $table->timestamps();
 
             $table->foreign('rfi_id')->references('id')->on('rfis')->cascadeOnDelete();
@@ -2111,7 +2462,8 @@ class RfiLegacyMigrationConfirmation extends Model
         'confirmed_at',
         'confirmed_lifecycle_status',
         'confirmed_escalation_state',
-        'notes',
+        'reason',
+        'source_snapshot',
     ];
 
     protected $casts = [
@@ -2139,12 +2491,12 @@ class RfiConfirmLegacyEscalation extends Command
 {
     protected $signature = 'rfi:confirm-legacy-escalation
         {rfi_id : The RFI to confirm}
-        {--lifecycle= : The confirmed lifecycle status (open|in_progress|answered|closed)}
+        {--lifecycle= : open|in_progress|answered|closed|cancelled}
         {--escalation= : unresolved|resolved|none}
         {--confirmed-by= : User id of the operator confirming this record}
-        {--notes= : Optional notes}';
+        {--reason= : Required. Why this lifecycle/escalation state was chosen for this record}';
 
-    protected $description = 'Record an operator confirmation for one legacy RFI row ahead of the escalation cutover';
+    protected $description = 'Record an operator confirmation (with a full source snapshot) for one legacy RFI row ahead of the escalation cutover';
 
     public function handle(): int
     {
@@ -2152,6 +2504,7 @@ class RfiConfirmLegacyEscalation extends Command
         $lifecycle = $this->option('lifecycle');
         $escalationState = $this->option('escalation');
         $confirmedBy = $this->option('confirmed-by');
+        $reason = $this->option('reason');
 
         if (!in_array($lifecycle, ['open', 'in_progress', 'answered', 'closed', 'cancelled'], true)) {
             $this->error('--lifecycle must be one of: open, in_progress, answered, closed, cancelled');
@@ -2168,6 +2521,11 @@ class RfiConfirmLegacyEscalation extends Command
             return self::FAILURE;
         }
 
+        if (!$reason) {
+            $this->error('--reason is required — the confirmation must record why this state was chosen, not just what was chosen');
+            return self::FAILURE;
+        }
+
         $rfi = Rfi::find($rfiId);
 
         if (!$rfi) {
@@ -2175,11 +2533,20 @@ class RfiConfirmLegacyEscalation extends Command
             return self::FAILURE;
         }
 
-        DB::transaction(function () use ($rfi, $lifecycle, $escalationState, $confirmedBy) {
+        $sourceSnapshot = [
+            'status' => $rfi->status,
+            'assigned_to' => $rfi->assigned_to,
+            'escalated_to' => $rfi->escalated_to,
+            'escalated_by' => $rfi->escalated_by,
+            'escalated_at' => $rfi->escalated_at?->toIso8601String(),
+            'escalation_reason' => $rfi->escalation_reason,
+            'updated_at' => $rfi->updated_at?->toIso8601String(),
+        ];
+
+        DB::transaction(function () use ($rfi, $lifecycle, $escalationState, $confirmedBy, $reason, $sourceSnapshot) {
             if ($escalationState === 'unresolved') {
                 $escalation = RfiEscalation::create([
-                    'rfi_id' => $rfi->id,
-                    'tenant_id' => $rfi->tenant_id,
+                    'rfi_id' => $rfi->id, 'tenant_id' => $rfi->tenant_id,
                     'escalated_to' => $rfi->escalated_to ?? $confirmedBy,
                     'escalated_by' => $rfi->escalated_by ?? $confirmedBy,
                     'escalated_at' => $rfi->escalated_at ?? now(),
@@ -2188,8 +2555,7 @@ class RfiConfirmLegacyEscalation extends Command
                 $rfi->current_escalation_id = $escalation->id;
             } elseif ($escalationState === 'resolved') {
                 $escalation = RfiEscalation::create([
-                    'rfi_id' => $rfi->id,
-                    'tenant_id' => $rfi->tenant_id,
+                    'rfi_id' => $rfi->id, 'tenant_id' => $rfi->tenant_id,
                     'escalated_to' => $rfi->escalated_to ?? $confirmedBy,
                     'escalated_by' => $rfi->escalated_by ?? $confirmedBy,
                     'escalated_at' => $rfi->escalated_at ?? $rfi->updated_at,
@@ -2214,7 +2580,8 @@ class RfiConfirmLegacyEscalation extends Command
                     'confirmed_at' => now(),
                     'confirmed_lifecycle_status' => $lifecycle,
                     'confirmed_escalation_state' => $escalationState,
-                    'notes' => $this->option('notes'),
+                    'reason' => $reason,
+                    'source_snapshot' => json_encode($sourceSnapshot),
                 ],
             );
         });
@@ -2235,12 +2602,12 @@ Expected: PASS (2 tests).
 
 ```bash
 git add database/migrations/2026_07_26_090200_create_rfi_legacy_migration_confirmations_table.php app/Models/RfiLegacyMigrationConfirmation.php app/Console/Commands/RfiConfirmLegacyEscalation.php tests/Feature/Console/RfiConfirmLegacyEscalationTest.php
-git commit -m "feat(rfi): add per-record legacy escalation confirmation table and command"
+git commit -m "feat(rfi): confirmation table stores who/when/what/why/source-snapshot, not a boolean"
 ```
 
 ---
 
-## Task 14: Legacy deployment gate — Cutover command with hard stop condition
+## Task 15: Legacy deployment gate — Cutover command with hard stop condition
 
 **Files:**
 - Create: `database/migrations/2026_07_26_090300_create_rfi_escalation_migration_state_table.php`
@@ -2249,7 +2616,7 @@ git commit -m "feat(rfi): add per-record legacy escalation confirmation table an
 - Test: `tests/Feature/Console/RfiEscalationCutoverTest.php`
 
 **Interfaces:**
-- Consumes: `RfiLegacyMigrationConfirmation` (Task 13).
+- Consumes: `RfiLegacyMigrationConfirmation` (Task 14).
 - Produces: table `rfi_escalation_migration_state` (single row, `cutover_completed_at`), command `rfi:escalation-cutover`. `RfiController::update()`'s status validation becomes cutover-aware.
 
 - [ ] **Step 1: Write the failing tests**
@@ -2300,11 +2667,10 @@ class RfiEscalationCutoverTest extends TestCase
             'rfi_number' => 'T-RFI-0021', 'status' => 'in_progress',
         ]);
         RfiLegacyMigrationConfirmation::create([
-            'rfi_id' => $rfi->id,
-            'confirmed_by' => $user->id,
-            'confirmed_at' => now(),
-            'confirmed_lifecycle_status' => 'in_progress',
-            'confirmed_escalation_state' => 'none',
+            'rfi_id' => $rfi->id, 'confirmed_by' => $user->id, 'confirmed_at' => now(),
+            'confirmed_lifecycle_status' => 'in_progress', 'confirmed_escalation_state' => 'none',
+            'reason' => 'Row already had no escalation snapshot and a valid status.',
+            'source_snapshot' => json_encode(['status' => 'in_progress']),
         ]);
 
         $this->artisan('rfi:escalation-cutover')->assertExitCode(0);
@@ -2369,35 +2735,19 @@ class RfiEscalationCutover extends Command
 
     public function handle(): int
     {
-        $unconfirmedEscalated = Rfi::where('status', 'escalated')
-            ->whereNotExists(function ($query) {
-                $query->select(DB::raw(1))
-                    ->from('rfi_legacy_migration_confirmations')
-                    ->whereColumn('rfi_legacy_migration_confirmations.rfi_id', 'rfis.id');
-            })
-            ->count();
+        $unconfirmed = function ($query) {
+            $query->select(DB::raw(1))->from('rfi_legacy_migration_confirmations')
+                ->whereColumn('rfi_legacy_migration_confirmations.rfi_id', 'rfis.id');
+        };
 
-        $unconfirmedPending = Rfi::where('status', 'pending')
-            ->whereNotExists(function ($query) {
-                $query->select(DB::raw(1))
-                    ->from('rfi_legacy_migration_confirmations')
-                    ->whereColumn('rfi_legacy_migration_confirmations.rfi_id', 'rfis.id');
-            })
-            ->count();
+        $unconfirmedEscalated = Rfi::where('status', 'escalated')->whereNotExists($unconfirmed)->count();
+        $unconfirmedPending = Rfi::where('status', 'pending')->whereNotExists($unconfirmed)->count();
+        $unconfirmedSnapshot = Rfi::where('status', '!=', 'escalated')->whereNotNull('escalated_to')->whereNotExists($unconfirmed)->count();
 
-        $unconfirmedSnapshot = Rfi::where('status', '!=', 'escalated')
-            ->whereNotNull('escalated_to')
-            ->whereNotExists(function ($query) {
-                $query->select(DB::raw(1))
-                    ->from('rfi_legacy_migration_confirmations')
-                    ->whereColumn('rfi_legacy_migration_confirmations.rfi_id', 'rfis.id');
-            })
-            ->count();
+        $total = $unconfirmedEscalated + $unconfirmedPending + $unconfirmedSnapshot;
 
-        $totalUnconfirmed = $unconfirmedEscalated + $unconfirmedPending + $unconfirmedSnapshot;
-
-        if ($totalUnconfirmed > 0) {
-            $this->error("Cutover blocked: {$totalUnconfirmed} legacy RFI record(s) still unconfirmed (escalated={$unconfirmedEscalated}, pending={$unconfirmedPending}, snapshot-only={$unconfirmedSnapshot}). Run rfi:escalation-preflight-report and rfi:confirm-legacy-escalation for each one first.");
+        if ($total > 0) {
+            $this->error("Cutover blocked: {$total} legacy RFI record(s) still unconfirmed (escalated={$unconfirmedEscalated}, pending={$unconfirmedPending}, snapshot-only={$unconfirmedSnapshot}). Run rfi:escalation-preflight-report and rfi:confirm-legacy-escalation for each one first.");
             return self::FAILURE;
         }
 
@@ -2412,19 +2762,7 @@ class RfiEscalationCutover extends Command
 
 - [ ] **Step 5: Make `RfiController::update()` cutover-aware**
 
-In `app/Http/Controllers/Api/RfiController.php`, in `update()`, replace:
-
-```php
-                'status' => 'sometimes|in:open,answered,closed',
-```
-
-with:
-
-```php
-                'status' => 'sometimes|in:' . implode(',', $this->allowedStatusValues()),
-```
-
-Add this private method at the end of the class:
+In `app/Http/Controllers/Api/RfiController.php`, in `update()`, replace `'status' => 'sometimes|in:open,answered,closed',` with `'status' => 'sometimes|in:' . implode(',', $this->allowedStatusValues()),` and add this private method at the end of the class:
 
 ```php
     private function allowedStatusValues(): array
@@ -2451,91 +2789,406 @@ git commit -m "feat(rfi): add escalation cutover command with hard stop conditio
 
 ---
 
-## Task 15: Concurrency tests — two simultaneous escalate()/resolveEscalation() requests
+## Task 16: Production rollback runbook + `rfi:escalation-rollback` command (flips behavior, never touches data)
 
 **Files:**
-- Modify: `tests/Unit/Services/RfiEscalationServiceTest.php`
+- Create: `app/Console/Commands/RfiEscalationRollback.php`
+- Create: `docs/superpowers/runbooks/rfi-escalation-rollback.md`
+- Test: `tests/Feature/Console/RfiEscalationRollbackTest.php`
 
 **Interfaces:**
-- Consumes: `RfiEscalationService` (Tasks 3-4).
+- Consumes: `rfi_escalation_migration_state` table (Task 15).
+- Produces: command `rfi:escalation-rollback {--reason=}` — clears `cutover_completed_at` so `allowedStatusValues()` (Task 15) reverts to accepting legacy values again; documented runbook for the parts of rollback that are operational rather than a single command (e.g. disabling the new routes at the load balancer/feature-flag level if a full revert to the old escalate() behavior is ever needed).
 
-- [ ] **Step 1: Write the failing tests**
-
-Add to `tests/Unit/Services/RfiEscalationServiceTest.php`:
+- [ ] **Step 1: Write the failing test**
 
 ```php
-    public function test_two_concurrent_escalate_calls_one_wins_one_conflicts(): void
+<?php declare(strict_types=1);
+
+namespace Tests\Feature\Console;
+
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
+
+class RfiEscalationRollbackTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_rollback_clears_cutover_flag_without_touching_escalation_tables(): void
     {
-        $rfi = $this->rfi;
+        DB::table('rfi_escalation_migration_state')->insert(['cutover_completed_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
 
-        $first = $this->service->escalate($rfi, $this->target->id, $this->escalator->id, 'First');
+        $this->artisan('rfi:escalation-rollback', ['--reason' => 'Reverting after an unrelated production incident, needs investigation'])
+            ->assertExitCode(0);
 
-        $this->expectException(RfiEscalationConflictException::class);
-        $this->service->escalate($rfi->fresh(), $this->target->id, $this->escalator->id, 'Second, should conflict because first already committed');
+        $stillCutover = DB::table('rfi_escalation_migration_state')->whereNotNull('cutover_completed_at')->exists();
+        $this->assertFalse($stillCutover);
 
-        $this->assertNotNull($first->id);
+        // The rfi_escalations and rfi_legacy_migration_confirmations TABLES themselves are never
+        // touched by this command — it only ever writes to rfi_escalation_migration_state.
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasTable('rfi_escalations'));
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasTable('rfi_legacy_migration_confirmations'));
     }
 
-    public function test_two_concurrent_resolve_calls_on_same_escalation_one_wins_one_conflicts(): void
+    public function test_rollback_requires_a_reason(): void
     {
-        $rfi = $this->rfi;
-        $this->service->escalate($rfi, $this->target->id, $this->escalator->id, 'Urgent');
+        DB::table('rfi_escalation_migration_state')->insert(['cutover_completed_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
 
-        $this->service->resolveEscalation($rfi->fresh(), $this->target->id, 'First resolve wins');
-
-        $this->expectException(RfiEscalationConflictException::class);
-        $this->service->resolveEscalation($rfi->fresh(), $this->escalator->id, 'Second resolve, should conflict');
+        $this->artisan('rfi:escalation-rollback')->assertExitCode(1);
     }
+}
 ```
 
-(Note: true multi-process concurrency cannot be exercised inside a single PHPUnit process against SQLite/MySQL without a second connection; these tests exercise the *sequential* guard logic — the second call, made after the first has already committed, must observe the row's committed state and be rejected. This validates the guard condition that would also reject a genuinely concurrent second transaction once it acquires the row lock, per spec §9's design — full multi-connection concurrency validation belongs in a manual/staging load test, out of scope for this automated suite.)
+- [ ] **Step 2: Run test to verify it fails**
 
-- [ ] **Step 2: Run tests to verify they fail**
+Run: `./vendor/bin/phpunit tests/Feature/Console/RfiEscalationRollbackTest.php`
+Expected: FAIL — command does not exist.
 
-Run: `./vendor/bin/phpunit tests/Unit/Services/RfiEscalationServiceTest.php`
-Expected: These specific two tests should already PASS given Tasks 3-4's implementation (they test the same guard as the conflict tests already written) — if so, this task's "step 2" confirms no regression rather than a red state. If either fails, the guard logic from Task 3/4 has a bug — fix it before proceeding, do not weaken the test.
+- [ ] **Step 3: Write the command**
 
-- [ ] **Step 3: N/A — no new implementation code, this task only strengthens test coverage of existing guards**
+`app/Console/Commands/RfiEscalationRollback.php`:
 
-- [ ] **Step 4: Run tests to verify they pass**
+```php
+<?php declare(strict_types=1);
 
-Run: `./vendor/bin/phpunit tests/Unit/Services/RfiEscalationServiceTest.php`
-Expected: PASS (8 tests total in the file).
+namespace App\Console\Commands;
 
-- [ ] **Step 5: Commit**
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
+class RfiEscalationRollback extends Command
+{
+    protected $signature = 'rfi:escalation-rollback {--reason=}';
+
+    protected $description = 'Revert application-level validation to pre-cutover behavior. Never touches rfi_escalations or confirmation data.';
+
+    public function handle(): int
+    {
+        $reason = $this->option('reason');
+
+        if (!$reason) {
+            $this->error('--reason is required — rollback must record why it happened');
+            return self::FAILURE;
+        }
+
+        DB::table('rfi_escalation_migration_state')->update(['cutover_completed_at' => null, 'updated_at' => now()]);
+
+        Log::warning('rfi_escalation_cutover_rolled_back', ['reason' => $reason, 'rolled_back_at' => now()->toIso8601String()]);
+
+        $this->info('Cutover flag cleared. status=escalated/pending are accepted again at the application layer. No rows in rfi_escalations or rfi_legacy_migration_confirmations were modified.');
+
+        return self::SUCCESS;
+    }
+}
+```
+
+- [ ] **Step 4: Write the runbook**
+
+`docs/superpowers/runbooks/rfi-escalation-rollback.md`:
+
+```markdown
+# RFI Escalation — Production Rollback Runbook
+
+**Do not run any migration `down()` in production once real escalation data exists.** All migrations in this feature are additive; their `down()` methods exist only for local/test iteration before any real data is written.
+
+## What "rollback" means here
+
+Rolling back this feature means reverting *application behavior* — new escalate/resolve/cancel actions, the cutover's tightened validation — while the `rfi_escalations`, `rfi_legacy_migration_confirmations`, and `rfi_escalation_migration_state` tables and all data in them stay exactly as they are. There is no scenario in this plan where rolling back means deleting or altering that data.
+
+## Steps
+
+1. **Deploy the previous application release** (the one before this feature's code was deployed), OR, if only the cutover specifically needs reverting while keeping the rest of the code:
+2. Run `php artisan rfi:escalation-rollback --reason="<why>"` — clears `rfi_escalation_migration_state.cutover_completed_at`, which makes `RfiController::allowedStatusValues()` accept `escalated`/`pending` again at the application layer. This does not touch `rfi_escalations` or `rfi_legacy_migration_confirmations`.
+3. If the new routes (`escalate`, `resolve-escalation`, `cancel`) must stop being reachable entirely (not just the cutover flag), disable them via the RBAC permission layer: revoke `rfi.escalate`/`rfi.cancel` from all roles (`ZenaAdminRolePermissionSeeder`/`ZenaProjectManagerRolePermissionSeeder` output), which causes the `rbac:rfi.*` route middleware to reject all callers with 403 without touching routes or code.
+4. Confirm no data loss: `SELECT COUNT(*) FROM rfi_escalations` and `SELECT COUNT(*) FROM rfi_legacy_migration_confirmations` before and after rollback must be identical.
+5. If the previous application release genuinely predates `current_escalation_id`/`rfi_escalations` (i.e. rolling back past this entire feature, not just the cutover), that older code simply never reads those columns/tables — they remain in the schema, unused but intact, until a future decision is made about them. Do not drop them as part of an emergency rollback.
+```
+
+- [ ] **Step 5: Run test to verify it passes**
+
+Run: `./vendor/bin/phpunit tests/Feature/Console/RfiEscalationRollbackTest.php`
+Expected: PASS (2 tests).
+
+- [ ] **Step 6: Commit**
 
 ```bash
-git add tests/Unit/Services/RfiEscalationServiceTest.php
-git commit -m "test(rfi): add explicit concurrency-guard regression tests for escalate/resolveEscalation"
+git add app/Console/Commands/RfiEscalationRollback.php docs/superpowers/runbooks/rfi-escalation-rollback.md tests/Feature/Console/RfiEscalationRollbackTest.php
+git commit -m "feat(rfi): add production rollback command + runbook (flips behavior, never touches data)"
 ```
 
 ---
 
-## Task 16: Full regression pass
+## Task 17: Real two-connection concurrency verification (MySQL only, not sqlite)
+
+**Files:**
+- Create: `app/Console/Commands/Testing/RfiConcurrencyTestEscalate.php`
+- Create: `app/Console/Commands/Testing/RfiConcurrencyTestResolve.php`
+- Create: `tests/Feature/Concurrency/RfiEscalationConcurrencyTest.php`
+
+**Interfaces:**
+- Consumes: `RfiEscalationService` (Tasks 3-4).
+- Produces: two Artisan test-support commands that invoke the real service from a genuinely separate OS process/DB connection; a test class that proves the row lock — not just the application-level state check — serializes concurrent access.
+
+**This task requires a real MySQL connection.** The default test `DB_CONNECTION` in `phpunit.xml` is `sqlite` — this test class explicitly uses the `mysql` connection defined in `config/database.php` regardless of the default, and skips itself with a clear message if that connection cannot be reached, rather than silently passing on sqlite.
+
+- [ ] **Step 1: Write the test-support commands**
+
+`app/Console/Commands/Testing/RfiConcurrencyTestEscalate.php`:
+
+```php
+<?php declare(strict_types=1);
+
+namespace App\Console\Commands\Testing;
+
+use App\Exceptions\RfiEscalationConflictException;
+use App\Models\Rfi;
+use App\Services\RfiEscalationService;
+use Illuminate\Console\Command;
+
+/**
+ * Test-support command: invokes RfiEscalationService::escalate() from a genuinely
+ * separate OS process, so concurrency tests can prove real row-locking behavior
+ * instead of simulating it with sequential calls in one PHPUnit process.
+ */
+class RfiConcurrencyTestEscalate extends Command
+{
+    protected $signature = 'rfi:concurrency-test-escalate {rfi_id} {target_id} {escalator_id} {reason}';
+
+    protected $hidden = true;
+
+    public function handle(RfiEscalationService $service): int
+    {
+        $rfi = Rfi::on('mysql')->findOrFail($this->argument('rfi_id'));
+
+        try {
+            $escalation = $service->escalate($rfi, $this->argument('target_id'), $this->argument('escalator_id'), $this->argument('reason'));
+            $this->line('OK ' . $escalation->id);
+            return self::SUCCESS;
+        } catch (RfiEscalationConflictException $e) {
+            $this->line('CONFLICT ' . $e->getMessage());
+            return self::FAILURE;
+        }
+    }
+}
+```
+
+`app/Console/Commands/Testing/RfiConcurrencyTestResolve.php`:
+
+```php
+<?php declare(strict_types=1);
+
+namespace App\Console\Commands\Testing;
+
+use App\Exceptions\RfiEscalationConflictException;
+use App\Exceptions\RfiEscalationNotFoundException;
+use App\Models\Rfi;
+use App\Services\RfiEscalationService;
+use Illuminate\Console\Command;
+
+class RfiConcurrencyTestResolve extends Command
+{
+    protected $signature = 'rfi:concurrency-test-resolve {rfi_id} {resolver_id} {resolution}';
+
+    protected $hidden = true;
+
+    public function handle(RfiEscalationService $service): int
+    {
+        $rfi = Rfi::on('mysql')->findOrFail($this->argument('rfi_id'));
+
+        try {
+            $escalation = $service->resolveEscalation($rfi, $this->argument('resolver_id'), $this->argument('resolution'));
+            $this->line('OK ' . $escalation->id);
+            return self::SUCCESS;
+        } catch (RfiEscalationConflictException|RfiEscalationNotFoundException $e) {
+            $this->line('CONFLICT ' . $e->getMessage());
+            return self::FAILURE;
+        }
+    }
+}
+```
+
+- [ ] **Step 2: Write the concurrency test**
+
+`tests/Feature/Concurrency/RfiEscalationConcurrencyTest.php`:
+
+```php
+<?php declare(strict_types=1);
+
+namespace Tests\Feature\Concurrency;
+
+use App\Models\Project;
+use App\Models\Rfi;
+use App\Models\RfiEscalation;
+use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Symfony\Component\Process\Process;
+use Tests\TestCase;
+
+class RfiEscalationConcurrencyTest extends TestCase
+{
+    private function skipUnlessMysqlAvailable(): void
+    {
+        try {
+            DB::connection('mysql')->select('SELECT 1');
+        } catch (\Throwable $e) {
+            $this->markTestSkipped(
+                'This test proves real row-locking behavior and MUST run against a real MySQL '
+                . 'connection, not sqlite. The "mysql" connection in config/database.php is not '
+                . 'reachable in this environment (' . $e->getMessage() . '). Run this suite in an '
+                . 'environment with MySQL configured before treating concurrency as verified — a '
+                . 'passing sqlite/sequential-call test is NOT evidence per the plan\'s blocker #5.'
+            );
+        }
+    }
+
+    protected function tearDown(): void
+    {
+        if (DB::connection('mysql')->getPdo()) {
+            DB::connection('mysql')->table('rfi_escalations')->delete();
+            DB::connection('mysql')->table('rfis')->delete();
+            DB::connection('mysql')->table('projects')->delete();
+            DB::connection('mysql')->table('tenants')->delete();
+            DB::connection('mysql')->table('users')->delete();
+        }
+        parent::tearDown();
+    }
+
+    public function test_two_concurrent_escalate_calls_on_the_same_rfi_only_one_succeeds(): void
+    {
+        $this->skipUnlessMysqlAvailable();
+
+        $tenant = Tenant::on('mysql')->create(Tenant::factory()->raw());
+        $project = Project::on('mysql')->create(Project::factory()->raw(['tenant_id' => $tenant->id]));
+        $escalator = User::on('mysql')->create(User::factory()->raw(['tenant_id' => $tenant->id]));
+        $target = User::on('mysql')->create(User::factory()->raw(['tenant_id' => $tenant->id, 'is_active' => true]));
+
+        $rfi = Rfi::on('mysql')->create([
+            'tenant_id' => $tenant->id, 'project_id' => $project->id, 'title' => 'Concurrency test',
+            'description' => 'd', 'priority' => 'medium', 'status' => 'open',
+            'created_by' => $escalator->id, 'rfi_number' => 'CONC-RFI-0001',
+        ]);
+
+        // Hold the RFI row lock open on a second, independent PDO connection.
+        $dsn = sprintf('mysql:host=%s;port=%s;dbname=%s', config('database.connections.mysql.host'), config('database.connections.mysql.port'), config('database.connections.mysql.database'));
+        $holder = new \PDO($dsn, config('database.connections.mysql.username'), config('database.connections.mysql.password'));
+        $holder->beginTransaction();
+        $holder->prepare('SELECT id FROM rfis WHERE id = ? FOR UPDATE')->execute([$rfi->id]);
+
+        // Spawn a real second OS process that will block on the row lock held above.
+        $php = (new \Symfony\Component\Process\PhpExecutableFinder())->find();
+        $process = new Process([
+            $php, 'artisan', 'rfi:concurrency-test-escalate', $rfi->id, $target->id, $escalator->id, 'From subprocess',
+        ], base_path(), ['DB_CONNECTION' => 'mysql']);
+        $process->start();
+
+        usleep(300_000); // give the subprocess time to reach and block on the FOR UPDATE lock
+
+        $this->assertTrue($process->isRunning(), 'Subprocess should still be blocked waiting on the row lock held by the primary connection.');
+
+        $holder->rollBack(); // release the lock without creating an escalation via this connection
+
+        $process->wait();
+        $this->assertSame(0, $process->getExitCode(), 'Subprocess escalate() should succeed once the lock is released: ' . $process->getOutput());
+        $this->assertStringContainsString('OK', $process->getOutput());
+
+        $this->assertSame(1, RfiEscalation::on('mysql')->where('rfi_id', $rfi->id)->count());
+
+        // Now that an active escalation exists, a second concurrent attempt must conflict.
+        $second = new Process([
+            $php, 'artisan', 'rfi:concurrency-test-escalate', $rfi->id, $target->id, $escalator->id, 'Should conflict',
+        ], base_path(), ['DB_CONNECTION' => 'mysql']);
+        $second->run();
+
+        $this->assertSame(1, $second->getExitCode());
+        $this->assertStringContainsString('CONFLICT', $second->getOutput());
+        $this->assertSame(1, RfiEscalation::on('mysql')->where('rfi_id', $rfi->id)->count(), 'Still exactly one escalation row after the conflicting attempt.');
+    }
+
+    public function test_two_concurrent_resolve_calls_on_the_same_escalation_only_one_succeeds(): void
+    {
+        $this->skipUnlessMysqlAvailable();
+
+        $tenant = Tenant::on('mysql')->create(Tenant::factory()->raw());
+        $project = Project::on('mysql')->create(Project::factory()->raw(['tenant_id' => $tenant->id]));
+        $escalator = User::on('mysql')->create(User::factory()->raw(['tenant_id' => $tenant->id]));
+        $target = User::on('mysql')->create(User::factory()->raw(['tenant_id' => $tenant->id, 'is_active' => true]));
+
+        $rfi = Rfi::on('mysql')->create([
+            'tenant_id' => $tenant->id, 'project_id' => $project->id, 'title' => 'Concurrency resolve test',
+            'description' => 'd', 'priority' => 'medium', 'status' => 'open',
+            'created_by' => $escalator->id, 'rfi_number' => 'CONC-RFI-0002',
+        ]);
+
+        app(\App\Services\RfiEscalationService::class)->escalate($rfi->setConnection('mysql'), $target->id, $escalator->id, 'Urgent');
+
+        $php = (new \Symfony\Component\Process\PhpExecutableFinder())->find();
+        $procA = new Process([$php, 'artisan', 'rfi:concurrency-test-resolve', $rfi->id, $target->id, 'Resolved by A'], base_path(), ['DB_CONNECTION' => 'mysql']);
+        $procB = new Process([$php, 'artisan', 'rfi:concurrency-test-resolve', $rfi->id, $escalator->id, 'Resolved by B'], base_path(), ['DB_CONNECTION' => 'mysql']);
+
+        $procA->start();
+        $procB->start();
+        $procA->wait();
+        $procB->wait();
+
+        $exitCodes = [$procA->getExitCode(), $procB->getExitCode()];
+        sort($exitCodes);
+        $this->assertSame([0, 1], $exitCodes, 'Exactly one of the two concurrent resolve attempts must succeed and the other must conflict. A: ' . $procA->getOutput() . ' B: ' . $procB->getOutput());
+
+        $escalation = RfiEscalation::on('mysql')->where('rfi_id', $rfi->id)->first();
+        $this->assertNotNull($escalation->resolved_at);
+        $this->assertNotNull($escalation->resolved_by);
+    }
+}
+```
+
+- [ ] **Step 3: Run the test against MySQL**
+
+Run: `DB_CONNECTION=mysql ./vendor/bin/phpunit tests/Feature/Concurrency/RfiEscalationConcurrencyTest.php`
+Expected: PASS (2 tests) if a MySQL connection is reachable per `config/database.php`'s `mysql` connection; otherwise both tests report SKIPPED with the explicit message from `skipUnlessMysqlAvailable()` — a skip here is an honest "not verified in this environment", not a false pass, and must be treated as an open item for CI/staging before this plan's blocker #5 is considered closed.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add app/Console/Commands/Testing/RfiConcurrencyTestEscalate.php app/Console/Commands/Testing/RfiConcurrencyTestResolve.php tests/Feature/Concurrency/RfiEscalationConcurrencyTest.php
+git commit -m "test(rfi): add genuine two-connection MySQL concurrency tests for escalate/resolveEscalation"
+```
+
+---
+
+## Task 18: Full regression pass + legacy gate + rollback end-to-end verification
 
 **Files:** none created/modified — verification only.
 
 - [ ] **Step 1: Run every touched test file together**
 
-Run: `./vendor/bin/phpunit tests/Unit/Models/RfiEscalationTest.php tests/Unit/Models/RfiTest.php tests/Unit/Services/RfiEscalationServiceTest.php tests/Feature/Api/RfiApiTest.php tests/Feature/Console tests/Unit/Seeders/ZenaProjectManagerRolePermissionSeederTest.php`
+Run: `./vendor/bin/phpunit tests/Unit/Models tests/Unit/Services tests/Unit/Seeders tests/Feature/Api/RfiApiTest.php tests/Feature/Console`
 Expected: PASS, 0 failures.
 
 - [ ] **Step 2: Run the full test suite to check for unrelated regressions**
 
 Run: `./vendor/bin/phpunit`
-Expected: same pass/fail baseline as before this plan started, plus this plan's new tests, no new failures in files this plan didn't touch (e.g. `RfiWorkflowTest`, `OperatorRfiUiTest` — read their output carefully since Task 7's `respond()` guard and Task 8's `close()` guard change existing behavior those tests may exercise; if either fails, fix the guard's edge case or fix the pre-existing test's fixture to match the new, intentionally-tightened contract — do not silently loosen the guard back to pre-plan behavior without flagging it).
+Expected: same pass/fail baseline as before this plan started, plus this plan's new tests (the MySQL-only concurrency test SKIPPED is acceptable in the sqlite-default CI run; it is not acceptable to be silently absent from the suite). Read `RfiWorkflowTest`/`OperatorRfiUiTest` output carefully — Task 8/9's guards change existing behavior those tests may exercise; fix the guard's edge case or the pre-existing fixture, never silently loosen the new guard.
 
-- [ ] **Step 3: Manually verify the legacy deployment gate order end-to-end**
+- [ ] **Step 3: Manually verify the legacy deployment gate end-to-end**
 
-Run in sequence against a local dev DB seeded with at least one `status='escalated'` row:
+Against a local dev DB seeded with at least one `status='escalated'` row:
 1. `php artisan rfi:escalation-preflight-report` — confirm it lists the row.
 2. `php artisan rfi:escalation-cutover` — confirm exit code 1 (blocked).
-3. `php artisan rfi:confirm-legacy-escalation {the rfi id} --lifecycle=in_progress --escalation=unresolved --confirmed-by={a real user id}` — confirm exit code 0.
-4. `php artisan rfi:escalation-cutover` — confirm exit code 0 this time.
+3. `php artisan rfi:confirm-legacy-escalation {rfi id} --lifecycle=in_progress --escalation=unresolved --confirmed-by={user id} --reason="manual verification"` — confirm exit code 0.
+4. `php artisan rfi:escalation-cutover` — confirm exit code 0.
+5. `php artisan rfi:escalation-rollback --reason="manual verification of rollback path"` — confirm exit code 0, confirm `rfi_escalations`/`rfi_legacy_migration_confirmations` row counts are unchanged from before this step, confirm the RFI's `status='escalated'` value from step 3 is once again accepted by `RfiController::update()`'s validator.
 
-Expected: exactly this sequence of exit codes (0, 1, 0, 0), proving the stop condition is real and not decorative.
+Expected: exit codes 0(list has 1 row), 1, 0, 0, 0 in that order, and zero data loss confirmed at step 5.
 
-- [ ] **Step 4: Commit (only if Step 2/3 required a follow-up fix; otherwise nothing to commit)**
+- [ ] **Step 4: Run the MySQL concurrency suite if a MySQL environment is available**
+
+Run: `DB_CONNECTION=mysql ./vendor/bin/phpunit tests/Feature/Concurrency/RfiEscalationConcurrencyTest.php`
+Expected: PASS (2 tests) — record the result in the final whole-branch review; if this environment has no MySQL available, flag it explicitly as an unverified item for the reviewer rather than omitting it from the report.
+
+- [ ] **Step 5: Commit (only if Steps 2-4 required a follow-up fix; otherwise nothing to commit)**
 
 ```bash
 git status
@@ -2545,30 +3198,19 @@ git status
 
 ## Self-Review
 
-**Spec coverage:**
-- §1 (pure lifecycle enum, no `escalated`/`pending` value going forward) → Tasks 5, 7, 9, 14 (validation list drops them only after cutover).
-- §2 (`rfi_escalations`, immutable origin fields, resolution written once, ≤1 active) → Tasks 1, 3, 4.
-- §2.1/§2.2 (`current_escalation_id`, compatibility mirror, no new reader treats mirror as truth) → Task 2 (pointer), Tasks 3-4 (mirror sync inside the same transaction as every writer this plan adds).
-- §3-4 (state diagram, transition table) → Tasks 5-9 (guards on escalate/respond/close/cancel).
-- §5 (owner/reassignment) → unchanged from current `assign()`, no task needed (spec explicitly carries it forward unmodified).
-- §6 (legacy deployment gate: additive → preflight → operator confirmation → cutover, hard stop condition) → Tasks 12, 13, 14.
-- §7 (answer doesn't resolve, close blocked, cancel-with-escalation PM/admin+atomic) → Tasks 7, 8, 9.
-- §8 (authorization matrix: PM+admin escalate, target/PM/admin resolve, active actor/target) → Tasks 5, 6, 9, 10.
-- §9 (lock both rows, resolution once, 409 on conflict) → Tasks 3, 4, 15.
-- §10 (new Notification class, after-commit, log-not-rollback, no dead-listener reuse) → Task 11.
-- §11 (32-case test matrix) → distributed across Tasks 3-15; every numbered case in the spec has a corresponding test in some task above (schema/model cases in 1-2, escalate/resolve/conflict/double-resolve/cycle in 3-4, respond/close/cancel guards in 7-9, cross-tenant/project/active-user in 5, notification-after-commit in 11, migration decision branches in 12-14, concurrency in 15).
-- §12/§13 (operational gaps, non-goals) → reflected in Global Constraints (Overdue Engine explicitly out of scope; no field drop; project-membership middleware gap noted but not silently "fixed" by this plan since spec left it as a separate concern — Task 5's target-membership check is new application code, not a claim that the underlying RBAC middleware gap is resolved).
+**Spec coverage:** all of rev 3's sections map to a task as in the prior version of this plan (see Tasks 1-2 for §2/§2.1/§2.2, 3-4 for §2/§9, 6-10 for §3-4/§7/§8, 13-15 for §6, 12 for §10, 17 for §9's concurrency claim, 16 for the rollback constraint this revision adds beyond the spec).
 
-**Placeholder scan:** no "TBD"/"add error handling"/"similar to Task N" found. The one intentionally temporary marker (`RfiEscalatedNotificationDispatcher_PLACEHOLDER_REMOVED_IN_TASK_10`) is explicitly a dead-on-arrival label the plan instructs to delete in the same step it's introduced — not a deferred TODO — kept only as a textual anchor so Task 10 knows exactly where to insert code; flagging this here in case a reviewer treats it as a placeholder violation, since the intent is that it never exists in committed code (Task 5's Step 3 deletes it before Step 4's tests run).
+**Blocker coverage (this revision):**
+1. Lifecycle centralization → Task 5 (`RfiLifecycleService`), Tasks 8-10 rewire the controller to delegate instead of containing transition logic; Task 3's own test (`test_service_never_reads_or_writes_rfi_status`) mechanically enforces the boundary stays clean.
+2. Production rollback → Task 16 (command + runbook), Global Constraints explicitly forbid running `down()` after data exists.
+3. Legacy gate schema → Task 14's `rfi_legacy_migration_confirmations` now stores `reason` (required, non-null) and `source_snapshot` (JSON, captured before any mutation) alongside who/when/what — not a boolean.
+4. Current escalation invariant → Task 2's `assertEscalationPointerIntegrity()` + cross-RFI/cross-tenant/already-resolved regression tests; Task 1's `rfi_escalations.rfi_id` foreign key uses RESTRICT, not CASCADE.
+5. Concurrency verification → Task 17's genuine two-PDO-connection, two-OS-process test against the real `mysql` connection, explicit skip-with-reason on sqlite rather than a false pass; Task 12's notification tests add a genuine outer-transaction-rollback case beyond the "second call throws before reaching dispatch" case already covered.
 
-**Type consistency check:** `RfiEscalationService::escalate(Rfi, string, string, string): RfiEscalation` (Task 3) called identically in Tasks 5, 9, 13. `resolveEscalation(Rfi, string, string, string = ...): RfiEscalation` (Task 4) called identically in Tasks 6, 9. `hasActiveEscalation(string): bool` (Task 3) called identically in Task 8. `RfiEscalationConflictException`/`RfiEscalationNotFoundException` caught with matching class names in Tasks 5, 6. `actorIsProjectManagerOrAdminForProject(User, string): bool` and `userIsActive(User): bool` (Task 5) reused with identical signatures in Tasks 6, 8, 9.
+**Placeholder scan:** no "TBD"/"add error handling"/"similar to Task N" found.
+
+**Type consistency check:** `RfiLifecycleService::respond/close/cancel(Rfi, ...): Rfi` (Task 5) called identically in Tasks 8-10. `RfiEscalationService::escalate/resolveEscalation/hasActiveEscalation` (Tasks 3-4) signatures unchanged from Task 3/4's own definitions when consumed in Tasks 5-7, 10, 12, 17. `Rfi::assertEscalationPointerIntegrity()` (Task 2) called identically in Task 4's `resolveEscalation()`. `RfiLegacyMigrationConfirmation` fillable fields (Task 14) match the columns Task 15's cutover query checks against (`rfi_legacy_migration_confirmations.rfi_id`).
 
 ---
 
-Plan complete and saved to `docs/superpowers/plans/2026-07-26-rfi-lifecycle-escalation-implementation.md`. Two execution options:
-
-**1. Subagent-Driven (recommended)** - I dispatch a fresh subagent per task, review between tasks, fast iteration
-
-**2. Inline Execution** - Execute tasks in this session using executing-plans, batch execution with checkpoints
-
-**Which approach?**
+Plan revised and saved to `docs/superpowers/plans/2026-07-26-rfi-lifecycle-escalation-implementation.md`. Proceeding to Subagent-Driven Development per operator instruction — no further execution-choice prompt needed.

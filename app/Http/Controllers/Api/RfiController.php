@@ -335,6 +335,12 @@ class RfiController extends ApiBaseController
 
             $rfi = $this->rfiForTenant($id);
 
+            try {
+                $this->lifecycleService->assertCanRespond($rfi);
+            } catch (\App\Exceptions\RfiLifecycleTransitionException $e) {
+                return $this->errorResponse($e->getMessage(), 422);
+            }
+
             $validator = Validator::make($request->all(), [
                 'response' => 'required|string',
                 'status' => 'required|in:answered,closed',
@@ -344,12 +350,7 @@ class RfiController extends ApiBaseController
                 return $this->validationError($validator->errors());
             }
 
-            $rfi->update([
-                'response' => $request->input('response'),
-                'status' => $request->input('status'),
-                'responded_by' => $user->id,
-                'responded_at' => now(),
-            ]);
+            $this->lifecycleService->respond($rfi, $user->id, $request->input('response'), $request->input('status'));
 
             $rfi->load(['project:id,name', 'createdBy:id,name', 'assignedTo:id,name']);
 

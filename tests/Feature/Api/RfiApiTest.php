@@ -251,6 +251,30 @@ class RfiApiTest extends TestCase
         ]);
     }
 
+    public function test_cannot_respond_to_a_closed_rfi(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'closed',
+        ]);
+
+        $response = $this->apiPost($this->zena('rfis.respond', ['id' => $rfi->id]), ['response' => 'Trying to respond after close', 'status' => 'answered']);
+
+        $response->assertStatus(422);
+    }
+
+    public function test_can_respond_to_an_open_rfi(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+
+        $response = $this->apiPost($this->zena('rfis.respond', ['id' => $rfi->id]), ['response' => 'Here is the answer', 'status' => 'answered']);
+
+        $response->assertStatus(200);
+    }
+
     /**
      * Test RFI escalation
      */

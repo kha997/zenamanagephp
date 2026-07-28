@@ -205,7 +205,7 @@ class RfiController extends ApiBaseController
                 'assigned_to' => 'nullable|exists:users,id',
                 'location' => 'nullable|string|max:255',
                 'drawing_reference' => 'nullable|string|max:255',
-                'status' => 'sometimes|in:open,answered,closed',
+                'status' => 'sometimes|in:' . implode(',', $this->allowedStatusValues()),
             ]);
 
             if ($validator->fails()) {
@@ -668,5 +668,14 @@ class RfiController extends ApiBaseController
             ->where('project_id', $projectId)
             ->whereHas('role', fn ($q) => $q->where('name', 'project_manager'))
             ->exists();
+    }
+
+    private function allowedStatusValues(): array
+    {
+        $cutoverComplete = DB::table('rfi_escalation_migration_state')->whereNotNull('cutover_completed_at')->exists();
+
+        $base = ['open', 'in_progress', 'answered', 'closed', 'cancelled'];
+
+        return $cutoverComplete ? $base : array_merge($base, ['escalated', 'pending']);
     }
 }

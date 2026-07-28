@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Exceptions\RfiEscalationConflictException;
+use App\Exceptions\RfiLifecycleTransitionException;
 use App\Http\Controllers\Api\BaseApiController as ApiBaseController;
 use App\Models\Project;
 use App\Models\Rfi;
@@ -386,15 +387,12 @@ class RfiController extends ApiBaseController
 
             $rfi = $this->rfiForTenant($id);
 
-            if ($rfi->status !== 'answered') {
-                return $this->errorResponse('RFI must be answered before it can be closed', 400);
+            try {
+                $this->lifecycleService->close($rfi, $user->id);
+            } catch (RfiLifecycleTransitionException $e) {
+                $statusCode = str_contains($e->getMessage(), 'active escalation') ? 409 : 400;
+                return $this->errorResponse($e->getMessage(), $statusCode);
             }
-
-            $rfi->update([
-                'status' => 'closed',
-                'closed_by' => $user->id,
-                'closed_at' => now(),
-            ]);
 
             $rfi->load(['project:id,name', 'createdBy:id,name', 'assignedTo:id,name']);
 

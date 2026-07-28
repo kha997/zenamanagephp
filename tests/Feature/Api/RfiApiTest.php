@@ -501,6 +501,27 @@ class RfiApiTest extends TestCase
         $response->assertStatus(409);
     }
 
+    public function test_cannot_close_rfi_while_escalation_is_active(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'answered',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        $memberRole = \App\Models\Role::firstOrCreate(
+            ['name' => 'project_manager'],
+            ['scope' => 'system', 'description' => 'Project Manager', 'is_active' => true],
+        );
+        \App\Models\UserRoleProject::create([
+            'project_id' => $this->project->id, 'user_id' => $target->id, 'role_id' => $memberRole->id,
+        ]);
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Still need confirmation', 'escalated_to' => $target->id])->assertStatus(200);
+
+        $response = $this->apiPost($this->zena('rfis.close', ['id' => $rfi->id]));
+
+        $response->assertStatus(409);
+    }
+
     /**
      * Test RFI closure
      */

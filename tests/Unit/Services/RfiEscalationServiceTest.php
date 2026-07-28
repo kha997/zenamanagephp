@@ -3,8 +3,10 @@
 namespace Tests\Unit\Services;
 
 use App\Exceptions\RfiEscalationConflictException;
+use App\Exceptions\RfiEscalationNotFoundException;
 use App\Models\Project;
 use App\Models\Rfi;
+use App\Models\RfiEscalation;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\RfiEscalationService;
@@ -77,5 +79,57 @@ class RfiEscalationServiceTest extends TestCase
         $source = file_get_contents($reflection->getFileName());
 
         $this->assertStringNotContainsString("'status'", $source, 'RfiEscalationService must not reference the rfis.status column — lifecycle belongs to RfiLifecycleService.');
+    }
+
+    public function test_resolve_escalation_sets_resolution_fields_once_and_clears_pointer(): void
+    {
+        $this->service->escalate($this->rfi, $this->target->id, $this->escalator->id, 'Urgent');
+
+        $resolved = $this->service->resolveEscalation($this->rfi->fresh(), $this->target->id, 'Answered directly with the client');
+
+        $this->assertNotNull($resolved->resolved_at);
+        $this->assertSame($this->target->id, $resolved->resolved_by);
+        $this->assertSame('Answered directly with the client', $resolved->resolution);
+        $this->assertSame(RfiEscalation::RESOLUTION_TYPE_MANUALLY_RESOLVED, $resolved->resolution_type);
+
+        $this->rfi->refresh();
+        $this->assertNull($this->rfi->current_escalation_id);
+        $this->assertNull($this->rfi->escalated_to);
+        $this->assertNull($this->rfi->escalation_reason);
+    }
+
+    public function test_resolve_escalation_twice_throws_conflict(): void
+    {
+        $this->service->escalate($this->rfi, $this->target->id, $this->escalator->id, 'Urgent');
+        $this->service->resolveEscalation($this->rfi->fresh(), $this->target->id, 'First resolution');
+
+        $this->expectException(RfiEscalationConflictException::class);
+
+        $this->service->resolveEscalation($this->rfi->fresh(), $this->target->id, 'Second attempt');
+    }
+
+    public function test_resolve_escalation_without_active_escalation_throws_not_found(): void
+    {
+        $this->expectException(RfiEscalationNotFoundException::class);
+
+        $this->service->resolveEscalation($this->rfi, $this->escalator->id, 'No escalation to resolve');
+    }
+
+    public function test_resolve_escalation_rejects_corrupted_pointer_via_integrity_guard(): void
+    {
+        $otherRfi = Rfi::create([
+            'tenant_id' => $this->rfi->tenant_id, 'project_id' => $this->rfi->project_id,
+            'title' => 'Other RFI', 'subject' => 'Other RFI', 'description' => 'd',
+            'question' => 'What about this?', 'priority' => 'medium', 'status' => 'open',
+            'asked_by' => $this->escalator->id, 'created_by' => $this->escalator->id,
+            'rfi_number' => 'TST-RFI-0099',
+        ]);
+        $escalationForOther = $this->service->escalate($otherRfi, $this->target->id, $this->escalator->id, 'Belongs to otherRfi');
+
+        // Corrupt this->rfi's pointer to point at otherRfi's escalation.
+        $this->rfi->update(['current_escalation_id' => $escalationForOther->id]);
+
+        $this->expectException(\App\Exceptions\RfiEscalationIntegrityException::class);
+        $this->service->resolveEscalation($this->rfi->fresh(), $this->target->id, 'Should be rejected by integrity guard');
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Exceptions\RfiEscalationConflictException;
+use App\Exceptions\RfiEscalationNotFoundException;
 use App\Models\Rfi;
 use App\Models\RfiEscalation;
 use Illuminate\Support\Facades\DB;
@@ -47,6 +48,58 @@ class RfiEscalationService
                 'escalated_by' => $escalation->escalated_by,
                 'escalated_at' => $escalation->escalated_at,
                 'escalation_reason' => $escalation->escalation_reason,
+            ]);
+
+            return $escalation;
+        });
+    }
+
+    public function resolveEscalation(
+        Rfi $rfi,
+        string $resolvedBy,
+        string $resolution,
+        string $resolutionType = RfiEscalation::RESOLUTION_TYPE_MANUALLY_RESOLVED,
+    ): RfiEscalation {
+        return DB::transaction(function () use ($rfi, $resolvedBy, $resolution, $resolutionType) {
+            $lockedRfi = Rfi::where('id', $rfi->id)->lockForUpdate()->firstOrFail();
+
+            $lockedRfi->assertEscalationPointerIntegrity();
+
+            if (!$lockedRfi->current_escalation_id) {
+                $alreadyResolved = RfiEscalation::where('rfi_id', $lockedRfi->id)
+                    ->whereNotNull('resolved_at')
+                    ->exists();
+
+                if ($alreadyResolved) {
+                    // Pointer was already cleared by a prior resolveEscalation() call —
+                    // this is a double-resolve attempt (e.g. duplicate submit), not "never escalated".
+                    throw new RfiEscalationConflictException('This escalation has already been resolved.');
+                }
+
+                throw new RfiEscalationNotFoundException('This RFI has no active escalation.');
+            }
+
+            $escalation = RfiEscalation::where('id', $lockedRfi->current_escalation_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($escalation->resolved_at !== null) {
+                throw new RfiEscalationConflictException('This escalation has already been resolved.');
+            }
+
+            $escalation->update([
+                'resolved_at' => now(),
+                'resolved_by' => $resolvedBy,
+                'resolution' => $resolution,
+                'resolution_type' => $resolutionType,
+            ]);
+
+            $lockedRfi->update([
+                'current_escalation_id' => null,
+                'escalated_to' => null,
+                'escalated_by' => null,
+                'escalated_at' => null,
+                'escalation_reason' => null,
             ]);
 
             return $escalation;

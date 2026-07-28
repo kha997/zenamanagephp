@@ -392,6 +392,91 @@ class RfiApiTest extends TestCase
         $response->assertStatus(422);
     }
 
+    public function test_escalation_target_can_resolve_their_own_escalation(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        $memberRole = \App\Models\Role::firstOrCreate(['name' => 'member'], ['scope' => 'system', 'description' => 'Member', 'is_active' => true]);
+        \App\Models\UserRoleProject::firstOrCreate(['project_id' => $this->project->id, 'user_id' => $target->id], ['role_id' => $memberRole->id]);
+        // The `rbac:rfi.escalate` route middleware checks system-level role
+        // attachment (User::roles()/user_roles pivot) + Permission::name, which is
+        // independent of the project-scoped UserRoleProject check above. Both must
+        // be satisfied for the target's resolve request to pass the middleware.
+        $target->roles()->attach($memberRole->id);
+        $permission = \App\Models\Permission::firstOrCreate(
+            ['code' => 'rfi.escalate'],
+            ['name' => 'rfi.escalate', 'module' => 'rfi', 'action' => 'escalate', 'description' => 'Escalate an RFI to another user'],
+        );
+        $memberRole->permissions()->syncWithoutDetaching([$permission->id]);
+
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Urgent', 'escalated_to' => $target->id])->assertStatus(200);
+
+        $token = $this->apiLoginToken($target, $this->apiFeatureTenant);
+        // The "sanctum" guard (Illuminate\Auth\RequestGuard) memoizes the resolved
+        // user for the lifetime of the shared AuthManager instance, which persists
+        // across every request made within this test method. Without resetting it
+        // here, this request (bearer token for $target) would still resolve to
+        // whichever user the guard authenticated first (via apiPost() above).
+        app('auth')->forgetGuards();
+        $response = $this->withHeaders($this->authHeadersForUser($target, $token))
+            ->postJson($this->zena('rfis.resolve-escalation', ['id' => $rfi->id]), ['resolution' => 'Answered the client directly by phone']);
+
+        $response->assertStatus(200);
+        $rfi->refresh();
+        $this->assertNull($rfi->current_escalation_id);
+    }
+
+    public function test_resolve_escalation_by_unrelated_user_is_forbidden(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        $memberRole = \App\Models\Role::firstOrCreate(['name' => 'member'], ['scope' => 'system', 'description' => 'Member', 'is_active' => true]);
+        \App\Models\UserRoleProject::firstOrCreate(['project_id' => $this->project->id, 'user_id' => $target->id], ['role_id' => $memberRole->id]);
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Urgent', 'escalated_to' => $target->id])->assertStatus(200);
+
+        $unrelated = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        $unrelated->roles()->attach($memberRole->id);
+        $permission = \App\Models\Permission::firstOrCreate(
+            ['code' => 'rfi.escalate'],
+            ['name' => 'rfi.escalate', 'module' => 'rfi', 'action' => 'escalate', 'description' => 'Escalate an RFI to another user'],
+        );
+        $memberRole->permissions()->syncWithoutDetaching([$permission->id]);
+
+        $token = $this->apiLoginToken($unrelated, $this->apiFeatureTenant);
+        // See the identical comment in test_escalation_target_can_resolve_their_own_escalation():
+        // the "sanctum" guard memoizes the resolved user across requests within a
+        // single test method, so this must be reset before switching bearer tokens.
+        app('auth')->forgetGuards();
+        $response = $this->withHeaders($this->authHeadersForUser($unrelated, $token))
+            ->postJson($this->zena('rfis.resolve-escalation', ['id' => $rfi->id]), ['resolution' => 'Trying to resolve an escalation that is not mine']);
+
+        $response->assertStatus(403);
+    }
+
+    public function test_resolve_escalation_twice_returns_conflict(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        $memberRole = \App\Models\Role::firstOrCreate(['name' => 'member'], ['scope' => 'system', 'description' => 'Member', 'is_active' => true]);
+        \App\Models\UserRoleProject::firstOrCreate(['project_id' => $this->project->id, 'user_id' => $target->id], ['role_id' => $memberRole->id]);
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Urgent', 'escalated_to' => $target->id])->assertStatus(200);
+
+        $this->apiPost($this->zena('rfis.resolve-escalation', ['id' => $rfi->id]), ['resolution' => 'First'])->assertStatus(200);
+
+        $response = $this->apiPost($this->zena('rfis.resolve-escalation', ['id' => $rfi->id]), ['resolution' => 'Second attempt']);
+
+        $response->assertStatus(409);
+    }
+
     /**
      * Test RFI closure
      */

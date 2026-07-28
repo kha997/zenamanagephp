@@ -486,6 +486,63 @@ class RfiController extends ApiBaseController
     }
 
     /**
+     * Resolve the RFI's active escalation.
+     */
+    public function resolveEscalation(Request $request, string $id): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+
+            if (!$user) {
+                return $this->unauthorized('Authentication required');
+            }
+
+            $rfi = $this->rfiForTenant($id);
+
+            if (!$this->userIsActive($user)) {
+                return $this->errorResponse('Deactivated users cannot resolve escalations', 403);
+            }
+
+            // Deliberately no blanket "no active escalation" pre-check here: the
+            // service distinguishes "never escalated" (404) from "already
+            // resolved" (409) by inspecting escalation history, and a pre-check
+            // on current_escalation_id alone would shadow that distinction on a
+            // duplicate resolve request (current_escalation_id is cleared by the
+            // first resolve, so a naive guard would always answer 404).
+            $isTarget = $rfi->escalated_to === $user->id;
+            $isPmOrAdmin = $this->actorIsProjectManagerOrAdminForProject($user, $rfi->project_id);
+
+            if (!$isTarget && !$isPmOrAdmin) {
+                return $this->errorResponse('Only the escalation target, project manager, or an admin can resolve this escalation', 403);
+            }
+
+            $validator = Validator::make($request->all(), ['resolution' => 'required|string']);
+
+            if ($validator->fails()) {
+                return $this->validationError($validator->errors());
+            }
+
+            try {
+                $this->escalationService->resolveEscalation($rfi, $user->id, $request->input('resolution'));
+            } catch (RfiEscalationConflictException $e) {
+                return $this->errorResponse($e->getMessage(), 409);
+            } catch (\App\Exceptions\RfiEscalationNotFoundException $e) {
+                return $this->errorResponse($e->getMessage(), 404);
+            }
+
+            $rfi->refresh()->load(['project:id,name', 'createdBy:id,name', 'assignedTo:id,name']);
+
+            $this->auditLogger->log($request, 'zena.rfi.resolve_escalation', 'rfi', (string) $rfi->id, 200, $rfi->project_id, $this->tenantId());
+
+            return $this->successResponse($rfi, 'Escalation resolved successfully');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFound('RFI not found');
+        } catch (\Exception $e) {
+            return $this->serverError('Failed to resolve escalation: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Generate unique RFI number.
      */
     private function generateRfiNumber(string $projectId): string

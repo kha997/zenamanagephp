@@ -1923,16 +1923,23 @@ git commit -m "feat(rfi): seed rfi.escalate and rfi.cancel permissions for the p
 
 ---
 
-## Task 12: `RfiEscalatedNotification` — after real commit, log-not-rollback, rollback-proves-no-notification
+## Task 12: In-app escalation notification — after real commit, log-not-rollback, rollback-proves-no-notification
 
-**Files:**
+> **SUPERSEDED DURING EXECUTION (commit `609aa613`):** the approach below (an `Illuminate\Notifications\Notification` subclass dispatched via `->notify()` on the `database` channel) was written without checking the real schema of this repo's `notifications` table. That table was fully customized in `2025_09_20_160100_recreate_notifications_table.php` — it has no `notifiable_id`/`notifiable_type` columns, which the Laravel `database` channel requires. Using the design below verbatim would throw a SQL error the first time it actually ran. The controller caught this via `Schema::getColumnListing('notifications')` before dispatching the task and redirected the implementer to use the repo's own `App\Models\Notification::create([...])` (fields: `user_id`, `tenant_id`, `type`, `priority`, `title`, `body`, `channel`, `data`) directly instead — no `app/Notifications/RfiEscalatedNotification.php` file was created. Every business requirement below (after-commit dispatch, log-not-rollback on failure, rollback-safety test) was preserved; only the persistence mechanism changed. Kept here for historical accuracy of what was planned vs. what was reviewed and approved as built.
+
+**Files (as actually built):**
+- Modify: `app/Services/RfiEscalationService.php` (added `dispatchEscalatedNotification()` using `App\Models\Notification::create()`, no new file)
+- Test: `tests/Feature/Api/RfiApiTest.php`
+
+**Files (as originally planned below — not what was built, see note above):**
 - Create: `app/Notifications/RfiEscalatedNotification.php`
 - Modify: `app/Services/RfiEscalationService.php`
 - Test: `tests/Feature/Api/RfiApiTest.php`
 
 **Interfaces:**
 - Consumes: `RfiEscalationService::escalate()` (Task 3).
-- Produces: `App\Notifications\RfiEscalatedNotification`.
+- Produces (as built): `RfiEscalationService::dispatchEscalatedNotification(RfiEscalation): void`, writing a row via `App\Models\Notification::create()`.
+- Produces (as originally planned, not built): `App\Notifications\RfiEscalatedNotification`.
 
 **Explicit constraint**: do NOT touch `app/Listeners/RfiEventListener.php` or `App\Events\Rfi*`.
 

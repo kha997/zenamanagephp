@@ -2,9 +2,14 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\RfiEscalationConflictException;
 use App\Http\Controllers\Api\BaseApiController as ApiBaseController;
 use App\Models\Project;
 use App\Models\Rfi;
+use App\Models\User;
+use App\Models\UserRoleProject;
+use App\Services\RfiEscalationService;
+use App\Services\RfiLifecycleService;
 use App\Services\ZenaAuditLogger;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -16,8 +21,11 @@ use Illuminate\Support\Facades\Validator;
 
 class RfiController extends ApiBaseController
 {
-    public function __construct(private ZenaAuditLogger $auditLogger)
-    {
+    public function __construct(
+        private ZenaAuditLogger $auditLogger,
+        private RfiEscalationService $escalationService,
+        private RfiLifecycleService $lifecycleService,
+    ) {
     }
 
     /**
@@ -414,12 +422,24 @@ class RfiController extends ApiBaseController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
 
             $rfi = $this->rfiForTenant($id);
+
+            if ($this->lifecycleService->isTerminal($rfi)) {
+                return $this->errorResponse('Cannot escalate a closed or cancelled RFI', 422);
+            }
+
+            if (!$this->userIsActive($user)) {
+                return $this->errorResponse('Deactivated users cannot escalate RFIs', 403);
+            }
+
+            if (!$this->actorIsProjectManagerOrAdminForProject($user, $rfi->project_id)) {
+                return $this->errorResponse('Only the project manager or an admin can escalate this RFI', 403);
+            }
 
             $validator = Validator::make($request->all(), [
                 'escalation_reason' => 'required|string',
@@ -430,25 +450,32 @@ class RfiController extends ApiBaseController
                 return $this->validationError($validator->errors());
             }
 
-            $rfi->update([
-                'status' => 'escalated',
-                'escalated_to' => $request->input('escalated_to'),
-                'escalation_reason' => $request->input('escalation_reason'),
-                'escalated_by' => $user->id,
-                'escalated_at' => now(),
-            ]);
+            $target = User::where('id', $request->input('escalated_to'))
+                ->where('tenant_id', $this->tenantId())
+                ->first();
 
-            $rfi->load(['project:id,name', 'createdBy:id,name', 'assignedTo:id,name']);
+            if (!$target) {
+                return $this->errorResponse('Escalation target must belong to the same tenant', 422);
+            }
 
-            $this->auditLogger->log(
-                $request,
-                'zena.rfi.escalate',
-                'rfi',
-                (string) $rfi->id,
-                200,
-                $rfi->project_id,
-                $this->tenantId()
-            );
+            if (!$this->userIsActive($target)) {
+                return $this->errorResponse('Escalation target must be an active user', 422);
+            }
+
+            if (!UserRoleProject::where('project_id', $rfi->project_id)->where('user_id', $target->id)->exists()
+                && !$this->userHasAdminRole($target)) {
+                return $this->errorResponse("Escalation target must be a member of this RFI's project", 422);
+            }
+
+            try {
+                $this->escalationService->escalate($rfi, $target->id, $user->id, $request->input('escalation_reason'));
+            } catch (RfiEscalationConflictException $e) {
+                return $this->errorResponse($e->getMessage(), 409);
+            }
+
+            $rfi->refresh()->load(['project:id,name', 'createdBy:id,name', 'assignedTo:id,name']);
+
+            $this->auditLogger->log($request, 'zena.rfi.escalate', 'rfi', (string) $rfi->id, 200, $rfi->project_id, $this->tenantId());
 
             return $this->successResponse($rfi, 'RFI escalated successfully');
         } catch (ModelNotFoundException $e) {
@@ -514,5 +541,27 @@ class RfiController extends ApiBaseController
         return Project::where('id', $projectId)
             ->where('tenant_id', $this->tenantId())
             ->first();
+    }
+
+    private function userIsActive(User $user): bool
+    {
+        return (bool) $user->is_active;
+    }
+
+    private function userHasAdminRole(User $user): bool
+    {
+        return $user->roles()->whereIn('name', ['System Admin', 'Admin', 'super_admin', 'system_admin'])->exists();
+    }
+
+    private function actorIsProjectManagerOrAdminForProject(User $user, string $projectId): bool
+    {
+        if ($this->userHasAdminRole($user)) {
+            return true;
+        }
+
+        return UserRoleProject::where('user_id', $user->id)
+            ->where('project_id', $projectId)
+            ->whereHas('role', fn ($q) => $q->where('name', 'project_manager'))
+            ->exists();
     }
 }

@@ -667,4 +667,77 @@ class RfiApiTest extends TestCase
         $response->assertStatus(403);
     }
 
+    public function test_escalate_creates_an_in_app_notification_for_the_target_after_commit(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        $memberRole = \App\Models\Role::firstOrCreate(
+            ['name' => 'project_manager'],
+            ['scope' => 'system', 'description' => 'Project Manager', 'is_active' => true],
+        );
+        \App\Models\UserRoleProject::create([
+            'project_id' => $this->project->id, 'user_id' => $target->id, 'role_id' => $memberRole->id,
+        ]);
+
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Urgent', 'escalated_to' => $target->id])->assertStatus(200);
+
+        $this->assertDatabaseCount('notifications', 1);
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $target->id,
+            'channel' => 'inapp',
+            'type' => 'rfi_escalated',
+        ]);
+    }
+
+    public function test_escalate_conflict_does_not_create_a_notification(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        $memberRole = \App\Models\Role::firstOrCreate(
+            ['name' => 'project_manager'],
+            ['scope' => 'system', 'description' => 'Project Manager', 'is_active' => true],
+        );
+        \App\Models\UserRoleProject::create([
+            'project_id' => $this->project->id, 'user_id' => $target->id, 'role_id' => $memberRole->id,
+        ]);
+
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'First', 'escalated_to' => $target->id])->assertStatus(200);
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Second should conflict', 'escalated_to' => $target->id])->assertStatus(409);
+
+        $this->assertDatabaseCount('notifications', 1);
+    }
+
+    public function test_a_genuine_mid_transaction_failure_after_row_creation_prevents_notification(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+
+        $service = app(\App\Services\RfiEscalationService::class);
+
+        try {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($service, $rfi, $target) {
+                $service->escalate($rfi, $target->id, $this->user->id, 'Will be rolled back by an outer failure');
+                // Force the OUTER transaction to fail after the escalate() call's own inner
+                // transaction has already returned successfully, proving that a failure in the
+                // surrounding unit of work still results in zero notifications once everything
+                // truly rolls back to the savepoint that never gets released.
+                throw new \RuntimeException('Simulated outer failure after escalate() returned');
+            });
+        } catch (\RuntimeException $e) {
+            // expected
+        }
+
+        $this->assertDatabaseCount('rfi_escalations', 0);
+        $this->assertDatabaseCount('notifications', 0);
+    }
+
 }

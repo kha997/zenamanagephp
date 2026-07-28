@@ -4,9 +4,12 @@ namespace App\Services;
 
 use App\Exceptions\RfiEscalationConflictException;
 use App\Exceptions\RfiEscalationNotFoundException;
+use App\Models\Notification;
 use App\Models\Rfi;
 use App\Models\RfiEscalation;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Owns the escalation cycle ONLY. Knows nothing about RFI lifecycle status —
@@ -21,7 +24,7 @@ class RfiEscalationService
 
     public function escalate(Rfi $rfi, string $escalatedTo, string $escalatedBy, string $reason): RfiEscalation
     {
-        return DB::transaction(function () use ($rfi, $escalatedTo, $escalatedBy, $reason) {
+        $escalation = DB::transaction(function () use ($rfi, $escalatedTo, $escalatedBy, $reason) {
             $lockedRfi = Rfi::where('id', $rfi->id)->lockForUpdate()->firstOrFail();
 
             $activeExists = RfiEscalation::where('rfi_id', $lockedRfi->id)
@@ -52,6 +55,41 @@ class RfiEscalationService
 
             return $escalation;
         });
+
+        $this->dispatchEscalatedNotification($escalation);
+
+        return $escalation;
+    }
+
+    private function dispatchEscalatedNotification(RfiEscalation $escalation): void
+    {
+        try {
+            $target = User::find($escalation->escalated_to);
+
+            if ($target) {
+                Notification::create([
+                    'user_id' => $escalation->escalated_to,
+                    'tenant_id' => $escalation->tenant_id,
+                    'type' => 'rfi_escalated',
+                    'priority' => Notification::PRIORITY_CRITICAL,
+                    'title' => 'RFI đã được escalate',
+                    'body' => $escalation->escalation_reason,
+                    'channel' => Notification::CHANNEL_INAPP,
+                    'data' => [
+                        'rfi_id' => $escalation->rfi_id,
+                        'escalation_id' => $escalation->id,
+                        'escalation_reason' => $escalation->escalation_reason,
+                        'escalated_by' => $escalation->escalated_by,
+                    ],
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::error('rfi_escalation_notification_failed', [
+                'escalation_id' => $escalation->id,
+                'rfi_id' => $escalation->rfi_id,
+                'exception' => $e->getMessage(),
+            ]);
+        }
     }
 
     public function resolveEscalation(

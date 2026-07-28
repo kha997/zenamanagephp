@@ -581,4 +581,90 @@ class RfiApiTest extends TestCase
         $response->assertStatus(401);
     }
 
+    public function test_can_cancel_open_rfi_without_active_escalation(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+
+        $response = $this->apiPost($this->zena('rfis.cancel', ['id' => $rfi->id]), ['reason' => 'Scope no longer applies']);
+
+        $response->assertStatus(200);
+        $this->assertSame('cancelled', $rfi->fresh()->status);
+    }
+
+    public function test_cancel_requires_reason(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+
+        $response = $this->apiPost($this->zena('rfis.cancel', ['id' => $rfi->id]), []);
+
+        $response->assertStatus(422);
+    }
+
+    public function test_cancel_with_active_escalation_requires_pm_or_admin_and_resolves_escalation_atomically(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        // escalate() requires the target to be a member of the RFI's project
+        // (UserRoleProject) unless they hold an admin role; without this the
+        // escalate call itself would 422 before the cancel flow is even reached.
+        $memberRole = \App\Models\Role::firstOrCreate(['name' => 'member'], ['scope' => 'system', 'description' => 'Member', 'is_active' => true]);
+        \App\Models\UserRoleProject::create(['project_id' => $this->project->id, 'user_id' => $target->id, 'role_id' => $memberRole->id]);
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Urgent', 'escalated_to' => $target->id])->assertStatus(200);
+
+        $response = $this->apiPost($this->zena('rfis.cancel', ['id' => $rfi->id]), ['reason' => 'Project cancelled by client']);
+
+        $response->assertStatus(200);
+        $rfi->refresh();
+        $this->assertSame('cancelled', $rfi->status);
+        $this->assertNull($rfi->current_escalation_id);
+
+        $escalation = \App\Models\RfiEscalation::where('rfi_id', $rfi->id)->first();
+        $this->assertNotNull($escalation->resolved_at);
+        $this->assertSame(\App\Models\RfiEscalation::RESOLUTION_TYPE_RFI_CANCELLED, $escalation->resolution_type);
+    }
+
+    public function test_cancel_with_active_escalation_by_non_pm_non_admin_is_forbidden(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        // See the identical comment in the previous test: escalate() requires
+        // the target to be a project member unless they hold an admin role.
+        $targetMemberRole = \App\Models\Role::firstOrCreate(['name' => 'member'], ['scope' => 'system', 'description' => 'Member', 'is_active' => true]);
+        \App\Models\UserRoleProject::create(['project_id' => $this->project->id, 'user_id' => $target->id, 'role_id' => $targetMemberRole->id]);
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Urgent', 'escalated_to' => $target->id])->assertStatus(200);
+
+        $regular = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        $role = \App\Models\Role::firstOrCreate(['name' => 'member'], ['scope' => 'system', 'description' => 'Member', 'is_active' => true]);
+        $regular->roles()->attach($role->id);
+        $permission = \App\Models\Permission::firstOrCreate(
+            ['code' => 'rfi.cancel'],
+            ['name' => 'rfi.cancel', 'module' => 'rfi', 'action' => 'cancel', 'description' => 'Cancel an RFI'],
+        );
+        $role->permissions()->syncWithoutDetaching([$permission->id]);
+        \App\Models\UserRoleProject::create(['project_id' => $this->project->id, 'user_id' => $regular->id, 'role_id' => $role->id]);
+
+        $token = $this->apiLoginToken($regular, $this->apiFeatureTenant);
+        // The "sanctum" guard memoizes the resolved user across requests within a
+        // single test method (see the identical comment on the resolve-escalation
+        // tests above), so it must be reset before switching bearer tokens: the
+        // apiPost() escalate call above resolved the default admin actor first.
+        app('auth')->forgetGuards();
+        $response = $this->withHeaders($this->authHeadersForUser($regular, $token))
+            ->postJson($this->zena('rfis.cancel', ['id' => $rfi->id]), ['reason' => 'Trying to cancel']);
+
+        $response->assertStatus(403);
+    }
+
 }

@@ -542,6 +542,55 @@ class RfiController extends ApiBaseController
     }
 
     /**
+     * Cancel an RFI.
+     */
+    public function cancel(Request $request, string $id): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+
+            if (!$user) {
+                return $this->unauthorized('Authentication required');
+            }
+
+            $rfi = $this->rfiForTenant($id);
+
+            try {
+                $this->lifecycleService->assertCanCancel($rfi);
+            } catch (\App\Exceptions\RfiLifecycleTransitionException $e) {
+                return $this->errorResponse($e->getMessage(), 422);
+            }
+
+            if (!$this->userIsActive($user)) {
+                return $this->errorResponse('Deactivated users cannot cancel RFIs', 403);
+            }
+
+            $validator = Validator::make($request->all(), ['reason' => 'required|string']);
+
+            if ($validator->fails()) {
+                return $this->validationError($validator->errors());
+            }
+
+            if ($this->escalationService->hasActiveEscalation($rfi->id)
+                && !$this->actorIsProjectManagerOrAdminForProject($user, $rfi->project_id)) {
+                return $this->errorResponse('Only the project manager or an admin can cancel an RFI while it has an active escalation', 403);
+            }
+
+            $this->lifecycleService->cancel($rfi, $user->id, $request->input('reason'));
+
+            $rfi->refresh()->load(['project:id,name', 'createdBy:id,name', 'assignedTo:id,name']);
+
+            $this->auditLogger->log($request, 'zena.rfi.cancel', 'rfi', (string) $rfi->id, 200, $rfi->project_id, $this->tenantId());
+
+            return $this->successResponse($rfi, 'RFI cancelled successfully');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFound('RFI not found');
+        } catch (\Exception $e) {
+            return $this->serverError('Failed to cancel RFI: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Generate unique RFI number.
      */
     private function generateRfiNumber(string $projectId): string

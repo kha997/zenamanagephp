@@ -86,7 +86,7 @@ class RfiLifecycleService
     {
         $this->assertCanCancel($rfi);
 
-        return DB::transaction(function () use ($rfi, $userId, $reason) {
+        DB::transaction(function () use ($rfi, $userId, $reason) {
             if ($this->escalationService->hasActiveEscalation($rfi->id)) {
                 $this->escalationService->resolveEscalation(
                     $rfi,
@@ -97,8 +97,8 @@ class RfiLifecycleService
             }
 
             $rfi->fresh()->update(['status' => 'cancelled']);
-
-            return $rfi->fresh();
         });
+
+        return $rfi->fresh();
     }
 }

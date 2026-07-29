@@ -47,7 +47,7 @@ class RfiConfirmLegacyEscalation extends Command
             return self::FAILURE;
         }
 
-        $rfi = Rfi::find($rfiId);
+        $rfi = Rfi::query()->find($rfiId);
 
         if (!$rfi) {
             $this->error("RFI {$rfiId} not found");
@@ -61,12 +61,12 @@ class RfiConfirmLegacyEscalation extends Command
             'escalated_by' => $rfi->escalated_by,
             'escalated_at' => $rfi->escalated_at?->toIso8601String(),
             'escalation_reason' => $rfi->escalation_reason,
-            'updated_at' => $rfi->updated_at?->toIso8601String(),
+            'updated_at' => $rfi->updated_at->toIso8601String(),
         ];
 
         DB::transaction(function () use ($rfi, $lifecycle, $escalationState, $confirmedBy, $reason, $sourceSnapshot) {
             if ($escalationState === 'unresolved') {
-                $escalation = RfiEscalation::create([
+                $escalation = RfiEscalation::query()->create([
                     'rfi_id' => $rfi->id, 'tenant_id' => $rfi->tenant_id,
                     'escalated_to' => $rfi->escalated_to ?? $confirmedBy,
                     'escalated_by' => $rfi->escalated_by ?? $confirmedBy,
@@ -75,7 +75,7 @@ class RfiConfirmLegacyEscalation extends Command
                 ]);
                 $rfi->current_escalation_id = $escalation->id;
             } elseif ($escalationState === 'resolved') {
-                $escalation = RfiEscalation::create([
+                $escalation = RfiEscalation::query()->create([
                     'rfi_id' => $rfi->id, 'tenant_id' => $rfi->tenant_id,
                     'escalated_to' => $rfi->escalated_to ?? $confirmedBy,
                     'escalated_by' => $rfi->escalated_by ?? $confirmedBy,
@@ -94,7 +94,7 @@ class RfiConfirmLegacyEscalation extends Command
             $rfi->status = $lifecycle;
             $rfi->save();
 
-            RfiLegacyMigrationConfirmation::updateOrCreate(
+            RfiLegacyMigrationConfirmation::query()->updateOrCreate(
                 ['rfi_id' => $rfi->id],
                 [
                     'confirmed_by' => $confirmedBy,

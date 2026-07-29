@@ -19,9 +19,9 @@ class RfiEscalationCutover extends Command
                 ->whereColumn('rfi_legacy_migration_confirmations.rfi_id', 'rfis.id');
         };
 
-        $unconfirmedEscalated = Rfi::where('status', 'escalated')->whereNotExists($unconfirmed)->count();
-        $unconfirmedPending = Rfi::where('status', 'pending')->whereNotExists($unconfirmed)->count();
-        $unconfirmedSnapshot = Rfi::where('status', '!=', 'escalated')->whereNotNull('escalated_to')->whereNotExists($unconfirmed)->count();
+        $unconfirmedEscalated = Rfi::query()->where('status', 'escalated')->whereNotExists($unconfirmed)->count();
+        $unconfirmedPending = Rfi::query()->where('status', 'pending')->whereNotExists($unconfirmed)->count();
+        $unconfirmedSnapshot = Rfi::query()->where('status', '!=', 'escalated')->whereNotNull('escalated_to')->whereNotExists($unconfirmed)->count();
 
         $total = $unconfirmedEscalated + $unconfirmedPending + $unconfirmedSnapshot;
 

@@ -15,13 +15,14 @@ class ZenaProjectManagerRolePermissionSeeder extends Seeder
 
     public function run(): void
     {
-        $role = Role::whereRaw('LOWER(name) = ?', ['project_manager'])->first();
+        /** @var Role|null $role */
+        $role = Role::query()->whereRaw('LOWER(name) = ?', ['project_manager'])->first();
 
         if (!$role) {
             return;
         }
 
-        $permissionIds = Permission::whereIn('code', self::PROJECT_MANAGER_PERMISSION_CODES)->pluck('id')->all();
+        $permissionIds = Permission::query()->whereIn('code', self::PROJECT_MANAGER_PERMISSION_CODES)->pluck('id')->all();
 
         if (empty($permissionIds)) {
             return;

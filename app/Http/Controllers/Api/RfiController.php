@@ -41,6 +41,8 @@ class RfiController extends ApiBaseController
                 return $this->unauthorized('Authentication required');
             }
 
+            /** @var \App\Models\User $user */
+
             $query = $this->rfiQuery();
 
             // Filter by project if specified
@@ -95,6 +97,8 @@ class RfiController extends ApiBaseController
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
+
+            /** @var \App\Models\User $user */
 
             $validator = Validator::make($request->all(), [
                 'project_id' => 'required|exists:projects,id',
@@ -167,6 +171,8 @@ class RfiController extends ApiBaseController
                 return $this->unauthorized('Authentication required');
             }
 
+            /** @var \App\Models\User $user */
+
             $rfi = $this->rfiForTenant($id, [
                 'project:id,name',
                 'createdBy:id,name',
@@ -192,6 +198,8 @@ class RfiController extends ApiBaseController
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
+
+            /** @var \App\Models\User $user */
 
             $rfi = $this->rfiForTenant($id);
 
@@ -249,6 +257,8 @@ class RfiController extends ApiBaseController
                 return $this->unauthorized('Authentication required');
             }
 
+            /** @var \App\Models\User $user */
+
             $rfi = $this->rfiForTenant($id);
 
             $projectId = $rfi->project_id;
@@ -283,6 +293,8 @@ class RfiController extends ApiBaseController
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
+
+            /** @var \App\Models\User $user */
 
             $rfi = $this->rfiForTenant($id);
 
@@ -333,6 +345,8 @@ class RfiController extends ApiBaseController
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
+
+            /** @var \App\Models\User $user */
 
             $rfi = $this->rfiForTenant($id);
 
@@ -390,6 +404,8 @@ class RfiController extends ApiBaseController
                 return $this->unauthorized('Authentication required');
             }
 
+            /** @var \App\Models\User $user */
+
             $rfi = $this->rfiForTenant($id);
 
             try {
@@ -431,6 +447,8 @@ class RfiController extends ApiBaseController
                 return $this->unauthorized('Authentication required');
             }
 
+            /** @var \App\Models\User $user */
+
             $rfi = $this->rfiForTenant($id);
 
             if ($this->lifecycleService->isTerminal($rfi)) {
@@ -454,7 +472,7 @@ class RfiController extends ApiBaseController
                 return $this->validationError($validator->errors());
             }
 
-            $target = User::where('id', $request->input('escalated_to'))
+            $target = User::query()->where('id', $request->input('escalated_to'))
                 ->where('tenant_id', $this->tenantId())
                 ->first();
 
@@ -466,7 +484,7 @@ class RfiController extends ApiBaseController
                 return $this->errorResponse('Escalation target must be an active user', 422);
             }
 
-            if (!UserRoleProject::where('project_id', $rfi->project_id)->where('user_id', $target->id)->exists()
+            if (!UserRoleProject::query()->where('project_id', $rfi->project_id)->where('user_id', $target->id)->exists()
                 && !$this->userHasAdminRole($target)) {
                 return $this->errorResponse("Escalation target must be a member of this RFI's project", 422);
             }
@@ -500,6 +518,8 @@ class RfiController extends ApiBaseController
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
+
+            /** @var \App\Models\User $user */
 
             $rfi = $this->rfiForTenant($id);
 
@@ -557,6 +577,8 @@ class RfiController extends ApiBaseController
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
+
+            /** @var \App\Models\User $user */
 
             $rfi = $this->rfiForTenant($id);
 
@@ -669,12 +691,15 @@ class RfiController extends ApiBaseController
             return true;
         }
 
-        return UserRoleProject::where('user_id', $user->id)
+        return UserRoleProject::query()->where('user_id', $user->id)
             ->where('project_id', $projectId)
             ->whereHas('role', fn ($q) => $q->where('name', 'project_manager'))
             ->exists();
     }
 
+    /**
+     * @return list<string>
+     */
     private function allowedStatusValues(): array
     {
         $cutoverComplete = DB::table('rfi_escalation_migration_state')->whereNotNull('cutover_completed_at')->exists();
@@ -691,6 +716,8 @@ class RfiController extends ApiBaseController
      * close/cancel endpoints), which enforce the "no active escalation" rule
      * and, for cancel, atomically resolve any active escalation. Allowing the
      * generic update() to set them would bypass those guards entirely.
+     *
+     * @return list<string>
      */
     private function allowedNonTerminalStatusValuesForUpdate(): array
     {

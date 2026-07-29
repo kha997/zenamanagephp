@@ -19,15 +19,18 @@ class RfiEscalationService
 {
     public function hasActiveEscalation(string $rfiId): bool
     {
-        return RfiEscalation::where('rfi_id', $rfiId)->whereNull('resolved_at')->exists();
+        return RfiEscalation::query()->where('rfi_id', $rfiId)->whereNull('resolved_at')->exists();
     }
 
     public function escalate(Rfi $rfi, string $escalatedTo, string $escalatedBy, string $reason): RfiEscalation
     {
-        $escalation = DB::transaction(function () use ($rfi, $escalatedTo, $escalatedBy, $reason) {
-            $lockedRfi = Rfi::where('id', $rfi->id)->lockForUpdate()->firstOrFail();
+        $escalation = null;
 
-            $activeExists = RfiEscalation::where('rfi_id', $lockedRfi->id)
+        DB::transaction(function () use ($rfi, $escalatedTo, $escalatedBy, $reason, &$escalation) {
+            /** @var Rfi $lockedRfi */
+            $lockedRfi = Rfi::query()->where('id', $rfi->id)->lockForUpdate()->firstOrFail();
+
+            $activeExists = RfiEscalation::query()->where('rfi_id', $lockedRfi->id)
                 ->whereNull('resolved_at')
                 ->lockForUpdate()
                 ->exists();
@@ -36,7 +39,7 @@ class RfiEscalationService
                 throw new RfiEscalationConflictException('An active escalation already exists for this RFI.');
             }
 
-            $escalation = RfiEscalation::create([
+            $escalation = RfiEscalation::query()->create([
                 'rfi_id' => $lockedRfi->id,
                 'tenant_id' => $lockedRfi->tenant_id,
                 'escalated_to' => $escalatedTo,
@@ -52,10 +55,9 @@ class RfiEscalationService
                 'escalated_at' => $escalation->escalated_at,
                 'escalation_reason' => $escalation->escalation_reason,
             ]);
-
-            return $escalation;
         });
 
+        /** @var RfiEscalation $escalation */
         $this->dispatchEscalatedNotification($escalation);
 
         return $escalation;
@@ -64,10 +66,10 @@ class RfiEscalationService
     private function dispatchEscalatedNotification(RfiEscalation $escalation): void
     {
         try {
-            $target = User::find($escalation->escalated_to);
+            $target = User::query()->find($escalation->escalated_to);
 
             if ($target) {
-                Notification::create([
+                Notification::query()->create([
                     'user_id' => $escalation->escalated_to,
                     'tenant_id' => $escalation->tenant_id,
                     'type' => 'rfi_escalated',
@@ -98,13 +100,16 @@ class RfiEscalationService
         string $resolution,
         string $resolutionType = RfiEscalation::RESOLUTION_TYPE_MANUALLY_RESOLVED,
     ): RfiEscalation {
-        return DB::transaction(function () use ($rfi, $resolvedBy, $resolution, $resolutionType) {
-            $lockedRfi = Rfi::where('id', $rfi->id)->lockForUpdate()->firstOrFail();
+        $escalation = null;
+
+        DB::transaction(function () use ($rfi, $resolvedBy, $resolution, $resolutionType, &$escalation) {
+            /** @var Rfi $lockedRfi */
+            $lockedRfi = Rfi::query()->where('id', $rfi->id)->lockForUpdate()->firstOrFail();
 
             $lockedRfi->assertEscalationPointerIntegrity();
 
             if (!$lockedRfi->current_escalation_id) {
-                $alreadyResolved = RfiEscalation::where('rfi_id', $lockedRfi->id)
+                $alreadyResolved = RfiEscalation::query()->where('rfi_id', $lockedRfi->id)
                     ->whereNotNull('resolved_at')
                     ->exists();
 
@@ -117,7 +122,8 @@ class RfiEscalationService
                 throw new RfiEscalationNotFoundException('This RFI has no active escalation.');
             }
 
-            $escalation = RfiEscalation::where('id', $lockedRfi->current_escalation_id)
+            /** @var RfiEscalation $escalation */
+            $escalation = RfiEscalation::query()->where('id', $lockedRfi->current_escalation_id)
                 ->lockForUpdate()
                 ->firstOrFail();
 
@@ -139,8 +145,9 @@ class RfiEscalationService
                 'escalated_at' => null,
                 'escalation_reason' => null,
             ]);
-
-            return $escalation;
         });
+
+        /** @var RfiEscalation $escalation */
+        return $escalation;
     }
 }

@@ -47367,3 +47367,8 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 2
 			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\LazyCollection<int,stdClass>\:\:map\(\) expects callable\(stdClass, int\)\: array\{string, string, mixed, string, string, mixed\}, Closure\(App\\Models\\Rfi\)\: array\{string, string, mixed, string, string, mixed\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/ReportPageController.php

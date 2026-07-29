@@ -11,4 +11,5 @@ LoadTest::skipIfAppIsUnreachable|group=slow|reason=dependency:
 PerformanceIntegrationTest::it_can_handle_alerts_performance|group=slow|reason=RUN_SLOW_TESTS
 PerformanceIntegrationTest::it_can_handle_stress_testing|group=stress|reason=RUN_STRESS_TESTS
 PerformanceTest::skipUnlessSlowTestsEnabled|group=slow|reason=RUN_SLOW_TESTS
+RfiEscalationConcurrencyTest::skipUnlessMysqlAvailable|group=stress|reason=dependency:
 ServiceUnitTest::skipUnlessRedisAvailable|group=redis|reason=REDIS_

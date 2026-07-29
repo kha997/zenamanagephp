@@ -285,6 +285,8 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::post('/{id}/respond', [\App\Http\Controllers\Api\RfiController::class, 'respond'])->middleware('rbac:rfi.respond')->name('rfis.respond');
             Route::post('/{id}/close', [\App\Http\Controllers\Api\RfiController::class, 'close'])->middleware('rbac:rfi.close')->name('rfis.close');
             Route::post('/{id}/escalate', [\App\Http\Controllers\Api\RfiController::class, 'escalate'])->middleware('rbac:rfi.escalate')->name('rfis.escalate');
+            Route::post('/{id}/resolve-escalation', [\App\Http\Controllers\Api\RfiController::class, 'resolveEscalation'])->middleware('rbac:rfi.escalate')->name('rfis.resolve-escalation');
+            Route::post('/{id}/cancel', [\App\Http\Controllers\Api\RfiController::class, 'cancel'])->middleware('rbac:rfi.cancel')->name('rfis.cancel');
         });
 
         // Submittals routes

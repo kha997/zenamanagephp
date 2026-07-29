@@ -2,9 +2,15 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\RfiEscalationConflictException;
+use App\Exceptions\RfiLifecycleTransitionException;
 use App\Http\Controllers\Api\BaseApiController as ApiBaseController;
 use App\Models\Project;
 use App\Models\Rfi;
+use App\Models\User;
+use App\Models\UserRoleProject;
+use App\Services\RfiEscalationService;
+use App\Services\RfiLifecycleService;
 use App\Services\ZenaAuditLogger;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -16,8 +22,11 @@ use Illuminate\Support\Facades\Validator;
 
 class RfiController extends ApiBaseController
 {
-    public function __construct(private ZenaAuditLogger $auditLogger)
-    {
+    public function __construct(
+        private ZenaAuditLogger $auditLogger,
+        private RfiEscalationService $escalationService,
+        private RfiLifecycleService $lifecycleService,
+    ) {
     }
 
     /**
@@ -31,6 +40,8 @@ class RfiController extends ApiBaseController
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
+
+            /** @var \App\Models\User $user */
 
             $query = $this->rfiQuery();
 
@@ -86,6 +97,8 @@ class RfiController extends ApiBaseController
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
+
+            /** @var \App\Models\User $user */
 
             $validator = Validator::make($request->all(), [
                 'project_id' => 'required|exists:projects,id',
@@ -158,6 +171,8 @@ class RfiController extends ApiBaseController
                 return $this->unauthorized('Authentication required');
             }
 
+            /** @var \App\Models\User $user */
+
             $rfi = $this->rfiForTenant($id, [
                 'project:id,name',
                 'createdBy:id,name',
@@ -184,6 +199,8 @@ class RfiController extends ApiBaseController
                 return $this->unauthorized('Authentication required');
             }
 
+            /** @var \App\Models\User $user */
+
             $rfi = $this->rfiForTenant($id);
 
             $validator = Validator::make($request->all(), [
@@ -196,7 +213,7 @@ class RfiController extends ApiBaseController
                 'assigned_to' => 'nullable|exists:users,id',
                 'location' => 'nullable|string|max:255',
                 'drawing_reference' => 'nullable|string|max:255',
-                'status' => 'sometimes|in:open,answered,closed',
+                'status' => 'sometimes|in:' . implode(',', $this->allowedNonTerminalStatusValuesForUpdate()),
             ]);
 
             if ($validator->fails()) {
@@ -240,6 +257,8 @@ class RfiController extends ApiBaseController
                 return $this->unauthorized('Authentication required');
             }
 
+            /** @var \App\Models\User $user */
+
             $rfi = $this->rfiForTenant($id);
 
             $projectId = $rfi->project_id;
@@ -274,6 +293,8 @@ class RfiController extends ApiBaseController
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
+
+            /** @var \App\Models\User $user */
 
             $rfi = $this->rfiForTenant($id);
 
@@ -325,7 +346,15 @@ class RfiController extends ApiBaseController
                 return $this->unauthorized('Authentication required');
             }
 
+            /** @var \App\Models\User $user */
+
             $rfi = $this->rfiForTenant($id);
+
+            try {
+                $this->lifecycleService->assertCanRespond($rfi);
+            } catch (\App\Exceptions\RfiLifecycleTransitionException $e) {
+                return $this->errorResponse($e->getMessage(), 422);
+            }
 
             $validator = Validator::make($request->all(), [
                 'response' => 'required|string',
@@ -336,12 +365,12 @@ class RfiController extends ApiBaseController
                 return $this->validationError($validator->errors());
             }
 
-            $rfi->update([
-                'response' => $request->input('response'),
-                'status' => $request->input('status'),
-                'responded_by' => $user->id,
-                'responded_at' => now(),
-            ]);
+            try {
+                $this->lifecycleService->respond($rfi, $user->id, $request->input('response'), $request->input('status'));
+            } catch (RfiLifecycleTransitionException $e) {
+                $statusCode = str_contains($e->getMessage(), 'active escalation') ? 409 : 400;
+                return $this->errorResponse($e->getMessage(), $statusCode);
+            }
 
             $rfi->load(['project:id,name', 'createdBy:id,name', 'assignedTo:id,name']);
 
@@ -375,17 +404,16 @@ class RfiController extends ApiBaseController
                 return $this->unauthorized('Authentication required');
             }
 
+            /** @var \App\Models\User $user */
+
             $rfi = $this->rfiForTenant($id);
 
-            if ($rfi->status !== 'answered') {
-                return $this->errorResponse('RFI must be answered before it can be closed', 400);
+            try {
+                $this->lifecycleService->close($rfi, $user->id);
+            } catch (RfiLifecycleTransitionException $e) {
+                $statusCode = str_contains($e->getMessage(), 'active escalation') ? 409 : 400;
+                return $this->errorResponse($e->getMessage(), $statusCode);
             }
-
-            $rfi->update([
-                'status' => 'closed',
-                'closed_by' => $user->id,
-                'closed_at' => now(),
-            ]);
 
             $rfi->load(['project:id,name', 'createdBy:id,name', 'assignedTo:id,name']);
 
@@ -414,12 +442,26 @@ class RfiController extends ApiBaseController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
 
+            /** @var \App\Models\User $user */
+
             $rfi = $this->rfiForTenant($id);
+
+            if ($this->lifecycleService->isTerminal($rfi)) {
+                return $this->errorResponse('Cannot escalate a closed or cancelled RFI', 422);
+            }
+
+            if (!$this->userIsActive($user)) {
+                return $this->errorResponse('Deactivated users cannot escalate RFIs', 403);
+            }
+
+            if (!$this->actorIsProjectManagerOrAdminForProject($user, $rfi->project_id)) {
+                return $this->errorResponse('Only the project manager or an admin can escalate this RFI', 403);
+            }
 
             $validator = Validator::make($request->all(), [
                 'escalation_reason' => 'required|string',
@@ -430,31 +472,148 @@ class RfiController extends ApiBaseController
                 return $this->validationError($validator->errors());
             }
 
-            $rfi->update([
-                'status' => 'escalated',
-                'escalated_to' => $request->input('escalated_to'),
-                'escalation_reason' => $request->input('escalation_reason'),
-                'escalated_by' => $user->id,
-                'escalated_at' => now(),
-            ]);
+            $target = User::query()->where('id', $request->input('escalated_to'))
+                ->where('tenant_id', $this->tenantId())
+                ->first();
 
-            $rfi->load(['project:id,name', 'createdBy:id,name', 'assignedTo:id,name']);
+            if (!$target) {
+                return $this->errorResponse('Escalation target must belong to the same tenant', 422);
+            }
 
-            $this->auditLogger->log(
-                $request,
-                'zena.rfi.escalate',
-                'rfi',
-                (string) $rfi->id,
-                200,
-                $rfi->project_id,
-                $this->tenantId()
-            );
+            if (!$this->userIsActive($target)) {
+                return $this->errorResponse('Escalation target must be an active user', 422);
+            }
+
+            if (!UserRoleProject::query()->where('project_id', $rfi->project_id)->where('user_id', $target->id)->exists()
+                && !$this->userHasAdminRole($target)) {
+                return $this->errorResponse("Escalation target must be a member of this RFI's project", 422);
+            }
+
+            try {
+                $this->escalationService->escalate($rfi, $target->id, $user->id, $request->input('escalation_reason'));
+            } catch (RfiEscalationConflictException $e) {
+                return $this->errorResponse($e->getMessage(), 409);
+            }
+
+            $rfi->refresh()->load(['project:id,name', 'createdBy:id,name', 'assignedTo:id,name']);
+
+            $this->auditLogger->log($request, 'zena.rfi.escalate', 'rfi', (string) $rfi->id, 200, $rfi->project_id, $this->tenantId());
 
             return $this->successResponse($rfi, 'RFI escalated successfully');
         } catch (ModelNotFoundException $e) {
             return $this->notFound('RFI not found');
         } catch (\Exception $e) {
             return $this->serverError('Failed to escalate RFI: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Resolve the RFI's active escalation.
+     */
+    public function resolveEscalation(Request $request, string $id): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+
+            if (!$user) {
+                return $this->unauthorized('Authentication required');
+            }
+
+            /** @var \App\Models\User $user */
+
+            $rfi = $this->rfiForTenant($id);
+
+            if (!$this->userIsActive($user)) {
+                return $this->errorResponse('Deactivated users cannot resolve escalations', 403);
+            }
+
+            // Deliberately no blanket "no active escalation" pre-check here: the
+            // service distinguishes "never escalated" (404) from "already
+            // resolved" (409) by inspecting escalation history, and a pre-check
+            // on current_escalation_id alone would shadow that distinction on a
+            // duplicate resolve request (current_escalation_id is cleared by the
+            // first resolve, so a naive guard would always answer 404).
+            $isTarget = $rfi->escalated_to === $user->id;
+            $isPmOrAdmin = $this->actorIsProjectManagerOrAdminForProject($user, $rfi->project_id);
+
+            if (!$isTarget && !$isPmOrAdmin) {
+                return $this->errorResponse('Only the escalation target, project manager, or an admin can resolve this escalation', 403);
+            }
+
+            $validator = Validator::make($request->all(), ['resolution' => 'required|string']);
+
+            if ($validator->fails()) {
+                return $this->validationError($validator->errors());
+            }
+
+            try {
+                $this->escalationService->resolveEscalation($rfi, $user->id, $request->input('resolution'));
+            } catch (RfiEscalationConflictException $e) {
+                return $this->errorResponse($e->getMessage(), 409);
+            } catch (\App\Exceptions\RfiEscalationNotFoundException $e) {
+                return $this->errorResponse($e->getMessage(), 404);
+            }
+
+            $rfi->refresh()->load(['project:id,name', 'createdBy:id,name', 'assignedTo:id,name']);
+
+            $this->auditLogger->log($request, 'zena.rfi.resolve_escalation', 'rfi', (string) $rfi->id, 200, $rfi->project_id, $this->tenantId());
+
+            return $this->successResponse($rfi, 'Escalation resolved successfully');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFound('RFI not found');
+        } catch (\Exception $e) {
+            return $this->serverError('Failed to resolve escalation: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Cancel an RFI.
+     */
+    public function cancel(Request $request, string $id): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+
+            if (!$user) {
+                return $this->unauthorized('Authentication required');
+            }
+
+            /** @var \App\Models\User $user */
+
+            $rfi = $this->rfiForTenant($id);
+
+            try {
+                $this->lifecycleService->assertCanCancel($rfi);
+            } catch (\App\Exceptions\RfiLifecycleTransitionException $e) {
+                return $this->errorResponse($e->getMessage(), 422);
+            }
+
+            if (!$this->userIsActive($user)) {
+                return $this->errorResponse('Deactivated users cannot cancel RFIs', 403);
+            }
+
+            $validator = Validator::make($request->all(), ['reason' => 'required|string']);
+
+            if ($validator->fails()) {
+                return $this->validationError($validator->errors());
+            }
+
+            if ($this->escalationService->hasActiveEscalation($rfi->id)
+                && !$this->actorIsProjectManagerOrAdminForProject($user, $rfi->project_id)) {
+                return $this->errorResponse('Only the project manager or an admin can cancel an RFI while it has an active escalation', 403);
+            }
+
+            $this->lifecycleService->cancel($rfi, $user->id, $request->input('reason'));
+
+            $rfi->refresh()->load(['project:id,name', 'createdBy:id,name', 'assignedTo:id,name']);
+
+            $this->auditLogger->log($request, 'zena.rfi.cancel', 'rfi', (string) $rfi->id, 200, $rfi->project_id, $this->tenantId());
+
+            return $this->successResponse($rfi, 'RFI cancelled successfully');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFound('RFI not found');
+        } catch (\Exception $e) {
+            return $this->serverError('Failed to cancel RFI: ' . $e->getMessage());
         }
     }
 
@@ -514,5 +673,54 @@ class RfiController extends ApiBaseController
         return Project::where('id', $projectId)
             ->where('tenant_id', $this->tenantId())
             ->first();
+    }
+
+    private function userIsActive(User $user): bool
+    {
+        return (bool) $user->is_active;
+    }
+
+    private function userHasAdminRole(User $user): bool
+    {
+        return $user->roles()->whereIn('name', ['System Admin', 'Admin', 'super_admin', 'system_admin'])->exists();
+    }
+
+    private function actorIsProjectManagerOrAdminForProject(User $user, string $projectId): bool
+    {
+        if ($this->userHasAdminRole($user)) {
+            return true;
+        }
+
+        return UserRoleProject::query()->where('user_id', $user->id)
+            ->where('project_id', $projectId)
+            ->whereHas('role', fn ($q) => $q->where('name', 'project_manager'))
+            ->exists();
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function allowedStatusValues(): array
+    {
+        $cutoverComplete = DB::table('rfi_escalation_migration_state')->whereNotNull('cutover_completed_at')->exists();
+
+        $base = ['open', 'in_progress', 'answered', 'closed', 'cancelled'];
+
+        return $cutoverComplete ? $base : array_merge($base, ['escalated', 'pending']);
+    }
+
+    /**
+     * Status values the generic update() action may set directly. Deliberately
+     * excludes 'closed' and 'cancelled': those are terminal/guarded statuses
+     * owned exclusively by RfiLifecycleService (via the dedicated respond/
+     * close/cancel endpoints), which enforce the "no active escalation" rule
+     * and, for cancel, atomically resolve any active escalation. Allowing the
+     * generic update() to set them would bypass those guards entirely.
+     *
+     * @return list<string>
+     */
+    private function allowedNonTerminalStatusValuesForUpdate(): array
+    {
+        return array_values(array_diff($this->allowedStatusValues(), ['closed', 'cancelled']));
     }
 }

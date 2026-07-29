@@ -2,12 +2,49 @@
 
 namespace App\Models;
 
+use App\Exceptions\RfiEscalationIntegrityException;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Traits\TenantScope;
 
+/**
+ * @property string $id
+ * @property string $tenant_id
+ * @property string $project_id
+ * @property string $title
+ * @property string $subject
+ * @property string $description
+ * @property string $question
+ * @property string $rfi_number
+ * @property string $priority
+ * @property string|null $location
+ * @property string|null $drawing_reference
+ * @property string $asked_by
+ * @property string $created_by
+ * @property string|null $assigned_to
+ * @property \Carbon\Carbon|null $due_date
+ * @property string $status
+ * @property string|null $answer
+ * @property string|null $response
+ * @property string|null $answered_by
+ * @property string|null $responded_by
+ * @property \Carbon\Carbon|null $answered_at
+ * @property \Carbon\Carbon|null $responded_at
+ * @property \Carbon\Carbon|null $assigned_at
+ * @property string|null $assignment_notes
+ * @property string|null $escalated_to
+ * @property string|null $escalation_reason
+ * @property string|null $escalated_by
+ * @property \Carbon\Carbon|null $escalated_at
+ * @property string|null $current_escalation_id
+ * @property string|null $closed_by
+ * @property \Carbon\Carbon|null $closed_at
+ * @property array<int, mixed>|null $attachments
+ * @property \Carbon\Carbon $created_at
+ * @property \Carbon\Carbon $updated_at
+ */
 class Rfi extends Model
 {
     use HasUlids, HasFactory, TenantScope;
@@ -40,6 +77,7 @@ class Rfi extends Model
         'escalation_reason',
         'escalated_by',
         'escalated_at',
+        'current_escalation_id',
         'closed_by',
         'closed_at',
         'attachments',
@@ -56,7 +94,7 @@ class Rfi extends Model
     ];
 
     /**
-     * Get the tenant that owns the RFI.
+     * @return BelongsTo<Tenant, $this>
      */
     public function tenant(): BelongsTo
     {
@@ -64,7 +102,7 @@ class Rfi extends Model
     }
 
     /**
-     * Get the project that owns the RFI.
+     * @return BelongsTo<Project, $this>
      */
     public function project(): BelongsTo
     {
@@ -72,7 +110,7 @@ class Rfi extends Model
     }
 
     /**
-     * Get the user who asked the RFI.
+     * @return BelongsTo<User, $this>
      */
     public function askedBy(): BelongsTo
     {
@@ -80,7 +118,7 @@ class Rfi extends Model
     }
 
     /**
-     * Get the user who created the RFI.
+     * @return BelongsTo<User, $this>
      */
     public function createdBy(): BelongsTo
     {
@@ -89,6 +127,8 @@ class Rfi extends Model
 
     /**
      * Alias to keep backwards compatibility.
+     *
+     * @return BelongsTo<User, $this>
      */
     public function creator(): BelongsTo
     {
@@ -96,7 +136,7 @@ class Rfi extends Model
     }
 
     /**
-     * Get the user assigned to answer the RFI.
+     * @return BelongsTo<User, $this>
      */
     public function assignedTo(): BelongsTo
     {
@@ -104,7 +144,7 @@ class Rfi extends Model
     }
 
     /**
-     * Get the user who answered the RFI.
+     * @return BelongsTo<User, $this>
      */
     public function answeredBy(): BelongsTo
     {
@@ -112,7 +152,7 @@ class Rfi extends Model
     }
 
     /**
-     * Get the user who responded to the RFI.
+     * @return BelongsTo<User, $this>
      */
     public function respondedBy(): BelongsTo
     {
@@ -120,7 +160,7 @@ class Rfi extends Model
     }
 
     /**
-     * Get the user who escalated the RFI.
+     * @return BelongsTo<User, $this>
      */
     public function escalatedBy(): BelongsTo
     {
@@ -128,7 +168,38 @@ class Rfi extends Model
     }
 
     /**
-     * Get the user who closed the RFI.
+     * @return BelongsTo<RfiEscalation, $this>
+     */
+    public function currentEscalation(): BelongsTo
+    {
+        return $this->belongsTo(RfiEscalation::class, 'current_escalation_id');
+    }
+
+    /**
+     * Guard against a corrupted current_escalation_id pointer: it must be null, or point to an
+     * escalation belonging to THIS rfi, THIS tenant, and still unresolved.
+     */
+    public function assertEscalationPointerIntegrity(): void
+    {
+        if ($this->current_escalation_id === null) {
+            return;
+        }
+
+        $escalation = RfiEscalation::query()->find($this->current_escalation_id);
+
+        if (!$escalation
+            || $escalation->rfi_id !== $this->id
+            || $escalation->tenant_id !== $this->tenant_id
+            || $escalation->resolved_at !== null
+        ) {
+            throw new RfiEscalationIntegrityException(
+                "RFI {$this->id} current_escalation_id points to an invalid escalation (missing, cross-RFI, cross-tenant, or already resolved)."
+            );
+        }
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
      */
     public function closedBy(): BelongsTo
     {

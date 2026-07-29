@@ -10,10 +10,11 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Tests\Traits\AuthenticationTestTrait;
 use Tests\Traits\RouteNameTrait;
+use Tests\Traits\TenantUserFactoryTrait;
 
 class RfiApiTest extends TestCase
 {
-    use RefreshDatabase, WithFaker, AuthenticationTestTrait, RouteNameTrait;
+    use RefreshDatabase, WithFaker, AuthenticationTestTrait, RouteNameTrait, TenantUserFactoryTrait;
 
     protected User $user;
     protected Project $project;
@@ -177,6 +178,50 @@ class RfiApiTest extends TestCase
         ]);
     }
 
+    public function test_update_cannot_set_status_to_closed_bypassing_lifecycle_guard(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id,
+            'status' => 'open',
+        ]);
+
+        $response = $this->apiPut($this->zena('rfis.update', ['id' => $rfi->id]), ['status' => 'closed']);
+
+        $response->assertStatus(422);
+
+        $this->assertDatabaseHas('rfis', [
+            'id' => $rfi->id,
+            'status' => 'open',
+        ]);
+    }
+
+    public function test_update_cannot_set_status_to_cancelled_bypassing_escalation_resolution(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        $memberRole = \App\Models\Role::firstOrCreate(
+            ['name' => 'project_manager'],
+            ['scope' => 'system', 'description' => 'Project Manager', 'is_active' => true],
+        );
+        \App\Models\UserRoleProject::create([
+            'project_id' => $this->project->id, 'user_id' => $target->id, 'role_id' => $memberRole->id,
+        ]);
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Need input', 'escalated_to' => $target->id])->assertStatus(200);
+
+        $response = $this->apiPut($this->zena('rfis.update', ['id' => $rfi->id]), ['status' => 'cancelled']);
+
+        $response->assertStatus(422);
+
+        $rfi->refresh();
+        $this->assertSame('open', $rfi->status);
+        $this->assertNotNull($rfi->current_escalation_id);
+    }
+
     /**
      * Test RFI assignment
      */
@@ -250,6 +295,58 @@ class RfiApiTest extends TestCase
         ]);
     }
 
+    public function test_cannot_respond_to_a_closed_rfi(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'closed',
+        ]);
+
+        $response = $this->apiPost($this->zena('rfis.respond', ['id' => $rfi->id]), ['response' => 'Trying to respond after close', 'status' => 'answered']);
+
+        $response->assertStatus(422);
+    }
+
+    public function test_can_respond_to_an_open_rfi(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+
+        $response = $this->apiPost($this->zena('rfis.respond', ['id' => $rfi->id]), ['response' => 'Here is the answer', 'status' => 'answered']);
+
+        $response->assertStatus(200);
+    }
+
+    public function test_cannot_respond_with_status_closed_while_escalation_is_active(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        $memberRole = \App\Models\Role::firstOrCreate(
+            ['name' => 'project_manager'],
+            ['scope' => 'system', 'description' => 'Project Manager', 'is_active' => true],
+        );
+        \App\Models\UserRoleProject::create([
+            'project_id' => $this->project->id, 'user_id' => $target->id, 'role_id' => $memberRole->id,
+        ]);
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Need input', 'escalated_to' => $target->id])->assertStatus(200);
+
+        $response = $this->apiPost($this->zena('rfis.respond', ['id' => $rfi->id]), ['response' => 'Trying to close via respond', 'status' => 'closed']);
+
+        $response->assertStatus(409);
+
+        $this->assertDatabaseHas('rfis', [
+            'id' => $rfi->id,
+            'status' => 'open',
+        ]);
+        $rfi->refresh();
+        $this->assertNotNull($rfi->current_escalation_id);
+    }
+
     /**
      * Test RFI escalation
      */
@@ -280,11 +377,221 @@ class RfiApiTest extends TestCase
                     ]
                 ]);
 
-        $this->assertDatabaseHas('rfis', [
-            'id' => $rfi->id,
-            'escalated_to' => $this->user->id,
-            'status' => 'escalated'
+        $rfi->refresh();
+        $this->assertNotNull($rfi->current_escalation_id);
+        $this->assertSame('in_progress', $rfi->status);
+        $this->assertSame($this->user->id, $rfi->escalated_to);
+    }
+
+    public function test_project_manager_can_escalate_rfi_in_their_project(): void
+    {
+        $pmRole = \App\Models\Role::firstOrCreate(
+            ['name' => 'project_manager'],
+            ['scope' => 'system', 'description' => 'Project Manager', 'is_active' => true],
+        );
+        $pmUser = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        \App\Models\UserRoleProject::create([
+            'project_id' => $this->project->id, 'user_id' => $pmUser->id, 'role_id' => $pmRole->id,
         ]);
+        // The `rbac:rfi.escalate` route middleware checks system-level role
+        // attachment (User::roles()/user_roles pivot) + Permission::name, which is
+        // independent of the project-scoped UserRoleProject check the controller
+        // itself performs. Both must be satisfied for this request to pass.
+        $pmUser->roles()->attach($pmRole->id);
+        $permission = \App\Models\Permission::firstOrCreate(
+            ['code' => 'rfi.escalate'],
+            ['name' => 'rfi.escalate', 'module' => 'rfi', 'action' => 'escalate', 'description' => 'Escalate an RFI to another user'],
+        );
+        $pmRole->permissions()->syncWithoutDetaching([$permission->id]);
+
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        \App\Models\UserRoleProject::create([
+            'project_id' => $this->project->id, 'user_id' => $target->id, 'role_id' => $pmRole->id,
+        ]);
+
+        $token = $this->apiLoginToken($pmUser, $this->apiFeatureTenant);
+        $response = $this->withHeaders($this->authHeadersForUser($pmUser, $token))
+            ->postJson($this->zena('rfis.escalate', ['id' => $rfi->id]), [
+                'escalation_reason' => 'Client needs urgent clarification',
+                'escalated_to' => $target->id,
+            ]);
+
+        $response->assertStatus(200);
+        $rfi->refresh();
+        $this->assertNotNull($rfi->current_escalation_id);
+        $this->assertSame('open', $rfi->status);
+    }
+
+    public function test_escalate_conflict_when_active_escalation_already_exists(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        $memberRole = \App\Models\Role::firstOrCreate(
+            ['name' => 'project_manager'],
+            ['scope' => 'system', 'description' => 'Project Manager', 'is_active' => true],
+        );
+        \App\Models\UserRoleProject::create([
+            'project_id' => $this->project->id, 'user_id' => $target->id, 'role_id' => $memberRole->id,
+        ]);
+
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'First', 'escalated_to' => $target->id])->assertStatus(200);
+
+        $response = $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Second', 'escalated_to' => $target->id]);
+
+        $response->assertStatus(409);
+    }
+
+    public function test_escalate_rejects_target_from_another_tenant(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+        $otherTenant = \App\Models\Tenant::factory()->create();
+        $foreignTarget = User::factory()->create(['tenant_id' => $otherTenant->id, 'is_active' => true]);
+
+        $response = $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Urgent', 'escalated_to' => $foreignTarget->id]);
+
+        $response->assertStatus(422);
+    }
+
+    public function test_escalate_rejects_deactivated_target(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+        $inactiveTarget = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => false]);
+
+        $response = $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Urgent', 'escalated_to' => $inactiveTarget->id]);
+
+        $response->assertStatus(422);
+    }
+
+    public function test_escalate_blocked_on_closed_rfi(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'closed',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+
+        $response = $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Urgent', 'escalated_to' => $target->id]);
+
+        $response->assertStatus(422);
+    }
+
+    public function test_escalation_target_can_resolve_their_own_escalation(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        $memberRole = \App\Models\Role::firstOrCreate(['name' => 'member'], ['scope' => 'system', 'description' => 'Member', 'is_active' => true]);
+        \App\Models\UserRoleProject::firstOrCreate(['project_id' => $this->project->id, 'user_id' => $target->id], ['role_id' => $memberRole->id]);
+        // The `rbac:rfi.escalate` route middleware checks system-level role
+        // attachment (User::roles()/user_roles pivot) + Permission::name, which is
+        // independent of the project-scoped UserRoleProject check above. Both must
+        // be satisfied for the target's resolve request to pass the middleware.
+        $target->roles()->attach($memberRole->id);
+        $permission = \App\Models\Permission::firstOrCreate(
+            ['code' => 'rfi.escalate'],
+            ['name' => 'rfi.escalate', 'module' => 'rfi', 'action' => 'escalate', 'description' => 'Escalate an RFI to another user'],
+        );
+        $memberRole->permissions()->syncWithoutDetaching([$permission->id]);
+
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Urgent', 'escalated_to' => $target->id])->assertStatus(200);
+
+        $token = $this->apiLoginToken($target, $this->apiFeatureTenant);
+        // The "sanctum" guard (Illuminate\Auth\RequestGuard) memoizes the resolved
+        // user for the lifetime of the shared AuthManager instance, which persists
+        // across every request made within this test method. Without resetting it
+        // here, this request (bearer token for $target) would still resolve to
+        // whichever user the guard authenticated first (via apiPost() above).
+        app('auth')->forgetGuards();
+        $response = $this->withHeaders($this->authHeadersForUser($target, $token))
+            ->postJson($this->zena('rfis.resolve-escalation', ['id' => $rfi->id]), ['resolution' => 'Answered the client directly by phone']);
+
+        $response->assertStatus(200);
+        $rfi->refresh();
+        $this->assertNull($rfi->current_escalation_id);
+    }
+
+    public function test_resolve_escalation_by_unrelated_user_is_forbidden(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        $memberRole = \App\Models\Role::firstOrCreate(['name' => 'member'], ['scope' => 'system', 'description' => 'Member', 'is_active' => true]);
+        \App\Models\UserRoleProject::firstOrCreate(['project_id' => $this->project->id, 'user_id' => $target->id], ['role_id' => $memberRole->id]);
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Urgent', 'escalated_to' => $target->id])->assertStatus(200);
+
+        $unrelated = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        $unrelated->roles()->attach($memberRole->id);
+        $permission = \App\Models\Permission::firstOrCreate(
+            ['code' => 'rfi.escalate'],
+            ['name' => 'rfi.escalate', 'module' => 'rfi', 'action' => 'escalate', 'description' => 'Escalate an RFI to another user'],
+        );
+        $memberRole->permissions()->syncWithoutDetaching([$permission->id]);
+
+        $token = $this->apiLoginToken($unrelated, $this->apiFeatureTenant);
+        // See the identical comment in test_escalation_target_can_resolve_their_own_escalation():
+        // the "sanctum" guard memoizes the resolved user across requests within a
+        // single test method, so this must be reset before switching bearer tokens.
+        app('auth')->forgetGuards();
+        $response = $this->withHeaders($this->authHeadersForUser($unrelated, $token))
+            ->postJson($this->zena('rfis.resolve-escalation', ['id' => $rfi->id]), ['resolution' => 'Trying to resolve an escalation that is not mine']);
+
+        $response->assertStatus(403);
+    }
+
+    public function test_resolve_escalation_twice_returns_conflict(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        $memberRole = \App\Models\Role::firstOrCreate(['name' => 'member'], ['scope' => 'system', 'description' => 'Member', 'is_active' => true]);
+        \App\Models\UserRoleProject::firstOrCreate(['project_id' => $this->project->id, 'user_id' => $target->id], ['role_id' => $memberRole->id]);
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Urgent', 'escalated_to' => $target->id])->assertStatus(200);
+
+        $this->apiPost($this->zena('rfis.resolve-escalation', ['id' => $rfi->id]), ['resolution' => 'First'])->assertStatus(200);
+
+        $response = $this->apiPost($this->zena('rfis.resolve-escalation', ['id' => $rfi->id]), ['resolution' => 'Second attempt']);
+
+        $response->assertStatus(409);
+    }
+
+    public function test_cannot_close_rfi_while_escalation_is_active(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'answered',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        $memberRole = \App\Models\Role::firstOrCreate(
+            ['name' => 'project_manager'],
+            ['scope' => 'system', 'description' => 'Project Manager', 'is_active' => true],
+        );
+        \App\Models\UserRoleProject::create([
+            'project_id' => $this->project->id, 'user_id' => $target->id, 'role_id' => $memberRole->id,
+        ]);
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Still need confirmation', 'escalated_to' => $target->id])->assertStatus(200);
+
+        $response = $this->apiPost($this->zena('rfis.close', ['id' => $rfi->id]));
+
+        $response->assertStatus(409);
     }
 
     /**
@@ -344,6 +651,165 @@ class RfiApiTest extends TestCase
     {
         $response = $this->getJson($this->zena('rfis.index'));
         $response->assertStatus(401);
+    }
+
+    public function test_can_cancel_open_rfi_without_active_escalation(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+
+        $response = $this->apiPost($this->zena('rfis.cancel', ['id' => $rfi->id]), ['reason' => 'Scope no longer applies']);
+
+        $response->assertStatus(200);
+        $this->assertSame('cancelled', $rfi->fresh()->status);
+    }
+
+    public function test_cancel_requires_reason(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+
+        $response = $this->apiPost($this->zena('rfis.cancel', ['id' => $rfi->id]), []);
+
+        $response->assertStatus(422);
+    }
+
+    public function test_cancel_with_active_escalation_requires_pm_or_admin_and_resolves_escalation_atomically(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        // escalate() requires the target to be a member of the RFI's project
+        // (UserRoleProject) unless they hold an admin role; without this the
+        // escalate call itself would 422 before the cancel flow is even reached.
+        $memberRole = \App\Models\Role::firstOrCreate(['name' => 'member'], ['scope' => 'system', 'description' => 'Member', 'is_active' => true]);
+        \App\Models\UserRoleProject::create(['project_id' => $this->project->id, 'user_id' => $target->id, 'role_id' => $memberRole->id]);
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Urgent', 'escalated_to' => $target->id])->assertStatus(200);
+
+        $response = $this->apiPost($this->zena('rfis.cancel', ['id' => $rfi->id]), ['reason' => 'Project cancelled by client']);
+
+        $response->assertStatus(200);
+        $rfi->refresh();
+        $this->assertSame('cancelled', $rfi->status);
+        $this->assertNull($rfi->current_escalation_id);
+
+        $escalation = \App\Models\RfiEscalation::where('rfi_id', $rfi->id)->first();
+        $this->assertNotNull($escalation->resolved_at);
+        $this->assertSame(\App\Models\RfiEscalation::RESOLUTION_TYPE_RFI_CANCELLED, $escalation->resolution_type);
+    }
+
+    public function test_cancel_with_active_escalation_by_non_pm_non_admin_is_forbidden(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        // See the identical comment in the previous test: escalate() requires
+        // the target to be a project member unless they hold an admin role.
+        $targetMemberRole = \App\Models\Role::firstOrCreate(['name' => 'member'], ['scope' => 'system', 'description' => 'Member', 'is_active' => true]);
+        \App\Models\UserRoleProject::create(['project_id' => $this->project->id, 'user_id' => $target->id, 'role_id' => $targetMemberRole->id]);
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Urgent', 'escalated_to' => $target->id])->assertStatus(200);
+
+        $regular = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        $role = \App\Models\Role::firstOrCreate(['name' => 'member'], ['scope' => 'system', 'description' => 'Member', 'is_active' => true]);
+        $regular->roles()->attach($role->id);
+        $permission = \App\Models\Permission::firstOrCreate(
+            ['code' => 'rfi.cancel'],
+            ['name' => 'rfi.cancel', 'module' => 'rfi', 'action' => 'cancel', 'description' => 'Cancel an RFI'],
+        );
+        $role->permissions()->syncWithoutDetaching([$permission->id]);
+        \App\Models\UserRoleProject::create(['project_id' => $this->project->id, 'user_id' => $regular->id, 'role_id' => $role->id]);
+
+        $token = $this->apiLoginToken($regular, $this->apiFeatureTenant);
+        // The "sanctum" guard memoizes the resolved user across requests within a
+        // single test method (see the identical comment on the resolve-escalation
+        // tests above), so it must be reset before switching bearer tokens: the
+        // apiPost() escalate call above resolved the default admin actor first.
+        app('auth')->forgetGuards();
+        $response = $this->withHeaders($this->authHeadersForUser($regular, $token))
+            ->postJson($this->zena('rfis.cancel', ['id' => $rfi->id]), ['reason' => 'Trying to cancel']);
+
+        $response->assertStatus(403);
+    }
+
+    public function test_escalate_creates_an_in_app_notification_for_the_target_after_commit(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        $memberRole = \App\Models\Role::firstOrCreate(
+            ['name' => 'project_manager'],
+            ['scope' => 'system', 'description' => 'Project Manager', 'is_active' => true],
+        );
+        \App\Models\UserRoleProject::create([
+            'project_id' => $this->project->id, 'user_id' => $target->id, 'role_id' => $memberRole->id,
+        ]);
+
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Urgent', 'escalated_to' => $target->id])->assertStatus(200);
+
+        $this->assertDatabaseCount('notifications', 1);
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $target->id,
+            'channel' => 'inapp',
+            'type' => 'rfi_escalated',
+        ]);
+    }
+
+    public function test_escalate_conflict_does_not_create_a_notification(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        $memberRole = \App\Models\Role::firstOrCreate(
+            ['name' => 'project_manager'],
+            ['scope' => 'system', 'description' => 'Project Manager', 'is_active' => true],
+        );
+        \App\Models\UserRoleProject::create([
+            'project_id' => $this->project->id, 'user_id' => $target->id, 'role_id' => $memberRole->id,
+        ]);
+
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'First', 'escalated_to' => $target->id])->assertStatus(200);
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Second should conflict', 'escalated_to' => $target->id])->assertStatus(409);
+
+        $this->assertDatabaseCount('notifications', 1);
+    }
+
+    public function test_a_genuine_mid_transaction_failure_after_row_creation_prevents_notification(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+
+        $service = app(\App\Services\RfiEscalationService::class);
+
+        try {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($service, $rfi, $target) {
+                $service->escalate($rfi, $target->id, $this->user->id, 'Will be rolled back by an outer failure');
+                // Force the OUTER transaction to fail after the escalate() call's own inner
+                // transaction has already returned successfully, proving that a failure in the
+                // surrounding unit of work still results in zero notifications once everything
+                // truly rolls back to the savepoint that never gets released.
+                throw new \RuntimeException('Simulated outer failure after escalate() returned');
+            });
+        } catch (\RuntimeException $e) {
+            // expected
+        }
+
+        $this->assertDatabaseCount('rfi_escalations', 0);
+        $this->assertDatabaseCount('notifications', 0);
     }
 
 }

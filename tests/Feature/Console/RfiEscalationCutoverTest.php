@@ -96,4 +96,26 @@ class RfiEscalationCutoverTest extends TestCase
 
         $this->assertDatabaseCount('rfi_escalation_migration_state', 1);
     }
+
+    public function test_cutover_refuses_when_a_row_has_a_partial_snapshot_missing_escalated_to(): void
+    {
+        // A legacy row whose escalated_to was cleared/never populated but another
+        // snapshot field survived (escalation_reason here) is still evidence of a
+        // past escalation per spec §6.2's "4 field snapshot" check — the cutover
+        // gate must not miss it just because escalated_to specifically is null.
+        $tenant = Tenant::factory()->create();
+        $project = Project::factory()->create(['tenant_id' => $tenant->id]);
+        $user = User::factory()->create(['tenant_id' => $tenant->id]);
+
+        $this->makeRfi($tenant, $project, $user, [
+            'rfi_number' => 'T-RFI-0023',
+            'status' => 'answered',
+            'escalated_to' => null,
+            'escalation_reason' => 'Escalated to a user later deleted; snapshot partially cleared.',
+        ]);
+
+        $this->artisan('rfi:escalation-cutover')->assertExitCode(1);
+
+        $this->assertDatabaseMissing('rfi_escalation_migration_state', []);
+    }
 }

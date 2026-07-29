@@ -24,6 +24,8 @@ use Tests\TestCase;
  * connection defined in config/database.php is not reachable in this
  * environment, both tests below skip themselves with an explicit message
  * rather than silently passing on sqlite.
+ *
+ * @group stress
  */
 class RfiEscalationConcurrencyTest extends TestCase
 {
@@ -33,11 +35,11 @@ class RfiEscalationConcurrencyTest extends TestCase
             DB::connection('mysql')->select('SELECT 1');
         } catch (\Throwable $e) {
             $this->markTestSkipped(
-                'This test proves real row-locking behavior and MUST run against a real MySQL '
-                . 'connection, not sqlite. The "mysql" connection in config/database.php is not '
-                . 'reachable in this environment (' . $e->getMessage() . '). Run this suite in an '
-                . 'environment with MySQL configured before treating concurrency as verified — a '
-                . 'passing sqlite/sequential-call test is NOT evidence per the plan\'s blocker #5.'
+                'dependency: real MySQL connection required to prove real row-locking behavior, '
+                . 'not sqlite. The "mysql" connection in config/database.php is not reachable in '
+                . 'this environment (' . $e->getMessage() . '). Run this suite in an environment '
+                . 'with MySQL configured before treating concurrency as verified — a passing '
+                . 'sqlite/sequential-call test is NOT evidence per the plan\'s blocker #5.'
             );
         }
     }
@@ -45,9 +47,9 @@ class RfiEscalationConcurrencyTest extends TestCase
     protected function tearDown(): void
     {
         // Guarded with try/catch (not just a getPdo() truthiness check): when MySQL is
-        // unreachable the test method already markTestSkipped()'d, but PHPUnit still runs
-        // tearDown() afterwards — without the guard, attempting to connect here would throw
-        // and turn a clean SKIP into a misleading ERROR.
+        // unreachable the test method already skipped itself in skipUnlessMysqlAvailable(),
+        // but PHPUnit still runs tearDown() afterwards — without the guard, attempting to
+        // connect here would throw and turn a clean SKIP into a misleading ERROR.
         try {
             if (DB::connection('mysql')->getPdo()) {
                 DB::connection('mysql')->table('rfi_escalations')->delete();

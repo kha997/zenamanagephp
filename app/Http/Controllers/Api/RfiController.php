@@ -205,7 +205,7 @@ class RfiController extends ApiBaseController
                 'assigned_to' => 'nullable|exists:users,id',
                 'location' => 'nullable|string|max:255',
                 'drawing_reference' => 'nullable|string|max:255',
-                'status' => 'sometimes|in:' . implode(',', $this->allowedStatusValues()),
+                'status' => 'sometimes|in:' . implode(',', $this->allowedNonTerminalStatusValuesForUpdate()),
             ]);
 
             if ($validator->fails()) {
@@ -351,7 +351,12 @@ class RfiController extends ApiBaseController
                 return $this->validationError($validator->errors());
             }
 
-            $this->lifecycleService->respond($rfi, $user->id, $request->input('response'), $request->input('status'));
+            try {
+                $this->lifecycleService->respond($rfi, $user->id, $request->input('response'), $request->input('status'));
+            } catch (RfiLifecycleTransitionException $e) {
+                $statusCode = str_contains($e->getMessage(), 'active escalation') ? 409 : 400;
+                return $this->errorResponse($e->getMessage(), $statusCode);
+            }
 
             $rfi->load(['project:id,name', 'createdBy:id,name', 'assignedTo:id,name']);
 
@@ -677,5 +682,18 @@ class RfiController extends ApiBaseController
         $base = ['open', 'in_progress', 'answered', 'closed', 'cancelled'];
 
         return $cutoverComplete ? $base : array_merge($base, ['escalated', 'pending']);
+    }
+
+    /**
+     * Status values the generic update() action may set directly. Deliberately
+     * excludes 'closed' and 'cancelled': those are terminal/guarded statuses
+     * owned exclusively by RfiLifecycleService (via the dedicated respond/
+     * close/cancel endpoints), which enforce the "no active escalation" rule
+     * and, for cancel, atomically resolve any active escalation. Allowing the
+     * generic update() to set them would bypass those guards entirely.
+     */
+    private function allowedNonTerminalStatusValuesForUpdate(): array
+    {
+        return array_values(array_diff($this->allowedStatusValues(), ['closed', 'cancelled']));
     }
 }

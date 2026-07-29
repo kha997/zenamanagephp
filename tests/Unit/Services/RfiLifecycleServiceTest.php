@@ -69,6 +69,27 @@ class RfiLifecycleServiceTest extends TestCase
         $this->lifecycle->respond($rfi, $this->user->id, 'Too late', 'answered');
     }
 
+    public function test_respond_rejected_to_closed_while_escalation_active(): void
+    {
+        $rfi = $this->makeRfi('open', 'T-0011a');
+        $target = User::factory()->create(['tenant_id' => $this->tenant->id]);
+        $this->escalation->escalate($rfi, $target->id, $this->user->id, 'Still open');
+
+        $this->expectException(RfiLifecycleTransitionException::class);
+        $this->lifecycle->respond($rfi->fresh(), $this->user->id, 'Trying to close', 'closed');
+    }
+
+    public function test_respond_to_answered_still_succeeds_while_escalation_active(): void
+    {
+        $rfi = $this->makeRfi('open', 'T-0011b');
+        $target = User::factory()->create(['tenant_id' => $this->tenant->id]);
+        $this->escalation->escalate($rfi, $target->id, $this->user->id, 'Still open');
+
+        $updated = $this->lifecycle->respond($rfi->fresh(), $this->user->id, 'Answering', 'answered');
+
+        $this->assertSame('answered', $updated->status);
+    }
+
     public function test_close_rejected_when_not_answered(): void
     {
         $rfi = $this->makeRfi('open', 'T-0012');

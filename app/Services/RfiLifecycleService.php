@@ -37,6 +37,10 @@ class RfiLifecycleService
     {
         $this->assertCanRespond($rfi);
 
+        if ($status === 'closed' && $this->escalationService->hasActiveEscalation($rfi->id)) {
+            throw new RfiLifecycleTransitionException('Cannot close an RFI while it has an active escalation — resolve the escalation first.');
+        }
+
         $rfi->update([
             'response' => $response,
             'status' => $status,

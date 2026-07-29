@@ -178,6 +178,50 @@ class RfiApiTest extends TestCase
         ]);
     }
 
+    public function test_update_cannot_set_status_to_closed_bypassing_lifecycle_guard(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id,
+            'status' => 'open',
+        ]);
+
+        $response = $this->apiPut($this->zena('rfis.update', ['id' => $rfi->id]), ['status' => 'closed']);
+
+        $response->assertStatus(422);
+
+        $this->assertDatabaseHas('rfis', [
+            'id' => $rfi->id,
+            'status' => 'open',
+        ]);
+    }
+
+    public function test_update_cannot_set_status_to_cancelled_bypassing_escalation_resolution(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        $memberRole = \App\Models\Role::firstOrCreate(
+            ['name' => 'project_manager'],
+            ['scope' => 'system', 'description' => 'Project Manager', 'is_active' => true],
+        );
+        \App\Models\UserRoleProject::create([
+            'project_id' => $this->project->id, 'user_id' => $target->id, 'role_id' => $memberRole->id,
+        ]);
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Need input', 'escalated_to' => $target->id])->assertStatus(200);
+
+        $response = $this->apiPut($this->zena('rfis.update', ['id' => $rfi->id]), ['status' => 'cancelled']);
+
+        $response->assertStatus(422);
+
+        $rfi->refresh();
+        $this->assertSame('open', $rfi->status);
+        $this->assertNotNull($rfi->current_escalation_id);
+    }
+
     /**
      * Test RFI assignment
      */
@@ -273,6 +317,34 @@ class RfiApiTest extends TestCase
         $response = $this->apiPost($this->zena('rfis.respond', ['id' => $rfi->id]), ['response' => 'Here is the answer', 'status' => 'answered']);
 
         $response->assertStatus(200);
+    }
+
+    public function test_cannot_respond_with_status_closed_while_escalation_is_active(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        $memberRole = \App\Models\Role::firstOrCreate(
+            ['name' => 'project_manager'],
+            ['scope' => 'system', 'description' => 'Project Manager', 'is_active' => true],
+        );
+        \App\Models\UserRoleProject::create([
+            'project_id' => $this->project->id, 'user_id' => $target->id, 'role_id' => $memberRole->id,
+        ]);
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Need input', 'escalated_to' => $target->id])->assertStatus(200);
+
+        $response = $this->apiPost($this->zena('rfis.respond', ['id' => $rfi->id]), ['response' => 'Trying to close via respond', 'status' => 'closed']);
+
+        $response->assertStatus(409);
+
+        $this->assertDatabaseHas('rfis', [
+            'id' => $rfi->id,
+            'status' => 'open',
+        ]);
+        $rfi->refresh();
+        $this->assertNotNull($rfi->current_escalation_id);
     }
 
     /**

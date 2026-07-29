@@ -47,6 +47,15 @@ class RfiEscalationPreflightReportTest extends TestCase
             'subject' => 'S', 'description' => 'd', 'question' => 'q?', 'priority' => 'medium', 'asked_by' => $user->id, 'created_by' => $user->id,
             'rfi_number' => 'T-RFI-0005', 'status' => 'open',
         ]);
+        // Partial snapshot: escalated_to is null (e.g. cleared when the target
+        // user was deleted) but escalation_reason survived — per spec §6.2 the
+        // 4 snapshot fields must each be checked, not just escalated_to.
+        $partialSnapshot = Rfi::create([
+            'tenant_id' => $tenant->id, 'project_id' => $project->id, 'title' => 'F',
+            'subject' => 'S', 'description' => 'd', 'question' => 'q?', 'priority' => 'medium', 'asked_by' => $user->id, 'created_by' => $user->id,
+            'rfi_number' => 'T-RFI-0006', 'status' => 'answered',
+            'escalated_to' => null, 'escalation_reason' => 'Escalated to a user later deleted; snapshot partially cleared.',
+        ]);
 
         $outputPath = storage_path('app/test-preflight-report.csv');
         @unlink($outputPath);
@@ -60,6 +69,7 @@ class RfiEscalationPreflightReportTest extends TestCase
         $this->assertStringContainsString($escalatedWithoutAssignee->id, $contents);
         $this->assertStringContainsString($pendingAnomaly->id, $contents);
         $this->assertStringContainsString($closedWithSnapshot->id, $contents);
+        $this->assertStringContainsString($partialSnapshot->id, $contents);
         $this->assertStringNotContainsString('T-RFI-0005', $contents);
 
         @unlink($outputPath);

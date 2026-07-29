@@ -21,7 +21,17 @@ class RfiEscalationCutover extends Command
 
         $unconfirmedEscalated = Rfi::query()->where('status', 'escalated')->whereNotExists($unconfirmed)->count();
         $unconfirmedPending = Rfi::query()->where('status', 'pending')->whereNotExists($unconfirmed)->count();
-        $unconfirmedSnapshot = Rfi::query()->where('status', '!=', 'escalated')->whereNotNull('escalated_to')->whereNotExists($unconfirmed)->count();
+        // Per spec §6.2: a row is "has escalation snapshot" if ANY of the 4
+        // legacy snapshot fields is populated, not just escalated_to — a
+        // partial snapshot (e.g. escalated_to cleared when the target user was
+        // deleted, but escalation_reason survived) is still real evidence of a
+        // past escalation and must not be missed by this gate.
+        $hasSnapshot = fn ($query) => $query
+            ->whereNotNull('escalated_to')
+            ->orWhereNotNull('escalated_by')
+            ->orWhereNotNull('escalated_at')
+            ->orWhereNotNull('escalation_reason');
+        $unconfirmedSnapshot = Rfi::query()->where('status', '!=', 'escalated')->where($hasSnapshot)->whereNotExists($unconfirmed)->count();
 
         $total = $unconfirmedEscalated + $unconfirmedPending + $unconfirmedSnapshot;
 

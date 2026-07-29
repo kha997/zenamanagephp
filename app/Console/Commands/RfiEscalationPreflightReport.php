@@ -25,7 +25,18 @@ class RfiEscalationPreflightReport extends Command
             }
         });
 
-        Rfi::query()->where('status', '!=', 'escalated')->whereNotNull('escalated_to')->orderBy('id')
+        // Per spec §6.2: a row "has escalation snapshot" if ANY of the 4 legacy
+        // snapshot fields is populated, not just escalated_to — a partial
+        // snapshot (e.g. escalated_to cleared when the target user was deleted,
+        // but escalation_reason survived) is still real evidence of a past
+        // escalation. Keep in sync with RfiEscalationCutover's identical check.
+        $hasSnapshot = fn ($query) => $query
+            ->whereNotNull('escalated_to')
+            ->orWhereNotNull('escalated_by')
+            ->orWhereNotNull('escalated_at')
+            ->orWhereNotNull('escalation_reason');
+
+        Rfi::query()->where('status', '!=', 'escalated')->where($hasSnapshot)->orderBy('id')
             ->chunk(200, function ($chunk) use (&$rows) {
                 foreach ($chunk as $rfi) {
                     $rows[] = [$rfi->id, $rfi->status, (string) $rfi->assigned_to, 'yes', $rfi->status, 'resolved_estimated', 'has escalation snapshot but status already moved on; resolved_at will be estimated from updated_at'];

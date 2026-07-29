@@ -24,7 +24,14 @@ return new class extends Migration
             $table->ulid('decided_by')->nullable();
             $table->timestamp('decided_at')->nullable();
             $table->text('decision_comments')->nullable();
-            $table->timestamp('created_at');
+            // Nullable rather than a bare NOT NULL timestamp: under strict MySQL/MariaDB (no
+            // explicit_defaults_for_timestamp), a second non-nullable TIMESTAMP column with no
+            // explicit DEFAULT gets an implicit zero-date default, which NO_ZERO_DATE/strict SQL
+            // mode rejects at CREATE TABLE time ("Invalid default value for 'created_at'"). The
+            // application always sets this explicitly on insert (SubmittalLifecycleService),
+            // so nullable is safe and matches the pattern used by sibling migrations
+            // (e.g. 2026_07_17_150000_create_price_reference_entries_table.php).
+            $table->timestamp('created_at')->nullable();
 
             $table->unique(['submittal_id', 'revision_no']);
             $table->index(['tenant_id']);

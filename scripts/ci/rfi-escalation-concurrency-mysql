@@ -18,6 +18,14 @@ cd "$ROOT_DIR"
 export APP_ENV=testing
 export DB_CONNECTION=mysql
 export PCOV_ENABLED=0
+# tests/bootstrap.php unconditionally overrides DB_CONNECTION/DB_DATABASE to
+# a throwaway sqlite file UNLESS this is set — without it, the actual
+# PHPUnit process (not this script's own preflight check, which uses a raw
+# PDO connection built from separately-resolved bash variables) would still
+# fail to reach the named 'mysql' Laravel connection, since config/database.php's
+# mysql block reads its 'database' value from the same DB_DATABASE env var
+# that bootstrap.php clobbers.
+export ZENA_INVARIANTS_DB=mysql
 
 resolve_with_precedence() {
     local default_value="$1"
@@ -99,5 +107,7 @@ JUNIT_OUT="${RUNNER_TEMP:-/tmp}/rfi-concurrency-junit.xml"
 # instead of reporting a false green.
 if grep -q 'skipped="[1-9]' "$JUNIT_OUT" 2>/dev/null; then
     echo "ERROR: RfiEscalationConcurrencyTest reported a SKIP despite MySQL being reachable per preflight — this must never be a silent pass." >&2
+    echo "Skip reason(s) from the junit report:" >&2
+    grep -A2 '<skipped' "$JUNIT_OUT" >&2 || true
     exit 1
 fi

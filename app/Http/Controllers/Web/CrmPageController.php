@@ -24,6 +24,7 @@ use App\Services\DeliverablePdfExportService;
 use App\Services\DeliverableTemplateVersionService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -488,7 +489,15 @@ class CrmPageController extends Controller
         ]);
 
         $tenantId = $this->tenantId();
-        $opportunity = Opportunity::query()->forTenant($tenantId)->findOrFail($id);
+
+        try {
+            $opportunity = Opportunity::query()->forTenant($tenantId)->findOrFail($id);
+        } catch (ModelNotFoundException $exception) {
+            if ($request->wantsJson()) {
+                throw $exception;
+            }
+            return back()->with('error', 'Không tìm thấy cơ hội bán hàng.');
+        }
 
         try {
             $opportunity = app(OpportunityStageTransitionService::class)->transition(
@@ -507,6 +516,11 @@ class CrmPageController extends Controller
                 throw $exception;
             }
             return back()->withErrors($exception->errors())->withInput();
+        } catch (Throwable $exception) {
+            if ($request->wantsJson()) {
+                throw $exception;
+            }
+            return back()->with('error', 'Không thể xử lý yêu cầu.');
         }
 
         if ($request->wantsJson()) {

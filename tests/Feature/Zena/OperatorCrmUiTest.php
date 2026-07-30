@@ -246,6 +246,67 @@ class OperatorCrmUiTest extends TestCase
         $this->assertSame(Opportunity::STAGE_WON, $opportunity->pipeline_stage);
     }
 
+    public function test_update_stage_non_json_returns_friendly_redirect_when_opportunity_not_found(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+        $this->withSession(['_token' => 'test-csrf-token']);
+        $headers['X-CSRF-TOKEN'] = 'test-csrf-token';
+
+        $response = $this->actingAs($this->user)
+            ->from(route('operator.crm.index'))
+            ->post(route('operator.crm.opportunities.stage', '00000000-0000-0000-0000-000000000000'), [
+                'pipeline_stage' => Opportunity::STAGE_QUALIFIED,
+            ], $headers);
+
+        $response->assertRedirect(route('operator.crm.index'));
+        $response->assertSessionHas('error', 'Không tìm thấy cơ hội bán hàng.');
+    }
+
+    public function test_update_stage_non_json_returns_friendly_redirect_on_unexpected_exception(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+        $this->withSession(['_token' => 'test-csrf-token']);
+        $headers['X-CSRF-TOKEN'] = 'test-csrf-token';
+
+        $account = \App\Models\Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'display_name' => 'Khách hàng unexpected-error test',
+        ]);
+        $opportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Cơ hội unexpected-error test',
+            'pipeline_stage' => Opportunity::STAGE_NEW_LEAD,
+            'sales_owner_id' => (string) $this->user->id,
+            'created_by' => (string) $this->user->id,
+        ]);
+
+        // Force the service layer to blow up with something other than the
+        // two typed exceptions the controller already special-cases, to
+        // simulate an unexpected DB/infra failure surfacing from
+        // OpportunityStageTransitionService::transition().
+        $this->app->bind(\App\Services\Crm\OpportunityStageTransitionService::class, function () {
+            return new class extends \App\Services\Crm\OpportunityStageTransitionService {
+                public function transition(\App\Models\User $actor, Opportunity $opportunity, string $toStage, ?string $lostReason): Opportunity
+                {
+                    throw new \RuntimeException('Simulated unexpected failure');
+                }
+            };
+        });
+
+        $response = $this->actingAs($this->user)
+            ->from(route('operator.crm.index'))
+            ->post(route('operator.crm.opportunities.stage', $opportunity->id), [
+                'pipeline_stage' => Opportunity::STAGE_QUALIFIED,
+            ], $headers);
+
+        $response->assertRedirect(route('operator.crm.index'));
+        $response->assertSessionHas('error', 'Không thể xử lý yêu cầu.');
+
+        $opportunity->refresh();
+        $this->assertSame(Opportunity::STAGE_NEW_LEAD, $opportunity->pipeline_stage);
+    }
+
     public function test_lead_conversion_accepts_custom_scope_summary(): void
     {
         $headers = ['X-Tenant-ID' => (string) $this->tenant->id];

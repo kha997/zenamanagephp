@@ -224,12 +224,14 @@ class PipelineDragDropTest extends DuskTestCase
         $this->browse(function (Browser $browser) use ($opportunity) {
             $browser->loginAs($this->user)
                 ->visit('/operator/crm')
-                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn', 10)
-                ->script([
-                    "window.__pendingCount = 0;"
-                    . "window.fetch = function() { window.__pendingCount++; return new Promise(function(){}); };",
-                ])
-                ->click('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn')
+                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn', 10);
+
+            $browser->script([
+                "window.__pendingCount = 0;"
+                . "window.fetch = function() { window.__pendingCount++; return new Promise(function(){}); };",
+            ]);
+
+            $browser->click('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn')
                 ->waitFor('[data-crm-stage-dialog][open]', 10)
                 ->click('[data-crm-stage-dialog] .crm-dialog-group-option[data-group="consulting_survey"]')
                 ->pause(300)
@@ -258,11 +260,13 @@ class PipelineDragDropTest extends DuskTestCase
         $this->browse(function (Browser $browser) use ($opportunity) {
             $browser->loginAs($this->user)
                 ->visit('/operator/crm')
-                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn', 10)
-                ->script([
-                    "window.fetch = function() { return Promise.resolve(new Response(JSON.stringify({message: 'Bạn không có quyền thực hiện thao tác này.'}), {status: 403})); };",
-                ])
-                ->click('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn')
+                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn', 10);
+
+            $browser->script([
+                "window.fetch = function() { return Promise.resolve(new Response(JSON.stringify({message: 'Bạn không có quyền thực hiện thao tác này.'}), {status: 403})); };",
+            ]);
+
+            $browser->click('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn')
                 ->waitFor('[data-crm-stage-dialog][open]', 10)
                 ->click('[data-crm-stage-dialog] .crm-dialog-group-option[data-group="consulting_survey"]')
                 ->waitForText('Bạn không có quyền thực hiện thao tác này.', 10)
@@ -281,11 +285,13 @@ class PipelineDragDropTest extends DuskTestCase
         $this->browse(function (Browser $browser) use ($opportunity) {
             $browser->loginAs($this->user)
                 ->visit('/operator/crm')
-                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn', 10)
-                ->script([
-                    "window.fetch = function() { return Promise.resolve(new Response('Internal Server Error', {status: 500})); };",
-                ])
-                ->click('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn')
+                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn', 10);
+
+            $browser->script([
+                "window.fetch = function() { return Promise.resolve(new Response('Internal Server Error', {status: 500})); };",
+            ]);
+
+            $browser->click('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn')
                 ->waitFor('[data-crm-stage-dialog][open]', 10)
                 ->click('[data-crm-stage-dialog] .crm-dialog-group-option[data-group="consulting_survey"]')
                 ->waitForText('Có lỗi xảy ra, vui lòng thử lại.', 10)

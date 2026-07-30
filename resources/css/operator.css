@@ -198,3 +198,15 @@ body {
     .operator-content { padding-left: 1rem; padding-right: 1rem; }
     .operator-form-grid { grid-template-columns: 1fr; }
 }
+
+/* Kéo-thả pipeline CRM — dialog dùng chung */
+[data-crm-stage-dialog] {
+    border: none;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    max-width: 24rem;
+    width: 90vw;
+}
+[data-crm-stage-dialog]::backdrop {
+    background: rgb(15 23 42 / 0.4);
+}

@@ -11,5 +11,57 @@
  */
 (function () {
     'use strict';
-    // Cố ý để trống.
+
+    var activeDialogContext = null; // { card } — Task 8 mở rộng thêm targetGroupKey
+
+    function openStageDialog(card) {
+        var dialog = document.querySelector('[data-crm-stage-dialog]');
+        var nameEl = dialog.querySelector('[data-dialog-opportunity-name]');
+        var groupPicker = dialog.querySelector('[data-dialog-group-picker]');
+
+        var opportunityNameEl = card.querySelector('.operator-link');
+        nameEl.textContent = opportunityNameEl ? opportunityNameEl.textContent.trim() : '';
+
+        var currentGroupKey = card.closest('[data-board-group]').dataset.boardGroup;
+        groupPicker.classList.remove('hidden');
+        groupPicker.querySelectorAll('.crm-dialog-group-option').forEach(function (btn) {
+            btn.classList.toggle('hidden', btn.dataset.group === currentGroupKey);
+        });
+
+        activeDialogContext = { card: card };
+        dialog.showModal();
+    }
+
+    function initStageDialog() {
+        var dialog = document.querySelector('[data-crm-stage-dialog]');
+        if (!dialog) return;
+
+        var cancelBtn = dialog.querySelector('[data-dialog-cancel]');
+        cancelBtn.addEventListener('click', function () {
+            activeDialogContext = null;
+            dialog.close();
+        });
+    }
+
+    function initClickFallback() {
+        document.querySelectorAll('.crm-stage-transition-btn').forEach(function (btn) {
+            btn.addEventListener('click', function (event) {
+                var card = event.currentTarget.closest('[data-opportunity-id]');
+                if (card.getAttribute('aria-busy') === 'true') return;
+                openStageDialog(card);
+            });
+        });
+    }
+
+    function initializePipelineDragDrop() {
+        if (!document.querySelector('[data-board-group]')) return; // không phải trang crm.index
+        initStageDialog();
+        initClickFallback();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializePipelineDragDrop);
+    } else {
+        initializePipelineDragDrop();
+    }
 })();

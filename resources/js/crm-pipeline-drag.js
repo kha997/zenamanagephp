@@ -103,7 +103,7 @@
     }
 
     function postStageUpdate(opportunityId, toStage, reason) {
-        var url = '/crm/opportunities/' + encodeURIComponent(opportunityId) + '/stage';
+        var url = '/operator/crm/opportunities/' + encodeURIComponent(opportunityId) + '/stage';
         var body = { pipeline_stage: toStage };
         if (reason) body.lost_reason = reason;
         return postJson(url, body);

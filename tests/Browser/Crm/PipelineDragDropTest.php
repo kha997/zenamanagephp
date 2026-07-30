@@ -476,15 +476,17 @@ class PipelineDragDropTest extends DuskTestCase
         $this->browse(function (Browser $browser) use ($opportunity) {
             $browser->loginAs($this->user)
                 ->visit('/operator/crm')
-                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-drag-handle', 10)
-                ->script([
-                    "var handle = document.querySelector('[data-opportunity-id=\"{$opportunity->id}\"] .crm-drag-handle');"
-                    . "var dt = new DataTransfer();"
-                    . "handle.dispatchEvent(new DragEvent('dragstart', {bubbles: true, cancelable: true, dataTransfer: dt}));"
-                    . "var target = document.querySelector('[data-board-group=\"consulting_survey\"]');"
-                    . "target.dispatchEvent(new DragEvent('drop', {bubbles: true, cancelable: true, dataTransfer: dt}));",
-                ])
-                ->waitFor('[data-board-group="consulting_survey"] [data-opportunity-id="' . $opportunity->id . '"]', 10);
+                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-drag-handle', 10);
+
+            $browser->script([
+                "var handle = document.querySelector('[data-opportunity-id=\"{$opportunity->id}\"] .crm-drag-handle');"
+                . "var dt = new DataTransfer();"
+                . "handle.dispatchEvent(new DragEvent('dragstart', {bubbles: true, cancelable: true, dataTransfer: dt}));"
+                . "var target = document.querySelector('[data-board-group=\"consulting_survey\"]');"
+                . "target.dispatchEvent(new DragEvent('drop', {bubbles: true, cancelable: true, dataTransfer: dt}));",
+            ]);
+
+            $browser->waitFor('[data-board-group="consulting_survey"] [data-opportunity-id="' . $opportunity->id . '"]', 10);
         });
 
         $opportunity->refresh();
@@ -498,15 +500,17 @@ class PipelineDragDropTest extends DuskTestCase
         $this->browse(function (Browser $browser) use ($opportunity) {
             $browser->loginAs($this->user)
                 ->visit('/operator/crm')
-                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-drag-handle', 10)
-                ->script([
-                    "var handle = document.querySelector('[data-opportunity-id=\"{$opportunity->id}\"] .crm-drag-handle');"
-                    . "var dt = new DataTransfer();"
-                    . "handle.dispatchEvent(new DragEvent('dragstart', {bubbles: true, cancelable: true, dataTransfer: dt}));"
-                    . "var target = document.querySelector('[data-board-group=\"lost_nurture\"]');"
-                    . "target.dispatchEvent(new DragEvent('drop', {bubbles: true, cancelable: true, dataTransfer: dt}));",
-                ])
-                ->waitFor('[data-crm-stage-dialog][open]', 10)
+                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-drag-handle', 10);
+
+            $browser->script([
+                "var handle = document.querySelector('[data-opportunity-id=\"{$opportunity->id}\"] .crm-drag-handle');"
+                . "var dt = new DataTransfer();"
+                . "handle.dispatchEvent(new DragEvent('dragstart', {bubbles: true, cancelable: true, dataTransfer: dt}));"
+                . "var target = document.querySelector('[data-board-group=\"lost_nurture\"]');"
+                . "target.dispatchEvent(new DragEvent('drop', {bubbles: true, cancelable: true, dataTransfer: dt}));",
+            ]);
+
+            $browser->waitFor('[data-crm-stage-dialog][open]', 10)
                 ->assertVisible('[data-dialog-choice-picker] input[value="lost"]')
                 ->assertScript(
                     "return document.querySelector('[data-dialog-group-picker]').classList.contains('hidden');",
@@ -525,15 +529,17 @@ class PipelineDragDropTest extends DuskTestCase
         $this->browse(function (Browser $browser) use ($opportunity) {
             $browser->loginAs($this->user)
                 ->visit('/operator/crm')
-                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-drag-handle', 10)
-                ->script([
-                    "var handle = document.querySelector('[data-opportunity-id=\"{$opportunity->id}\"] .crm-drag-handle');"
-                    . "var dt = new DataTransfer();"
-                    . "handle.dispatchEvent(new DragEvent('dragstart', {bubbles: true, cancelable: true, dataTransfer: dt}));"
-                    . "var target = document.querySelector('[data-board-group=\"new\"]');"
-                    . "target.dispatchEvent(new DragEvent('drop', {bubbles: true, cancelable: true, dataTransfer: dt}));",
-                ])
-                ->pause(300)
+                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-drag-handle', 10);
+
+            $browser->script([
+                "var handle = document.querySelector('[data-opportunity-id=\"{$opportunity->id}\"] .crm-drag-handle');"
+                . "var dt = new DataTransfer();"
+                . "handle.dispatchEvent(new DragEvent('dragstart', {bubbles: true, cancelable: true, dataTransfer: dt}));"
+                . "var target = document.querySelector('[data-board-group=\"new\"]');"
+                . "target.dispatchEvent(new DragEvent('drop', {bubbles: true, cancelable: true, dataTransfer: dt}));",
+            ]);
+
+            $browser->pause(300)
                 ->assertPresent('[data-board-group="new"] [data-opportunity-id="' . $opportunity->id . '"]')
                 ->assertMissing('[data-crm-stage-dialog][open]');
         });

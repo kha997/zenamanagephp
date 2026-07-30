@@ -21,7 +21,7 @@
                 data-column-label="{{ $column['label'] }}"
                 data-requires-choice="{{ $column['requires_choice'] ? '1' : '0' }}"
                 data-default-entry-stage="{{ $column['default_entry_stage'] ?? '' }}"
-                data-choice-options="{{ json_encode($column['choice_options'] ?? []) }}"
+                :data-choice-options="$column['choice_options'] ? json_encode($column['choice_options']) : null"
             >
                 <div class="mb-3 flex items-center justify-between">
                     <span class="font-semibold text-slate-900">{{ $column['label'] }}</span>

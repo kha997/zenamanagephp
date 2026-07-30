@@ -302,6 +302,37 @@ class OperatorCrmUiTest extends TestCase
         $this->assertStringContainsString('crm-dialog-group-option', $html);
     }
 
+    public function test_crm_index_only_lost_nurture_column_has_choice_options_attribute(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $response = $this->actingAs($this->user)
+            ->get(route('operator.crm.index'), $headers);
+
+        $response->assertOk();
+        $html = $response->getContent();
+
+        // Cột lost_nurture: PHẢI có data-choice-options với JSON 3 lựa chọn
+        $lostNurtureStart = strpos($html, 'data-board-group="lost_nurture"');
+        $this->assertNotFalse($lostNurtureStart);
+        $sectionStart = strrpos(substr($html, 0, $lostNurtureStart), '<section');
+        $this->assertNotFalse($sectionStart);
+        $sectionEnd = strpos($html, '</section>', $sectionStart);
+        $lostNurtureSectionHtml = substr($html, $sectionStart, $sectionEnd - $sectionStart);
+
+        $this->assertStringContainsString('data-choice-options="', $lostNurtureSectionHtml);
+
+        // Cột "new" (không dùng choice): KHÔNG được có data-choice-options — dù rỗng hay không
+        $newStart = strpos($html, 'data-board-group="new"');
+        $this->assertNotFalse($newStart);
+        $newSectionStart = strrpos(substr($html, 0, $newStart), '<section');
+        $this->assertNotFalse($newSectionStart);
+        $newSectionEnd = strpos($html, '</section>', $newSectionStart);
+        $newSectionHtml = substr($html, $newSectionStart, $newSectionEnd - $newSectionStart);
+
+        $this->assertStringNotContainsString('data-choice-options', $newSectionHtml);
+    }
+
     public function test_crm_index_terminal_card_has_no_drag_handle_or_transition_button(): void
     {
         $headers = ['X-Tenant-ID' => (string) $this->tenant->id];

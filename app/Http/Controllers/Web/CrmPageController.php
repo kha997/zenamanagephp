@@ -1,37 +1,47 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
 
+use App\Exceptions\DeliverablePdfExportUnavailableException;
 use App\Http\Controllers\Api\AccountController as ApiAccountController;
 use App\Http\Controllers\Api\LeadController as ApiLeadController;
 use App\Http\Controllers\Api\OpportunityController as ApiOpportunityController;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Web\Concerns\DelegatesToApiControllers;
 use App\Models\Account;
+use App\Models\Contract;
 use App\Models\DeliverableTemplate;
 use App\Models\EventRecord;
 use App\Models\Lead;
 use App\Models\Opportunity;
 use App\Models\OpportunityAppointment;
+use App\Models\PriceReferenceEntry;
 use App\Models\Quote;
 use App\Models\QuoteLineItem;
 use App\Models\User;
 use App\Services\AiAssistService;
 use App\Services\Crm\OpportunityStageTransitionService;
-use App\Services\DocumentContext\DocumentContextRegistry;
-use App\Services\ZenaBoqIntegrationService;
 use App\Services\DeliverablePdfExportService;
 use App\Services\DeliverableTemplateVersionService;
+use App\Services\DocumentContext\DocumentContextRegistry;
+use App\Services\QuoteLifecycleService;
+use App\Services\ZenaBoqIntegrationService;
+use App\Support\VietnameseMoneyWords;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Throwable;
 
@@ -225,7 +235,7 @@ class CrmPageController extends Controller
 
         $lead = Lead::query()->forTenant($tenantId)->whereKey($id)->first();
 
-        if (!$lead instanceof Lead) {
+        if (! $lead instanceof Lead) {
             return response()->json(['success' => false, 'message' => 'Lead not found'], 404);
         }
 
@@ -249,21 +259,21 @@ class CrmPageController extends Controller
      *
      * @return array{opportunity: array<string, mixed>, lead_origin: array<string, mixed>|null, appointments: list<array<string, mixed>>, quotes: list<array<string, mixed>>}
      */
-    public function buildOpportunitySummaryContext(\App\Models\Opportunity $opportunity): array
+    public function buildOpportunitySummaryContext(Opportunity $opportunity): array
     {
         $tenantId = (string) $opportunity->tenant_id;
 
-        $lead = \App\Models\Lead::query()
+        $lead = Lead::query()
             ->where('tenant_id', $tenantId)
             ->where('converted_opportunity_id', (string) $opportunity->id)
             ->first();
 
-        $appointments = \App\Models\OpportunityAppointment::query()
+        $appointments = OpportunityAppointment::query()
             ->where('tenant_id', $tenantId)
             ->where('opportunity_id', (string) $opportunity->id)
             ->orderBy('scheduled_at')
             ->get()
-            ->map(fn (\App\Models\OpportunityAppointment $a) => [
+            ->map(fn (OpportunityAppointment $a) => [
                 'type' => $a->type,
                 'scheduled_at' => $a->scheduled_at?->toDateTimeString(),
                 'status' => $a->status,
@@ -272,12 +282,12 @@ class CrmPageController extends Controller
             ->values()
             ->all();
 
-        $quotes = \App\Models\Quote::query()
+        $quotes = Quote::query()
             ->where('tenant_id', $tenantId)
             ->where('opportunity_id', (string) $opportunity->id)
             ->orderBy('created_at')
             ->get()
-            ->map(fn (\App\Models\Quote $q) => [
+            ->map(fn (Quote $q) => [
                 'quote_number' => $q->quote_number,
                 'revision_no' => $q->revision_no,
                 'status' => $q->status,
@@ -316,9 +326,9 @@ class CrmPageController extends Controller
     {
         $tenantId = (string) Auth::user()?->tenant_id;
 
-        $opportunity = \App\Models\Opportunity::query()->forTenant($tenantId)->whereKey($id)->first();
+        $opportunity = Opportunity::query()->forTenant($tenantId)->whereKey($id)->first();
 
-        if (!$opportunity instanceof \App\Models\Opportunity) {
+        if (! $opportunity instanceof Opportunity) {
             return response()->json(['success' => false, 'message' => 'Opportunity not found'], 404);
         }
 
@@ -406,7 +416,7 @@ class CrmPageController extends Controller
                 ->with('assignee:id,name')
                 ->orderByDesc('scheduled_at')
                 ->get(),
-            'events' => \App\Models\EventRecord::query()
+            'events' => EventRecord::query()
                 ->where('tenant_id', $tenantId)
                 ->where('aggregate_type', 'opportunity')
                 ->where('aggregate_id', $id)
@@ -418,11 +428,11 @@ class CrmPageController extends Controller
     }
 
     /**
-     * @return array{project_code: string, subtotal: ?float, vat_amount: ?float, total: ?float, status: ?string, calibration: ?string, synced_at: ?\Illuminate\Support\Carbon, is_stale: bool, external_url: ?string}|null
+     * @return array{project_code: string, subtotal: ?float, vat_amount: ?float, total: ?float, status: ?string, calibration: ?string, synced_at: ?Carbon, is_stale: bool, external_url: ?string}|null
      */
     private function buildBoqCardViewModel(Opportunity $opportunity): ?array
     {
-        if (!$opportunity->external_boq_project_code) {
+        if (! $opportunity->external_boq_project_code) {
             return null;
         }
 
@@ -452,19 +462,19 @@ class CrmPageController extends Controller
         $eligible = (string) $opportunity->pipeline_stage === Opportunity::STAGE_WON
             && ($snapshot['status'] ?? null) === 'ACCEPTED';
 
-        $existingContract = \App\Models\Contract::query()
+        $existingContract = Contract::query()
             ->where('tenant_id', (string) $opportunity->tenant_id)
             ->where('source_opportunity_id', $opportunity->id)
             ->first();
 
-        if (!$eligible && !$existingContract instanceof \App\Models\Contract) {
+        if (! $eligible && ! $existingContract instanceof Contract) {
             return null;
         }
 
         $hasDrift = false;
         $contractData = null;
 
-        if ($existingContract instanceof \App\Models\Contract) {
+        if ($existingContract instanceof Contract) {
             $hasDrift = $existingContract->source_quote_id !== $opportunity->external_quote_id
                 || $existingContract->source_quote_revision !== ($snapshot['revision'] ?? null);
 
@@ -496,6 +506,7 @@ class CrmPageController extends Controller
             if ($request->wantsJson()) {
                 throw $exception;
             }
+
             return back()->with('error', 'Không tìm thấy cơ hội bán hàng.');
         }
 
@@ -510,16 +521,19 @@ class CrmPageController extends Controller
             if ($request->wantsJson()) {
                 throw new AuthorizationException('Bạn không có quyền thực hiện thao tác này.');
             }
+
             return back()->with('error', 'Bạn không có quyền thực hiện thao tác này.');
-        } catch (\Illuminate\Validation\ValidationException $exception) {
+        } catch (ValidationException $exception) {
             if ($request->wantsJson()) {
                 throw $exception;
             }
+
             return back()->withErrors($exception->errors())->withInput();
         } catch (Throwable $exception) {
             if ($request->wantsJson()) {
                 throw $exception;
             }
+
             return back()->with('error', 'Không thể xử lý yêu cầu.');
         }
 
@@ -563,7 +577,7 @@ class CrmPageController extends Controller
         ]);
 
         try {
-            $response = $apiController->linkExternalBoqProject($this->buildApiRequest($request, $validated), $id, app(\App\Services\ZenaBoqIntegrationService::class));
+            $response = $apiController->linkExternalBoqProject($this->buildApiRequest($request, $validated), $id, app(ZenaBoqIntegrationService::class));
         } catch (AuthorizationException) {
             return back()->withInput()->with('error', 'Bạn không có quyền thực hiện thao tác này.');
         } catch (Throwable) {
@@ -576,7 +590,7 @@ class CrmPageController extends Controller
     public function syncBoqQuote(Request $request, string $id, ApiOpportunityController $apiController): RedirectResponse
     {
         try {
-            $response = $apiController->syncExternalQuote($this->buildApiRequest($request), $id, app(\App\Services\ZenaBoqIntegrationService::class));
+            $response = $apiController->syncExternalQuote($this->buildApiRequest($request), $id, app(ZenaBoqIntegrationService::class));
         } catch (AuthorizationException) {
             return back()->with('error', 'Bạn không có quyền thực hiện thao tác này.');
         } catch (Throwable) {
@@ -614,7 +628,7 @@ class CrmPageController extends Controller
 
         $this->authorize('view', $quote);
 
-        $quoteTemplates = \App\Models\DeliverableTemplate::query()
+        $quoteTemplates = DeliverableTemplate::query()
             ->where('tenant_id', $tenantId)
             ->where('context', 'quote')
             ->with('latestPublishedVersion')
@@ -634,7 +648,7 @@ class CrmPageController extends Controller
             ->whereKey($id)
             ->first();
 
-        if (!$opp instanceof Opportunity) {
+        if (! $opp instanceof Opportunity) {
             return back()->with('error', 'Không tìm thấy cơ hội.');
         }
 
@@ -660,7 +674,7 @@ class CrmPageController extends Controller
             ->findOrFail($id);
 
         $validated = $request->validate([
-            'type' => ['required', 'string', 'in:' . implode(',', OpportunityAppointment::VALID_TYPES)],
+            'type' => ['required', 'string', 'in:'.implode(',', OpportunityAppointment::VALID_TYPES)],
             'scheduled_at' => ['required', 'date', 'after:now'],
             'location' => ['nullable', 'string', 'max:255'],
             'assigned_to' => ['nullable', 'string'],
@@ -672,7 +686,7 @@ class CrmPageController extends Controller
                 ->whereKey($validated['assigned_to'])
                 ->exists();
 
-            if (!$assigneeExists) {
+            if (! $assigneeExists) {
                 return back()->withInput()->withErrors(['assigned_to' => 'Người phụ trách không hợp lệ.']);
             }
         }
@@ -718,7 +732,7 @@ class CrmPageController extends Controller
             ->where('tenant_id', $tenantId)
             ->findOrFail($id);
 
-        if (!OpportunityAppointment::canTransition($appointment->status, OpportunityAppointment::STATUS_COMPLETED)) {
+        if (! OpportunityAppointment::canTransition($appointment->status, OpportunityAppointment::STATUS_COMPLETED)) {
             return back()->with('error', 'Không thể chuyển trạng thái.');
         }
 
@@ -756,7 +770,7 @@ class CrmPageController extends Controller
             ->where('tenant_id', $tenantId)
             ->findOrFail($id);
 
-        if (!OpportunityAppointment::canTransition($appointment->status, OpportunityAppointment::STATUS_CANCELLED)) {
+        if (! OpportunityAppointment::canTransition($appointment->status, OpportunityAppointment::STATUS_CANCELLED)) {
             return back()->with('error', 'Không thể chuyển trạng thái.');
         }
 
@@ -794,7 +808,7 @@ class CrmPageController extends Controller
             ->where('tenant_id', $tenantId)
             ->findOrFail($id);
 
-        if (!OpportunityAppointment::canTransition($appointment->status, OpportunityAppointment::STATUS_RESCHEDULED)) {
+        if (! OpportunityAppointment::canTransition($appointment->status, OpportunityAppointment::STATUS_RESCHEDULED)) {
             return back()->with('error', 'Không thể chuyển trạng thái.');
         }
 
@@ -841,7 +855,7 @@ class CrmPageController extends Controller
             ->whereKey($id)
             ->first();
 
-        if (!$quote instanceof Quote) {
+        if (! $quote instanceof Quote) {
             return back()->with('error', 'Không tìm thấy báo giá.');
         }
 
@@ -857,7 +871,7 @@ class CrmPageController extends Controller
             'lines.*.unit_price' => ['required', 'numeric', 'min:0'],
             'lines.*.price_note' => ['nullable', 'string', 'max:500'],
             'lines.*.code' => ['nullable', 'string', 'max:50'],
-            'lines.*.benchmark_type' => ['nullable', 'string', \Illuminate\Validation\Rule::in(\App\Models\PriceReferenceEntry::VALID_BENCHMARK_TYPES)],
+            'lines.*.benchmark_type' => ['nullable', 'string', Rule::in(PriceReferenceEntry::VALID_BENCHMARK_TYPES)],
             'lines.*.evidence_note' => ['nullable', 'string', 'max:500'],
             'lines.*.evidence_date' => ['nullable', 'date', 'before_or_equal:today'],
         ]);
@@ -887,8 +901,8 @@ class CrmPageController extends Controller
                     'price_note' => $line['price_note'] ?? null,
                 ]);
 
-                if (!empty($line['benchmark_type']) && !empty($line['code'])) {
-                    \App\Models\PriceReferenceEntry::create([
+                if (! empty($line['benchmark_type']) && ! empty($line['code'])) {
+                    PriceReferenceEntry::create([
                         'tenant_id' => $tenantId,
                         'work_item_code' => $line['code'],
                         'work_item_name' => $line['name'],
@@ -919,9 +933,9 @@ class CrmPageController extends Controller
             return response()->json(['data' => null]);
         }
 
-        $entry = \App\Models\PriceReferenceEntry::latestFor($tenantId, $code, $unit);
+        $entry = PriceReferenceEntry::latestFor($tenantId, $code, $unit);
 
-        if (!$entry) {
+        if (! $entry) {
             return response()->json(['data' => null]);
         }
 
@@ -934,26 +948,26 @@ class CrmPageController extends Controller
         $code = (string) $request->query('code', '');
         $unit = (string) $request->query('unit', '');
 
-        $entries = \App\Models\PriceReferenceEntry::query()
+        $entries = PriceReferenceEntry::query()
             ->where('tenant_id', $tenantId)
             ->where('work_item_code', $code)
             ->where('unit', $unit)
             ->orderByDesc('evidenced_at')
             ->orderByDesc('created_at')
             ->get()
-            ->map(fn (\App\Models\PriceReferenceEntry $entry) => $this->serializePriceReferenceEntry($entry))
+            ->map(fn (PriceReferenceEntry $entry) => $this->serializePriceReferenceEntry($entry))
             ->values();
 
         return response()->json(['data' => $entries]);
     }
 
     /** @return array{unit_price: float, benchmark_type: string, benchmark_type_label: string, evidence_note: string|null, evidenced_at: string} */
-    private function serializePriceReferenceEntry(\App\Models\PriceReferenceEntry $entry): array
+    private function serializePriceReferenceEntry(PriceReferenceEntry $entry): array
     {
         return [
             'unit_price' => $entry->unit_price,
             'benchmark_type' => $entry->benchmark_type,
-            'benchmark_type_label' => \App\Models\PriceReferenceEntry::BENCHMARK_TYPE_LABELS[$entry->benchmark_type] ?? $entry->benchmark_type,
+            'benchmark_type_label' => PriceReferenceEntry::BENCHMARK_TYPE_LABELS[$entry->benchmark_type] ?? $entry->benchmark_type,
             'evidence_note' => $entry->evidence_note,
             'evidenced_at' => $entry->evidenced_at->format('Y-m-d'),
         ];
@@ -968,11 +982,11 @@ class CrmPageController extends Controller
             ->whereKey($id)
             ->first();
 
-        if (!$quote instanceof Quote) {
+        if (! $quote instanceof Quote) {
             return back()->with('error', 'Không tìm thấy báo giá.');
         }
 
-        if (!Quote::canTransition($quote->status, Quote::STATUS_SENT)) {
+        if (! Quote::canTransition($quote->status, Quote::STATUS_SENT)) {
             return back()->with('error', 'Không thể chuyển trạng thái.');
         }
 
@@ -981,7 +995,7 @@ class CrmPageController extends Controller
             ->where('tenant_id', $tenantId)
             ->exists();
 
-        if (!$hasLines) {
+        if (! $hasLines) {
             return back()->with('error', 'Cần ít nhất một dòng để gửi báo giá.');
         }
 
@@ -1019,20 +1033,20 @@ class CrmPageController extends Controller
             ->whereKey($id)
             ->first();
 
-        if (!$quote instanceof Quote) {
+        if (! $quote instanceof Quote) {
             return back()->with('error', 'Không tìm thấy báo giá.');
         }
 
-        if (!Quote::canTransition($quote->status, Quote::STATUS_ACCEPTED)) {
+        if (! Quote::canTransition($quote->status, Quote::STATUS_ACCEPTED)) {
             return back()->with('error', 'Không thể chuyển trạng thái.');
         }
 
         try {
-            app(\App\Services\QuoteLifecycleService::class)->accept($quote, [
+            app(QuoteLifecycleService::class)->accept($quote, [
                 'actor_user_id' => Auth::id() ? (string) Auth::id() : null,
                 'source' => 'operator',
             ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return back()->with('error', $e->getMessage());
         }
 
@@ -1048,20 +1062,20 @@ class CrmPageController extends Controller
             ->whereKey($id)
             ->first();
 
-        if (!$quote instanceof Quote) {
+        if (! $quote instanceof Quote) {
             return back()->with('error', 'Không tìm thấy báo giá.');
         }
 
-        if (!Quote::canTransition($quote->status, Quote::STATUS_REJECTED)) {
+        if (! Quote::canTransition($quote->status, Quote::STATUS_REJECTED)) {
             return back()->with('error', 'Không thể chuyển trạng thái.');
         }
 
         try {
-            app(\App\Services\QuoteLifecycleService::class)->reject($quote, [
+            app(QuoteLifecycleService::class)->reject($quote, [
                 'actor_user_id' => Auth::id() ? (string) Auth::id() : null,
                 'source' => 'operator',
             ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return back()->with('error', $e->getMessage());
         }
 
@@ -1077,7 +1091,7 @@ class CrmPageController extends Controller
             ->whereKey($id)
             ->first();
 
-        if (!$original instanceof Quote) {
+        if (! $original instanceof Quote) {
             return back()->with('error', 'Không tìm thấy báo giá.');
         }
 
@@ -1135,7 +1149,7 @@ class CrmPageController extends Controller
             ->whereKey($id)
             ->first();
 
-        if (!$quote instanceof Quote) {
+        if (! $quote instanceof Quote) {
             return back()->with('error', 'Không tìm thấy báo giá.');
         }
 
@@ -1167,7 +1181,7 @@ class CrmPageController extends Controller
             ->whereKey($id)
             ->first();
 
-        if (!$quote instanceof Quote) {
+        if (! $quote instanceof Quote) {
             abort(404);
         }
 
@@ -1180,27 +1194,27 @@ class CrmPageController extends Controller
             'lines' => $lines,
             'account' => $account,
             'opportunity' => $opportunity,
-            'amountInWords' => \App\Support\VietnameseMoneyWords::toWords((float) $quote->total),
+            'amountInWords' => VietnameseMoneyWords::toWords((float) $quote->total),
         ])->render();
 
         try {
             $pdfBytes = $pdfService->render($html);
-        } catch (\App\Exceptions\DeliverablePdfExportUnavailableException) {
+        } catch (DeliverablePdfExportUnavailableException) {
             return back()->with('error', 'Không thể tạo PDF báo giá vào lúc này.');
         }
 
-        $filename = 'bao-gia-' . $quote->quote_number . '.pdf';
+        $filename = 'bao-gia-'.$quote->quote_number.'.pdf';
 
         return response($pdfBytes, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="' . $filename . '"',
+            'Content-Disposition' => 'inline; filename="'.$filename.'"',
         ]);
     }
 
     public function renderQuoteDocument(string $id, string $template, DeliverableTemplateVersionService $versionService, DocumentContextRegistry $contextRegistry, DeliverablePdfExportService $pdfService): SymfonyResponse
     {
-        /** @var \App\Models\User $authUser */
-        $authUser = \Illuminate\Support\Facades\Auth::user();
+        /** @var User $authUser */
+        $authUser = Auth::user();
         $tenantId = (string) $authUser->tenant_id;
 
         /** @var Quote $quote */
@@ -1224,13 +1238,13 @@ class CrmPageController extends Controller
 
         try {
             $pdfBytes = $pdfService->render($rendered);
-        } catch (\App\Exceptions\DeliverablePdfExportUnavailableException) {
+        } catch (DeliverablePdfExportUnavailableException) {
             return back()->with('error', 'Không thể tạo PDF vào lúc này.');
         }
 
         return response($pdfBytes, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="bao-gia-' . Str::slug($tpl->name) . '-' . $quote->quote_number . '.pdf"',
+            'Content-Disposition' => 'inline; filename="bao-gia-'.Str::slug($tpl->name).'-'.$quote->quote_number.'.pdf"',
         ]);
     }
 }

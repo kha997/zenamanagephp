@@ -1,24 +1,27 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services\Crm;
 
 use App\Models\EventRecord;
 use App\Models\Opportunity;
 use App\Models\User;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 class OpportunityStageTransitionService
 {
     /**
-     * @throws \Illuminate\Auth\Access\AuthorizationException nếu $actor không có quyền update $opportunity
+     * @throws AuthorizationException nếu $actor không có quyền update $opportunity
      * @throws ValidationException nếu $toStage không hợp lệ, opportunity đã terminal, hoặc thiếu lost_reason khi chuyển sang lost
      */
     public function transition(User $actor, Opportunity $opportunity, string $toStage, ?string $lostReason): Opportunity
     {
         Gate::forUser($actor)->authorize('update', $opportunity);
 
-        if (!in_array($toStage, Opportunity::VALID_STAGES, true)) {
+        if (! in_array($toStage, Opportunity::VALID_STAGES, true)) {
             throw ValidationException::withMessages(['pipeline_stage' => ['Giai đoạn không hợp lệ.']]);
         }
 

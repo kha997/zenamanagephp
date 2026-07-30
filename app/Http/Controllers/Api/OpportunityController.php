@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
@@ -22,6 +24,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Opportunity — pipeline sale 14 stage (spec crm-zena).
@@ -127,7 +130,7 @@ class OpportunityController extends BaseApiController
 
     public function index(Request $request): JsonResponse
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return $this->unauthorized('Authentication required');
         }
 
@@ -163,7 +166,7 @@ class OpportunityController extends BaseApiController
 
     public function show(Request $request, string $id): JsonResponse
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return $this->unauthorized('Authentication required');
         }
 
@@ -174,7 +177,7 @@ class OpportunityController extends BaseApiController
 
         $opportunity = $this->scopedQuery($tenantId)->whereKey($id)->first();
 
-        if (!$opportunity instanceof Opportunity) {
+        if (! $opportunity instanceof Opportunity) {
             return $this->notFound('Opportunity not found');
         }
 
@@ -190,7 +193,7 @@ class OpportunityController extends BaseApiController
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return $this->unauthorized('Authentication required');
         }
 
@@ -239,7 +242,7 @@ class OpportunityController extends BaseApiController
 
     public function update(Request $request, string $id): JsonResponse
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return $this->unauthorized('Authentication required');
         }
 
@@ -250,7 +253,7 @@ class OpportunityController extends BaseApiController
 
         $opportunity = $this->scopedQuery($tenantId)->whereKey($id)->first();
 
-        if (!$opportunity instanceof Opportunity) {
+        if (! $opportunity instanceof Opportunity) {
             return $this->notFound('Opportunity not found');
         }
 
@@ -287,7 +290,7 @@ class OpportunityController extends BaseApiController
 
     public function updateStage(Request $request, string $id): JsonResponse
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return $this->unauthorized('Authentication required');
         }
 
@@ -298,7 +301,7 @@ class OpportunityController extends BaseApiController
 
         $opportunity = $this->scopedQuery($tenantId)->whereKey($id)->first();
 
-        if (!$opportunity instanceof Opportunity) {
+        if (! $opportunity instanceof Opportunity) {
             return $this->notFound('Opportunity not found');
         }
 
@@ -320,7 +323,7 @@ class OpportunityController extends BaseApiController
                 (string) $request->input('pipeline_stage'),
                 $request->input('lost_reason')
             );
-        } catch (\Illuminate\Validation\ValidationException $exception) {
+        } catch (ValidationException $exception) {
             return $this->validationError($exception->errors());
         }
 
@@ -337,7 +340,7 @@ class OpportunityController extends BaseApiController
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return $this->unauthorized('Authentication required');
         }
 
@@ -348,7 +351,7 @@ class OpportunityController extends BaseApiController
 
         $opportunity = $this->scopedQuery($tenantId)->whereKey($id)->first();
 
-        if (!$opportunity instanceof Opportunity) {
+        if (! $opportunity instanceof Opportunity) {
             return $this->notFound('Opportunity not found');
         }
 
@@ -380,7 +383,7 @@ class OpportunityController extends BaseApiController
             $project = Project::query()->create([
                 'tenant_id' => $tenantId,
                 'name' => (string) $request->input('project_name', $opportunity->opportunity_name),
-                'code' => 'PRJ-' . Str::upper(Str::random(8)),
+                'code' => 'PRJ-'.Str::upper(Str::random(8)),
                 'description' => $opportunity->service_scope_summary,
                 'status' => 'planning',
                 'progress' => 0,
@@ -420,7 +423,7 @@ class OpportunityController extends BaseApiController
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return $this->unauthorized('Authentication required');
         }
 
@@ -431,7 +434,7 @@ class OpportunityController extends BaseApiController
 
         $opportunity = $this->scopedQuery($tenantId)->whereKey($id)->first();
 
-        if (!$opportunity instanceof Opportunity) {
+        if (! $opportunity instanceof Opportunity) {
             return $this->notFound('Opportunity not found');
         }
 
@@ -466,7 +469,7 @@ class OpportunityController extends BaseApiController
         $hasExternalAccepted = ($snapshot['status'] ?? null) === 'ACCEPTED';
         $hasNativeAccepted = $nativeQuote instanceof Quote;
 
-        if (!$hasNativeAccepted && !$hasExternalAccepted) {
+        if (! $hasNativeAccepted && ! $hasExternalAccepted) {
             return $this->validationError([
                 'quote' => ['Either a native accepted quote or an accepted external quote is required to generate a contract.'],
             ]);
@@ -474,14 +477,14 @@ class OpportunityController extends BaseApiController
 
         $projectId = $opportunity->converted_project_id;
 
-        if (!$projectId) {
+        if (! $projectId) {
             $this->authorize('convert', $opportunity);
 
             $project = DB::transaction(function () use ($opportunity, $user, $tenantId): Project {
                 $project = Project::query()->create([
                     'tenant_id' => $tenantId,
                     'name' => (string) $opportunity->opportunity_name,
-                    'code' => 'PRJ-' . Str::upper(Str::random(8)),
+                    'code' => 'PRJ-'.Str::upper(Str::random(8)),
                     'description' => $opportunity->service_scope_summary,
                     'status' => 'planning',
                     'progress' => 0,
@@ -520,7 +523,7 @@ class OpportunityController extends BaseApiController
                 'source_quote_id' => $hasNativeAccepted ? (string) $nativeQuote->id : ($opportunity->external_quote_id ?? null),
                 'source_quote_revision' => $hasNativeAccepted ? $nativeQuote->revision_no : ($snapshot['revision'] ?? null),
                 'code' => $this->generateContractCode(),
-                'title' => 'Hợp đồng dịch vụ - ' . $clientName,
+                'title' => 'Hợp đồng dịch vụ - '.$clientName,
                 'client_name' => $clientName,
                 'total_value' => $hasNativeAccepted ? (float) ($nativeQuote->total ?: $nativeQuote->subtotal) : (float) ($snapshot['total'] ?? 0),
                 'currency' => 'VND',
@@ -533,7 +536,7 @@ class OpportunityController extends BaseApiController
                     'tenant_id' => $tenantId,
                     'project_id' => $projectId,
                     'contract_id' => (string) $contract->id,
-                    'code' => 'BOQ-' . $contract->code,
+                    'code' => 'BOQ-'.$contract->code,
                     'name' => $clientName,
                 ]);
 
@@ -578,18 +581,18 @@ class OpportunityController extends BaseApiController
     private function generateContractCode(): string
     {
         for ($attempt = 0; $attempt < 5; $attempt++) {
-            $candidate = 'CTR-' . Str::upper(Str::random(8));
-            if (!Contract::query()->where('code', $candidate)->exists()) {
+            $candidate = 'CTR-'.Str::upper(Str::random(8));
+            if (! Contract::query()->where('code', $candidate)->exists()) {
                 return $candidate;
             }
         }
 
-        return 'CTR-' . Str::upper((string) Str::ulid());
+        return 'CTR-'.Str::upper((string) Str::ulid());
     }
 
     public function linkExternalBoqProject(Request $request, string $id, ZenaBoqIntegrationService $boqService): JsonResponse
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return $this->unauthorized('Authentication required');
         }
 
@@ -598,13 +601,13 @@ class OpportunityController extends BaseApiController
             return $this->errorResponse('Tenant context missing', 400);
         }
 
-        if (!$boqService->isTenantAuthorized($tenantId)) {
+        if (! $boqService->isTenantAuthorized($tenantId)) {
             return $this->forbidden('This tenant is not authorized for the zena-boq-core integration');
         }
 
         $opportunity = $this->scopedQuery($tenantId)->whereKey($id)->first();
 
-        if (!$opportunity instanceof Opportunity) {
+        if (! $opportunity instanceof Opportunity) {
             return $this->notFound('Opportunity not found');
         }
 
@@ -629,7 +632,7 @@ class OpportunityController extends BaseApiController
 
     public function syncExternalQuote(Request $request, string $id, ZenaBoqIntegrationService $boqService): JsonResponse
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return $this->unauthorized('Authentication required');
         }
 
@@ -638,19 +641,19 @@ class OpportunityController extends BaseApiController
             return $this->errorResponse('Tenant context missing', 400);
         }
 
-        if (!$boqService->isTenantAuthorized($tenantId)) {
+        if (! $boqService->isTenantAuthorized($tenantId)) {
             return $this->forbidden('This tenant is not authorized for the zena-boq-core integration');
         }
 
         $opportunity = $this->scopedQuery($tenantId)->whereKey($id)->first();
 
-        if (!$opportunity instanceof Opportunity) {
+        if (! $opportunity instanceof Opportunity) {
             return $this->notFound('Opportunity not found');
         }
 
         $this->authorize('update', $opportunity);
 
-        if (!$opportunity->external_boq_project_code) {
+        if (! $opportunity->external_boq_project_code) {
             return $this->validationError([
                 'external_boq_project_code' => ['Link this opportunity to a zena-boq-core project before syncing.'],
             ]);

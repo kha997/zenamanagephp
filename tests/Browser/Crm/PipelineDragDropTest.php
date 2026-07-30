@@ -216,4 +216,109 @@ class PipelineDragDropTest extends DuskTestCase
                 );
         });
     }
+
+    public function test_normal_group_click_sends_request_and_blocks_duplicate(): void
+    {
+        $opportunity = $this->makeOpportunity();
+
+        $this->browse(function (Browser $browser) use ($opportunity) {
+            $browser->loginAs($this->user)
+                ->visit('/operator/crm')
+                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn', 10)
+                ->script([
+                    "window.__pendingCount = 0;"
+                    . "window.fetch = function() { window.__pendingCount++; return new Promise(function(){}); };",
+                ])
+                ->click('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn')
+                ->waitFor('[data-crm-stage-dialog][open]', 10)
+                ->click('[data-crm-stage-dialog] .crm-dialog-group-option[data-group="consulting_survey"]')
+                ->pause(300)
+                ->assertAttribute('[data-opportunity-id="' . $opportunity->id . '"]', 'aria-busy', 'true');
+
+            $pendingAfterClick = $browser->script('return window.__pendingCount;')[0];
+            $this->assertSame(1, $pendingAfterClick);
+
+            // Nút transition đã bị disable bởi setCardPending — không còn cách nào double-submit
+            // qua UI. Đợi thêm rồi xác nhận __pendingCount không tự tăng thêm lần nào nữa.
+            $browser->pause(500);
+            $pendingAfterWait = $browser->script('return window.__pendingCount;')[0];
+            $this->assertSame(1, $pendingAfterWait);
+
+            $browser->assertScript(
+                "return document.querySelector('[data-opportunity-id=\"{$opportunity->id}\"] .crm-stage-transition-btn').disabled;",
+                true
+            );
+        });
+    }
+
+    public function test_error_403_response_shows_toast_clears_pending_and_keeps_card(): void
+    {
+        $opportunity = $this->makeOpportunity();
+
+        $this->browse(function (Browser $browser) use ($opportunity) {
+            $browser->loginAs($this->user)
+                ->visit('/operator/crm')
+                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn', 10)
+                ->script([
+                    "window.fetch = function() { return Promise.resolve(new Response(JSON.stringify({message: 'Bạn không có quyền thực hiện thao tác này.'}), {status: 403})); };",
+                ])
+                ->click('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn')
+                ->waitFor('[data-crm-stage-dialog][open]', 10)
+                ->click('[data-crm-stage-dialog] .crm-dialog-group-option[data-group="consulting_survey"]')
+                ->waitForText('Bạn không có quyền thực hiện thao tác này.', 10)
+                ->assertAttribute('[data-opportunity-id="' . $opportunity->id . '"]', 'aria-busy', 'false')
+                ->assertPresent('[data-board-group="new"] [data-opportunity-id="' . $opportunity->id . '"]');
+        });
+
+        $opportunity->refresh();
+        $this->assertSame(Opportunity::STAGE_NEW_LEAD, $opportunity->pipeline_stage);
+    }
+
+    public function test_error_500_response_shows_generic_toast_and_clears_pending(): void
+    {
+        $opportunity = $this->makeOpportunity();
+
+        $this->browse(function (Browser $browser) use ($opportunity) {
+            $browser->loginAs($this->user)
+                ->visit('/operator/crm')
+                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn', 10)
+                ->script([
+                    "window.fetch = function() { return Promise.resolve(new Response('Internal Server Error', {status: 500})); };",
+                ])
+                ->click('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn')
+                ->waitFor('[data-crm-stage-dialog][open]', 10)
+                ->click('[data-crm-stage-dialog] .crm-dialog-group-option[data-group="consulting_survey"]')
+                ->waitForText('Có lỗi xảy ra, vui lòng thử lại.', 10)
+                ->assertAttribute('[data-opportunity-id="' . $opportunity->id . '"]', 'aria-busy', 'false')
+                ->assertPresent('[data-board-group="new"] [data-opportunity-id="' . $opportunity->id . '"]');
+        });
+
+        $opportunity->refresh();
+        $this->assertSame(Opportunity::STAGE_NEW_LEAD, $opportunity->pipeline_stage);
+    }
+
+    public function test_successful_submit_clears_pending_state(): void
+    {
+        // Backend thật (đã nối xong từ Task 4) — chỉ xác nhận pending được gỡ,
+        // CHƯA xác nhận card di chuyển cột (đó là Task 10/slice 4, chưa tồn tại).
+        $opportunity = $this->makeOpportunity();
+
+        $this->browse(function (Browser $browser) use ($opportunity) {
+            $browser->loginAs($this->user)
+                ->visit('/operator/crm')
+                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn', 10)
+                ->click('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn')
+                ->waitFor('[data-crm-stage-dialog][open]', 10)
+                ->click('[data-crm-stage-dialog] .crm-dialog-group-option[data-group="consulting_survey"]')
+                ->pause(500);
+
+            $ariaBusy = $browser->script(
+                "return document.querySelector('[data-opportunity-id=\"{$opportunity->id}\"]').getAttribute('aria-busy');"
+            )[0];
+            $this->assertSame('false', $ariaBusy);
+        });
+
+        $opportunity->refresh();
+        $this->assertSame(Opportunity::STAGE_BRIEF_DISCOVERY, $opportunity->pipeline_stage); // backend ĐÃ đổi thật
+    }
 }

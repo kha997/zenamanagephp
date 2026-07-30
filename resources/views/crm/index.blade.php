@@ -15,10 +15,10 @@
     </x-ui.page-header>
 
     <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        @foreach ($board as $label => $column)
+        @foreach ($board as $groupKey => $column)
             <x-ui.card>
                 <div class="mb-3 flex items-center justify-between">
-                    <span class="font-semibold text-slate-900">{{ $label }}</span>
+                    <span class="font-semibold text-slate-900">{{ $column['label'] }}</span>
                     <span class="text-sm text-slate-500">{{ $column['count'] }} · {{ number_format($column['total_fee'], 0, ',', '.') }}₫</span>
                 </div>
 

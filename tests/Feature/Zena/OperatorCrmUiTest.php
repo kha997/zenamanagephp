@@ -104,6 +104,21 @@ class OperatorCrmUiTest extends TestCase
         $this->assertNotNull($opportunity->converted_project_id);
     }
 
+    public function test_crm_index_renders_all_six_board_group_labels(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $this->actingAs($this->user)
+            ->get(route('operator.crm.index'), $headers)
+            ->assertOk()
+            ->assertSee('Mới')
+            ->assertSee('Tư vấn / Khảo sát')
+            ->assertSee('Báo giá')
+            ->assertSee('Đàm phán / Hợp đồng')
+            ->assertSee('Thắng')
+            ->assertSee('Thua / Nurture');
+    }
+
     public function test_lead_conversion_accepts_custom_scope_summary(): void
     {
         $headers = ['X-Tenant-ID' => (string) $this->tenant->id];

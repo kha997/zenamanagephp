@@ -37,14 +37,48 @@ class CrmPageController extends Controller
 {
     use DelegatesToApiControllers;
 
-    /** Nhóm 14 stage thành cột hiển thị board. */
+    /**
+     * Nhóm 14 stage thành cột hiển thị board. Key là định danh ổn định dùng
+     * trong data-board-group / JS — KHÔNG đổi key này, chỉ 'label' mới là
+     * chuỗi hiển thị được phép đổi.
+     */
     private const BOARD_GROUPS = [
-        'Mới' => [Opportunity::STAGE_NEW_LEAD, Opportunity::STAGE_QUALIFIED, Opportunity::STAGE_CONTACTED],
-        'Tư vấn / Khảo sát' => [Opportunity::STAGE_BRIEF_DISCOVERY, Opportunity::STAGE_SURVEY_OR_INPUTS_RECEIVED, Opportunity::STAGE_SCOPE_DEFINED],
-        'Báo giá' => [Opportunity::STAGE_PROPOSAL_DRAFT, Opportunity::STAGE_PROPOSAL_SENT],
-        'Đàm phán / Hợp đồng' => [Opportunity::STAGE_NEGOTIATION, Opportunity::STAGE_CONTRACTING],
-        'Thắng' => [Opportunity::STAGE_WON],
-        'Thua / Nurture' => [Opportunity::STAGE_LOST, Opportunity::STAGE_NO_BID, Opportunity::STAGE_NURTURE],
+        'new' => [
+            'label' => 'Mới',
+            'stages' => [Opportunity::STAGE_NEW_LEAD, Opportunity::STAGE_QUALIFIED, Opportunity::STAGE_CONTACTED],
+            'default_entry_stage' => Opportunity::STAGE_NEW_LEAD,
+        ],
+        'consulting_survey' => [
+            'label' => 'Tư vấn / Khảo sát',
+            'stages' => [Opportunity::STAGE_BRIEF_DISCOVERY, Opportunity::STAGE_SURVEY_OR_INPUTS_RECEIVED, Opportunity::STAGE_SCOPE_DEFINED],
+            'default_entry_stage' => Opportunity::STAGE_BRIEF_DISCOVERY,
+        ],
+        'quote' => [
+            'label' => 'Báo giá',
+            'stages' => [Opportunity::STAGE_PROPOSAL_DRAFT, Opportunity::STAGE_PROPOSAL_SENT],
+            'default_entry_stage' => Opportunity::STAGE_PROPOSAL_DRAFT,
+        ],
+        'negotiation_contract' => [
+            'label' => 'Đàm phán / Hợp đồng',
+            'stages' => [Opportunity::STAGE_NEGOTIATION, Opportunity::STAGE_CONTRACTING],
+            'default_entry_stage' => Opportunity::STAGE_NEGOTIATION,
+        ],
+        'won' => [
+            'label' => 'Thắng',
+            'stages' => [Opportunity::STAGE_WON],
+            'default_entry_stage' => Opportunity::STAGE_WON,
+        ],
+        'lost_nurture' => [
+            'label' => 'Thua / Nurture',
+            'stages' => [Opportunity::STAGE_LOST, Opportunity::STAGE_NO_BID, Opportunity::STAGE_NURTURE],
+            'default_entry_stage' => null,
+            'requires_choice' => true,
+            'choice_options' => [
+                ['stage' => Opportunity::STAGE_LOST, 'label' => 'Thua', 'requires_reason' => true, 'terminal' => true],
+                ['stage' => Opportunity::STAGE_NO_BID, 'label' => 'Không tham gia', 'requires_reason' => false, 'terminal' => true],
+                ['stage' => Opportunity::STAGE_NURTURE, 'label' => 'Nuôi dưỡng', 'requires_reason' => false, 'terminal' => false],
+            ],
+        ],
     ];
 
     private function tenantId(): string
@@ -70,12 +104,16 @@ class CrmPageController extends Controller
             ->get();
 
         $board = [];
-        foreach (self::BOARD_GROUPS as $label => $stages) {
-            $items = $opportunities->whereIn('pipeline_stage', $stages)->values();
-            $board[$label] = [
+        foreach (self::BOARD_GROUPS as $groupKey => $group) {
+            $items = $opportunities->whereIn('pipeline_stage', $group['stages'])->values();
+            $board[$groupKey] = [
+                'label' => $group['label'],
                 'items' => $items,
                 'count' => $items->count(),
                 'total_fee' => (float) $items->sum('estimated_fee'),
+                'default_entry_stage' => $group['default_entry_stage'],
+                'requires_choice' => $group['requires_choice'] ?? false,
+                'choice_options' => $group['choice_options'] ?? null,
             ];
         }
 

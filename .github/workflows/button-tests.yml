@@ -481,7 +481,7 @@ jobs:
         set +e
         for attempt in 1 2; do
           echo "== Dusk attempt ${attempt}/2 =="
-          php artisan dusk tests/Browser/Projects/ --env=testing --without-tty --stop-on-failure
+          php artisan dusk tests/Browser/Projects/ tests/Browser/Crm/ --env=testing --without-tty --stop-on-failure
           code=$?
           if [ "$code" -eq 0 ]; then
             exit 0

@@ -10,8 +10,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * Opportunity — trung tâm pipeline sale (spec crm-zena: 14 stage).
  *
+ * @property string $id
+ * @property string $tenant_id
  * @property string $opportunity_name
+ * @property string $pipeline_stage
+ * @property string|null $lost_reason
+ * @property string|null $forecast_category
+ * @property string|null $converted_project_id
  * @property-read Account|null $account
+ * @method static \Illuminate\Database\Eloquent\Builder<static> forTenant(string $tenantId)
  */
 class Opportunity extends Model
 {

@@ -510,9 +510,12 @@ class CrmPageController extends Controller
             return back()->with('error', 'Không tìm thấy cơ hội bán hàng.');
         }
 
+        /** @var User $authUser */
+        $authUser = Auth::user();
+
         try {
             $opportunity = app(OpportunityStageTransitionService::class)->transition(
-                Auth::user(),
+                $authUser,
                 $opportunity,
                 (string) $validated['pipeline_stage'],
                 $validated['lost_reason'] ?? null

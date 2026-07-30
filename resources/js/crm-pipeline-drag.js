@@ -313,10 +313,76 @@
         });
     }
 
+    var draggedCard = null;
+
+    function clearAllDragover() {
+        document.querySelectorAll('[data-board-group][data-dragover]').forEach(function (el) {
+            el.removeAttribute('data-dragover');
+        });
+    }
+
+    function initDragDrop() {
+        document.querySelectorAll('.crm-drag-handle').forEach(function (handle) {
+            handle.addEventListener('dragstart', function (event) {
+                var card = event.currentTarget.closest('[data-opportunity-id]');
+                if (card.getAttribute('aria-busy') === 'true') {
+                    event.preventDefault();
+                    return;
+                }
+                draggedCard = card;
+                if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+            });
+
+            handle.addEventListener('dragend', function () {
+                draggedCard = null;
+                clearAllDragover();
+            });
+        });
+
+        document.querySelectorAll('[data-board-group]').forEach(function (columnEl) {
+            columnEl.addEventListener('dragenter', function (event) {
+                event.preventDefault();
+                if (draggedCard) {
+                    var sourceGroupKey = draggedCard.closest('[data-board-group]').dataset.boardGroup;
+                    if (columnEl.dataset.boardGroup === sourceGroupKey) return; // không highlight cột nguồn
+                }
+                columnEl.setAttribute('data-dragover', '1');
+            });
+
+            columnEl.addEventListener('dragover', function (event) {
+                event.preventDefault(); // bắt buộc để drop bắn được
+            });
+
+            columnEl.addEventListener('dragleave', function (event) {
+                // chỉ clear khi con trỏ THỰC SỰ rời cột (relatedTarget không còn nằm trong columnEl)
+                if (event.relatedTarget && columnEl.contains(event.relatedTarget)) return;
+                columnEl.removeAttribute('data-dragover');
+            });
+
+            columnEl.addEventListener('drop', function (event) {
+                event.preventDefault();
+                columnEl.removeAttribute('data-dragover');
+                if (!draggedCard) return;
+
+                var sourceGroupKey = draggedCard.closest('[data-board-group]').dataset.boardGroup;
+                var targetGroupKey = columnEl.dataset.boardGroup;
+                var card = draggedCard;
+                draggedCard = null;
+
+                if (sourceGroupKey === targetGroupKey) {
+                    return; // no-op tuyệt đối — không gọi API, không đổi DOM
+                }
+
+                requestStageTransition(card, targetGroupKey);
+            });
+        });
+    }
+
     function initializePipelineDragDrop() {
         if (!document.querySelector('[data-board-group]')) return; // không phải trang crm.index
         initStageDialog();
         initClickFallback();
+        initDragDrop();
     }
 
     if (document.readyState === 'loading') {

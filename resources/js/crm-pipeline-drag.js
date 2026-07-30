@@ -84,6 +84,78 @@
         };
     }
 
+    function csrfToken() {
+        var meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? meta.getAttribute('content') : '';
+    }
+
+    function postJson(url, body) {
+        return fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken(),
+                'X-Requested-With': 'XMLHttpRequest',
+                Accept: 'application/json',
+            },
+            body: JSON.stringify(body),
+        });
+    }
+
+    function postStageUpdate(opportunityId, toStage, reason) {
+        var url = '/crm/opportunities/' + encodeURIComponent(opportunityId) + '/stage';
+        var body = { pipeline_stage: toStage };
+        if (reason) body.lost_reason = reason;
+        return postJson(url, body);
+    }
+
+    function parseErrorResponse(response) {
+        if (!response) {
+            return Promise.resolve({ userMessage: 'Có lỗi xảy ra, vui lòng thử lại.' });
+        }
+        if (response.status === 401) {
+            return Promise.resolve({ userMessage: 'Phiên đăng nhập không còn hợp lệ, vui lòng đăng nhập lại.' });
+        }
+        if (response.status === 403) {
+            return Promise.resolve({ userMessage: 'Bạn không có quyền thực hiện thao tác này.' });
+        }
+        if (response.status === 419) {
+            return Promise.resolve({ userMessage: 'Phiên làm việc đã hết hạn, vui lòng tải lại trang.', reload: true });
+        }
+        return response.json()
+            .then(function (body) {
+                if (response.status === 422) {
+                    var firstFieldError = body && body.errors && Object.values(body.errors)[0];
+                    var firstMessage = Array.isArray(firstFieldError) ? firstFieldError[0] : null;
+                    return { userMessage: firstMessage || (body && body.message) || 'Dữ liệu không hợp lệ.' };
+                }
+                return { userMessage: (body && body.message) || 'Có lỗi xảy ra, vui lòng thử lại.' };
+            })
+            .catch(function () {
+                return { userMessage: response.status >= 500
+                    ? 'Có lỗi xảy ra, vui lòng thử lại.'
+                    : 'Có lỗi xảy ra, vui lòng thử lại (mã lỗi ' + response.status + ').' };
+            });
+    }
+
+    function showToast(message, options) {
+        var el = document.createElement('div');
+        el.className = 'fixed bottom-4 right-4 z-50 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800 shadow-lg';
+        el.textContent = message;
+        if (options && options.reload) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = 'Tải lại trang';
+            btn.className = 'ml-3 underline';
+            btn.addEventListener('click', function () { window.location.reload(); });
+            el.appendChild(btn);
+        }
+        document.body.appendChild(el);
+        if (!(options && options.reload)) {
+            setTimeout(function () { el.remove(); }, 5000);
+        }
+    }
+
     function setCardPending(card, pending) {
         card.setAttribute('aria-busy', pending ? 'true' : 'false');
         var handle = card.querySelector('.crm-drag-handle');
@@ -102,9 +174,25 @@
         if (dialog.open) dialog.close();
         activeDialogContext = null;
         setCardPending(card, true);
-        // Task 9 (slice 3) thay toàn bộ phần dưới đây: gọi postStageUpdate(), xử lý
-        // thành công (Task 10 gắn commitCardTransition) / lỗi qua parseErrorResponse()
-        // + showToast(). Ở slice này CHƯA gọi mạng — card sẽ pending vĩnh viễn, đúng ý.
+
+        return postStageUpdate(card.dataset.opportunityId, toStage, reason)
+            .then(function (response) {
+                if (response.ok) {
+                    // Task 10 (slice 4) thay dòng dưới bằng commitCardTransition(card, targetGroupKey, body.data)
+                    setCardPending(card, false);
+                    return;
+                }
+                return parseErrorResponse(response).then(function (error) {
+                    setCardPending(card, false);
+                    showToast(error.userMessage, error);
+                });
+            })
+            .catch(function () {
+                return parseErrorResponse(null).then(function (error) {
+                    setCardPending(card, false);
+                    showToast(error.userMessage, error);
+                });
+            });
     }
 
     function requestStageTransition(card, targetGroupKey) {

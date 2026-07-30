@@ -76,7 +76,7 @@ class PipelineDragDropTest extends DuskTestCase
 
         $this->browse(function (Browser $browser) use ($opportunity) {
             $browser->loginAs($this->user)
-                ->visit('/app/crm')
+                ->visit('/operator/crm')
                 ->waitFor('[data-board-group="new"]', 10)
                 ->assertSee('Pipeline kinh doanh')
                 ->assertPresent('[data-opportunity-id="' . $opportunity->id . '"]')
@@ -92,7 +92,7 @@ class PipelineDragDropTest extends DuskTestCase
 
         $this->browse(function (Browser $browser) use ($opportunity) {
             $browser->loginAs($this->user)
-                ->visit('/app/crm')
+                ->visit('/operator/crm')
                 ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn', 10)
                 ->click('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn')
                 ->waitFor('[data-crm-stage-dialog][open]', 10)
@@ -114,7 +114,7 @@ class PipelineDragDropTest extends DuskTestCase
 
         $this->browse(function (Browser $browser) use ($opportunity) {
             $browser->loginAs($this->user)
-                ->visit('/app/crm')
+                ->visit('/operator/crm')
                 ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn', 10)
                 ->click('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn')
                 ->waitFor('[data-crm-stage-dialog][open]', 10)

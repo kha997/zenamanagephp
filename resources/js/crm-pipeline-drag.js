@@ -169,6 +169,64 @@
         }
     }
 
+    function formatVnd(amount) {
+        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(amount);
+    }
+
+    function recalculateColumnSummary(columnEl) {
+        var cards = columnEl.querySelectorAll('[data-opportunity-id]');
+        var total = 0;
+        cards.forEach(function (card) { total += parseInt(card.dataset.amount, 10) || 0; });
+        var countEl = columnEl.querySelector('[data-column-count]');
+        var totalEl = columnEl.querySelector('[data-column-total]');
+        if (countEl) countEl.textContent = String(cards.length);
+        if (totalEl) totalEl.textContent = formatVnd(total);
+        var emptyEl = columnEl.querySelector('[data-column-empty]');
+        if (emptyEl) emptyEl.classList.toggle('hidden', cards.length > 0);
+    }
+
+    function stageLabelFor(groupKey) {
+        var groupEl = document.querySelector('[data-board-group="' + groupKey + '"]');
+        return groupEl ? groupEl.dataset.columnLabel : groupKey;
+    }
+
+    function commitCardTransition(card, targetGroupKey, responseData) {
+        var sourceGroupEl = card.closest('[data-board-group]');
+        var targetGroupEl = document.querySelector('[data-board-group="' + targetGroupKey + '"]');
+        var targetList = targetGroupEl.querySelector('ul');
+
+        if (!targetList) {
+            targetList = document.createElement('ul');
+            targetList.className = 'space-y-2';
+            targetGroupEl.appendChild(targetList);
+        }
+
+        // 1. vị trí card
+        targetList.appendChild(card);
+
+        // 2. data-current-stage
+        card.dataset.currentStage = responseData.pipeline_stage;
+
+        // 3. stage badge hiển thị (nếu card có phần tử badge riêng)
+        var badgeEl = card.querySelector('[data-stage-badge]');
+        if (badgeEl) badgeEl.textContent = stageLabelFor(targetGroupKey);
+
+        // 4 + 5 + 6. data-terminal + xóa drag handle + nút "Chuyển giai đoạn" nếu terminal
+        card.dataset.terminal = responseData.is_terminal ? '1' : '0';
+        if (responseData.is_terminal) {
+            var handle = card.querySelector('.crm-drag-handle');
+            if (handle) handle.remove();
+            var transitionBtn = card.querySelector('.crm-stage-transition-btn');
+            if (transitionBtn) transitionBtn.remove();
+        }
+
+        // 7 + 8. count và tổng estimated_fee của cột nguồn và cột đích
+        if (sourceGroupEl) recalculateColumnSummary(sourceGroupEl);
+        recalculateColumnSummary(targetGroupEl);
+
+        setCardPending(card, false);
+    }
+
     function submitStageTransition(card, targetGroupKey, toStage, reason) {
         var dialog = document.querySelector('[data-crm-stage-dialog]');
         if (dialog.open) dialog.close();
@@ -178,9 +236,9 @@
         return postStageUpdate(card.dataset.opportunityId, toStage, reason)
             .then(function (response) {
                 if (response.ok) {
-                    // Task 10 (slice 4) thay dòng dưới bằng commitCardTransition(card, targetGroupKey, body.data)
-                    setCardPending(card, false);
-                    return;
+                    return response.json().then(function (body) {
+                        commitCardTransition(card, targetGroupKey, body.data);
+                    });
                 }
                 return parseErrorResponse(response).then(function (error) {
                     setCardPending(card, false);

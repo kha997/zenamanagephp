@@ -91,6 +91,32 @@ class OpportunityAppointmentLifecycleTest extends TestCase
             ->count());
     }
 
+    public function test_store_creates_scheduled_appointments_for_site_visit_and_meeting(): void
+    {
+        $tenant = Tenant::factory()->create();
+        ['user' => $user, 'opportunity' => $opportunity] = $this->makeOpportunity($tenant);
+        $assignee = $this->createTenantUser($tenant, ['name' => 'Host'], ['sales'], ['crm.view', 'crm.manage']);
+
+        $this->actingAs($user);
+
+        foreach ([OpportunityAppointment::TYPE_SITE_VISIT, OpportunityAppointment::TYPE_MEETING] as $index => $type) {
+            $response = $this->post(route('operator.crm.opportunities.appointments.store', $opportunity->id), [
+                'type' => $type,
+                'scheduled_at' => Carbon::now()->addDays($index + 1)->format('Y-m-d H:i:s'),
+                'location' => $type === OpportunityAppointment::TYPE_SITE_VISIT ? 'Công trình ABC' : 'Phòng họp A',
+                'assigned_to' => (string) $assignee->id,
+            ]);
+
+            $response->assertRedirect();
+            $response->assertSessionHas('success');
+        }
+
+        $this->assertSame(2, OpportunityAppointment::query()
+            ->where('opportunity_id', (string) $opportunity->id)
+            ->where('status', OpportunityAppointment::STATUS_SCHEDULED)
+            ->count());
+    }
+
     public function test_complete_requires_outcome_notes(): void
     {
         $tenant = Tenant::factory()->create();
@@ -281,6 +307,12 @@ class OpportunityAppointmentLifecycleTest extends TestCase
             'assigned_to' => (string) $assignee->id,
         ]);
 
+        $siteVisit = $this->makeAppointment($tenant, $opportunity, $user, OpportunityAppointment::STATUS_SCHEDULED, [
+            'type' => OpportunityAppointment::TYPE_SITE_VISIT,
+            'scheduled_at' => Carbon::now()->addDays(3),
+            'assigned_to' => (string) $assignee->id,
+        ]);
+
         $response = $this->actingAs($user)
             ->get(route('operator.crm.opportunities.show', $opportunity->id));
 
@@ -290,6 +322,8 @@ class OpportunityAppointmentLifecycleTest extends TestCase
         $response->assertSeeText('Khảo sát');
         $response->assertDontSee('>consultation<', false);
         $response->assertDontSee('>survey<', false);
+        $response->assertSeeText('Tham quan');
+        $response->assertDontSee('>site_visit<', false);
         $response->assertSeeText('Hoàn thành');
         $response->assertSeeText('Hủy');
         $response->assertSeeText('Dời lịch');

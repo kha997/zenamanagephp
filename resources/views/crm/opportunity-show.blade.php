@@ -14,6 +14,8 @@
     $appointmentTypeLabels = [
         'consultation' => 'Tư vấn',
         'survey' => 'Khảo sát',
+        'site_visit' => 'Tham quan',
+        'meeting' => 'Họp',
     ];
     $appointmentStatusMeta = [
         'scheduled' => ['label' => 'Đã đặt lịch', 'classes' => 'bg-amber-100 text-amber-800'],

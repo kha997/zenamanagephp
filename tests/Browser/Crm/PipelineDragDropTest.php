@@ -336,4 +336,82 @@ class PipelineDragDropTest extends DuskTestCase
         $opportunity->refresh();
         $this->assertSame(Opportunity::STAGE_BRIEF_DISCOVERY, $opportunity->pipeline_stage); // backend ĐÃ đổi thật
     }
+
+    public function test_successful_submit_moves_card_and_updates_column_aggregates(): void
+    {
+        $opportunityToMove = $this->makeOpportunity(['estimated_fee' => 1000000000]);
+        $otherInSourceColumn = $this->makeOpportunity(['estimated_fee' => 500000000]);
+
+        $this->browse(function (Browser $browser) use ($opportunityToMove, $otherInSourceColumn) {
+            $browser->loginAs($this->user)
+                ->visit('/operator/crm')
+                ->waitFor('[data-opportunity-id="' . $opportunityToMove->id . '"] .crm-stage-transition-btn', 10)
+                ->click('[data-opportunity-id="' . $opportunityToMove->id . '"] .crm-stage-transition-btn')
+                ->waitFor('[data-crm-stage-dialog][open]', 10)
+                ->click('[data-crm-stage-dialog] .crm-dialog-group-option[data-group="consulting_survey"]')
+                ->waitFor('[data-board-group="consulting_survey"] [data-opportunity-id="' . $opportunityToMove->id . '"]', 10)
+                ->assertMissing('[data-board-group="new"] [data-opportunity-id="' . $opportunityToMove->id . '"]')
+                ->assertScript(
+                    "return document.querySelector('[data-opportunity-id=\"{$opportunityToMove->id}\"]').dataset.currentStage;",
+                    Opportunity::STAGE_BRIEF_DISCOVERY
+                )
+                ->assertScript(
+                    "return document.querySelector('[data-board-group=\"new\"] [data-column-count]').textContent.trim();",
+                    '1' // chỉ còn $otherInSourceColumn
+                )
+                ->assertScript(
+                    "return document.querySelector('[data-board-group=\"consulting_survey\"] [data-column-count]').textContent.trim();",
+                    '1'
+                );
+        });
+    }
+
+    public function test_terminal_response_removes_handle_and_transition_button(): void
+    {
+        $opportunity = $this->makeOpportunity();
+
+        $this->browse(function (Browser $browser) use ($opportunity) {
+            $browser->loginAs($this->user)
+                ->visit('/operator/crm')
+                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn', 10)
+                ->click('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn')
+                ->waitFor('[data-crm-stage-dialog][open]', 10)
+                ->click('[data-crm-stage-dialog] .crm-dialog-group-option[data-group="lost_nurture"]')
+                ->waitFor('[data-dialog-choice-picker] input[value="lost"]', 10)
+                ->click('[data-dialog-choice-picker] input[value="lost"]')
+                ->type('[data-dialog-reason]', 'Khách chọn đối thủ khác')
+                ->click('[data-dialog-confirm]')
+                ->waitFor('[data-board-group="lost_nurture"] [data-opportunity-id="' . $opportunity->id . '"]', 10)
+                ->assertMissing('[data-opportunity-id="' . $opportunity->id . '"] .crm-drag-handle')
+                ->assertMissing('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn');
+        });
+
+        $opportunity->refresh();
+        $this->assertSame(Opportunity::STAGE_LOST, $opportunity->pipeline_stage);
+        $this->assertSame('Khách chọn đối thủ khác', $opportunity->lost_reason);
+    }
+
+    public function test_nurture_response_keeps_handle_and_transition_button(): void
+    {
+        $opportunity = $this->makeOpportunity();
+
+        $this->browse(function (Browser $browser) use ($opportunity) {
+            $browser->loginAs($this->user)
+                ->visit('/operator/crm')
+                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn', 10)
+                ->click('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn')
+                ->waitFor('[data-crm-stage-dialog][open]', 10)
+                ->click('[data-crm-stage-dialog] .crm-dialog-group-option[data-group="lost_nurture"]')
+                ->waitFor('[data-dialog-choice-picker] input[value="nurture"]', 10)
+                ->click('[data-dialog-choice-picker] input[value="nurture"]')
+                ->click('[data-dialog-confirm]')
+                ->waitFor('[data-board-group="lost_nurture"] [data-opportunity-id="' . $opportunity->id . '"]', 10)
+                ->assertPresent('[data-opportunity-id="' . $opportunity->id . '"] .crm-drag-handle')
+                ->assertPresent('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn');
+        });
+
+        $opportunity->refresh();
+        $this->assertSame(Opportunity::STAGE_NURTURE, $opportunity->pipeline_stage);
+        $this->assertFalse($opportunity->isTerminal());
+    }
 }

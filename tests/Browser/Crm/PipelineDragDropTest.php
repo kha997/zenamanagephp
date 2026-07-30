@@ -85,4 +85,45 @@ class PipelineDragDropTest extends DuskTestCase
                 ->assertPresent('[data-crm-stage-dialog]');
         });
     }
+
+    public function test_click_transition_opens_dialog_with_group_picker_excluding_current_group(): void
+    {
+        $opportunity = $this->makeOpportunity(); // stage mặc định new_lead → group 'new'
+
+        $this->browse(function (Browser $browser) use ($opportunity) {
+            $browser->loginAs($this->user)
+                ->visit('/app/crm')
+                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn', 10)
+                ->click('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn')
+                ->waitFor('[data-crm-stage-dialog][open]', 10)
+                ->assertVisible('[data-crm-stage-dialog] .crm-dialog-group-option[data-group="consulting_survey"]')
+                ->assertVisible('[data-crm-stage-dialog] .crm-dialog-group-option[data-group="quote"]')
+                ->assertVisible('[data-crm-stage-dialog] .crm-dialog-group-option[data-group="negotiation_contract"]')
+                ->assertVisible('[data-crm-stage-dialog] .crm-dialog-group-option[data-group="won"]')
+                ->assertVisible('[data-crm-stage-dialog] .crm-dialog-group-option[data-group="lost_nurture"]')
+                ->assertScript(
+                    "return document.querySelector('[data-crm-stage-dialog] .crm-dialog-group-option[data-group=\"new\"]').classList.contains('hidden');",
+                    true
+                );
+        });
+    }
+
+    public function test_cancel_dialog_closes_without_changing_card(): void
+    {
+        $opportunity = $this->makeOpportunity();
+
+        $this->browse(function (Browser $browser) use ($opportunity) {
+            $browser->loginAs($this->user)
+                ->visit('/app/crm')
+                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn', 10)
+                ->click('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn')
+                ->waitFor('[data-crm-stage-dialog][open]', 10)
+                ->click('[data-dialog-cancel]')
+                ->waitUntilMissing('[data-crm-stage-dialog][open]', 10)
+                ->assertPresent('[data-board-group="new"] [data-opportunity-id="' . $opportunity->id . '"]');
+        });
+
+        $opportunity->refresh();
+        $this->assertSame(Opportunity::STAGE_NEW_LEAD, $opportunity->pipeline_stage);
+    }
 }

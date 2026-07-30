@@ -246,6 +246,127 @@ class OperatorCrmUiTest extends TestCase
         $this->assertSame(Opportunity::STAGE_WON, $opportunity->pipeline_stage);
     }
 
+    public function test_crm_index_renders_drag_drop_dom_contract(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+        $account = \App\Models\Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'display_name' => 'Khách hàng contract test',
+        ]);
+        $normalOpportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Cơ hội thường',
+            'pipeline_stage' => Opportunity::STAGE_NEW_LEAD,
+            'estimated_fee' => 1250000000,
+            'sales_owner_id' => (string) $this->user->id,
+            'created_by' => (string) $this->user->id,
+        ]);
+        $terminalOpportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Cơ hội đã thắng',
+            'pipeline_stage' => Opportunity::STAGE_WON,
+            'estimated_fee' => 500000000,
+            'sales_owner_id' => (string) $this->user->id,
+            'created_by' => (string) $this->user->id,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->get(route('operator.crm.index'), $headers);
+
+        $response->assertOk();
+        $html = $response->getContent();
+
+        // Card thường: đủ data attribute, có handle + nút chuyển giai đoạn
+        $this->assertStringContainsString('data-opportunity-id="' . $normalOpportunity->id . '"', $html);
+        $this->assertStringContainsString('data-current-stage="' . Opportunity::STAGE_NEW_LEAD . '"', $html);
+        $this->assertStringContainsString('data-terminal="0"', $html);
+        $this->assertStringContainsString('data-amount="1250000000"', $html);
+        $this->assertStringContainsString('crm-drag-handle', $html);
+        $this->assertStringContainsString('crm-stage-transition-btn', $html);
+
+        // Card terminal: data-terminal=1, KHÔNG có handle/nút trong phạm vi thẻ đó
+        $this->assertStringContainsString('data-opportunity-id="' . $terminalOpportunity->id . '"', $html);
+        $this->assertStringContainsString('data-terminal="1"', $html);
+
+        // Cột dùng stable key, không phải label
+        $this->assertStringContainsString('data-board-group="new"', $html);
+        $this->assertStringContainsString('data-board-group="lost_nurture"', $html);
+        $this->assertStringContainsString('data-default-entry-stage="' . Opportunity::STAGE_NEW_LEAD . '"', $html);
+        $this->assertStringContainsString('data-requires-choice="1"', $html);
+        $this->assertStringContainsString('data-choice-options="', $html);
+
+        // Dialog dùng chung
+        $this->assertStringContainsString('data-crm-stage-dialog', $html);
+        $this->assertStringContainsString('crm-dialog-group-option', $html);
+    }
+
+    public function test_crm_index_terminal_card_has_no_drag_handle_or_transition_button(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+        $account = \App\Models\Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'display_name' => 'Khách hàng terminal-only test',
+        ]);
+        $terminalOpportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Cơ hội đã thua',
+            'pipeline_stage' => Opportunity::STAGE_LOST,
+            'lost_reason' => 'Test',
+            'sales_owner_id' => (string) $this->user->id,
+            'created_by' => (string) $this->user->id,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->get(route('operator.crm.index'), $headers);
+
+        $html = $response->getContent();
+        $cardStart = strpos($html, 'data-opportunity-id="' . $terminalOpportunity->id . '"');
+        $this->assertNotFalse($cardStart);
+
+        // Cắt riêng đoạn HTML của thẻ này (đến </li> gần nhất) để không lẫn với thẻ khác
+        $liEnd = strpos($html, '</li>', $cardStart);
+        $cardHtml = substr($html, $cardStart, $liEnd - $cardStart);
+
+        $this->assertStringNotContainsString('crm-drag-handle', $cardHtml);
+        $this->assertStringNotContainsString('crm-stage-transition-btn', $cardHtml);
+    }
+
+    public function test_crm_index_hides_drag_handle_and_transition_button_for_view_only_user(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+        $viewer = $this->createTenantUser($this->tenant, [], ['crm_viewer'], ['crm.view']);
+        $account = \App\Models\Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'display_name' => 'Khách hàng view-only test',
+        ]);
+        $opportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Cơ hội view-only',
+            'pipeline_stage' => Opportunity::STAGE_NEW_LEAD, // KHÔNG terminal — chỉ permission là lý do ẩn
+            'sales_owner_id' => (string) $viewer->id,
+            'created_by' => (string) $viewer->id,
+        ]);
+
+        $response = $this->actingAs($viewer)
+            ->get(route('operator.crm.index'), $headers);
+
+        $html = $response->getContent();
+        $cardStart = strpos($html, 'data-opportunity-id="' . $opportunity->id . '"');
+        $this->assertNotFalse($cardStart);
+
+        $liEnd = strpos($html, '</li>', $cardStart);
+        $cardHtml = substr($html, $cardStart, $liEnd - $cardStart);
+
+        $this->assertStringContainsString('data-terminal="0"', $cardHtml); // xác nhận rõ: KHÔNG terminal
+        $this->assertStringNotContainsString('crm-drag-handle', $cardHtml);
+        $this->assertStringNotContainsString('draggable="true"', $cardHtml);
+        $this->assertStringNotContainsString('crm-stage-transition-btn', $cardHtml);
+    }
+
     public function test_update_stage_non_json_returns_friendly_redirect_when_opportunity_not_found(): void
     {
         $headers = ['X-Tenant-ID' => (string) $this->tenant->id];

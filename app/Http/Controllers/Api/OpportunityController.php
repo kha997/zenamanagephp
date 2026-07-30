@@ -11,6 +11,7 @@ use App\Models\Opportunity;
 use App\Models\Project;
 use App\Models\Quote;
 use App\Models\QuoteLineItem;
+use App\Services\Crm\OpportunityStageTransitionService;
 use App\Services\ZenaBoqIntegrationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -304,43 +305,27 @@ class OpportunityController extends BaseApiController
         $this->authorize('update', $opportunity);
 
         $validator = Validator::make($request->all(), [
-            'pipeline_stage' => ['required', Rule::in(Opportunity::VALID_STAGES)],
-            'lost_reason' => [
-                'required_if:pipeline_stage,' . Opportunity::STAGE_LOST,
-                'nullable', 'string', 'max:500',
-            ],
+            'pipeline_stage' => ['required', 'string'],
+            'lost_reason' => ['nullable', 'string', 'max:500'],
         ]);
 
         if ($validator->fails()) {
             return $this->validationError($validator->errors());
         }
 
-        if ($opportunity->isTerminal()) {
-            return $this->validationError([
-                'pipeline_stage' => ['Won/lost/no-bid opportunities can no longer change stage.'],
-            ]);
+        try {
+            $opportunity = app(OpportunityStageTransitionService::class)->transition(
+                $request->user(),
+                $opportunity,
+                (string) $request->input('pipeline_stage'),
+                $request->input('lost_reason')
+            );
+        } catch (\Illuminate\Validation\ValidationException $exception) {
+            return $this->validationError($exception->errors());
         }
-
-        $from = (string) $opportunity->pipeline_stage;
-        $to = (string) $request->input('pipeline_stage');
-
-        $opportunity->pipeline_stage = $to;
-        $opportunity->lost_reason = $to === Opportunity::STAGE_LOST
-            ? (string) $request->input('lost_reason')
-            : null;
-
-        if ($to === Opportunity::STAGE_WON) {
-            $opportunity->forecast_category = 'closed_won';
-        } elseif (in_array($to, [Opportunity::STAGE_LOST, Opportunity::STAGE_NO_BID], true)) {
-            $opportunity->forecast_category = 'closed_lost';
-        }
-
-        $opportunity->save();
-
-        $this->recordEvent($opportunity, 'crm.opportunity.stage_changed', ['from' => $from, 'to' => $to]);
 
         return $this->zenaSuccessResponse(
-            $this->serialize($opportunity->fresh() ?? $opportunity),
+            $this->serialize($opportunity),
             'Opportunity stage updated successfully'
         );
     }

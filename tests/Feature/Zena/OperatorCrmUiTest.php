@@ -35,6 +35,26 @@ class OperatorCrmUiTest extends TestCase
         );
     }
 
+    /**
+     * Header set for postJson() calls against CSRF-protected 'web' routes.
+     *
+     * TestCase::ensureCsrfToken() deliberately skips auto-injecting a token
+     * when the request declares an application/json Accept header (JSON API
+     * calls are normally CSRF-exempt via routes/api.php's `except` list).
+     * This route lives under the 'web' middleware group though, where
+     * VerifyCsrfToken::runningUnitTests() is hard-disabled — so JSON POSTs
+     * here still need an explicit token. We pin one via withSession().
+     */
+    private function jsonCsrfHeaders(): array
+    {
+        $this->withSession(['_token' => 'test-csrf-token']);
+
+        return [
+            'X-Tenant-ID' => (string) $this->tenant->id,
+            'X-CSRF-TOKEN' => 'test-csrf-token',
+        ];
+    }
+
     public function test_crm_ui_full_flow_lead_to_project(): void
     {
         $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
@@ -117,6 +137,113 @@ class OperatorCrmUiTest extends TestCase
             ->assertSee('Đàm phán / Hợp đồng')
             ->assertSee('Thắng')
             ->assertSee('Thua / Nurture');
+    }
+
+    public function test_update_stage_returns_json_shape_when_ajax(): void
+    {
+        $headers = $this->jsonCsrfHeaders();
+        $account = \App\Models\Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'display_name' => 'Khách hàng AJAX test',
+        ]);
+        $opportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Cơ hội AJAX test',
+            'pipeline_stage' => Opportunity::STAGE_NEW_LEAD,
+            'sales_owner_id' => (string) $this->user->id,
+            'created_by' => (string) $this->user->id,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->postJson(route('operator.crm.opportunities.stage', $opportunity->id), [
+                'pipeline_stage' => Opportunity::STAGE_QUALIFIED,
+            ], $headers);
+
+        $response->assertOk();
+        $response->assertJson([
+            'message' => 'Đã cập nhật giai đoạn.',
+            'data' => [
+                'id' => (string) $opportunity->id,
+                'pipeline_stage' => Opportunity::STAGE_QUALIFIED,
+                'is_terminal' => false,
+            ],
+        ]);
+        $this->assertArrayNotHasKey('success', $response->json());
+        $this->assertArrayNotHasKey('status', $response->json());
+    }
+
+    public function test_update_stage_json_returns_403_when_permission_missing(): void
+    {
+        $headers = $this->jsonCsrfHeaders();
+        $viewer = $this->createTenantUser($this->tenant, [], ['crm_viewer'], ['crm.view']);
+        $account = \App\Models\Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'display_name' => 'Khách hàng 403 test',
+        ]);
+        $opportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Cơ hội 403 test',
+            'pipeline_stage' => Opportunity::STAGE_NEW_LEAD,
+            'sales_owner_id' => (string) $viewer->id,
+            'created_by' => (string) $viewer->id,
+        ]);
+
+        $this->actingAs($viewer)
+            ->postJson(route('operator.crm.opportunities.stage', $opportunity->id), [
+                'pipeline_stage' => Opportunity::STAGE_QUALIFIED,
+            ], $headers)
+            ->assertStatus(403);
+    }
+
+    public function test_update_stage_json_returns_422_when_lost_reason_missing(): void
+    {
+        $headers = $this->jsonCsrfHeaders();
+        $account = \App\Models\Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'display_name' => 'Khách hàng 422 test',
+        ]);
+        $opportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Cơ hội 422 test',
+            'pipeline_stage' => Opportunity::STAGE_NEW_LEAD,
+            'sales_owner_id' => (string) $this->user->id,
+            'created_by' => (string) $this->user->id,
+        ]);
+
+        $this->actingAs($this->user)
+            ->postJson(route('operator.crm.opportunities.stage', $opportunity->id), [
+                'pipeline_stage' => Opportunity::STAGE_LOST,
+            ], $headers)
+            ->assertStatus(422);
+    }
+
+    public function test_update_stage_json_blocks_terminal_transition(): void
+    {
+        $headers = $this->jsonCsrfHeaders();
+        $account = \App\Models\Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'display_name' => 'Khách hàng terminal test',
+        ]);
+        $opportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Cơ hội terminal test',
+            'pipeline_stage' => Opportunity::STAGE_WON,
+            'sales_owner_id' => (string) $this->user->id,
+            'created_by' => (string) $this->user->id,
+        ]);
+
+        $this->actingAs($this->user)
+            ->postJson(route('operator.crm.opportunities.stage', $opportunity->id), [
+                'pipeline_stage' => Opportunity::STAGE_QUALIFIED,
+            ], $headers)
+            ->assertStatus(422);
+
+        $opportunity->refresh();
+        $this->assertSame(Opportunity::STAGE_WON, $opportunity->pipeline_stage);
     }
 
     public function test_lead_conversion_accepts_custom_scope_summary(): void

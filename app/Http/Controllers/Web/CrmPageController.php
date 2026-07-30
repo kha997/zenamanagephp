@@ -17,6 +17,7 @@ use App\Models\Quote;
 use App\Models\QuoteLineItem;
 use App\Models\User;
 use App\Services\AiAssistService;
+use App\Services\Crm\OpportunityStageTransitionService;
 use App\Services\DocumentContext\DocumentContextRegistry;
 use App\Services\ZenaBoqIntegrationService;
 use App\Services\DeliverablePdfExportService;
@@ -479,22 +480,47 @@ class CrmPageController extends Controller
         ];
     }
 
-    public function updateStage(Request $request, string $id, ApiOpportunityController $apiController): RedirectResponse
+    public function updateStage(Request $request, string $id): RedirectResponse|JsonResponse
     {
         $validated = $request->validate([
             'pipeline_stage' => ['required', 'string'],
             'lost_reason' => ['nullable', 'string', 'max:500'],
         ]);
 
+        $tenantId = $this->tenantId();
+        $opportunity = Opportunity::query()->forTenant($tenantId)->findOrFail($id);
+
         try {
-            $response = $apiController->updateStage($this->buildApiRequest($request, array_filter($validated, fn ($value) => $value !== null)), $id);
+            $opportunity = app(OpportunityStageTransitionService::class)->transition(
+                Auth::user(),
+                $opportunity,
+                (string) $validated['pipeline_stage'],
+                $validated['lost_reason'] ?? null
+            );
         } catch (AuthorizationException) {
+            if ($request->wantsJson()) {
+                throw new AuthorizationException('Bạn không có quyền thực hiện thao tác này.');
+            }
             return back()->with('error', 'Bạn không có quyền thực hiện thao tác này.');
-        } catch (Throwable) {
-            return back()->with('error', 'Không thể xử lý yêu cầu.');
+        } catch (\Illuminate\Validation\ValidationException $exception) {
+            if ($request->wantsJson()) {
+                throw $exception;
+            }
+            return back()->withErrors($exception->errors())->withInput();
         }
 
-        return $this->handleMutationResponse($response, url()->previous(), 'Đã chuyển giai đoạn');
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => 'Đã cập nhật giai đoạn.',
+                'data' => [
+                    'id' => $opportunity->id,
+                    'pipeline_stage' => $opportunity->pipeline_stage,
+                    'is_terminal' => $opportunity->isTerminal(),
+                ],
+            ], 200);
+        }
+
+        return back()->with('success', 'Đã chuyển giai đoạn');
     }
 
     public function convertOpportunity(Request $request, string $id, ApiOpportunityController $apiController): RedirectResponse

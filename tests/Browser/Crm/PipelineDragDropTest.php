@@ -130,10 +130,15 @@ class PipelineDragDropTest extends DuskTestCase
     public function test_selecting_normal_group_closes_dialog_and_sets_pending(): void
     {
         // Group KHÔNG requires_choice (vd. consulting_survey): chọn xong là submit ngay
-        // (1-bước) — không cần bước "Xác nhận" riêng như group requires_choice. Slice này
-        // submitStageTransition() còn là stub (chỉ đóng dialog + đặt pending, CHƯA gọi
-        // mạng thật) nên card sẽ pending vĩnh viễn trong phạm vi test này — đúng như kỳ
-        // vọng của slice 2, Task 9 mới hoàn thiện phần gọi mạng.
+        // (1-bước) — không cần bước "Xác nhận" riêng như group requires_choice.
+        //
+        // Kể từ Task 9, submitStageTransition() gọi mạng thật (không còn là stub của
+        // slice 2). Request tới backend thật (đã nối xong từ Task 4) hoàn tất nhanh
+        // trong môi trường test nên card không còn pending vĩnh viễn — dialog đóng ngay
+        // (submitStageTransition đóng dialog trước khi gọi mạng) và aria-busy trở về
+        // 'false' sau khi request thành công. Bài test này giờ xác nhận dialog đóng +
+        // request thật sự hoàn tất, không còn xác nhận "pending vĩnh viễn" (đó là đặc
+        // điểm của stub cũ, không phải hành vi mục tiêu).
         $opportunity = $this->makeOpportunity();
 
         $this->browse(function (Browser $browser) use ($opportunity) {
@@ -144,8 +149,12 @@ class PipelineDragDropTest extends DuskTestCase
                 ->waitFor('[data-crm-stage-dialog][open]', 10)
                 ->click('[data-crm-stage-dialog] .crm-dialog-group-option[data-group="consulting_survey"]')
                 ->waitUntilMissing('[data-crm-stage-dialog][open]', 10)
-                ->assertAttribute('[data-opportunity-id="' . $opportunity->id . '"]', 'aria-busy', 'true');
+                ->pause(500)
+                ->assertAttribute('[data-opportunity-id="' . $opportunity->id . '"]', 'aria-busy', 'false');
         });
+
+        $opportunity->refresh();
+        $this->assertSame(Opportunity::STAGE_BRIEF_DISCOVERY, $opportunity->pipeline_stage);
     }
 
     public function test_selecting_lost_nurture_group_shows_three_choice_options(): void

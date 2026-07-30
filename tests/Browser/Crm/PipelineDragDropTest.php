@@ -126,4 +126,94 @@ class PipelineDragDropTest extends DuskTestCase
         $opportunity->refresh();
         $this->assertSame(Opportunity::STAGE_NEW_LEAD, $opportunity->pipeline_stage);
     }
+
+    public function test_selecting_normal_group_closes_dialog_and_sets_pending(): void
+    {
+        // Group KHÔNG requires_choice (vd. consulting_survey): chọn xong là submit ngay
+        // (1-bước) — không cần bước "Xác nhận" riêng như group requires_choice. Slice này
+        // submitStageTransition() còn là stub (chỉ đóng dialog + đặt pending, CHƯA gọi
+        // mạng thật) nên card sẽ pending vĩnh viễn trong phạm vi test này — đúng như kỳ
+        // vọng của slice 2, Task 9 mới hoàn thiện phần gọi mạng.
+        $opportunity = $this->makeOpportunity();
+
+        $this->browse(function (Browser $browser) use ($opportunity) {
+            $browser->loginAs($this->user)
+                ->visit('/operator/crm')
+                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn', 10)
+                ->click('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn')
+                ->waitFor('[data-crm-stage-dialog][open]', 10)
+                ->click('[data-crm-stage-dialog] .crm-dialog-group-option[data-group="consulting_survey"]')
+                ->waitUntilMissing('[data-crm-stage-dialog][open]', 10)
+                ->assertAttribute('[data-opportunity-id="' . $opportunity->id . '"]', 'aria-busy', 'true');
+        });
+    }
+
+    public function test_selecting_lost_nurture_group_shows_three_choice_options(): void
+    {
+        $opportunity = $this->makeOpportunity();
+
+        $this->browse(function (Browser $browser) use ($opportunity) {
+            $browser->loginAs($this->user)
+                ->visit('/operator/crm')
+                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn', 10)
+                ->click('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn')
+                ->waitFor('[data-crm-stage-dialog][open]', 10)
+                ->click('[data-crm-stage-dialog] .crm-dialog-group-option[data-group="lost_nurture"]')
+                ->waitFor('[data-dialog-choice-picker] input[value="lost"]', 10)
+                ->assertPresent('[data-dialog-choice-picker] input[value="no_bid"]')
+                ->assertPresent('[data-dialog-choice-picker] input[value="nurture"]')
+                // preselect: bước group-picker bị ẩn đi khi đã vào bước choice_options
+                ->assertScript(
+                    "return document.querySelector('[data-dialog-group-picker]').classList.contains('hidden');",
+                    true
+                )
+                // dialog vẫn đang mở (không đóng lại khi chuyển bước)
+                ->assertScript("return document.querySelector('[data-crm-stage-dialog]').open;", true);
+        });
+    }
+
+    public function test_choosing_lost_requires_reason_before_confirm_enables(): void
+    {
+        $opportunity = $this->makeOpportunity();
+
+        $this->browse(function (Browser $browser) use ($opportunity) {
+            $browser->loginAs($this->user)
+                ->visit('/operator/crm')
+                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn', 10)
+                ->click('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn')
+                ->waitFor('[data-crm-stage-dialog][open]', 10)
+                ->click('[data-crm-stage-dialog] .crm-dialog-group-option[data-group="lost_nurture"]')
+                ->waitFor('[data-dialog-choice-picker] input[value="lost"]', 10)
+                ->click('[data-dialog-choice-picker] input[value="lost"]')
+                ->assertScript(
+                    "return document.querySelector('[data-dialog-confirm]').disabled;",
+                    true
+                )
+                ->type('[data-dialog-reason]', 'Khách chọn đối thủ khác')
+                ->assertScript(
+                    "return document.querySelector('[data-dialog-confirm]').disabled;",
+                    false
+                );
+        });
+    }
+
+    public function test_choosing_no_bid_does_not_require_reason(): void
+    {
+        $opportunity = $this->makeOpportunity();
+
+        $this->browse(function (Browser $browser) use ($opportunity) {
+            $browser->loginAs($this->user)
+                ->visit('/operator/crm')
+                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn', 10)
+                ->click('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn')
+                ->waitFor('[data-crm-stage-dialog][open]', 10)
+                ->click('[data-crm-stage-dialog] .crm-dialog-group-option[data-group="lost_nurture"]')
+                ->waitFor('[data-dialog-choice-picker] input[value="no_bid"]', 10)
+                ->click('[data-dialog-choice-picker] input[value="no_bid"]')
+                ->assertScript(
+                    "return document.querySelector('[data-dialog-confirm]').disabled;",
+                    false
+                );
+        });
+    }
 }

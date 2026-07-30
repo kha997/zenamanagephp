@@ -414,4 +414,131 @@ class PipelineDragDropTest extends DuskTestCase
         $this->assertSame(Opportunity::STAGE_NURTURE, $opportunity->pipeline_stage);
         $this->assertFalse($opportunity->isTerminal());
     }
+
+    public function test_dragover_sets_and_clears_data_dragover_through_full_lifecycle(): void
+    {
+        $opportunity = $this->makeOpportunity();
+
+        $this->browse(function (Browser $browser) use ($opportunity) {
+            $browser->loginAs($this->user)
+                ->visit('/operator/crm')
+                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-drag-handle', 10);
+
+            // dragenter cột khác cột nguồn → data-dragover="1"
+            $browser->script([
+                "document.querySelector('[data-board-group=\"consulting_survey\"]').dispatchEvent(new Event('dragenter', {bubbles: true, cancelable: true}));",
+            ]);
+            $browser->assertScript(
+                "return document.querySelector('[data-board-group=\"consulting_survey\"]').getAttribute('data-dragover');",
+                '1'
+            );
+
+            // dragleave thật sự rời cột → clear
+            $browser->script([
+                "document.querySelector('[data-board-group=\"consulting_survey\"]').dispatchEvent(new Event('dragleave', {bubbles: true, cancelable: true}));",
+            ]);
+            $browser->assertScript(
+                "return document.querySelector('[data-board-group=\"consulting_survey\"]').getAttribute('data-dragover');",
+                null
+            );
+
+            // dragenter lại rồi drop → clear
+            $browser->script([
+                "document.querySelector('[data-board-group=\"consulting_survey\"]').dispatchEvent(new Event('dragenter', {bubbles: true, cancelable: true}));"
+                . "document.querySelector('[data-board-group=\"consulting_survey\"]').dispatchEvent(new Event('drop', {bubbles: true, cancelable: true}));",
+            ]);
+            $browser->assertScript(
+                "return document.querySelector('[data-board-group=\"consulting_survey\"]').getAttribute('data-dragover');",
+                null
+            );
+
+            // dragenter nhiều cột rồi dragend (thả ngoài board) → clear TOÀN BỘ cột, không riêng 1 cột
+            $browser->script([
+                "document.querySelector('[data-board-group=\"quote\"]').dispatchEvent(new Event('dragenter', {bubbles: true, cancelable: true}));"
+                . "document.querySelector('[data-board-group=\"won\"]').dispatchEvent(new Event('dragenter', {bubbles: true, cancelable: true}));"
+                . "document.querySelector('.crm-drag-handle').dispatchEvent(new Event('dragend', {bubbles: true, cancelable: true}));",
+            ]);
+            $browser->assertScript(
+                "return document.querySelector('[data-board-group=\"quote\"]').getAttribute('data-dragover');",
+                null
+            );
+            $browser->assertScript(
+                "return document.querySelector('[data-board-group=\"won\"]').getAttribute('data-dragover');",
+                null
+            );
+        });
+    }
+
+    public function test_drop_on_different_column_triggers_stage_transition(): void
+    {
+        $opportunity = $this->makeOpportunity();
+
+        $this->browse(function (Browser $browser) use ($opportunity) {
+            $browser->loginAs($this->user)
+                ->visit('/operator/crm')
+                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-drag-handle', 10)
+                ->script([
+                    "var handle = document.querySelector('[data-opportunity-id=\"{$opportunity->id}\"] .crm-drag-handle');"
+                    . "var dt = new DataTransfer();"
+                    . "handle.dispatchEvent(new DragEvent('dragstart', {bubbles: true, cancelable: true, dataTransfer: dt}));"
+                    . "var target = document.querySelector('[data-board-group=\"consulting_survey\"]');"
+                    . "target.dispatchEvent(new DragEvent('drop', {bubbles: true, cancelable: true, dataTransfer: dt}));",
+                ])
+                ->waitFor('[data-board-group="consulting_survey"] [data-opportunity-id="' . $opportunity->id . '"]', 10);
+        });
+
+        $opportunity->refresh();
+        $this->assertSame(Opportunity::STAGE_BRIEF_DISCOVERY, $opportunity->pipeline_stage);
+    }
+
+    public function test_drop_into_lost_nurture_column_opens_dialog_preselected(): void
+    {
+        $opportunity = $this->makeOpportunity();
+
+        $this->browse(function (Browser $browser) use ($opportunity) {
+            $browser->loginAs($this->user)
+                ->visit('/operator/crm')
+                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-drag-handle', 10)
+                ->script([
+                    "var handle = document.querySelector('[data-opportunity-id=\"{$opportunity->id}\"] .crm-drag-handle');"
+                    . "var dt = new DataTransfer();"
+                    . "handle.dispatchEvent(new DragEvent('dragstart', {bubbles: true, cancelable: true, dataTransfer: dt}));"
+                    . "var target = document.querySelector('[data-board-group=\"lost_nurture\"]');"
+                    . "target.dispatchEvent(new DragEvent('drop', {bubbles: true, cancelable: true, dataTransfer: dt}));",
+                ])
+                ->waitFor('[data-crm-stage-dialog][open]', 10)
+                ->assertVisible('[data-dialog-choice-picker] input[value="lost"]')
+                ->assertScript(
+                    "return document.querySelector('[data-dialog-group-picker]').classList.contains('hidden');",
+                    true
+                );
+        });
+
+        $opportunity->refresh();
+        $this->assertSame(Opportunity::STAGE_NEW_LEAD, $opportunity->pipeline_stage); // chưa submit, chỉ mở dialog
+    }
+
+    public function test_drop_on_same_column_is_noop(): void
+    {
+        $opportunity = $this->makeOpportunity();
+
+        $this->browse(function (Browser $browser) use ($opportunity) {
+            $browser->loginAs($this->user)
+                ->visit('/operator/crm')
+                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-drag-handle', 10)
+                ->script([
+                    "var handle = document.querySelector('[data-opportunity-id=\"{$opportunity->id}\"] .crm-drag-handle');"
+                    . "var dt = new DataTransfer();"
+                    . "handle.dispatchEvent(new DragEvent('dragstart', {bubbles: true, cancelable: true, dataTransfer: dt}));"
+                    . "var target = document.querySelector('[data-board-group=\"new\"]');"
+                    . "target.dispatchEvent(new DragEvent('drop', {bubbles: true, cancelable: true, dataTransfer: dt}));",
+                ])
+                ->pause(300)
+                ->assertPresent('[data-board-group="new"] [data-opportunity-id="' . $opportunity->id . '"]')
+                ->assertMissing('[data-crm-stage-dialog][open]');
+        });
+
+        $opportunity->refresh();
+        $this->assertSame(Opportunity::STAGE_NEW_LEAD, $opportunity->pipeline_stage);
+    }
 }

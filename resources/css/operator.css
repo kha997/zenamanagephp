@@ -211,7 +211,7 @@ body {
     background: rgb(15 23 42 / 0.4);
 }
 
-[aria-busy="true"] {
+[data-opportunity-id][aria-busy="true"] {
     opacity: 0.6;
     pointer-events: none;
 }

@@ -1,12 +1,12 @@
 # Kéo-thả pipeline CRM giữa các cột
 
-Date: 2026-07-30 (rev 3 — khóa các điểm còn mở từ review lần 2: Service thay Action, board group key ổn định, fallback UI chốt cứng, DOM commit đầy đủ, JSON shape tường minh không qua trait mới, error normalization tập trung, pending-state test cụ thể)
+Date: 2026-07-30 (rev 4 — bổ sung permission gating cho UI mutation; rev 3 khóa Service thay Action, board group key ổn định, fallback UI chốt cứng, DOM commit đầy đủ, JSON shape tường minh không qua trait mới, error normalization tập trung, pending-state test cụ thể)
 
 ## Bối cảnh
 
 Trang `crm.index` (`resources/views/crm/index.blade.php`) hiển thị board Kanban 6 cột, nhưng các thẻ cơ hội không kéo-thả được — chỉ đổi giai đoạn qua dropdown ở trang chi tiết cơ hội (`opportunity-show.blade.php`). Đây là spec cho tính năng kéo-thả thật giữa các cột.
 
-Rev 1 (chưa commit) là bản phác thảo sơ bộ. Rev 2 (commit `0567213a`) khóa 7 quyết định kiến trúc lớn nhưng để lại vài điểm mở. Rev 3 này khóa toàn bộ các điểm còn mở đó, dựa trên khảo sát bổ sung bên dưới.
+Rev 1 (chưa commit) là bản phác thảo sơ bộ. Rev 2 (commit `0567213a`) khóa 7 quyết định kiến trúc lớn nhưng để lại vài điểm mở. Rev 3 (commit `ec3deffb`) khóa toàn bộ các điểm còn mở đó. Rev 4 này chỉ bổ sung 1 quyết định còn thiếu — gate hiển thị điều khiển mutation theo permission — phát hiện trong lúc review implementation plan: rev 3 chỉ ẩn drag handle/nút "Chuyển giai đoạn" theo `isTerminal()`, chưa gate theo permission `crm.manage` như convention đã có ở `opportunity-show.blade.php`. Không quyết định kiến trúc nào khác của rev 3 bị thay đổi.
 
 ## Khảo sát thực tế
 
@@ -289,6 +289,8 @@ JS **không được** so sánh `"Mới"`/`"Thua / Nurture"` hay bất kỳ chu�
 
 ### 3. UI fallback "Chuyển giai đoạn" — chốt cứng, không còn là câu hỏi mở
 
+**Gate hiển thị theo permission (rev 4):** drag handle và nút "Chuyển giai đoạn" chỉ render khi **đồng thời** `!$opportunity->isTerminal()` **và** actor có permission `crm.manage`. Dùng đúng pattern permission-check đã có ở `resources/views/crm/opportunity-show.blade.php:132,157,205,342` — `@if (auth()->user()?->hasPermission('crm.manage'))` — không tạo helper hay convention mới. User chỉ có `crm.view` vẫn xem được board và từng card bình thường, chỉ không thấy 2 điều khiển mutation này. Đây thuần là UX (ẩn điều khiển sẽ luôn thất bại) — **không phải cơ chế bảo mật thay thế**: route mutation (`POST /crm/opportunities/{id}/stage`) vẫn được bảo vệ độc lập bởi middleware `rbac:crm.manage` và `OpportunityStageTransitionService`'s `Gate::forUser($actor)->authorize('update', $opportunity)`, không đổi.
+
 **Markup:**
 
 ```html
@@ -298,7 +300,7 @@ JS **không được** so sánh `"Mới"`/`"Thua / Nurture"` hay bất kỳ chu�
     data-terminal="{{ $opportunity->isTerminal() ? '1' : '0' }}"
     data-amount="{{ (int) ($opportunity->estimated_fee ?? 0) }}">
     <div class="flex items-start gap-2">
-        @if (!$opportunity->isTerminal())
+        @if (!$opportunity->isTerminal() && auth()->user()?->hasPermission('crm.manage'))
             <button type="button" class="crm-drag-handle" draggable="true" aria-label="Kéo để chuyển giai đoạn">⋮⋮</button>
         @endif
         <div class="flex-1">
@@ -306,7 +308,7 @@ JS **không được** so sánh `"Mới"`/`"Thua / Nurture"` hay bất kỳ chu�
                 {{ $opportunity->opportunity_name }}
             </a>
             <div class="text-xs text-slate-500">...</div>
-            @if (!$opportunity->isTerminal())
+            @if (!$opportunity->isTerminal() && auth()->user()?->hasPermission('crm.manage'))
                 <button type="button" class="crm-stage-transition-btn text-xs operator-link">Chuyển giai đoạn</button>
             @endif
         </div>
@@ -314,7 +316,7 @@ JS **không được** so sánh `"Mới"`/`"Thua / Nurture"` hay bất kỳ chu�
 </li>
 ```
 
-Card terminal: **không render** handle lẫn nút (loại hẳn khỏi DOM, không phải chỉ disable — backend chặn tuyệt đối nên không có lý do hiện điều khiển chết).
+Card terminal, hoặc card với actor thiếu `crm.manage`: **không render** handle lẫn nút (loại hẳn khỏi DOM, không phải chỉ disable — cả hai lý do đều dẫn đến thất bại chắc chắn ở backend nên không có lý do hiện điều khiển chết).
 
 **Dialog dùng chung cho mọi lối vào (kéo-thả VÀ click):**
 
@@ -582,23 +584,28 @@ Thêm `resources/js/crm-pipeline-drag.js` vào `vite.config.js` (mảng `input`)
 7. Cùng kịch bản (vd #5) gọi qua **cả hai** route (web JSON path và API) → cùng bị chặn cùng lý do, xác nhận cả hai controller dùng chung `OpportunityStageTransitionService`.
 8. Route API giữ nguyên shape response như trước refactor (regression).
 
-### Unit tests cho invariant `BOARD_GROUPS` (5 invariant ở Quyết định 2)
+### Unit tests cho invariant `BOARD_GROUPS`
 
-9. Group key duy nhất.
+9. **Tập key ổn định đúng chính xác** — `array_keys(BOARD_GROUPS)` (sort trước khi so sánh) phải bằng đúng danh sách khóa cứng `['consulting_survey', 'lost_nurture', 'negotiation_contract', 'new', 'quote', 'won']`. (Không dùng `array_keys() === array_unique(array_keys())` — đó là tautology vì PHP associative array không thể có key literal trùng nhau, key sau ghi đè key trước ngay ở compile-time, test kiểu đó không bảo vệ được gì.) Mỗi key khớp `^[a-z][a-z0-9_]*$` (snake_case).
 10. Không stage nào thuộc nhiều group; union `stages` của toàn bộ group bằng đúng `Opportunity::VALID_STAGES`.
 11. `default_entry_stage` (khi khác null) thuộc `stages` của chính group.
 12. Group `requires_choice=true` luôn có `default_entry_stage === null`.
 13. Mọi `choice_options[].stage` thuộc `stages` của chính group chứa nó.
 
+Nếu thứ tự hiển thị 6 cột trên board là một contract bắt buộc (từ trái sang phải đúng thứ tự pipeline), viết **test thứ tự riêng** (so sánh `array_keys(BOARD_GROUPS)` chưa sort với thứ tự kỳ vọng, ghi rõ mục đích là kiểm thứ tự hiển thị) — không trộn vào test #9 (test #9 chỉ kiểm tập hợp, cố tình sort trước khi so sánh).
+
 ### Render/view contract tests (`tests/Feature/`, DOM assertions qua response Blade, không cần Dusk)
 
 14. Card thường có `data-opportunity-id`, `data-current-stage`, `data-amount` (số thô), `data-terminal="0"`.
-15. Card terminal: `data-terminal="1"`, không có `.crm-drag-handle`, không có `.crm-stage-transition-btn`.
+15. Card terminal (actor có `crm.manage`): `data-terminal="1"`, không có `.crm-drag-handle`, không có `.crm-stage-transition-btn`.
+15b. Card không terminal nhưng actor **chỉ có `crm.view`** (không có `crm.manage`): không có `.crm-drag-handle`, không có `draggable` attribute nào trong thẻ, không có `.crm-stage-transition-btn` — dù `data-terminal="0"`. Đây là test riêng biệt với #15 (nguyên nhân ẩn khác nhau: terminal vs permission), không gộp chung.
 16. Mỗi cột có `data-board-group` = đúng key ổn định (`new`, `consulting_survey`, `quote`, `negotiation_contract`, `won`, `lost_nurture`) — **không phải** label tiếng Việt.
 17. Cột "Thua / Nurture" (`data-board-group="lost_nurture"`) có `data-requires-choice="1"`, không có `data-default-entry-stage` (hoặc rỗng).
 18. Dialog `[data-crm-stage-dialog]` chứa đủ 6 nút `.crm-dialog-group-option` với `data-group` khớp 6 key ổn định (không mang `data-choice-options` — dữ liệu đó chỉ có trên phần tử cột, xem Quyết định 2/3). Cột `data-board-group="lost_nurture"` có `data-choice-options` là JSON hợp lệ chứa đủ 3 phần tử `lost`/`no_bid`/`nurture` với đúng `requires_reason`; các cột còn lại không có attribute này.
 
 ### Dusk tests (`tests/Browser/`) — qua luồng click "Chuyển giai đoạn", không giả lập HTML5 drag thật
+
+Toàn bộ Dusk test dùng actor có `crm.manage` (vì actor thiếu quyền này không còn thấy điều khiển mutation nào để thao tác — đúng rev 4). Kiểm tra 403 thật (thiếu quyền) là việc của Feature test (#3), không phải Dusk.
 
 19. Card terminal không có nút/handle chuyển giai đoạn nào hiển thị.
 20. Click "Chuyển giai đoạn" → dialog mở, liệt kê đúng 5 group (loại trừ group hiện tại của card).
@@ -607,7 +614,7 @@ Thêm `resources/js/crm-pipeline-drag.js` vào `vite.config.js` (mảng `input`)
 23. Chọn "Thua", nhập lý do, Xác nhận → card chuyển đúng cột, count/tổng tiền 2 cột cập nhật, card không còn handle/nút chuyển giai đoạn (vì `lost` là terminal — đối chiếu Quyết định 4 mục 4-6).
 24. Chọn group thường (không `requires_choice`) → không hiện bước chọn `choice_options`, submit thẳng, card chuyển tới đúng `default_entry_stage` của group đó, card **vẫn còn** handle/nút chuyển giai đoạn (không terminal).
 25. Mở dialog rồi bấm Hủy → không có request nào được gửi, card giữ nguyên.
-26. Giả lập backend trả lỗi (seed opportunity đã terminal, thử đổi stage qua thao tác khác nếu còn thao tác nào lộ ra được — hoặc test qua tầng Feature test thay vì Dusk nếu không dựng được kịch bản UI-only) → toast lỗi hiện, card giữ nguyên cột cũ.
+26. **Frontend error handling (tách biệt khỏi authorization thật):** actor có `crm.manage`, đi qua đúng luồng UI (click → dialog → confirm), nhưng trước khi bấm Xác nhận, stub `window.fetch` (qua `$browser->script(...)`) để trả về `Response` giả với status `403` hoặc `500` (tùy 1 trong 2, không cần cả 2 trong cùng test — có thể viết 2 test riêng nếu muốn phủ cả hai). Sau khi bấm Xác nhận: card **không** di chuyển sang cột khác, `aria-busy` được gỡ về `false`/không còn, toast lỗi xuất hiện trên trang. Test này xác nhận `parseErrorResponse()`/`showToast()`/pessimistic-update hoạt động đúng cho MỌI response lỗi (không riêng gì 403 permission) — không phụ thuộc việc dựng được kịch bản backend thật trả lỗi qua UI.
 
 **Pending-state test (chốt cách làm, không còn là câu hỏi mở):**
 
@@ -624,4 +631,4 @@ Thêm `resources/js/crm-pipeline-drag.js` vào `vite.config.js` (mảng `input`)
 2. **CSS cho `<dialog>` gốc** — dự án chưa dùng `<dialog>` ở đâu, chưa khảo sát Tailwind/CSS reset hiện tại có đè style mặc định (backdrop, position) hay không; cần xác nhận ở bước viết plan/implementation, có thể cần vài dòng CSS tối thiểu (không phải thư viện).
 3. Markup chi tiết của bước "chọn cột đích" trong dialog (danh sách nút dọc, hay dropdown `<select>`) chưa vẽ pixel-cụ thể — spec đã chốt hành vi và cấu trúc dữ liệu (`data-group`, `data-choice-options`, `data-default-entry-stage`) đủ để implement, phần trình bày trực quan (CSS) để lại cho bước implementation, không ảnh hưởng logic.
 
-Không còn câu hỏi kiến trúc mở nào (Service vs Action, board group key, fallback UI, DOM commit checklist, JSON shape, error normalization, pending-state test) — toàn bộ đã chốt ở rev 3 này.
+Không còn câu hỏi kiến trúc mở nào (Service vs Action, board group key, fallback UI, DOM commit checklist, JSON shape, error normalization, pending-state test, permission gating) — toàn bộ đã chốt qua rev 3 và rev 4.

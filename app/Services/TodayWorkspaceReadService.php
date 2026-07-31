@@ -55,11 +55,13 @@ class TodayWorkspaceReadService
                 ->values()
                 ->all();
 
-        $upcomingMilestones = $this->safeSection(
-            fn () => $this->upcomingMilestones($tenantId, $actorId, $relatedProjectIds)
-        );
+        $upcomingMilestones = $openWorkFailed
+            ? $errorResult
+            : $this->safeSection(fn () => $this->upcomingMilestones($tenantId, $actorId, $relatedProjectIds));
         $unreadUpdates = $this->safeSection(fn () => $this->unreadUpdateQuery->build($tenantId, $actorId));
-        $teamException = $this->safeTeamException($tenantId, $actorId, $openWork);
+        $teamException = $openWorkFailed
+            ? $errorResult
+            : $this->safeTeamException($tenantId, $actorId, $openWork);
 
         return new \App\Support\Today\TodayWorkspaceViewModel(
             personalOpenWork: $personalOpenWork,
@@ -74,7 +76,7 @@ class TodayWorkspaceReadService
     /**
      * @return array{0: Collection<int, OpenWorkItem>, 1: bool}
      */
-    private function loadOpenWork(string $tenantId): array
+    protected function loadOpenWork(string $tenantId): array
     {
         try {
             return [$this->openWorkReadQuery->collect($tenantId), false];

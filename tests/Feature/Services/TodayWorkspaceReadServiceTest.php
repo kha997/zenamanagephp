@@ -144,4 +144,38 @@ class TodayWorkspaceReadServiceTest extends TestCase
         $this->assertSame(\App\Support\Dashboard\Availability::ERROR, $viewModel->upcomingMilestones->availability);
         $this->assertCount(1, $viewModel->personalOpenWork->items);
     }
+
+    public function test_open_work_fetch_failure_propagates_error_to_upcoming_milestones_and_team_exception(): void
+    {
+        $this->taskFor($this->actor, ['name' => 'Việc không liên quan', 'title' => 'Việc không liên quan']);
+
+        $failingService = new class(app(OpenWorkReadQuery::class)) extends TodayWorkspaceReadService {
+            public function __construct(OpenWorkReadQuery $openWorkReadQuery)
+            {
+                parent::__construct(
+                    $openWorkReadQuery,
+                    app(\App\Services\UpcomingMilestoneQuery::class),
+                    app(\App\Services\UnreadUpdateQuery::class),
+                    app(\App\Services\TeamExceptionQuery::class),
+                );
+            }
+
+            protected function loadOpenWork(string $tenantId): array
+            {
+                report(new \RuntimeException('open work fetch boom'));
+
+                return [collect(), true];
+            }
+        };
+
+        $viewModel = $failingService->build($this->actor);
+
+        $this->assertSame(Availability::ERROR, $viewModel->upcomingMilestones->availability);
+        $this->assertSame(Availability::ERROR, $viewModel->personalOpenWork->availability);
+        $this->assertNotNull($viewModel->teamException);
+        $this->assertSame(Availability::ERROR, $viewModel->teamException->availability);
+
+        // Unread Updates không phụ thuộc open work — không bị lây lỗi (NO_DATA, không phải ERROR).
+        $this->assertNotSame(Availability::ERROR, $viewModel->unreadUpdates->availability);
+    }
 }

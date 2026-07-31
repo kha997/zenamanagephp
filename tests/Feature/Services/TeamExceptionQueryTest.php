@@ -86,7 +86,16 @@ class TeamExceptionQueryTest extends TestCase
     public function test_never_computes_availability_or_capacity_percentage(): void
     {
         $pm = User::factory()->create(['tenant_id' => (string) $this->tenant->id]);
-        Project::factory()->create(['tenant_id' => (string) $this->tenant->id, 'pm_id' => (string) $pm->id]);
+        $member = User::factory()->create(['tenant_id' => (string) $this->tenant->id]);
+        $project = Project::factory()->create(['tenant_id' => (string) $this->tenant->id, 'pm_id' => (string) $pm->id]);
+        Task::factory()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'project_id' => (string) $project->id,
+            'assigned_to' => (string) $member->id,
+            'status' => Task::STATUS_IN_PROGRESS,
+            'name' => 'Test task',
+            'title' => 'Test task',
+        ]);
 
         $openWork = $this->openWorkReadQuery->collect((string) $this->tenant->id);
         $result = (new TeamExceptionQuery())->build((string) $this->tenant->id, (string) $pm->id, $openWork);

@@ -4,109 +4,138 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\ContractPayment;
+use App\Models\User;
 use App\Services\BusinessKpiService;
+use App\Services\ErrorEnvelopeService;
 use App\Support\Dashboard\Availability;
 use App\Support\Dashboard\Freshness;
-use App\Support\Dashboard\MetricGuard;
 use App\Support\Dashboard\MetricResult;
 use App\Support\Dashboard\Reliability;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class CrmReportController extends Controller
 {
     public function index(BusinessKpiService $kpiService): View
     {
-        $tenantId = (string) Auth::user()?->tenant_id;
-        $outstandingDebt = $kpiService->outstandingDebt($tenantId);
+        /** @var User $user */
+        $user = Auth::user();
+        $tenantId = (string) $user->tenant_id;
+
+        $debtMetrics = $this->computeOutstandingDebtMetrics($tenantId, $kpiService);
 
         return view('crm.report', [
             'monthlyRevenue' => $kpiService->monthlyRevenue($tenantId),
             'pipelineByStage' => $kpiService->pipelineByStage($tenantId),
-            'outstandingDebt' => $outstandingDebt,
-            'outstandingDebtTotalMetric' => $this->computeOutstandingDebtTotalMetric($tenantId, $outstandingDebt['total']),
-            'outstandingDebtOverdueMetric' => $this->computeOutstandingDebtOverdueMetric($tenantId, $outstandingDebt),
+            'outstandingDebt' => $debtMetrics['outstandingDebt'],
+            'outstandingDebtTotalMetric' => $debtMetrics['totalMetric'],
+            'outstandingDebtOverdueMetric' => $debtMetrics['overdueMetric'],
             'salesWinRate' => $kpiService->salesWinRate($tenantId),
             'serviceCategoryPerformance' => $kpiService->serviceCategoryPerformance($tenantId),
         ]);
     }
 
-    private function hasAnyPaymentSchedule(string $tenantId): bool
-    {
-        return ContractPayment::query()->where('tenant_id', $tenantId)->exists();
-    }
-
-    private function computeOutstandingDebtTotalMetric(string $tenantId, float $total): MetricResult
-    {
-        $label = 'Giá trị theo lịch chưa ghi nhận thanh toán';
-
-        return MetricGuard::wrap(
-            'outstandingDebt.total',
-            ['tenant_id' => $tenantId],
-            $label,
-            function () use ($tenantId, $total, $label) {
-                if (!$this->hasAnyPaymentSchedule($tenantId)) {
-                    return new MetricResult(
-                        value: null,
-                        availability: Availability::NO_DATA,
-                        reliability: Reliability::LIMITED,
-                        freshness: Freshness::UNKNOWN,
-                        asOf: null,
-                        label: $label,
-                        explanation: 'Chưa có lịch thanh toán nào được thiết lập.',
-                    );
-                }
-
-                $asOf = ContractPayment::query()->where('tenant_id', $tenantId)->max('updated_at');
-
-                return new MetricResult(
-                    value: $total,
-                    availability: Availability::AVAILABLE,
-                    reliability: Reliability::LIMITED,
-                    freshness: Freshness::UNKNOWN,
-                    asOf: $asOf ? Carbon::parse($asOf) : null,
-                    label: $label,
-                    explanation: "Số liệu này cộng tất cả các khoản thanh toán theo lịch hợp đồng chưa được đánh dấu 'đã thanh toán', kể cả các khoản chưa tới hạn. Hệ thống hiện chưa ghi nhận thanh toán từng phần, nên số liệu này không phải công nợ thực tế đã xác nhận.",
-                );
-            },
-        );
-    }
-
     /**
-     * @param array{total: float, overdue_total: float, overdue_count: int, aging: array{not_due: float, due_1_30: float, due_31_60: float, due_61_90: float, due_over_90: float}} $outstandingDebt
+     * Tính outstandingDebt (legacy array) + cả 2 metric (total, overdue) từ
+     * MỘT lần gọi BusinessKpiService::outstandingDebt() + MỘT lần kiểm tra
+     * hasAnyPaymentSchedule() duy nhất (P2-C): cả 2 đều dùng chung bảng
+     * contract_payments, trước đây mỗi metric tự gọi hasAnyPaymentSchedule()
+     * riêng (2 lần) và outstandingDebt() luôn chạy TRƯỚC + NGOÀI guard, nên
+     * một lỗi truy vấn thật sự sẽ 500 toàn trang trước khi kịp vào guard.
+     *
+     * @return array{outstandingDebt: array<string, mixed>, totalMetric: MetricResult, overdueMetric: MetricResult}
      */
-    private function computeOutstandingDebtOverdueMetric(string $tenantId, array $outstandingDebt): MetricResult
+    private function computeOutstandingDebtMetrics(string $tenantId, BusinessKpiService $kpiService): array
     {
-        $label = 'Giá trị đã quá hạn theo lịch, chưa ghi nhận thanh toán';
+        $totalLabel = 'Giá trị theo lịch chưa ghi nhận thanh toán';
+        $overdueLabel = 'Giá trị đã quá hạn theo lịch, chưa ghi nhận thanh toán';
+        $emptyDebt = [
+            'total' => 0.0,
+            'overdue_total' => 0.0,
+            'overdue_count' => 0,
+            'aging' => [
+                'not_due' => 0.0,
+                'due_1_30' => 0.0,
+                'due_31_60' => 0.0,
+                'due_61_90' => 0.0,
+                'due_over_90' => 0.0,
+            ],
+        ];
 
-        return MetricGuard::wrap(
-            'outstandingDebt.overdue_total',
-            ['tenant_id' => $tenantId],
-            $label,
-            function () use ($tenantId, $outstandingDebt, $label) {
-                if (!$this->hasAnyPaymentSchedule($tenantId)) {
-                    return new MetricResult(
-                        value: null,
-                        availability: Availability::NO_DATA,
-                        reliability: Reliability::LIMITED,
-                        freshness: Freshness::UNKNOWN,
-                        asOf: null,
-                        label: $label,
-                        explanation: 'Chưa có lịch thanh toán nào được thiết lập.',
-                    );
-                }
+        try {
+            $outstandingDebt = $kpiService->outstandingDebt($tenantId);
+            $hasSchedule = ContractPayment::query()->where('tenant_id', $tenantId)->exists();
+            $asOf = $hasSchedule
+                ? ContractPayment::query()->where('tenant_id', $tenantId)->max('updated_at')
+                : null;
+        } catch (\Throwable $e) {
+            Log::error('dashboard_metric_error', [
+                'tenant_id' => $tenantId,
+                'widget' => 'outstandingDebt',
+                'request_id' => ErrorEnvelopeService::getCurrentRequestId(),
+                'exception' => $e->getMessage(),
+                'exception_class' => $e::class,
+            ]);
 
-                return new MetricResult(
-                    value: $outstandingDebt['overdue_total'],
-                    availability: Availability::AVAILABLE,
-                    reliability: Reliability::LIMITED,
-                    freshness: Freshness::UNKNOWN,
-                    asOf: Carbon::now(),
-                    label: $label,
-                    explanation: 'Số liệu này chỉ tính các khoản đã tới hoặc quá hạn thanh toán theo lịch hợp đồng (dựa trên ngày đến hạn, không dựa vào nhãn trạng thái thủ công), chưa được đánh dấu \'đã thanh toán\'. Chưa phản ánh các khoản đã thu một phần.',
-                );
-            },
-        );
+            $errorMetric = fn (string $label) => new MetricResult(
+                value: null,
+                availability: Availability::ERROR,
+                reliability: Reliability::UNKNOWN,
+                freshness: Freshness::UNKNOWN,
+                asOf: null,
+                label: $label,
+                explanation: "Không thể tính được \"{$label}\" do lỗi truy vấn dữ liệu.",
+            );
+
+            return [
+                'outstandingDebt' => $emptyDebt,
+                'totalMetric' => $errorMetric($totalLabel),
+                'overdueMetric' => $errorMetric($overdueLabel),
+            ];
+        }
+
+        if (!$hasSchedule) {
+            $noDataMetric = fn (string $label) => new MetricResult(
+                value: null,
+                availability: Availability::NO_DATA,
+                reliability: Reliability::LIMITED,
+                freshness: Freshness::UNKNOWN,
+                asOf: null,
+                label: $label,
+                explanation: 'Chưa có lịch thanh toán nào được thiết lập.',
+            );
+
+            return [
+                'outstandingDebt' => $outstandingDebt,
+                'totalMetric' => $noDataMetric($totalLabel),
+                'overdueMetric' => $noDataMetric($overdueLabel),
+            ];
+        }
+
+        $asOfCarbon = $asOf ? Carbon::parse($asOf) : null;
+
+        return [
+            'outstandingDebt' => $outstandingDebt,
+            'totalMetric' => new MetricResult(
+                value: $outstandingDebt['total'],
+                availability: Availability::AVAILABLE,
+                reliability: Reliability::LIMITED,
+                freshness: Freshness::UNKNOWN,
+                asOf: $asOfCarbon,
+                label: $totalLabel,
+                explanation: "Số liệu này cộng tất cả các khoản thanh toán theo lịch hợp đồng chưa được đánh dấu 'đã thanh toán', kể cả các khoản chưa tới hạn. Hệ thống hiện chưa ghi nhận thanh toán từng phần, nên số liệu này không phải công nợ thực tế đã xác nhận.",
+            ),
+            'overdueMetric' => new MetricResult(
+                value: $outstandingDebt['overdue_total'],
+                availability: Availability::AVAILABLE,
+                reliability: Reliability::LIMITED,
+                freshness: Freshness::UNKNOWN,
+                asOf: Carbon::now(),
+                label: $overdueLabel,
+                explanation: 'Số liệu này chỉ tính các khoản đã tới hoặc quá hạn thanh toán theo lịch hợp đồng (dựa trên ngày đến hạn, không dựa vào nhãn trạng thái thủ công), chưa được đánh dấu \'đã thanh toán\'. Chưa phản ánh các khoản đã thu một phần.',
+            ),
+        ];
     }
 }

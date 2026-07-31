@@ -70,6 +70,8 @@ class OpportunityAppointmentModelTest extends TestCase
         return [
             'consultation' => [OpportunityAppointment::TYPE_CONSULTATION],
             'survey' => [OpportunityAppointment::TYPE_SURVEY],
+            'site_visit' => [OpportunityAppointment::TYPE_SITE_VISIT],
+            'meeting' => [OpportunityAppointment::TYPE_MEETING],
         ];
     }
 

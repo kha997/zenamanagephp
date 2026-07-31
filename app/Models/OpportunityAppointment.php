@@ -31,10 +31,14 @@ class OpportunityAppointment extends Model
 
     public const TYPE_CONSULTATION = 'consultation';
     public const TYPE_SURVEY = 'survey';
+    public const TYPE_SITE_VISIT = 'site_visit';
+    public const TYPE_MEETING = 'meeting';
 
     public const VALID_TYPES = [
         self::TYPE_CONSULTATION,
         self::TYPE_SURVEY,
+        self::TYPE_SITE_VISIT,
+        self::TYPE_MEETING,
     ];
 
     public const STATUS_SCHEDULED = 'scheduled';

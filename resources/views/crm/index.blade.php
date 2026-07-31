@@ -31,41 +31,38 @@
                     </span>
                 </div>
 
-                @if ($column['items']->isEmpty())
-                    <p class="text-sm text-slate-400" data-column-empty>Trống</p>
-                @else
-                    <ul class="space-y-2">
-                        @foreach ($column['items'] as $opportunity)
-                            <li class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
-                                data-opportunity-id="{{ $opportunity->id }}"
-                                data-current-stage="{{ $opportunity->pipeline_stage }}"
-                                data-terminal="{{ $opportunity->isTerminal() ? '1' : '0' }}"
-                                data-amount="{{ (int) ($opportunity->estimated_fee ?? 0) }}"
-                            >
-                                <div class="flex items-start gap-2">
-                                    @if (!$opportunity->isTerminal() && auth()->user()?->hasPermission('crm.manage'))
-                                        <button type="button" class="crm-drag-handle" draggable="true" aria-label="Kéo để chuyển giai đoạn">⋮⋮</button>
-                                    @endif
-                                    <div class="flex-1">
-                                        <a href="{{ route('operator.crm.opportunities.show', $opportunity->id) }}" class="operator-link font-medium">
-                                            {{ $opportunity->opportunity_name }}
-                                        </a>
-                                        <div class="text-xs text-slate-500">
-                                            {{ $opportunity->account?->display_name ?? '—' }}
-                                            · {{ $opportunity->salesOwner?->name ?? 'Chưa gán' }}
-                                            @if ($opportunity->estimated_fee)
-                                                · {{ number_format((float) $opportunity->estimated_fee, 0, ',', '.') }}₫
-                                            @endif
-                                        </div>
-                                        @if (!$opportunity->isTerminal() && auth()->user()?->hasPermission('crm.manage'))
-                                            <button type="button" class="crm-stage-transition-btn text-xs operator-link">Chuyển giai đoạn</button>
+                <p class="text-sm text-slate-400{{ $column['items']->isEmpty() ? '' : ' hidden' }}" data-column-empty>Trống</p>
+                <ul class="space-y-2">
+                    @foreach ($column['items'] as $opportunity)
+                        <li class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
+                            data-opportunity-id="{{ $opportunity->id }}"
+                            data-current-stage="{{ $opportunity->pipeline_stage }}"
+                            data-terminal="{{ $opportunity->isTerminal() ? '1' : '0' }}"
+                            data-amount="{{ (int) ($opportunity->estimated_fee ?? 0) }}"
+                        >
+                            <div class="flex items-start gap-2">
+                                @if (!$opportunity->isTerminal() && auth()->user()?->hasPermission('crm.manage'))
+                                    <button type="button" class="crm-drag-handle" draggable="true" aria-label="Kéo để chuyển giai đoạn">⋮⋮</button>
+                                @endif
+                                <div class="flex-1">
+                                    <a href="{{ route('operator.crm.opportunities.show', $opportunity->id) }}" class="operator-link font-medium">
+                                        {{ $opportunity->opportunity_name }}
+                                    </a>
+                                    <div class="text-xs text-slate-500">
+                                        {{ $opportunity->account?->display_name ?? '—' }}
+                                        · {{ $opportunity->salesOwner?->name ?? 'Chưa gán' }}
+                                        @if ($opportunity->estimated_fee)
+                                            · {{ number_format((float) $opportunity->estimated_fee, 0, ',', '.') }}₫
                                         @endif
                                     </div>
+                                    @if (!$opportunity->isTerminal() && auth()->user()?->hasPermission('crm.manage'))
+                                        <button type="button" class="crm-stage-transition-btn text-xs operator-link">Chuyển giai đoạn</button>
+                                    @endif
                                 </div>
-                            </li>
-                        @endforeach
-                    </ul>
-                @endif
+                            </div>
+                        </li>
+                    @endforeach
+                </ul>
             </x-ui.card>
         @endforeach
     </div>

@@ -179,6 +179,19 @@
                 </a>
             </nav>
         </aside>
+        <script>
+            // Khôi phục scrollTop của sidebar NGAY LẬP TỨC (đồng bộ, trước khi
+            // trình duyệt vẽ), tránh chớp giật so với việc khôi phục bằng
+            // module script (luôn chạy sau khi đã vẽ xong DOM ban đầu). Xem
+            // resources/js/sidebar-scroll-restore.js cho phần ghi lại vị trí
+            // cuộn khi người dùng cuộn sidebar.
+            (function () {
+                var saved = sessionStorage.getItem('operator-sidebar-scroll-top');
+                if (saved === null) return;
+                var sidebar = document.querySelector('.operator-sidebar');
+                if (sidebar) sidebar.scrollTop = parseInt(saved, 10) || 0;
+            })();
+        </script>
 
         <main class="operator-main">
             <header class="operator-topbar">

@@ -1,8 +1,9 @@
 /**
- * Giữ nguyên vị trí cuộn của sidebar operator qua các lần điều hướng trang.
- * Mỗi link trong sidebar là một lần tải trang mới (không phải SPA), nên
- * trình duyệt không tự khôi phục scrollTop của phần tử con
- * (position:fixed; overflow-y:auto) như nó làm với scroll của cả trang.
+ * Ghi lại vị trí cuộn của sidebar operator mỗi khi người dùng cuộn, để một
+ * inline script (đặt ngay sau thẻ </aside> trong operator.blade.php) khôi
+ * phục lại NGAY LẬP TỨC ở lần tải trang kế tiếp, trước khi trình duyệt kịp
+ * vẽ sidebar ở vị trí đầu — tránh hiện tượng "chớp giật" nếu khôi phục bằng
+ * script module (luôn chạy sau khi đã vẽ xong DOM ban đầu).
  */
 (function () {
     'use strict';
@@ -12,11 +13,6 @@
     function init() {
         var sidebar = document.querySelector('.operator-sidebar');
         if (!sidebar) return;
-
-        var saved = sessionStorage.getItem(STORAGE_KEY);
-        if (saved !== null) {
-            sidebar.scrollTop = parseInt(saved, 10) || 0;
-        }
 
         sidebar.addEventListener('scroll', function () {
             sessionStorage.setItem(STORAGE_KEY, String(sidebar.scrollTop));

@@ -13,6 +13,7 @@ use App\Models\Quote;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class PortalDashboardTest extends TestCase
@@ -491,5 +492,72 @@ class PortalDashboardTest extends TestCase
         $response->assertSee('Giá trị theo lịch chưa ghi nhận thanh toán');
         $response->assertDontSee('Số dư còn lại');
         $response->assertSee('chưa ghi nhận thanh toán từng phần', false);
+    }
+
+    public function test_dashboard_renders_with_error_state_when_outstanding_balance_query_fails(): void
+    {
+        $tenant = Tenant::factory()->create(['slug' => 'zena-balance-fail']);
+        $staffUser = User::factory()->create(['tenant_id' => (string) $tenant->id]);
+
+        $account = Account::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'account_type' => Account::TYPE_INDIVIDUAL,
+            'display_name' => 'Khach hang balance fail',
+            'email' => 'balancefail@example.com',
+            'status' => Account::STATUS_ACTIVE,
+        ]);
+
+        $project = Project::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'name' => 'Du an balance fail',
+            'code' => 'PRJ-BALFAIL',
+            'status' => 'active',
+        ]);
+
+        Opportunity::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Co hoi balance fail',
+            'service_category' => 'architecture',
+            'pipeline_stage' => Opportunity::STAGE_WON,
+            'converted_project_id' => (string) $project->id,
+            'sales_owner_id' => (string) $staffUser->id,
+            'created_by' => (string) $staffUser->id,
+        ]);
+
+        $contract = Contract::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'project_id' => (string) $project->id,
+            'code' => 'CTR-BALFAIL',
+            'title' => 'Hop dong balance fail',
+            'total_value' => 100000000,
+            'currency' => 'VND',
+        ]);
+
+        ContractPayment::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'contract_id' => (string) $contract->id,
+            'name' => 'Dot balance fail',
+            'amount' => 50000000,
+            'status' => ContractPayment::STATUS_PLANNED,
+            'due_date' => now()->addDays(10),
+        ]);
+
+        $this->actingAs($account, 'client');
+
+        Schema::rename('contract_payments', 'contract_payments_test_failure_injection');
+
+        try {
+            $response = $this->get(route('portal.dashboard', ['tenantSlug' => 'zena-balance-fail']));
+        } finally {
+            Schema::rename('contract_payments_test_failure_injection', 'contract_payments');
+        }
+
+        // The whole page must still render — not 500 — with the rest of the
+        // dashboard (projects/documents/contracts) unaffected.
+        $response->assertOk();
+        $response->assertSee('Du an balance fail', false);
+        $response->assertSee('Giá trị theo lịch chưa ghi nhận thanh toán');
+        $response->assertSee('Không thể tính được', false);
     }
 }

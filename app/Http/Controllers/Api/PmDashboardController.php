@@ -8,6 +8,7 @@ use App\Models\Project;
 use App\Models\ProjectMilestone;
 use App\Models\Rfi;
 use App\Models\Task;
+use App\Models\User;
 use App\Models\UserRoleProject;
 use App\Support\Dashboard\Availability;
 use App\Support\Dashboard\Freshness;
@@ -23,9 +24,17 @@ class PmDashboardController extends Controller
 {
     use ZenaContractResponseTrait;
 
+    private function authenticatedUser(): User
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        return $user;
+    }
+
     public function getOverview(Request $request): JsonResponse
     {
-        $user = Auth::user();
+        $user = $this->authenticatedUser();
 
         $projectIds = $this->actorProjectIds($user, $request->input('project_id'));
 
@@ -65,7 +74,7 @@ class PmDashboardController extends Controller
 
     public function getProjectProgress(Request $request): JsonResponse
     {
-        $user = Auth::user();
+        $user = $this->authenticatedUser();
 
         $projectId = $request->input('project_id');
 
@@ -118,13 +127,13 @@ class PmDashboardController extends Controller
 
     private function computeOverallProgress(string $projectId): float
     {
-        $total = Task::where('project_id', $projectId)->count();
+        $total = Task::query()->where('project_id', $projectId)->count();
 
         if ($total === 0) {
             return 0.0;
         }
 
-        $completed = Task::where('project_id', $projectId)
+        $completed = Task::query()->where('project_id', $projectId)
             ->where('status', Task::STATUS_COMPLETED)
             ->count();
 
@@ -137,10 +146,10 @@ class PmDashboardController extends Controller
 
         return MetricGuard::wrap(
             'overall_progress',
-            ['project_id' => $projectId, 'tenant_id' => (string) Auth::user()?->tenant_id],
+            ['project_id' => $projectId, 'tenant_id' => (string) $this->authenticatedUser()->tenant_id],
             $label,
             function () use ($projectId, $label) {
-                $total = Task::where('project_id', $projectId)->count();
+                $total = Task::query()->where('project_id', $projectId)->count();
 
                 if ($total === 0) {
                     return new MetricResult(
@@ -154,12 +163,12 @@ class PmDashboardController extends Controller
                     );
                 }
 
-                $completed = Task::where('project_id', $projectId)
+                $completed = Task::query()->where('project_id', $projectId)
                     ->where('status', Task::STATUS_COMPLETED)
                     ->count();
 
                 $value = round(($completed / $total) * 100, 2);
-                $asOf = Task::where('project_id', $projectId)->max('updated_at');
+                $asOf = Task::query()->where('project_id', $projectId)->max('updated_at');
 
                 return new MetricResult(
                     value: $value,
@@ -176,7 +185,7 @@ class PmDashboardController extends Controller
 
     private function computeTaskProgress(string $projectId): array
     {
-        $tasks = Task::where('project_id', $projectId)->get();
+        $tasks = Task::query()->where('project_id', $projectId)->get();
 
         $overdue = $tasks->filter(
             fn ($t) => $t->end_date !== null
@@ -195,7 +204,7 @@ class PmDashboardController extends Controller
 
     private function computeMilestoneProgress(string $projectId): array
     {
-        $milestones = ProjectMilestone::where('project_id', $projectId)->get();
+        $milestones = ProjectMilestone::query()->where('project_id', $projectId)->get();
 
         $total = $milestones->count();
         $completed = $milestones->where('status', ProjectMilestone::STATUS_COMPLETED)->count();
@@ -232,10 +241,10 @@ class PmDashboardController extends Controller
 
         return MetricGuard::wrap(
             'milestone_progress',
-            ['project_id' => $projectId, 'tenant_id' => (string) Auth::user()?->tenant_id],
+            ['project_id' => $projectId, 'tenant_id' => (string) $this->authenticatedUser()->tenant_id],
             $label,
             function () use ($projectId, $label) {
-                $total = ProjectMilestone::where('project_id', $projectId)->count();
+                $total = ProjectMilestone::query()->where('project_id', $projectId)->count();
 
                 if ($total === 0) {
                     return new MetricResult(
@@ -249,12 +258,12 @@ class PmDashboardController extends Controller
                     );
                 }
 
-                $completed = ProjectMilestone::where('project_id', $projectId)
+                $completed = ProjectMilestone::query()->where('project_id', $projectId)
                     ->where('status', ProjectMilestone::STATUS_COMPLETED)
                     ->count();
 
                 $value = round(($completed / $total) * 100, 2);
-                $asOf = ProjectMilestone::where('project_id', $projectId)->max('updated_at');
+                $asOf = ProjectMilestone::query()->where('project_id', $projectId)->max('updated_at');
 
                 return new MetricResult(
                     value: $value,
@@ -290,7 +299,7 @@ class PmDashboardController extends Controller
 
         return MetricGuard::wrap(
             'budget_progress',
-            ['project_id' => (string) $project->id, 'tenant_id' => (string) Auth::user()?->tenant_id],
+            ['project_id' => (string) $project->id, 'tenant_id' => (string) $this->authenticatedUser()->tenant_id],
             $label,
             function () use ($project, $label) {
                 $total = (float) ($project->budget_total ?? 0);
@@ -358,7 +367,7 @@ class PmDashboardController extends Controller
 
         return MetricGuard::wrap(
             'timeline_progress',
-            ['project_id' => (string) $project->id, 'tenant_id' => (string) Auth::user()?->tenant_id],
+            ['project_id' => (string) $project->id, 'tenant_id' => (string) $this->authenticatedUser()->tenant_id],
             $label,
             function () use ($project, $label) {
                 if (!$project->start_date || !$project->end_date) {

@@ -13671,7 +13671,7 @@ parameters:
 		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<App\\Models\\Opportunity\>\:\:forTenant\(\)\.$#'
 			identifier: method.notFound
-			count: 4
+			count: 3
 			path: app/Http/Controllers/Web/CrmPageController.php
 
 		-

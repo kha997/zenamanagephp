@@ -501,7 +501,7 @@ class CrmPageController extends Controller
         $tenantId = $this->tenantId();
 
         try {
-            $opportunity = Opportunity::query()->forTenant($tenantId)->findOrFail($id);
+            $opportunity = Opportunity::forTenant($tenantId)->findOrFail($id);
         } catch (ModelNotFoundException $exception) {
             if ($request->wantsJson()) {
                 throw $exception;

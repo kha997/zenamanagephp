@@ -20,8 +20,109 @@ class TodayWorkspaceReadService
     private const IN_PROGRESS_LIMIT = 10;
     private const OVERDUE_AND_BLOCKED_LIMIT = 20;
 
-    public function __construct(private readonly OpenWorkReadQuery $openWorkReadQuery)
+    public function __construct(
+        private readonly OpenWorkReadQuery $openWorkReadQuery,
+        private readonly UpcomingMilestoneQuery $upcomingMilestoneQuery,
+        private readonly UnreadUpdateQuery $unreadUpdateQuery,
+        private readonly TeamExceptionQuery $teamExceptionQuery,
+    ) {
+    }
+
+    public function build(\App\Models\User $actor): \App\Support\Today\TodayWorkspaceViewModel
     {
+        $tenantId = (string) $actor->tenant_id;
+        $actorId = (string) $actor->id;
+
+        [$openWork, $openWorkFailed] = $this->loadOpenWork($tenantId);
+
+        $errorResult = new TodaySectionResult(
+            [],
+            Availability::ERROR,
+            Reliability::UNKNOWN,
+            'Không thể tải mục này lúc này.',
+        );
+
+        $personalOpenWork = $openWorkFailed ? $errorResult : $this->safeSection(fn () => $this->personalOpenWork($openWork, $actorId));
+        $inProgress = $openWorkFailed ? $errorResult : $this->safeSection(fn () => $this->inProgress($openWork, $actorId));
+        $overdueAndBlocked = $openWorkFailed ? $errorResult : $this->safeSection(fn () => $this->overdueAndBlocked($openWork, $actorId));
+
+        $relatedProjectIds = $openWorkFailed
+            ? []
+            : collect($personalOpenWork->items)
+                ->pluck('projectId')
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+
+        $upcomingMilestones = $this->safeSection(
+            fn () => $this->upcomingMilestones($tenantId, $actorId, $relatedProjectIds)
+        );
+        $unreadUpdates = $this->safeSection(fn () => $this->unreadUpdateQuery->build($tenantId, $actorId));
+        $teamException = $this->safeTeamException($tenantId, $actorId, $openWork);
+
+        return new \App\Support\Today\TodayWorkspaceViewModel(
+            personalOpenWork: $personalOpenWork,
+            inProgress: $inProgress,
+            overdueAndBlocked: $overdueAndBlocked,
+            upcomingMilestones: $upcomingMilestones,
+            unreadUpdates: $unreadUpdates,
+            teamException: $teamException,
+        );
+    }
+
+    /**
+     * @return array{0: Collection<int, OpenWorkItem>, 1: bool}
+     */
+    private function loadOpenWork(string $tenantId): array
+    {
+        try {
+            return [$this->openWorkReadQuery->collect($tenantId), false];
+        } catch (\Throwable $e) {
+            report($e);
+
+            return [collect(), true];
+        }
+    }
+
+    /**
+     * @param string[] $relatedProjectIds
+     */
+    public function upcomingMilestones(string $tenantId, string $actorId, array $relatedProjectIds): TodaySectionResult
+    {
+        return $this->upcomingMilestoneQuery->build($tenantId, $actorId, $relatedProjectIds);
+    }
+
+    private function safeSection(\Closure $build): TodaySectionResult
+    {
+        try {
+            return $build();
+        } catch (\Throwable $e) {
+            report($e);
+
+            return new TodaySectionResult(
+                [],
+                Availability::ERROR,
+                Reliability::UNKNOWN,
+                'Không thể tải mục này lúc này.',
+            );
+        }
+    }
+
+    private function safeTeamException(string $tenantId, string $actorId, Collection $openWork): ?TodaySectionResult
+    {
+        try {
+            return $this->teamExceptionQuery->build($tenantId, $actorId, $openWork);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return new TodaySectionResult(
+                [],
+                Availability::ERROR,
+                Reliability::UNKNOWN,
+                'Không thể tải mục này lúc này.',
+            );
+        }
     }
 
     /**

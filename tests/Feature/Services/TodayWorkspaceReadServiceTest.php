@@ -94,4 +94,54 @@ class TodayWorkspaceReadServiceTest extends TestCase
         $this->assertContains((string) $blocked->id, $ids);
         $this->assertCount(2, $result->items);
     }
+
+    public function test_build_returns_complete_view_model_with_single_open_work_fetch(): void
+    {
+        $this->taskFor($this->actor, ['name' => 'Việc build', 'title' => 'Việc build']);
+
+        \Illuminate\Support\Facades\DB::flushQueryLog();
+        \Illuminate\Support\Facades\DB::enableQueryLog();
+        $viewModel = $this->service->build($this->actor);
+        $queries = \Illuminate\Support\Facades\DB::getQueryLog();
+        \Illuminate\Support\Facades\DB::disableQueryLog();
+
+        $this->assertInstanceOf(\App\Support\Today\TodayWorkspaceViewModel::class, $viewModel);
+        $this->assertCount(1, $viewModel->personalOpenWork->items);
+        $this->assertNull($viewModel->teamException);
+
+        // OpenWorkReadQuery::collect() chạy đúng 1 lần (Task + eager-load project,
+        // DesignItem + eager-load project = 4 query) — không phải 3-4 lần cho
+        // personalOpenWork/inProgress/overdueAndBlocked/teamException riêng rẽ.
+        $openWorkQueries = collect($queries)->filter(
+            fn (array $q) => str_contains($q['query'], 'from "tasks"') || str_contains($q['query'], 'from "design_items"')
+        );
+        $this->assertLessThanOrEqual(4, $openWorkQueries->count());
+    }
+
+    public function test_one_section_failure_does_not_break_other_sections(): void
+    {
+        $this->taskFor($this->actor, ['name' => 'Việc sống sót', 'title' => 'Việc sống sót']);
+
+        $failingService = new class(app(OpenWorkReadQuery::class)) extends TodayWorkspaceReadService {
+            public function __construct(OpenWorkReadQuery $openWorkReadQuery)
+            {
+                parent::__construct(
+                    $openWorkReadQuery,
+                    app(\App\Services\UpcomingMilestoneQuery::class),
+                    app(\App\Services\UnreadUpdateQuery::class),
+                    app(\App\Services\TeamExceptionQuery::class),
+                );
+            }
+
+            public function upcomingMilestones(string $tenantId, string $actorId, array $projectIds): \App\Support\Today\TodaySectionResult
+            {
+                throw new \RuntimeException('boom');
+            }
+        };
+
+        $viewModel = $failingService->build($this->actor);
+
+        $this->assertSame(\App\Support\Dashboard\Availability::ERROR, $viewModel->upcomingMilestones->availability);
+        $this->assertCount(1, $viewModel->personalOpenWork->items);
+    }
 }

@@ -115,6 +115,20 @@ class OpportunityAppointmentLifecycleTest extends TestCase
             ->where('opportunity_id', (string) $opportunity->id)
             ->where('status', OpportunityAppointment::STATUS_SCHEDULED)
             ->count());
+
+        $siteVisit = OpportunityAppointment::query()
+            ->where('opportunity_id', (string) $opportunity->id)
+            ->where('type', OpportunityAppointment::TYPE_SITE_VISIT)
+            ->first();
+        $this->assertNotNull($siteVisit);
+        $this->assertSame('Công trình ABC', $siteVisit->location);
+
+        $meeting = OpportunityAppointment::query()
+            ->where('opportunity_id', (string) $opportunity->id)
+            ->where('type', OpportunityAppointment::TYPE_MEETING)
+            ->first();
+        $this->assertNotNull($meeting);
+        $this->assertSame('Phòng họp A', $meeting->location);
     }
 
     public function test_complete_requires_outcome_notes(): void
@@ -307,9 +321,15 @@ class OpportunityAppointmentLifecycleTest extends TestCase
             'assigned_to' => (string) $assignee->id,
         ]);
 
-        $siteVisit = $this->makeAppointment($tenant, $opportunity, $user, OpportunityAppointment::STATUS_SCHEDULED, [
+        $this->makeAppointment($tenant, $opportunity, $user, OpportunityAppointment::STATUS_SCHEDULED, [
             'type' => OpportunityAppointment::TYPE_SITE_VISIT,
             'scheduled_at' => Carbon::now()->addDays(3),
+            'assigned_to' => (string) $assignee->id,
+        ]);
+
+        $this->makeAppointment($tenant, $opportunity, $user, OpportunityAppointment::STATUS_SCHEDULED, [
+            'type' => OpportunityAppointment::TYPE_MEETING,
+            'scheduled_at' => Carbon::now()->addDays(4),
             'assigned_to' => (string) $assignee->id,
         ]);
 
@@ -324,6 +344,8 @@ class OpportunityAppointmentLifecycleTest extends TestCase
         $response->assertDontSee('>survey<', false);
         $response->assertSeeText('Tham quan');
         $response->assertDontSee('>site_visit<', false);
+        $response->assertSeeText('Họp');
+        $response->assertDontSee('>meeting<', false);
         $response->assertSeeText('Hoàn thành');
         $response->assertSeeText('Hủy');
         $response->assertSeeText('Dời lịch');

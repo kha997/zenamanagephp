@@ -391,7 +391,7 @@ class PmDashboardController extends Controller
 
         $totalDays = (int) $start->diffInDays($end);
         $elapsedDays = (int) $start->diffInDays($now);
-        $pct = $totalDays > 0 ? round(min(($elapsedDays / $totalDays) * 100, 100), 2) : 0;
+        $pct = $totalDays > 0 ? max(0, min(round(($elapsedDays / $totalDays) * 100, 2), 100)) : 0;
 
         return [
             'start_date' => $start,
@@ -429,7 +429,7 @@ class PmDashboardController extends Controller
 
                 $totalDays = (int) $start->diffInDays($end);
                 $elapsedDays = (int) $start->diffInDays($now);
-                $value = $totalDays > 0 ? round(min(($elapsedDays / $totalDays) * 100, 100), 2) : 0.0;
+                $value = $totalDays > 0 ? max(0.0, min(round(($elapsedDays / $totalDays) * 100, 2), 100)) : 0.0;
 
                 return new MetricResult(
                     value: $value,

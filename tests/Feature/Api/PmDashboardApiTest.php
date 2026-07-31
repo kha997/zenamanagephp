@@ -287,6 +287,36 @@ class PmDashboardApiTest extends TestCase
             ->assertJsonPath('data.timeline_progress_meta.as_of', null);
     }
 
+    public function test_timeline_progress_is_clamped_to_zero_when_project_starts_in_the_future(): void
+    {
+        $project = $this->createAssignedProject('Future start project', Project::STATUS_PLANNING, [
+            'start_date' => now()->addDays(10)->toDateString(),
+            'end_date' => now()->addDays(30)->toDateString(),
+        ]);
+
+        $this->withHeaders($this->headers)
+            ->getJson(route('api.zena.pm.progress', ['project_id' => (string) $project->id], false))
+            ->assertOk()
+            ->assertJsonPath('data.timeline_progress.percentage_elapsed', 0)
+            ->assertJsonPath('data.timeline_progress_meta.value', 0)
+            ->assertJsonPath('data.timeline_progress_meta.availability', 'AVAILABLE');
+    }
+
+    public function test_timeline_progress_is_clamped_to_one_hundred_when_project_has_ended(): void
+    {
+        $project = $this->createAssignedProject('Ended project', Project::STATUS_COMPLETED, [
+            'start_date' => now()->subDays(30)->toDateString(),
+            'end_date' => now()->subDays(10)->toDateString(),
+        ]);
+
+        $this->withHeaders($this->headers)
+            ->getJson(route('api.zena.pm.progress', ['project_id' => (string) $project->id], false))
+            ->assertOk()
+            ->assertJsonPath('data.timeline_progress.percentage_elapsed', 100)
+            ->assertJsonPath('data.timeline_progress_meta.value', 100)
+            ->assertJsonPath('data.timeline_progress_meta.availability', 'AVAILABLE');
+    }
+
     public function test_pm_progress_route_requires_project_id_and_hides_inaccessible_projects(): void
     {
         $project = $this->createAssignedProject('Accessible PM progress project', Project::STATUS_ACTIVE);

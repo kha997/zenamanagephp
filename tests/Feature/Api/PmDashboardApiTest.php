@@ -11,6 +11,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Models\UserRoleProject;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 use Tests\Traits\AuthenticationTestTrait;
 
@@ -371,6 +372,78 @@ class PmDashboardApiTest extends TestCase
             ->assertJsonPath('data.budget_progress_meta.value', null)
             ->assertJsonPath('data.budget_progress_meta.availability', 'NOT_APPLICABLE')
             ->assertJsonPath('data.budget_progress_meta.reliability', 'RELIABLE');
+    }
+
+    public function test_task_query_failure_degrades_overall_and_task_progress_without_500ing_the_endpoint(): void
+    {
+        $project = $this->createAssignedProject('Task query failure project', Project::STATUS_ACTIVE, [
+            'budget_total' => 100000,
+            'budget_actual' => 25000,
+        ]);
+
+        ProjectMilestone::query()->create([
+            'project_id' => (string) $project->id,
+            'name' => 'Unaffected milestone',
+            'status' => ProjectMilestone::STATUS_COMPLETED,
+            'target_date' => now()->subDays(5)->toDateString(),
+            'completed_date' => now()->subDays(4)->toDateString(),
+            'created_by' => (string) $this->actor->id,
+        ]);
+
+        Schema::rename('tasks', 'tasks_test_failure_injection');
+
+        try {
+            $response = $this->withHeaders($this->headers)
+                ->getJson(route('api.zena.pm.progress', ['project_id' => (string) $project->id], false));
+        } finally {
+            Schema::rename('tasks_test_failure_injection', 'tasks');
+        }
+
+        $response->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('data.overall_progress', 0)
+            ->assertJsonPath('data.overall_progress_meta.value', null)
+            ->assertJsonPath('data.overall_progress_meta.availability', 'ERROR')
+            ->assertJsonPath('data.task_progress', ['total' => 0, 'completed' => 0, 'in_progress' => 0, 'pending' => 0, 'overdue' => 0])
+            // Milestone and budget metrics run their own queries and must be unaffected by the Task table failure.
+            ->assertJsonPath('data.milestone_progress_meta.availability', 'AVAILABLE')
+            ->assertJsonPath('data.milestone_progress_meta.value', 100)
+            ->assertJsonPath('data.budget_progress_meta.availability', 'AVAILABLE');
+    }
+
+    public function test_milestone_query_failure_degrades_milestone_progress_without_500ing_the_endpoint(): void
+    {
+        $project = $this->createAssignedProject('Milestone query failure project', Project::STATUS_ACTIVE);
+
+        $this->createTask($project, [
+            'status' => Task::STATUS_COMPLETED,
+            'end_date' => now()->subDay(),
+        ]);
+
+        Schema::rename('project_milestones', 'project_milestones_test_failure_injection');
+
+        try {
+            $response = $this->withHeaders($this->headers)
+                ->getJson(route('api.zena.pm.progress', ['project_id' => (string) $project->id], false));
+        } finally {
+            Schema::rename('project_milestones_test_failure_injection', 'project_milestones');
+        }
+
+        $response->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('data.milestone_progress_meta.value', null)
+            ->assertJsonPath('data.milestone_progress_meta.availability', 'ERROR')
+            ->assertJsonPath('data.milestone_progress', [
+                'total_milestones' => 0,
+                'completed_milestones' => 0,
+                'pending_milestones' => 0,
+                'overdue_milestones' => 0,
+                'completion_rate' => 0,
+                'upcoming_milestones' => [],
+            ])
+            // Task metrics run their own query and must be unaffected by the Milestone table failure.
+            ->assertJsonPath('data.overall_progress_meta.availability', 'AVAILABLE')
+            ->assertJsonPath('data.overall_progress_meta.value', 100);
     }
 
     private function createAssignedProject(string $name, string $status, array $attributes = []): Project

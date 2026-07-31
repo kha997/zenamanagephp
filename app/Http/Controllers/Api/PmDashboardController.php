@@ -10,6 +10,7 @@ use App\Models\Rfi;
 use App\Models\Task;
 use App\Models\User;
 use App\Models\UserRoleProject;
+use App\Services\ErrorEnvelopeService;
 use App\Support\Dashboard\Availability;
 use App\Support\Dashboard\Freshness;
 use App\Support\Dashboard\MetricGuard;
@@ -19,6 +20,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class PmDashboardController extends Controller
 {
@@ -96,17 +98,20 @@ class PmDashboardController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Project not found or access denied'], 404);
         }
 
+        $taskMetrics = $this->computeTaskMetrics($projectId);
+        $milestoneMetrics = $this->computeMilestoneMetrics($projectId);
+
         return $this->zenaSuccessResponse([
             'project' => [
                 'id' => (string) $project->id,
                 'name' => $project->name,
                 'status' => $project->status,
             ],
-            'overall_progress' => $this->computeOverallProgress($projectId),
-            'overall_progress_meta' => $this->computeOverallProgressMeta($projectId)->toArray(),
-            'task_progress' => $this->computeTaskProgress($projectId),
-            'milestone_progress' => $this->computeMilestoneProgress($projectId),
-            'milestone_progress_meta' => $this->computeMilestoneProgressMeta($projectId)->toArray(),
+            'overall_progress' => $taskMetrics['overall_progress'],
+            'overall_progress_meta' => $taskMetrics['overall_progress_meta']->toArray(),
+            'task_progress' => $taskMetrics['task_progress'],
+            'milestone_progress' => $milestoneMetrics['milestone_progress'],
+            'milestone_progress_meta' => $milestoneMetrics['milestone_progress_meta']->toArray(),
             'budget_progress' => $this->computeBudgetProgress($project),
             'budget_progress_meta' => $this->computeBudgetProgressMeta($project)->toArray(),
             'timeline_progress' => $this->computeTimelineProgress($project),
@@ -125,93 +130,143 @@ class PmDashboardController extends Controller
         return $query->pluck('project_id')->all();
     }
 
-    private function computeOverallProgress(string $projectId): float
-    {
-        $total = Task::query()->where('project_id', $projectId)->count();
-
-        if ($total === 0) {
-            return 0.0;
-        }
-
-        $completed = Task::query()->where('project_id', $projectId)
-            ->where('status', Task::STATUS_COMPLETED)
-            ->count();
-
-        return round(($completed / $total) * 100, 2);
-    }
-
-    private function computeOverallProgressMeta(string $projectId): MetricResult
+    /**
+     * Tính overall_progress + overall_progress_meta + task_progress từ MỘT lần
+     * fetch Task duy nhất (P2-A): tránh chạy 3 câu Task::query() độc lập (2 cho
+     * legacy value + 1 cho meta) khiến response 500 khi truy vấn Task lỗi mà
+     * legacy field không đi qua guard.
+     *
+     * @return array{overall_progress: float, overall_progress_meta: MetricResult, task_progress: array<string, int>}
+     */
+    private function computeTaskMetrics(string $projectId): array
     {
         $label = 'Tiến độ công việc (Task)';
+        $emptyBreakdown = ['total' => 0, 'completed' => 0, 'in_progress' => 0, 'pending' => 0, 'overdue' => 0];
 
-        return MetricGuard::wrap(
-            'overall_progress',
-            ['project_id' => $projectId, 'tenant_id' => (string) $this->authenticatedUser()->tenant_id],
-            $label,
-            function () use ($projectId, $label) {
-                $total = Task::query()->where('project_id', $projectId)->count();
+        try {
+            $tasks = Task::query()->where('project_id', $projectId)->get();
+        } catch (\Throwable $e) {
+            Log::error('dashboard_metric_error', [
+                'project_id' => $projectId,
+                'tenant_id' => (string) $this->authenticatedUser()->tenant_id,
+                'widget' => 'overall_progress',
+                'request_id' => ErrorEnvelopeService::getCurrentRequestId(),
+                'exception' => $e->getMessage(),
+                'exception_class' => $e::class,
+            ]);
 
-                if ($total === 0) {
-                    return new MetricResult(
-                        value: null,
-                        availability: Availability::NO_DATA,
-                        reliability: Reliability::RELIABLE,
-                        freshness: Freshness::UNKNOWN,
-                        asOf: null,
-                        label: $label,
-                        explanation: 'Dự án chưa có công việc (Task) nào được tạo.',
-                    );
-                }
-
-                $completed = Task::query()->where('project_id', $projectId)
-                    ->where('status', Task::STATUS_COMPLETED)
-                    ->count();
-
-                $value = round(($completed / $total) * 100, 2);
-                $asOf = Task::query()->where('project_id', $projectId)->max('updated_at');
-
-                return new MetricResult(
-                    value: $value,
-                    availability: Availability::AVAILABLE,
-                    reliability: Reliability::RELIABLE,
+            return [
+                'overall_progress' => 0.0,
+                'overall_progress_meta' => new MetricResult(
+                    value: null,
+                    availability: Availability::ERROR,
+                    reliability: Reliability::UNKNOWN,
                     freshness: Freshness::UNKNOWN,
-                    asOf: $asOf ? Carbon::parse($asOf) : null,
+                    asOf: null,
                     label: $label,
-                    explanation: null,
-                );
-            },
-        );
-    }
+                    explanation: "Không thể tính được \"{$label}\" do lỗi truy vấn dữ liệu.",
+                ),
+                'task_progress' => $emptyBreakdown,
+            ];
+        }
 
-    private function computeTaskProgress(string $projectId): array
-    {
-        $tasks = Task::query()->where('project_id', $projectId)->get();
-
+        $total = $tasks->count();
         $overdue = $tasks->filter(
             fn ($t) => $t->end_date !== null
                 && $t->end_date < now()
                 && !in_array($t->status, [Task::STATUS_COMPLETED, Task::STATUS_CANCELLED], true)
         )->count();
 
-        return [
-            'total' => $tasks->count(),
+        $taskProgress = [
+            'total' => $total,
             'completed' => $tasks->where('status', Task::STATUS_COMPLETED)->count(),
             'in_progress' => $tasks->where('status', Task::STATUS_IN_PROGRESS)->count(),
             'pending' => $tasks->where('status', Task::STATUS_PENDING)->count(),
             'overdue' => $overdue,
         ];
+
+        if ($total === 0) {
+            return [
+                'overall_progress' => 0.0,
+                'overall_progress_meta' => new MetricResult(
+                    value: null,
+                    availability: Availability::NO_DATA,
+                    reliability: Reliability::RELIABLE,
+                    freshness: Freshness::UNKNOWN,
+                    asOf: null,
+                    label: $label,
+                    explanation: 'Dự án chưa có công việc (Task) nào được tạo.',
+                ),
+                'task_progress' => $taskProgress,
+            ];
+        }
+
+        $value = round(($taskProgress['completed'] / $total) * 100, 2);
+        $asOf = $tasks->max('updated_at');
+
+        return [
+            'overall_progress' => $value,
+            'overall_progress_meta' => new MetricResult(
+                value: $value,
+                availability: Availability::AVAILABLE,
+                reliability: Reliability::RELIABLE,
+                freshness: Freshness::UNKNOWN,
+                asOf: $asOf ? Carbon::parse($asOf) : null,
+                label: $label,
+                explanation: null,
+            ),
+            'task_progress' => $taskProgress,
+        ];
     }
 
-    private function computeMilestoneProgress(string $projectId): array
+    /**
+     * Tính milestone_progress + milestone_progress_meta từ MỘT lần fetch
+     * ProjectMilestone duy nhất (P2-A) — cùng lý do với computeTaskMetrics().
+     *
+     * @return array{milestone_progress: array<string, mixed>, milestone_progress_meta: MetricResult}
+     */
+    private function computeMilestoneMetrics(string $projectId): array
     {
-        $milestones = ProjectMilestone::query()->where('project_id', $projectId)->get();
+        $label = 'Tỷ lệ hoàn thành mốc tiến độ';
+        $emptyBreakdown = [
+            'total_milestones' => 0,
+            'completed_milestones' => 0,
+            'pending_milestones' => 0,
+            'overdue_milestones' => 0,
+            'completion_rate' => 0.0,
+            'upcoming_milestones' => [],
+        ];
+
+        try {
+            $milestones = ProjectMilestone::query()->where('project_id', $projectId)->get();
+        } catch (\Throwable $e) {
+            Log::error('dashboard_metric_error', [
+                'project_id' => $projectId,
+                'tenant_id' => (string) $this->authenticatedUser()->tenant_id,
+                'widget' => 'milestone_progress',
+                'request_id' => ErrorEnvelopeService::getCurrentRequestId(),
+                'exception' => $e->getMessage(),
+                'exception_class' => $e::class,
+            ]);
+
+            return [
+                'milestone_progress' => $emptyBreakdown,
+                'milestone_progress_meta' => new MetricResult(
+                    value: null,
+                    availability: Availability::ERROR,
+                    reliability: Reliability::UNKNOWN,
+                    freshness: Freshness::UNKNOWN,
+                    asOf: null,
+                    label: $label,
+                    explanation: "Không thể tính được \"{$label}\" do lỗi truy vấn dữ liệu.",
+                ),
+            ];
+        }
 
         $total = $milestones->count();
         $completed = $milestones->where('status', ProjectMilestone::STATUS_COMPLETED)->count();
         $pending = $milestones->where('status', ProjectMilestone::STATUS_PENDING)->count();
         $overdue = $milestones->where('status', ProjectMilestone::STATUS_OVERDUE)->count();
-
-        $completionRate = $total > 0 ? round(($completed / $total) * 100, 2) : 0.0;
 
         $upcoming = $milestones
             ->whereNotIn('status', [ProjectMilestone::STATUS_COMPLETED])
@@ -225,57 +280,43 @@ class PmDashboardController extends Controller
             ])
             ->values();
 
-        return [
-            'total_milestones' => $total,
-            'completed_milestones' => $completed,
-            'pending_milestones' => $pending,
-            'overdue_milestones' => $overdue,
-            'completion_rate' => $completionRate,
-            'upcoming_milestones' => $upcoming,
-        ];
-    }
-
-    private function computeMilestoneProgressMeta(string $projectId): MetricResult
-    {
-        $label = 'Tỷ lệ hoàn thành mốc tiến độ';
-
-        return MetricGuard::wrap(
-            'milestone_progress',
-            ['project_id' => $projectId, 'tenant_id' => (string) $this->authenticatedUser()->tenant_id],
-            $label,
-            function () use ($projectId, $label) {
-                $total = ProjectMilestone::query()->where('project_id', $projectId)->count();
-
-                if ($total === 0) {
-                    return new MetricResult(
-                        value: null,
-                        availability: Availability::NO_DATA,
-                        reliability: Reliability::LEGACY,
-                        freshness: Freshness::UNKNOWN,
-                        asOf: null,
-                        label: $label,
-                        explanation: 'Dự án chưa có mốc tiến độ (Milestone) nào được tạo. Nguồn dữ liệu này không còn kênh cập nhật chính thức.',
-                    );
-                }
-
-                $completed = ProjectMilestone::query()->where('project_id', $projectId)
-                    ->where('status', ProjectMilestone::STATUS_COMPLETED)
-                    ->count();
-
-                $value = round(($completed / $total) * 100, 2);
-                $asOf = ProjectMilestone::query()->where('project_id', $projectId)->max('updated_at');
-
-                return new MetricResult(
-                    value: $value,
-                    availability: Availability::AVAILABLE,
+        if ($total === 0) {
+            return [
+                'milestone_progress' => array_merge($emptyBreakdown, ['upcoming_milestones' => $upcoming]),
+                'milestone_progress_meta' => new MetricResult(
+                    value: null,
+                    availability: Availability::NO_DATA,
                     reliability: Reliability::LEGACY,
                     freshness: Freshness::UNKNOWN,
-                    asOf: $asOf ? Carbon::parse($asOf) : null,
+                    asOf: null,
                     label: $label,
-                    explanation: 'Dữ liệu lịch sử — không còn kênh cập nhật chính thức.',
-                );
-            },
-        );
+                    explanation: 'Dự án chưa có mốc tiến độ (Milestone) nào được tạo. Nguồn dữ liệu này không còn kênh cập nhật chính thức.',
+                ),
+            ];
+        }
+
+        $value = round(($completed / $total) * 100, 2);
+        $asOf = $milestones->max('updated_at');
+
+        return [
+            'milestone_progress' => [
+                'total_milestones' => $total,
+                'completed_milestones' => $completed,
+                'pending_milestones' => $pending,
+                'overdue_milestones' => $overdue,
+                'completion_rate' => $value,
+                'upcoming_milestones' => $upcoming,
+            ],
+            'milestone_progress_meta' => new MetricResult(
+                value: $value,
+                availability: Availability::AVAILABLE,
+                reliability: Reliability::LEGACY,
+                freshness: Freshness::UNKNOWN,
+                asOf: $asOf ? Carbon::parse($asOf) : null,
+                label: $label,
+                explanation: 'Dữ liệu lịch sử — không còn kênh cập nhật chính thức.',
+            ),
+        ];
     }
 
     private function computeBudgetProgress(Project $project): array

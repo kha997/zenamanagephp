@@ -132,13 +132,9 @@ class PipelineDragDropTest extends DuskTestCase
         // Group KHÔNG requires_choice (vd. consulting_survey): chọn xong là submit ngay
         // (1-bước) — không cần bước "Xác nhận" riêng như group requires_choice.
         //
-        // Kể từ Task 9, submitStageTransition() gọi mạng thật (không còn là stub của
-        // slice 2). Request tới backend thật (đã nối xong từ Task 4) hoàn tất nhanh
-        // trong môi trường test nên card không còn pending vĩnh viễn — dialog đóng ngay
-        // (submitStageTransition đóng dialog trước khi gọi mạng) và aria-busy trở về
-        // 'false' sau khi request thành công. Bài test này giờ xác nhận dialog đóng +
-        // request thật sự hoàn tất, không còn xác nhận "pending vĩnh viễn" (đó là đặc
-        // điểm của stub cũ, không phải hành vi mục tiêu).
+        // submitStageTransition() đóng dialog ngay rồi mới gọi mạng thật; request hoàn
+        // tất nhanh trong môi trường test nên aria-busy trở về 'false' sau khi request
+        // thành công — không pending vĩnh viễn.
         $opportunity = $this->makeOpportunity();
 
         $this->browse(function (Browser $browser) use ($opportunity) {
@@ -314,8 +310,9 @@ class PipelineDragDropTest extends DuskTestCase
 
     public function test_successful_submit_clears_pending_state(): void
     {
-        // Backend thật (đã nối xong từ Task 4) — chỉ xác nhận pending được gỡ,
-        // CHƯA xác nhận card di chuyển cột (đó là Task 10/slice 4, chưa tồn tại).
+        // Backend thật — chỉ xác nhận pending được gỡ sau khi request hoàn tất.
+        // Việc card thực sự di chuyển cột + cập nhật aggregate được kiểm riêng ở
+        // test_successful_submit_moves_card_and_updates_column_aggregates bên dưới.
         $opportunity = $this->makeOpportunity();
 
         $this->browse(function (Browser $browser) use ($opportunity) {

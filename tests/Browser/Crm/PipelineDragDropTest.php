@@ -547,4 +547,39 @@ class PipelineDragDropTest extends DuskTestCase
         $opportunity->refresh();
         $this->assertSame(Opportunity::STAGE_NEW_LEAD, $opportunity->pipeline_stage);
     }
+
+    public function test_dragging_the_last_card_out_of_a_column_reveals_the_empty_state(): void
+    {
+        $opportunity = $this->makeOpportunity();
+
+        $this->browse(function (Browser $browser) use ($opportunity) {
+            $browser->loginAs($this->user)
+                ->visit('/operator/crm')
+                ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-drag-handle', 10)
+                ->assertMissing('[data-board-group="new"] [data-column-empty]:not(.hidden)');
+
+            $browser->script([
+                "var handle = document.querySelector('[data-opportunity-id=\"{$opportunity->id}\"] .crm-drag-handle');"
+                . "var dt = new DataTransfer();"
+                . "handle.dispatchEvent(new DragEvent('dragstart', {bubbles: true, cancelable: true, dataTransfer: dt}));"
+                . "var target = document.querySelector('[data-board-group=\"consulting_survey\"]');"
+                . "target.dispatchEvent(new DragEvent('drop', {bubbles: true, cancelable: true, dataTransfer: dt}));",
+            ]);
+
+            $browser->waitFor('[data-board-group="consulting_survey"] [data-opportunity-id="' . $opportunity->id . '"]', 10)
+                ->assertScript(
+                    "return document.querySelector('[data-board-group=\"new\"] [data-column-count]').textContent.trim();",
+                    '0'
+                )
+                ->assertScript(
+                    "return document.querySelector('[data-board-group=\"new\"] [data-column-total]').textContent.trim()"
+                    . " === new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(0);",
+                    true
+                )
+                ->assertVisible('[data-board-group="new"] [data-column-empty]')
+                ->assertSeeIn('[data-board-group="new"] [data-column-empty]', 'Trống')
+                ->assertMissing('[data-board-group="new"] [data-opportunity-id="' . $opportunity->id . '"]')
+                ->assertPresent('[data-board-group="consulting_survey"] [data-opportunity-id="' . $opportunity->id . '"]');
+        });
+    }
 }

@@ -35,6 +35,26 @@ class OperatorCrmUiTest extends TestCase
         );
     }
 
+    /**
+     * Header set for postJson() calls against CSRF-protected 'web' routes.
+     *
+     * TestCase::ensureCsrfToken() deliberately skips auto-injecting a token
+     * when the request declares an application/json Accept header (JSON API
+     * calls are normally CSRF-exempt via routes/api.php's `except` list).
+     * This route lives under the 'web' middleware group though, where
+     * VerifyCsrfToken::runningUnitTests() is hard-disabled — so JSON POSTs
+     * here still need an explicit token. We pin one via withSession().
+     */
+    private function jsonCsrfHeaders(): array
+    {
+        $this->withSession(['_token' => 'test-csrf-token']);
+
+        return [
+            'X-Tenant-ID' => (string) $this->tenant->id,
+            'X-CSRF-TOKEN' => 'test-csrf-token',
+        ];
+    }
+
     public function test_crm_ui_full_flow_lead_to_project(): void
     {
         $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
@@ -102,6 +122,341 @@ class OperatorCrmUiTest extends TestCase
 
         $opportunity->refresh();
         $this->assertNotNull($opportunity->converted_project_id);
+    }
+
+    public function test_crm_index_renders_all_six_board_group_labels(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $this->actingAs($this->user)
+            ->get(route('operator.crm.index'), $headers)
+            ->assertOk()
+            ->assertSee('Mới')
+            ->assertSee('Tư vấn / Khảo sát')
+            ->assertSee('Báo giá')
+            ->assertSee('Đàm phán / Hợp đồng')
+            ->assertSee('Thắng')
+            ->assertSee('Thua / Nurture');
+    }
+
+    public function test_update_stage_returns_json_shape_when_ajax(): void
+    {
+        $headers = $this->jsonCsrfHeaders();
+        $account = \App\Models\Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'display_name' => 'Khách hàng AJAX test',
+        ]);
+        $opportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Cơ hội AJAX test',
+            'pipeline_stage' => Opportunity::STAGE_NEW_LEAD,
+            'sales_owner_id' => (string) $this->user->id,
+            'created_by' => (string) $this->user->id,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->postJson(route('operator.crm.opportunities.stage', $opportunity->id), [
+                'pipeline_stage' => Opportunity::STAGE_QUALIFIED,
+            ], $headers);
+
+        $response->assertOk();
+        $response->assertJson([
+            'message' => 'Đã cập nhật giai đoạn.',
+            'data' => [
+                'id' => (string) $opportunity->id,
+                'pipeline_stage' => Opportunity::STAGE_QUALIFIED,
+                'is_terminal' => false,
+            ],
+        ]);
+        $this->assertArrayNotHasKey('success', $response->json());
+        $this->assertArrayNotHasKey('status', $response->json());
+    }
+
+    public function test_update_stage_json_returns_403_when_permission_missing(): void
+    {
+        $headers = $this->jsonCsrfHeaders();
+        $viewer = $this->createTenantUser($this->tenant, [], ['crm_viewer'], ['crm.view']);
+        $account = \App\Models\Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'display_name' => 'Khách hàng 403 test',
+        ]);
+        $opportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Cơ hội 403 test',
+            'pipeline_stage' => Opportunity::STAGE_NEW_LEAD,
+            'sales_owner_id' => (string) $viewer->id,
+            'created_by' => (string) $viewer->id,
+        ]);
+
+        $this->actingAs($viewer)
+            ->postJson(route('operator.crm.opportunities.stage', $opportunity->id), [
+                'pipeline_stage' => Opportunity::STAGE_QUALIFIED,
+            ], $headers)
+            ->assertStatus(403);
+    }
+
+    public function test_update_stage_json_returns_422_when_lost_reason_missing(): void
+    {
+        $headers = $this->jsonCsrfHeaders();
+        $account = \App\Models\Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'display_name' => 'Khách hàng 422 test',
+        ]);
+        $opportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Cơ hội 422 test',
+            'pipeline_stage' => Opportunity::STAGE_NEW_LEAD,
+            'sales_owner_id' => (string) $this->user->id,
+            'created_by' => (string) $this->user->id,
+        ]);
+
+        $this->actingAs($this->user)
+            ->postJson(route('operator.crm.opportunities.stage', $opportunity->id), [
+                'pipeline_stage' => Opportunity::STAGE_LOST,
+            ], $headers)
+            ->assertStatus(422);
+    }
+
+    public function test_update_stage_json_blocks_terminal_transition(): void
+    {
+        $headers = $this->jsonCsrfHeaders();
+        $account = \App\Models\Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'display_name' => 'Khách hàng terminal test',
+        ]);
+        $opportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Cơ hội terminal test',
+            'pipeline_stage' => Opportunity::STAGE_WON,
+            'sales_owner_id' => (string) $this->user->id,
+            'created_by' => (string) $this->user->id,
+        ]);
+
+        $this->actingAs($this->user)
+            ->postJson(route('operator.crm.opportunities.stage', $opportunity->id), [
+                'pipeline_stage' => Opportunity::STAGE_QUALIFIED,
+            ], $headers)
+            ->assertStatus(422);
+
+        $opportunity->refresh();
+        $this->assertSame(Opportunity::STAGE_WON, $opportunity->pipeline_stage);
+    }
+
+    public function test_crm_index_renders_drag_drop_dom_contract(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+        $account = \App\Models\Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'display_name' => 'Khách hàng contract test',
+        ]);
+        $normalOpportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Cơ hội thường',
+            'pipeline_stage' => Opportunity::STAGE_NEW_LEAD,
+            'estimated_fee' => 1250000000,
+            'sales_owner_id' => (string) $this->user->id,
+            'created_by' => (string) $this->user->id,
+        ]);
+        $terminalOpportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Cơ hội đã thắng',
+            'pipeline_stage' => Opportunity::STAGE_WON,
+            'estimated_fee' => 500000000,
+            'sales_owner_id' => (string) $this->user->id,
+            'created_by' => (string) $this->user->id,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->get(route('operator.crm.index'), $headers);
+
+        $response->assertOk();
+        $html = $response->getContent();
+
+        // Card thường: đủ data attribute, có handle + nút chuyển giai đoạn
+        $this->assertStringContainsString('data-opportunity-id="' . $normalOpportunity->id . '"', $html);
+        $this->assertStringContainsString('data-current-stage="' . Opportunity::STAGE_NEW_LEAD . '"', $html);
+        $this->assertStringContainsString('data-terminal="0"', $html);
+        $this->assertStringContainsString('data-amount="1250000000"', $html);
+        $this->assertStringContainsString('crm-drag-handle', $html);
+        $this->assertStringContainsString('crm-stage-transition-btn', $html);
+
+        // Card terminal: data-terminal=1, KHÔNG có handle/nút trong phạm vi thẻ đó
+        $this->assertStringContainsString('data-opportunity-id="' . $terminalOpportunity->id . '"', $html);
+        $this->assertStringContainsString('data-terminal="1"', $html);
+
+        // Cột dùng stable key, không phải label
+        $this->assertStringContainsString('data-board-group="new"', $html);
+        $this->assertStringContainsString('data-board-group="lost_nurture"', $html);
+        $this->assertStringContainsString('data-default-entry-stage="' . Opportunity::STAGE_NEW_LEAD . '"', $html);
+        $this->assertStringContainsString('data-requires-choice="1"', $html);
+        $this->assertStringContainsString('data-choice-options="', $html);
+
+        // Dialog dùng chung
+        $this->assertStringContainsString('data-crm-stage-dialog', $html);
+        $this->assertStringContainsString('crm-dialog-group-option', $html);
+    }
+
+    public function test_crm_index_only_lost_nurture_column_has_choice_options_attribute(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $response = $this->actingAs($this->user)
+            ->get(route('operator.crm.index'), $headers);
+
+        $response->assertOk();
+        $html = $response->getContent();
+
+        // Cột lost_nurture: PHẢI có data-choice-options với JSON 3 lựa chọn
+        $lostNurtureStart = strpos($html, 'data-board-group="lost_nurture"');
+        $this->assertNotFalse($lostNurtureStart);
+        $sectionStart = strrpos(substr($html, 0, $lostNurtureStart), '<section');
+        $this->assertNotFalse($sectionStart);
+        $sectionEnd = strpos($html, '</section>', $sectionStart);
+        $lostNurtureSectionHtml = substr($html, $sectionStart, $sectionEnd - $sectionStart);
+
+        $this->assertStringContainsString('data-choice-options="', $lostNurtureSectionHtml);
+
+        // Cột "new" (không dùng choice): KHÔNG được có data-choice-options — dù rỗng hay không
+        $newStart = strpos($html, 'data-board-group="new"');
+        $this->assertNotFalse($newStart);
+        $newSectionStart = strrpos(substr($html, 0, $newStart), '<section');
+        $this->assertNotFalse($newSectionStart);
+        $newSectionEnd = strpos($html, '</section>', $newSectionStart);
+        $newSectionHtml = substr($html, $newSectionStart, $newSectionEnd - $newSectionStart);
+
+        $this->assertStringNotContainsString('data-choice-options', $newSectionHtml);
+    }
+
+    public function test_crm_index_terminal_card_has_no_drag_handle_or_transition_button(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+        $account = \App\Models\Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'display_name' => 'Khách hàng terminal-only test',
+        ]);
+        $terminalOpportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Cơ hội đã thua',
+            'pipeline_stage' => Opportunity::STAGE_LOST,
+            'lost_reason' => 'Test',
+            'sales_owner_id' => (string) $this->user->id,
+            'created_by' => (string) $this->user->id,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->get(route('operator.crm.index'), $headers);
+
+        $html = $response->getContent();
+        $cardStart = strpos($html, 'data-opportunity-id="' . $terminalOpportunity->id . '"');
+        $this->assertNotFalse($cardStart);
+
+        // Cắt riêng đoạn HTML của thẻ này (đến </li> gần nhất) để không lẫn với thẻ khác
+        $liEnd = strpos($html, '</li>', $cardStart);
+        $cardHtml = substr($html, $cardStart, $liEnd - $cardStart);
+
+        $this->assertStringNotContainsString('crm-drag-handle', $cardHtml);
+        $this->assertStringNotContainsString('crm-stage-transition-btn', $cardHtml);
+    }
+
+    public function test_crm_index_hides_drag_handle_and_transition_button_for_view_only_user(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+        $viewer = $this->createTenantUser($this->tenant, [], ['crm_viewer'], ['crm.view']);
+        $account = \App\Models\Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'display_name' => 'Khách hàng view-only test',
+        ]);
+        $opportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Cơ hội view-only',
+            'pipeline_stage' => Opportunity::STAGE_NEW_LEAD, // KHÔNG terminal — chỉ permission là lý do ẩn
+            'sales_owner_id' => (string) $viewer->id,
+            'created_by' => (string) $viewer->id,
+        ]);
+
+        $response = $this->actingAs($viewer)
+            ->get(route('operator.crm.index'), $headers);
+
+        $html = $response->getContent();
+        $cardStart = strpos($html, 'data-opportunity-id="' . $opportunity->id . '"');
+        $this->assertNotFalse($cardStart);
+
+        $liEnd = strpos($html, '</li>', $cardStart);
+        $cardHtml = substr($html, $cardStart, $liEnd - $cardStart);
+
+        $this->assertStringContainsString('data-terminal="0"', $cardHtml); // xác nhận rõ: KHÔNG terminal
+        $this->assertStringNotContainsString('crm-drag-handle', $cardHtml);
+        $this->assertStringNotContainsString('draggable="true"', $cardHtml);
+        $this->assertStringNotContainsString('crm-stage-transition-btn', $cardHtml);
+    }
+
+    public function test_update_stage_non_json_returns_friendly_redirect_when_opportunity_not_found(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+        $this->withSession(['_token' => 'test-csrf-token']);
+        $headers['X-CSRF-TOKEN'] = 'test-csrf-token';
+
+        $response = $this->actingAs($this->user)
+            ->from(route('operator.crm.index'))
+            ->post(route('operator.crm.opportunities.stage', '00000000-0000-0000-0000-000000000000'), [
+                'pipeline_stage' => Opportunity::STAGE_QUALIFIED,
+            ], $headers);
+
+        $response->assertRedirect(route('operator.crm.index'));
+        $response->assertSessionHas('error', 'Không tìm thấy cơ hội bán hàng.');
+    }
+
+    public function test_update_stage_non_json_returns_friendly_redirect_on_unexpected_exception(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+        $this->withSession(['_token' => 'test-csrf-token']);
+        $headers['X-CSRF-TOKEN'] = 'test-csrf-token';
+
+        $account = \App\Models\Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'display_name' => 'Khách hàng unexpected-error test',
+        ]);
+        $opportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Cơ hội unexpected-error test',
+            'pipeline_stage' => Opportunity::STAGE_NEW_LEAD,
+            'sales_owner_id' => (string) $this->user->id,
+            'created_by' => (string) $this->user->id,
+        ]);
+
+        // Force the service layer to blow up with something other than the
+        // two typed exceptions the controller already special-cases, to
+        // simulate an unexpected DB/infra failure surfacing from
+        // OpportunityStageTransitionService::transition().
+        $this->app->bind(\App\Services\Crm\OpportunityStageTransitionService::class, function () {
+            return new class extends \App\Services\Crm\OpportunityStageTransitionService {
+                public function transition(\App\Models\User $actor, Opportunity $opportunity, string $toStage, ?string $lostReason): Opportunity
+                {
+                    throw new \RuntimeException('Simulated unexpected failure');
+                }
+            };
+        });
+
+        $response = $this->actingAs($this->user)
+            ->from(route('operator.crm.index'))
+            ->post(route('operator.crm.opportunities.stage', $opportunity->id), [
+                'pipeline_stage' => Opportunity::STAGE_QUALIFIED,
+            ], $headers);
+
+        $response->assertRedirect(route('operator.crm.index'));
+        $response->assertSessionHas('error', 'Không thể xử lý yêu cầu.');
+
+        $opportunity->refresh();
+        $this->assertSame(Opportunity::STAGE_NEW_LEAD, $opportunity->pipeline_stage);
     }
 
     public function test_lead_conversion_accepts_custom_scope_summary(): void

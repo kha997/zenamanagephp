@@ -31,8 +31,20 @@
 
         <x-ui.card title="Công nợ">
             <div class="grid gap-4 sm:grid-cols-3">
-                <x-ui.field-value label="Tổng công nợ" :value="number_format($outstandingDebt['total'], 0, ',', '.') . '₫'" />
-                <x-ui.field-value label="Quá hạn" :value="number_format($outstandingDebt['overdue_total'], 0, ',', '.') . '₫'" />
+                <x-ui.field-value
+                    :label="$outstandingDebtTotalMetric->label"
+                    :value="$outstandingDebtTotalMetric->value !== null ? number_format($outstandingDebtTotalMetric->value, 0, ',', '.') . '₫' : null"
+                />
+                @if ($outstandingDebtTotalMetric->explanation)
+                    <p class="col-span-full text-xs text-slate-500">{{ $outstandingDebtTotalMetric->explanation }}</p>
+                @endif
+                <x-ui.field-value
+                    :label="$outstandingDebtOverdueMetric->label"
+                    :value="$outstandingDebtOverdueMetric->value !== null ? number_format($outstandingDebtOverdueMetric->value, 0, ',', '.') . '₫' : null"
+                />
+                @if ($outstandingDebtOverdueMetric->explanation)
+                    <p class="col-span-full text-xs text-slate-500">{{ $outstandingDebtOverdueMetric->explanation }}</p>
+                @endif
                 <x-ui.field-value label="Số khoản quá hạn" :value="(string) $outstandingDebt['overdue_count']" />
             </div>
             <div class="mt-4 grid gap-4 sm:grid-cols-3 lg:grid-cols-5">

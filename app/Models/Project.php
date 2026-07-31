@@ -31,6 +31,7 @@ use App\Models\User;
  * @property string $status Trạng thái dự án
  * @property float $progress Tiến độ %
  * @property float $actual_cost Chi phí thực tế
+ * @property \Carbon\Carbon|null $updated_at
  */
 class Project extends Model
 {

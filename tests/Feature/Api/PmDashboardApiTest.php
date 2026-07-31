@@ -11,6 +11,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Models\UserRoleProject;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 use Tests\Traits\AuthenticationTestTrait;
 
@@ -236,6 +237,8 @@ class PmDashboardApiTest extends TestCase
             ->assertJsonPath('data.project.id', (string) $project->id)
             ->assertJsonPath('data.project.name', 'PM progress project')
             ->assertJsonPath('data.overall_progress', 25)
+            ->assertJsonPath('data.overall_progress_meta.value', 25)
+            ->assertJsonPath('data.overall_progress_meta.availability', 'AVAILABLE')
             ->assertJsonPath('data.task_progress.total', 4)
             ->assertJsonPath('data.task_progress.completed', 1)
             ->assertJsonPath('data.task_progress.in_progress', 1)
@@ -246,6 +249,9 @@ class PmDashboardApiTest extends TestCase
             ->assertJsonPath('data.milestone_progress.pending_milestones', 1)
             ->assertJsonPath('data.milestone_progress.overdue_milestones', 1)
             ->assertJsonPath('data.milestone_progress.completion_rate', 33.33)
+            ->assertJsonPath('data.milestone_progress_meta.value', 33.33)
+            ->assertJsonPath('data.milestone_progress_meta.availability', 'AVAILABLE')
+            ->assertJsonPath('data.milestone_progress_meta.reliability', 'LEGACY')
             ->assertJsonCount(2, 'data.milestone_progress.upcoming_milestones')
             ->assertJsonPath('data.milestone_progress.upcoming_milestones.0.name', 'Delayed handoff')
             ->assertJsonPath('data.milestone_progress.upcoming_milestones.1.id', (string) $upcomingMilestone->id)
@@ -253,9 +259,62 @@ class PmDashboardApiTest extends TestCase
             ->assertJsonPath('data.budget_progress.spent_amount', 25000)
             ->assertJsonPath('data.budget_progress.remaining_amount', 75000)
             ->assertJsonPath('data.budget_progress.percentage_spent', 25)
+            ->assertJsonPath('data.budget_progress_meta.value', 25)
+            ->assertJsonPath('data.budget_progress_meta.availability', 'AVAILABLE')
             ->assertJsonPath('data.timeline_progress.total_days', 20)
             ->assertJsonPath('data.timeline_progress.days_elapsed', 10)
-            ->assertJsonPath('data.timeline_progress.percentage_elapsed', 50);
+            ->assertJsonPath('data.timeline_progress.percentage_elapsed', 50)
+            ->assertJsonPath('data.timeline_progress_meta.value', 50)
+            ->assertJsonPath('data.timeline_progress_meta.availability', 'AVAILABLE')
+            ->assertJsonPath('data.timeline_progress_meta.label', 'Tỷ lệ thời gian kế hoạch đã trôi qua');
+    }
+
+    public function test_timeline_progress_meta_is_not_applicable_when_dates_missing(): void
+    {
+        $project = $this->createAssignedProject('No dates project', Project::STATUS_ACTIVE, [
+            'start_date' => null,
+            'end_date' => null,
+        ]);
+
+        $this->withHeaders($this->headers)
+            ->getJson(route('api.zena.pm.progress', ['project_id' => (string) $project->id], false))
+            ->assertOk()
+            ->assertJsonPath('data.timeline_progress.percentage_elapsed', 0)
+            ->assertJsonPath('data.timeline_progress_meta.value', null)
+            ->assertJsonPath('data.timeline_progress_meta.availability', 'NOT_APPLICABLE')
+            ->assertJsonPath('data.timeline_progress_meta.reliability', 'RELIABLE')
+            ->assertJsonPath('data.timeline_progress_meta.label', 'Tỷ lệ thời gian kế hoạch đã trôi qua')
+            ->assertJsonPath('data.timeline_progress_meta.as_of', null);
+    }
+
+    public function test_timeline_progress_is_clamped_to_zero_when_project_starts_in_the_future(): void
+    {
+        $project = $this->createAssignedProject('Future start project', Project::STATUS_PLANNING, [
+            'start_date' => now()->addDays(10)->toDateString(),
+            'end_date' => now()->addDays(30)->toDateString(),
+        ]);
+
+        $this->withHeaders($this->headers)
+            ->getJson(route('api.zena.pm.progress', ['project_id' => (string) $project->id], false))
+            ->assertOk()
+            ->assertJsonPath('data.timeline_progress.percentage_elapsed', 0)
+            ->assertJsonPath('data.timeline_progress_meta.value', 0)
+            ->assertJsonPath('data.timeline_progress_meta.availability', 'AVAILABLE');
+    }
+
+    public function test_timeline_progress_is_clamped_to_one_hundred_when_project_has_ended(): void
+    {
+        $project = $this->createAssignedProject('Ended project', Project::STATUS_COMPLETED, [
+            'start_date' => now()->subDays(30)->toDateString(),
+            'end_date' => now()->subDays(10)->toDateString(),
+        ]);
+
+        $this->withHeaders($this->headers)
+            ->getJson(route('api.zena.pm.progress', ['project_id' => (string) $project->id], false))
+            ->assertOk()
+            ->assertJsonPath('data.timeline_progress.percentage_elapsed', 100)
+            ->assertJsonPath('data.timeline_progress_meta.value', 100)
+            ->assertJsonPath('data.timeline_progress_meta.availability', 'AVAILABLE');
     }
 
     public function test_pm_progress_route_requires_project_id_and_hides_inaccessible_projects(): void
@@ -304,15 +363,128 @@ class PmDashboardApiTest extends TestCase
             ->assertJsonPath('message', 'Project not found or access denied');
     }
 
-    private function createAssignedProject(string $name, string $status): Project
+    public function test_overall_progress_meta_is_no_data_when_project_has_no_tasks(): void
     {
-        $project = Project::factory()->create([
+        $project = $this->createAssignedProject('Empty progress project', Project::STATUS_ACTIVE);
+
+        $this->withHeaders($this->headers)
+            ->getJson(route('api.zena.pm.progress', ['project_id' => (string) $project->id], false))
+            ->assertOk()
+            ->assertJsonPath('data.overall_progress', 0)
+            ->assertJsonPath('data.overall_progress_meta.value', null)
+            ->assertJsonPath('data.overall_progress_meta.availability', 'NO_DATA')
+            ->assertJsonPath('data.overall_progress_meta.reliability', 'RELIABLE')
+            ->assertJsonPath('data.overall_progress_meta.freshness', 'UNKNOWN')
+            ->assertJsonPath('data.overall_progress_meta.as_of', null)
+            ->assertJsonPath('data.overall_progress_meta.explanation', 'Dự án chưa có công việc (Task) nào được tạo.');
+    }
+
+    public function test_milestone_progress_meta_is_no_data_and_legacy_when_project_has_no_milestones(): void
+    {
+        $project = $this->createAssignedProject('No milestone project', Project::STATUS_ACTIVE);
+
+        $this->withHeaders($this->headers)
+            ->getJson(route('api.zena.pm.progress', ['project_id' => (string) $project->id], false))
+            ->assertOk()
+            ->assertJsonPath('data.milestone_progress_meta.value', null)
+            ->assertJsonPath('data.milestone_progress_meta.availability', 'NO_DATA')
+            ->assertJsonPath('data.milestone_progress_meta.reliability', 'LEGACY');
+    }
+
+    public function test_budget_progress_meta_is_not_applicable_when_no_budget_entered(): void
+    {
+        $project = $this->createAssignedProject('No budget project', Project::STATUS_ACTIVE, ['budget_actual' => 0]);
+
+        $this->withHeaders($this->headers)
+            ->getJson(route('api.zena.pm.progress', ['project_id' => (string) $project->id], false))
+            ->assertOk()
+            ->assertJsonPath('data.budget_progress', ['total_budget' => 0, 'spent_amount' => 0, 'remaining_amount' => 0, 'percentage_spent' => 0])
+            ->assertJsonPath('data.budget_progress_meta.value', null)
+            ->assertJsonPath('data.budget_progress_meta.availability', 'NOT_APPLICABLE')
+            ->assertJsonPath('data.budget_progress_meta.reliability', 'RELIABLE');
+    }
+
+    public function test_task_query_failure_degrades_overall_and_task_progress_without_500ing_the_endpoint(): void
+    {
+        $project = $this->createAssignedProject('Task query failure project', Project::STATUS_ACTIVE, [
+            'budget_total' => 100000,
+            'budget_actual' => 25000,
+        ]);
+
+        ProjectMilestone::query()->create([
+            'project_id' => (string) $project->id,
+            'name' => 'Unaffected milestone',
+            'status' => ProjectMilestone::STATUS_COMPLETED,
+            'target_date' => now()->subDays(5)->toDateString(),
+            'completed_date' => now()->subDays(4)->toDateString(),
+            'created_by' => (string) $this->actor->id,
+        ]);
+
+        Schema::rename('tasks', 'tasks_test_failure_injection');
+
+        try {
+            $response = $this->withHeaders($this->headers)
+                ->getJson(route('api.zena.pm.progress', ['project_id' => (string) $project->id], false));
+        } finally {
+            Schema::rename('tasks_test_failure_injection', 'tasks');
+        }
+
+        $response->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('data.overall_progress', 0)
+            ->assertJsonPath('data.overall_progress_meta.value', null)
+            ->assertJsonPath('data.overall_progress_meta.availability', 'ERROR')
+            ->assertJsonPath('data.task_progress', ['total' => 0, 'completed' => 0, 'in_progress' => 0, 'pending' => 0, 'overdue' => 0])
+            // Milestone and budget metrics run their own queries and must be unaffected by the Task table failure.
+            ->assertJsonPath('data.milestone_progress_meta.availability', 'AVAILABLE')
+            ->assertJsonPath('data.milestone_progress_meta.value', 100)
+            ->assertJsonPath('data.budget_progress_meta.availability', 'AVAILABLE');
+    }
+
+    public function test_milestone_query_failure_degrades_milestone_progress_without_500ing_the_endpoint(): void
+    {
+        $project = $this->createAssignedProject('Milestone query failure project', Project::STATUS_ACTIVE);
+
+        $this->createTask($project, [
+            'status' => Task::STATUS_COMPLETED,
+            'end_date' => now()->subDay(),
+        ]);
+
+        Schema::rename('project_milestones', 'project_milestones_test_failure_injection');
+
+        try {
+            $response = $this->withHeaders($this->headers)
+                ->getJson(route('api.zena.pm.progress', ['project_id' => (string) $project->id], false));
+        } finally {
+            Schema::rename('project_milestones_test_failure_injection', 'project_milestones');
+        }
+
+        $response->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('data.milestone_progress_meta.value', null)
+            ->assertJsonPath('data.milestone_progress_meta.availability', 'ERROR')
+            ->assertJsonPath('data.milestone_progress', [
+                'total_milestones' => 0,
+                'completed_milestones' => 0,
+                'pending_milestones' => 0,
+                'overdue_milestones' => 0,
+                'completion_rate' => 0,
+                'upcoming_milestones' => [],
+            ])
+            // Task metrics run their own query and must be unaffected by the Milestone table failure.
+            ->assertJsonPath('data.overall_progress_meta.availability', 'AVAILABLE')
+            ->assertJsonPath('data.overall_progress_meta.value', 100);
+    }
+
+    private function createAssignedProject(string $name, string $status, array $attributes = []): Project
+    {
+        $project = Project::factory()->create(array_merge([
             'tenant_id' => (string) $this->tenant->id,
             'created_by' => (string) $this->actor->id,
             'pm_id' => (string) $this->actor->id,
             'name' => $name,
             'status' => $status,
-        ]);
+        ], $attributes));
 
         $role = Role::firstOrCreate(
             ['name' => 'project_manager'],

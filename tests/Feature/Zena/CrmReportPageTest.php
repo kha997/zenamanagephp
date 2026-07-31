@@ -12,6 +12,7 @@ use App\Models\ContractPayment;
 use App\Models\Project;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 use Tests\Traits\TenantUserFactoryTrait;
 
@@ -61,6 +62,60 @@ class CrmReportPageTest extends TestCase
             ->get(route('operator.crm.reports'), $headers)
             ->assertOk()
             ->assertSee('123.000.000', false);
+    }
+
+    public function test_report_page_relabels_outstanding_debt_total_as_scheduled_unpaid(): void
+    {
+        $account = Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_type' => Account::TYPE_INDIVIDUAL,
+            'display_name' => 'Khach hang label test',
+            'status' => Account::STATUS_ACTIVE,
+        ]);
+
+        $project = Project::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'name' => 'Du an label test',
+            'code' => 'PRJ-CRMLABEL',
+            'status' => 'active',
+        ]);
+
+        $contract = Contract::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'project_id' => (string) $project->id,
+            'code' => 'CTR-CRMLABEL',
+            'title' => 'Hop dong label test',
+            'total_value' => 50000000,
+            'currency' => 'VND',
+            'status' => 'active',
+        ]);
+
+        ContractPayment::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'contract_id' => (string) $contract->id,
+            'name' => 'Dot 1',
+            'amount' => 20000000,
+            'due_date' => now()->addDays(15)->toDateString(),
+            'status' => ContractPayment::STATUS_PLANNED,
+        ]);
+
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $this->actingAs($this->viewer)
+            ->get(route('operator.crm.reports'), $headers)
+            ->assertOk()
+            ->assertSee('Giá trị theo lịch chưa ghi nhận thanh toán')
+            ->assertDontSee('Tổng công nợ');
+    }
+
+    public function test_report_page_shows_no_data_when_tenant_has_no_payment_schedule(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $this->actingAs($this->viewer)
+            ->get(route('operator.crm.reports'), $headers)
+            ->assertOk()
+            ->assertSee('Chưa có lịch thanh toán');
     }
 
     public function test_report_page_requires_crm_view_permission(): void
@@ -146,6 +201,92 @@ class CrmReportPageTest extends TestCase
             ->assertSee('20.000.000', false);
     }
 
+    public function test_aging_not_due_bucket_excludes_future_dated_payment_from_overdue_total(): void
+    {
+        $account = Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_type' => Account::TYPE_INDIVIDUAL,
+            'display_name' => 'Khach hang aging test',
+            'status' => Account::STATUS_ACTIVE,
+        ]);
+
+        $project = Project::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'name' => 'Du an aging test',
+            'code' => 'PRJ-AGING1',
+            'status' => 'active',
+        ]);
+
+        $contract = Contract::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'project_id' => (string) $project->id,
+            'code' => 'CTR-AGING1',
+            'title' => 'Hop dong aging test',
+            'total_value' => 10000000,
+            'currency' => 'VND',
+            'status' => 'active',
+        ]);
+
+        ContractPayment::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'contract_id' => (string) $contract->id,
+            'name' => 'Ky tuong lai',
+            'amount' => 10000000,
+            'due_date' => now()->addDays(45)->toDateString(),
+            'status' => ContractPayment::STATUS_PLANNED,
+        ]);
+
+        $response = $this->actingAs($this->viewer)->get(route('operator.crm.reports'));
+
+        $response->assertOk();
+        $response->assertSee('Giá trị đã quá hạn theo lịch, chưa ghi nhận thanh toán');
+        // overdue_total must be 0 (the payment is not_due), rendered as "0₫"
+        $response->assertSeeInOrder(['Giá trị đã quá hạn theo lịch, chưa ghi nhận thanh toán', '0₫']);
+    }
+
+    public function test_aging_due_date_wins_over_stale_status_field(): void
+    {
+        $account = Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_type' => Account::TYPE_INDIVIDUAL,
+            'display_name' => 'Khach hang aging test 2',
+            'status' => Account::STATUS_ACTIVE,
+        ]);
+
+        $project = Project::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'name' => 'Du an aging test 2',
+            'code' => 'PRJ-AGING2',
+            'status' => 'active',
+        ]);
+
+        $contract = Contract::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'project_id' => (string) $project->id,
+            'code' => 'CTR-AGING2',
+            'title' => 'Hop dong aging test 2',
+            'total_value' => 5000000,
+            'currency' => 'VND',
+            'status' => 'active',
+        ]);
+
+        // status is still "planned" (never manually flipped to "overdue"), but due_date is 10 days in the past —
+        // BusinessKpiService::outstandingDebt() must still count this as overdue because it compares due_date, not status.
+        ContractPayment::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'contract_id' => (string) $contract->id,
+            'name' => 'Ky qua han nhung status chua cap nhat',
+            'amount' => 5000000,
+            'due_date' => now()->subDays(10)->toDateString(),
+            'status' => ContractPayment::STATUS_PLANNED,
+        ]);
+
+        $response = $this->actingAs($this->viewer)->get(route('operator.crm.reports'));
+
+        $response->assertOk();
+        $response->assertSeeInOrder(['Giá trị đã quá hạn theo lịch, chưa ghi nhận thanh toán', '5.000.000₫']);
+    }
+
     public function test_report_page_is_tenant_isolated(): void
     {
         $otherTenant = Tenant::factory()->create();
@@ -172,5 +313,45 @@ class CrmReportPageTest extends TestCase
             ->get(route('operator.crm.reports'), $headers)
             ->assertOk()
             ->assertDontSee('987.654.321', false);
+    }
+
+    public function test_report_page_renders_with_error_state_when_outstanding_debt_query_fails(): void
+    {
+        $account = Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_type' => Account::TYPE_INDIVIDUAL,
+            'display_name' => 'Khach hang debt query fail',
+            'status' => Account::STATUS_ACTIVE,
+        ]);
+
+        Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Co hoi debt query fail',
+            'service_category' => 'architecture',
+            'pipeline_stage' => Opportunity::STAGE_WON,
+            'estimated_fee' => 55000000,
+            'sales_owner_id' => (string) $this->viewer->id,
+            'created_by' => (string) $this->viewer->id,
+        ]);
+
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        Schema::rename('contract_payments', 'contract_payments_test_failure_injection');
+
+        try {
+            $response = $this->actingAs($this->viewer)->get(route('operator.crm.reports'), $headers);
+        } finally {
+            Schema::rename('contract_payments_test_failure_injection', 'contract_payments');
+        }
+
+        // The whole report page must still render — not 500 — with unrelated
+        // widgets (revenue, pipeline) unaffected, and BOTH debt metrics
+        // (total + overdue) reporting a consistent error state.
+        $response->assertOk();
+        $response->assertSee('55.000.000', false);
+        $response->assertSee('Giá trị theo lịch chưa ghi nhận thanh toán');
+        $response->assertSee('Giá trị đã quá hạn theo lịch, chưa ghi nhận thanh toán');
+        $response->assertSee('Không thể tính được', false);
     }
 }

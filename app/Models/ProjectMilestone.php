@@ -14,8 +14,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $project_id ID dự án
  * @property string $name Tên milestone
  * @property string|null $description Mô tả
- * @property \Carbon\Carbon|null $target_date Ngày mục tiêu
- * @property \Carbon\Carbon|null $completed_date Ngày hoàn thành
+ * @property \Illuminate\Support\Carbon|null $target_date Ngày mục tiêu
+ * @property \Illuminate\Support\Carbon|null $completed_date Ngày hoàn thành
  * @property string $status Trạng thái
  * @property int $order Thứ tự
  * @property array|null $metadata Dữ liệu bổ sung

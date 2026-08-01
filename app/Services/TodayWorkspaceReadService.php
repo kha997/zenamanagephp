@@ -111,6 +111,9 @@ class TodayWorkspaceReadService
         }
     }
 
+    /**
+     * @param Collection<int, OpenWorkItem> $openWork
+     */
     private function safeTeamException(string $tenantId, string $actorId, Collection $openWork): ?TodaySectionResult
     {
         try {

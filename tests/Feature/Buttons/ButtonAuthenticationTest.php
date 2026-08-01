@@ -62,8 +62,10 @@ class ButtonAuthenticationTest extends TestCase
             'password' => 'password'
         ]);
 
-        $expected = config('fortify.home') ?? RouteServiceProvider::HOME;
-        $response->assertRedirect($expected);
+        // AuthController::login() redirects to /app/today (post-login landing
+        // page since the Today workspace MVP), not the config('fortify.home')
+        // value — this app does not route logins through Fortify's responder.
+        $response->assertRedirect('/app/today');
     }
 
     /**

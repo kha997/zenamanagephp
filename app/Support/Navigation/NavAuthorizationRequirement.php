@@ -5,6 +5,7 @@ namespace App\Support\Navigation;
 final class NavAuthorizationRequirement
 {
     /**
+     * @param 'rbac'|'can'|'baseline'|'unresolvable' $type
      * @param string[] $permissions
      */
     private function __construct(

@@ -18,6 +18,14 @@ class TodayPerformanceTest extends TestCase
     use RefreshDatabase;
     use TenantUserFactoryTrait;
 
+    /**
+     * Per-collaborator query budget for a single /app/today request, fixed
+     * regardless of row count (see the row-count-invariance assertion below):
+     * OpenWorkReadQuery ~4, UpcomingMilestoneQuery ~2, UnreadUpdateQuery ~1,
+     * TeamExceptionQuery ~4, nav composer (route/permission preload) ~3,
+     * plus a ~6-query allowance for framework overhead (auth, session,
+     * tenant resolution, view rendering) = ceiling 20.
+     */
     private const ANALYTICAL_MAX_QUERIES = 20;
 
     private function seedFixture(Tenant $tenant, \App\Models\User $viewer, Project $project, int $rowCount): void

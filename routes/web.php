@@ -28,7 +28,7 @@ use Illuminate\Support\Facades\Auth;
 
 // Root redirect - Redirect to dashboard (auth temporarily disabled)
 Route::get('/', function () {
-    return redirect('/app/dashboard');
+    return redirect('/app/today');
 });
 
 // Legacy Routes - These routes are deprecated and will be removed

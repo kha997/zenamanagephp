@@ -47431,3 +47431,9 @@ parameters:
 			identifier: argument.templateType
 			count: 1
 			path: app/Support/Navigation/OperatorNavigationComposer.php
+
+		-
+			message: '#^Parameter \$targetDate of class App\\Support\\Today\\TodayMilestoneItem constructor expects Illuminate\\Support\\Carbon\|null, Carbon\\Carbon\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/UpcomingMilestoneQuery.php

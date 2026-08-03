@@ -43,7 +43,7 @@ class AuthController extends Controller
             // operator dashboard, which already covers workload/projects/
             // contracts/etc.; /admin remains reachable only via its own
             // rbac:admin gate for whoever actually qualifies.
-            return redirect()->intended('/app/dashboard');
+            return redirect()->intended('/app/today');
         }
 
         // If authentication fails, try demo users

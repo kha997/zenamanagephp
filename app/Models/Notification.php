@@ -13,7 +13,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Model Notification để quản lý thông báo
- * 
+ *
+ * @property string $id
  * @property string $user_id
  * @property string $priority
  * @property string $title
@@ -21,8 +22,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $link_url
  * @property string $channel
  * @property \Carbon\Carbon|null $read_at
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property \Illuminate\Support\Carbon $created_at
+ * @property \Illuminate\Support\Carbon $updated_at
  */
 class Notification extends Model
 {

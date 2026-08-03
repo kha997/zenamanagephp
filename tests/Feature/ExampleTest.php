@@ -17,6 +17,6 @@ class ExampleTest extends TestCase
         $response = $this->get('/');
 
         $response->assertStatus(302);
-        $response->assertRedirect('/app/dashboard');
+        $response->assertRedirect('/app/today');
     }
 }

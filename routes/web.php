@@ -28,7 +28,7 @@ use Illuminate\Support\Facades\Auth;
 
 // Root redirect - Redirect to dashboard (auth temporarily disabled)
 Route::get('/', function () {
-    return redirect('/app/dashboard');
+    return redirect('/app/today');
 });
 
 // Legacy Routes - These routes are deprecated and will be removed
@@ -390,6 +390,7 @@ Route::get('/projects-enhanced', function() {
     Route::get('/tasks', [App\Http\Controllers\Web\AppController::class, 'tasks'])->name('tasks');
     Route::get('/workload', [App\Http\Controllers\Web\WorkloadPageController::class, 'index'])->middleware('rbac:task.view')->name('workload.index');
     Route::get('/my-work', [App\Http\Controllers\Web\WorkloadPageController::class, 'myWork'])->middleware('rbac:task.view')->name('my-work.index');
+    Route::get('/today', [App\Http\Controllers\Web\TodayController::class, 'index'])->middleware('rbac:task.view')->name('today');
     Route::get('/tasks/create', [App\Http\Controllers\Web\TaskController::class, 'create'])->name('tasks.create');
     // Web store/update delegate sang Api\TaskController (business logic ở API)
     Route::post('/tasks', [App\Http\Controllers\Web\TaskController::class, 'store'])->middleware('rbac:task.create')->name('tasks.store');

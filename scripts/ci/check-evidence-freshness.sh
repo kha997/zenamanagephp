@@ -9,6 +9,15 @@ set -euo pipefail
 # infrastructure involved.
 #
 # Usage: PR_NUMBER=<n> WORK_ID=<id> bash scripts/ci/check-evidence-freshness.sh
+#
+# PR_HEAD_SHA (optional): the real PR branch head SHA (GitHub Actions:
+# github.event.pull_request.head.sha). On a `pull_request` trigger with
+# actions/checkout@v5, `git rev-parse HEAD` resolves to the ephemeral
+# GitHub-created merge commit, not the PR branch head that was hashed into
+# owner_decision_binding.evidence_digest when the decision was recorded —
+# so the digest would never match. When PR_HEAD_SHA is set, it is preferred;
+# otherwise this falls back to `git rev-parse HEAD` (correct for `push`
+# triggers and manual/local runs, where there is no merge commit).
 
 : "${PR_NUMBER:?PR_NUMBER env var required}"
 : "${WORK_ID:?WORK_ID env var required}"
@@ -30,7 +39,7 @@ if [ "$owner_decision_value" = "none" ]; then
   exit 0
 fi
 
-current_head_sha="$(git rev-parse HEAD)"
+current_head_sha="${PR_HEAD_SHA:-$(git rev-parse HEAD)}"
 
 checks_json="$(gh pr checks "$PR_NUMBER" --json name,state)"
 current_digest="$(php -r '

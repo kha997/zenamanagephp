@@ -181,10 +181,8 @@ class DocumentController extends Controller
             $tenantId = (string) Auth::user()?->tenant_id;
 
             $query = Document::with(['project', 'uploader'])
-                ->where('is_active', true)
                 ->whereHas('project', fn ($projectQuery) => $projectQuery->where('tenant_id', $tenantId));
 
-            // Apply filters
             if ($request->filled('project_id')) {
                 $query->where('project_id', $request->input('project_id'));
             }
@@ -195,15 +193,38 @@ class DocumentController extends Controller
 
             $documents = $query->orderBy('created_at', 'desc')->paginate(15);
             $projects = Project::query()->where('tenant_id', $tenantId)->select('id', 'name')->get();
-            
-            return view('documents.approvals', compact('documents', 'projects'));
-        } catch (\Exception $e) {
+            $decisionUsers = $this->decisionUsersFor($documents, $tenantId);
+
+            return view('documents.approvals', compact('documents', 'projects', 'decisionUsers'));
+        } catch (\Throwable $e) {
+            report($e);
+
             return view('documents.approvals', [
                 'documents' => collect(),
                 'projects' => collect(),
-                'error' => 'Không thể tải danh sách documents cần duyệt: ' . $e->getMessage()
+                'decisionUsers' => collect(),
+                'error' => 'Không thể tải danh sách tài liệu cần duyệt. Vui lòng thử lại sau.',
             ]);
         }
+    }
+
+    /**
+     * @param \Illuminate\Pagination\LengthAwarePaginator<int, Document> $paginatedDocuments
+     * @return \Illuminate\Support\Collection<string, string>
+     */
+    public function decisionUsersFor(\Illuminate\Pagination\LengthAwarePaginator $paginatedDocuments, string $tenantId): \Illuminate\Support\Collection
+    {
+        $decisionUserIds = $paginatedDocuments->getCollection()
+            ->pluck('decision_by_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($decisionUserIds->isEmpty()) {
+            return collect();
+        }
+
+        return \App\Models\User::query()->where('tenant_id', $tenantId)->whereIn('id', $decisionUserIds)->pluck('name', 'id');
     }
 
     /**

@@ -44,7 +44,7 @@
         <x-ui.empty-state title="Không có tài liệu" description="Không có tài liệu nào khớp bộ lọc." />
     @else
         <x-ui.card>
-            <x-ui.data-table :headers="['Tài liệu', 'Dự án', 'Trạng thái', 'Người tải', 'Ngày tạo']">
+            <x-ui.data-table :headers="['Tài liệu', 'Dự án', 'Trạng thái', 'Người tải', 'Ngày tạo', 'Người xử lý', 'Hành động']">
                 @foreach ($documents as $document)
                     <tr>
                         <td class="font-medium text-slate-900">{{ $document->title ?? $document->name }}</td>
@@ -52,6 +52,32 @@
                         <td><x-ui.status-badge :status="$document->status ?? 'pending'" /></td>
                         <td class="text-sm text-slate-600">{{ $document->uploader?->name ?? '—' }}</td>
                         <td class="text-sm text-slate-600">{{ optional($document->created_at)->format('d/m/Y H:i') }}</td>
+                        <td class="text-sm text-slate-600">
+                            @if (in_array($document->status, ['approved', 'rejected'], true))
+                                {{ $decisionUsers[$document->decision_by_id] ?? '—' }}
+                                @if ($document->decision_at)
+                                    <div class="text-xs text-slate-400">{{ $document->decision_at->format('d/m/Y H:i') }}</div>
+                                @endif
+                                @if ($document->decision_note)
+                                    <div class="text-xs text-slate-500">{{ $document->decision_note }}</div>
+                                @endif
+                            @else
+                                —
+                            @endif
+                        </td>
+                        <td>
+                            @if ($document->status === 'submitted')
+                                <form method="POST" action="{{ route('app.documents.workflow.approve', ['document' => $document->id]) }}" class="inline">
+                                    @csrf
+                                    <button type="submit" class="operator-button operator-button-primary">Duyệt</button>
+                                </form>
+                                <form method="POST" action="{{ route('app.documents.workflow.reject', ['document' => $document->id]) }}" class="inline">
+                                    @csrf
+                                    <input type="hidden" name="decision_note" value="Từ chối qua danh sách duyệt" />
+                                    <button type="submit" class="operator-button operator-button-secondary">Từ chối</button>
+                                </form>
+                            @endif
+                        </td>
                     </tr>
                 @endforeach
             </x-ui.data-table>

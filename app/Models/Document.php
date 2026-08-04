@@ -26,6 +26,7 @@ use App\Models\Project;
  * @property string|null $linked_entity_id
  * @property string|null $current_version_id
  * @property array|null $tags
+ * @property array<string, mixed>|null $metadata
  * @property string $status
  * @property string $visibility
  * @property bool $client_approved
@@ -198,6 +199,23 @@ class Document extends Model
     public function currentVersion(): HasOne
     {
         return $this->hasOne(DocumentVersion::class, 'id', 'current_version_id');
+    }
+
+    public function getDecisionByIdAttribute(): ?string
+    {
+        return is_array($this->metadata) ? ($this->metadata['decision_by'] ?? null) : null;
+    }
+
+    public function getDecisionAtAttribute(): ?\Carbon\Carbon
+    {
+        $value = is_array($this->metadata) ? ($this->metadata['decision_at'] ?? null) : null;
+
+        return $value ? \Carbon\Carbon::parse($value) : null;
+    }
+
+    public function getDecisionNoteAttribute(): ?string
+    {
+        return is_array($this->metadata) ? ($this->metadata['decision_note'] ?? null) : null;
     }
 
     /**

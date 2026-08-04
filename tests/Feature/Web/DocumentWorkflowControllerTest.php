@@ -128,6 +128,75 @@ class DocumentWorkflowControllerTest extends TestCase
         ]);
     }
 
+    public function test_approve_by_actor_with_document_approve_transitions_submitted_to_approved(): void
+    {
+        $document = $this->makeDocument(['status' => 'submitted', 'metadata' => ['status' => 'submitted']]);
+        $actor = $this->createTenantUser($this->tenant, [], ['pm'], ['document.approve']);
+
+        $response = $this->actingAs($actor)
+            ->withHeaders(['X-Tenant-ID' => (string) $this->tenant->id])
+            ->post(route('app.documents.workflow.approve', ['document' => $document->id]));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+        $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'approved']);
+    }
+
+    public function test_reject_without_decision_note_fails_validation(): void
+    {
+        $document = $this->makeDocument(['status' => 'submitted', 'metadata' => ['status' => 'submitted']]);
+        $actor = $this->createTenantUser($this->tenant, [], ['pm'], ['document.approve']);
+
+        $response = $this->actingAs($actor)
+            ->withHeaders(['X-Tenant-ID' => (string) $this->tenant->id])
+            ->post(route('app.documents.workflow.reject', ['document' => $document->id]), []);
+
+        $response->assertSessionHasErrors('decision_note');
+        $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'submitted']);
+    }
+
+    public function test_reject_with_decision_note_transitions_submitted_to_rejected(): void
+    {
+        $document = $this->makeDocument(['status' => 'submitted', 'metadata' => ['status' => 'submitted']]);
+        $actor = $this->createTenantUser($this->tenant, [], ['pm'], ['document.approve']);
+
+        $response = $this->actingAs($actor)
+            ->withHeaders(['X-Tenant-ID' => (string) $this->tenant->id])
+            ->post(route('app.documents.workflow.reject', ['document' => $document->id]), [
+                'decision_note' => 'Thiếu chữ ký kỹ sư trưởng',
+            ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+        $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'rejected']);
+    }
+
+    public function test_approve_or_reject_without_document_approve_permission_is_blocked(): void
+    {
+        $document = $this->makeDocument(['status' => 'submitted', 'metadata' => ['status' => 'submitted']]);
+        $actor = $this->createTenantUser($this->tenant, [], ['designer'], ['document.update']);
+
+        $response = $this->actingAs($actor)
+            ->withHeaders(['X-Tenant-ID' => (string) $this->tenant->id])
+            ->post(route('app.documents.workflow.approve', ['document' => $document->id]));
+
+        $response->assertStatus(302);
+        $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'submitted']);
+    }
+
+    public function test_approve_on_already_approved_document_shows_error_and_does_not_mutate(): void
+    {
+        $document = $this->makeDocument(['status' => 'approved', 'metadata' => ['status' => 'approved', 'decision_by' => 'someone-else']]);
+        $actor = $this->createTenantUser($this->tenant, [], ['pm'], ['document.approve']);
+
+        $response = $this->actingAs($actor)
+            ->withHeaders(['X-Tenant-ID' => (string) $this->tenant->id])
+            ->post(route('app.documents.workflow.approve', ['document' => $document->id]));
+
+        $response->assertSessionHasErrors('error');
+        $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'approved']);
+    }
+
     /**
      * `UploadedFile::fake()->create()` produces content with no real file signature,
      * which fails `FileStorageService`'s `EnhancedMimeValidationService` signature check

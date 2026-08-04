@@ -117,6 +117,6 @@ class DocumentPolicy
             return false;
         }
 
-        return $user->hasRole(['super_admin', 'admin', 'pm']);
+        return $user->hasPermission('document.approve');
     }
 }

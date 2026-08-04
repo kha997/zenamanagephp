@@ -598,6 +598,7 @@ class DocumentManagementTest extends TestCase
         $approver = $this->createTenantUser($this->tenant, [], ['admin'], [
             'document.view',
             'document.update',
+            'document.approve',
         ]);
         $this->apiAs($approver, $this->tenant);
 
@@ -631,6 +632,7 @@ class DocumentManagementTest extends TestCase
         $approver = $this->createTenantUser($this->tenant, [], ['admin'], [
             'document.view',
             'document.update',
+            'document.approve',
         ]);
         $this->apiAs($approver, $this->tenant);
 
@@ -676,7 +678,12 @@ class DocumentManagementTest extends TestCase
             ],
         ]);
 
-        $this->user->assignRole('admin');
+        $adminRole = $this->user->assignRole('admin');
+        $approvePermission = \App\Models\Permission::firstOrCreate(
+            ['name' => 'document.approve'],
+            ['code' => 'document.approve', 'module' => 'document', 'action' => 'approve', 'description' => 'Document approve']
+        );
+        $adminRole->permissions()->syncWithoutDetaching($approvePermission->id);
         $this->apiAs($this->user, $this->tenant);
 
         $this->apiPost($this->zena('documents.decision', ['id' => $submittedDocument->id]), [
@@ -712,6 +719,14 @@ class DocumentManagementTest extends TestCase
 
         $this->apiPost($this->zena('documents.submit', ['id' => $foreignDocument->id]), [])
             ->assertNotFound();
+
+        $approvePermission = \App\Models\Permission::firstOrCreate(
+            ['name' => 'document.approve'],
+            ['code' => 'document.approve', 'module' => 'document', 'action' => 'approve', 'description' => 'Document approve']
+        );
+        $this->user->roles->each(function ($role) use ($approvePermission) {
+            $role->permissions()->syncWithoutDetaching($approvePermission->id);
+        });
 
         $this->apiPost($this->zena('documents.decision', ['id' => $foreignDocument->id]), [
             'decision' => 'approved',

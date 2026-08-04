@@ -137,6 +137,7 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'document.create', 'module' => 'document', 'action' => 'create', 'description' => 'Upload documents'],
         ['code' => 'document.update', 'module' => 'document', 'action' => 'update', 'description' => 'Update document metadata'],
         ['code' => 'document.delete', 'module' => 'document', 'action' => 'delete', 'description' => 'Delete documents'],
+        ['code' => 'document.approve', 'module' => 'document', 'action' => 'approve', 'description' => 'Approve or reject submitted documents'],
 
         // Material catalog
         ['code' => 'material.view', 'module' => 'material', 'action' => 'view', 'description' => 'View canonical material catalog entries'],

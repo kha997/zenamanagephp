@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\DocumentDecision;
+use App\Exceptions\DocumentWorkflowException;
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Http\Controllers\Controller;
 use App\Models\ChangeRequest;
@@ -11,6 +13,7 @@ use App\Models\DocumentVersion;
 use App\Models\Project;
 use App\Models\Submittal;
 use App\Models\Task;
+use App\Services\DocumentWorkflowService;
 use App\Services\ErrorEnvelopeService;
 use App\Services\ZenaAuditLogger;
 use Illuminate\Database\Eloquent\Builder;
@@ -32,10 +35,6 @@ class SimpleDocumentController extends Controller
 
     private const DEFAULT_PER_PAGE = 15;
     private const MAX_PER_PAGE = 100;
-    private const STATUS_DRAFT = 'draft';
-    private const STATUS_SUBMITTED = 'submitted';
-    private const STATUS_APPROVED = 'approved';
-    private const STATUS_REJECTED = 'rejected';
     private const LINKABLE_MODELS = [
         Document::ENTITY_TYPE_TASK => Task::class,
         Document::ENTITY_TYPE_COMPONENT => Component::class,
@@ -304,68 +303,56 @@ class SimpleDocumentController extends Controller
 
     public function submit(string $id): JsonResponse
     {
-        $document = $this->findDocument($id);
+        $tenantId = $this->resolveTenantId();
 
-        if (!$document) {
-            return ErrorEnvelopeService::notFoundError('Document');
+        try {
+            $document = app(DocumentWorkflowService::class)->submit($tenantId, $id, (string) Auth::id());
+        } catch (DocumentWorkflowException $e) {
+            report($e);
+
+            return match ($e->reasonCode) {
+                'DOCUMENT_NOT_FOUND' => ErrorEnvelopeService::notFoundError('Document'),
+                default => ErrorEnvelopeService::conflictError('Document can only be submitted from draft status'),
+            };
         }
 
-        if ($document->status !== self::STATUS_DRAFT) {
-            return ErrorEnvelopeService::conflictError('Document can only be submitted from draft status');
-        }
-
-        $userId = Auth::id();
-        $metadata = $document->metadata ?? [];
-        $metadata['status'] = self::STATUS_SUBMITTED;
-        $metadata['submitted_at'] = now()->toISOString();
-        $metadata['submitted_by'] = $userId;
-
-        $document->forceFill([
-            'status' => self::STATUS_SUBMITTED,
-            'metadata' => $metadata,
-            'updated_by' => $userId,
-        ])->save();
-
-        return $this->zenaSuccessResponse($document->fresh(['currentVersion']), 'Document submitted successfully');
+        return $this->zenaSuccessResponse($document, 'Document submitted successfully');
     }
 
     public function decision(Request $request, string $id): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'decision' => 'required|string|in:' . implode(',', [self::STATUS_APPROVED, self::STATUS_REJECTED]),
+            'decision' => ['required', 'string', Rule::in(array_map(fn (DocumentDecision $c) => $c->value, DocumentDecision::cases()))],
+            'note' => ['nullable', 'string', 'max:500'],
         ]);
 
         if ($validator->fails()) {
             return ErrorEnvelopeService::validationError($validator->errors()->toArray());
         }
 
-        $document = $this->findDocument($id);
+        $data = $validator->validated();
+        $decision = DocumentDecision::from($data['decision']);
+        $note = $data['note'] ?? null;
+        $tenantId = $this->resolveTenantId();
 
-        if (!$document) {
+        $documentForAuth = app(DocumentWorkflowService::class)->findForTenant($tenantId, $id);
+        if ($documentForAuth === null) {
             return ErrorEnvelopeService::notFoundError('Document');
         }
+        $this->authorize('approve', $documentForAuth);
 
-        $this->authorize('approve', $document);
+        try {
+            $document = app(DocumentWorkflowService::class)->decide($tenantId, $id, (string) Auth::id(), $decision, $note);
+        } catch (DocumentWorkflowException $e) {
+            report($e);
 
-        if ($document->status !== self::STATUS_SUBMITTED) {
-            return ErrorEnvelopeService::conflictError('Document can only be decided from submitted status');
+            return match ($e->reasonCode) {
+                'DOCUMENT_NOT_FOUND' => ErrorEnvelopeService::notFoundError('Document'),
+                default => ErrorEnvelopeService::conflictError('Document can only be decided from submitted status'),
+            };
         }
 
-        $decision = $validator->validated()['decision'];
-        $userId = Auth::id();
-        $metadata = $document->metadata ?? [];
-        $metadata['status'] = $decision;
-        $metadata['decision'] = $decision;
-        $metadata['decision_at'] = now()->toISOString();
-        $metadata['decision_by'] = $userId;
-
-        $document->forceFill([
-            'status' => $decision,
-            'metadata' => $metadata,
-            'updated_by' => $userId,
-        ])->save();
-
-        return $this->zenaSuccessResponse($document->fresh(['currentVersion']), 'Document decision recorded successfully');
+        return $this->zenaSuccessResponse($document, 'Document decision recorded successfully');
     }
 
     public function download(string $id)
@@ -615,14 +602,18 @@ class SimpleDocumentController extends Controller
         return $this->zenaSuccessResponse(null, 'Document deleted successfully');
     }
 
-    private function findDocument(string $id): ?Document
+    private function resolveTenantId(): string
     {
         $user = Auth::user();
-        $tenantId = (string) (app()->bound('current_tenant_id') ? app('current_tenant_id') : ($user?->tenant_id ?? ''));
 
+        return (string) (app()->bound('current_tenant_id') ? app('current_tenant_id') : ($user?->tenant_id ?? ''));
+    }
+
+    private function findDocument(string $id): ?Document
+    {
         return Document::query()
             ->with('currentVersion')
-            ->where('tenant_id', $tenantId)
+            ->where('tenant_id', $this->resolveTenantId())
             ->find($id);
     }
 

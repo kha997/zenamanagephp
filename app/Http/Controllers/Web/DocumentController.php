@@ -227,63 +227,6 @@ class DocumentController extends Controller
         return \App\Models\User::query()->where('tenant_id', $tenantId)->whereIn('id', $decisionUserIds)->pluck('name', 'id');
     }
 
-    /**
-     * Approve a document.
-     */
-    public function approve(Request $request, string $documentId): RedirectResponse
-    {
-        $request->validate([
-            'approval_note' => 'nullable|string|max:500',
-        ]);
-
-        try {
-            $document = Document::findOrFail($documentId);
-            
-            $document->update([
-                'status' => 'approved',
-                'approved_by' => Auth::id(),
-                'approved_at' => now(),
-                'approval_note' => $request->input('approval_note'),
-            ]);
-            
-            return redirect()
-                ->back()
-                ->with('success', 'Document đã được duyệt thành công!');
-        } catch (\Exception $e) {
-            return redirect()
-                ->back()
-                ->withErrors(['error' => 'Không thể duyệt document: ' . $e->getMessage()]);
-        }
-    }
-
-    /**
-     * Reject a document.
-     */
-    public function reject(Request $request, string $documentId): RedirectResponse
-    {
-        $request->validate([
-            'rejection_reason' => 'required|string|max:500',
-        ]);
-
-        try {
-            $document = Document::findOrFail($documentId);
-            
-            $document->update([
-                'status' => 'rejected',
-                'rejected_by' => Auth::id(),
-                'rejected_at' => now(),
-                'rejection_reason' => $request->input('rejection_reason'),
-            ]);
-            
-            return redirect()
-                ->back()
-                ->with('success', 'Document đã bị từ chối.');
-        } catch (\Exception $e) {
-            return redirect()
-                ->back()
-                ->withErrors(['error' => 'Không thể từ chối document: ' . $e->getMessage()]);
-        }
-    }
 
     /**
      * Remove the specified document.

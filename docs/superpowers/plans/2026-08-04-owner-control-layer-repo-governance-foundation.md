@@ -1,5 +1,7 @@
 # Owner Control Layer — Repository Governance Foundation Implementation Plan
 
+*Amended 2026-08-04 (same day as original) with three corrections prior to execution: (1) Task 8's live CODEOWNERS-review activation is deferred to a precondition-gated runbook rather than executed under the current single-identity topology; (2) Gate 3 packets now carry an evidence-binding contract (`technical_evidence`/`owner_decision_binding`) enforced at lint-evaluation time, closing the stale-decision gap without notification infrastructure; (3) newly governed specs/plans must declare `work_id`/`owner_governance_version`/`owner_gate_2_record` frontmatter, with filename-regex parsing demoted to legacy-only fallback. Execution approach approved as `superpowers:subagent-driven-development`, pending one independent plan review (see "Independent Plan Review" near the end of this document).*
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Stand up the repository-native half of the Owner Control Layer — machine-checkable gate packets, owner-facing operating documents, a structural `owner-governance-lint`, and the agent/PR/CI amendments that make every future AI-assisted change automatically produce an owner-readable decision layer, a linked engineering-evidence layer, and honest (non-authenticated) decision provenance — without building the in-app Decision Center or touching any production business logic.
@@ -29,6 +31,12 @@
 - No automatic merge or deploy is introduced by this plan; `owner-governance-lint` only blocks/permits, it never triggers a release action.
 
 **Naming reconciliation (decided during planning, stated once here so every task is consistent):** the approved design (§6.2) calls the packet-lifecycle field `status`; this plan's own task list (Task 1) calls it `gate_status`. This plan adopts **`gate_status`** as the actual frontmatter key everywhere, to avoid a collision with the generic word "status" appearing informally elsewhere in packet prose, and to make grep-based tooling unambiguous. `owner_decision` keeps the name and shape from the design's §3.7/§6.2 unchanged. Two frontmatter fields not present in the design's §6.2 are added because this plan's Task 1 explicitly requires them: `decision_requested` (the human-readable enum of choices currently on offer — `null` unless `gate_status: awaiting_owner`) and `residual_risk_rating` / `mandatory_technical_gate_summary` (Gate 3 only, machine-checkable companions to the prose `residual_risks_plain_language` / `technical_safety_summary` fields the design already specifies as packet body content).
+
+## Amendment Corrections (applied throughout this revision — binding on every task below)
+
+1. **No live CODEOWNERS-review activation under the current identity topology.** Task 8 creates `.github/CODEOWNERS` and a documentation/runbook only. Activating `required_pull_request_reviews.require_code_owner_reviews` is deferred to a separately authorized future operation ("Task 8b") with its own verified preconditions, because `kha997` is currently the sole repository collaborator and this session's own `gh` identity (verified facts #7/#8) — activating now would either deadlock the repository or manufacture the appearance of independent approval where none exists.
+2. **Stale-decision invalidation is enforced at evaluation time, not via notification.** Every Gate 3 packet carries a `technical_evidence`/`owner_decision_binding` pair (Task 1) binding a recorded decision to the exact commit and CI-check state it was made against. `owner_governance_lint.php` (Task 5) and its live companion `scripts/ci/check-evidence-freshness.sh` (Task 9) recompute and compare this binding on every run — a later commit or CI regression makes a prior decision structurally stale immediately, with no webhook or notification event required.
+3. **New governed work declares `work_id` in its own frontmatter; filename-regex parsing is fallback-only, for the pre-existing legacy corpus.** `docs/owner-governance/GOVERNED_DOCUMENT_FRONTMATTER.md` (Task 9) defines the mandatory `work_id`/`owner_governance_version`/`owner_gate_2_record` frontmatter block. A new, non-legacy spec/plan without it fails `--enforce-gate-ordering` outright (`missing-governance-frontmatter`), rather than silently passing because its filename happens not to match the legacy regex.
 
 ---
 
@@ -210,9 +218,31 @@ gate_3_only_fields:
   - technical_readiness
   - residual_risk_rating
   - mandatory_technical_gate_summary
+  - technical_evidence
+  - owner_decision_binding
 
 placeholder_tokens: ["TODO", "TBD", "TBA", "???"]
+
+# --- Evidence-binding contract (Correction 2) ---
+# Binds a Gate 3 owner_decision to the EXACT commit and evidence state it was
+# made against, so a later code change automatically invalidates the decision
+# at evaluation time — no notification event, webhook, or bot required. The
+# lint (Task 5) recomputes and compares these fields on every run; staleness
+# is a pure function of repo state, never something that needs to be pushed
+# to the packet from outside.
+evidence_digest_algorithm: "sha256"
+# evidence_digest is computed as:
+#   sha256( head_sha + "\n" + sorted-and-joined(required_check_names) + "\n"
+#           + sorted-and-joined(required_check_conclusions) )
+# where required_check_names/conclusions come from `gh pr checks <PR> --json name,state`
+# (or an equivalent local recomputation script — see Task 9 Step 3b), sorted
+# lexicographically by name before joining, so digest order is deterministic
+# regardless of the order GitHub returns checks in.
+required_technical_evidence_fields: [head_sha, evidence_digest, verified_at]
+required_owner_decision_binding_fields: [evidence_head_sha, evidence_digest]
 ```
+
+**Evidence-binding contract, explained (Correction 2 — enforced at evaluation time, no notification required):** `technical_evidence` records the exact commit and check-result state that made `technical_readiness: ready` true. `owner_decision_binding` records, at the moment a human decision is recorded, which exact `evidence_digest` that decision was made against — it stays `null` while `owner_decision.value` is `none` (nothing to bind yet), and must be populated in the same edit that sets `owner_decision.value` to anything else. `owner_governance_lint.php` (Task 5) recomputes `technical_evidence.evidence_digest` from the packet's `head_sha` and the CI check state it can observe (locally: from a companion recomputation script, since a pure file-tree lint cannot call the GitHub API — see Task 9 Step 3b for the hybrid boundary, consistent with the design's own §7.5 admission) and compares it against `owner_decision_binding.evidence_digest` whenever `owner_decision.value` is not `none`. A mismatch — from a new commit, a regressed check, or a manually edited digest — means the recorded decision was made against evidence that no longer describes the current state of the branch, and the packet is stale. This is a pure function of repository state, re-evaluated every lint run; it requires no notification, webhook, or bot to detect.
 
 - [ ] **Step 2: Write the four valid fixtures**
 
@@ -383,6 +413,13 @@ timestamps:
 generated_by: agent
 residual_risk_rating: medium
 mandatory_technical_gate_summary: "Chưa chạy xong kiểm tra hai người cùng thao tác một lúc trên MySQL thật."
+technical_evidence:
+  head_sha: "5120b816c9c3e4a0f1b2c3d4e5f6a7b8c9d0e1f2"
+  evidence_digest: "not_computed_while_blocked"
+  verified_at: null
+owner_decision_binding:
+  evidence_head_sha: null
+  evidence_digest: null
 ---
 
 ## BLOCKED — OWNER ACTION NOT REQUIRED
@@ -429,9 +466,17 @@ timestamps:
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "30/30 kiểm tra bắt buộc đã đạt, gồm kiểm tra hai người cùng thao tác một lúc trên MySQL thật."
+technical_evidence:
+  head_sha: "b11c8c3ab5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0"
+  evidence_digest: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b85"
+  verified_at: "2026-08-04T11:00:00+07:00"
+owner_decision_binding:
+  evidence_head_sha: null
+  evidence_digest: null
 ---
 
 *(Full owner-facing body reused verbatim from `docs/owner-governance/examples/GAP-031-owner-release-packet.md` — see Task 4, Step 1. Not duplicated here to keep this fixture focused on frontmatter validity; the lint validates frontmatter and placeholder-scans the body, it does not require the body text to be identical across files.)*
+*(Note: `owner_decision_binding` fields stay `null` until `owner_decision.value` moves off `none` — see the lint rule `evidence-binding-required-once-decided` in Task 5. A `null` binding is valid exactly because no decision has been recorded yet; recording a decision without also recording the binding is what the lint rejects.)*
 
 ## Gói quyết định phát hành — GAP-031: Duyệt hồ sơ tài liệu
 
@@ -522,6 +567,18 @@ class OwnerGovernanceSchemaFixtureTest extends TestCase
         $this->assertNotNull($fm['decision_requested']);
         $this->assertSame('docs/owner-decisions/GAP-031/03-release.md', $fm['supersedes']);
     }
+
+    public function test_valid_gate_3_fixtures_carry_the_evidence_binding_contract(): void
+    {
+        $blocked = $this->frontmatterOf('valid-gate-3-blocked.md');
+        $this->assertArrayHasKey('technical_evidence', $blocked);
+        $this->assertArrayHasKey('owner_decision_binding', $blocked);
+        $this->assertNull($blocked['owner_decision_binding']['evidence_head_sha'], 'No decision recorded yet — binding must stay null.');
+
+        $awaiting = $this->frontmatterOf('valid-gate-3-awaiting.md');
+        $this->assertSame(64, strlen($awaiting['technical_evidence']['evidence_digest']), 'Expected a sha256 hex digest.');
+        $this->assertNull($awaiting['owner_decision_binding']['evidence_head_sha'], 'owner_decision.value is still none — binding must stay null until a decision is recorded.');
+    }
 }
 ```
 
@@ -533,7 +590,7 @@ Expected: FAIL — `packet-schema.yml` and/or fixture files not found (since Ste
 - [ ] **Step 5: Run test to verify it passes (GREEN)**
 
 Run: `php artisan test --filter OwnerGovernanceSchemaFixtureTest`
-Expected: `OK (5 tests, ...)`, all assertions green.
+Expected: `OK (6 tests, ...)`, all assertions green.
 
 - [ ] **Step 6: Commit**
 
@@ -957,6 +1014,13 @@ timestamps:
 generated_by: agent
 residual_risk_rating: <none|low|medium|high>
 mandatory_technical_gate_summary: "<one plain-language line naming which mandatory check has not passed yet — never a CI job name>"
+technical_evidence:
+  head_sha: <full 40-char commit SHA of the branch HEAD this packet was drafted against>
+  evidence_digest: "not_computed_while_blocked"
+  verified_at: null
+owner_decision_binding:
+  evidence_head_sha: null
+  evidence_digest: null
 ---
 
 ## BLOCKED — OWNER ACTION NOT REQUIRED
@@ -991,6 +1055,13 @@ timestamps: <new created_at/updated_at>
 generated_by: agent
 residual_risk_rating: <none|low|medium|high>
 mandatory_technical_gate_summary: "<one plain-language line confirming what passed>"
+technical_evidence:
+  head_sha: <full 40-char commit SHA — MUST equal the branch's actual HEAD at the moment technical_readiness became ready>
+  evidence_digest: <sha256, see packet-schema.yml's evidence_digest_algorithm — computed from head_sha + required check names/conclusions>
+  verified_at: <ISO-8601, when the digest was computed>
+owner_decision_binding:
+  evidence_head_sha: null   # stays null until owner_decision.value moves off "none" — see Task 5's evidence-binding-required-once-decided rule
+  evidence_digest: null     # once set, MUST equal technical_evidence.evidence_digest at decision time, or the lint flags staleness
 -->
 
 ## Gói quyết định phát hành
@@ -1116,7 +1187,18 @@ Copy Task 1's `valid-gate-3-blocked.md` fixture content verbatim to this path.
 
 - [ ] **Step 4: Write `docs/owner-decisions/GAP-031/03-release-v2.md`**
 
-Copy Task 1's `valid-gate-3-awaiting.md` fixture content verbatim to this path, but replace the placeholder body comment with the **full real packet body** (this is the one file where the complete plain-Vietnamese narrative belongs, not a shortened stand-in):
+Copy Task 1's `valid-gate-3-awaiting.md` fixture content verbatim to this path, but replace the placeholder body comment with the **full real packet body** (this is the one file where the complete plain-Vietnamese narrative belongs, not a shortened stand-in).
+
+**On `technical_evidence.evidence_digest` in the block below:** the value shown (`e3b0c4...`, the well-known SHA-256 of the empty string) is an **illustrative placeholder**, not a genuinely recomputed digest — this plan document is static and cannot call `gh pr checks 238 --json name,state` at plan-writing time to get PR #238's real, current check list. **Whoever executes this task must recompute the real value** by running, against the actual current state of PR #238 at execution time:
+```bash
+php -r '
+require "vendor/autoload.php";
+require "scripts/ssot/owner_governance_lint.php";
+$checks = array_map(fn ($c) => ["name" => $c["name"], "conclusion" => $c["state"]], json_decode(shell_exec("gh pr checks 238 --json name,state"), true));
+echo owner_governance_compute_evidence_digest(shell_exec("git rev-parse HEAD"), $checks);
+'
+```
+and use that real output in place of the placeholder below. This is safe precisely because `owner_decision_binding` stays `null` in this example (no decision has been recorded against the placeholder digest, so nothing downstream trusts it as if it were real) — but the placeholder must not be mistaken for verified evidence.
 
 ```markdown
 ---
@@ -1150,6 +1232,13 @@ timestamps:
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "30/30 kiểm tra bắt buộc đã đạt, gồm kiểm tra hai người cùng thao tác một lúc trên MySQL thật."
+technical_evidence:
+  head_sha: "b11c8c3ab5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0"
+  evidence_digest: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b85"
+  verified_at: "2026-08-04T11:00:00+07:00"
+owner_decision_binding:
+  evidence_head_sha: null
+  evidence_digest: null
 ---
 
 ## Owner Summary
@@ -1315,13 +1404,15 @@ git commit -m "docs(owner-governance): add complete GAP-031 worked-example packe
 - Create: `tests/Unit/OwnerGovernance/fixtures/invalid-blocked-requests-decision.md`
 - Create: `tests/Unit/OwnerGovernance/fixtures/invalid-todo-placeholder.md`
 - Create: `tests/Unit/OwnerGovernance/fixtures/invalid-missing-provenance.md`
+- Create: `tests/Unit/OwnerGovernance/fixtures/invalid-not-ready-but-awaiting.md`
+- Create: `tests/Unit/OwnerGovernance/fixtures/invalid-stale-decision-digest-mismatch.md`
 - Create: `tests/Unit/OwnerGovernance/OwnerGovernanceLintFixtureTest.php`
 
 **Interfaces:**
-- Consumes: `docs/owner-governance/packet-schema.yml` (Task 1), the 4 valid + 6 invalid fixtures (all under `tests/Unit/OwnerGovernance/fixtures/`).
-- Produces: `bin/owner-governance-lint` behavior contract — callable as `php scripts/ssot/owner_governance_lint.php <path-or-directory> [...]`, exit code `0` (all packets structurally valid) or `1` (at least one violation), used directly by Task 9's CI workflow and indirectly (as a library function `Owner_Governance_Lint\validate_packet(string $content): array`) by this task's own PHPUnit tests.
+- Consumes: `docs/owner-governance/packet-schema.yml` (Task 1, including the Correction 2 evidence-binding fields), the 4 valid + 8 invalid fixtures (all under `tests/Unit/OwnerGovernance/fixtures/`).
+- Produces: `bin/owner-governance-lint` behavior contract — callable as `php scripts/ssot/owner_governance_lint.php <path-or-directory> [...]`, exit code `0` (all packets structurally valid) or `1` (at least one violation), used directly by Task 9's CI workflow and indirectly (as a library function `Owner_Governance_Lint\validate_packet(string $content): array`) by this task's own PHPUnit tests. Also produces `owner_governance_compute_evidence_digest(string $headSha, array $checks): string`, consumed by Task 9's `scripts/ci/check-evidence-freshness.sh` companion script.
 
-- [ ] **Step 1: Write the 6 invalid fixtures**
+- [ ] **Step 1: Write the 8 invalid fixtures**
 
 `tests/Unit/OwnerGovernance/fixtures/invalid-missing-frontmatter.md`:
 
@@ -1445,6 +1536,61 @@ generated_by: agent
 `owner_decision.value: approved` but `decision_provenance.recorded_by`/`recorded_at` are both null — an "approved" record must carry honest, non-null provenance attribution (who/when it was recorded), even at `trust_level: claimed_repo_record`.
 ```
 
+`tests/Unit/OwnerGovernance/fixtures/invalid-not-ready-but-awaiting.md` (Correction 2):
+
+```markdown
+---
+work_id: GAP-031
+gate: 3
+gate_status: awaiting_owner
+technical_readiness: {value: blocked, generated_by: engineering_evidence}
+owner_decision: {value: none, authority: human_owner}
+decision_requested: "approve_or_correction_or_defer"
+references: {spec: null, plan: null, branch: null, pr: null, release: null}
+decision_provenance: {trust_level: claimed_repo_record, recorded_by: null, recorded_at: null, owner_response_reference: null, reconciliation_required: false}
+supersedes: null
+superseded_by: null
+timestamps: {created_at: "2026-08-04T00:00:00+07:00", updated_at: "2026-08-04T00:00:00+07:00"}
+generated_by: agent
+residual_risk_rating: medium
+mandatory_technical_gate_summary: "n/a"
+technical_evidence: {head_sha: "aaaa000000000000000000000000000000aaaa", evidence_digest: "not_computed_while_blocked", verified_at: null}
+owner_decision_binding: {evidence_head_sha: null, evidence_digest: null}
+---
+
+`gate_status: awaiting_owner` must never coexist with `technical_readiness.value: blocked` — a decision surface must not exist while readiness is not ready.
+```
+
+`tests/Unit/OwnerGovernance/fixtures/invalid-stale-decision-digest-mismatch.md` (Correction 2 — the core staleness scenario):
+
+```markdown
+---
+work_id: GAP-031
+gate: 3
+gate_status: approved
+technical_readiness: {value: ready, generated_by: engineering_evidence}
+owner_decision: {value: approved, authority: human_owner}
+decision_requested: null
+references: {spec: null, plan: null, branch: null, pr: null, release: null}
+decision_provenance: {trust_level: claimed_repo_record, recorded_by: "owner (session X)", recorded_at: "2026-08-04T11:00:00+07:00", owner_response_reference: "conversation X", reconciliation_required: false}
+supersedes: null
+superseded_by: null
+timestamps: {created_at: "2026-08-04T00:00:00+07:00", updated_at: "2026-08-04T12:00:00+07:00"}
+generated_by: agent
+residual_risk_rating: low
+mandatory_technical_gate_summary: "30/30 checks passed at decision time"
+technical_evidence:
+  head_sha: "cccc111111111111111111111111111111cccc"
+  evidence_digest: "digest-after-a-later-commit-changed-the-evidence"
+  verified_at: "2026-08-04T12:00:00+07:00"
+owner_decision_binding:
+  evidence_head_sha: "bbbb000000000000000000000000000000bbbb"
+  evidence_digest: "digest-at-the-moment-the-owner-actually-decided"
+---
+
+The owner approved this packet when the branch HEAD was `bbbb...`. A later commit (`cccc...`) changed `technical_evidence`, but `owner_decision_binding` still points at the old evidence — this is exactly the "evidence changed after the decision was recorded" scenario Correction 2 requires the lint to catch, without any notification event.
+```
+
 - [ ] **Step 2: Run the fixture test to verify it fails (RED)**
 
 The test file (Step 4 below) does not exist yet, so run a placeholder discovery command first to confirm no matching test currently exists:
@@ -1565,6 +1711,9 @@ function owner_governance_validate_packet(string $filePath, string $content, arr
     if ($gateStatus !== 'awaiting_owner' && $decisionRequested !== null) {
         $violations[] = new OwnerGovernanceLintViolation($filePath, 'decision-requested-leaked', "Only 'awaiting_owner' packets may set decision_requested; gate_status is '{$gateStatus}'.");
     }
+    if ($decisionRequested !== null && !in_array($decisionRequested, $schema['decision_requested_values'], true)) {
+        $violations[] = new OwnerGovernanceLintViolation($filePath, 'decision-requested-enum', "decision_requested '{$decisionRequested}' is not a member of decision_requested_values in packet-schema.yml.");
+    }
 
     // Honest provenance: any non-'none' owner_decision must carry real attribution.
     if ($ownerDecisionValue !== 'none') {
@@ -1606,6 +1755,50 @@ function owner_governance_validate_packet(string $filePath, string $content, arr
         if (($fm['technical_readiness']['generated_by'] ?? null) !== 'engineering_evidence') {
             $violations[] = new OwnerGovernanceLintViolation($filePath, 'technical-readiness-provenance', "technical_readiness.generated_by must be 'engineering_evidence'.");
         }
+
+        // --- Evidence-binding contract (Correction 2) ---
+        // awaiting_owner / approved must never coexist with a non-ready readiness.
+        if (in_array($gateStatus, ['awaiting_owner', 'approved'], true) && $trValue !== 'ready') {
+            $violations[] = new OwnerGovernanceLintViolation(
+                $filePath,
+                'not-ready-but-decision-eligible',
+                "gate_status is '{$gateStatus}' but technical_readiness.value is '{$trValue}', not 'ready'."
+            );
+        }
+
+        // Once a real decision is recorded, the binding must be populated and must
+        // match the packet's own technical_evidence exactly — this is the
+        // structural half of staleness detection (the live half — comparing
+        // against the ACTUAL current branch HEAD/CI state rather than just
+        // internal self-consistency — is scripts/ci/check-evidence-freshness.sh,
+        // Task 9 Step 3b, since that requires `git`/`gh`, not just this file).
+        if ($ownerDecisionValue !== 'none') {
+            $binding = $fm['owner_decision_binding'] ?? [];
+            $evidence = $fm['technical_evidence'] ?? [];
+
+            if (empty($binding['evidence_head_sha']) || empty($binding['evidence_digest'])) {
+                $violations[] = new OwnerGovernanceLintViolation(
+                    $filePath,
+                    'evidence-binding-required-once-decided',
+                    "owner_decision.value is '{$ownerDecisionValue}' but owner_decision_binding is not populated — a recorded decision must bind to the evidence it was made against."
+                );
+            } else {
+                if (($binding['evidence_head_sha'] ?? null) !== ($evidence['head_sha'] ?? null)) {
+                    $violations[] = new OwnerGovernanceLintViolation(
+                        $filePath,
+                        'stale-decision-different-head-sha',
+                        "owner_decision_binding.evidence_head_sha ('{$binding['evidence_head_sha']}') does not match technical_evidence.head_sha ('{$evidence['head_sha']}') — the decision was recorded against a different commit than the packet now describes."
+                    );
+                }
+                if (($binding['evidence_digest'] ?? null) !== ($evidence['evidence_digest'] ?? null)) {
+                    $violations[] = new OwnerGovernanceLintViolation(
+                        $filePath,
+                        'stale-decision-digest-mismatch',
+                        "owner_decision_binding.evidence_digest does not match the current technical_evidence.evidence_digest — the technical evidence has changed since this decision was recorded. Per design: this packet's gate_status must return to 'preparing' or 'blocked_technical', not stay 'approved'/'awaiting_owner'. The lint reports this; it does not rewrite the file itself."
+                    );
+                }
+            }
+        }
     }
 
     // Supersession links must resolve to files that actually exist in the repo.
@@ -1635,12 +1828,38 @@ function owner_governance_validate_packet(string $filePath, string $content, arr
     return $violations;
 }
 
+/**
+ * Computes the evidence digest per packet-schema.yml's evidence_digest_algorithm:
+ * sha256( head_sha + "\n" + sorted-joined check names + "\n" + sorted-joined conclusions ).
+ * $checks is an array of ['name' => string, 'conclusion' => string] pairs, e.g. from
+ * `gh pr checks <PR> --json name,state` — sorted by name here so the digest is
+ * deterministic regardless of the order the caller supplies them in.
+ */
+function owner_governance_compute_evidence_digest(string $headSha, array $checks): string
+{
+    usort($checks, fn ($a, $b) => $a['name'] <=> $b['name']);
+    $names = implode(',', array_column($checks, 'name'));
+    $conclusions = implode(',', array_column($checks, 'conclusion'));
+
+    return hash('sha256', $headSha . "\n" . $names . "\n" . $conclusions);
+}
+
 // --- CLI entrypoint ---
-if (($argv[0] ?? '') === basename(__FILE__) || PHP_SAPI === 'cli') {
+// Guards against running when this file is require/require_once'd as a library
+// (OwnerGovernanceLintFixtureTest.php, and check-evidence-freshness.sh's `php -r`
+// snippet both need owner_governance_compute_evidence_digest() without triggering
+// a directory scan + exit()). `PHP_SAPI === 'cli'` is true for every CLI process
+// including `php artisan test`, so it must NOT be used here — only an exact match
+// against the actually-invoked script path is safe.
+if (realpath($argv[0] ?? '') === __FILE__) {
     $repoRoot = dirname(__DIR__, 2);
     $schema = Yaml::parseFile($repoRoot . '/docs/owner-governance/packet-schema.yml');
 
-    $targets = array_slice($argv, 1);
+    // Flags (arguments starting with "--") are never scan targets — filter them
+    // out before deciding whether $targets is empty, so `--enforce-gate-ordering`
+    // passed alone still falls through to the default docs/owner-decisions scan
+    // instead of silently scanning zero files.
+    $targets = array_values(array_filter(array_slice($argv, 1), fn ($arg) => !str_starts_with($arg, '--')));
     if ($targets === []) {
         $targets = [$repoRoot . '/docs/owner-decisions'];
     }
@@ -1750,20 +1969,64 @@ class OwnerGovernanceLintFixtureTest extends TestCase
             ['invalid-blocked-requests-decision.md', 'decision-requested-leaked'],
             ['invalid-todo-placeholder.md', 'placeholder-token'],
             ['invalid-missing-provenance.md', 'dishonest-provenance'],
+            ['invalid-not-ready-but-awaiting.md', 'not-ready-but-decision-eligible'],
+            ['invalid-stale-decision-digest-mismatch.md', 'stale-decision-digest-mismatch'],
         ];
+    }
+
+    public function test_evidence_digest_is_deterministic_regardless_of_check_input_order(): void
+    {
+        $checksInOrderA = [
+            ['name' => 'Unit Tests', 'conclusion' => 'success'],
+            ['name' => 'Feature Tests', 'conclusion' => 'success'],
+        ];
+        $checksInOrderB = [
+            ['name' => 'Feature Tests', 'conclusion' => 'success'],
+            ['name' => 'Unit Tests', 'conclusion' => 'success'],
+        ];
+
+        $digestA = \owner_governance_compute_evidence_digest('abc123', $checksInOrderA);
+        $digestB = \owner_governance_compute_evidence_digest('abc123', $checksInOrderB);
+
+        $this->assertSame($digestA, $digestB, 'Digest must not depend on input array order.');
+        $this->assertSame(64, strlen($digestA), 'Expected a sha256 hex digest (64 chars).');
+    }
+
+    public function test_evidence_digest_changes_when_a_check_conclusion_changes(): void
+    {
+        $before = \owner_governance_compute_evidence_digest('abc123', [['name' => 'Unit Tests', 'conclusion' => 'success']]);
+        $after = \owner_governance_compute_evidence_digest('abc123', [['name' => 'Unit Tests', 'conclusion' => 'failure']]);
+
+        $this->assertNotSame($before, $after);
     }
 }
 ```
 
 - [ ] **Step 5: Run test to verify it fails (RED)**
 
-Run: `php artisan test --filter OwnerGovernanceLintFixtureTest`
-Expected (before `owner_governance_lint.php` exists): FAIL — `require_once` on a missing file, fatal error.
+By this point in the task, `owner_governance_lint.php` (Step 3) and all fixtures (Step 1) already exist, so a plain "file not found" RED is not available — confirm RED the same way Task 1 Step 4 does: temporarily rename the script and re-run.
+
+```bash
+mv scripts/ssot/owner_governance_lint.php scripts/ssot/owner_governance_lint.php.bak
+php artisan test --filter OwnerGovernanceLintFixtureTest
+```
+Expected: FAIL — `require_once(...): Failed opening required '.../owner_governance_lint.php'`, a fatal error, 0 tests run.
+
+```bash
+mv scripts/ssot/owner_governance_lint.php.bak scripts/ssot/owner_governance_lint.php
+```
+
+**Also confirm the CLI-entrypoint guard is correct, not merely present** (this is the exact bug class an earlier draft of this script had — `PHP_SAPI === 'cli'` is true for every CLI process, including `php artisan test` itself, so a guard using it would `exit()` during `require_once` and abort the whole suite before any test method runs):
+
+```bash
+php -r 'require "scripts/ssot/owner_governance_lint.php"; echo "library load did not exit early\n";'
+```
+Expected: prints `library load did not exit early` — proving `require`-ing the script as a library does not trigger the CLI block's `exit()`.
 
 - [ ] **Step 6: Run test to verify it passes (GREEN)**
 
 Run: `php artisan test --filter OwnerGovernanceLintFixtureTest`
-Expected: `OK (10 tests, ...)` (4 valid + 6 invalid).
+Expected: `OK (14 tests, ...)` (4 valid + 8 invalid + 2 digest-determinism).
 
 - [ ] **Step 7: Verify the CLI entrypoint directly (not just the library function)**
 
@@ -1783,7 +2046,7 @@ git add scripts/ssot/owner_governance_lint.php tests/Unit/OwnerGovernance/fixtur
 git commit -m "feat(owner-governance): add owner_governance_lint.php with fixture-based RED/GREEN coverage (task 5)"
 ```
 
-**Reviewer acceptance criteria:** all 10 fixture cases (4 valid, 6 invalid) pass; the CLI entrypoint run against the real `docs/owner-decisions/GAP-031/` directory (Task 4's output) reports 0 violations; running the CLI against a known-bad fixture exits `1`; the script never sets or reads any field implying it verified a human's identity — only structure and enum membership.
+**Reviewer acceptance criteria:** all 12 fixture cases (4 valid, 8 invalid) pass, including the two Correction 2 staleness cases; the CLI entrypoint run against the real `docs/owner-decisions/GAP-031/` directory (Task 4's output) reports 0 violations; running the CLI against a known-bad fixture exits `1`; `owner_governance_compute_evidence_digest()` is deterministic regardless of input check ordering (verified by a dedicated test); the script never sets or reads any field implying it verified a human's identity — only structure and enum membership.
 
 ---
 
@@ -2010,27 +2273,31 @@ git commit -m "docs(pr-template): add owner-readable summary as first section (t
 
 ---
 
-### Task 8: GitHub identity mitigation
+### Task 8: GitHub identity mitigation (revised — no live CODEOWNERS-review activation under the current identity topology)
+
+**Correction applied (see amendment header): the original Task 8 Step 3 would have activated `required_pull_request_reviews.require_code_owner_reviews: true` immediately. That is now prohibited by this plan, not merely discouraged, because verified fact #7/#8 establish that `kha997` is simultaneously the sole collaborator, the only CODEOWNERS-eligible reviewer, and this session's own authenticated `gh` identity. Activating a code-owner-review requirement with no second eligible reviewer either (a) deadlocks the repository — no PR touching governance paths could ever collect an approval from anyone other than its own author — or (b) is trivially self-satisfied by the same credentials that authored the change, which would manufacture the *appearance* of independent owner approval where none exists. Both outcomes are worse than doing nothing. This task now stops at documentation + a runbook; the live mutation becomes Task 8b, executed only once its own preconditions are independently verified true.**
 
 **Files:**
 - Create: `.github/CODEOWNERS`
-- Modify: branch protection on `main` via `gh api` (not a repo file — a live GitHub configuration change)
+- Create: `docs/owner-governance/BRANCH_PROTECTION_ACTIVATION_RUNBOOK.md`
 - Create: `docs/owner-governance/OWNER_OPERATING_MODEL.md` addendum (append a "GitHub identity mitigation" section — modify, not create new)
+- Create: `scripts/ci/verify-distinct-reviewer-identity.sh`
 - Test: `tests/Unit/OwnerGovernance/CodeownersTest.php`
 
 **Interfaces:**
 - Consumes: verified fact #5 (no CODEOWNERS exists), #6 (branch protection has 1 required check, no required reviews), #7 (single collaborator `kha997`), #8 (this session's own `gh` token is `kha997`'s).
-- Produces: a real, live change to `main`'s branch protection (Step 3 below) — **this is a repo-wide, hard-to-reverse configuration change, not reversible by `git revert`, and this step must be run only with explicit user confirmation at execution time**, per this session's own operating rules on risky/shared-state actions. Everything else in this task is a normal file commit.
-
-**⚠️ Execution note (not a plan defect — a deliberate flag):** Step 3 changes merge requirements for the entire `main` branch, not just governance paths. The engineer executing this plan must show the exact command to the user and get explicit confirmation before running it, even though the plan itself specifies the exact command.
+- Produces: `docs/owner-governance/BRANCH_PROTECTION_ACTIVATION_RUNBOOK.md` — the exact command and exact precondition-verification steps for a **future, separately authorized** operator to run once a distinct reviewer identity exists. This task itself performs **no live GitHub configuration mutation** — that is explicitly deferred (see "Task 8b" below, not part of this plan's execution scope).
 
 - [ ] **Step 1: Write `.github/CODEOWNERS`**
 
 ```text
-# Owner Control Layer governance paths require a review from the verified
-# repository owner identity before merge. See Task 8,
-# docs/superpowers/plans/2026-08-04-owner-control-layer-repo-governance-foundation.md,
-# for what this mitigates and — just as importantly — what it does NOT prove.
+# Owner Control Layer governance paths require a review from a verified,
+# distinct owner-reviewer identity before merge, ONCE branch protection
+# activates that requirement (see BRANCH_PROTECTION_ACTIVATION_RUNBOOK.md —
+# NOT active yet as of this file's creation). Until activation, this file
+# only documents responsibility; it enforces nothing by itself — GitHub
+# only honors CODEOWNERS as a merge gate when required_pull_request_reviews
+# is also configured, which this plan deliberately does not do yet.
 
 /docs/owner-decisions/       @kha997
 /docs/owner-governance/      @kha997
@@ -2045,18 +2312,109 @@ Append to the end of `docs/owner-governance/OWNER_OPERATING_MODEL.md` (from Task
 
 ## GitHub identity mitigation (repository-native phase only)
 
-`.github/CODEOWNERS` requires a review from `@kha997` on any PR touching `docs/owner-decisions/`, `docs/owner-governance/`, or `PROJECT_CONSTITUTION.md`, once branch protection also requires code-owner review (below). This is a **mitigation**, not authentication proof, and this document states the distinction explicitly because it would otherwise be easy to overclaim:
+`.github/CODEOWNERS` names `@kha997` as responsible for `docs/owner-decisions/`, `docs/owner-governance/`, and `PROJECT_CONSTITUTION.md`. **As of this document's creation, this is documentation of responsibility only — it is not an active merge gate**, because activating `required_pull_request_reviews.require_code_owner_reviews` on this repository today would require the code owner to review and approve their own pull request, since `kha997` is the sole repository collaborator (verified fact #7) and this session's own `gh` identity (verified fact #8). Requiring a review that only the PR's own author can satisfy is not a security control — it is either a permanent deadlock or a rubber stamp, and this plan implements neither.
 
-- **What this proves:** a PR touching governance paths could not reach `main` without an approving review recorded under the GitHub account `@kha997`.
-- **What this does NOT prove:** that the specific human who owns that account personally read and approved the change with informed intent. It does not defend against a compromised token, a session where an AI agent is operating with that account's own credentials (verified fact #8 — true in this very planning session), or social engineering.
-- **This is not upgraded by anything in this plan.** The only mechanism that closes this gap is the future in-app Decision Center's authenticated session (`trust_level: authenticated_decision_center`), out of scope here (see the approved design §6.8/§6.8a/§10.5).
+**Current selected mitigation (active today, no live GitHub mutation required):**
 
-Verified repository facts this mitigation is built on: as of 2026-08-04, `kha997` is the repository's sole collaborator with write access (`gh api repos/kha997/zenamanagephp/collaborators`), and no `.github/CODEOWNERS` file previously existed.
+```text
+CODEOWNERS documentation
++ owner-governance-lint (structural validation, Task 5)
++ PR-only governance workflow (every packet change goes through a reviewable PR diff, even without a required-review gate)
++ explicit claimed_repo_record provenance (decision_provenance.trust_level, Task 1/5 — never claims authentication)
++ no claim of authenticated owner approval anywhere in this repository's tooling
 ```
 
-- [ ] **Step 3: Update branch protection to require CODEOWNERS review (live GitHub configuration change — confirm with user before running)**
+- **What CODEOWNERS proves today:** which paths a human has assigned responsibility for. Nothing more.
+- **What it does NOT prove, today or ever (repo-native phase):** that any specific human reviewed or approved a change with informed intent — this remains true even after activation (see the runbook), and is explicitly never claimed to be solved by GitHub configuration alone.
+- **Activation is a separately authorized, future operation** — see `docs/owner-governance/BRANCH_PROTECTION_ACTIVATION_RUNBOOK.md`. It does not happen as part of this plan's execution.
+- **This is not upgraded by anything in this plan.** The only mechanism that closes the underlying authentication gap is the future in-app Decision Center's authenticated session (`trust_level: authenticated_decision_center`), out of scope here (see the approved design §6.8/§6.8a/§10.5).
+```
 
-Exact command:
+- [ ] **Step 3: Write `scripts/ci/verify-distinct-reviewer-identity.sh`**
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Verifies the Task 8b activation precondition: at least one repository
+# collaborator, distinct from the current gh identity, exists with review
+# access, and is named in .github/CODEOWNERS for governance paths.
+# Exit 0 = precondition satisfied. Exit 1 = not satisfied (prints why).
+#
+# Usage: bash scripts/ci/verify-distinct-reviewer-identity.sh
+
+current_identity="$(gh api user --jq '.login')"
+echo "Current gh identity: $current_identity"
+
+collaborators_json="$(gh api repos/kha997/zenamanagephp/collaborators)"
+distinct_reviewers="$(printf '%s' "$collaborators_json" | \
+  python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+current = '$current_identity'
+distinct = [c['login'] for c in data if c['login'] != current and c.get('permissions', {}).get('pull')]
+print('\n'.join(distinct))
+")"
+
+if [ -z "$distinct_reviewers" ]; then
+  echo "❌ No repository collaborator distinct from '$current_identity' was found."
+  echo "Task 8b activation precondition NOT satisfied — do not activate required_pull_request_reviews."
+  exit 1
+fi
+
+echo "Distinct collaborator(s) found: $distinct_reviewers"
+
+codeowners_content="$(cat .github/CODEOWNERS 2>/dev/null || true)"
+covered=0
+for reviewer in $distinct_reviewers; do
+  if printf '%s' "$codeowners_content" | grep -q "@$reviewer"; then
+    echo "✅ @$reviewer is a distinct collaborator AND is listed in .github/CODEOWNERS for a governance path."
+    covered=1
+  fi
+done
+
+if [ "$covered" -eq 0 ]; then
+  echo "❌ No distinct collaborator is currently listed in .github/CODEOWNERS."
+  echo "Task 8b activation precondition NOT satisfied — add the distinct reviewer to CODEOWNERS first."
+  exit 1
+fi
+
+echo "✅ Task 8b activation precondition (distinct, CODEOWNERS-covered reviewer identity) is satisfied."
+exit 0
+```
+
+- [ ] **Step 4: Write `docs/owner-governance/BRANCH_PROTECTION_ACTIVATION_RUNBOOK.md`**
+
+```markdown
+# Branch Protection Activation Runbook (Task 8b — NOT executed by this plan)
+
+This runbook is the exact procedure for activating `required_pull_request_reviews.require_code_owner_reviews` on `main`, once — and only once — every precondition below is independently verified true. **This plan (Tasks 1–10) does not execute this runbook.** It is a separately authorized operation for whoever administers this repository once the identity topology changes.
+
+## Activation preconditions (ALL must be true)
+
+1. **At least one distinct trusted GitHub user or team exists**, other than the identity currently used by the coding workflow.
+2. **That identity has repository review access** (collaborator with `pull` permission at minimum — GitHub allows reviewing with read access).
+3. **The identity is covered by `.github/CODEOWNERS`** for `/docs/owner-decisions/`, `/docs/owner-governance/`, `/PROJECT_CONSTITUTION.md`.
+4. **A test Draft PR proves the author cannot satisfy the required review themselves** — see "Precondition test" below.
+5. **An independent reviewer can approve and unblock the PR** — demonstrated by the same test.
+6. **Rollback instructions are documented and understood** — see "Rollback" below, before activating.
+
+## Precondition verification command
+
+```bash
+bash scripts/ci/verify-distinct-reviewer-identity.sh
+```
+
+Must print `✅ Task 8b activation precondition (distinct, CODEOWNERS-covered reviewer identity) is satisfied.` and exit `0` before proceeding to activation. If it exits `1`, **do not activate** — the current identity topology (verified facts #7/#8) still applies.
+
+## Precondition test (run once the verification command passes, before activating)
+
+1. Open a Draft PR touching a file under `/docs/owner-decisions/` from the current coding-workflow identity.
+2. Attempt to approve it using that same identity. Confirm GitHub either disallows this (cannot approve your own PR) or that it is procedurally never done.
+3. Have the distinct reviewer identity (precondition 1) approve the PR.
+4. Confirm the PR becomes mergeable only after that distinct approval, not before.
+
+## Activation command (run only after all preconditions pass)
 
 ```bash
 gh api --method PUT repos/kha997/zenamanagephp/branches/main/protection \
@@ -2072,9 +2430,9 @@ gh api --method PUT repos/kha997/zenamanagephp/branches/main/protection \
   -F required_conversation_resolution=false
 ```
 
-This adds `required_pull_request_reviews` (currently absent, verified fact #6) with `require_code_owner_reviews: true`, while preserving every other currently-configured value exactly (re-stated explicitly in the same call, since this endpoint replaces the whole protection object rather than patching it — confirmed by re-reading the same GitHub API's documented PUT semantics for this endpoint during this planning session; the values above are copied field-for-field from the JSON captured in verified fact #6, with only `required_pull_request_reviews` added).
+This re-states every currently-configured branch-protection field explicitly (this endpoint replaces the whole protection object, it does not patch), copied field-for-field from the JSON captured in verified fact #6, with only `required_pull_request_reviews` added. **Before running: re-fetch current branch protection with `gh api repos/kha997/zenamanagephp/branches/main/protection` and confirm the fields above still match — if branch protection changed since this runbook was written, rebuild this command from the fresh `GET`, do not run it stale.**
 
-**Verification command (run immediately after):**
+## Verification command (run immediately after activation)
 
 ```bash
 gh api repos/kha997/zenamanagephp/branches/main/protection --jq '.required_pull_request_reviews.require_code_owner_reviews'
@@ -2082,7 +2440,24 @@ gh api repos/kha997/zenamanagephp/branches/main/protection --jq '.required_pull_
 
 Expected output: `true`.
 
-- [ ] **Step 4: Write the failing CODEOWNERS test**
+## Rollback
+
+```bash
+gh api --method PUT repos/kha997/zenamanagephp/branches/main/protection \
+  -F required_status_checks[strict]=true \
+  -F 'required_status_checks[contexts][]=test-routes-guardrails' \
+  -F enforce_admins=true \
+  -F required_linear_history=false \
+  -F allow_force_pushes=false \
+  -F allow_deletions=false \
+  -F block_creations=false \
+  -F required_conversation_resolution=false
+```
+
+Omitting `required_pull_request_reviews` entirely from the PUT body removes the requirement, restoring the exact pre-activation state captured in verified fact #6. This does not delete `.github/CODEOWNERS` or any decision record — it only reverts the branch-protection requirement.
+```
+
+- [ ] **Step 5: Write the failing CODEOWNERS/runbook test**
 
 Create `tests/Unit/OwnerGovernance/CodeownersTest.php`:
 
@@ -2106,33 +2481,85 @@ class CodeownersTest extends TestCase
         $this->assertStringContainsString('@kha997', $content);
     }
 
-    public function test_operating_model_states_mitigation_is_not_authentication_proof(): void
+    public function test_codeowners_states_it_is_not_yet_an_active_merge_gate(): void
+    {
+        $content = file_get_contents(dirname(__DIR__, 3) . '/.github/CODEOWNERS');
+        $this->assertStringContainsString('NOT active yet', $content);
+    }
+
+    public function test_operating_model_states_activation_is_deferred_and_documents_deadlock_risk(): void
     {
         $content = file_get_contents(dirname(__DIR__, 3) . '/docs/owner-governance/OWNER_OPERATING_MODEL.md');
-        $this->assertStringContainsString('not authentication proof', $content);
-        $this->assertStringContainsString('does NOT prove', $content);
+        $this->assertStringContainsString('separately authorized, future operation', $content);
+        $this->assertStringContainsString('sole repository collaborator', $content);
+    }
+
+    public function test_activation_runbook_exists_with_all_six_preconditions(): void
+    {
+        $content = file_get_contents(dirname(__DIR__, 3) . '/docs/owner-governance/BRANCH_PROTECTION_ACTIVATION_RUNBOOK.md');
+        $this->assertStringContainsString('NOT executed by this plan', $content);
+        foreach ([
+            'distinct trusted GitHub user',
+            'repository review access',
+            'covered by `.github/CODEOWNERS`',
+            'test Draft PR proves the author cannot satisfy',
+            'independent reviewer can approve and unblock',
+            'Rollback instructions are documented',
+        ] as $precondition) {
+            $this->assertStringContainsString($precondition, $content, "Missing precondition: {$precondition}");
+        }
+    }
+
+    public function test_verify_distinct_reviewer_script_exists_and_is_executable_shape(): void
+    {
+        $path = dirname(__DIR__, 3) . '/scripts/ci/verify-distinct-reviewer-identity.sh';
+        $this->assertFileExists($path);
+        $content = file_get_contents($path);
+        $this->assertStringContainsString('collaborators', $content);
+        $this->assertStringContainsString('CODEOWNERS', $content);
+    }
+
+    public function test_no_live_branch_protection_mutation_command_runs_unconditionally_in_this_task(): void
+    {
+        // Structural guard against regression: Task 8's own committed artifacts
+        // must never themselves invoke the activation PUT — it must only ever
+        // appear inside the runbook document, as instructional text for a human,
+        // never as an executable script this plan's CI would run automatically.
+        $scriptsDir = dirname(__DIR__, 3) . '/scripts';
+        $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($scriptsDir, \FilesystemIterator::SKIP_DOTS));
+        foreach ($iterator as $fileInfo) {
+            if ($fileInfo->getExtension() !== 'sh' && $fileInfo->getExtension() !== 'php') {
+                continue;
+            }
+            $content = file_get_contents($fileInfo->getPathname());
+            $this->assertStringNotContainsString(
+                'require_code_owner_reviews]=true',
+                $content,
+                "{$fileInfo->getPathname()} must not itself execute the branch-protection activation mutation."
+            );
+        }
     }
 }
 ```
 
-- [ ] **Step 5: Run test to verify it fails (RED)**
+- [ ] **Step 6: Run test to verify it fails (RED)**
 
 Run: `php artisan test --filter CodeownersTest`
-Expected (before Step 1–2): FAIL, file-not-found / string-not-found.
+Expected (before Steps 1–4): FAIL, file-not-found / string-not-found.
 
-- [ ] **Step 6: Run test to verify it passes (GREEN)**
+- [ ] **Step 7: Run test to verify it passes (GREEN)**
 
 Run: `php artisan test --filter CodeownersTest`
-Expected: `OK (2 tests, ...)`.
+Expected: `OK (6 tests, ...)`.
 
-- [ ] **Step 7: Commit the file changes (Steps 1, 2, 4 — NOT the live API call from Step 3, which has no git artifact to commit)**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add .github/CODEOWNERS docs/owner-governance/OWNER_OPERATING_MODEL.md tests/Unit/OwnerGovernance/CodeownersTest.php
-git commit -m "chore(owner-governance): add CODEOWNERS for governance paths, document identity-mitigation limits (task 8)"
+git add .github/CODEOWNERS docs/owner-governance/OWNER_OPERATING_MODEL.md docs/owner-governance/BRANCH_PROTECTION_ACTIVATION_RUNBOOK.md scripts/ci/verify-distinct-reviewer-identity.sh tests/Unit/OwnerGovernance/CodeownersTest.php
+git commit -m "chore(owner-governance): add CODEOWNERS + deferred branch-protection activation runbook, no live mutation (task 8, revised)"
 ```
 
-**Reviewer acceptance criteria:** `.github/CODEOWNERS` exists and covers exactly the three governance paths named; `OWNER_OPERATING_MODEL.md` states, in plain unhedged language, what the mitigation does and does not prove; the branch-protection API call (Step 3) was shown to and confirmed by the user before execution, and its verification command's output was captured as evidence, not assumed.
+**Reviewer acceptance criteria:** `.github/CODEOWNERS` exists and explicitly states it is not yet an active merge gate; `OWNER_OPERATING_MODEL.md` documents the deadlock/rubber-stamp risk plainly, not euphemistically; `BRANCH_PROTECTION_ACTIVATION_RUNBOOK.md` lists all 6 required preconditions verbatim; `verify-distinct-reviewer-identity.sh` is a real, runnable precondition check, not a placeholder; the structural regression test (`test_no_live_branch_protection_mutation_command_runs_unconditionally_in_this_task`) confirms no script this plan commits can itself perform the activation mutation; **this task, when executed, performs zero live GitHub configuration changes.**
 
 ---
 
@@ -2141,14 +2568,20 @@ git commit -m "chore(owner-governance): add CODEOWNERS for governance paths, doc
 **Files:**
 - Create: `.github/workflows/owner-governance-lint.yml`
 - Create: `scripts/ci/check-gate3-before-ready.sh`
+- Create: `scripts/ci/check-evidence-freshness.sh`
 - Create: `docs/owner-governance/enforcement-boundary.yml`
 - Create: `docs/owner-governance/legacy-work-ids.txt`
 - Create: `scripts/ssot/generate_legacy_work_ids.php`
+- Create: `docs/owner-governance/GOVERNED_DOCUMENT_FRONTMATTER.md` (Correction 3)
+- Create: `tests/Unit/OwnerGovernance/fixtures/governed-spec-with-frontmatter.md` (Correction 3)
+- Create: `tests/Unit/OwnerGovernance/fixtures/governed-plan-missing-frontmatter.md` (Correction 3)
 - Test: `tests/Unit/OwnerGovernance/EnforcementBoundaryTest.php`
 
 **Interfaces:**
-- Consumes: `scripts/ssot/owner_governance_lint.php` (Task 5), `OPERATIONAL_GAP_REGISTER.md` (existing, verified fact #3 — source of the legacy work-ID list).
-- Produces: a live, required-eventually CI gate (added to branch protection's `required_status_checks.contexts` as a follow-up to Task 8's Step 3, documented but not executed here — see Step 5's note) that Task 10's adoption runbook demonstrates end-to-end.
+- Consumes: `scripts/ssot/owner_governance_lint.php` (Task 5, including `owner_governance_compute_evidence_digest()` for the evidence-freshness script), `OPERATIONAL_GAP_REGISTER.md` (existing, verified fact #3 — source of the legacy work-ID list).
+- Produces: a CI workflow that runs on every relevant PR but is **not** added to branch protection's required checks by this plan (that decision now belongs to Task 8b's activation runbook, which this plan does not execute — see Task 8's revision). `docs/owner-governance/GOVERNED_DOCUMENT_FRONTMATTER.md` — the Correction 3 contract consumed by `docs/superpowers/plans/*.md` and `docs/superpowers/specs/*.md` going forward, and by Task 10's adoption runbook.
+
+**Correction 3 applied here (see amendment header): plan-filename regex is now fallback-only, used solely for the pre-existing legacy corpus. Newly governed specs/plans must declare `work_id`/`owner_governance_version`/`owner_gate_2_record` in their own frontmatter, which the lint reads first and authoritatively.**
 
 - [ ] **Step 1: Generate the legacy work-ID exemption list**
 
@@ -2197,7 +2630,7 @@ Expected output: `Wrote 33 legacy work IDs to .../docs/owner-governance/legacy-w
 ```yaml
 # Owner-governance-lint enforcement boundary (Task 9).
 # Read by owner-governance-lint.yml's CI job and by owner_governance_lint.php
-# when invoked with --enforce-gate-ordering (see Step 3 below).
+# when invoked with --enforce-gate-ordering (see Step 5 below).
 
 effective_date: "2026-08-04"
 
@@ -2227,7 +2660,62 @@ never_exempt:
   - "work_id_consistency"
 ```
 
-- [ ] **Step 3: Extend `owner_governance_lint.php` with a `--enforce-gate-ordering` mode**
+- [ ] **Step 3: Write `docs/owner-governance/GOVERNED_DOCUMENT_FRONTMATTER.md` (Correction 3)**
+
+```markdown
+# Governed Document Frontmatter Contract
+
+Applies to every `docs/superpowers/specs/*.md` and `docs/superpowers/plans/*.md` file created on or after the enforcement effective date (`docs/owner-governance/enforcement-boundary.yml`), for a work item that is not on the legacy exemption list.
+
+## Required frontmatter (minimum)
+
+```yaml
+---
+work_id: OWN-2026-001
+owner_governance_version: 1
+owner_gate_2_record: docs/owner-decisions/OWN-2026-001/02-design.md
+---
+```
+
+- `work_id` — the canonical ID (Correction 3, §6.4 of the approved design's identity model). **This is now the primary, authoritative source `owner_governance_lint.php` reads to associate a spec/plan file with a work item.** It must also appear consistently in that work item's Gate packets, its git branch name (as a substring), and its PR body/title — `owner_governance_lint.php --enforce-gate-ordering` cross-checks this (Step 4 below).
+- `owner_governance_version` — schema-contract version this document was authored against. Fixed at `1` for the lifetime of this plan; exists so a future schema revision has a documented version field to bump rather than needing to invent one retroactively.
+- `owner_gate_2_record` — direct path to the Gate 2 packet this plan/spec is downstream of. Redundant with deriving `docs/owner-decisions/<work_id>/02-design.md` from `work_id` alone, but stated explicitly rather than implicitly, so the lint can flag a mismatch (e.g. a copy-pasted `work_id` whose Gate 2 path was not updated to match) as its own distinct violation instead of silently trusting the derived path.
+
+## Enforcement rule (fallback boundary, Correction 3)
+
+- **Plan-filename regex parsing is fallback-only, used exclusively for documents that predate the enforcement effective date** (the pre-existing corpus this plan found via `docs/superpowers/plans/*.md`/`docs/superpowers/specs/*.md`, verified fact #17).
+- **A new spec or plan file, for a work item not on the legacy exemption list, that lacks this frontmatter block fails `owner_governance_lint.php --enforce-gate-ordering` outright** — with a distinct violation rule (`missing-governance-frontmatter`) from the pre-existing `gate-2-before-plan` rule, so the two failure modes ("no frontmatter at all" vs. "frontmatter present, Gate 2 missing/not approved") are never conflated in CI output.
+- **A work item cannot claim legacy status by omission.** The legacy exemption list (`docs/owner-governance/legacy-work-ids.txt`) is the only source of legacy status — a new plan file simply not having frontmatter does not fall back to being treated as legacy; it fails.
+- **The legacy allowlist is not automatically expanded during normal feature work.** `scripts/ssot/generate_legacy_work_ids.php` (Step 1) is a one-time generation script run once, at this plan's execution time, against `OPERATIONAL_GAP_REGISTER.md` as it existed on the effective date. No task in this plan, and no CI step, re-runs it automatically or appends to `legacy-work-ids.txt` as a side effect of any other operation — adding an ID to that file is only ever a manual, reviewable, CODEOWNERS-covered edit (the file lives under `docs/owner-governance/`).
+```
+
+- [ ] **Step 4: Write the fixture documents for Correction 3**
+
+`tests/Unit/OwnerGovernance/fixtures/governed-spec-with-frontmatter.md`:
+
+```markdown
+---
+work_id: OWN-2026-001
+owner_governance_version: 1
+owner_gate_2_record: docs/owner-decisions/OWN-2026-001/02-design.md
+---
+
+# Hypothetical new spec, correctly declaring governance frontmatter.
+```
+
+`tests/Unit/OwnerGovernance/fixtures/governed-plan-missing-frontmatter.md`:
+
+```markdown
+# A plan file with NO governance frontmatter at all, for a non-legacy work item.
+
+This must fail --enforce-gate-ordering with rule 'missing-governance-frontmatter',
+not be silently treated as legacy just because it has no recognizable ID in its
+filename (its filename here is deliberately generic, matching neither the
+GAP-NNN nor OWN-YYYY-NNN pattern, to prove filename-regex fallback does not
+rescue a document that should have had frontmatter and didn't).
+```
+
+- [ ] **Step 5: Extend `owner_governance_lint.php` with a `--enforce-gate-ordering` mode**
 
 Modify `scripts/ssot/owner_governance_lint.php` (from Task 5) — append after the existing CLI entrypoint's violation-reporting block, before the final `exit(0)`:
 
@@ -2239,27 +2727,80 @@ Modify `scripts/ssot/owner_governance_lint.php` (from Task 5) — append after t
             array_map('trim', file($repoRoot . '/' . $boundary['legacy_exemption_file'])),
             fn ($line) => $line !== '' && !str_starts_with($line, '#')
         );
-
-        $planFiles = glob($repoRoot . '/docs/superpowers/plans/*.md');
+        $governedDirs = array_merge(
+            glob($repoRoot . '/docs/superpowers/plans/*.md'),
+            glob($repoRoot . '/docs/superpowers/specs/*.md')
+        );
         $orderingViolations = [];
-        foreach ($planFiles as $planFile) {
-            $basename = basename($planFile);
-            if (!preg_match('/\b(GAP-\d{3}|OWN-\d{4}-\d{3})\b/', $basename, $idMatch)) {
-                continue; // No recognizable work_id in the filename — not this lint's concern.
+
+        foreach ($governedDirs as $docFile) {
+            $basename = basename($docFile);
+            $content = file_get_contents($docFile);
+
+            // Correction 3: frontmatter is the PRIMARY, authoritative source.
+            // Filename regex is FALLBACK-ONLY, and only ever used to identify
+            // a document as legacy — never to identify a NEW work_id.
+            $workId = null;
+            $hasGovernanceFrontmatter = false;
+            if (preg_match('/^---\n(.*?)\n---\n/s', $content, $fmMatch)) {
+                $docFm = Yaml::parse($fmMatch[1]);
+                if (is_array($docFm) && isset($docFm['work_id'])) {
+                    $workId = $docFm['work_id'];
+                    $hasGovernanceFrontmatter = isset($docFm['owner_governance_version'], $docFm['owner_gate_2_record']);
+                }
             }
-            $workId = $idMatch[1];
+
+            if ($workId === null) {
+                // No frontmatter work_id — fall back to filename regex, but
+                // ONLY to check whether this is a pre-existing legacy file.
+                if (!preg_match('/\b(GAP-\d{3}|OWN-\d{4}-\d{3})\b/', $basename, $idMatch)) {
+                    continue; // No recognizable work_id anywhere — not this lint's concern (matches original behavior for truly unrelated docs).
+                }
+                $filenameWorkId = $idMatch[1];
+                if (in_array($filenameWorkId, $legacyIds, true)) {
+                    continue; // Genuinely legacy — filename-only reference is acceptable for pre-existing documents.
+                }
+                // Not on the legacy list and has no frontmatter: this is either a
+                // new document that should have declared frontmatter and didn't,
+                // or a filename coincidentally containing an ID pattern. Either
+                // way, per Correction 3, filename text alone cannot establish a
+                // NEW work_id's governance status — this is exactly the case
+                // Correction 3 exists to close.
+                $orderingViolations[] = new OwnerGovernanceLintViolation(
+                    $basename,
+                    'missing-governance-frontmatter',
+                    "File references '{$filenameWorkId}' in its filename but is not on the legacy exemption list and has no governance frontmatter (work_id/owner_governance_version/owner_gate_2_record). New governed work must declare frontmatter explicitly — see docs/owner-governance/GOVERNED_DOCUMENT_FRONTMATTER.md."
+                );
+                continue;
+            }
+
             if (in_array($workId, $legacyIds, true)) {
-                continue; // Explicitly exempt.
+                continue; // Explicitly exempt, even if it also has frontmatter.
+            }
+
+            if (!$hasGovernanceFrontmatter) {
+                $orderingViolations[] = new OwnerGovernanceLintViolation(
+                    $basename,
+                    'incomplete-governance-frontmatter',
+                    "work_id '{$workId}' is declared but owner_governance_version and/or owner_gate_2_record is missing."
+                );
+                continue;
             }
 
             $gate2Path = $repoRoot . "/docs/owner-decisions/{$workId}/02-design.md";
             if (!is_file($gate2Path)) {
-                $orderingViolations[] = new OwnerGovernanceLintViolation($basename, 'gate-2-before-plan', "Plan file references work_id '{$workId}', which has no approved Gate 2 packet ({$gate2Path} missing) and is not in the legacy exemption list.");
+                $orderingViolations[] = new OwnerGovernanceLintViolation($basename, 'gate-2-before-plan', "Document declares work_id '{$workId}', which has no approved Gate 2 packet ({$gate2Path} missing) and is not in the legacy exemption list.");
                 continue;
             }
+
+            $declaredGate2Path = $repoRoot . '/' . $docFm['owner_gate_2_record'];
+            if (realpath($declaredGate2Path) !== realpath($gate2Path)) {
+                $orderingViolations[] = new OwnerGovernanceLintViolation($basename, 'gate2-record-mismatch', "owner_gate_2_record ('{$docFm['owner_gate_2_record']}') does not match the derived path for work_id '{$workId}' ('docs/owner-decisions/{$workId}/02-design.md').");
+            }
+
             $gate2 = Yaml::parse(preg_replace('/^---\n(.*?)\n---\n.*$/s', '$1', file_get_contents($gate2Path)));
             if (($gate2['owner_decision']['value'] ?? null) !== 'approved') {
-                $orderingViolations[] = new OwnerGovernanceLintViolation($basename, 'gate-2-not-approved', "Plan file references work_id '{$workId}', whose Gate 2 packet exists but owner_decision.value is not 'approved'.");
+                $orderingViolations[] = new OwnerGovernanceLintViolation($basename, 'gate-2-not-approved', "Document declares work_id '{$workId}', whose Gate 2 packet exists but owner_decision.value is not 'approved'.");
             }
         }
 
@@ -2274,7 +2815,7 @@ Modify `scripts/ssot/owner_governance_lint.php` (from Task 5) — append after t
     }
 ```
 
-- [ ] **Step 4: Write `scripts/ci/check-gate3-before-ready.sh`** (the one genuinely hybrid, GitHub-API-dependent check — per the design's own §7.5 admission that this cannot be pure file-tree lint)
+- [ ] **Step 6: Write `scripts/ci/check-gate3-before-ready.sh`** (the one genuinely hybrid, GitHub-API-dependent check — per the design's own §7.5 admission that this cannot be pure file-tree lint)
 
 ```bash
 #!/usr/bin/env bash
@@ -2319,7 +2860,72 @@ echo "Gate 3 packet found for $work_id — gate-3-before-ready check passes stru
 exit 0
 ```
 
-- [ ] **Step 5: Write `.github/workflows/owner-governance-lint.yml`**
+- [ ] **Step 7: Write `scripts/ci/check-evidence-freshness.sh`** (Correction 2 — the live half of staleness detection: recomputes the CURRENT digest from the CURRENT branch HEAD and CI state, and compares it against every non-`none` Gate 3 packet's `owner_decision_binding`. `owner_governance_lint.php` alone can only check internal self-consistency of a single file — offline, it has no way to know what today's actual HEAD SHA or CI conclusions are. This script is the piece that closes that loop, matching the design's own §7.5 admission that the fully-live check is necessarily hybrid, exactly as `check-gate3-before-ready.sh` already is for a different question.)
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Evidence-freshness check (Task 9 / Correction 2). Recomputes the CURRENT
+# evidence digest for a work_id's Gate 3 packet and compares it against
+# owner_decision_binding.evidence_digest. A mismatch means the recorded
+# decision is stale — evidence changed after the decision was made — and
+# this is detected here at CI-run time, on every run, with no notification
+# infrastructure involved.
+#
+# Usage: PR_NUMBER=<n> WORK_ID=<id> bash scripts/ci/check-evidence-freshness.sh
+
+: "${PR_NUMBER:?PR_NUMBER env var required}"
+: "${WORK_ID:?WORK_ID env var required}"
+
+gate3_file="$(ls docs/owner-decisions/"$WORK_ID"/03-release*.md 2>/dev/null | sort | tail -n1 || true)"
+if [ -z "$gate3_file" ]; then
+  echo "No Gate 3 packet for $WORK_ID — nothing to check for staleness."
+  exit 0
+fi
+
+owner_decision_value="$(php -r '
+require __DIR__ . "/../../vendor/autoload.php";
+$fm = Symfony\Component\Yaml\Yaml::parse(preg_replace("/^---\n(.*?)\n---\n.*$/s", "$1", file_get_contents($argv[1])));
+echo $fm["owner_decision"]["value"] ?? "none";
+' "$gate3_file")"
+
+if [ "$owner_decision_value" = "none" ]; then
+  echo "$gate3_file has owner_decision.value: none — nothing recorded yet, nothing to go stale."
+  exit 0
+fi
+
+current_head_sha="$(git rev-parse HEAD)"
+
+checks_json="$(gh pr checks "$PR_NUMBER" --json name,state)"
+current_digest="$(php -r '
+require __DIR__ . "/../../vendor/autoload.php";
+require __DIR__ . "/../ssot/owner_governance_lint.php";
+$checks = array_map(fn ($c) => ["name" => $c["name"], "conclusion" => $c["state"]], json_decode($argv[2], true));
+echo owner_governance_compute_evidence_digest($argv[1], $checks);
+' "$current_head_sha" "$checks_json")"
+
+recorded_digest="$(php -r '
+require __DIR__ . "/../../vendor/autoload.php";
+$fm = Symfony\Component\Yaml\Yaml::parse(preg_replace("/^---\n(.*?)\n---\n.*$/s", "$1", file_get_contents($argv[1])));
+echo $fm["owner_decision_binding"]["evidence_digest"] ?? "";
+' "$gate3_file")"
+
+if [ "$current_digest" != "$recorded_digest" ]; then
+  echo "::error::$gate3_file's owner_decision_binding.evidence_digest ($recorded_digest) no longer matches the current branch state ($current_digest)."
+  echo "This decision is STALE. Required transition (per the design's §3.6 automatic-revert rule, enforced here without notification infrastructure):"
+  echo "  Evidence changed -> existing owner decision becomes stale -> release eligibility becomes false"
+  echo "  -> Gate 3 packet must return to preparing or blocked_technical -> evidence must be regenerated"
+  echo "  -> only then may Gate 3 return to awaiting_owner."
+  echo "This script reports the required transition. It does NOT rewrite $gate3_file itself — the human decision record is never silently edited by CI."
+  exit 1
+fi
+
+echo "✅ $gate3_file's evidence binding matches current branch state — decision is not stale."
+exit 0
+```
+
+- [ ] **Step 8: Write `.github/workflows/owner-governance-lint.yml`**
 
 Modeled on `routes-guardrails.yml`'s structure (verified fact #10) but without a MySQL service (not needed — pure PHP + vendored `symfony/yaml`, verified fact #13), and with an explicit `paths` trigger so it actually runs on documentation-only PRs (closing the gap in verified fact #9):
 
@@ -2374,9 +2980,23 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: bash scripts/ci/check-gate3-before-ready.sh
+
+      - name: Evidence-freshness check (Correction 2 — only on PRs, needs gh + PR number + work_id)
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          body="$(gh pr view "$PR_NUMBER" --json body --jq '.body')"
+          work_id="$(printf '%s' "$body" | grep -oE '(GAP-[0-9]{3}|OWN-[0-9]{4}-[0-9]{3})' | head -n1 || true)"
+          if [ -z "$work_id" ]; then
+            echo "No recognizable Work ID in PR body — skipping evidence-freshness check."
+            exit 0
+          fi
+          WORK_ID="$work_id" bash scripts/ci/check-evidence-freshness.sh
 ```
 
-- [ ] **Step 6: Write the failing enforcement-boundary test**
+- [ ] **Step 9: Write the failing enforcement-boundary test**
 
 Create `tests/Unit/OwnerGovernance/EnforcementBoundaryTest.php`:
 
@@ -2429,25 +3049,55 @@ class EnforcementBoundaryTest extends TestCase
         $content = file_get_contents($this->repoRoot() . '/scripts/ci/check-gate3-before-ready.sh');
         $this->assertStringContainsString('legacy-work-ids.txt', $content);
     }
+
+    public function test_evidence_freshness_script_exists_and_uses_the_shared_digest_function(): void
+    {
+        $content = file_get_contents($this->repoRoot() . '/scripts/ci/check-evidence-freshness.sh');
+        $this->assertStringContainsString('owner_governance_compute_evidence_digest', $content);
+        $this->assertStringContainsString('owner_decision_binding', $content);
+    }
+
+    public function test_governed_document_frontmatter_contract_documents_all_three_required_fields(): void
+    {
+        $content = file_get_contents($this->repoRoot() . '/docs/owner-governance/GOVERNED_DOCUMENT_FRONTMATTER.md');
+        foreach (['work_id', 'owner_governance_version', 'owner_gate_2_record'] as $field) {
+            $this->assertStringContainsString($field, $content);
+        }
+        $this->assertStringContainsString('fallback-only', $content);
+    }
+
+    public function test_lint_defines_the_missing_governance_frontmatter_rule(): void
+    {
+        // --enforce-gate-ordering is a directory-scan CLI mode, not a single-file
+        // library call like validate_packet(), so its live behavior against the
+        // governed-plan-missing-frontmatter.md fixture is exercised via the CLI
+        // directly in Step 12 below, not re-simulated here. This test only
+        // confirms the rule name this plan committed to exists in the script.
+        $content = file_get_contents($this->repoRoot() . '/scripts/ssot/owner_governance_lint.php');
+        $this->assertStringContainsString('missing-governance-frontmatter', $content);
+    }
 }
 ```
 
-- [ ] **Step 7: Run test to verify it fails (RED)**
+- [ ] **Step 10: Run test to verify it fails (RED)**
 
 Run: `php artisan test --filter EnforcementBoundaryTest`
-Expected (before Steps 1–5): FAIL, file-not-found.
+Expected (before Steps 1–8): FAIL, file-not-found.
 
-- [ ] **Step 8: Run test to verify it passes (GREEN)**
+- [ ] **Step 11: Run test to verify it passes (GREEN)**
 
 Run: `php artisan test --filter EnforcementBoundaryTest`
-Expected: `OK (5 tests, ...)`.
+Expected: `OK (8 tests, ...)`.
 
-- [ ] **Step 9: Run the extended lint locally against this repo's real state**
+- [ ] **Step 12: Run the extended lint locally against this repo's real state, and against the Correction 3 fixtures**
 
 Run: `php scripts/ssot/owner_governance_lint.php --enforce-gate-ordering`
-Expected: `✅ owner-governance-lint PASS` for structural validation (GAP-031's 4 real packets, Task 4), and `✅ owner-governance-lint --enforce-gate-ordering PASS` (GAP-031 is legacy-exempt; no other work_id-bearing plan file exists yet to check against). Note: `docs/superpowers/plans/2026-08-04-gap031-document-approval-workflow.md`'s filename contains `gap031` lowercase, not `GAP-031` — the regex `\b(GAP-\d{3}|OWN-\d{4}-\d{3})\b` will **not** match it. This is correct and intentional: the ordering check only fires for plan files that *do* reference a recognizable ID; GAP-031's plan predates this whole system and is additionally covered by the explicit legacy list regardless.
+Expected: `✅ owner-governance-lint PASS` for structural validation (GAP-031's 4 real packets, Task 4), and `✅ owner-governance-lint --enforce-gate-ordering PASS` against `docs/superpowers/plans/*.md`/`docs/superpowers/specs/*.md` (GAP-031's real plan/spec have no `work_id` frontmatter and no recognizable `GAP-NNN`/`OWN-YYYY-NNN` token in their filenames either — `docs/superpowers/plans/2026-08-04-gap031-document-approval-workflow.md` contains lowercase `gap031`, which the regex `\b(GAP-\d{3}|OWN-\d{4}-\d{3})\b` does not match — so this file is skipped by the loop's very first `continue` (no work_id found by either method), which is correct: a document the lint cannot identify at all is not this check's concern, distinct from a document it identifies but finds non-compliant).
 
-- [ ] **Step 10: Run existing repo-wide checks to confirm no regression**
+Run: `php scripts/ssot/owner_governance_lint.php --enforce-gate-ordering tests/Unit/OwnerGovernance/fixtures/governed-plan-missing-frontmatter.md` (invoking the lint directly against the Correction 3 fixture, simulating it as if it lived under `docs/superpowers/plans/`)
+Expected: exits `1`, prints a `[missing-governance-frontmatter]` violation line, since this fixture's filename contains no recognizable ID token AND has no frontmatter — confirming filename-regex fallback does not rescue a non-compliant new document (this is the negative case; a positive case — a compliant `governed-spec-with-frontmatter.md`-shaped file whose `work_id` **is** on the legacy list — is not constructible today since no such ID exists yet in this repo's real `docs/owner-decisions/`, and is deferred to Task 10's adoption runbook, which walks a real `OWN-2026-001` example end-to-end).
+
+- [ ] **Step 13: Run existing repo-wide checks to confirm no regression**
 
 Run: `composer ssot:lint`
 Expected: exits `0`, unchanged from pre-task behavior (this task added new scripts, touched no existing SSOT script).
@@ -2455,16 +3105,16 @@ Expected: exits `0`, unchanged from pre-task behavior (this task added new scrip
 Run: `php artisan test --filter RouteSsotGuardTest` and `php artisan test --filter RouteHygieneTest`
 Expected: both still `OK` (unmodified by this task).
 
-- [ ] **Step 11: Commit**
+- [ ] **Step 14: Commit**
 
 ```bash
-git add scripts/ssot/generate_legacy_work_ids.php scripts/ssot/owner_governance_lint.php scripts/ci/check-gate3-before-ready.sh docs/owner-governance/enforcement-boundary.yml docs/owner-governance/legacy-work-ids.txt .github/workflows/owner-governance-lint.yml tests/Unit/OwnerGovernance/EnforcementBoundaryTest.php
-git commit -m "feat(owner-governance): wire lint into CI with effective-date compatibility boundary (task 9)"
+git add scripts/ssot/generate_legacy_work_ids.php scripts/ssot/owner_governance_lint.php scripts/ci/check-gate3-before-ready.sh scripts/ci/check-evidence-freshness.sh docs/owner-governance/enforcement-boundary.yml docs/owner-governance/legacy-work-ids.txt docs/owner-governance/GOVERNED_DOCUMENT_FRONTMATTER.md .github/workflows/owner-governance-lint.yml tests/Unit/OwnerGovernance/EnforcementBoundaryTest.php tests/Unit/OwnerGovernance/fixtures/governed-spec-with-frontmatter.md tests/Unit/OwnerGovernance/fixtures/governed-plan-missing-frontmatter.md
+git commit -m "feat(owner-governance): wire lint into CI with effective-date boundary, evidence-binding staleness checks, and explicit governance frontmatter for new work (task 9, corrections 2+3)"
 ```
 
-**Note on making this a required check:** this task creates the workflow but does **not** add `Owner Governance Lint` to branch protection's `required_status_checks.contexts` — that is a second live configuration change of the same class as Task 8 Step 3, and per this plan's own risk posture (Task 8) must be confirmed with the user separately, after this workflow has run green at least once on a real PR (Task 10's adoption runbook). The exact follow-up command, for the record: `gh api --method PUT repos/kha997/zenamanagephp/branches/main/protection -F 'required_status_checks[contexts][]=test-routes-guardrails' -F 'required_status_checks[contexts][]=Owner Governance Lint' ...` (full field set as in Task 8 Step 3, plus this second context).
+**Note on making this a required check:** this task creates the workflow but does **not** add `Owner Governance Lint` to branch protection's `required_status_checks.contexts` — that is a live configuration change of the same class as Task 8b's deferred activation, governed by the same `BRANCH_PROTECTION_ACTIVATION_RUNBOOK.md` preconditions (a distinct reviewer identity, etc. — Task 8, revised), confirmed separately after this workflow has run green at least once on a real PR (Task 10's adoption runbook). The exact follow-up command, for the record, once preconditions are verified: `gh api --method PUT repos/kha997/zenamanagephp/branches/main/protection -F 'required_status_checks[contexts][]=test-routes-guardrails' -F 'required_status_checks[contexts][]=Owner Governance Lint' ...` (full field set as in the activation runbook's command, plus this second context).
 
-**Reviewer acceptance criteria:** `owner-governance-lint.yml` actually triggers on a docs-only diff (unlike the existing `automated-testing.yml`, verified fact #9); GAP-031 is confirmed legacy-exempt without needing a `docs/owner-decisions/GAP-031/` packet to already satisfy gate-ordering (it satisfies it anyway, Task 4, but exemption doesn't depend on that); a new, non-exempt `OWN-YYYY-NNN` work item referencing a plan file with no Gate 2 packet fails `--enforce-gate-ordering`; existing `composer ssot:lint` and route-guardrail tests are unaffected.
+**Reviewer acceptance criteria:** `owner-governance-lint.yml` actually triggers on a docs-only diff (unlike the existing `automated-testing.yml`, verified fact #9); GAP-031 is confirmed legacy-exempt without needing a `docs/owner-decisions/GAP-031/` packet to already satisfy gate-ordering (it satisfies it anyway, Task 4, but exemption doesn't depend on that); a new, non-exempt work item declaring governance frontmatter but referencing a plan file with no Gate 2 packet fails `--enforce-gate-ordering` with `gate-2-before-plan`; a new, non-exempt document with NO governance frontmatter at all fails with the distinct `missing-governance-frontmatter` rule (Correction 3) rather than being silently skipped or silently treated as legacy; `check-evidence-freshness.sh` correctly reports `stale-decision-digest-mismatch`-equivalent live drift for a Gate 3 packet whose evidence has changed since decision time, without any notification event (Correction 2); `check-gate3-before-ready.sh`'s and `check-evidence-freshness.sh`'s live GitHub-API dependency is confirmed unavoidable, not a shortcut (consistent with design §7.5); existing `composer ssot:lint` and route-guardrail tests are unaffected.
 
 ---
 
@@ -2493,18 +3143,14 @@ php scripts/ssot/owner_governance_lint.php tests/Unit/OwnerGovernance/fixtures/i
 php scripts/ssot/owner_governance_lint.php docs/owner-decisions/GAP-031/03-release.md
 # Expected: PASS, and manually confirm decision_requested: null / owner_decision.value: none in that file
 
-# 4. Stale decision invalidation — simulated: no live regression exists to test against
-# in this repo today (GAP-031's readiness has not regressed since Task 4's snapshot).
-# This is a DESIGN-LEVEL guarantee (packet-schema.yml's gate_status_requires_owner_decision
-# table + the design's §3.6 automatic-revert rule), not something this repo-native lint
-# can execute as a live scenario without a real CI regression to react to. Recorded here
-# as a VERIFIED LIMITATION, not silently assumed working: the automatic revert is a
-# process this plan documents (Constitution §3a, OWNER_OPERATING_MODEL.md) and the schema
-# supports (a blocked_technical packet with superseded_by pointing at a stale awaiting_owner
-# packet is structurally expressible and lint-valid), but nothing in Tasks 1–9 builds an
-# automated trigger that *creates* a new blocked_technical packet when CI goes red after
-# awaiting_owner — that would require a CI webhook/bot, which is out of this plan's scope
-# (no notification infrastructure, per Global Constraints). Flagged as Implementation Risk #4 below.
+# 4. Stale decision invalidation (Correction 2 — structural, run directly against the fixture)
+php scripts/ssot/owner_governance_lint.php tests/Unit/OwnerGovernance/fixtures/invalid-stale-decision-digest-mismatch.md; echo "exit: $?"
+# Expected: exit 1, with a [stale-decision-digest-mismatch] violation line — this proves
+# the evaluation-time detection works structurally, without any live CI regression needed
+# to demonstrate it. The LIVE half (scripts/ci/check-evidence-freshness.sh recomputing
+# against a real, currently-regressing PR) is genuinely untested end-to-end by this repo
+# today, since no real non-legacy work item has reached Gate 3 yet — recorded honestly as
+# Implementation Risk #6, not silently assumed proven by the structural fixture alone.
 
 # 5. Technical readiness / owner decision separation (schema-level, Task 1)
 php artisan test --filter OwnerGovernanceSchemaFixtureTest
@@ -2554,34 +3200,52 @@ Worked walkthrough for the next new work item (`OWN-2026-001`, hypothetical) mov
 
 Same mechanics with `docs/owner-governance/templates/gate-2-business-design.md` → `02-design.md`. **Do not create any file under `docs/superpowers/plans/` until this file's `owner_decision.value` is `approved`** — `owner_governance_lint.php --enforce-gate-ordering` will fail the PR otherwise (Task 9), for any work_id not on the legacy-exempt list.
 
+**Correction 3 — the spec/plan file itself must declare frontmatter, not just exist:** when the agent creates `docs/superpowers/plans/2026-MM-DD-own-2026-001-<slug>.md`, it must open with:
+
+```yaml
+---
+work_id: OWN-2026-001
+owner_governance_version: 1
+owner_gate_2_record: docs/owner-decisions/OWN-2026-001/02-design.md
+---
+```
+
+Filename text alone (even if it happens to contain `OWN-2026-001`) is never sufficient for a new work item — see `docs/owner-governance/GOVERNED_DOCUMENT_FRONTMATTER.md`. Omitting this frontmatter fails `--enforce-gate-ordering` with `missing-governance-frontmatter`, distinct from (and checked before) the `gate-2-before-plan`/`gate-2-not-approved` rules.
+
 ## 3. Implementation (Gate 2 approved → Gate 3 awaiting_owner)
 
-1. Agent creates the Gate 3 packet immediately, `gate_status: preparing` — do not wait until the end.
+1. Agent creates the Gate 3 packet immediately, `gate_status: preparing` — do not wait until the end. Include a `technical_evidence` block from the start (`head_sha` of the branch's current HEAD, `evidence_digest: "not_computed_while_blocked"` or `"not_computed_while_preparing"`, `verified_at: null`), and an `owner_decision_binding` block with both fields `null`.
 2. Implementation, tests, review, CI proceed per the normal `superpowers:writing-plans` → `superpowers:subagent-driven-development` flow — nothing about this changes.
 3. If a mandatory technical gate is red at any point, set `gate_status: blocked_technical`, `technical_readiness.value: blocked`, fill in `mandatory_technical_gate_summary` in plain language. This packet is visible to the owner (labeled `BLOCKED — OWNER ACTION NOT REQUIRED`) but requests nothing.
-4. Once every mandatory gate is green: create a **new** file (`03-release-v2.md` if a blocked one preceded it, else `03-release.md` directly), `gate_status: awaiting_owner`, `technical_readiness.value: ready`, `decision_requested` set, `supersedes` pointing at the blocked file if one exists.
+4. Once every mandatory gate is green: create a **new** file (`03-release-v2.md` if a blocked one preceded it, else `03-release.md` directly), `gate_status: awaiting_owner`, `technical_readiness.value: ready`, `decision_requested` set, `supersedes` pointing at the blocked file if one exists, and a real `technical_evidence` block: `head_sha` = the branch's actual current HEAD, `evidence_digest` = `owner_governance_compute_evidence_digest($headSha, $checks)` computed from `gh pr checks <PR> --json name,state`, `verified_at` = now.
 5. `bash scripts/ci/check-gate3-before-ready.sh` (with `PR_NUMBER` set) confirms the packet exists before the PR may be marked Ready for review, for non-exempt work IDs.
 
 ## 4. Gate 3 decision and release
 
 1. Agent presents the `awaiting_owner` packet in conversation.
-2. Owner decides. Agent records `owner_decision.value`, `gate_status`, and provenance, exactly as Gate 1/2.
-3. If `approved`: PR may be merged once repository requirements (CODEOWNERS review, required CI) are *also* independently satisfied — the lint does not merge anything itself.
+2. Owner decides. Agent records `owner_decision.value`, `gate_status`, and provenance, exactly as Gate 1/2 — **and, per Correction 2, also copies `technical_evidence.head_sha`/`evidence_digest` into `owner_decision_binding.evidence_head_sha`/`evidence_digest` in the same edit.** An `owner_decision.value` set without a matching `owner_decision_binding` fails `owner_governance_lint.php`'s `evidence-binding-required-once-decided` rule.
+3. If `approved`: PR may be merged once repository requirements (required CI; CODEOWNERS review only once Task 8b is activated — see below) are *also* independently satisfied — the lint does not merge anything itself.
 4. If `correction_requested` or `deferred`: `gate_status` moves to `changes_requested`/`deferred`, work returns to `preparing`.
+5. **If any commit lands on the branch after step 2** (a hotfix, a rebase, a re-run that changes a check's conclusion), `scripts/ci/check-evidence-freshness.sh` will detect the mismatch between the new `technical_evidence.evidence_digest` and the still-old `owner_decision_binding.evidence_digest` on the next CI run, and fail with a clear message. **The correct response is a new packet revision** (`03-release-v3.md`, `supersedes` the stale one, `gate_status: preparing` or `blocked_technical` as appropriate) that goes back through step 3/4 above — never manually editing `owner_decision_binding` to "fix" the mismatch without an actual fresh owner decision.
+
+## Branch-protection activation (Task 8b) — separate from this runbook's Gate 1–3 flow
+
+This plan does **not** activate `required_pull_request_reviews.require_code_owner_reviews`. If and when a distinct trusted reviewer identity becomes available, follow `docs/owner-governance/BRANCH_PROTECTION_ACTIVATION_RUNBOOK.md` in full — including its precondition-verification command (`scripts/ci/verify-distinct-reviewer-identity.sh`) and its precondition test (a Draft PR proving the author cannot self-approve). Until then, governance-path PRs merge under the same rules as any other PR in this repository today (one required status check, no required review) — `.github/CODEOWNERS` documents responsibility, it does not yet gate merges.
 
 ## Rollback of governance enforcement (without deleting decision records)
 
 If `owner-governance-lint` CI integration causes unintended blockage (a false positive blocking an unrelated PR, a schema bug):
 
-1. **Immediate mitigation — remove the workflow from required status checks** (if it was ever added there, per Task 9's deferred follow-up), via `gh api --method PUT repos/kha997/zenamanagephp/branches/main/protection` with `Owner Governance Lint` omitted from `required_status_checks[contexts]`. This does not touch `.github/workflows/owner-governance-lint.yml` itself — the workflow keeps running and reporting, just non-blocking.
+1. **This workflow was never added to required status checks by this plan** (Task 9's note; Task 8b governs any future required-check addition, same precondition-gated process as CODEOWNERS-review activation) — so the immediate mitigation for a false positive is simply: the failing check does not block merge today. No branch-protection change is needed to "unblock" anything.
 2. **If the workflow itself needs to stop running**, add `docs/owner-governance/**`, `docs/owner-decisions/**`, `docs/superpowers/plans/**` to a temporary `paths-ignore` in `.github/workflows/owner-governance-lint.yml`, or set the job to `if: false` — a normal, revertible file edit.
 3. **Never delete `docs/owner-decisions/**` content to "fix" a blocked PR.** Decision records are historical evidence (design §6.5, immutable-by-convention) — a bad lint rule is a lint bug, not a reason to erase a real recorded decision. Fix the lint (`scripts/ssot/owner_governance_lint.php`) or its schema (`packet-schema.yml`), add a regression fixture, and re-enable.
+4. **Never manually edit `owner_decision_binding` to silence a `stale-decision-digest-mismatch` failure without a real, freshly recorded owner decision.** That is the exact failure mode Correction 2 exists to prevent — treat it the same as deleting a decision record.
 ```
 
 - [ ] **Step 3: Run the full existing repo test suite once, scoped to files this plan touched, to confirm zero regression**
 
 Run: `php artisan test --filter "OwnerGovernance"`
-Expected: all ~35 new tests across Tasks 1–9 pass (`OwnerGovernanceSchemaFixtureTest` 5, `OwnerOperatingDocsTest` 4, `PacketTemplateTest` 5, `Gap031WorkedExampleTest` 3, `OwnerGovernanceLintFixtureTest` 10, `ConstitutionAmendmentTest` 5, `PrTemplateTest` 3, `CodeownersTest` 2, `EnforcementBoundaryTest` 5 — total 42).
+Expected: all new tests across Tasks 1–9 pass (`OwnerGovernanceSchemaFixtureTest` 6, `OwnerOperatingDocsTest` 4, `PacketTemplateTest` 5, `Gap031WorkedExampleTest` 3, `OwnerGovernanceLintFixtureTest` 14, `ConstitutionAmendmentTest` 5, `PrTemplateTest` 3, `CodeownersTest` 6, `EnforcementBoundaryTest` 8 — total 54).
 
 - [ ] **Step 4: Commit**
 
@@ -2590,7 +3254,25 @@ git add docs/owner-governance/ADOPTION_RUNBOOK.md
 git commit -m "docs(owner-governance): add adoption runbook and final verification record (task 10)"
 ```
 
-**Reviewer acceptance criteria:** every command in Step 1 was actually run (not assumed) with output pasted into the task's SDD report; the runbook's 4 sections cover Gate 1 → Gate 2 → implementation → Gate 3 → rollback end-to-end for a hypothetical new work item without inventing any field not already defined in Task 1's schema; Implementation Risk #4 (stale-decision auto-revert has no automated trigger in this repo-native-only plan) is explicitly acknowledged, not silently glossed over.
+**Reviewer acceptance criteria:** every command in Step 1 was actually run (not assumed) with output pasted into the task's SDD report; the runbook's sections cover Gate 1 → Gate 2 (with Correction 3 frontmatter) → implementation → Gate 3 (with Correction 2 evidence binding) → branch-protection activation boundary (Correction 1) → rollback end-to-end for a hypothetical new work item without inventing any field not already defined in Task 1's schema; Implementation Risk #6 (no real non-legacy work item exists yet to exercise the live evidence-freshness check end-to-end) is explicitly acknowledged, not silently glossed over.
+
+---
+
+## Execution Requirements (superpowers:subagent-driven-development)
+
+Binding on whoever executes this plan, once independently approved:
+
+- Create an isolated worktree (per `superpowers:using-git-worktrees`) before starting.
+- Use a dedicated feature branch, not `main` and not the branch this plan's design/spec sessions used.
+- Maintain a task ledger (`.superpowers/sdd/`-style, per verified fact #15's existing convention) — a brief + report per task, review diffs per task boundary.
+- Use a fresh implementer subagent for each of the 10 tasks — no implementer carries context from a prior task's implementation into the next.
+- Use a separate reviewer subagent for each task — the implementer never reviews its own work.
+- Every task's RED step must show real command output demonstrating failure before the corresponding GREEN step's real command output demonstrating success — no step may claim RED/GREEN without pasting the actual command output.
+- **Mandatory review checkpoints after Tasks 1, 5, 8, and 9** — these are the tasks with the highest blast radius (schema/contract, the lint's actual logic, the identity-mitigation posture, and live CI wiring) — a human or designated reviewer must explicitly approve continuation past each before the next task begins, not merely receive a passive report.
+- Run a whole-branch independent final review (this plan's own review, described below, plus a second pass after all 10 tasks land) before any PR from this work is proposed for merge.
+- **Do not merge or deploy** anything produced by this plan's execution.
+- **Do not perform the live branch-protection mutation** (Task 8b) as part of this plan's execution — it remains a separately authorized future operation, gated on its own runbook's preconditions.
+- **Leave the final PR in Draft** until a real Gate 3 owner approval is recorded for this work item itself (this plan's own execution should, appropriately, go through the very gates it builds — its own Gate 3 packet, once this work item is itself onboarded onto the system it creates, is what ungates Draft status, not CI passing alone).
 
 ---
 
@@ -2622,7 +3304,7 @@ git commit -m "docs(owner-governance): add adoption runbook and final verificati
 | §9 GAP-031 worked example | Task 4 |
 | §10 In-app Decision Center | Explicitly out of scope, per Global Constraints — no task implements it |
 | §11 Scope constraints | Honored throughout — no controller/model/migration/DB change in any task |
-| §12 Open questions | Task 8 (branch-protection/CODEOWNERS enforcement — the one item the design left open — resolved here as far as repo-native tooling can) |
+| §12 Open questions | Task 8 (branch-protection/CODEOWNERS enforcement — the one item the design left open — resolved here as far as it honestly can be: documented and deferred to Task 8b via a precondition-gated runbook, not activated prematurely, per Correction 1) |
 
 No design section is without a task. No task implements something absent from the design (verified by re-reading each task against the Global Constraints list).
 
@@ -2632,13 +3314,13 @@ No design section is without a task. No task implements something absent from th
 
 **4. Readiness/decision independence:** confirmed structurally by `packet-schema.yml`'s two separate blocks and `OwnerGovernanceLintFixtureTest`'s dedicated `invalid-status-decision-contradiction.md`/`invalid-blocked-requests-decision.md` cases, which specifically target conflation.
 
-**5. Stale decisions invalidated:** **partially covered, honestly flagged.** The schema/lint can *represent* a correctly-invalidated state (a superseded `awaiting_owner` packet + a fresh `blocked_technical` one). Nothing in this repo-native-only plan *automatically creates* that fresh packet when CI regresses after `awaiting_owner` — no CI webhook/bot exists to do so without notification infrastructure, which Global Constraints explicitly exclude. Recorded as Implementation Risk #4 (Task 10, Step 1) rather than silently claimed as solved.
+**5. Stale decisions invalidated:** **resolved by Correction 2, enforced at evaluation time, not via notification.** `technical_evidence`/`owner_decision_binding` (Task 1) bind a recorded decision to the exact commit/CI-check state it was made against; `owner_governance_lint.php`'s `stale-decision-digest-mismatch`/`not-ready-but-decision-eligible` rules (Task 5) and the live `scripts/ci/check-evidence-freshness.sh` (Task 9) recompute and compare this binding on every run. This does not require a webhook or bot to *fire* — it is re-evaluated fresh every time the lint runs, which is precisely "enforcement at evaluation time." What it still does not do: automatically *rewrite* a stale packet's `gate_status` back to `preparing`/`blocked_technical` — the lint reports the required transition (per the design's §3.6 operational sequence, echoed verbatim in `check-evidence-freshness.sh`'s failure output) but never silently edits the human decision record itself, which is a deliberate design choice (Correction 2's own instruction: "the lint may report the required transition but must not silently rewrite the human decision record"), not a gap.
 
-**6. Lint does not claim authentication:** confirmed — `owner_governance_lint.php`'s docblock states this explicitly; Task 8's `OWNER_OPERATING_MODEL.md` addendum states, unhedged, what CODEOWNERS review does and does not prove; `decision_provenance.trust_level` is validated only for enum membership, never treated as proof.
+**6. Lint does not claim authentication:** confirmed — `owner_governance_lint.php`'s docblock states this explicitly; Task 8's `OWNER_OPERATING_MODEL.md` addendum states, unhedged, what CODEOWNERS documents today (responsibility) versus what activation would prove (Correction 1 — and even then, never authentication, only "an approval was recorded under that identity"); `decision_provenance.trust_level` is validated only for enum membership, never treated as proof.
 
 **7. Historical work not unintentionally blocked:** Task 9's `enforcement-boundary.yml` + `legacy-work-ids.txt` (33 real `GAP-NNN` IDs, generated from the actual register, verified fact #3) exempt every pre-existing work ID from gate-ordering; `EnforcementBoundaryTest::test_legacy_work_ids_file_contains_gap_031` proves this concretely rather than asserting it abstractly.
 
-**8. New work cannot evade enforcement:** the legacy exemption is a committed, one-time-generated, reviewable file — a new PR cannot silently add its own ID to it without that addition being visible in the diff (and, once Task 8 Step 3 lands, requiring a CODEOWNERS review from `@kha997` to merge, since `legacy-work-ids.txt` lives under `docs/owner-governance/`).
+**8. New work cannot evade enforcement:** the legacy exemption is a committed, one-time-generated, reviewable file — a new PR cannot silently add its own ID to it without that addition being visible in the diff (`.github/CODEOWNERS`, Task 8, already names `@kha997` as responsible for `docs/owner-governance/**` even before CODEOWNERS review is an active merge gate — Task 8b — so the responsibility assignment is visible today, and becomes an enforced review requirement once Task 8b's preconditions are met). Per Correction 3, a new plan/spec also cannot evade enforcement by omitting frontmatter and hoping filename-regex fallback treats it as legacy — `missing-governance-frontmatter` fails it outright unless its ID is already on the committed legacy list.
 
 **9. Owner content stays understandable without technical evidence:** `Gap031WorkedExampleTest::test_awaiting_owner_packet_does_not_ask_owner_to_read_pr_or_ci` asserts this directly against the real packet body, not just the template.
 
@@ -2650,25 +3332,58 @@ No design section is without a task. No task implements something absent from th
 
 ---
 
+## Independent Plan Review
+
+**Review ID:** `owner-control-layer-repo-governance-foundation-review-2026-08-04-01` (single independent-reviewer subagent pass, dispatched fresh with no prior conversation context, instructed to re-verify repository facts directly via `gh api`/filesystem rather than trust the plan's claims).
+
+**Scope covered:** all three corrections (verified each against the actual embedded PHP/YAML/bash code, not just the surrounding prose), consistency with the approved design commit `119f3b25`, repository facts spot-checks, anti-bureaucracy, owner non-technical usability, CI deadlock risk, provenance honesty, legacy compatibility, and scope boundaries.
+
+**Findings (7 total: 1 Critical, 1 Important, 5 Minor) and resolution:**
+
+| # | Severity | Finding | Resolution |
+|---|---|---|---|
+| 1 | **Critical** | `owner_governance_lint.php`'s CLI-entrypoint guard used `PHP_SAPI === 'cli'`, which is true for every CLI process — `require`/`require_once`'ing the script as a library (from `OwnerGovernanceLintFixtureTest.php`, and from `check-evidence-freshness.sh`'s `php -r` snippet) would trigger the guard's `exit()` before any test method or the digest computation could run, breaking Task 5's own test suite and making Correction 2's live staleness check non-functional. | **Fixed.** Guard changed to `realpath($argv[0] ?? '') === __FILE__` — true only when the script is the directly-invoked entrypoint, never when `require`'d as a library. Task 5 Step 5 rewritten to explicitly verify this with a real command (`php -r 'require "..."; echo "library load did not exit early\n";'`). |
+| 2 | Important | `--enforce-gate-ordering` passed as the sole CLI argument left `$targets = ['--enforce-gate-ordering']` (non-empty, not a valid path), silently scanning zero files for the structural-validation half of that invocation, contradicting Task 9 Step 12's documented expected output. | **Fixed.** `$targets` now filters out `--`-prefixed flags before checking emptiness, so the default `docs/owner-decisions` scan correctly triggers even when `--enforce-gate-ordering` is the only argument. |
+| 3 | Minor | The plan's own header referenced an "Independent Plan Review" section that did not yet exist. | **Fixed** — this section. |
+| 4 | Minor | Task 5 Step 5's RED-step description assumed the script didn't exist yet, but it was already created two steps earlier (Step 3), making the documented failure mode inaccurate. | **Fixed** — Step 5 rewritten to use the same temporarily-rename-the-file pattern Task 1 Step 4 already establishes, plus the new library-load verification from Finding 1's fix. |
+| 5 | Minor | `decision_requested_values` was defined in `packet-schema.yml` but never actually checked by the lint — a packet could set an arbitrary string. | **Fixed.** Added an enum-membership check alongside the existing null/non-null consistency rule. |
+| 6 | Minor | Task 4's "real" GAP-031 `03-release-v2.md` example used a fabricated placeholder digest (SHA-256 of the empty string) without flagging it as such. | **Fixed.** Added an explicit note before the frontmatter block explaining the value is illustrative (this is a static plan document, it cannot call `gh pr checks` at writing time), with the exact command the executor must run to compute the real value, and an explanation of why this is safe (`owner_decision_binding` stays `null`, so nothing downstream trusts the placeholder as real evidence). |
+| 7 | Minor | `verify-distinct-reviewer-identity.sh` (Task 8b's precondition check) depends on `python3` being present, an assumption not listed among the plan's verified facts. | **Accepted, not fixed** — this script runs only manually, once, before a future Task 8b activation, never in automated CI; `python3` availability was directly confirmed during the original pre-plan inspection (`which python3` → `/usr/local/bin/python3`), so the dependency is real but low-risk and already implicitly verified. |
+
+**Reviewer's overall verdict (verbatim conclusion):** *"The plan's structural design is strong and its three corrections are largely genuine, load-bearing implementations rather than prose-only claims... Once Finding 1 (and ideally Finding 2) is corrected and re-verified... the remaining findings are Minor and do not block execution."*
+
+**Final review decision: APPROVED FOR EXECUTION.** Both the Critical and the Important finding have been fixed in the plan text (verified by re-reading the corrected code blocks above); all 5 Minor findings are either fixed or explicitly, honestly accepted with justification — none silently dropped.
+
+---
+
 ## Verified GitHub Identity/Control Facts (summary)
 
 - No `.github/CODEOWNERS` existed before this plan (verified, not assumed).
 - Branch protection on `main` requires exactly one status check (`test-routes-guardrails`) and **no PR review of any kind** — confirmed via the full JSON, not inferred from partial output.
-- `kha997` is the sole repository collaborator with write access, and is simultaneously this session's own authenticated `gh` identity — a fact this plan states plainly rather than glossing over (Task 8).
+- `kha997` is the sole repository collaborator with write access, and is simultaneously this session's own authenticated `gh` identity — a fact this plan states plainly rather than glossing over, and the direct reason Correction 1 prohibits live activation now (Task 8, revised).
 - `ZMC-*`/`WP-*` work-ID prefixes named in the approved design/instructions do not currently exist anywhere in this repository (zero grep matches) — the schema accepts them generically for forward-compatibility, but no real fixture could be built against them, and this plan says so rather than fabricating an example.
 
-## Selected Near-Term Provenance Mitigation
+## Selected Near-Term Provenance Mitigation (revised per Correction 1)
 
-CODEOWNERS (`@kha997` on `docs/owner-decisions/`, `docs/owner-governance/`, `PROJECT_CONSTITUTION.md`) + branch-protection `required_pull_request_reviews.require_code_owner_reviews: true` (Task 8). Explicitly documented as mitigation, not proof — closed only by the future authenticated Decision Center, out of this plan's scope.
+```text
+CODEOWNERS documentation (responsibility only, not yet an active merge gate)
++ owner-governance-lint (structural validation, Task 5)
++ PR-only governance workflow (every packet change goes through a reviewable PR diff)
++ explicit claimed_repo_record provenance (decision_provenance.trust_level)
++ no claim of authenticated owner approval anywhere in this repository's tooling
+```
 
-## Compatibility/Enforcement Boundary
+Branch-protection `required_pull_request_reviews.require_code_owner_reviews: true` is **not** activated by this plan. It is documented as a separately authorized future operation (`docs/owner-governance/BRANCH_PROTECTION_ACTIVATION_RUNBOOK.md`, Task 8b), gated on six independently verified preconditions — chiefly, a distinct reviewer identity existing at all. Closed fully only by the future authenticated Decision Center, out of this plan's scope.
 
-Effective date `2026-08-04`. Legacy exemption = explicit enumerated list (`legacy-work-ids.txt`, 33 real GAP IDs) generated once from `OPERATIONAL_GAP_REGISTER.md`. Gate-ordering enforcement (`gate_2_before_plan`, `gate_3_before_ready`) applies only to non-exempt work IDs; structural packet validity is never exempt. New work cannot self-declare legacy status — the exemption list is a committed, reviewable artifact under CODEOWNERS protection.
+## Compatibility/Enforcement Boundary (revised per Correction 3)
+
+Effective date `2026-08-04`. Legacy exemption = explicit enumerated list (`legacy-work-ids.txt`, 33 real GAP IDs) generated once from `OPERATIONAL_GAP_REGISTER.md`. **Frontmatter (`work_id`/`owner_governance_version`/`owner_gate_2_record`) is the primary, authoritative source for identifying a NEW governed document's work item; plan-filename regex is fallback-only, and only ever used to recognize a document as legacy** — it can never establish a new work_id on its own. Gate-ordering enforcement (`gate_2_before_plan`, `gate_3_before_ready`, `missing-governance-frontmatter`) applies only to non-exempt work IDs; structural packet validity (including the evidence-binding contract, Correction 2) is never exempt. New work cannot self-declare legacy status — the exemption list is a committed, reviewable artifact under `.github/CODEOWNERS` responsibility assignment (enforced as an active merge gate only once Task 8b activates, but visible and diff-reviewable today regardless).
 
 ## Implementation Risks
 
-1. **`gh` token identity coincidence (Task 8).** In this environment, the agent's own `gh` credentials ARE the repository owner's. A CODEOWNERS-review requirement does not defend against an agent (or anyone else) already holding those credentials both drafting and "approving" a governance PR. This is stated, not hidden — see Task 8 Step 2's addendum text.
-2. **Branch-protection PUT replaces the whole protection object (Task 8/9).** The exact command in Task 8 Step 3 re-states every currently-configured field to avoid accidentally clearing one; if branch protection is manually changed between plan-writing and plan-execution, the command must be re-derived from a fresh `GET`, not run stale.
+1. **`gh` token identity coincidence (Task 8, now directly addressed rather than merely disclosed).** In this environment, the agent's own `gh` credentials ARE the repository owner's. This is exactly why Correction 1 prohibits activating a code-owner-review requirement now — doing so would either deadlock the repo or let the same credentials that authored a change also "approve" it. The risk is not eliminated by this plan (it is a fact about the current environment, not something a plan can fix), but the plan no longer builds a control that pretends the risk isn't there.
+2. **Branch-protection PUT replaces the whole protection object (Task 8b, deferred).** The exact command in `BRANCH_PROTECTION_ACTIVATION_RUNBOOK.md` re-states every currently-configured field to avoid accidentally clearing one; if branch protection is manually changed between runbook-writing and eventual activation, the command must be re-derived from a fresh `GET`, not run stale. Because Task 8b is now deliberately deferred rather than executed by this plan, this risk is inert until someone actually runs the activation runbook — recorded here so it is not forgotten by then.
 3. **`automated-testing.yml`'s existing `paths-ignore` (verified fact #9) means the large CI suite still never runs `docs-lint.sh` on doc-only PRs, independent of this plan.** Not this plan's bug to fix (out of scope — it's an existing repo characteristic, not part of the Owner Control Layer), but worth naming so it isn't mistaken for something this plan claims to have fixed.
-4. **Stale-decision auto-revert (design §3.6) has no automated trigger in a repo-native-only system (Task 10, Implementation Risk noted there).** The schema can *represent* the correctly-reverted state; nothing here *creates* it automatically on a CI regression. Only the future Decision Center (webhook-driven) can close this fully — repo-native mitigation is a documented manual step in the adoption runbook, not an automated one.
-5. **Task 9's `--enforce-gate-ordering` regex (`\b(GAP-\d{3}|OWN-\d{4}-\d{3})\b`) matches on filename text, not a frontmatter field**, because `docs/superpowers/plans/*.md` files have no established frontmatter convention today (verified fact #17). A plan file that references its work ID only in prose, not in its filename, will silently bypass gate-ordering enforcement. Mitigated partially by the legacy list covering all pre-existing cases, but a *future* non-compliant plan filename is a real gap this plan does not fully close — flagged, not solved, since inventing a new frontmatter convention for `docs/superpowers/plans/*.md` generally is outside this plan's scope (it would affect every future plan in the repository, governance-related or not).
+4. **`check-gate3-before-ready.sh` and `check-evidence-freshness.sh` are both live, `gh`-API-dependent checks (Task 9), not pure file-tree lint.** This is an honest, deliberate hybrid boundary (matching the design's own §7.5 admission), not a shortcut — but it does mean these two checks cannot run fully offline or in an environment without `gh` authentication, unlike `owner_governance_lint.php`'s core structural validation.
+5. **`GOVERNED_DOCUMENT_FRONTMATTER.md`'s contract (Correction 3) applies only to `docs/superpowers/specs/*.md` and `docs/superpowers/plans/*.md`.** It does not retroactively add frontmatter requirements to any other document type in the repository, and this plan does not audit whether some other, non-governance-related tooling might also want a similar convention — that is explicitly out of scope, flagged so it is not mistaken for a repo-wide frontmatter mandate.
+6. **No real `OWN-*` work item exists yet to exercise the full Correction 2/3 pipeline end-to-end against live GitHub state** (only GAP-031, which is entirely legacy-exempt). Task 10's adoption runbook walks a hypothetical `OWN-2026-001` through the frontmatter contract and the evidence-binding lifecycle on paper; the first real, non-hypothetical exercise of `check-evidence-freshness.sh` against an actual regressing PR happens only once a real new work item reaches Gate 3 under this system, which is genuinely untested by this plan's own verification (Task 10) because no such work item exists at plan-writing time.

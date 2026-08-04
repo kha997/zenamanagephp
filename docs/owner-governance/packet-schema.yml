@@ -1,0 +1,88 @@
+# Owner Control Layer — canonical packet frontmatter schema.
+# Single source of truth for owner_governance_lint.php (scripts/ssot/owner_governance_lint.php)
+# and for every packet template (docs/owner-governance/templates/*.md).
+# Do not duplicate these enums inline elsewhere — read this file.
+
+work_id_pattern: '^(GAP-[0-9]{3}|ZMC-[0-9]{3,}|WP-[0-9]{3,}|OWN-[0-9]{4}-[0-9]{3})$'
+
+gates:
+  1:
+    file_name: "01-request.md"
+    gate_status_values: [not_started, preparing, awaiting_owner, approved, changes_requested, deferred, superseded]
+    owner_decision_values: [none, approved, more_info_requested, declined, deferred]
+    requires_technical_readiness: false
+  2:
+    file_name: "02-design.md"
+    gate_status_values: [not_started, preparing, awaiting_owner, approved, changes_requested, deferred, superseded]
+    owner_decision_values: [none, approved, changes_requested, declined]
+    requires_technical_readiness: false
+  3:
+    file_name: "03-release.md"
+    gate_status_values: [not_started, preparing, blocked_technical, awaiting_owner, approved, changes_requested, deferred, superseded]
+    owner_decision_values: [none, approved, correction_requested, deferred]
+    requires_technical_readiness: true
+
+# gate_status -> owner_decision.value compatibility (design §3.6 mapping table).
+# A packet whose gate_status is not listed here as a key has no owner_decision
+# constraint beyond its per-gate enum above (not_started/preparing/blocked_technical
+# all require owner_decision.value == "none").
+gate_status_requires_owner_decision:
+  not_started: ["none"]
+  preparing: ["none"]
+  blocked_technical: ["none"]
+  awaiting_owner: ["none"]
+  approved: ["approved"]
+  changes_requested: ["changes_requested", "correction_requested", "more_info_requested"]
+  deferred: ["deferred", "declined"]
+  superseded: []  # any value is legal on a superseded packet; it is frozen history
+
+technical_readiness_values: [not_checked, blocked, ready]
+decision_provenance_trust_level_values: [claimed_repo_record, authenticated_decision_center]
+decision_requested_values: [null, "approve_or_proceed", "approve_or_more_info_or_decline_or_defer", "approve_or_changes_or_decline", "approve_or_correction_or_defer"]
+residual_risk_rating_values: [none, low, medium, high]
+
+required_top_level_fields:
+  - work_id
+  - gate
+  - gate_status
+  - owner_decision
+  - decision_requested
+  - references
+  - decision_provenance
+  - supersedes
+  - superseded_by
+  - timestamps
+  - generated_by
+
+required_reference_fields: [spec, plan, branch, pr, release]
+required_provenance_fields: [trust_level, recorded_by, recorded_at, owner_response_reference, reconciliation_required]
+required_timestamp_fields: [created_at, updated_at]
+
+# Gate-3-only fields (validator must reject their presence on gate 1/2 files
+# and require them on gate 3 files).
+gate_3_only_fields:
+  - technical_readiness
+  - residual_risk_rating
+  - mandatory_technical_gate_summary
+  - technical_evidence
+  - owner_decision_binding
+
+placeholder_tokens: ["TODO", "TBD", "TBA", "???"]
+
+# --- Evidence-binding contract (Correction 2) ---
+# Binds a Gate 3 owner_decision to the EXACT commit and evidence state it was
+# made against, so a later code change automatically invalidates the decision
+# at evaluation time — no notification event, webhook, or bot required. The
+# lint (Task 5) recomputes and compares these fields on every run; staleness
+# is a pure function of repo state, never something that needs to be pushed
+# to the packet from outside.
+evidence_digest_algorithm: "sha256"
+# evidence_digest is computed as:
+#   sha256( head_sha + "\n" + sorted-and-joined(required_check_names) + "\n"
+#           + sorted-and-joined(required_check_conclusions) )
+# where required_check_names/conclusions come from `gh pr checks <PR> --json name,state`
+# (or an equivalent local recomputation script — see Task 9 Step 3b), sorted
+# lexicographically by name before joining, so digest order is deterministic
+# regardless of the order GitHub returns checks in.
+required_technical_evidence_fields: [head_sha, evidence_digest, verified_at]
+required_owner_decision_binding_fields: [evidence_head_sha, evidence_digest]

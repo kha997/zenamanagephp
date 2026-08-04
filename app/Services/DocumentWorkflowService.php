@@ -30,6 +30,7 @@ class DocumentWorkflowService
             if ($document === null) {
                 throw DocumentWorkflowException::documentNotFound();
             }
+            /** @var \App\Models\Document $document */
 
             if ($document->status !== DocumentWorkflowStatus::DRAFT->value) {
                 throw DocumentWorkflowException::invalidSubmitTransition($document->status);
@@ -72,6 +73,7 @@ class DocumentWorkflowService
             if ($document === null) {
                 throw DocumentWorkflowException::documentNotFound();
             }
+            /** @var \App\Models\Document $document */
 
             if ($document->status !== DocumentWorkflowStatus::SUBMITTED->value) {
                 throw DocumentWorkflowException::invalidDecisionTransition($document->status);

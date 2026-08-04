@@ -1,0 +1,11 @@
+# Owner Control Layer governance paths require a review from a verified,
+# distinct owner-reviewer identity before merge, ONCE branch protection
+# activates that requirement (see BRANCH_PROTECTION_ACTIVATION_RUNBOOK.md —
+# NOT active yet as of this file's creation). Until activation, this file
+# only documents responsibility; it enforces nothing by itself — GitHub
+# only honors CODEOWNERS as a merge gate when required_pull_request_reviews
+# is also configured, which this plan deliberately does not do yet.
+
+/docs/owner-decisions/       @kha997
+/docs/owner-governance/      @kha997
+/PROJECT_CONSTITUTION.md     @kha997

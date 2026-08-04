@@ -48,3 +48,22 @@ One packet file per gate per work ID, at `docs/owner-decisions/<WORK-ID>/0X-<nam
 ## Immutability and supersession
 
 A packet is never edited in place once `owner_decision.value` is not `none`. A new file (`03-release-v2.md`, etc.) is created instead, with `supersedes`/`superseded_by` frontmatter linking the two. See `docs/owner-decisions/GAP-031/` for a real example of this (Task 4).
+
+## GitHub identity mitigation (repository-native phase only)
+
+`.github/CODEOWNERS` names `@kha997` as responsible for `docs/owner-decisions/`, `docs/owner-governance/`, and `PROJECT_CONSTITUTION.md`. **As of this document's creation, this is documentation of responsibility only — it is not an active merge gate**, because activating `required_pull_request_reviews.require_code_owner_reviews` on this repository today would require the code owner to review and approve their own pull request, since `kha997` is the sole repository collaborator (verified fact #7) and this session's own `gh` identity (verified fact #8). Requiring a review that only the PR's own author can satisfy is not a security control — it is either a permanent deadlock or a rubber stamp, and this plan implements neither.
+
+**Current selected mitigation (active today, no live GitHub mutation required):**
+
+```text
+CODEOWNERS documentation
++ owner-governance-lint (structural validation, Task 5)
++ PR-only governance workflow (every packet change goes through a reviewable PR diff, even without a required-review gate)
++ explicit claimed_repo_record provenance (decision_provenance.trust_level, Task 1/5 — never claims authentication)
++ no claim of authenticated owner approval anywhere in this repository's tooling
+```
+
+- **What CODEOWNERS proves today:** which paths a human has assigned responsibility for. Nothing more.
+- **What it does NOT prove, today or ever (repo-native phase):** that any specific human reviewed or approved a change with informed intent — this remains true even after activation (see the runbook), and is explicitly never claimed to be solved by GitHub configuration alone.
+- **Activation is a separately authorized, future operation** — see `docs/owner-governance/BRANCH_PROTECTION_ACTIVATION_RUNBOOK.md`. It does not happen as part of this plan's execution.
+- **This is not upgraded by anything in this plan.** The only mechanism that closes the underlying authentication gap is the future in-app Decision Center's authenticated session (`trust_level: authenticated_decision_center`), out of scope here (see the approved design §6.8/§6.8a/§10.5).

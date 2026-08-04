@@ -94,7 +94,10 @@ class DocumentController extends Controller
         $apiRequest = Request::create(
             $request->fullUrl(),
             'POST',
-            $request->only(['title', 'project_id', 'document_type', 'description']),
+            array_merge(
+                $request->only(['title', 'project_id', 'document_type', 'description']),
+                ['status' => \App\Enums\DocumentWorkflowStatus::DRAFT->value]
+            ),
             $request->cookies->all(),
             $request->files->all(),
             $request->server->all()

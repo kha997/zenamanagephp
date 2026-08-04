@@ -22,6 +22,18 @@ set -euo pipefail
 : "${PR_NUMBER:?PR_NUMBER env var required}"
 : "${WORK_ID:?WORK_ID env var required}"
 
+# __DIR__ inside a `php -r` snippet resolves to the CURRENT WORKING DIRECTORY,
+# not this script's directory (there is no real __FILE__ for inline code) —
+# an earlier version of this script used `__DIR__ . "/../../vendor/autoload.php"`
+# assuming __DIR__ meant "scripts/ci/", which only worked if CWD happened to be
+# scripts/ci/ too. It doesn't when GitHub Actions invokes this as
+# `bash scripts/ci/check-evidence-freshness.sh` from the repo root, which
+# resolved to a nonexistent path two directories above the repo root and
+# crashed with "Failed opening required .../vendor/autoload.php" (caught by
+# this script's own real CI run on PR #239). Fixed by resolving this script's
+# real directory in bash and passing it into every `php -r` snippet explicitly.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 gate3_file="$(ls docs/owner-decisions/"$WORK_ID"/03-release*.md 2>/dev/null | sort | tail -n1 || true)"
 if [ -z "$gate3_file" ]; then
   echo "No Gate 3 packet for $WORK_ID — nothing to check for staleness."
@@ -29,10 +41,10 @@ if [ -z "$gate3_file" ]; then
 fi
 
 owner_decision_value="$(php -r '
-require __DIR__ . "/../../vendor/autoload.php";
+require $argv[2] . "/../../vendor/autoload.php";
 $fm = Symfony\Component\Yaml\Yaml::parse(preg_replace("/^---\n(.*?)\n---\n.*$/s", "$1", file_get_contents($argv[1])));
 echo $fm["owner_decision"]["value"] ?? "none";
-' "$gate3_file")"
+' "$gate3_file" "$SCRIPT_DIR")"
 
 if [ "$owner_decision_value" = "none" ]; then
   echo "$gate3_file has owner_decision.value: none — nothing recorded yet, nothing to go stale."
@@ -43,17 +55,17 @@ current_head_sha="${PR_HEAD_SHA:-$(git rev-parse HEAD)}"
 
 checks_json="$(gh pr checks "$PR_NUMBER" --json name,state)"
 current_digest="$(php -r '
-require __DIR__ . "/../../vendor/autoload.php";
-require __DIR__ . "/../ssot/owner_governance_lint.php";
+require $argv[3] . "/../../vendor/autoload.php";
+require $argv[3] . "/../ssot/owner_governance_lint.php";
 $checks = array_map(fn ($c) => ["name" => $c["name"], "conclusion" => $c["state"]], json_decode($argv[2], true));
 echo owner_governance_compute_evidence_digest($argv[1], $checks);
-' "$current_head_sha" "$checks_json")"
+' "$current_head_sha" "$checks_json" "$SCRIPT_DIR")"
 
 recorded_digest="$(php -r '
-require __DIR__ . "/../../vendor/autoload.php";
+require $argv[2] . "/../../vendor/autoload.php";
 $fm = Symfony\Component\Yaml\Yaml::parse(preg_replace("/^---\n(.*?)\n---\n.*$/s", "$1", file_get_contents($argv[1])));
 echo $fm["owner_decision_binding"]["evidence_digest"] ?? "";
-' "$gate3_file")"
+' "$gate3_file" "$SCRIPT_DIR")"
 
 if [ "$current_digest" != "$recorded_digest" ]; then
   echo "::error::$gate3_file's owner_decision_binding.evidence_digest ($recorded_digest) no longer matches the current branch state ($current_digest)."

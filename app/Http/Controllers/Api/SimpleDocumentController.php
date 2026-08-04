@@ -316,6 +316,12 @@ class SimpleDocumentController extends Controller
     {
         $tenantId = $this->resolveTenantId();
 
+        $documentForAuth = app(DocumentWorkflowService::class)->findForTenant($tenantId, $id);
+        if ($documentForAuth === null) {
+            return ErrorEnvelopeService::notFoundError('Document');
+        }
+        $this->authorize('update', $documentForAuth);
+
         try {
             $document = app(DocumentWorkflowService::class)->submit($tenantId, $id, (string) Auth::id());
         } catch (DocumentWorkflowException $e) {

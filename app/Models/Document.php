@@ -26,6 +26,7 @@ use App\Models\Project;
  * @property string|null $linked_entity_id
  * @property string|null $current_version_id
  * @property array|null $tags
+ * @property string $status
  * @property string $visibility
  * @property bool $client_approved
  * @property string|null $created_by

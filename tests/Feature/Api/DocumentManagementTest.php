@@ -10,6 +10,7 @@ use App\Models\Task;
 use App\Models\Component;
 use App\Models\ChangeRequest;
 use App\Models\User;
+use App\Enums\DocumentWorkflowStatus;
 use Illuminate\Filesystem\FilesystemManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -393,7 +394,7 @@ class DocumentManagementTest extends TestCase
             'title' => 'Updated Spec',
             'discipline' => 'interior',
             'package' => 'SPEC-02',
-            'status' => 'approved',
+            'status' => 'review',
             'revision' => '1',
             'tags' => ['approved'],
         ])
@@ -401,7 +402,7 @@ class DocumentManagementTest extends TestCase
             ->assertJsonPath('data.title', 'Updated Spec')
             ->assertJsonPath('data.discipline', 'interior')
             ->assertJsonPath('data.package', 'SPEC-02')
-            ->assertJsonPath('data.status', 'approved')
+            ->assertJsonPath('data.status', 'review')
             ->assertJsonPath('data.revision', '1');
 
         $this->assertDatabaseHas('documents', [
@@ -409,7 +410,7 @@ class DocumentManagementTest extends TestCase
             'title' => 'Updated Spec',
             'discipline' => 'interior',
             'package' => 'SPEC-02',
-            'status' => 'approved',
+            'status' => 'review',
             'revision' => '1',
         ]);
     }
@@ -435,7 +436,7 @@ class DocumentManagementTest extends TestCase
             'title' => 'Canonical Spec',
             'discipline' => 'interior',
             'package' => 'SPEC-02',
-            'status' => 'approved',
+            'status' => 'review',
             'revision' => '1',
             'tags' => ['approved'],
         ])
@@ -443,11 +444,11 @@ class DocumentManagementTest extends TestCase
             ->assertJsonPath('data.title', 'Canonical Spec')
             ->assertJsonPath('data.discipline', 'interior')
             ->assertJsonPath('data.package', 'SPEC-02')
-            ->assertJsonPath('data.status', 'approved')
+            ->assertJsonPath('data.status', 'review')
             ->assertJsonPath('data.revision', '1')
             ->assertJsonPath('data.metadata.discipline', 'interior')
             ->assertJsonPath('data.metadata.package', 'SPEC-02')
-            ->assertJsonPath('data.metadata.status', 'approved')
+            ->assertJsonPath('data.metadata.status', 'review')
             ->assertJsonPath('data.metadata.revision', '1')
             ->assertJsonPath('data.metadata.tags.0', 'approved');
 
@@ -456,9 +457,252 @@ class DocumentManagementTest extends TestCase
             'title' => 'Canonical Spec',
             'discipline' => 'interior',
             'package' => 'SPEC-02',
-            'status' => 'approved',
+            'status' => 'review',
             'revision' => '1',
         ]);
+    }
+
+    public function test_update_rejects_direct_set_of_reserved_status_approved(): void
+    {
+        $document = $this->createDocument(['status' => 'draft', 'metadata' => ['status' => 'draft']]);
+
+        $this->apiPatch($this->namedRoute('v1.documents.update.patch', ['id' => $document->id]), [
+            'status' => 'approved',
+        ])->assertStatus(422);
+
+        $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'draft']);
+    }
+
+    public function test_update_rejects_direct_set_of_reserved_status_submitted_and_rejected(): void
+    {
+        $document = $this->createDocument(['status' => 'draft', 'metadata' => ['status' => 'draft']]);
+
+        $this->apiPatch($this->namedRoute('v1.documents.update.patch', ['id' => $document->id]), [
+            'status' => 'submitted',
+        ])->assertStatus(422);
+
+        $this->apiPatch($this->namedRoute('v1.documents.update.patch', ['id' => $document->id]), [
+            'status' => 'rejected',
+        ])->assertStatus(422);
+
+        $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'draft']);
+    }
+
+    public function test_update_on_submitted_document_silently_preserves_status_for_legacy_target(): void
+    {
+        $document = $this->createDocument(['status' => 'submitted', 'metadata' => ['status' => 'submitted']]);
+
+        $this->apiPatch($this->namedRoute('v1.documents.update.patch', ['id' => $document->id]), [
+            'status' => 'review',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'submitted');
+
+        $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'submitted']);
+    }
+
+    public function test_update_on_approved_document_still_updates_other_fields(): void
+    {
+        $document = $this->createDocument(['status' => 'approved', 'metadata' => ['status' => 'approved']]);
+
+        $this->apiPatch($this->namedRoute('v1.documents.update.patch', ['id' => $document->id]), [
+            'title' => 'Tên mới sau khi đã duyệt',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.title', 'Tên mới sau khi đã duyệt')
+            ->assertJsonPath('data.status', 'approved');
+
+        $this->assertDatabaseHas('documents', [
+            'id' => $document->id,
+            'title' => 'Tên mới sau khi đã duyệt',
+            'status' => 'approved',
+        ]);
+    }
+
+    public function test_update_legacy_to_legacy_status_change_still_works(): void
+    {
+        $document = $this->createDocument(['status' => 'draft', 'metadata' => ['status' => 'draft']]);
+
+        $this->apiPatch($this->namedRoute('v1.documents.update.patch', ['id' => $document->id]), [
+            'status' => 'review',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'review');
+
+        $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'review']);
+    }
+
+    public function test_create_version_rejects_direct_set_of_reserved_status(): void
+    {
+        $create = $this->apiPostMultipart($this->namedRoute('v1.documents.store'), [
+            'project_id' => $this->project->id,
+            'title' => 'Reserved Version Guard',
+            'document_type' => 'drawing',
+            'status' => 'draft',
+            'file' => $this->createValidPdfUploadedFile('reserved-guard-v1.pdf'),
+        ])->assertCreated();
+
+        $documentId = $create->json('data.id');
+
+        $this->apiPostMultipart($this->namedRoute('v1.documents.versions.store', ['id' => $documentId]), [
+            'file' => $this->createValidPdfUploadedFile('reserved-guard-v2.pdf'),
+            'version' => 2,
+            'status' => 'approved',
+        ])->assertStatus(422);
+    }
+
+    public function test_create_version_on_submitted_document_preserves_status(): void
+    {
+        $document = $this->createDocument(['status' => 'submitted', 'metadata' => ['status' => 'submitted'], 'version' => 1]);
+
+        $this->apiPostMultipart($this->namedRoute('v1.documents.versions.store', ['id' => $document->id]), [
+            'file' => $this->createValidPdfUploadedFile('submitted-new-version.pdf'),
+            'version' => 2,
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'submitted');
+
+        $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'submitted']);
+    }
+
+    public function test_create_version_on_approved_document_with_legacy_status_input_preserves_status(): void
+    {
+        $document = $this->createDocument(['status' => 'approved', 'metadata' => ['status' => 'approved'], 'version' => 1]);
+
+        $this->apiPostMultipart($this->namedRoute('v1.documents.versions.store', ['id' => $document->id]), [
+            'file' => $this->createValidPdfUploadedFile('approved-new-version.pdf'),
+            'version' => 2,
+            'status' => 'review',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'approved');
+
+        $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'approved']);
+    }
+
+    public function test_store_still_accepts_legacy_review_status(): void
+    {
+        $this->apiPostMultipart($this->namedRoute('v1.documents.store'), [
+            'project_id' => $this->project->id,
+            'title' => 'Legacy Review Store',
+            'document_type' => 'drawing',
+            'status' => 'review',
+            'file' => $this->createValidPdfUploadedFile('legacy-review-store.pdf'),
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'review');
+    }
+
+    public function test_store_still_accepts_draft_status(): void
+    {
+        $this->apiPostMultipart($this->namedRoute('v1.documents.store'), [
+            'project_id' => $this->project->id,
+            'title' => 'Draft Store',
+            'document_type' => 'drawing',
+            'status' => 'draft',
+            'file' => $this->createValidPdfUploadedFile('draft-store.pdf'),
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'draft');
+    }
+
+    public function test_store_rejects_direct_creation_with_reserved_statuses(): void
+    {
+        foreach (DocumentWorkflowStatus::reservedValues() as $reservedStatus) {
+            $this->apiPostMultipart($this->namedRoute('v1.documents.store'), [
+                'project_id' => $this->project->id,
+                'title' => 'Reserved Store Attempt ' . $reservedStatus,
+                'document_type' => 'drawing',
+                'status' => $reservedStatus,
+                'file' => $this->createValidPdfUploadedFile('reserved-store-' . $reservedStatus . '.pdf'),
+            ])->assertStatus(422);
+        }
+    }
+
+    /**
+     * Amended (audit metadata forgery, not just the status column): a document
+     * already has real decision audit from a genuine DocumentWorkflowService::decide()
+     * call. An actor calling createVersion() with a crafted nested `metadata`
+     * blob must not be able to overwrite any of the 6 protected audit keys —
+     * on EITHER the parent document's metadata OR the new DocumentVersion row's
+     * metadata, since createVersionRecord() shares the same $metadata value.
+     */
+    public function test_create_version_cannot_forge_workflow_audit_metadata(): void
+    {
+        $document = $this->createDocument([
+            'status' => 'approved',
+            'metadata' => [
+                'status' => 'approved',
+                'decision' => 'approved',
+                'decision_by' => (string) $this->user->id,
+                'decision_at' => now()->subHour()->toISOString(),
+                'decision_note' => 'Đạt yêu cầu (quyết định thật)',
+                'submitted_by' => (string) $this->user->id,
+                'submitted_at' => now()->subHours(2)->toISOString(),
+            ],
+            'version' => 1,
+        ]);
+
+        $forgedActorId = '01HZFORGEDACTORID000000001';
+
+        $response = $this->apiPostMultipart($this->namedRoute('v1.documents.versions.store', ['id' => $document->id]), [
+            'file' => $this->createValidPdfUploadedFile('forged-audit-version.pdf'),
+            'version' => 2,
+            'metadata' => [
+                'status' => 'rejected',
+                'decision' => 'rejected',
+                'decision_by' => $forgedActorId,
+                'decision_at' => now()->toISOString(),
+                'decision_note' => 'Bị hủy bởi kẻ giả mạo',
+                'submitted_by' => $forgedActorId,
+                'submitted_at' => now()->toISOString(),
+            ],
+        ])->assertCreated();
+
+        $document->refresh();
+        $this->assertSame('approved', $document->status);
+        $this->assertSame('approved', $document->metadata['status']);
+        $this->assertSame('approved', $document->metadata['decision']);
+        $this->assertSame((string) $this->user->id, $document->metadata['decision_by']);
+        $this->assertSame('Đạt yêu cầu (quyết định thật)', $document->metadata['decision_note']);
+        $this->assertSame((string) $this->user->id, $document->metadata['submitted_by']);
+
+        $newVersionId = $response->json('data.current_version_id');
+        $versionMetadata = DocumentVersion::findOrFail($newVersionId)->metadata;
+        $this->assertSame('approved', $versionMetadata['status'] ?? null);
+        $this->assertSame('approved', $versionMetadata['decision'] ?? null);
+        $this->assertSame((string) $this->user->id, $versionMetadata['decision_by'] ?? null);
+        $this->assertNotSame($forgedActorId, $versionMetadata['decision_by'] ?? null);
+    }
+
+    /**
+     * Same forgery vector via store() — a brand-new document has no prior audit
+     * to protect, but the client must still be unable to plant a forged
+     * decision_by/decision_note pair at creation time (protects data
+     * consistency: a document must never claim a decision that never
+     * happened via DocumentWorkflowService).
+     */
+    public function test_store_strips_protected_audit_keys_from_client_supplied_metadata(): void
+    {
+        $response = $this->apiPostMultipart($this->namedRoute('v1.documents.store'), [
+            'project_id' => $this->project->id,
+            'title' => 'Forged Audit At Creation',
+            'document_type' => 'drawing',
+            'status' => 'draft',
+            'metadata' => [
+                'decision_by' => '01HZFORGEDATCREATE00000001',
+                'decision_note' => 'Giả mạo lúc tạo mới',
+                'tags' => ['legit-tag'],
+            ],
+            'file' => $this->createValidPdfUploadedFile('forged-audit-store.pdf'),
+        ])->assertCreated();
+
+        $documentId = $response->json('data.id');
+        $document = Document::findOrFail($documentId);
+
+        $this->assertArrayNotHasKey('decision_by', $document->metadata);
+        $this->assertArrayNotHasKey('decision_note', $document->metadata);
+        $this->assertSame(['legit-tag'], $document->metadata['tags'] ?? null);
     }
 
     public function test_version_history_is_retained_in_document_versions(): void

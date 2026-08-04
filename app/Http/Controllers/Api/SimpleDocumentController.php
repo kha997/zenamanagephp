@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Enums\DocumentDecision;
+use App\Enums\DocumentWorkflowStatus;
 use App\Exceptions\DocumentWorkflowException;
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Http\Controllers\Controller;
@@ -19,6 +20,7 @@ use App\Services\ZenaAuditLogger;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -40,6 +42,15 @@ class SimpleDocumentController extends Controller
         Document::ENTITY_TYPE_COMPONENT => Component::class,
         Document::ENTITY_TYPE_CR => ChangeRequest::class,
         Document::ENTITY_TYPE_SUBMITTAL => Submittal::class,
+    ];
+    private const PROTECTED_METADATA_KEYS = [
+        'status',
+        'submitted_by',
+        'submitted_at',
+        'decision',
+        'decision_by',
+        'decision_at',
+        'decision_note',
     ];
 
     public function index(Request $request)
@@ -84,7 +95,7 @@ class SimpleDocumentController extends Controller
             'document_type' => ['required', Rule::in(Document::VALID_DOCUMENT_TYPES)],
             'discipline' => 'nullable|string|max:100',
             'package' => 'nullable|string|max:100',
-            'status' => 'nullable|string|max:100',
+            'status' => ['nullable', 'string', 'max:100', Rule::notIn(DocumentWorkflowStatus::reservedValues())],
             'revision' => 'nullable|string|max:50',
             'file' => 'required|file|max:10240|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,jpg,jpeg,png,gif,zip,rar,7z',
             'name' => 'sometimes|string|max:255',
@@ -384,7 +395,7 @@ class SimpleDocumentController extends Controller
             'document_type' => ['nullable', Rule::in(Document::VALID_DOCUMENT_TYPES)],
             'discipline' => 'nullable|string|max:100',
             'package' => 'nullable|string|max:100',
-            'status' => 'nullable|string|max:100',
+            'status' => ['nullable', 'string', 'max:100', Rule::notIn(DocumentWorkflowStatus::reservedValues())],
             'revision' => 'nullable|string|max:50',
         ]);
 
@@ -432,7 +443,8 @@ class SimpleDocumentController extends Controller
         }
 
         $versionNumber = $nextVersion;
-        $metadata = $this->buildMetadata($request->all(), $document->metadata ?? []);
+        $data = $validator->validated();
+        $metadata = $this->buildMetadata($data, $document->metadata ?? []);
         $metadata['change_notes'] = $request->input('change_notes');
 
         $fileType = strtolower(trim((string) ($fileInfo['extension'] ?? '')));
@@ -441,6 +453,12 @@ class SimpleDocumentController extends Controller
         }
 
         $document = DB::transaction(function () use ($document, $fileInfo, $fileType, $metadata, $request, $user, $versionNumber) {
+            $targetStatus = DocumentWorkflowStatus::isReserved($document->status)
+                ? $document->status
+                : $request->input('status', $document->status);
+
+            $metadata['status'] = $targetStatus;
+
             $version = $this->createVersionRecord(
                 $document,
                 $versionNumber,
@@ -466,7 +484,7 @@ class SimpleDocumentController extends Controller
                 'discipline' => $request->input('discipline', $document->discipline),
                 'package' => $request->input('package', $document->package),
                 'revision' => $request->input('revision', $document->revision),
-                'status' => $request->input('status', $document->status),
+                'status' => $targetStatus,
                 'category' => $request->input('document_type', $document->document_type) ?: $document->category,
                 'description' => $document->description,
                 'metadata' => $metadata,
@@ -513,7 +531,7 @@ class SimpleDocumentController extends Controller
             'document_type' => ['nullable', Rule::in(Document::VALID_DOCUMENT_TYPES)],
             'discipline' => 'nullable|string|max:100',
             'package' => 'nullable|string|max:100',
-            'status' => 'nullable|string|max:100',
+            'status' => ['nullable', 'string', 'max:100', Rule::notIn(DocumentWorkflowStatus::reservedValues())],
             'revision' => 'nullable|string|max:50',
         ]);
 
@@ -551,8 +569,13 @@ class SimpleDocumentController extends Controller
         }
 
         if (array_key_exists('status', $data)) {
-            $updatePayload['status'] = $data['status'];
-            $metadata['status'] = $data['status'];
+            if (!DocumentWorkflowStatus::isReserved($document->status)) {
+                $updatePayload['status'] = $data['status'];
+                $metadata['status'] = $data['status'];
+            }
+            // Document hiện đang ở trạng thái workflow (submitted/approved/rejected) —
+            // generic update KHÔNG được đổi status, kể cả sang giá trị legacy hợp lệ.
+            // Field status bị bỏ qua âm thầm; các field khác trong $data vẫn áp dụng bình thường.
         }
 
         if (array_key_exists('revision', $data)) {
@@ -651,7 +674,7 @@ class SimpleDocumentController extends Controller
         $metadata = $base;
 
         if (isset($input['metadata']) && is_array($input['metadata'])) {
-            $metadata = array_merge($metadata, $input['metadata']);
+            $metadata = array_merge($metadata, Arr::except($input['metadata'], self::PROTECTED_METADATA_KEYS));
         }
 
         foreach (['document_type', 'discipline', 'package', 'status', 'revision'] as $field) {

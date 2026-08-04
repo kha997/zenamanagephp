@@ -1,3 +1,15 @@
+## Owner Summary (read this first — no code required)
+- Work ID: <GAP-NNN / OWN-YYYY-NNN>
+- Owner gate status: Gate 1 [<gate_status>] · Gate 2 [<gate_status>] · Gate 3 [<gate_status>]
+- Technical readiness (Gate 3 only): <not_checked / blocked / ready>
+- Owner decision (Gate 3 only): <none / approved / correction_requested / deferred>
+- Owner packets: `docs/owner-decisions/<WORK-ID>/`
+- What this changes for users (one paragraph, plain Vietnamese, no jargon):
+- Business acceptance evidence: <link to Gate 2 packet's acceptance-scenario checklist, or "n/a — no user-facing change">
+- Exclusions / deferred gaps: <e.g. "GAP-032 and GAP-033 remain separate">
+- Residual risk (plain language): <e.g. "none" / one sentence>
+- Decision needed from the owner right now: <the exact decision_requested value, or "none — informational">
+
 ## SSOT Story Reference
 - Backlog SSOT: `docs/roadmap/backlog.yaml`
 - Story ID: **Sx.y** (e.g. S2.2)

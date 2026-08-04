@@ -1,0 +1,30 @@
+# Owner-governance-lint enforcement boundary (Task 9).
+# Read by owner-governance-lint.yml's CI job and by owner_governance_lint.php
+# when invoked with --enforce-gate-ordering (see Step 5 below).
+
+effective_date: "2026-08-04"
+
+# A work_id is LEGACY (exempt from gate-ordering enforcement — "must have an
+# approved Gate 2 packet before a plan exists") if EITHER:
+#   (a) it is listed in docs/owner-governance/legacy-work-ids.txt, OR
+#   (b) docs/owner-decisions/<work_id>/ does not exist AND the work_id's
+#       earliest reference anywhere in git history predates effective_date.
+# Condition (b) is what stops new work from "pretending to be legacy": a
+# work_id that has never appeared before effective_date, and therefore has
+# no git history predating it, can never satisfy (b) — its only path to
+# exemption is being explicitly enumerated in legacy-work-ids.txt, which is
+# a committed, reviewable, one-time-generated file (Step 1), not something
+# a single PR can silently add an entry to and expect to pass review unnoticed.
+
+legacy_exemption_file: "docs/owner-governance/legacy-work-ids.txt"
+
+# Gate-ordering rules that DO NOT apply to legacy-exempt work IDs:
+exempt_from:
+  - "gate_2_before_plan"     # a docs/superpowers/plans/** file may exist without docs/owner-decisions/<id>/02-design.md
+  - "gate_3_before_ready"    # a PR may be marked Ready for review without docs/owner-decisions/<id>/03-release*.md
+
+# Rules that ALWAYS apply, legacy or not (structural validity is never exempt):
+never_exempt:
+  - "packet_schema_validity"  # any packet file that DOES exist must still pass owner_governance_lint.php
+  - "no_placeholder_tokens"
+  - "work_id_consistency"

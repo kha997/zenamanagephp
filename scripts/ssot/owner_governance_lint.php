@@ -257,6 +257,7 @@ if (realpath($argv[0] ?? '') === __FILE__) {
     // passed alone still falls through to the default docs/owner-decisions scan
     // instead of silently scanning zero files.
     $targets = array_values(array_filter(array_slice($argv, 1), fn ($arg) => !str_starts_with($arg, '--')));
+    $targetsExplicit = $targets !== [];
     if ($targets === []) {
         $targets = [$repoRoot . '/docs/owner-decisions'];
     }
@@ -293,11 +294,152 @@ if (realpath($argv[0] ?? '') === __FILE__) {
         }
     }
 
-    if ($allViolations !== []) {
+    // Structural failure no longer exits immediately: --enforce-gate-ordering
+    // (Task 9) may target a governed-document fixture that is deliberately
+    // NOT a Gate packet (e.g. a Correction-3 spec/plan frontmatter fixture),
+    // which structural validation correctly rejects with its own 'frontmatter'
+    // rule. Both checks run and report independently; the final exit code
+    // reflects either one failing, so no diagnostic is ever silently skipped.
+    $structuralFailed = $allViolations !== [];
+    if ($structuralFailed) {
         printf("\n❌ owner-governance-lint FAIL (%d violation(s) across %d file(s) scanned)\n", count($allViolations), count($files));
-        exit(1);
+    } else {
+        printf("✅ owner-governance-lint PASS (%d file(s) scanned, 0 violations)\n", count($files));
     }
 
-    printf("✅ owner-governance-lint PASS (%d file(s) scanned, 0 violations)\n", count($files));
-    exit(0);
+    $orderingFailed = false;
+
+    // --- Gate-ordering enforcement (Task 9), only runs with --enforce-gate-ordering ---
+    if (in_array('--enforce-gate-ordering', $argv, true)) {
+        $boundary = Yaml::parseFile($repoRoot . '/docs/owner-governance/enforcement-boundary.yml');
+        $legacyIds = array_filter(
+            array_map('trim', file($repoRoot . '/' . $boundary['legacy_exemption_file'])),
+            fn ($line) => $line !== '' && !str_starts_with($line, '#')
+        );
+
+        // With no explicit file/dir targets on the CLI, scan the standard
+        // governed-document directories (docs/superpowers/plans, .../specs).
+        // With explicit targets (e.g. running this directly against a
+        // Correction-3 fixture, as Task 9's verification step does), check
+        // exactly those files instead — an explicit target is a deliberate
+        // request to evaluate that document's governance, so unlike a bulk
+        // directory scan it is never silently skipped for lacking a
+        // filename-recognizable work-ID token (see below).
+        $explicitFileTargets = $targetsExplicit ? array_values(array_filter($targets, 'is_file')) : [];
+        $governedDocFiles = $explicitFileTargets !== []
+            ? $explicitFileTargets
+            : array_merge(
+                glob($repoRoot . '/docs/superpowers/plans/*.md'),
+                glob($repoRoot . '/docs/superpowers/specs/*.md')
+            );
+        $scanningExplicitFiles = $explicitFileTargets !== [];
+
+        $orderingViolations = [];
+
+        foreach ($governedDocFiles as $docFile) {
+            $basename = basename($docFile);
+            $content = file_get_contents($docFile);
+
+            // Correction 3: frontmatter is the PRIMARY, authoritative source.
+            // Filename regex is FALLBACK-ONLY, and only ever used to identify
+            // a document as legacy — never to identify a NEW work_id.
+            $workId = null;
+            $hasGovernanceFrontmatter = false;
+            $docFm = null;
+            if (preg_match('/^---\n(.*?)\n---\n/s', $content, $fmMatch)) {
+                $docFm = Yaml::parse($fmMatch[1]);
+                if (is_array($docFm) && isset($docFm['work_id'])) {
+                    $workId = $docFm['work_id'];
+                    $hasGovernanceFrontmatter = isset($docFm['owner_governance_version'], $docFm['owner_gate_2_record']);
+                }
+            }
+
+            if ($workId === null) {
+                // No frontmatter work_id — fall back to filename regex, but
+                // ONLY to check whether this is a pre-existing legacy file.
+                if (preg_match('/\b(GAP-\d{3}|OWN-\d{4}-\d{3})\b/', $basename, $idMatch)) {
+                    $filenameWorkId = $idMatch[1];
+                    if (in_array($filenameWorkId, $legacyIds, true)) {
+                        continue; // Genuinely legacy — filename-only reference is acceptable for pre-existing documents.
+                    }
+                    // Not on the legacy list and has no frontmatter: this is either a
+                    // new document that should have declared frontmatter and didn't,
+                    // or a filename coincidentally containing an ID pattern. Either
+                    // way, per Correction 3, filename text alone cannot establish a
+                    // NEW work_id's governance status — this is exactly the case
+                    // Correction 3 exists to close.
+                    $orderingViolations[] = new OwnerGovernanceLintViolation(
+                        $basename,
+                        'missing-governance-frontmatter',
+                        "File references '{$filenameWorkId}' in its filename but is not on the legacy exemption list and has no governance frontmatter (work_id/owner_governance_version/owner_gate_2_record). New governed work must declare frontmatter explicitly — see docs/owner-governance/GOVERNED_DOCUMENT_FRONTMATTER.md."
+                    );
+                    continue;
+                }
+
+                if (!$scanningExplicitFiles) {
+                    // Bulk directory scan: a document with neither frontmatter nor a
+                    // filename-recognizable work-ID token is unidentifiable by this
+                    // lint — not this check's concern (matches original behavior for
+                    // truly unrelated docs, and for the pre-existing corpus whose
+                    // filenames don't carry a recognizable token, e.g. GAP-031's
+                    // real plan/spec files which use lowercase "gap031").
+                    continue;
+                }
+
+                // Explicitly targeted file, with neither frontmatter nor a
+                // filename-recognizable work-ID token: still fails. An explicit
+                // target is a deliberate request to check this document's
+                // governance — filename-regex fallback exists only to recognize
+                // LEGACY documents, never to excuse an explicitly-checked document
+                // from needing frontmatter.
+                $orderingViolations[] = new OwnerGovernanceLintViolation(
+                    $basename,
+                    'missing-governance-frontmatter',
+                    'File has no governance frontmatter (work_id/owner_governance_version/owner_gate_2_record) and no recognizable work-ID token in its filename either. New governed work must declare frontmatter explicitly — see docs/owner-governance/GOVERNED_DOCUMENT_FRONTMATTER.md.'
+                );
+                continue;
+            }
+
+            if (in_array($workId, $legacyIds, true)) {
+                continue; // Explicitly exempt, even if it also has frontmatter.
+            }
+
+            if (!$hasGovernanceFrontmatter) {
+                $orderingViolations[] = new OwnerGovernanceLintViolation(
+                    $basename,
+                    'incomplete-governance-frontmatter',
+                    "work_id '{$workId}' is declared but owner_governance_version and/or owner_gate_2_record is missing."
+                );
+                continue;
+            }
+
+            $gate2Path = $repoRoot . "/docs/owner-decisions/{$workId}/02-design.md";
+            if (!is_file($gate2Path)) {
+                $orderingViolations[] = new OwnerGovernanceLintViolation($basename, 'gate-2-before-plan', "Document declares work_id '{$workId}', which has no approved Gate 2 packet ({$gate2Path} missing) and is not in the legacy exemption list.");
+                continue;
+            }
+
+            $declaredGate2Path = $repoRoot . '/' . $docFm['owner_gate_2_record'];
+            if (realpath($declaredGate2Path) !== realpath($gate2Path)) {
+                $orderingViolations[] = new OwnerGovernanceLintViolation($basename, 'gate2-record-mismatch', "owner_gate_2_record ('{$docFm['owner_gate_2_record']}') does not match the derived path for work_id '{$workId}' ('docs/owner-decisions/{$workId}/02-design.md').");
+            }
+
+            $gate2 = Yaml::parse(preg_replace('/^---\n(.*?)\n---\n.*$/s', '$1', file_get_contents($gate2Path)));
+            if (($gate2['owner_decision']['value'] ?? null) !== 'approved') {
+                $orderingViolations[] = new OwnerGovernanceLintViolation($basename, 'gate-2-not-approved', "Document declares work_id '{$workId}', whose Gate 2 packet exists but owner_decision.value is not 'approved'.");
+            }
+        }
+
+        foreach ($orderingViolations as $violation) {
+            echo ($isGithubActions ? "::error file={$violation->file}::" : '') . "owner-governance-lint [{$violation->rule}]: {$violation->message}\n";
+        }
+        if ($orderingViolations !== []) {
+            printf("\n❌ owner-governance-lint --enforce-gate-ordering FAIL (%d violation(s))\n", count($orderingViolations));
+            $orderingFailed = true;
+        } else {
+            echo "✅ owner-governance-lint --enforce-gate-ordering PASS\n";
+        }
+    }
+
+    exit(($structuralFailed || $orderingFailed) ? 1 : 0);
 }

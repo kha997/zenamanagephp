@@ -81,14 +81,28 @@ $fm = Symfony\Component\Yaml\Yaml::parse(preg_replace("/^---\n(.*?)\n---\n.*$/s"
 echo $fm["technical_evidence"]["implementation_tree_digest"] ?? "";
 ' "$gate3_file" "$SCRIPT_DIR")"
 
-if [ -n "$recorded_evidence_digest" ] && [ "$recorded_evidence_digest" != "not_computed_while_blocked" ] && [ "$current_digest" != "$recorded_evidence_digest" ]; then
-  echo "::error::$gate3_file's technical_evidence.implementation_tree_digest ($recorded_evidence_digest) no longer matches the current implementation tree ($current_digest)."
-  echo "The implementation has changed since this packet's evidence was recorded. Required transition:"
-  echo "  Evidence changed -> existing technical_evidence becomes stale -> release eligibility becomes false"
-  echo "  -> Gate 3 packet must return to preparing or blocked_technical -> evidence must be regenerated"
-  echo "  -> only then may Gate 3 return to awaiting_owner."
-  echo "This script reports the required transition. It does NOT rewrite $gate3_file itself."
-  exit 1
+# Only compare technical_evidence for staleness once the packet has
+# actually claimed a verified digest (gate_status awaiting_owner/approved).
+# Before that (not_started/preparing/blocked_technical), technical_evidence
+# is explicitly a placeholder (e.g. "not_computed_while_blocked" or
+# "not_computed_while_preparing") -- there is nothing real to compare
+# against yet. An earlier version of this check special-cased only the
+# "not_computed_while_blocked" literal string and missed
+# "not_computed_while_preparing", causing a real false-positive staleness
+# failure on this script's own real CI run on PR #239 the moment the
+# packet legitimately returned to 'preparing'. Gating on gate_status
+# instead of enumerating every placeholder string is more robust: it can't
+# miss a future placeholder value the same way.
+if [ "$gate_status" = "awaiting_owner" ] || [ "$gate_status" = "approved" ]; then
+  if [ "$current_digest" != "$recorded_evidence_digest" ]; then
+    echo "::error::$gate3_file's technical_evidence.implementation_tree_digest ($recorded_evidence_digest) no longer matches the current implementation tree ($current_digest)."
+    echo "The implementation has changed since this packet's evidence was recorded. Required transition:"
+    echo "  Evidence changed -> existing technical_evidence becomes stale -> release eligibility becomes false"
+    echo "  -> Gate 3 packet must return to preparing or blocked_technical -> evidence must be regenerated"
+    echo "  -> only then may Gate 3 return to awaiting_owner."
+    echo "This script reports the required transition. It does NOT rewrite $gate3_file itself."
+    exit 1
+  fi
 fi
 
 if [ "$owner_decision_value" != "none" ]; then

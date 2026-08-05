@@ -350,6 +350,9 @@ class EvidenceBindingTest extends TestCase
     // model's exclusion makes the two commits produce an IDENTICAL digest,
     // because the only change between them is the excluded file.
 
+    /**
+     * @group stress
+     */
     public function test_real_repo_history_c4250146_and_f775d286_produce_identical_digest(): void
     {
         $repoRoot = dirname(__DIR__, 3);
@@ -357,7 +360,7 @@ class EvidenceBindingTest extends TestCase
         $hasF775 = trim((string) shell_exec('git -C ' . escapeshellarg($repoRoot) . ' cat-file -e f775d286637a02d8e25f164a78bad8a70281a201 2>&1; echo $?'));
         $hasC425 = trim((string) shell_exec('git -C ' . escapeshellarg($repoRoot) . ' cat-file -e c4250146a3f7da97e93ff25b8db13430cdb7aab4 2>&1; echo $?'));
         if ($hasF775 !== '0' || $hasC425 !== '0') {
-            $this->markTestSkipped('This regression test requires commits f775d286 and c4250146 to be reachable in the real repository history (they should be, on this branch).');
+            $this->markTestSkipped('dependency: requires commits f775d286 and c4250146 to be reachable in the real repository history (they should be, on this branch).');
         }
 
         $digestAtF775 = \owner_governance_compute_implementation_tree_digest('f775d286637a02d8e25f164a78bad8a70281a201', 'OWN-2026-001', $repoRoot);

@@ -1,14 +1,14 @@
 ---
 work_id: OWN-2026-001
 gate: 3
-gate_status: awaiting_owner
+gate_status: deferred
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: deferred
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-04-non-technical-owner-control-layer-design.md
   plan: docs/superpowers/plans/2026-08-04-owner-control-layer-repo-governance-foundation.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
-  reconciliation_required: false
+  recorded_at: "2026-08-05T17:00:00+07:00"
+  owner_response_reference: "ChatGPT project conversation — Owner Gate 3 decision on 2026-08-05"
+  reconciliation_required: true
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-05T00:10:00+07:00"
-  updated_at: "2026-08-05T16:00:00+07:00"
+  updated_at: "2026-08-05T17:00:00+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "Toàn bộ 6 lỗi kỹ thuật phát hiện qua các lần trình trước và qua vòng review độc lập toàn nhánh cuối cùng (2 lỗi phạm vi/bằng chứng ban đầu, 4 lỗi kỹ thuật nhỏ hơn phát sinh ngay trong lúc sửa — gồm cả lỗi 'CI đã xanh chưa' tự đối chiếu với chính công việc đang chạy nó, và lỗi chọn nhầm hồ sơ Gate 3 khi có phiên bản thay thế) đều đã sửa và kiểm chứng lại bằng CI thật, không phải giả định. 22/22 kiểm tra CI thật trên PR #239 đều đạt (0 pending, 0 fail) tại đầu nhánh hiện tại."
@@ -39,8 +39,16 @@ owner_decision_binding:
   decision_recorded_at: null
 ---
 
+## DEFERRED — QUYẾT ĐỊNH ĐÃ GHI NHẬN
+
+**Quyết định của chủ doanh nghiệp:** Hoãn phát hành (deferred). Đây KHÔNG phải là từ chối, và KHÔNG yêu cầu chỉnh sửa nghiệp vụ nào đối với nền tảng quản trị này.
+
+**Lý do hoãn (nguyên văn):** Hoãn phát hành vì PR #239 hiện là PR xếp chồng trên PR #238. PR #239 chỉ được trình phê duyệt phát hành cuối cùng sau khi PR #238 được xử lý và merge, PR #239 được đổi base về main, toàn bộ CI bắt buộc chạy lại, phạm vi diff được xác nhận lại và bằng chứng kỹ thuật được tái tạo trên trạng thái tích hợp cuối cùng.
+
+**Bằng chứng kỹ thuật bên dưới** phản ánh trạng thái đã kiểm chứng tại thời điểm hoãn (commit `8ff12dab`, phạm vi xếp chồng trên PR #238) — đây là lịch sử kỹ thuật, không phải bằng chứng ràng buộc cho một quyết định phê duyệt. Không có ràng buộc phê duyệt nào được ghi (`owner_decision_binding` vẫn để trống) vì hoãn không phải là phê duyệt.
+
 ## Owner Summary
-Sáu vấn đề kỹ thuật phát hiện qua các lần trình trước và qua một vòng review độc lập toàn nhánh cuối cùng — bao gồm cả những lỗi mà chính hệ thống kiểm tra thật trên GitHub, và chính người review độc lập, tự bắt được trong lúc sửa lỗi — đều đã sửa và kiểm chứng lại bằng CI thật. Nền tảng quản trị quyết định owner cấp repository sẵn sàng kỹ thuật, đang chờ owner xem qua và quyết định.
+Sáu vấn đề kỹ thuật phát hiện qua các lần trình trước và qua một vòng review độc lập toàn nhánh cuối cùng — bao gồm cả những lỗi mà chính hệ thống kiểm tra thật trên GitHub, và chính người review độc lập, tự bắt được trong lúc sửa lỗi — đều đã sửa và kiểm chứng lại bằng CI thật. Nền tảng quản trị quyết định owner cấp repository sẵn sàng kỹ thuật trong phạm vi xếp chồng hiện tại. Owner đã xem và quyết định hoãn phát hành cho đến khi PR #238 được merge và PR #239 được tái xác minh trên `main`.
 
 ## Gói quyết định phát hành — OWN-2026-001: Nền tảng quản trị quyết định owner (repository) — bản đã sửa đầy đủ
 
@@ -76,9 +84,18 @@ Thấp. Ba giới hạn đã biết: (a) một tài liệu mới rất hiếm g�
 **9. Có thể hoàn tác không?**
 Có, hoàn toàn. Chỉ là tài liệu, script, và cấu hình CI — không đổi cấu trúc dữ liệu, không đổi cấu hình GitHub.
 
-**10. Đề xuất của đội kỹ thuật:** Đã sẵn sàng kỹ thuật, đã kiểm chứng lại bằng CI thật nhiều lần liên tiếp sau khi sửa lỗi, và đã qua một vòng review độc lập toàn nhánh riêng biệt. Đề xuất owner xem qua và quyết định.
+**10. Đề xuất của đội kỹ thuật (tại thời điểm trình):** Đã sẵn sàng kỹ thuật, đã kiểm chứng lại bằng CI thật nhiều lần liên tiếp sau khi sửa lỗi, và đã qua một vòng review độc lập toàn nhánh riêng biệt.
 
-**Quyết định của chủ doanh nghiệp:** ☐ Phát hành  ☐ Yêu cầu chỉnh sửa nghiệp vụ  ☐ Hoãn phát hành
+**Quyết định của chủ doanh nghiệp:** ☐ Phát hành  ☐ Yêu cầu chỉnh sửa nghiệp vụ  ☑ Hoãn phát hành
+
+## Bước tiếp theo (sau khi PR #238 merge)
+1. Đổi base của PR #239 về `main`.
+2. Xác minh lại diff cô lập (phải rỗng với các đường dẫn mã nguồn sản phẩm).
+3. Chạy lại toàn bộ kiểm tra CI bắt buộc trên `main`.
+4. Tính lại mã băm bằng chứng (implementation-tree digest) trên trạng thái tích hợp cuối cùng.
+5. Cập nhật `technical_evidence`.
+6. Chuyển Gate 3 từ `deferred` sang `preparing`, rồi sang `awaiting_owner` chỉ sau khi mọi kiểm tra bắt buộc đều xanh.
+7. Trình owner một quyết định Gate 3 cuối cùng, riêng biệt.
 
 ## What the owner is NOT being asked to decide
-Owner không được yêu cầu mở pull request kỹ thuật, đọc log CI, xem mã nguồn, hay đọc bình luận review — mọi kết luận trên đã được đội kỹ thuật xác minh trực tiếp trên hệ thống CI thật và qua một vòng review độc lập riêng biệt, bao gồm cả việc tự sửa và tự kiểm chứng lại 6 lỗi phát sinh qua toàn bộ quá trình. Owner cũng không được yêu cầu quyết định về tên lớp, cấu trúc file, thuật toán băm, chiến lược khóa dữ liệu, hay thời gian chờ tối đa của kiểm tra CI — chỉ quyết định có phát hành nền tảng quản trị này hay không, và có chấp nhận việc PR #239 tạm thời xếp chồng lên PR #238 hay không.
+Owner không được yêu cầu mở pull request kỹ thuật, đọc log CI, xem mã nguồn, hay đọc bình luận review — mọi kết luận trên đã được đội kỹ thuật xác minh trực tiếp trên hệ thống CI thật và qua một vòng review độc lập riêng biệt, bao gồm cả việc tự sửa và tự kiểm chứng lại 6 lỗi phát sinh qua toàn bộ quá trình. Owner cũng không được yêu cầu quyết định về tên lớp, cấu trúc file, thuật toán băm, chiến lược khóa dữ liệu, hay thời gian chờ tối đa của kiểm tra CI.

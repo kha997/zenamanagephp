@@ -81,10 +81,10 @@ class OwnerGovernanceSchemaFixtureTest extends TestCase
         $blocked = $this->frontmatterOf('valid-gate-3-blocked.md');
         $this->assertArrayHasKey('technical_evidence', $blocked);
         $this->assertArrayHasKey('owner_decision_binding', $blocked);
-        $this->assertNull($blocked['owner_decision_binding']['evidence_head_sha'], 'No decision recorded yet — binding must stay null.');
+        $this->assertNull($blocked['owner_decision_binding']['implementation_tree_digest'], 'No decision recorded yet — binding must stay null.');
 
         $awaiting = $this->frontmatterOf('valid-gate-3-awaiting.md');
-        $this->assertSame(64, strlen($awaiting['technical_evidence']['evidence_digest']), 'Expected a sha256 hex digest.');
-        $this->assertNull($awaiting['owner_decision_binding']['evidence_head_sha'], 'owner_decision.value is still none — binding must stay null until a decision is recorded.');
+        $this->assertSame(64, strlen($awaiting['technical_evidence']['implementation_tree_digest']), 'Expected a sha256 hex digest.');
+        $this->assertNull($awaiting['owner_decision_binding']['implementation_tree_digest'], 'owner_decision.value is still none — binding must stay null until a decision is recorded.');
     }
 }

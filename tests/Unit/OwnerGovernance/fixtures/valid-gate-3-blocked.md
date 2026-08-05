@@ -30,12 +30,13 @@ generated_by: agent
 residual_risk_rating: medium
 mandatory_technical_gate_summary: "Chưa chạy xong kiểm tra hai người cùng thao tác một lúc trên MySQL thật."
 technical_evidence:
-  head_sha: "5120b816c9c3e4a0f1b2c3d4e5f6a7b8c9d0e1f2"
-  evidence_digest: "not_computed_while_blocked"
+  subject_sha: "5120b816c9c3e4a0f1b2c3d4e5f6a7b8c9d0e1f2"
+  implementation_tree_digest: "not_computed_while_blocked"
+  verified_pr_head_sha: null
   verified_at: null
 owner_decision_binding:
-  evidence_head_sha: null
-  evidence_digest: null
+  implementation_tree_digest: null
+  decision_recorded_at: null
 ---
 
 ## BLOCKED — OWNER ACTION NOT REQUIRED

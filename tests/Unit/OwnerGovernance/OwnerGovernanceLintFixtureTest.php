@@ -59,33 +59,26 @@ class OwnerGovernanceLintFixtureTest extends TestCase
             ['invalid-todo-placeholder.md', 'placeholder-token'],
             ['invalid-missing-provenance.md', 'dishonest-provenance'],
             ['invalid-not-ready-but-awaiting.md', 'not-ready-but-decision-eligible'],
-            ['invalid-stale-decision-digest-mismatch.md', 'stale-decision-digest-mismatch'],
+            ['invalid-stale-decision-digest-mismatch.md', 'stale-decision-tree-digest-mismatch'],
         ];
     }
 
-    public function test_evidence_digest_is_deterministic_regardless_of_check_input_order(): void
+    // NOTE: the CI-check-based owner_governance_compute_evidence_digest()
+    // function these two tests originally covered was removed and replaced
+    // by owner_governance_compute_implementation_tree_digest() (a git-tree
+    // digest) as part of Correction 2's revision (2026-08-05) — the old
+    // model was self-referential: hashing head_sha meant presenting a Gate 3
+    // packet (itself a commit, which changes head_sha) invalidated its own
+    // evidence before it could ever be valid. Full coverage for the new
+    // function's determinism, exclusion behavior, and the real regression
+    // proof lives in tests/Unit/OwnerGovernance/EvidenceBindingTest.php.
+    // owner_governance_count_blocking_checks() (the CI-greenness helper
+    // extracted from check-evidence-freshness.sh) is also covered there.
+
+    public function test_implementation_tree_digest_function_exists_and_is_used_by_the_live_script(): void
     {
-        $checksInOrderA = [
-            ['name' => 'Unit Tests', 'conclusion' => 'success'],
-            ['name' => 'Feature Tests', 'conclusion' => 'success'],
-        ];
-        $checksInOrderB = [
-            ['name' => 'Feature Tests', 'conclusion' => 'success'],
-            ['name' => 'Unit Tests', 'conclusion' => 'success'],
-        ];
-
-        $digestA = \owner_governance_compute_evidence_digest('abc123', $checksInOrderA);
-        $digestB = \owner_governance_compute_evidence_digest('abc123', $checksInOrderB);
-
-        $this->assertSame($digestA, $digestB, 'Digest must not depend on input array order.');
-        $this->assertSame(64, strlen($digestA), 'Expected a sha256 hex digest (64 chars).');
-    }
-
-    public function test_evidence_digest_changes_when_a_check_conclusion_changes(): void
-    {
-        $before = \owner_governance_compute_evidence_digest('abc123', [['name' => 'Unit Tests', 'conclusion' => 'success']]);
-        $after = \owner_governance_compute_evidence_digest('abc123', [['name' => 'Unit Tests', 'conclusion' => 'failure']]);
-
-        $this->assertNotSame($before, $after);
+        $lintScript = file_get_contents(dirname(__DIR__, 3) . '/scripts/ssot/owner_governance_lint.php');
+        $this->assertStringContainsString('function owner_governance_compute_implementation_tree_digest', $lintScript);
+        $this->assertStringNotContainsString('function owner_governance_compute_evidence_digest', $lintScript, 'The old, self-referential CI-check digest function must not exist anymore.');
     }
 }

@@ -13,8 +13,8 @@ timestamps: {created_at: "2026-08-04T00:00:00+07:00", updated_at: "2026-08-04T00
 generated_by: agent
 residual_risk_rating: medium
 mandatory_technical_gate_summary: "n/a"
-technical_evidence: {head_sha: "aaaa000000000000000000000000000000aaaa", evidence_digest: "not_computed_while_blocked", verified_at: null}
-owner_decision_binding: {evidence_head_sha: null, evidence_digest: null}
+technical_evidence: {subject_sha: "aaaa000000000000000000000000000000aaaa", implementation_tree_digest: "not_computed_while_blocked", verified_pr_head_sha: null, verified_at: null}
+owner_decision_binding: {implementation_tree_digest: null, decision_recorded_at: null}
 ---
 
 `gate_status: awaiting_owner` must never coexist with `technical_readiness.value: blocked` — a decision surface must not exist while readiness is not ready.

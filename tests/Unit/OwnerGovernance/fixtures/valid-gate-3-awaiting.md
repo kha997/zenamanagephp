@@ -30,12 +30,13 @@ generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "30/30 kiểm tra bắt buộc đã đạt, gồm kiểm tra hai người cùng thao tác một lúc trên MySQL thật."
 technical_evidence:
-  head_sha: "b11c8c3ab5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0"
-  evidence_digest: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  subject_sha: "b11c8c3ab5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0"
+  implementation_tree_digest: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  verified_pr_head_sha: "b11c8c3ab5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0"
   verified_at: "2026-08-04T11:00:00+07:00"
 owner_decision_binding:
-  evidence_head_sha: null
-  evidence_digest: null
+  implementation_tree_digest: null
+  decision_recorded_at: null
 ---
 
 *(Full owner-facing body reused verbatim from `docs/owner-governance/examples/GAP-031-owner-release-packet.md` — see Task 4, Step 1. Not duplicated here to keep this fixture focused on frontmatter validity; the lint validates frontmatter and placeholder-scans the body, it does not require the body text to be identical across files.)*

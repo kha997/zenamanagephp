@@ -277,11 +277,29 @@ function owner_governance_compute_implementation_tree_digest(string $sha, string
     return hash('sha256', implode("\n", $lines));
 }
 
+/**
+ * Counts checks that are neither 'pass' nor 'skipping' (GitHub CLI's `bucket`
+ * field from `gh pr checks --json name,state,bucket`) — i.e. pending or
+ * failed. Extracted as a pure, unit-testable function so
+ * scripts/ci/check-evidence-freshness.sh's "is current-head CI green" logic
+ * isn't duplicated inline and untestable inside a bash `php -r` snippet.
+ *
+ * @param array<int, array{name: string, state?: string, bucket?: string}> $checks
+ */
+function owner_governance_count_blocking_checks(array $checks): int
+{
+    return count(array_filter(
+        $checks,
+        fn ($c) => ($c['bucket'] ?? '') !== 'pass' && ($c['bucket'] ?? '') !== 'skipping'
+    ));
+}
+
 // --- CLI entrypoint ---
 // Guards against running when this file is require/require_once'd as a library
 // (OwnerGovernanceLintFixtureTest.php, and check-evidence-freshness.sh's `php -r`
-// snippet both need owner_governance_compute_evidence_digest() without triggering
-// a directory scan + exit()). `PHP_SAPI === 'cli'` is true for every CLI process
+// snippets, need owner_governance_compute_implementation_tree_digest() and
+// owner_governance_count_blocking_checks() without triggering a directory
+// scan + exit()). `PHP_SAPI === 'cli'` is true for every CLI process
 // including `php artisan test`, so it must NOT be used here — only an exact match
 // against the actually-invoked script path is safe.
 if (realpath($argv[0] ?? '') === __FILE__) {

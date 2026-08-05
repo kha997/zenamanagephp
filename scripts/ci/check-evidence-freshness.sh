@@ -101,10 +101,9 @@ fi
 # --- Check 2: live (all mandatory CI checks on the current PR head are green) ---
 checks_json="$(gh pr checks "$PR_NUMBER" --json name,state,bucket)"
 non_pass_count="$(printf '%s' "$checks_json" | php -r '
-$checks = json_decode(stream_get_contents(STDIN), true);
-$blocking = array_filter($checks, fn ($c) => ($c["bucket"] ?? "") !== "pass" && ($c["bucket"] ?? "") !== "skipping");
-echo count($blocking);
-')"
+require $argv[1] . "/../ssot/owner_governance_lint.php";
+echo owner_governance_count_blocking_checks(json_decode(stream_get_contents(STDIN), true));
+' "$SCRIPT_DIR")"
 
 if [ "$owner_decision_value" = "none" ] && [ "$non_pass_count" != "0" ]; then
   echo "::error::$non_pass_count check(s) on PR #$PR_NUMBER's current head are not green (pending or failed) — technical_readiness cannot be 'ready' yet."

@@ -25,6 +25,20 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          # On a pull_request trigger, actions/checkout defaults to the
+          # synthetic refs/pull/<n>/merge commit, not the real PR head SHA.
+          # owner_governance_compute_implementation_tree_digest() runs
+          # `git ls-tree -r <sha>` against the REAL PR head
+          # (github.event.pull_request.head.sha, passed as PR_HEAD_SHA
+          # below) — that commit object was never fetched under the
+          # default merge-ref checkout, so `git ls-tree` silently failed
+          # (stderr suppressed) and returned empty output, which hashed to
+          # sha256("") and was misreported as a genuine digest mismatch.
+          # Caught on this workflow's own real CI run on PR #239. Checking
+          # out the real head ref directly ensures that exact commit's
+          # tree/blobs are actually present.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2

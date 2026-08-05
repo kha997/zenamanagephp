@@ -85,6 +85,26 @@ class EvidenceBindingTest extends TestCase
         }
     }
 
+    // --- Defensive hardening: a missing commit object must be a hard error,
+    // never a silently-empty (and silently wrong) digest. Caught on this
+    // function's own real CI run on PR #239: actions/checkout's default
+    // merge-ref checkout never fetched the real PR head commit object being
+    // verified, and the original implementation silently treated `git
+    // ls-tree`'s empty/failed output as "an empty tree", producing
+    // sha256("") — a plausible-looking but completely wrong digest that was
+    // then misreported as a genuine staleness mismatch. ---
+
+    public function test_digest_of_a_nonexistent_commit_throws_instead_of_silently_returning_sha256_of_empty_string(): void
+    {
+        $repo = $this->makeTempRepo();
+        $this->commitFile($repo, 'app/Foo.php', "<?php // v1\n", 'seed implementation');
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessageMatches('/does not exist in the checkout/');
+
+        \owner_governance_compute_implementation_tree_digest('0000000000000000000000000000000000000000', 'OWN-2026-001', $repo);
+    }
+
     // --- Required test 2: changing a governance PHP script invalidates it ---
 
     public function test_changing_a_governance_php_script_invalidates_digest(): void

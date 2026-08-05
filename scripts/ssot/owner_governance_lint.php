@@ -253,6 +253,22 @@ function owner_governance_validate_packet(string $filePath, string $content, arr
  */
 function owner_governance_compute_implementation_tree_digest(string $sha, string $workId, string $repoRoot): string
 {
+    // Confirm the commit object actually exists in this checkout BEFORE
+    // trusting `git ls-tree`'s output. Caught on this function's own real
+    // CI run on PR #239: on a `pull_request` trigger, actions/checkout
+    // defaults to the synthetic refs/pull/<n>/merge commit, not the real
+    // PR head SHA passed here — that commit object was never fetched, so
+    // `git ls-tree -r <sha> 2>/dev/null` silently returned empty output
+    // (stderr suppressed), which hashed to sha256("") and was reported as
+    // a plausible-looking but completely wrong digest, misdiagnosed as a
+    // genuine staleness mismatch. An empty/missing tree must be a hard
+    // error, never a silently-computed (and silently wrong) digest.
+    $existsCommand = sprintf('git -C %s cat-file -e %s 2>&1', escapeshellarg($repoRoot), escapeshellarg($sha . '^{commit}'));
+    exec($existsCommand, $existsOutput, $existsExitCode);
+    if ($existsExitCode !== 0) {
+        throw new \RuntimeException("owner_governance_compute_implementation_tree_digest: commit '{$sha}' does not exist in the checkout at '{$repoRoot}' — cannot compute a trustworthy digest. This usually means the checkout fetched a different ref (e.g. a merge commit) than the SHA being verified.");
+    }
+
     $excludePath = "docs/owner-decisions/{$workId}/03-release.md";
 
     $command = sprintf('git -C %s ls-tree -r %s 2>/dev/null', escapeshellarg($repoRoot), escapeshellarg($sha));
@@ -272,6 +288,11 @@ function owner_governance_compute_implementation_tree_digest(string $sha, string
         }
         $lines[] = "{$blobSha} {$path}";
     }
+
+    if ($lines === []) {
+        throw new \RuntimeException("owner_governance_compute_implementation_tree_digest: commit '{$sha}' exists but its tree contains zero non-excluded blobs — this is almost certainly a bug (a real repository tree is never empty), not a legitimately empty implementation.");
+    }
+
     sort($lines);
 
     return hash('sha256', implode("\n", $lines));

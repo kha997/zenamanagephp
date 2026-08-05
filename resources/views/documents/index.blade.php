@@ -47,7 +47,7 @@
         />
     @else
         <x-ui.card>
-            <x-ui.data-table :headers="['Tài liệu', 'Dự án', 'Trạng thái', 'Người tải', 'Ngày tạo']">
+            <x-ui.data-table :headers="['Tài liệu', 'Dự án', 'Trạng thái', 'Người tải', 'Ngày tạo', 'Hành động']">
                 @foreach ($documents as $document)
                     <tr>
                         <td>
@@ -58,6 +58,14 @@
                         <td><x-ui.status-badge :status="$document->status ?? 'pending'" /></td>
                         <td class="text-sm text-slate-600">{{ $document->uploader?->name ?? '—' }}</td>
                         <td class="text-sm text-slate-600">{{ optional($document->created_at)->format('d/m/Y H:i') }}</td>
+                        <td>
+                            @if ($document->status === 'draft')
+                                <form method="POST" action="{{ route('app.documents.workflow.submit', ['document' => $document->id]) }}">
+                                    @csrf
+                                    <button type="submit" class="operator-button operator-button-secondary">Gửi duyệt</button>
+                                </form>
+                            @endif
+                        </td>
                     </tr>
                 @endforeach
             </x-ui.data-table>

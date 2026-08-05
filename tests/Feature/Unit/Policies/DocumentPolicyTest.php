@@ -147,22 +147,32 @@ class DocumentPolicyTest extends TestCase
 
     public function test_user_can_approve_document_with_management_role()
     {
-        $this->user->assignRole('pm');
-        
+        $role = $this->user->assignRole('pm');
+        $permission = \App\Models\Permission::firstOrCreate(
+            ['name' => 'document.approve'],
+            ['code' => 'document.approve', 'module' => 'document', 'action' => 'approve', 'description' => 'Document approve']
+        );
+        $role->permissions()->syncWithoutDetaching($permission->id);
+
         $this->assertTrue($this->policy->approve($this->user, $this->document));
     }
 
     public function test_user_cannot_approve_document_without_management_role()
     {
         $this->user->assignRole('engineer');
-        
+
         $this->assertFalse($this->policy->approve($this->user, $this->document));
     }
 
     public function test_super_admin_can_perform_all_actions()
     {
-        $this->user->assignRole('super_admin');
-        
+        $role = $this->user->assignRole('super_admin');
+        $permission = \App\Models\Permission::firstOrCreate(
+            ['name' => 'document.approve'],
+            ['code' => 'document.approve', 'module' => 'document', 'action' => 'approve', 'description' => 'Document approve']
+        );
+        $role->permissions()->syncWithoutDetaching($permission->id);
+
         $this->assertTrue($this->policy->view($this->user, $this->document));
         $this->assertTrue($this->policy->create($this->user));
         $this->assertTrue($this->policy->update($this->user, $this->document));

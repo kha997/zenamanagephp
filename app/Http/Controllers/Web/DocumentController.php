@@ -94,7 +94,10 @@ class DocumentController extends Controller
         $apiRequest = Request::create(
             $request->fullUrl(),
             'POST',
-            $request->only(['title', 'project_id', 'document_type', 'description']),
+            array_merge(
+                $request->only(['title', 'project_id', 'document_type', 'description']),
+                ['status' => \App\Enums\DocumentWorkflowStatus::DRAFT->value]
+            ),
             $request->cookies->all(),
             $request->files->all(),
             $request->server->all()
@@ -178,10 +181,8 @@ class DocumentController extends Controller
             $tenantId = (string) Auth::user()?->tenant_id;
 
             $query = Document::with(['project', 'uploader'])
-                ->where('is_active', true)
                 ->whereHas('project', fn ($projectQuery) => $projectQuery->where('tenant_id', $tenantId));
 
-            // Apply filters
             if ($request->filled('project_id')) {
                 $query->where('project_id', $request->input('project_id'));
             }
@@ -192,74 +193,40 @@ class DocumentController extends Controller
 
             $documents = $query->orderBy('created_at', 'desc')->paginate(15);
             $projects = Project::query()->where('tenant_id', $tenantId)->select('id', 'name')->get();
-            
-            return view('documents.approvals', compact('documents', 'projects'));
-        } catch (\Exception $e) {
+            $decisionUsers = $this->decisionUsersFor($documents, $tenantId);
+
+            return view('documents.approvals', compact('documents', 'projects', 'decisionUsers'));
+        } catch (\Throwable $e) {
+            report($e);
+
             return view('documents.approvals', [
                 'documents' => collect(),
                 'projects' => collect(),
-                'error' => 'Không thể tải danh sách documents cần duyệt: ' . $e->getMessage()
+                'decisionUsers' => collect(),
+                'error' => 'Không thể tải danh sách tài liệu cần duyệt. Vui lòng thử lại sau.',
             ]);
         }
     }
 
     /**
-     * Approve a document.
+     * @param \Illuminate\Pagination\LengthAwarePaginator<int, Document> $paginatedDocuments
+     * @return \Illuminate\Support\Collection<string, string>
      */
-    public function approve(Request $request, string $documentId): RedirectResponse
+    public function decisionUsersFor(\Illuminate\Pagination\LengthAwarePaginator $paginatedDocuments, string $tenantId): \Illuminate\Support\Collection
     {
-        $request->validate([
-            'approval_note' => 'nullable|string|max:500',
-        ]);
+        $decisionUserIds = $paginatedDocuments->getCollection()
+            ->pluck('decision_by_id')
+            ->filter()
+            ->unique()
+            ->values();
 
-        try {
-            $document = Document::findOrFail($documentId);
-            
-            $document->update([
-                'status' => 'approved',
-                'approved_by' => Auth::id(),
-                'approved_at' => now(),
-                'approval_note' => $request->input('approval_note'),
-            ]);
-            
-            return redirect()
-                ->back()
-                ->with('success', 'Document đã được duyệt thành công!');
-        } catch (\Exception $e) {
-            return redirect()
-                ->back()
-                ->withErrors(['error' => 'Không thể duyệt document: ' . $e->getMessage()]);
+        if ($decisionUserIds->isEmpty()) {
+            return collect();
         }
+
+        return \App\Models\User::query()->where('tenant_id', $tenantId)->whereIn('id', $decisionUserIds)->pluck('name', 'id');
     }
 
-    /**
-     * Reject a document.
-     */
-    public function reject(Request $request, string $documentId): RedirectResponse
-    {
-        $request->validate([
-            'rejection_reason' => 'required|string|max:500',
-        ]);
-
-        try {
-            $document = Document::findOrFail($documentId);
-            
-            $document->update([
-                'status' => 'rejected',
-                'rejected_by' => Auth::id(),
-                'rejected_at' => now(),
-                'rejection_reason' => $request->input('rejection_reason'),
-            ]);
-            
-            return redirect()
-                ->back()
-                ->with('success', 'Document đã bị từ chối.');
-        } catch (\Exception $e) {
-            return redirect()
-                ->back()
-                ->withErrors(['error' => 'Không thể từ chối document: ' . $e->getMessage()]);
-        }
-    }
 
     /**
      * Remove the specified document.

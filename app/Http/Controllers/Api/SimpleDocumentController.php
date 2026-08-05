@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\DocumentDecision;
+use App\Enums\DocumentWorkflowStatus;
+use App\Exceptions\DocumentWorkflowException;
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Http\Controllers\Controller;
 use App\Models\ChangeRequest;
@@ -11,11 +14,13 @@ use App\Models\DocumentVersion;
 use App\Models\Project;
 use App\Models\Submittal;
 use App\Models\Task;
+use App\Services\DocumentWorkflowService;
 use App\Services\ErrorEnvelopeService;
 use App\Services\ZenaAuditLogger;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -32,15 +37,20 @@ class SimpleDocumentController extends Controller
 
     private const DEFAULT_PER_PAGE = 15;
     private const MAX_PER_PAGE = 100;
-    private const STATUS_DRAFT = 'draft';
-    private const STATUS_SUBMITTED = 'submitted';
-    private const STATUS_APPROVED = 'approved';
-    private const STATUS_REJECTED = 'rejected';
     private const LINKABLE_MODELS = [
         Document::ENTITY_TYPE_TASK => Task::class,
         Document::ENTITY_TYPE_COMPONENT => Component::class,
         Document::ENTITY_TYPE_CR => ChangeRequest::class,
         Document::ENTITY_TYPE_SUBMITTAL => Submittal::class,
+    ];
+    private const PROTECTED_METADATA_KEYS = [
+        'status',
+        'submitted_by',
+        'submitted_at',
+        'decision',
+        'decision_by',
+        'decision_at',
+        'decision_note',
     ];
 
     public function index(Request $request)
@@ -85,7 +95,7 @@ class SimpleDocumentController extends Controller
             'document_type' => ['required', Rule::in(Document::VALID_DOCUMENT_TYPES)],
             'discipline' => 'nullable|string|max:100',
             'package' => 'nullable|string|max:100',
-            'status' => 'nullable|string|max:100',
+            'status' => ['nullable', 'string', 'max:100', Rule::notIn(DocumentWorkflowStatus::reservedValues())],
             'revision' => 'nullable|string|max:50',
             'file' => 'required|file|max:10240|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,jpg,jpeg,png,gif,zip,rar,7z',
             'name' => 'sometimes|string|max:255',
@@ -304,68 +314,62 @@ class SimpleDocumentController extends Controller
 
     public function submit(string $id): JsonResponse
     {
-        $document = $this->findDocument($id);
+        $tenantId = $this->resolveTenantId();
 
-        if (!$document) {
+        $documentForAuth = app(DocumentWorkflowService::class)->findForTenant($tenantId, $id);
+        if ($documentForAuth === null) {
             return ErrorEnvelopeService::notFoundError('Document');
         }
+        $this->authorize('update', $documentForAuth);
 
-        if ($document->status !== self::STATUS_DRAFT) {
-            return ErrorEnvelopeService::conflictError('Document can only be submitted from draft status');
+        try {
+            $document = app(DocumentWorkflowService::class)->submit($tenantId, $id, (string) Auth::id());
+        } catch (DocumentWorkflowException $e) {
+            report($e);
+
+            return match ($e->reasonCode) {
+                'DOCUMENT_NOT_FOUND' => ErrorEnvelopeService::notFoundError('Document'),
+                default => ErrorEnvelopeService::conflictError('Document can only be submitted from draft status'),
+            };
         }
 
-        $userId = Auth::id();
-        $metadata = $document->metadata ?? [];
-        $metadata['status'] = self::STATUS_SUBMITTED;
-        $metadata['submitted_at'] = now()->toISOString();
-        $metadata['submitted_by'] = $userId;
-
-        $document->forceFill([
-            'status' => self::STATUS_SUBMITTED,
-            'metadata' => $metadata,
-            'updated_by' => $userId,
-        ])->save();
-
-        return $this->zenaSuccessResponse($document->fresh(['currentVersion']), 'Document submitted successfully');
+        return $this->zenaSuccessResponse($document, 'Document submitted successfully');
     }
 
     public function decision(Request $request, string $id): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'decision' => 'required|string|in:' . implode(',', [self::STATUS_APPROVED, self::STATUS_REJECTED]),
+            'decision' => ['required', 'string', Rule::in(array_map(fn (DocumentDecision $c) => $c->value, DocumentDecision::cases()))],
+            'note' => ['nullable', 'string', 'max:500'],
         ]);
 
         if ($validator->fails()) {
             return ErrorEnvelopeService::validationError($validator->errors()->toArray());
         }
 
-        $document = $this->findDocument($id);
+        $data = $validator->validated();
+        $decision = DocumentDecision::from($data['decision']);
+        $note = $data['note'] ?? null;
+        $tenantId = $this->resolveTenantId();
 
-        if (!$document) {
+        $documentForAuth = app(DocumentWorkflowService::class)->findForTenant($tenantId, $id);
+        if ($documentForAuth === null) {
             return ErrorEnvelopeService::notFoundError('Document');
         }
+        $this->authorize('approve', $documentForAuth);
 
-        $this->authorize('approve', $document);
+        try {
+            $document = app(DocumentWorkflowService::class)->decide($tenantId, $id, (string) Auth::id(), $decision, $note);
+        } catch (DocumentWorkflowException $e) {
+            report($e);
 
-        if ($document->status !== self::STATUS_SUBMITTED) {
-            return ErrorEnvelopeService::conflictError('Document can only be decided from submitted status');
+            return match ($e->reasonCode) {
+                'DOCUMENT_NOT_FOUND' => ErrorEnvelopeService::notFoundError('Document'),
+                default => ErrorEnvelopeService::conflictError('Document can only be decided from submitted status'),
+            };
         }
 
-        $decision = $validator->validated()['decision'];
-        $userId = Auth::id();
-        $metadata = $document->metadata ?? [];
-        $metadata['status'] = $decision;
-        $metadata['decision'] = $decision;
-        $metadata['decision_at'] = now()->toISOString();
-        $metadata['decision_by'] = $userId;
-
-        $document->forceFill([
-            'status' => $decision,
-            'metadata' => $metadata,
-            'updated_by' => $userId,
-        ])->save();
-
-        return $this->zenaSuccessResponse($document->fresh(['currentVersion']), 'Document decision recorded successfully');
+        return $this->zenaSuccessResponse($document, 'Document decision recorded successfully');
     }
 
     public function download(string $id)
@@ -397,7 +401,7 @@ class SimpleDocumentController extends Controller
             'document_type' => ['nullable', Rule::in(Document::VALID_DOCUMENT_TYPES)],
             'discipline' => 'nullable|string|max:100',
             'package' => 'nullable|string|max:100',
-            'status' => 'nullable|string|max:100',
+            'status' => ['nullable', 'string', 'max:100', Rule::notIn(DocumentWorkflowStatus::reservedValues())],
             'revision' => 'nullable|string|max:50',
         ]);
 
@@ -445,7 +449,8 @@ class SimpleDocumentController extends Controller
         }
 
         $versionNumber = $nextVersion;
-        $metadata = $this->buildMetadata($request->all(), $document->metadata ?? []);
+        $data = $validator->validated();
+        $metadata = $this->buildMetadata($data, $document->metadata ?? []);
         $metadata['change_notes'] = $request->input('change_notes');
 
         $fileType = strtolower(trim((string) ($fileInfo['extension'] ?? '')));
@@ -454,6 +459,12 @@ class SimpleDocumentController extends Controller
         }
 
         $document = DB::transaction(function () use ($document, $fileInfo, $fileType, $metadata, $request, $user, $versionNumber) {
+            $targetStatus = DocumentWorkflowStatus::isReserved($document->status)
+                ? $document->status
+                : $request->input('status', $document->status);
+
+            $metadata['status'] = $targetStatus;
+
             $version = $this->createVersionRecord(
                 $document,
                 $versionNumber,
@@ -479,7 +490,7 @@ class SimpleDocumentController extends Controller
                 'discipline' => $request->input('discipline', $document->discipline),
                 'package' => $request->input('package', $document->package),
                 'revision' => $request->input('revision', $document->revision),
-                'status' => $request->input('status', $document->status),
+                'status' => $targetStatus,
                 'category' => $request->input('document_type', $document->document_type) ?: $document->category,
                 'description' => $document->description,
                 'metadata' => $metadata,
@@ -526,7 +537,7 @@ class SimpleDocumentController extends Controller
             'document_type' => ['nullable', Rule::in(Document::VALID_DOCUMENT_TYPES)],
             'discipline' => 'nullable|string|max:100',
             'package' => 'nullable|string|max:100',
-            'status' => 'nullable|string|max:100',
+            'status' => ['nullable', 'string', 'max:100', Rule::notIn(DocumentWorkflowStatus::reservedValues())],
             'revision' => 'nullable|string|max:50',
         ]);
 
@@ -564,8 +575,13 @@ class SimpleDocumentController extends Controller
         }
 
         if (array_key_exists('status', $data)) {
-            $updatePayload['status'] = $data['status'];
-            $metadata['status'] = $data['status'];
+            if (!DocumentWorkflowStatus::isReserved($document->status)) {
+                $updatePayload['status'] = $data['status'];
+                $metadata['status'] = $data['status'];
+            }
+            // Document hiện đang ở trạng thái workflow (submitted/approved/rejected) —
+            // generic update KHÔNG được đổi status, kể cả sang giá trị legacy hợp lệ.
+            // Field status bị bỏ qua âm thầm; các field khác trong $data vẫn áp dụng bình thường.
         }
 
         if (array_key_exists('revision', $data)) {
@@ -615,14 +631,18 @@ class SimpleDocumentController extends Controller
         return $this->zenaSuccessResponse(null, 'Document deleted successfully');
     }
 
-    private function findDocument(string $id): ?Document
+    private function resolveTenantId(): string
     {
         $user = Auth::user();
-        $tenantId = (string) (app()->bound('current_tenant_id') ? app('current_tenant_id') : ($user?->tenant_id ?? ''));
 
+        return (string) (app()->bound('current_tenant_id') ? app('current_tenant_id') : ($user?->tenant_id ?? ''));
+    }
+
+    private function findDocument(string $id): ?Document
+    {
         return Document::query()
             ->with('currentVersion')
-            ->where('tenant_id', $tenantId)
+            ->where('tenant_id', $this->resolveTenantId())
             ->find($id);
     }
 
@@ -660,7 +680,7 @@ class SimpleDocumentController extends Controller
         $metadata = $base;
 
         if (isset($input['metadata']) && is_array($input['metadata'])) {
-            $metadata = array_merge($metadata, $input['metadata']);
+            $metadata = array_merge($metadata, Arr::except($input['metadata'], self::PROTECTED_METADATA_KEYS));
         }
 
         foreach (['document_type', 'discipline', 'package', 'status', 'revision'] as $field) {

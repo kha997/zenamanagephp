@@ -415,8 +415,11 @@ Route::get('/projects-enhanced', function() {
     Route::get('/documents', [App\Http\Controllers\Web\DocumentController::class, 'index'])->name('documents');
     Route::get('/documents/create', [App\Http\Controllers\Web\DocumentController::class, 'create'])->name('documents.create');
     Route::post('/documents', [App\Http\Controllers\Web\DocumentController::class, 'store'])->middleware('rbac:document.create')->name('documents.store');
-    Route::get('/documents/approvals', [App\Http\Controllers\Web\DocumentController::class, 'approvals'])->name('documents.approvals');
-    
+    Route::get('/documents/approvals', [App\Http\Controllers\Web\DocumentController::class, 'approvals'])->middleware('rbac:document.approve')->name('documents.approvals');
+    Route::post('/documents/{document}/submit', [App\Http\Controllers\Web\DocumentWorkflowController::class, 'submit'])->middleware('rbac:document.update')->name('documents.workflow.submit');
+    Route::post('/documents/{document}/approve', [App\Http\Controllers\Web\DocumentWorkflowController::class, 'approve'])->middleware('rbac:document.approve')->name('documents.workflow.approve');
+    Route::post('/documents/{document}/reject', [App\Http\Controllers\Web\DocumentWorkflowController::class, 'reject'])->middleware('rbac:document.approve')->name('documents.workflow.reject');
+
         // Team Routes
         Route::get('/team', function () {
             return view('app.team', [

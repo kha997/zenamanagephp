@@ -10,11 +10,16 @@ set -euo pipefail
 #      commit that touches ONLY that file (presenting/refreshing a packet)
 #      never invalidates its own evidence — the self-reference bug an
 #      earlier CI-check-based design had is architecturally impossible here.
-#   2. Live: confirm every mandatory CI check on the CURRENT PR head is
-#      green — this is a live, gh-dependent fact the tree digest alone
-#      cannot express (the tree can be byte-identical while CI has not yet
-#      finished, or has regressed for an environmental reason unrelated to
-#      any file content).
+#   2. Live: only when the packet's gate_status is already 'awaiting_owner'
+#      (i.e. it is actively CLAIMING readiness), confirm every mandatory CI
+#      check on the CURRENT PR head is green — this is a live, gh-dependent
+#      fact the tree digest alone cannot express. Gated on gate_status, not
+#      on owner_decision.value: this job runs CONCURRENTLY with the checks
+#      it inspects, so most are legitimately still pending for any ordinary
+#      preparing/blocked_technical packet at the moment this job executes —
+#      gating on owner_decision.value == 'none' (true in both states) made
+#      this check fail on every normal in-progress CI run, caught on this
+#      script's own real CI run on PR #239.
 #
 # Usage: PR_NUMBER=<n> WORK_ID=<id> bash scripts/ci/check-evidence-freshness.sh
 #
@@ -53,6 +58,12 @@ owner_decision_value="$(php -r '
 require $argv[2] . "/../../vendor/autoload.php";
 $fm = Symfony\Component\Yaml\Yaml::parse(preg_replace("/^---\n(.*?)\n---\n.*$/s", "$1", file_get_contents($argv[1])));
 echo $fm["owner_decision"]["value"] ?? "none";
+' "$gate3_file" "$SCRIPT_DIR")"
+
+gate_status="$(php -r '
+require $argv[2] . "/../../vendor/autoload.php";
+$fm = Symfony\Component\Yaml\Yaml::parse(preg_replace("/^---\n(.*?)\n---\n.*$/s", "$1", file_get_contents($argv[1])));
+echo $fm["gate_status"] ?? "";
 ' "$gate3_file" "$SCRIPT_DIR")"
 
 current_head_sha="${PR_HEAD_SHA:-$(git rev-parse HEAD)}"
@@ -99,17 +110,31 @@ echo $fm["owner_decision_binding"]["implementation_tree_digest"] ?? "";
 fi
 
 # --- Check 2: live (all mandatory CI checks on the current PR head are green) ---
-checks_json="$(gh pr checks "$PR_NUMBER" --json name,state,bucket)"
-non_pass_count="$(printf '%s' "$checks_json" | php -r '
+# Gated on gate_status == 'awaiting_owner' specifically, NOT on
+# owner_decision_value == 'none' — "none" is true both before readiness
+# (preparing/blocked_technical, where nothing is being claimed yet and
+# CI is normally still running) and at readiness (awaiting_owner, before a
+# decision is made). Gating on owner_decision_value alone made this check
+# fail on every ordinary CI run for a preparing/blocked packet, since this
+# job runs CONCURRENTLY with the very checks it inspects — most of which
+# are still legitimately pending at the moment this job executes. Gating on
+# gate_status instead means this check only fires when the packet is
+# actively CLAIMING to be ready for a decision, which is the only moment a
+# not-yet-green CI state is actually a governance violation worth failing
+# the build over.
+if [ "$gate_status" = "awaiting_owner" ]; then
+  checks_json="$(gh pr checks "$PR_NUMBER" --json name,state,bucket)"
+  non_pass_count="$(printf '%s' "$checks_json" | php -r '
 require $argv[1] . "/../ssot/owner_governance_lint.php";
 echo owner_governance_count_blocking_checks(json_decode(stream_get_contents(STDIN), true));
 ' "$SCRIPT_DIR")"
 
-if [ "$owner_decision_value" = "none" ] && [ "$non_pass_count" != "0" ]; then
-  echo "::error::$non_pass_count check(s) on PR #$PR_NUMBER's current head are not green (pending or failed) — technical_readiness cannot be 'ready' yet."
-  echo "gate_status must not reach 'awaiting_owner' until every mandatory check on the current head is green."
-  exit 1
+  if [ "$non_pass_count" != "0" ]; then
+    echo "::error::gate_status is 'awaiting_owner' but $non_pass_count check(s) on PR #$PR_NUMBER's current head are not green (pending or failed) — technical_readiness cannot be 'ready' yet."
+    echo "gate_status must not reach 'awaiting_owner' until every mandatory check on the current head is green."
+    exit 1
+  fi
 fi
 
-echo "✅ $gate3_file's implementation-tree digest matches the current implementation tree ($current_digest), and CI on the current head is green — evidence is fresh, decision is not stale."
+echo "✅ $gate3_file's implementation-tree digest matches the current implementation tree ($current_digest) — evidence is fresh, decision is not stale."
 exit 0

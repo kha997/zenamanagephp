@@ -31,12 +31,13 @@ generated_by: agent
 residual_risk_rating: <none|low|medium|high>
 mandatory_technical_gate_summary: "<one plain-language line naming which mandatory check has not passed yet — never a CI job name>"
 technical_evidence:
-  head_sha: <full 40-char commit SHA of the branch HEAD this packet was drafted against>
-  evidence_digest: "not_computed_while_blocked"
+  subject_sha: <full 40-char commit SHA of the branch HEAD this packet was drafted against>
+  implementation_tree_digest: "not_computed_while_blocked"
+  verified_pr_head_sha: null
   verified_at: null
 owner_decision_binding:
-  evidence_head_sha: null
-  evidence_digest: null
+  implementation_tree_digest: null
+  decision_recorded_at: null
 ---
 
 ## BLOCKED — OWNER ACTION NOT REQUIRED
@@ -72,12 +73,13 @@ generated_by: agent
 residual_risk_rating: <none|low|medium|high>
 mandatory_technical_gate_summary: "<one plain-language line confirming what passed>"
 technical_evidence:
-  head_sha: <full 40-char commit SHA — MUST equal the branch's actual HEAD at the moment technical_readiness became ready>
-  evidence_digest: <sha256, see packet-schema.yml's evidence_digest_algorithm — computed from head_sha + required check names/conclusions>
+  subject_sha: <full 40-char commit SHA of the branch state this packet's evidence was computed against — the exact tree, not necessarily "the latest commit">
+  implementation_tree_digest: <sha256, see packet-schema.yml's implementation_tree_digest_algorithm — computed by owner_governance_compute_implementation_tree_digest(), a git-tree hash excluding ONLY this exact Gate 3 file>
+  verified_pr_head_sha: <the PR head SHA whose live CI was actually inspected — may equal subject_sha, kept separate because verifying CI is a live gh-dependent fact, not part of the structural tree digest>
   verified_at: <ISO-8601, when the digest was computed>
 owner_decision_binding:
-  evidence_head_sha: null   # stays null until owner_decision.value moves off "none" — see Task 5's evidence-binding-required-once-decided rule
-  evidence_digest: null     # once set, MUST equal technical_evidence.evidence_digest at decision time, or the lint flags staleness
+  implementation_tree_digest: null   # stays null until owner_decision.value moves off "none" — see Task 5's evidence-binding-required-once-decided rule
+  decision_recorded_at: null         # once set, implementation_tree_digest above MUST equal technical_evidence.implementation_tree_digest at decision time, or the lint flags staleness (stale-decision-tree-digest-mismatch)
 -->
 
 ## Gói quyết định phát hành

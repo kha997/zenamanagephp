@@ -30,12 +30,13 @@ generated_by: agent
 residual_risk_rating: medium
 mandatory_technical_gate_summary: "Đã phát hiện 2 vấn đề: (1) PR #239 hiện đang chứa cả các thay đổi mã nguồn sản phẩm GAP-031 chưa merge từ PR #238 do PR #239 nhánh từ nhánh của #238; (2) bằng chứng kỹ thuật được ghi trong hồ sơ này (head_sha f775d286) đã cũ hơn commit tạo ra chính hồ sơ đó (c4250146), nên coi như chưa có bằng chứng hợp lệ. Chưa đủ điều kiện để chờ owner quyết định."
 technical_evidence:
-  head_sha: null
-  evidence_digest: "not_computed_while_blocked"
+  subject_sha: null
+  implementation_tree_digest: "not_computed_while_blocked"
+  verified_pr_head_sha: null
   verified_at: null
 owner_decision_binding:
-  evidence_head_sha: null
-  evidence_digest: null
+  implementation_tree_digest: null
+  decision_recorded_at: null
 ---
 
 ## BLOCKED — OWNER ACTION NOT REQUIRED

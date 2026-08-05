@@ -29,21 +29,24 @@ timestamps:
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "30/30 kiểm tra bắt buộc đã đạt, gồm kiểm tra hai người cùng thao tác một lúc trên MySQL thật."
-# evidence_digest below is an ILLUSTRATIVE PLACEHOLDER (SHA-256 of the empty
-# string), not a genuinely recomputed digest. The recompute helper this plan
-# specifies (owner_governance_compute_evidence_digest, shipping in Task 5's
-# scripts/ssot/owner_governance_lint.php) does not exist yet at the time this
-# file was written, so it could not be called even though live check data for
-# this pull request was reachable. Safe to leave: owner_decision_binding
-# stays null below, so nothing downstream trusts this digest as verified.
-# Recompute and replace once the Task 5 lint script exists.
+# implementation_tree_digest below is an ILLUSTRATIVE PLACEHOLDER (SHA-256 of
+# the empty string), not a genuinely recomputed digest — reconstructing the
+# real git-tree state at this historical commit for this now-legacy-exempt
+# worked example is not required (GAP-031 is on the committed legacy
+# allowlist, so this packet's gate-ordering status does not depend on this
+# value being real). Safe to leave: owner_decision_binding stays null below,
+# so nothing downstream trusts this digest as verified. The recompute helper
+# (owner_governance_compute_implementation_tree_digest,
+# scripts/ssot/owner_governance_lint.php) exists and is used for real by the
+# live OWN-2026-001 packet — see docs/owner-decisions/OWN-2026-001/03-release.md.
 technical_evidence:
-  head_sha: "b11c8c3ab5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0"
-  evidence_digest: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  subject_sha: "b11c8c3ab5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0"
+  implementation_tree_digest: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  verified_pr_head_sha: "b11c8c3ab5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0"
   verified_at: "2026-08-04T11:00:00+07:00"
 owner_decision_binding:
-  evidence_head_sha: null
-  evidence_digest: null
+  implementation_tree_digest: null
+  decision_recorded_at: null
 ---
 
 ## Owner Summary

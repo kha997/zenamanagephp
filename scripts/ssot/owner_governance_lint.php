@@ -153,7 +153,7 @@ function owner_governance_validate_packet(string $filePath, string $content, arr
             $violations[] = new OwnerGovernanceLintViolation($filePath, 'technical-readiness-provenance', "technical_readiness.generated_by must be 'engineering_evidence'.");
         }
 
-        // --- Evidence-binding contract (Correction 2) ---
+        // --- Evidence-binding contract (Correction 2, revised) ---
         // awaiting_owner / approved must never coexist with a non-ready readiness.
         if (in_array($gateStatus, ['awaiting_owner', 'approved'], true) && $trValue !== 'ready') {
             $violations[] = new OwnerGovernanceLintViolation(
@@ -163,37 +163,50 @@ function owner_governance_validate_packet(string $filePath, string $content, arr
             );
         }
 
+        // technical_evidence sub-fields must be present whenever this gate
+        // requires technical_readiness at all (i.e. on every Gate 3 packet,
+        // not only decided ones) — the field names themselves are the
+        // canonical contract Correction 2 requires consistently everywhere.
+        $evidence = $fm['technical_evidence'] ?? [];
+        foreach ($schema['required_technical_evidence_fields'] as $teField) {
+            if (!array_key_exists($teField, $evidence)) {
+                $violations[] = new OwnerGovernanceLintViolation($filePath, 'technical-evidence-field-missing', "technical_evidence is missing required field '{$teField}'.");
+            }
+        }
+        $bindingFieldsPresent = $fm['owner_decision_binding'] ?? [];
+        foreach ($schema['required_owner_decision_binding_fields'] as $bField) {
+            if (!array_key_exists($bField, $bindingFieldsPresent)) {
+                $violations[] = new OwnerGovernanceLintViolation($filePath, 'owner-decision-binding-field-missing', "owner_decision_binding is missing required field '{$bField}'.");
+            }
+        }
+
         // Once a real decision is recorded, the binding must be populated and must
-        // match the packet's own technical_evidence exactly — this is the
-        // structural half of staleness detection (the live half — comparing
-        // against the ACTUAL current branch HEAD/CI state rather than just
-        // internal self-consistency — is scripts/ci/check-evidence-freshness.sh,
-        // Task 9 Step 3b, since that requires `git`/`gh`, not just this file).
+        // match the packet's own technical_evidence.implementation_tree_digest
+        // exactly — this is the structural half of staleness detection. Because
+        // the digest is a git-tree hash that structurally excludes only this
+        // exact Gate 3 record file (never the whole work-ID directory), a
+        // commit that touches ONLY this file leaves the digest unchanged, while
+        // a commit touching anything else (Gate 1/Gate 2 records, schemas,
+        // scripts, CI config, ...) changes it and correctly invalidates
+        // readiness. The live half — recomputing this digest against the
+        // ACTUAL current git tree rather than just internal self-consistency —
+        // is scripts/ci/check-evidence-freshness.sh, since that requires `git`,
+        // not just this file.
         if ($ownerDecisionValue !== 'none') {
             $binding = $fm['owner_decision_binding'] ?? [];
-            $evidence = $fm['technical_evidence'] ?? [];
 
-            if (empty($binding['evidence_head_sha']) || empty($binding['evidence_digest'])) {
+            if (empty($binding['implementation_tree_digest']) || empty($binding['decision_recorded_at'])) {
                 $violations[] = new OwnerGovernanceLintViolation(
                     $filePath,
                     'evidence-binding-required-once-decided',
-                    "owner_decision.value is '{$ownerDecisionValue}' but owner_decision_binding is not populated — a recorded decision must bind to the evidence it was made against."
+                    "owner_decision.value is '{$ownerDecisionValue}' but owner_decision_binding is not populated — a recorded decision must bind to the implementation tree it was made against."
                 );
-            } else {
-                if (($binding['evidence_head_sha'] ?? null) !== ($evidence['head_sha'] ?? null)) {
-                    $violations[] = new OwnerGovernanceLintViolation(
-                        $filePath,
-                        'stale-decision-different-head-sha',
-                        "owner_decision_binding.evidence_head_sha ('{$binding['evidence_head_sha']}') does not match technical_evidence.head_sha ('{$evidence['head_sha']}') — the decision was recorded against a different commit than the packet now describes."
-                    );
-                }
-                if (($binding['evidence_digest'] ?? null) !== ($evidence['evidence_digest'] ?? null)) {
-                    $violations[] = new OwnerGovernanceLintViolation(
-                        $filePath,
-                        'stale-decision-digest-mismatch',
-                        "owner_decision_binding.evidence_digest does not match the current technical_evidence.evidence_digest — the technical evidence has changed since this decision was recorded. Per design: this packet's gate_status must return to 'preparing' or 'blocked_technical', not stay 'approved'/'awaiting_owner'. The lint reports this; it does not rewrite the file itself."
-                    );
-                }
+            } elseif (($binding['implementation_tree_digest'] ?? null) !== ($evidence['implementation_tree_digest'] ?? null)) {
+                $violations[] = new OwnerGovernanceLintViolation(
+                    $filePath,
+                    'stale-decision-tree-digest-mismatch',
+                    "owner_decision_binding.implementation_tree_digest does not match technical_evidence.implementation_tree_digest — the implementation has changed since this decision was recorded. Per design: this packet's gate_status must return to 'preparing' or 'blocked_technical', not stay 'approved'/'awaiting_owner'. The lint reports this; it does not rewrite the file itself."
+                );
             }
         }
     }
@@ -226,19 +239,42 @@ function owner_governance_validate_packet(string $filePath, string $content, arr
 }
 
 /**
- * Computes the evidence digest per packet-schema.yml's evidence_digest_algorithm:
- * sha256( head_sha + "\n" + sorted-joined check names + "\n" + sorted-joined conclusions ).
- * $checks is an array of ['name' => string, 'conclusion' => string] pairs, e.g. from
- * `gh pr checks <PR> --json name,state` — sorted by name here so the digest is
- * deterministic regardless of the order the caller supplies them in.
+ * Computes the implementation-tree digest per packet-schema.yml's
+ * implementation_tree_digest_algorithm: sha256 of the sorted list of
+ * "<blob_sha> <path>" lines for the complete git tree at $sha, excluding
+ * ONLY docs/owner-decisions/<workId>/03-release.md — never the whole
+ * work-ID directory. This is what makes the digest immune to the
+ * self-reference bug (a Gate-3-packet-only commit does not change it)
+ * while still changing on any real implementation or governance edit,
+ * including Gate 1/Gate 2 records, schemas, scripts, and CI config.
+ *
+ * Requires a real git checkout at $repoRoot containing $sha (works for any
+ * commit reachable in that repo's history, not just the current HEAD).
  */
-function owner_governance_compute_evidence_digest(string $headSha, array $checks): string
+function owner_governance_compute_implementation_tree_digest(string $sha, string $workId, string $repoRoot): string
 {
-    usort($checks, fn ($a, $b) => $a['name'] <=> $b['name']);
-    $names = implode(',', array_column($checks, 'name'));
-    $conclusions = implode(',', array_column($checks, 'conclusion'));
+    $excludePath = "docs/owner-decisions/{$workId}/03-release.md";
 
-    return hash('sha256', $headSha . "\n" . $names . "\n" . $conclusions);
+    $command = sprintf('git -C %s ls-tree -r %s 2>/dev/null', escapeshellarg($repoRoot), escapeshellarg($sha));
+    $output = shell_exec($command) ?? '';
+
+    $lines = [];
+    foreach (explode("\n", rtrim($output, "\n")) as $rawLine) {
+        if ($rawLine === '') {
+            continue;
+        }
+        [$meta, $path] = explode("\t", $rawLine, 2);
+        $metaParts = preg_split('/\s+/', $meta);
+        $type = $metaParts[1] ?? null;
+        $blobSha = $metaParts[2] ?? null;
+        if ($type !== 'blob' || $path === $excludePath) {
+            continue;
+        }
+        $lines[] = "{$blobSha} {$path}";
+    }
+    sort($lines);
+
+    return hash('sha256', implode("\n", $lines));
 }
 
 // --- CLI entrypoint ---

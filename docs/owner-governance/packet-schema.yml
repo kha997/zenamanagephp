@@ -69,20 +69,32 @@ gate_3_only_fields:
 
 placeholder_tokens: ["TODO", "TBD", "TBA", "???"]
 
-# --- Evidence-binding contract (Correction 2) ---
-# Binds a Gate 3 owner_decision to the EXACT commit and evidence state it was
-# made against, so a later code change automatically invalidates the decision
-# at evaluation time — no notification event, webhook, or bot required. The
-# lint (Task 5) recomputes and compares these fields on every run; staleness
-# is a pure function of repo state, never something that needs to be pushed
-# to the packet from outside.
-evidence_digest_algorithm: "sha256"
-# evidence_digest is computed as:
-#   sha256( head_sha + "\n" + sorted-and-joined(required_check_names) + "\n"
-#           + sorted-and-joined(required_check_conclusions) )
-# where required_check_names/conclusions come from `gh pr checks <PR> --json name,state`
-# (or an equivalent local recomputation script — see Task 9 Step 3b), sorted
-# lexicographically by name before joining, so digest order is deterministic
-# regardless of the order GitHub returns checks in.
-required_technical_evidence_fields: [head_sha, evidence_digest, verified_at]
-required_owner_decision_binding_fields: [evidence_head_sha, evidence_digest]
+# --- Evidence-binding contract (Correction 2, revised 2026-08-05) ---
+# Binds a Gate 3 owner_decision to the EXACT implementation content it was
+# made against, so a later code/governance change automatically invalidates
+# the decision at evaluation time — no notification event, webhook, or bot
+# required, and (unlike the original CI-check-based design this replaces)
+# no self-reference: presenting a fresh Gate 3 packet is itself a commit,
+# and that commit must never invalidate its own evidence.
+#
+# technical_evidence.implementation_tree_digest is computed as:
+#   sha256( sorted lines of "<blob_sha> <path>" for every blob in the
+#           complete git tree at technical_evidence.subject_sha,
+#           EXCLUDING ONLY docs/owner-decisions/<work_id>/03-release.md —
+#           never the whole work-ID directory, so Gate 1/Gate 2 records,
+#           schemas, scripts, CI config, and every other file still count. )
+#
+# Because the digest structurally excludes only the exact Gate 3 record
+# file, a commit that touches ONLY that file (presenting/refreshing a
+# packet) leaves the digest unchanged; a commit touching anything else
+# changes it. This is what makes "the current PR head may differ from
+# subject_sha only when every intervening commit changes exclusively the
+# exact Gate 3 record" a direct, checkable CONSEQUENCE of digest equality,
+# not a separate mechanism.
+#
+# technical_evidence.verified_pr_head_sha records which PR head's live CI
+# was actually inspected (a live, gh-dependent fact, separate from the
+# structural tree digest) — see scripts/ci/check-evidence-freshness.sh.
+implementation_tree_digest_algorithm: "sha256"
+required_technical_evidence_fields: [subject_sha, implementation_tree_digest, verified_pr_head_sha, verified_at]
+required_owner_decision_binding_fields: [implementation_tree_digest, decision_recorded_at]

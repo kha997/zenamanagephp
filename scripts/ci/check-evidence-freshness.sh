@@ -136,15 +136,43 @@ fi
 # actively CLAIMING to be ready for a decision, which is the only moment a
 # not-yet-green CI state is actually a governance violation worth failing
 # the build over.
+#
+# Self-reference: THIS STEP runs inside the "Owner Governance Lint" job,
+# which is itself one of the checks `gh pr checks` reports on the same PR
+# head. It cannot know its own final bucket before it finishes, so it is
+# excluded by name from the count below — its own outcome is already
+# enforced by the surrounding CI system (if this job later fails, the run
+# fails regardless of what this step decided). What remains genuinely
+# uncertain is OTHER jobs triggered by the same push (e.g.
+# test-routes-guardrails) that may still be mid-run at this exact instant.
+# Rather than hard-failing on a snapshot that is structurally still
+# settling (caught on PR #239's real CI: this step failed on its own
+# introducing commit purely from timing, with both concurrent jobs still
+# pending), poll with a bounded wait for the remaining checks to reach a
+# final state before judging them.
 if [ "$gate_status" = "awaiting_owner" ]; then
-  checks_json="$(gh pr checks "$PR_NUMBER" --json name,state,bucket)"
-  non_pass_count="$(printf '%s' "$checks_json" | php -r '
+  self_check_name="Owner Governance Lint"
+  poll_attempts=20   # 20 * 15s = 5 minutes max wait
+  poll_interval=15
+  non_pass_count=""
+
+  for _ in $(seq 1 "$poll_attempts"); do
+    checks_json="$(gh pr checks "$PR_NUMBER" --json name,state,bucket)"
+    non_pass_count="$(printf '%s' "$checks_json" | php -r '
 require $argv[1] . "/../ssot/owner_governance_lint.php";
-echo owner_governance_count_blocking_checks(json_decode(stream_get_contents(STDIN), true));
-' "$SCRIPT_DIR")"
+$checks = json_decode(stream_get_contents(STDIN), true);
+$checks = array_values(array_filter($checks, fn($c) => ($c["name"] ?? "") !== $argv[2]));
+echo owner_governance_count_blocking_checks($checks);
+' "$SCRIPT_DIR" "$self_check_name")"
+
+    if [ "$non_pass_count" = "0" ]; then
+      break
+    fi
+    sleep "$poll_interval"
+  done
 
   if [ "$non_pass_count" != "0" ]; then
-    echo "::error::gate_status is 'awaiting_owner' but $non_pass_count check(s) on PR #$PR_NUMBER's current head are not green (pending or failed) — technical_readiness cannot be 'ready' yet."
+    echo "::error::gate_status is 'awaiting_owner' but $non_pass_count other check(s) on PR #$PR_NUMBER's current head are not green (pending or failed) after waiting up to $((poll_attempts * poll_interval))s — technical_readiness cannot be 'ready' yet."
     echo "gate_status must not reach 'awaiting_owner' until every mandatory check on the current head is green."
     exit 1
   fi

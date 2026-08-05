@@ -299,6 +299,46 @@ class EvidenceBindingTest extends TestCase
         $this->assertNotContains('stale-decision-tree-digest-mismatch', $rules);
     }
 
+    // --- Regression: recording OWN-2026-001's own real 'deferred' decision
+    // found that the binding-required check originally fired on ANY
+    // non-'none' owner_decision.value, including 'deferred' -- which grants
+    // no release and therefore has nothing to bind against an exact tree
+    // state. Requiring a binding there would force fabricating one. Scoped
+    // to 'approved' only. ---
+
+    public function test_deferred_packet_with_no_binding_populated_passes_validation(): void
+    {
+        $schema = Yaml::parseFile(dirname(__DIR__, 3) . '/docs/owner-governance/packet-schema.yml');
+        $content = $this->buildGate3Fixture(
+            gateStatus: 'deferred',
+            ownerDecisionValue: 'deferred',
+            evidenceDigest: str_repeat('d', 64),
+            bindingDigest: null,
+        );
+
+        $violations = \owner_governance_validate_packet('test.md', $content, $schema);
+        $rules = array_map(fn ($v) => $v->rule, $violations);
+
+        $this->assertNotContains('evidence-binding-required-once-decided', $rules, 'A deferred decision must not be forced to fabricate an owner_decision_binding.');
+        $this->assertCount(0, $violations, 'A deferred packet with an unpopulated binding and proper provenance must pass validation with zero violations: ' . json_encode(array_map(fn ($v) => $v->message, $violations)));
+    }
+
+    public function test_approved_packet_with_no_binding_populated_still_fails_validation(): void
+    {
+        $schema = Yaml::parseFile(dirname(__DIR__, 3) . '/docs/owner-governance/packet-schema.yml');
+        $content = $this->buildGate3Fixture(
+            gateStatus: 'approved',
+            ownerDecisionValue: 'approved',
+            evidenceDigest: str_repeat('e', 64),
+            bindingDigest: null,
+        );
+
+        $violations = \owner_governance_validate_packet('test.md', $content, $schema);
+        $rules = array_map(fn ($v) => $v->rule, $violations);
+
+        $this->assertContains('evidence-binding-required-once-decided', $rules, 'Narrowing the binding requirement to approved-only must not accidentally stop enforcing it FOR approved decisions.');
+    }
+
     // --- Required test 9: the linter cannot pass the real c4250146 vs f775d286 mismatch under the OLD contract ---
     // Regression proof, using this repository's own real history: the ONLY
     // difference between commit f775d286 (before the OWN-2026-001 packet

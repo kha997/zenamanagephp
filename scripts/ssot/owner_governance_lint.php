@@ -180,8 +180,8 @@ function owner_governance_validate_packet(string $filePath, string $content, arr
             }
         }
 
-        // Once a real decision is recorded, the binding must be populated and must
-        // match the packet's own technical_evidence.implementation_tree_digest
+        // Once a decision APPROVES release, the binding must be populated and
+        // must match the packet's own technical_evidence.implementation_tree_digest
         // exactly — this is the structural half of staleness detection. Because
         // the digest is a git-tree hash that structurally excludes only this
         // exact Gate 3 record file (never the whole work-ID directory), a
@@ -192,7 +192,16 @@ function owner_governance_validate_packet(string $filePath, string $content, arr
         // ACTUAL current git tree rather than just internal self-consistency —
         // is scripts/ci/check-evidence-freshness.sh, since that requires `git`,
         // not just this file.
-        if ($ownerDecisionValue !== 'none') {
+        //
+        // Scoped to 'approved' specifically, NOT "!== 'none'": a binding
+        // exists to detect staleness of a decision that GRANTS release
+        // against an exact tree state. 'deferred' and 'correction_requested'
+        // grant nothing -- there is no approval to go stale, so requiring a
+        // binding for them forces fabricating one, which is worse than
+        // requiring none. Caught recording OWN-2026-001's own real 'deferred'
+        // decision: the original `!== 'none'` condition demanded a binding
+        // digest for a decision that explicitly does not approve anything.
+        if ($ownerDecisionValue === 'approved') {
             $binding = $fm['owner_decision_binding'] ?? [];
 
             if (empty($binding['implementation_tree_digest']) || empty($binding['decision_recorded_at'])) {

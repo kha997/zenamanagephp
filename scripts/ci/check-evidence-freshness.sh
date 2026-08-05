@@ -48,11 +48,27 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-gate3_file="$(ls docs/owner-decisions/"$WORK_ID"/03-release*.md 2>/dev/null | sort | tail -n1 || true)"
-if [ -z "$gate3_file" ]; then
+# A plain `ls ... | sort | tail -n1` is WRONG here: "-" (0x2D) sorts before
+# "." (0x2E) in ASCII, so the string "03-release-v2.md" sorts BEFORE
+# "03-release.md" even though v2 is the newer/active packet — this
+# mis-selected GAP-031's superseded base packet over its active
+# 03-release-v2.md (caught by the final whole-branch review on PR #239).
+# Delegate to the same version-aware resolver the digest function itself
+# uses, so packet selection and digest exclusion can never diverge.
+candidates_json="$(ls docs/owner-decisions/"$WORK_ID"/03-release*.md 2>/dev/null | xargs -I{} basename {} | php -r '
+$lines = [];
+while (($l = fgets(STDIN)) !== false) { $lines[] = rtrim($l, "\n"); }
+echo json_encode($lines);
+' || true)"
+if [ "$candidates_json" = "[]" ] || [ -z "$candidates_json" ]; then
   echo "No Gate 3 packet for $WORK_ID — nothing to check for staleness."
   exit 0
 fi
+active_basename="$(printf '%s' "$candidates_json" | php -r '
+require $argv[1] . "/../ssot/owner_governance_lint.php";
+echo owner_governance_pick_active_gate3_basename(json_decode(stream_get_contents(STDIN), true));
+' "$SCRIPT_DIR")"
+gate3_file="docs/owner-decisions/$WORK_ID/$active_basename"
 
 owner_decision_value="$(php -r '
 require $argv[2] . "/../../vendor/autoload.php";

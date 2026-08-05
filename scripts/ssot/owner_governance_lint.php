@@ -239,14 +239,57 @@ function owner_governance_validate_packet(string $filePath, string $content, arr
 }
 
 /**
+ * Given basenames of Gate 3 release packets found for one work_id (e.g.
+ * ["03-release.md", "03-release-v2.md"]), returns the basename of the
+ * ACTIVE (highest-versioned) one. "03-release.md" is version 1;
+ * "03-release-vN.md" is version N. A plain lexicographic sort is wrong
+ * here: "-" (0x2D) sorts before "." (0x2E) in ASCII, so the string
+ * "03-release-v2.md" sorts BEFORE "03-release.md" even though v2 is the
+ * newer packet — caught by the final whole-branch review on PR #239,
+ * which found `ls ... | sort | tail -n1`-style selection already
+ * mis-picking GAP-031's superseded base packet over its active
+ * 03-release-v2.md. Version compare (not string compare) is required.
+ *
+ * @param array<int, string> $basenames
+ */
+function owner_governance_pick_active_gate3_basename(array $basenames): string
+{
+    $best = null;
+    $bestVersion = -1;
+    foreach ($basenames as $basename) {
+        if ($basename === '03-release.md') {
+            $version = 1;
+        } elseif (preg_match('/^03-release-v(\d+)\.md$/', $basename, $m) === 1) {
+            $version = (int) $m[1];
+        } else {
+            continue;
+        }
+        if ($version > $bestVersion) {
+            $bestVersion = $version;
+            $best = $basename;
+        }
+    }
+    if ($best === null) {
+        throw new \InvalidArgumentException('owner_governance_pick_active_gate3_basename: no recognized 03-release*.md basename found among: ' . implode(', ', $basenames));
+    }
+    return $best;
+}
+
+/**
  * Computes the implementation-tree digest per packet-schema.yml's
  * implementation_tree_digest_algorithm: sha256 of the sorted list of
  * "<blob_sha> <path>" lines for the complete git tree at $sha, excluding
- * ONLY docs/owner-decisions/<workId>/03-release.md — never the whole
- * work-ID directory. This is what makes the digest immune to the
- * self-reference bug (a Gate-3-packet-only commit does not change it)
- * while still changing on any real implementation or governance edit,
- * including Gate 1/Gate 2 records, schemas, scripts, and CI config.
+ * ONLY the ACTIVE docs/owner-decisions/<workId>/03-release*.md packet
+ * (resolved via owner_governance_pick_active_gate3_basename against
+ * whatever release packet basenames exist in the tree at $sha) — never the
+ * whole work-ID directory, and never a superseded/older packet, which
+ * would otherwise leave the currently-active packet counted in the digest
+ * and reintroduce the original self-reference bug for exactly the
+ * supersession pattern GAP-031 demonstrates. This is what makes the
+ * digest immune to the self-reference bug (a Gate-3-packet-only commit
+ * does not change it) while still changing on any real implementation or
+ * governance edit, including Gate 1/Gate 2 records, schemas, scripts, and
+ * CI config.
  *
  * Requires a real git checkout at $repoRoot containing $sha (works for any
  * commit reachable in that repo's history, not just the current HEAD).
@@ -269,12 +312,12 @@ function owner_governance_compute_implementation_tree_digest(string $sha, string
         throw new \RuntimeException("owner_governance_compute_implementation_tree_digest: commit '{$sha}' does not exist in the checkout at '{$repoRoot}' — cannot compute a trustworthy digest. This usually means the checkout fetched a different ref (e.g. a merge commit) than the SHA being verified.");
     }
 
-    $excludePath = "docs/owner-decisions/{$workId}/03-release.md";
+    $workDir = "docs/owner-decisions/{$workId}/";
 
     $command = sprintf('git -C %s ls-tree -r %s 2>/dev/null', escapeshellarg($repoRoot), escapeshellarg($sha));
     $output = shell_exec($command) ?? '';
 
-    $lines = [];
+    $entries = [];
     foreach (explode("\n", rtrim($output, "\n")) as $rawLine) {
         if ($rawLine === '') {
             continue;
@@ -283,10 +326,33 @@ function owner_governance_compute_implementation_tree_digest(string $sha, string
         $metaParts = preg_split('/\s+/', $meta);
         $type = $metaParts[1] ?? null;
         $blobSha = $metaParts[2] ?? null;
-        if ($type !== 'blob' || $path === $excludePath) {
+        if ($type !== 'blob') {
             continue;
         }
-        $lines[] = "{$blobSha} {$path}";
+        $entries[] = ['path' => $path, 'blobSha' => $blobSha];
+    }
+
+    // Resolve the ACTIVE Gate 3 packet path from what actually exists in
+    // this tree (not the working directory, so historical shas resolve
+    // correctly too) so the exclusion always targets whichever packet is
+    // currently claiming readiness, not a superseded one.
+    $excludePath = null;
+    $candidateBasenames = [];
+    foreach ($entries as $entry) {
+        if (str_starts_with($entry['path'], $workDir) && preg_match('#^03-release(-v\d+)?\.md$#', basename($entry['path'])) === 1) {
+            $candidateBasenames[] = basename($entry['path']);
+        }
+    }
+    if ($candidateBasenames !== []) {
+        $excludePath = $workDir . owner_governance_pick_active_gate3_basename($candidateBasenames);
+    }
+
+    $lines = [];
+    foreach ($entries as $entry) {
+        if ($entry['path'] === $excludePath) {
+            continue;
+        }
+        $lines[] = "{$entry['blobSha']} {$entry['path']}";
     }
 
     if ($lines === []) {

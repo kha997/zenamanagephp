@@ -85,6 +85,61 @@ class EvidenceBindingTest extends TestCase
         }
     }
 
+    // --- Regression: the final whole-branch review on PR #239 found that
+    // GAP-031's supersession pattern (03-release.md superseded by
+    // 03-release-v2.md) was mis-handled two ways: (a) naive
+    // `ls | sort | tail -n1`-style selection picked the superseded
+    // 03-release.md over the active 03-release-v2.md, because "-" sorts
+    // before "." in ASCII; (b) the digest exclusion was hardcoded to
+    // "03-release.md" only, so a commit touching only the ACTIVE
+    // 03-release-v2.md packet was not excluded and changed the digest —
+    // reintroducing the original self-reference bug for the supersession
+    // case. Both are fixed via owner_governance_pick_active_gate3_basename(),
+    // used consistently by both the digest function and the freshness
+    // script's packet selection. ---
+
+    public function test_pick_active_gate3_basename_prefers_versioned_over_plain_despite_lexicographic_order(): void
+    {
+        // "03-release-v2.md" < "03-release.md" under a plain string sort,
+        // but v2 is the newer/active packet and must win.
+        $this->assertSame(
+            '03-release-v2.md',
+            \owner_governance_pick_active_gate3_basename(['03-release.md', '03-release-v2.md'])
+        );
+    }
+
+    public function test_pick_active_gate3_basename_picks_highest_version_among_several(): void
+    {
+        $this->assertSame(
+            '03-release-v10.md',
+            \owner_governance_pick_active_gate3_basename(['03-release.md', '03-release-v2.md', '03-release-v10.md', '03-release-v9.md'])
+        );
+    }
+
+    public function test_pick_active_gate3_basename_falls_back_to_plain_when_it_is_the_only_candidate(): void
+    {
+        $this->assertSame('03-release.md', \owner_governance_pick_active_gate3_basename(['03-release.md']));
+    }
+
+    public function test_digest_excludes_the_active_versioned_packet_not_the_superseded_one(): void
+    {
+        $repo = $this->makeTempRepo();
+        $this->commitFile($repo, 'app/Foo.php', "<?php // v1\n", 'seed implementation');
+        $this->commitFile($repo, 'docs/owner-decisions/GAP-031/03-release.md', "superseded v1 packet\n", 'superseded packet');
+        $shaWithV2 = $this->commitFile($repo, 'docs/owner-decisions/GAP-031/03-release-v2.md', "active v2 packet\n", 'active v2 packet');
+        $digestBeforeV2Edit = \owner_governance_compute_implementation_tree_digest($shaWithV2, 'GAP-031', $repo);
+
+        // Editing ONLY the active v2 packet must not change the digest.
+        $shaAfterV2Edit = $this->commitFile($repo, 'docs/owner-decisions/GAP-031/03-release-v2.md', "active v2 packet — refreshed narrative\n", 'v2 packet-only edit');
+        $digestAfterV2Edit = \owner_governance_compute_implementation_tree_digest($shaAfterV2Edit, 'GAP-031', $repo);
+        $this->assertSame($digestBeforeV2Edit, $digestAfterV2Edit, 'A commit touching only the ACTIVE (v2) Gate 3 packet must not change the digest.');
+
+        // Editing the SUPERSEDED v1 packet is a real content change and must change the digest.
+        $shaAfterV1Edit = $this->commitFile($repo, 'docs/owner-decisions/GAP-031/03-release.md', "superseded v1 packet — edited\n", 'edit superseded v1 packet');
+        $digestAfterV1Edit = \owner_governance_compute_implementation_tree_digest($shaAfterV1Edit, 'GAP-031', $repo);
+        $this->assertNotSame($digestAfterV2Edit, $digestAfterV1Edit, 'Editing the SUPERSEDED packet is a real content change and must change the digest — only the active packet is excluded.');
+    }
+
     // --- Defensive hardening: a missing commit object must be a hard error,
     // never a silently-empty (and silently wrong) digest. Caught on this
     // function's own real CI run on PR #239: actions/checkout's default

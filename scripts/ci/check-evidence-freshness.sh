@@ -121,7 +121,18 @@ if [ "$gate_status" = "awaiting_owner" ] || [ "$gate_status" = "approved" ]; the
   fi
 fi
 
-if [ "$owner_decision_value" != "none" ]; then
+# Scoped to owner_decision_value == 'approved' specifically, NOT
+# "!= 'none'" -- a binding exists to detect staleness of a decision that
+# GRANTS release against an exact tree state. 'deferred' grants nothing,
+# so owner_decision_binding is intentionally left unpopulated (empty
+# string) for it -- comparing an intentionally-empty binding against the
+# current digest always "fails" as a false staleness error. Caught on
+# this script's own real CI run recording OWN-2026-001's own 'deferred'
+# decision: the digest comparison fired and reported the record as STALE
+# even though nothing was ever approved. Matches the identical fix already
+# applied to owner_governance_lint.php's evidence-binding-required-once-decided
+# rule (scoped to 'approved' there for the same reason).
+if [ "$owner_decision_value" = "approved" ]; then
   recorded_binding_digest="$(php -r '
 require $argv[2] . "/../../vendor/autoload.php";
 $fm = Symfony\Component\Yaml\Yaml::parse(preg_replace("/^---\n(.*?)\n---\n.*$/s", "$1", file_get_contents($argv[1])));

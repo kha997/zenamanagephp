@@ -3,7 +3,7 @@
 # and for every packet template (docs/owner-governance/templates/*.md).
 # Do not duplicate these enums inline elsewhere — read this file.
 
-work_id_pattern: '^(GAP-[0-9]{3}|ZMC-[0-9]{3,}|WP-[0-9]{3,}|OWN-[0-9]{4}-[0-9]{3})$'
+work_id_pattern: '^(GAP-[0-9]{3}[a-z]?|ZMC-[0-9]{3,}|WP-[0-9]{3,}|OWN-[0-9]{4}-[0-9]{3})$'
 
 gates:
   1:

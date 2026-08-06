@@ -1,14 +1,14 @@
 ---
 work_id: OWN-2026-003
 gate: 3
-gate_status: preparing
+gate_status: awaiting_owner
 technical_readiness:
-  value: not_checked
+  value: ready
   generated_by: engineering_evidence
 owner_decision:
   value: none
   authority: human_owner
-decision_requested: null
+decision_requested: "approve_or_correction_or_defer"
 references:
   spec: null
   plan: null
@@ -25,15 +25,15 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-06T13:30:49+07:00"
-  updated_at: "2026-08-06T14:26:57+07:00"
+  updated_at: "2026-08-06T14:30:07+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "OWN-2026-003 reconciles OPERATIONAL_GAP_REGISTER.md with OWN-2026-002's verified Wave 1 findings, exactly per the owner-approved Gate 2 design plus the mandatory status-glossary condition. Implementation head 85dc1a1dac6a8fac1c525c28fa7586c4dbcfc22d contains the register edit. Verified: structural lint on all 3 governance packets (0 violations), git diff --check clean, real CI on the implementation head (Owner Governance Lint success, test-routes-guardrails success, 0 failed/cancelled/pending), and a fresh independent review of the ACTUAL register diff (0 Critical, 0 Important, 1 Minor accepted as non-blocking) confirming every approved row was faithfully implemented, original audit history preserved, GAP-010c never overstated as confirmed in any occurrence, and zero non-documentation files touched. This packet-only Gate 3 commit does not itself change the implementation-tree digest (the digest excludes only the active Gate 3 packet file for this work_id)."
+mandatory_technical_gate_summary: "OWN-2026-003 reconciles OPERATIONAL_GAP_REGISTER.md with OWN-2026-002's verified Wave 1 findings, exactly per the owner-approved Gate 2 design plus the mandatory status-glossary condition. This evidence spans two distinct, separately-verified scopes: (a) implementation head 85dc1a1dac6a8fac1c525c28fa7586c4dbcfc22d contains ONLY the register edit (03-release.md did not exist on that head); it passed its own implementation-head checks — real CI (Owner Governance Lint success, test-routes-guardrails success, 0 failed/cancelled/pending) and a fresh independent review of the ACTUAL register diff (0 Critical, 0 Important, 1 Minor accepted as non-blocking) confirming every approved row was faithfully implemented, original audit history preserved, and GAP-010c never overstated as confirmed in any occurrence; (b) the Gate 3 preparing and re-presentation commits on this branch contain ONLY packet changes to 03-release.md itself (chronology correction), and separately passed structural lint on all 3 governance packets (0 violations), git diff --check clean, and their own triggered CI (Owner Governance Lint success, test-routes-guardrails success, 0 failed/cancelled/pending). The implementation-tree digest was independently recomputed after the packet-only chronology-correction commit and confirmed unchanged (the digest excludes only the active Gate 3 packet file for this work_id, by construction). Zero non-documentation files were touched at any point in this correction."
 technical_evidence:
-  subject_sha: null
-  implementation_tree_digest: "not_computed_while_preparing"
-  verified_pr_head_sha: null
-  verified_at: null
+  subject_sha: "85dc1a1dac6a8fac1c525c28fa7586c4dbcfc22d"
+  implementation_tree_digest: "17739698b295b885628efda931af12ba9c2793b612907275053d0c9dd204fe33"
+  verified_pr_head_sha: "85dc1a1dac6a8fac1c525c28fa7586c4dbcfc22d"
+  verified_at: "2026-08-06T14:29:36+07:00"
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null

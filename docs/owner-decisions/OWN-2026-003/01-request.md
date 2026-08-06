@@ -1,30 +1,36 @@
 ---
 work_id: OWN-2026-003
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_more_info_or_decline_or_defer"
+decision_requested: null
 references:
   spec: null
   plan: null
   branch: docs/OWN-2026-003-wave1-register-reconciliation
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/241
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
-  reconciliation_required: false
+  recorded_at: "2026-08-06T13:02:26+07:00"
+  owner_response_reference: "ChatGPT project conversation — explicit Owner Gate 1 approval for OWN-2026-003 on 2026-08-06"
+  reconciliation_required: true
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-06T12:34:08+07:00"
-  updated_at: "2026-08-06T12:34:08+07:00"
+  updated_at: "2026-08-06T13:02:26+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+The owner approves preparation of the detailed business design for reconciling the operational-gap register.
+
+This approval does not authorize editing the register or implementing any gap.
 
 ## Owner Summary
 Sổ đăng ký gap vận hành (`OPERATIONAL_GAP_REGISTER.md`) hiện có 10 mục ghi trạng thái "UNVERIFIED" (chưa ai xác nhận lại) từ nhiều tháng trước. Chương trình OWN-2026-002 (đã được owner duyệt cấu trúc) đã xác minh lại toàn bộ 10 mục này bằng cách đọc trực tiếp mã nguồn hiện tại trên `main`. Việc này đề nghị cập nhật sổ đăng ký cho đúng với kết quả xác minh thật — **chỉ là tài liệu, không đổi mã nguồn, không đổi hành vi hệ thống.**
@@ -59,7 +65,7 @@ Hoàn tác bằng cách revert lại đúng commit sửa tài liệu — không 
 Đội kỹ thuật đề xuất: phê duyệt để tiến hành thiết kế chi tiết (Gate 2) cho việc cập nhật sổ đăng ký. Hoàn thành việc này giúp sổ đăng ký đáng tin cậy trước khi bắt đầu GAP-010b.
 
 ## Decision Needed
-Owner chọn một trong bốn: **Phê duyệt để tiến hành thiết kế (Gate 2)** / **Yêu cầu thêm thông tin** / **Từ chối** / **Hoãn**.
+Owner đã chọn: **Phê duyệt để tiến hành thiết kế (Gate 2).**
 
 ## What the owner is NOT being asked to decide
 Owner không được yêu cầu phê duyệt bất kỳ thay đổi mã nguồn, cấu trúc dữ liệu, route, hay quyền hạn nào — chỉ xác nhận việc cập nhật lại đúng trạng thái trong sổ đăng ký gap vận hành là cần thiết và cho phép tiến hành thiết kế chi tiết.

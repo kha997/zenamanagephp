@@ -1,14 +1,14 @@
 ---
 work_id: OWN-2026-004
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: null
   plan: null
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
-  reconciliation_required: false
+  recorded_at: "2026-08-06T22:18:01+07:00"
+  owner_response_reference: "ChatGPT project conversation — explicit Owner Gate 3 release approval for OWN-2026-004 on 2026-08-06"
+  reconciliation_required: true
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-06T17:13:48+07:00"
-  updated_at: "2026-08-06T21:26:13+07:00"
+  updated_at: "2026-08-06T22:18:01+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "This is the THIRD and final correction round for OWN-2026-004. Round 1 fixed the schema and CI extraction to accept canonical GAP sub-identifiers (GAP-010b, GAP-014c). Round 2 fixed a partial-prefix extraction bug (invalid tokens like GAP-010bb were substring-matched into the valid-looking GAP-010b). Round 3 (this presentation) fixed an authoritative-resolution bug: the Round-2 extractor correctly rejected invalid tokens, but it still scanned the WHOLE PR body and returned the first valid-looking token found ANYWHERE — including inside narrative/disclaimer text. On PR #242's own body, this caused the extractor to resolve 'GAP-010b' (from the line 'GAP-010b implementation authorized: NO') instead of the PR's actual Work ID 'OWN-2026-004'. Consequence, confirmed in the real (now-superseded) workflow run 31107599102: Evidence Freshness printed 'No Gate 3 packet for GAP-010b — nothing to check for staleness.' and exited successfully — OWN-2026-004's own Gate 3 evidence was never checked. The corrected contract, implemented on head 49451731c8dcd04baf8511b6242b0c41749e0054: the canonical schema (docs/owner-governance/packet-schema.yml, unchanged) defines which Work-ID forms are accepted; one shared script (scripts/ci/extract-work-id.sh) is the sole authority for resolving WHICH Work ID a given PR body declares; both CI consumers (scripts/ci/check-gate3-before-ready.sh, .github/workflows/owner-governance-lint.yml) delegate to it identically and now fail closed (no `|| true`, no silent 'skipping' message) on any resolution failure instead of proceeding as if nothing needed checking. The authoritative field is the PR body's first non-empty line, required to be exactly 'Work ID: <candidate>'; incidental mentions of other Work IDs anywhere later in the body are ignored and never selected as a fallback; a missing declaration, a declaration not on the first non-empty line, more than one declaration anywhere in the body, an empty candidate, a candidate that fails the canonical pattern, or a candidate followed by extra characters (e.g. 'OWN-2026-004-extra') all fail closed — nonzero exit, no output, never a silent empty success. Corrected real workflow run 31110247676 (and reconfirmed on the packet-only preparing commit, run 31110576079) now logs: '✅ docs/owner-decisions/OWN-2026-004/03-release.md's implementation-tree digest matches the current implementation tree (4c1bcd4a4e20497f4a70e1df2ac46c6949cfb37a25cd6535e83ce13472eff599) — evidence is fresh, decision is not stale.' — Evidence Freshness now genuinely validates OWN-2026-004, not GAP-010b. Verified: written-first tests confirmed red (19 failures reproducing the exact defect, including a test built from the literal reproduced PR #242 defect body) against the unmodified resolver, then green after the fix; focused suite (OwnerGovernanceSchemaFixtureTest, EnforcementBoundaryTest, GapSubIdentifierWorkIdTest) 46/46 pass; full governance suite (tests/Unit/OwnerGovernance) 119/119 pass; owner_governance_lint.php (no args and --enforce-gate-ordering) both PASS with 0 violations; bash -n on both scripts OK; git diff --check clean; real CI on the implementation head (Owner Governance Lint success, test-routes-guardrails success, 0 failed); a fresh independent review (no prior context) found 0 Critical, 0 Important, 0 Minor findings across all three correction rounds, confirming the resolver's declaration-counting and first-line logic are correct by design (including the conservative 'multiple declarations anywhere, even in quoted text, fails closed' behavior), the reproduced PR #242 defect body is genuinely fixed (not just a synthetic analog), both CI callers genuinely fail closed without a blast-radius regression (the workflow is path-scoped to governance-relevant PRs only), scripts/ssot/owner_governance_lint.php and docs/owner-governance/packet-schema.yml remained unmodified, and no file outside the declared allowed scope was touched. The previous digest af64503cb4f092b2996471ecf5b04f7671aaf68677fe1d9089d965ab398594cd (bound to the now-superseded first-valid-token-anywhere resolver) is superseded by 4c1bcd4a4e20497f4a70e1df2ac46c6949cfb37a25cd6535e83ce13472eff599, independently recomputed and confirmed unchanged across the packet-only preparing commit. The GAP-010b draft (docs/owner-decisions/GAP-010b/01-request.md, hash 693bcf7a3706734d37a2a1a1cf8d38cca019e08a443480702bd4a86187a524fc) remains unchanged, still uncommitted in its own worktree, and is not part of this correction."
@@ -35,8 +35,8 @@ technical_evidence:
   verified_pr_head_sha: "49451731c8dcd04baf8511b6242b0c41749e0054"
   verified_at: "2026-08-06T21:26:13+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "4c1bcd4a4e20497f4a70e1df2ac46c6949cfb37a25cd6535e83ce13472eff599"
+  decision_recorded_at: "2026-08-06T22:18:01+07:00"
 ---
 
 ## Owner Summary
@@ -76,3 +76,13 @@ Có, hoàn toàn — chỉ cần revert đúng PR sửa công cụ này.
 
 ## What the owner is NOT being asked to decide
 Owner không được yêu cầu phê duyệt việc sửa GAP-010b, GAP-014b, GAP-014c hay bất kỳ gap nào khác — chỉ quyết định có phát hành việc sửa công cụ quản trị này hay không. Owner cũng không được yêu cầu đọc mã nguồn hay log CI — mọi kết luận đã được đội kỹ thuật xác minh trực tiếp qua CI thật và review độc lập.
+
+## OWNER GATE 3: APPROVED
+
+The owner approves release of the Owner Control Layer Work-ID compatibility and authoritative-resolution correction.
+
+The approval is bound to implementation-tree digest:
+
+4c1bcd4a4e20497f4a70e1df2ac46c6949cfb37a25cd6535e83ce13472eff599
+
+This decision does not approve GAP-010b's business request or implementation.

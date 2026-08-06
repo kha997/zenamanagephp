@@ -1,14 +1,14 @@
 ---
 work_id: OWN-2026-004
 gate: 3
-gate_status: awaiting_owner
+gate_status: blocked_technical
 technical_readiness:
-  value: ready
+  value: blocked
   generated_by: engineering_evidence
 owner_decision:
   value: none
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: null
   plan: null
@@ -25,15 +25,15 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-06T17:13:48+07:00"
-  updated_at: "2026-08-06T17:16:50+07:00"
+  updated_at: "2026-08-06T20:31:18+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "OWN-2026-004 extends the Owner Control Layer's canonical work_id_pattern to GAP-[0-9]{3}[a-z]? so existing canonical gap sub-identifiers (GAP-010b, GAP-014c) can be governed without renaming them. Implementation head b772a2822363954f51c3b78f84faddbab7963e1d contains the schema change (docs/owner-governance/packet-schema.yml), both CI Work-ID extraction updates (scripts/ci/check-gate3-before-ready.sh, .github/workflows/owner-governance-lint.yml), and a new test file (tests/Unit/OwnerGovernance/GapSubIdentifierWorkIdTest.php). Verified: written-first tests confirmed red (7 failures) against the unmodified schema/scripts, then green after the fix; focused suite (OwnerGovernanceSchemaFixtureTest, EnforcementBoundaryTest, GapSubIdentifierWorkIdTest) 31/31 pass; full governance suite (tests/Unit/OwnerGovernance) 90/90 pass; owner_governance_lint.php (no args and --enforce-gate-ordering) both PASS with 0 violations; bash -n on check-gate3-before-ready.sh OK; direct grep -oE extraction of 'GAP-010b' returns the full string, not truncated to 'GAP-010'; GAP-010B/GAP-010bb/GAP-010-b/GAP-10/GAP-0010/GAP-0010b/GAP-010_/GAP-010\\/ all confirmed rejected; ZMC/WP/OWN forms confirmed unaffected; scripts/ssot/owner_governance_lint.php confirmed unmodified; real CI on the implementation head (all checks pass, including Owner Governance Lint, test-routes-guardrails, and the full test suite); a fresh independent review (no prior context) found 0 Critical and 0 Important findings, confirming the regex change is narrow (only the GAP alternative changed), all three GAP-pattern locations stayed in sync, no governance bypass was introduced, and no file outside the declared allowed scope was touched. This packet-only Gate 3 commit does not itself change the implementation-tree digest (the digest excludes only the active Gate 3 packet file for this work_id) — confirmed by direct recomputation before and after the preparing commit."
+mandatory_technical_gate_summary: "BLOCKED: a defect was found in the previously-presented implementation head (b772a2822363954f51c3b78f84faddbab7963e1d). The schema (docs/owner-governance/packet-schema.yml) correctly uses a full-string anchored pattern, but both CI Work-ID extraction paths (scripts/ci/check-gate3-before-ready.sh, .github/workflows/owner-governance-lint.yml) used an UNBOUNDED SUBSTRING pattern '(GAP-[0-9]{3}[a-z]?|OWN-[0-9]{4}-[0-9]{3})' with grep -oE, which matches a valid-looking prefix inside an invalid token rather than requiring the whole token to be valid. Reproduced: 'GAP-010bb' (invalid: double-letter suffix) extracts as 'GAP-010b' (a different, valid sub-identifier); 'GAP-0010' (invalid: 4-digit) extracts as 'GAP-001' (a different, valid parent ID); 'GAP-010-b' (invalid: hyphenated) extracts as 'GAP-010' (the valid parent ID). This means invalid Work IDs can be silently converted into different valid Work IDs during CI extraction, contradicting the design requirement that invalid forms remain rejected and that evidence attach to the exact canonical identity. The previous digest e940511826a6af709077d9027e7502060e7d9c93f65f9bbd4cf2d2d2dbba2fb0 is superseded pending the exact-token extraction fix. The GAP-010b draft (docs/owner-decisions/GAP-010b/01-request.md, hash 693bcf7a3706734d37a2a1a1cf8d38cca019e08a443480702bd4a86187a524fc) remains unchanged and is not part of this correction."
 technical_evidence:
-  subject_sha: "b772a2822363954f51c3b78f84faddbab7963e1d"
-  implementation_tree_digest: "e940511826a6af709077d9027e7502060e7d9c93f65f9bbd4cf2d2d2dbba2fb0"
-  verified_pr_head_sha: "b772a2822363954f51c3b78f84faddbab7963e1d"
-  verified_at: "2026-08-06T17:16:50+07:00"
+  subject_sha: null
+  implementation_tree_digest: "not_computed_while_blocked"
+  verified_pr_head_sha: null
+  verified_at: null
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null

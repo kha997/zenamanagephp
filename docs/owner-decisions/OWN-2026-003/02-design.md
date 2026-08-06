@@ -1,11 +1,11 @@
 ---
 work_id: OWN-2026-003
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_changes_or_decline"
+decision_requested: null
 references:
   spec: null
   plan: null
@@ -15,16 +15,24 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
-  reconciliation_required: false
+  recorded_at: "2026-08-06T13:21:43+07:00"
+  owner_response_reference: "ChatGPT project conversation — explicit Owner Gate 2 approval for OWN-2026-003 on 2026-08-06"
+  reconciliation_required: true
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-06T13:05:06+07:00"
-  updated_at: "2026-08-06T13:05:06+07:00"
+  updated_at: "2026-08-06T13:21:43+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 2: APPROVED
+
+The owner approves the exact register reconciliation described in this packet, including preservation of audit history and the distinction between confirmed issues and reproduction-pending candidates.
+
+Mandatory implementation condition: the register's status glossary must define `PARTIALLY RESOLVED (verified)` and `REOPENED FOR REPRODUCTION`.
+
+This approval does not authorize implementing any gap.
 
 ## Owner Summary
 Đây là thiết kế chi tiết (không phải triển khai) cho việc cập nhật lại sổ đăng ký gap vận hành (`OPERATIONAL_GAP_REGISTER.md`) cho đúng với kết quả xác minh Wave 1. **Sổ đăng ký chưa hề bị đụng vào** — tài liệu này chỉ trình bày chính xác nội dung sẽ được sửa, để owner xem qua và quyết định trước khi việc sửa thật sự diễn ra.

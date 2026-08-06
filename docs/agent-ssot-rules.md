@@ -42,3 +42,8 @@ These rules apply to **all agents** (Codex / Continue / humans) when producing r
 - Commands executed (exact) + short outputs.
 - File/line citations for key claims.
 - Clear “UNKNOWN” list (if any).
+
+## 9) Owner-facing content is a distinct artifact, not a technical report
+Khi tạo Owner Decision Packet (`docs/owner-decisions/<WORK-ID>/0X-*.md`), không trích `route:list`, số dòng migration, hay code controller làm **nội dung** packet — trích chúng trong Engineering Evidence Layer đã liên kết (`references.spec`/`references.plan`) thay vào đó. Packet phải đọc được bởi người không hiểu bất kỳ quy tắc nào từ 1 đến 8 ở trên.
+
+Mọi báo cáo agent (stop report) phải có đủ 5 phần: Owner Summary, Technical Evidence Appendix, Decision Needed, Residual Risk, và phần nêu rõ owner KHÔNG được yêu cầu quyết định điều gì. Trước khi đưa một phát hiện lên owner, áp dụng bài kiểm tra 4 câu hỏi ở `docs/owner-governance/OWNER_DECISION_RULES.md` — nếu cả 4 câu đều "không," đây là chi tiết triển khai, giải quyết kỹ thuật, không đưa lên owner.

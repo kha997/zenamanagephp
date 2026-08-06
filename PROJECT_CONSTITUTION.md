@@ -54,6 +54,18 @@ Nếu chưa đủ thông tin, không được tự coi giả định là sự th
 
 Quy tắc bằng chứng cụ thể (route:list, migration, controller/request là SSOT tương ứng) đã được đặc tả sẵn ở `docs/agent-ssot-rules.md` — áp dụng trực tiếp cho mọi claim kỹ thuật.
 
+## 3a. Owner Gates
+
+Mọi thay đổi tiến tới lập kế hoạch triển khai hoặc code phải đi qua đúng ba cổng quyết định của chủ doanh nghiệp (owner), theo `docs/owner-governance/OWNER_OPERATING_MODEL.md`:
+
+* **Gate 1 — Business Request Approval**: owner xác nhận vấn đề vận hành có thật, quan trọng, đúng phạm vi. Trước khi Gate 1 được duyệt, agent chỉ được nghiên cứu (đọc code, không viết plan, không viết code sản phẩm).
+* **Gate 2 — Business Design Approval**: owner duyệt workflow trước/sau, vai trò, quy tắc. Trước khi Gate 2 được duyệt, không được tạo `docs/superpowers/plans/*` cho work ID đó, không viết code sản phẩm.
+* **Gate 3 — Release Approval**: owner quyết định một thay đổi đã được kiểm chứng có được phát hành hay không. **Gate 3 không chặn việc triển khai, kiểm thử, review kỹ thuật, hay chuẩn bị demo** — các việc đó được phép ngay khi Gate 2 duyệt xong, không cần chờ Gate 3. Gate 3 chỉ chặn: merge (khi owner approval là điều kiện bắt buộc), deploy, thay đổi dữ liệu production, phát hành cho người dùng thật, và việc tuyên bố thay đổi "đã được owner duyệt."
+
+`technical_readiness` (bằng chứng kỹ thuật) và `owner_decision` (quyết định của owner) là hai trường độc lập — không agent nào được suy ra quyết định owner từ trạng thái kỹ thuật sẵn sàng, và owner không thể override một cổng kỹ thuật đỏ (toàn vẹn dữ liệu, tenant isolation, bảo mật, phân quyền, CI bắt buộc).
+
+SSOT cho cơ chế cổng: `docs/owner-governance/OWNER_OPERATING_MODEL.md`. Điều khoản §8 (Evidence Before Claims) và Phụ lục A của văn bản này **vẫn có hiệu lực đầy đủ, không đổi** — các cổng owner là một lớp quyết định bổ sung, không thay thế kỷ luật bằng chứng kỹ thuật hiện có.
+
 ## 4. Operational Gap Detection
 
 Khi phân tích workflow, chủ động tìm:
@@ -244,6 +256,7 @@ Một task chỉ được coi là hoàn thành khi:
 | Trình tự roadmap & backlog có ID | `docs/roadmap/canonical-roadmap.md`, `docs/roadmap/backlog.yaml` |
 | Gap vận hành đã phát hiện, chấm điểm, xếp ưu tiên | `OPERATIONAL_GAP_REGISTER.md` (nguồn thô: `docs/audits/*`) |
 | Route legacy đang gỡ bỏ | `legacy-map.json` |
+| Cổng quyết định owner và gói quyết định (packet) | `docs/owner-governance/OWNER_OPERATING_MODEL.md` |
 
 ## Deprecated Files
 

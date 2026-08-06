@@ -1,0 +1,79 @@
+name: Owner Governance Lint
+
+on:
+  pull_request:
+    paths:
+      - 'docs/owner-decisions/**'
+      - 'docs/owner-governance/**'
+      - 'docs/superpowers/plans/**'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
+      - 'PROJECT_CONSTITUTION.md'
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'docs/owner-decisions/**'
+      - 'docs/owner-governance/**'
+      - 'docs/superpowers/plans/**'
+
+jobs:
+  owner-governance-lint:
+    name: Owner Governance Lint
+    runs-on: ubuntu-latest
+    env:
+      COMPOSER_PROCESS_TIMEOUT: 0
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          # On a pull_request trigger, actions/checkout defaults to the
+          # synthetic refs/pull/<n>/merge commit, not the real PR head SHA.
+          # owner_governance_compute_implementation_tree_digest() runs
+          # `git ls-tree -r <sha>` against the REAL PR head
+          # (github.event.pull_request.head.sha, passed as PR_HEAD_SHA
+          # below) — that commit object was never fetched under the
+          # default merge-ref checkout, so `git ls-tree` silently failed
+          # (stderr suppressed) and returned empty output, which hashed to
+          # sha256("") and was misreported as a genuine digest mismatch.
+          # Caught on this workflow's own real CI run on PR #239. Checking
+          # out the real head ref directly ensures that exact commit's
+          # tree/blobs are actually present.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          tools: composer:v2
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Structural validation (schema + enums + contradictions)
+        run: php scripts/ssot/owner_governance_lint.php
+
+      - name: Gate-ordering enforcement (effective-date boundary)
+        run: php scripts/ssot/owner_governance_lint.php --enforce-gate-ordering
+
+      - name: Gate-3-before-ready check (only on PRs, needs gh + PR number)
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: bash scripts/ci/check-gate3-before-ready.sh
+
+      - name: Evidence-freshness check (Correction 2 — only on PRs, needs gh + PR number + work_id)
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          body="$(gh pr view "$PR_NUMBER" --json body --jq '.body')"
+          work_id="$(printf '%s' "$body" | grep -oE '(GAP-[0-9]{3}|OWN-[0-9]{4}-[0-9]{3})' | head -n1 || true)"
+          if [ -z "$work_id" ]; then
+            echo "No recognizable Work ID in PR body — skipping evidence-freshness check."
+            exit 0
+          fi
+          WORK_ID="$work_id" bash scripts/ci/check-evidence-freshness.sh

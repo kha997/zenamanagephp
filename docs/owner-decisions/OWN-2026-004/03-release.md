@@ -1,14 +1,14 @@
 ---
 work_id: OWN-2026-004
 gate: 3
-gate_status: preparing
+gate_status: awaiting_owner
 technical_readiness:
-  value: not_checked
+  value: ready
   generated_by: engineering_evidence
 owner_decision:
   value: none
   authority: human_owner
-decision_requested: null
+decision_requested: "approve_or_correction_or_defer"
 references:
   spec: null
   plan: null
@@ -25,22 +25,22 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-06T17:13:48+07:00"
-  updated_at: "2026-08-06T20:42:16+07:00"
+  updated_at: "2026-08-06T20:46:43+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "Preparing — verification not yet finalized in this packet. Exact-token extraction fix implemented on head 58fba81de66f2aa9d86a90684a68a65c144e3dbf."
+mandatory_technical_gate_summary: "CORRECTED: the previously-presented implementation head (b772a2822363954f51c3b78f84faddbab7963e1d) allowed partial-prefix extraction — both CI Work-ID extraction paths used an unbounded substring pattern that could match a valid-looking prefix inside an invalid token instead of requiring the whole token to be valid. Reproduced: 'GAP-010bb' extracted as 'GAP-010b'; 'GAP-0010' extracted as 'GAP-001'; 'GAP-010-b' extracted as 'GAP-010'. The corrected implementation head 58fba81de66f2aa9d86a90684a68a65c144e3dbf introduces a shared, portable extractor (scripts/ci/extract-work-id.sh, POSIX ERE only, no grep -P dependency) that tokenizes the input into maximal words (keeping hyphens/underscores/slashes attached, so an invalid token is never split into a valid-looking piece plus leftover) and requires each whole token to match the canonical pattern anchored ('^(GAP-[0-9]{3}[a-z]?|OWN-[0-9]{4}-[0-9]{3})$') before accepting it. All previously-reproduced invalid examples (GAP-010B, GAP-010bb, GAP-010-b, GAP-10, GAP-0010, GAP-0010b, GAP-010_, GAP-010/, XGAP-010b, GAP-010bX) now return no Work ID; all valid forms (GAP-010, GAP-010a, GAP-010b, GAP-014c, OWN-2026-004) extract to themselves exactly. Both scripts/ci/check-gate3-before-ready.sh and .github/workflows/owner-governance-lint.yml now delegate to the identical shared script — verified via a test asserting byte-identical invocation strings — so the two CI paths cannot structurally diverge on what a Work ID is. Verified: written-first tests confirmed red (18 failures reproducing the exact defect) against the unmodified extraction, then green after the fix; focused suite (OwnerGovernanceSchemaFixtureTest, EnforcementBoundaryTest, GapSubIdentifierWorkIdTest) 46/46 pass; full governance suite (tests/Unit/OwnerGovernance) 105/105 pass; owner_governance_lint.php (no args and --enforce-gate-ordering) both PASS with 0 violations; bash -n on both scripts OK; git diff --check clean; real CI on the implementation head (Owner Governance Lint success, test-routes-guardrails success, 0 failed); a fresh independent review (no prior context) found 0 Critical, 0 Important, 0 Minor findings, confirming the tokenizer's hyphen placement in the character class is safe (no accidental range), the three original defects are genuinely fixed (not just test-passing), scripts/ssot/owner_governance_lint.php remained unmodified, no file outside the declared allowed scope was touched, and no governance bypass was introduced. The previous digest e940511826a6af709077d9027e7502060e7d9c93f65f9bbd4cf2d2d2dbba2fb0 (bound to the now-superseded partial-prefix-extraction head) is superseded by af64503cb4f092b2996471ecf5b04f7671aaf68677fe1d9089d965ab398594cd, independently recomputed and confirmed unchanged across the packet-only preparing commit. The GAP-010b draft (docs/owner-decisions/GAP-010b/01-request.md, hash 693bcf7a3706734d37a2a1a1cf8d38cca019e08a443480702bd4a86187a524fc) remains unchanged, still uncommitted in its own worktree, and is not part of this correction."
 technical_evidence:
-  subject_sha: null
-  implementation_tree_digest: "not_computed_while_preparing"
-  verified_pr_head_sha: null
-  verified_at: null
+  subject_sha: "58fba81de66f2aa9d86a90684a68a65c144e3dbf"
+  implementation_tree_digest: "af64503cb4f092b2996471ecf5b04f7671aaf68677fe1d9089d965ab398594cd"
+  verified_pr_head_sha: "58fba81de66f2aa9d86a90684a68a65c144e3dbf"
+  verified_at: "2026-08-06T20:46:08+07:00"
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null
 ---
 
 ## Owner Summary
-Sửa xong lỗi tương thích trong công cụ quản trị Owner Control Layer: công cụ giờ đã chấp nhận đúng các mã con gap chính thức (GAP-010b, GAP-014c...) mà không đổi tên chúng. Đây thuần tuý là sửa công cụ — không đổi hành vi sản phẩm, không phê duyệt việc sửa GAP-010b. Đã kiểm chứng đầy đủ bằng test, lint, CI thật, và một vòng review độc lập. Sẵn sàng chờ owner quyết định.
+Sửa xong lỗi tương thích trong công cụ quản trị Owner Control Layer: công cụ giờ đã chấp nhận đúng các mã con gap chính thức (GAP-010b, GAP-014c...) mà không đổi tên chúng. **Đã phát hiện và sửa thêm một lỗi thứ hai** trong lần trình lại trước: cách trích xuất Work-ID trong CI dùng mẫu "khớp một phần" thay vì "khớp trọn vẹn", khiến một mã KHÔNG hợp lệ có thể bị âm thầm biến thành một mã KHÁC hợp lệ (ví dụ `GAP-010bb` bị đọc nhầm thành `GAP-010b`). Đã sửa bằng cách bắt buộc khớp trọn vẹn từng mã, dùng chung một script cho cả 2 nơi trích xuất để không thể lệch nhau nữa. Đây thuần tuý là sửa công cụ — không đổi hành vi sản phẩm, không phê duyệt việc sửa GAP-010b. Đã kiểm chứng đầy đủ bằng test (bắt đúng lỗi trước khi sửa), lint, CI thật, và một vòng review độc lập. Sẵn sàng chờ owner quyết định lại.
 
 ## Gói quyết định phát hành — OWN-2026-004: Sửa tương thích mã con gap trong Owner Control Layer
 

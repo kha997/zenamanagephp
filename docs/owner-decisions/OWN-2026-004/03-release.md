@@ -1,14 +1,14 @@
 ---
 work_id: OWN-2026-004
 gate: 3
-gate_status: preparing
+gate_status: awaiting_owner
 technical_readiness:
-  value: not_checked
+  value: ready
   generated_by: engineering_evidence
 owner_decision:
   value: none
   authority: human_owner
-decision_requested: null
+decision_requested: "approve_or_correction_or_defer"
 references:
   spec: null
   plan: null
@@ -25,22 +25,49 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-06T17:13:48+07:00"
-  updated_at: "2026-08-06T17:13:48+07:00"
+  updated_at: "2026-08-06T17:16:50+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "Preparing — verification not yet finalized in this packet."
+mandatory_technical_gate_summary: "OWN-2026-004 extends the Owner Control Layer's canonical work_id_pattern to GAP-[0-9]{3}[a-z]? so existing canonical gap sub-identifiers (GAP-010b, GAP-014c) can be governed without renaming them. Implementation head b772a2822363954f51c3b78f84faddbab7963e1d contains the schema change (docs/owner-governance/packet-schema.yml), both CI Work-ID extraction updates (scripts/ci/check-gate3-before-ready.sh, .github/workflows/owner-governance-lint.yml), and a new test file (tests/Unit/OwnerGovernance/GapSubIdentifierWorkIdTest.php). Verified: written-first tests confirmed red (7 failures) against the unmodified schema/scripts, then green after the fix; focused suite (OwnerGovernanceSchemaFixtureTest, EnforcementBoundaryTest, GapSubIdentifierWorkIdTest) 31/31 pass; full governance suite (tests/Unit/OwnerGovernance) 90/90 pass; owner_governance_lint.php (no args and --enforce-gate-ordering) both PASS with 0 violations; bash -n on check-gate3-before-ready.sh OK; direct grep -oE extraction of 'GAP-010b' returns the full string, not truncated to 'GAP-010'; GAP-010B/GAP-010bb/GAP-010-b/GAP-10/GAP-0010/GAP-0010b/GAP-010_/GAP-010\\/ all confirmed rejected; ZMC/WP/OWN forms confirmed unaffected; scripts/ssot/owner_governance_lint.php confirmed unmodified; real CI on the implementation head (all checks pass, including Owner Governance Lint, test-routes-guardrails, and the full test suite); a fresh independent review (no prior context) found 0 Critical and 0 Important findings, confirming the regex change is narrow (only the GAP alternative changed), all three GAP-pattern locations stayed in sync, no governance bypass was introduced, and no file outside the declared allowed scope was touched. This packet-only Gate 3 commit does not itself change the implementation-tree digest (the digest excludes only the active Gate 3 packet file for this work_id) — confirmed by direct recomputation before and after the preparing commit."
 technical_evidence:
-  subject_sha: null
-  implementation_tree_digest: "not_computed_while_preparing"
-  verified_pr_head_sha: null
-  verified_at: null
+  subject_sha: "b772a2822363954f51c3b78f84faddbab7963e1d"
+  implementation_tree_digest: "e940511826a6af709077d9027e7502060e7d9c93f65f9bbd4cf2d2d2dbba2fb0"
+  verified_pr_head_sha: "b772a2822363954f51c3b78f84faddbab7963e1d"
+  verified_at: "2026-08-06T17:16:50+07:00"
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null
 ---
 
-## OWNER GATE 3: PREPARING
+## Owner Summary
+Sửa xong lỗi tương thích trong công cụ quản trị Owner Control Layer: công cụ giờ đã chấp nhận đúng các mã con gap chính thức (GAP-010b, GAP-014c...) mà không đổi tên chúng. Đây thuần tuý là sửa công cụ — không đổi hành vi sản phẩm, không phê duyệt việc sửa GAP-010b. Đã kiểm chứng đầy đủ bằng test, lint, CI thật, và một vòng review độc lập. Sẵn sàng chờ owner quyết định.
 
-This packet is being prepared. It will summarize verification of the OWN-2026-004 governance-tooling correction before being presented for owner decision.
+## Gói quyết định phát hành — OWN-2026-004: Sửa tương thích mã con gap trong Owner Control Layer
 
-This is a tooling-only correction. It does not change product behavior. It does not approve GAP-010b's business request or implementation.
+**1. Vấn đề là gì?**
+Công cụ kiểm tra hồ sơ quản trị (Owner Control Layer) chỉ chấp nhận `work_id` dạng `GAP-NNN` (3 chữ số, không hậu tố). Điều này chặn việc mở hồ sơ Gate 1 chính thức cho GAP-010b — một lỗi thật, đang mở, đã được owner xác nhận qua sổ đăng ký (OWN-2026-003).
+
+**2. Mẫu định danh mới là gì?**
+`GAP-[0-9]{3}[a-z]?` — đúng 3 chữ số, có thể theo sau bởi đúng 1 chữ cái thường. Chữ HOA, nhiều ký tự, hay dấu câu vẫn bị từ chối. GAP-010b, GAP-014c được chấp nhận; GAP-010B, GAP-010bb, GAP-010-b vẫn bị từ chối.
+
+**3. Vì sao phải sửa 3 nơi?**
+Schema (`docs/owner-governance/packet-schema.yml`), và 2 đường trích xuất Work-ID trong CI (`scripts/ci/check-gate3-before-ready.sh`, `.github/workflows/owner-governance-lint.yml`) định nghĩa độc lập với nhau — nếu chỉ sửa 1-2 nơi, CI có thể cắt cụt mã con về mã cha (`GAP-010b` → `GAP-010`), làm sai lệch bằng chứng gắn với đúng mã con. Cả 3 nơi đã được xác nhận đồng bộ.
+
+**4. Đã kiểm chứng những gì?**
+Viết test thất bại trước khi sửa (TDD) — xác nhận đỏ (7 lỗi) trên mã cũ, xanh sau khi sửa. Bộ test tập trung 31/31 qua; toàn bộ bộ test quản trị 90/90 qua. Lint cấu trúc 0 lỗi. CI thật trên đầu nhánh triển khai: tất cả các kiểm tra đều đạt. Một vòng review độc lập (không có bối cảnh trước) xác nhận: mẫu đủ hẹp (chỉ phần GAP thay đổi), 3 nơi đồng bộ, không có lỗ hổng quản trị nào bị mở ra, không file nào ngoài phạm vi cho phép bị đụng tới. 0 lỗi nghiêm trọng, 0 lỗi quan trọng.
+
+**5. Việc này có phê duyệt sửa GAP-010b không?**
+Không. Đây thuần tuý là sửa công cụ. GAP-010b vẫn đang mở, chưa được phê duyệt sửa hay triển khai gì. Hồ sơ Gate 1 nháp cho GAP-010b (đã soạn sẵn từ trước, chưa commit/mở PR) vẫn được giữ nguyên, không bị đụng tới trong lần sửa này.
+
+**6. Hành vi sản phẩm có đổi không?**
+Không. Chỉ sửa công cụ quản trị nội bộ (schema + 2 script CI) — không đụng tới mã nguồn ứng dụng, route, migration, hay sổ đăng ký gap.
+
+**7. Có thể hoàn tác không?**
+Có, hoàn toàn — chỉ cần revert đúng PR sửa công cụ này.
+
+**8. Đề xuất của đội kỹ thuật:** Đã sẵn sàng kỹ thuật, đã kiểm chứng bằng TDD + CI thật + review độc lập. Đề xuất owner xem qua và quyết định.
+
+**Quyết định của chủ doanh nghiệp:** ☐ Phát hành  ☐ Yêu cầu chỉnh sửa  ☐ Hoãn phát hành
+
+## What the owner is NOT being asked to decide
+Owner không được yêu cầu phê duyệt việc sửa GAP-010b, GAP-014b, GAP-014c hay bất kỳ gap nào khác — chỉ quyết định có phát hành việc sửa công cụ quản trị này hay không. Owner cũng không được yêu cầu đọc mã nguồn hay log CI — mọi kết luận đã được đội kỹ thuật xác minh trực tiếp.

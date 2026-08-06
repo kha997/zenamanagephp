@@ -1,14 +1,14 @@
 ---
 work_id: OWN-2026-003
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: null
   plan: null
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
-  reconciliation_required: false
+  recorded_at: "2026-08-06T15:23:25+07:00"
+  owner_response_reference: "ChatGPT project conversation — explicit Owner Gate 3 release approval for OWN-2026-003 on 2026-08-06"
+  reconciliation_required: true
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-06T13:30:49+07:00"
-  updated_at: "2026-08-06T14:30:07+07:00"
+  updated_at: "2026-08-06T15:23:25+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "OWN-2026-003 reconciles OPERATIONAL_GAP_REGISTER.md with OWN-2026-002's verified Wave 1 findings, exactly per the owner-approved Gate 2 design plus the mandatory status-glossary condition. This evidence spans two distinct, separately-verified scopes: (a) implementation head 85dc1a1dac6a8fac1c525c28fa7586c4dbcfc22d contains ONLY the register edit (03-release.md did not exist on that head); it passed its own implementation-head checks — real CI (Owner Governance Lint success, test-routes-guardrails success, 0 failed/cancelled/pending) and a fresh independent review of the ACTUAL register diff (0 Critical, 0 Important, 1 Minor accepted as non-blocking) confirming every approved row was faithfully implemented, original audit history preserved, and GAP-010c never overstated as confirmed in any occurrence; (b) the Gate 3 preparing and re-presentation commits on this branch contain ONLY packet changes to 03-release.md itself (chronology correction), and separately passed structural lint on all 3 governance packets (0 violations), git diff --check clean, and their own triggered CI (Owner Governance Lint success, test-routes-guardrails success, 0 failed/cancelled/pending). The implementation-tree digest was independently recomputed after the packet-only chronology-correction commit and confirmed unchanged (the digest excludes only the active Gate 3 packet file for this work_id, by construction). Zero non-documentation files were touched at any point in this correction."
@@ -35,8 +35,8 @@ technical_evidence:
   verified_pr_head_sha: "85dc1a1dac6a8fac1c525c28fa7586c4dbcfc22d"
   verified_at: "2026-08-06T14:29:36+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "17739698b295b885628efda931af12ba9c2793b612907275053d0c9dd204fe33"
+  decision_recorded_at: "2026-08-06T15:23:25+07:00"
 ---
 
 ## Owner Summary
@@ -74,3 +74,12 @@ Có, hoàn toàn — chỉ cần revert đúng một commit sửa tài liệu (`
 
 ## What the owner is NOT being asked to decide
 Owner không được yêu cầu mở pull request kỹ thuật, đọc log CI, hay xem mã nguồn — mọi kết luận trên đã được đội kỹ thuật xác minh trực tiếp trên CI thật và qua một vòng review độc lập. Owner cũng không được yêu cầu quyết định về GAP-010b, GAP-010c, hay bất kỳ gap nào khác — chỉ quyết định có phát hành việc cập nhật sổ đăng ký này hay không.
+
+## OWNER GATE 3: APPROVED
+
+The owner approves release of the Wave 1 register reconciliation.
+
+The approval is bound to implementation-tree digest:
+17739698b295b885628efda931af12ba9c2793b612907275053d0c9dd204fe33
+
+No gap implementation is approved by this decision.

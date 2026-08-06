@@ -87,58 +87,115 @@ class GapSubIdentifierWorkIdTest extends TestCase
     }
 
     /**
-     * Extracts the GAP alternative out of the extraction regex embedded in
-     * a CI script/workflow's `grep -oE '(...)'` line, so this test breaks
-     * if a future edit reverts the extraction pattern instead of relying
-     * on a hardcoded copy that could drift from the real file.
+     * Both CI Work-ID extraction locations must delegate to the shared
+     * scripts/ci/extract-work-id.sh extractor rather than embed their own
+     * copy of the extraction pattern — this makes divergence between the
+     * two paths structurally impossible instead of merely tested-against.
      */
-    private function extractGapAlternativeFromExtractionLine(string $content): string
+    private function assertDelegatesToSharedExtractor(string $relativePath): void
     {
-        $this->assertMatchesRegularExpression(
-            '/grep -oE \'\((GAP-[^|]+)\|OWN-\[0-9\]\{4\}-\[0-9\]\{3\}\)\'/',
-            $content
+        $content = file_get_contents($this->repoRoot() . '/' . $relativePath);
+        $this->assertStringContainsString(
+            'bash scripts/ci/extract-work-id.sh',
+            $content,
+            "{$relativePath} must delegate Work-ID extraction to the shared scripts/ci/extract-work-id.sh extractor."
         );
-        preg_match('/grep -oE \'\((GAP-[^|]+)\|OWN-\[0-9\]\{4\}-\[0-9\]\{3\}\)\'/', $content, $m);
-
-        return $m[1];
     }
 
-    public function test_gate3_before_ready_extraction_recognizes_full_subidentifier(): void
+    /**
+     * Runs the REAL shared extractor script both CI paths delegate to,
+     * against a "Work ID: <candidate>" body exactly as CI constructs it,
+     * and returns the extracted token (or '' if nothing matched).
+     */
+    private function runRealExtraction(string $candidate): string
     {
-        $content = file_get_contents($this->repoRoot() . '/scripts/ci/check-gate3-before-ready.sh');
-        $gapAlternative = $this->extractGapAlternativeFromExtractionLine($content);
+        $extractorPath = $this->repoRoot() . '/scripts/ci/extract-work-id.sh';
+        $this->assertFileExists($extractorPath);
 
-        preg_match('/' . $gapAlternative . '/', 'GAP-010b', $matches);
-        $this->assertSame('GAP-010b', $matches[0] ?? null, 'check-gate3-before-ready.sh must extract the full sub-identifier, not the parent prefix.');
+        $body = "Work ID: {$candidate}\nGate 1: APPROVED";
+
+        $output = shell_exec('printf ' . escapeshellarg('%s') . ' ' . escapeshellarg($body) . ' | bash ' . escapeshellarg($extractorPath));
+
+        return trim((string) $output);
     }
 
-    public function test_evidence_freshness_workflow_extraction_recognizes_full_subidentifier(): void
+    public static function validExtractionCandidates(): array
     {
-        $content = file_get_contents($this->repoRoot() . '/.github/workflows/owner-governance-lint.yml');
-        $gapAlternative = $this->extractGapAlternativeFromExtractionLine($content);
-
-        preg_match('/' . $gapAlternative . '/', 'GAP-010b', $matches);
-        $this->assertSame('GAP-010b', $matches[0] ?? null, 'owner-governance-lint.yml must extract the full sub-identifier, not the parent prefix.');
+        return [
+            ['GAP-010', 'GAP-010'],
+            ['GAP-010a', 'GAP-010a'],
+            ['GAP-010b', 'GAP-010b'],
+            ['GAP-014c', 'GAP-014c'],
+            ['OWN-2026-004', 'OWN-2026-004'],
+        ];
     }
 
-    public function test_extraction_lines_actually_run_via_grep_and_return_the_full_subidentifier(): void
+    public static function invalidExtractionCandidates(): array
     {
-        foreach (
-            [
-                'scripts/ci/check-gate3-before-ready.sh' => 'work_id="',
-                '.github/workflows/owner-governance-lint.yml' => 'work_id="',
-            ] as $relativePath => $needle
-        ) {
-            $content = file_get_contents($this->repoRoot() . '/' . $relativePath);
-            $gapAlternative = $this->extractGapAlternativeFromExtractionLine($content);
+        return [
+            ['GAP-10'],
+            ['GAP-010B'],
+            ['GAP-010bb'],
+            ['GAP-010-b'],
+            ['GAP-0010'],
+            ['GAP-0010b'],
+            ['GAP-010_'],
+            ['GAP-010/'],
+            ['XGAP-010b'],
+            ['GAP-010bX'],
+        ];
+    }
 
-            $extractionPattern = "({$gapAlternative}|OWN-[0-9]{4}-[0-9]{3})";
-            $body = "Work ID: GAP-010b\nGate 1: APPROVED";
+    public function test_gate3_before_ready_delegates_to_shared_extractor(): void
+    {
+        $this->assertDelegatesToSharedExtractor('scripts/ci/check-gate3-before-ready.sh');
+    }
 
-            $escapedPattern = escapeshellarg($extractionPattern);
-            $output = shell_exec("printf '%s' " . escapeshellarg($body) . " | grep -oE {$escapedPattern} | head -n1");
+    public function test_evidence_freshness_workflow_delegates_to_shared_extractor(): void
+    {
+        $this->assertDelegatesToSharedExtractor('.github/workflows/owner-governance-lint.yml');
+    }
 
-            $this->assertSame('GAP-010b', trim((string) $output), "{$relativePath}'s real extraction pattern, run through grep -oE, must return the full sub-identifier.");
-        }
+    /** @dataProvider validExtractionCandidates */
+    public function test_shared_extractor_returns_exact_valid_tokens(string $candidate, string $expected): void
+    {
+        $this->assertSame(
+            $expected,
+            $this->runRealExtraction($candidate),
+            "scripts/ci/extract-work-id.sh must return exactly '{$expected}' for '{$candidate}'."
+        );
+    }
+
+    /**
+     * The core regression this file exists to prevent: an unbounded
+     * substring extraction pattern silently converts an INVALID candidate
+     * into a DIFFERENT, valid-looking Work ID (e.g. 'GAP-010bb' -> 'GAP-010b',
+     * 'GAP-0010' -> 'GAP-001', 'GAP-010-b' -> 'GAP-010') instead of matching
+     * nothing. Every candidate here must extract to the empty string —
+     * never accepted in full, never reduced to a valid parent ID, never
+     * reduced to a valid sub-ID.
+     *
+     * @dataProvider invalidExtractionCandidates
+     */
+    public function test_shared_extractor_returns_nothing_for_invalid_tokens(string $candidate): void
+    {
+        $this->assertSame(
+            '',
+            $this->runRealExtraction($candidate),
+            "scripts/ci/extract-work-id.sh must return EMPTY for invalid candidate '{$candidate}' — it must not silently convert it into a different valid Work ID."
+        );
+    }
+
+    public function test_both_ci_paths_delegate_to_the_same_extractor_so_they_cannot_diverge(): void
+    {
+        $scriptContent = file_get_contents($this->repoRoot() . '/scripts/ci/check-gate3-before-ready.sh');
+        $workflowContent = file_get_contents($this->repoRoot() . '/.github/workflows/owner-governance-lint.yml');
+
+        preg_match('/bash scripts\/ci\/extract-work-id\.sh/', $scriptContent, $scriptMatch);
+        preg_match('/bash scripts\/ci\/extract-work-id\.sh/', $workflowContent, $workflowMatch);
+
+        $this->assertNotEmpty($scriptMatch, 'check-gate3-before-ready.sh must invoke the shared extractor.');
+        $this->assertNotEmpty($workflowMatch, 'owner-governance-lint.yml must invoke the shared extractor.');
+        $this->assertSame($scriptMatch[0], $workflowMatch[0], 'Both CI paths must invoke the extractor identically.');
     }
 }

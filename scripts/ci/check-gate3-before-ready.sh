@@ -18,7 +18,7 @@ if [ "$is_draft" = "true" ]; then
 fi
 
 body="$(gh pr view "$PR_NUMBER" --json body --jq '.body')"
-work_id="$(printf '%s' "$body" | grep -oE '(GAP-[0-9]{3}[a-z]?|OWN-[0-9]{4}-[0-9]{3})' | head -n1 || true)"
+work_id="$(printf '%s' "$body" | bash scripts/ci/extract-work-id.sh || true)"
 
 if [ -z "$work_id" ]; then
   echo "No recognizable Work ID found in PR body's Owner Summary — nothing to check."

@@ -1,9 +1,9 @@
 ---
 work_id: OWN-2026-004
 gate: 3
-gate_status: blocked_technical
+gate_status: preparing
 technical_readiness:
-  value: blocked
+  value: not_checked
   generated_by: engineering_evidence
 owner_decision:
   value: none
@@ -25,13 +25,13 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-06T17:13:48+07:00"
-  updated_at: "2026-08-06T21:13:26+07:00"
+  updated_at: "2026-08-06T21:22:24+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "BLOCKED: a third defect was found. The exact-token implementation correctly rejects invalid tokens, but the extractor selected the first valid Work ID mentioned anywhere in the PR body. On PR #242 it selected GAP-010b from a negative authorization statement ('GAP-010b implementation authorized: NO') instead of the authoritative PR Work ID OWN-2026-004. As a result, Evidence Freshness exited successfully without checking the OWN-2026-004 Gate 3 packet — the real workflow log for run 31107599102 recorded 'No Gate 3 packet for GAP-010b — nothing to check for staleness.' instead of validating OWN-2026-004's evidence. Reproduced directly: `printf '%s' \"$body\" | bash scripts/ci/extract-work-id.sh` on the exact live PR #242 body returns 'GAP-010b', not 'OWN-2026-004'. The previous digest af64503cb4f092b2996471ecf5b04f7671aaf68677fe1d9089d965ab398594cd is superseded pending the authoritative Work-ID resolution fix. The GAP-010b draft (docs/owner-decisions/GAP-010b/01-request.md, hash 693bcf7a3706734d37a2a1a1cf8d38cca019e08a443480702bd4a86187a524fc) remains unchanged and is not part of this correction."
+mandatory_technical_gate_summary: "Preparing — verification not yet finalized in this packet. Authoritative Work-ID resolution fix implemented on head 49451731c8dcd04baf8511b6242b0c41749e0054."
 technical_evidence:
   subject_sha: null
-  implementation_tree_digest: "not_computed_while_blocked"
+  implementation_tree_digest: "not_computed_while_preparing"
   verified_pr_head_sha: null
   verified_at: null
 owner_decision_binding:

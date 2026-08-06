@@ -18,11 +18,9 @@ if [ "$is_draft" = "true" ]; then
 fi
 
 body="$(gh pr view "$PR_NUMBER" --json body --jq '.body')"
-work_id="$(printf '%s' "$body" | grep -oE '(GAP-[0-9]{3}|OWN-[0-9]{4}-[0-9]{3})' | head -n1 || true)"
-
-if [ -z "$work_id" ]; then
-  echo "No recognizable Work ID found in PR body's Owner Summary — nothing to check."
-  exit 0
+if ! work_id="$(printf '%s' "$body" | bash scripts/ci/extract-work-id.sh)"; then
+  echo "::error::PR #$PR_NUMBER is marked Ready for review but has no authoritative 'Work ID: <candidate>' declaration on the first non-empty line of its body — see the extract-work-id diagnostic above."
+  exit 1
 fi
 
 if grep -qxF "$work_id" docs/owner-governance/legacy-work-ids.txt 2>/dev/null; then

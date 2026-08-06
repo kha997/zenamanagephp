@@ -71,9 +71,8 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           body="$(gh pr view "$PR_NUMBER" --json body --jq '.body')"
-          work_id="$(printf '%s' "$body" | grep -oE '(GAP-[0-9]{3}|OWN-[0-9]{4}-[0-9]{3})' | head -n1 || true)"
-          if [ -z "$work_id" ]; then
-            echo "No recognizable Work ID in PR body — skipping evidence-freshness check."
-            exit 0
+          if ! work_id="$(printf '%s' "$body" | bash scripts/ci/extract-work-id.sh)"; then
+            echo "::error::No authoritative 'Work ID: <candidate>' declaration on the first non-empty line of the PR body — see the extract-work-id diagnostic above. Evidence-freshness cannot resolve which Gate 3 packet to check."
+            exit 1
           fi
           WORK_ID="$work_id" bash scripts/ci/check-evidence-freshness.sh

@@ -1,14 +1,14 @@
 ---
 work_id: OWN-2026-004
 gate: 3
-gate_status: awaiting_owner
+gate_status: blocked_technical
 technical_readiness:
-  value: ready
+  value: blocked
   generated_by: engineering_evidence
 owner_decision:
   value: none
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: null
   plan: null
@@ -25,15 +25,15 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-06T17:13:48+07:00"
-  updated_at: "2026-08-06T20:46:43+07:00"
+  updated_at: "2026-08-06T21:13:26+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "CORRECTED: the previously-presented implementation head (b772a2822363954f51c3b78f84faddbab7963e1d) allowed partial-prefix extraction — both CI Work-ID extraction paths used an unbounded substring pattern that could match a valid-looking prefix inside an invalid token instead of requiring the whole token to be valid. Reproduced: 'GAP-010bb' extracted as 'GAP-010b'; 'GAP-0010' extracted as 'GAP-001'; 'GAP-010-b' extracted as 'GAP-010'. The corrected implementation head 58fba81de66f2aa9d86a90684a68a65c144e3dbf introduces a shared, portable extractor (scripts/ci/extract-work-id.sh, POSIX ERE only, no grep -P dependency) that tokenizes the input into maximal words (keeping hyphens/underscores/slashes attached, so an invalid token is never split into a valid-looking piece plus leftover) and requires each whole token to match the canonical pattern anchored ('^(GAP-[0-9]{3}[a-z]?|OWN-[0-9]{4}-[0-9]{3})$') before accepting it. All previously-reproduced invalid examples (GAP-010B, GAP-010bb, GAP-010-b, GAP-10, GAP-0010, GAP-0010b, GAP-010_, GAP-010/, XGAP-010b, GAP-010bX) now return no Work ID; all valid forms (GAP-010, GAP-010a, GAP-010b, GAP-014c, OWN-2026-004) extract to themselves exactly. Both scripts/ci/check-gate3-before-ready.sh and .github/workflows/owner-governance-lint.yml now delegate to the identical shared script — verified via a test asserting byte-identical invocation strings — so the two CI paths cannot structurally diverge on what a Work ID is. Verified: written-first tests confirmed red (18 failures reproducing the exact defect) against the unmodified extraction, then green after the fix; focused suite (OwnerGovernanceSchemaFixtureTest, EnforcementBoundaryTest, GapSubIdentifierWorkIdTest) 46/46 pass; full governance suite (tests/Unit/OwnerGovernance) 105/105 pass; owner_governance_lint.php (no args and --enforce-gate-ordering) both PASS with 0 violations; bash -n on both scripts OK; git diff --check clean; real CI on the implementation head (Owner Governance Lint success, test-routes-guardrails success, 0 failed); a fresh independent review (no prior context) found 0 Critical, 0 Important, 0 Minor findings, confirming the tokenizer's hyphen placement in the character class is safe (no accidental range), the three original defects are genuinely fixed (not just test-passing), scripts/ssot/owner_governance_lint.php remained unmodified, no file outside the declared allowed scope was touched, and no governance bypass was introduced. The previous digest e940511826a6af709077d9027e7502060e7d9c93f65f9bbd4cf2d2d2dbba2fb0 (bound to the now-superseded partial-prefix-extraction head) is superseded by af64503cb4f092b2996471ecf5b04f7671aaf68677fe1d9089d965ab398594cd, independently recomputed and confirmed unchanged across the packet-only preparing commit. The GAP-010b draft (docs/owner-decisions/GAP-010b/01-request.md, hash 693bcf7a3706734d37a2a1a1cf8d38cca019e08a443480702bd4a86187a524fc) remains unchanged, still uncommitted in its own worktree, and is not part of this correction."
+mandatory_technical_gate_summary: "BLOCKED: a third defect was found. The exact-token implementation correctly rejects invalid tokens, but the extractor selected the first valid Work ID mentioned anywhere in the PR body. On PR #242 it selected GAP-010b from a negative authorization statement ('GAP-010b implementation authorized: NO') instead of the authoritative PR Work ID OWN-2026-004. As a result, Evidence Freshness exited successfully without checking the OWN-2026-004 Gate 3 packet — the real workflow log for run 31107599102 recorded 'No Gate 3 packet for GAP-010b — nothing to check for staleness.' instead of validating OWN-2026-004's evidence. Reproduced directly: `printf '%s' \"$body\" | bash scripts/ci/extract-work-id.sh` on the exact live PR #242 body returns 'GAP-010b', not 'OWN-2026-004'. The previous digest af64503cb4f092b2996471ecf5b04f7671aaf68677fe1d9089d965ab398594cd is superseded pending the authoritative Work-ID resolution fix. The GAP-010b draft (docs/owner-decisions/GAP-010b/01-request.md, hash 693bcf7a3706734d37a2a1a1cf8d38cca019e08a443480702bd4a86187a524fc) remains unchanged and is not part of this correction."
 technical_evidence:
-  subject_sha: "58fba81de66f2aa9d86a90684a68a65c144e3dbf"
-  implementation_tree_digest: "af64503cb4f092b2996471ecf5b04f7671aaf68677fe1d9089d965ab398594cd"
-  verified_pr_head_sha: "58fba81de66f2aa9d86a90684a68a65c144e3dbf"
-  verified_at: "2026-08-06T20:46:08+07:00"
+  subject_sha: null
+  implementation_tree_digest: "not_computed_while_blocked"
+  verified_pr_head_sha: null
+  verified_at: null
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null

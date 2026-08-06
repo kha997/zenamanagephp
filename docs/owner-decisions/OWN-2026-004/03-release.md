@@ -1,9 +1,9 @@
 ---
 work_id: OWN-2026-004
 gate: 3
-gate_status: blocked_technical
+gate_status: preparing
 technical_readiness:
-  value: blocked
+  value: not_checked
   generated_by: engineering_evidence
 owner_decision:
   value: none
@@ -25,13 +25,13 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-06T17:13:48+07:00"
-  updated_at: "2026-08-06T20:31:18+07:00"
+  updated_at: "2026-08-06T20:42:16+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "BLOCKED: a defect was found in the previously-presented implementation head (b772a2822363954f51c3b78f84faddbab7963e1d). The schema (docs/owner-governance/packet-schema.yml) correctly uses a full-string anchored pattern, but both CI Work-ID extraction paths (scripts/ci/check-gate3-before-ready.sh, .github/workflows/owner-governance-lint.yml) used an UNBOUNDED SUBSTRING pattern '(GAP-[0-9]{3}[a-z]?|OWN-[0-9]{4}-[0-9]{3})' with grep -oE, which matches a valid-looking prefix inside an invalid token rather than requiring the whole token to be valid. Reproduced: 'GAP-010bb' (invalid: double-letter suffix) extracts as 'GAP-010b' (a different, valid sub-identifier); 'GAP-0010' (invalid: 4-digit) extracts as 'GAP-001' (a different, valid parent ID); 'GAP-010-b' (invalid: hyphenated) extracts as 'GAP-010' (the valid parent ID). This means invalid Work IDs can be silently converted into different valid Work IDs during CI extraction, contradicting the design requirement that invalid forms remain rejected and that evidence attach to the exact canonical identity. The previous digest e940511826a6af709077d9027e7502060e7d9c93f65f9bbd4cf2d2d2dbba2fb0 is superseded pending the exact-token extraction fix. The GAP-010b draft (docs/owner-decisions/GAP-010b/01-request.md, hash 693bcf7a3706734d37a2a1a1cf8d38cca019e08a443480702bd4a86187a524fc) remains unchanged and is not part of this correction."
+mandatory_technical_gate_summary: "Preparing — verification not yet finalized in this packet. Exact-token extraction fix implemented on head 58fba81de66f2aa9d86a90684a68a65c144e3dbf."
 technical_evidence:
   subject_sha: null
-  implementation_tree_digest: "not_computed_while_blocked"
+  implementation_tree_digest: "not_computed_while_preparing"
   verified_pr_head_sha: null
   verified_at: null
 owner_decision_binding:

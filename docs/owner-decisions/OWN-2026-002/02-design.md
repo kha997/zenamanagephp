@@ -10,7 +10,7 @@ references:
   spec: docs/superpowers/specs/2026-08-06-operational-gap-remediation-program-design.md
   plan: null
   branch: docs/OWN-2026-002-operational-gap-remediation-program-design
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/240
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
@@ -21,8 +21,8 @@ decision_provenance:
 supersedes: null
 superseded_by: null
 timestamps:
-  created_at: "2026-08-06T14:00:00+07:00"
-  updated_at: "2026-08-06T15:00:00+07:00"
+  created_at: "2026-08-06T12:04:00+07:00"
+  updated_at: "2026-08-06T12:14:38+07:00"
 generated_by: agent
 ---
 

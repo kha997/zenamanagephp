@@ -6,11 +6,11 @@ owner_gate_2_record: docs/owner-decisions/OWN-2026-002/02-design.md
 
 # OWN-2026-002 — Operational Gap Remediation Program Design
 
-**Work ID:** OWN-2026-002 (this program-level work item). **Gate 1:** approved (`docs/owner-decisions/OWN-2026-002/01-request.md`). **Gate 2:** this document + `docs/owner-decisions/OWN-2026-002/02-design.md`.
+**Work ID:** OWN-2026-002 (this program-level work item). **Gate 1 (active record):** approved (`docs/owner-decisions/OWN-2026-002/01-request-v2.md` — supersedes `01-request.md`, which is retained as the superseded historical record; v2 corrects only chronology and PR linkage, not the approved decision itself). **Gate 2:** this document + `docs/owner-decisions/OWN-2026-002/02-design.md`.
 
 **Status:** DESIGN ONLY. No implementation authorized by this document. Each work item below requires its own Gate 1 (Business Request) and Gate 2 (Business Design) owner approval before any code is written, per `docs/owner-governance/OWNER_OPERATING_MODEL.md`.
 
-**Program approval reference:** Owner approved Gate 1 for OWN-2026-002 explicitly on 2026-08-06, and separately approved OWN-2026-001 (Owner Control Layer repository foundation, merged to `main` at `8cc137f9`). This document is OWN-2026-002's Gate 2 design — it does not itself constitute Gate 1/Gate 2 approval for any individual gap listed below. Gate 1 approval scope is limited to program definition and sequencing (see `01-request.md`); it does not authorize implementing any gap.
+**Program approval reference:** Owner approved Gate 1 for OWN-2026-002 explicitly on 2026-08-06, and separately approved OWN-2026-001 (Owner Control Layer repository foundation, merged to `main` at `8cc137f9`). This document is OWN-2026-002's Gate 2 design — it does not itself constitute Gate 1/Gate 2 approval for any individual gap listed below. Gate 1 approval scope is limited to program definition and sequencing (see `01-request-v2.md`, the active Gate 1 record); it does not authorize implementing any gap.
 
 **Verified against:** `main` @ `8cc137f98a7ebbfb6510e3a1a7ab46dca2f69ebc` (post OWN-2026-001 merge).
 

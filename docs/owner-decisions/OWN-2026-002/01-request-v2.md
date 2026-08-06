@@ -1,7 +1,7 @@
 ---
 work_id: OWN-2026-002
 gate: 1
-gate_status: superseded
+gate_status: approved
 owner_decision:
   value: approved
   authority: human_owner
@@ -10,24 +10,31 @@ references:
   spec: docs/superpowers/specs/2026-08-06-operational-gap-remediation-program-design.md
   plan: null
   branch: docs/OWN-2026-002-operational-gap-remediation-program-design
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/240
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-06T14:00:00+07:00"
-  owner_response_reference: "ChatGPT project conversation — explicit program Gate 1 approval on 2026-08-06"
+  recorded_at: "2026-08-06T12:14:38+07:00"
+  owner_response_reference: "ChatGPT project conversation — explicit program Gate 1 approval on 2026-08-06; chronology correction recorded before PR #240 Gate 2 decision"
   reconciliation_required: true
-supersedes: null
-superseded_by: docs/owner-decisions/OWN-2026-002/01-request-v2.md
+supersedes: docs/owner-decisions/OWN-2026-002/01-request.md
+superseded_by: null
 timestamps:
-  created_at: "2026-08-06T14:00:00+07:00"
-  updated_at: "2026-08-06T14:00:00+07:00"
+  created_at: "2026-08-06T12:14:38+07:00"
+  updated_at: "2026-08-06T12:14:38+07:00"
 generated_by: agent
 ---
 
 ## Owner Summary
 Owner đề nghị lập một chương trình có quản trị để xác minh, xếp ưu tiên, thiết kế và khắc phục các "gap vận hành" (vấn đề đã ghi nhận nhưng chưa xác nhận hoặc chưa xử lý) trong kho mã, theo từng đợt có kiểm soát — không phải một lần triển khai lớn duy nhất.
+
+## Ghi chú về bản sửa (v2)
+Bản v2 này **chỉ sửa lỗi thời gian ghi nhận và liên kết PR** trong hồ sơ gốc (`01-request.md`) — hồ sơ gốc ghi thời điểm ghi nhận là 14:00, nhưng thời điểm thật (theo lịch sử Git và PR #240) là khoảng 12:04-12:14, tức là hồ sơ gốc ghi một thời điểm ở tương lai so với lúc PR thật sự được tạo. Hồ sơ gốc đã được giữ nguyên làm bản ghi lịch sử có thể kiểm toán (`gate_status: superseded`, không bị xoá hay viết đè). Bản v2 này:
+- **Không** mở rộng hay thay đổi phạm vi quyết định đã duyệt ở Gate 1 gốc;
+- **Không** cấp thêm bất kỳ thẩm quyền nghiệp vụ mới hay rộng hơn nào;
+- **Không** phê duyệt triển khai bất kỳ gap kỹ thuật cụ thể nào;
+- Quyết định phê duyệt Gate 1 ban đầu của owner **vẫn còn nguyên giá trị** — bản v2 chỉ chép lại đúng quyết định đó với thời gian và liên kết PR chính xác.
 
 ## Vấn đề vận hành
 Sổ đăng ký gap vận hành (`OPERATIONAL_GAP_REGISTER.md`) đang chứa nhiều mục ở trạng thái "UNVERIFIED" (kết quả sửa lỗi cũ chưa ai xác nhận lại) và nhiều mục "OPEN" tự khai nhưng chưa có kế hoạch xử lý theo lộ trình rõ ràng. Không có cách nào để owner biết mục nào an toàn, mục nào còn rủi ro thật, và thứ tự xử lý hợp lý là gì — nếu không có một chương trình được thiết kế và duyệt rõ ràng.

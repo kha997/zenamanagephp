@@ -1,30 +1,37 @@
 ---
 work_id: GAP-010b
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_more_info_or_decline_or_defer"
+decision_requested: null
 references:
   spec: null
   plan: null
   branch: docs/GAP-010b-legacy-csv-export-safety
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/243
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
-  reconciliation_required: false
+  recorded_at: "2026-08-07T07:11:52+07:00"
+  owner_response_reference: "ChatGPT project conversation — explicit Owner Gate 1 approval for GAP-010b on 2026-08-06"
+  reconciliation_required: true
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-06T15:31:23+07:00"
-  updated_at: "2026-08-06T15:31:23+07:00"
+  updated_at: "2026-08-07T07:11:52+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+The owner approves preparation of the Gate 2 design for GAP-010b.
+
+This approval does not authorize any source-code, route, permission,
+storage, API or deployment change.
 
 ## OWNER GATE 1: REQUEST
 

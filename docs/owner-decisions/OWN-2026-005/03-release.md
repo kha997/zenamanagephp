@@ -1,14 +1,14 @@
 ---
 work_id: OWN-2026-005
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: null
   plan: null
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
-  reconciliation_required: false
+  recorded_at: "2026-08-07T12:08:00+07:00"
+  owner_response_reference: "ChatGPT project conversation — explicit Owner Gate 3 release approval for OWN-2026-005 on 2026-08-07"
+  reconciliation_required: true
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-07T09:15:08+07:00"
-  updated_at: "2026-08-07T09:15:08+07:00"
+  updated_at: "2026-08-07T12:08:00+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "32/32 kiểm tra CI bắt buộc trên PR #247 đã đạt (7 workflow độc lập), gồm 147/147 test Owner Governance mới và có sẵn, không có review nào yêu cầu chỉnh sửa, không có review thread chưa xử lý."
@@ -35,8 +35,8 @@ technical_evidence:
   verified_pr_head_sha: "de7060ba1396fe7fd922d859e2204d637da0af0a"
   verified_at: "2026-08-07T09:15:08+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "5db8f94b40fb40b7af45ea7ab3c20520e47a73b306eaf729a7ac95094f1cbd64"
+  decision_recorded_at: "2026-08-07T12:08:00+07:00"
 ---
 
 ## Gói quyết định phát hành — OWN-2026-005: Sửa công cụ quản trị Gate 2 (design-only exemption)
@@ -75,7 +75,17 @@ Có. Không có migration cơ sở dữ liệu, không đổi cấu trúc dữ l
 
 **10. Đề xuất của đội kỹ thuật:** Phát hành (Approve).
 
-**Quyết định của chủ doanh nghiệp:** ☐ Phát hành  ☐ Yêu cầu chỉnh sửa nghiệp vụ  ☐ Hoãn phát hành
+**Quyết định của chủ doanh nghiệp:** ☒ Phát hành  ☐ Yêu cầu chỉnh sửa nghiệp vụ  ☐ Hoãn phát hành
 
 ## What the owner is NOT being asked to decide
 Owner không được yêu cầu đọc mã nguồn, mở pull request kỹ thuật, xem nhật ký CI, hay review từng dòng thay đổi — mọi kết luận trên đã được đội kỹ thuật xác minh trực tiếp qua CI thật và bằng chứng đính kèm. Owner cũng không được yêu cầu quyết định bất kỳ điều gì về GAP-010b hay GAP-034 — hai work item đó hoàn toàn tách biệt và chưa được yêu cầu quyết định ở đây.
+
+## OWNER GATE 3: APPROVED
+
+Owner approves release of OWN-2026-005.
+
+Approval is bound to implementation-tree digest:
+
+5db8f94b40fb40b7af45ea7ab3c20520e47a73b306eaf729a7ac95094f1cbd64
+
+This approval applies only to OWN-2026-005 and does not authorize GAP-010b, GAP-034, or any other work item.

@@ -65,6 +65,16 @@ class EnforcementBoundaryTest extends TestCase
         $this->assertStringContainsString('fallback-only', $content);
     }
 
+    public function test_workflow_passes_changed_files_to_gate_ordering_on_pull_request(): void
+    {
+        // OWN-2026-005: the design-only exemption requires positive evidence
+        // of this submission's diff scope — the workflow must compute it via
+        // `gh pr view --json files` and pass it through `--changed-files=`.
+        $content = file_get_contents($this->repoRoot() . '/.github/workflows/owner-governance-lint.yml');
+        $this->assertStringContainsString('--changed-files=', $content);
+        $this->assertStringContainsString("gh pr view \"\$PR_NUMBER\" --json files", $content);
+    }
+
     public function test_lint_defines_the_missing_governance_frontmatter_rule(): void
     {
         // --enforce-gate-ordering is a directory-scan CLI mode, not a single-file

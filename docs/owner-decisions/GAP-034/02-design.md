@@ -10,7 +10,7 @@ references:
   spec: docs/superpowers/specs/2026-08-07-gap-034-export-tenant-isolation-design.md
   plan: null
   branch: docs/GAP-034-gate2-export-tenant-isolation
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/249
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-07T22:17:08+07:00"
-  updated_at: "2026-08-07T22:17:08+07:00"
+  updated_at: "2026-08-07T22:21:10+07:00"
 generated_by: agent
 ---
 

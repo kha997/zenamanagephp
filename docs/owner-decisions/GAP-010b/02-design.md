@@ -16,44 +16,48 @@ decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
   recorded_at: null
-  owner_response_reference: null
+  owner_response_reference: "ChatGPT project conversation — Owner Gate 2 review round 1 (CHANGES REQUESTED) for GAP-010b on 2026-08-07; this packet is the re-presentation closing all round-1 findings"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-07T07:12:43+07:00"
-  updated_at: "2026-08-07T13:14:39+07:00"
+  updated_at: "2026-08-07T16:15:33+07:00"
 generated_by: agent
 ---
 
-## OWNER GATE 2: DESIGN PRESENTED
+## OWNER GATE 2: RE-PRESENTED AFTER CHANGES REQUESTED (round 1)
 
-Đội kỹ thuật trình bày thiết kế Gate 2 cho GAP-010b để owner xem xét. Chưa có mã nguồn nào được sửa, chưa có implementation plan nào được tạo. Bản thiết kế đầy đủ nằm tại `docs/superpowers/specs/2026-08-06-gap-010b-legacy-csv-export-safety-design.md`.
+Đội kỹ thuật trình lại thiết kế Gate 2 cho GAP-010b sau khi owner yêu cầu chỉnh sửa (review round 1, 2026-08-07). Chưa có mã nguồn nào được sửa, chưa có implementation plan nào được tạo. Bản thiết kế đầy đủ nằm tại `docs/superpowers/specs/2026-08-06-gap-010b-legacy-csv-export-safety-design.md`.
 
-## Trước / Sau
+## Owner Gate 2 review round 1 — CHANGES REQUESTED — cách đóng từng phát hiện
 
-**Trước:** `POST /tasks/bulk/export` và `POST /projects/bulk/export` xuất CSV không tách bạch giữa escaping cấu trúc CSV và vô hiệu hoá công thức bảng tính, dựng toàn bộ dữ liệu trong bộ nhớ tại nhiều tầng khác nhau (không chỉ bước ghi file cuối). Đồng thời route hiện **không gọi được** vì controller thiếu dòng `use Illuminate\Http\Request;`, và câu truy vấn xuất dữ liệu **không lọc theo tenant** (đã tách thành GAP-034, work item riêng).
+1. **Bounded-memory cho project/tasks:** Thiết kế cũ (`Project::with(['tasks'])` theo chunk) không thật sự giới hạn bộ nhớ — một project có rất nhiều task vẫn tải toàn bộ task đó vào RAM. **Đã sửa:** dùng `withCount()` (aggregate ở tầng database), lấy đúng số liệu "Tổng task"/"Task hoàn thành" mà **không bao giờ** tải bất kỳ model `Task` nào — dùng đúng mẫu đã có sẵn và đang chạy thật trong `AnalyticsController.php:152-154`.
+2. **Serialization của `tags`:** Đã xác minh `tags` cast thành `array` trên model. **Đã chốt:** dùng đúng quy ước có sẵn trong hệ thống (`Document::getTagsAsString()`: `implode(', ', $tags)`), không phát minh định dạng mới. Đã phát hiện thêm: mã hiện tại đang có lỗi thật (PHP tự chuyển mảng thành chuỗi `"Array"`) — thiết kế mới đóng lỗi này.
+3. **Phạm vi sửa import `Illuminate\Http\Request` còn thiếu:** Owner đã quyết định ngay tại Gate 2 này: **có**, thuộc phạm vi implementation của GAP-010b. Việc này KHÔNG có nghĩa route được phép hoạt động trên production trước khi GAP-034 hoàn tất — phạm vi implementation và phạm vi phát hành (release) là hai quyết định tách biệt.
+4. **Formula-neutralization phải phân biệt loại dữ liệu:** Quy tắc cũ vô tình biến mọi số âm (ví dụ `progress_percent = -5`) thành text chỉ vì bắt đầu bằng dấu `-`. **Đã sửa:** chỉ áp dụng vô hiệu hoá công thức cho cột dạng văn bản/người dùng nhập; cột số, null, ngày tháng giữ nguyên ý nghĩa gốc, dựa trên loại dữ liệu đã biết trước của cột, không dựa vào ký tự đầu chuỗi sau khi convert.
+5. **CSV compatibility (EOL, BOM, cách so sánh):** Đã chốt dứt điểm, không để ngỏ cho implementation tự chọn: giữ nguyên `\n` (không đổi CRLF), không thêm BOM, hợp đồng tương thích là "đúng giá trị logic + đúng thứ tự cột/tiêu đề" (không phải giống byte-từng-byte, trừ đúng dòng tiêu đề).
+6. **Số dòng trả về + tránh file dở dang:** Đã chốt: đếm số dòng thực sự đã ghi thành công (không đếm trên collection đầy đủ cũ); ghi vào file tạm trước, chỉ công bố file cuối sau khi xong hoàn toàn, xoá file tạm nếu lỗi — không bao giờ trả về "thành công" cho file dở dang.
 
-**Sau (đề xuất, chờ owner chọn ở Gate 3):** công thức bảng tính bị vô hiệu hoá an toàn bằng lớp riêng biệt với escaping cấu trúc CSV chuẩn (không phá dữ liệu hợp lệ như số điện thoại bắt đầu bằng `+`); bộ nhớ dùng có giới hạn xuyên suốt toàn bộ chuỗi xử lý (câu truy vấn → hydrate model → transform → encode CSV → ghi file), không chỉ bước ghi cuối; route gọi được đúng như mô tả API hiện tại; hai route xuất dữ liệu **không được khôi phục hoạt động** cho tới khi GAP-034 (lọc theo tenant) cũng được triển khai và xác minh xong.
+Đồng thời: bỏ hẳn việc eager-load quan hệ `assignments` ở đường xuất task (đã xác minh không được dùng ở đâu trong việc tạo file CSV) — không mang theo dữ liệu thừa vào bộ nhớ.
 
-## Phát hiện quan trọng cần owner biết trước khi quyết định
+## Trước / Sau (cập nhật)
 
-1. **Route hiện không hoạt động được (đã xác minh bằng cách chạy thử thật, không phải suy đoán, và vẫn đúng với `main` hiện tại):** `ExportController.php` không có dòng `use Illuminate\Http\Request;`, và hai hàm `exportTasks()`/`exportProjects()` khai kiểu tham số là `Request` — vì không có `use`, PHP hiểu đây là `App\Http\Controllers\Api\Request`, một class không tồn tại. Khi Laravel cố tạo tham số này để gọi hàm, nó báo lỗi `Target class [App\Http\Controllers\Api\Request] does not exist.` — **lỗi xảy ra trước khi vào được thân hàm**, nên khối `try/catch` trong controller không bắt được. Kết quả: gọi 2 route này ngay bây giờ luôn thất bại, không xuất được gì cả — nghĩa là rủi ro chèn công thức và hết bộ nhớ **hiện tại không khai thác được**. Gate 2 này **ghi nhận** phát hiện này lại (vẫn đúng) nhưng **không sửa** — không "sửa nhanh import để route chạy lại" ở bước Gate 2.
-2. **Tenant filtering là HARD BLOCKER riêng (GAP-034, PR #246, Gate 1 đang chờ owner):** Model `Task`/`Project` không có cơ chế tự động lọc theo tenant, `ExportController` cũng không tự lọc. GAP-034 là work item quản trị hoàn toàn tách biệt — có Gate 1/2/3, acceptance criteria, test, bằng chứng, và quyết định owner riêng. **Hai route xuất dữ liệu của GAP-010b không được khôi phục hoạt động cho tới khi GAP-034 cũng được triển khai và xác minh xong** — kể cả khi GAP-010b tự nó đã sẵn sàng. Thiết kế GAP-010b **không** thêm bất kỳ bộ lọc tenant nào "tiện tay" — đó là phạm vi của GAP-034.
-3. **Phân quyền hiện tại rất chung chung, không riêng cho tính năng xuất dữ liệu:** route chỉ dùng middleware `rbac` không kèm quyền cụ thể — không thuộc phạm vi GAP-010b, giữ nguyên như hiện tại.
+**Trước:** `POST /tasks/bulk/export` và `POST /projects/bulk/export` không tách bạch escaping CSV với vô hiệu hoá công thức, dựng toàn bộ dữ liệu trong bộ nhớ ở nhiều tầng (kể cả tầng project→tasks nghiêm trọng hơn đã phát hiện), có lỗi thật khi xuất cột `tags` (mảng bị ép thành chữ "Array"), thiếu import khiến route không gọi được, không lọc theo tenant (GAP-034).
+
+**Sau (thiết kế đã chốt, chờ owner quyết định phát hành ở Gate 3):** công thức bảng tính bị vô hiệu hoá đúng loại dữ liệu (không đụng vào số/null/ngày); bộ nhớ có giới hạn thật sự ở mọi tầng cho cả hai đường xuất, kể cả trường hợp một project có rất nhiều task; `tags` xuất đúng theo quy ước có sẵn của hệ thống; import được thêm vào (thuộc phạm vi implementation) nhưng route vẫn **không được khôi phục hoạt động trên production cho tới khi GAP-034 hoàn tất và xác minh xong**.
 
 ## Owner cần quyết định (không phải kỹ thuật)
 
-- **Có đưa việc sửa lỗi thiếu `use Request` vào cùng phạm vi implementation của GAP-010b không?** Đội kỹ thuật đề xuất: có, vì không thể xác minh bất kỳ phần nào của thiết kế xuất dữ liệu an toàn bằng kiểm thử thực tế nếu route còn không gọi được — nhưng đây vẫn là quyết định của owner tại Gate 3, không tự ý gộp ở Gate 2 này.
-- **Có chấp nhận thiết kế bảo đảm bộ nhớ giới hạn xuyên suốt toàn bộ chuỗi xử lý (không chỉ bước ghi file) như trình bày trong bản thiết kế đính kèm không?**
-- **Có chấp nhận việc GAP-034 là điều kiện bắt buộc (hard blocker) trước khi khôi phục route, thay vì gộp lọc tenant vào GAP-010b không?** Đội kỹ thuật đề xuất: có — đã tách theo đúng chỉ đạo owner trước đó.
+- **Chấp nhận toàn bộ thiết kế đã chốt ở các mục 1–6 trên không?**
+- **Xác nhận: import fix thuộc phạm vi implementation của GAP-010b, nhưng release vẫn bị chặn bởi GAP-034 — đúng như owner đã quyết định.**
 
 Xem đầy đủ phân tích kỹ thuật, quyết định thiết kế, tiêu chí chấp nhận, và kế hoạch kiểm thử tại bản thiết kế đính kèm.
 
 ## Trạng thái và bước tiếp theo
 
-Gate 1 đã duyệt → **Gate 2 đang chờ owner (bước này)** → Gate 3 (chưa bắt đầu, chưa được phép). PR #243 vẫn là Draft, chưa merge, chưa có mã nguồn nào thay đổi, chưa có implementation plan nào được tạo.
+Gate 1 đã duyệt → **Gate 2 đang chờ owner (bước này, sau khi đóng round 1 changes-requested)** → Gate 3 (chưa bắt đầu, chưa được phép). PR #243 vẫn là Draft, chưa merge, chưa có mã nguồn nào thay đổi, chưa có implementation plan nào được tạo.
 
 ## Ngoại lệ
 
-GAP-010c, GAP-034 (work item riêng, hard blocker — xem trên), và các gap khác không thuộc phạm vi quyết định này.
+GAP-010c, GAP-034 (work item riêng, hard blocker — xem thiết kế đính kèm) và các gap khác không thuộc phạm vi quyết định này.

@@ -16,13 +16,13 @@ decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
   recorded_at: null
-  owner_response_reference: "ChatGPT project conversation — Owner-authorized GAP-034 Gate 2 design preparation after explicit Gate 1 approval; Owner review round 1 on 2026-08-07 returned CHANGES REQUESTED for scalar foreign-reference leakage; this revision re-presents the design without recording approval"
+  owner_response_reference: "ChatGPT project conversation — Owner-authorized GAP-034 Gate 2 design preparation after explicit Gate 1 approval; review round 1 returned CHANGES REQUESTED for Task scalar foreign-reference leakage; review round 2 returned CHANGES REQUESTED for incomplete Project scalar-reference inventory/projection; this revision re-presents the design without recording approval"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-07T22:17:08+07:00"
-  updated_at: "2026-08-07T22:30:42+07:00"
+  updated_at: "2026-08-07T23:00:57+07:00"
 generated_by: agent
 ---
 
@@ -33,8 +33,10 @@ GAP-034 bảo vệ cả hai endpoint bulk export task/project khỏi rò rỉ d�
 ## Lịch sử review
 
 - Owner review round 1, reviewed head `96dc086283e021e007d627d62c0061ecb330f2ab`: **CHANGES REQUESTED**.
-- Finding: relation scoping không ngăn scalar foreign identifiers trên Task đi vào CSV/JSON qua `assignee_id` và unrestricted `toArray()`.
-- Revision này bổ sung query eligibility cho Project bắt buộc, inventory toàn bộ reference-bearing Task attributes và tenant-safe explicit JSON projection. Gate 2 vẫn **AWAITING OWNER**; không ghi nhận approval.
+- Finding round 1: relation scoping không ngăn Task scalar foreign identifiers đi vào CSV/JSON qua `assignee_id` và unrestricted `toArray()`; Task-side revision được Owner chấp nhận về hướng.
+- Owner review round 2, reviewed head `08d48bd9c9e02712365f0ad5248c374aa8463d00`: **CHANGES REQUESTED**.
+- Finding round 2: Project JSON vẫn cần inventory/projection cụ thể cho `client_id`, `pm_id`, `created_by` và các reference-bearing Project columns khác.
+- Revision này giữ nguyên Task policy đã được chấp nhận và bổ sung tenant-safe explicit Project projection. Gate 2 vẫn **AWAITING OWNER**; không ghi nhận approval.
 
 ## Trước / Sau
 
@@ -50,7 +52,7 @@ GAP-034 bảo vệ cả hai endpoint bulk export task/project khỏi rò rỉ d�
 2. Nếu trusted tenant context thiếu hoặc rỗng, export fail closed trước khi chạy query hoặc tạo file.
 3. Base Task/Project query luôn có tenant predicate trước mọi ID/filter do caller cung cấp.
 4. Task chỉ eligible nếu Project bắt buộc tồn tại và thuộc trusted tenant; Project relation, Task relation/assignment data và aggregates đều bị giới hạn cùng tenant.
-5. JSON dùng explicit tenant-safe projection; không dùng unrestricted `$tasks->toArray()`.
+5. Task và Project JSON dùng explicit tenant-safe projections; không dùng unrestricted `$tasks->toArray()` hoặc `$projects->toArray()`.
 6. Optional scalar references chỉ được giữ sau tenant/project validation; foreign/stale values thành `null`, `[]` hoặc fallback không định danh.
 7. ID tenant khác bị lọc im lặng: không record, không related data, không scalar-reference leak và không existence oracle.
 
@@ -65,6 +67,9 @@ GAP-034 bảo vệ cả hai endpoint bulk export task/project khỏi rò rỉ d�
 - `component_id` và `phase_id` chỉ được giữ khi target thuộc cùng eligible Project; nếu không thì `null`.
 - `dependencies_json` chỉ giữ Task IDs thuộc trusted tenant, có tenant-consistent Project và cùng Project với Task nguồn; foreign/stale IDs bị loại.
 - `assigned_to`, `created_by`, `updated_by`, `watchers`, `parent_id`, `work_instance_id` và `work_instance_step_id` cũng được tenant-safe validation trước JSON projection.
+- Project `client_id`, `pm_id`, `created_by` là optional User references: Project vẫn eligible; same-tenant ID được giữ, foreign/stale ID thành `null`.
+- Project `template_id` là reference-shaped column nhưng repository không có FK/relation/target contract; không được allowlist vào export cho đến khi có review riêng.
+- Project `tags` là string labels và `settings` là business flags/config theo request/factory evidence; GAP-034 coi là non-reference metadata và giữ nguyên.
 - Missing trusted context không được phép rơi về query không scope.
 - Header/user mismatch vẫn do middleware xử lý và không bị thay đổi.
 
@@ -78,6 +83,7 @@ Không thay đổi vai trò hoặc permission. Mọi caller đã vượt qua `au
 - ID tenant khác hoặc mixed IDs: tenant khác bị bỏ qua, response không phân biệt “không tồn tại” với “không thuộc tenant”.
 - CSV, Excel và JSON tuân cùng data-selection boundary.
 - JSON giữ envelope và Task field names nhưng được tạo từ allowlisted explicit projection; không serialize unrestricted model attributes/relations.
+- Project JSON giữ safe business fields; optional User references chỉ được đưa vào sau tenant validation, Task children dùng Task-safe projection, counts dùng tenant-constrained aggregates.
 - Missing tenant context: request thất bại, không có success response/download artifact.
 
 ## Kịch bản chấp nhận
@@ -97,6 +103,8 @@ Không thay đổi vai trò hoặc permission. Mọi caller đã vượt qua `au
 13. Tenant-header mismatch behavior hiện tại của middleware vẫn giữ nguyên.
 14. Task A có `assignee_id = User B` → Task vẫn eligible, CSV/Excel dùng `Unassigned`, JSON dùng `null`, User B ULID/attributes không xuất hiện.
 15. Foreign/stale component, phase, dependency, user/audit/watcher, parent hoặc work-instance references → áp dụng policy đã chốt theo inventory; foreign ULID không xuất hiện ở bất kỳ payload nào.
+16. Project A có foreign/stale `client_id`, `pm_id` hoặc `created_by` → Project A vẫn export; field tương ứng thành `null`; User B ULID/attributes không xuất hiện.
+17. Project A có valid same-tenant User references → IDs được giữ nguyên; future/unexpected Project reference column không tự động đi vào JSON.
 
 ## Tương tác với GAP-010b
 

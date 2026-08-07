@@ -10,7 +10,7 @@ owner_gate_2_record: docs/owner-decisions/GAP-034/02-design.md
 
 **Objective:** An authenticated request operating as Tenant A can never cause either legacy bulk export endpoint to emit Tenant B Task/Project records, Tenant B-derived related/aggregate data, or unverified Tenant B-owned scalar reference identifiers, regardless of caller-supplied IDs, filters or requested format.
 
-**Review history:** Owner review round 1 reviewed head `96dc086283e021e007d627d62c0061ecb330f2ab` and returned **CHANGES REQUESTED** for scalar foreign-reference leakage. This revision closes that finding and re-presents Gate 2; it does not record approval.
+**Review history:** Round 1 reviewed head `96dc086283e021e007d627d62c0061ecb330f2ab` and returned **CHANGES REQUESTED — Task scalar foreign-reference leakage**; the Task-side direction is now accepted and unchanged. Round 2 reviewed head `08d48bd9c9e02712365f0ad5248c374aa8463d00` and returned **CHANGES REQUESTED — Project scalar foreign-reference inventory/projection incomplete**. This revision closes the Project-side finding and re-presents Gate 2; it does not record approval.
 
 **Endpoints and formats:** `POST /tasks/bulk/export` and `POST /projects/bulk/export`; CSV, Excel and JSON. Isolation is applied to data selection before format generation, so no writer can bypass it.
 
@@ -55,6 +55,12 @@ The scope is opt-in and unused by `ExportController`.
 Current Task CSV emits the Project name and constructs `User <assignee_id>` directly from the Task row. Current Task JSON passes `$tasks->toArray()` to the writer. `Src\CoreProject\Models\Task` has no `$hidden` allowlist, so Eloquent serialization includes database attributes beyond `$fillable`, plus loaded relations.
 
 Repository schema/model evidence identifies reference-bearing Task attributes: `project_id`, `component_id`, `phase_id`, `assignee_id`, `assigned_to`, `dependencies_json`, `parent_id`, `created_by`, `updated_by`, `watchers`, `work_instance_id` and `work_instance_step_id`. Project, Component, ProjectPhase, User, Task, WorkInstance and WorkInstanceStep are tenant- or project-owned. These scalar values remain visible even when an eager-loaded relation is absent; relation scoping alone is therefore insufficient.
+
+### 1.6 Project schema and metadata evidence
+
+The full current `projects` migration chain adds `tenant_id`, `client_id`, `pm_id`, `created_by` and `template_id` alongside business fields. Foreign-key migrations bind `client_id`, `pm_id` and `created_by` to `users`; `App\Models\Project` also exposes `client()` and manager relationships through `client_id`/`pm_id`. Users carry `tenant_id`. `template_id` is added as a nullable string but has no Project FK, model relationship or repository usage establishing a target/tenant contract.
+
+`tags` is validated as an array of bounded strings in Project requests and factories generate ordinary word labels. `settings` is validated as an array; the Project factory evidence contains boolean business flags (`notifications`, `auto_assign`, `require_approval`). No repository evidence gives either field an entity-ID-bearing structure. Under GAP-034 they are ordinary business metadata, not reference containers. A future schema/contract that places identifiers inside them requires a new review before those values can be allowlisted.
 
 ---
 
@@ -208,6 +214,23 @@ For users, validation is `users.id IN candidates AND users.tenant_id = trustedTe
 
 This optional-reference sanitization is allowed after primary query eligibility because its result is an explicit writer projection, not an attempt to rescue a foreign primary/related row. At no point may an unverified candidate identifier be copied into the projection.
 
+### 5.6 Emitted Project reference inventory and settled behavior
+
+Current Project CSV explicitly emits business fields and database-derived Task counts; it does not emit the optional Project User IDs. Current Project Excel delegates to the CSV field set. Current Project JSON uses unrestricted `$projects->toArray()`, so all loaded database attributes and the loaded `tasks` relation are exposed regardless of `$fillable`.
+
+| Project field/surface | Repository-backed target/ownership | Current CSV | Current Excel | Current JSON | Same-tenant valid behavior | Foreign-target behavior | Missing/stale behavior |
+|---|---|---:|---:|---:|---|---|---|
+| `tenant_id` | `tenants`; Project's primary ownership boundary | no | no | yes | emit the already-verified trusted tenant value | impossible after base predicate | Project is ineligible if trusted ownership does not match |
+| `client_id` | `users`; optional Client relationship, User is tenant-owned | no | no | yes | preserve ID after `users.tenant_id = trustedTenantId` validation | Project remains; JSON `null` | Project remains; JSON `null` |
+| `pm_id` | `users`; optional Manager/ProjectManager relationship, User is tenant-owned | no | no | yes | preserve ID after same-tenant validation | Project remains; JSON `null` | Project remains; JSON `null` |
+| `created_by` | `users`; nullable creator/audit FK, User is tenant-owned | no | no | yes | preserve ID after same-tenant validation | Project remains; JSON `null` | Project remains; JSON `null` |
+| `template_id` | nullable reference-shaped string; no Project FK/relation/target contract found | no | no | yes under current raw serialization | not allowlisted pending a separately reviewed target/ownership contract | omitted | omitted |
+| loaded `tasks` collection | `tasks`; Task is tenant/project-owned | counts only | counts only | yes | include only through §§4.2, 5.4–5.5 Task-safe projection | foreign/ineligible Task absent | stale relation absent |
+
+Project `id` is the eligible primary identifier, not a foreign reference. No `updated_by`, `manager_id` or other reference-bearing column exists in the audited `projects` migrations: `manager_id` is only an accessor alias for `pm_id` and is not appended automatically. The remaining migrated columns are business/lifecycle values, not entity identifiers.
+
+Optional Project User IDs use the same bounded allowset pattern as Task User references: query only `users.id IN candidates AND users.tenant_id = trustedTenantId`, preserve matching IDs, and map every nonmatch to `null` without loading User attributes. They never affect Project primary eligibility.
+
 ---
 
 ## 6. Aggregate isolation and GAP-010b composition
@@ -250,7 +273,20 @@ The same projected logical record is the security boundary for CSV, Excel and JS
 
 ### 7.2 Project JSON serialization
 
-Project JSON must likewise use an explicit projection or an equivalently allowlisted mapper, not unrestricted `$projects->toArray()` with raw loaded Tasks. Project primary rows are tenant-scoped; any retained Task list uses the Task eligibility/reference rules above, and counts use §6. This closes the same future-attribute/loaded-relation bypass for the Project endpoint.
+Future GAP-034 implementation uses a **tenant-safe explicit Project projection**, never `$projects->toArray()`, raw model attributes, or raw Task models. The settled allowlist is:
+
+- identity/ownership: `id`, verified `tenant_id`;
+- business/lifecycle: `code`, `name`, `description`, `status`, `priority`, `progress`, `start_date`, `end_date`;
+- financial/capacity: `budget_total`, `budget_planned`, `budget_actual`, `actual_cost`, `estimated_hours`, `actual_hours`, `completion_percentage`;
+- classification/state: `risk_level`, `is_template`, `last_activity_at`;
+- confirmed non-reference metadata: `tags`, `settings`;
+- timestamps/lifecycle: `created_at`, `updated_at`, `deleted_at` where present in the current selected row;
+- optional verified references: `client_id`, `pm_id`, `created_by`, with nonmatching values explicitly set to `null`;
+- relations/aggregates: a `tasks` key only when required by the existing JSON contract, populated exclusively with the Task-safe projection; tenant-constrained `tasks_count`/`completed_tasks_count` where selected by the format design.
+
+`template_id` is deliberately absent because repository evidence does not establish its target or tenant ownership. It cannot enter output merely because it exists in the table. Any other newly added/unexpected database attribute is absent by default until explicitly reviewed and allowlisted.
+
+The top-level `export_info`/`projects` envelope remains. The Project itself remains eligible when optional `client_id`, `pm_id` or `created_by` is foreign/stale; only that field becomes `null`. No foreign User attributes are loaded or emitted. This closes the future-attribute and loaded-relation bypass symmetrically with Task JSON.
 
 ---
 
@@ -326,8 +362,14 @@ Tests must inspect emitted logical records/writer inputs, not only SQL strings.
 20. Header/user mismatch → existing middleware 403 behavior unchanged.
 21. If assignments remain during isolated GAP-034 verification, Assignment B linked to Task A is absent from writer input; final GAP-010b composition removes the eager load.
 22. Projection contract → Task and Project JSON writers do not receive Eloquent `toArray()` output; an unexpected future reference-bearing model column is absent unless explicitly reviewed and allowlisted.
+23. Project A with `client_id = User B` → Project A remains; JSON has `client_id: null`; User B ULID/attributes are absent everywhere.
+24. Project A with `pm_id = User B` → Project A remains; JSON has `pm_id: null`; User B ULID/attributes are absent everywhere.
+25. Project A with `created_by = User B` → Project A remains; JSON has `created_by: null`; User B ULID/attributes are absent everywhere.
+26. Project A with valid same-tenant `client_id`, `pm_id` and `created_by` → all three IDs remain intact without loading User attributes.
+27. Project metadata → ordinary string `tags` and boolean/config `settings` round-trip unchanged as non-reference metadata; `template_id` and an injected future/unexpected reference-bearing column are absent from Project writer input unless separately reviewed and allowlisted.
+28. Project JSON with loaded Tasks → every child uses the Task eligibility/reference projection; no raw Task model/attribute array enters the Project payload.
 
-Use real string/ULID tenant and record IDs. Include deliberately inconsistent rows using direct database insertion or a narrowly controlled fixture where model protections would otherwise prevent the state. For every foreign-reference class, assert the actual `foreignTenantUlid` is not present anywhere in serialized logical writer input or parsed output, not merely that a relation object is absent. Also verify zero Tenant B names/attributes/aggregate influence.
+Use real string/ULID tenant and record IDs. Include deliberately inconsistent rows using direct database insertion or a narrowly controlled fixture where model protections would otherwise prevent the state. For every Task and Project foreign-reference class, assert the actual `foreignTenantUlid` is not present anywhere in serialized logical writer input or parsed output, not merely that a relation object is absent. Also verify zero Tenant B names/attributes/aggregate influence.
 
 ---
 
@@ -342,12 +384,15 @@ Use real string/ULID tenant and record IDs. Include deliberately inconsistent ro
 7. Project Task relations and all Task aggregates independently enforce tenant.
 8. Every emitted tenant-owned scalar/reference value follows the settled §5.4 policy.
 9. Task/Project JSON uses explicit tenant-safe projection; unrestricted model `toArray()` is prohibited.
-10. Unauthorized primary IDs are silently excluded without existence disclosure.
-11. CSV/Excel/JSON share the same eligible rows and tenant-safe projection boundary.
-12. GAP-010b bounded-memory aggregate design remains intact with tenant-constrained closures and bounded reference allowsets.
-13. No RBAC/global-scope/model-wide scope/schema/dependency change is introduced.
-14. All §10 regressions pass in a future authorized implementation.
-15. Neither export route is released until both GAP-034 and GAP-010b pass their own governance and verification.
+10. Project optional `client_id`, `pm_id` and `created_by` preserve only verified same-tenant IDs; foreign/stale values become `null` without excluding the Project.
+11. Project `tags`/`settings` remain confirmed non-reference metadata; unclassified `template_id` and future columns are excluded by default.
+12. Project Task children use only the Task-safe projection and aggregates remain tenant-constrained.
+13. Unauthorized primary IDs are silently excluded without existence disclosure.
+14. CSV/Excel/JSON share the same eligible rows and tenant-safe projection boundary.
+15. GAP-010b bounded-memory aggregate design remains intact with tenant-constrained closures and bounded reference allowsets.
+16. No RBAC/global-scope/model-wide scope/schema/dependency change is introduced.
+17. All §10 regressions pass in a future authorized implementation.
+18. Neither export route is released until both GAP-034 and GAP-010b pass their own governance and verification.
 
 ---
 

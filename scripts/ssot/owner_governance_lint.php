@@ -374,6 +374,46 @@ function owner_governance_compute_implementation_tree_digest(string $sha, string
 }
 
 /**
+ * Loads and strictly validates a JSON changed-files list (written by
+ * scripts/ci/fetch-pr-changed-files.sh, or an equivalent source that has
+ * already verified completeness against a paginated API). Fails closed:
+ * throws on a missing/unreadable file, invalid JSON, a payload that is not
+ * a JSON array, an empty array, or any element that is not a non-empty
+ * string. Deliberately never returns null or an empty array on failure —
+ * a caller must let this propagate into a hard error, never silently
+ * degrade to "no changed-files evidence" (which would look identical to a
+ * legitimate absence of the flag and defeat the fail-closed contract this
+ * exists for).
+ *
+ * @return array<int, string>
+ */
+function owner_governance_load_changed_files_json(string $path): array
+{
+    if (!is_file($path)) {
+        throw new \RuntimeException("changed-files JSON file '{$path}' does not exist.");
+    }
+    $raw = file_get_contents($path);
+    if ($raw === false || trim($raw) === '') {
+        throw new \RuntimeException("changed-files JSON file '{$path}' is empty or unreadable.");
+    }
+    try {
+        $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+    } catch (\JsonException $e) {
+        throw new \RuntimeException("changed-files JSON file '{$path}' is not valid JSON: " . $e->getMessage());
+    }
+    if (!is_array($decoded) || $decoded === []) {
+        throw new \RuntimeException("changed-files JSON file '{$path}' did not decode to a non-empty JSON array.");
+    }
+    foreach ($decoded as $entry) {
+        if (!is_string($entry) || $entry === '') {
+            throw new \RuntimeException("changed-files JSON file '{$path}' contains a non-string or empty entry — every entry must be a non-empty file path string.");
+        }
+    }
+
+    return array_values($decoded);
+}
+
+/**
  * Governance-doc path prefixes eligible for the design-only gate-ordering
  * exemption (OWN-2026-005): a submission whose changed files are ALL under
  * one of these prefixes touches only governance/design documentation, never
@@ -676,19 +716,28 @@ if (realpath($argv[0] ?? '') === __FILE__) {
             );
         $scanningExplicitFiles = $explicitFileTargets !== [];
 
-        // OWN-2026-005: --changed-files=<comma-separated relative paths>
-        // carries this submission's diff scope (e.g. computed by CI from
-        // `gh pr view --json files` on a pull_request event). Absent this
-        // flag, $changedFiles stays null and owner_governance_enforce_gate_ordering()
+        // OWN-2026-005: --changed-files-json=<path to a JSON array file>
+        // carries this submission's diff scope (e.g. computed by CI via
+        // scripts/ci/fetch-pr-changed-files.sh on a pull_request event). A
+        // JSON file — never a comma-separated string — because filenames
+        // are legal Git content and may themselves contain commas; only a
+        // real JSON array preserves the list losslessly. Absent this flag,
+        // $changedFiles stays null and owner_governance_enforce_gate_ordering()
         // behaves exactly as before this correction — no exemption without
-        // explicit, positive evidence of what changed.
+        // explicit, positive, verified-complete evidence of what changed.
+        // A PRESENT but invalid/unreadable/malformed flag is a hard error
+        // (fail closed) — never silently treated as if the flag were absent.
         $changedFiles = null;
         foreach ($argv as $arg) {
-            if (str_starts_with($arg, '--changed-files=')) {
-                $changedFiles = array_values(array_filter(
-                    array_map('trim', explode(',', substr($arg, strlen('--changed-files=')))),
-                    fn ($f) => $f !== ''
-                ));
+            if (str_starts_with($arg, '--changed-files-json=')) {
+                $changedFilesJsonPath = substr($arg, strlen('--changed-files-json='));
+                try {
+                    $changedFiles = owner_governance_load_changed_files_json($changedFilesJsonPath);
+                } catch (\Throwable $e) {
+                    $prefix = $isGithubActions ? '::error::' : '';
+                    fwrite(STDERR, "{$prefix}owner-governance-lint: --changed-files-json failed closed: {$e->getMessage()}\n");
+                    exit(1);
+                }
                 break;
             }
         }

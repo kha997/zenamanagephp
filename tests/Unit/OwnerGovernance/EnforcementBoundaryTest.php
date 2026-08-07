@@ -35,6 +35,29 @@ class EnforcementBoundaryTest extends TestCase
         $this->assertStringContainsString('docs/superpowers/plans/**', $content);
     }
 
+    /**
+     * OWN-2026-005: Owner Governance Lint validates docs/superpowers/specs/**
+     * files (they can declare owner_gate_2_record frontmatter and are
+     * subject to --enforce-gate-ordering), so a spec-only change must
+     * trigger this workflow on its own — it must never depend on the
+     * assumption that a spec edit is always accompanied by an
+     * owner-decisions packet change in the same PR.
+     */
+    public function test_owner_governance_workflow_triggers_on_spec_only_changes(): void
+    {
+        $workflow = Yaml::parseFile($this->repoRoot() . '/.github/workflows/owner-governance-lint.yml');
+        $this->assertContains(
+            'docs/superpowers/specs/**',
+            $workflow['on']['pull_request']['paths'],
+            'docs/superpowers/specs/** must trigger this workflow on pull_request — a spec-only change must not depend on an accompanying owner-decisions packet change in the same diff to be linted.'
+        );
+        $this->assertContains(
+            'docs/superpowers/specs/**',
+            $workflow['on']['push']['paths'],
+            'docs/superpowers/specs/** must also trigger this workflow on push to main.'
+        );
+    }
+
     public function test_lint_script_supports_enforce_gate_ordering_flag(): void
     {
         $content = file_get_contents($this->repoRoot() . '/scripts/ssot/owner_governance_lint.php');
@@ -65,14 +88,25 @@ class EnforcementBoundaryTest extends TestCase
         $this->assertStringContainsString('fallback-only', $content);
     }
 
-    public function test_workflow_passes_changed_files_to_gate_ordering_on_pull_request(): void
+    /**
+     * OWN-2026-005 (owner review round 2): `gh pr view --json files` is
+     * backed by a `files(first: 100)` GraphQL query and silently truncates
+     * beyond 100 changed files — using it as the sole changed-files source
+     * risked misclassifying a real implementation file (beyond the cap) as
+     * part of a "design-only" diff. The workflow must instead delegate to
+     * scripts/ci/fetch-pr-changed-files.sh, which uses the paginated REST
+     * API, cross-checks the fetched count against the PR's authoritative
+     * changedFiles total, and fails closed on any error or mismatch. Full
+     * runtime coverage of that script's pagination/cross-check/fail-closed
+     * behavior lives in FetchPrChangedFilesTest.php; this test only pins
+     * down that the workflow actually calls it instead of the capped field.
+     */
+    public function test_workflow_uses_the_paginated_changed_files_source_not_the_capped_field(): void
     {
-        // OWN-2026-005: the design-only exemption requires positive evidence
-        // of this submission's diff scope — the workflow must compute it via
-        // `gh pr view --json files` and pass it through `--changed-files=`.
         $content = file_get_contents($this->repoRoot() . '/.github/workflows/owner-governance-lint.yml');
-        $this->assertStringContainsString('--changed-files=', $content);
-        $this->assertStringContainsString("gh pr view \"\$PR_NUMBER\" --json files", $content);
+        $this->assertStringNotContainsString('--json files', $content, 'Must not use the 100-item-capped `gh pr view --json files` field.');
+        $this->assertStringContainsString('fetch-pr-changed-files.sh', $content, 'Must delegate to the paginated, fail-closed changed-files script.');
+        $this->assertStringContainsString('--changed-files-json=', $content, 'Must pass the changed-files list as a JSON file, not a comma-joined string.');
     }
 
     public function test_lint_defines_the_missing_governance_frontmatter_rule(): void

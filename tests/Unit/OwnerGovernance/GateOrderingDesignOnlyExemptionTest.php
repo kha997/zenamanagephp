@@ -368,4 +368,79 @@ MD;
             'docs/owner-governance/packet-schema.yml',
         ]), 'docs/owner-governance/** (schema/tooling) must NOT count as design-only — it is a different risk class with its own governed work item.');
     }
+
+    /**
+     * Owner review round 2: proves the exemption logic itself has no
+     * hidden ~100-item limitation (the original bug this correction fixes
+     * was specifically about a 100-item CAP on the changed-files SOURCE —
+     * scripts/ci/fetch-pr-changed-files.sh's own multi-page/101-file
+     * coverage lives in FetchPrChangedFilesTest.php; this proves the
+     * downstream enforcement decision is correct once handed such a list).
+     */
+    public function test_101st_file_being_an_implementation_file_still_fails_end_to_end(): void
+    {
+        $root = $this->makeTempRoot();
+        $workId = 'GAP-909';
+        $gate2Rel = "docs/owner-decisions/{$workId}/02-design.md";
+        $specRel = 'docs/superpowers/specs/2026-08-07-fixture-101-files.md';
+
+        $this->writeFile($root, $gate2Rel, $this->gate2Frontmatter($workId, 'awaiting_owner', 'none'));
+        $this->writeFile($root, $specRel, $this->specFrontmatter($workId, $gate2Rel));
+
+        $changedFiles = array_map(fn ($i) => "docs/superpowers/specs/fixture-{$i}.md", range(1, 100));
+        $changedFiles[] = 'app/Http/Controllers/Api/ExportController.php'; // file #101
+
+        $violations = \owner_governance_enforce_gate_ordering(
+            [$root . '/' . $specRel],
+            true,
+            $root,
+            [],
+            $changedFiles
+        );
+
+        $rules = array_map(fn ($v) => $v->rule, $violations);
+        $this->assertContains('gate-2-not-approved', $rules, 'A 101-file diff where only file #101 is an implementation file must still fail — the exemption logic must not have any 100-item blind spot.');
+    }
+
+    /**
+     * A changed-file path containing a comma must be classified correctly
+     * (never comma-split into two entries, one of which could spuriously
+     * "look like" an allowed governance-doc path).
+     */
+    public function test_filename_containing_a_comma_is_classified_correctly_end_to_end(): void
+    {
+        $root = $this->makeTempRoot();
+        $workId = 'GAP-910';
+        $gate2Rel = "docs/owner-decisions/{$workId}/02-design.md";
+        $specRel = 'docs/superpowers/specs/2026-08-07-fixture-comma.md';
+
+        $this->writeFile($root, $gate2Rel, $this->gate2Frontmatter($workId, 'awaiting_owner', 'none'));
+        $this->writeFile($root, $specRel, $this->specFrontmatter($workId, $gate2Rel));
+
+        // A single design-only file whose name itself contains a comma.
+        $commaFile = 'docs/superpowers/specs/weird, filename, with commas.md';
+        $violations = \owner_governance_enforce_gate_ordering(
+            [$root . '/' . $specRel],
+            true,
+            $root,
+            [],
+            [$gate2Rel, $specRel, $commaFile]
+        );
+        $this->assertSame([], $violations, 'A design-only diff must still PASS when one of its filenames contains a comma — proves the comma is never mis-split.');
+
+        // Same comma-containing name, but now treated as if it were an
+        // implementation file (i.e. proving the helper does path-prefix
+        // matching, not naive comma-tokenizing that could accidentally
+        // "match" an allowed prefix from a fragment).
+        $trickyFile = 'app/weird, docs/owner-decisions, filename.php';
+        $violationsWithTrickyFile = \owner_governance_enforce_gate_ordering(
+            [$root . '/' . $specRel],
+            true,
+            $root,
+            [],
+            [$gate2Rel, $specRel, $trickyFile]
+        );
+        $rules = array_map(fn ($v) => $v->rule, $violationsWithTrickyFile);
+        $this->assertContains('gate-2-not-approved', $rules, 'A filename starting with app/ must still be classified as non-design-only, even if a substring after a comma looks like an allowed path.');
+    }
 }

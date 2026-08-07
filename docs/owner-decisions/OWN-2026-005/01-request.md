@@ -16,13 +16,13 @@ decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
   recorded_at: "2026-08-07T08:01:21+07:00"
-  owner_response_reference: "ChatGPT project conversation — explicit owner directive 2026-08-06/07 authorizing a governance-tooling correction to owner_governance_lint.php's --enforce-gate-ordering check"
+  owner_response_reference: "ChatGPT project conversation — owner directive 2026-08-06/07 authorizing a governance-tooling correction to owner_governance_lint.php's --enforce-gate-ordering check; reconfirmed and made implementation-explicit by owner review round 2 (2026-08-07): 'Việc triển khai riêng cho OWN-2026-005 đã được owner cho phép trong chỉ thị trước' — Gate 1 approval for OWN-2026-005 is not in doubt."
   reconciliation_required: true
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-07T08:01:21+07:00"
-  updated_at: "2026-08-07T08:01:21+07:00"
+  updated_at: "2026-08-07T08:42:44+07:00"
 generated_by: agent
 ---
 

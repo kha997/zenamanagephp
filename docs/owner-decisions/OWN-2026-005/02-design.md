@@ -16,13 +16,13 @@ decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
   recorded_at: "2026-08-07T08:01:21+07:00"
-  owner_response_reference: "ChatGPT project conversation — explicit owner directive 2026-08-06/07 dictating the mandatory design principles for this correction verbatim"
+  owner_response_reference: "ChatGPT project conversation — owner directive 2026-08-06/07 dictating the mandatory design principles for this correction verbatim; owner review round 2 (2026-08-07) confirmed the overall design is accepted ('Thiết kế tổng thể được chấp nhận') while requiring an implementation correction (full-pagination changed-files evidence, lossless JSON transport, spec-path workflow trigger) — Gate 2 approval for OWN-2026-005 is not in doubt, only the implementation detail was revised."
   reconciliation_required: true
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-07T08:01:21+07:00"
-  updated_at: "2026-08-07T08:01:21+07:00"
+  updated_at: "2026-08-07T08:42:44+07:00"
 generated_by: agent
 ---
 
@@ -46,7 +46,18 @@ Owner đã tự chỉ đạo các nguyên tắc thiết kế bắt buộc (verba
 
 ## Cơ chế phân biệt design-only vs. implementation
 
-Dựa trên phạm vi file thay đổi thực tế của PR, lấy qua `gh pr view --json files` (cơ chế đã có sẵn trong `check-gate3-before-ready.sh`/`check-evidence-freshness.sh`, không phát minh cơ chế mới). Hàm mới `owner_governance_changed_files_are_design_only()` chỉ coi một diff là "design-only" khi TOÀN BỘ file đều nằm trong `docs/owner-decisions/`, `docs/superpowers/specs/`, hoặc `docs/superpowers/plans/` — cố tình KHÔNG bao gồm `docs/owner-governance/**` (thay đổi schema/tooling là loại rủi ro khác, phải qua đúng work item riêng, như chính lần sửa này). Danh sách trống cũng KHÔNG được coi là design-only.
+Dựa trên phạm vi file thay đổi thực tế của PR. Hàm `owner_governance_changed_files_are_design_only()` chỉ coi một diff là "design-only" khi TOÀN BỘ file đều nằm trong `docs/owner-decisions/`, `docs/superpowers/specs/`, hoặc `docs/superpowers/plans/` — cố tình KHÔNG bao gồm `docs/owner-governance/**` (thay đổi schema/tooling là loại rủi ro khác, phải qua đúng work item riêng, như chính lần sửa này). Danh sách trống cũng KHÔNG được coi là design-only.
+
+## Vòng review 2 của owner (2026-08-07) — sửa lỗ hổng bằng chứng changed-files
+
+Owner chấp nhận thiết kế tổng thể nhưng yêu cầu sửa cơ chế lấy danh sách file thay đổi trước khi trình Gate 3:
+
+- **Nguồn dữ liệu:** không dùng `gh pr view --json files` nữa (trường `files(first: 100)` GraphQL, giới hạn ngầm 100 file, có thể bỏ sót file thứ 101 trở đi và phân loại sai thành design-only). Thay bằng `scripts/ci/fetch-pr-changed-files.sh`: dùng REST API có phân trang (`gh api --paginate`), đối chiếu số file lấy được với tổng `changedFiles` (trường số nguyên riêng, không bị giới hạn 100), **fail closed** (thoát mã khác 0, không in JSON) nếu API lỗi, phân trang lỗi, JSON lỗi, danh sách rỗng, hoặc số lượng không khớp.
+- **Định dạng truyền dữ liệu:** không dùng chuỗi phân cách dấu phẩy nữa (tên file hợp lệ có thể chứa dấu phẩy). Thay bằng file JSON (`--changed-files-json=<path>`), đọc bằng `json_decode(..., JSON_THROW_ON_ERROR)`, xác nhận là mảng chuỗi không rỗng, cũng fail closed nếu không hợp lệ.
+- **Workflow trigger:** thêm `docs/superpowers/specs/**` vào cả `on.pull_request.paths` và `on.push.paths` — một thay đổi chỉ riêng spec phải tự kích hoạt Owner Governance Lint, không phụ thuộc giả định luôn có gói owner-decision đi kèm.
+- **Test:** thay test tĩnh cũ (chỉ xác nhận gọi `gh pr view`) bằng bộ test xác nhận nguồn phân trang đầy đủ + fail-closed (`FetchPrChangedFilesTest.php`, dùng `gh` giả để test xác định không cần mạng thật), cộng thêm test end-to-end 101-file và tên file có dấu phẩy qua chính hàm enforcement (`GateOrderingDesignOnlyExemptionTest.php`).
+
+Thiết kế tổng thể (5 nguyên tắc bắt buộc ở trên) không đổi — đây là sửa lỗ hổng trong cách LẤY bằng chứng, không phải đổi logic quyết định design-only vs. implementation.
 
 ## Được phép / Không được phép
 

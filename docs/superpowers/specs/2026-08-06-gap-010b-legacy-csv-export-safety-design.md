@@ -4,9 +4,9 @@ owner_governance_version: 1
 owner_gate_2_record: docs/owner-decisions/GAP-010b/02-design.md
 ---
 
-# GAP-010b — Legacy CSV Export Safety: Gate 2 Design (re-presented after owner Gate 2 review round 1)
+# GAP-010b — Legacy CSV Export Safety: Gate 2 Design (approved)
 
-**Status:** Gate 2 design, awaiting owner decision. No implementation plan exists yet; no production code has been changed. This revision closes all findings from **Owner Gate 2 review round 1 (2026-08-07): CHANGES REQUESTED** — see §14 for the review record and how each finding was closed.
+**Status:** Owner Gate 2 **APPROVED** at `2026-08-07T16:27:00+07:00`, including the mandatory ULID-type and `fputcsv()` escape corrections recorded in this revision. Gate 3 is **NOT STARTED**; implementation, merge, and release are **NOT authorized**. No implementation plan exists yet; no production code has been changed. See §14 for the decision history.
 
 **Scope:** `app/Http/Controllers/Api/ExportController.php` (`exportTasks()`, `exportProjects()`, `generateCsv()`, `generateProjectsCsv()`) and the two routes `POST /tasks/bulk/export`, `POST /projects/bulk/export` registered at `routes/api.php:1006-1009`. **The missing `Illuminate\Http\Request` import repair is now IN SCOPE for GAP-010b's implementation (owner decision, §1.3/§14) — but this remains a design document; the import is not touched by this Gate 2 packet itself.**
 
@@ -46,7 +46,7 @@ Route::middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function 
 
 **Owner decision (Gate 2 review round 1, 2026-08-07): adding `use Illuminate\Http\Request;` IS part of GAP-010b's implementation scope.** This is a Gate 2 design-scope decision, not deferred to Gate 3. Rationale (owner's): it is the same code path GAP-010b is designed against, and no part of this design can be verified end-to-end without it.
 
-**This decision does NOT authorize merging or deploying that fix ahead of GAP-034.** Adding the import to GAP-010b's implementation branch makes the two export routes *callable* — and callable, on this codebase, means reachable by any tenant, because GAP-034 (query-level tenant filtering) is not yet implemented. Therefore: **GAP-010b's implementation, once it includes this import fix, must not be merged/deployed in a state where the two export routes become reachable in production until GAP-034 has ALSO been implemented and verified** (§10, restated as a hard release-gating criterion in §11 item 12). The import fix is *implementation scope*, not *release scope* — those are two different gates for two different questions, and this design keeps them separate on purpose.
+**This decision does NOT authorize merging or deploying that fix ahead of GAP-034.** Adding the import to GAP-010b's implementation branch makes the two export routes *callable* — and callable, on this codebase, means reachable by any tenant, because GAP-034 (query-level tenant filtering) is not yet implemented. Therefore: **GAP-010b's implementation, once it includes this import fix, must not be merged/deployed in a state where the two export routes become reachable in production until GAP-034 has ALSO been implemented and verified** (§10, restated as a hard release-gating criterion in §11 item 13). The import fix is *implementation scope*, not *release scope* — those are two different gates for two different questions, and this design keeps them separate on purpose.
 
 No existing automated test covers this — the only reference to `ExportController.php` in `tests/` is a static architecture-allowlist check (`tests/Feature/Architecture/ProjectModelReferenceAllowlistTest.php:26`).
 
@@ -72,7 +72,7 @@ $task->assignee_id ? 'User ' . $task->assignee_id : 'Unassigned',
 'tags' => 'array',
 ```
 
-`$task->tags` is Eloquent-cast to a PHP array, not a scalar. The current code (`ExportController.php:162`, `$task->tags` placed directly into the row array then into `str_replace('"', '""', $field)`) passes an array into a string-only function — PHP would coerce it to the literal string `"Array"` with an `E_WARNING`, silently corrupting every tags cell. **This is a real, previously-undocumented data-corruption defect in the current code, confirmed this round. §4 defines the serialization design that closes it.**
+`$task->tags` is Eloquent-cast to a PHP array, not a scalar. The current code (`ExportController.php:162`, `$task->tags` placed directly into the row array then into `str_replace('"', '""', $field)`) passes an array into a string-only function — PHP would coerce it to the literal string `"Array"` with an `E_WARNING`, silently corrupting every tags cell. **This is a real, previously-undocumented data-corruption defect in the current code, confirmed this round. §3 defines the serialization design that closes it.**
 
 ### 1.5 Project CSV behavior — `generateProjectsCsv()` (`ExportController.php:182-226`) and the controller call site (`ExportController.php:84-132`)
 
@@ -85,7 +85,7 @@ $completedTasks = $project->tasks->where('status', 'completed')->count();
 
 Structurally identical amplification pattern to §1.4, with an additional, more severe amplifier: `Project::with(['tasks'])->get()` loads **every task row of every matched project** into memory just to compute two integer counts per project. A single project with a very large number of tasks materializes that entire task collection in RAM regardless of how projects themselves are chunked — chunking the *project* query alone does not bound this. §5.1 replaces this with a database-side aggregate that never hydrates a single `Task` model for this purpose.
 
-### 1.6 Current API response contract (MUST PRESERVE — see §7)
+### 1.6 Current API response contract (MUST PRESERVE — see §9)
 
 ```json
 {
@@ -99,7 +99,7 @@ Structurally identical amplification pattern to §1.4, with an additional, more 
 }
 ```
 
-Synchronous: the HTTP request does not return until the file is fully generated and stored. `download_url` is available immediately in the same response. `total_tasks`/`total_projects` today comes from `$tasks->count()`/`$projects->count()` on the **full, already-materialized** collection (§8 replaces this with a count of rows actually written).
+Synchronous: the HTTP request does not return until the file is fully generated and stored. `download_url` is available immediately in the same response. `total_tasks`/`total_projects` today comes from `$tasks->count()`/`$projects->count()` on the **full, already-materialized** collection (§6 replaces this with a count of rows actually written).
 
 On failure: `{"success": false, "message": "Export failed: <raw exception>"}`, HTTP 500 — leaks the raw PHP exception message, an adjacent finding (§1.8), not in GAP-010b's stated scope unless the owner adds it.
 
@@ -130,17 +130,17 @@ Per owner direction, formula-neutralization is **type-aware**: it applies to tex
 
 ### 2.1 Two layers, kept separate (unchanged principle from round 1)
 
-**Layer 1 — CSV structural escaping** (RFC 4180: quoting, comma/quote/newline handling — see §3). **Layer 2 — spreadsheet-formula neutralization** (this section). **These are never conflated: quoting a field (Layer 1) does nothing to stop a spreadsheet application from evaluating `=SUM(A1:A2)` inside that quoted field as a formula. This design does not claim quote-wrapping is any part of a formula-injection mitigation.**
+**Layer 1 — CSV structural escaping** (RFC 4180: quoting, comma/quote/newline handling — see §4). **Layer 2 — spreadsheet-formula neutralization** (this section). **These are never conflated: quoting a field (Layer 1) does nothing to stop a spreadsheet application from evaluating `=SUM(A1:A2)` inside that quoted field as a formula. This design does not claim quote-wrapping is any part of a formula-injection mitigation.**
 
-### 2.2 Type-aware application rule (closes owner finding §6 of review round 1)
+### 2.2 Type-aware application rule (closes the type-awareness finding from review round 1)
 
 | Logical data type (source: the model attribute's actual type/cast, not its stringified CSV form) | Formula-neutralization applied? |
 |---|---|
-| Textual / user-controlled string (task/project name, description, tags-as-text — §4) | **Yes.** |
-| Numeric model attribute genuinely typed/cast as numeric (`id`, `progress_percent` (`float` cast), `budget_total`/`budget_planned`/`budget_actual`, `estimated_hours`/`actual_hours` (`float` cast), `Total Tasks`/`Completed Tasks` aggregates) | **No.** A negative number like `progress_percent = -5` is written as the numeric value `-5`, not neutralized — it is not textual, user-controlled content; it is a database-typed numeric field. Numeric semantics (including negative sign) are preserved exactly as stored. |
+| Textual / user-controlled string (task/project name, description, tags-as-text — §3) | **Yes.** |
+| Numeric model attribute genuinely typed/cast as numeric (`progress_percent` (`float` cast), `budget_total`/`budget_planned`/`budget_actual`, `estimated_hours`/`actual_hours` (`float` cast), `Total Tasks`/`Completed Tasks` aggregates) | **No.** A negative number like `progress_percent = -5` is written as the numeric value `-5`, not neutralized — it is not textual, user-controlled content; it is a database-typed numeric field. Numeric semantics (including negative sign) are preserved exactly as stored. |
 | Null | **No neutralization; empty CSV cell**, per §2.4 below — never neutralize a null. |
 | Date/time (`start_date`, `end_date`, `created_at`) | **No neutralization** of the serialized date string produced by the pinned date-format regression test (§8) — a correctly-formatted date does not start with a risk character in this system's date format, verified by the test, not assumed. |
-| ID fields that are formatted as text but are not free-text (none currently identified in the exported columns beyond the numeric `id` above) | N/A — no such column exists in the current export column set. |
+| Task/Project `id` | **No.** It is a schema-controlled, system-generated ULID: a structured string identifier (`$keyType = 'string'`, non-incrementing). It is exported as its exact string value, never numeric-coerced and never formula-neutralized as user-controlled free text. |
 
 **The rule that decides whether to neutralize is based on the column's *known, fixed* data type in the implementation** (each exported column has a known type at code-write time — the implementation is not inferring type from the runtime string), not on inspecting the stringified value for a leading `-`. This is what makes the type-aware distinction possible and testable (§8).
 
@@ -150,7 +150,7 @@ A **textual** cell value is formula-interpretable if, after any leading whitespa
 
 ### 2.4 Baseline mitigation (unchanged, reaffirmed baseline)
 
-Prepend a single leading apostrophe (`'`) to any **textual** value matching §2.3's rule, leaving the rest of the value byte-for-byte unchanged — **the original marker character (`=`, `+`, `-`, `@`, or the leading whitespace/control) is never stripped, never truncated.** OWASP-recommended; same mechanism Excel/Sheets/LibreOffice use internally for "force text." Rejected alternatives (unchanged from round 1): stripping the leading character (destructive); wrapping the whole field in `="..."` (itself a formula construct). **Quote-wrapping (Layer 1, §3) is never used as a substitute security mitigation for this layer — restated explicitly per owner instruction.**
+Prepend a single leading apostrophe (`'`) to any **textual** value matching §2.3's rule, leaving the rest of the value byte-for-byte unchanged — **the original marker character (`=`, `+`, `-`, `@`, or the leading whitespace/control) is never stripped, never truncated.** OWASP-recommended; same mechanism Excel/Sheets/LibreOffice use internally for "force text." Rejected alternatives (unchanged from round 1): stripping the leading character (destructive); wrapping the whole field in `="..."` (itself a formula construct). **Quote-wrapping (Layer 1, §4) is never used as a substitute security mitigation for this layer — restated explicitly per owner instruction.**
 
 ### 2.5 Data-integrity and compatibility consequences
 
@@ -169,7 +169,7 @@ Prepend a single leading apostrophe (`'`) to any **textual** value matching §2.
 
 ---
 
-## 3. Tags serialization — settled decision (closes owner finding §4 of review round 1)
+## 3. Tags serialization — settled decision (closes the tags-serialization finding from review round 1)
 
 ### 3.1 Canonical precedent found in this codebase
 
@@ -195,14 +195,14 @@ public function getTagsAsString(): string
 | `['urgent', 'phase-2']` (multiple tags) | `urgent, phase-2` |
 | Tags containing Unicode (`['gấp', 'ưu tiên']`) | `gấp, ưu tiên` — UTF-8 preserved. |
 | A tag containing a comma (`['a,b', 'c']`) | `a,b, c` — **disclosed, accepted lossy edge case**: joining with `, ` cannot distinguish "one tag containing a literal comma" from "two tags" once serialized to text. This is the exact same trade-off already accepted by the existing `Document::getTagsAsString()` precedent — GAP-010b adopts it unchanged rather than inventing a different (e.g. JSON) representation that would diverge from the system's established convention. |
-| A tag containing a double quote (`['5" pipe']`) | `5" pipe` — the quote is structural CSV content, handled entirely by Layer 1 (`fputcsv()`, §5.3), not by this serialization step. |
+| A tag containing a double quote (`['5" pipe']`) | `5" pipe` — the quote is structural CSV content, handled entirely by Layer 1 (`fputcsv()`, §4), not by this serialization step. |
 | A tag that is itself formula-like (`['=SUM(A1:A2)']`) | Serializes to `=SUM(A1:A2)` as the logical string, which is then evaluated as **textual** content by §2 and neutralized (`'=SUM(A1:A2)`) — the tags column is textual/user-controlled per §2.2's table, so Layer 2 always applies to the *serialized* string, never to the raw PHP array. |
 
 ### 3.3 Processing order (explicit, closes ambiguity)
 
 1. Determine the logical string value: `implode(', ', $tags) ?: ''` (§3.2).
 2. Apply Layer 2 formula-neutralization (§2) to that string, since the tags column is textual.
-3. Apply Layer 1 CSV structural escaping (`fputcsv()`, §5.3) to the (possibly `'`-prefixed) string.
+3. Apply Layer 1 CSV structural escaping (`fputcsv()`, §4) to the (possibly `'`-prefixed) string.
 
 **The current code's implicit array-to-string coercion (§1.4, PHP casting an array to the literal string `"Array"`) is a confirmed defect this design closes — not a hypothetical.** `str_replace()`/`fputcsv()` must never receive an unserialized PHP array; §3.2's `implode()` step happens first, always.
 
@@ -212,11 +212,26 @@ public function getTagsAsString(): string
 
 ---
 
-## 4. Standards-compliant CSV generation (Layer 1) — settled decisions (closes owner finding §7 of review round 1)
+## 4. Standards-compliant CSV generation (Layer 1) — settled decisions (closes the CSV-compatibility finding from review round 1)
 
 **Decision: use PHP's `fputcsv()` against an open stream** instead of manual string concatenation, replacing the current hand-written `str_replace('"', '""', $field)`. `fputcsv()` guarantees RFC-4180-correct quoting/escaping without per-field hand-written logic, and composes directly with the streaming design (§5).
 
 **Layer 2 (§2) is applied to each textual cell value BEFORE it is handed to `fputcsv()`.**
+
+The invocation semantics are pinned explicitly and must be equivalent to:
+
+```php
+fputcsv(
+    $stream,
+    $row,
+    ',',
+    '"',
+    '',
+    "\n"
+);
+```
+
+Delimiter is comma, enclosure is double quote, escape is the empty string, EOL is LF, and no BOM is written. The implementation must not rely on PHP defaults for any of these security- or compatibility-relevant parameters.
 
 ### 4.1 EOL — settled: keep `\n` (LF), do not switch to CRLF
 
@@ -236,7 +251,7 @@ public function getTagsAsString(): string
 
 ### 4.4 Column order and headers — settled: preserve exactly
 
-The exact current header row and column order for both exports (`ExportController.php:142-146` for tasks: `ID, Name, Description, Status, Priority, Project, Assignee, Start Date, End Date, Progress %, Estimated Hours, Actual Hours, Tags, Created At`; `ExportController.php:187-191` for projects: `ID, Code, Name, Description, Status, Priority, Progress %, Budget Total, Budget Planned, Budget Actual, Start Date, End Date, Total Tasks, Completed Tasks, Created At`) **must be preserved exactly, in the same order, with the same header text.** This is a MUST-preserve compatibility item (§7), verified by exact string comparison of the header row specifically (the one place byte-for-byte comparison is the correct test).
+The exact current header row and column order for both exports (`ExportController.php:142-146` for tasks: `ID, Name, Description, Status, Priority, Project, Assignee, Start Date, End Date, Progress %, Estimated Hours, Actual Hours, Tags, Created At`; `ExportController.php:187-191` for projects: `ID, Code, Name, Description, Status, Priority, Progress %, Budget Total, Budget Planned, Budget Actual, Start Date, End Date, Total Tasks, Completed Tasks, Created At`) **must be preserved exactly, in the same order, with the same header text.** This is a MUST-preserve compatibility item (§9), verified by exact string comparison of the header row specifically (the one place byte-for-byte comparison is the correct test).
 
 ### 4.5 Other CSV requirements (unchanged from round 1, now settled rather than flagged)
 
@@ -247,9 +262,13 @@ The exact current header row and column order for both exports (`ExportControlle
 | Dates, numeric precision | Passed through unchanged (§2.2); pinned by a regression test (§12) so a later Carbon/format change doesn't silently alter exports. |
 | Tags | See §3 — fully settled, no longer an open question. |
 
+### 4.6 Required parser round-trip regression matrix
+
+Embedded quote, literal backslash, a backslash immediately before a quote, comma, and multiline field values must each be written with the explicit §4 invocation contract, parsed by a standards-compliant CSV parser, and compare exactly equal to the original logical value. The regression must also assert LF row endings and absence of a BOM.
+
 ---
 
-## 5. End-to-end bounded-memory design — closes owner findings §2 and §3 of review round 1
+## 5. End-to-end bounded-memory design — closes the bounded-memory findings from review round 1
 
 **Decision: bound memory at every stage — database query → model hydration → transformation → CSV encoding → output — for BOTH the task and project export paths, using database-side aggregation to eliminate the project/task amplifier entirely, and chunked, minimal-relation queries for the task path.**
 
@@ -321,7 +340,7 @@ Eliminating `assignments` removes an entire unnecessary eager-load (and its unde
 
 ---
 
-## 6. Response row count without full-collection materialization — closes owner finding §8 of review round 1
+## 6. Response row count without full-collection materialization — closes the response-count finding from review round 1
 
 **Current defect:** `$tasks->count()` / `$projects->count()` (`ExportController.php:67`, `:121`) are called on the full, already-materialized collection — a pattern that no longer exists once §5's chunked design removes the full collection entirely.
 
@@ -333,7 +352,7 @@ A test asserting `response.data.total_tasks` (or `total_projects`) exactly equal
 
 ---
 
-## 7. Atomic / partial-file behavior — closes owner finding §9 of review round 1
+## 7. Atomic / partial-file behavior — closes the partial-file finding from review round 1
 
 **Settled invariant (implementation detail — specific PHP calls are a Gate 3/implementation-plan decision, not fixed here):**
 
@@ -431,15 +450,18 @@ All of the following are **new** tests — no existing automated coverage of `Ex
 | Leading tab + `=1+1` | Neutralized. |
 | Leading CR/LF + `=1+1` | Neutralized. |
 | Ordinary text | Unchanged. |
-| Embedded comma | Correctly quoted, one cell (parsed, not raw-string compared — §4.3). |
-| Embedded quote | Correctly doubled-quote-escaped. |
-| Multiline content | Correctly quoted, newline preserved inside quotes, still one cell. |
+| Embedded comma | Standards-compliant parser round-trip returns the exact original logical value as one cell (§4.3/§4.6). |
+| Embedded quote | Standards-compliant parser round-trip returns the exact original logical value (§4.6). |
+| Multiline content | Standards-compliant parser round-trip returns the exact original logical value, including its embedded newline (§4.6). |
 | Vietnamese Unicode | Correctly encoded, no mojibake. |
 | Empty/null textual fields | Empty cell, no crash, no neutralization. |
 | **Legitimate `+`-prefixed textual value (e.g. phone number `+84901234567`)** | Neutralized (prefixed with `'`) BUT every digit including `+` fully visible when opened in a spreadsheet application. |
 | **Genuinely numeric negative field (`progress_percent = -5`)** | **NOT neutralized** — written as the numeric value `-5`, retains numeric semantics (§2.2's type-aware correction). |
 | Null model attribute | Empty cell, never neutralized. |
 | Date/time field | Serialized per the pinned date-format test, not neutralized. |
+| Real Task/Project ULID | After CSV generation and standards-compliant parser round-trip, the parsed ID is exactly identical to the original model ID; no numeric coercion or formula neutralization occurs. |
+| Literal backslash | Parser round-trip returns the exact original logical value (§4.6). |
+| Backslash immediately before quote | Parser round-trip returns the exact original logical value (§4.6). |
 
 ### 12.2 Tags serialization matrix (§3)
 
@@ -498,13 +520,13 @@ Required changes and how each was closed in this revision:
 
 Also closed per owner instruction: dropped the unused `assignments` eager-load from the task path (§5.2, §1.4 finding); removed "chờ owner chọn ở Gate 3" language throughout — every decision this section lists is now a settled Gate 2 design decision, not deferred.
 
-**Re-presented at:** `gate_status: awaiting_owner`, `owner_decision.value: none`, `decision_requested: approve_or_changes_or_decline` (see `docs/owner-decisions/GAP-010b/02-design.md`) — not self-marked approved.
+**Owner Gate 2 approval recorded at `2026-08-07T16:27:00+07:00`:** `gate_status: approved`, `owner_decision.value: approved`, `decision_requested: null` (see `docs/owner-decisions/GAP-010b/02-design.md`). The approval required and includes the Task/Project ULID exact-string correction (§2.2/§12.1) and the explicit `fputcsv()` escape/EOL contract (§4/§4.6). Gate 3 is not started; implementation, merge, and release remain unauthorized.
 
 ---
 
-## 15. Independent review
+## 15. Historical independent-review checklist
 
-An independent review of this Gate 2 design revision is required before it is presented as final to the owner. The reviewer must specifically evaluate:
+The following checklist was retained from the pre-approval presentation as historical review context; it is not a current unresolved owner decision:
 
 - Whether §5.1's `withCount()` design genuinely eliminates the per-project task-hydration risk for a project with a very large number of tasks, and whether the cited `AnalyticsController.php` precedent is accurately represented.
 - Whether §5.2's removal of the `assignments` eager-load is justified by an accurate reading of the CSV column-building code (i.e., confirm `assignee_id` truly is a plain column, not silently relation-derived elsewhere).
@@ -516,4 +538,4 @@ An independent review of this Gate 2 design revision is required before it is pr
 - Whether this document accidentally pre-selects implementation code (as opposed to a design decision, which Gate 2 is permitted to make) anywhere that would exceed Gate 2's authorization.
 - Whether a non-technical owner reading only `docs/owner-decisions/GAP-010b/02-design.md` has enough information to make the Gate 2 decision without needing this full document.
 
-*(Independent review to be dispatched and its findings recorded in the final report before this design is considered ready for owner Gate 2 review.)*
+*(Historical checklist retained for provenance. Owner Gate 2 approval is recorded in §14 and the owner-decision packet.)*

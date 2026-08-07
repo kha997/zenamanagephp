@@ -1,11 +1,11 @@
 ---
 work_id: GAP-010b
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_changes_or_decline"
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-06-gap-010b-legacy-csv-export-safety-design.md
   plan: null
@@ -15,20 +15,28 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: "ChatGPT project conversation — Owner Gate 2 review round 1 (CHANGES REQUESTED) for GAP-010b on 2026-08-07; this packet is the re-presentation closing all round-1 findings"
-  reconciliation_required: false
+  recorded_at: "2026-08-07T16:27:00+07:00"
+  owner_response_reference: "ChatGPT project conversation — explicit Owner Gate 2 approval for GAP-010b on 2026-08-07, with mandatory ULID-type and fputcsv escape corrections"
+  reconciliation_required: true
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-07T07:12:43+07:00"
-  updated_at: "2026-08-07T16:15:33+07:00"
+  updated_at: "2026-08-07T16:27:00+07:00"
 generated_by: agent
 ---
 
-## OWNER GATE 2: RE-PRESENTED AFTER CHANGES REQUESTED (round 1)
+## OWNER GATE 2: APPROVED
 
-Đội kỹ thuật trình lại thiết kế Gate 2 cho GAP-010b sau khi owner yêu cầu chỉnh sửa (review round 1, 2026-08-07). Chưa có mã nguồn nào được sửa, chưa có implementation plan nào được tạo. Bản thiết kế đầy đủ nằm tại `docs/superpowers/specs/2026-08-06-gap-010b-legacy-csv-export-safety-design.md`.
+Owner đã phê duyệt thiết kế Gate 2 cho GAP-010b lúc `2026-08-07T16:27:00+07:00`, với hai correction bắt buộc về phân loại ULID và tham số escape của `fputcsv()`. Chưa có mã nguồn nào được sửa, chưa có implementation plan nào được tạo. Bản thiết kế đầy đủ nằm tại `docs/superpowers/specs/2026-08-06-gap-010b-legacy-csv-export-safety-design.md`.
+
+## Authorization boundary
+
+- Gate 1: **APPROVED**
+- Gate 2: **APPROVED**
+- Gate 3: **NOT STARTED**
+- Implementation authorized: **NO**
+- Merge/release authorized: **NO**
 
 ## Owner Gate 2 review round 1 — CHANGES REQUESTED — cách đóng từng phát hiện
 
@@ -47,16 +55,16 @@ generated_by: agent
 
 **Sau (thiết kế đã chốt, chờ owner quyết định phát hành ở Gate 3):** công thức bảng tính bị vô hiệu hoá đúng loại dữ liệu (không đụng vào số/null/ngày); bộ nhớ có giới hạn thật sự ở mọi tầng cho cả hai đường xuất, kể cả trường hợp một project có rất nhiều task; `tags` xuất đúng theo quy ước có sẵn của hệ thống; import được thêm vào (thuộc phạm vi implementation) nhưng route vẫn **không được khôi phục hoạt động trên production cho tới khi GAP-034 hoàn tất và xác minh xong**.
 
-## Owner cần quyết định (không phải kỹ thuật)
+## Owner decision recorded
 
-- **Chấp nhận toàn bộ thiết kế đã chốt ở các mục 1–6 trên không?**
-- **Xác nhận: import fix thuộc phạm vi implementation của GAP-010b, nhưng release vẫn bị chặn bởi GAP-034 — đúng như owner đã quyết định.**
+- Owner chấp nhận toàn bộ thiết kế đã chốt, sau khi correction phân loại Task/Project `id` là ULID string và explicit `fputcsv()` escape được ghi vào spec.
+- Import fix thuộc phạm vi implementation tương lai của GAP-010b, nhưng release vẫn bị chặn bởi GAP-034.
 
 Xem đầy đủ phân tích kỹ thuật, quyết định thiết kế, tiêu chí chấp nhận, và kế hoạch kiểm thử tại bản thiết kế đính kèm.
 
 ## Trạng thái và bước tiếp theo
 
-Gate 1 đã duyệt → **Gate 2 đang chờ owner (bước này, sau khi đóng round 1 changes-requested)** → Gate 3 (chưa bắt đầu, chưa được phép). PR #243 vẫn là Draft, chưa merge, chưa có mã nguồn nào thay đổi, chưa có implementation plan nào được tạo.
+Gate 1 đã duyệt → **Gate 2 đã duyệt** → Gate 3 **chưa bắt đầu**. PR #243 vẫn là Draft, chưa merge; implementation, merge và release đều chưa được phép.
 
 ## Ngoại lệ
 

@@ -6,11 +6,11 @@ owner_gate_2_record: docs/owner-decisions/GAP-034/02-design.md
 
 # GAP-034 — Export Tenant Isolation: Gate 2 Design
 
-**Status:** Gate 2 design awaiting Owner decision. Gate 1 is approved. Gate 3 is not started; implementation, merge and release are not authorized.
+**Status:** Gate 2 design approved by Owner at `2026-08-07T23:28:00+07:00`. Gate 1 is approved. Gate 3 is not started; implementation, merge and release are not authorized.
 
 **Objective:** An authenticated request operating as Tenant A can never cause either legacy bulk export endpoint to emit Tenant B Task/Project records, Tenant B-derived related/aggregate data, or unverified Tenant B-owned scalar reference identifiers, regardless of caller-supplied IDs, filters or requested format.
 
-**Review history:** Round 1 reviewed head `96dc086283e021e007d627d62c0061ecb330f2ab` and returned **CHANGES REQUESTED — Task scalar foreign-reference leakage**; the Task-side direction is now accepted and unchanged. Round 2 reviewed head `08d48bd9c9e02712365f0ad5248c374aa8463d00` and returned **CHANGES REQUESTED — Project scalar foreign-reference inventory/projection incomplete**. This revision closes the Project-side finding and re-presents Gate 2; it does not record approval.
+**Review history:** Round 1 reviewed head `96dc086283e021e007d627d62c0061ecb330f2ab` and returned **CHANGES REQUESTED — Task scalar foreign-reference leakage**; resolved by Task eligibility/reference projection. Round 2 reviewed head `08d48bd9c9e02712365f0ad5248c374aa8463d00` and returned **CHANGES REQUESTED — Project scalar foreign-reference inventory/projection incomplete**; resolved by Project inventory/projection. Owner approved Gate 2 after reviewing head `8de359e5449a2cfe8fb1d49e2ec7621f9af34ea2`, with the mandatory compatibility clarification in §7.2.
 
 **Endpoints and formats:** `POST /tasks/bulk/export` and `POST /projects/bulk/export`; CSV, Excel and JSON. Isolation is applied to data selection before format generation, so no writer can bypass it.
 
@@ -282,11 +282,11 @@ Future GAP-034 implementation uses a **tenant-safe explicit Project projection**
 - confirmed non-reference metadata: `tags`, `settings`;
 - timestamps/lifecycle: `created_at`, `updated_at`, `deleted_at` where present in the current selected row;
 - optional verified references: `client_id`, `pm_id`, `created_by`, with nonmatching values explicitly set to `null`;
-- relations/aggregates: a `tasks` key only when required by the existing JSON contract, populated exclusively with the Task-safe projection; tenant-constrained `tasks_count`/`completed_tasks_count` where selected by the format design.
+- relations/aggregates: preserve the existing `tasks` key on every Project JSON record and populate every child exclusively with the Task-safe projection; use tenant-constrained `tasks_count`/`completed_tasks_count` where selected by the format design.
 
 `template_id` is deliberately absent because repository evidence does not establish its target or tenant ownership. It cannot enter output merely because it exists in the table. Any other newly added/unexpected database attribute is absent by default until explicitly reviewed and allowlisted.
 
-The top-level `export_info`/`projects` envelope remains. The Project itself remains eligible when optional `client_id`, `pm_id` or `created_by` is foreign/stale; only that field becomes `null`. No foreign User attributes are loaded or emitted. This closes the future-attribute and loaded-relation bypass symmetrically with Task JSON.
+The top-level `export_info`/`projects` envelope and each Project's existing `tasks` key remain. The `tasks` value is the tenant-scoped collection of Task-eligible children emitted exclusively through the approved Task-safe projection; raw Task serialization is forbidden. The Project itself remains eligible when optional `client_id`, `pm_id` or `created_by` is foreign/stale; only that field becomes `null`. No foreign User attributes are loaded or emitted. This closes the future-attribute and loaded-relation bypass symmetrically with Task JSON.
 
 ---
 
@@ -402,4 +402,4 @@ Excluded: global model scopes, broad TenantScope rollout, `scopeForTenant()` rep
 
 If implementation evidence shows explicit export-path predicates cannot enforce this design without changing a model-wide/public contract, work stops for a Gate 2 revision. Any separate RBAC flaw or additional tenant surface is recorded and routed as its own security work item.
 
-**Current authority:** Gate 2 awaiting Owner. Implementation authorized: NO. Gate 3: NOT STARTED. Merge/release authorized: NO.
+**Current authority:** Gate 2 APPROVED. Implementation-plan preparation authorized. Implementation authorized: NO. Gate 3: NOT STARTED. Merge/release authorized: NO.

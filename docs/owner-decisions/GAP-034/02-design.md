@@ -1,11 +1,11 @@
 ---
 work_id: GAP-034
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_changes_or_decline"
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-07-gap-034-export-tenant-isolation-design.md
   plan: null
@@ -15,28 +15,28 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: "ChatGPT project conversation — Owner-authorized GAP-034 Gate 2 design preparation after explicit Gate 1 approval; review round 1 returned CHANGES REQUESTED for Task scalar foreign-reference leakage; review round 2 returned CHANGES REQUESTED for incomplete Project scalar-reference inventory/projection; this revision re-presents the design without recording approval"
-  reconciliation_required: false
+  recorded_at: "2026-08-07T23:28:00+07:00"
+  owner_response_reference: "ChatGPT project conversation — explicit Owner Gate 2 approval for GAP-034 on 2026-08-07 after review rounds 1 and 2, with mandatory Project JSON tasks-key preservation clarification"
+  reconciliation_required: true
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-07T22:17:08+07:00"
-  updated_at: "2026-08-07T23:00:57+07:00"
+  updated_at: "2026-08-07T23:28:00+07:00"
 generated_by: agent
 ---
 
-## OWNER GATE 2: AWAITING OWNER
+## OWNER GATE 2: APPROVED
 
 GAP-034 bảo vệ cả hai endpoint bulk export task/project khỏi rò rỉ dữ liệu giữa tenant, cho CSV, Excel và JSON. Thiết kế chỉ giới hạn dữ liệu được chọn và dữ liệu liên quan/tổng hợp được đưa vào export; không thay đổi RBAC, không triển khai GAP-010b và chưa cho phép sửa mã nguồn.
 
 ## Lịch sử review
 
 - Owner review round 1, reviewed head `96dc086283e021e007d627d62c0061ecb330f2ab`: **CHANGES REQUESTED**.
-- Finding round 1: relation scoping không ngăn Task scalar foreign identifiers đi vào CSV/JSON qua `assignee_id` và unrestricted `toArray()`; Task-side revision được Owner chấp nhận về hướng.
+- Finding round 1: relation scoping không ngăn Task scalar foreign identifiers đi vào CSV/JSON qua `assignee_id` và unrestricted `toArray()`; **historical/resolved** bằng Task eligibility, reference inventory và explicit Task projection.
 - Owner review round 2, reviewed head `08d48bd9c9e02712365f0ad5248c374aa8463d00`: **CHANGES REQUESTED**.
-- Finding round 2: Project JSON vẫn cần inventory/projection cụ thể cho `client_id`, `pm_id`, `created_by` và các reference-bearing Project columns khác.
-- Revision này giữ nguyên Task policy đã được chấp nhận và bổ sung tenant-safe explicit Project projection. Gate 2 vẫn **AWAITING OWNER**; không ghi nhận approval.
+- Finding round 2: Project JSON vẫn cần inventory/projection cụ thể cho `client_id`, `pm_id`, `created_by` và các reference-bearing Project columns khác; **historical/resolved** bằng Project inventory và explicit Project projection.
+- Owner approved Gate 2 tại `2026-08-07T23:28:00+07:00`, với clarification bắt buộc rằng Project JSON giữ nguyên `tasks` key và mọi child Task chỉ đi qua Task-safe projection. Clarification này không mở lại quyết định thiết kế khác.
 
 ## Trước / Sau
 
@@ -83,7 +83,7 @@ Không thay đổi vai trò hoặc permission. Mọi caller đã vượt qua `au
 - ID tenant khác hoặc mixed IDs: tenant khác bị bỏ qua, response không phân biệt “không tồn tại” với “không thuộc tenant”.
 - CSV, Excel và JSON tuân cùng data-selection boundary.
 - JSON giữ envelope và Task field names nhưng được tạo từ allowlisted explicit projection; không serialize unrestricted model attributes/relations.
-- Project JSON giữ safe business fields; optional User references chỉ được đưa vào sau tenant validation, Task children dùng Task-safe projection, counts dùng tenant-constrained aggregates.
+- Project JSON giữ safe business fields và luôn giữ existing `tasks` key; optional User references chỉ được đưa vào sau tenant validation, mọi Task child dùng Task-safe projection, counts dùng tenant-constrained aggregates.
 - Missing tenant context: request thất bại, không có success response/download artifact.
 
 ## Kịch bản chấp nhận
@@ -114,10 +114,10 @@ GAP-034 chỉ sở hữu tenant isolation của selection, relations, aggregates
 
 Không global model scope, không rollout `TenantScope`, không sửa model-wide `scopeForTenant(int ...)`, không RBAC redesign, migration, dependency, tenant-ID migration, route change, application code, test implementation, GAP-010b implementation, Gate 3, merge hoặc release.
 
-## Decision Needed
+## Owner Decision
 
-Owner chọn một trong: **Approve để cho phép chuẩn bị implementation plan/implementation authorization riêng** / **Request changes** / **Decline**.
+Gate 2 được Owner **APPROVED**. Owner chỉ cho phép chuẩn bị implementation plan riêng; implementation vẫn chưa được cho phép.
 
 ## What the owner is NOT being asked to decide
 
-Owner chưa được yêu cầu phê duyệt class/method/test mechanics, sửa model scope, implementation, Gate 3, merge hoặc release. Implementation authorized: **NO**. Gate 3: **NOT STARTED**. Merge/release authorized: **NO**.
+Approval này không cho phép implementation, sửa model scope, Gate 3, merge hoặc release. Implementation authorized: **NO**. Gate 3: **NOT STARTED**. Merge/release authorized: **NO**.

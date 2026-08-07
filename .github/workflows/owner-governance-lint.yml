@@ -6,6 +6,7 @@ on:
       - 'docs/owner-decisions/**'
       - 'docs/owner-governance/**'
       - 'docs/superpowers/plans/**'
+      - 'docs/superpowers/specs/**'
       - '.github/PULL_REQUEST_TEMPLATE.md'
       - 'PROJECT_CONSTITUTION.md'
   push:
@@ -14,6 +15,7 @@ on:
       - 'docs/owner-decisions/**'
       - 'docs/owner-governance/**'
       - 'docs/superpowers/plans/**'
+      - 'docs/superpowers/specs/**'
 
 jobs:
   owner-governance-lint:
@@ -54,7 +56,29 @@ jobs:
         run: php scripts/ssot/owner_governance_lint.php
 
       - name: Gate-ordering enforcement (effective-date boundary)
-        run: php scripts/ssot/owner_governance_lint.php --enforce-gate-ordering
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # OWN-2026-005: on a pull_request event, pass this submission's
+          # COMPLETE, verified changed-file list (scripts/ci/fetch-pr-changed-files.sh
+          # — paginated REST fetch, cross-checked against the PR's
+          # authoritative changedFiles count, fails closed on any error or
+          # mismatch) as a lossless JSON file, so the design-only exemption
+          # (a design spec referencing its OWN work_id's still-awaiting_owner
+          # Gate 2 packet) can be recognized without risking an incomplete
+          # or corrupted file list. On a push event (no PR number available),
+          # no flag is passed and behavior is byte-for-byte identical to
+          # before this correction — no exemption without positive,
+          # explicit, verified-complete evidence of what changed.
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            changed_files_json="${RUNNER_TEMP}/own-2026-005-changed-files.json"
+            bash scripts/ci/fetch-pr-changed-files.sh > "$changed_files_json"
+            php scripts/ssot/owner_governance_lint.php --enforce-gate-ordering "--changed-files-json=${changed_files_json}"
+          else
+            php scripts/ssot/owner_governance_lint.php --enforce-gate-ordering
+          fi
 
       - name: Gate-3-before-ready check (only on PRs, needs gh + PR number)
         if: github.event_name == 'pull_request'

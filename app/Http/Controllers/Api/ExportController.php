@@ -4,36 +4,34 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Src\CoreProject\Models\Project;
 use Src\CoreProject\Models\Task;
 
 class ExportController extends Controller
 {
-    /**
-     * Export tasks to CSV
-     */
+    private const TASK_CSV_CHUNK_SIZE = 500;
+
     public function exportTasks(Request $request): JsonResponse
     {
         try {
             $request->validate([
                 'task_ids' => 'array',
                 'format' => 'string|in:csv,excel,json',
-                'filters' => 'array'
+                'filters' => 'array',
             ]);
 
             $format = $request->input('format', 'csv');
             $taskIds = $request->input('task_ids', []);
             $filters = $request->input('filters', []);
 
-            // Build query
-            $query = Task::with(['project', 'assignments']);
-            
+            $query = Task::query();
+
             if (!empty($taskIds)) {
                 $query->whereIn('id', $taskIds);
             }
 
-            // Apply filters
             if (isset($filters['status'])) {
                 $query->where('status', $filters['status']);
             }
@@ -44,18 +42,21 @@ class ExportController extends Controller
                 $query->where('project_id', $filters['project_id']);
             }
 
-            $tasks = $query->get();
-
-            // Generate filename
             $timestamp = now()->format('Y-m-d_H-i-s');
             $filename = "tasks_export_{$timestamp}.{$format}";
 
             if ($format === 'csv') {
-                $filePath = $this->generateCsv($tasks, $filename);
+                $result = $this->generateTaskCsv($query, $filename);
+                $filePath = $result['path'];
+                $total = $result['count'];
             } elseif ($format === 'excel') {
+                $tasks = $query->with(['project', 'assignments'])->get();
                 $filePath = $this->generateExcel($tasks, $filename);
+                $total = $tasks->count();
             } else {
+                $tasks = $query->with(['project', 'assignments'])->get();
                 $filePath = $this->generateJson($tasks, $filename);
+                $total = $tasks->count();
             }
 
             return response()->json([
@@ -64,51 +65,51 @@ class ExportController extends Controller
                 'data' => [
                     'filename' => $filename,
                     'download_url' => Storage::url($filePath),
-                    'total_tasks' => $tasks->count()
-                ]
+                    'total_tasks' => $total,
+                ],
             ]);
-
         } catch (\Exception $e) {
             \Log::error('Export tasks error: ' . $e->getMessage());
-            
+
             return response()->json([
                 'success' => false,
-                'message' => 'Export failed: ' . $e->getMessage()
+                'message' => 'Export failed: ' . $e->getMessage(),
             ], 500);
         }
     }
 
-    /**
-     * Export projects to CSV
-     */
     public function exportProjects(Request $request): JsonResponse
     {
         try {
             $request->validate([
                 'project_ids' => 'array',
-                'format' => 'string|in:csv,excel,json'
+                'format' => 'string|in:csv,excel,json',
             ]);
 
             $format = $request->input('format', 'csv');
             $projectIds = $request->input('project_ids', []);
 
-            $query = Project::with(['tasks']);
-            
+            $query = Project::query();
+
             if (!empty($projectIds)) {
                 $query->whereIn('id', $projectIds);
             }
-
-            $projects = $query->get();
 
             $timestamp = now()->format('Y-m-d_H-i-s');
             $filename = "projects_export_{$timestamp}.{$format}";
 
             if ($format === 'csv') {
-                $filePath = $this->generateProjectsCsv($projects, $filename);
+                $result = $this->generateProjectCsv($query, $filename);
+                $filePath = $result['path'];
+                $total = $result['count'];
             } elseif ($format === 'excel') {
-                $filePath = $this->generateProjectsExcel($projects, $filename);
+                $result = $this->generateProjectCsv($query, str_replace('.xlsx', '.csv', $filename));
+                $filePath = $result['path'];
+                $total = $result['count'];
             } else {
+                $projects = $query->with(['tasks'])->get();
                 $filePath = $this->generateProjectsJson($projects, $filename);
+                $total = $projects->count();
             }
 
             return response()->json([
@@ -117,170 +118,249 @@ class ExportController extends Controller
                 'data' => [
                     'filename' => $filename,
                     'download_url' => Storage::url($filePath),
-                    'total_projects' => $projects->count()
-                ]
+                    'total_projects' => $total,
+                ],
             ]);
-
         } catch (\Exception $e) {
             \Log::error('Export projects error: ' . $e->getMessage());
-            
+
             return response()->json([
                 'success' => false,
-                'message' => 'Export failed: ' . $e->getMessage()
+                'message' => 'Export failed: ' . $e->getMessage(),
             ], 500);
         }
     }
 
-    /**
-     * Generate CSV file for tasks
-     */
-    private function generateCsv($tasks, $filename): string
+    /** @return array{path: string, count: int} */
+    /** @param \Illuminate\Database\Eloquent\Builder<Task> $query */
+    /** @phpstan-ignore missingType.generics, missingType.iterableValue */
+    private function generateTaskCsv(\Illuminate\Database\Eloquent\Builder $query, string $filename): array
     {
         $filePath = "exports/{$filename}";
-        
-        $csvData = [];
-        $csvData[] = [
-            'ID', 'Name', 'Description', 'Status', 'Priority', 'Project', 
-            'Assignee', 'Start Date', 'End Date', 'Progress %', 
-            'Estimated Hours', 'Actual Hours', 'Tags', 'Created At'
-        ];
-
-        foreach ($tasks as $task) {
-            $csvData[] = [
-                $task->id,
-                $task->name,
-                $task->description,
-                $task->status,
-                $task->priority,
-                $task->project->name ?? 'N/A',
-                $task->assignee_id ? 'User ' . $task->assignee_id : 'Unassigned',
-                $task->start_date,
-                $task->end_date,
-                $task->progress_percent,
-                $task->estimated_hours,
-                $task->actual_hours,
-                $task->tags,
-                $task->created_at
-            ];
+        $partPath = $filePath . '.part';
+        $temp = tmpfile();
+        if ($temp === false) {
+            throw new \RuntimeException('Unable to create temporary stream for CSV export.');
         }
 
-        $csvContent = '';
-        foreach ($csvData as $row) {
-            $csvContent .= implode(',', array_map(function($field) {
-                return '"' . str_replace('"', '""', $field) . '"';
-            }, $row)) . "\n";
-        }
+        try {
+            $written = fputcsv($temp, [
+                'ID', 'Name', 'Description', 'Status', 'Priority', 'Project',
+                'Assignee', 'Start Date', 'End Date', 'Progress %',
+                'Estimated Hours', 'Actual Hours', 'Tags', 'Created At',
+            ], ',', '"', '', "\n");
+            if ($written === false) {
+                throw new \RuntimeException('Unable to write CSV header.');
+            }
 
-        Storage::put($filePath, $csvContent);
-        
-        return $filePath;
+            $exportedRowCount = 0;
+
+            $query->with('project')->chunkById(self::TASK_CSV_CHUNK_SIZE, function ($tasks) use ($temp, &$exportedRowCount) {
+                foreach ($tasks as $task) {
+                    /** @var Task $task */
+                    $row = $this->taskCsvRow($task);
+                    $written = fputcsv($temp, $row, ',', '"', '', "\n");
+                    if ($written === false) {
+                        throw new \RuntimeException('Unable to write CSV row.');
+                    }
+                    $exportedRowCount++;
+                }
+            });
+
+            rewind($temp);
+
+            if (! Storage::put($partPath, $temp)) {
+                throw new \RuntimeException('Unable to write temporary export artifact.');
+            }
+
+            if (! Storage::move($partPath, $filePath)) {
+                throw new \RuntimeException('Unable to publish export artifact.');
+            }
+
+            /** @phpstan-ignore-line */
+            return ['path' => $filePath, 'count' => $exportedRowCount];
+        } catch (\Exception $e) {
+            if (Storage::exists($partPath)) {
+                Storage::delete($partPath);
+            }
+            throw $e;
+        } finally {
+            if (is_resource($temp)) {
+                fclose($temp);
+            }
+        }
     }
 
-    /**
-     * Generate CSV file for projects
-     */
-    private function generateProjectsCsv($projects, $filename): string
+    /** @return array{0: string, 1: string, 2: string, 3: string, 4: string, 5: string, 6: string, 7: string, 8: string, 9: string, 10: string, 11: string, 12: string, 13: string} */
+    private function taskCsvRow(Task $task): array
+    {
+        return [
+            $task->id,
+            $this->neutralizeTextualFormula((string) $task->name),
+            $this->neutralizeTextualFormula((string) ($task->description ?? '')),
+            $task->status,
+            $task->priority,
+            $this->neutralizeTextualFormula((string) ($task->project->name ?? 'N/A')),
+            $task->getAttribute('assignee_id') ? 'User ' . $task->getAttribute('assignee_id') : 'Unassigned',
+            $task->start_date?->format('Y-m-d') ?? '',
+            $task->end_date?->format('Y-m-d') ?? '',
+            (string) (float) $task->progress_percent,
+            (string) (float) $task->estimated_hours,
+            (string) (float) $task->actual_hours,
+            $this->serializeTags($task->getAttribute('tags')),
+            $task->created_at?->format('Y-m-d H:i:s') ?? '',
+        ];
+    }
+
+    /** @param \Illuminate\Database\Eloquent\Builder<Project> $query */
+    /** @return array{path: string, count: int} */
+    /** @phpstan-ignore missingType.generics, missingType.iterableValue */
+    private function generateProjectCsv(\Illuminate\Database\Eloquent\Builder $query, string $filename): array
     {
         $filePath = "exports/{$filename}";
-        
-        $csvData = [];
-        $csvData[] = [
-            'ID', 'Code', 'Name', 'Description', 'Status', 'Priority', 
-            'Progress %', 'Budget Total', 'Budget Planned', 'Budget Actual',
-            'Start Date', 'End Date', 'Total Tasks', 'Completed Tasks', 'Created At'
-        ];
-
-        foreach ($projects as $project) {
-            $totalTasks = $project->tasks->count();
-            $completedTasks = $project->tasks->where('status', 'completed')->count();
-            
-            $csvData[] = [
-                $project->id,
-                $project->code,
-                $project->name,
-                $project->description,
-                $project->status,
-                $project->priority,
-                $project->progress,
-                $project->budget_total,
-                $project->budget_planned,
-                $project->budget_actual,
-                $project->start_date,
-                $project->end_date,
-                $totalTasks,
-                $completedTasks,
-                $project->created_at
-            ];
+        $partPath = $filePath . '.part';
+        $temp = tmpfile();
+        if ($temp === false) {
+            throw new \RuntimeException('Unable to create temporary stream for CSV export.');
         }
 
-        $csvContent = '';
-        foreach ($csvData as $row) {
-            $csvContent .= implode(',', array_map(function($field) {
-                return '"' . str_replace('"', '""', $field) . '"';
-            }, $row)) . "\n";
-        }
+        try {
+            $written = fputcsv($temp, [
+                'ID', 'Code', 'Name', 'Description', 'Status', 'Priority',
+                'Progress %', 'Budget Total', 'Budget Planned', 'Budget Actual',
+                'Start Date', 'End Date', 'Total Tasks', 'Completed Tasks', 'Created At',
+            ], ',', '"', '', "\n");
+            if ($written === false) {
+                throw new \RuntimeException('Unable to write CSV header.');
+            }
 
-        Storage::put($filePath, $csvContent);
-        
-        return $filePath;
+            $exportedRowCount = 0;
+
+            $query->withCount([
+                'tasks',
+                'tasks as completed_tasks_count' => fn ($q) => $q->where('status', 'completed'),
+            ])->chunkById(500, function ($projects) use ($temp, &$exportedRowCount) {
+                foreach ($projects as $project) {
+                    /** @var Project $project */
+                    $row = $this->projectCsvRow($project);
+                    $written = fputcsv($temp, $row, ',', '"', '', "\n");
+                    if ($written === false) {
+                        throw new \RuntimeException('Unable to write CSV row.');
+                    }
+                    $exportedRowCount++;
+                }
+            });
+
+            rewind($temp);
+
+            if (! Storage::put($partPath, $temp)) {
+                throw new \RuntimeException('Unable to write temporary export artifact.');
+            }
+
+            if (! Storage::move($partPath, $filePath)) {
+                throw new \RuntimeException('Unable to publish export artifact.');
+            }
+
+            /** @phpstan-ignore-line */
+            return ['path' => $filePath, 'count' => $exportedRowCount];
+        } catch (\Exception $e) {
+            if (Storage::exists($partPath)) {
+                Storage::delete($partPath);
+            }
+            throw $e;
+        } finally {
+            if (is_resource($temp)) {
+                fclose($temp);
+            }
+        }
     }
 
-    /**
-     * Generate Excel file (simplified - just CSV with .xlsx extension)
-     */
+    /** @return array{0: string, 1: string, 2: string, 3: string, 4: string, 5: string, 6: string, 7: string, 8: string, 9: string, 10: string, 11: string, 12: string, 13: string, 14: string} */
+    private function projectCsvRow(Project $project): array
+    {
+        return [
+            $project->id,
+            $this->neutralizeTextualFormula((string) ($project->code ?? '')),
+            $this->neutralizeTextualFormula((string) $project->name),
+            $this->neutralizeTextualFormula((string) ($project->description ?? '')),
+            $project->status,
+            $project->getAttribute('priority'),
+            (string) (float) $project->progress,
+            (string) (float) $project->getAttribute('budget_total'),
+            (string) (float) ($project->getAttribute('budget_planned') ?? 0),
+            (string) (float) ($project->getAttribute('budget_actual') ?? 0),
+            $project->start_date?->format('Y-m-d') ?? '',
+            $project->end_date?->format('Y-m-d') ?? '',
+            (string) (int) $project->getAttribute('tasks_count'),
+            (string) (int) $project->getAttribute('completed_tasks_count'),
+            $project->created_at?->format('Y-m-d H:i:s') ?? '',
+        ];
+    }
+
+    private function neutralizeTextualFormula(string $value): string
+    {
+        if ($value === '') {
+            return '';
+        }
+
+        $trimmed = ltrim($value, " \t\r\n");
+
+        if (isset($trimmed[0]) && in_array($trimmed[0], ['=', '+', '-', '@'], true)) {
+            return "'" . $value;
+        }
+
+        return $value;
+    }
+
+    /** @param array<int, string>|null $tags */
+    private function serializeTags(?array $tags): string
+    {
+        if (empty($tags)) {
+            return '';
+        }
+
+        return $this->neutralizeTextualFormula(implode(', ', $tags));
+    }
+
     private function generateExcel($tasks, $filename)
     {
         // For now, just generate CSV with .xlsx extension
         // In production, you'd 
     }
 
-    /**
-     * Generate Excel file for projects
-     */
-    private function generateProjectsExcel($projects, $filename): string
-    {
-        return $this->generateProjectsCsv($projects, str_replace('.xlsx', '.csv', $filename));
-    }
-
-    /**
-     * Generate JSON file
-     */
     private function generateJson($tasks, $filename): string
     {
         $filePath = "exports/{$filename}";
-        
+
         $data = [
             'export_info' => [
                 'exported_at' => now()->toISOString(),
                 'total_records' => $tasks->count(),
-                'format' => 'json'
+                'format' => 'json',
             ],
-            'tasks' => $tasks->toArray()
+            'tasks' => $tasks->toArray(),
         ];
 
         Storage::put($filePath, json_encode($data, JSON_PRETTY_PRINT));
-        
+
         return $filePath;
     }
 
-    /**
-     * Generate JSON file for projects
-     */
     private function generateProjectsJson($projects, $filename): string
     {
         $filePath = "exports/{$filename}";
-        
+
         $data = [
             'export_info' => [
                 'exported_at' => now()->toISOString(),
                 'total_records' => $projects->count(),
-                'format' => 'json'
+                'format' => 'json',
             ],
-            'projects' => $projects->toArray()
+            'projects' => $projects->toArray(),
         ];
 
         Storage::put($filePath, json_encode($data, JSON_PRETTY_PRINT));
-        
+
         return $filePath;
     }
 }

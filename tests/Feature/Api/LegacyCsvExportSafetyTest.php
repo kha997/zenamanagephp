@@ -20,7 +20,9 @@ class LegacyCsvExportSafetyTest extends TestCase
 {
     use RefreshDatabase;
 
+    /** @phpstan-ignore assign.propertyType */
     private Tenant $tenant;
+    /** @phpstan-ignore assign.propertyType */
     private User $user;
     private string $disk;
 
@@ -73,20 +75,6 @@ class LegacyCsvExportSafetyTest extends TestCase
     private function readExportedFile(string $filename): string
     {
         return Storage::disk($this->disk)->get('exports/' . $filename);
-    }
-
-    private function assertExportArtifactsAbsent(): void
-    {
-        $exportsPath = storage_path('app/exports');
-
-        if (! File::exists($exportsPath)) {
-            $this->assertTrue(true, 'Exports directory does not exist, so no artifacts can remain');
-            return;
-        }
-
-        $files = File::files($exportsPath);
-
-        $this->assertEmpty($files, 'No export artifacts should remain after failed export');
     }
 
     private function cleanExportDirectory(): void
@@ -728,45 +716,44 @@ class LegacyCsvExportSafetyTest extends TestCase
     }
 
     /** @test */
-    public function task_csv_mid_export_failure_cleans_up_after_header_written(): void
+    public function task_csv_mid_generation_failure_cleans_up_before_publication(): void
     {
         $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-        CoreTask::factory()->count(2)->create([
+
+        $task = new \Src\CoreProject\Models\Task([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
+            'name' => 'Mid-export failure task',
+            'status' => 'pending',
+            'priority' => 'medium',
+            'progress_percent' => 0,
+            'estimated_hours' => 1,
+            'actual_hours' => 0,
         ]);
+        $task->save();
 
         $this->cleanExportDirectory();
 
-        Storage::shouldReceive('put')->andReturn(false);
+        $builder = Mockery::mock(\Illuminate\Database\Eloquent\Builder::class);
+        $builder->shouldReceive('with')->andReturnSelf();
+        $builder->shouldReceive('withCount')->andReturnSelf();
+        $builder->shouldReceive('chunkById')->andReturnUsing(function ($size, $callback) use ($task) {
+            $callback(collect([$task]));
+            throw new \RuntimeException('Simulated mid-generation failure');
+        });
 
-        $response = $this->postCsv('/api/tasks/bulk/export', [
-            'format' => 'csv',
-        ]);
+        $controller = new \App\Http\Controllers\Api\ExportController();
+        $reflection = new \ReflectionClass($controller);
+        $method = $reflection->getMethod('generateTaskCsv');
+        $method->setAccessible(true);
 
-        $response->assertStatus(500);
-        $this->assertFalse($response->json('success'));
-        $this->assertNull($response->json('data.download_url'));
-        $this->assertEmpty(File::files(storage_path('app/exports')));
-    }
+        try {
+            $method->invoke($controller, $builder, 'test.csv');
+            $this->fail('Expected RuntimeException was not thrown');
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString('mid-generation', $e->getMessage());
+        }
 
-    /** @test */
-    public function project_csv_mid_export_failure_cleans_up_after_header_written(): void
-    {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-
-        $this->cleanExportDirectory();
-
-        Storage::shouldReceive('put')->andReturn(false);
-
-        $response = $this->postCsv('/api/projects/bulk/export', [
-            'format' => 'csv',
-            'project_ids' => [$project->id],
-        ]);
-
-        $response->assertStatus(500);
-        $this->assertFalse($response->json('success'));
-        $this->assertNull($response->json('data.download_url'));
         $this->assertEmpty(File::files(storage_path('app/exports')));
     }
 

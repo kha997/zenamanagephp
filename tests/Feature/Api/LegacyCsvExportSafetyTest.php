@@ -9,6 +9,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Mockery;
 use Src\CoreProject\Models\Project as CoreProject;
@@ -72,6 +73,33 @@ class LegacyCsvExportSafetyTest extends TestCase
     private function readExportedFile(string $filename): string
     {
         return Storage::disk($this->disk)->get('exports/' . $filename);
+    }
+
+    private function assertExportArtifactsAbsent(): void
+    {
+        $exportsPath = storage_path('app/exports');
+
+        if (! File::exists($exportsPath)) {
+            $this->assertTrue(true, 'Exports directory does not exist, so no artifacts can remain');
+            return;
+        }
+
+        $files = File::files($exportsPath);
+
+        $this->assertEmpty($files, 'No export artifacts should remain after failed export');
+    }
+
+    private function cleanExportDirectory(): void
+    {
+        $exportsPath = storage_path('app/exports');
+
+        if (! File::exists($exportsPath)) {
+            return;
+        }
+
+        foreach (File::files($exportsPath) as $file) {
+            File::delete($file->getRealPath());
+        }
     }
 
     private function parseCsv(string $payload): array
@@ -594,12 +622,16 @@ class LegacyCsvExportSafetyTest extends TestCase
             'project_id' => $project->id,
         ]);
 
+        $this->cleanExportDirectory();
+
         Storage::shouldReceive('move')->andReturn(false);
 
         $response = $this->postCsv('/api/tasks/bulk/export', ['format' => 'csv']);
 
         $response->assertStatus(500);
         $this->assertFalse($response->json('success'));
+        $this->assertNull($response->json('data.download_url'));
+        $this->assertEmpty(File::files(storage_path('app/exports')));
     }
 
     /** @test */
@@ -607,12 +639,135 @@ class LegacyCsvExportSafetyTest extends TestCase
     {
         CoreProject::factory()->count(3)->create(['tenant_id' => $this->tenant->id]);
 
+        $this->cleanExportDirectory();
+
         Storage::shouldReceive('move')->andReturn(false);
 
         $response = $this->postCsv('/api/projects/bulk/export', ['format' => 'csv']);
 
         $response->assertStatus(500);
         $this->assertFalse($response->json('success'));
+        $this->assertNull($response->json('data.download_url'));
+        $this->assertEmpty(File::files(storage_path('app/exports')));
+    }
+
+    /** @test */
+    public function task_csv_storage_put_false_cleans_up(): void
+    {
+        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        CoreTask::factory()->count(3)->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $project->id,
+        ]);
+
+        $this->cleanExportDirectory();
+
+        Storage::shouldReceive('put')->andReturn(false);
+
+        $response = $this->postCsv('/api/tasks/bulk/export', ['format' => 'csv']);
+
+        $response->assertStatus(500);
+        $this->assertFalse($response->json('success'));
+        $this->assertNull($response->json('data.download_url'));
+        $this->assertEmpty(File::files(storage_path('app/exports')));
+    }
+
+    /** @test */
+    public function task_csv_storage_move_false_cleans_up(): void
+    {
+        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        CoreTask::factory()->count(3)->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $project->id,
+        ]);
+
+        $this->cleanExportDirectory();
+
+        Storage::shouldReceive('move')->andReturn(false);
+
+        $response = $this->postCsv('/api/tasks/bulk/export', ['format' => 'csv']);
+
+        $response->assertStatus(500);
+        $this->assertFalse($response->json('success'));
+        $this->assertNull($response->json('data.download_url'));
+        $this->assertEmpty(File::files(storage_path('app/exports')));
+    }
+
+    /** @test */
+    public function project_csv_storage_put_false_cleans_up(): void
+    {
+        CoreProject::factory()->count(3)->create(['tenant_id' => $this->tenant->id]);
+
+        $this->cleanExportDirectory();
+
+        Storage::shouldReceive('put')->andReturn(false);
+
+        $response = $this->postCsv('/api/projects/bulk/export', ['format' => 'csv']);
+
+        $response->assertStatus(500);
+        $this->assertFalse($response->json('success'));
+        $this->assertNull($response->json('data.download_url'));
+        $this->assertEmpty(File::files(storage_path('app/exports')));
+    }
+
+    /** @test */
+    public function project_csv_storage_move_false_cleans_up(): void
+    {
+        CoreProject::factory()->count(3)->create(['tenant_id' => $this->tenant->id]);
+
+        $this->cleanExportDirectory();
+
+        Storage::shouldReceive('move')->andReturn(false);
+
+        $response = $this->postCsv('/api/projects/bulk/export', ['format' => 'csv']);
+
+        $response->assertStatus(500);
+        $this->assertFalse($response->json('success'));
+        $this->assertNull($response->json('data.download_url'));
+        $this->assertEmpty(File::files(storage_path('app/exports')));
+    }
+
+    /** @test */
+    public function task_csv_mid_export_failure_cleans_up_after_header_written(): void
+    {
+        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        CoreTask::factory()->count(2)->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $project->id,
+        ]);
+
+        $this->cleanExportDirectory();
+
+        Storage::shouldReceive('put')->andReturn(false);
+
+        $response = $this->postCsv('/api/tasks/bulk/export', [
+            'format' => 'csv',
+        ]);
+
+        $response->assertStatus(500);
+        $this->assertFalse($response->json('success'));
+        $this->assertNull($response->json('data.download_url'));
+        $this->assertEmpty(File::files(storage_path('app/exports')));
+    }
+
+    /** @test */
+    public function project_csv_mid_export_failure_cleans_up_after_header_written(): void
+    {
+        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+
+        $this->cleanExportDirectory();
+
+        Storage::shouldReceive('put')->andReturn(false);
+
+        $response = $this->postCsv('/api/projects/bulk/export', [
+            'format' => 'csv',
+            'project_ids' => [$project->id],
+        ]);
+
+        $response->assertStatus(500);
+        $this->assertFalse($response->json('success'));
+        $this->assertNull($response->json('data.download_url'));
+        $this->assertEmpty(File::files(storage_path('app/exports')));
     }
 
     // ------------------------------------------------------------------

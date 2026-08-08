@@ -151,6 +151,12 @@ parameters:
 			path: app/Console/Commands/BackupCommand.php
 
 		-
+			message: '#^Method App\\Console\\Commands\\BackupCommand\:\:backupAll\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Console/Commands/BackupCommand.php
+
+		-
 			message: '#^Method App\\Console\\Commands\\BackupCommand\:\:backupConfig\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
@@ -4285,6 +4291,12 @@ parameters:
 			path: app/Http/Controllers/Api/ChangeRequestController.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\Document\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ChangeRequestController.php
+
+		-
 			message: '#^Access to an undefined property App\\Models\\Task\:\:\$title\.$#'
 			identifier: property.notFound
 			count: 1
@@ -5707,45 +5719,33 @@ parameters:
 			path: app/Http/Controllers/Api/EventRecordController.php
 
 		-
-			message: '#^Access to an undefined property Src\\CoreProject\\Models\\Project\:\:\$budget_total\.$#'
-			identifier: property.notFound
-			count: 1
+			message: '#^Call to method input\(\) on an unknown class App\\Http\\Controllers\\Api\\Request\.$#'
+			identifier: class.notFound
+			count: 5
 			path: app/Http/Controllers/Api/ExportController.php
 
 		-
-			message: '#^Access to an undefined property Src\\CoreProject\\Models\\Project\:\:\$completed_tasks_count\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/ExportController.php
-
-		-
-			message: '#^Access to an undefined property Src\\CoreProject\\Models\\Project\:\:\$priority\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/ExportController.php
-
-		-
-			message: '#^Access to an undefined property Src\\CoreProject\\Models\\Project\:\:\$tasks_count\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/ExportController.php
-
-		-
-			message: '#^Access to an undefined property Src\\CoreProject\\Models\\Task\:\:\$assignee_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/ExportController.php
-
-		-
-			message: '#^Access to an undefined property Src\\CoreProject\\Models\\Task\:\:\$tags\.$#'
-			identifier: property.notFound
-			count: 1
+			message: '#^Call to method validate\(\) on an unknown class App\\Http\\Controllers\\Api\\Request\.$#'
+			identifier: class.notFound
+			count: 2
 			path: app/Http/Controllers/Api/ExportController.php
 
 		-
 			message: '#^Call to static method error\(\) on an unknown class Log\.$#'
 			identifier: class.notFound
 			count: 2
+			path: app/Http/Controllers/Api/ExportController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\ExportController\:\:generateCsv\(\) has parameter \$filename with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: app/Http/Controllers/Api/ExportController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\ExportController\:\:generateCsv\(\) has parameter \$tasks with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
 			path: app/Http/Controllers/Api/ExportController.php
 
 		-
@@ -5779,14 +5779,26 @@ parameters:
 			path: app/Http/Controllers/Api/ExportController.php
 
 		-
-			message: '#^Method App\\Http\\Controllers\\Api\\ExportController\:\:generateProjectCsv\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
-			identifier: missingType.generics
+			message: '#^Method App\\Http\\Controllers\\Api\\ExportController\:\:generateProjectsCsv\(\) has parameter \$filename with no type specified\.$#'
+			identifier: missingType.parameter
 			count: 1
 			path: app/Http/Controllers/Api/ExportController.php
 
 		-
-			message: '#^Method App\\Http\\Controllers\\Api\\ExportController\:\:generateProjectCsv\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
+			message: '#^Method App\\Http\\Controllers\\Api\\ExportController\:\:generateProjectsCsv\(\) has parameter \$projects with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: app/Http/Controllers/Api/ExportController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\ExportController\:\:generateProjectsExcel\(\) has parameter \$filename with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: app/Http/Controllers/Api/ExportController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\ExportController\:\:generateProjectsExcel\(\) has parameter \$projects with no type specified\.$#'
+			identifier: missingType.parameter
 			count: 1
 			path: app/Http/Controllers/Api/ExportController.php
 
@@ -5803,44 +5815,14 @@ parameters:
 			path: app/Http/Controllers/Api/ExportController.php
 
 		-
-			message: '#^Method App\\Http\\Controllers\\Api\\ExportController\:\:generateTaskCsv\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
-			identifier: missingType.generics
+			message: '#^Parameter \$request of method App\\Http\\Controllers\\Api\\ExportController\:\:exportProjects\(\) has invalid type App\\Http\\Controllers\\Api\\Request\.$#'
+			identifier: class.notFound
 			count: 1
 			path: app/Http/Controllers/Api/ExportController.php
 
 		-
-			message: '#^Method App\\Http\\Controllers\\Api\\ExportController\:\:generateTaskCsv\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Http/Controllers/Api/ExportController.php
-
-		-
-			message: '#^Method App\\Http\\Controllers\\Api\\ExportController\:\:projectCsvRow\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Http/Controllers/Api/ExportController.php
-
-		-
-			message: '#^Method App\\Http\\Controllers\\Api\\ExportController\:\:serializeTags\(\) has parameter \$tags with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Http/Controllers/Api/ExportController.php
-
-		-
-			message: '#^Method App\\Http\\Controllers\\Api\\ExportController\:\:taskCsvRow\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Http/Controllers/Api/ExportController.php
-
-		-
-			message: '#^Parameter \#1 \$project of method App\\Http\\Controllers\\Api\\ExportController\:\:projectCsvRow\(\) expects Src\\CoreProject\\Models\\Project, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/Api/ExportController.php
-
-		-
-			message: '#^Parameter \#1 \$task of method App\\Http\\Controllers\\Api\\ExportController\:\:taskCsvRow\(\) expects Src\\CoreProject\\Models\\Task, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
+			message: '#^Parameter \$request of method App\\Http\\Controllers\\Api\\ExportController\:\:exportTasks\(\) has invalid type App\\Http\\Controllers\\Api\\Request\.$#'
+			identifier: class.notFound
 			count: 1
 			path: app/Http/Controllers/Api/ExportController.php
 
@@ -6205,6 +6187,12 @@ parameters:
 			path: app/Http/Controllers/Api/LeadController.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/LeadController.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$id\.$#'
 			identifier: property.notFound
 			count: 6
@@ -6565,6 +6553,12 @@ parameters:
 			path: app/Http/Controllers/Api/MaterialRequestController.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\Notification\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 5
+			path: app/Http/Controllers/Api/NotificationController.php
+
+		-
 			message: '#^Access to an undefined property App\\Models\\Notification\:\:\$message\.$#'
 			identifier: property.notFound
 			count: 2
@@ -6613,6 +6607,12 @@ parameters:
 			path: app/Http/Controllers/Api/NotificationController.php
 
 		-
+			message: '#^Call to static method store\(\) on an unknown class Cache\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Http/Controllers/Api/NotificationController.php
+
+		-
 			message: '#^Method App\\Http\\Controllers\\Api\\NotificationController\:\:normalizeData\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
@@ -6643,6 +6643,18 @@ parameters:
 			path: app/Http/Controllers/Api/OpenApiController.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$account\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/OpportunityController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$converted_project_id\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Http/Controllers/Api/OpportunityController.php
+
+		-
 			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$external_boq_project_code\.$#'
 			identifier: property.notFound
 			count: 2
@@ -6667,6 +6679,36 @@ parameters:
 			path: app/Http/Controllers/Api/OpportunityController.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$forecast_category\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Api/OpportunityController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Http/Controllers/Api/OpportunityController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$lost_reason\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/OpportunityController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$opportunity_name\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Http/Controllers/Api/OpportunityController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$pipeline_stage\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Http/Controllers/Api/OpportunityController.php
+
+		-
 			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$sales_owner_id\.$#'
 			identifier: property.notFound
 			count: 2
@@ -6682,6 +6724,12 @@ parameters:
 			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$service_scope_summary\.$#'
 			identifier: property.notFound
 			count: 2
+			path: app/Http/Controllers/Api/OpportunityController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 1
 			path: app/Http/Controllers/Api/OpportunityController.php
 
 		-
@@ -6800,6 +6848,18 @@ parameters:
 
 		-
 			message: '#^Method App\\Http\\Controllers\\Api\\PmDashboardController\:\:computeBudgetProgress\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/Api/PmDashboardController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\PmDashboardController\:\:computeMilestoneProgress\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/Api/PmDashboardController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\PmDashboardController\:\:computeTaskProgress\(\) return type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
 			path: app/Http/Controllers/Api/PmDashboardController.php
@@ -6997,10 +7057,232 @@ parameters:
 			path: app/Http/Controllers/Api/ProjectManagerController.php
 
 		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Api/ProjectMilestoneController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 8
+			path: app/Http/Controllers/Api/ProjectMilestoneController.php
+
+		-
+			message: '#^Call to an undefined method App\\Http\\Controllers\\Api\\ProjectMilestoneController\:\:errorResponse\(\)\.$#'
+			identifier: method.notFound
+			count: 29
+			path: app/Http/Controllers/Api/ProjectMilestoneController.php
+
+		-
+			message: '#^Call to an undefined method App\\Http\\Controllers\\Api\\ProjectMilestoneController\:\:successResponse\(\)\.$#'
+			identifier: method.notFound
+			count: 8
+			path: app/Http/Controllers/Api/ProjectMilestoneController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Authenticatable\:\:hasPermission\(\)\.$#'
+			identifier: method.notFound
+			count: 6
+			path: app/Http/Controllers/Api/ProjectMilestoneController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Project\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 8
+			path: app/Http/Controllers/Api/ProjectMilestoneController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ProjectMilestone\:\:byProject\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 6
+			path: app/Http/Controllers/Api/ProjectMilestoneController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ProjectMilestone\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ProjectMilestoneController.php
+
+		-
+			message: '#^Call to an undefined static method Illuminate\\Support\\Facades\\DB\:\:rollback\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 6
+			path: app/Http/Controllers/Api/ProjectMilestoneController.php
+
+		-
+			message: '#^Call to method all\(\) on an unknown class App\\Http\\Controllers\\Api\\Request\.$#'
+			identifier: class.notFound
+			count: 3
+			path: app/Http/Controllers/Api/ProjectMilestoneController.php
+
+		-
+			message: '#^Call to method input\(\) on an unknown class App\\Http\\Controllers\\Api\\Request\.$#'
+			identifier: class.notFound
+			count: 6
+			path: app/Http/Controllers/Api/ProjectMilestoneController.php
+
+		-
+			message: '#^Call to method only\(\) on an unknown class App\\Http\\Controllers\\Api\\Request\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ProjectMilestoneController.php
+
+		-
+			message: '#^Call to method validate\(\) on an unknown class App\\Http\\Controllers\\Api\\Request\.$#'
+			identifier: class.notFound
+			count: 4
+			path: app/Http/Controllers/Api/ProjectMilestoneController.php
+
+		-
+			message: '#^Parameter \$request of method App\\Http\\Controllers\\Api\\ProjectMilestoneController\:\:cancel\(\) has invalid type App\\Http\\Controllers\\Api\\Request\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ProjectMilestoneController.php
+
+		-
+			message: '#^Parameter \$request of method App\\Http\\Controllers\\Api\\ProjectMilestoneController\:\:complete\(\) has invalid type App\\Http\\Controllers\\Api\\Request\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ProjectMilestoneController.php
+
+		-
+			message: '#^Parameter \$request of method App\\Http\\Controllers\\Api\\ProjectMilestoneController\:\:index\(\) has invalid type App\\Http\\Controllers\\Api\\Request\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ProjectMilestoneController.php
+
+		-
+			message: '#^Parameter \$request of method App\\Http\\Controllers\\Api\\ProjectMilestoneController\:\:reorder\(\) has invalid type App\\Http\\Controllers\\Api\\Request\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ProjectMilestoneController.php
+
+		-
+			message: '#^Parameter \$request of method App\\Http\\Controllers\\Api\\ProjectMilestoneController\:\:store\(\) has invalid type App\\Http\\Controllers\\Api\\Request\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ProjectMilestoneController.php
+
+		-
+			message: '#^Parameter \$request of method App\\Http\\Controllers\\Api\\ProjectMilestoneController\:\:update\(\) has invalid type App\\Http\\Controllers\\Api\\Request\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ProjectMilestoneController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 9
+			path: app/Http/Controllers/Api/ProjectTemplateController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 10
+			path: app/Http/Controllers/Api/ProjectTemplateController.php
+
+		-
+			message: '#^Access to undefined constant App\\Models\\Project\:\:STATUS_DRAFT\.$#'
+			identifier: classConstant.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ProjectTemplateController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Authenticatable\:\:hasPermission\(\)\.$#'
+			identifier: method.notFound
+			count: 5
+			path: app/Http/Controllers/Api/ProjectTemplateController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Project\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ProjectTemplateController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ProjectTemplate\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Http/Controllers/Api/ProjectTemplateController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\ProjectTemplate\:\:forTenant\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 7
+			path: app/Http/Controllers/Api/ProjectTemplateController.php
+
+		-
+			message: '#^Call to an undefined static method Illuminate\\Support\\Facades\\DB\:\:rollback\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 5
+			path: app/Http/Controllers/Api/ProjectTemplateController.php
+
+		-
+			message: '#^Call to method all\(\) on an unknown class App\\Http\\Controllers\\Api\\Request\.$#'
+			identifier: class.notFound
+			count: 5
+			path: app/Http/Controllers/Api/ProjectTemplateController.php
+
+		-
+			message: '#^Call to method has\(\) on an unknown class App\\Http\\Controllers\\Api\\Request\.$#'
+			identifier: class.notFound
+			count: 2
+			path: app/Http/Controllers/Api/ProjectTemplateController.php
+
+		-
+			message: '#^Call to method input\(\) on an unknown class App\\Http\\Controllers\\Api\\Request\.$#'
+			identifier: class.notFound
+			count: 3
+			path: app/Http/Controllers/Api/ProjectTemplateController.php
+
+		-
+			message: '#^Call to method validate\(\) on an unknown class App\\Http\\Controllers\\Api\\Request\.$#'
+			identifier: class.notFound
+			count: 4
+			path: app/Http/Controllers/Api/ProjectTemplateController.php
+
+		-
+			message: '#^Parameter \$request of method App\\Http\\Controllers\\Api\\ProjectTemplateController\:\:createProject\(\) has invalid type App\\Http\\Controllers\\Api\\Request\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ProjectTemplateController.php
+
+		-
+			message: '#^Parameter \$request of method App\\Http\\Controllers\\Api\\ProjectTemplateController\:\:duplicate\(\) has invalid type App\\Http\\Controllers\\Api\\Request\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ProjectTemplateController.php
+
+		-
+			message: '#^Parameter \$request of method App\\Http\\Controllers\\Api\\ProjectTemplateController\:\:index\(\) has invalid type App\\Http\\Controllers\\Api\\Request\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ProjectTemplateController.php
+
+		-
+			message: '#^Parameter \$request of method App\\Http\\Controllers\\Api\\ProjectTemplateController\:\:store\(\) has invalid type App\\Http\\Controllers\\Api\\Request\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ProjectTemplateController.php
+
+		-
+			message: '#^Parameter \$request of method App\\Http\\Controllers\\Api\\ProjectTemplateController\:\:update\(\) has invalid type App\\Http\\Controllers\\Api\\Request\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Http/Controllers/Api/ProjectTemplateController.php
+
+		-
 			message: '#^Dead catch \- Throwable is never thrown in the try block\.$#'
 			identifier: catch.neverThrown
 			count: 1
 			path: app/Http/Controllers/Api/Public/SystemHealthController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Notification\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Api/RealTimeController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Notification\:\:\$message\.$#'
@@ -7157,6 +7439,30 @@ parameters:
 			identifier: nullCoalesce.variable
 			count: 1
 			path: app/Http/Controllers/Api/RealTimeController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Rfi\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 6
+			path: app/Http/Controllers/Api/RfiController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Rfi\:\:\$project_id\.$#'
+			identifier: property.notFound
+			count: 6
+			path: app/Http/Controllers/Api/RfiController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Rfi\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/RfiController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 5
+			path: app/Http/Controllers/Api/RfiController.php
 
 		-
 			message: '#^Call to an undefined static method App\\Models\\Project\:\:find\(\)\.$#'
@@ -7420,6 +7726,12 @@ parameters:
 			message: '#^Access to an undefined property App\\Models\\Document\:\:\$revision\.$#'
 			identifier: property.notFound
 			count: 1
+			path: app/Http/Controllers/Api/SimpleDocumentController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Document\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 3
 			path: app/Http/Controllers/Api/SimpleDocumentController.php
 
 		-
@@ -7933,6 +8245,30 @@ parameters:
 			path: app/Http/Controllers/Api/SiteEngineerDashboardController.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\Submittal\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 6
+			path: app/Http/Controllers/Api/SubmittalController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Submittal\:\:\$project_id\.$#'
+			identifier: property.notFound
+			count: 6
+			path: app/Http/Controllers/Api/SubmittalController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Submittal\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Http/Controllers/Api/SubmittalController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Http/Controllers/Api/SubmittalController.php
+
+		-
 			message: '#^Call to an undefined static method App\\Models\\Project\:\:where\(\)\.$#'
 			identifier: staticMethod.notFound
 			count: 1
@@ -7993,12 +8329,6 @@ parameters:
 			path: app/Http/Controllers/Api/SupportDocumentationController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\SupportTicket\:\:\$assigned_to\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/SupportTicketController.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\SupportTicket\:\:\$id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -8012,6 +8342,12 @@ parameters:
 
 		-
 			message: '#^Access to an undefined property App\\Models\\SupportTicket\:\:\$user_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/SupportTicketController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\SupportTicket\:\:\$assigned_to\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Controllers/Api/SupportTicketController.php
@@ -8063,6 +8399,12 @@ parameters:
 			identifier: staticMethod.notFound
 			count: 3
 			path: app/Http/Controllers/Api/TaskAssignmentController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Notification\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/TaskController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Task\:\:\$assigned_to\.$#'
@@ -8931,7 +9273,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$id\.$#'
 			identifier: property.notFound
-			count: 7
+			count: 5
 			path: app/Http/Controllers/Api/WorkTemplateController.php
 
 		-
@@ -9015,7 +9357,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$id\.$#'
 			identifier: property.notFound
-			count: 14
+			count: 13
 			path: app/Http/Controllers/Api/WorkTemplateController.php
 
 		-
@@ -9031,12 +9373,6 @@ parameters:
 			path: app/Http/Controllers/Api/WorkTemplateController.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Query\\Builder\:\:with\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Controllers/Api/WorkTemplateController.php
-
-		-
 			message: '#^Call to an undefined static method App\\Models\\WorkInstance\:\:create\(\)\.$#'
 			identifier: staticMethod.notFound
 			count: 1
@@ -9044,6 +9380,12 @@ parameters:
 
 		-
 			message: '#^Call to an undefined static method App\\Models\\WorkInstanceStep\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\WorkTemplate\:\:create\(\)\.$#'
 			identifier: staticMethod.notFound
 			count: 1
 			path: app/Http/Controllers/Api/WorkTemplateController.php
@@ -9063,7 +9405,7 @@ parameters:
 		-
 			message: '#^Call to an undefined static method App\\Models\\WorkTemplateVersion\:\:create\(\)\.$#'
 			identifier: staticMethod.notFound
-			count: 1
+			count: 3
 			path: app/Http/Controllers/Api/WorkTemplateController.php
 
 		-
@@ -9079,37 +9421,13 @@ parameters:
 			path: app/Http/Controllers/Api/WorkTemplateController.php
 
 		-
-			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:buildContentPayload\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Http/Controllers/Api/WorkTemplateController.php
-
-		-
 			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:buildContentPayload\(\) return type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
 			path: app/Http/Controllers/Api/WorkTemplateController.php
 
 		-
-			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:createDraftFromLatestPublished\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Http/Controllers/Api/WorkTemplateController.php
-
-		-
 			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:isValidSelectorShape\(\) has parameter \$selector with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Http/Controllers/Api/WorkTemplateController.php
-
-		-
-			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:nextPublishedSemver\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Http/Controllers/Api/WorkTemplateController.php
-
-		-
-			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:phaseValidationRules\(\) return type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
 			path: app/Http/Controllers/Api/WorkTemplateController.php
@@ -9139,38 +9457,14 @@ parameters:
 			path: app/Http/Controllers/Api/WorkTemplateController.php
 
 		-
-			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:stepValidationRules\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Http/Controllers/Api/WorkTemplateController.php
-
-		-
 			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:syncStepsAndFields\(\) has parameter \$steps with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
 			path: app/Http/Controllers/Api/WorkTemplateController.php
 
 		-
-			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:syncStepsAndFields\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Http/Controllers/Api/WorkTemplateController.php
-
-		-
 			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:templateForTenant\(\) has no return type specified\.$#'
 			identifier: missingType.return
-			count: 1
-			path: app/Http/Controllers/Api/WorkTemplateController.php
-
-		-
-			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:templateResponsePayload\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Http/Controllers/Api/WorkTemplateController.php
-
-		-
-			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:versionResponsePayload\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
 			count: 1
 			path: app/Http/Controllers/Api/WorkTemplateController.php
 
@@ -9219,7 +9513,7 @@ parameters:
 		-
 			message: '#^Parameter \#1 \$from of method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:cloneStepsAndFields\(\) expects App\\Models\\WorkTemplateVersion, stdClass given\.$#'
 			identifier: argument.type
-			count: 1
+			count: 2
 			path: app/Http/Controllers/Api/WorkTemplateController.php
 
 		-
@@ -9395,6 +9689,12 @@ parameters:
 			identifier: staticMethod.notFound
 			count: 1
 			path: app/Http/Controllers/Auth/PasswordResetController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Authenticatable\:\:isSuperAdmin\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/AuthController.php
 
 		-
 			message: '#^Call to an undefined static method App\\Models\\Role\:\:where\(\)\.$#'
@@ -12817,6 +13117,72 @@ parameters:
 			path: app/Http/Controllers/UserController.php
 
 		-
+			message: '#^Parameter \#1 \$request of method App\\Services\\UserManagementService\:\:createUser\(\) expects Illuminate\\Http\\Request, App\\Http\\Controllers\\Request given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/UserController.php
+
+		-
+			message: '#^Parameter \#1 \$request of method App\\Services\\UserManagementService\:\:deleteUser\(\) expects Illuminate\\Http\\Request, App\\Http\\Controllers\\Request given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/UserController.php
+
+		-
+			message: '#^Parameter \#1 \$request of method App\\Services\\UserManagementService\:\:getUserById\(\) expects Illuminate\\Http\\Request, App\\Http\\Controllers\\Request given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/UserController.php
+
+		-
+			message: '#^Parameter \#1 \$request of method App\\Services\\UserManagementService\:\:getUsers\(\) expects Illuminate\\Http\\Request, App\\Http\\Controllers\\Request given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/UserController.php
+
+		-
+			message: '#^Parameter \#1 \$request of method App\\Services\\UserManagementService\:\:updateUser\(\) expects Illuminate\\Http\\Request, App\\Http\\Controllers\\Request given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/UserController.php
+
+		-
+			message: '#^Parameter \$request of method App\\Http\\Controllers\\UserController\:\:destroy\(\) has invalid type App\\Http\\Controllers\\Request\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Http/Controllers/UserController.php
+
+		-
+			message: '#^Parameter \$request of method App\\Http\\Controllers\\UserController\:\:hasPermission\(\) has invalid type App\\Http\\Controllers\\Request\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Http/Controllers/UserController.php
+
+		-
+			message: '#^Parameter \$request of method App\\Http\\Controllers\\UserController\:\:index\(\) has invalid type App\\Http\\Controllers\\Request\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Http/Controllers/UserController.php
+
+		-
+			message: '#^Parameter \$request of method App\\Http\\Controllers\\UserController\:\:show\(\) has invalid type App\\Http\\Controllers\\Request\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Http/Controllers/UserController.php
+
+		-
+			message: '#^Parameter \$request of method App\\Http\\Controllers\\UserController\:\:store\(\) has invalid type App\\Http\\Controllers\\Request\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Http/Controllers/UserController.php
+
+		-
+			message: '#^Parameter \$request of method App\\Http\\Controllers\\UserController\:\:update\(\) has invalid type App\\Http\\Controllers\\Request\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Http/Controllers/UserController.php
+
+		-
 			message: '#^Call to an undefined static method App\\Models\\User\:\:create\(\)\.$#'
 			identifier: staticMethod.notFound
 			count: 1
@@ -12847,8 +13213,8 @@ parameters:
 			path: app/Http/Controllers/UserControllerV2.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
-			identifier: property.notFound
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
+			identifier: method.notFound
 			count: 1
 			path: app/Http/Controllers/Web/ActivityFeedPageController.php
 
@@ -13009,16 +13375,10 @@ parameters:
 			path: app/Http/Controllers/Web/AnalyticsController.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Authenticatable\:\:tokens\(\)\.$#'
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
 			identifier: method.notFound
 			count: 1
 			path: app/Http/Controllers/Web/ApiTokenPageController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Project\:\:\$latestBaseline\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Web/AppController.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
@@ -13099,8 +13459,14 @@ parameters:
 			path: app/Http/Controllers/Web/AppController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			message: '#^Access to an undefined property App\\Models\\Project\:\:\$latestBaseline\.$#'
 			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/AppController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
+			identifier: method.notFound
 			count: 3
 			path: app/Http/Controllers/Web/BoqPageController.php
 
@@ -13117,8 +13483,8 @@ parameters:
 			path: app/Http/Controllers/Web/BoqPageController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
-			identifier: property.notFound
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
+			identifier: method.notFound
 			count: 3
 			path: app/Http/Controllers/Web/ChangeRequestPageController.php
 
@@ -13195,39 +13561,9 @@ parameters:
 			path: app/Http/Controllers/Web/CrmPageController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Lead\:\:\$created_at\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Web/CrmPageController.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\Lead\:\:\$project_description\.$#'
 			identifier: property.notFound
 			count: 2
-			path: app/Http/Controllers/Web/CrmPageController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$created_at\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Web/CrmPageController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$estimated_fee\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Web/CrmPageController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$estimated_project_value\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Web/CrmPageController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$expected_close_date\.$#'
-			identifier: property.notFound
-			count: 1
 			path: app/Http/Controllers/Web/CrmPageController.php
 
 		-
@@ -13249,26 +13585,32 @@ parameters:
 			path: app/Http/Controllers/Web/CrmPageController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$priority\.$#'
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$id\.$#'
 			identifier: property.notFound
-			count: 1
+			count: 6
 			path: app/Http/Controllers/Web/CrmPageController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$probability\.$#'
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$pipeline_stage\.$#'
 			identifier: property.notFound
-			count: 1
+			count: 2
 			path: app/Http/Controllers/Web/CrmPageController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$service_category\.$#'
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$tenant_id\.$#'
 			identifier: property.notFound
-			count: 1
+			count: 2
 			path: app/Http/Controllers/Web/CrmPageController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$service_scope_summary\.$#'
+			message: '#^Access to an undefined property App\\Models\\Quote\:\:\$opportunity\.$#'
 			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Authenticatable\:\:hasPermission\(\)\.$#'
+			identifier: method.notFound
 			count: 1
 			path: app/Http/Controllers/Web/CrmPageController.php
 
@@ -13279,8 +13621,14 @@ parameters:
 			path: app/Http/Controllers/Web/CrmPageController.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Authenticatable\:\:hasPermission\(\)\.$#'
-			identifier: method.notFound
+			message: '#^Call to an undefined static method App\\Models\\PriceReferenceEntry\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,stdClass\>\:\:map\(\) expects callable\(stdClass, int\)\: array\{unit_price\: float, benchmark_type\: string, benchmark_type_label\: string, evidence_note\: string\|null, evidenced_at\: string\}, Closure\(App\\Models\\PriceReferenceEntry\)\: array\{unit_price\: float, benchmark_type\: string, benchmark_type_label\: string, evidence_note\: string\|null, evidenced_at\: string\} given\.$#'
+			identifier: argument.type
 			count: 1
 			path: app/Http/Controllers/Web/CrmPageController.php
 
@@ -13303,12 +13651,6 @@ parameters:
 			path: app/Http/Controllers/Web/CrmPageController.php
 
 		-
-			message: '#^Call to an undefined static method App\\Models\\PriceReferenceEntry\:\:create\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 1
-			path: app/Http/Controllers/Web/CrmPageController.php
-
-		-
 			message: '#^Method App\\Http\\Controllers\\Web\\CrmPageController\:\:buildApiRequest\(\) has parameter \$files with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
@@ -13321,8 +13663,68 @@ parameters:
 			path: app/Http/Controllers/Web/CrmPageController.php
 
 		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,stdClass\>\:\:map\(\) expects callable\(stdClass, int\)\: array\{quote_number\: string, revision_no\: int, status\: string, total\: float, sent_at\: string\|null, decided_at\: string\|null, valid_until\: string\|null\}, Closure\(App\\Models\\Quote\)\: array\{quote_number\: string, revision_no\: int, status\: string, total\: float, sent_at\: string\|null, decided_at\: string\|null, valid_until\: string\|null\} given\.$#'
-			identifier: argument.type
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$service_category\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$service_scope_summary\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$forecast_category\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$estimated_fee\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$estimated_project_value\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$probability\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$expected_close_date\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$priority\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$lost_reason\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Lead\:\:\$created_at\.$#'
+			identifier: property.notFound
 			count: 1
 			path: app/Http/Controllers/Web/CrmPageController.php
 
@@ -13333,16 +13735,28 @@ parameters:
 			path: app/Http/Controllers/Web/CrmPageController.php
 
 		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,stdClass\>\:\:map\(\) expects callable\(stdClass, int\)\: array\{unit_price\: float, benchmark_type\: string, benchmark_type_label\: string, evidence_note\: string\|null, evidenced_at\: string\}, Closure\(App\\Models\\PriceReferenceEntry\)\: array\{unit_price\: float, benchmark_type\: string, benchmark_type_label\: string, evidence_note\: string\|null, evidenced_at\: string\} given\.$#'
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,stdClass\>\:\:map\(\) expects callable\(stdClass, int\)\: array\{quote_number\: string, revision_no\: int, status\: string, total\: float, sent_at\: string\|null, decided_at\: string\|null, valid_until\: string\|null\}, Closure\(App\\Models\\Quote\)\: array\{quote_number\: string, revision_no\: int, status\: string, total\: float, sent_at\: string\|null, decided_at\: string\|null, valid_until\: string\|null\} given\.$#'
 			identifier: argument.type
 			count: 1
 			path: app/Http/Controllers/Web/CrmPageController.php
 
 		-
-			message: '#^Using nullsafe method call on non\-nullable type Carbon\\Carbon\. Use \-\> instead\.$#'
+			message: '#^Using nullsafe method call on non-nullable type Carbon\\Carbon\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Http/Controllers/Web/CrmPageController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Web/CrmReportController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:id\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Web/DesignItemPageController.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
@@ -13383,7 +13797,7 @@ parameters:
 		-
 			message: '#^Call to an undefined static method App\\Models\\Document\:\:findOrFail\(\)\.$#'
 			identifier: staticMethod.notFound
-			count: 2
+			count: 4
 			path: app/Http/Controllers/Web/DocumentController.php
 
 		-
@@ -13633,6 +14047,18 @@ parameters:
 			path: app/Http/Controllers/Web/GlobalSearchPageController.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\Rfi\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/GlobalSearchPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Rfi\:\:\$rfi_number\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/GlobalSearchPageController.php
+
+		-
 			message: '#^Access to an undefined property App\\Models\\SiteDiary\:\:\$diary_date\.$#'
 			identifier: property.notFound
 			count: 1
@@ -13657,6 +14083,18 @@ parameters:
 			path: app/Http/Controllers/Web/GlobalSearchPageController.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\Submittal\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/GlobalSearchPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Submittal\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/GlobalSearchPageController.php
+
+		-
 			message: '#^Access to an undefined property App\\Models\\Vendor\:\:\$id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -13675,8 +14113,8 @@ parameters:
 			path: app/Http/Controllers/Web/GlobalSearchPageController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
-			identifier: property.notFound
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
+			identifier: method.notFound
 			count: 1
 			path: app/Http/Controllers/Web/GlobalSearchPageController.php
 
@@ -13957,8 +14395,8 @@ parameters:
 			path: app/Http/Controllers/Web/InvitationController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
-			identifier: property.notFound
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
+			identifier: method.notFound
 			count: 2
 			path: app/Http/Controllers/Web/MaterialPageController.php
 
@@ -13975,8 +14413,8 @@ parameters:
 			path: app/Http/Controllers/Web/MaterialPageController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
-			identifier: property.notFound
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
+			identifier: method.notFound
 			count: 2
 			path: app/Http/Controllers/Web/MaterialRequestPageController.php
 
@@ -14023,8 +14461,8 @@ parameters:
 			path: app/Http/Controllers/Web/Portal/PortalDashboardController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
-			identifier: property.notFound
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
+			identifier: method.notFound
 			count: 1
 			path: app/Http/Controllers/Web/ProcurementDashboardController.php
 
@@ -14293,12 +14731,6 @@ parameters:
 			path: app/Http/Controllers/Web/ProjectController.php
 
 		-
-			message: '#^Parameter \#2 \$baseline of static method App\\Services\\ProjectDelayStatus\:\:evaluate\(\) expects App\\Models\\Baseline\|null, stdClass\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/Web/ProjectController.php
-
-		-
 			message: '#^Parameter \#3 \$user of class Src\\CoreProject\\Events\\ProjectUpdated constructor expects App\\Models\\User\|null, array\<int, string\> given\.$#'
 			identifier: argument.type
 			count: 1
@@ -14309,6 +14741,18 @@ parameters:
 			identifier: variable.undefined
 			count: 1
 			path: app/Http/Controllers/Web/ProjectController.php
+
+		-
+			message: '#^Parameter \#2 \$baseline of static method App\\Services\\ProjectDelayStatus\:\:evaluate\(\) expects App\\Models\\Baseline\|null, stdClass\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/ProjectController.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between Carbon\\Carbon and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/ProjectDelayStatus.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\MaterialReceipt\:\:\$contract_id\.$#'
@@ -14323,8 +14767,8 @@ parameters:
 			path: app/Http/Controllers/Web/ReceiptPageController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
-			identifier: property.notFound
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
+			identifier: method.notFound
 			count: 3
 			path: app/Http/Controllers/Web/ReceiptPageController.php
 
@@ -14339,18 +14783,6 @@ parameters:
 			identifier: missingType.iterableValue
 			count: 1
 			path: app/Http/Controllers/Web/ReceiptPageController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\ContractExpense\:\:\$amount\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Web/ReportPageController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\ContractExpense\:\:\$expense_date\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Web/ReportPageController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\MaterialRequest\:\:\$created_at\.$#'
@@ -14443,7 +14875,37 @@ parameters:
 			path: app/Http/Controllers/Web/ReportPageController.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\Rfi\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/ReportPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Rfi\:\:\$priority\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/ReportPageController.php
+
+		-
 			message: '#^Access to an undefined property App\\Models\\Rfi\:\:\$project\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/ReportPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Rfi\:\:\$rfi_number\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/ReportPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Rfi\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/ReportPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Rfi\:\:\$subject\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Controllers/Web/ReportPageController.php
@@ -14503,8 +14965,8 @@ parameters:
 			path: app/Http/Controllers/Web/ReportPageController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
-			identifier: property.notFound
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
+			identifier: method.notFound
 			count: 3
 			path: app/Http/Controllers/Web/ReportPageController.php
 
@@ -14539,6 +15001,12 @@ parameters:
 			path: app/Http/Controllers/Web/ReportPageController.php
 
 		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\LazyCollection\<int,stdClass\>\:\:map\(\) expects callable\(stdClass, int\)\: array\{mixed, mixed, mixed, mixed, mixed, mixed\}, Closure\(App\\Models\\Rfi\)\: array\{mixed, mixed, mixed, mixed, mixed, mixed\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/ReportPageController.php
+
+		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\LazyCollection\<int,stdClass\>\:\:map\(\) expects callable\(stdClass, int\)\: array\{mixed, mixed, mixed, mixed, mixed, string, mixed\}, Closure\(App\\Models\\MaterialRequest\)\: array\{mixed, mixed, mixed, mixed, mixed, string, mixed\} given\.$#'
 			identifier: argument.type
 			count: 1
@@ -14557,20 +15025,26 @@ parameters:
 			path: app/Http/Controllers/Web/ReportPageController.php
 
 		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\LazyCollection\<int,stdClass\>\:\:map\(\) expects callable\(stdClass, int\)\: array\{string, string, mixed, string, string, mixed\}, Closure\(App\\Models\\Rfi\)\: array\{string, string, mixed, string, string, mixed\} given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/Web/ReportPageController.php
-
-		-
 			message: '#^Return type of call to method Illuminate\\Support\\LazyCollection\<int,stdClass\>\:\:map\(\) contains unresolvable type\.$#'
 			identifier: method.unresolvableReturnType
 			count: 5
 			path: app/Http/Controllers/Web/ReportPageController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			message: '#^Access to an undefined property App\\Models\\ContractExpense\:\:\$expense_date\.$#'
 			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/ReportPageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ContractExpense\:\:\$amount\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/ReportPageController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
+			identifier: method.notFound
 			count: 3
 			path: app/Http/Controllers/Web/RfiPageController.php
 
@@ -14581,8 +15055,8 @@ parameters:
 			path: app/Http/Controllers/Web/RfiPageController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
-			identifier: property.notFound
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
+			identifier: method.notFound
 			count: 1
 			path: app/Http/Controllers/Web/SchedulePageController.php
 
@@ -14603,6 +15077,54 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: app/Http/Controllers/Web/SchedulePageController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Web/WorkloadPageController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Query\\Builder\:\:with\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Http/Controllers/Web/WorkloadPageController.php
+
+		-
+			message: '#^Using nullsafe property access \"\?\-\>name\" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Http/Controllers/Web/WorkloadPageController.php
+
+		-
+			message: '#^Offset ''assigned_to'' on \*NEVER\* on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Http/Controllers/Web/WorkloadPageController.php
+
+		-
+			message: '#^Unable to resolve the template type TGroupKey in call to method Illuminate\\Support\\Collection\<\*NEVER\*,\*NEVER\*\>\:\:groupBy\(\)$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Http/Controllers/Web/WorkloadPageController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,stdClass\>\:\:map\(\) expects callable\(stdClass, int\)\: array\{user\: App\\Models\\User, items\: Illuminate\\Support\\Collection\<int, array\<string, mixed\>\>, open_count\: int\<0, max\>, overdue_count\: int\<0, max\>, blocked_count\: int\<0, max\>\}, Closure\(App\\Models\\User\)\: array\{user\: App\\Models\\User, items\: Illuminate\\Support\\Collection\<int, array\<string, mixed\>\>, open_count\: int\<0, max\>, overdue_count\: int\<0, max\>, blocked_count\: int\<0, max\>\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/WorkloadPageController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Web\\WorkloadPageController\:\:index\(\) should return Illuminate\\View\\View but returns Illuminate\\Contracts\\View\\View\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/Web/WorkloadPageController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Web\\WorkloadPageController\:\:myWork\(\) should return Illuminate\\View\\View but returns Illuminate\\Contracts\\View\\View\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/Web/WorkloadPageController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\SiteDiary\:\:\$equipment_used\.$#'
@@ -14815,12 +15337,6 @@ parameters:
 			path: app/Http/Controllers/Web/TaskBulkController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
-			identifier: property.notFound
-			count: 5
-			path: app/Http/Controllers/Web/TaskController.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Http\\Request\:\:\$project_id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -14842,6 +15358,12 @@ parameters:
 			message: '#^Call to an undefined method App\\Services\\TaskService\:\:updateTaskStatus\(\)\.$#'
 			identifier: method.notFound
 			count: 1
+			path: app/Http/Controllers/Web/TaskController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 5
 			path: app/Http/Controllers/Web/TaskController.php
 
 		-
@@ -14959,20 +15481,8 @@ parameters:
 			path: app/Http/Controllers/Web/TaskController.php
 
 		-
-			message: '#^Method App\\Http\\Controllers\\Web\\TodayController\:\:index\(\) should return Illuminate\\View\\View but returns Illuminate\\Contracts\\View\\View\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Http/Controllers/Web/TodayController.php
-
-		-
-			message: '#^Parameter \#1 \$actor of method App\\Services\\TodayWorkspaceReadService\:\:build\(\) expects App\\Models\\User, Illuminate\\Contracts\\Auth\\Authenticatable\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/Web/TodayController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
-			identifier: property.notFound
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
+			identifier: method.notFound
 			count: 2
 			path: app/Http/Controllers/Web/VendorPageController.php
 
@@ -15005,84 +15515,6 @@ parameters:
 			identifier: method.notFound
 			count: 2
 			path: app/Http/Controllers/Web/WebhookPageController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$code\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Web/WorkTemplateApplyController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Web/WorkTemplateApplyController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Web/WorkTemplateApplyController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$publishedVersions\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Web/WorkTemplateApplyController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Web/WorkTemplateApplyController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,stdClass\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Http/Controllers/Web/WorkTemplateApplyController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,stdClass\>\:\:map\(\) expects callable\(stdClass, int\)\: array\{id\: string, name\: mixed, code\: mixed, latest_published_version_id\: string\|null\}, Closure\(App\\Models\\WorkTemplate\)\: array\{id\: string, name\: mixed, code\: mixed, latest_published_version_id\: string\|null\} given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/Web/WorkTemplateApplyController.php
-
-		-
-			message: '#^Return type of call to method Illuminate\\Support\\Collection\<int,array\<string, mixed\>\>\:\:values\(\) contains unresolvable type\.$#'
-			identifier: method.unresolvableReturnType
-			count: 1
-			path: app/Http/Controllers/Web/WorkTemplateApplyController.php
-
-		-
-			message: '#^Return type of call to method Illuminate\\Support\\Collection\<int,stdClass\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: method.unresolvableReturnType
-			count: 1
-			path: app/Http/Controllers/Web/WorkTemplateApplyController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Controllers/Web/WorkloadPageController.php
-
-		-
-			message: '#^Method App\\Http\\Controllers\\Web\\WorkloadPageController\:\:index\(\) should return Illuminate\\View\\View but returns Illuminate\\Contracts\\View\\View\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Http/Controllers/Web/WorkloadPageController.php
-
-		-
-			message: '#^Method App\\Http\\Controllers\\Web\\WorkloadPageController\:\:myWork\(\) should return Illuminate\\View\\View but returns Illuminate\\Contracts\\View\\View\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Http/Controllers/Web/WorkloadPageController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,stdClass\>\:\:map\(\) expects callable\(stdClass, int\)\: array\{user\: App\\Models\\User, items\: Illuminate\\Support\\Collection\<int, App\\Support\\Work\\OpenWorkItem\>, open_count\: int\<0, max\>, overdue_count\: int\<0, max\>, blocked_count\: int\<0, max\>\}, Closure\(App\\Models\\User\)\: array\{user\: App\\Models\\User, items\: Illuminate\\Support\\Collection\<int, App\\Support\\Work\\OpenWorkItem\>, open_count\: int\<0, max\>, overdue_count\: int\<0, max\>, blocked_count\: int\<0, max\>\} given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/Web/WorkloadPageController.php
 
 		-
 			message: '#^Access to property \$base_start_date on an unknown class App\\Http\\Controllers\\Request\.$#'
@@ -23905,6 +24337,12 @@ parameters:
 			path: app/Models/NotificationRule.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$pipeline_stage\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Opportunity.php
+
+		-
 			message: '#^Method App\\Models\\Opportunity\:\:account\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
 			identifier: missingType.generics
 			count: 1
@@ -24445,12 +24883,6 @@ parameters:
 			path: app/Models/Project.php
 
 		-
-			message: '#^Method App\\Models\\Project\:\:latestBaseline\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasOne does not specify its types\: TRelatedModel, TDeclaringModel$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/Project.php
-
-		-
 			message: '#^Method App\\Models\\Project\:\:manager\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
 			identifier: missingType.generics
 			count: 1
@@ -24604,6 +25036,12 @@ parameters:
 			message: '#^Unsafe call to private method App\\Models\\Project\:\:sanitizeText\(\) through static\:\:\.$#'
 			identifier: staticClassAccess.privateMethod
 			count: 2
+			path: app/Models/Project.php
+
+		-
+			message: '#^Method App\\Models\\Project\:\:latestBaseline\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasOne does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
 			path: app/Models/Project.php
 
 		-
@@ -25639,7 +26077,61 @@ parameters:
 			path: app/Models/QueryLog.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\Rfi\:\:\$due_date\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Models/Rfi.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Rfi\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Models/Rfi.php
+
+		-
 			message: '#^Class App\\Models\\Rfi uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Rfi.php
+
+		-
+			message: '#^Method App\\Models\\Rfi\:\:answeredBy\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Rfi.php
+
+		-
+			message: '#^Method App\\Models\\Rfi\:\:askedBy\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Rfi.php
+
+		-
+			message: '#^Method App\\Models\\Rfi\:\:assignedTo\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Rfi.php
+
+		-
+			message: '#^Method App\\Models\\Rfi\:\:closedBy\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Rfi.php
+
+		-
+			message: '#^Method App\\Models\\Rfi\:\:createdBy\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Rfi.php
+
+		-
+			message: '#^Method App\\Models\\Rfi\:\:creator\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Rfi.php
+
+		-
+			message: '#^Method App\\Models\\Rfi\:\:escalatedBy\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
 			identifier: missingType.generics
 			count: 1
 			path: app/Models/Rfi.php
@@ -25647,6 +26139,18 @@ parameters:
 		-
 			message: '#^Method App\\Models\\Rfi\:\:getDaysUntilDueAttribute\(\) should return int\|null but returns float\.$#'
 			identifier: return.type
+			count: 1
+			path: app/Models/Rfi.php
+
+		-
+			message: '#^Method App\\Models\\Rfi\:\:project\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Rfi.php
+
+		-
+			message: '#^Method App\\Models\\Rfi\:\:respondedBy\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
 			count: 1
 			path: app/Models/Rfi.php
 
@@ -25713,6 +26217,12 @@ parameters:
 		-
 			message: '#^Method App\\Models\\Rfi\:\:scopeOverdue\(\) has parameter \$query with no type specified\.$#'
 			identifier: missingType.parameter
+			count: 1
+			path: app/Models/Rfi.php
+
+		-
+			message: '#^Method App\\Models\\Rfi\:\:tenant\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
 			count: 1
 			path: app/Models/Rfi.php
 
@@ -25931,6 +26441,24 @@ parameters:
 			identifier: missingType.iterableValue
 			count: 1
 			path: app/Models/SiteDiary.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Submittal\:\:\$due_date\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Submittal.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Submittal\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Submittal.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Submittal\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Models/Submittal.php
 
 		-
 			message: '#^Class App\\Models\\Submittal uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
@@ -26725,21 +27253,9 @@ parameters:
 			path: app/Models/TaskAssignment.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\TaskAssignment\:\:\$tenant_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Models/TaskAssignment.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\TaskAssignment\:\:\$user\.$#'
 			identifier: property.notFound
 			count: 2
-			path: app/Models/TaskAssignment.php
-
-		-
-			message: '#^Call to an undefined static method App\\Models\\Task\:\:withoutGlobalScopes\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 1
 			path: app/Models/TaskAssignment.php
 
 		-
@@ -26871,6 +27387,18 @@ parameters:
 		-
 			message: '#^Property App\\Models\\TaskAssignment\:\:\$casts type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
+			count: 1
+			path: app/Models/TaskAssignment.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Task\:\:withoutGlobalScopes\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Models/TaskAssignment.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\TaskAssignment\:\:\$tenant_id\.$#'
+			identifier: property.notFound
 			count: 1
 			path: app/Models/TaskAssignment.php
 
@@ -28369,24 +28897,6 @@ parameters:
 			path: app/Models/WorkTemplate.php
 
 		-
-			message: '#^Class App\\Models\\WorkTemplateChecklistItem uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/WorkTemplateChecklistItem.php
-
-		-
-			message: '#^Method App\\Models\\WorkTemplateChecklistItem\:\:task\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/WorkTemplateChecklistItem.php
-
-		-
-			message: '#^Property App\\Models\\WorkTemplateChecklistItem\:\:\$casts type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Models/WorkTemplateChecklistItem.php
-
-		-
 			message: '#^Class App\\Models\\WorkTemplateField uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
 			identifier: missingType.generics
 			count: 1
@@ -28403,60 +28913,6 @@ parameters:
 			identifier: missingType.iterableValue
 			count: 1
 			path: app/Models/WorkTemplateField.php
-
-		-
-			message: '#^Class App\\Models\\WorkTemplatePhase uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/WorkTemplatePhase.php
-
-		-
-			message: '#^Method App\\Models\\WorkTemplatePhase\:\:tasks\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/WorkTemplatePhase.php
-
-		-
-			message: '#^Method App\\Models\\WorkTemplatePhase\:\:tasks\(\) should return Illuminate\\Database\\Eloquent\\Relations\\HasMany but returns Illuminate\\Database\\Query\\Builder\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Models/WorkTemplatePhase.php
-
-		-
-			message: '#^Method App\\Models\\WorkTemplatePhase\:\:version\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/WorkTemplatePhase.php
-
-		-
-			message: '#^Property App\\Models\\WorkTemplatePhase\:\:\$casts type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Models/WorkTemplatePhase.php
-
-		-
-			message: '#^Class App\\Models\\WorkTemplateRequiredDocument uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/WorkTemplateRequiredDocument.php
-
-		-
-			message: '#^Method App\\Models\\WorkTemplateRequiredDocument\:\:checklistItem\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/WorkTemplateRequiredDocument.php
-
-		-
-			message: '#^Method App\\Models\\WorkTemplateRequiredDocument\:\:task\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/WorkTemplateRequiredDocument.php
-
-		-
-			message: '#^Property App\\Models\\WorkTemplateRequiredDocument\:\:\$casts type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Models/WorkTemplateRequiredDocument.php
 
 		-
 			message: '#^Class App\\Models\\WorkTemplateStep uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
@@ -28483,133 +28939,13 @@ parameters:
 			path: app/Models/WorkTemplateStep.php
 
 		-
-			message: '#^Class App\\Models\\WorkTemplateTask uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/WorkTemplateTask.php
-
-		-
-			message: '#^Method App\\Models\\WorkTemplateTask\:\:assignments\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/WorkTemplateTask.php
-
-		-
-			message: '#^Method App\\Models\\WorkTemplateTask\:\:assignments\(\) should return Illuminate\\Database\\Eloquent\\Relations\\HasMany but returns Illuminate\\Database\\Query\\Builder\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Models/WorkTemplateTask.php
-
-		-
-			message: '#^Method App\\Models\\WorkTemplateTask\:\:checklistItems\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/WorkTemplateTask.php
-
-		-
-			message: '#^Method App\\Models\\WorkTemplateTask\:\:checklistItems\(\) should return Illuminate\\Database\\Eloquent\\Relations\\HasMany but returns Illuminate\\Database\\Query\\Builder\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Models/WorkTemplateTask.php
-
-		-
-			message: '#^Method App\\Models\\WorkTemplateTask\:\:phase\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/WorkTemplateTask.php
-
-		-
-			message: '#^Method App\\Models\\WorkTemplateTask\:\:requiredDocuments\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/WorkTemplateTask.php
-
-		-
-			message: '#^Method App\\Models\\WorkTemplateTask\:\:requiredDocuments\(\) should return Illuminate\\Database\\Eloquent\\Relations\\HasMany but returns Illuminate\\Database\\Query\\Builder\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Models/WorkTemplateTask.php
-
-		-
-			message: '#^Method App\\Models\\WorkTemplateTask\:\:triggers\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/WorkTemplateTask.php
-
-		-
-			message: '#^Method App\\Models\\WorkTemplateTask\:\:triggers\(\) should return Illuminate\\Database\\Eloquent\\Relations\\HasMany but returns Illuminate\\Database\\Query\\Builder\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Models/WorkTemplateTask.php
-
-		-
-			message: '#^Property App\\Models\\WorkTemplateTask\:\:\$casts type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Models/WorkTemplateTask.php
-
-		-
-			message: '#^Class App\\Models\\WorkTemplateTaskAssignment uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/WorkTemplateTaskAssignment.php
-
-		-
-			message: '#^Method App\\Models\\WorkTemplateTaskAssignment\:\:task\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/WorkTemplateTaskAssignment.php
-
-		-
-			message: '#^Property App\\Models\\WorkTemplateTaskAssignment\:\:\$casts type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Models/WorkTemplateTaskAssignment.php
-
-		-
-			message: '#^Class App\\Models\\WorkTemplateTrigger uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/WorkTemplateTrigger.php
-
-		-
-			message: '#^Method App\\Models\\WorkTemplateTrigger\:\:task\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/WorkTemplateTrigger.php
-
-		-
-			message: '#^Property App\\Models\\WorkTemplateTrigger\:\:\$casts type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Models/WorkTemplateTrigger.php
-
-		-
 			message: '#^Class App\\Models\\WorkTemplateVersion uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
 			identifier: missingType.generics
 			count: 1
 			path: app/Models/WorkTemplateVersion.php
 
 		-
-			message: '#^Method App\\Models\\WorkTemplateVersion\:\:phases\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/WorkTemplateVersion.php
-
-		-
-			message: '#^Method App\\Models\\WorkTemplateVersion\:\:phases\(\) should return Illuminate\\Database\\Eloquent\\Relations\\HasMany but returns Illuminate\\Database\\Query\\Builder\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Models/WorkTemplateVersion.php
-
-		-
 			message: '#^Method App\\Models\\WorkTemplateVersion\:\:publisher\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/WorkTemplateVersion.php
-
-		-
-			message: '#^Method App\\Models\\WorkTemplateVersion\:\:sourceVersion\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
 			identifier: missingType.generics
 			count: 1
 			path: app/Models/WorkTemplateVersion.php
@@ -29077,6 +29413,12 @@ parameters:
 			path: app/Policies/NotificationPolicy.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\Opportunity\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Policies/OpportunityPolicy.php
+
+		-
 			message: '#^Access to an undefined property App\\Models\\QcInspection\:\:\$inspector_id\.$#'
 			identifier: property.notFound
 			count: 2
@@ -29183,6 +29525,18 @@ parameters:
 			identifier: missingType.return
 			count: 1
 			path: app/Policies/QcPlanPolicy.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Rfi\:\:\$created_by\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Policies/RfiPolicy.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Rfi\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 5
+			path: app/Policies/RfiPolicy.php
 
 		-
 			message: '#^Method App\\Policies\\RfiPolicy\:\:approve\(\) has no return type specified\.$#'
@@ -39097,18 +39451,6 @@ parameters:
 			path: app/Services/OIDCService.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Query\\Builder\:\:with\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: app/Services/OpenWorkReadQuery.php
-
-		-
-			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 2
-			path: app/Services/OpenWorkReadQuery.php
-
-		-
 			message: '#^Access to property \$email on an unknown class App\\Services\\User\.$#'
 			identifier: class.notFound
 			count: 2
@@ -40103,12 +40445,6 @@ parameters:
 			identifier: identical.alwaysFalse
 			count: 1
 			path: app/Services/ProjectAnalyticsService.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between Carbon\\Carbon and null will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Services/ProjectDelayStatus.php
 
 		-
 			message: '#^Call to an undefined static method App\\Models\\Project\:\:create\(\)\.$#'
@@ -43399,24 +43735,6 @@ parameters:
 			path: app/Services/TaskService.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Team\:\:\$activeMembers\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Services/TeamExceptionQuery.php
-
-		-
-			message: '#^Unable to resolve the template type TFlatMapKey in call to method Illuminate\\Support\\Collection\<int,App\\Models\\Team\>\:\:flatMap\(\)$#'
-			identifier: argument.templateType
-			count: 2
-			path: app/Services/TeamExceptionQuery.php
-
-		-
-			message: '#^Unable to resolve the template type TFlatMapValue in call to method Illuminate\\Support\\Collection\<int,App\\Models\\Team\>\:\:flatMap\(\)$#'
-			identifier: argument.templateType
-			count: 2
-			path: app/Services/TeamExceptionQuery.php
-
-		-
 			message: '#^Instanceof between App\\Models\\Invitation and App\\Models\\Invitation will always evaluate to true\.$#'
 			identifier: instanceof.alwaysTrue
 			count: 1
@@ -43607,30 +43925,6 @@ parameters:
 			identifier: missingType.iterableValue
 			count: 1
 			path: app/Services/ThirdPartyIntegrationService.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<App\\Models\\Notification\>\:\:forUser\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Services/UnreadUpdateQuery.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Query\\Builder\:\:whereHas\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Services/UpcomingMilestoneQuery.php
-
-		-
-			message: '#^Parameter \$targetDate of class App\\Support\\Today\\TodayMilestoneItem constructor expects Illuminate\\Support\\Carbon\|null, Carbon\\Carbon\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/UpcomingMilestoneQuery.php
-
-		-
-			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Services/UpcomingMilestoneQuery.php
 
 		-
 			message: '#^Call to an undefined static method App\\Models\\User\:\:create\(\)\.$#'
@@ -44127,708 +44421,6 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$code\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$created_at\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$created_by\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$deleted_by\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$description\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 8
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$status\.$#'
-			identifier: property.notFound
-			count: 3
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$tenant_id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$updated_at\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$updated_by\.$#'
-			identifier: property.notFound
-			count: 3
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$versions\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateChecklistItem\:\:\$checklist_key\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateChecklistItem\:\:\$help_text\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateChecklistItem\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateChecklistItem\:\:\$is_required\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateChecklistItem\:\:\$item_order\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateChecklistItem\:\:\$label\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateChecklistItem\:\:\$validation_json\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateField\:\:\$default_value\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateField\:\:\$enum_options_json\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateField\:\:\$field_key\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateField\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateField\:\:\$is_required\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateField\:\:\$label\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateField\:\:\$type\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateField\:\:\$validation_json\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateField\:\:\$visibility_rule_json\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplatePhase\:\:\$config_json\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplatePhase\:\:\$default_offset_days\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplatePhase\:\:\$description\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplatePhase\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplatePhase\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplatePhase\:\:\$phase_key\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplatePhase\:\:\$phase_order\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplatePhase\:\:\$tasks\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateRequiredDocument\:\:\$description\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateRequiredDocument\:\:\$doc_key\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateRequiredDocument\:\:\$doc_order\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateRequiredDocument\:\:\$document_type\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateRequiredDocument\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateRequiredDocument\:\:\$is_required\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateRequiredDocument\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateRequiredDocument\:\:\$rules_json\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateRequiredDocument\:\:\$work_template_checklist_item_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateStep\:\:\$assignee_rule_json\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateStep\:\:\$config_json\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateStep\:\:\$fields\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateStep\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateStep\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateStep\:\:\$sla_hours\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateStep\:\:\$step_key\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateStep\:\:\$step_order\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateStep\:\:\$type\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTask\:\:\$assignments\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTask\:\:\$checklistItems\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTask\:\:\$config_json\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTask\:\:\$default_duration_days\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTask\:\:\$description\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTask\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTask\:\:\$is_required\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTask\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTask\:\:\$requiredDocuments\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTask\:\:\$task_key\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTask\:\:\$task_order\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTask\:\:\$task_type\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTask\:\:\$triggers\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTaskAssignment\:\:\$approval_order\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTaskAssignment\:\:\$assignment_key\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTaskAssignment\:\:\$assignment_type\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTaskAssignment\:\:\$conditions_json\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTaskAssignment\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTaskAssignment\:\:\$is_required\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTaskAssignment\:\:\$role_code\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTrigger\:\:\$action\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTrigger\:\:\$conditions_json\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTrigger\:\:\$event\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTrigger\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTrigger\:\:\$is_active\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTrigger\:\:\$payload_json\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTrigger\:\:\$trigger_key\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateTrigger\:\:\$trigger_order\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$created_at\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 13
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$is_immutable\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$phases\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$published_at\.$#'
-			identifier: property.notFound
-			count: 3
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$published_by\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$schema_version\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$semver\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$source_version_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$steps\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$tenant_id\.$#'
-			identifier: property.notFound
-			count: 32
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$updated_at\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$work_template_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Call to an undefined static method App\\Models\\WorkTemplate\:\:create\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Call to an undefined static method App\\Models\\WorkTemplateChecklistItem\:\:create\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 2
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Call to an undefined static method App\\Models\\WorkTemplateField\:\:create\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 2
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Call to an undefined static method App\\Models\\WorkTemplatePhase\:\:create\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 2
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Call to an undefined static method App\\Models\\WorkTemplateRequiredDocument\:\:create\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 2
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Call to an undefined static method App\\Models\\WorkTemplateStep\:\:create\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 2
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Call to an undefined static method App\\Models\\WorkTemplateTask\:\:create\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 2
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Call to an undefined static method App\\Models\\WorkTemplateTaskAssignment\:\:create\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 2
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Call to an undefined static method App\\Models\\WorkTemplateTrigger\:\:create\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 2
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Call to an undefined static method App\\Models\\WorkTemplateVersion\:\:create\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 3
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Method App\\Services\\WorkTemplateCrudService\:\:buildContentPayload\(\) has parameter \$base with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Method App\\Services\\WorkTemplateCrudService\:\:buildContentPayload\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Method App\\Services\\WorkTemplateCrudService\:\:resolveSchemaVersion\(\) has parameter \$content with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Method App\\Services\\WorkTemplateCrudService\:\:serializeTemplate\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Method App\\Services\\WorkTemplateCrudService\:\:serializeVersion\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Method App\\Services\\WorkTemplateCrudService\:\:syncLegacyStepsAndFields\(\) has parameter \$steps with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Method App\\Services\\WorkTemplateCrudService\:\:syncV2Hierarchy\(\) has parameter \$phases with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Method App\\Services\\WorkTemplateCrudService\:\:syncVersionStructure\(\) has parameter \$content with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Offset 0 on non\-empty\-list\<int\> on left side of \?\? always exists and is not nullable\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Parameter \#1 \$from of method App\\Services\\WorkTemplateCrudService\:\:cloneVersionStructure\(\) expects App\\Models\\WorkTemplateVersion, stdClass given\.$#'
-			identifier: argument.type
-			count: 2
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Using nullsafe property access "\?\-\>content_json" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Using nullsafe property access "\?\-\>schema_version" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 2
-			path: app/Services/WorkTemplateCrudService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$code\.$#'
-			identifier: property.notFound
 			count: 2
 			path: app/Services/WorkTemplatePackageService.php
 
@@ -45149,24 +44741,6 @@ parameters:
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Services/ZenaBoqIntegrationService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$permissions\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Support/Navigation/OperatorNavigationComposer.php
-
-		-
-			message: '#^Unable to resolve the template type TFlatMapKey in call to method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:flatMap\(\)$#'
-			identifier: argument.templateType
-			count: 1
-			path: app/Support/Navigation/OperatorNavigationComposer.php
-
-		-
-			message: '#^Unable to resolve the template type TFlatMapValue in call to method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:flatMap\(\)$#'
-			identifier: argument.templateType
-			count: 1
-			path: app/Support/Navigation/OperatorNavigationComposer.php
 
 		-
 			message: '#^Trait App\\Traits\\DispatchesEvents is used zero times and is not analysed\.$#'
@@ -46327,18 +45901,6 @@ parameters:
 			path: database/seeders/ZenaPermissionsSeeder.php
 
 		-
-			message: '#^Call to an undefined static method App\\Models\\Permission\:\:whereIn\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 2
-			path: database/seeders/ZenaPermissionsSeeder.php
-
-		-
-			message: '#^Call to an undefined static method App\\Models\\Role\:\:where\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 2
-			path: database/seeders/ZenaPermissionsSeeder.php
-
-		-
 			message: '#^Using nullsafe method call on non\-nullable type Illuminate\\Console\\Command\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
@@ -46507,6 +46069,168 @@ parameters:
 			path: routes/web.php
 
 		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/ActivityFeedPageController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Authenticatable\:\:tokens\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Web/ApiTokenPageController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Http/Controllers/Web/BoqPageController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Http/Controllers/Web/ChangeRequestPageController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/CrmReportController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/GlobalSearchPageController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Web/MaterialPageController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Web/MaterialRequestPageController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/ProcurementDashboardController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Http/Controllers/Web/ReceiptPageController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Http/Controllers/Web/ReportPageController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Http/Controllers/Web/RfiPageController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/SchedulePageController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Web/VendorPageController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Web/WorkloadPageController.php
+
+		-
+			message: '#^Unable to resolve the template type TGroupKey in call to method Illuminate\\Support\\Collection\<int,array\<string, mixed\>\>\:\:groupBy\(\)$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Http/Controllers/Web/WorkloadPageController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/WorkTemplateApplyController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,stdClass\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Http/Controllers/Web/WorkTemplateApplyController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,stdClass\>\:\:map\(\) expects callable\(stdClass, int\)\: array\{id\: string, name\: mixed, code\: mixed, latest_published_version_id\: string\|null\}, Closure\(App\\Models\\WorkTemplate\)\: array\{id\: string, name\: mixed, code\: mixed, latest_published_version_id\: string\|null\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/WorkTemplateApplyController.php
+
+		-
+			message: '#^Return type of call to method Illuminate\\Support\\Collection\<int,stdClass\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: method.unresolvableReturnType
+			count: 1
+			path: app/Http/Controllers/Web/WorkTemplateApplyController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$publishedVersions\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/WorkTemplateApplyController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/WorkTemplateApplyController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/WorkTemplateApplyController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Web/WorkTemplateApplyController.php
+
+		-
+			message: '#^Return type of call to method Illuminate\\Support\\Collection\<int,array\<string, mixed\>\>\:\:values\(\) contains unresolvable type\.$#'
+			identifier: method.unresolvableReturnType
+			count: 1
+			path: app/Http/Controllers/Web/WorkTemplateApplyController.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Role\:\:where\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: database/seeders/ZenaPermissionsSeeder.php
+
+		-
+			message: '#^Call to an undefined static method App\\Models\\Permission\:\:whereIn\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: database/seeders/ZenaPermissionsSeeder.php
+
+		-
 			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
 			identifier: method.notFound
 			count: 1
@@ -46523,3 +46247,1193 @@ parameters:
 			identifier: staticMethod.notFound
 			count: 2
 			path: routes/web.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Component\:\:\$project\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Access to an undefined property App\\Models\\Component\:\:\$start_date\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Access to an undefined property App\\Models\\Project\:\:\$pm_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkInstance\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkInstance\:\:\$project_id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkInstance\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkInstance\:\:\$work_template_version_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 7
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateField\:\:\$default_value\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateField\:\:\$enum_options_json\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateField\:\:\$field_key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateField\:\:\$is_required\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateField\:\:\$label\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateField\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateField\:\:\$validation_json\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateField\:\:\$visibility_rule_json\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateStep\:\:\$config_json\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateStep\:\:\$depends_on\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateStep\:\:\$fields\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateStep\:\:\$sla_hours\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 14
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 8
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$work_template_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Query\\Builder\:\:with\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Call to an undefined static method App\\Models\\WorkInstance\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Call to an undefined static method App\\Models\\WorkInstanceStep\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Call to an undefined static method App\\Models\\WorkTemplateField\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Call to an undefined static method App\\Models\\WorkTemplateStep\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Call to an undefined static method App\\Models\\WorkTemplateVersion\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:buildApplyResponsePayload\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:buildContentPayload\(\) has parameter \$base with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:buildContentPayload\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:buildContentPayload\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:createDraftFromLatestPublished\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:isValidSelectorShape\(\) has parameter \$selector with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:nextPublishedSemver\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:phaseValidationRules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:resolveSecondaryAssignments\(\) has parameter \$config with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:resolveVersionForApply\(\) never returns App\\Models\\WorkTemplateVersion so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:resolveVersionForApply\(\) should return App\\Models\\WorkTemplateVersion\|null but returns stdClass\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:resolveVersionForApply\(\) should return App\\Models\\WorkTemplateVersion\|null but returns stdClass\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:stepValidationRules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:syncStepsAndFields\(\) has parameter \$steps with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:syncStepsAndFields\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:templateForTenant\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:templateResponsePayload\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:versionResponsePayload\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Offset ''order'' on array\{task_key\: string, step_key\: string, phase_key\: string, phase_name\: string, phase_order\: int, name\: string, type\: string, order\: int, \.\.\.\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Offset ''task_key'' on array\{task_key\: string, step_key\: string, doc_key\: string, label\: string, required\: bool\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Offset ''task_key'' on array\{task_key\: string, step_key\: string, item_key\: string, label\: string, required\: bool\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Offset 0 on non\-empty\-list\<int\> on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Parameter \#1 \$array \(list\<array\{task_key\: string, step_key\: string, doc_key\: string, label\: string, required\: bool\}\>\) of array_values is already a list, call has no effect\.$#'
+			identifier: arrayValues.list
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Parameter \#1 \$array \(list\<array\{task_key\: string, step_key\: string, item_key\: string, label\: string, required\: bool\}\>\) of array_values is already a list, call has no effect\.$#'
+			identifier: arrayValues.list
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Parameter \#1 \$array \(list\<array\{task_key\: string, step_key\: string, phase_key\: string, phase_name\: string, phase_order\: int, name\: string, type\: string, order\: int, \.\.\.\}\>\) of array_values is already a list, call has no effect\.$#'
+			identifier: arrayValues.list
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Parameter \#1 \$from of method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:cloneStepsAndFields\(\) expects App\\Models\\WorkTemplateVersion, stdClass given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Parameter \#1 \$step of method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:assertStepConfigValid\(\) expects App\\Models\\WorkTemplateStep, stdClass given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Parameter \#1 \$step of method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:buildSnapshotFields\(\) expects App\\Models\\WorkTemplateStep, stdClass given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Parameter \#2 \$stepsByKey of method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:resolveTimelineForStep\(\) expects array\<string, App\\Models\\WorkTemplateStep\>, array\<string, stdClass\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Parameter \#2 \$versions of method App\\Services\\WorkTemplatePackageService\:\:buildExportPayload\(\) expects Illuminate\\Support\\Collection\<int, App\\Models\\WorkTemplateVersion\>, Illuminate\\Support\\Collection\<int, stdClass\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Parameter \#7 \$now of method App\\Http\\Controllers\\Api\\WorkTemplateController\:\:buildAssignmentRows\(\) expects Illuminate\\Support\\Carbon, Carbon\\CarbonInterface given\.$#'
+			identifier: argument.type
+			count: 3
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Strict comparison using \!\=\= between non\-empty\-list\<Carbon\\CarbonImmutable\> and array\{\} will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Ternary operator condition is always true\.$#'
+			identifier: ternary.alwaysTrue
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Using nullsafe property access "\?\-\>content_json" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Api/WorkTemplateController.php
+		-
+			message: '#^Class App\\Models\\WorkTemplateChecklistItem uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/WorkTemplateChecklistItem.php
+		-
+			message: '#^Method App\\Models\\WorkTemplateChecklistItem\:\:task\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/WorkTemplateChecklistItem.php
+		-
+			message: '#^Property App\\Models\\WorkTemplateChecklistItem\:\:\$casts type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Models/WorkTemplateChecklistItem.php
+		-
+			message: '#^Class App\\Models\\WorkTemplatePhase uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/WorkTemplatePhase.php
+		-
+			message: '#^Method App\\Models\\WorkTemplatePhase\:\:tasks\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/WorkTemplatePhase.php
+		-
+			message: '#^Method App\\Models\\WorkTemplatePhase\:\:tasks\(\) should return Illuminate\\Database\\Eloquent\\Relations\\HasMany but returns Illuminate\\Database\\Query\\Builder\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Models/WorkTemplatePhase.php
+		-
+			message: '#^Method App\\Models\\WorkTemplatePhase\:\:version\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/WorkTemplatePhase.php
+		-
+			message: '#^Property App\\Models\\WorkTemplatePhase\:\:\$casts type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Models/WorkTemplatePhase.php
+		-
+			message: '#^Class App\\Models\\WorkTemplateRequiredDocument uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/WorkTemplateRequiredDocument.php
+		-
+			message: '#^Method App\\Models\\WorkTemplateRequiredDocument\:\:checklistItem\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/WorkTemplateRequiredDocument.php
+		-
+			message: '#^Method App\\Models\\WorkTemplateRequiredDocument\:\:task\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/WorkTemplateRequiredDocument.php
+		-
+			message: '#^Property App\\Models\\WorkTemplateRequiredDocument\:\:\$casts type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Models/WorkTemplateRequiredDocument.php
+		-
+			message: '#^Class App\\Models\\WorkTemplateTask uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/WorkTemplateTask.php
+		-
+			message: '#^Method App\\Models\\WorkTemplateTask\:\:assignments\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/WorkTemplateTask.php
+		-
+			message: '#^Method App\\Models\\WorkTemplateTask\:\:assignments\(\) should return Illuminate\\Database\\Eloquent\\Relations\\HasMany but returns Illuminate\\Database\\Query\\Builder\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Models/WorkTemplateTask.php
+		-
+			message: '#^Method App\\Models\\WorkTemplateTask\:\:checklistItems\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/WorkTemplateTask.php
+		-
+			message: '#^Method App\\Models\\WorkTemplateTask\:\:checklistItems\(\) should return Illuminate\\Database\\Eloquent\\Relations\\HasMany but returns Illuminate\\Database\\Query\\Builder\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Models/WorkTemplateTask.php
+		-
+			message: '#^Method App\\Models\\WorkTemplateTask\:\:phase\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/WorkTemplateTask.php
+		-
+			message: '#^Method App\\Models\\WorkTemplateTask\:\:requiredDocuments\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/WorkTemplateTask.php
+		-
+			message: '#^Method App\\Models\\WorkTemplateTask\:\:requiredDocuments\(\) should return Illuminate\\Database\\Eloquent\\Relations\\HasMany but returns Illuminate\\Database\\Query\\Builder\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Models/WorkTemplateTask.php
+		-
+			message: '#^Method App\\Models\\WorkTemplateTask\:\:triggers\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/WorkTemplateTask.php
+		-
+			message: '#^Method App\\Models\\WorkTemplateTask\:\:triggers\(\) should return Illuminate\\Database\\Eloquent\\Relations\\HasMany but returns Illuminate\\Database\\Query\\Builder\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Models/WorkTemplateTask.php
+		-
+			message: '#^Property App\\Models\\WorkTemplateTask\:\:\$casts type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Models/WorkTemplateTask.php
+		-
+			message: '#^Class App\\Models\\WorkTemplateTaskAssignment uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/WorkTemplateTaskAssignment.php
+		-
+			message: '#^Method App\\Models\\WorkTemplateTaskAssignment\:\:task\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/WorkTemplateTaskAssignment.php
+		-
+			message: '#^Property App\\Models\\WorkTemplateTaskAssignment\:\:\$casts type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Models/WorkTemplateTaskAssignment.php
+		-
+			message: '#^Class App\\Models\\WorkTemplateTrigger uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/WorkTemplateTrigger.php
+		-
+			message: '#^Method App\\Models\\WorkTemplateTrigger\:\:task\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/WorkTemplateTrigger.php
+		-
+			message: '#^Property App\\Models\\WorkTemplateTrigger\:\:\$casts type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Models/WorkTemplateTrigger.php
+		-
+			message: '#^Class App\\Models\\WorkTemplateVersion uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/WorkTemplateVersion.php
+		-
+			message: '#^Method App\\Models\\WorkTemplateVersion\:\:phases\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/WorkTemplateVersion.php
+		-
+			message: '#^Method App\\Models\\WorkTemplateVersion\:\:phases\(\) should return Illuminate\\Database\\Eloquent\\Relations\\HasMany but returns Illuminate\\Database\\Query\\Builder\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Models/WorkTemplateVersion.php
+		-
+			message: '#^Method App\\Models\\WorkTemplateVersion\:\:publisher\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/WorkTemplateVersion.php
+		-
+			message: '#^Method App\\Models\\WorkTemplateVersion\:\:sourceVersion\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/WorkTemplateVersion.php
+		-
+			message: '#^Method App\\Models\\WorkTemplateVersion\:\:steps\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/WorkTemplateVersion.php
+		-
+			message: '#^Method App\\Models\\WorkTemplateVersion\:\:steps\(\) should return Illuminate\\Database\\Eloquent\\Relations\\HasMany but returns Illuminate\\Database\\Query\\Builder\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Models/WorkTemplateVersion.php
+		-
+			message: '#^Method App\\Models\\WorkTemplateVersion\:\:template\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/WorkTemplateVersion.php
+		-
+			message: '#^Property App\\Models\\WorkTemplateVersion\:\:\$casts type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Models/WorkTemplateVersion.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$created_by\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$deleted_by\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$description\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 8
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$updated_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$updated_by\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplate\:\:\$versions\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateChecklistItem\:\:\$checklist_key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateChecklistItem\:\:\$help_text\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateChecklistItem\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateChecklistItem\:\:\$is_required\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateChecklistItem\:\:\$item_order\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateChecklistItem\:\:\$label\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateChecklistItem\:\:\$validation_json\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateField\:\:\$default_value\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateField\:\:\$enum_options_json\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateField\:\:\$field_key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateField\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateField\:\:\$is_required\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateField\:\:\$label\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateField\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateField\:\:\$validation_json\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateField\:\:\$visibility_rule_json\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplatePhase\:\:\$config_json\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplatePhase\:\:\$default_offset_days\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplatePhase\:\:\$description\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplatePhase\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplatePhase\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplatePhase\:\:\$phase_key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplatePhase\:\:\$phase_order\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplatePhase\:\:\$tasks\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateRequiredDocument\:\:\$description\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateRequiredDocument\:\:\$doc_key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateRequiredDocument\:\:\$doc_order\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateRequiredDocument\:\:\$document_type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateRequiredDocument\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateRequiredDocument\:\:\$is_required\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateRequiredDocument\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateRequiredDocument\:\:\$rules_json\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateRequiredDocument\:\:\$work_template_checklist_item_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateStep\:\:\$assignee_rule_json\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateStep\:\:\$config_json\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateStep\:\:\$fields\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateStep\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateStep\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateStep\:\:\$sla_hours\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateStep\:\:\$step_key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateStep\:\:\$step_order\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateStep\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTask\:\:\$assignments\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTask\:\:\$checklistItems\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTask\:\:\$config_json\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTask\:\:\$default_duration_days\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTask\:\:\$description\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTask\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTask\:\:\$is_required\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTask\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTask\:\:\$requiredDocuments\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTask\:\:\$task_key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTask\:\:\$task_order\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTask\:\:\$task_type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTask\:\:\$triggers\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTaskAssignment\:\:\$approval_order\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTaskAssignment\:\:\$assignment_key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTaskAssignment\:\:\$assignment_type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTaskAssignment\:\:\$conditions_json\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTaskAssignment\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTaskAssignment\:\:\$is_required\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTaskAssignment\:\:\$role_code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTrigger\:\:\$action\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTrigger\:\:\$conditions_json\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTrigger\:\:\$event\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTrigger\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTrigger\:\:\$is_active\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTrigger\:\:\$payload_json\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTrigger\:\:\$trigger_key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateTrigger\:\:\$trigger_order\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 13
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$is_immutable\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$phases\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$published_at\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$published_by\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$schema_version\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$semver\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$source_version_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$steps\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$tenant_id\.$#'
+			identifier: property.notFound
+			count: 32
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$updated_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Access to an undefined property App\\Models\\WorkTemplateVersion\:\:\$work_template_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Call to an undefined static method App\\Models\\WorkTemplate\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Call to an undefined static method App\\Models\\WorkTemplateChecklistItem\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Call to an undefined static method App\\Models\\WorkTemplateField\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Call to an undefined static method App\\Models\\WorkTemplatePhase\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Call to an undefined static method App\\Models\\WorkTemplateRequiredDocument\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Call to an undefined static method App\\Models\\WorkTemplateStep\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Call to an undefined static method App\\Models\\WorkTemplateTask\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Call to an undefined static method App\\Models\\WorkTemplateTaskAssignment\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Call to an undefined static method App\\Models\\WorkTemplateTrigger\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Call to an undefined static method App\\Models\\WorkTemplateVersion\:\:create\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 3
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Method App\\Services\\WorkTemplateCrudService\:\:buildContentPayload\(\) has parameter \$base with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Method App\\Services\\WorkTemplateCrudService\:\:buildContentPayload\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Method App\\Services\\WorkTemplateCrudService\:\:resolveSchemaVersion\(\) has parameter \$content with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Method App\\Services\\WorkTemplateCrudService\:\:serializeTemplate\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Method App\\Services\\WorkTemplateCrudService\:\:serializeVersion\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Method App\\Services\\WorkTemplateCrudService\:\:syncLegacyStepsAndFields\(\) has parameter \$steps with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Method App\\Services\\WorkTemplateCrudService\:\:syncV2Hierarchy\(\) has parameter \$phases with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Method App\\Services\\WorkTemplateCrudService\:\:syncVersionStructure\(\) has parameter \$content with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Offset 0 on non\-empty\-list\<int\> on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Parameter \#1 \$from of method App\\Services\\WorkTemplateCrudService\:\:cloneVersionStructure\(\) expects App\\Models\\WorkTemplateVersion, stdClass given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Using nullsafe property access "\?\-\>content_json" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Using nullsafe property access "\?\-\>schema_version" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Services/WorkTemplateCrudService.php
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\LazyCollection<int,stdClass>\:\:map\(\) expects callable\(stdClass, int\)\: array\{string, string, mixed, string, string, mixed\}, Closure\(App\\Models\\Rfi\)\: array\{string, string, mixed, string, string, mixed\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/ReportPageController.php
+		-
+			message: '#^Method App\\Http\\Controllers\\Web\\TodayController\:\:index\(\) should return Illuminate\\View\\View but returns Illuminate\\Contracts\\View\\View\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/Web/TodayController.php
+
+		-
+			message: '#^Parameter \#1 \$actor of method App\\Services\\TodayWorkspaceReadService\:\:build\(\) expects App\\Models\\User, Illuminate\\Contracts\\Auth\\Authenticatable\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/TodayController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,stdClass\>\:\:map\(\) expects callable\(stdClass, int\)\: array\{user\: App\\Models\\User, items\: Illuminate\\Support\\Collection\<int, App\\Support\\Work\\OpenWorkItem\>, open_count\: int\<0, max\>, overdue_count\: int\<0, max\>, blocked_count\: int\<0, max\>\}, Closure\(App\\Models\\User\)\: array\{user\: App\\Models\\User, items\: Illuminate\\Support\\Collection\<int, App\\Support\\Work\\OpenWorkItem\>, open_count\: int\<0, max\>, overdue_count\: int\<0, max\>, blocked_count\: int\<0, max\>\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/WorkloadPageController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Query\\Builder\:\:with\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Services/OpenWorkReadQuery.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Services/OpenWorkReadQuery.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Team\:\:\$activeMembers\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/TeamExceptionQuery.php
+
+		-
+			message: '#^Unable to resolve the template type TFlatMapKey in call to method Illuminate\\Support\\Collection\<int,App\\Models\\Team\>\:\:flatMap\(\)$#'
+			identifier: argument.templateType
+			count: 2
+			path: app/Services/TeamExceptionQuery.php
+
+		-
+			message: '#^Unable to resolve the template type TFlatMapValue in call to method Illuminate\\Support\\Collection\<int,App\\Models\\Team\>\:\:flatMap\(\)$#'
+			identifier: argument.templateType
+			count: 2
+			path: app/Services/TeamExceptionQuery.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<App\\Models\\Notification\>\:\:forUser\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/UnreadUpdateQuery.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Query\\Builder\:\:whereHas\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/UpcomingMilestoneQuery.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/UpcomingMilestoneQuery.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$permissions\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Support/Navigation/OperatorNavigationComposer.php
+
+		-
+			message: '#^Unable to resolve the template type TFlatMapKey in call to method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:flatMap\(\)$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Support/Navigation/OperatorNavigationComposer.php
+
+		-
+			message: '#^Unable to resolve the template type TFlatMapValue in call to method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:flatMap\(\)$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Support/Navigation/OperatorNavigationComposer.php
+
+		-
+			message: '#^Parameter \$targetDate of class App\\Support\\Today\\TodayMilestoneItem constructor expects Illuminate\\Support\\Carbon\|null, Carbon\\Carbon\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/UpcomingMilestoneQuery.php

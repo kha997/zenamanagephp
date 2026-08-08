@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Mockery;
 use Src\CoreProject\Models\Project as CoreProject;
 use Src\CoreProject\Models\Task as CoreTask;
 use Tests\TestCase;
@@ -34,8 +35,13 @@ class LegacyCsvExportSafetyTest extends TestCase
 
         $this->user->assignRole('admin');
 
-        Storage::fake('local');
         $this->disk = config('filesystems.default');
+    }
+
+    protected function tearDown(): void
+    {
+        Mockery::close();
+        parent::tearDown();
     }
 
     private function actingAsExportUser(): array
@@ -588,7 +594,7 @@ class LegacyCsvExportSafetyTest extends TestCase
             'project_id' => $project->id,
         ]);
 
-        Storage::shouldReceive('move')->andThrow(new \RuntimeException('Storage move failed'));
+        Storage::shouldReceive('move')->andReturn(false);
 
         $response = $this->postCsv('/api/tasks/bulk/export', ['format' => 'csv']);
 
@@ -601,7 +607,7 @@ class LegacyCsvExportSafetyTest extends TestCase
     {
         CoreProject::factory()->count(3)->create(['tenant_id' => $this->tenant->id]);
 
-        Storage::shouldReceive('move')->andThrow(new \RuntimeException('Storage move failed'));
+        Storage::shouldReceive('move')->andReturn(false);
 
         $response = $this->postCsv('/api/projects/bulk/export', ['format' => 'csv']);
 
@@ -936,6 +942,108 @@ class LegacyCsvExportSafetyTest extends TestCase
         $rows = $this->parseCsv($payload);
 
         $this->assertSame("' \t=SPACE(A1)", $rows[1][12]);
+    }
+
+    /** @test */
+    public function task_csv_tags_empty_array_is_serialized_as_empty_string(): void
+    {
+        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $task = CoreTask::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $project->id,
+            'tags' => [],
+        ]);
+
+        $response = $this->postCsv('/api/tasks/bulk/export', [
+            'format' => 'csv',
+            'task_ids' => [$task->id],
+        ]);
+        $response->assertOk();
+
+        $filename = $response->json('data.filename');
+        $payload = $this->readExportedFile($filename);
+        $rows = $this->parseCsv($payload);
+
+        $this->assertSame('', $rows[1][12]);
+    }
+
+    /** @test */
+    public function task_csv_tags_quote_in_tag_is_preserved(): void
+    {
+        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $task = CoreTask::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $project->id,
+            'tags' => ['tag"quote'],
+        ]);
+
+        $response = $this->postCsv('/api/tasks/bulk/export', [
+            'format' => 'csv',
+            'task_ids' => [$task->id],
+        ]);
+        $response->assertOk();
+
+        $filename = $response->json('data.filename');
+        $payload = $this->readExportedFile($filename);
+        $rows = $this->parseCsv($payload);
+
+        $this->assertSame('tag"quote', $rows[1][12]);
+    }
+
+    // ------------------------------------------------------------------
+    // CSV structural round-trip matrix
+    // ------------------------------------------------------------------
+
+    /** @test */
+    public function task_csv_round_trip_backslash(): void
+    {
+        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $task = CoreTask::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $project->id,
+            'name' => 'value\\with\\backslash',
+            'title' => 'value\\with\\backslash',
+            'description' => 'path\\to\\file',
+        ]);
+
+        $response = $this->postCsv('/api/tasks/bulk/export', [
+            'format' => 'csv',
+            'task_ids' => [$task->id],
+        ]);
+        $response->assertOk();
+
+        $filename = $response->json('data.filename');
+        $payload = $this->readExportedFile($filename);
+        $rows = $this->parseCsv($payload);
+
+        $this->assertSame('value\\with\\backslash', $rows[1][1]);
+        $this->assertSame('path\\to\\file', $rows[1][2]);
+    }
+
+    /** @test */
+    public function task_csv_round_trip_backslash_before_quote(): void
+    {
+        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $task = CoreTask::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $project->id,
+            'name' => 'value\\"with\\"backslash',
+            'title' => 'value\\"with\\"backslash',
+            'description' => 'path\\"to\\"file',
+        ]);
+
+        $response = $this->postCsv('/api/tasks/bulk/export', [
+            'format' => 'csv',
+            'task_ids' => [$task->id],
+        ]);
+        $response->assertOk();
+
+        $filename = $response->json('data.filename');
+        $payload = $this->readExportedFile($filename);
+        $rows = $this->parseCsv($payload);
+
+        $this->assertSame('value\\"with\\"backslash', $rows[1][1]);
+        $this->assertSame('path\\"to\\"file', $rows[1][2]);
     }
 
     // ------------------------------------------------------------------

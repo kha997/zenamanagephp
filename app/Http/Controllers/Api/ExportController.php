@@ -165,8 +165,13 @@ class ExportController extends Controller
 
             rewind($temp);
 
-            Storage::put($partPath, $temp);
-            Storage::move($partPath, $filePath);
+            if (! Storage::put($partPath, $temp)) {
+                throw new \RuntimeException('Unable to write temporary export artifact.');
+            }
+
+            if (! Storage::move($partPath, $filePath)) {
+                throw new \RuntimeException('Unable to publish export artifact.');
+            }
 
             return ['path' => $filePath, 'count' => $exportedRowCount];
         } catch (\Exception $e) {
@@ -238,8 +243,13 @@ class ExportController extends Controller
 
             rewind($temp);
 
-            Storage::put($partPath, $temp);
-            Storage::move($partPath, $filePath);
+            if (! Storage::put($partPath, $temp)) {
+                throw new \RuntimeException('Unable to write temporary export artifact.');
+            }
+
+            if (! Storage::move($partPath, $filePath)) {
+                throw new \RuntimeException('Unable to publish export artifact.');
+            }
 
             return ['path' => $filePath, 'count' => $exportedRowCount];
         } catch (\Exception $e) {

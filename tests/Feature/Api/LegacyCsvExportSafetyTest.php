@@ -523,4 +523,562 @@ class LegacyCsvExportSafetyTest extends TestCase
 
         $this->assertSame(4, $response->json('data.total_projects'));
     }
+
+    /** @test */
+    public function project_excel_successful_row_count_is_exact(): void
+    {
+        CoreProject::factory()->count(3)->create(['tenant_id' => $this->tenant->id]);
+
+        $response = $this->postCsv('/api/projects/bulk/export', ['format' => 'excel']);
+        $response->assertOk();
+
+        $this->assertSame(3, $response->json('data.total_projects'));
+    }
+
+    // ------------------------------------------------------------------
+    // Stream-safe publication and atomic cleanup
+    // ------------------------------------------------------------------
+
+    /** @test */
+    public function task_csv_large_dataset_does_not_amplify_memory_with_full_string(): void
+    {
+        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        CoreTask::factory()->count(200)->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $project->id,
+        ]);
+
+        $response = $this->postCsv('/api/tasks/bulk/export', ['format' => 'csv']);
+        $response->assertOk();
+
+        $this->assertSame(200, $response->json('data.total_tasks'));
+
+        $filename = $response->json('data.filename');
+        $this->assertNotEmpty($filename);
+
+        $payload = $this->readExportedFile($filename);
+        $rows = $this->parseCsv($payload);
+        $this->assertCount(201, $rows);
+    }
+
+    /** @test */
+    public function project_csv_large_dataset_does_not_amplify_memory_with_full_string(): void
+    {
+        CoreProject::factory()->count(50)->create(['tenant_id' => $this->tenant->id]);
+
+        $response = $this->postCsv('/api/projects/bulk/export', ['format' => 'csv']);
+        $response->assertOk();
+
+        $this->assertSame(50, $response->json('data.total_projects'));
+
+        $filename = $response->json('data.filename');
+        $this->assertNotEmpty($filename);
+
+        $payload = $this->readExportedFile($filename);
+        $rows = $this->parseCsv($payload);
+        $this->assertCount(51, $rows);
+    }
+
+    /** @test */
+    public function task_csv_publish_failure_cleans_up(): void
+    {
+        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        CoreTask::factory()->count(3)->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $project->id,
+        ]);
+
+        Storage::shouldReceive('move')->andThrow(new \RuntimeException('Storage move failed'));
+
+        $response = $this->postCsv('/api/tasks/bulk/export', ['format' => 'csv']);
+
+        $response->assertStatus(500);
+        $this->assertFalse($response->json('success'));
+    }
+
+    /** @test */
+    public function project_csv_publish_failure_cleans_up(): void
+    {
+        CoreProject::factory()->count(3)->create(['tenant_id' => $this->tenant->id]);
+
+        Storage::shouldReceive('move')->andThrow(new \RuntimeException('Storage move failed'));
+
+        $response = $this->postCsv('/api/projects/bulk/export', ['format' => 'csv']);
+
+        $response->assertStatus(500);
+        $this->assertFalse($response->json('success'));
+    }
+
+    // ------------------------------------------------------------------
+    // Formula/type matrix
+    // ------------------------------------------------------------------
+
+    /** @test */
+    public function task_csv_formula_matrix_leading_spaces_and_markers(): void
+    {
+        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $task = CoreTask::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $project->id,
+            'name' => '  =1+1',
+            'title' => '  =1+1',
+            'description' => "\t+123456789",
+        ]);
+
+        $response = $this->postCsv('/api/tasks/bulk/export', [
+            'format' => 'csv',
+            'task_ids' => [$task->id],
+        ]);
+        $response->assertOk();
+
+        $filename = $response->json('data.filename');
+        $payload = $this->readExportedFile($filename);
+        $rows = $this->parseCsv($payload);
+
+        $this->assertSame("'  =1+1", $rows[1][1]);
+        $this->assertSame("'\t+123456789", $rows[1][2]);
+    }
+
+    /** @test */
+    public function task_csv_formula_matrix_ordinary_text_unchanged(): void
+    {
+        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $task = CoreTask::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $project->id,
+            'name' => 'normal text',
+            'title' => 'normal text',
+            'description' => 'another normal',
+        ]);
+
+        $response = $this->postCsv('/api/tasks/bulk/export', [
+            'format' => 'csv',
+            'task_ids' => [$task->id],
+        ]);
+        $response->assertOk();
+
+        $filename = $response->json('data.filename');
+        $payload = $this->readExportedFile($filename);
+        $rows = $this->parseCsv($payload);
+
+        $this->assertSame('normal text', $rows[1][1]);
+        $this->assertSame('another normal', $rows[1][2]);
+    }
+
+    /** @test */
+    public function task_csv_formula_matrix_vietnamese_unicode(): void
+    {
+        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $task = CoreTask::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $project->id,
+            'name' => 'Hợp đồng xây dựng',
+            'title' => 'Hợp đồng xây dựng',
+            'description' => 'Giá trị: =SUM(A1:A2)',
+        ]);
+
+        $response = $this->postCsv('/api/tasks/bulk/export', [
+            'format' => 'csv',
+            'task_ids' => [$task->id],
+        ]);
+        $response->assertOk();
+
+        $filename = $response->json('data.filename');
+        $payload = $this->readExportedFile($filename);
+        $rows = $this->parseCsv($payload);
+
+        $this->assertSame('Hợp đồng xây dựng', $rows[1][1]);
+        $this->assertSame("Giá trị: =SUM(A1:A2)", $rows[1][2]);
+    }
+
+    /** @test */
+    public function task_csv_numeric_negative_remains_numeric(): void
+    {
+        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $task = CoreTask::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $project->id,
+            'progress_percent' => -5,
+            'estimated_hours' => -10.5,
+            'actual_hours' => -3.25,
+        ]);
+
+        $response = $this->postCsv('/api/tasks/bulk/export', [
+            'format' => 'csv',
+            'task_ids' => [$task->id],
+        ]);
+        $response->assertOk();
+
+        $filename = $response->json('data.filename');
+        $payload = $this->readExportedFile($filename);
+        $rows = $this->parseCsv($payload);
+
+        $this->assertSame('-5', $rows[1][9]);
+        $this->assertSame('-10.5', $rows[1][10]);
+        $this->assertSame('-3.25', $rows[1][11]);
+    }
+
+    /** @test */
+    public function project_csv_formula_matrix_textual_fields(): void
+    {
+        $project = CoreProject::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'name' => '=IMPORTXML(...)',
+            'code' => '+CODE',
+            'description' => '-TEXT',
+        ]);
+
+        $response = $this->postCsv('/api/projects/bulk/export', [
+            'format' => 'csv',
+            'project_ids' => [$project->id],
+        ]);
+        $response->assertOk();
+
+        $filename = $response->json('data.filename');
+        $payload = $this->readExportedFile($filename);
+        $rows = $this->parseCsv($payload);
+
+        $this->assertSame("'=IMPORTXML(...)", $rows[1][2]);
+        $this->assertSame("'+CODE", $rows[1][1]);
+        $this->assertSame("'-TEXT", $rows[1][3]);
+    }
+
+    /** @test */
+    public function project_csv_numeric_fields_remain_numeric(): void
+    {
+        $project = CoreProject::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'progress' => -5.5,
+            'budget_total' => -1000,
+            'budget_planned' => -500,
+            'budget_actual' => -250,
+        ]);
+
+        $response = $this->postCsv('/api/projects/bulk/export', [
+            'format' => 'csv',
+            'project_ids' => [$project->id],
+        ]);
+        $response->assertOk();
+
+        $filename = $response->json('data.filename');
+        $payload = $this->readExportedFile($filename);
+        $rows = $this->parseCsv($payload);
+
+        $this->assertSame('-5.5', $rows[1][6]);
+        $this->assertSame('-1000', $rows[1][7]);
+        $this->assertSame('-500', $rows[1][8]);
+        $this->assertSame('-250', $rows[1][9]);
+    }
+
+    // ------------------------------------------------------------------
+    // CSV structural round-trip matrix
+    // ------------------------------------------------------------------
+
+    /** @test */
+    public function task_csv_round_trip_comma_quote_backslash(): void
+    {
+        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $task = CoreTask::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $project->id,
+            'name' => 'value,with,comma',
+            'title' => 'value,with,comma',
+            'description' => 'value"with"quotes',
+        ]);
+
+        $response = $this->postCsv('/api/tasks/bulk/export', [
+            'format' => 'csv',
+            'task_ids' => [$task->id],
+        ]);
+        $response->assertOk();
+
+        $filename = $response->json('data.filename');
+        $payload = $this->readExportedFile($filename);
+        $rows = $this->parseCsv($payload);
+
+        $this->assertSame('value,with,comma', $rows[1][1]);
+        $this->assertSame('value"with"quotes', $rows[1][2]);
+    }
+
+    /** @test */
+    public function task_csv_round_trip_multiline_and_vietnamese(): void
+    {
+        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $task = CoreTask::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $project->id,
+            'name' => "line1\nline2",
+            'title' => "line1\nline2",
+            'description' => 'Hợp đồng xây dựng',
+        ]);
+
+        $response = $this->postCsv('/api/tasks/bulk/export', [
+            'format' => 'csv',
+            'task_ids' => [$task->id],
+        ]);
+        $response->assertOk();
+
+        $filename = $response->json('data.filename');
+        $payload = $this->readExportedFile($filename);
+        $rows = $this->parseCsv($payload);
+
+        $this->assertSame("line1\nline2", $rows[1][1]);
+        $this->assertSame('Hợp đồng xây dựng', $rows[1][2]);
+    }
+
+    /** @test */
+    public function task_csv_round_trip_asserts_lf_and_no_bom(): void
+    {
+        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        CoreTask::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $project->id,
+        ]);
+
+        $response = $this->postCsv('/api/tasks/bulk/export', ['format' => 'csv']);
+        $response->assertOk();
+
+        $payload = $this->readExportedFile($response->json('data.filename'));
+        $this->assertLfNoBom($payload);
+    }
+
+    // ------------------------------------------------------------------
+    // Tags regression matrix
+    // ------------------------------------------------------------------
+
+    /** @test */
+    public function task_csv_tags_null_and_empty(): void
+    {
+        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $task = CoreTask::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $project->id,
+            'tags' => null,
+        ]);
+
+        $response = $this->postCsv('/api/tasks/bulk/export', [
+            'format' => 'csv',
+            'task_ids' => [$task->id],
+        ]);
+        $response->assertOk();
+
+        $filename = $response->json('data.filename');
+        $payload = $this->readExportedFile($filename);
+        $rows = $this->parseCsv($payload);
+
+        $this->assertSame('', $rows[1][12]);
+    }
+
+    /** @test */
+    public function task_csv_tags_one_and_multiple(): void
+    {
+        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $task = CoreTask::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $project->id,
+            'tags' => ['one'],
+        ]);
+
+        $response = $this->postCsv('/api/tasks/bulk/export', [
+            'format' => 'csv',
+            'task_ids' => [$task->id],
+        ]);
+        $response->assertOk();
+
+        $filename = $response->json('data.filename');
+        $payload = $this->readExportedFile($filename);
+        $rows = $this->parseCsv($payload);
+
+        $this->assertSame('one', $rows[1][12]);
+    }
+
+    /** @test */
+    public function task_csv_tags_unicode_and_comma(): void
+    {
+        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $task = CoreTask::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $project->id,
+            'tags' => ['Hợp đồng', 'tag,with,comma'],
+        ]);
+
+        $response = $this->postCsv('/api/tasks/bulk/export', [
+            'format' => 'csv',
+            'task_ids' => [$task->id],
+        ]);
+        $response->assertOk();
+
+        $filename = $response->json('data.filename');
+        $payload = $this->readExportedFile($filename);
+        $rows = $this->parseCsv($payload);
+
+        $this->assertSame('Hợp đồng, tag,with,comma', $rows[1][12]);
+    }
+
+    /** @test */
+    public function task_csv_tags_leading_whitespace_before_marker_is_neutralized(): void
+    {
+        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $task = CoreTask::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $project->id,
+            'tags' => [" \t=SPACE(A1)"],
+        ]);
+
+        $response = $this->postCsv('/api/tasks/bulk/export', [
+            'format' => 'csv',
+            'task_ids' => [$task->id],
+        ]);
+        $response->assertOk();
+
+        $filename = $response->json('data.filename');
+        $payload = $this->readExportedFile($filename);
+        $rows = $this->parseCsv($payload);
+
+        $this->assertSame("' \t=SPACE(A1)", $rows[1][12]);
+    }
+
+    // ------------------------------------------------------------------
+    // Non-CSV compatibility
+    // ------------------------------------------------------------------
+
+    /** @test */
+    public function task_json_preserves_existing_payload_shape(): void
+    {
+        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $task = CoreTask::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $project->id,
+        ]);
+
+        $response = $this->postCsv('/api/tasks/bulk/export', [
+            'format' => 'json',
+            'task_ids' => [$task->id],
+        ]);
+        $response->assertOk();
+
+        $this->assertSame(1, $response->json('data.total_tasks'));
+        $this->assertNotNull($response->json('data'));
+    }
+
+    /** @test */
+    public function project_json_preserves_existing_payload_shape(): void
+    {
+        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+
+        $response = $this->postCsv('/api/projects/bulk/export', [
+            'format' => 'json',
+            'project_ids' => [$project->id],
+        ]);
+        $response->assertOk();
+
+        $this->assertSame(1, $response->json('data.total_projects'));
+        $this->assertNotNull($response->json('data'));
+    }
+
+    /** @test */
+    public function task_excel_remains_known_incomplete_path(): void
+    {
+        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        CoreTask::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $project->id,
+        ]);
+
+        $response = $this->postCsv('/api/tasks/bulk/export', ['format' => 'excel']);
+        $response->assertOk();
+
+        $this->assertSame(1, $response->json('data.total_tasks'));
+        $this->assertNotNull($response->json('data.filename'));
+    }
+
+    /** @test */
+    public function project_excel_reuses_bounded_tabular_source(): void
+    {
+        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        CoreTask::factory()->count(200)->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $project->id,
+        ]);
+
+        DB::enableQueryLog();
+
+        $response = $this->postCsv('/api/projects/bulk/export', ['format' => 'excel']);
+        $response->assertOk();
+
+        $this->assertSame(1, $response->json('data.total_projects'));
+
+        $filename = $response->json('data.filename');
+        $this->assertNotNull($filename);
+
+        $payload = $this->readExportedFile($filename);
+        $rows = $this->parseCsv($payload);
+        $this->assertCount(2, $rows);
+    }
+
+    // ------------------------------------------------------------------
+    // Project bounded-memory proof
+    // ------------------------------------------------------------------
+
+    /** @test */
+    public function project_csv_large_project_bounded_memory_proof(): void
+    {
+        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        CoreTask::factory()->count(200)->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $project->id,
+        ]);
+
+        DB::enableQueryLog();
+
+        $response = $this->postCsv('/api/projects/bulk/export', ['format' => 'csv']);
+        $response->assertOk();
+
+        $queries = DB::getQueryLog();
+        $taskHydrationQueries = array_filter($queries, function (array $query): bool {
+            $sql = strtolower($query['query']);
+            return str_contains($sql, 'where `tasks`')
+                || str_contains($sql, 'where `core_project_tasks`');
+        });
+
+        $this->assertEmpty($taskHydrationQueries, 'Project CSV must not hydrate tasks relation for large project');
+
+        $filename = $response->json('data.filename');
+        $payload = $this->readExportedFile($filename);
+        $rows = $this->parseCsv($payload);
+
+        $this->assertCount(2, $rows);
+        $this->assertSame(1, $response->json('data.total_projects'));
+    }
+
+    /** @test */
+    public function project_excel_large_project_bounded_memory_proof(): void
+    {
+        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        CoreTask::factory()->count(200)->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $project->id,
+        ]);
+
+        DB::enableQueryLog();
+
+        $response = $this->postCsv('/api/projects/bulk/export', ['format' => 'excel']);
+        $response->assertOk();
+
+        $queries = DB::getQueryLog();
+        $taskHydrationQueries = array_filter($queries, function (array $query): bool {
+            $sql = strtolower($query['query']);
+            return str_contains($sql, 'where `tasks`')
+                || str_contains($sql, 'where `core_project_tasks`');
+        });
+
+        $this->assertEmpty($taskHydrationQueries, 'Project Excel must not hydrate tasks relation for large project');
+
+        $filename = $response->json('data.filename');
+        $payload = $this->readExportedFile($filename);
+        $rows = $this->parseCsv($payload);
+
+        $this->assertCount(2, $rows);
+        $this->assertSame(1, $response->json('data.total_projects'));
+    }
 }

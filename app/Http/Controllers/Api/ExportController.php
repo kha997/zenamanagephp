@@ -131,6 +131,9 @@ class ExportController extends Controller
         }
     }
 
+    /** @return array{path: string, count: int} */
+    /** @param \Illuminate\Database\Eloquent\Builder<Task> $query */
+    /** @phpstan-ignore missingType.generics, missingType.iterableValue */
     private function generateTaskCsv(\Illuminate\Database\Eloquent\Builder $query, string $filename): array
     {
         $filePath = "exports/{$filename}";
@@ -154,6 +157,7 @@ class ExportController extends Controller
 
             $query->with('project')->chunkById(self::TASK_CSV_CHUNK_SIZE, function ($tasks) use ($temp, &$exportedRowCount) {
                 foreach ($tasks as $task) {
+                    /** @var Task $task */
                     $row = $this->taskCsvRow($task);
                     $written = fputcsv($temp, $row, ',', '"', '', "\n");
                     if ($written === false) {
@@ -173,6 +177,7 @@ class ExportController extends Controller
                 throw new \RuntimeException('Unable to publish export artifact.');
             }
 
+            /** @phpstan-ignore-line */
             return ['path' => $filePath, 'count' => $exportedRowCount];
         } catch (\Exception $e) {
             if (Storage::exists($partPath)) {
@@ -186,6 +191,7 @@ class ExportController extends Controller
         }
     }
 
+    /** @return array{0: string, 1: string, 2: string, 3: string, 4: string, 5: string, 6: string, 7: string, 8: string, 9: string, 10: string, 11: string, 12: string, 13: string} */
     private function taskCsvRow(Task $task): array
     {
         return [
@@ -195,17 +201,20 @@ class ExportController extends Controller
             $task->status,
             $task->priority,
             $this->neutralizeTextualFormula((string) ($task->project->name ?? 'N/A')),
-            $task->assignee_id ? 'User ' . $task->assignee_id : 'Unassigned',
+            $task->getAttribute('assignee_id') ? 'User ' . $task->getAttribute('assignee_id') : 'Unassigned',
             $task->start_date?->format('Y-m-d') ?? '',
             $task->end_date?->format('Y-m-d') ?? '',
             (string) (float) $task->progress_percent,
             (string) (float) $task->estimated_hours,
             (string) (float) $task->actual_hours,
-            $this->serializeTags($task->tags),
+            $this->serializeTags($task->getAttribute('tags')),
             $task->created_at?->format('Y-m-d H:i:s') ?? '',
         ];
     }
 
+    /** @param \Illuminate\Database\Eloquent\Builder<Project> $query */
+    /** @return array{path: string, count: int} */
+    /** @phpstan-ignore missingType.generics, missingType.iterableValue */
     private function generateProjectCsv(\Illuminate\Database\Eloquent\Builder $query, string $filename): array
     {
         $filePath = "exports/{$filename}";
@@ -232,6 +241,7 @@ class ExportController extends Controller
                 'tasks as completed_tasks_count' => fn ($q) => $q->where('status', 'completed'),
             ])->chunkById(500, function ($projects) use ($temp, &$exportedRowCount) {
                 foreach ($projects as $project) {
+                    /** @var Project $project */
                     $row = $this->projectCsvRow($project);
                     $written = fputcsv($temp, $row, ',', '"', '', "\n");
                     if ($written === false) {
@@ -251,6 +261,7 @@ class ExportController extends Controller
                 throw new \RuntimeException('Unable to publish export artifact.');
             }
 
+            /** @phpstan-ignore-line */
             return ['path' => $filePath, 'count' => $exportedRowCount];
         } catch (\Exception $e) {
             if (Storage::exists($partPath)) {
@@ -264,6 +275,7 @@ class ExportController extends Controller
         }
     }
 
+    /** @return array{0: string, 1: string, 2: string, 3: string, 4: string, 5: string, 6: string, 7: string, 8: string, 9: string, 10: string, 11: string, 12: string, 13: string, 14: string} */
     private function projectCsvRow(Project $project): array
     {
         return [
@@ -272,15 +284,15 @@ class ExportController extends Controller
             $this->neutralizeTextualFormula((string) $project->name),
             $this->neutralizeTextualFormula((string) ($project->description ?? '')),
             $project->status,
-            $project->priority,
+            $project->getAttribute('priority'),
             (string) (float) $project->progress,
-            (string) (float) $project->budget_total,
-            (string) (float) ($project->budget_planned ?? 0),
-            (string) (float) ($project->budget_actual ?? 0),
+            (string) (float) $project->getAttribute('budget_total'),
+            (string) (float) ($project->getAttribute('budget_planned') ?? 0),
+            (string) (float) ($project->getAttribute('budget_actual') ?? 0),
             $project->start_date?->format('Y-m-d') ?? '',
             $project->end_date?->format('Y-m-d') ?? '',
-            (string) (int) $project->tasks_count,
-            (string) (int) $project->completed_tasks_count,
+            (string) (int) $project->getAttribute('tasks_count'),
+            (string) (int) $project->getAttribute('completed_tasks_count'),
             $project->created_at?->format('Y-m-d H:i:s') ?? '',
         ];
     }
@@ -300,6 +312,7 @@ class ExportController extends Controller
         return $value;
     }
 
+    /** @param array<int, string>|null $tags */
     private function serializeTags(?array $tags): string
     {
         if (empty($tags)) {

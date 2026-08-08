@@ -8,9 +8,9 @@ owner_gate_2_record: docs/owner-decisions/GAP-010b/02-design.md
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:test-driven-development while implementing each task and superpowers:verification-before-completion before every completion claim.
 
-**Goal:** Make the two legacy CSV exports formula-safe, standards-parsable, bounded-memory, row-count accurate, and atomically published while preserving their synchronous API contract and leaving JSON/Excel behavior unchanged.
+**Goal:** Make the two legacy CSV exports formula-safe, standards-parsable, bounded-memory, row-count accurate, and atomically published while preserving their synchronous API contract; preserve JSON behavior, leave Task Excel unrepaired, and reuse the bounded Project tabular source for the existing Project Excel CSV-style delegation.
 
-**Architecture:** Validate `format` before query execution, retain one common caller-filter builder per resource, and branch into writer-specific execution. CSV receives an unexecuted builder and streams bounded `chunkById()` rows into a disk-backed temporary stream using explicit `fputcsv()` parameters; Task CSV loads only `project` per chunk, while Project CSV uses database `withCount()` aggregates and never hydrates `tasks`. JSON/Excel keep their existing collection/eager-relation flow. A small set of private controller helpers owns typed row construction, textual formula neutralization, tags serialization, and temporary publication; no new production service or dependency is introduced.
+**Architecture:** Validate `format` before query execution, retain one common caller-filter builder per resource, and branch into writer-specific execution. CSV receives an unexecuted builder and streams bounded `chunkById()` rows into a disk-backed temporary stream using explicit `fputcsv()` parameters; Task CSV loads only `project` per chunk, while Project CSV and the existing Project Excel CSV-style delegation share database `withCount()` aggregates, bounded processing, and never hydrate `tasks`. Task JSON and Project JSON keep their current collection/relation paths; Task Excel keeps its current incomplete path/writer and is not repaired. A small set of private controller helpers owns typed row construction, textual formula neutralization, tags serialization, and temporary publication; no new production service or dependency is introduced.
 
 **Tech Stack:** PHP 8.2, Laravel/Eloquent, PHPUnit/Laravel feature tests, `Storage::fake()`, native `tmpfile()`/`fputcsv()`/`fgetcsv()`.
 
@@ -19,7 +19,7 @@ owner_gate_2_record: docs/owner-decisions/GAP-010b/02-design.md
 - Gate 1 and Gate 2 are approved. Implementation remains unauthorized until a later explicit Owner decision.
 - Future runtime scope is limited to `app/Http/Controllers/Api/ExportController.php` and a focused regression test at `tests/Feature/Api/LegacyCsvExportSafetyTest.php`.
 - `use Illuminate\Http\Request;` is explicitly owned by GAP-010b.
-- CSV-only changes must not alter JSON/Excel query shape, payload, filename behavior, success/failure behavior, or writer implementation.
+- Task CSV-only removal of `assignments` must not alter Task JSON/Excel relation shape. Project JSON keeps its loaded `tasks` relation. Project Excel keeps its externally observable filename/download/fidelity behavior but reuses the bounded Project tabular source because its current writer delegates to the CSV-style generator.
 - Tenant predicates, tenant-safe relations/aggregates, reference allowsets, and safe writer projections belong to GAP-034, not this plan.
 - No route, middleware, RBAC, model, migration, package, Excel library, JSON writer, background job, timeout policy, or adjacent raw-error fix is in scope.
 - No implementation branch may be merged/released or proposed for Gate 3 before GAP-034 is stacked and combined verification is green.
@@ -31,14 +31,9 @@ owner_gate_2_record: docs/owner-decisions/GAP-010b/02-design.md
 
 No other future implementation file is expected. Discovery of a required third file is a scope stop for Owner review.
 
-## Pre-Implementation Compatibility Stop
+## Owner Header Resolution
 
-The approved design currently states both:
-
-1. invoke `fputcsv($stream, $row, ',', '"', '', "\n")` rather than manual CSV concatenation; and
-2. preserve the current header row byte-for-byte.
-
-The current writer quotes every header field, while native `fputcsv()` does not quote simple fields that require no enclosure. These requirements cannot both be satisfied by passing the header array directly to the pinned native call. Task 1 must capture the exact baseline and demonstrate the mismatch with a red characterization. Before production editing, return this evidence to Owner for one explicit resolution: parsed header value/order compatibility through `fputcsv()`, or a separately authorized exact-header emission exception. Do not silently relax “byte-for-byte,” manually concatenate the header without approval, or replace `fputcsv()`.
+Owner resolved the physical-header ambiguity during joint plan review. Compatibility requires exact header labels, exact order, exact parsed cells, valid CSV semantics, LF, no BOM, and the explicit native invocation `fputcsv($stream, $header, ',', '"', '', "\n")`. It does not require the legacy quote-every-field header bytes. Record the old bytes only as historical characterization; do not assert raw equality, manually concatenate/force quotes, special-case the header writer, or stop again for this resolved issue.
 
 ## GAP-010b / GAP-034 Composition Contract
 
@@ -50,19 +45,30 @@ current approved design base
 → Owner Gate 3
 ```
 
-The future GAP-010b implementation branch starts at approved Gate 2 head `9fb8c7b20595d4984a376a00d998dde58136b1d8`. GAP-034 must then stack on the exact Owner-reviewed GAP-010b implementation head. No concurrent branches may independently implement shared `ExportController.php` hunks.
+The corrected GAP-010b plan head is `P10`. Create `impl/GAP-010b-legacy-csv-export-safety` from exact `P10`, with its Draft implementation PR based on `plan/GAP-010b-legacy-csv-export-safety`. Its completed head is `H10`; stop there for Owner review and do not begin GAP-034.
+
+Only after Owner accepts exact `H10`, create `integration/GAP-010b-gap034-export` from `H10` and normal non-force merge the exact corrected GAP-034 plan head `P34`. This preserves both work-item histories. Expected conflict count is zero because `P34` is documentation history; any conflict is a hard stop and must not be resolved silently. Validate the resulting `IBASE`.
+
+Only after later Owner authorization, create `impl/GAP-034-export-tenant-isolation` from exact `IBASE`, with its implementation PR based on `integration/GAP-010b-gap034-export`. No concurrent branches may independently implement shared `ExportController.php` hunks.
 
 Shared controller ownership:
 
-- GAP-010b owns the `Request` import, early CSV/non-CSV format seam, CSV `chunkById()` execution, Task CSV removal of `assignments`, Project CSV removal of child hydration, Project CSV aggregate mechanics, typed row mapping, formula/tag processing, explicit `fputcsv()`, temp/publish cleanup, and actual written-row counts.
+- GAP-010b owns the `Request` import, early format seam, CSV `chunkById()` execution, Task CSV-only removal of `assignments`, Project CSV/Project Excel removal of child hydration, bounded Project tabular aggregate mechanics, typed row mapping, formula/tag processing, explicit `fputcsv()`, temp/publish cleanup, and actual written-row counts.
 - GAP-034 owns trusted tenant resolution, Task structural eligibility, tenant predicates on base queries/relations, tenant predicates inside GAP-010b aggregate closures, reference validation, and safe logical writer projections.
 - The integration seam is an unexecuted, already caller-filtered query builder plus a row-source/writer boundary. GAP-034 narrows that builder and supplies validated scalar rows; it must not replace GAP-010b's streaming/publishing mechanics.
-- Project CSV's future combined shape is: tenant-secure Project base → caller narrowing → tenant-constrained `withCount()` → `chunkById()` → safe tabular projection → native CSV writer. It never calls `with('tasks')`.
+- Project CSV and Project Excel's future combined tabular shape is: tenant-secure Project base → caller narrowing → tenant-constrained `withCount()` → bounded/chunked tabular processing → safe tabular projection → existing CSV-style writer semantics. Neither calls `with('tasks')`; Project Excel receives no library/fidelity/filename/MIME redesign.
 - Task CSV's future combined shape is: tenant-secure eligible Task base → caller/filter narrowing → only CSV-required, tenant-constrained `project` relation → `chunkById()` → safe Task projection → native CSV writer. It never loads `assignments`.
 
 ---
 
-### Task 1: Characterize the Existing Contract and Resolve the Header Conflict
+## Review History
+
+- Owner joint plan review: APPROVED WITH NON-DISCRETIONARY ALIGNMENT CORRECTIONS.
+- Alignment recorded: native parsed-header contract resolved without an Owner stop; Project Excel reuses the bounded tabular source; Task CSV-only `assignments` removal; H10 → P34 merge → IBASE lineage.
+
+---
+
+### Task 1: Characterize the Existing Contract and Pin the Resolved Header Semantics
 
 **Files:**
 - Create: `tests/Feature/Api/LegacyCsvExportSafetyTest.php`
@@ -97,15 +103,11 @@ private function parseCsv(string $payload): array
 
 Cover the missing `Illuminate\Http\Request` import, HTTP method/path, request fields, response envelope, filename pattern, synchronous file availability, headers/column order, LF/no-BOM, date/numeric/null logical values, and exact Task/Project ULID strings. Record the current quoted header bytes separately from parsed header values.
 
-- [ ] **Step 3: Demonstrate the native-header incompatibility**
+- [ ] **Step 3: Characterize physical-header change without making it a blocker**
 
-In a unit-level characterization, write each approved header array through the exact pinned `fputcsv()` call and assert parsed values/order match while raw bytes differ from the current quote-every-field header. Expected: the compatibility assertion requiring both raw equality and native generation is RED.
+Record that the old quote-every-field bytes differ from native output, then assert only the approved contract: parsing the header written through the pinned call yields the literal approved header array in exact label/order, with LF and no BOM. Expected RED reason against current production: the current writer does not use the pinned native call.
 
-- [ ] **Step 4: STOP for the pre-implementation Owner decision**
-
-Report both byte strings and the passing parsed-value comparison. Do not edit production code until Owner resolves the conflict identified above. After explicit resolution, update only the affected test expectation within the already authorized future test file and continue.
-
-- [ ] **Step 5: Commit baseline tests after resolution**
+- [ ] **Step 4: Commit baseline tests**
 
 ```bash
 git add tests/Feature/Api/LegacyCsvExportSafetyTest.php
@@ -120,7 +122,7 @@ git commit -m "test(exports): characterize legacy CSV contracts"
 
 **Interfaces:**
 - Consumes: validated request fields and common caller filters.
-- Produces: an unexecuted builder for CSV or the unchanged eager-loaded collection for JSON/Excel.
+- Produces: an unexecuted builder for CSV/Project Excel tabular execution or the format-compatible Task JSON/Excel and Project JSON paths.
 
 - [ ] **Step 1: Add failing query-shape tests before the import repair**
 
@@ -128,8 +130,9 @@ Instrument database queries/model events at the controller-to-writer boundary an
 
 - Task CSV uses `chunkById()`, loads `project` only within each chunk, and executes no `assignments` relation query.
 - Project CSV uses `withCount()` aliases and executes no Task hydration/relation query, including one Project with a very large Task population.
-- Task JSON/Excel still receive the current `project` + `assignments` collection shape.
-- Project JSON/Excel still receive the current `tasks` collection shape; GAP-010b does not impose its CSV aggregate-only builder on them.
+- Task JSON and Task Excel still receive the current `project` + `assignments` collection shape; Task Excel remains incomplete and is not repaired.
+- Project JSON still receives the current loaded `tasks` collection shape.
+- Project Excel receives the same bounded aggregate-only Project tabular source as Project CSV, with no `tasks` hydration, while retaining its legacy externally observable filename/download/fidelity behavior.
 
 Expected: RED because the current controller calls `get()` before format dispatch and both CSV paths hydrate unnecessary/unbounded relations.
 
@@ -138,9 +141,12 @@ Expected: RED because the current controller calls `get()` before format dispatc
 Add `use Illuminate\Http\Request;`. In each endpoint, validate/read `format`, construct one caller-filtered base builder, and dispatch:
 
 ```text
-csv   → pass the unexecuted builder to the CSV pipeline
-excel → apply the existing Excel relation shape, call get(), use existing writer
-json  → apply the existing JSON relation shape, call get(), use existing writer
+Task csv    → pass the unexecuted builder to the bounded Task CSV pipeline
+Task excel  → preserve current relation shape and incomplete writer; do not repair
+Task json   → preserve current relation shape and JSON writer
+Project csv → pass the unexecuted builder to bounded Project tabular pipeline
+Project excel → reuse bounded Project tabular source and existing CSV-style delegation
+Project json → preserve current loaded-tasks relation and JSON writer
 ```
 
 Do not add tenant logic. Keep IDs and Task filters semantically identical. Preserve current non-CSV methods without redesign.
@@ -149,7 +155,7 @@ Do not add tenant logic. Keep IDs and Task filters semantically identical. Prese
 
 Clone/extend only the CSV builder with `with('project')` and `chunkById($chunkSize, ...)`; do not load `assignments`. Keep `$task->assignee_id` as the existing plain-column source. Define a fixed, test-visible chunk size constant/private method rather than an environment-dependent value.
 
-- [ ] **Step 4: Implement Project CSV source semantics**
+- [ ] **Step 4: Implement Project CSV/Excel bounded tabular source semantics**
 
 Clone/extend only the CSV builder with:
 
@@ -161,7 +167,7 @@ Clone/extend only the CSV builder with:
 ->chunkById(...)
 ```
 
-Never call `with('tasks')`, access `$project->tasks`, or instantiate Task models to compute counts. Leave closure seams where GAP-034 will add tenant predicates without changing the writer.
+For both Project CSV and Project Excel, never call `with('tasks')`, access `$project->tasks`, or instantiate Task models to compute counts. Reuse the bounded row-source mechanics while leaving existing Project Excel filename, download URL extension, XLSX fidelity, and MIME behavior unchanged. Leave closure seams where GAP-034 will add tenant predicates without changing the writer.
 
 - [ ] **Step 5: Run focused dispatch/query tests**
 
@@ -169,7 +175,7 @@ Never call `with('tasks')`, access `$project->tasks`, or instantiate Task models
 php artisan test tests/Feature/Api/LegacyCsvExportSafetyTest.php --filter='request_import|format_dispatch|task_csv_query|project_csv_query|non_csv_compatibility'
 ```
 
-Expected: PASS, including relation-not-loaded and bounded query-count assertions.
+Expected: PASS, including relation-not-loaded and bounded query-count assertions for Project CSV and Project Excel, plus unchanged Project JSON and Task JSON/Excel characterization.
 
 - [ ] **Step 6: Commit the execution seam**
 
@@ -286,7 +292,7 @@ git commit -m "fix(exports): publish bounded CSV exports atomically"
 
 **Interfaces:**
 - Consumes: completed GAP-010b implementation on the exact approved base.
-- Produces: implementation evidence and the exact head onto which GAP-034 must stack; no Gate 3 packet.
+- Produces: implementation evidence and exact `H10` for Owner review; no integration branch and no Gate 3 packet.
 
 - [ ] **Step 1: Run the complete focused suite**
 
@@ -316,7 +322,7 @@ Expected: PHPStan exits 0, diff check is silent, and only the two planned implem
 
 - [ ] **Step 4: Enforce the release dependency**
 
-Record the exact reviewed GAP-010b implementation head as the sole permitted base for GAP-034. Keep the GAP-010b implementation PR Draft and explicitly blocked from Gate 3/merge/release. Stack GAP-034 on that exact head, run both focused suites and shared-controller review, and only then present the combined head for a future Owner Gate 3 decision. A GAP-010b-only green suite is not release evidence.
+Record exact `H10` and keep the GAP-010b implementation PR Draft and explicitly blocked from Gate 3/merge/release. Stop for Owner review. Do not create the integration branch. After a later acceptance of `H10`, the separately authorized integration step creates `integration/GAP-010b-gap034-export`, normal-merges exact `P34`, validates `IBASE`, and only then may a later-authorized GAP-034 implementation branch start. A GAP-010b-only green suite is not release evidence.
 
 - [ ] **Step 5: Report without advancing authority**
 
@@ -325,8 +331,8 @@ Report exact branch/head/base, changed files, diff stat, test counts, PHPStan, C
 ## Self-Review Result
 
 - Scope coverage: Request import, format-aware dispatch, Task/Project bounded CSV sources, type-aware formula handling, tags serialization, explicit native CSV parameters, API compatibility, actual row count, atomic publication, and release dependency all map to Tasks 1–5.
-- Format isolation: CSV receives builders/chunks; JSON/Excel retain current eager-loaded collections and existing writers.
+- Format isolation: CSV receives builders/chunks; Project Excel shares the bounded Project tabular source without fidelity repair; JSON retains current relation behavior; Task Excel retains its incomplete path and `assignments` is removed only from Task CSV.
 - Memory contract: Task CSV loads only bounded `project` relations; Project CSV uses aggregate scalars and never hydrates `tasks`; encoding uses one disk-backed temporary stream.
-- Composition: GAP-010b owns mechanics first; GAP-034 stacks on its exact approved implementation head and adds tenant security without concurrent controller writers.
-- Known compatibility finding: byte-exact current header quoting conflicts with direct native `fputcsv()` header emission and requires Owner resolution before production implementation.
+- Composition: GAP-010b produces `H10` for Owner review; only after acceptance does an integration branch normal-merge exact `P34` to form `IBASE`; a later-authorized GAP-034 branch starts from `IBASE` without concurrent controller writers.
+- Header resolution: native `fputcsv()` writes the header; parsed labels/order, LF, and no BOM are exact; legacy raw quote-every-field bytes are not preserved and are not a blocker.
 - Authority boundary: this plan does not authorize implementation, Gate 3, Ready state, merge, or release.

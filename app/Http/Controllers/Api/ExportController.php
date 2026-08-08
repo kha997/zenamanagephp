@@ -13,6 +13,17 @@ class ExportController extends Controller
 {
     private const TASK_CSV_CHUNK_SIZE = 500;
 
+    private function trustedTenantId(Request $request): string
+    {
+        $tenantId = trim((string) $request->attributes->get('tenant_id', ''));
+
+        if ($tenantId === '') {
+            throw new \RuntimeException('Trusted tenant context is required for export.');
+        }
+
+        return $tenantId;
+    }
+
     public function exportTasks(Request $request): JsonResponse
     {
         try {
@@ -25,8 +36,13 @@ class ExportController extends Controller
             $format = $request->input('format', 'csv');
             $taskIds = $request->input('task_ids', []);
             $filters = $request->input('filters', []);
+            $trustedTenantId = $this->trustedTenantId($request);
 
-            $query = Task::query();
+            $query = Task::query()
+                ->where('tenant_id', $trustedTenantId)
+                ->whereHas('project', fn ($projectQuery) => $projectQuery
+                    ->where('tenant_id', $trustedTenantId)
+                );
 
             if (!empty($taskIds)) {
                 $query->whereIn('id', $taskIds);
@@ -88,8 +104,9 @@ class ExportController extends Controller
 
             $format = $request->input('format', 'csv');
             $projectIds = $request->input('project_ids', []);
+            $trustedTenantId = $this->trustedTenantId($request);
 
-            $query = Project::query();
+            $query = Project::query()->where('tenant_id', $trustedTenantId);
 
             if (!empty($projectIds)) {
                 $query->whereIn('id', $projectIds);

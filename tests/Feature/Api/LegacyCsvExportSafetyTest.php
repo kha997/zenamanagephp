@@ -742,7 +742,7 @@ class LegacyCsvExportSafetyTest extends TestCase
             throw new \RuntimeException('Simulated mid-generation failure');
         });
 
-        $controller = new \App\Http\Controllers\Api\ExportController();
+        $controller = app(\App\Http\Controllers\Api\ExportController::class);
         $reflection = new \ReflectionClass($controller);
         $method = $reflection->getMethod('generateTaskCsv');
         $method->setAccessible(true);

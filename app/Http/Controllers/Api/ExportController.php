@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\ExportTenantProjectionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -12,6 +13,10 @@ use Src\CoreProject\Models\Task;
 class ExportController extends Controller
 {
     private const TASK_CSV_CHUNK_SIZE = 500;
+
+    public function __construct(private ExportTenantProjectionService $projectionService)
+    {
+    }
 
     private function trustedTenantId(Request $request): string
     {
@@ -67,12 +72,14 @@ class ExportController extends Controller
                 $total = $result['count'];
             } elseif ($format === 'excel') {
                 $tasks = $query->with(['project', 'assignments'])->get();
-                $filePath = $this->generateExcel($tasks, $filename);
-                $total = $tasks->count();
+                $safeTasks = $this->projectionService->projectTasks($tasks, $trustedTenantId);
+                $filePath = $this->generateExcel($safeTasks, $filename);
+                $total = $safeTasks->count();
             } else {
                 $tasks = $query->with(['project', 'assignments'])->get();
-                $filePath = $this->generateJson($tasks, $filename);
-                $total = $tasks->count();
+                $safeTasks = $this->projectionService->projectTasks($tasks, $trustedTenantId);
+                $filePath = $this->generateJson($safeTasks, $filename);
+                $total = $safeTasks->count();
             }
 
             return response()->json([
@@ -116,17 +123,19 @@ class ExportController extends Controller
             $filename = "projects_export_{$timestamp}.{$format}";
 
             if ($format === 'csv') {
-                $result = $this->generateProjectCsv($query, $filename);
+                $result = $this->generateProjectCsv($query, $filename, $trustedTenantId);
                 $filePath = $result['path'];
                 $total = $result['count'];
             } elseif ($format === 'excel') {
-                $result = $this->generateProjectCsv($query, str_replace('.xlsx', '.csv', $filename));
+                $result = $this->generateProjectCsv($query, str_replace('.xlsx', '.csv', $filename), $trustedTenantId);
                 $filePath = $result['path'];
                 $total = $result['count'];
             } else {
                 $projects = $query->with(['tasks'])->get();
-                $filePath = $this->generateProjectsJson($projects, $filename);
-                $total = $projects->count();
+                $tasks = $projects->pluck('tasks')->flatten();
+                $safeProjects = $this->projectionService->projectJsonRows($projects, $tasks, $trustedTenantId);
+                $filePath = $this->generateProjectsJson($safeProjects, $filename);
+                $total = $safeProjects->count();
             }
 
             return response()->json([
@@ -232,7 +241,7 @@ class ExportController extends Controller
     /** @param \Illuminate\Database\Eloquent\Builder<Project> $query */
     /** @return array{path: string, count: int} */
     /** @phpstan-ignore missingType.generics, missingType.iterableValue */
-    private function generateProjectCsv(\Illuminate\Database\Eloquent\Builder $query, string $filename): array
+    private function generateProjectCsv(\Illuminate\Database\Eloquent\Builder $query, string $filename, string $tenantId): array
     {
         $filePath = "exports/{$filename}";
         $partPath = $filePath . '.part';
@@ -254,8 +263,8 @@ class ExportController extends Controller
             $exportedRowCount = 0;
 
             $query->withCount([
-                'tasks',
-                'tasks as completed_tasks_count' => fn ($q) => $q->where('status', 'completed'),
+                'tasks as tasks_count' => fn ($q) => $q->where('tenant_id', $tenantId),
+                'tasks as completed_tasks_count' => fn ($q) => $q->where('tenant_id', $tenantId)->where('status', 'completed'),
             ])->chunkById(500, function ($projects) use ($temp, &$exportedRowCount) {
                 foreach ($projects as $project) {
                     /** @var Project $project */
@@ -345,6 +354,7 @@ class ExportController extends Controller
         // In production, you'd 
     }
 
+    /** @param \Illuminate\Database\Eloquent\Collection<int, array<string, mixed>> $tasks */
     private function generateJson($tasks, $filename): string
     {
         $filePath = "exports/{$filename}";
@@ -355,7 +365,7 @@ class ExportController extends Controller
                 'total_records' => $tasks->count(),
                 'format' => 'json',
             ],
-            'tasks' => $tasks->toArray(),
+            'tasks' => $tasks->all(),
         ];
 
         Storage::put($filePath, json_encode($data, JSON_PRETTY_PRINT));
@@ -363,6 +373,7 @@ class ExportController extends Controller
         return $filePath;
     }
 
+    /** @param \Illuminate\Database\Eloquent\Collection<int, array<string, mixed>> $projects */
     private function generateProjectsJson($projects, $filename): string
     {
         $filePath = "exports/{$filename}";
@@ -373,7 +384,7 @@ class ExportController extends Controller
                 'total_records' => $projects->count(),
                 'format' => 'json',
             ],
-            'projects' => $projects->toArray(),
+            'projects' => $projects->all(),
         ];
 
         Storage::put($filePath, json_encode($data, JSON_PRETTY_PRINT));

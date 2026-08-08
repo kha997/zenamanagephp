@@ -19,7 +19,7 @@
 - `tasks_count` and `completed_tasks_count` are tabular writer fields only and are not added to Project JSON.
 - No `$tasks->toArray()`, `$projects->toArray()`, or raw child Task serialization.
 - Candidate reference validation operates per bounded collection/chunk and never copies an unverified identifier into writer input.
-- GAP-034 owns tenant-safe selection, relation/aggregate isolation, reference validation, and projections. GAP-010b retains Request import, CSV injection mitigation, streaming/chunking, tags CSV serialization, `fputcsv()`, atomic publication, exported-row counting, and removal of the unused assignments eager-load.
+- GAP-034 owns tenant-safe selection, relation/aggregate isolation, reference validation, and projections. GAP-010b retains Request import, CSV injection mitigation, streaming/chunking, tags CSV serialization, `fputcsv()`, atomic publication, exported-row counting, and removal of the unused `assignments` eager-load from Task CSV only; Task JSON/Excel relation behavior is not removed under GAP-010b.
 - Do not create Gate 3, mark a PR Ready, merge, release, or restore the export routes during this plan.
 
 ## File Map
@@ -35,10 +35,10 @@ No model, migration, route, package, or global-scope file is expected.
 Before implementation, compare the selected implementation base with the approved GAP-010b branch:
 
 1. `ExportController` currently lacks `use Illuminate\Http\Request;`; that import belongs to GAP-010b.
-2. GAP-010b owns removal of `assignments`, chunking/streaming, CSV field escaping/tag serialization, `fputcsv()`, atomic publication, and exported-row counting.
+2. GAP-010b owns Task CSV-only removal of `assignments`, chunking/streaming, CSV field escaping/tag serialization, `fputcsv()`, atomic publication, exported-row counting, and the bounded Project tabular source shared by Project CSV/current Project Excel.
 3. GAP-034 must feed safe logical projections into those writers and add tenant predicates inside GAP-010b's count closures.
 
-If the implementation base does not already contain the approved GAP-010b composition points, stop before Task 1 and return to Owner plan review. Do not add the Request import, remove assignments, or rewrite writers under GAP-034. The intended ordering is GAP-010b implementation/base first, then GAP-034 rebased onto its exact approved head; alternatively Owner must explicitly authorize a coordinated shared-hunk sequence.
+If the implementation base does not already contain the approved GAP-010b composition points, stop before Task 1 and return to Owner plan review. Do not add the Request import, remove Task CSV assignments, or rewrite writers under GAP-034. GAP-034 implementation begins only from the exact validated integration base described below.
 
 ## GAP-010b / GAP-034 Composition Contract
 
@@ -50,11 +50,18 @@ current approved design base
 → Owner Gate 3
 ```
 
-The implementation topology is mandatory: GAP-010b must first produce an Owner-approved implementation head from `9fb8c7b20595d4984a376a00d998dde58136b1d8`; GAP-034 is then stacked on that exact head. The two work items must not be implemented concurrently on independent branches because both modify `ExportController.php`.
+The implementation topology is mandatory and preserves both histories:
+
+1. Corrected GAP-010b plan head `P10` is the base of `impl/GAP-010b-legacy-csv-export-safety`; its Draft PR targets `plan/GAP-010b-legacy-csv-export-safety`.
+2. Completed GAP-010b head `H10` is an Owner checkpoint. Stop there; GAP-034 remains unauthorized.
+3. Only after Owner accepts exact `H10`, create `integration/GAP-010b-gap034-export` from `H10` and normal non-force merge exact corrected GAP-034 plan head `P34`. Any conflict is a hard stop and must not be resolved silently. Validate the resulting `IBASE`.
+4. Only after later Owner authorization, create `impl/GAP-034-export-tenant-isolation` from exact `IBASE`; its Draft PR targets `integration/GAP-010b-gap034-export`.
+
+The two work items must not be implemented concurrently on independent branches because both modify `ExportController.php`.
 
 Shared controller ownership is divided by interface, not by duplicate hunks:
 
-- GAP-010b owns the `Request` import, format dispatch/writer composition, Project CSV `chunkById()` streaming, removal of CSV-unneeded eager loading, `fputcsv()`, formula/tag handling, atomic publication, and actual written-row counting.
+- GAP-010b owns the `Request` import, format dispatch/writer composition, Project CSV/Project Excel bounded tabular `chunkById()` processing, removal of CSV-unneeded eager loading, Task CSV-only removal of `assignments`, `fputcsv()`, formula/tag handling, atomic publication, and actual written-row counting.
 - GAP-034 owns the trusted-tenant predicate, Task structural eligibility, format-specific tenant-safe relation selection, tenant predicates inside aggregate closures, scalar/reference validation, and safe logical projections supplied to each writer.
 - The composition seam is a common tenant-secure selection builder followed by writer-specific query extensions and safe-array projection. GAP-034 adds security predicates/projection calls to GAP-010b's established flow; it does not replace GAP-010b's writer mechanics.
 - Any compatibility conflict between the approved GAP-010b head and these seams is a stop-and-report condition before GAP-034 implementation.
@@ -63,6 +70,8 @@ Shared controller ownership is divided by interface, not by duplicate hunks:
 
 - Owner implementation-plan review round 1: CHANGES REQUESTED
   - Reason: format-specific Project hydration/count compatibility, out-of-scope Excel test expectations, and safe nested Project projection/composition.
+- Owner joint plan review: APPROVED WITH NON-DISCRETIONARY ALIGNMENT CORRECTIONS.
+  - Alignment: Project Excel reuses GAP-010b's bounded Project tabular source; Task Excel remains unrepaired and is verified at the safe input boundary; Task CSV alone drops `assignments`; H10 Owner checkpoint and H10 + P34 → IBASE lineage preserve both histories.
 
 ---
 
@@ -272,7 +281,7 @@ Apply the same verified-User policy to `assigned_to`, `created_by`, and `updated
 
 - [ ] **Step 5: Constrain eager loads and route safe arrays to Task writers**
 
-Constrain `project` by trusted tenant. If the implementation base still loads `assignments`, stop at the GAP-010b boundary rather than removing it here; any temporary load must be tenant-constrained. Inject the projection service and pass its result to CSV, Excel, and JSON writer methods. CSV derives Project name from the safe `project` array and renders a null `assignee_id` as `Unassigned`.
+Constrain `project` by trusted tenant. GAP-010b removes `assignments` from Task CSV only; Task JSON/Excel may still carry the existing relation at `IBASE`. GAP-034 must not treat that as permission to remove or serialize it raw: route each non-CSV format through the approved safe projection/writer-input boundary. Inject the projection service and pass its result to CSV, Excel, and JSON writer methods. CSV derives Project name from the safe `project` array and renders a null `assignee_id` as `Unassigned`.
 
 - [ ] **Step 6: Run Task-reference tests and verify green state**
 
@@ -331,7 +340,7 @@ Keep one base Project builder containing the trusted `tenant_id` predicate and c
 - CSV/current Excel extend the base builder with tenant-constrained `withCount()` closures for `tasks_count` and `completed_tasks_count`, never call `with('tasks')`, and feed GAP-010b's `chunkById()`/bounded tabular writer path.
 - JSON extends the base builder with only the relations needed for safe Project scalars, then loads all eligible child Tasks for the bounded Project batch in one grouped query using both `tasks.tenant_id = $trustedTenantId` and same-tenant Project structural eligibility. JSON does not select the tabular count aliases.
 
-If GAP-010b already supplies count closures, add only GAP-034's tenant predicates inside those closures; do not replace its bounded-memory design. Current Project Excel preserves its CSV-style logical row behavior and uses the same safe tabular projection, without making Excel library/fidelity repair part of this work item.
+GAP-010b supplies the bounded Project CSV/Project Excel tabular source and count closures. Add only GAP-034's tenant predicates inside those closures; do not replace its bounded-memory design. Project Excel preserves its external legacy behavior and uses the same safe tabular projection, without Excel library, filename, MIME, extension, or fidelity repair.
 
 - [ ] **Step 4: Implement common Project scalars and writer-specific representations**
 
@@ -511,4 +520,4 @@ Report exact head, files, diff stat, test counts, PHPStan, CI, PR Draft/Ready st
 - Completeness scan: no unfinished marker, delegated duplicate instruction, or unspecified error/test step remains.
 - Type consistency: `projectTasks(Collection, string): Collection`, `projectScalarRows(Collection, string): Collection`, `projectTabularRows(Collection, string): Collection`, and `projectJsonRows(Collection, Collection, string): Collection` are defined once and consumed consistently.
 - Format compatibility: Project CSV/current Excel use counts without child hydration; Project JSON uses safe batched children without CSV-only count keys; Task Excel is verified at its safe logical boundary without claiming the out-of-scope generator is repaired.
-- Hard boundary: implementation must not start until the GAP-010b Request/writer composition base is Owner-approved; GAP-034 must stack on that exact implementation head, with no independent concurrent controller implementation.
+- Hard boundary: GAP-034 implementation must not start at `H10`. After Owner accepts `H10`, exact `P34` must be normal-merged into the integration branch and validated as `IBASE`; only a later Owner authorization permits GAP-034 implementation from exact `IBASE`.

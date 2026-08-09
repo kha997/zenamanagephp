@@ -2,16 +2,16 @@
 
 namespace App\Services;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\DB;
-use Src\CoreProject\Models\Project;
 use Src\CoreProject\Models\Task;
 
 final class ExportTenantProjectionService
 {
     /**
      * @param SupportCollection<array-key, Task> $tasks
-     * @param SupportCollection<array-key, Project>|null $projects
+     * @param SupportCollection<array-key, Model>|null $projects
      * @return SupportCollection<array-key, array<string, mixed>>
      */
     public function projectTasks(SupportCollection $tasks, string $tenantId, ?SupportCollection $projects = null): SupportCollection
@@ -151,7 +151,7 @@ final class ExportTenantProjectionService
     }
 
     /**
-     * @param SupportCollection<array-key, Project> $projects
+     * @param SupportCollection<array-key, Model> $projects
      * @return SupportCollection<array-key, array<string, mixed>>
      */
     public function projectScalarRows(SupportCollection $projects, string $tenantId): SupportCollection
@@ -162,7 +162,7 @@ final class ExportTenantProjectionService
         );
 
         /** @var SupportCollection<array-key, array<string, mixed>> $result */
-        $result = $projects->map(function (Project $project) use ($tenantId, $validUserIds): array {
+        $result = $projects->map(function (Model $project) use ($tenantId, $validUserIds): array {
             return [
                 'id' => (string) $project->getAttribute('id'),
                 'tenant_id' => $tenantId,
@@ -199,7 +199,7 @@ final class ExportTenantProjectionService
     }
 
     /**
-     * @param SupportCollection<array-key, Project> $projects
+     * @param SupportCollection<array-key, Model> $projects
      * @return SupportCollection<array-key, array<string, mixed>>
      */
     public function projectTabularRows(SupportCollection $projects, string $tenantId): SupportCollection
@@ -220,7 +220,7 @@ final class ExportTenantProjectionService
     }
 
     /**
-     * @param SupportCollection<array-key, Project> $projects
+     * @param SupportCollection<array-key, Model> $projects
      * @param SupportCollection<array-key, Task> $tasks
      * @return SupportCollection<array-key, array<string, mixed>>
      */

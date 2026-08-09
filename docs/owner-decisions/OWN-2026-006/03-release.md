@@ -1,14 +1,14 @@
 ---
 work_id: OWN-2026-006
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-09-own-2026-006-multi-work-gate3-digest-isolation-design.md
   plan: docs/superpowers/plans/2026-08-09-own-2026-006-multi-work-gate3-digest-isolation.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-08-09T16:56:00+07:00"
+  owner_response_reference: "ChatGPT project conversation — Owner explicitly approved OWN-2026-006 Gate 3 on 2026-08-09 at 16:56 +07:00, bound to implementation-tree digest bf4aaea6053ce6df8d93c4da6eecd4d3d80c9f3e7286f720727192293301d797."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-09T15:52:11+07:00"
-  updated_at: "2026-08-09T15:52:11+07:00"
+  updated_at: "2026-08-09T16:56:00+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "31 exact-head CI checks passed on provenance SHA 26e9ed59b1bcac65a2cac4e0b22238f66be320ed; the Draft-only deploy job was skipped as intended. Focused regression passed 11 tests / 16 assertions, scoped OwnerGovernance passed 158 tests / 537 assertions, both governance linters passed, and git diff check passed."
@@ -35,8 +35,8 @@ technical_evidence:
   verified_pr_head_sha: "26e9ed59b1bcac65a2cac4e0b22238f66be320ed"
   verified_at: "2026-08-09T15:52:11+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "bf4aaea6053ce6df8d93c4da6eecd4d3d80c9f3e7286f720727192293301d797"
+  decision_recorded_at: "2026-08-09T16:56:00+07:00"
 ---
 
 ## OWN-2026-006 — Formal Gate 3 release packet

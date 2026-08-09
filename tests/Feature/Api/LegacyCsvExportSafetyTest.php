@@ -20,9 +20,7 @@ class LegacyCsvExportSafetyTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @phpstan-ignore assign.propertyType */
     private Tenant $tenant;
-    /** @phpstan-ignore assign.propertyType */
     private User $user;
     private string $disk;
 
@@ -30,8 +28,8 @@ class LegacyCsvExportSafetyTest extends TestCase
     {
         parent::setUp();
 
-        $this->tenant = Tenant::factory()->create();
-        $this->user = User::factory()->create([
+        $this->tenant = $this->createTenant();
+        $this->user = $this->createUser([
             'tenant_id' => $this->tenant->id,
             'is_active' => true,
         ]);
@@ -47,6 +45,51 @@ class LegacyCsvExportSafetyTest extends TestCase
         parent::tearDown();
     }
 
+    /** @param array<string, mixed> $attributes */
+    private function createTenant(array $attributes = []): Tenant
+    {
+        $model = Tenant::factory()->createOne($attributes);
+        if (! $model instanceof Tenant) {
+            throw new \LogicException('Tenant factory returned an unexpected model type.');
+        }
+
+        return $model;
+    }
+
+    /** @param array<string, mixed> $attributes */
+    private function createUser(array $attributes = []): User
+    {
+        $model = User::factory()->createOne($attributes);
+        if (! $model instanceof User) {
+            throw new \LogicException('User factory returned an unexpected model type.');
+        }
+
+        return $model;
+    }
+
+    /** @param array<string, mixed> $attributes */
+    private function createCoreProject(array $attributes = []): CoreProject
+    {
+        $model = CoreProject::factory()->createOne($attributes);
+        if (! $model instanceof CoreProject) {
+            throw new \LogicException('Project factory returned ' . get_debug_type($model) . '.');
+        }
+
+        return $model;
+    }
+
+    /** @param array<string, mixed> $attributes */
+    private function createCoreTask(array $attributes = []): Task
+    {
+        $model = CoreTask::factory()->createOne($attributes);
+        if (! $model instanceof Task) {
+            throw new \LogicException('Task factory returned ' . get_debug_type($model) . '.');
+        }
+
+        return $model;
+    }
+
+    /** @return array<string, string> */
     private function actingAsExportUser(): array
     {
         $response = $this->withHeaders([
@@ -66,6 +109,10 @@ class LegacyCsvExportSafetyTest extends TestCase
         ];
     }
 
+    /**
+     * @param array<string, mixed> $payload
+     * @return \Illuminate\Testing\TestResponse<\Symfony\Component\HttpFoundation\Response>
+     */
     private function postCsv(string $uri, array $payload = []): \Illuminate\Testing\TestResponse
     {
         return $this->withHeaders($this->actingAsExportUser())
@@ -90,6 +137,7 @@ class LegacyCsvExportSafetyTest extends TestCase
         }
     }
 
+    /** @return list<list<string|null>> */
     private function parseCsv(string $payload): array
     {
         $stream = fopen('php://temp', 'w+');
@@ -105,6 +153,7 @@ class LegacyCsvExportSafetyTest extends TestCase
         return $rows;
     }
 
+    /** @param list<string> $expectedLabels */
     private function assertCsvHeader(array $expectedLabels, string $payload): void
     {
         $rows = $this->parseCsv($payload);
@@ -139,8 +188,8 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_route_is_reachable(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-        CoreTask::factory()->create([
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
+        $this->createCoreTask([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
         ]);
@@ -165,7 +214,7 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function project_csv_route_is_reachable(): void
     {
-        CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $this->createCoreProject(['tenant_id' => $this->tenant->id]);
 
         $response = $this->postCsv('/api/projects/bulk/export', [
             'format' => 'csv',
@@ -187,8 +236,8 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_has_correct_filename_pattern(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-        CoreTask::factory()->create([
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
+        $this->createCoreTask([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
         ]);
@@ -204,7 +253,7 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function project_csv_has_correct_filename_pattern(): void
     {
-        CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $this->createCoreProject(['tenant_id' => $this->tenant->id]);
 
         $response = $this->postCsv('/api/projects/bulk/export', ['format' => 'csv']);
         $response->assertOk();
@@ -217,8 +266,8 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_header_has_approved_labels_and_order(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-        CoreTask::factory()->create([
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
+        $this->createCoreTask([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
         ]);
@@ -250,7 +299,7 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function project_csv_header_has_approved_labels_and_order(): void
     {
-        CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $this->createCoreProject(['tenant_id' => $this->tenant->id]);
 
         $response = $this->postCsv('/api/projects/bulk/export', ['format' => 'csv']);
         $response->assertOk();
@@ -280,8 +329,8 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_uses_lf_and_no_bom(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-        CoreTask::factory()->create([
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
+        $this->createCoreTask([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
         ]);
@@ -296,7 +345,7 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function project_csv_uses_lf_and_no_bom(): void
     {
-        CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $this->createCoreProject(['tenant_id' => $this->tenant->id]);
 
         $response = $this->postCsv('/api/projects/bulk/export', ['format' => 'csv']);
         $response->assertOk();
@@ -308,8 +357,8 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_preserves_ulid_strings(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-        $task = CoreTask::factory()->create([
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
+        $task = $this->createCoreTask([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
         ]);
@@ -328,7 +377,7 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function project_csv_preserves_ulid_strings(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
 
         $response = $this->postCsv('/api/projects/bulk/export', ['format' => 'csv', 'project_ids' => [$project->id]]);
         $response->assertOk();
@@ -344,8 +393,8 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_formula_injection_is_neutralized(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-        $task = CoreTask::factory()->create([
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
+        $task = $this->createCoreTask([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
             'name' => '=cmd|/c calc',
@@ -373,8 +422,8 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_tags_are_serialized_as_text(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-        $task = CoreTask::factory()->create([
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
+        $task = $this->createCoreTask([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
             'tags' => ['tag1', 'tag2', 'tag,with,comma'],
@@ -396,7 +445,7 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_written_row_count_matches_parsed_data_rows(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
         CoreTask::factory()->count(3)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
@@ -434,8 +483,8 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_json_is_not_modified_by_gap010b(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-        $task = CoreTask::factory()->create([
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
+        $task = $this->createCoreTask([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
         ]);
@@ -452,7 +501,7 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function project_json_is_not_modified_by_gap010b(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
 
         $response = $this->postCsv('/api/projects/bulk/export', [
             'format' => 'json',
@@ -470,8 +519,8 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_does_not_load_assignments(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-        $task = CoreTask::factory()->create([
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
+        $task = $this->createCoreTask([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
         ]);
@@ -485,7 +534,7 @@ class LegacyCsvExportSafetyTest extends TestCase
         $response->assertOk();
 
         $queries = DB::getQueryLog();
-        $assignmentQueries = array_filter($queries, function (array $query) use ($task): bool {
+        $assignmentQueries = array_filter($queries, function (array $query): bool {
             return str_contains($query['query'], 'task_assignments');
         });
 
@@ -495,7 +544,7 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function project_csv_does_not_hydrate_tasks(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
         CoreTask::factory()->count(50)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
@@ -523,7 +572,7 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_successful_row_count_is_exact(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
         CoreTask::factory()->count(5)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
@@ -564,7 +613,7 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_large_dataset_does_not_amplify_memory_with_full_string(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
         CoreTask::factory()->count(200)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
@@ -604,7 +653,7 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_publish_failure_cleans_up(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
         CoreTask::factory()->count(3)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
@@ -642,7 +691,7 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_storage_put_false_cleans_up(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
         CoreTask::factory()->count(3)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
@@ -663,7 +712,7 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_storage_move_false_cleans_up(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
         CoreTask::factory()->count(3)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
@@ -718,7 +767,7 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_mid_generation_failure_cleans_up_before_publication(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
 
         $task = new \Src\CoreProject\Models\Task([
             'tenant_id' => $this->tenant->id,
@@ -735,12 +784,26 @@ class LegacyCsvExportSafetyTest extends TestCase
         $this->cleanExportDirectory();
 
         $builder = Mockery::mock(\Illuminate\Database\Eloquent\Builder::class);
-        $builder->shouldReceive('with')->andReturnSelf();
-        $builder->shouldReceive('withCount')->andReturnSelf();
-        $builder->shouldReceive('chunkById')->andReturnUsing(function ($size, $callback) use ($task) {
+        $withExpectation = $builder->shouldReceive('with');
+        if (! $withExpectation instanceof \Mockery\CompositeExpectation) {
+            throw new \LogicException('Expected a concrete Mockery expectation.');
+        }
+        $withExpectation->__call('andReturnSelf', []);
+
+        $withCountExpectation = $builder->shouldReceive('withCount');
+        if (! $withCountExpectation instanceof \Mockery\CompositeExpectation) {
+            throw new \LogicException('Expected a concrete Mockery expectation.');
+        }
+        $withCountExpectation->__call('andReturnSelf', []);
+
+        $chunkExpectation = $builder->shouldReceive('chunkById');
+        if (! $chunkExpectation instanceof \Mockery\CompositeExpectation) {
+            throw new \LogicException('Expected a concrete Mockery expectation.');
+        }
+        $chunkExpectation->__call('andReturnUsing', [function ($size, $callback) use ($task) {
             $callback(collect([$task]));
             throw new \RuntimeException('Simulated mid-generation failure');
-        });
+        }]);
 
         $controller = app(\App\Http\Controllers\Api\ExportController::class);
         $reflection = new \ReflectionClass($controller);
@@ -764,8 +827,8 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_formula_matrix_leading_spaces_and_markers(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-        $task = CoreTask::factory()->create([
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
+        $task = $this->createCoreTask([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
             'name' => '  =1+1',
@@ -790,8 +853,8 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_formula_matrix_ordinary_text_unchanged(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-        $task = CoreTask::factory()->create([
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
+        $task = $this->createCoreTask([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
             'name' => 'normal text',
@@ -816,8 +879,8 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_formula_matrix_vietnamese_unicode(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-        $task = CoreTask::factory()->create([
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
+        $task = $this->createCoreTask([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
             'name' => 'Hợp đồng xây dựng',
@@ -842,8 +905,8 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_numeric_negative_remains_numeric(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-        $task = CoreTask::factory()->create([
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
+        $task = $this->createCoreTask([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
             'progress_percent' => -5,
@@ -869,7 +932,7 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function project_csv_formula_matrix_textual_fields(): void
     {
-        $project = CoreProject::factory()->create([
+        $project = $this->createCoreProject([
             'tenant_id' => $this->tenant->id,
             'name' => '=IMPORTXML(...)',
             'code' => '+CODE',
@@ -894,7 +957,7 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function project_csv_numeric_fields_remain_numeric(): void
     {
-        $project = CoreProject::factory()->create([
+        $project = $this->createCoreProject([
             'tenant_id' => $this->tenant->id,
             'progress' => -5.5,
             'budget_total' => -1000,
@@ -925,8 +988,8 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_round_trip_comma_quote_backslash(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-        $task = CoreTask::factory()->create([
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
+        $task = $this->createCoreTask([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
             'name' => 'value,with,comma',
@@ -951,8 +1014,8 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_round_trip_multiline_and_vietnamese(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-        $task = CoreTask::factory()->create([
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
+        $task = $this->createCoreTask([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
             'name' => "line1\nline2",
@@ -977,8 +1040,8 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_round_trip_asserts_lf_and_no_bom(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-        CoreTask::factory()->create([
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
+        $this->createCoreTask([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
         ]);
@@ -997,8 +1060,8 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_tags_null_and_empty(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-        $task = CoreTask::factory()->create([
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
+        $task = $this->createCoreTask([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
             'tags' => null,
@@ -1020,8 +1083,8 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_tags_one_and_multiple(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-        $task = CoreTask::factory()->create([
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
+        $task = $this->createCoreTask([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
             'tags' => ['one'],
@@ -1043,8 +1106,8 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_tags_unicode_and_comma(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-        $task = CoreTask::factory()->create([
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
+        $task = $this->createCoreTask([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
             'tags' => ['Hợp đồng', 'tag,with,comma'],
@@ -1066,8 +1129,8 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_tags_leading_whitespace_before_marker_is_neutralized(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-        $task = CoreTask::factory()->create([
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
+        $task = $this->createCoreTask([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
             'tags' => [" \t=SPACE(A1)"],
@@ -1089,8 +1152,8 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_tags_empty_array_is_serialized_as_empty_string(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-        $task = CoreTask::factory()->create([
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
+        $task = $this->createCoreTask([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
             'tags' => [],
@@ -1112,8 +1175,8 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_tags_quote_in_tag_is_preserved(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-        $task = CoreTask::factory()->create([
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
+        $task = $this->createCoreTask([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
             'tags' => ['tag"quote'],
@@ -1139,8 +1202,8 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_round_trip_backslash(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-        $task = CoreTask::factory()->create([
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
+        $task = $this->createCoreTask([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
             'name' => 'value\\with\\backslash',
@@ -1165,8 +1228,8 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_csv_round_trip_backslash_before_quote(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-        $task = CoreTask::factory()->create([
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
+        $task = $this->createCoreTask([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
             'name' => 'value\\"with\\"backslash',
@@ -1195,8 +1258,8 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_json_preserves_existing_payload_shape(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-        $task = CoreTask::factory()->create([
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
+        $task = $this->createCoreTask([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
         ]);
@@ -1214,7 +1277,7 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function project_json_preserves_existing_payload_shape(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
 
         $response = $this->postCsv('/api/projects/bulk/export', [
             'format' => 'json',
@@ -1229,8 +1292,8 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function task_excel_remains_known_incomplete_path(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
-        CoreTask::factory()->create([
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
+        $this->createCoreTask([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
         ]);
@@ -1245,7 +1308,7 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function project_excel_reuses_bounded_tabular_source(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
         CoreTask::factory()->count(200)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
@@ -1273,7 +1336,7 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function project_csv_large_project_bounded_memory_proof(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
         CoreTask::factory()->count(200)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,
@@ -1304,7 +1367,7 @@ class LegacyCsvExportSafetyTest extends TestCase
     /** @test */
     public function project_excel_large_project_bounded_memory_proof(): void
     {
-        $project = CoreProject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $project = $this->createCoreProject(['tenant_id' => $this->tenant->id]);
         CoreTask::factory()->count(200)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $project->id,

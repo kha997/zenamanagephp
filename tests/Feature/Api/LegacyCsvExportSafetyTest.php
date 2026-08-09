@@ -748,7 +748,7 @@ class LegacyCsvExportSafetyTest extends TestCase
         $method->setAccessible(true);
 
         try {
-            $method->invoke($controller, $builder, 'test.csv');
+            $method->invoke($controller, $builder, 'test.csv', 'tenant-1');
             $this->fail('Expected RuntimeException was not thrown');
         } catch (\RuntimeException $e) {
             $this->assertStringContainsString('mid-generation', $e->getMessage());

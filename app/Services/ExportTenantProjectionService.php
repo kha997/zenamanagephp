@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\DB;
 use Src\CoreProject\Models\Project;
@@ -10,42 +9,68 @@ use Src\CoreProject\Models\Task;
 
 final class ExportTenantProjectionService
 {
-    /** @return SupportCollection<int, array<string, mixed>> */
+    /**
+     * @param SupportCollection<array-key, Task> $tasks
+     * @param SupportCollection<array-key, Project>|null $projects
+     * @return SupportCollection<array-key, array<string, mixed>>
+     */
     public function projectTasks(SupportCollection $tasks, string $tenantId, ?SupportCollection $projects = null): SupportCollection
     {
+        $watcherIds = $tasks->pluck('watchers')->flatten()->filter();
         $validUserIds = $this->sameTenantUserIds(
-            $tasks->pluck('assignee_id')->merge($tasks->pluck('assigned_to'))->merge($tasks->pluck('created_by'))->merge($tasks->pluck('updated_by')),
+            $tasks->pluck('assignee_id')
+                ->merge($tasks->pluck('assigned_to'))
+                ->merge($tasks->pluck('created_by'))
+                ->merge($tasks->pluck('updated_by'))
+                ->merge($watcherIds),
             $tenantId
         );
 
-        $validComponentIds = $this->sameProjectComponentIds($tasks);
-        $validPhaseIds = $this->sameProjectPhaseIds($tasks);
-        $eligibleTaskIds = $this->eligibleReferencedTaskIds($tasks, $tenantId);
-        $validWorkInstanceIds = $this->validWorkInstanceIds($tasks->pluck('work_instance_id'), $tenantId);
-        $validWorkInstanceStepIds = $this->validWorkInstanceStepIds($tasks->pluck('work_instance_step_id'), $tenantId, $validWorkInstanceIds);
+        $validComponentKeys = $this->sameProjectComponentKeys($tasks);
+        $validPhaseKeys = $this->sameProjectPhaseKeys($tasks);
+        $validDependencyKeys = $this->sameProjectTaskKeys($tasks, 'dependencies_json', $tenantId);
+        $validParentKeys = $this->sameProjectTaskKeys($tasks, 'parent_id', $tenantId);
+        $validWorkInstanceKeys = $this->sameProjectWorkInstanceKeys($tasks);
+        $validWorkInstanceStepKeys = $this->sameProjectWorkInstanceStepKeys($tasks);
 
         $safeProjectScalars = $projects
             ? $this->projectScalarRows($projects, $tenantId)
             : $this->projectScalarRows($tasks->pluck('project'), $tenantId);
 
-        return $tasks->map(function (Task $task) use ($tenantId, $validUserIds, $validComponentIds, $validPhaseIds, $eligibleTaskIds, $validWorkInstanceIds, $validWorkInstanceStepIds, $safeProjectScalars): array {
+        /** @var SupportCollection<array-key, array<string, mixed>> $result */
+        $result = $tasks->map(function (Task $task) use ($tenantId, $validUserIds, $validComponentKeys, $validPhaseKeys, $validDependencyKeys, $validParentKeys, $validWorkInstanceKeys, $validWorkInstanceStepKeys, $safeProjectScalars): array {
+            $projectId = (string) $task->getAttribute('project_id');
+            $taskId = (string) $task->getAttribute('id');
+
             $dependencies = array_values(array_filter(
-                $task->dependencies_json ?? [],
-                fn ($id) => isset($eligibleTaskIds[(string) $id])
+                $task->getAttribute('dependencies_json') ?? [],
+                fn ($id) => isset($validDependencyKeys[$projectId . '|' . (string) $id])
             ));
 
-            $watchers = $task->watchers ?? [];
+            $watchers = $task->getAttribute('watchers') ?? [];
             if (!is_array($watchers)) {
                 $watchers = [];
             }
             $watchers = array_values(array_filter($watchers, fn ($id) => isset($validUserIds[(string) $id])));
 
+            $parentId = $task->getAttribute('parent_id');
+            $validParent = $parentId !== null && $parentId !== '' ? isset($validParentKeys[$projectId . '|' . (string) $parentId]) : false;
+
+            $workInstanceId = $task->getAttribute('work_instance_id');
+            $validWorkInstance = $workInstanceId !== null && $workInstanceId !== '' ? isset($validWorkInstanceKeys[$projectId . '|' . (string) $workInstanceId]) : false;
+
+            $workInstanceStepId = $task->getAttribute('work_instance_step_id');
+            $validStep = false;
+            if ($workInstanceStepId !== null && $workInstanceStepId !== '' && $validWorkInstance) {
+                $validStep = isset($validWorkInstanceStepKeys[$projectId . '|' . (string) $workInstanceId . '|' . (string) $workInstanceStepId]);
+            }
+
             return [
-                'id' => (string) $task->id,
+                'id' => $taskId,
                 'tenant_id' => $tenantId,
-                'project_id' => (string) $task->project_id,
-                'project' => $safeProjectScalars[(string) $task->project_id] ?? [
-                    'id' => (string) $task->project_id,
+                'project_id' => $projectId,
+                'project' => $safeProjectScalars[$projectId] ?? [
+                    'id' => $projectId,
                     'tenant_id' => $tenantId,
                     'code' => null,
                     'name' => null,
@@ -64,38 +89,43 @@ final class ExportTenantProjectionService
                     'tags' => [],
                     'settings' => [],
                 ],
-                'name' => $task->name,
-                'title' => $task->title ?? null,
-                'description' => $task->description,
-                'status' => $task->status,
-                'priority' => $task->priority,
-                'progress_percent' => (float) $task->progress_percent,
-                'estimated_hours' => (float) $task->estimated_hours,
-                'actual_hours' => (float) $task->actual_hours,
-                'start_date' => $task->start_date?->format('Y-m-d'),
-                'end_date' => $task->end_date?->format('Y-m-d'),
-                'is_hidden' => (bool) $task->is_hidden,
-                'visibility' => $task->visibility,
-                'client_approved' => (bool) $task->client_approved,
-                'assignee_id' => isset($validUserIds[(string) $task->assignee_id]) ? (string) $task->assignee_id : null,
-                'component_id' => isset($validComponentIds[(string) $task->component_id]) ? (string) $task->component_id : null,
-                'phase_id' => isset($validPhaseIds[(string) $task->phase_id]) ? (string) $task->phase_id : null,
+                'name' => (string) $task->getAttribute('name'),
+                'title' => $task->getAttribute('title') !== null ? (string) $task->getAttribute('title') : null,
+                'description' => (string) $task->getAttribute('description'),
+                'status' => (string) $task->getAttribute('status'),
+                'priority' => (string) $task->getAttribute('priority'),
+                'progress_percent' => (float) $task->getAttribute('progress_percent'),
+                'estimated_hours' => (float) $task->getAttribute('estimated_hours'),
+                'actual_hours' => (float) $task->getAttribute('actual_hours'),
+                'start_date' => $task->getAttribute('start_date')?->format('Y-m-d'),
+                'end_date' => $task->getAttribute('end_date')?->format('Y-m-d'),
+                'is_hidden' => (bool) $task->getAttribute('is_hidden'),
+                'visibility' => (string) $task->getAttribute('visibility'),
+                'client_approved' => (bool) $task->getAttribute('client_approved'),
+                'assignee_id' => isset($validUserIds[(string) ($task->getAttribute('assignee_id') ?? '')]) ? (string) $task->getAttribute('assignee_id') : null,
+                'component_id' => isset($validComponentKeys[$projectId . '|' . (string) ($task->getAttribute('component_id') ?? '')]) ? (string) $task->getAttribute('component_id') : null,
+                'phase_id' => isset($validPhaseKeys[$projectId . '|' . (string) ($task->getAttribute('phase_id') ?? '')]) ? (string) $task->getAttribute('phase_id') : null,
                 'dependencies_json' => $dependencies,
-                'assigned_to' => isset($validUserIds[(string) ($task->assigned_to ?? '')]) ? (string) $task->assigned_to : null,
-                'created_by' => isset($validUserIds[(string) $task->created_by]) ? (string) $task->created_by : null,
-                'updated_by' => isset($validUserIds[(string) $task->updated_by]) ? (string) $task->updated_by : null,
+                'assigned_to' => isset($validUserIds[(string) ($task->getAttribute('assigned_to') ?? '')]) ? (string) $task->getAttribute('assigned_to') : null,
+                'created_by' => isset($validUserIds[(string) $task->getAttribute('created_by')]) ? (string) $task->getAttribute('created_by') : null,
+                'updated_by' => isset($validUserIds[(string) $task->getAttribute('updated_by')]) ? (string) $task->getAttribute('updated_by') : null,
                 'watchers' => $watchers,
-                'parent_id' => isset($eligibleTaskIds[(string) ($task->parent_id ?? '')]) ? (string) $task->parent_id : null,
-                'work_instance_id' => isset($validWorkInstanceIds[(string) ($task->work_instance_id ?? '')]) ? (string) $task->work_instance_id : null,
-                'work_instance_step_id' => isset($validWorkInstanceStepIds[(string) ($task->work_instance_step_id ?? '')]) ? (string) $task->work_instance_step_id : null,
-                'tags' => $task->tags ?? [],
-                'created_at' => $task->created_at?->format('Y-m-d H:i:s'),
-                'updated_at' => $task->updated_at?->format('Y-m-d H:i:s'),
+                'parent_id' => $validParent ? (string) $parentId : null,
+                'work_instance_id' => $validWorkInstance ? (string) $workInstanceId : null,
+                'work_instance_step_id' => $validStep ? (string) $workInstanceStepId : null,
+                'tags' => $task->getAttribute('tags') ?? [],
+                'created_at' => $task->getAttribute('created_at')?->format('Y-m-d H:i:s'),
+                'updated_at' => $task->getAttribute('updated_at')?->format('Y-m-d H:i:s'),
             ];
         });
+
+        return $result;
     }
 
-    /** @return SupportCollection<int, array<string, mixed>> */
+    /**
+     * @param SupportCollection<array-key, Project> $projects
+     * @return SupportCollection<array-key, array<string, mixed>>
+     */
     public function projectScalarRows(SupportCollection $projects, string $tenantId): SupportCollection
     {
         $validUserIds = $this->sameTenantUserIds(
@@ -103,61 +133,80 @@ final class ExportTenantProjectionService
             $tenantId
         );
 
-        return $projects->map(function (Project $project) use ($tenantId, $validUserIds): array {
+        /** @var SupportCollection<array-key, array<string, mixed>> $result */
+        $result = $projects->map(function (Project $project) use ($tenantId, $validUserIds): array {
             return [
-                'id' => (string) $project->id,
+                'id' => (string) $project->getAttribute('id'),
                 'tenant_id' => $tenantId,
-                'code' => $project->code,
-                'name' => $project->name,
-                'description' => $project->description,
-                'status' => $project->status,
-                'priority' => $project->priority,
-                'progress' => (float) $project->progress,
-                'budget_total' => (float) $project->budget_total,
-                'budget_planned' => (float) ($project->budget_planned ?? 0),
-                'budget_actual' => (float) ($project->budget_actual ?? 0),
-                'start_date' => $project->start_date?->format('Y-m-d'),
-                'end_date' => $project->end_date?->format('Y-m-d'),
-                'client_id' => isset($validUserIds[(string) $project->client_id]) ? (string) $project->client_id : null,
-                'pm_id' => isset($validUserIds[(string) $project->pm_id]) ? (string) $project->pm_id : null,
-                'created_by' => isset($validUserIds[(string) $project->created_by]) ? (string) $project->created_by : null,
-                'tags' => $project->tags ?? [],
-                'settings' => $project->settings ?? [],
+                'code' => $project->getAttribute('code'),
+                'name' => $project->getAttribute('name'),
+                'description' => $project->getAttribute('description'),
+                'status' => $project->getAttribute('status'),
+                'priority' => $project->getAttribute('priority'),
+                'progress' => (float) $project->getAttribute('progress'),
+                'budget_total' => (float) $project->getAttribute('budget_total'),
+                'budget_planned' => (float) ($project->getAttribute('budget_planned') ?? 0),
+                'budget_actual' => (float) ($project->getAttribute('budget_actual') ?? 0),
+                'start_date' => $project->getAttribute('start_date')?->format('Y-m-d'),
+                'end_date' => $project->getAttribute('end_date')?->format('Y-m-d'),
+                'client_id' => isset($validUserIds[(string) ($project->getAttribute('client_id') ?? '')]) ? (string) $project->getAttribute('client_id') : null,
+                'pm_id' => isset($validUserIds[(string) ($project->getAttribute('pm_id') ?? '')]) ? (string) $project->getAttribute('pm_id') : null,
+                'created_by' => isset($validUserIds[(string) $project->getAttribute('created_by')]) ? (string) $project->getAttribute('created_by') : null,
+                'tags' => $project->getAttribute('tags') ?? [],
+                'settings' => $project->getAttribute('settings') ?? [],
             ];
         });
+
+        return $result;
     }
 
-    /** @return SupportCollection<int, array<string, mixed>> */
+    /**
+     * @param SupportCollection<array-key, Project> $projects
+     * @return SupportCollection<array-key, array<string, mixed>>
+     */
     public function projectTabularRows(SupportCollection $projects, string $tenantId): SupportCollection
     {
         $scalarRows = $this->projectScalarRows($projects, $tenantId);
 
-        return $scalarRows->map(function (array $row) use ($projects): array {
+        /** @var SupportCollection<array-key, array<string, mixed>> $result */
+        $result = $scalarRows->map(function (array $row) use ($projects): array {
             $project = $projects->firstWhere('id', $row['id']);
 
-            $row['tasks_count'] = (int) ($project->tasks_count ?? 0);
-            $row['completed_tasks_count'] = (int) ($project->completed_tasks_count ?? 0);
+            $row['tasks_count'] = (int) ($project->getAttribute('tasks_count') ?? 0);
+            $row['completed_tasks_count'] = (int) ($project->getAttribute('completed_tasks_count') ?? 0);
 
             return $row;
         });
+
+        return $result;
     }
 
-    /** @return SupportCollection<int, array<string, mixed>> */
+    /**
+     * @param SupportCollection<array-key, Project> $projects
+     * @param SupportCollection<array-key, Task> $tasks
+     * @return SupportCollection<array-key, array<string, mixed>>
+     */
     public function projectJsonRows(SupportCollection $projects, SupportCollection $tasks, string $tenantId): SupportCollection
     {
         $scalarRows = $this->projectScalarRows($projects, $tenantId);
         $safeTasks = $this->projectTasks($tasks, $tenantId, $projects);
         $tasksByProjectId = $safeTasks->groupBy('project_id');
 
-        return $scalarRows->map(function (array $row) use ($tasksByProjectId): array {
+        /** @var SupportCollection<array-key, array<string, mixed>> $result */
+        $result = $scalarRows->map(function (array $row) use ($tasksByProjectId): array {
             $projectTasks = $tasksByProjectId->get($row['id'], collect([]));
             $row['tasks'] = $projectTasks->values()->all();
 
             return $row;
         });
+
+        return $result;
     }
 
-    /** @return array<string, true> */
+    /**
+     * @param SupportCollection<array-key, mixed> $candidateIds
+     * @return array<string, true>
+     */
     private function sameTenantUserIds(SupportCollection $candidateIds, string $tenantId): array
     {
         $ids = $candidateIds
@@ -181,109 +230,184 @@ final class ExportTenantProjectionService
         return array_combine($validIds, array_fill(0, count($validIds), true)) ?: [];
     }
 
-    /** @return array<string, true> */
-    private function sameProjectComponentIds(SupportCollection $tasks): array
+    /**
+     * @param SupportCollection<array-key, Task> $tasks
+     * @return array<string, true> keys are "project_id|component_id"
+     */
+    private function sameProjectComponentKeys(SupportCollection $tasks): array
     {
-        $projectIds = $tasks->pluck('project_id')->filter()->unique()->values()->all();
-        $componentIds = $tasks->pluck('component_id')->filter()->unique()->values()->all();
+        $pairs = [];
+        foreach ($tasks as $task) {
+            $projectId = (string) $task->getAttribute('project_id');
+            $componentId = (string) $task->getAttribute('component_id');
+            if ($projectId !== '' && $componentId !== '') {
+                $pairs[] = [$projectId, $componentId];
+            }
+        }
 
-        if (empty($projectIds) || empty($componentIds)) {
+        if (empty($pairs)) {
             return [];
         }
 
-        $validIds = DB::table('components')
+        $componentIds = array_unique(array_column($pairs, 1));
+
+        $valid = DB::table('components')
             ->whereIn('id', $componentIds)
-            ->whereIn('project_id', $projectIds)
-            ->pluck('id')
-            ->map(fn ($id) => (string) $id)
+            ->get(['id', 'project_id'])
+            ->map(fn ($row) => (string) $row->project_id . '|' . (string) $row->id)
             ->all();
 
-        return array_combine($validIds, array_fill(0, count($validIds), true)) ?: [];
+        return array_combine($valid, array_fill(0, count($valid), true)) ?: [];
     }
 
-    /** @return array<string, true> */
-    private function sameProjectPhaseIds(SupportCollection $tasks): array
+    /**
+     * @param SupportCollection<array-key, Task> $tasks
+     * @return array<string, true> keys are "project_id|phase_id"
+     */
+    private function sameProjectPhaseKeys(SupportCollection $tasks): array
     {
-        $projectIds = $tasks->pluck('project_id')->filter()->unique()->values()->all();
-        $phaseIds = $tasks->pluck('phase_id')->filter()->unique()->values()->all();
+        $pairs = [];
+        foreach ($tasks as $task) {
+            $projectId = (string) $task->getAttribute('project_id');
+            $phaseId = (string) $task->getAttribute('phase_id');
+            if ($projectId !== '' && $phaseId !== '') {
+                $pairs[] = [$projectId, $phaseId];
+            }
+        }
 
-        if (empty($projectIds) || empty($phaseIds)) {
+        if (empty($pairs)) {
             return [];
         }
 
-        $validIds = DB::table('project_phases')
+        $phaseIds = array_unique(array_column($pairs, 1));
+
+        $valid = DB::table('project_phases')
             ->whereIn('id', $phaseIds)
-            ->whereIn('project_id', $projectIds)
-            ->pluck('id')
-            ->map(fn ($id) => (string) $id)
+            ->get(['id', 'project_id'])
+            ->map(fn ($row) => (string) $row->project_id . '|' . (string) $row->id)
             ->all();
 
-        return array_combine($validIds, array_fill(0, count($validIds), true)) ?: [];
+        return array_combine($valid, array_fill(0, count($valid), true)) ?: [];
     }
 
-    /** @return array<string, true> */
-    private function eligibleReferencedTaskIds(SupportCollection $tasks, string $tenantId): array
+    /**
+     * @param SupportCollection<array-key, Task> $tasks
+     * @param string $attributeName
+     * @param string $tenantId
+     * @return array<string, true> keys are "project_id|task_id"
+     */
+    private function sameProjectTaskKeys(SupportCollection $tasks, string $attributeName, string $tenantId): array
     {
-        $candidateIds = $tasks->pluck('dependencies_json')
-            ->flatten()
-            ->filter()
-            ->map(fn ($id) => (string) $id)
-            ->unique()
-            ->values()
-            ->all();
+        $pairs = [];
+        $rawIds = [];
+        foreach ($tasks as $task) {
+            $projectId = (string) $task->getAttribute('project_id');
+            $value = $task->getAttribute($attributeName);
+            if ($attributeName === 'dependencies_json') {
+                if (!is_array($value)) {
+                    continue;
+                }
+                foreach ($value as $id) {
+                    $id = (string) $id;
+                    if ($id !== '') {
+                        $pairs[] = [$projectId, $id];
+                        $rawIds[] = $id;
+                    }
+                }
+            } else {
+                $id = (string) ($value ?? '');
+                if ($id !== '') {
+                    $pairs[] = [$projectId, $id];
+                    $rawIds[] = $id;
+                }
+            }
+        }
 
-        if (empty($candidateIds)) {
+        if (empty($pairs)) {
             return [];
         }
 
-        $validIds = DB::table('tasks as t')
+        $rawIds = array_unique($rawIds);
+
+        $valid = DB::table('tasks as t')
             ->join('projects as p', 'p.id', '=', 't.project_id')
-            ->whereIn('t.id', $candidateIds)
+            ->whereIn('t.id', $rawIds)
             ->where('t.tenant_id', $tenantId)
             ->where('p.tenant_id', $tenantId)
-            ->pluck('t.id')
-            ->map(fn ($id) => (string) $id)
+            ->get(['t.id', 'p.id as project_id'])
+            ->map(fn ($row) => (string) $row->project_id . '|' . (string) $row->id)
             ->all();
 
-        return array_combine($validIds, array_fill(0, count($validIds), true)) ?: [];
+        return array_combine($valid, array_fill(0, count($valid), true)) ?: [];
     }
 
-    /** @return array<string, true> */
-    private function validWorkInstanceIds(SupportCollection $candidateIds, string $tenantId): array
+    /**
+     * @param SupportCollection<array-key, Task> $tasks
+     * @return array<string, true> keys are "project_id|work_instance_id"
+     */
+    private function sameProjectWorkInstanceKeys(SupportCollection $tasks): array
     {
-        $ids = $candidateIds->filter()->map(fn ($id) => (string) $id)->unique()->values()->all();
+        $pairs = [];
+        foreach ($tasks as $task) {
+            $projectId = (string) $task->getAttribute('project_id');
+            $workInstanceId = (string) $task->getAttribute('work_instance_id');
+            if ($projectId !== '' && $workInstanceId !== '') {
+                $pairs[] = [$projectId, $workInstanceId];
+            }
+        }
 
-        if (empty($ids)) {
+        if (empty($pairs)) {
             return [];
         }
 
-        $validIds = DB::table('work_instances')
-            ->whereIn('id', $ids)
-            ->where('tenant_id', $tenantId)
-            ->pluck('id')
-            ->map(fn ($id) => (string) $id)
+        $workInstanceIds = array_unique(array_column($pairs, 1));
+
+        $valid = DB::table('work_instances')
+            ->whereIn('id', $workInstanceIds)
+            ->get(['id', 'project_id'])
+            ->map(fn ($row) => (string) $row->project_id . '|' . (string) $row->id)
             ->all();
 
-        return array_combine($validIds, array_fill(0, count($validIds), true)) ?: [];
+        return array_combine($valid, array_fill(0, count($valid), true)) ?: [];
     }
 
-    /** @return array<string, true> */
-    private function validWorkInstanceStepIds(SupportCollection $candidateIds, string $tenantId, array $validWorkInstanceIds): array
+    /**
+     * @param SupportCollection<array-key, Task> $tasks
+     * @return array<string, true> keys are "project_id|work_instance_id|step_id"
+     */
+    private function sameProjectWorkInstanceStepKeys(SupportCollection $tasks): array
     {
-        $ids = $candidateIds->filter()->map(fn ($id) => (string) $id)->unique()->values()->all();
+        $pairs = [];
+        $workInstanceIds = [];
+        foreach ($tasks as $task) {
+            $projectId = (string) $task->getAttribute('project_id');
+            $workInstanceId = (string) $task->getAttribute('work_instance_id');
+            $stepId = (string) $task->getAttribute('work_instance_step_id');
+            if ($projectId !== '' && $workInstanceId !== '' && $stepId !== '') {
+                $pairs[] = [$projectId, $workInstanceId, $stepId];
+                $workInstanceIds[] = $workInstanceId;
+            }
+        }
 
-        if (empty($ids) || empty($validWorkInstanceIds)) {
+        if (empty($pairs)) {
             return [];
         }
 
-        $validIds = DB::table('work_instance_steps as wis')
-            ->join('work_instances as wi', 'wi.id', '=', 'wis.work_instance_id')
-            ->whereIn('wis.id', $ids)
-            ->where('wi.tenant_id', $tenantId)
-            ->pluck('wis.id')
-            ->map(fn ($id) => (string) $id)
+        $workInstanceIds = array_unique($workInstanceIds);
+
+        $valid = DB::table('work_instance_steps')
+            ->whereIn('work_instance_id', $workInstanceIds)
+            ->get(['id', 'work_instance_id'])
+            ->map(fn ($row) => (string) $row->work_instance_id . '|' . (string) $row->id)
             ->all();
 
-        return array_combine($validIds, array_fill(0, count($validIds), true)) ?: [];
+        $result = [];
+        foreach ($pairs as [$projectId, $workInstanceId, $stepId]) {
+            if (isset($valid[$workInstanceId . '|' . $stepId])) {
+                $result[$projectId . '|' . $workInstanceId . '|' . $stepId] = true;
+            }
+        }
+
+        return $result;
     }
 }

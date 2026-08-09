@@ -67,7 +67,7 @@ class ExportController extends Controller
             $filename = "tasks_export_{$timestamp}.{$format}";
 
             if ($format === 'csv') {
-                $result = $this->generateTaskCsv($query, $filename);
+                $result = $this->generateTaskCsv($query, $filename, $trustedTenantId);
                 $filePath = $result['path'];
                 $total = $result['count'];
             } elseif ($format === 'excel') {
@@ -132,7 +132,14 @@ class ExportController extends Controller
                 $total = $result['count'];
             } else {
                 $projects = $query->with(['tasks'])->get();
-                $tasks = $projects->pluck('tasks')->flatten();
+                $projectIds = $projects->pluck('id')->all();
+                $taskQuery = Task::query()
+                    ->where('tenant_id', $trustedTenantId)
+                    ->whereIn('project_id', $projectIds);
+                /** @var \Illuminate\Database\Eloquent\Builder<Task> $taskQuery */
+                /** @phpstan-ignore method.notFound */
+                $taskQuery = $taskQuery->whereHas('project', fn ($q) => $q->where('tenant_id', $trustedTenantId));
+                $tasks = $taskQuery->get();
                 $safeProjects = $this->projectionService->projectJsonRows($projects, $tasks, $trustedTenantId);
                 $filePath = $this->generateProjectsJson($safeProjects, $filename);
                 $total = $safeProjects->count();
@@ -160,7 +167,7 @@ class ExportController extends Controller
     /** @return array{path: string, count: int} */
     /** @param \Illuminate\Database\Eloquent\Builder<Task> $query */
     /** @phpstan-ignore missingType.generics, missingType.iterableValue */
-    private function generateTaskCsv(\Illuminate\Database\Eloquent\Builder $query, string $filename): array
+    private function generateTaskCsv(\Illuminate\Database\Eloquent\Builder $query, string $filename, string $tenantId): array
     {
         $filePath = "exports/{$filename}";
         $partPath = $filePath . '.part';
@@ -181,10 +188,11 @@ class ExportController extends Controller
 
             $exportedRowCount = 0;
 
-            $query->with('project')->chunkById(self::TASK_CSV_CHUNK_SIZE, function ($tasks) use ($temp, &$exportedRowCount) {
-                foreach ($tasks as $task) {
-                    /** @var Task $task */
-                    $row = $this->taskCsvRow($task);
+            $query->with('project')->chunkById(self::TASK_CSV_CHUNK_SIZE, function ($tasks) use ($tenantId, $temp, &$exportedRowCount) {
+                $safeTasks = $this->projectionService->projectTasks($tasks, $tenantId);
+                foreach ($safeTasks as $safeTask) {
+                    /** @var array<string, mixed> $safeTask */
+                    $row = $this->taskCsvRow($safeTask);
                     $written = fputcsv($temp, $row, ',', '"', '', "\n");
                     if ($written === false) {
                         throw new \RuntimeException('Unable to write CSV row.');
@@ -217,24 +225,27 @@ class ExportController extends Controller
         }
     }
 
-    /** @return array{0: string, 1: string, 2: string, 3: string, 4: string, 5: string, 6: string, 7: string, 8: string, 9: string, 10: string, 11: string, 12: string, 13: string} */
-    private function taskCsvRow(Task $task): array
+    /**
+     * @param array<string, mixed> $task
+     * @return array<int, string>
+     */
+    private function taskCsvRow(array $task): array
     {
         return [
-            $task->id,
-            $this->neutralizeTextualFormula((string) $task->name),
-            $this->neutralizeTextualFormula((string) ($task->description ?? '')),
-            $task->status,
-            $task->priority,
-            $this->neutralizeTextualFormula((string) ($task->project->name ?? 'N/A')),
-            $task->getAttribute('assignee_id') ? 'User ' . $task->getAttribute('assignee_id') : 'Unassigned',
-            $task->start_date?->format('Y-m-d') ?? '',
-            $task->end_date?->format('Y-m-d') ?? '',
-            (string) (float) $task->progress_percent,
-            (string) (float) $task->estimated_hours,
-            (string) (float) $task->actual_hours,
-            $this->serializeTags($task->getAttribute('tags')),
-            $task->created_at?->format('Y-m-d H:i:s') ?? '',
+            (string) $task['id'],
+            $this->neutralizeTextualFormula((string) ($task['name'] ?? '')),
+            $this->neutralizeTextualFormula((string) ($task['description'] ?? '')),
+            (string) ($task['status'] ?? ''),
+            (string) ($task['priority'] ?? ''),
+            $this->neutralizeTextualFormula((string) ($task['project']['name'] ?? 'N/A')),
+            isset($task['assignee_id']) && $task['assignee_id'] !== '' ? 'User ' . $task['assignee_id'] : 'Unassigned',
+            (string) ($task['start_date'] ?? ''),
+            (string) ($task['end_date'] ?? ''),
+            (string) (float) ($task['progress_percent'] ?? 0),
+            (string) (float) ($task['estimated_hours'] ?? 0),
+            (string) (float) ($task['actual_hours'] ?? 0),
+            $this->serializeTags($task['tags'] ?? null),
+            (string) ($task['created_at'] ?? ''),
         ];
     }
 
@@ -265,11 +276,12 @@ class ExportController extends Controller
             $query->withCount([
                 'tasks as tasks_count' => fn ($q) => $q->where('tenant_id', $tenantId),
                 'tasks as completed_tasks_count' => fn ($q) => $q->where('tenant_id', $tenantId)->where('status', 'completed'),
-            ])->chunkById(500, function ($projects) use ($temp, &$exportedRowCount) {
-                foreach ($projects as $project) {
-                    /** @var Project $project */
-                    $row = $this->projectCsvRow($project);
-                    $written = fputcsv($temp, $row, ',', '"', '', "\n");
+            ])->chunkById(500, function ($projects) use ($tenantId, $temp, &$exportedRowCount) {
+                $safeRows = $this->projectionService->projectTabularRows($projects, $tenantId);
+                foreach ($safeRows as $row) {
+                    /** @var array<string, mixed> $row */
+                    $csvRow = $this->projectCsvRow($row);
+                    $written = fputcsv($temp, $csvRow, ',', '"', '', "\n");
                     if ($written === false) {
                         throw new \RuntimeException('Unable to write CSV row.');
                     }
@@ -301,25 +313,28 @@ class ExportController extends Controller
         }
     }
 
-    /** @return array{0: string, 1: string, 2: string, 3: string, 4: string, 5: string, 6: string, 7: string, 8: string, 9: string, 10: string, 11: string, 12: string, 13: string, 14: string} */
-    private function projectCsvRow(Project $project): array
+    /**
+     * @param array<string, mixed> $project
+     * @return array<int, string>
+     */
+    private function projectCsvRow(array $project): array
     {
         return [
-            $project->id,
-            $this->neutralizeTextualFormula((string) ($project->code ?? '')),
-            $this->neutralizeTextualFormula((string) $project->name),
-            $this->neutralizeTextualFormula((string) ($project->description ?? '')),
-            $project->status,
-            $project->getAttribute('priority'),
-            (string) (float) $project->progress,
-            (string) (float) $project->getAttribute('budget_total'),
-            (string) (float) ($project->getAttribute('budget_planned') ?? 0),
-            (string) (float) ($project->getAttribute('budget_actual') ?? 0),
-            $project->start_date?->format('Y-m-d') ?? '',
-            $project->end_date?->format('Y-m-d') ?? '',
-            (string) (int) $project->getAttribute('tasks_count'),
-            (string) (int) $project->getAttribute('completed_tasks_count'),
-            $project->created_at?->format('Y-m-d H:i:s') ?? '',
+            (string) $project['id'],
+            $this->neutralizeTextualFormula((string) ($project['code'] ?? '')),
+            $this->neutralizeTextualFormula((string) ($project['name'] ?? '')),
+            $this->neutralizeTextualFormula((string) ($project['description'] ?? '')),
+            (string) ($project['status'] ?? ''),
+            (string) ($project['priority'] ?? ''),
+            (string) (float) ($project['progress'] ?? 0),
+            (string) (float) ($project['budget_total'] ?? 0),
+            (string) (float) ($project['budget_planned'] ?? 0),
+            (string) (float) ($project['budget_actual'] ?? 0),
+            (string) ($project['start_date'] ?? ''),
+            (string) ($project['end_date'] ?? ''),
+            (string) (int) ($project['tasks_count'] ?? 0),
+            (string) (int) ($project['completed_tasks_count'] ?? 0),
+            (string) ($project['created_at'] ?? ''),
         ];
     }
 
@@ -348,14 +363,14 @@ class ExportController extends Controller
         return $this->neutralizeTextualFormula(implode(', ', $tags));
     }
 
-    private function generateExcel($tasks, $filename)
+    /** @param \Illuminate\Support\Collection<array-key, array<string, mixed>> $tasks */
+    private function generateExcel($tasks, string $filename): string
     {
-        // For now, just generate CSV with .xlsx extension
-        // In production, you'd 
+        return $this->generateJson($tasks, str_replace('.xlsx', '.csv', $filename));
     }
 
-    /** @param \Illuminate\Database\Eloquent\Collection<int, array<string, mixed>> $tasks */
-    private function generateJson($tasks, $filename): string
+    /** @param \Illuminate\Support\Collection<array-key, array<string, mixed>> $tasks */
+    private function generateJson($tasks, string $filename): string
     {
         $filePath = "exports/{$filename}";
 
@@ -373,8 +388,8 @@ class ExportController extends Controller
         return $filePath;
     }
 
-    /** @param \Illuminate\Database\Eloquent\Collection<int, array<string, mixed>> $projects */
-    private function generateProjectsJson($projects, $filename): string
+    /** @param \Illuminate\Support\Collection<array-key, array<string, mixed>> $projects */
+    private function generateProjectsJson($projects, string $filename): string
     {
         $filePath = "exports/{$filename}";
 

@@ -31,22 +31,22 @@ class ExportTenantIsolationTest extends TestCase
     {
         parent::setUp();
 
-        $this->tenantA = Tenant::factory()->create();
-        $this->tenantB = Tenant::factory()->create();
+        $this->tenantA = Tenant::factory()->createOne();
+        $this->tenantB = Tenant::factory()->createOne();
 
-        $this->userA = User::factory()->create([
+        $this->userA = User::factory()->createOne([
             'tenant_id' => $this->tenantA->id,
             'is_active' => true,
         ]);
         $this->userA->assignRole('admin');
 
-        $this->userB = User::factory()->create([
+        $this->userB = User::factory()->createOne([
             'tenant_id' => $this->tenantB->id,
             'is_active' => true,
         ]);
         $this->userB->assignRole('admin');
 
-        $this->userBAdmin = User::factory()->create([
+        $this->userBAdmin = User::factory()->createOne([
             'tenant_id' => $this->tenantB->id,
             'is_active' => true,
         ]);
@@ -103,14 +103,14 @@ class ExportTenantIsolationTest extends TestCase
     /** @test */
     public function task_export_silently_filters_foreign_and_mixed_ids(): void
     {
-        $projectA = CoreProject::factory()->create(['tenant_id' => $this->tenantA->id]);
-        $projectB = CoreProject::factory()->create(['tenant_id' => $this->tenantB->id]);
+        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $projectB = CoreProject::factory()->createOne(['tenant_id' => $this->tenantB->id]);
 
-        $taskA = CoreTask::factory()->create([
+        $taskA = CoreTask::factory()->createOne([
             'tenant_id' => $this->tenantA->id,
             'project_id' => $projectA->id,
         ]);
-        $taskB = CoreTask::factory()->create([
+        $taskB = CoreTask::factory()->createOne([
             'tenant_id' => $this->tenantB->id,
             'project_id' => $projectB->id,
         ]);
@@ -130,8 +130,8 @@ class ExportTenantIsolationTest extends TestCase
     /** @test */
     public function project_export_silently_filters_foreign_and_mixed_ids(): void
     {
-        $projectA = CoreProject::factory()->create(['tenant_id' => $this->tenantA->id]);
-        $projectB = CoreProject::factory()->create(['tenant_id' => $this->tenantB->id]);
+        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $projectB = CoreProject::factory()->createOne(['tenant_id' => $this->tenantB->id]);
 
         $response = $this->export('projects', $this->userA, $this->tenantA, [
             'format' => 'csv',
@@ -148,14 +148,14 @@ class ExportTenantIsolationTest extends TestCase
     /** @test */
     public function task_export_no_ids_returns_all_tenant_tasks(): void
     {
-        $projectA = CoreProject::factory()->create(['tenant_id' => $this->tenantA->id]);
-        $projectB = CoreProject::factory()->create(['tenant_id' => $this->tenantB->id]);
+        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $projectB = CoreProject::factory()->createOne(['tenant_id' => $this->tenantB->id]);
 
-        $taskA = CoreTask::factory()->create([
+        $taskA = CoreTask::factory()->createOne([
             'tenant_id' => $this->tenantA->id,
             'project_id' => $projectA->id,
         ]);
-        CoreTask::factory()->create([
+        CoreTask::factory()->createOne([
             'tenant_id' => $this->tenantB->id,
             'project_id' => $projectB->id,
         ]);
@@ -173,8 +173,8 @@ class ExportTenantIsolationTest extends TestCase
     /** @test */
     public function project_export_no_ids_returns_all_tenant_projects(): void
     {
-        $projectA = CoreProject::factory()->create(['tenant_id' => $this->tenantA->id]);
-        CoreProject::factory()->create(['tenant_id' => $this->tenantB->id]);
+        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        CoreProject::factory()->createOne(['tenant_id' => $this->tenantB->id]);
 
         $response = $this->export('projects', $this->userA, $this->tenantA, [
             'format' => 'csv',
@@ -189,8 +189,8 @@ class ExportTenantIsolationTest extends TestCase
     /** @test */
     public function task_export_tenant_b_only_ids_returns_empty(): void
     {
-        $projectB = CoreProject::factory()->create(['tenant_id' => $this->tenantB->id]);
-        $taskB = CoreTask::factory()->create([
+        $projectB = CoreProject::factory()->createOne(['tenant_id' => $this->tenantB->id]);
+        $taskB = CoreTask::factory()->createOne([
             'tenant_id' => $this->tenantB->id,
             'project_id' => $projectB->id,
         ]);
@@ -221,7 +221,7 @@ class ExportTenantIsolationTest extends TestCase
     /** @test */
     public function tenant_mismatch_header_returns_403(): void
     {
-        $projectA = CoreProject::factory()->create(['tenant_id' => $this->tenantA->id]);
+        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
 
         $response = $this->withHeaders([
             'Accept' => 'application/json',
@@ -249,8 +249,8 @@ class ExportTenantIsolationTest extends TestCase
     /** @test */
     public function cross_tenant_project_makes_task_ineligible_in_every_format(): void
     {
-        $projectB = CoreProject::factory()->create(['tenant_id' => $this->tenantB->id]);
-        $taskA = CoreTask::factory()->create([
+        $projectB = CoreProject::factory()->createOne(['tenant_id' => $this->tenantB->id]);
+        $taskA = CoreTask::factory()->createOne([
             'tenant_id' => $this->tenantA->id,
             'project_id' => $projectB->id,
         ]);
@@ -269,8 +269,8 @@ class ExportTenantIsolationTest extends TestCase
     /** @test */
     public function foreign_assignee_is_unassigned_and_never_emitted(): void
     {
-        $projectA = CoreProject::factory()->create(['tenant_id' => $this->tenantA->id]);
-        $taskA = CoreTask::factory()->create([
+        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $taskA = CoreTask::factory()->createOne([
             'tenant_id' => $this->tenantA->id,
             'project_id' => $projectA->id,
             'assignee_id' => $this->userB->id,
@@ -291,12 +291,12 @@ class ExportTenantIsolationTest extends TestCase
     /** @test */
     public function foreign_component_is_null_in_json(): void
     {
-        $projectA = CoreProject::factory()->create(['tenant_id' => $this->tenantA->id]);
-        $componentB = \Src\CoreProject\Models\Component::factory()->create([
+        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $componentB = \Src\CoreProject\Models\Component::factory()->createOne([
             'tenant_id' => $this->tenantB->id,
-            'project_id' => CoreProject::factory()->create(['tenant_id' => $this->tenantB->id])->id,
+            'project_id' => CoreProject::factory()->createOne(['tenant_id' => $this->tenantB->id])->id,
         ]);
-        $taskA = CoreTask::factory()->create([
+        $taskA = CoreTask::factory()->createOne([
             'tenant_id' => $this->tenantA->id,
             'project_id' => $projectA->id,
             'component_id' => $componentB->id,
@@ -319,12 +319,12 @@ class ExportTenantIsolationTest extends TestCase
     /** @test */
     public function foreign_dependencies_are_filtered_in_json(): void
     {
-        $projectA = CoreProject::factory()->create(['tenant_id' => $this->tenantA->id]);
-        $taskB = CoreTask::factory()->create([
+        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $taskB = CoreTask::factory()->createOne([
             'tenant_id' => $this->tenantB->id,
-            'project_id' => CoreProject::factory()->create(['tenant_id' => $this->tenantB->id])->id,
+            'project_id' => CoreProject::factory()->createOne(['tenant_id' => $this->tenantB->id])->id,
         ]);
-        $taskA = CoreTask::factory()->create([
+        $taskA = CoreTask::factory()->createOne([
             'tenant_id' => $this->tenantA->id,
             'project_id' => $projectA->id,
             'dependencies_json' => [$taskB->id],
@@ -344,8 +344,8 @@ class ExportTenantIsolationTest extends TestCase
     /** @test */
     public function foreign_assigned_to_is_null_in_json(): void
     {
-        $projectA = CoreProject::factory()->create(['tenant_id' => $this->tenantA->id]);
-        $taskA = CoreTask::factory()->create([
+        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $taskA = CoreTask::factory()->createOne([
             'tenant_id' => $this->tenantA->id,
             'project_id' => $projectA->id,
             'assigned_to' => $this->userB->id,
@@ -365,8 +365,8 @@ class ExportTenantIsolationTest extends TestCase
     /** @test */
     public function foreign_created_by_is_null_in_json(): void
     {
-        $projectA = CoreProject::factory()->create(['tenant_id' => $this->tenantA->id]);
-        $taskA = CoreTask::factory()->create([
+        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $taskA = CoreTask::factory()->createOne([
             'tenant_id' => $this->tenantA->id,
             'project_id' => $projectA->id,
             'created_by' => $this->userB->id,
@@ -386,8 +386,8 @@ class ExportTenantIsolationTest extends TestCase
     /** @test */
     public function foreign_updated_by_is_null_in_json(): void
     {
-        $projectA = CoreProject::factory()->create(['tenant_id' => $this->tenantA->id]);
-        $taskA = CoreTask::factory()->create([
+        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $taskA = CoreTask::factory()->createOne([
             'tenant_id' => $this->tenantA->id,
             'project_id' => $projectA->id,
             'updated_by' => $this->userB->id,
@@ -407,8 +407,8 @@ class ExportTenantIsolationTest extends TestCase
     /** @test */
     public function foreign_watchers_are_filtered_in_json(): void
     {
-        $projectA = CoreProject::factory()->create(['tenant_id' => $this->tenantA->id]);
-        $taskA = CoreTask::factory()->create([
+        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $taskA = CoreTask::factory()->createOne([
             'tenant_id' => $this->tenantA->id,
             'project_id' => $projectA->id,
             'watchers' => [$this->userB->id],
@@ -428,13 +428,13 @@ class ExportTenantIsolationTest extends TestCase
     /** @test */
     public function foreign_parent_task_is_null_in_json(): void
     {
-        $projectA = CoreProject::factory()->create(['tenant_id' => $this->tenantA->id]);
-        $taskA = CoreTask::factory()->create([
+        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $taskA = CoreTask::factory()->createOne([
             'tenant_id' => $this->tenantA->id,
             'project_id' => $projectA->id,
-            'parent_id' => CoreTask::factory()->create([
+            'parent_id' => CoreTask::factory()->createOne([
                 'tenant_id' => $this->tenantB->id,
-                'project_id' => CoreProject::factory()->create(['tenant_id' => $this->tenantB->id])->id,
+                'project_id' => CoreProject::factory()->createOne(['tenant_id' => $this->tenantB->id])->id,
             ])->id,
         ]);
 
@@ -452,11 +452,11 @@ class ExportTenantIsolationTest extends TestCase
     /** @test */
     public function foreign_work_instance_is_null_in_json(): void
     {
-        $projectA = CoreProject::factory()->create(['tenant_id' => $this->tenantA->id]);
-        $foreignInstance = WorkInstance::factory()->create([
+        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $foreignInstance = WorkInstance::factory()->createOne([
             'tenant_id' => $this->tenantB->id,
         ]);
-        $taskA = CoreTask::factory()->create([
+        $taskA = CoreTask::factory()->createOne([
             'tenant_id' => $this->tenantA->id,
             'project_id' => $projectA->id,
             'work_instance_id' => $foreignInstance->id,
@@ -476,14 +476,14 @@ class ExportTenantIsolationTest extends TestCase
     /** @test */
     public function foreign_work_instance_step_is_null_in_json(): void
     {
-        $projectA = CoreProject::factory()->create(['tenant_id' => $this->tenantA->id]);
-        $foreignStep = WorkInstanceStep::factory()->create([
+        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $foreignStep = WorkInstanceStep::factory()->createOne([
             'tenant_id' => $this->tenantB->id,
-            'work_instance_id' => WorkInstance::factory()->create([
+            'work_instance_id' => WorkInstance::factory()->createOne([
                 'tenant_id' => $this->tenantB->id,
             ])->id,
         ]);
-        $taskA = CoreTask::factory()->create([
+        $taskA = CoreTask::factory()->createOne([
             'tenant_id' => $this->tenantA->id,
             'project_id' => $projectA->id,
             'work_instance_step_id' => $foreignStep->id,
@@ -503,10 +503,10 @@ class ExportTenantIsolationTest extends TestCase
     /** @test */
     public function foreign_task_excluded_from_project_relation_and_aggregates(): void
     {
-        $projectA = CoreProject::factory()->create(['tenant_id' => $this->tenantA->id]);
-        $projectB = CoreProject::factory()->create(['tenant_id' => $this->tenantB->id]);
+        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $projectB = CoreProject::factory()->createOne(['tenant_id' => $this->tenantB->id]);
 
-        $taskB = CoreTask::factory()->create([
+        $taskB = CoreTask::factory()->createOne([
             'tenant_id' => $this->tenantB->id,
             'project_id' => $projectB->id,
         ]);
@@ -526,8 +526,8 @@ class ExportTenantIsolationTest extends TestCase
     /** @test */
     public function task_json_contains_safe_project_projection(): void
     {
-        $projectA = CoreProject::factory()->create(['tenant_id' => $this->tenantA->id]);
-        $taskA = CoreTask::factory()->create([
+        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $taskA = CoreTask::factory()->createOne([
             'tenant_id' => $this->tenantA->id,
             'project_id' => $projectA->id,
         ]);
@@ -550,8 +550,8 @@ class ExportTenantIsolationTest extends TestCase
     /** @test */
     public function project_json_preserves_tasks_key_with_safe_children(): void
     {
-        $projectA = CoreProject::factory()->create(['tenant_id' => $this->tenantA->id]);
-        $taskA = CoreTask::factory()->create([
+        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $taskA = CoreTask::factory()->createOne([
             'tenant_id' => $this->tenantA->id,
             'project_id' => $projectA->id,
         ]);
@@ -571,7 +571,7 @@ class ExportTenantIsolationTest extends TestCase
     /** @test */
     public function project_optional_foreign_users_become_null_without_excluding_project(): void
     {
-        $projectA = CoreProject::factory()->create([
+        $projectA = CoreProject::factory()->createOne([
             'tenant_id' => $this->tenantA->id,
             'client_id' => $this->userB->id,
             'pm_id' => $this->userB->id,
@@ -593,7 +593,7 @@ class ExportTenantIsolationTest extends TestCase
     /** @test */
     public function project_csv_never_hydrates_tasks_relation(): void
     {
-        $projectA = CoreProject::factory()->create(['tenant_id' => $this->tenantA->id]);
+        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
         CoreTask::factory()->count(3)->create([
             'tenant_id' => $this->tenantA->id,
             'project_id' => $projectA->id,
@@ -620,8 +620,8 @@ class ExportTenantIsolationTest extends TestCase
     /** @test */
     public function tenant_like_override_is_ignored(): void
     {
-        $projectA = CoreProject::factory()->create(['tenant_id' => $this->tenantA->id]);
-        $projectB = CoreProject::factory()->create(['tenant_id' => $this->tenantB->id]);
+        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $projectB = CoreProject::factory()->createOne(['tenant_id' => $this->tenantB->id]);
 
         $response = $this->withHeaders([
             'Accept' => 'application/json',
@@ -646,7 +646,7 @@ class ExportTenantIsolationTest extends TestCase
     /** @test */
     public function project_json_does_not_contain_csv_count_keys(): void
     {
-        $projectA = CoreProject::factory()->create(['tenant_id' => $this->tenantA->id]);
+        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
         CoreTask::factory()->count(3)->create([
             'tenant_id' => $this->tenantA->id,
             'project_id' => $projectA->id,
@@ -666,5 +666,63 @@ class ExportTenantIsolationTest extends TestCase
 
         $this->assertStringNotContainsString('"tasks_count"', $payload);
         $this->assertStringNotContainsString('"completed_tasks_count"', $payload);
+    }
+
+    /** @test */
+    public function valid_project_users_are_preserved_in_json(): void
+    {
+        $projectA = CoreProject::factory()->createOne([
+            'tenant_id' => $this->tenantA->id,
+            'client_id' => $this->userA->id,
+            'pm_id' => $this->userA->id,
+            'created_by' => $this->userA->id,
+        ]);
+
+        $response = $this->export('projects', $this->userA, $this->tenantA, [
+            'format' => 'json',
+            'project_ids' => [$projectA->id],
+        ]);
+
+        $response->assertOk();
+        $payload = $this->storedPayload($response, 'json');
+
+        $this->assertStringContainsString($this->userA->id, $payload);
+    }
+
+    /** @test */
+    public function project_json_excludes_unexpected_fields(): void
+    {
+        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+
+        $response = $this->export('projects', $this->userA, $this->tenantA, [
+            'format' => 'json',
+            'project_ids' => [$projectA->id],
+        ]);
+
+        $response->assertOk();
+        $payload = $this->storedPayload($response, 'json');
+
+        $this->assertStringNotContainsString('"template_id"', $payload);
+    }
+
+    /** @test */
+    public function valid_assignee_is_preserved_in_json(): void
+    {
+        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $taskValid = CoreTask::factory()->createOne([
+            'tenant_id' => $this->tenantA->id,
+            'project_id' => $projectA->id,
+            'assignee_id' => $this->userA->id,
+        ]);
+
+        $response = $this->export('tasks', $this->userA, $this->tenantA, [
+            'format' => 'json',
+            'task_ids' => [$taskValid->id],
+        ]);
+
+        $response->assertOk();
+        $payload = $this->storedPayload($response, 'json');
+
+        $this->assertStringContainsString($this->userA->id, $payload);
     }
 }

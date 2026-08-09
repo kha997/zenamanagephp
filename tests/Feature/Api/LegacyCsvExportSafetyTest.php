@@ -1236,10 +1236,11 @@ class LegacyCsvExportSafetyTest extends TestCase
         ]);
 
         $response = $this->postCsv('/api/tasks/bulk/export', ['format' => 'excel']);
-        $response->assertOk();
+        $response->assertStatus(500)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'Export failed: Task Excel writer is not yet implemented.');
 
-        $this->assertSame(1, $response->json('data.total_tasks'));
-        $this->assertNotNull($response->json('data.filename'));
+        $this->assertNull($response->json('data.filename'));
     }
 
     /** @test */

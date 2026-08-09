@@ -26,7 +26,7 @@ final class ExportTenantProjectionService
             $tenantId
         );
 
-        $validComponentKeys = $this->sameProjectComponentKeys($tasks);
+        $validComponentKeys = $this->sameProjectComponentKeys($tasks, $tenantId);
         $validPhaseKeys = $this->sameProjectPhaseKeys($tasks);
         $validDependencyKeys = $this->sameProjectTaskKeys($tasks, 'dependencies_json', $tenantId);
         $validParentKeys = $this->sameProjectTaskKeys($tasks, 'parent_id', $tenantId);
@@ -265,7 +265,7 @@ final class ExportTenantProjectionService
      * @param SupportCollection<array-key, Task> $tasks
      * @return array<string, true> keys are "project_id|component_id"
      */
-    private function sameProjectComponentKeys(SupportCollection $tasks): array
+    private function sameProjectComponentKeys(SupportCollection $tasks, string $tenantId): array
     {
         $pairs = [];
         foreach ($tasks as $task) {
@@ -315,7 +315,6 @@ final class ExportTenantProjectionService
 
         $valid = DB::table('project_phases')
             ->whereIn('id', $phaseIds)
-            ->where('tenant_id', $tenantId)
             ->get(['id', 'project_id'])
             ->map(fn ($row) => (string) $row->project_id . '|' . (string) $row->id)
             ->all();

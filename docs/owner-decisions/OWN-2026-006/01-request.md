@@ -10,19 +10,19 @@ references:
   spec: docs/superpowers/specs/2026-08-09-own-2026-006-multi-work-gate3-digest-isolation-design.md
   plan: docs/superpowers/plans/2026-08-09-own-2026-006-multi-work-gate3-digest-isolation.md
   branch: fix/OWN-2026-006-multi-work-gate3-digest-isolation
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/254
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-09T12:00:00+07:00"
-  owner_response_reference: "ChatGPT project conversation — OWNER AUTHORIZATION — OWN-2026-006 MULTI-WORK-ITEM GATE-3 DIGEST ISOLATION, received 2026-08-09, explicitly states Gate 1 APPROVED and authorizes this governance-tooling correction."
+  recorded_at: "2026-08-09T15:24:00+07:00"
+  owner_response_reference: "ChatGPT project conversation — OWNER DECISION — OWN-2026-006 IMPLEMENTATION ACCEPTED / PREPARE FORMAL GATE 3 PACKET; the Owner explicitly re-confirmed Gate 1 APPROVED on 2026-08-09 at 15:24 +07:00."
   reconciliation_required: true
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-09T12:00:00+07:00"
-  updated_at: "2026-08-09T12:00:00+07:00"
+  updated_at: "2026-08-09T15:24:00+07:00"
 generated_by: agent
 ---
 

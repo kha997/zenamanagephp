@@ -288,10 +288,12 @@ function owner_governance_pick_active_gate3_basename(array $basenames): string
  * Computes the implementation-tree digest per packet-schema.yml's
  * implementation_tree_digest_algorithm: sha256 of the sorted list of
  * "<blob_sha> <path>" lines for the complete git tree at $sha, excluding
- * ONLY the ACTIVE docs/owner-decisions/<workId>/03-release*.md packet
+ * the ACTIVE docs/owner-decisions/<workId>/03-release*.md packet and every
+ * recognized Gate 3 packet belonging to another work item
  * (resolved via owner_governance_pick_active_gate3_basename against
  * whatever release packet basenames exist in the tree at $sha) — never the
- * whole work-ID directory, and never a superseded/older packet, which
+ * whole target work-ID directory, and never a superseded/older packet for
+ * the target work item, which
  * would otherwise leave the currently-active packet counted in the digest
  * and reintroduce the original self-reference bug for exactly the
  * supersession pattern GAP-031 demonstrates. This is what makes the
@@ -359,6 +361,10 @@ function owner_governance_compute_implementation_tree_digest(string $sha, string
     $lines = [];
     foreach ($entries as $entry) {
         if ($entry['path'] === $excludePath) {
+            continue;
+        }
+        if (preg_match('#^docs/owner-decisions/[^/]+/03-release(?:-v\d+)?\.md$#', $entry['path']) === 1
+            && ! str_starts_with($entry['path'], $workDir)) {
             continue;
         }
         $lines[] = "{$entry['blobSha']} {$entry['path']}";

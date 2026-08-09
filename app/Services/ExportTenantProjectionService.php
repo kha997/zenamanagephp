@@ -30,8 +30,8 @@ final class ExportTenantProjectionService
         $validPhaseKeys = $this->sameProjectPhaseKeys($tasks);
         $validDependencyKeys = $this->sameProjectTaskKeys($tasks, 'dependencies_json', $tenantId);
         $validParentKeys = $this->sameProjectTaskKeys($tasks, 'parent_id', $tenantId);
-        $validWorkInstanceKeys = $this->sameProjectWorkInstanceKeys($tasks);
-        $validWorkInstanceStepKeys = $this->sameProjectWorkInstanceStepKeys($tasks);
+        $validWorkInstanceKeys = $this->sameProjectWorkInstanceKeys($tasks, $tenantId);
+        $validWorkInstanceStepKeys = $this->sameProjectWorkInstanceStepKeys($tasks, $tenantId);
 
         $safeProjectScalars = $projects
             ? $this->projectScalarRows($projects, $tenantId)
@@ -47,11 +47,22 @@ final class ExportTenantProjectionService
                 fn ($id) => isset($validDependencyKeys[$projectId . '|' . (string) $id])
             ));
 
-            $watchers = $task->getAttribute('watchers') ?? [];
-            if (!is_array($watchers)) {
+            $watchers = $task->getAttribute('watchers');
+            if ($watchers === null) {
+                $watchers = [];
+            } elseif (is_string($watchers)) {
+                $decoded = json_decode($watchers, true);
+                if (is_array($decoded)) {
+                    $watchers = array_values(array_filter($decoded, fn ($id) => isset($validUserIds[(string) $id])));
+                    $watchers = json_encode($watchers) ?: '[]';
+                } else {
+                    $watchers = [];
+                }
+            } elseif (is_array($watchers)) {
+                $watchers = array_values(array_filter($watchers, fn ($id) => isset($validUserIds[(string) $id])));
+            } else {
                 $watchers = [];
             }
-            $watchers = array_values(array_filter($watchers, fn ($id) => isset($validUserIds[(string) $id])));
 
             $parentId = $task->getAttribute('parent_id');
             $validParent = $parentId !== null && $parentId !== '' ? isset($validParentKeys[$projectId . '|' . (string) $parentId]) : false;
@@ -78,16 +89,26 @@ final class ExportTenantProjectionService
                     'status' => null,
                     'priority' => null,
                     'progress' => null,
+                    'start_date' => null,
+                    'end_date' => null,
                     'budget_total' => null,
                     'budget_planned' => null,
                     'budget_actual' => null,
-                    'start_date' => null,
-                    'end_date' => null,
+                    'actual_cost' => null,
+                    'actual_hours' => null,
+                    'estimated_hours' => null,
+                    'completion_percentage' => null,
+                    'risk_level' => null,
+                    'is_template' => false,
+                    'last_activity_at' => null,
+                    'tags' => [],
+                    'settings' => [],
+                    'created_at' => null,
+                    'updated_at' => null,
+                    'deleted_at' => null,
                     'client_id' => null,
                     'pm_id' => null,
                     'created_by' => null,
-                    'tags' => [],
-                    'settings' => [],
                 ],
                 'name' => (string) $task->getAttribute('name'),
                 'title' => $task->getAttribute('title') !== null ? (string) $task->getAttribute('title') : null,
@@ -144,16 +165,26 @@ final class ExportTenantProjectionService
                 'status' => $project->getAttribute('status'),
                 'priority' => $project->getAttribute('priority'),
                 'progress' => (float) $project->getAttribute('progress'),
+                'start_date' => $project->getAttribute('start_date')?->format('Y-m-d'),
+                'end_date' => $project->getAttribute('end_date')?->format('Y-m-d'),
                 'budget_total' => (float) $project->getAttribute('budget_total'),
                 'budget_planned' => (float) ($project->getAttribute('budget_planned') ?? 0),
                 'budget_actual' => (float) ($project->getAttribute('budget_actual') ?? 0),
-                'start_date' => $project->getAttribute('start_date')?->format('Y-m-d'),
-                'end_date' => $project->getAttribute('end_date')?->format('Y-m-d'),
+                'actual_cost' => (float) ($project->getAttribute('actual_cost') ?? 0),
+                'estimated_hours' => (float) ($project->getAttribute('estimated_hours') ?? 0),
+                'actual_hours' => (float) ($project->getAttribute('actual_hours') ?? 0),
+                'completion_percentage' => (float) ($project->getAttribute('completion_percentage') ?? 0),
+                'risk_level' => $project->getAttribute('risk_level'),
+                'is_template' => (bool) $project->getAttribute('is_template'),
+                'last_activity_at' => $project->getAttribute('last_activity_at')?->format('Y-m-d H:i:s'),
+                'tags' => $project->getAttribute('tags') ?? [],
+                'settings' => $project->getAttribute('settings') ?? [],
+                'created_at' => $project->getAttribute('created_at')?->format('Y-m-d H:i:s'),
+                'updated_at' => $project->getAttribute('updated_at')?->format('Y-m-d H:i:s'),
+                'deleted_at' => $project->getAttribute('deleted_at')?->format('Y-m-d H:i:s'),
                 'client_id' => isset($validUserIds[(string) ($project->getAttribute('client_id') ?? '')]) ? (string) $project->getAttribute('client_id') : null,
                 'pm_id' => isset($validUserIds[(string) ($project->getAttribute('pm_id') ?? '')]) ? (string) $project->getAttribute('pm_id') : null,
                 'created_by' => isset($validUserIds[(string) $project->getAttribute('created_by')]) ? (string) $project->getAttribute('created_by') : null,
-                'tags' => $project->getAttribute('tags') ?? [],
-                'settings' => $project->getAttribute('settings') ?? [],
             ];
         });
 
@@ -253,6 +284,7 @@ final class ExportTenantProjectionService
 
         $valid = DB::table('components')
             ->whereIn('id', $componentIds)
+            ->where('tenant_id', $tenantId)
             ->get(['id', 'project_id'])
             ->map(fn ($row) => (string) $row->project_id . '|' . (string) $row->id)
             ->all();
@@ -283,6 +315,7 @@ final class ExportTenantProjectionService
 
         $valid = DB::table('project_phases')
             ->whereIn('id', $phaseIds)
+            ->where('tenant_id', $tenantId)
             ->get(['id', 'project_id'])
             ->map(fn ($row) => (string) $row->project_id . '|' . (string) $row->id)
             ->all();
@@ -343,16 +376,19 @@ final class ExportTenantProjectionService
 
     /**
      * @param SupportCollection<array-key, Task> $tasks
+     * @param string $tenantId
      * @return array<string, true> keys are "project_id|work_instance_id"
      */
-    private function sameProjectWorkInstanceKeys(SupportCollection $tasks): array
+    private function sameProjectWorkInstanceKeys(SupportCollection $tasks, string $tenantId): array
     {
         $pairs = [];
+        $rawIds = [];
         foreach ($tasks as $task) {
             $projectId = (string) $task->getAttribute('project_id');
             $workInstanceId = (string) $task->getAttribute('work_instance_id');
             if ($projectId !== '' && $workInstanceId !== '') {
                 $pairs[] = [$projectId, $workInstanceId];
+                $rawIds[] = $workInstanceId;
             }
         }
 
@@ -360,11 +396,14 @@ final class ExportTenantProjectionService
             return [];
         }
 
-        $workInstanceIds = array_unique(array_column($pairs, 1));
+        $rawIds = array_unique($rawIds);
 
-        $valid = DB::table('work_instances')
-            ->whereIn('id', $workInstanceIds)
-            ->get(['id', 'project_id'])
+        $valid = DB::table('work_instances as wi')
+            ->join('projects as p', 'p.id', '=', 'wi.project_id')
+            ->whereIn('wi.id', $rawIds)
+            ->where('wi.tenant_id', $tenantId)
+            ->where('p.tenant_id', $tenantId)
+            ->get(['wi.id', 'wi.project_id'])
             ->map(fn ($row) => (string) $row->project_id . '|' . (string) $row->id)
             ->all();
 
@@ -373,41 +412,39 @@ final class ExportTenantProjectionService
 
     /**
      * @param SupportCollection<array-key, Task> $tasks
+     * @param string $tenantId
      * @return array<string, true> keys are "project_id|work_instance_id|step_id"
      */
-    private function sameProjectWorkInstanceStepKeys(SupportCollection $tasks): array
+    private function sameProjectWorkInstanceStepKeys(SupportCollection $tasks, string $tenantId): array
     {
-        $pairs = [];
         $workInstanceIds = [];
+        $stepIds = [];
         foreach ($tasks as $task) {
-            $projectId = (string) $task->getAttribute('project_id');
             $workInstanceId = (string) $task->getAttribute('work_instance_id');
             $stepId = (string) $task->getAttribute('work_instance_step_id');
-            if ($projectId !== '' && $workInstanceId !== '' && $stepId !== '') {
-                $pairs[] = [$projectId, $workInstanceId, $stepId];
+            if ($workInstanceId !== '' && $stepId !== '') {
                 $workInstanceIds[] = $workInstanceId;
+                $stepIds[] = $stepId;
             }
         }
 
-        if (empty($pairs)) {
+        if (empty($stepIds)) {
             return [];
         }
 
         $workInstanceIds = array_unique($workInstanceIds);
+        $stepIds = array_unique($stepIds);
 
-        $valid = DB::table('work_instance_steps')
-            ->whereIn('work_instance_id', $workInstanceIds)
-            ->get(['id', 'work_instance_id'])
-            ->map(fn ($row) => (string) $row->work_instance_id . '|' . (string) $row->id)
+        $valid = DB::table('work_instance_steps as s')
+            ->join('work_instances as wi', 'wi.id', '=', 's.work_instance_id')
+            ->whereIn('s.id', $stepIds)
+            ->where('s.tenant_id', $tenantId)
+            ->where('wi.tenant_id', $tenantId)
+            ->whereIn('wi.id', $workInstanceIds)
+            ->get(['s.id', 'wi.project_id', 's.work_instance_id'])
+            ->map(fn ($row) => (string) $row->project_id . '|' . (string) $row->work_instance_id . '|' . (string) $row->id)
             ->all();
 
-        $result = [];
-        foreach ($pairs as [$projectId, $workInstanceId, $stepId]) {
-            if (isset($valid[$workInstanceId . '|' . $stepId])) {
-                $result[$projectId . '|' . $workInstanceId . '|' . $stepId] = true;
-            }
-        }
-
-        return $result;
+        return array_combine($valid, array_fill(0, count($valid), true)) ?: [];
     }
 }

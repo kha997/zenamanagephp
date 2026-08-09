@@ -71,12 +71,16 @@ class ExportController extends Controller
                 $filePath = $result['path'];
                 $total = $result['count'];
             } elseif ($format === 'excel') {
-                $tasks = $query->with(['project', 'assignments'])->get();
+                $tasks = $query->with([
+                    'project' => fn ($q) => $q->where('tenant_id', $trustedTenantId),
+                ])->get();
                 $safeTasks = $this->projectionService->projectTasks($tasks, $trustedTenantId);
                 $filePath = $this->generateExcel($safeTasks, $filename);
                 $total = $safeTasks->count();
             } else {
-                $tasks = $query->with(['project', 'assignments'])->get();
+                $tasks = $query->with([
+                    'project' => fn ($q) => $q->where('tenant_id', $trustedTenantId),
+                ])->get();
                 $safeTasks = $this->projectionService->projectTasks($tasks, $trustedTenantId);
                 $filePath = $this->generateJson($safeTasks, $filename);
                 $total = $safeTasks->count();
@@ -131,7 +135,7 @@ class ExportController extends Controller
                 $filePath = $result['path'];
                 $total = $result['count'];
             } else {
-                $projects = $query->with(['tasks'])->get();
+                $projects = $query->get();
                 $projectIds = $projects->pluck('id')->all();
                 $taskQuery = Task::query()
                     ->where('tenant_id', $trustedTenantId)
@@ -366,7 +370,7 @@ class ExportController extends Controller
     /** @param \Illuminate\Support\Collection<array-key, array<string, mixed>> $tasks */
     private function generateExcel($tasks, string $filename): string
     {
-        return $this->generateJson($tasks, str_replace('.xlsx', '.csv', $filename));
+        throw new \RuntimeException('Task Excel writer is not yet implemented.');
     }
 
     /** @param \Illuminate\Support\Collection<array-key, array<string, mixed>> $tasks */

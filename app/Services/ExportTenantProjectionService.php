@@ -16,7 +16,15 @@ final class ExportTenantProjectionService
      */
     public function projectTasks(SupportCollection $tasks, string $tenantId, ?SupportCollection $projects = null): SupportCollection
     {
-        $watcherIds = $tasks->pluck('watchers')->flatten()->filter();
+        $watcherIds = $tasks->flatMap(function (Task $task): array {
+            $watchers = $task->getAttribute('watchers');
+            if (is_string($watchers)) {
+                $decoded = json_decode($watchers, true);
+                return is_array($decoded) ? $decoded : [];
+            }
+
+            return is_array($watchers) ? $watchers : [];
+        })->filter();
         $validUserIds = $this->sameTenantUserIds(
             $tasks->pluck('assignee_id')
                 ->merge($tasks->pluck('assigned_to'))
@@ -33,9 +41,10 @@ final class ExportTenantProjectionService
         $validWorkInstanceKeys = $this->sameProjectWorkInstanceKeys($tasks, $tenantId);
         $validWorkInstanceStepKeys = $this->sameProjectWorkInstanceStepKeys($tasks, $tenantId);
 
-        $safeProjectScalars = $projects
+        $safeProjectScalars = ($projects
             ? $this->projectScalarRows($projects, $tenantId)
-            : $this->projectScalarRows($tasks->pluck('project'), $tenantId);
+            : $this->projectScalarRows($tasks->pluck('project'), $tenantId))
+            ->keyBy('id');
 
         /** @var SupportCollection<array-key, array<string, mixed>> $result */
         $result = $tasks->map(function (Task $task) use ($tenantId, $validUserIds, $validComponentKeys, $validPhaseKeys, $validDependencyKeys, $validParentKeys, $validWorkInstanceKeys, $validWorkInstanceStepKeys, $safeProjectScalars): array {
@@ -48,19 +57,17 @@ final class ExportTenantProjectionService
             ));
 
             $watchers = $task->getAttribute('watchers');
-            if ($watchers === null) {
-                $watchers = [];
-            } elseif (is_string($watchers)) {
+            if (is_string($watchers)) {
                 $decoded = json_decode($watchers, true);
                 if (is_array($decoded)) {
                     $watchers = array_values(array_filter($decoded, fn ($id) => isset($validUserIds[(string) $id])));
                     $watchers = json_encode($watchers) ?: '[]';
                 } else {
-                    $watchers = [];
+                    $watchers = '[]';
                 }
             } elseif (is_array($watchers)) {
                 $watchers = array_values(array_filter($watchers, fn ($id) => isset($validUserIds[(string) $id])));
-            } else {
+            } elseif ($watchers !== null) {
                 $watchers = [];
             }
 

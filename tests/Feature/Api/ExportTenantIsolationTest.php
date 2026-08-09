@@ -156,9 +156,10 @@ class ExportTenantIsolationTest extends TestCase
             'tenant_id' => $this->tenantA->id,
             'project_id' => $projectA->id,
         ]);
-        CoreTask::factory()->createOne([
+        $taskB = CoreTask::factory()->createOne([
             'tenant_id' => $this->tenantB->id,
             'project_id' => $projectB->id,
+            'name' => 'foreign-no-ids-task',
         ]);
 
         $response = $this->export('tasks', $this->userA, $this->tenantA, [
@@ -169,13 +170,14 @@ class ExportTenantIsolationTest extends TestCase
         $payload = $this->storedPayload($response, 'csv');
 
         $this->assertStringContainsString($taskA->id, $payload);
+        $this->assertForeignIdsAbsent($payload, $taskB->id, 'foreign-no-ids-task');
     }
 
     /** @test */
     public function project_export_no_ids_returns_all_tenant_projects(): void
     {
         $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
-        CoreProject::factory()->createOne(['tenant_id' => $this->tenantB->id]);
+        $projectB = CoreProject::factory()->createOne(['tenant_id' => $this->tenantB->id, 'name' => 'foreign-no-ids-project']);
 
         $response = $this->export('projects', $this->userA, $this->tenantA, [
             'format' => 'csv',
@@ -185,6 +187,23 @@ class ExportTenantIsolationTest extends TestCase
         $payload = $this->storedPayload($response, 'csv');
 
         $this->assertStringContainsString($projectA->name, $payload);
+        $this->assertForeignIdsAbsent($payload, $projectB->id, 'foreign-no-ids-project');
+    }
+
+    /** @test */
+    public function foreign_project_filter_and_foreign_only_project_ids_return_empty(): void
+    {
+        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $projectB = CoreProject::factory()->createOne(['tenant_id' => $this->tenantB->id]);
+        CoreTask::factory()->createOne(['tenant_id' => $this->tenantA->id, 'project_id' => $projectA->id]);
+
+        $this->export('tasks', $this->userA, $this->tenantA, [
+            'format' => 'csv', 'filters' => ['project_id' => $projectB->id],
+        ])->assertOk()->assertJsonPath('data.total_tasks', 0);
+
+        $this->export('projects', $this->userA, $this->tenantA, [
+            'format' => 'csv', 'project_ids' => [$projectB->id],
+        ])->assertOk()->assertJsonPath('data.total_projects', 0);
     }
 
     /** @test */
@@ -255,11 +274,19 @@ class ExportTenantIsolationTest extends TestCase
             'tenant_id' => $this->tenantA->id,
             'project_id' => $projectB->id,
         ]);
+        $staleProjectId = (string) \Illuminate\Support\Str::ulid();
+        $staleTask = CoreTask::factory()->createOne([
+            'tenant_id' => $this->tenantA->id,
+            'project_id' => CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id])->id,
+        ]);
+        DB::statement('PRAGMA defer_foreign_keys = ON');
+        DB::table('tasks')->where('id', $staleTask->id)->update(['project_id' => $staleProjectId]);
+        $this->assertSame($staleProjectId, (string) CoreTask::query()->findOrFail($staleTask->id)->project_id);
 
-        foreach (['csv', 'json'] as $format) {
+        foreach (['csv', 'json', 'excel'] as $format) {
             $response = $this->export('tasks', $this->userA, $this->tenantA, [
                 'format' => $format,
-                'task_ids' => [$taskA->id],
+                'task_ids' => [$taskA->id, $staleTask->id],
             ]);
 
             $response->assertOk();
@@ -287,6 +314,11 @@ class ExportTenantIsolationTest extends TestCase
 
         $this->assertStringContainsString('Unassigned', $payload);
         $this->assertForeignIdsAbsent($payload, $this->userB->id);
+
+        $json = json_decode($this->storedPayload($this->export('tasks', $this->userA, $this->tenantA, [
+            'format' => 'json', 'task_ids' => [$taskA->id],
+        ]), 'json'), true, flags: JSON_THROW_ON_ERROR);
+        $this->assertNull($json['tasks'][0]['assignee_id']);
     }
 
     /** @test */
@@ -355,15 +387,20 @@ class ExportTenantIsolationTest extends TestCase
     public function foreign_dependencies_are_filtered_in_json(): void
     {
         $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $projectA2 = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $valid = CoreTask::factory()->createOne(['tenant_id' => $this->tenantA->id, 'project_id' => $projectA->id]);
+        $crossProject = CoreTask::factory()->createOne(['tenant_id' => $this->tenantA->id, 'project_id' => $projectA2->id]);
         $taskB = CoreTask::factory()->createOne([
             'tenant_id' => $this->tenantB->id,
             'project_id' => CoreProject::factory()->createOne(['tenant_id' => $this->tenantB->id])->id,
         ]);
+        $stale = (string) \Illuminate\Support\Str::ulid();
         $taskA = CoreTask::factory()->createOne([
             'tenant_id' => $this->tenantA->id,
             'project_id' => $projectA->id,
-            'dependencies_json' => [$taskB->id],
+            'dependencies_json' => [$valid->id, $crossProject->id, $taskB->id, $stale],
         ]);
+        $this->assertSame([$valid->id, $crossProject->id, $taskB->id, $stale], CoreTask::query()->findOrFail($taskA->id)->dependencies_json);
 
         $response = $this->export('tasks', $this->userA, $this->tenantA, [
             'format' => 'json',
@@ -372,8 +409,8 @@ class ExportTenantIsolationTest extends TestCase
 
         $response->assertOk();
         $payload = $this->storedPayload($response, 'json');
-
-        $this->assertStringNotContainsString($taskB->id, $payload);
+        $dependencies = json_decode($payload, true, flags: JSON_THROW_ON_ERROR)['tasks'][0]['dependencies_json'];
+        $this->assertSame([(string) $valid->id], $dependencies);
     }
 
     /** @test */
@@ -561,7 +598,12 @@ class ExportTenantIsolationTest extends TestCase
     /** @test */
     public function task_json_contains_safe_project_projection(): void
     {
-        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $projectA = CoreProject::factory()->createOne([
+            'tenant_id' => $this->tenantA->id,
+            'code' => 'PROJECT-SAFE-LOOKUP',
+            'name' => 'Distinctive Project Name',
+            'description' => 'Distinctive nested project description',
+        ]);
         $taskA = CoreTask::factory()->createOne([
             'tenant_id' => $this->tenantA->id,
             'project_id' => $projectA->id,
@@ -574,12 +616,54 @@ class ExportTenantIsolationTest extends TestCase
 
         $response->assertOk();
         $payload = $this->storedPayload($response, 'json');
+        $project = json_decode($payload, true, flags: JSON_THROW_ON_ERROR)['tasks'][0]['project'];
 
-        $this->assertStringContainsString('"project"', $payload);
-        $this->assertStringContainsString('"id"', $payload);
-        $this->assertStringContainsString('"name"', $payload);
+        $this->assertSame((string) $projectA->id, $project['id']);
+        $this->assertSame('PROJECT-SAFE-LOOKUP', $project['code']);
+        $this->assertSame('Distinctive Project Name', $project['name']);
+        $this->assertSame('Distinctive nested project description', $project['description']);
         $this->assertStringNotContainsString('"tasks_count"', $payload);
         $this->assertStringNotContainsString('"completed_tasks_count"', $payload);
+
+        $csv = $this->storedPayload($this->export('tasks', $this->userA, $this->tenantA, [
+            'format' => 'csv', 'task_ids' => [$taskA->id],
+        ]), 'csv');
+        $this->assertStringContainsString('Distinctive Project Name', $csv);
+        $this->assertStringNotContainsString('N/A', $csv);
+    }
+
+    /** @test */
+    public function watcher_candidates_are_sanitized_and_preserve_string_and_array_representations(): void
+    {
+        $project = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $stale = (string) \Illuminate\Support\Str::ulid();
+        $stringTask = CoreTask::factory()->createOne(['tenant_id' => $this->tenantA->id, 'project_id' => $project->id]);
+        DB::table('tasks')->where('id', $stringTask->id)->update([
+            'watchers' => json_encode([$this->userA->id, $this->userB->id, $stale], JSON_THROW_ON_ERROR),
+        ]);
+        $persistedString = CoreTask::query()->with('project')->findOrFail($stringTask->id);
+        $this->assertIsString($persistedString->getAttribute('watchers'));
+        $this->assertSame(
+            [(string) $this->userA->id, (string) $this->userB->id, $stale],
+            json_decode($persistedString->getAttribute('watchers'), true, flags: JSON_THROW_ON_ERROR)
+        );
+
+        $arrayTask = CoreTask::query()->with('project')->findOrFail($stringTask->id);
+        $arrayTask->setAttribute('watchers', [$this->userA->id, $this->userB->id, $stale]);
+        $this->assertIsArray($arrayTask->getAttribute('watchers'));
+
+        $service = app(ExportTenantProjectionService::class);
+        $stringRow = $service->projectTasks(collect([$persistedString]), (string) $this->tenantA->id)->first();
+        $arrayRow = $service->projectTasks(collect([$arrayTask]), (string) $this->tenantA->id)->first();
+
+        $this->assertIsString($stringRow['watchers']);
+        $this->assertSame([(string) $this->userA->id], json_decode($stringRow['watchers'], true, flags: JSON_THROW_ON_ERROR));
+        $this->assertIsArray($arrayRow['watchers']);
+        $this->assertSame([(string) $this->userA->id], $arrayRow['watchers']);
+
+        $arrayTask->setAttribute('watchers', '{malformed-json');
+        $malformed = $service->projectTasks(collect([$arrayTask]), (string) $this->tenantA->id)->first();
+        $this->assertSame('[]', $malformed['watchers']);
     }
 
     /** @test */
@@ -606,12 +690,12 @@ class ExportTenantIsolationTest extends TestCase
     /** @test */
     public function project_optional_foreign_users_become_null_without_excluding_project(): void
     {
-        $projectA = CoreProject::factory()->createOne([
-            'tenant_id' => $this->tenantA->id,
-            'client_id' => $this->userB->id,
-            'pm_id' => $this->userB->id,
-            'created_by' => $this->userB->id,
-        ]);
+        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $projectA->forceFill(['client_id' => $this->userB->id, 'pm_id' => $this->userB->id, 'created_by' => $this->userB->id])->save();
+        $persisted = CoreProject::query()->findOrFail($projectA->id);
+        $this->assertSame((string) $this->userB->id, (string) $persisted->client_id);
+        $this->assertSame((string) $this->userB->id, (string) $persisted->pm_id);
+        $this->assertSame((string) $this->userB->id, (string) $persisted->created_by);
 
         $response = $this->export('projects', $this->userA, $this->tenantA, [
             'format' => 'json',
@@ -620,9 +704,11 @@ class ExportTenantIsolationTest extends TestCase
 
         $response->assertOk();
         $payload = $this->storedPayload($response, 'json');
-
-        $this->assertStringContainsString($projectA->name, $payload);
-        $this->assertStringNotContainsString($this->userB->id, $payload);
+        $project = json_decode($payload, true, flags: JSON_THROW_ON_ERROR)['projects'][0];
+        $this->assertSame((string) $projectA->id, $project['id']);
+        $this->assertNull($project['client_id']);
+        $this->assertNull($project['pm_id']);
+        $this->assertNull($project['created_by']);
     }
 
     /** @test */
@@ -674,8 +760,9 @@ class ExportTenantIsolationTest extends TestCase
             'X-Tenant-ID' => (string) $this->tenantA->id,
         ])->postJson('/api/projects/bulk/export', [
             'format' => 'csv',
-            'project_ids' => [$projectB->id],
-        ])->assertOk()->assertJsonPath('data.total_projects', 0);
+            'tenant_id' => $this->tenantB->id,
+            'project_ids' => [$projectA->id, $projectB->id],
+        ])->assertOk()->assertJsonPath('data.total_projects', 1);
     }
 
     /** @test */
@@ -720,8 +807,10 @@ class ExportTenantIsolationTest extends TestCase
 
         $response->assertOk();
         $payload = $this->storedPayload($response, 'json');
-
-        $this->assertStringContainsString($this->userA->id, $payload);
+        $project = json_decode($payload, true, flags: JSON_THROW_ON_ERROR)['projects'][0];
+        $this->assertSame((string) $this->userA->id, $project['client_id']);
+        $this->assertSame((string) $this->userA->id, $project['pm_id']);
+        $this->assertSame((string) $this->userA->id, $project['created_by']);
     }
 
     /** @test */
@@ -747,8 +836,11 @@ class ExportTenantIsolationTest extends TestCase
         $taskValid = CoreTask::factory()->createOne([
             'tenant_id' => $this->tenantA->id,
             'project_id' => $projectA->id,
-            'assignee_id' => $this->userA->id,
         ]);
+        DB::table('tasks')
+            ->where('id', $taskValid->id)
+            ->update(['assignee_id' => $this->userA->id]);
+        $this->assertSame((string) $this->userA->id, (string) CoreTask::query()->findOrFail($taskValid->id)->assignee_id);
 
         $response = $this->export('tasks', $this->userA, $this->tenantA, [
             'format' => 'json',
@@ -759,6 +851,10 @@ class ExportTenantIsolationTest extends TestCase
         $payload = $this->storedPayload($response, 'json');
 
         $this->assertStringContainsString($this->userA->id, $payload);
+        $csv = $this->storedPayload($this->export('tasks', $this->userA, $this->tenantA, [
+            'format' => 'csv', 'task_ids' => [$taskValid->id],
+        ]), 'csv');
+        $this->assertStringContainsString('User ' . $this->userA->id, $csv);
     }
 
     /** @test */
@@ -910,10 +1006,131 @@ class ExportTenantIsolationTest extends TestCase
         $this->assertSame((string) $this->tenantA->id, $row['project']['tenant_id']);
         $this->assertStringNotContainsString((string) $this->userB->id, json_encode($row, JSON_THROW_ON_ERROR));
 
-        $method = new \ReflectionMethod(\App\Http\Controllers\Api\ExportController::class, 'generateExcel');
-        $method->setAccessible(true);
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Task Excel writer is not yet implemented.');
-        $method->invoke(app(\App\Http\Controllers\Api\ExportController::class), $safeRows, 'tasks.xlsx');
+    }
+
+    /** @test */
+    public function task_user_and_parent_references_apply_positive_foreign_cross_project_and_stale_controls(): void
+    {
+        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $projectA2 = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $validParent = CoreTask::factory()->createOne(['tenant_id' => $this->tenantA->id, 'project_id' => $projectA->id]);
+        $crossParent = CoreTask::factory()->createOne(['tenant_id' => $this->tenantA->id, 'project_id' => $projectA2->id]);
+        $foreignParent = CoreTask::factory()->createOne([
+            'tenant_id' => $this->tenantB->id,
+            'project_id' => CoreProject::factory()->createOne(['tenant_id' => $this->tenantB->id])->id,
+        ]);
+        $stale = (string) \Illuminate\Support\Str::ulid();
+
+        $makeSource = function (array $references) use ($projectA): CoreTask {
+            $created = CoreTask::factory()->createOne(['tenant_id' => $this->tenantA->id, 'project_id' => $projectA->id]);
+            $task = CoreTask::query()->with('project')->findOrFail($created->id);
+            $task->setRawAttributes(array_merge($task->getAttributes(), $references), true);
+            return $task;
+        };
+        $valid = $makeSource([
+            'assigned_to' => $this->userA->id, 'created_by' => $this->userA->id,
+            'updated_by' => $this->userA->id, 'parent_id' => $validParent->id,
+        ]);
+        $foreign = $makeSource([
+            'assigned_to' => $this->userB->id, 'created_by' => $this->userB->id,
+            'updated_by' => $stale, 'parent_id' => $foreignParent->id,
+        ]);
+        $cross = $makeSource(['parent_id' => $crossParent->id]);
+        $staleSource = $makeSource(['parent_id' => $stale]);
+        $this->assertSame((string) $this->userA->id, (string) $valid->getAttribute('assigned_to'));
+        $this->assertSame((string) $this->userA->id, (string) $valid->getAttribute('created_by'));
+        $this->assertSame((string) $this->userA->id, (string) $valid->getAttribute('updated_by'));
+        $this->assertSame((string) $validParent->id, (string) $valid->getAttribute('parent_id'));
+        $this->assertSame((string) $this->userB->id, (string) $foreign->getAttribute('assigned_to'));
+        $this->assertSame((string) $this->userB->id, (string) $foreign->getAttribute('created_by'));
+        $this->assertSame($stale, (string) $foreign->getAttribute('updated_by'));
+        $this->assertSame((string) $foreignParent->id, (string) $foreign->getAttribute('parent_id'));
+        $this->assertSame((string) $crossParent->id, (string) $cross->getAttribute('parent_id'));
+        $this->assertSame($stale, (string) $staleSource->getAttribute('parent_id'));
+
+        $rows = app(ExportTenantProjectionService::class)
+            ->projectTasks(collect([$valid, $foreign, $cross, $staleSource]), (string) $this->tenantA->id)
+            ->keyBy('id');
+        $this->assertSame((string) $this->userA->id, $rows[$valid->id]['assigned_to']);
+        $this->assertSame((string) $this->userA->id, $rows[$valid->id]['created_by']);
+        $this->assertSame((string) $this->userA->id, $rows[$valid->id]['updated_by']);
+        $this->assertSame((string) $validParent->id, $rows[$valid->id]['parent_id']);
+        $this->assertNull($rows[$foreign->id]['assigned_to']);
+        $this->assertNull($rows[$foreign->id]['created_by']);
+        $this->assertNull($rows[$foreign->id]['updated_by']);
+        $this->assertNull($rows[$foreign->id]['parent_id']);
+        $this->assertNull($rows[$cross->id]['parent_id']);
+        $this->assertNull($rows[$staleSource->id]['parent_id']);
+    }
+
+    /** @test */
+    public function work_instance_and_step_references_require_tenant_project_and_exact_instance_chain(): void
+    {
+        $projectA = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $projectA2 = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        $validInstance = WorkInstance::factory()->createOne(['tenant_id' => $this->tenantA->id, 'project_id' => $projectA->id]);
+        $otherInstance = WorkInstance::factory()->createOne(['tenant_id' => $this->tenantA->id, 'project_id' => $projectA->id]);
+        $wrongProject = WorkInstance::factory()->createOne(['tenant_id' => $this->tenantA->id, 'project_id' => $projectA2->id]);
+        $foreignInstance = WorkInstance::factory()->createOne(['tenant_id' => $this->tenantB->id]);
+        $validStep = WorkInstanceStep::factory()->createOne(['tenant_id' => $this->tenantA->id, 'work_instance_id' => $validInstance->id]);
+        $otherStep = WorkInstanceStep::factory()->createOne(['tenant_id' => $this->tenantA->id, 'work_instance_id' => $otherInstance->id]);
+        $stale = (string) \Illuminate\Support\Str::ulid();
+
+        $makeSource = function (string $instanceId, string $stepId) use ($projectA): CoreTask {
+            $created = CoreTask::factory()->createOne(['tenant_id' => $this->tenantA->id, 'project_id' => $projectA->id]);
+            $task = CoreTask::query()->with('project')->findOrFail($created->id);
+            $task->setRawAttributes(array_merge($task->getAttributes(), ['work_instance_id' => $instanceId, 'work_instance_step_id' => $stepId]), true);
+            return $task;
+        };
+        $valid = $makeSource((string) $validInstance->id, (string) $validStep->id);
+        $wrongProjectTask = $makeSource((string) $wrongProject->id, $stale);
+        $foreignTask = $makeSource((string) $foreignInstance->id, $stale);
+        $wrongChain = $makeSource((string) $validInstance->id, (string) $otherStep->id);
+        $staleTask = $makeSource($stale, $stale);
+
+        $this->assertSame((string) $validInstance->id, (string) $valid->getAttribute('work_instance_id'));
+        $this->assertSame((string) $validStep->id, (string) $valid->getAttribute('work_instance_step_id'));
+        $this->assertSame((string) $wrongProject->id, (string) $wrongProjectTask->getAttribute('work_instance_id'));
+        $this->assertSame((string) $foreignInstance->id, (string) $foreignTask->getAttribute('work_instance_id'));
+        $this->assertSame((string) $otherStep->id, (string) $wrongChain->getAttribute('work_instance_step_id'));
+        $this->assertSame($stale, (string) $staleTask->getAttribute('work_instance_id'));
+        $this->assertSame($stale, (string) $staleTask->getAttribute('work_instance_step_id'));
+
+        $rows = app(ExportTenantProjectionService::class)
+            ->projectTasks(collect([$valid, $wrongProjectTask, $foreignTask, $wrongChain, $staleTask]), (string) $this->tenantA->id)
+            ->keyBy('id');
+        $this->assertSame((string) $validInstance->id, $rows[$valid->id]['work_instance_id']);
+        $this->assertSame((string) $validStep->id, $rows[$valid->id]['work_instance_step_id']);
+        foreach ([$wrongProjectTask, $foreignTask, $staleTask] as $invalid) {
+            $this->assertNull($rows[$invalid->id]['work_instance_id']);
+            $this->assertNull($rows[$invalid->id]['work_instance_step_id']);
+        }
+        $this->assertSame((string) $validInstance->id, $rows[$wrongChain->id]['work_instance_id']);
+        $this->assertNull($rows[$wrongChain->id]['work_instance_step_id']);
+    }
+
+    /** @test */
+    public function project_excel_tabular_boundary_uses_safe_arrays_counts_and_no_hydrated_tasks(): void
+    {
+        $project = CoreProject::factory()->createOne(['tenant_id' => $this->tenantA->id]);
+        CoreTask::factory()->createOne(['tenant_id' => $this->tenantA->id, 'project_id' => $project->id, 'status' => 'completed']);
+        $foreign = CoreTask::factory()->createOne([
+            'tenant_id' => $this->tenantB->id,
+            'project_id' => CoreProject::factory()->createOne(['tenant_id' => $this->tenantB->id])->id,
+            'status' => 'completed',
+        ]);
+        $foreign->forceFill(['project_id' => $project->id])->save();
+        $bounded = CoreProject::query()->whereKey($project->id)->withCount([
+            'tasks as tasks_count' => fn ($q) => $q->where('tenant_id', $this->tenantA->id),
+            'tasks as completed_tasks_count' => fn ($q) => $q->where('tenant_id', $this->tenantA->id)->where('status', 'completed'),
+        ])->get();
+        $rows = app(ExportTenantProjectionService::class)->projectTabularRows($bounded, (string) $this->tenantA->id);
+        $row = $rows->first();
+        $this->assertIsArray($row);
+        $this->assertNotInstanceOf(CoreProject::class, $row);
+        $this->assertSame(1, $row['tasks_count']);
+        $this->assertSame(1, $row['completed_tasks_count']);
+        $this->assertArrayNotHasKey('tasks', $row);
+        $this->assertFalse($bounded->first()->relationLoaded('tasks'));
     }
 }

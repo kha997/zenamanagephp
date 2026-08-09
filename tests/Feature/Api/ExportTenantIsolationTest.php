@@ -160,8 +160,16 @@ class ExportTenantIsolationTest extends TestCase
      */
     private function export(string $resource, User $user, Tenant $tenant, array $payload = []): \Illuminate\Testing\TestResponse
     {
+        $route = match ($resource) {
+            'tasks' => '/api/tasks/bulk/export',
+            'projects' => '/api/projects/bulk/export',
+            default => throw new \InvalidArgumentException(
+                "Unsupported export resource: {$resource}"
+            ),
+        };
+
         return $this->withHeaders($this->actingAsExportUser($tenant, $user))
-            ->postJson("/api/{$resource}/bulk/export", $payload);
+            ->postJson($route, $payload);
     }
 
     /** @param \Illuminate\Testing\TestResponse<\Symfony\Component\HttpFoundation\Response> $response */

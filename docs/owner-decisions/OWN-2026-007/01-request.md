@@ -7,10 +7,10 @@ owner_decision:
   authority: human_owner
 decision_requested: approve_or_proceed
 references:
-  spec: null
+  spec: docs/owner-decisions/OWN-2026-007/00-gap-010c-reproduction-evidence.md
   plan: null
   branch: docs/OWN-2026-007-post-p1-gap-register-reconciliation
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/255
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-10T08:33:51+07:00"
-  updated_at: "2026-08-10T08:33:51+07:00"
+  updated_at: "2026-08-10T08:45:39+07:00"
 generated_by: agent
 ---
 
@@ -47,17 +47,17 @@ Trên `main` hiện tại, GAP-010b và GAP-034 đã qua Gate 3, có triển kha
 - **GAP-010b Gate 3 approved:** `docs/owner-decisions/GAP-010b/03-release.md` ghi `gate_status: approved`, `owner_decision.value: approved` (2026-08-09). Triển khai merge trong PR #253.
 - **GAP-034 Gate 3 approved:** `docs/owner-decisions/GAP-034/03-release.md` ghi `gate_status: approved`, `owner_decision.value: approved` (2026-08-09). Cùng PR #253 nguyên tử.
 - **PR #253 merged:** `origin/main` hiện tại tại commit `1325c0e6 Merge PR #253: combined export release`.
-- **GAP-010c reproduction:** Tái hiện trên `main` hiện tại cho kết quả NOT REPRODUCED. 8 trường hợp kiểm tra, 0 ca lệch ngày. Trang `/schedule` không có chuyển đổi múi giờ phía client. Bằng chứng lịch sử về date-only Gantt normalization tồn tại trong commit `63afc21f`. Hợp đồng schema `tasks.start_date/end_date` là DATE (theo migration). Runtime kiểm tra disposable đã xem xét; không claim gì về production DB schema thực tế nếu chưa query trực tiếp.
-- **GAP-010 parent:** Cả 3 dòng con (GAP-010a/b/c) đã RESOLVED → nên đề xuất chuyển GAP-010 sang `RESOLVED (verified)`.
+- **GAP-010c reproduction:** Bằng chứng kỹ thuật chi tiết được lưu trong `docs/owner-decisions/OWN-2026-007/00-gap-010c-reproduction-evidence.md`. Tóm tắt: baseline `1325c0e6`, 8 ca kiểm tra, `SHIFTED=0`, không có chuyển đổi múi giờ phía client trên `/schedule`. Commit `63afc21f` ghi nhận remediation date-only Gantt normalization lịch sử. Hợp đồng schema `tasks.start_date/end_date` là `DATE` theo migration. Runtime kiểm tra disposable đã xem xét; không claim gì về production DB schema thực tế nếu chưa query trực tiếp.
+- **GAP-010 parent:** GAP-010a và GAP-010b đã RESOLVED. GAP-010c có kết quả khác (không phải RESOLVED). Gate 2 phải xác định trạng thái cha phù hợp dựa trên trạng thái cuối của 3 dòng con.
 
 ## Tác động nếu không xử lý
 Agent/owner có thể chọn sai hàng đợi, lặp lại công việc kỹ thuật đã hoàn thành, và mất niềm tin vào SSOT vận hành.
 
 ## Phạm vi đề xuất
 Cập nhật `OPERATIONAL_GAP_REGISTER.md` để phản ánh đúng trạng thái đã xác minh của 4 hàng:
-- GAP-010: `RESOLVED (verified)` (vì 3 dòng con đã đóng), giữ lịch sử split.
+- GAP-010: trạng thái cuối do Gate 2 xác định dựa trên 3 dòng con (GAP-010a RESOLVED, GAP-010b RESOLVED, GAP-010c NOT REPRODUCED/closed).
 - GAP-010b: `RESOLVED (verified)`.
-- GAP-010c: `RESOLVED (verified 2026-08-10)`, ghi rõ kết quả NOT REPRODUCED và lịch sử reproduction.
+- GAP-010c: đóng lại với trạng thái mô tả chính xác kết quả NOT REPRODUCED — không phải `RESOLVED (verified)` vì không có lỗi đã xác nhận và sửa chữa. Gate 2 phải định nghĩa taxonomy chính xác (ví dụ: `CLOSED — NOT REPRODUCED (verified)` hoặc tương đương).
 - GAP-034: `RESOLVED (verified)`.
 
 Toàn bộ chỉ là thao tác tài liệu — không thay đổi hành vi ứng dụng, không triển khai gap nào.
@@ -74,7 +74,7 @@ Toàn bộ chỉ là thao tác tài liệu — không thay đổi hành vi ứng
 - dual Task-model cast cleanup.
 
 ## Đề xuất
-Phê duyệt để tiến hành thiết kế chi tiết (Gate 2) cho việc cập nhật đúng trạng thái trong `OPERATIONAL_GAP_REGISTER.md`.
+Phê duyệt để tiến hành thiết kế chi tiết (Gate 2) cho việc cập nhật đúng trạng thái trong `OPERATIONAL_GAP_REGISTER.md`, với taxonomy mới cho GAP-010c và trạng thái cha GAP-010 phải phản ánh đúng 3 trạng thái con khác nhau.
 
 ## Decision Needed
 Owner cần chọn một trong: **Phê duyệt để tiến hành thiết kế (Gate 2)** / **Yêu cầu thêm thông tin** / **Từ chối** / **Hoãn lại**.

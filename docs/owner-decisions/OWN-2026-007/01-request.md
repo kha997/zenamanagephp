@@ -1,11 +1,11 @@
 ---
 work_id: OWN-2026-007
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_proceed
+decision_requested: null
 references:
   spec: docs/audits/2026-08-10-gap-010c-reproduction-evidence.md
   plan: null
@@ -14,17 +14,21 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-08-10T10:11:24+07:00"
+  owner_response_reference: "ChatGPT project conversation — explicit Owner Gate 1 approval for OWN-2026-007 on 2026-08-10"
   reconciliation_required: true
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-10T08:33:51+07:00"
-  updated_at: "2026-08-10T08:45:39+07:00"
+  updated_at: "2026-08-10T10:11:24+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner phê duyệt OWN-2026-007 Gate 1 lúc `2026-08-10T09:56:05+07:00`, ủy quyền chuẩn bị thiết kế chi tiết Gate 2 cho việc đối chiếu lại Sổ đăng ký Khoảng cách Vận hành sau P1. Quyết định này chỉ cho phép thiết kế Gate 2; không cho phép cập nhật `OPERATIONAL_GAP_REGISTER.md`, implementation, Gate 3, merge hay release.
 
 ## Owner Summary
 `OPERATIONAL_GAP_REGISTER.md` hiện ghi 4 hàng đã lỗi thời so với trạng thái đã xác minh trên `main`: GAP-010, GAP-010b, GAP-010c và GAP-034. Cần cập nhật lại cho đúng — chỉ tài liệu, không đổi mã nguồn.

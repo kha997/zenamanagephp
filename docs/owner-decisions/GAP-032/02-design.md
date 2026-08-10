@@ -130,13 +130,15 @@ The cost is slightly more complex implementation. The benefit is permanent busin
 
 **Two independent dimensions:**
 
-- **Dimension 1 — Lifecycle:** `draft` ↔ `in-review` ↔ `published` → `archived` (with backward paths for revision).
+- **Dimension 1 — Lifecycle:** `draft` ↔ `in-review` ↔ `published` → `archived`.
   - `in-review` means informal/editorial/document review, NOT formal approval.
-- **Dimension 2 — Approval:** `not-submitted` → `awaiting-approval` → `approved` | `rejected` (with reopen/resubmit cycles).
+- **Dimension 2 — Approval:** `not-submitted` → `awaiting-approval` → `approved` | `rejected`.
 
 A document's overall status is the combination of its position in both dimensions.
 
 **Not in Lifecycle:** `submitted`, `submitted-for-approval`, `awaiting-approval`, `approved`, `rejected`. These belong to Approval only.
+
+**Archived reactivation:** Archived documents may be explicitly reactivated for revision through the `Reactivate for revision` action defined in §7.10. There is no automatic reactivation.
 
 ### 7.2 Initial state
 
@@ -148,28 +150,38 @@ The canonical business concept is **`awaiting-approval`** in the approval dimens
 
 Under the compatibility contract, the legacy stored value `submitted` may remain in legacy `status` output during the compatibility window even though the canonical Approval concept is `awaiting-approval`.
 
+**Canonical invariant:** Approval transitions may occur ONLY through explicit workflow actions. Generic lifecycle/status editing cannot enter, approve, reject, or otherwise mutate the Approval dimension.
+
+Therefore generic status input must NOT use these values to perform approval transitions: `submitted`, `awaiting-approval`, `approved`, `rejected`, `pending`.
+
+In particular, `submitted` is a **legacy compatibility OUTPUT**, not a generic status input that may trigger `not-submitted` → `awaiting-approval`. Formal submission remains an explicit Submit action. Likewise `approved` and `rejected` remain explicit decision actions only.
+
 ### 7.4 Legacy value classifications
 
 | Value | Classification |
 |---|---|
-| `active` | Legacy lifecycle compatibility value; canonical mapping candidate: `draft` |
-| `review` | Legacy lifecycle compatibility value; canonical mapping candidate: `in-review` |
+| `active` | Legacy lifecycle compatibility input; canonical mapping: `draft` |
+| `review` | Legacy lifecycle compatibility input; canonical mapping: `in-review` |
 | `published` | Recognized lifecycle concept; may also exist as legacy persisted input/value |
 | `draft` | Valid current business concept; canonical entry state in the lifecycle dimension |
-| `submitted` | Legacy approval compatibility value; canonical approval concept: `awaiting-approval` |
-| `approved` | Valid current business concept; exists only in the Approval dimension |
-| `rejected` | Valid current business concept; exists only in the Approval dimension |
+| `submitted` | Legacy approval compatibility output only; NOT a generic status input. Canonical approval concept: `awaiting-approval` |
+| `awaiting-approval` | Approval dimension value; NOT a generic lifecycle/status input |
+| `approved` | Approval dimension value; NOT a generic lifecycle/status input |
+| `rejected` | Approval dimension value; NOT a generic lifecycle/status input |
 | `pending` | Obsolete UI/filter alias; not a canonical persisted business state |
 
 **Business treatment:**
-- `active`, `review`: normalize to the nearest canonical lifecycle state on entry to workflow.
+- `active`, `review`: These aliases may be supported during compatibility because they only affect Lifecycle. They normalize to the nearest canonical lifecycle state only through an explicit lifecycle/status/workflow action.
 - `published`: recognized as a legitimate lifecycle state.
-- `submitted`: remains available as a legacy compatibility output; canonical Approval concept is `awaiting-approval`.
-- `pending`: not accepted as input; maps to `awaiting-approval` in display logic only.
+- `submitted`: legacy compatibility output only. It is NOT a generic status input and must never trigger `not-submitted` → `awaiting-approval`. Canonical Approval concept is `awaiting-approval`.
+- `awaiting-approval`, `approved`, `rejected`: These belong to the Approval dimension only. They are controlled by explicit Approval actions (Submit, Approve, Reject). Generic status editing must never mutate the Approval dimension.
+- `pending`: not accepted as a generic status input. It maps to `awaiting-approval` in display/filter logic only.
+
+`pending` must never be interpreted as an approval transition through generic status editing. Whether legacy clients currently send `pending` is UNKNOWN and must be checked before an intentionally breaking rejection policy is released. The UI/filter alias can map to the canonical concept for reads/filtering without becoming a persisted business state.
 
 ### 7.5 Entering approval from a legacy state
 
-A document at `active` or `review` must first be normalized to a canonical lifecycle state (`draft` or `in-review`) through an explicit user or system action. There is no automatic normalization that bypasses user intent.
+A document at `active` or `review` must first be normalized to a canonical lifecycle state (`draft` or `in-review`) through an explicit user or system action. There is no automatic normalization that bypasses user intent, and generic status editing cannot perform this transition. A document currently holding a legacy lifecycle value may enter the approval workflow ONLY through an explicit Submit action.
 
 ### 7.6 Reopen/resubmit rule
 
@@ -184,7 +196,7 @@ This is allowed because it is an explicit cross-dimension business action. It is
 ### 7.7 Backward compatibility
 
 - **Must preserve:** API status outputs (`data.status`, `metadata.status`), existing filters, existing clients/tests, legacy records.
-- **May deprecate:** API status inputs for legacy values (`active`, `review`, `submitted`) — accepted temporarily with normalization; `pending` rejected immediately.
+- **May deprecate:** API status inputs for legacy lifecycle values (`active`, `review`) — accepted temporarily with normalization. `submitted`, `awaiting-approval`, `approved`, `rejected`, and `pending` must NOT be accepted as generic status inputs because they are controlled by Approval actions. Generic status editing can NEVER mutate the Approval dimension.
 - **May change:** Internal storage representation; two-dimensional mapping is an implementation decision.
 - **Unknown:** Production client behavior and production data distribution.
 
@@ -206,21 +218,107 @@ This is allowed because it is an explicit cross-dimension business action. It is
 
 **Production data distribution: UNKNOWN.** No production query was performed. If implementation planning reveals a large fraction of production records hold legacy values, a pre-implementation evidence step must measure that distribution before any bulk normalization is designed.
 
-### 7.9 Effect of approval decisions on lifecycle
+### 7.9 Publication eligibility
 
-Approval decisions and document publication/lifecycle changes are separate actions.
+**Invariant:** Approval does NOT automatically publish a document.
 
-**Invariant:** Approval does not automatically mean Published.
+**Owner business rule:** Formal approval is NOT universally required before publication. This preserves the independence of the two dimensions because some documents may not require a formal approval workflow.
 
-An approval decision changes only the Approval dimension. Publication is a separate lifecycle action.
+However, if a Document HAS entered formal approval, then publication is not allowed while Approval is:
+- `awaiting-approval`
+- `rejected`
 
-Likewise, `rejected` does not itself have to be a lifecycle state. If rejection requires revision, the user may explicitly reopen the document for revision, and that business action may coordinate:
+Publication is allowed when Approval is:
+- `not-submitted`
+- `approved`
+
+Therefore `Lifecycle draft/in-review → published` has this business precondition:
+- Approval ∈ {`not-submitted`, `approved`}
+
+This means:
+- documents that do not require formal approval may be published;
+- documents currently awaiting approval cannot be published prematurely;
+- rejected documents must be reopened/revised before publication;
+- approval still does not automatically cause publication.
+
+Do not introduce document-type-specific approval policy in GAP-032. That is reserved for a future business rule.
+
+### 7.10 Explicit cross-dimension actions
+
+These are the only actions that may mutate the Approval dimension or coordinate both dimensions. Generic status editing must never perform these transitions.
+
+#### Submit
+
+Precondition:
+- Lifecycle ∈ {`draft`, `in-review`}
+- Approval = `not-submitted`
+
+Effect:
+- Approval → `awaiting-approval`
+- Lifecycle unchanged
+
+#### Approve
+
+Precondition:
+- Approval = `awaiting-approval`
+
+Effect:
+- Approval: `awaiting-approval` → `approved`
+- Lifecycle unchanged
+
+#### Reject
+
+Precondition:
+- Approval = `awaiting-approval`
+
+Effect:
+- Approval: `awaiting-approval` → `rejected`
+- Lifecycle unchanged
+
+#### Reopen for revision
+
+Precondition:
+- Approval ∈ {`approved`, `rejected`}
+
+Effect:
 - Lifecycle → `draft`
 - Approval → `not-submitted`
 
-Do not call `approved` or `rejected` "terminal in both dimensions". They are Approval outcomes only.
+Historical decision audit is preserved.
 
-### 7.10 Canonical API/business representation
+#### Publish
+
+Preconditions:
+- Lifecycle ∈ {`draft`, `in-review`}
+- Approval ∈ {`not-submitted`, `approved`}
+
+Effect:
+- Lifecycle → `published`
+- Approval unchanged
+
+#### Archive
+
+Precondition:
+- Lifecycle = `published`
+
+Effect:
+- Lifecycle: `published` → `archived`
+- Approval unchanged
+
+#### Reactivate for revision
+
+Precondition:
+- Lifecycle = `archived`
+
+Effect:
+- Lifecycle: `archived` → `draft`
+- Approval → `not-submitted`
+
+Historical approval/audit records are preserved.
+
+---
+
+### 7.11 Canonical API/business representation
 
 Future canonical consumers must be able to observe Lifecycle and Approval separately. The existing single `status` field is legacy compatibility, not the long-term canonical two-dimensional representation.
 
@@ -235,7 +333,7 @@ Gate 2 does not decide those mechanics.
 
 ---
 
-## 8. Legacy `status` compatibility contract
+## 8. Legacy `status` compatibility projection
 
 The legacy `status` string is a compatibility projection. It is NOT the canonical business source of truth after GAP-032.
 
@@ -245,13 +343,32 @@ The canonical business model is:
 
 Existing clients may temporarily continue to receive the legacy projection.
 
-**Compatibility principle:**
-- When Approval is `awaiting-approval`, `approved`, or `rejected`, legacy `status` may project the existing workflow-compatible value.
-- When Approval is `not-submitted`, legacy `status` may project the lifecycle-compatible value.
+**Deterministic projection rule:**
 
-`submitted` may remain in legacy `status` output during the compatibility window even though the canonical Approval concept is `awaiting-approval`.
+If Approval != `not-submitted`:
+    legacy status projects Approval
+Else:
+    legacy status projects Lifecycle
 
-`pending` remains a stale UI/filter alias only; it is not a canonical persisted business state.
+**Projection table:**
+
+| Canonical state                                     | Legacy `status` projection |
+| --------------------------------------------------- | -------------------------- |
+| Approval = `awaiting-approval`                      | `submitted`                |
+| Approval = `approved`                               | `approved`                 |
+| Approval = `rejected`                               | `rejected`                 |
+| Approval = `not-submitted`, Lifecycle = `draft`     | `draft`                    |
+| Approval = `not-submitted`, Lifecycle = `in-review` | `review`                   |
+| Approval = `not-submitted`, Lifecycle = `published` | `published`                |
+| Approval = `not-submitted`, Lifecycle = `archived`  | `archived`                 |
+
+`metadata.status` mirrors the same legacy projection during compatibility.
+
+The canonical source of truth remains:
+- Lifecycle
+- Approval
+
+not the legacy projection.
 
 ---
 

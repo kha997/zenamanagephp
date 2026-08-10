@@ -1,14 +1,14 @@
 ---
 work_id: OWN-2026-007
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/owner-decisions/OWN-2026-007/02-design.md
   plan: null
@@ -16,16 +16,16 @@ references:
   pr: https://github.com/kha997/zenamanagephp/pull/255
   release: null
 decision_provenance:
-  trust_level: claimed_repo_record
+  trust_level: owner_approval_recorded
   recorded_by: agent
-  recorded_at: "2026-08-10T13:42:10+07:00"
-  owner_response_reference: null
-  reconciliation_required: true
+  recorded_at: "2026-08-10T17:54:09+07:00"
+  owner_response_reference: "OWN-2026-007 Gate 3 Owner approval: APPROVE"
+  reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-10T11:20:03+07:00"
-  updated_at: "2026-08-10T13:42:10+07:00"
+  updated_at: "2026-08-10T17:54:09+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "Implementation-tree evidence for subject 79a09d6121e41baec5edd22f51555cacd1ccd1ef matches digest 23fce626460276409a28e63f0680d0ee0900ac64d85f8821d49500024c79c7fb. Owner Governance Lint and Routes Guardrails are green on the current PR head, with live head freshness enforced by check-evidence-freshness.sh. git diff --check PASS."
@@ -35,8 +35,8 @@ technical_evidence:
   verified_pr_head_sha: "79a09d6121e41baec5edd22f51555cacd1ccd1ef"
   verified_at: "2026-08-10T13:42:10+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "23fce626460276409a28e63f0680d0ee0900ac64d85f8821d49500024c79c7fb"
+  decision_recorded_at: "2026-08-10T17:54:09+07:00"
 ---
 
 ## OWN-2026-007 — Formal Gate 3 release packet
@@ -146,4 +146,4 @@ Phê duyệt phát hành OWN-2026-007 Gate 3, ràng buộc với implementation-
 
 **Quyết định Owner được yêu cầu:** APPROVE / REQUEST CHANGES / DEFER / DECLINE
 
-**Quyết định Owner hiện tại:** Chưa ghi nhận.
+**Quyết định Owner:** APPROVED (recorded at 2026-08-10T17:54:09+07:00, binding to implementation-tree digest `23fce626460276409a28e63f0680d0ee0900ac64d85f8821d49500024c79c7fb`).

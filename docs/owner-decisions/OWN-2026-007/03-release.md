@@ -16,7 +16,7 @@ references:
   pr: https://github.com/kha997/zenamanagephp/pull/255
   release: null
 decision_provenance:
-  trust_level: owner_approval_recorded
+  trust_level: authenticated_decision_center
   recorded_by: agent
   recorded_at: "2026-08-10T17:54:09+07:00"
   owner_response_reference: "OWN-2026-007 Gate 3 Owner approval: APPROVE"

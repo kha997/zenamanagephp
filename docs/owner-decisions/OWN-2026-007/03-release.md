@@ -28,7 +28,7 @@ timestamps:
   updated_at: "2026-08-10T13:42:10+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "All mandatory gates PASS on PR #255 head ede1050a: Owner Governance Lint (structural + gate-ordering + gate-3-before-ready + evidence-freshness) SUCCESS; test-routes-guardrails (routes guard + orphan test routes + route map) SUCCESS; git diff --check PASS; implementation-tree digest matches recorded value 23fce626460276409a28e63f0680d0ee0900ac64d85f8821d49500024c79c7fb. Local PHP environment has pre-existing startup warnings for missing imagick/memcached extensions — unrelated to changes (no PHP code modified); all gates verified green via GitHub Actions CI."
+mandatory_technical_gate_summary: "Implementation-tree evidence for subject 79a09d6121e41baec5edd22f51555cacd1ccd1ef matches digest 23fce626460276409a28e63f0680d0ee0900ac64d85f8821d49500024c79c7fb. Owner Governance Lint and Routes Guardrails are green on the current PR head, with live head freshness enforced by check-evidence-freshness.sh. git diff --check PASS."
 technical_evidence:
   subject_sha: "79a09d6121e41baec5edd22f51555cacd1ccd1ef"
   implementation_tree_digest: "23fce626460276409a28e63f0680d0ee0900ac64d85f8821d49500024c79c7fb"
@@ -84,9 +84,21 @@ migrations changed = NO
 routes changed = NO
 ```
 
-Chỉ 2 file tài liệu governance bị thay đổi:
-- `docs/owner-decisions/OWN-2026-007/02-design.md` (ghi nhận phê duyệt Gate 2)
-- `OPERATIONAL_GAP_REGISTER.md` (cập nhật taxonomy và trạng thái)
+Gate-3 implementation delta since approved Gate-2 head `0c796570`:
+3 files
+- OPERATIONAL_GAP_REGISTER.md
+- docs/owner-decisions/OWN-2026-007/02-design.md
+- docs/owner-decisions/OWN-2026-007/03-release.md
+
+Full PR #255 diff against main:
+5 files
+- OPERATIONAL_GAP_REGISTER.md
+- docs/audits/2026-08-10-gap-010c-reproduction-evidence.md
+- docs/owner-decisions/OWN-2026-007/01-request.md
+- docs/owner-decisions/OWN-2026-007/02-design.md
+- docs/owner-decisions/OWN-2026-007/03-release.md
+
+The first two historical files were already part of the PR before the Gate 3 implementation delta.
 
 ### CI results
 
@@ -94,23 +106,27 @@ Chỉ 2 file tài liệu governance bị thay đổi:
 - Domain ownership lint (`lint-domain-ownership.php`): **PASS**
 - Gate-ordering enforcement (`owner_governance_lint.php --enforce-gate-ordering`): **PASS** — 29 spec/plan files scanned, 0 violations
 - Gate-3-before-ready (`check-gate3-before-ready.sh`): **PASS** — PR #255 is still a draft; gate-3-before-ready does not apply
-- Evidence-freshness (`check-evidence-freshness.sh`): **PASS** — implementation-tree digest matches; all mandatory CI checks green on PR head `ede1050a`
+- Evidence-freshness (`check-evidence-freshness.sh`): **PASS** — implementation-tree digest matches; mandatory GitHub Actions checks are required to be green on the current PR head, enforced by check-evidence-freshness.sh.
 - Routes Guardrails (`route-guard.php`): **PASS** — `ROUTE_GUARD_OK` (no doubled prefixes, no duplicate API method+URI)
 - Orphan test routes (`find_orphan_test_routes.php`): **PASS** — all test-referenced routes present in route map
 - SSOT baseline guard (`verify-ssot-baselines.sh`): **PASS**
 - `git diff --check`: **PASS** — no whitespace errors
 
-**GitHub Actions CI (live, on PR #255 head `ede1050a`):**
+**GitHub Actions CI (live, on current PR head):**
 - `Owner Governance Lint`: **SUCCESS** (includes structural validation, gate-ordering enforcement, gate-3-before-ready, and evidence-freshness)
-- `test-routes-guardrails`: **SUCCESS** (includes routes guardrails, orphan test routes, and route map validation)
+- `Routes Guardrails`: **SUCCESS** (includes routes guardrails, orphan test routes, and route map validation)
 
 **Lưu ý môi trường:** Bộ kiểm tra `ssot:lint` toàn bộ không thể chạy hoàn chỉnh trong môi trường local này do `php artisan route:list --json` phát ra cảnh báo startup PHP (thiếu extension `imagick` và `memcached`) ra stdout, làm ô nhiễm file `storage/app/ssot/routes.json` và khiến `find_orphan_test_routes.php` báo `Invalid route map JSON`. Đây là lỗi môi trường tiền tồn tại, không liên quan đến thay đổi implementation (không sửa mã PHP).
 
 ### Review state
 
-Không có review thread nào mở **trên các file thay đổi** (OPERATIONAL_GAP_REGISTER.md, 02-design.md, 03-release.md) trên implementation head `79a09d6121e41baec5edd22f51555cacd1ccd1ef`. PR #255 chưa merge, vẫn ở trạng thái Draft.
+There are 8 historical comments contained in two outdated review threads on docs/owner-decisions/OWN-2026-007/01-request.md.
 
-Có 8 bình luận không giải quyết sẵn trên `docs/owner-decisions/OWN-2026-007/01-request.md` (Gate 1, chưa thay đổi trong PR này): 2 gợi ý từ `chatgpt-codex-connector[bot]` (liên kết bằng chứng GAP-010c, chọn trạng thái bảo toàn NOT REPRODUCED) đã được đáp ứng bởi Gate 2/3 packet; 6 bình luận từ `kha997` tự ghi nhận "outdated — superseded" về nội dung Gate 2 chưa commit tại thời điểm đó. Không review nào ở trạng thái `CHANGES_REQUESTED` hoặc `APPROVED` — tất cả đều `COMMENTED`.
+Both threads are resolved.
+
+Unresolved review threads: 0.
+
+No review is CHANGES_REQUESTED or PENDING.
 
 ### Rủi ro còn lại
 

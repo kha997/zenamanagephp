@@ -238,34 +238,32 @@ Option B is slightly more complex to implement because the storage layer must ha
 
 ### 6.1 Dimension 1 — Document lifecycle
 
+**Question answered:** What stage is the document itself in?
+
 **Canonical states:**
 
 | Business state | Meaning | Who uses it |
 |---|---|---|
 | `draft` | Document is being created or edited; not ready for any external process. | Creators, editors |
-| `in-review` | Document is complete and open for internal or external review, but not yet submitted for formal approval. | Editors, reviewers |
-| `approved` | Document has passed a formal approval decision. | Approvers, viewers |
-| `rejected` | Document failed a formal approval decision. | Approvers, editors |
+| `in-review` | Document is complete and open for informal/editorial/document review, NOT formal approval. | Editors, reviewers |
 | `published` | Document is released to its intended audience (client, project team, public). | Publishers, viewers |
 | `archived` | Document is retained but no longer active. | Archivists, viewers |
 
 **Initial state:** Every new document enters at `draft`, regardless of whether it was created via API or Web.
 
 **Transitions (conceptual):**
-- `draft` → `in-review` (editor marks ready for review)
-- `draft` → `submitted-for-approval` (editor submits directly for approval, skipping open review)
-- `in-review` → `submitted-for-approval` (reviewer forwards to approval)
-- `submitted-for-approval` → `approved` (approver accepts)
-- `submitted-for-approval` → `rejected` (approver rejects)
-- `approved` → `published` (publisher releases)
-- `approved` → `draft` (reopen for revision after approval)
-- `rejected` → `draft` (reopen for revision after rejection)
+- `draft` ↔ `in-review` (editor marks ready for review; returns to draft for changes)
+- `draft` / `in-review` → `published` (publisher releases)
 - `published` → `archived` (retire document)
-- `archived` → `draft` (reactivate archived document)
+- `archived` → `draft` (reactivate archived document, if business allows)
 
 **Note:** The exact transition rules — which roles can trigger which transitions, whether notes are required, etc. — are implementation details. The business rule is that every state has a defined set of forward and backward paths.
 
+**Not in this dimension:** `submitted`, `submitted-for-approval`, `awaiting-approval`, `approved`, `rejected`. These belong to the Approval dimension only.
+
 ### 6.2 Dimension 2 — Approval workflow state
+
+**Question answered:** What is the formal approval state?
 
 **Canonical states:**
 
@@ -278,34 +276,55 @@ Option B is slightly more complex to implement because the storage layer must ha
 
 **Entry rule:** Any document in a lifecycle state that is eligible for approval (`draft`, `in-review`) can be submitted by an authorized user. Documents in `published`, `archived`, or already in an approval state require an explicit re-entry or reopening step before they can be submitted again.
 
-**Reopen/resubmit rule:** After `approved` or `rejected`, the document may return to `draft` (revision) and then be resubmitted. The approval dimension resets to `not-submitted` upon reopening. There is no limit on reopen/resubmit cycles unless a future business rule specifies one.
+**Transitions (conceptual):**
+- `not-submitted` → `awaiting-approval` (submit for approval)
+- `awaiting-approval` → `approved` (approver accepts)
+- `awaiting-approval` → `rejected` (approver rejects)
+
+**Reopen/resubmit rule:** After `approved` or `rejected`, the document may return to `draft` for revision. The approval dimension resets to `not-submitted` upon reopening. There is no limit on reopen/resubmit cycles unless a future business rule specifies one.
 
 **Independence:** Changing the approval dimension does not change the lifecycle dimension, and vice versa. A document can be `in-review` (lifecycle) and `awaiting-approval` (approval) simultaneously if the business requires a parallel track.
 
 ### 6.3 Canonical "Chờ duyệt" meaning
 
-The canonical business concept for "Chờ duyệt" / "Awaiting approval" is **`awaiting-approval`** in the approval workflow dimension. The legacy UI label `pending` is a stale label that should map to `awaiting-approval` in displays and filters. No write path currently stores `pending`; the stored value is `submitted`. Under Option B, `submitted` is deprecated as a stored value and replaced by the two-dimensional model, where the approval dimension uses `awaiting-approval`.
+The canonical business concept for "Chờ duyệt" / "Awaiting approval" is **`awaiting-approval`** in the approval workflow dimension. The legacy UI label `pending` is a stale label that should map to `awaiting-approval` in displays and filters. No write path currently stores `pending`.
+
+Under the compatibility contract, the legacy stored value `submitted` may remain in legacy `status` output during the compatibility window even though the canonical Approval concept is `awaiting-approval`.
 
 ### 6.4 Legacy value classification
 
-| Legacy value | Classification | Business treatment under Option B |
-|---|---|---|
-| `active` | Legacy compatibility concept | Normalize to `draft` on first workflow entry. Accept as input temporarily but do not treat it as a first-class lifecycle state. |
-| `review` | Legacy compatibility concept | Normalize to `in-review` on first workflow entry. Accept as input temporarily. |
-| `published` | Legacy compatibility concept | Normalize to `published` in the lifecycle dimension. Can be persisted by clients through the generic path; business recognizes it as a legitimate lifecycle state. |
-| `draft` | Valid current business concept | Canonical entry state in the lifecycle dimension. |
-| `submitted` | Legacy workflow value | Replaced by `awaiting-approval` in the approval dimension. `submitted` is a deprecated stored value. |
-| `approved` | Valid current business concept | Canonical terminal state in both dimensions. Business meaning must be disambiguated by dimension context. |
-| `rejected` | Valid current business concept | Canonical terminal state in the approval dimension. |
-| `pending` | Obsolete/invalid concept | UI-only label. Map to `awaiting-approval` in display logic. Do not accept as input. |
+| Value | Classification |
+|---|---|
+| `active` | Legacy lifecycle compatibility value; canonical mapping candidate: `draft` |
+| `review` | Legacy lifecycle compatibility value; canonical mapping candidate: `in-review` |
+| `published` | Recognized lifecycle concept; may also exist as legacy persisted input/value |
+| `draft` | Valid current business concept; canonical entry state in the lifecycle dimension |
+| `submitted` | Legacy approval compatibility value; canonical approval concept: `awaiting-approval` |
+| `approved` | Valid current business concept; exists only in the Approval dimension |
+| `rejected` | Valid current business concept; exists only in the Approval dimension |
+| `pending` | Obsolete UI/filter alias; not a canonical persisted business state |
+
+**Business treatment:**
+- `active`, `review`: normalize to the nearest canonical lifecycle state on entry to workflow.
+- `published`: recognized as a legitimate lifecycle state.
+- `submitted`: remains available as a legacy compatibility output; canonical Approval concept is `awaiting-approval`.
+- `pending`: not accepted as input; maps to `awaiting-approval` in display logic only.
 
 ### 6.5 Entering approval from a legacy state
 
 A document currently holding a legacy lifecycle value (`active`, `review`) may enter the approval workflow through an explicit preparation step: the user (or system) first normalizes the document to a canonical lifecycle state (`draft` or `in-review`), then submits it for approval. There is no automatic normalization that bypasses user intent — the transition from legacy to canonical must be a deliberate action.
 
+The submit action is an Approval transition. It may have a lifecycle eligibility precondition (Lifecycle must be `draft` or `in-review`) but it does not create a new lifecycle state.
+
 ### 6.6 Reopening after decision
 
-`approved` and `rejected` in the approval dimension are **not permanently terminal**. The business permits reopening: an authorized user may return the document to `draft` for revision, after which it may be resubmitted. Each reopen/resubmit cycle creates a new decision record in the audit trail. The approval dimension resets to `not-submitted` upon reopening.
+`approved` and `rejected` in the approval dimension are **not permanently terminal**. The business permits reopening: an authorized user may explicitly reopen the document for revision, returning it to `draft`. Each reopen/resubmit cycle creates a new decision record in the audit trail.
+
+This action intentionally coordinates both dimensions:
+- Lifecycle = `draft`
+- Approval = `not-submitted`
+
+This is allowed because it is an explicit cross-dimension business action. It is not described as the approval dimension automatically mutating lifecycle.
 
 ### 6.7 Backward compatibility classification
 
@@ -318,16 +337,69 @@ A document currently holding a legacy lifecycle value (`active`, `review`) may e
 | Existing clients/tests | Must preserve: no immediate breaking change to accepted input set; tests may need adjustment if they assert specific legacy behavior. |
 | Legacy records | Preserve until touched: existing `active`/`review`/`submitted` records remain valid until modified by a user or workflow action. |
 
+**Legacy `status` compatibility projection:** The legacy `status` string is a compatibility projection, not the canonical business source of truth after GAP-032. Existing clients may temporarily continue to receive the legacy projection. See §6.9 for the full compatibility contract.
+
 ### 6.8 Legacy data policy
 
-**Principle: Preserve until touched, normalize on entry to workflow.**
+**Principle: Preserve legacy status until an explicit lifecycle/status/workflow action occurs.**
 
 - Existing records are not bulk-migrated in this gate.
-- When a legacy-status document is next updated by a user or enters the approval workflow, it is normalized to the nearest canonical state at that time.
+- Normalization may occur only through an explicit business action whose intent includes lifecycle/workflow transition.
+- Examples of unrelated changes that must NOT implicitly normalize:
+  - rename
+  - description edit
+  - tag change
+  - file metadata edit
+  - other non-status update
 - Documents that are never touched remain in their legacy state indefinitely; they are not invalidated retroactively.
 - If future business analysis shows that a specific legacy value is truly obsolete (not just legacy), a separate migration decision can be made.
 
 **Production data distribution: UNKNOWN.** No production query was performed. If implementation planning reveals that a large fraction of production records hold legacy values, a pre-implementation evidence step must measure that distribution before any bulk normalization is designed.
+
+### 6.9 Legacy `status` compatibility contract
+
+The legacy `status` string becomes a compatibility projection. It is NOT the canonical business source of truth after GAP-032.
+
+The canonical business model is:
+- Lifecycle dimension
+- Approval dimension
+
+Existing clients may temporarily continue to receive the legacy projection.
+
+**Compatibility principle:**
+- When Approval is `awaiting-approval`, `approved`, or `rejected`, legacy `status` may project the existing workflow-compatible value.
+- When Approval is `not-submitted`, legacy `status` may project the lifecycle-compatible value.
+
+`submitted` may remain in legacy `status` output during the compatibility window even though the canonical Approval concept is `awaiting-approval`.
+
+`pending` remains a stale UI/filter alias only; it is not a canonical persisted business state.
+
+### 6.10 Effect of approval decisions on lifecycle
+
+Approval decisions and document publication/lifecycle changes are separate actions.
+
+**Invariant:** Approval does not automatically mean Published.
+
+An approval decision changes only the Approval dimension. Publication is a separate lifecycle action.
+
+Likewise, `rejected` does not itself have to be a lifecycle state. If rejection requires revision, the user may explicitly reopen the document for revision, and that business action may coordinate:
+- Lifecycle → `draft`
+- Approval → `not-submitted`
+
+Do not call `approved` or `rejected` "terminal in both dimensions". They are Approval outcomes only.
+
+### 6.11 Canonical API/business representation
+
+Future canonical consumers must be able to observe Lifecycle and Approval separately. The existing single `status` field is legacy compatibility, not the long-term canonical two-dimensional representation.
+
+Implementation planning may later decide:
+- columns
+- JSON
+- DTO/resource fields
+- versioned API
+- compatibility adapter
+
+Gate 2 does not decide those mechanics.
 
 ---
 
@@ -335,19 +407,16 @@ A document currently holding a legacy lifecycle value (`active`, `review`) may e
 
 The following invariants must hold under the chosen model:
 
-**A.** Every user-visible status label has one canonical business meaning.
-
-**B.** API and Web creation have the same business semantics for the lifecycle dimension (`draft`), unless an explicit business reason for a difference is documented and Owner-approved.
-
-**C.** "Awaiting approval" is represented by one canonical business concept (`awaiting-approval`) in the approval dimension. The stale UI label `pending` maps to this concept in display logic only.
-
-**D.** Approval decisions cannot be reached by generic status editing. An approver decision is an explicit action in the approval dimension, written only by the approval service.
-
-**E.** Legacy compatibility cannot silently redefine workflow decisions. A document at `active` or `review` is not "awaiting approval" — it is in a legacy lifecycle state that requires an explicit transition before approval is possible.
-
-**F.** GAP-033 can rely on a stable definition of when a document is awaiting an approver: the approval dimension is `awaiting-approval`.
-
-**G.** Production legacy data is not assumed to be clean or known. The model must be safe to apply to any existing value.
+1. Lifecycle and Approval are separate dimensions.
+2. `approved`/`rejected` exist only in Approval.
+3. `submitted`/`awaiting-approval` exist only in Approval.
+4. `published` exists only in Lifecycle.
+5. Formal approval does not automatically equal publication.
+6. Unrelated document edits do not normalize legacy status.
+7. Legacy `status` is explicitly a compatibility projection.
+8. Canonical business representation contains both dimensions.
+9. `submitted` may remain a legacy compatibility output while `awaiting-approval` is the canonical Approval concept.
+10. GAP-032 does not decide when GAP-033 assigns the approver.
 
 ---
 
@@ -366,8 +435,14 @@ These remain exclusively within GAP-033 scope.
 
 What GAP-033 may now assume after Gate 2 approval:
 - There is a stable, unambiguous approval dimension with states `not-submitted`, `awaiting-approval`, `approved`, `rejected`.
-- A document is eligible for approver assignment if and only if its approval dimension is `awaiting-approval`.
+- GAP-033 may rely on the fact that Approval = `awaiting-approval` means the document is formally waiting for an approval decision.
 - Reopening a rejected or approved document resets the approval dimension to `not-submitted`, making it eligible for a new approval cycle.
+
+GAP-033 itself will decide:
+- when the approver is assigned
+- whether assignment is required before submit
+- whether pre-assignment is allowed
+- replacement/reassignment rules
 
 ---
 

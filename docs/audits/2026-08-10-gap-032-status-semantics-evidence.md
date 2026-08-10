@@ -186,7 +186,9 @@ Values of `documents.status` actually produced/read by repo artifacts (no produc
 - `draft` — workflow entry; Web store default; factory; tests. Also accepted as a generic (non-reserved) value by `store()`/`update()`.
 - `review` — accepted as a generic (non-reserved) value by `store()`/`update()`; asserted in tests; factory.
 - `active` — DB default + API `store()` default; **not** emitted by the factory.
-- `published` — **factory only** (no live controller/service/test path sets a document to `published`); note `published` is also used as a status by *other* models (`KnowledgeArticle`, `DeliverableTemplate`, `support_documentations`), but those are different tables — only the document factory mentions it.
+- `published` is explicitly emitted only by the factory in repository artifacts.
+  No canonical application code enumerates `published` as a first-class Document business status.
+  However, the live generic create/update contract accepts arbitrary non-reserved status strings, so a client can currently persist `published` through that generic path.
 - `submitted`/`approved`/`rejected` — reserved workflow values; written only by `DocumentWorkflowService`; `approved` is also randomly emitted by the factory (which would collide semantically with a terminal workflow decision).
 
 `PRODUCTION FACTS UNKNOWN` — production `documents.status` value distribution was **not queried**; the live production set of values is unknown.

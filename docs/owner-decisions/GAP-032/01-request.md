@@ -1,28 +1,28 @@
 ---
 work_id: GAP-032
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-08-10-gap-032-status-semantics-evidence.md
   plan: null
   branch: docs/GAP-032-document-status-semantics
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/256
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-08-10T19:35:22+07:00"
+  owner_response_reference: "Owner explicit approval for GAP-032 Gate 1 on 2026-08-10; PR #256 authorized to proceed to Gate 2 business design"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-10T18:26:10+07:00"
-  updated_at: "2026-08-10T18:26:10+07:00"
+  updated_at: "2026-08-10T19:35:22+07:00"
 generated_by: agent
 ---
 
@@ -83,8 +83,14 @@ This Gate 1 request covers discovery and the Owner decision only. The following 
 
 The Owner is **not** being asked to approve any implementation approach, code change, migration, enum, column, route, controller, service, or test. Not being asked to pick "two fields vs. one field" or "rename legacy values" or "migrate legacy data" — those are solution choices reserved for Gate 2 and beyond. Not being asked to decide anything about GAP-033 or Today Workspace. This step only asks: is this split of one overloaded field into a resolved business semantics worth designing (Gate 2).
 
+## Gate 1 Owner Decision
+
+**APPROVED**
+
+Owner has approved proceeding to GAP-032 Gate 2 business design. No implementation, migration, schema change, route, controller, service, test, or merge is authorized by this approval.
+
 ## Decision Needed
 
-The Owner chooses one: **Approve** to proceed to Gate 2 design / **Request changes** (with clarification) / **Decline**.
+Owner decision: **APPROVED**. Proceeding to Gate 2 design.
 
 This request does not authorize implementation, merge, or release.

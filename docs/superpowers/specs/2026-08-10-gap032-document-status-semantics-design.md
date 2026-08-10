@@ -1,6 +1,6 @@
 # GAP-032 — Document Status Semantics: Gate 2 Business Design
 
-**Status:** Gate 2 design — awaiting Owner approval. Gate 1 is approved. Gate 3 is not started; implementation, merge and release are not authorized.
+**Status:** Gate 2 approved. Owner decision: APPROVED. Implementation planning authorized. Gate 1 is approved. Gate 3 is not started; implementation, merge and release are not authorized.
 
 **Objective:** Define a single, coherent business meaning for `Document.status` so that every actor — creator, editor, submitter, approver, viewer, API client, and downstream system — can look at a document's status and know exactly what it means, what transitions are allowed, and how legacy data is treated.
 
@@ -567,13 +567,30 @@ GAP-033 itself will decide:
 
 ## 9. Owner decision
 
-This section records the business model selected by the Owner. It is not self-approved.
+**Selected option:** Option B — Separate Lifecycle and Approval dimensions
 
-**Selected option:** [Owner to choose: A / B / C]
+**Owner approval recorded at:** 2026-08-10T22:02:30+07:00
 
-**Owner approval recorded at:** [Owner approval timestamp]
+**Binding design head:** 482f6c3a74ae028a55dd9316abf13821fd1c8d5d
 
-**Conditions or clarifications attached:** [None, or Owner-specified amendments]
+**Owner decision:** APPROVED
+
+**Conditions or clarifications attached:**
+
+An explicit Lifecycle/status action MAY normalize:
+- `active` → `draft`
+- `review` → `in-review`
+
+because these operations affect Lifecycle only.
+
+However, generic lifecycle/status editing can NEVER mutate Approval. Therefore only explicit Approval actions may cause:
+- `not-submitted` → `awaiting-approval`
+- `awaiting-approval` → `approved`
+- `awaiting-approval` → `rejected`
+
+`submitted`, `awaiting-approval`, `approved`, `rejected`, and `pending` must never function as generic status-edit shortcuts into Approval.
+
+This clarification resolves wording only; it does not reopen the selected design.
 
 ---
 

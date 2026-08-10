@@ -1,11 +1,11 @@
 ---
 work_id: GAP-032
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-10-gap032-document-status-semantics-design.md
   plan: null
@@ -15,20 +15,20 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-08-10T22:02:30+07:00"
+  owner_response_reference: "482f6c3a74ae028a55dd9316abf13821fd1c8d5d"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-10T20:33:31+07:00"
-  updated_at: "2026-08-10T20:33:31+07:00"
+  updated_at: "2026-08-10T22:02:30+07:00"
 generated_by: agent
 ---
 
 # GAP-032 — Document Status Semantics: Gate 2 Owner Packet
 
-**Status:** Gate 2 design prepared. Awaiting Owner approval. No implementation, migration, schema change, route, controller, service, test, or merge is authorized.
+**Status:** Gate 2 approved. Owner decision: APPROVED. Implementation planning authorized. No implementation, migration, schema change, route, controller, service, test, or merge is authorized until Gate 3.
 
 ---
 
@@ -414,21 +414,8 @@ This Gate 2 design does not authorize, and does not contain:
 - Any controller, service, model, route, or test change.
 - Any API contract change or OpenAPI update.
 - Any data migration script or bulk normalization.
-- Any implementation plan.
+- Any implementation execution.
 - GAP-033 artifacts (approver assignment, Today Workspace integration, notifications).
 - Merge or release.
 
-Implementation planning may begin only after explicit Owner Gate 2 approval.
-
----
-
-## 12. Decision Needed
-
-**Owner chooses one:**
-
-1. **APPROVE** — Accept Option B (separate business dimensions) and the business rules in §7. Proceed to implementation planning.
-2. **REQUEST CHANGES** — Specify which section needs revision (business rules, compatibility position, legacy-data policy, or option selection).
-3. **DEFER** — Return for additional evidence or business consultation.
-4. **DECLINE** — Halt GAP-032; no further gates proceed.
-
-This packet does not authorize implementation, merge, or release.
+Implementation planning is authorized by Gate 2 approval. Implementation execution may begin only after explicit Owner Gate 3 approval.

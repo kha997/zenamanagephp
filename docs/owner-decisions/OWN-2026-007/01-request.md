@@ -7,7 +7,7 @@ owner_decision:
   authority: human_owner
 decision_requested: approve_or_proceed
 references:
-  spec: docs/owner-decisions/OWN-2026-007/00-gap-010c-reproduction-evidence.md
+  spec: docs/audits/2026-08-10-gap-010c-reproduction-evidence.md
   plan: null
   branch: docs/OWN-2026-007-post-p1-gap-register-reconciliation
   pr: https://github.com/kha997/zenamanagephp/pull/255
@@ -47,7 +47,7 @@ Trên `main` hiện tại, GAP-010b và GAP-034 đã qua Gate 3, có triển kha
 - **GAP-010b Gate 3 approved:** `docs/owner-decisions/GAP-010b/03-release.md` ghi `gate_status: approved`, `owner_decision.value: approved` (2026-08-09). Triển khai merge trong PR #253.
 - **GAP-034 Gate 3 approved:** `docs/owner-decisions/GAP-034/03-release.md` ghi `gate_status: approved`, `owner_decision.value: approved` (2026-08-09). Cùng PR #253 nguyên tử.
 - **PR #253 merged:** `origin/main` hiện tại tại commit `1325c0e6 Merge PR #253: combined export release`.
-- **GAP-010c reproduction:** Bằng chứng kỹ thuật chi tiết được lưu trong `docs/owner-decisions/OWN-2026-007/00-gap-010c-reproduction-evidence.md`. Tóm tắt: baseline `1325c0e6`, 8 ca kiểm tra, `SHIFTED=0`, không có chuyển đổi múi giờ phía client trên `/schedule`. Commit `63afc21f` ghi nhận remediation date-only Gantt normalization lịch sử. Hợp đồng schema `tasks.start_date/end_date` là `DATE` theo migration. Runtime kiểm tra disposable đã xem xét; không claim gì về production DB schema thực tế nếu chưa query trực tiếp.
+- **GAP-010c reproduction:** Bằng chứng kỹ thuật chi tiết được lưu trong `docs/audits/2026-08-10-gap-010c-reproduction-evidence.md`. Tóm tắt: baseline `1325c0e6`, 8 ca kiểm tra, `SHIFTED=0`, không có chuyển đổi múi giờ phía client trên `/schedule`. Commit `63afc21f` ghi nhận remediation date-only Gantt normalization lịch sử. Hợp đồng schema `tasks.start_date/end_date` là `DATE` theo migration. Runtime kiểm tra disposable đã xem xét; không claim gì về production DB schema thực tế nếu chưa query trực tiếp.
 - **GAP-010 parent:** GAP-010a và GAP-010b đã RESOLVED. GAP-010c có kết quả khác (không phải RESOLVED). Gate 2 phải xác định trạng thái cha phù hợp dựa trên trạng thái cuối của 3 dòng con.
 
 ## Tác động nếu không xử lý

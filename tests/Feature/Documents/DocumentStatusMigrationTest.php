@@ -58,10 +58,11 @@ class DocumentStatusMigrationTest extends TestCase
         self::assertSame($before->metadata, $after->metadata);
     }
 
+    /** @group slow */
     public function test_migration_round_trip_preserves_existing_status_and_metadata_on_sqlite(): void
     {
         if (DB::getDriverName() !== 'sqlite') {
-            self::markTestSkipped('The explicit down/up round-trip assertion is SQLite-specific.');
+            self::markTestSkipped('dependency: the explicit down/up round-trip assertion is SQLite-specific.');
         }
 
         $document = $this->createLegacyDocument('review', '{"status":"review","bytes":"unchanged"}');

@@ -102,11 +102,30 @@ class DocumentStatusServiceTest extends TestCase
             '01JACTOR000000000000000001'
         );
 
-        self::assertSame('published', $document->getAttribute('lifecycle_status'));
-        self::assertSame('awaiting-approval', $document->getAttribute('approval_status'));
+        self::assertSame('published', $document->getAttributes()['lifecycle_status']);
+        self::assertSame('awaiting-approval', $document->getAttributes()['approval_status']);
         self::assertSame('submitted', $document->getAttribute('status'));
         self::assertSame('submitted', $document->metadata['status']);
         self::assertTrue($document->metadata['preserved']);
         self::assertSame('01JACTOR000000000000000001', $document->getAttribute('updated_by'));
+    }
+
+    public function test_canonical_accessors_resolve_raw_originals_instead_of_pending_dirty_values(): void
+    {
+        $document = new Document();
+        $document->setRawAttributes([
+            'status' => 'review',
+            'lifecycle_status' => null,
+            'approval_status' => null,
+        ], true);
+        $document->forceFill([
+            'lifecycle_status' => 'published',
+            'approval_status' => 'approved',
+        ]);
+
+        self::assertSame('in-review', $document->getAttribute('lifecycle_status'));
+        self::assertSame('not-submitted', $document->getAttribute('approval_status'));
+        self::assertSame('published', $document->getAttributes()['lifecycle_status']);
+        self::assertSame('approved', $document->getAttributes()['approval_status']);
     }
 }

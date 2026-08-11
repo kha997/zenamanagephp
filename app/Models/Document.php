@@ -226,9 +226,6 @@ class Document extends Model
     public function getLifecycleStatusAttribute(mixed $value): ?string
     {
         $rawLifecycleStatus = $this->getRawOriginal('lifecycle_status');
-        if ($this->isDirty('lifecycle_status')) {
-            $rawLifecycleStatus = $value;
-        }
 
         return (new DocumentStatusResolver())->lifecycle(
             is_string($rawLifecycleStatus) ? $rawLifecycleStatus : null,
@@ -239,9 +236,6 @@ class Document extends Model
     public function getApprovalStatusAttribute(mixed $value): ?string
     {
         $rawApprovalStatus = $this->getRawOriginal('approval_status');
-        if ($this->isDirty('approval_status')) {
-            $rawApprovalStatus = $value;
-        }
 
         return (new DocumentStatusResolver())->approval(
             is_string($rawApprovalStatus) ? $rawApprovalStatus : null,
@@ -266,12 +260,15 @@ class Document extends Model
             $legacyStatus
         );
         $compatibilityStatus = $resolver->compatibilityStatus($lifecycle, $approval, $legacyStatus);
-        $metadata = is_array($array['metadata'] ?? null) ? $array['metadata'] : [];
-        $metadata['status'] = $compatibilityStatus;
         $array['lifecycle_status'] = $lifecycle?->value;
         $array['approval_status'] = $approval?->value;
         $array['status'] = $compatibilityStatus;
-        $array['metadata'] = $metadata;
+
+        if ($lifecycle !== null || $approval !== null) {
+            $metadata = is_array($array['metadata'] ?? null) ? $array['metadata'] : [];
+            $metadata['status'] = $compatibilityStatus;
+            $array['metadata'] = $metadata;
+        }
 
         return $array;
     }

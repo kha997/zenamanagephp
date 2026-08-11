@@ -11,6 +11,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use LogicException;
 use Tests\TestCase;
 
@@ -119,6 +120,37 @@ class DocumentStatusMigrationTest extends TestCase
             'approval_status',
         ]);
         self::assertEquals($before, $after);
+    }
+
+    public function test_unknown_legacy_status_preserves_differing_metadata_status_during_serialization(): void
+    {
+        $document = $this->createLegacyDocument(
+            'legacy-document-state',
+            '{"status":"metadata-only-state","preserve":"yes"}'
+        );
+        $before = DB::table('documents')->where('id', $document->id)->value('metadata');
+
+        $serialized = $document->fresh()->toArray();
+
+        self::assertNull($serialized['lifecycle_status']);
+        self::assertNull($serialized['approval_status']);
+        self::assertSame('legacy-document-state', $serialized['status']);
+        self::assertSame('metadata-only-state', $serialized['metadata']['status']);
+        self::assertSame($before, DB::table('documents')->where('id', $document->id)->value('metadata'));
+    }
+
+    public function test_unknown_legacy_status_keeps_absent_metadata_status_absent_during_serialization(): void
+    {
+        $document = $this->createLegacyDocument('legacy-document-state', '{"preserve":"yes"}');
+
+        $serialized = $document->fresh()->toArray();
+
+        self::assertNull($serialized['lifecycle_status']);
+        self::assertNull($serialized['approval_status']);
+        self::assertSame('legacy-document-state', $serialized['status']);
+        self::assertArrayNotHasKey('status', $serialized['metadata']);
+        self::assertSame('yes', $serialized['metadata']['preserve']);
+        self::assertSame('{"preserve":"yes"}', DB::table('documents')->where('id', $document->id)->value('metadata'));
     }
 
     public function test_approval_events_schema_is_tenant_scoped_append_only_and_version_bound(): void
@@ -267,6 +299,117 @@ class DocumentStatusMigrationTest extends TestCase
         $event->delete();
     }
 
+    public function test_approval_events_cannot_be_updated_quietly(): void
+    {
+        [$document, $version, $actor] = $this->createVersionedDocument();
+        $event = DocumentApprovalEvent::create($this->validEventAttributes($document, $version, $actor));
+
+        try {
+            $event->updateQuietly(['note' => 'Rewritten quietly']);
+            self::fail('Quiet update rewrote append-only approval history.');
+        } catch (LogicException) {
+            self::assertDatabaseHas('document_approval_events', [
+                'id' => $event->id,
+                'note' => 'Ready for decision',
+            ]);
+        }
+    }
+
+    public function test_approval_events_cannot_be_deleted_quietly(): void
+    {
+        [$document, $version, $actor] = $this->createVersionedDocument();
+        $event = DocumentApprovalEvent::create($this->validEventAttributes($document, $version, $actor));
+
+        try {
+            $event->deleteQuietly();
+            self::fail('Quiet delete removed append-only approval history.');
+        } catch (LogicException) {
+            self::assertDatabaseHas('document_approval_events', ['id' => $event->id]);
+        }
+    }
+
+    public function test_approval_events_cannot_be_mass_updated(): void
+    {
+        [$document, $version, $actor] = $this->createVersionedDocument();
+        $event = DocumentApprovalEvent::create($this->validEventAttributes($document, $version, $actor));
+
+        try {
+            DocumentApprovalEvent::query()->whereKey($event->id)->update(['note' => 'Mass rewrite']);
+            self::fail('Mass update rewrote append-only approval history.');
+        } catch (LogicException) {
+            self::assertDatabaseHas('document_approval_events', [
+                'id' => $event->id,
+                'note' => 'Ready for decision',
+            ]);
+        }
+    }
+
+    public function test_approval_events_cannot_be_mass_deleted(): void
+    {
+        [$document, $version, $actor] = $this->createVersionedDocument();
+        $event = DocumentApprovalEvent::create($this->validEventAttributes($document, $version, $actor));
+
+        try {
+            DocumentApprovalEvent::query()->whereKey($event->id)->delete();
+            self::fail('Mass delete removed append-only approval history.');
+        } catch (LogicException) {
+            self::assertDatabaseHas('document_approval_events', ['id' => $event->id]);
+        }
+    }
+
+    public function test_invalid_approval_event_cannot_bypass_validation_with_create_quietly(): void
+    {
+        [$document, $version, $actor] = $this->createVersionedDocument();
+        $attributes = $this->validEventAttributes($document, $version, $actor);
+        $attributes['event'] = 'approved';
+        $attributes['to_approval_status'] = 'approved';
+        $attributes['document_version_id'] = null;
+
+        try {
+            DocumentApprovalEvent::query()->createQuietly($attributes);
+            self::fail('Quiet creation bypassed required version validation.');
+        } catch (LogicException) {
+            self::assertDatabaseMissing('document_approval_events', [
+                'document_id' => $document->id,
+                'event' => 'approved',
+            ]);
+        }
+    }
+
+    public function test_invalid_approval_event_cannot_bypass_validation_with_mass_insert(): void
+    {
+        [$document, $version, $actor] = $this->createVersionedDocument();
+        $attributes = $this->validEventAttributes($document, $version, $actor);
+        $attributes['id'] = (string) Str::ulid();
+        $attributes['event'] = 'invalid-event';
+        $attributes['context'] = json_encode([], JSON_THROW_ON_ERROR);
+        $attributes['created_at'] = now();
+        $attributes['updated_at'] = now();
+
+        try {
+            DocumentApprovalEvent::query()->insert($attributes);
+            self::fail('Mass insert bypassed approval-event validation.');
+        } catch (LogicException) {
+            self::assertDatabaseMissing('document_approval_events', ['id' => $attributes['id']]);
+        }
+    }
+
+    public function test_invalid_approval_event_cannot_bypass_validation_with_mass_upsert(): void
+    {
+        [$document, $version, $actor] = $this->createVersionedDocument();
+        $attributes = $this->validEventAttributes($document, $version, $actor);
+        $attributes['id'] = (string) Str::ulid();
+        $attributes['event'] = 'invalid-event';
+        $attributes['context'] = json_encode([], JSON_THROW_ON_ERROR);
+
+        try {
+            DocumentApprovalEvent::query()->upsert([$attributes], ['id'], ['note']);
+            self::fail('Mass upsert bypassed approval-event validation.');
+        } catch (LogicException) {
+            self::assertDatabaseMissing('document_approval_events', ['id' => $attributes['id']]);
+        }
+    }
+
     private function createLegacyDocument(string $status, string $metadata): Document
     {
         $tenant = Tenant::factory()->create();
@@ -308,6 +451,22 @@ class DocumentStatusMigrationTest extends TestCase
         ]);
 
         return [$document, $version, $actor];
+    }
+
+    /** @return array<string, mixed> */
+    private function validEventAttributes(Document $document, DocumentVersion $version, User $actor): array
+    {
+        return [
+            'tenant_id' => $document->tenant_id,
+            'document_id' => $document->id,
+            'document_version_id' => $version->id,
+            'event' => 'submitted',
+            'from_approval_status' => 'not-submitted',
+            'to_approval_status' => 'awaiting-approval',
+            'actor_id' => $actor->id,
+            'note' => 'Ready for decision',
+            'context' => [],
+        ];
     }
 
     private function canonicalStatusMigration(): Migration

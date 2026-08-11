@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\DocumentApprovalStatus;
+use App\Models\Builders\DocumentApprovalEventBuilder;
+use Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,9 +22,12 @@ use LogicException;
  * @property string|null $note
  * @property array<string, mixed> $context
  */
+#[UseEloquentBuilder(DocumentApprovalEventBuilder::class)]
 class DocumentApprovalEvent extends Model
 {
     use HasUlids;
+
+    private bool $validatedInsertInProgress = false;
 
     private const EVENTS = [
         'submitted',
@@ -64,17 +69,36 @@ class DocumentApprovalEvent extends Model
         'updated_at' => 'datetime',
     ];
 
-    protected static function booted(): void
+    /** @param array<string, mixed> $options */
+    public function save(array $options = []): bool
     {
-        static::creating(function (self $event): void {
-            $event->validateCreation();
-        });
-        static::updating(function (): never {
+        if ($this->exists) {
             throw new LogicException('Document approval events are append-only.');
-        });
-        static::deleting(function (): never {
-            throw new LogicException('Document approval events are append-only.');
-        });
+        }
+
+        $this->validateCreation();
+        $this->validatedInsertInProgress = true;
+
+        try {
+            return parent::save($options);
+        } finally {
+            $this->validatedInsertInProgress = false;
+        }
+    }
+
+    public function delete(): never
+    {
+        throw new LogicException('Document approval events are append-only.');
+    }
+
+    public function forceDelete(): never
+    {
+        throw new LogicException('Document approval events are append-only.');
+    }
+
+    public function allowsValidatedApprovalEventInsert(): bool
+    {
+        return $this->validatedInsertInProgress;
     }
 
     /** @return BelongsTo<Document, $this> */

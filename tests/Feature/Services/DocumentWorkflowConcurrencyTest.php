@@ -101,13 +101,15 @@ class DocumentWorkflowConcurrencyTest extends TestCase
                     'observed_query_source' => 'performance_schema.threads.PROCESSLIST_INFO',
                     'query_targets_documents' => true,
                     'query_uses_for_update' => true,
+                    'query_has_tenant_predicate' => true,
+                    'query_has_document_id_predicate' => true,
                     'synthetic_query_marker_present' => false,
                     'document_lock_identity_matched' => true,
                     'object_name' => 'documents',
                     'index_name' => 'PRIMARY',
                     'lock_status' => 'WAITING',
                     'lock_type' => 'RECORD',
-                    'lock_data' => "'tenant-id', 'governed-document'",
+                    'lock_data' => "'governed-document'",
                     'observed_query' => 'select * from `documents` where tenant_id = ? and id = ? for update',
                 ],
             ],
@@ -126,6 +128,38 @@ class DocumentWorkflowConcurrencyTest extends TestCase
                 ],
             ],
         ], 'submit', 'version', 'HTTP_422', 'governed-document');
+    }
+
+    public function test_lock_evidence_without_tenant_predicate_is_rejected(): void
+    {
+        $this->expectException(ExpectationFailedException::class);
+
+        $results = $this->governedContentionResults('governed-document');
+        $results[0]['contention_evidence']['observed_query'] = 'select * from documents where id = ? for update';
+
+        $this->assertExpectedCrossPathOutcome(
+            $results,
+            'submit',
+            'version',
+            'HTTP_422',
+            'governed-document',
+        );
+    }
+
+    public function test_lock_data_containing_document_id_as_substring_is_rejected(): void
+    {
+        $this->expectException(ExpectationFailedException::class);
+
+        $results = $this->governedContentionResults('governed-document');
+        $results[0]['contention_evidence']['lock_data'] = "'prefix-governed-document-suffix'";
+
+        $this->assertExpectedCrossPathOutcome(
+            $results,
+            'submit',
+            'version',
+            'HTTP_422',
+            'governed-document',
+        );
     }
 
     public function test_concurrent_submit_allows_exactly_one_transition(): void
@@ -424,6 +458,8 @@ class DocumentWorkflowConcurrencyTest extends TestCase
         self::assertTrue($winnerEvidence['governed_query_observed'] ?? false, $this->resultDump($results));
         self::assertTrue($winnerEvidence['query_targets_documents'] ?? false, $this->resultDump($results));
         self::assertTrue($winnerEvidence['query_uses_for_update'] ?? false, $this->resultDump($results));
+        self::assertTrue($winnerEvidence['query_has_tenant_predicate'] ?? false, $this->resultDump($results));
+        self::assertTrue($winnerEvidence['query_has_document_id_predicate'] ?? false, $this->resultDump($results));
         self::assertFalse($winnerEvidence['synthetic_query_marker_present'] ?? true, $this->resultDump($results));
         self::assertMatchesRegularExpression(
             '/\bfrom\s+`?documents`?(?:\s|$)/i',
@@ -438,6 +474,14 @@ class DocumentWorkflowConcurrencyTest extends TestCase
         self::assertStringNotContainsStringIgnoringCase(
             'GAP032_LOCK_',
             $winnerEvidence['observed_query'] ?? '',
+            $this->resultDump($results)
+        );
+        self::assertTrue(
+            $this->queryHasEqualityPredicate($winnerEvidence['observed_query'] ?? '', 'tenant_id'),
+            $this->resultDump($results)
+        );
+        self::assertTrue(
+            $this->queryHasEqualityPredicate($winnerEvidence['observed_query'] ?? '', 'id'),
             $this->resultDump($results)
         );
         self::assertTrue($winnerEvidence['document_lock_identity_matched'] ?? false, $this->resultDump($results));
@@ -470,7 +514,11 @@ class DocumentWorkflowConcurrencyTest extends TestCase
         self::assertSame('PRIMARY', $winnerEvidence['index_name'] ?? null, $this->resultDump($results));
         self::assertSame('RECORD', $winnerEvidence['lock_type'] ?? null, $this->resultDump($results));
         self::assertSame('WAITING', $winnerEvidence['lock_status'] ?? null, $this->resultDump($results));
-        self::assertStringContainsString($documentId, $winnerEvidence['lock_data'] ?? '', $this->resultDump($results));
+        self::assertSame(
+            $documentId,
+            $this->decodeMysqlQuotedPrimaryLockData($winnerEvidence['lock_data'] ?? ''),
+            $this->resultDump($results)
+        );
         self::assertGreaterThan(0, $loserEvidence['governed_operation_microseconds'] ?? 0, $this->resultDump($results));
     }
 
@@ -516,6 +564,75 @@ class DocumentWorkflowConcurrencyTest extends TestCase
         ksort($actual);
 
         self::assertSame($expected, $actual);
+    }
+
+    private function queryHasEqualityPredicate(string $query, string $column): bool
+    {
+        $normalizedQuery = strtolower((string) preg_replace('/\s+/', ' ', trim($query)));
+        $pattern = '/(?:\bwhere\b|\band\b)\s*\(*\s*(?:`?documents`?\s*\.\s*)?`?'
+            . preg_quote($column, '/')
+            . '`?\s*=\s*(?:\?|\'(?:\'\'|[^\'])*\'|"(?:[^"]|"")*"|[a-z0-9_-]+)/i';
+
+        return preg_match($pattern, $normalizedQuery) === 1;
+    }
+
+    private function decodeMysqlQuotedPrimaryLockData(string $lockData): ?string
+    {
+        if (preg_match("/^'((?:''|[^'])*)'$/D", trim($lockData), $matches) !== 1) {
+            return null;
+        }
+
+        return str_replace("''", "'", $matches[1]);
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function governedContentionResults(string $documentId): array
+    {
+        return [
+            [
+                'operation' => 'submit',
+                'status' => 'ok',
+                'exit_code' => 0,
+                'contention_evidence' => [
+                    'role' => 'leader',
+                    'lock_wait_observed' => true,
+                    'governed_query_observed' => true,
+                    'observer_connection_id' => 101,
+                    'waiting_connection_id' => 202,
+                    'data_lock_waiting_connection_id' => 202,
+                    'blocking_connection_id' => 101,
+                    'lock_wait_source' => 'performance_schema.data_lock_waits',
+                    'lock_wait_observed_at' => '2026-08-11T12:00:00+00:00',
+                    'observed_query_source' => 'performance_schema.threads.PROCESSLIST_INFO',
+                    'query_targets_documents' => true,
+                    'query_uses_for_update' => true,
+                    'query_has_tenant_predicate' => true,
+                    'query_has_document_id_predicate' => true,
+                    'synthetic_query_marker_present' => false,
+                    'document_lock_identity_matched' => true,
+                    'object_name' => 'documents',
+                    'index_name' => 'PRIMARY',
+                    'lock_status' => 'WAITING',
+                    'lock_type' => 'RECORD',
+                    'lock_data' => "'{$documentId}'",
+                    'observed_query' => 'select * from `documents` where tenant_id = ? and id = ? for update',
+                ],
+            ],
+            [
+                'operation' => 'version',
+                'status' => 'domain',
+                'reason' => 'HTTP_422',
+                'exit_code' => 2,
+                'contention_evidence' => [
+                    'role' => 'loser',
+                    'lock_wait_observed' => true,
+                    'connection_id' => 202,
+                    'governed_operation' => 'version',
+                    'governed_operation_microseconds' => 100_000,
+                    'governed_operation_completed_after_observation' => true,
+                ],
+            ],
+        ];
     }
 
     /** @param array<int, array<string, mixed>> $results */
@@ -619,12 +736,25 @@ try {
             $normalizedQuery = strtolower((string) preg_replace('/\s+/', ' ', trim($query)));
             $queryTargetsDocuments = preg_match('/\bfrom\s+`?documents`?(?:\s|$)/', $normalizedQuery) === 1;
             $queryUsesForUpdate = str_contains($normalizedQuery, 'for update');
+            $queryHasEqualityPredicate = static function (string $column) use ($normalizedQuery): bool {
+                $pattern = '/(?:\bwhere\b|\band\b)\s*\(*\s*(?:`?documents`?\s*\.\s*)?`?'
+                    . preg_quote($column, '/')
+                    . '`?\s*=\s*(?:\?|\'(?:\'\'|[^\'])*\'|"(?:[^"]|"")*"|[a-z0-9_-]+)/i';
+
+                return preg_match($pattern, $normalizedQuery) === 1;
+            };
+            $queryHasTenantPredicate = $queryHasEqualityPredicate('tenant_id');
+            $queryHasDocumentIdPredicate = $queryHasEqualityPredicate('id');
             $syntheticQueryMarkerPresent = str_contains($normalizedQuery, 'gap032_lock_');
+            $rawLockData = (string) ($lockCandidate->lock_data ?? '');
+            $decodedPrimaryLockKey = preg_match("/^'((?:''|[^'])*)'$/D", trim($rawLockData), $lockDataMatch) === 1
+                ? str_replace("''", "'", $lockDataMatch[1])
+                : null;
             $documentLockIdentityMatched = $lockCandidate !== null
                 && (string) ($lockCandidate->index_name ?? '') === 'PRIMARY'
                 && (string) ($lockCandidate->lock_type ?? '') === 'RECORD'
                 && (string) ($lockCandidate->lock_status ?? '') === 'WAITING'
-                && str_contains((string) ($lockCandidate->lock_data ?? ''), $documentId);
+                && $decodedPrimaryLockKey === $documentId;
             $lastTransactionObservation = $candidate === null ? null : [
                 'trx_state' => (string) ($candidate->trx_state ?? ''),
                 'trx_mysql_thread_id' => (int) ($candidate->trx_mysql_thread_id ?? 0),
@@ -646,12 +776,16 @@ try {
             $lastObservationFlags = [
                 'query_targets_documents' => $queryTargetsDocuments,
                 'query_uses_for_update' => $queryUsesForUpdate,
+                'query_has_tenant_predicate' => $queryHasTenantPredicate,
+                'query_has_document_id_predicate' => $queryHasDocumentIdPredicate,
                 'synthetic_query_marker_present' => $syntheticQueryMarkerPresent,
                 'document_lock_identity_matched' => $documentLockIdentityMatched,
             ];
 
             if ($queryTargetsDocuments
                 && $queryUsesForUpdate
+                && $queryHasTenantPredicate
+                && $queryHasDocumentIdPredicate
                 && !$syntheticQueryMarkerPresent
                 && $documentLockIdentityMatched) {
                 $waitingDataLock = $lockCandidate;
@@ -684,6 +818,8 @@ try {
             'observed_query_source' => $observedQuerySource,
             'query_targets_documents' => preg_match('/\bfrom\s+`?documents`?(?:\s|$)/', $normalizedObservedQuery) === 1,
             'query_uses_for_update' => str_contains($normalizedObservedQuery, 'for update'),
+            'query_has_tenant_predicate' => $queryHasTenantPredicate,
+            'query_has_document_id_predicate' => $queryHasDocumentIdPredicate,
             'synthetic_query_marker_present' => str_contains($normalizedObservedQuery, 'gap032_lock_'),
             'document_lock_identity_matched' => $documentLockIdentityMatched,
             'object_name' => (string) ($waitingDataLock->object_name ?? ''),

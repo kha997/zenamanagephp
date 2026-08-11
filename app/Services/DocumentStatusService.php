@@ -29,6 +29,10 @@ class DocumentStatusService
         );
     }
 
+    /**
+     * @param Builder<Document> $query
+     * @return Builder<Document>
+     */
     public function applyLegacyStatusFilter(Builder $query, string $status): Builder
     {
         return match ($status) {
@@ -67,6 +71,10 @@ class DocumentStatusService
         };
     }
 
+    /**
+     * @param Builder<Document> $query
+     * @return Builder<Document>
+     */
     public function applyLifecycleFilter(Builder $query, DocumentLifecycleStatus $status): Builder
     {
         $legacyStatuses = match ($status) {
@@ -85,6 +93,10 @@ class DocumentStatusService
         });
     }
 
+    /**
+     * @param Builder<Document> $query
+     * @return Builder<Document>
+     */
     public function applyApprovalFilter(Builder $query, DocumentApprovalStatus $status): Builder
     {
         $legacyStatuses = match ($status) {
@@ -121,7 +133,11 @@ class DocumentStatusService
         ]);
     }
 
-    /** @param array<int, string> $legacyStatuses */
+    /**
+     * @param Builder<Document> $query
+     * @param array<int, string> $legacyStatuses
+     * @return Builder<Document>
+     */
     private function applyLifecycleProjectionFilter(Builder $query, DocumentLifecycleStatus $status, array $legacyStatuses): Builder
     {
         return $query->where(function (Builder $filter) use ($status, $legacyStatuses): void {
@@ -136,7 +152,11 @@ class DocumentStatusService
         });
     }
 
-    /** @param array<int, string> $legacyStatuses */
+    /**
+     * @param Builder<Document> $query
+     * @param array<int, string> $legacyStatuses
+     * @return Builder<Document>
+     */
     private function applyApprovalProjectionFilter(Builder $query, DocumentApprovalStatus $status, array $legacyStatuses): Builder
     {
         return $query->where(function (Builder $filter) use ($status, $legacyStatuses): void {

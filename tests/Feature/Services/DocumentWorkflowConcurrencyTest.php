@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\DocumentWorkflowService;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\ExpectationFailedException;
 use Symfony\Component\Process\PhpExecutableFinder;
 use Symfony\Component\Process\Process;
 use Tests\TestCase;
@@ -31,6 +32,25 @@ class DocumentWorkflowConcurrencyTest extends TestCase
 
     /** @var array<int, string> */
     private array $barriers = [];
+
+    public function test_controlled_cross_path_result_without_observed_mysql_lock_wait_is_rejected(): void
+    {
+        $this->expectException(ExpectationFailedException::class);
+
+        $this->assertExpectedCrossPathOutcome([
+            [
+                'operation' => 'submit',
+                'status' => 'ok',
+                'exit_code' => 0,
+            ],
+            [
+                'operation' => 'version',
+                'status' => 'domain',
+                'reason' => 'HTTP_422',
+                'exit_code' => 2,
+            ],
+        ], 'submit', 'version', 'HTTP_422');
+    }
 
     public function test_concurrent_submit_allows_exactly_one_transition(): void
     {
@@ -210,7 +230,8 @@ class DocumentWorkflowConcurrencyTest extends TestCase
      */
     private function race(array $left, array $right, bool $leftLocksFirst = false): array
     {
-        $barrier = sys_get_temp_dir() . '/gap032-' . bin2hex(random_bytes(8));
+        $lockToken = bin2hex(random_bytes(8));
+        $barrier = sys_get_temp_dir() . '/gap032-' . $lockToken;
         if (! mkdir($barrier, 0700) && ! is_dir($barrier)) {
             self::fail("Unable to create process barrier {$barrier}.");
         }
@@ -222,7 +243,7 @@ class DocumentWorkflowConcurrencyTest extends TestCase
         foreach ([[$left, 'left'], [$right, 'right']] as [$arguments, $label]) {
             $lockRole = $leftLocksFirst ? ($label === 'left' ? 'leader' : 'loser') : 'peer';
             $processes[] = new Process(
-                [$php, '-r', $this->workerScript(), ...$arguments, $barrier, $label, $lockRole],
+                [$php, '-r', $this->workerScript(), ...$arguments, $barrier, $label, $lockRole, $lockToken],
                 base_path(),
                 ['APP_ENV' => 'testing', 'DB_CONNECTION' => 'mysql'],
                 null,
@@ -287,6 +308,47 @@ class DocumentWorkflowConcurrencyTest extends TestCase
         self::assertSame('domain', $loser['status'] ?? null, $this->resultDump($results));
         self::assertSame($loserReason, $loser['reason'] ?? null, $this->resultDump($results));
         self::assertSame(2, $loser['exit_code'] ?? null, $this->resultDump($results));
+        $this->assertObservedMysqlLockWait($winner, $loser, $results);
+    }
+
+    /**
+     * @param array<string, mixed> $winner
+     * @param array<string, mixed> $loser
+     * @param array<int, array<string, mixed>> $results
+     */
+    private function assertObservedMysqlLockWait(array $winner, array $loser, array $results): void
+    {
+        $winnerEvidence = $winner['contention_evidence'] ?? null;
+        $loserEvidence = $loser['contention_evidence'] ?? null;
+
+        self::assertIsArray($winnerEvidence, $this->resultDump($results));
+        self::assertIsArray($loserEvidence, $this->resultDump($results));
+        self::assertSame('leader', $winnerEvidence['role'] ?? null, $this->resultDump($results));
+        self::assertSame('loser', $loserEvidence['role'] ?? null, $this->resultDump($results));
+        self::assertTrue($winnerEvidence['lock_wait_observed'] ?? false, $this->resultDump($results));
+        self::assertTrue($loserEvidence['lock_wait_observed'] ?? false, $this->resultDump($results));
+        self::assertSame('LOCK WAIT', $winnerEvidence['trx_state'] ?? null, $this->resultDump($results));
+        self::assertTrue($winnerEvidence['query_marker_matched'] ?? false, $this->resultDump($results));
+        self::assertTrue($loserEvidence['lock_acquired_after_observation'] ?? false, $this->resultDump($results));
+        self::assertGreaterThan(0, $winnerEvidence['observer_connection_id'] ?? 0, $this->resultDump($results));
+        self::assertGreaterThan(0, $winnerEvidence['waiting_connection_id'] ?? 0, $this->resultDump($results));
+        self::assertNotSame(
+            $winnerEvidence['observer_connection_id'] ?? null,
+            $winnerEvidence['waiting_connection_id'] ?? null,
+            $this->resultDump($results)
+        );
+        self::assertNotSame('', $winnerEvidence['trx_wait_started'] ?? '', $this->resultDump($results));
+        self::assertSame(
+            $winnerEvidence['waiting_connection_id'] ?? null,
+            $loserEvidence['connection_id'] ?? null,
+            $this->resultDump($results)
+        );
+        self::assertSame(
+            $winnerEvidence['lock_marker'] ?? null,
+            $loserEvidence['lock_marker'] ?? null,
+            $this->resultDump($results)
+        );
+        self::assertGreaterThan(0, $loserEvidence['lock_wait_microseconds'] ?? 0, $this->resultDump($results));
     }
 
     private function assertSubmittedLineage(DocumentApprovalEvent $event, Document $document, User $actor): void
@@ -343,7 +405,7 @@ class DocumentWorkflowConcurrencyTest extends TestCase
 require getcwd() . '/vendor/autoload.php';
 $app = require getcwd() . '/bootstrap/app.php';
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
-[$operation, $tenantId, $documentId, $actorId, $payload, $barrier, $label, $lockRole] = array_slice($argv, 1);
+[$operation, $tenantId, $documentId, $actorId, $payload, $barrier, $label, $lockRole, $lockToken] = array_slice($argv, 1);
 file_put_contents($barrier . '/' . $label . '.ready', 'ready');
 $deadline = microtime(true) + 20;
 while (!file_exists($barrier . '/release') && microtime(true) < $deadline) { usleep(10000); }
@@ -351,9 +413,12 @@ if (!file_exists($barrier . '/release')) {
     echo 'GAP032_RESULT=' . json_encode(['operation' => $operation, 'status' => 'error', 'reason' => 'BARRIER_TIMEOUT']) . PHP_EOL;
     exit(3);
 }
+$lockMarker = 'GAP032_LOCK_' . $lockToken;
+$contentionEvidence = null;
 try {
     if ($lockRole === 'leader') {
         Illuminate\Support\Facades\DB::beginTransaction();
+        $leaderConnection = Illuminate\Support\Facades\DB::selectOne('SELECT CONNECTION_ID() AS connection_id');
         $lockedDocument = Illuminate\Support\Facades\DB::table('documents')
             ->where('tenant_id', $tenantId)
             ->where('id', $documentId)
@@ -364,18 +429,83 @@ try {
         }
         file_put_contents($barrier . '/leader.locked', 'locked');
         $deadline = microtime(true) + 10;
-        while (!file_exists($barrier . '/loser.started') && microtime(true) < $deadline) { usleep(10000); }
-        if (!file_exists($barrier . '/loser.started')) {
-            throw new RuntimeException('Controlled loser did not start.');
+        while (!file_exists($barrier . '/loser.connection') && microtime(true) < $deadline) { usleep(10000); }
+        if (!file_exists($barrier . '/loser.connection')) {
+            throw new RuntimeException('Controlled loser did not publish its MySQL connection ID.');
         }
-        usleep(100000);
+        $loserConnectionId = (int) trim((string) file_get_contents($barrier . '/loser.connection'));
+        $waitingTransaction = null;
+        $observationDeadline = microtime(true) + 10;
+        while (microtime(true) < $observationDeadline) {
+            $candidate = Illuminate\Support\Facades\DB::selectOne(
+                "SELECT trx_state, trx_mysql_thread_id, trx_wait_started, trx_query
+                 FROM information_schema.innodb_trx
+                 WHERE trx_mysql_thread_id = ? AND trx_state = 'LOCK WAIT'",
+                [$loserConnectionId]
+            );
+            if ($candidate !== null
+                && is_string($candidate->trx_query ?? null)
+                && str_contains($candidate->trx_query, $lockMarker)) {
+                $waitingTransaction = $candidate;
+                break;
+            }
+            usleep(10000);
+        }
+        if ($waitingTransaction === null) {
+            throw new RuntimeException('Controlled loser never entered an observable InnoDB LOCK WAIT for the tagged document query.');
+        }
+        $contentionEvidence = [
+            'role' => 'leader',
+            'lock_wait_observed' => true,
+            'observer_connection_id' => (int) ($leaderConnection->connection_id ?? 0),
+            'waiting_connection_id' => (int) ($waitingTransaction->trx_mysql_thread_id ?? 0),
+            'trx_state' => (string) ($waitingTransaction->trx_state ?? ''),
+            'trx_wait_started' => (string) ($waitingTransaction->trx_wait_started ?? ''),
+            'lock_marker' => $lockMarker,
+            'query_marker_matched' => true,
+        ];
+        file_put_contents(
+            $barrier . '/lock-wait.observed',
+            json_encode($contentionEvidence, JSON_THROW_ON_ERROR)
+        );
     } elseif ($lockRole === 'loser') {
         $deadline = microtime(true) + 10;
         while (!file_exists($barrier . '/leader.locked') && microtime(true) < $deadline) { usleep(10000); }
         if (!file_exists($barrier . '/leader.locked')) {
             throw new RuntimeException('Controlled leader did not acquire the row lock.');
         }
-        file_put_contents($barrier . '/loser.started', 'started');
+        Illuminate\Support\Facades\DB::beginTransaction();
+        $loserConnection = Illuminate\Support\Facades\DB::selectOne('SELECT CONNECTION_ID() AS connection_id');
+        $loserConnectionId = (int) ($loserConnection->connection_id ?? 0);
+        file_put_contents($barrier . '/loser.connection', (string) $loserConnectionId);
+        $lockAttemptStarted = hrtime(true);
+        Illuminate\Support\Facades\DB::select(
+            "SELECT /* {$lockMarker} */ id
+             FROM documents
+             WHERE tenant_id = ? AND id = ?
+             FOR UPDATE",
+            [$tenantId, $documentId]
+        );
+        $lockWaitMicroseconds = (int) ((hrtime(true) - $lockAttemptStarted) / 1000);
+        if (!file_exists($barrier . '/lock-wait.observed')) {
+            throw new RuntimeException('Document lock was acquired without leader-side InnoDB LOCK WAIT evidence.');
+        }
+        $observedEvidence = json_decode(
+            (string) file_get_contents($barrier . '/lock-wait.observed'),
+            true,
+            512,
+            JSON_THROW_ON_ERROR
+        );
+        $contentionEvidence = [
+            'role' => 'loser',
+            'lock_wait_observed' => ($observedEvidence['lock_wait_observed'] ?? false) === true
+                && ($observedEvidence['waiting_connection_id'] ?? null) === $loserConnectionId
+                && ($observedEvidence['lock_marker'] ?? null) === $lockMarker,
+            'connection_id' => $loserConnectionId,
+            'lock_marker' => $lockMarker,
+            'lock_wait_microseconds' => $lockWaitMicroseconds,
+            'lock_acquired_after_observation' => true,
+        ];
     }
 
     if ($operation === 'submit') {
@@ -415,7 +545,10 @@ try {
             'body' => json_decode($response->getContent(), true),
         ];
     }
-    if ($lockRole === 'leader') {
+    if ($contentionEvidence !== null) {
+        $result['contention_evidence'] = $contentionEvidence;
+    }
+    if ($lockRole === 'leader' || $lockRole === 'loser') {
         Illuminate\Support\Facades\DB::commit();
     }
     echo 'GAP032_RESULT=' . json_encode($result) . PHP_EOL;

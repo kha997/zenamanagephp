@@ -66,6 +66,7 @@ jobs:
       env:
         APP_ENV: testing
         GAP032_REQUIRE_MYSQL: '1'
+        ZENA_INVARIANTS_DB: mysql
         DB_CONNECTION: mysql
         DB_HOST: 127.0.0.1
         DB_PORT: 3306

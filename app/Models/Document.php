@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\User;
+use App\Services\DocumentStatusResolver;
 use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -28,6 +29,8 @@ use App\Models\Project;
  * @property array|null $tags
  * @property array<string, mixed>|null $metadata
  * @property string $status
+ * @property string|null $lifecycle_status
+ * @property string|null $approval_status
  * @property string $visibility
  * @property bool $client_approved
  * @property string|null $created_by
@@ -129,6 +132,8 @@ class Document extends Model
 
     protected $casts = [
         'metadata' => 'array',
+        'lifecycle_status' => 'string',
+        'approval_status' => 'string',
         'file_size' => 'integer',
         'version' => 'integer',
         'is_current_version' => 'boolean',
@@ -216,6 +221,59 @@ class Document extends Model
     public function getDecisionNoteAttribute(): ?string
     {
         return is_array($this->metadata) ? ($this->metadata['decision_note'] ?? null) : null;
+    }
+
+    public function getLifecycleStatusAttribute(mixed $value): ?string
+    {
+        $rawLifecycleStatus = $this->getRawOriginal('lifecycle_status');
+        if ($this->isDirty('lifecycle_status')) {
+            $rawLifecycleStatus = $value;
+        }
+
+        return (new DocumentStatusResolver())->lifecycle(
+            is_string($rawLifecycleStatus) ? $rawLifecycleStatus : null,
+            (string) $this->getRawOriginal('status')
+        )?->value;
+    }
+
+    public function getApprovalStatusAttribute(mixed $value): ?string
+    {
+        $rawApprovalStatus = $this->getRawOriginal('approval_status');
+        if ($this->isDirty('approval_status')) {
+            $rawApprovalStatus = $value;
+        }
+
+        return (new DocumentStatusResolver())->approval(
+            is_string($rawApprovalStatus) ? $rawApprovalStatus : null,
+            (string) $this->getRawOriginal('status')
+        )?->value;
+    }
+
+    /** @return array<string, mixed> */
+    public function toArray(): array
+    {
+        $array = parent::toArray();
+        $resolver = new DocumentStatusResolver();
+        $rawLifecycleStatus = $this->getRawOriginal('lifecycle_status');
+        $rawApprovalStatus = $this->getRawOriginal('approval_status');
+        $legacyStatus = (string) $this->getRawOriginal('status');
+        $lifecycle = $resolver->lifecycle(
+            is_string($rawLifecycleStatus) ? $rawLifecycleStatus : null,
+            $legacyStatus
+        );
+        $approval = $resolver->approval(
+            is_string($rawApprovalStatus) ? $rawApprovalStatus : null,
+            $legacyStatus
+        );
+        $compatibilityStatus = $resolver->compatibilityStatus($lifecycle, $approval, $legacyStatus);
+        $metadata = is_array($array['metadata'] ?? null) ? $array['metadata'] : [];
+        $metadata['status'] = $compatibilityStatus;
+        $array['lifecycle_status'] = $lifecycle?->value;
+        $array['approval_status'] = $approval?->value;
+        $array['status'] = $compatibilityStatus;
+        $array['metadata'] = $metadata;
+
+        return $array;
     }
 
     /**

@@ -24,7 +24,10 @@ owner_gate_2_record: docs/owner-decisions/GAP-032/02-design.md
 - Generic writes must reject `submitted`, `awaiting-approval`, `approved`, `rejected`, and `pending`, and must strip canonical status fields/metadata keys supplied by clients.
 - Every persisted compatibility projection writes identical `documents.status` and `metadata.status` values.
 - Untouched legacy rows are not backfilled or normalized; unrelated edits do not materialize canonical columns or rewrite either legacy projection.
-- An unrecognized legacy value resolves to nullable canonical dimensions and is ineligible for every canonical action until an explicit supported lifecycle/status action materializes canonical state.
+- An unrecognized legacy value resolves to nullable canonical dimensions and is ineligible for every canonical action; GAP-032 does not design a production reconciliation path.
+- Untouched legacy `submitted`, `approved`, and `rejected` rows resolve Approval only. Their Lifecycle is `null` because the approval-first compatibility projection did not preserve it.
+- Missing historical approval-event/version lineage is never reconstructed. Decide/Reopen fail with `LEGACY_APPROVAL_RECONCILIATION_REQUIRED` when the required version-bound event does not exist.
+- Generic lifecycle normalization is allowed only when Approval is safely `not-submitted`, including recognized lifecycle-only legacy `active`, `draft`, and `review`; it cannot reset a legacy workflow Approval state.
 - All state transitions are tenant-scoped, authorized, transactional, and protected with `lockForUpdate()`.
 - Historical `submitted_*` and `decision_*` metadata survives reopen/reactivate; the current approval state may reset, but audit evidence is append-preserved.
 - Gate 3 authorizes release/merge/deploy only; this plan does not create a Gate 3 packet or start GAP-033.
@@ -53,16 +56,20 @@ public function writeState(Document $document, DocumentLifecycleStatus $lifecycl
 
 The service is constructor-injected into controllers and workflow/lifecycle services, never into the model. `Document::toArray()` and its canonical attribute accessors instantiate/call only the pure `DocumentStatusResolver`; they never call `app()`, resolve `DocumentStatusService`, query, authorize, or mutate. The call graph is exactly `SimpleDocumentController → zenaSuccessResponse() → Eloquent Document/paginator item → Document::toArray() → DocumentStatusResolver`. `DocumentStatusService → DocumentStatusResolver` is the separate service path for transitions and filters. `writeState()` mutates the already locked model but does not save it; the owning transaction appends audit data and calls `save()` exactly once. Transition methods return `Document` refreshed after commit.
 
-Raw and resolved attributes are deliberately distinct. The resolver and every write/precondition path read `getRawOriginal('lifecycle_status')`, `getRawOriginal('approval_status')`, and `getRawOriginal('status')`; they never read the canonical accessors recursively. `Document::lifecycle_status` and `Document::approval_status` are resolved serialized strings or `null`. `Document::toArray()` uses the resolver once to set `lifecycle_status`, `approval_status`, `status`, and `metadata.status` in the output array without saving. For an untouched recognized row the two raw canonical columns remain `NULL` while serialization exposes recognized resolved values. For an untouched unrecognized row they remain `NULL`, both serialized canonical fields are `null`, and serialized `status`/`metadata.status` remain the original legacy compatibility string. Here `null` means **legacy state not yet canonically classified**; it does not mean `draft`, `not-submitted`, or an invalid row.
+Raw and resolved attributes are deliberately distinct. The resolver and every write/precondition path read `getRawOriginal('lifecycle_status')`, `getRawOriginal('approval_status')`, and `getRawOriginal('status')`; they never read the canonical accessors recursively. `Document::lifecycle_status` and `Document::approval_status` are resolved serialized strings or `null`. `Document::toArray()` uses the resolver once to set `lifecycle_status`, `approval_status`, `status`, and `metadata.status` in the output array without saving. For an untouched recognized row the two raw canonical columns remain `NULL` while serialization exposes only dimensions that can be reconstructed. In particular, untouched `submitted`, `approved`, and `rejected` rows serialize Lifecycle `null` plus their resolved Approval while preserving the legacy projection in both `status` fields. For an untouched unrecognized row both serialized canonical fields are `null`, and serialized `status`/`metadata.status` remain the original legacy compatibility string. Here Lifecycle `null` means **Lifecycle cannot be reconstructed from the lossy legacy projection**; it does not mean `draft` or introduce another Lifecycle enum. Reads never save canonical columns.
 
 Fallback for an untouched row (`lifecycle_status IS NULL` and/or `approval_status IS NULL`) is deterministic:
 
 | Legacy `status` | Lifecycle fallback | Approval fallback |
 |---|---|---|
-| `active`, `draft`, `submitted`, `approved`, `rejected` | `draft` | `submitted` → `awaiting-approval`; `approved` → `approved`; `rejected` → `rejected`; otherwise `not-submitted` |
+| `active`, `draft` | `draft` | `not-submitted` |
 | `review` | `in-review` | `not-submitted` |
 | `published` | `published` | `not-submitted` |
 | `archived` | `archived` | `not-submitted` |
+| `submitted` | `null` | `awaiting-approval` |
+| `approved` | `null` | `approved` |
+| `rejected` | `null` | `rejected` |
+| unrecognized | `null` | `null` |
 
 Any unrecognized legacy string resolves to Lifecycle `null` and Approval `null`. It remains byte-for-byte unchanged in storage and in serialized `status`/`metadata.status`; reads never rewrite the database. No `unknown` enum case is introduced.
 
@@ -82,7 +89,7 @@ return match ($approval) {
 };
 ```
 
-`data.lifecycle_status` and `data.approval_status` expose resolved canonical strings for recognized/materialized rows and `null` for unrecognized untouched rows. `data.status` and `data.metadata.status` remain identical compatibility values, including the original unknown legacy string. Raw database columns may be `NULL` only for untouched legacy rows.
+`data.lifecycle_status` and `data.approval_status` expose only reconstructable canonical values. Untouched `submitted`, `approved`, and `rejected` serialize respectively as `(null, awaiting-approval)`, `(null, approved)`, and `(null, rejected)`; `data.status` and `data.metadata.status` remain `submitted`, `approved`, and `rejected`. Unknown untouched rows expose two canonical nulls plus their original compatibility value. Raw database columns remain `NULL` on every untouched legacy read.
 
 `status=pending` is read/filter-only and means Approval `awaiting-approval`. SQL filtering must remain database-side:
 
@@ -102,7 +109,7 @@ Filter inputs are exact:
 | Parameter | Accepted values | Untouched-row fallback |
 |---|---|---|
 | `status` | Any structurally valid string within the existing maximum length | Known aliases/concepts are resolver-aware: `pending|awaiting-approval → submitted`, `in-review → review`, and the other recognized values use their compatibility mapping. Every other safe string performs the historical exact `documents.status = <input>` match only for rows whose canonical columns are both `NULL`; it gains no canonical meaning. |
-| `lifecycle_status` | `draft`, `in-review`, `published`, `archived` | `draft`: `active|draft|submitted|approved|rejected`; `in-review`: `review`; other values match themselves. Unknown strings match no lifecycle filter. |
+| `lifecycle_status` | `draft`, `in-review`, `published`, `archived` | `draft`: `active|draft`; `in-review`: `review`; `published`: `published`; `archived`: `archived`. Untouched `submitted|approved|rejected` and unknown strings match no Lifecycle filter. |
 | `approval_status` | `not-submitted`, `awaiting-approval`, `approved`, `rejected` | `active|draft|review|published|archived` → not-submitted; `submitted` → awaiting; `approved|rejected` → themselves. Unknown strings match no approval filter. |
 
 Invalid canonical filter values return the existing 422 validation envelope. The legacy `status` parameter validates only structural safety (`string` plus the repository's existing maximum length), not enum membership. Every canonical fallback branch additionally requires the relevant canonical column to be `NULL`; exact-match unknown legacy filtering requires both canonical columns to be `NULL`; tenant scoping remains the outer model/query constraint.
@@ -129,16 +136,22 @@ Add table-driven tests named:
 
 ```php
 test_legacy_statuses_resolve_to_deterministic_canonical_dimensions()
+test_legacy_submitted_resolves_null_lifecycle_and_awaiting_approval()
+test_legacy_approved_resolves_null_lifecycle_and_approved()
+test_legacy_rejected_resolves_null_lifecycle_and_rejected()
 test_unknown_legacy_status_remains_unresolved_without_being_rewritten()
 test_all_canonical_combinations_project_to_the_binding_legacy_status()
 test_all_filter_values_match_materialized_and_untouched_rows_without_cross_tenant_results()
 test_unknown_legacy_status_does_not_match_any_canonical_lifecycle_filter()
 test_unknown_legacy_status_does_not_match_any_canonical_approval_filter()
+test_legacy_workflow_statuses_do_not_match_any_canonical_lifecycle_filter()
+test_legacy_submitted_matches_awaiting_approval_filter()
+test_legacy_approved_and_rejected_match_their_approval_filters()
 test_legacy_status_filter_can_still_exact_match_unknown_legacy_value()
 test_write_state_sets_both_columns_and_identical_status_projections()
 ```
 
-The Unit projection test must enumerate all 16 Lifecycle × Approval combinations and assert approval precedence. The Unit legacy test must include `active`, `draft`, `review`, `published`, `archived`, `submitted`, `approved`, `rejected`, and an unknown string whose two results are `null`. The Feature filter test uses `RefreshDatabase`, inserts materialized/recognized untouched rows plus unknown untouched same-tenant and other-tenant rows. It proves unknown rows match no canonical filter, while a bounded `status=<unknown-string>` exact-matches only the untouched same-tenant legacy row.
+The Unit projection test must enumerate all 16 Lifecycle × Approval combinations and assert approval precedence. The Unit legacy test must assert the exact fallback table above, including null Lifecycle for `submitted`, `approved`, and `rejected`, plus two null dimensions for an unknown string. The Feature filter test uses `RefreshDatabase`, inserts materialized/recognized untouched rows plus unknown untouched same-tenant and other-tenant rows. It proves legacy workflow and unknown rows match no canonical Lifecycle filter, legacy workflow rows retain their Approval and legacy-status aliases/filters, and a bounded `status=<unknown-string>` exact-matches only the untouched same-tenant legacy row.
 
 - [ ] **Step 2: Run the focused test and verify red**
 
@@ -224,7 +237,7 @@ Schema::table('documents', function (Blueprint $table): void {
 });
 ```
 
-`down()` drops the named indexes before the columns. Do not execute any `UPDATE`, backfill, normalization, `NOT NULL`, enum alteration, or production-data query. Add the columns to model documentation and casts, but do not make them client mass-assignable. Canonical accessors and `Document::toArray()` call only `DocumentStatusResolver` as defined in the representation contract. They pass raw values obtained with `getRawOriginal()` and never read `$this->lifecycle_status`/`$this->approval_status` from inside their own resolution path. Tests assert recognized and unknown legacy rows keep raw canonical columns `NULL`; recognized rows serialize mapped values, while unknown rows serialize two canonical `null`s plus unchanged `status`/`metadata.status`.
+`down()` drops the named indexes before the columns. Do not execute any `UPDATE`, backfill, normalization, `NOT NULL`, enum alteration, or production-data query. Add the columns to model documentation and casts, but do not make them client mass-assignable. Canonical accessors and `Document::toArray()` call only `DocumentStatusResolver` as defined in the representation contract. They pass raw values obtained with `getRawOriginal()` and never read `$this->lifecycle_status`/`$this->approval_status` from inside their own resolution path. Tests assert all untouched legacy rows keep raw canonical columns `NULL`; lifecycle-only rows serialize both mapped dimensions, workflow rows serialize null Lifecycle plus mapped Approval, and unknown rows serialize two canonical `null`s plus unchanged `status`/`metadata.status`.
 
 The second migration creates `document_approval_events` with ULID `id`, indexed `tenant_id`, foreign `document_id`, nullable foreign `document_version_id`, `event` (`submitted|approved|rejected|reopened|reactivated`), `from_approval_status`, `to_approval_status`, `actor_id`, nullable `note`, JSON `context`, and timestamps. `DocumentApprovalEvent` exposes creation only; no update/delete workflow method may be added. Model/service validation enforces: `submitted`, `approved`, `rejected`, and `reopened` require `document_version_id`; `reactivated` permits it to be `NULL` only for an explicitly marked legacy no-current-version context. The FK stays nullable solely for that exception. Version ownership is validated against the same `document_id` and tenant before event insertion.
 
@@ -273,7 +286,7 @@ test_api_create_rejects_review_published_archived_and_all_approval_values()
 test_generic_update_maps_active_to_draft_and_review_to_in_review_without_changing_approval()
 test_generic_update_rejects_submitted_awaiting_approval_approved_rejected_and_pending()
 test_generic_write_rejects_unknown_status_without_mutating_existing_unknown_legacy_rows()
-test_explicit_draft_action_materializes_unknown_legacy_row_as_draft_not_submitted()
+test_generic_lifecycle_edit_cannot_reset_legacy_workflow_approval_state()
 test_store_update_and_create_version_strip_forged_canonical_columns_and_metadata_keys()
 test_unrelated_api_edit_does_not_materialize_or_normalize_untouched_legacy_status()
 test_unrelated_edit_preserves_unknown_legacy_status_and_null_canonical_columns()
@@ -296,7 +309,7 @@ Expected: FAIL on current default `active`, missing canonical state, or forgery 
 
 - [ ] **Step 3: Implement minimal protected generic-write behavior**
 
-Extend `PROTECTED_METADATA_KEYS` with `lifecycle_status` and `approval_status`. Never accept the top-level canonical columns in validated/mass-assigned payloads. `DocumentCreationService` accepts only server-built attributes, forces tenant/actor, and atomically materializes `draft`/`not-submitted` plus both legacy projections. `SimpleDocumentController`, Web creation, and routed `DesignItemController::uploadDocument()` must use it; Design Item lookup for an existing Document includes `tenant_id` and entity identity. Remove the duplicate unprotected Web `POST /documents` registration at `routes/web.php:541-543` (or add the identical `rbac:document.create` middleware if route reconciliation requires retaining it), and assert the final unique route requires auth, tenant isolation, and `document.create`. Omitted status, `draft`, and compatibility alias `active` are accepted at the external canonical API, while other create values fail validation. Generic update may map only `active|draft → draft` and `review|in-review → in-review`; explicitly supplying one of those supported values is user intent and materializes both canonical columns even when the existing legacy value is unknown. Therefore `status=draft` on an unknown row writes Lifecycle `draft` and Approval `not-submitted`, while `status=in-review` writes Lifecycle `in-review` and Approval `not-submitted`; aliases `active` and `review` remain equivalent. A recognized/materialized row preserves its resolved current Approval. The action invokes `writeState()` inside a transaction with a tenant-scoped `lockForUpdate()` re-read, then authorizes `update` against that locked row before mutation. `published` and `archived` require explicit actions. Unknown existing strings remain untouched on unrelated edits, but new unknown generic status writes return 422. `createVersion()` performs the same tenant-scoped locked re-read and post-lock authorization before status/snapshot work.
+Extend `PROTECTED_METADATA_KEYS` with `lifecycle_status` and `approval_status`. Never accept the top-level canonical columns in validated/mass-assigned payloads. `DocumentCreationService` accepts only server-built attributes, forces tenant/actor, and atomically materializes `draft`/`not-submitted` plus both legacy projections. `SimpleDocumentController`, Web creation, and routed `DesignItemController::uploadDocument()` must use it; Design Item lookup for an existing Document includes `tenant_id` and entity identity. Remove the duplicate unprotected Web `POST /documents` registration at `routes/web.php:541-543` (or add the identical `rbac:document.create` middleware if route reconciliation requires retaining it), and assert the final unique route requires auth, tenant isolation, and `document.create`. Omitted status, `draft`, and compatibility alias `active` are accepted at the external canonical API, while other create values fail validation. Generic update may map only `active|draft → draft` and `review|in-review → in-review`, and only when the locked row resolves Approval `not-submitted` or is a recognized lifecycle-only legacy `active|draft|review` row. A materialized row preserves its resolved current Approval. Untouched legacy `submitted|approved|rejected` and unrecognized rows cannot be canonicalized through generic `status=draft|in-review`; doing so would reset or invent Approval state. They fail closed without mutation, and production reconciliation is out of GAP-032 scope. The action invokes `writeState()` inside a transaction with a tenant-scoped `lockForUpdate()` re-read, then authorizes `update` against that locked row before mutation. `published` and `archived` require explicit actions. Unknown existing strings remain untouched on unrelated edits, but new unknown generic status writes return 422. `createVersion()` performs the same tenant-scoped locked re-read and post-lock authorization before status/snapshot work.
 
 - [ ] **Step 4: Run API regression tests**
 
@@ -340,15 +353,18 @@ test_submit_accepts_draft_or_in_review_only_when_not_submitted_and_preserves_lif
 test_submit_rejects_each_invalid_lifecycle_or_approval_combination()
 test_submit_rejects_untouched_active_until_explicit_normalization_action()
 test_submit_rejects_untouched_review_until_explicit_normalization_action()
-test_unknown_legacy_status_cannot_submit_or_publish_without_explicit_normalization()
+test_unknown_legacy_status_cannot_submit_publish_or_use_generic_lifecycle_normalization()
 test_submit_fails_closed_when_document_has_no_current_version()
 test_submit_event_is_bound_to_locked_current_version()
 test_approve_and_reject_require_awaiting_approval_and_preserve_lifecycle()
 test_approve_event_uses_the_same_version_as_the_submitted_event()
 test_reject_event_uses_the_same_version_as_the_submitted_event()
+test_legacy_submitted_without_version_bound_submit_event_cannot_be_decided()
 test_reopen_approved_resets_to_draft_not_submitted_and_preserves_historical_audit()
 test_reopen_rejected_resets_to_draft_not_submitted_and_preserves_historical_audit()
 test_reopen_event_preserves_the_decided_version_reference()
+test_legacy_approved_without_version_bound_decision_event_cannot_be_reopened()
+test_legacy_rejected_without_version_bound_decision_event_cannot_be_reopened()
 test_reactivate_archived_resets_to_draft_not_submitted_and_preserves_historical_audit()
 test_reactivate_legacy_archived_document_without_current_version_records_explicit_unbound_legacy_event()
 test_each_formal_approval_cycle_event_is_version_bound()
@@ -374,11 +390,11 @@ Expected: FAIL because canonical preconditions and reopen/reactivate do not exis
 
 - [ ] **Step 3: Implement the minimal locked transitions**
 
-Every method must query by both `tenant_id` and `id` inside `DB::transaction()`, call `lockForUpdate()`, resolve both dimensions after the lock, validate the exact approved precondition, append the approval event, update current audit metadata, call `writeState()`, and save once. Any unresolved dimension fails closed with an explicit domain error; an untouched unknown/`active`/`review` row must first pass through the explicit generic lifecycle normalization action in Task 3.
+Every method must query by both `tenant_id` and `id` inside `DB::transaction()`, call `lockForUpdate()`, resolve both dimensions after the lock, validate the exact approved precondition, append the approval event, update current audit metadata, call `writeState()`, and save once. Any unresolved dimension fails closed. Recognized lifecycle-only legacy `active|draft|review` may first pass through Task 3 normalization; untouched workflow or unknown legacy rows may not.
 
 `submit()` accepts Lifecycle `draft|in-review` and Approval `not-submitted`, and additionally requires `documents.current_version_id !== null`. It locks/loads `Document::currentVersion()` by that exact ID and verifies the version's `document_id` equals the locked Document ID and its parent Document tenant equals the requested tenant. Missing, foreign-document, or cross-tenant identity fails closed with `DocumentWorkflowException::invalidCurrentVersion()`; Submit never fabricates a version. The `submitted` event records that locked `current_version_id`.
 
-`decide()` accepts only `awaiting-approval`. It locates the active cycle's append-only `submitted` event under the same document lock and writes the `approved` or `rejected` event with that event's `document_version_id`, not whatever version happens to be current; missing or inconsistent submitted-version evidence fails closed. `reopenForRevision()` accepts only `approved|rejected` and writes `reopened.document_version_id` from the decision event being reopened before resetting Lifecycle to `draft` and Approval to `not-submitted`. Historical event/version identity never changes.
+`decide()` accepts only `awaiting-approval`. It locates the active cycle's append-only `submitted` event under the same document lock and writes the `approved` or `rejected` event with that event's `document_version_id`, not whatever version happens to be current. Missing or inconsistent submitted-version evidence throws the explicit domain classification `LEGACY_APPROVAL_RECONCILIATION_REQUIRED`, not an ordinary invalid-transition error, and never binds to `current_version_id`. `reopenForRevision()` accepts only `approved|rejected` and requires the append-only version-bound decision event being reopened before writing `reopened.document_version_id` and resetting state. Missing decision lineage uses the same reconciliation-required classification. No submitted, decision, actor, timestamp, or version event is fabricated from legacy state or mutable metadata. Historical event/version identity never changes.
 
 `reactivateForRevision()` accepts only Lifecycle `archived`. For a materialized/legacy archived record with a current version, `reactivated.document_version_id` uses `documents.current_version_id`. For a genuine legacy archived record with `current_version_id = null`, reactivation remains allowed, writes `document_version_id = null`, and sets event context exactly to `legacy_without_current_version: true`; no synthetic `DocumentVersion` is created. No other event may use a null version reference. Do not move authorization into the service or weaken adapter policy/middleware checks.
 
@@ -444,7 +460,7 @@ Expected: FAIL because action methods/routes do not exist.
 
 - [ ] **Step 3: Implement explicit action adapters and locked service transitions**
 
-`DocumentLifecycleService::publish()` and `archive()` must use the same tenant-scoped transaction/lock pattern as approval workflow. Every action first requires non-null resolved Lifecycle and Approval; an unresolved legacy row fails closed and must use the explicit `draft|in-review` normalization path in Task 3 before any Submit, Publish, Archive, Approve, Reject, Reopen, or Reactivate action. API and Web adapters must find tenant-scoped documents and call `$this->authorize('update', $document)`; routes remain under existing authentication and `rbac:document.update` groups. Register actions on both `routes/api_zena.php` and the compatibility surface in `routes/api.php`; API-Zena names use its existing `api.zena.` group prefix, Web names use `documents.*`, and compatibility routes do not collide with either. No generic status write invokes these actions.
+`DocumentLifecycleService::publish()` and `archive()` must use the same tenant-scoped transaction/lock pattern as approval workflow. Every action first requires non-null resolved Lifecycle and Approval. Recognized lifecycle-only legacy `active|draft|review` may use Task 3 normalization; untouched `submitted|approved|rejected` and unknown rows fail closed and cannot use the generic lifecycle path. API and Web adapters must find tenant-scoped documents and call `$this->authorize('update', $document)`; routes remain under existing authentication and `rbac:document.update` groups. Register actions on both `routes/api_zena.php` and the compatibility surface in `routes/api.php`; API-Zena names use its existing `api.zena.` group prefix, Web names use `documents.*`, and compatibility routes do not collide with either. No generic status write invokes these actions.
 
 - [ ] **Step 4: Run action and route guardrail tests**
 
@@ -505,7 +521,7 @@ Expected: FAIL because current reads and filters use `where('status', ...)` dire
 
 - [ ] **Step 3: Implement resolved serialization and database-side filters**
 
-Implement the exact raw-model serialization call graph from the representation contract: `Document::toArray()` calls `parent::toArray()`, passes `getRawOriginal('lifecycle_status')`, `getRawOriginal('approval_status')`, and `getRawOriginal('status')` to the pure `DocumentStatusResolver`, and replaces only the returned array's `lifecycle_status`, `approval_status`, `status`, and `metadata.status`. Recognized untouched rows expose resolved canonical values while their raw columns remain null; unknown untouched rows expose canonical nulls and their original compatibility value in both legacy fields. No serialization read saves or mutates the model, and no accessor calls `DocumentStatusService` or the container. Replace direct filters with `applyLegacyStatusFilter()`, `applyLifecycleFilter()`, and `applyApprovalFilter()` according to the requested parameter. Known aliases use resolver-aware SQL predicates; any other bounded safe `status` string uses exact legacy comparison only and never canonical interpretation. Views branch on resolved nullable Lifecycle/Approval attributes and hide all canonical action buttons for unresolved rows; keep the Vietnamese `pending` option as a read alias. The approvals page defaults to `approval_status=awaiting-approval`; an explicit filter may show decided rows.
+Implement the exact raw-model serialization call graph from the representation contract: `Document::toArray()` calls `parent::toArray()`, passes `getRawOriginal('lifecycle_status')`, `getRawOriginal('approval_status')`, and `getRawOriginal('status')` to the pure `DocumentStatusResolver`, and replaces only the returned array's `lifecycle_status`, `approval_status`, `status`, and `metadata.status`. Untouched lifecycle-only rows expose both reconstructable dimensions; untouched `submitted|approved|rejected` expose null Lifecycle plus their resolved Approval and unchanged legacy projection; unknown untouched rows expose two canonical nulls and their original compatibility value. No serialization read saves or mutates the model, and no accessor calls `DocumentStatusService` or the container. Replace direct filters with `applyLegacyStatusFilter()`, `applyLifecycleFilter()`, and `applyApprovalFilter()` according to the requested parameter. Known aliases use resolver-aware SQL predicates; any other bounded safe `status` string uses exact legacy comparison only and never canonical interpretation. Views keep legacy records listable/showable and use resolved Approval for waiting/decided filters, while hiding unsafe mutation buttons when required lineage is absent; keep the Vietnamese `pending` option as a read alias. The approvals page defaults to `approval_status=awaiting-approval`; an explicit filter may show decided rows.
 
 - [ ] **Step 4: Run API/Web compatibility suites**
 
@@ -645,9 +661,17 @@ rg -n "Document::(create|query\(\)->create)|DocumentVersion::create|createNewVer
 
 Confirm: additive nullable columns plus an append-only audit-table migration, no backfill, no production query, no GAP-033 code, no Gate-3 packet, canonical fields absent from client mass-assignment, every approval mutation owned by `DocumentWorkflowService`, every routed new Document owned by `DocumentCreationService`, and every routed version mutation owned by `DocumentVersionService`.
 
+Also prove explicitly:
+
+- No `submitted`, `approved`, or `rejected` fallback assigns Lifecycle `draft` (or any other Lifecycle).
+- No formal decision or reopen reconstructs a missing submitted/decision event, version, actor, or timestamp, or silently binds to `current_version_id`.
+- No generic lifecycle update clears or replaces an existing Approval state.
+- Legacy workflow rows remain listable, showable, serializable, and filterable through legacy and Approval filters while unsafe mutation fails closed.
+- Production legacy workflow inventory is **REQUIRED BEFORE GATE 3** and **NOT PERFORMED DURING IMPLEMENTATION**.
+
 - [ ] **Step 4: Request independent implementation review**
 
-Dispatch a fresh reviewer with the approved Gate-2 spec, this plan, `origin/main` base SHA, implementation HEAD SHA, and the full diff. Require Critical/Important/Minor findings and fix every confirmed Critical or Important issue before presenting engineering readiness.
+Dispatch a fresh reviewer with the approved Gate-2 spec, this plan, `origin/main` base SHA, implementation HEAD SHA, and the full diff. Focus the review on lossy compatibility inversion, legacy `submitted|approved|rejected`, canonical Lifecycle leakage, missing historical event lineage, generic-reset bypass, and Gate 3 production compatibility evidence. Require Critical/Important/Minor findings and fix every confirmed Critical or Important issue before presenting engineering readiness.
 
 - [ ] **Step 5: Commit only review-driven corrections**
 
@@ -660,9 +684,9 @@ If review finds no required correction, do not create an empty commit.
 
 ## Production evidence decision
 
-**Production DB queried: NO. Pre-implementation production evidence required: NO.** The selected migration adds two nullable columns and indexes only; it does not read, reinterpret, update, normalize, or constrain an existing row. Untouched rows retain their existing `status` and metadata exactly: recognized values use the documented fallback, while unrecognized values remain canonically unresolved until an explicit supported status action materializes state. A separately authorized production-distribution query becomes mandatory before any future backfill, `NOT NULL` conversion, destructive normalization, unknown-value classification, or removal of legacy fallback/projection.
+**Production DB queried: NO. Pre-implementation production evidence required: NO.** Implementation can proceed because the migration is additive, canonical columns are nullable, there is no backfill, legacy reads remain compatible, and unsafe legacy workflow mutation fails closed. Untouched rows retain their existing `status` and metadata exactly; legacy workflow rows expose Approval but unresolved Lifecycle, and unrecognized values expose two unresolved dimensions. No correction or implementation run performs a production query.
 
-Because current generic validation historically accepted arbitrary non-reserved strings and the approved spec says `pending` client usage is unknown, release evidence must still inventory known integrations/fixtures and, if separately authorized, production telemetry before Gate 3. That is a compatibility release gate, not a prerequisite for implementing the additive nullable architecture; implementation must preserve existing unknown rows even while rejecting new unknown writes.
+Before Gate 3 technical readiness can be claimed, separately authorized read-only production evidence must inventory at least `submitted`, `approved`, `rejected`, unknown legacy statuses, and `NULL current_version_id`, and determine whether any active workflow would hit `LEGACY_APPROVAL_RECONCILIATION_REQUIRED`. If affected production records exist, Gate 3 remains blocked until a separately reviewed reconciliation strategy exists. That strategy is outside GAP-032 unless separately authorized.
 
 ## Architecture alternatives rejected
 

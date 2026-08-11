@@ -50,8 +50,9 @@ class DocumentWorkflowConcurrencyTest extends TestCase
                     'waiting_connection_id' => 202,
                     'data_lock_waiting_connection_id' => 202,
                     'blocking_connection_id' => 101,
-                    'trx_state' => 'LOCK WAIT',
-                    'trx_wait_started' => '2026-08-11 12:00:00',
+                    'lock_wait_source' => 'performance_schema.data_lock_waits',
+                    'lock_wait_observed_at' => '2026-08-11T12:00:00+00:00',
+                    'observed_query_source' => 'performance_schema.threads.PROCESSLIST_INFO',
                     'query_targets_documents' => true,
                     'query_uses_for_update' => true,
                     'synthetic_query_marker_present' => true,
@@ -78,6 +79,53 @@ class DocumentWorkflowConcurrencyTest extends TestCase
                 ],
             ],
         ], 'submit', 'version', 'HTTP_422', 'synthetic-document');
+    }
+
+    public function test_performance_schema_lock_evidence_with_processlist_query_is_accepted(): void
+    {
+        $this->assertExpectedCrossPathOutcome([
+            [
+                'operation' => 'submit',
+                'status' => 'ok',
+                'exit_code' => 0,
+                'contention_evidence' => [
+                    'role' => 'leader',
+                    'lock_wait_observed' => true,
+                    'governed_query_observed' => true,
+                    'observer_connection_id' => 101,
+                    'waiting_connection_id' => 202,
+                    'data_lock_waiting_connection_id' => 202,
+                    'blocking_connection_id' => 101,
+                    'lock_wait_source' => 'performance_schema.data_lock_waits',
+                    'lock_wait_observed_at' => '2026-08-11T12:00:00+00:00',
+                    'observed_query_source' => 'performance_schema.threads.PROCESSLIST_INFO',
+                    'query_targets_documents' => true,
+                    'query_uses_for_update' => true,
+                    'synthetic_query_marker_present' => false,
+                    'document_lock_identity_matched' => true,
+                    'object_name' => 'documents',
+                    'index_name' => 'PRIMARY',
+                    'lock_status' => 'WAITING',
+                    'lock_type' => 'RECORD',
+                    'lock_data' => "'tenant-id', 'governed-document'",
+                    'observed_query' => 'select * from `documents` where tenant_id = ? and id = ? for update',
+                ],
+            ],
+            [
+                'operation' => 'version',
+                'status' => 'domain',
+                'reason' => 'HTTP_422',
+                'exit_code' => 2,
+                'contention_evidence' => [
+                    'role' => 'loser',
+                    'lock_wait_observed' => true,
+                    'connection_id' => 202,
+                    'governed_operation' => 'version',
+                    'governed_operation_microseconds' => 100_000,
+                    'governed_operation_completed_after_observation' => true,
+                ],
+            ],
+        ], 'submit', 'version', 'HTTP_422', 'governed-document');
     }
 
     public function test_concurrent_submit_allows_exactly_one_transition(): void
@@ -239,11 +287,12 @@ class DocumentWorkflowConcurrencyTest extends TestCase
         return [$tenant, $actor, $project, $document->fresh()];
     }
 
+    /** @group stress */
     private function requireRealMysql(): void
     {
         if (env('DB_CONNECTION') !== 'mysql' || DB::getDriverName() !== 'mysql') {
             $this->markTestSkipped(
-                'INSUFFICIENT CONCURRENCY EVIDENCE: set DB_CONNECTION=mysql and run with a real MySQL service. '
+                'dependency: INSUFFICIENT CONCURRENCY EVIDENCE; set DB_CONNECTION=mysql and run with a real MySQL service. '
                 . 'SQLite/sequential execution cannot prove row-lock behavior.'
             );
         }
@@ -362,13 +411,22 @@ class DocumentWorkflowConcurrencyTest extends TestCase
         self::assertSame('loser', $loserEvidence['role'] ?? null, $this->resultDump($results));
         self::assertTrue($winnerEvidence['lock_wait_observed'] ?? false, $this->resultDump($results));
         self::assertTrue($loserEvidence['lock_wait_observed'] ?? false, $this->resultDump($results));
-        self::assertSame('LOCK WAIT', $winnerEvidence['trx_state'] ?? null, $this->resultDump($results));
+        self::assertSame(
+            'performance_schema.data_lock_waits',
+            $winnerEvidence['lock_wait_source'] ?? null,
+            $this->resultDump($results)
+        );
+        self::assertContains(
+            $winnerEvidence['observed_query_source'] ?? null,
+            ['information_schema.innodb_trx.trx_query', 'performance_schema.threads.PROCESSLIST_INFO'],
+            $this->resultDump($results)
+        );
         self::assertTrue($winnerEvidence['governed_query_observed'] ?? false, $this->resultDump($results));
         self::assertTrue($winnerEvidence['query_targets_documents'] ?? false, $this->resultDump($results));
         self::assertTrue($winnerEvidence['query_uses_for_update'] ?? false, $this->resultDump($results));
         self::assertFalse($winnerEvidence['synthetic_query_marker_present'] ?? true, $this->resultDump($results));
         self::assertMatchesRegularExpression(
-            '/\bfrom\s+`?documents`?\b/i',
+            '/\bfrom\s+`?documents`?(?:\s|$)/i',
             $winnerEvidence['observed_query'] ?? '',
             $this->resultDump($results)
         );
@@ -392,7 +450,7 @@ class DocumentWorkflowConcurrencyTest extends TestCase
             $winnerEvidence['waiting_connection_id'] ?? null,
             $this->resultDump($results)
         );
-        self::assertNotSame('', $winnerEvidence['trx_wait_started'] ?? '', $this->resultDump($results));
+        self::assertNotSame('', $winnerEvidence['lock_wait_observed_at'] ?? '', $this->resultDump($results));
         self::assertSame(
             $winnerEvidence['waiting_connection_id'] ?? null,
             $loserEvidence['connection_id'] ?? null,
@@ -410,6 +468,7 @@ class DocumentWorkflowConcurrencyTest extends TestCase
         );
         self::assertSame('documents', $winnerEvidence['object_name'] ?? null, $this->resultDump($results));
         self::assertSame('PRIMARY', $winnerEvidence['index_name'] ?? null, $this->resultDump($results));
+        self::assertSame('RECORD', $winnerEvidence['lock_type'] ?? null, $this->resultDump($results));
         self::assertSame('WAITING', $winnerEvidence['lock_status'] ?? null, $this->resultDump($results));
         self::assertStringContainsString($documentId, $winnerEvidence['lock_data'] ?? '', $this->resultDump($results));
         self::assertGreaterThan(0, $loserEvidence['governed_operation_microseconds'] ?? 0, $this->resultDump($results));
@@ -424,7 +483,7 @@ class DocumentWorkflowConcurrencyTest extends TestCase
         self::assertSame($document->current_version_id, $event->document_version_id);
         self::assertSame((string) $actor->id, $event->actor_id);
         self::assertNull($event->note);
-        self::assertSame([
+        $this->assertSameAssociativeArray([
             'submitted_by' => $metadata['submitted_by'] ?? null,
             'submitted_at' => $metadata['submitted_at'] ?? null,
         ], $event->context);
@@ -439,12 +498,24 @@ class DocumentWorkflowConcurrencyTest extends TestCase
         self::assertSame($document->current_version_id, $event->document_version_id);
         self::assertSame((string) $actor->id, $event->actor_id);
         self::assertNull($event->note);
-        self::assertSame([
+        $this->assertSameAssociativeArray([
             'decision' => $metadata['decision'] ?? null,
             'decision_by' => $metadata['decision_by'] ?? null,
             'decision_at' => $metadata['decision_at'] ?? null,
             'decision_note' => $metadata['decision_note'] ?? null,
         ], $event->context);
+    }
+
+    /**
+     * @param array<string, mixed> $expected
+     * @param array<string, mixed> $actual
+     */
+    private function assertSameAssociativeArray(array $expected, array $actual): void
+    {
+        ksort($expected);
+        ksort($actual);
+
+        self::assertSame($expected, $actual);
     }
 
     /** @param array<int, array<string, mixed>> $results */
@@ -500,8 +571,10 @@ try {
             throw new RuntimeException('Controlled loser did not publish its MySQL connection ID.');
         }
         $loserConnectionId = (int) trim((string) file_get_contents($barrier . '/loser.connection'));
-        $waitingTransaction = null;
         $waitingDataLock = null;
+        $lastTransactionObservation = null;
+        $lastDataLockObservation = null;
+        $lastObservationFlags = null;
         $observationDeadline = microtime(true) + 10;
         while (microtime(true) < $observationDeadline) {
             $candidate = Illuminate\Support\Facades\DB::selectOne(
@@ -510,12 +583,6 @@ try {
                  WHERE trx_mysql_thread_id = ? AND trx_state = 'LOCK WAIT'",
                 [$loserConnectionId]
             );
-            $query = is_string($candidate->trx_query ?? null) ? $candidate->trx_query : '';
-            $normalizedQuery = strtolower((string) preg_replace('/\s+/', ' ', trim($query)));
-            $queryTargetsDocuments = preg_match('/\bfrom\s+`?documents`?\b/', $normalizedQuery) === 1;
-            $queryUsesForUpdate = str_contains($normalizedQuery, 'for update');
-            $syntheticQueryMarkerPresent = str_contains($normalizedQuery, 'gap032_lock_');
-
             $lockCandidate = Illuminate\Support\Facades\DB::selectOne(
                 "SELECT
                     requesting_thread.PROCESSLIST_ID AS waiting_connection_id,
@@ -526,7 +593,8 @@ try {
                     requested_lock.LOCK_TYPE AS lock_type,
                     requested_lock.LOCK_MODE AS lock_mode,
                     requested_lock.LOCK_STATUS AS lock_status,
-                    requested_lock.LOCK_DATA AS lock_data
+                    requested_lock.LOCK_DATA AS lock_data,
+                    requesting_thread.PROCESSLIST_INFO AS processlist_info
                  FROM performance_schema.data_lock_waits AS lock_wait
                  JOIN performance_schema.data_locks AS requested_lock
                    ON requested_lock.ENGINE_LOCK_ID = lock_wait.REQUESTING_ENGINE_LOCK_ID
@@ -541,41 +609,83 @@ try {
                  LIMIT 1",
                 [$loserConnectionId, $leaderConnectionId]
             );
+            $candidateQuery = is_string($candidate->trx_query ?? null) ? $candidate->trx_query : '';
+            $query = $candidateQuery;
+            $observedQuerySource = 'information_schema.innodb_trx.trx_query';
+            if ($query === '' && is_string($lockCandidate->processlist_info ?? null)) {
+                $query = $lockCandidate->processlist_info;
+                $observedQuerySource = 'performance_schema.threads.PROCESSLIST_INFO';
+            }
+            $normalizedQuery = strtolower((string) preg_replace('/\s+/', ' ', trim($query)));
+            $queryTargetsDocuments = preg_match('/\bfrom\s+`?documents`?(?:\s|$)/', $normalizedQuery) === 1;
+            $queryUsesForUpdate = str_contains($normalizedQuery, 'for update');
+            $syntheticQueryMarkerPresent = str_contains($normalizedQuery, 'gap032_lock_');
             $documentLockIdentityMatched = $lockCandidate !== null
                 && (string) ($lockCandidate->index_name ?? '') === 'PRIMARY'
+                && (string) ($lockCandidate->lock_type ?? '') === 'RECORD'
                 && (string) ($lockCandidate->lock_status ?? '') === 'WAITING'
                 && str_contains((string) ($lockCandidate->lock_data ?? ''), $documentId);
+            $lastTransactionObservation = $candidate === null ? null : [
+                'trx_state' => (string) ($candidate->trx_state ?? ''),
+                'trx_mysql_thread_id' => (int) ($candidate->trx_mysql_thread_id ?? 0),
+                'trx_wait_started' => (string) ($candidate->trx_wait_started ?? ''),
+                'trx_query' => $candidateQuery,
+            ];
+            $lastDataLockObservation = $lockCandidate === null ? null : [
+                'waiting_connection_id' => (int) ($lockCandidate->waiting_connection_id ?? 0),
+                'blocking_connection_id' => (int) ($lockCandidate->blocking_connection_id ?? 0),
+                'object_schema' => (string) ($lockCandidate->object_schema ?? ''),
+                'object_name' => (string) ($lockCandidate->object_name ?? ''),
+                'index_name' => (string) ($lockCandidate->index_name ?? ''),
+                'lock_type' => (string) ($lockCandidate->lock_type ?? ''),
+                'lock_mode' => (string) ($lockCandidate->lock_mode ?? ''),
+                'lock_status' => (string) ($lockCandidate->lock_status ?? ''),
+                'lock_data' => (string) ($lockCandidate->lock_data ?? ''),
+                'processlist_info' => (string) ($lockCandidate->processlist_info ?? ''),
+            ];
+            $lastObservationFlags = [
+                'query_targets_documents' => $queryTargetsDocuments,
+                'query_uses_for_update' => $queryUsesForUpdate,
+                'synthetic_query_marker_present' => $syntheticQueryMarkerPresent,
+                'document_lock_identity_matched' => $documentLockIdentityMatched,
+            ];
 
-            if ($candidate !== null
-                && $queryTargetsDocuments
+            if ($queryTargetsDocuments
                 && $queryUsesForUpdate
                 && !$syntheticQueryMarkerPresent
                 && $documentLockIdentityMatched) {
-                $waitingTransaction = $candidate;
                 $waitingDataLock = $lockCandidate;
                 break;
             }
             usleep(10000);
         }
-        if ($waitingTransaction === null || $waitingDataLock === null) {
-            throw new RuntimeException('Controlled loser never entered an observable InnoDB LOCK WAIT on the governed documents primary-key lock.');
+        if ($waitingDataLock === null) {
+            throw new RuntimeException(
+                'Controlled loser never entered an observable InnoDB LOCK WAIT on the governed documents lock. Diagnostic: '
+                . json_encode([
+                    'transaction' => $lastTransactionObservation,
+                    'data_lock' => $lastDataLockObservation,
+                    'flags' => $lastObservationFlags,
+                ], JSON_THROW_ON_ERROR)
+            );
         }
-        $observedQuery = (string) ($waitingTransaction->trx_query ?? '');
+        $observedQuery = $query;
         $normalizedObservedQuery = strtolower((string) preg_replace('/\s+/', ' ', trim($observedQuery)));
         $contentionEvidence = [
             'role' => 'leader',
             'lock_wait_observed' => true,
             'governed_query_observed' => true,
             'observer_connection_id' => $leaderConnectionId,
-            'waiting_connection_id' => (int) ($waitingTransaction->trx_mysql_thread_id ?? 0),
+            'waiting_connection_id' => (int) ($waitingDataLock->waiting_connection_id ?? 0),
             'data_lock_waiting_connection_id' => (int) ($waitingDataLock->waiting_connection_id ?? 0),
             'blocking_connection_id' => (int) ($waitingDataLock->blocking_connection_id ?? 0),
-            'trx_state' => (string) ($waitingTransaction->trx_state ?? ''),
-            'trx_wait_started' => (string) ($waitingTransaction->trx_wait_started ?? ''),
-            'query_targets_documents' => preg_match('/\bfrom\s+`?documents`?\b/', $normalizedObservedQuery) === 1,
+            'lock_wait_source' => 'performance_schema.data_lock_waits',
+            'lock_wait_observed_at' => gmdate(DATE_ATOM),
+            'observed_query_source' => $observedQuerySource,
+            'query_targets_documents' => preg_match('/\bfrom\s+`?documents`?(?:\s|$)/', $normalizedObservedQuery) === 1,
             'query_uses_for_update' => str_contains($normalizedObservedQuery, 'for update'),
             'synthetic_query_marker_present' => str_contains($normalizedObservedQuery, 'gap032_lock_'),
-            'document_lock_identity_matched' => str_contains((string) ($waitingDataLock->lock_data ?? ''), $documentId),
+            'document_lock_identity_matched' => $documentLockIdentityMatched,
             'object_name' => (string) ($waitingDataLock->object_name ?? ''),
             'index_name' => (string) ($waitingDataLock->index_name ?? ''),
             'lock_status' => (string) ($waitingDataLock->lock_status ?? ''),

@@ -3,6 +3,7 @@ ApiTestConfiguration::test_required_services_available|group=redis|reason=REDIS_
 BulkOperationsTest::skipUnlessSlowTestsEnabled|group=slow|reason=RUN_SLOW_TESTS
 ButtonFormSubmissionTest::setUp|group=slow|reason=RUN_SLOW_TESTS
 DocumentStatusMigrationTest::test_migration_round_trip_preserves_existing_status_and_metadata_on_sqlite|group=slow|reason=dependency:
+DocumentWorkflowConcurrencyTest::requireRealMysql|group=stress|reason=dependency:
 DocumentWorkflowConcurrencyTest::skipUnlessMysqlAvailable|group=stress|reason=dependency:
 EvidenceBindingTest::test_real_repo_history_c4250146_and_f775d286_produce_identical_digest|group=stress|reason=dependency:
 FinalSystemTest::skipUnlessStressTestsEnabled|group=stress|reason=RUN_STRESS_TESTS

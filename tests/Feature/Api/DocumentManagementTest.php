@@ -10,6 +10,7 @@ use App\Models\Task;
 use App\Models\Component;
 use App\Models\ChangeRequest;
 use App\Models\User;
+use App\Services\DocumentWorkflowService;
 use App\Enums\DocumentWorkflowStatus;
 use App\Enums\DocumentApprovalStatus;
 use App\Enums\DocumentLifecycleStatus;
@@ -1053,10 +1054,22 @@ class DocumentManagementTest extends TestCase
     {
         $document = $this->createDocument([
             'status' => 'draft',
+            'lifecycle_status' => DocumentLifecycleStatus::DRAFT->value,
+            'approval_status' => DocumentApprovalStatus::NOT_SUBMITTED->value,
             'metadata' => [
                 'status' => 'draft',
             ],
         ]);
+        $version = DocumentVersion::query()->create([
+            'document_id' => $document->id,
+            'version_number' => 1,
+            'file_path' => "documents/{$document->id}/v1.pdf",
+            'storage_driver' => 'local',
+            'comment' => 'Initial version',
+            'metadata' => ['version' => 1],
+            'created_by' => $this->user->id,
+        ]);
+        $document->forceFill(['current_version_id' => $version->id])->saveQuietly();
 
         $this->apiPost($this->zena('documents.submit', ['id' => $document->id]), [])
             ->assertOk()
@@ -1080,16 +1093,8 @@ class DocumentManagementTest extends TestCase
             'document.update',
             'document.approve',
         ]);
+        $document = $this->createCanonicallySubmittedDocument();
         $this->apiAs($approver, $this->tenant);
-
-        $document = $this->createDocument([
-            'status' => 'submitted',
-            'metadata' => [
-                'status' => 'submitted',
-                'submitted_by' => $this->user->id,
-                'submitted_at' => now()->subMinute()->toISOString(),
-            ],
-        ]);
 
         $this->apiPost($this->zena('documents.decision', ['id' => $document->id]), [
             'decision' => 'approved',
@@ -1114,15 +1119,8 @@ class DocumentManagementTest extends TestCase
             'document.update',
             'document.approve',
         ]);
+        $document = $this->createCanonicallySubmittedDocument();
         $this->apiAs($approver, $this->tenant);
-
-        $document = $this->createDocument([
-            'status' => 'submitted',
-            'metadata' => [
-                'status' => 'submitted',
-                'submitted_by' => $this->user->id,
-            ],
-        ]);
 
         $this->apiPost($this->zena('documents.decision', ['id' => $document->id]), [
             'decision' => 'rejected',
@@ -1358,6 +1356,32 @@ class DocumentManagementTest extends TestCase
                 'revision' => '0',
             ],
         ], $overrides));
+    }
+
+    private function createCanonicallySubmittedDocument(): Document
+    {
+        $document = $this->createDocument([
+            'status' => DocumentLifecycleStatus::DRAFT->value,
+            'lifecycle_status' => DocumentLifecycleStatus::DRAFT->value,
+            'approval_status' => DocumentApprovalStatus::NOT_SUBMITTED->value,
+            'metadata' => ['status' => DocumentLifecycleStatus::DRAFT->value],
+        ]);
+        $version = DocumentVersion::query()->create([
+            'document_id' => $document->id,
+            'version_number' => 1,
+            'file_path' => "documents/{$document->id}/v1.pdf",
+            'storage_driver' => 'local',
+            'comment' => 'Initial version',
+            'metadata' => ['version' => 1],
+            'created_by' => $this->user->id,
+        ]);
+        $document->forceFill(['current_version_id' => $version->id])->saveQuietly();
+
+        return $this->app->make(DocumentWorkflowService::class)->submit(
+            (string) $this->tenant->id,
+            (string) $document->id,
+            (string) $this->user->id,
+        );
     }
 
     private function createValidPdfUploadedFile(string $name = 'test-document.pdf', int $paddingBytes = 0): UploadedFile

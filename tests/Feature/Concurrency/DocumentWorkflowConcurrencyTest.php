@@ -32,6 +32,7 @@ class DocumentWorkflowConcurrencyTest extends TestCase
 {
     private ?string $originalDefaultConnection = null;
 
+    /** @group stress */
     private function skipUnlessMysqlAvailable(): void
     {
         try {

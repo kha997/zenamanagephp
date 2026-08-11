@@ -11,6 +11,7 @@ use App\Models\DocumentVersion;
 use App\Models\Project;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\DocumentLifecycleService;
 use App\Services\DocumentWorkflowService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -83,6 +84,28 @@ class DocumentWorkflowControllerTest extends TestCase
             (string) $document->uploaded_by,
             $decision,
             $note
+        );
+
+        return $document->fresh();
+    }
+
+    private function publishDocument(Document $document): Document
+    {
+        app(DocumentLifecycleService::class)->publish(
+            (string) $this->tenant->id,
+            (string) $document->id,
+            (string) $document->uploaded_by
+        );
+
+        return $document->fresh();
+    }
+
+    private function archiveDocument(Document $document): Document
+    {
+        app(DocumentLifecycleService::class)->archive(
+            (string) $this->tenant->id,
+            (string) $document->id,
+            (string) $document->uploaded_by
         );
 
         return $document->fresh();
@@ -244,6 +267,132 @@ class DocumentWorkflowControllerTest extends TestCase
 
         $response->assertSessionHasErrors('error');
         $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'approved']);
+    }
+
+    public function test_publish_by_actor_with_document_update_transitions_draft_to_published(): void
+    {
+        $document = $this->makeDocument();
+        $actor = $this->createTenantUser($this->tenant, [], ['designer'], ['document.update']);
+
+        $response = $this->actingAs($actor)
+            ->withHeaders(['X-Tenant-ID' => (string) $this->tenant->id])
+            ->post(route('app.documents.workflow.publish', ['document' => $document->id]));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+        $fresh = $document->fresh();
+        self::assertSame(DocumentLifecycleStatus::PUBLISHED->value, $fresh->getRawOriginal('lifecycle_status'));
+        self::assertSame(DocumentApprovalStatus::NOT_SUBMITTED->value, $fresh->getRawOriginal('approval_status'));
+        $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'published']);
+    }
+
+    public function test_archive_by_actor_with_document_update_transitions_published_to_archived(): void
+    {
+        $document = $this->makeDocument();
+        $document = $this->publishDocument($document);
+        $actor = $this->createTenantUser($this->tenant, [], ['designer'], ['document.update']);
+
+        $response = $this->actingAs($actor)
+            ->withHeaders(['X-Tenant-ID' => (string) $this->tenant->id])
+            ->post(route('app.documents.workflow.archive', ['document' => $document->id]));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+        $fresh = $document->fresh();
+        self::assertSame(DocumentLifecycleStatus::ARCHIVED->value, $fresh->getRawOriginal('lifecycle_status'));
+        self::assertSame(DocumentApprovalStatus::NOT_SUBMITTED->value, $fresh->getRawOriginal('approval_status'));
+        $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'archived']);
+    }
+
+    public function test_reopen_by_actor_with_document_update_transitions_approved_to_draft(): void
+    {
+        $document = $this->makeDocument();
+        $document = $this->submitDocument($document);
+        $document = $this->decideDocument($document, DocumentDecision::APPROVED);
+        $actor = $this->createTenantUser($this->tenant, [], ['designer'], ['document.update']);
+
+        $response = $this->actingAs($actor)
+            ->withHeaders(['X-Tenant-ID' => (string) $this->tenant->id])
+            ->post(route('app.documents.workflow.reopen', ['document' => $document->id]));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+        $fresh = $document->fresh();
+        self::assertSame(DocumentLifecycleStatus::DRAFT->value, $fresh->getRawOriginal('lifecycle_status'));
+        self::assertSame(DocumentApprovalStatus::NOT_SUBMITTED->value, $fresh->getRawOriginal('approval_status'));
+        $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'draft']);
+    }
+
+    public function test_reactivate_by_actor_with_document_update_transitions_archived_to_draft(): void
+    {
+        $document = $this->makeDocument();
+        $document = $this->publishDocument($document);
+        $document = $this->archiveDocument($document);
+        $actor = $this->createTenantUser($this->tenant, [], ['designer'], ['document.update']);
+
+        $response = $this->actingAs($actor)
+            ->withHeaders(['X-Tenant-ID' => (string) $this->tenant->id])
+            ->post(route('app.documents.workflow.reactivate', ['document' => $document->id]));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+        $fresh = $document->fresh();
+        self::assertSame(DocumentLifecycleStatus::DRAFT->value, $fresh->getRawOriginal('lifecycle_status'));
+        self::assertSame(DocumentApprovalStatus::NOT_SUBMITTED->value, $fresh->getRawOriginal('approval_status'));
+        $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'draft']);
+    }
+
+    public function test_lifecycle_actions_without_document_update_permission_are_blocked(): void
+    {
+        $publishable = $this->makeDocument();
+        $archivable = $this->publishDocument($this->makeDocument());
+        $reopenable = $this->decideDocument($this->submitDocument($this->makeDocument()), DocumentDecision::APPROVED);
+        $reactivatable = $this->archiveDocument($this->publishDocument($this->makeDocument()));
+        $actor = $this->createTenantUser($this->tenant, [], ['viewer'], ['document.view']);
+
+        $requests = [
+            'publish' => $publishable,
+            'archive' => $archivable,
+            'reopen' => $reopenable,
+            'reactivate' => $reactivatable,
+        ];
+
+        foreach ($requests as $action => $document) {
+            $before = $document->getRawOriginal('status');
+            $response = $this->actingAs($actor)
+                ->withHeaders(['X-Tenant-ID' => (string) $this->tenant->id])
+                ->post(route("app.documents.workflow.{$action}", ['document' => $document->id]));
+
+            $response->assertStatus(302);
+            self::assertSame($before, $document->fresh()->getRawOriginal('status'));
+        }
+    }
+
+    public function test_lifecycle_actions_on_cross_tenant_document_return_404(): void
+    {
+        $otherTenant = Tenant::factory()->create();
+        $otherProject = Project::factory()->create(['tenant_id' => $otherTenant->id]);
+        $otherUploader = User::factory()->create(['tenant_id' => $otherTenant->id]);
+        $foreignDocument = Document::factory()->create([
+            'tenant_id' => $otherTenant->id,
+            'project_id' => $otherProject->id,
+            'uploaded_by' => $otherUploader->id,
+            'created_by' => $otherUploader->id,
+            'updated_by' => $otherUploader->id,
+            'status' => 'draft',
+            'lifecycle_status' => DocumentLifecycleStatus::DRAFT->value,
+            'approval_status' => DocumentApprovalStatus::NOT_SUBMITTED->value,
+            'metadata' => ['status' => 'draft'],
+        ]);
+        $actor = $this->createTenantUser($this->tenant, [], ['designer'], ['document.update']);
+
+        foreach (['publish', 'archive', 'reopen', 'reactivate'] as $action) {
+            $response = $this->actingAs($actor)
+                ->withHeaders(['X-Tenant-ID' => (string) $this->tenant->id])
+                ->post(route("app.documents.workflow.{$action}", ['document' => $foreignDocument->id]));
+
+            $response->assertNotFound();
+        }
     }
 
     /**

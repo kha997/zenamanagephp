@@ -1,5 +1,7 @@
 tests/Feature/Api/ContractPdfExportTest.php:52|api/v1/work-template/projects/{$project->id}/contracts/{$contract->id}/pdf
 tests/Feature/Api/ContractPdfExportTest.php:52|api/zena/projects/{$project->id}/contracts/{$contract->id}/pdf
+tests/Feature/Api/DocumentLifecycleActionsTest.php:218|api/zena/documents/{id}/{$action}
+tests/Feature/Api/DocumentLifecycleActionsTest.php:224|api/documents/{document}/{$action}
 tests/Feature/Architecture/ModuleOwnershipSourceInvariantTest.php:114|api/v1/tasks` -> `Src\\CoreProject\\Controllers\\TaskController`
 tests/Feature/Architecture/ModuleOwnershipSourceInvariantTest.php:115|api/v1/work-template/projects/*/tasks` -> `Src\\WorkTemplate\\Controllers\\ProjectTaskController` projection routes
 tests/Feature/Architecture/ModuleOwnershipSourceInvariantTest.php:50|api/v1/projects` -> `Src\\CoreProject\\Controllers\\ProjectController`

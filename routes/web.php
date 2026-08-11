@@ -419,6 +419,10 @@ Route::get('/projects-enhanced', function() {
     Route::post('/documents/{document}/submit', [App\Http\Controllers\Web\DocumentWorkflowController::class, 'submit'])->middleware('rbac:document.update')->name('documents.workflow.submit');
     Route::post('/documents/{document}/approve', [App\Http\Controllers\Web\DocumentWorkflowController::class, 'approve'])->middleware('rbac:document.approve')->name('documents.workflow.approve');
     Route::post('/documents/{document}/reject', [App\Http\Controllers\Web\DocumentWorkflowController::class, 'reject'])->middleware('rbac:document.approve')->name('documents.workflow.reject');
+    Route::post('/documents/{document}/publish', [App\Http\Controllers\Web\DocumentWorkflowController::class, 'publish'])->middleware('rbac:document.update')->name('documents.workflow.publish');
+    Route::post('/documents/{document}/archive', [App\Http\Controllers\Web\DocumentWorkflowController::class, 'archive'])->middleware('rbac:document.update')->name('documents.workflow.archive');
+    Route::post('/documents/{document}/reopen', [App\Http\Controllers\Web\DocumentWorkflowController::class, 'reopen'])->middleware('rbac:document.update')->name('documents.workflow.reopen');
+    Route::post('/documents/{document}/reactivate', [App\Http\Controllers\Web\DocumentWorkflowController::class, 'reactivate'])->middleware('rbac:document.update')->name('documents.workflow.reactivate');
 
         // Team Routes
         Route::get('/team', function () {

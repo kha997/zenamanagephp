@@ -11,6 +11,8 @@ use App\Models\Component;
 use App\Models\ChangeRequest;
 use App\Models\User;
 use App\Enums\DocumentWorkflowStatus;
+use App\Enums\DocumentApprovalStatus;
+use App\Enums\DocumentLifecycleStatus;
 use Illuminate\Filesystem\FilesystemManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -69,7 +71,7 @@ class DocumentManagementTest extends TestCase
             'document_type' => 'drawing',
             'discipline' => 'structural',
             'package' => 'PKG-A1',
-            'status' => 'review',
+            'status' => 'draft',
             'revision' => 'A',
             'tags' => ['ifc', 'steel'],
             'description' => 'Issued for coordination',
@@ -80,7 +82,7 @@ class DocumentManagementTest extends TestCase
             ->assertJsonPath('data.document_type', 'drawing')
             ->assertJsonPath('data.discipline', 'structural')
             ->assertJsonPath('data.package', 'PKG-A1')
-            ->assertJsonPath('data.status', 'review')
+            ->assertJsonPath('data.status', 'draft')
             ->assertJsonPath('data.revision', 'A');
 
         $documentId = $response->json('data.id');
@@ -91,14 +93,14 @@ class DocumentManagementTest extends TestCase
             'document_type' => 'drawing',
             'discipline' => 'structural',
             'package' => 'PKG-A1',
-            'status' => 'review',
+            'status' => 'draft',
             'revision' => 'A',
         ]);
 
         $this->apiGet($this->namedRoute('v1.documents.index', query: [
             'discipline' => 'structural',
             'package' => 'PKG-A1',
-            'status' => 'review',
+            'status' => 'draft',
             'revision' => 'A',
             'q' => 'Structural',
         ]))
@@ -328,7 +330,7 @@ class DocumentManagementTest extends TestCase
             'document_type' => 'specification',
             'discipline' => 'architectural',
             'package' => 'SPEC-A2',
-            'status' => 'review',
+            'status' => 'active',
             'revision' => 'B',
             'tags' => ['issued', 'coordination'],
             'description' => 'Canonical metadata proof',
@@ -339,12 +341,12 @@ class DocumentManagementTest extends TestCase
             ->assertJsonPath('data.document_type', 'specification')
             ->assertJsonPath('data.discipline', 'architectural')
             ->assertJsonPath('data.package', 'SPEC-A2')
-            ->assertJsonPath('data.status', 'review')
+            ->assertJsonPath('data.status', 'draft')
             ->assertJsonPath('data.revision', 'B')
             ->assertJsonPath('data.metadata.document_type', 'specification')
             ->assertJsonPath('data.metadata.discipline', 'architectural')
             ->assertJsonPath('data.metadata.package', 'SPEC-A2')
-            ->assertJsonPath('data.metadata.status', 'review')
+            ->assertJsonPath('data.metadata.status', 'draft')
             ->assertJsonPath('data.metadata.revision', 'B')
             ->assertJsonPath('data.metadata.tags.0', 'issued');
 
@@ -356,7 +358,7 @@ class DocumentManagementTest extends TestCase
             'document_type' => 'specification',
             'discipline' => 'architectural',
             'package' => 'SPEC-A2',
-            'status' => 'review',
+            'status' => 'draft',
             'revision' => 'B',
         ]);
 
@@ -364,7 +366,7 @@ class DocumentManagementTest extends TestCase
             'document_type' => 'specification',
             'discipline' => 'architectural',
             'package' => 'SPEC-A2',
-            'status' => 'review',
+            'status' => 'draft',
             'revision' => 'B',
             'q' => 'Architectural',
         ]))
@@ -488,15 +490,14 @@ class DocumentManagementTest extends TestCase
         $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'draft']);
     }
 
-    public function test_update_on_submitted_document_silently_preserves_status_for_legacy_target(): void
+    public function test_update_on_submitted_document_rejects_generic_lifecycle_target(): void
     {
         $document = $this->createDocument(['status' => 'submitted', 'metadata' => ['status' => 'submitted']]);
 
         $this->apiPatch($this->namedRoute('v1.documents.update.patch', ['id' => $document->id]), [
             'status' => 'review',
         ])
-            ->assertOk()
-            ->assertJsonPath('data.status', 'submitted');
+            ->assertStatus(422);
 
         $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'submitted']);
     }
@@ -565,7 +566,7 @@ class DocumentManagementTest extends TestCase
         $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'submitted']);
     }
 
-    public function test_create_version_on_approved_document_with_legacy_status_input_preserves_status(): void
+    public function test_create_version_on_approved_document_rejects_generic_lifecycle_input(): void
     {
         $document = $this->createDocument(['status' => 'approved', 'metadata' => ['status' => 'approved'], 'version' => 1]);
 
@@ -574,13 +575,12 @@ class DocumentManagementTest extends TestCase
             'version' => 2,
             'status' => 'review',
         ])
-            ->assertCreated()
-            ->assertJsonPath('data.status', 'approved');
+            ->assertStatus(422);
 
         $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'approved']);
     }
 
-    public function test_store_still_accepts_legacy_review_status(): void
+    public function test_store_rejects_legacy_review_status(): void
     {
         $this->apiPostMultipart($this->namedRoute('v1.documents.store'), [
             'project_id' => $this->project->id,
@@ -589,8 +589,184 @@ class DocumentManagementTest extends TestCase
             'status' => 'review',
             'file' => $this->createValidPdfUploadedFile('legacy-review-store.pdf'),
         ])
-            ->assertCreated()
-            ->assertJsonPath('data.status', 'review');
+            ->assertStatus(422);
+    }
+
+    public function test_api_create_defaults_to_draft_and_not_submitted_with_matching_legacy_projection(): void
+    {
+        $response = $this->apiPostMultipart($this->namedRoute('v1.documents.store'), [
+            'project_id' => $this->project->id,
+            'title' => 'Default canonical state',
+            'document_type' => 'drawing',
+            'file' => $this->createValidPdfUploadedFile('default-canonical.pdf'),
+        ])->assertCreated();
+
+        $this->assertDatabaseHas('documents', [
+            'id' => $response->json('data.id'),
+            'status' => 'draft',
+            'lifecycle_status' => DocumentLifecycleStatus::DRAFT->value,
+            'approval_status' => DocumentApprovalStatus::NOT_SUBMITTED->value,
+        ]);
+    }
+
+    public function test_api_create_active_alias_still_materializes_draft_and_not_submitted(): void
+    {
+        $response = $this->apiPostMultipart($this->namedRoute('v1.documents.store'), [
+            'project_id' => $this->project->id,
+            'title' => 'Active compatibility alias',
+            'document_type' => 'drawing',
+            'status' => 'active',
+            'file' => $this->createValidPdfUploadedFile('active-alias.pdf'),
+        ])->assertCreated();
+
+        $this->assertDatabaseHas('documents', [
+            'id' => $response->json('data.id'),
+            'status' => 'draft',
+            'lifecycle_status' => 'draft',
+            'approval_status' => 'not-submitted',
+        ]);
+    }
+
+    public function test_api_create_rejects_review_published_archived_and_all_approval_values(): void
+    {
+        foreach (['review', 'published', 'archived', 'submitted', 'awaiting-approval', 'approved', 'rejected', 'pending'] as $status) {
+            $this->apiPostMultipart($this->namedRoute('v1.documents.store'), [
+                'project_id' => $this->project->id,
+                'title' => 'Rejected create ' . $status,
+                'document_type' => 'drawing',
+                'status' => $status,
+                'file' => $this->createValidPdfUploadedFile('rejected-create-' . $status . '.pdf'),
+            ])->assertStatus(422);
+        }
+    }
+
+    public function test_generic_update_maps_active_to_draft_and_review_to_in_review_without_changing_approval(): void
+    {
+        $document = $this->createDocument(['status' => 'active', 'metadata' => ['status' => 'active']]);
+
+        $this->apiPatch($this->namedRoute('v1.documents.update.patch', ['id' => $document->id]), ['status' => 'review'])
+            ->assertOk();
+
+        $this->assertDatabaseHas('documents', [
+            'id' => $document->id,
+            'status' => 'review',
+            'lifecycle_status' => 'in-review',
+            'approval_status' => 'not-submitted',
+        ]);
+    }
+
+    public function test_generic_update_rejects_submitted_awaiting_approval_approved_rejected_and_pending(): void
+    {
+        $document = $this->createDocument();
+
+        foreach (['submitted', 'awaiting-approval', 'approved', 'rejected', 'pending'] as $status) {
+            $this->apiPatch($this->namedRoute('v1.documents.update.patch', ['id' => $document->id]), ['status' => $status])
+                ->assertStatus(422);
+        }
+    }
+
+    public function test_generic_write_rejects_unknown_status_without_mutating_existing_unknown_legacy_rows(): void
+    {
+        $document = $this->createDocument(['status' => 'legacy-unknown', 'metadata' => ['status' => 'legacy-unknown']]);
+
+        $this->apiPatch($this->namedRoute('v1.documents.update.patch', ['id' => $document->id]), ['status' => 'unrecognized'])
+            ->assertStatus(422);
+
+        $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'legacy-unknown', 'lifecycle_status' => null, 'approval_status' => null]);
+    }
+
+    public function test_generic_lifecycle_edit_cannot_reset_legacy_workflow_approval_state(): void
+    {
+        $document = $this->createDocument(['status' => 'approved', 'metadata' => ['status' => 'approved']]);
+
+        $this->apiPatch($this->namedRoute('v1.documents.update.patch', ['id' => $document->id]), ['status' => 'draft'])
+            ->assertStatus(422);
+
+        $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'approved', 'lifecycle_status' => null, 'approval_status' => null]);
+    }
+
+    public function test_store_update_and_create_version_strip_forged_canonical_columns_and_metadata_keys(): void
+    {
+        $create = $this->apiPostMultipart($this->namedRoute('v1.documents.store'), [
+            'project_id' => $this->project->id,
+            'title' => 'Canonical forgery guard',
+            'document_type' => 'drawing',
+            'lifecycle_status' => 'archived',
+            'approval_status' => 'approved',
+            'metadata' => ['lifecycle_status' => 'archived', 'approval_status' => 'approved'],
+            'file' => $this->createValidPdfUploadedFile('forgery-store.pdf'),
+        ])->assertCreated();
+
+        $id = $create->json('data.id');
+        $this->apiPatch($this->namedRoute('v1.documents.update.patch', ['id' => $id]), [
+            'lifecycle_status' => 'archived',
+            'approval_status' => 'approved',
+            'status' => 'review',
+        ])->assertOk();
+        $version = $this->apiPostMultipart($this->namedRoute('v1.documents.versions.store', ['id' => $id]), [
+            'file' => $this->createValidPdfUploadedFile('forgery-version.pdf'),
+            'version' => 2,
+            'lifecycle_status' => 'archived',
+            'approval_status' => 'approved',
+            'metadata' => ['lifecycle_status' => 'archived', 'approval_status' => 'approved'],
+        ])->assertCreated();
+
+        $document = Document::findOrFail($id);
+        $this->assertSame('in-review', $document->lifecycle_status);
+        $this->assertSame('not-submitted', $document->approval_status);
+        $this->assertArrayNotHasKey('lifecycle_status', $document->metadata);
+        $this->assertArrayNotHasKey('approval_status', $document->metadata);
+        $versionMetadata = DocumentVersion::findOrFail($version->json('data.current_version_id'))->metadata;
+        $this->assertArrayNotHasKey('lifecycle_status', $versionMetadata);
+        $this->assertArrayNotHasKey('approval_status', $versionMetadata);
+    }
+
+    public function test_unrelated_api_edit_does_not_materialize_or_normalize_untouched_legacy_status(): void
+    {
+        $document = $this->createDocument(['status' => 'submitted', 'metadata' => ['status' => 'submitted']]);
+
+        $this->apiPatch($this->namedRoute('v1.documents.update.patch', ['id' => $document->id]), ['title' => 'Retitled only'])
+            ->assertOk();
+
+        $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'submitted', 'lifecycle_status' => null, 'approval_status' => null]);
+    }
+
+    public function test_unrelated_edit_preserves_unknown_legacy_status_and_null_canonical_columns(): void
+    {
+        $document = $this->createDocument(['status' => 'legacy-unknown', 'metadata' => ['status' => 'legacy-unknown']]);
+
+        $this->apiPatch($this->namedRoute('v1.documents.update.patch', ['id' => $document->id]), ['description' => 'An unrelated edit'])
+            ->assertOk();
+
+        $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'legacy-unknown', 'lifecycle_status' => null, 'approval_status' => null]);
+    }
+
+    public function test_update_and_create_version_authorize_the_tenant_scoped_document_before_the_locked_mutation(): void
+    {
+        $document = $this->createDocument();
+        $viewOnlyUser = $this->createTenantUser($this->tenant, [], ['engineer'], ['document.view']);
+        $this->apiAs($viewOnlyUser, $this->tenant);
+
+        $this->apiPatch($this->namedRoute('v1.documents.update.patch', ['id' => $document->id]), ['status' => 'review'])->assertForbidden();
+        $this->apiPostMultipart($this->namedRoute('v1.documents.versions.store', ['id' => $document->id]), [
+            'file' => $this->createValidPdfUploadedFile('unauthorized-version.pdf'),
+            'version' => 2,
+        ])->assertForbidden();
+    }
+
+    public function test_cross_tenant_update_and_create_version_return_not_found_without_mutation(): void
+    {
+        $otherTenant = Tenant::factory()->create();
+        $otherUser = $this->createTenantUser($otherTenant, [], ['designer'], ['document.view', 'document.update']);
+        $otherProject = Project::factory()->create(['tenant_id' => $otherTenant->id, 'created_by' => $otherUser->id]);
+        $foreign = Document::factory()->create(['tenant_id' => $otherTenant->id, 'project_id' => $otherProject->id, 'status' => 'draft', 'version' => 1]);
+
+        $this->apiPatch($this->namedRoute('v1.documents.update.patch', ['id' => $foreign->id]), ['status' => 'review'])->assertNotFound();
+        $this->apiPostMultipart($this->namedRoute('v1.documents.versions.store', ['id' => $foreign->id]), [
+            'file' => $this->createValidPdfUploadedFile('cross-tenant-version.pdf'),
+            'version' => 2,
+        ])->assertNotFound();
+        $this->assertDatabaseHas('documents', ['id' => $foreign->id, 'status' => 'draft', 'version' => 1]);
     }
 
     public function test_store_still_accepts_draft_status(): void

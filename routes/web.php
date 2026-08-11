@@ -538,10 +538,6 @@ Route::delete('/projects/{project}', function (Project $project) {
     ], 200);
 })->middleware(['auth', 'tenant.isolation', 'rbac:project.delete'])->name('projects.destroy');
 
-Route::post('/documents', [App\Http\Controllers\Web\DocumentController::class, 'store'])
-    ->middleware(['auth', 'tenant.isolation'])
-    ->name('documents.store');
-
 Route::put('/profile', function (Request $request) {
     return response()->json(['message' => 'Profile updated via web endpoint'], 200);
 })->middleware(['auth', 'tenant.isolation'])->name('profile.update');

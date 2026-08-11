@@ -4,6 +4,7 @@ namespace Tests\Feature\Api;
 
 use App\Http\Middleware\RoleBasedAccessControlMiddleware;
 use App\Models\DesignItem;
+use App\Models\Document;
 use App\Models\Project;
 use App\Models\Tenant;
 use App\Models\User;
@@ -368,6 +369,57 @@ class DesignItemApiTest extends TestCase
 
         $list = $this->getJson($this->route('documents.index', ['id' => $itemId]), $this->headersFor($this->userA));
         $list->assertStatus(200)->assertJsonCount(2, 'data');
+    }
+
+    public function test_design_item_first_upload_uses_canonical_creation_boundary_and_draft_not_submitted_state(): void
+    {
+        $item = DesignItem::query()->create([
+            'tenant_id' => (string) $this->tenantA->id,
+            'project_id' => (string) $this->projectA->id,
+            'name' => 'Canonical upload target',
+            'item_type' => DesignItem::TYPE_OTHER,
+            'review_status' => DesignItem::STATUS_DRAFT,
+            'created_by' => (string) $this->userA->id,
+        ]);
+        \Illuminate\Support\Facades\Storage::fake('local');
+
+        $this->post($this->route('documents.store', ['id' => $item->id]), [
+            'file' => \Illuminate\Http\UploadedFile::fake()->create('canonical-design.pdf', 20, 'application/pdf'),
+        ], $this->headersFor($this->userA))->assertCreated();
+
+        $this->assertDatabaseHas('documents', [
+            'tenant_id' => (string) $this->tenantA->id,
+            'linked_entity_type' => Document::ENTITY_TYPE_DESIGN_ITEM,
+            'linked_entity_id' => (string) $item->id,
+            'status' => 'draft',
+            'lifecycle_status' => 'draft',
+            'approval_status' => 'not-submitted',
+        ]);
+    }
+
+    public function test_design_item_upload_cannot_create_or_find_a_cross_tenant_document(): void
+    {
+        $item = DesignItem::query()->create([
+            'tenant_id' => (string) $this->tenantA->id,
+            'project_id' => (string) $this->projectA->id,
+            'name' => 'Tenant-scoped upload target',
+            'item_type' => DesignItem::TYPE_OTHER,
+            'review_status' => DesignItem::STATUS_DRAFT,
+            'created_by' => (string) $this->userA->id,
+        ]);
+        $foreign = Document::factory()->create([
+            'tenant_id' => (string) $this->tenantB->id,
+            'linked_entity_type' => Document::ENTITY_TYPE_DESIGN_ITEM,
+            'linked_entity_id' => (string) $item->id,
+        ]);
+        \Illuminate\Support\Facades\Storage::fake('local');
+
+        $this->post($this->route('documents.store', ['id' => $item->id]), [
+            'file' => \Illuminate\Http\UploadedFile::fake()->create('tenant-scoped.pdf', 20, 'application/pdf'),
+        ], $this->headersFor($this->userA))->assertCreated();
+
+        $this->assertDatabaseHas('documents', ['id' => $foreign->id, 'tenant_id' => (string) $this->tenantB->id]);
+        $this->assertDatabaseHas('documents', ['tenant_id' => (string) $this->tenantA->id, 'linked_entity_id' => (string) $item->id]);
     }
 
     public function test_upload_requires_manage_permission(): void

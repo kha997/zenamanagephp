@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\DocumentApprovalStatus;
 use App\Enums\DocumentDecision;
+use App\Enums\DocumentLifecycleStatus;
 use App\Enums\DocumentWorkflowStatus;
 use App\Exceptions\DocumentWorkflowException;
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
@@ -15,6 +17,8 @@ use App\Models\Project;
 use App\Models\Submittal;
 use App\Models\Task;
 use App\Services\DocumentWorkflowService;
+use App\Services\DocumentCreationService;
+use App\Services\DocumentStatusService;
 use App\Services\ErrorEnvelopeService;
 use App\Services\ZenaAuditLogger;
 use Illuminate\Database\Eloquent\Builder;
@@ -51,6 +55,8 @@ class SimpleDocumentController extends Controller
         'decision_by',
         'decision_at',
         'decision_note',
+        'lifecycle_status',
+        'approval_status',
     ];
 
     public function index(Request $request)
@@ -95,7 +101,7 @@ class SimpleDocumentController extends Controller
             'document_type' => ['required', Rule::in(Document::VALID_DOCUMENT_TYPES)],
             'discipline' => 'nullable|string|max:100',
             'package' => 'nullable|string|max:100',
-            'status' => ['nullable', 'string', 'max:100', Rule::notIn(DocumentWorkflowStatus::reservedValues())],
+            'status' => ['nullable', 'string', Rule::in(['active', 'draft'])],
             'revision' => 'nullable|string|max:50',
             'file' => 'required|file|max:10240|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,jpg,jpeg,png,gif,zip,rar,7z',
             'name' => 'sometimes|string|max:255',
@@ -171,12 +177,8 @@ class SimpleDocumentController extends Controller
             }
 
             $document = DB::transaction(function () use ($data, $documentName, $fileInfo, $fileType, $metadata, $projectId, $tenantId, $user, $versionNumber) {
-                $document = Document::create([
-                    'tenant_id' => $tenantId,
+                $document = app(DocumentCreationService::class)->create([
                     'project_id' => $projectId,
-                    'uploaded_by' => $user->id,
-                    'created_by' => $user->id,
-                    'updated_by' => $user->id,
                     'name' => $documentName,
                     'title' => $data['title'],
                     'document_type' => $data['document_type'],
@@ -192,10 +194,9 @@ class SimpleDocumentController extends Controller
                     'category' => $data['document_type'] ?? $data['category'] ?? 'general',
                     'description' => $data['description'] ?? null,
                     'metadata' => $metadata,
-                    'status' => $data['status'] ?? 'active',
                     'version' => $versionNumber,
                     'is_current_version' => true,
-                ]);
+                ], $tenantId, (string) $user->id);
 
                 $version = $this->createVersionRecord(
                     $document,
@@ -401,8 +402,9 @@ class SimpleDocumentController extends Controller
             'document_type' => ['nullable', Rule::in(Document::VALID_DOCUMENT_TYPES)],
             'discipline' => 'nullable|string|max:100',
             'package' => 'nullable|string|max:100',
-            'status' => ['nullable', 'string', 'max:100', Rule::notIn(DocumentWorkflowStatus::reservedValues())],
+            'status' => ['nullable', 'string', Rule::in(['active', 'draft', 'review', 'in-review'])],
             'revision' => 'nullable|string|max:50',
+            'metadata' => 'nullable|array',
         ]);
 
         if ($validator->fails()) {
@@ -420,6 +422,7 @@ class SimpleDocumentController extends Controller
         }
 
         $this->authorize('update', $document);
+        $tenantId = $this->resolveTenantId();
 
         $file = $request->file('file');
         if (!$file) {
@@ -439,67 +442,79 @@ class SimpleDocumentController extends Controller
         }
 
         $fileInfo = $uploadResult['file'];
-        $requestedVersion = $request->input('version');
-        $nextVersion = $this->nextVersionNumber($document);
-
-        if ($requestedVersion !== null && (int) $requestedVersion !== $nextVersion) {
-            return ErrorEnvelopeService::validationError([
-                'version' => ['Version must match the next sequential version number.'],
-            ]);
-        }
-
-        $versionNumber = $nextVersion;
         $data = $validator->validated();
-        $metadata = $this->buildMetadata($data, $document->metadata ?? []);
-        $metadata['change_notes'] = $request->input('change_notes');
 
         $fileType = strtolower(trim((string) ($fileInfo['extension'] ?? '')));
         if ($fileType === '') {
             $fileType = 'document';
         }
 
-        $document = DB::transaction(function () use ($document, $fileInfo, $fileType, $metadata, $request, $user, $versionNumber) {
-            $targetStatus = DocumentWorkflowStatus::isReserved($document->status)
-                ? $document->status
-                : $request->input('status', $document->status);
+        try {
+            $document = DB::transaction(function () use ($document, $fileInfo, $fileType, $data, $request, $user, $tenantId) {
+                $locked = Document::query()
+                    ->where('tenant_id', $tenantId)
+                    ->whereKey($document->id)
+                    ->lockForUpdate()
+                    ->first();
 
-            $metadata['status'] = $targetStatus;
+                if (!$locked instanceof Document) {
+                    throw \Illuminate\Database\Eloquent\ModelNotFoundException::make(Document::class, [$document->id]);
+                }
 
-            $version = $this->createVersionRecord(
-                $document,
-                $versionNumber,
-                $user->id,
-                $fileInfo['path'],
-                $fileInfo['original_name'],
-                $fileInfo['mime_type'],
-                (int) $fileInfo['size'],
-                $metadata,
-                $request->input('change_notes')
-            );
+                $nextVersion = $this->nextVersionNumber($locked);
+                $requestedVersion = $request->input('version');
+                if ($requestedVersion !== null && (int) $requestedVersion !== $nextVersion) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'version' => ['Version must match the next sequential version number.'],
+                    ]);
+                }
 
-            $document->forceFill([
-                'uploaded_by' => $user->id,
-                'updated_by' => $user->id,
-                'original_name' => $fileInfo['original_name'],
-                'file_path' => $fileInfo['path'],
-                'file_type' => $fileType,
-                'mime_type' => $fileInfo['mime_type'],
-                'file_size' => (int) $fileInfo['size'],
-                'file_hash' => Str::ulid(),
-                'document_type' => $request->input('document_type', $document->document_type),
-                'discipline' => $request->input('discipline', $document->discipline),
-                'package' => $request->input('package', $document->package),
-                'revision' => $request->input('revision', $document->revision),
-                'status' => $targetStatus,
-                'category' => $request->input('document_type', $document->document_type) ?: $document->category,
-                'description' => $document->description,
-                'metadata' => $metadata,
-                'version' => $versionNumber,
-                'current_version_id' => $version->id,
-            ])->save();
+                $metadata = $this->buildMetadata($data, $locked->metadata ?? []);
+                $metadata['change_notes'] = $request->input('change_notes');
+                $locked->forceFill(['metadata' => $metadata]);
 
-            return $document->fresh(['currentVersion']);
-        });
+                if (array_key_exists('status', $data)) {
+                    $this->writeGenericLifecycle($locked, $data['status'], (string) $user->id);
+                }
+
+                $version = $this->createVersionRecord(
+                    $locked,
+                    $nextVersion,
+                    $user->id,
+                    $fileInfo['path'],
+                    $fileInfo['original_name'],
+                    $fileInfo['mime_type'],
+                    (int) $fileInfo['size'],
+                    $locked->metadata ?? [],
+                    $request->input('change_notes')
+                );
+
+                $locked->forceFill([
+                    'uploaded_by' => $user->id,
+                    'updated_by' => $user->id,
+                    'original_name' => $fileInfo['original_name'],
+                    'file_path' => $fileInfo['path'],
+                    'file_type' => $fileType,
+                    'mime_type' => $fileInfo['mime_type'],
+                    'file_size' => (int) $fileInfo['size'],
+                    'file_hash' => Str::ulid(),
+                    'document_type' => $request->input('document_type', $locked->document_type),
+                    'discipline' => $request->input('discipline', $locked->discipline),
+                    'package' => $request->input('package', $locked->package),
+                    'revision' => $request->input('revision', $locked->revision),
+                    'category' => $request->input('document_type', $locked->document_type) ?: $locked->category,
+                    'description' => $locked->description,
+                    'version' => $nextVersion,
+                    'current_version_id' => $version->id,
+                ])->save();
+
+                return $locked->fresh(['currentVersion']);
+            });
+        } catch (\Illuminate\Validation\ValidationException $exception) {
+            return ErrorEnvelopeService::validationError($exception->errors());
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
+            return ErrorEnvelopeService::notFoundError('Document');
+        }
 
         return $this->zenaSuccessResponse($document, 'Document version created successfully', 201);
     }
@@ -529,6 +544,8 @@ class SimpleDocumentController extends Controller
             return ErrorEnvelopeService::notFoundError('Document');
         }
 
+        $this->authorize('update', $document);
+
         $validator = Validator::make($request->all(), [
             'title' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
@@ -537,7 +554,7 @@ class SimpleDocumentController extends Controller
             'document_type' => ['nullable', Rule::in(Document::VALID_DOCUMENT_TYPES)],
             'discipline' => 'nullable|string|max:100',
             'package' => 'nullable|string|max:100',
-            'status' => ['nullable', 'string', 'max:100', Rule::notIn(DocumentWorkflowStatus::reservedValues())],
+            'status' => ['nullable', 'string', Rule::in(['active', 'draft', 'review', 'in-review'])],
             'revision' => 'nullable|string|max:50',
         ]);
 
@@ -574,16 +591,6 @@ class SimpleDocumentController extends Controller
             $metadata['package'] = $data['package'];
         }
 
-        if (array_key_exists('status', $data)) {
-            if (!DocumentWorkflowStatus::isReserved($document->status)) {
-                $updatePayload['status'] = $data['status'];
-                $metadata['status'] = $data['status'];
-            }
-            // Document hiện đang ở trạng thái workflow (submitted/approved/rejected) —
-            // generic update KHÔNG được đổi status, kể cả sang giá trị legacy hợp lệ.
-            // Field status bị bỏ qua âm thầm; các field khác trong $data vẫn áp dụng bình thường.
-        }
-
         if (array_key_exists('revision', $data)) {
             $updatePayload['revision'] = $data['revision'];
             $metadata['revision'] = $data['revision'];
@@ -597,12 +604,42 @@ class SimpleDocumentController extends Controller
             $updatePayload['metadata'] = $metadata;
         }
 
-        if (!empty($updatePayload)) {
-            $updatePayload['updated_by'] = Auth::id();
-            $document->update($updatePayload);
+        try {
+            $updated = DB::transaction(function () use ($document, $data, $updatePayload, $metadata): Document {
+                $locked = Document::query()
+                    ->where('tenant_id', $this->resolveTenantId())
+                    ->whereKey($document->id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$locked instanceof Document) {
+                    throw \Illuminate\Database\Eloquent\ModelNotFoundException::make(Document::class, [$document->id]);
+                }
+
+                if ($metadata !== ($document->metadata ?? [])) {
+                    $locked->forceFill(['metadata' => $metadata]);
+                }
+                $locked->forceFill($updatePayload);
+
+                if (array_key_exists('status', $data)) {
+                    $this->writeGenericLifecycle($locked, $data['status'], (string) Auth::id());
+                } elseif (!empty($updatePayload)) {
+                    $locked->forceFill(['updated_by' => Auth::id()]);
+                }
+
+                if ($locked->isDirty()) {
+                    $locked->save();
+                }
+
+                return $locked->fresh();
+            });
+        } catch (\Illuminate\Validation\ValidationException $exception) {
+            return ErrorEnvelopeService::validationError($exception->errors());
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
+            return ErrorEnvelopeService::notFoundError('Document');
         }
 
-        return $this->zenaSuccessResponse($document->fresh());
+        return $this->zenaSuccessResponse($updated);
     }
 
     public function destroy(Request $request, $id)
@@ -683,7 +720,7 @@ class SimpleDocumentController extends Controller
             $metadata = array_merge($metadata, Arr::except($input['metadata'], self::PROTECTED_METADATA_KEYS));
         }
 
-        foreach (['document_type', 'discipline', 'package', 'status', 'revision'] as $field) {
+        foreach (['document_type', 'discipline', 'package', 'revision'] as $field) {
             if (array_key_exists($field, $input)) {
                 $metadata[$field] = $input[$field];
             }
@@ -702,6 +739,24 @@ class SimpleDocumentController extends Controller
         $currentVersion = (int) $document->version;
 
         return max($latestVersion, $currentVersion) + 1;
+    }
+
+    private function writeGenericLifecycle(Document $document, string $input, string $actorId): void
+    {
+        $lifecycle = match ($input) {
+            'active', 'draft' => DocumentLifecycleStatus::DRAFT,
+            'review', 'in-review' => DocumentLifecycleStatus::IN_REVIEW,
+        };
+        $statusService = app(DocumentStatusService::class);
+        $approval = $statusService->approval($document);
+
+        if ($approval !== DocumentApprovalStatus::NOT_SUBMITTED) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'status' => ['Generic lifecycle updates require a not-submitted document.'],
+            ]);
+        }
+
+        $statusService->writeState($document, $lifecycle, $approval, $actorId);
     }
 
     private function createVersionRecord(

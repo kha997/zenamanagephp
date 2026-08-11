@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Models\DesignItem;
 use App\Models\Document;
 use App\Models\DocumentVersion;
+use App\Services\DocumentCreationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -316,15 +317,13 @@ class DesignItemController extends BaseApiController
         }
 
         $document = Document::query()
+            ->where('tenant_id', $tenantId)
             ->forEntity(Document::ENTITY_TYPE_DESIGN_ITEM, (string) $item->id)
             ->first();
 
         if (!$document instanceof Document) {
-            $document = Document::query()->create([
-                'tenant_id' => $tenantId,
+            $document = app(DocumentCreationService::class)->create([
                 'project_id' => (string) $item->project_id,
-                'uploaded_by' => (string) $user->id,
-                'created_by' => (string) $user->id,
                 'name' => (string) $file->getClientOriginalName(),
                 'original_name' => (string) $file->getClientOriginalName(),
                 'title' => (string) $item->name,
@@ -335,9 +334,8 @@ class DesignItemController extends BaseApiController
                 'file_hash' => (string) (hash_file('sha256', $file->getRealPath()) ?: Str::random(32)),
                 'linked_entity_type' => Document::ENTITY_TYPE_DESIGN_ITEM,
                 'linked_entity_id' => (string) $item->id,
-                'status' => 'active',
                 'visibility' => Document::VISIBILITY_INTERNAL,
-            ]);
+            ], $tenantId, (string) $user->id);
         }
 
         $version = $document->createNewVersion([
@@ -379,6 +377,7 @@ class DesignItemController extends BaseApiController
         $this->authorize('view', $item);
 
         $document = Document::query()
+            ->where('tenant_id', $tenantId)
             ->forEntity(Document::ENTITY_TYPE_DESIGN_ITEM, (string) $item->id)
             ->first();
 

@@ -29,6 +29,22 @@ final class DocumentWorkflowException extends RuntimeException
         );
     }
 
+    public static function invalidPublishTransition(string $currentStatus): self
+    {
+        return new self(
+            'INVALID_PUBLISH_TRANSITION',
+            "Document can only be published from draft or in-review lifecycle state (current: {$currentStatus})."
+        );
+    }
+
+    public static function invalidArchiveTransition(string $currentStatus): self
+    {
+        return new self(
+            'INVALID_ARCHIVE_TRANSITION',
+            "Document can only be archived from published lifecycle state (current: {$currentStatus})."
+        );
+    }
+
     public static function invalidReopenTransition(string $currentStatus): self
     {
         return new self(

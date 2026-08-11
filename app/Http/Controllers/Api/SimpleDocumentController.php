@@ -15,6 +15,7 @@ use App\Models\DocumentVersion;
 use App\Models\Project;
 use App\Models\Submittal;
 use App\Models\Task;
+use App\Services\DocumentLifecycleService;
 use App\Services\DocumentWorkflowService;
 use App\Services\DocumentCreationService;
 use App\Services\DocumentStatusService;
@@ -370,6 +371,102 @@ class SimpleDocumentController extends Controller
         }
 
         return $this->zenaSuccessResponse($document, 'Document decision recorded successfully');
+    }
+
+    public function publish(string $id): JsonResponse
+    {
+        $tenantId = $this->resolveTenantId();
+
+        $documentForAuth = app(DocumentLifecycleService::class)->findForTenant($tenantId, $id);
+        if ($documentForAuth === null) {
+            return ErrorEnvelopeService::notFoundError('Document');
+        }
+        $this->authorize('update', $documentForAuth);
+
+        try {
+            $document = app(DocumentLifecycleService::class)->publish($tenantId, $id, (string) Auth::id());
+        } catch (DocumentWorkflowException $e) {
+            report($e);
+
+            return match ($e->reasonCode) {
+                'DOCUMENT_NOT_FOUND' => ErrorEnvelopeService::notFoundError('Document'),
+                default => ErrorEnvelopeService::conflictError('Document can only be published from draft or in-review state'),
+            };
+        }
+
+        return $this->zenaSuccessResponse($document, 'Document published successfully');
+    }
+
+    public function archive(string $id): JsonResponse
+    {
+        $tenantId = $this->resolveTenantId();
+
+        $documentForAuth = app(DocumentLifecycleService::class)->findForTenant($tenantId, $id);
+        if ($documentForAuth === null) {
+            return ErrorEnvelopeService::notFoundError('Document');
+        }
+        $this->authorize('update', $documentForAuth);
+
+        try {
+            $document = app(DocumentLifecycleService::class)->archive($tenantId, $id, (string) Auth::id());
+        } catch (DocumentWorkflowException $e) {
+            report($e);
+
+            return match ($e->reasonCode) {
+                'DOCUMENT_NOT_FOUND' => ErrorEnvelopeService::notFoundError('Document'),
+                default => ErrorEnvelopeService::conflictError('Document can only be archived from published state'),
+            };
+        }
+
+        return $this->zenaSuccessResponse($document, 'Document archived successfully');
+    }
+
+    public function reopen(string $id): JsonResponse
+    {
+        $tenantId = $this->resolveTenantId();
+
+        $documentForAuth = app(DocumentLifecycleService::class)->findForTenant($tenantId, $id);
+        if ($documentForAuth === null) {
+            return ErrorEnvelopeService::notFoundError('Document');
+        }
+        $this->authorize('update', $documentForAuth);
+
+        try {
+            $document = app(DocumentLifecycleService::class)->reopen($tenantId, $id, (string) Auth::id());
+        } catch (DocumentWorkflowException $e) {
+            report($e);
+
+            return match ($e->reasonCode) {
+                'DOCUMENT_NOT_FOUND' => ErrorEnvelopeService::notFoundError('Document'),
+                default => ErrorEnvelopeService::conflictError('Document can only be reopened after an approval decision'),
+            };
+        }
+
+        return $this->zenaSuccessResponse($document, 'Document reopened successfully');
+    }
+
+    public function reactivate(string $id): JsonResponse
+    {
+        $tenantId = $this->resolveTenantId();
+
+        $documentForAuth = app(DocumentLifecycleService::class)->findForTenant($tenantId, $id);
+        if ($documentForAuth === null) {
+            return ErrorEnvelopeService::notFoundError('Document');
+        }
+        $this->authorize('update', $documentForAuth);
+
+        try {
+            $document = app(DocumentLifecycleService::class)->reactivate($tenantId, $id, (string) Auth::id());
+        } catch (DocumentWorkflowException $e) {
+            report($e);
+
+            return match ($e->reasonCode) {
+                'DOCUMENT_NOT_FOUND' => ErrorEnvelopeService::notFoundError('Document'),
+                default => ErrorEnvelopeService::conflictError('Document can only be reactivated from archived state'),
+            };
+        }
+
+        return $this->zenaSuccessResponse($document, 'Document reactivated successfully');
     }
 
     public function download(string $id)

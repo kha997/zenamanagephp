@@ -75,7 +75,7 @@ class CsrfProtectionTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $response = $this->post('/documents', [
+        $response = $this->post(route('app.documents.store'), [
             'title' => 'Test Document',
             'content' => 'Test Content'
         ]);

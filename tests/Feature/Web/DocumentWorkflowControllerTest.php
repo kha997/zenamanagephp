@@ -2,11 +2,16 @@
 
 namespace Tests\Feature\Web;
 
+use App\Enums\DocumentApprovalStatus;
+use App\Enums\DocumentDecision;
+use App\Enums\DocumentLifecycleStatus;
 use App\Http\Middleware\VerifyCsrfToken;
 use App\Models\Document;
+use App\Models\DocumentVersion;
 use App\Models\Project;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\DocumentWorkflowService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use Tests\Traits\TenantUserFactoryTrait;
@@ -32,15 +37,55 @@ class DocumentWorkflowControllerTest extends TestCase
     {
         $uploader = User::factory()->create(['tenant_id' => $this->tenant->id]);
 
-        return Document::factory()->create(array_merge([
+        $document = Document::factory()->create(array_merge([
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'uploaded_by' => $uploader->id,
             'created_by' => $uploader->id,
             'updated_by' => $uploader->id,
             'status' => 'draft',
+            'lifecycle_status' => DocumentLifecycleStatus::DRAFT->value,
+            'approval_status' => DocumentApprovalStatus::NOT_SUBMITTED->value,
             'metadata' => ['status' => 'draft'],
+            'current_version_id' => null,
         ], $overrides));
+
+        $version = DocumentVersion::query()->create([
+            'document_id' => $document->id,
+            'version_number' => 1,
+            'file_path' => "documents/{$document->id}/v1.pdf",
+            'storage_driver' => 'local',
+            'comment' => 'Initial version',
+            'metadata' => ['version' => 1],
+            'created_by' => $uploader->id,
+        ]);
+        $document->forceFill(['current_version_id' => $version->id])->saveQuietly();
+
+        return $document->fresh();
+    }
+
+    private function submitDocument(Document $document): Document
+    {
+        app(DocumentWorkflowService::class)->submit(
+            (string) $this->tenant->id,
+            (string) $document->id,
+            (string) $document->uploaded_by
+        );
+
+        return $document->fresh();
+    }
+
+    private function decideDocument(Document $document, DocumentDecision $decision, ?string $note = null): Document
+    {
+        app(DocumentWorkflowService::class)->decide(
+            (string) $this->tenant->id,
+            (string) $document->id,
+            (string) $document->uploaded_by,
+            $decision,
+            $note
+        );
+
+        return $document->fresh();
     }
 
     public function test_submit_by_actor_with_document_update_transitions_draft_to_submitted(): void
@@ -59,7 +104,9 @@ class DocumentWorkflowControllerTest extends TestCase
 
     public function test_submit_on_non_draft_document_shows_error_and_does_not_mutate(): void
     {
-        $document = $this->makeDocument(['status' => 'approved', 'metadata' => ['status' => 'approved']]);
+        $document = $this->makeDocument();
+        $document = $this->submitDocument($document);
+        $document = $this->decideDocument($document, DocumentDecision::APPROVED);
         $actor = $this->createTenantUser($this->tenant, [], ['designer'], ['document.update']);
 
         $response = $this->actingAs($actor)
@@ -130,7 +177,8 @@ class DocumentWorkflowControllerTest extends TestCase
 
     public function test_approve_by_actor_with_document_approve_transitions_submitted_to_approved(): void
     {
-        $document = $this->makeDocument(['status' => 'submitted', 'metadata' => ['status' => 'submitted']]);
+        $document = $this->makeDocument();
+        $document = $this->submitDocument($document);
         $actor = $this->createTenantUser($this->tenant, [], ['pm'], ['document.approve']);
 
         $response = $this->actingAs($actor)
@@ -157,7 +205,8 @@ class DocumentWorkflowControllerTest extends TestCase
 
     public function test_reject_with_decision_note_transitions_submitted_to_rejected(): void
     {
-        $document = $this->makeDocument(['status' => 'submitted', 'metadata' => ['status' => 'submitted']]);
+        $document = $this->makeDocument();
+        $document = $this->submitDocument($document);
         $actor = $this->createTenantUser($this->tenant, [], ['pm'], ['document.approve']);
 
         $response = $this->actingAs($actor)

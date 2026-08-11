@@ -165,7 +165,7 @@ Define backed string enums with only the approved values. Implement the pure `Do
 
 ```php
 $metadata = $document->metadata ?? [];
-$legacy = $this->project($lifecycle, $approval);
+$legacy = $this->resolver->project($lifecycle, $approval);
 $metadata['status'] = $legacy;
 $document->forceFill([
     'lifecycle_status' => $lifecycle->value,
@@ -290,7 +290,7 @@ test_generic_lifecycle_edit_cannot_reset_legacy_workflow_approval_state()
 test_store_update_and_create_version_strip_forged_canonical_columns_and_metadata_keys()
 test_unrelated_api_edit_does_not_materialize_or_normalize_untouched_legacy_status()
 test_unrelated_edit_preserves_unknown_legacy_status_and_null_canonical_columns()
-test_update_and_create_version_authorize_the_tenant_scoped_locked_document()
+test_update_and_create_version_authorize_the_tenant_scoped_document_before_the_locked_mutation()
 test_cross_tenant_update_and_create_version_return_not_found_without_mutation()
 test_web_create_persists_draft_not_submitted_matching_projections_and_version_snapshot()
 test_every_web_document_create_route_requires_document_create_permission()
@@ -309,7 +309,7 @@ Expected: FAIL on current default `active`, missing canonical state, or forgery 
 
 - [ ] **Step 3: Implement minimal protected generic-write behavior**
 
-Extend `PROTECTED_METADATA_KEYS` with `lifecycle_status` and `approval_status`. Never accept the top-level canonical columns in validated/mass-assigned payloads. `DocumentCreationService` accepts only server-built attributes, forces tenant/actor, and atomically materializes `draft`/`not-submitted` plus both legacy projections. `SimpleDocumentController`, Web creation, and routed `DesignItemController::uploadDocument()` must use it; Design Item lookup for an existing Document includes `tenant_id` and entity identity. Remove the duplicate unprotected Web `POST /documents` registration at `routes/web.php:541-543` (or add the identical `rbac:document.create` middleware if route reconciliation requires retaining it), and assert the final unique route requires auth, tenant isolation, and `document.create`. Omitted status, `draft`, and compatibility alias `active` are accepted at the external canonical API, while other create values fail validation. Generic update may map only `active|draft → draft` and `review|in-review → in-review`, and only when the locked row resolves Approval `not-submitted` or is a recognized lifecycle-only legacy `active|draft|review` row. A materialized row preserves its resolved current Approval. Untouched legacy `submitted|approved|rejected` and unrecognized rows cannot be canonicalized through generic `status=draft|in-review`; doing so would reset or invent Approval state. They fail closed without mutation, and production reconciliation is out of GAP-032 scope. The action invokes `writeState()` inside a transaction with a tenant-scoped `lockForUpdate()` re-read, then authorizes `update` against that locked row before mutation. `published` and `archived` require explicit actions. Unknown existing strings remain untouched on unrelated edits, but new unknown generic status writes return 422. `createVersion()` performs the same tenant-scoped locked re-read and post-lock authorization before status/snapshot work.
+Extend `PROTECTED_METADATA_KEYS` with `lifecycle_status` and `approval_status`. Never accept the top-level canonical columns in validated/mass-assigned payloads. `DocumentCreationService` accepts only server-built attributes, forces tenant/actor, and atomically materializes `draft`/`not-submitted` plus both legacy projections. `SimpleDocumentController`, Web creation, and routed `DesignItemController::uploadDocument()` must use it; Design Item lookup for an existing Document includes `tenant_id` and entity identity. Remove the duplicate unprotected Web `POST /documents` registration at `routes/web.php:541-543` (or add the identical `rbac:document.create` middleware if route reconciliation requires retaining it), and assert the final unique route requires auth, tenant isolation, and `document.create`. Omitted status, `draft`, and compatibility alias `active` are accepted at the external canonical API, while other create values fail validation. Generic update may map only `active|draft → draft` and `review|in-review → in-review`, and only when the locked row resolves Approval `not-submitted` or is a recognized lifecycle-only legacy `active|draft|review` row. A materialized row preserves its resolved current Approval. Untouched legacy `submitted|approved|rejected` and unrecognized rows cannot be canonicalized through generic `status=draft|in-review`; doing so would reset or invent Approval state. They fail closed without mutation, and production reconciliation is out of GAP-032 scope. After the adapter performs its tenant-scoped lookup and authorizes `update` against that resource, the action invokes `writeState()` inside a transaction with a tenant-scoped `lockForUpdate()` re-read before mutation. The locked re-read must prove the same tenant, the same Document ID, that the row still exists, and that state/version preconditions still hold; it does not perform a second policy authorization. `published` and `archived` require explicit actions. Unknown existing strings remain untouched on unrelated edits, but new unknown generic status writes return 422. `createVersion()` follows the same sequence: tenant-scoped adapter lookup and authorization, then a tenant-scoped locked re-read that proves identity and preconditions before status/snapshot work.
 
 - [ ] **Step 4: Run API regression tests**
 
@@ -428,7 +428,7 @@ git commit -m "feat(documents): separate approval workflow state"
 - Modify: `routes/api.php`
 - Modify: `routes/web.php`
 - Create: `tests/Feature/Api/DocumentLifecycleActionsTest.php`
-- Modify: `tests/Feature/Web/DocumentWorkflowTest.php`
+- Modify: `tests/Feature/Web/DocumentWorkflowControllerTest.php`
 
 **Interfaces:**
 - Consumes: `DocumentStatusService` and `DocumentWorkflowService::reopenForRevision()/reactivateForRevision()`.
@@ -454,20 +454,20 @@ test_web_actions_delegate_to_the_same_services_and_rules()
 
 - [ ] **Step 2: Run focused tests and verify red**
 
-Run: `php artisan test tests/Feature/Api/DocumentLifecycleActionsTest.php tests/Feature/Web/DocumentWorkflowTest.php`
+Run: `php artisan test tests/Feature/Api/DocumentLifecycleActionsTest.php tests/Feature/Web/DocumentWorkflowControllerTest.php`
 
 Expected: FAIL because action methods/routes do not exist.
 
 - [ ] **Step 3: Implement explicit action adapters and locked service transitions**
 
-`DocumentLifecycleService::publish()` and `archive()` must use the same tenant-scoped transaction/lock pattern as approval workflow. Every action first requires non-null resolved Lifecycle and Approval. Recognized lifecycle-only legacy `active|draft|review` may use Task 3 normalization; untouched `submitted|approved|rejected` and unknown rows fail closed and cannot use the generic lifecycle path. API and Web adapters must find tenant-scoped documents and call `$this->authorize('update', $document)`; routes remain under existing authentication and `rbac:document.update` groups. Register actions on both `routes/api_zena.php` and the compatibility surface in `routes/api.php`; API-Zena names use its existing `api.zena.` group prefix, Web names use `documents.*`, and compatibility routes do not collide with either. No generic status write invokes these actions.
+`DocumentLifecycleService::publish()` and `archive()` must use the same tenant-scoped transaction/lock pattern as approval workflow. Every action first requires non-null resolved Lifecycle and Approval. Recognized lifecycle-only legacy `active|draft|review` may use Task 3 normalization; untouched `submitted|approved|rejected` and unknown rows fail closed and cannot use the generic lifecycle path. API and Web adapters must first find the tenant-scoped document and call `$this->authorize('update', $document)`, then invoke the service. Inside the service transaction, the tenant-scoped locked re-read must prove the same Document ID, row existence, and state/version preconditions; services do not perform policy/Gate/Auth checks or a second authorization. Routes remain under existing authentication and `rbac:document.update` groups. Register actions on both `routes/api_zena.php` and the compatibility surface in `routes/api.php`; API-Zena names use its existing `api.zena.` group prefix, Web names use `documents.*`, and compatibility routes do not collide with either. No generic status write invokes these actions.
 
 - [ ] **Step 4: Run action and route guardrail tests**
 
 Run:
 
 ```bash
-php artisan test tests/Feature/Api/DocumentLifecycleActionsTest.php tests/Feature/Web/DocumentWorkflowTest.php
+php artisan test tests/Feature/Api/DocumentLifecycleActionsTest.php tests/Feature/Web/DocumentWorkflowControllerTest.php
 php artisan test --filter RouteHygieneTest
 php artisan test --filter TenantIsolationProjectsTest
 php artisan route:list --json | php scripts/ci/route-guard.php
@@ -478,7 +478,7 @@ Expected: PASS; route middleware and authorization are asserted.
 - [ ] **Step 5: Commit explicit actions**
 
 ```bash
-git add app/Services/DocumentLifecycleService.php app/Http/Controllers/Api/SimpleDocumentController.php app/Http/Controllers/Web/DocumentWorkflowController.php routes/api_zena.php routes/api.php routes/web.php tests/Feature/Api/DocumentLifecycleActionsTest.php tests/Feature/Web/DocumentWorkflowTest.php
+git add app/Services/DocumentLifecycleService.php app/Http/Controllers/Api/SimpleDocumentController.php app/Http/Controllers/Web/DocumentWorkflowController.php routes/api_zena.php routes/api.php routes/web.php tests/Feature/Api/DocumentLifecycleActionsTest.php tests/Feature/Web/DocumentWorkflowControllerTest.php
 git commit -m "feat(documents): add explicit lifecycle actions"
 ```
 
@@ -491,7 +491,8 @@ git commit -m "feat(documents): add explicit lifecycle actions"
 - Modify: `resources/views/documents/index.blade.php`
 - Modify: `resources/views/documents/approvals.blade.php`
 - Modify: `tests/Feature/Api/DocumentManagementTest.php`
-- Modify: `tests/Feature/Web/DocumentWorkflowTest.php`
+- Modify: `tests/Feature/Web/DocumentWorkflowControllerTest.php`
+- Modify: `tests/Feature/Web/DocumentApprovalsPageTest.php`
 
 **Interfaces:**
 - Consumes: resolved model attributes and the three `DocumentStatusService` filter methods.
@@ -513,9 +514,11 @@ test_web_waiting_filter_uses_pending_alias_without_persisting_pending()
 test_web_buttons_use_canonical_dimensions_for_action_visibility()
 ```
 
+Put approval-list, filter, and button-visibility assertions in `DocumentApprovalsPageTest.php`. If this task changes a workflow-action regression, keep that assertion in `DocumentWorkflowControllerTest.php`; do not create `DocumentWorkflowTest.php`.
+
 - [ ] **Step 2: Run focused tests and verify red**
 
-Run: `php artisan test tests/Feature/Api/DocumentManagementTest.php tests/Feature/Web/DocumentWorkflowTest.php --filter='(serialization|projection|pending_filter|status_filters|action_visibility|creation_expose)'`
+Run: `php artisan test tests/Feature/Api/DocumentManagementTest.php tests/Feature/Web/DocumentWorkflowControllerTest.php tests/Feature/Web/DocumentApprovalsPageTest.php --filter='(serialization|projection|pending_filter|status_filters|action_visibility|creation_expose)'`
 
 Expected: FAIL because current reads and filters use `where('status', ...)` directly.
 
@@ -529,7 +532,8 @@ Run:
 
 ```bash
 php artisan test tests/Feature/Api/DocumentManagementTest.php
-php artisan test tests/Feature/Web/DocumentWorkflowTest.php
+php artisan test tests/Feature/Web/DocumentWorkflowControllerTest.php
+php artisan test tests/Feature/Web/DocumentApprovalsPageTest.php
 ```
 
 Expected: PASS with `data.status === data.metadata.status` for all combinations.
@@ -537,7 +541,7 @@ Expected: PASS with `data.status === data.metadata.status` for all combinations.
 - [ ] **Step 5: Commit read compatibility**
 
 ```bash
-git add app/Models/Document.php app/Http/Controllers/Api/SimpleDocumentController.php app/Http/Controllers/Web/DocumentController.php resources/views/documents/index.blade.php resources/views/documents/approvals.blade.php tests/Feature/Api/DocumentManagementTest.php tests/Feature/Web/DocumentWorkflowTest.php
+git add app/Models/Document.php app/Http/Controllers/Api/SimpleDocumentController.php app/Http/Controllers/Web/DocumentController.php resources/views/documents/index.blade.php resources/views/documents/approvals.blade.php tests/Feature/Api/DocumentManagementTest.php tests/Feature/Web/DocumentWorkflowControllerTest.php tests/Feature/Web/DocumentApprovalsPageTest.php
 git commit -m "feat(documents): expose canonical status compatibility"
 ```
 
@@ -573,8 +577,9 @@ test_version_creation_racing_with_workflow_transition_cannot_commit_mixed_snapsh
 test_concurrent_version_creation_allocates_distinct_numbers_under_lock()
 test_design_item_version_upload_is_blocked_for_awaiting_approved_and_rejected_documents()
 test_design_item_version_upload_is_tenant_scoped_and_produces_coherent_snapshot()
-test_routed_document_mutators_use_governed_creation_version_lifecycle_or_workflow_services()
-test_every_routed_app_document_mutator_uses_governed_services_or_an_evidence_allowlist()
+test_every_routed_document_mutator_is_explicitly_classified()
+test_every_routed_state_or_version_mutator_uses_its_governed_service()
+test_non_state_adapter_mutators_cannot_write_protected_state_version_or_workflow_fields()
 ```
 
 - [ ] **Step 2: Run focused tests and verify red**
@@ -585,7 +590,7 @@ Expected: FAIL because version metadata lacks canonical dimensions and version c
 
 - [ ] **Step 3: Implement coherent locked snapshots**
 
-Move version persistence into `DocumentVersionService`. It performs the tenant-scoped Document re-read, `lockForUpdate()`, adapter authorization before invocation, and `nextVersionNumber()` computation inside one transaction before resolving state or creating database records. Both `SimpleDocumentController::createVersion()` and `DesignItemController::uploadDocument()` delegate after their route middleware and resource authorization. Block version creation while Approval is `awaiting-approval`, `approved`, or `rejected`; approved/rejected content must pass through explicit Reopen first, and waiting content must complete its decision before Reopen is available. Snapshot `lifecycle_status`, `approval_status`, projected `status`, and the current approval-event/version reference into `DocumentVersion.metadata`; strip protected client keys first. Remove public `Document::createNewVersion()` and `revertToVersion()` as production mutation APIs, migrating every routed caller to the service; test fixtures may create versions directly. The architecture test builds a route→controller→service inventory and permits a direct mutation only when an explicit allowlist entry proves the class has no route, command, listener, job, or container call site. Initial candidates requiring that proof include `SecureUploadService`, `App\Http\Controllers\DocumentController`, and `Web\DocumentManagementController`; `App\Services\DocumentService` is separately classified because it uses the divergent `Src\DocumentManagement\Models\Document`. Any reachable caller must migrate, not be allowlisted. An unrelated edit with no status request must not call `writeState()`.
+Move version persistence into `DocumentVersionService`. After the adapter performs a tenant-scoped lookup and authorizes `update` against that resource, the service performs a tenant-scoped Document re-read and `lockForUpdate()` inside one transaction. The locked re-read proves the same tenant, Document ID, and row existence; the service does not authorize. Resolve Approval and Lifecycle from that locked row, then validate version eligibility and all state/version preconditions before computing `nextVersionNumber()` and persisting any database record. Both `SimpleDocumentController::createVersion()` and `DesignItemController::uploadDocument()` delegate after their route middleware and resource authorization. Block version creation while Approval is `awaiting-approval`, `approved`, or `rejected`; approved/rejected content must pass through explicit Reopen first, and waiting content must complete its decision before Reopen is available. Snapshot `lifecycle_status`, `approval_status`, projected `status`, and the current approval-event/version reference into `DocumentVersion.metadata`; strip protected client keys first. Remove public `Document::createNewVersion()` and `revertToVersion()` as production mutation APIs, migrating every routed caller to the service; test fixtures may create versions directly. The architecture test builds a route→controller→service inventory and classifies every routed Document mutator into exactly one category: governed state/version mutations must use `DocumentCreationService`, `DocumentVersionService`, `DocumentLifecycleService`, `DocumentWorkflowService`, or `DocumentStatusService` for generic lifecycle compatibility normalization; non-state adapter-owned mutations may remain at the adapter when repository patterns support them but may not write canonical state, workflow Approval/audit fields, `current_version_id`, or `DocumentVersion` rows. An evidence allowlist is permitted only for explicitly identified non-state methods/surfaces, never for an entire class with any reachable state/version mutator. Initial non-state candidates requiring that proof include `SecureUploadService`, `App\Http\Controllers\DocumentController`, and `Web\DocumentManagementController`; `App\Services\DocumentService` is separately classified because it uses the divergent `Src\DocumentManagement\Models\Document`. Any reachable state/version caller must migrate to its governed service; do not introduce a generic `DocumentMutationService`. An unrelated edit with no status request must not call `writeState()`.
 
 - [ ] **Step 4: Run version and real-concurrency tests**
 
@@ -627,7 +632,8 @@ php artisan test tests/Feature/Services/DocumentWorkflowConcurrencyTest.php
 php artisan test tests/Feature/Api/DocumentManagementTest.php
 php artisan test tests/Feature/Api/DesignItemApiTest.php
 php artisan test tests/Feature/Api/DocumentLifecycleActionsTest.php
-php artisan test tests/Feature/Web/DocumentWorkflowTest.php
+php artisan test tests/Feature/Web/DocumentWorkflowControllerTest.php
+php artisan test tests/Feature/Web/DocumentApprovalsPageTest.php
 php artisan test tests/Feature/Web/DocumentCreationTest.php
 php artisan test tests/Architecture/DocumentMutationOwnershipTest.php
 ```
@@ -659,7 +665,7 @@ rg -n "lifecycle_status|approval_status|pending|submitted" app tests database/mi
 rg -n "Document::(create|query\(\)->create)|DocumentVersion::create|createNewVersion\(|revertToVersion\(" app routes
 ```
 
-Confirm: additive nullable columns plus an append-only audit-table migration, no backfill, no production query, no GAP-033 code, no Gate-3 packet, canonical fields absent from client mass-assignment, every approval mutation owned by `DocumentWorkflowService`, every routed new Document owned by `DocumentCreationService`, and every routed version mutation owned by `DocumentVersionService`.
+Confirm: additive nullable columns plus an append-only audit-table migration, no backfill, no production query, no GAP-033 code, no Gate-3 packet, canonical fields absent from client mass-assignment, every routed Document mutator explicitly classified, every routed state/version mutation owned by its Category-A service (`DocumentCreationService`, `DocumentVersionService`, `DocumentLifecycleService`, `DocumentWorkflowService`, or `DocumentStatusService` for generic lifecycle compatibility normalization), and every Category-B adapter-owned mutation prohibited from writing canonical state, workflow Approval/audit fields, `current_version_id`, or `DocumentVersion` rows.
 
 Also prove explicitly:
 
@@ -671,12 +677,12 @@ Also prove explicitly:
 
 - [ ] **Step 4: Request independent implementation review**
 
-Dispatch a fresh reviewer with the approved Gate-2 spec, this plan, `origin/main` base SHA, implementation HEAD SHA, and the full diff. Focus the review on lossy compatibility inversion, legacy `submitted|approved|rejected`, canonical Lifecycle leakage, missing historical event lineage, generic-reset bypass, and Gate 3 production compatibility evidence. Require Critical/Important/Minor findings and fix every confirmed Critical or Important issue before presenting engineering readiness.
+Dispatch a fresh reviewer with the approved Gate-2 spec, this plan, `origin/main` base SHA, implementation HEAD SHA, and the full diff. Focus the review on lossy compatibility inversion, legacy `submitted|approved|rejected`, canonical Lifecycle leakage, missing historical event lineage, generic-reset bypass, adapter authorization before the tenant-scoped locked re-read, Category-A/Category-B mutation classification, and Gate 3 production compatibility evidence. Require Critical/Important/Minor findings and fix every confirmed Critical or Important issue before presenting engineering readiness.
 
 - [ ] **Step 5: Commit only review-driven corrections**
 
 ```bash
-git add app/Enums/DocumentLifecycleStatus.php app/Enums/DocumentApprovalStatus.php app/Services/DocumentStatusResolver.php app/Services/DocumentStatusService.php app/Services/DocumentCreationService.php app/Services/DocumentVersionService.php app/Services/DocumentWorkflowService.php app/Services/DocumentLifecycleService.php app/Exceptions/DocumentWorkflowException.php app/Models/Document.php app/Models/DocumentVersion.php app/Models/DocumentApprovalEvent.php app/Http/Controllers/Api/SimpleDocumentController.php app/Http/Controllers/Api/DesignItemController.php app/Http/Controllers/Web/DocumentController.php app/Http/Controllers/Web/DocumentWorkflowController.php database/migrations/2026_08_10_230000_add_canonical_status_dimensions_to_documents.php database/migrations/2026_08_10_230100_create_document_approval_events_table.php routes/api_zena.php routes/api.php routes/web.php resources/views/documents/index.blade.php resources/views/documents/approvals.blade.php tests/Unit/Services/DocumentStatusServiceTest.php tests/Feature/Documents/DocumentStatusMigrationTest.php tests/Feature/Documents/DocumentStatusFilterTest.php tests/Feature/Services/DocumentWorkflowServiceTest.php tests/Feature/Services/DocumentWorkflowConcurrencyTest.php tests/Feature/Api/DocumentManagementTest.php tests/Feature/Api/DesignItemApiTest.php tests/Feature/Api/DocumentLifecycleActionsTest.php tests/Feature/Web/DocumentWorkflowTest.php tests/Feature/Web/DocumentCreationTest.php tests/Architecture/DocumentMutationOwnershipTest.php
+git add app/Enums/DocumentLifecycleStatus.php app/Enums/DocumentApprovalStatus.php app/Services/DocumentStatusResolver.php app/Services/DocumentStatusService.php app/Services/DocumentCreationService.php app/Services/DocumentVersionService.php app/Services/DocumentWorkflowService.php app/Services/DocumentLifecycleService.php app/Exceptions/DocumentWorkflowException.php app/Models/Document.php app/Models/DocumentVersion.php app/Models/DocumentApprovalEvent.php app/Http/Controllers/Api/SimpleDocumentController.php app/Http/Controllers/Api/DesignItemController.php app/Http/Controllers/Web/DocumentController.php app/Http/Controllers/Web/DocumentWorkflowController.php database/migrations/2026_08_10_230000_add_canonical_status_dimensions_to_documents.php database/migrations/2026_08_10_230100_create_document_approval_events_table.php routes/api_zena.php routes/api.php routes/web.php resources/views/documents/index.blade.php resources/views/documents/approvals.blade.php tests/Unit/Services/DocumentStatusServiceTest.php tests/Feature/Documents/DocumentStatusMigrationTest.php tests/Feature/Documents/DocumentStatusFilterTest.php tests/Feature/Services/DocumentWorkflowServiceTest.php tests/Feature/Services/DocumentWorkflowConcurrencyTest.php tests/Feature/Api/DocumentManagementTest.php tests/Feature/Api/DesignItemApiTest.php tests/Feature/Api/DocumentLifecycleActionsTest.php tests/Feature/Web/DocumentWorkflowControllerTest.php tests/Feature/Web/DocumentApprovalsPageTest.php tests/Feature/Web/DocumentCreationTest.php tests/Architecture/DocumentMutationOwnershipTest.php
 git commit -m "fix(documents): address GAP-032 implementation review"
 ```
 

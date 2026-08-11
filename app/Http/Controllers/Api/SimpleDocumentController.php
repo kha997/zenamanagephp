@@ -449,7 +449,7 @@ class SimpleDocumentController extends Controller
         }
 
         try {
-            $document = DB::transaction(function () use ($document, $fileInfo, $fileType, $data, $request, $user, $tenantId) {
+            $result = DB::transaction(function () use ($document, $fileInfo, $fileType, $data, $request, $user, $tenantId) {
                 /** @var Document|null $locked */
                 $locked = Document::query()
                     ->where('tenant_id', $tenantId)
@@ -465,7 +465,7 @@ class SimpleDocumentController extends Controller
                 $nextVersion = $this->nextVersionNumber($locked);
                 $requestedVersion = $request->input('version');
                 if ($requestedVersion !== null && (int) $requestedVersion !== $nextVersion) {
-                    throw \Illuminate\Validation\ValidationException::withMessages([
+                    return ErrorEnvelopeService::validationError([
                         'version' => ['Version must match the next sequential version number.'],
                     ]);
                 }
@@ -475,7 +475,10 @@ class SimpleDocumentController extends Controller
                 $locked->forceFill(['metadata' => $metadata]);
 
                 if (array_key_exists('status', $data)) {
-                    $this->writeGenericLifecycle($locked, $data['status'], (string) $user->id);
+                    $validationErrors = $this->writeGenericLifecycle($locked, $data['status'], (string) $user->id);
+                    if ($validationErrors !== null) {
+                        return ErrorEnvelopeService::validationError($validationErrors);
+                    }
                 }
 
                 $version = $this->createVersionRecord(
@@ -511,13 +514,15 @@ class SimpleDocumentController extends Controller
 
                 return $locked->fresh(['currentVersion']);
             });
-        } catch (\Illuminate\Validation\ValidationException $exception) {
-            return ErrorEnvelopeService::validationError($exception->errors());
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
             return ErrorEnvelopeService::notFoundError('Document');
         }
 
-        return $this->zenaSuccessResponse($document, 'Document version created successfully', 201);
+        if ($result instanceof JsonResponse) {
+            return $result;
+        }
+
+        return $this->zenaSuccessResponse($result, 'Document version created successfully', 201);
     }
 
     public function getVersions(string $id)
@@ -593,7 +598,7 @@ class SimpleDocumentController extends Controller
         }
 
         try {
-            $updated = DB::transaction(function () use ($document, $data, $updatePayload): Document {
+            $result = DB::transaction(function () use ($document, $data, $updatePayload) {
                 /** @var Document|null $locked */
                 $locked = Document::query()
                     ->where('tenant_id', $this->resolveTenantId())
@@ -621,7 +626,10 @@ class SimpleDocumentController extends Controller
                 $locked->forceFill($updatePayload);
 
                 if (array_key_exists('status', $data)) {
-                    $this->writeGenericLifecycle($locked, $data['status'], (string) Auth::id());
+                    $validationErrors = $this->writeGenericLifecycle($locked, $data['status'], (string) Auth::id());
+                    if ($validationErrors !== null) {
+                        return ErrorEnvelopeService::validationError($validationErrors);
+                    }
                 } elseif (!empty($updatePayload)) {
                     $locked->forceFill(['updated_by' => Auth::id()]);
                 }
@@ -632,13 +640,15 @@ class SimpleDocumentController extends Controller
 
                 return $locked->fresh();
             });
-        } catch (\Illuminate\Validation\ValidationException $exception) {
-            return ErrorEnvelopeService::validationError($exception->errors());
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
             return ErrorEnvelopeService::notFoundError('Document');
         }
 
-        return $this->zenaSuccessResponse($updated);
+        if ($result instanceof JsonResponse) {
+            return $result;
+        }
+
+        return $this->zenaSuccessResponse($result);
     }
 
     public function destroy(Request $request, $id)
@@ -740,26 +750,27 @@ class SimpleDocumentController extends Controller
         return max($latestVersion, $currentVersion) + 1;
     }
 
-    /** @throws \Illuminate\Validation\ValidationException */
-    private function writeGenericLifecycle(Document $document, string $input, string $actorId): void
+    /** @return array<string, array<int, string>>|null */
+    private function writeGenericLifecycle(Document $document, string $input, string $actorId): ?array
     {
         $lifecycle = match ($input) {
             'active', 'draft' => DocumentLifecycleStatus::DRAFT,
             'review', 'in-review' => DocumentLifecycleStatus::IN_REVIEW,
-            default => throw \Illuminate\Validation\ValidationException::withMessages([
-                'status' => ['Unsupported generic lifecycle status.'],
-            ]),
+            default => null,
         };
+        if ($lifecycle === null) {
+            return ['status' => ['Unsupported generic lifecycle status.']];
+        }
         $statusService = app(DocumentStatusService::class);
         $approval = $statusService->approval($document);
 
         if ($approval !== DocumentApprovalStatus::NOT_SUBMITTED) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'status' => ['Generic lifecycle updates require a not-submitted document.'],
-            ]);
+            return ['status' => ['Generic lifecycle updates require a not-submitted document.']];
         }
 
         $statusService->writeState($document, $lifecycle, $approval, $actorId);
+
+        return null;
     }
 
     private function createVersionRecord(

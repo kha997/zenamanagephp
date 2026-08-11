@@ -499,7 +499,8 @@ class DocumentManagementTest extends TestCase
         $this->apiPatch($this->namedRoute('v1.documents.update.patch', ['id' => $document->id]), [
             'status' => 'review',
         ])
-            ->assertStatus(422);
+            ->assertStatus(422)
+            ->assertJsonPath('error.code', 'E422.VALIDATION');
 
         $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'submitted']);
     }
@@ -577,7 +578,8 @@ class DocumentManagementTest extends TestCase
             'version' => 2,
             'status' => 'review',
         ])
-            ->assertStatus(422);
+            ->assertStatus(422)
+            ->assertJsonPath('error.code', 'E422.VALIDATION');
 
         $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'approved']);
     }

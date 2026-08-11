@@ -62,13 +62,31 @@ class SimpleDocumentController extends Controller
     public function index(Request $request)
     {
         $perPage = $this->resolvePerPage($request);
+        $statusService = app(DocumentStatusService::class);
         $paginator = Document::query()
             ->with('currentVersion')
             ->when($request->filled('project_id'), fn (Builder $query) => $query->where('project_id', $request->string('project_id')))
             ->when($request->filled('document_type'), fn (Builder $query) => $query->where('document_type', $request->string('document_type')))
             ->when($request->filled('discipline'), fn (Builder $query) => $query->where('discipline', $request->string('discipline')))
             ->when($request->filled('package'), fn (Builder $query) => $query->where('package', $request->string('package')))
-            ->when($request->filled('status'), fn (Builder $query) => $query->where('status', $request->string('status')))
+            ->when(
+                $request->filled('status'),
+                fn (Builder $query) => $statusService->applyLegacyStatusFilter($query, $request->string('status')->toString())
+            )
+            ->when(
+                $request->filled('lifecycle_status') && DocumentLifecycleStatus::tryFrom($request->string('lifecycle_status')->toString()) !== null,
+                fn (Builder $query) => $statusService->applyLifecycleFilter(
+                    $query,
+                    DocumentLifecycleStatus::from($request->string('lifecycle_status')->toString())
+                )
+            )
+            ->when(
+                $request->filled('approval_status') && DocumentApprovalStatus::tryFrom($request->string('approval_status')->toString()) !== null,
+                fn (Builder $query) => $statusService->applyApprovalFilter(
+                    $query,
+                    DocumentApprovalStatus::from($request->string('approval_status')->toString())
+                )
+            )
             ->when($request->filled('revision'), fn (Builder $query) => $query->where('revision', $request->string('revision')))
             ->when($request->filled('linked_entity_type'), fn (Builder $query) => $query->where('linked_entity_type', strtolower($request->string('linked_entity_type')->trim()->toString())))
             ->when($request->filled('linked_entity_id'), fn (Builder $query) => $query->where('linked_entity_id', $request->string('linked_entity_id')))

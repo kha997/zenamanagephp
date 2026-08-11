@@ -647,6 +647,152 @@ class DocumentManagementTest extends TestCase
         }
     }
 
+    public function test_api_and_web_creation_expose_draft_and_not_submitted(): void
+    {
+        $apiResponse = $this->apiPostMultipart($this->namedRoute('v1.documents.store'), [
+            'project_id' => $this->project->id,
+            'title' => 'API creation canonical proof',
+            'document_type' => 'drawing',
+            'file' => $this->createValidPdfUploadedFile('api-creation.pdf'),
+        ])->assertCreated();
+
+        self::assertSame('draft', $apiResponse->json('data.lifecycle_status'));
+        self::assertSame('not-submitted', $apiResponse->json('data.approval_status'));
+        $this->assertDatabaseHas('documents', [
+            'id' => $apiResponse->json('data.id'),
+            'lifecycle_status' => DocumentLifecycleStatus::DRAFT->value,
+            'approval_status' => DocumentApprovalStatus::NOT_SUBMITTED->value,
+        ]);
+
+        $webResponse = $this->actingAs($this->user)
+            ->withoutMiddleware(\App\Http\Middleware\VerifyCsrfToken::class)
+            ->withHeaders(['X-Tenant-ID' => (string) $this->tenant->id])
+            ->post('/app/documents', [
+                'title' => 'Web creation canonical proof',
+                'project_id' => $this->project->id,
+                'document_type' => 'drawing',
+                'file' => $this->createValidPdfUploadedFile('web-creation.pdf'),
+            ]);
+
+        $webResponse->assertRedirect('/app/documents');
+        $this->assertDatabaseHas('documents', [
+            'title' => 'Web creation canonical proof',
+            'lifecycle_status' => DocumentLifecycleStatus::DRAFT->value,
+            'approval_status' => DocumentApprovalStatus::NOT_SUBMITTED->value,
+        ]);
+    }
+
+    public function test_raw_model_serialization_exposes_resolved_canonical_dimensions_for_legacy_rows(): void
+    {
+        $lifecycleOnly = $this->createDocument(['status' => 'review', 'metadata' => ['status' => 'review']]);
+        $approvalOnly = $this->createDocument(['status' => 'approved', 'metadata' => ['status' => 'approved']]);
+
+        $this->apiGet($this->namedRoute('v1.documents.show', ['id' => $lifecycleOnly->id]))
+            ->assertOk()
+            ->assertJsonPath('data.lifecycle_status', 'in-review')
+            ->assertJsonPath('data.approval_status', 'not-submitted')
+            ->assertJsonPath('data.status', 'review')
+            ->assertJsonPath('data.metadata.status', 'review');
+
+        $this->apiGet($this->namedRoute('v1.documents.show', ['id' => $approvalOnly->id]))
+            ->assertOk()
+            ->assertJsonPath('data.lifecycle_status', null)
+            ->assertJsonPath('data.approval_status', 'approved')
+            ->assertJsonPath('data.status', 'approved')
+            ->assertJsonPath('data.metadata.status', 'approved');
+
+        $this->assertDatabaseHas('documents', ['id' => $lifecycleOnly->id, 'lifecycle_status' => null, 'approval_status' => null]);
+        $this->assertDatabaseHas('documents', ['id' => $approvalOnly->id, 'lifecycle_status' => null, 'approval_status' => null]);
+    }
+
+    public function test_unknown_legacy_status_serializes_null_canonical_dimensions_and_original_legacy_projection(): void
+    {
+        $document = $this->createDocument(['status' => 'legacy-unknown', 'metadata' => ['status' => 'legacy-unknown']]);
+
+        $this->apiGet($this->namedRoute('v1.documents.show', ['id' => $document->id]))
+            ->assertOk()
+            ->assertJsonPath('data.lifecycle_status', null)
+            ->assertJsonPath('data.approval_status', null)
+            ->assertJsonPath('data.status', 'legacy-unknown')
+            ->assertJsonPath('data.metadata.status', 'legacy-unknown');
+
+        $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'legacy-unknown', 'lifecycle_status' => null, 'approval_status' => null]);
+    }
+
+    public function test_every_projection_returns_equal_data_status_and_metadata_status(): void
+    {
+        $materialized = $this->createDocument([
+            'status' => 'draft',
+            'lifecycle_status' => DocumentLifecycleStatus::DRAFT->value,
+            'approval_status' => DocumentApprovalStatus::NOT_SUBMITTED->value,
+            'metadata' => ['status' => 'draft'],
+        ]);
+        $legacyReview = $this->createDocument(['status' => 'review', 'metadata' => ['status' => 'review']]);
+        $legacyApproved = $this->createDocument(['status' => 'approved', 'metadata' => ['status' => 'approved']]);
+        $legacyUnknown = $this->createDocument(['status' => 'legacy-unknown', 'metadata' => ['status' => 'legacy-unknown']]);
+
+        foreach ([$materialized, $legacyReview, $legacyApproved, $legacyUnknown] as $document) {
+            $response = $this->apiGet($this->namedRoute('v1.documents.show', ['id' => $document->id]))->assertOk();
+            self::assertSame($response->json('data.status'), $response->json('data.metadata.status'));
+        }
+    }
+
+    public function test_pending_filter_returns_canonical_awaiting_and_untouched_submitted_rows_only(): void
+    {
+        $materializedAwaiting = $this->createCanonicallySubmittedDocument();
+        $legacySubmitted = $this->createDocument(['status' => 'submitted', 'metadata' => ['status' => 'submitted']]);
+        $draft = $this->createDocument(['status' => 'draft']);
+        $approved = $this->createDocument(['status' => 'approved', 'metadata' => ['status' => 'approved']]);
+
+        $response = $this->apiGet($this->namedRoute('v1.documents.index', query: ['status' => 'pending']))->assertOk();
+        $ids = collect($response->json('data'))->pluck('id')->all();
+
+        self::assertContains($materializedAwaiting->id, $ids);
+        self::assertContains($legacySubmitted->id, $ids);
+        self::assertNotContains($draft->id, $ids);
+        self::assertNotContains($approved->id, $ids);
+    }
+
+    public function test_legacy_status_filter_matches_projection_while_canonical_filters_remain_independent(): void
+    {
+        $materializedDraft = $this->createDocument([
+            'status' => 'draft',
+            'lifecycle_status' => DocumentLifecycleStatus::DRAFT->value,
+            'approval_status' => DocumentApprovalStatus::NOT_SUBMITTED->value,
+        ]);
+        $legacyActive = $this->createDocument(['status' => 'active', 'metadata' => ['status' => 'active']]);
+        $materializedInReview = $this->createDocument([
+            'status' => 'review',
+            'lifecycle_status' => DocumentLifecycleStatus::IN_REVIEW->value,
+            'approval_status' => DocumentApprovalStatus::NOT_SUBMITTED->value,
+        ]);
+
+        $byStatus = collect(
+            $this->apiGet($this->namedRoute('v1.documents.index', query: ['status' => 'draft']))->assertOk()->json('data')
+        )->pluck('id')->all();
+        self::assertContains($materializedDraft->id, $byStatus);
+        self::assertContains($legacyActive->id, $byStatus);
+        self::assertNotContains($materializedInReview->id, $byStatus);
+
+        $byLifecycle = collect(
+            $this->apiGet($this->namedRoute('v1.documents.index', query: ['lifecycle_status' => 'draft']))->assertOk()->json('data')
+        )->pluck('id')->all();
+        self::assertContains($materializedDraft->id, $byLifecycle);
+        self::assertNotContains($materializedInReview->id, $byLifecycle);
+    }
+
+    public function test_legacy_status_filter_can_still_exact_match_unknown_legacy_value(): void
+    {
+        $unknown = $this->createDocument(['status' => 'legacy-unknown', 'metadata' => ['status' => 'legacy-unknown']]);
+        $draft = $this->createDocument(['status' => 'draft']);
+
+        $response = $this->apiGet($this->namedRoute('v1.documents.index', query: ['status' => 'legacy-unknown']))->assertOk();
+        $ids = collect($response->json('data'))->pluck('id')->all();
+
+        self::assertSame([$unknown->id], $ids);
+        self::assertNotContains($draft->id, $ids);
+    }
+
     public function test_generic_update_maps_active_to_draft_and_review_to_in_review_without_changing_approval(): void
     {
         $document = $this->createDocument(['status' => 'active', 'metadata' => ['status' => 'active']]);

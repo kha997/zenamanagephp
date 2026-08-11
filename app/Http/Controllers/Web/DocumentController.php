@@ -10,9 +10,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Illuminate\Validation\Rule;
+use App\Enums\DocumentApprovalStatus;
 use App\Models\Document;
 use App\Models\DocumentVersion;
 use App\Services\DocumentCreationService;
+use App\Services\DocumentStatusService;
 use Src\CoreProject\Models\Project;
 use Src\Foundation\Services\FileStorageService;
 
@@ -46,7 +48,7 @@ class DocumentController extends Controller
         }
 
         if ($request->filled('status')) {
-            $query->where('status', (string) $request->input('status'));
+            app(DocumentStatusService::class)->applyLegacyStatusFilter($query, (string) $request->input('status'));
         }
 
         return view('documents.index', [
@@ -219,8 +221,11 @@ class DocumentController extends Controller
                 $query->where('project_id', $request->input('project_id'));
             }
 
+            $statusService = app(DocumentStatusService::class);
             if ($request->filled('status')) {
-                $query->where('status', $request->input('status'));
+                $statusService->applyLegacyStatusFilter($query, (string) $request->input('status'));
+            } else {
+                $statusService->applyApprovalFilter($query, DocumentApprovalStatus::AWAITING_APPROVAL);
             }
 
             $documents = $query->orderBy('created_at', 'desc')->paginate(15);

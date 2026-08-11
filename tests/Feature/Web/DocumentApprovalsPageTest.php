@@ -3,9 +3,11 @@
 namespace Tests\Feature\Web;
 
 use App\Models\Document;
+use App\Models\DocumentVersion;
 use App\Models\Project;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\DocumentWorkflowService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use Tests\Traits\TenantUserFactoryTrait;
@@ -39,6 +41,37 @@ class DocumentApprovalsPageTest extends TestCase
             'status' => 'submitted',
             'metadata' => ['status' => 'submitted'],
         ], $overrides));
+    }
+
+    private function makeMaterializedSubmittedDocument(): Document
+    {
+        $uploader = User::factory()->create(['tenant_id' => $this->tenant->id]);
+        $document = Document::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'uploaded_by' => $uploader->id,
+            'created_by' => $uploader->id,
+            'updated_by' => $uploader->id,
+            'status' => 'draft',
+            'lifecycle_status' => \App\Enums\DocumentLifecycleStatus::DRAFT->value,
+            'approval_status' => \App\Enums\DocumentApprovalStatus::NOT_SUBMITTED->value,
+            'metadata' => ['status' => 'draft'],
+            'current_version_id' => null,
+        ]);
+        $version = DocumentVersion::query()->create([
+            'document_id' => $document->id,
+            'version_number' => 1,
+            'file_path' => "documents/{$document->id}/v1.pdf",
+            'storage_driver' => 'local',
+            'comment' => 'Initial version',
+            'metadata' => ['version' => 1],
+            'created_by' => $uploader->id,
+        ]);
+        $document->forceFill(['current_version_id' => $version->id])->saveQuietly();
+
+        app(DocumentWorkflowService::class)->submit((string) $this->tenant->id, (string) $document->id, (string) $uploader->id);
+
+        return $document->fresh();
     }
 
     public function test_approvals_page_loads_without_is_active_error(): void
@@ -96,7 +129,7 @@ class DocumentApprovalsPageTest extends TestCase
 
         $response = $this->actingAs($actor)
             ->withHeaders(['X-Tenant-ID' => (string) $this->tenant->id])
-            ->get(route('app.documents.approvals'));
+            ->get(route('app.documents.approvals', ['status' => 'approved']));
 
         $response->assertOk();
         $response->assertSee('Nguyễn Văn Duyệt');
@@ -105,7 +138,7 @@ class DocumentApprovalsPageTest extends TestCase
 
     public function test_submitted_document_shows_approve_and_reject_actions(): void
     {
-        $this->makeDocument(['status' => 'submitted', 'metadata' => ['status' => 'submitted']]);
+        $document = $this->makeMaterializedSubmittedDocument();
         $actor = $this->createTenantUser($this->tenant, [], ['pm'], ['document.approve']);
 
         $response = $this->actingAs($actor)
@@ -113,8 +146,36 @@ class DocumentApprovalsPageTest extends TestCase
             ->get(route('app.documents.approvals'));
 
         $response->assertOk();
-        $response->assertSee(route('app.documents.workflow.approve', ['document' => Document::first()->id]), false);
-        $response->assertSee(route('app.documents.workflow.reject', ['document' => Document::first()->id]), false);
+        $response->assertSee(route('app.documents.workflow.approve', ['document' => $document->id]), false);
+        $response->assertSee(route('app.documents.workflow.reject', ['document' => $document->id]), false);
+    }
+
+    public function test_web_buttons_use_canonical_dimensions_for_action_visibility(): void
+    {
+        $unresolvedLegacy = $this->makeDocument(['status' => 'submitted', 'metadata' => ['status' => 'submitted']]);
+        $actor = $this->createTenantUser($this->tenant, [], ['pm'], ['document.approve']);
+
+        $response = $this->actingAs($actor)
+            ->withHeaders(['X-Tenant-ID' => (string) $this->tenant->id])
+            ->get(route('app.documents.approvals', ['status' => 'submitted']));
+
+        $response->assertOk();
+        $response->assertDontSee(route('app.documents.workflow.approve', ['document' => $unresolvedLegacy->id]), false);
+        $response->assertDontSee(route('app.documents.workflow.reject', ['document' => $unresolvedLegacy->id]), false);
+    }
+
+    public function test_web_waiting_filter_uses_pending_alias_without_persisting_pending(): void
+    {
+        $document = $this->makeDocument(['status' => 'submitted', 'metadata' => ['status' => 'submitted']]);
+        $actor = $this->createTenantUser($this->tenant, [], ['pm'], ['document.approve']);
+
+        $response = $this->actingAs($actor)
+            ->withHeaders(['X-Tenant-ID' => (string) $this->tenant->id])
+            ->get(route('app.documents.approvals', ['status' => 'pending']));
+
+        $response->assertOk();
+        $response->assertSee($document->title ?? $document->name);
+        $this->assertDatabaseMissing('documents', ['id' => $document->id, 'status' => 'pending']);
     }
 
     public function test_draft_document_shows_no_decision_actions(): void
@@ -144,7 +205,7 @@ class DocumentApprovalsPageTest extends TestCase
         \Illuminate\Support\Facades\DB::enableQueryLog();
         $this->actingAs($actor)
             ->withHeaders(['X-Tenant-ID' => (string) $this->tenant->id])
-            ->get(route('app.documents.approvals'))
+            ->get(route('app.documents.approvals', ['status' => 'approved']))
             ->assertOk();
         $queryCountFor5 = count(\Illuminate\Support\Facades\DB::getQueryLog());
         \Illuminate\Support\Facades\DB::flushQueryLog();
@@ -160,7 +221,7 @@ class DocumentApprovalsPageTest extends TestCase
         \Illuminate\Support\Facades\DB::enableQueryLog();
         $this->actingAs($actor)
             ->withHeaders(['X-Tenant-ID' => (string) $this->tenant->id])
-            ->get(route('app.documents.approvals'))
+            ->get(route('app.documents.approvals', ['status' => 'approved']))
             ->assertOk();
         $queryCountFor10 = count(\Illuminate\Support\Facades\DB::getQueryLog());
 

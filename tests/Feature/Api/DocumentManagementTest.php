@@ -17,6 +17,8 @@ use Illuminate\Filesystem\FilesystemManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 use Tests\Traits\AuthenticationTestTrait;
@@ -607,6 +609,7 @@ class DocumentManagementTest extends TestCase
             'lifecycle_status' => DocumentLifecycleStatus::DRAFT->value,
             'approval_status' => DocumentApprovalStatus::NOT_SUBMITTED->value,
         ]);
+        $this->assertSame('draft', Document::findOrFail($response->json('data.id'))->metadata['status']);
     }
 
     public function test_api_create_active_alias_still_materializes_draft_and_not_submitted(): void
@@ -625,6 +628,7 @@ class DocumentManagementTest extends TestCase
             'lifecycle_status' => 'draft',
             'approval_status' => 'not-submitted',
         ]);
+        $this->assertSame('draft', Document::findOrFail($response->json('data.id'))->metadata['status']);
     }
 
     public function test_api_create_rejects_review_published_archived_and_all_approval_values(): void
@@ -673,6 +677,60 @@ class DocumentManagementTest extends TestCase
             ->assertStatus(422);
 
         $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'legacy-unknown', 'lifecycle_status' => null, 'approval_status' => null]);
+    }
+
+    public function test_generic_lifecycle_write_fails_closed_for_existing_unknown_legacy_status(): void
+    {
+        $document = $this->createDocument([
+            'status' => 'legacy-unknown',
+            'metadata' => ['status' => 'legacy-unknown', 'custom' => 'unchanged'],
+        ]);
+
+        foreach (['draft', 'in-review'] as $status) {
+            $this->apiPatch($this->namedRoute('v1.documents.update.patch', ['id' => $document->id]), ['status' => $status])
+                ->assertStatus(422);
+        }
+
+        $document->refresh();
+        $this->assertSame('legacy-unknown', $document->getRawOriginal('status'));
+        $this->assertNull($document->getRawOriginal('lifecycle_status'));
+        $this->assertNull($document->getRawOriginal('approval_status'));
+        $this->assertSame(['status' => 'legacy-unknown', 'custom' => 'unchanged'], $document->metadata);
+    }
+
+    public function test_unrelated_metadata_update_preserves_workflow_projection_committed_before_locked_reread(): void
+    {
+        $document = $this->createDocument([
+            'status' => 'draft',
+            'lifecycle_status' => 'draft',
+            'approval_status' => 'not-submitted',
+            'metadata' => ['status' => 'draft'],
+        ]);
+
+        Gate::before(function ($user, string $ability, array $arguments) use ($document) {
+            if ($ability === 'update' && ($arguments[0] ?? null) instanceof Document && $arguments[0]->id === $document->id) {
+                DB::table('documents')->where('id', $document->id)->update([
+                    'status' => 'approved',
+                    'lifecycle_status' => 'in-review',
+                    'approval_status' => 'approved',
+                    'metadata' => json_encode(['status' => 'approved', 'decision' => 'approved'], JSON_THROW_ON_ERROR),
+                ]);
+            }
+
+            return null;
+        });
+
+        $this->apiPatch($this->namedRoute('v1.documents.update.patch', ['id' => $document->id]), [
+            'tags' => ['after-workflow-commit'],
+        ])->assertOk();
+
+        $document->refresh();
+        $this->assertSame('approved', $document->getRawOriginal('status'));
+        $this->assertSame('in-review', $document->getRawOriginal('lifecycle_status'));
+        $this->assertSame('approved', $document->getRawOriginal('approval_status'));
+        $this->assertSame('approved', $document->metadata['status']);
+        $this->assertSame('approved', $document->metadata['decision']);
+        $this->assertSame(['after-workflow-commit'], $document->metadata['tags']);
     }
 
     public function test_generic_lifecycle_edit_cannot_reset_legacy_workflow_approval_state(): void

@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Enums\DocumentApprovalStatus;
 use App\Enums\DocumentDecision;
 use App\Enums\DocumentLifecycleStatus;
-use App\Enums\DocumentWorkflowStatus;
 use App\Exceptions\DocumentWorkflowException;
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Http\Controllers\Controller;
@@ -564,7 +563,6 @@ class SimpleDocumentController extends Controller
 
         $data = $validator->validated();
         $updatePayload = [];
-        $metadata = $document->metadata ?? [];
 
         if (isset($data['title'])) {
             $updatePayload['name'] = $data['title'];
@@ -577,35 +575,23 @@ class SimpleDocumentController extends Controller
 
         if (isset($data['document_type'])) {
             $updatePayload['document_type'] = $data['document_type'];
-            $metadata['document_type'] = $data['document_type'];
             $updatePayload['category'] = $data['document_type'];
         }
 
         if (array_key_exists('discipline', $data)) {
             $updatePayload['discipline'] = $data['discipline'];
-            $metadata['discipline'] = $data['discipline'];
         }
 
         if (array_key_exists('package', $data)) {
             $updatePayload['package'] = $data['package'];
-            $metadata['package'] = $data['package'];
         }
 
         if (array_key_exists('revision', $data)) {
             $updatePayload['revision'] = $data['revision'];
-            $metadata['revision'] = $data['revision'];
-        }
-
-        if (isset($data['tags'])) {
-            $metadata['tags'] = $data['tags'];
-        }
-
-        if ($metadata !== ($document->metadata ?? [])) {
-            $updatePayload['metadata'] = $metadata;
         }
 
         try {
-            $updated = DB::transaction(function () use ($document, $data, $updatePayload, $metadata): Document {
+            $updated = DB::transaction(function () use ($document, $data, $updatePayload): Document {
                 $locked = Document::query()
                     ->where('tenant_id', $this->resolveTenantId())
                     ->whereKey($document->id)
@@ -616,7 +602,16 @@ class SimpleDocumentController extends Controller
                     throw \Illuminate\Database\Eloquent\ModelNotFoundException::make(Document::class, [$document->id]);
                 }
 
-                if ($metadata !== ($document->metadata ?? [])) {
+                $metadata = $locked->metadata ?? [];
+                foreach (['document_type', 'discipline', 'package', 'revision'] as $field) {
+                    if (array_key_exists($field, $data)) {
+                        $metadata[$field] = $data[$field];
+                    }
+                }
+                if (array_key_exists('tags', $data)) {
+                    $metadata['tags'] = $data['tags'];
+                }
+                if ($metadata !== ($locked->metadata ?? [])) {
                     $locked->forceFill(['metadata' => $metadata]);
                 }
                 $locked->forceFill($updatePayload);

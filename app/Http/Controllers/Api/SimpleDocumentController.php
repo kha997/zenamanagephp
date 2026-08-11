@@ -450,14 +450,16 @@ class SimpleDocumentController extends Controller
 
         try {
             $document = DB::transaction(function () use ($document, $fileInfo, $fileType, $data, $request, $user, $tenantId) {
+                /** @var Document|null $locked */
                 $locked = Document::query()
                     ->where('tenant_id', $tenantId)
                     ->whereKey($document->id)
                     ->lockForUpdate()
                     ->first();
 
-                if (!$locked instanceof Document) {
-                    throw \Illuminate\Database\Eloquent\ModelNotFoundException::make(Document::class, [$document->id]);
+                if ($locked === null) {
+                    throw (new \Illuminate\Database\Eloquent\ModelNotFoundException())
+                        ->setModel(Document::class, [$document->id]);
                 }
 
                 $nextVersion = $this->nextVersionNumber($locked);
@@ -592,14 +594,16 @@ class SimpleDocumentController extends Controller
 
         try {
             $updated = DB::transaction(function () use ($document, $data, $updatePayload): Document {
+                /** @var Document|null $locked */
                 $locked = Document::query()
                     ->where('tenant_id', $this->resolveTenantId())
                     ->whereKey($document->id)
                     ->lockForUpdate()
                     ->first();
 
-                if (!$locked instanceof Document) {
-                    throw \Illuminate\Database\Eloquent\ModelNotFoundException::make(Document::class, [$document->id]);
+                if ($locked === null) {
+                    throw (new \Illuminate\Database\Eloquent\ModelNotFoundException())
+                        ->setModel(Document::class, [$document->id]);
                 }
 
                 $metadata = $locked->metadata ?? [];
@@ -736,11 +740,15 @@ class SimpleDocumentController extends Controller
         return max($latestVersion, $currentVersion) + 1;
     }
 
+    /** @throws \Illuminate\Validation\ValidationException */
     private function writeGenericLifecycle(Document $document, string $input, string $actorId): void
     {
         $lifecycle = match ($input) {
             'active', 'draft' => DocumentLifecycleStatus::DRAFT,
             'review', 'in-review' => DocumentLifecycleStatus::IN_REVIEW,
+            default => throw \Illuminate\Validation\ValidationException::withMessages([
+                'status' => ['Unsupported generic lifecycle status.'],
+            ]),
         };
         $statusService = app(DocumentStatusService::class);
         $approval = $statusService->approval($document);

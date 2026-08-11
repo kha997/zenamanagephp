@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Storage;
 /**
  * Model DocumentVersion để quản lý các phiên bản tài liệu
  * 
+ * @property string $id
  * @property string $document_id
  * @property int $version_number
  * @property string $file_path
@@ -237,4 +238,3 @@ class DocumentVersion extends Model
         return number_format($size / pow(1024, $power), 2, '.', ',') . ' ' . $units[$power];
     }
 }
-

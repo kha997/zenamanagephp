@@ -141,7 +141,7 @@ class DocumentApprovalEvent extends Model
         }
 
         if ($this->document_version_id === null) {
-            if (in_array($this->event, self::VERSION_REQUIRED_EVENTS, true)) {
+            if ($this->event !== 'reactivated' || in_array($this->event, self::VERSION_REQUIRED_EVENTS, true)) {
                 throw new LogicException('Document approval event requires a document version.');
             }
 
@@ -150,6 +150,10 @@ class DocumentApprovalEvent extends Model
             }
 
             return;
+        }
+
+        if ($this->context === ['legacy_without_current_version' => true]) {
+            throw new LogicException('Legacy no-current-version context requires an unbound reactivation event.');
         }
 
         $versionBelongsToDocument = DocumentVersion::query()

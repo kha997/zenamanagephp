@@ -5,7 +5,7 @@ namespace Tests\Unit\Services;
 use App\Enums\DocumentApprovalStatus;
 use App\Enums\DocumentLifecycleStatus;
 use App\Models\Document;
-use App\Services\DocumentStatusResolver;
+use App\Models\Support\DocumentStatusResolver;
 use App\Services\DocumentStatusService;
 use PHPUnit\Framework\TestCase;
 

@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Models\User;
-use App\Services\DocumentStatusResolver;
+use App\Models\Support\DocumentStatusResolver;
 use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;

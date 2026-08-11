@@ -160,6 +160,7 @@ class DocumentStatusMigrationTest extends TestCase
     public function test_unknown_legacy_status_keeps_absent_metadata_status_absent_during_serialization(): void
     {
         $document = $this->createLegacyDocument('legacy-document-state', '{"preserve":"yes"}');
+        $before = DB::table('documents')->where('id', $document->id)->value('metadata');
 
         $serialized = $document->fresh()->toArray();
 
@@ -168,7 +169,7 @@ class DocumentStatusMigrationTest extends TestCase
         self::assertSame('legacy-document-state', $serialized['status']);
         self::assertArrayNotHasKey('status', $serialized['metadata']);
         self::assertSame('yes', $serialized['metadata']['preserve']);
-        self::assertSame('{"preserve":"yes"}', DB::table('documents')->where('id', $document->id)->value('metadata'));
+        self::assertSame($before, DB::table('documents')->where('id', $document->id)->value('metadata'));
     }
 
     public function test_approval_events_schema_is_tenant_scoped_append_only_and_version_bound(): void

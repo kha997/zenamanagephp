@@ -10,6 +10,7 @@ use App\Models\Document;
 use App\Models\DocumentApprovalEvent;
 use App\Models\DocumentVersion;
 use Illuminate\Support\Facades\DB;
+use JsonException;
 
 class DocumentWorkflowService
 {
@@ -85,18 +86,37 @@ class DocumentWorkflowService
     ): Document {
         return DB::transaction(function () use ($tenantId, $documentId, $actorId, $decision, $note): Document {
             $document = $this->lockDocument($tenantId, $documentId);
-            [$lifecycle, $approval] = $this->resolveState($document);
+            $approval = $this->statusService->approval($document);
 
             if ($approval !== DocumentApprovalStatus::AWAITING_APPROVAL) {
                 throw DocumentWorkflowException::invalidDecisionTransition((string) $document->getRawOriginal('status'));
             }
 
-            $submitted = $this->latestEvent($document);
-            if ($submitted === null
-                || $submitted->event !== 'submitted'
-                || $submitted->to_approval_status !== DocumentApprovalStatus::AWAITING_APPROVAL->value
-                || ! $this->hasValidVersionEvidence($document, $tenantId, $submitted->document_version_id)) {
+            $metadata = $document->metadata ?? [];
+            $submittedBy = $metadata['submitted_by'] ?? null;
+            $submittedAt = $metadata['submitted_at'] ?? null;
+            $submitted = is_string($submittedBy) && is_string($submittedAt)
+                ? $this->matchingEvent(
+                    $document,
+                    $tenantId,
+                    'submitted',
+                    DocumentApprovalStatus::NOT_SUBMITTED,
+                    DocumentApprovalStatus::AWAITING_APPROVAL,
+                    $submittedBy,
+                    null,
+                    [
+                        'submitted_by' => $submittedBy,
+                        'submitted_at' => $submittedAt,
+                    ]
+                )
+                : null;
+            if ($submitted === null) {
                 throw DocumentWorkflowException::legacyApprovalReconciliationRequired();
+            }
+
+            $lifecycle = $this->statusService->lifecycle($document);
+            if ($lifecycle === null) {
+                throw DocumentWorkflowException::invalidCanonicalState((string) $document->getRawOriginal('status'));
             }
 
             $decidedAt = now()->toISOString();
@@ -134,18 +154,44 @@ class DocumentWorkflowService
     {
         return DB::transaction(function () use ($tenantId, $documentId, $actorId): Document {
             $document = $this->lockDocument($tenantId, $documentId);
-            [, $approval] = $this->resolveState($document);
+            $approval = $this->statusService->approval($document);
 
             if (! in_array($approval, [DocumentApprovalStatus::APPROVED, DocumentApprovalStatus::REJECTED], true)) {
                 throw DocumentWorkflowException::invalidReopenTransition((string) $document->getRawOriginal('status'));
             }
 
-            $decision = $this->latestEvent($document);
-            if ($decision === null
-                || $decision->event !== $approval->value
-                || $decision->to_approval_status !== $approval->value
-                || ! $this->hasValidVersionEvidence($document, $tenantId, $decision->document_version_id)) {
+            $metadata = $document->metadata ?? [];
+            $decisionBy = $metadata['decision_by'] ?? null;
+            $decisionAt = $metadata['decision_at'] ?? null;
+            $decisionName = $metadata['decision'] ?? null;
+            $decisionNote = $metadata['decision_note'] ?? null;
+            $validDecisionMetadata = $decisionName === $approval->value
+                && is_string($decisionBy)
+                && is_string($decisionAt)
+                && ($decisionNote === null || is_string($decisionNote));
+            $decision = $validDecisionMetadata
+                ? $this->matchingEvent(
+                    $document,
+                    $tenantId,
+                    $approval->value,
+                    DocumentApprovalStatus::AWAITING_APPROVAL,
+                    $approval,
+                    $decisionBy,
+                    $decisionNote,
+                    [
+                        'decision' => $approval->value,
+                        'decision_by' => $decisionBy,
+                        'decision_at' => $decisionAt,
+                        'decision_note' => $decisionNote,
+                    ]
+                )
+                : null;
+            if ($decision === null) {
                 throw DocumentWorkflowException::legacyApprovalReconciliationRequired();
+            }
+
+            if ($this->statusService->lifecycle($document) === null) {
+                throw DocumentWorkflowException::invalidCanonicalState((string) $document->getRawOriginal('status'));
             }
 
             $this->appendEvent(
@@ -274,15 +320,39 @@ class DocumentWorkflowService
         return $version;
     }
 
-    private function latestEvent(Document $document): ?DocumentApprovalEvent
+    /** @param array<string, mixed> $context */
+    private function matchingEvent(
+        Document $document,
+        string $tenantId,
+        string $eventName,
+        DocumentApprovalStatus $from,
+        DocumentApprovalStatus $to,
+        string $actorId,
+        ?string $note,
+        array $context,
+    ): ?DocumentApprovalEvent
     {
-        $row = DB::table('document_approval_events')
-            ->where('tenant_id', (string) $document->getAttribute('tenant_id'))
+        $query = DB::table('document_approval_events')
+            ->where('tenant_id', $tenantId)
             ->where('document_id', $document->id)
-            ->orderByDesc('id')
-            ->first();
+            ->where('event', $eventName)
+            ->where('from_approval_status', $from->value)
+            ->where('to_approval_status', $to->value)
+            ->where('actor_id', $actorId);
 
-        if ($row === null) {
+        $note === null ? $query->whereNull('note') : $query->where('note', $note);
+
+        $matches = $query->get()->filter(function (object $row) use ($document, $tenantId, $context): bool {
+            return $this->contextsMatch($this->eventContext($row->context ?? null), $context)
+                && $this->hasValidVersionEvidence($document, $tenantId, $row->document_version_id ?? null);
+        });
+
+        if ($matches->count() !== 1) {
+            return null;
+        }
+
+        $row = $matches->first();
+        if (! is_object($row)) {
             return null;
         }
 
@@ -291,6 +361,42 @@ class DocumentWorkflowService
         $event->exists = true;
 
         return $event;
+    }
+
+    /** @return array<string, mixed>|null */
+    private function eventContext(mixed $context): ?array
+    {
+        if (is_array($context)) {
+            return $context;
+        }
+
+        if (! is_string($context)) {
+            return null;
+        }
+
+        try {
+            $decoded = json_decode($context, true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            return null;
+        }
+
+        return is_array($decoded) ? $decoded : null;
+    }
+
+    /**
+     * @param array<string, mixed>|null $actual
+     * @param array<string, mixed> $expected
+     */
+    private function contextsMatch(?array $actual, array $expected): bool
+    {
+        if ($actual === null) {
+            return false;
+        }
+
+        ksort($actual);
+        ksort($expected);
+
+        return $actual === $expected;
     }
 
     private function hasValidVersionEvidence(Document $document, string $tenantId, ?string $versionId): bool

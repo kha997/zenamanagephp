@@ -42,10 +42,11 @@ class DocumentWorkflowConcurrencyTest extends TestCase
             ['submit', (string) $tenant->id, (string) $document->id, (string) $actor->id, '']
         );
 
-        $this->assertOneWinnerAndDomainLoser($results, ['INVALID_SUBMIT_TRANSITION']);
+        $this->assertOneWinnerAndDomainLoser($results, 'INVALID_SUBMIT_TRANSITION');
         $fresh = $document->fresh();
         self::assertSame(DocumentApprovalStatus::AWAITING_APPROVAL->value, $fresh->getRawOriginal('approval_status'));
-        self::assertSame(1, DocumentApprovalEvent::query()->where('document_id', $document->id)->where('event', 'submitted')->count());
+        $submitted = DocumentApprovalEvent::query()->where('document_id', $document->id)->where('event', 'submitted')->sole();
+        $this->assertSubmittedLineage($submitted, $fresh, $actor);
     }
 
     public function test_concurrent_approve_and_reject_allow_exactly_one_decision(): void
@@ -59,12 +60,14 @@ class DocumentWorkflowConcurrencyTest extends TestCase
             ['decide', (string) $tenant->id, (string) $document->id, (string) $actor->id, 'rejected']
         );
 
-        $this->assertOneWinnerAndDomainLoser($results, ['INVALID_DECISION_TRANSITION']);
-        self::assertContains($document->fresh()->getRawOriginal('approval_status'), ['approved', 'rejected']);
-        self::assertSame(1, DocumentApprovalEvent::query()
+        $this->assertOneWinnerAndDomainLoser($results, 'INVALID_DECISION_TRANSITION');
+        $fresh = $document->fresh();
+        self::assertContains($fresh->getRawOriginal('approval_status'), ['approved', 'rejected']);
+        $decisionEvent = DocumentApprovalEvent::query()
             ->where('document_id', $document->id)
             ->whereIn('event', ['approved', 'rejected'])
-            ->count());
+            ->sole();
+        $this->assertDecisionLineage($decisionEvent, $fresh, $actor);
     }
 
     public function test_concurrent_submit_and_generic_update_cannot_undo_approval_entry(): void
@@ -74,16 +77,16 @@ class DocumentWorkflowConcurrencyTest extends TestCase
 
         $results = $this->race(
             ['submit', (string) $tenant->id, (string) $document->id, (string) $actor->id, ''],
-            ['generic-update', (string) $tenant->id, (string) $document->id, (string) $actor->id, 'in-review']
+            ['generic-update', (string) $tenant->id, (string) $document->id, (string) $actor->id, 'in-review'],
+            true
         );
 
-        self::assertSame('ok', $results[0]['operation'] === 'submit' ? $results[0]['status'] : $results[1]['status'], $this->resultDump($results));
-        self::assertContains($results[0]['status'], ['ok', 'domain'], $this->resultDump($results));
-        self::assertContains($results[1]['status'], ['ok', 'domain'], $this->resultDump($results));
+        $this->assertExpectedCrossPathOutcome($results, 'submit', 'generic-update', 'HTTP_422');
         $fresh = $document->fresh();
         self::assertSame(DocumentApprovalStatus::AWAITING_APPROVAL->value, $fresh->getRawOriginal('approval_status'), $this->resultDump($results));
         self::assertSame('submitted', $fresh->getRawOriginal('status'));
-        self::assertSame(1, DocumentApprovalEvent::query()->where('document_id', $document->id)->where('event', 'submitted')->count());
+        $submitted = DocumentApprovalEvent::query()->where('document_id', $document->id)->where('event', 'submitted')->sole();
+        $this->assertSubmittedLineage($submitted, $fresh, $actor);
     }
 
     public function test_concurrent_submit_and_version_create_cannot_commit_mixed_state(): void
@@ -93,15 +96,16 @@ class DocumentWorkflowConcurrencyTest extends TestCase
 
         $results = $this->race(
             ['submit', (string) $tenant->id, (string) $document->id, (string) $actor->id, ''],
-            ['version', (string) $tenant->id, (string) $document->id, (string) $actor->id, '']
+            ['version', (string) $tenant->id, (string) $document->id, (string) $actor->id, ''],
+            true
         );
 
-        self::assertContains($results[0]['status'], ['ok', 'domain'], $this->resultDump($results));
-        self::assertContains($results[1]['status'], ['ok', 'domain'], $this->resultDump($results));
+        $this->assertExpectedCrossPathOutcome($results, 'submit', 'version', 'HTTP_422');
         $fresh = $document->fresh();
         $submitted = DocumentApprovalEvent::query()->where('document_id', $document->id)->where('event', 'submitted')->sole();
         self::assertSame(DocumentApprovalStatus::AWAITING_APPROVAL->value, $fresh->getRawOriginal('approval_status'), $this->resultDump($results));
-        self::assertSame($submitted->document_version_id, $fresh->current_version_id, 'Approval state and version evidence must come from one serialized outcome. ' . $this->resultDump($results));
+        $this->assertSubmittedLineage($submitted, $fresh, $actor);
+        self::assertSame(1, DocumentVersion::query()->where('document_id', $document->id)->count(), $this->resultDump($results));
     }
 
     public function test_concurrent_approve_or_reject_and_version_create_cannot_commit_mixed_state(): void
@@ -115,22 +119,20 @@ class DocumentWorkflowConcurrencyTest extends TestCase
 
             $results = $this->race(
                 ['decide', (string) $tenant->id, (string) $document->id, (string) $actor->id, $decision],
-                ['version', (string) $tenant->id, (string) $document->id, (string) $actor->id, '']
+                ['version', (string) $tenant->id, (string) $document->id, (string) $actor->id, ''],
+                true
             );
 
-            self::assertContains($results[0]['status'], ['ok', 'domain'], $this->resultDump($results));
-            self::assertContains($results[1]['status'], ['ok', 'domain'], $this->resultDump($results));
+            $this->assertExpectedCrossPathOutcome($results, 'decide', 'version', 'HTTP_422');
             $fresh = $document->fresh();
             $decisionEvent = DocumentApprovalEvent::query()
                 ->where('document_id', $document->id)
                 ->where('event', $decision)
-                ->first();
-            if ($decisionEvent !== null) {
-                self::assertSame($submittedVersionId, $decisionEvent->document_version_id);
-                self::assertSame($submittedVersionId, $fresh->current_version_id, 'A version must not move underneath an active approval cycle. ' . $this->resultDump($results));
-            } else {
-                self::assertSame(DocumentApprovalStatus::AWAITING_APPROVAL->value, $fresh->getRawOriginal('approval_status'));
-            }
+                ->sole();
+            self::assertSame($decision, $fresh->getRawOriginal('approval_status'));
+            self::assertSame($submittedVersionId, $fresh->current_version_id, 'A version must not move underneath an active approval cycle. ' . $this->resultDump($results));
+            self::assertSame(1, DocumentVersion::query()->where('document_id', $document->id)->count(), $this->resultDump($results));
+            $this->assertDecisionLineage($decisionEvent, $fresh, $actor);
         }
     }
 
@@ -146,7 +148,12 @@ class DocumentWorkflowConcurrencyTest extends TestCase
             ['version', (string) $tenant->id, (string) $document->id, (string) $actor->id, '']
         );
 
-        self::assertSame(['domain', 'domain'], array_column($results, 'status'), $this->resultDump($results));
+        foreach ($results as $result) {
+            self::assertSame('version', $result['operation'] ?? null, $this->resultDump($results));
+            self::assertSame('domain', $result['status'] ?? null, $this->resultDump($results));
+            self::assertSame('HTTP_422', $result['reason'] ?? null, $this->resultDump($results));
+            self::assertSame(2, $result['exit_code'] ?? null, $this->resultDump($results));
+        }
         self::assertSame($versionId, $document->fresh()->current_version_id, $this->resultDump($results));
         self::assertSame(1, DocumentVersion::query()->where('document_id', $document->id)->count());
     }
@@ -201,7 +208,7 @@ class DocumentWorkflowConcurrencyTest extends TestCase
      * @param array{string, string, string, string, string} $right
      * @return array<int, array<string, mixed>>
      */
-    private function race(array $left, array $right): array
+    private function race(array $left, array $right, bool $leftLocksFirst = false): array
     {
         $barrier = sys_get_temp_dir() . '/gap032-' . bin2hex(random_bytes(8));
         if (! mkdir($barrier, 0700) && ! is_dir($barrier)) {
@@ -213,8 +220,9 @@ class DocumentWorkflowConcurrencyTest extends TestCase
         self::assertNotFalse($php);
         $processes = [];
         foreach ([[$left, 'left'], [$right, 'right']] as [$arguments, $label]) {
+            $lockRole = $leftLocksFirst ? ($label === 'left' ? 'leader' : 'loser') : 'peer';
             $processes[] = new Process(
-                [$php, '-r', $this->workerScript(), ...$arguments, $barrier, $label],
+                [$php, '-r', $this->workerScript(), ...$arguments, $barrier, $label, $lockRole],
                 base_path(),
                 ['APP_ENV' => 'testing', 'DB_CONNECTION' => 'mysql'],
                 null,
@@ -250,13 +258,67 @@ class DocumentWorkflowConcurrencyTest extends TestCase
     }
 
     /** @param array<int, array<string, mixed>> $results */
-    private function assertOneWinnerAndDomainLoser(array $results, array $allowedReasons): void
+    private function assertOneWinnerAndDomainLoser(array $results, string $expectedReason): void
     {
         $statuses = array_column($results, 'status');
         sort($statuses);
         self::assertSame(['domain', 'ok'], $statuses, $this->resultDump($results));
         $loser = collect($results)->firstWhere('status', 'domain');
-        self::assertContains($loser['reason'] ?? null, $allowedReasons, $this->resultDump($results));
+        $winner = collect($results)->firstWhere('status', 'ok');
+        self::assertSame($expectedReason, $loser['reason'] ?? null, $this->resultDump($results));
+        self::assertSame(2, $loser['exit_code'] ?? null, $this->resultDump($results));
+        self::assertSame(0, $winner['exit_code'] ?? null, $this->resultDump($results));
+    }
+
+    /** @param array<int, array<string, mixed>> $results */
+    private function assertExpectedCrossPathOutcome(
+        array $results,
+        string $winnerOperation,
+        string $loserOperation,
+        string $loserReason,
+    ): void {
+        $winner = collect($results)->firstWhere('operation', $winnerOperation);
+        $loser = collect($results)->firstWhere('operation', $loserOperation);
+
+        self::assertNotNull($winner, $this->resultDump($results));
+        self::assertNotNull($loser, $this->resultDump($results));
+        self::assertSame('ok', $winner['status'] ?? null, $this->resultDump($results));
+        self::assertSame(0, $winner['exit_code'] ?? null, $this->resultDump($results));
+        self::assertSame('domain', $loser['status'] ?? null, $this->resultDump($results));
+        self::assertSame($loserReason, $loser['reason'] ?? null, $this->resultDump($results));
+        self::assertSame(2, $loser['exit_code'] ?? null, $this->resultDump($results));
+    }
+
+    private function assertSubmittedLineage(DocumentApprovalEvent $event, Document $document, User $actor): void
+    {
+        $metadata = $document->metadata ?? [];
+        self::assertSame('submitted', $event->event);
+        self::assertSame(DocumentApprovalStatus::NOT_SUBMITTED->value, $event->from_approval_status);
+        self::assertSame(DocumentApprovalStatus::AWAITING_APPROVAL->value, $event->to_approval_status);
+        self::assertSame($document->current_version_id, $event->document_version_id);
+        self::assertSame((string) $actor->id, $event->actor_id);
+        self::assertNull($event->note);
+        self::assertSame([
+            'submitted_by' => $metadata['submitted_by'] ?? null,
+            'submitted_at' => $metadata['submitted_at'] ?? null,
+        ], $event->context);
+    }
+
+    private function assertDecisionLineage(DocumentApprovalEvent $event, Document $document, User $actor): void
+    {
+        $metadata = $document->metadata ?? [];
+        self::assertSame($document->getRawOriginal('approval_status'), $event->event);
+        self::assertSame(DocumentApprovalStatus::AWAITING_APPROVAL->value, $event->from_approval_status);
+        self::assertSame($document->getRawOriginal('approval_status'), $event->to_approval_status);
+        self::assertSame($document->current_version_id, $event->document_version_id);
+        self::assertSame((string) $actor->id, $event->actor_id);
+        self::assertNull($event->note);
+        self::assertSame([
+            'decision' => $metadata['decision'] ?? null,
+            'decision_by' => $metadata['decision_by'] ?? null,
+            'decision_at' => $metadata['decision_at'] ?? null,
+            'decision_note' => $metadata['decision_note'] ?? null,
+        ], $event->context);
     }
 
     /** @param array<int, array<string, mixed>> $results */
@@ -281,7 +343,7 @@ class DocumentWorkflowConcurrencyTest extends TestCase
 require getcwd() . '/vendor/autoload.php';
 $app = require getcwd() . '/bootstrap/app.php';
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
-[$operation, $tenantId, $documentId, $actorId, $payload, $barrier, $label] = array_slice($argv, 1);
+[$operation, $tenantId, $documentId, $actorId, $payload, $barrier, $label, $lockRole] = array_slice($argv, 1);
 file_put_contents($barrier . '/' . $label . '.ready', 'ready');
 $deadline = microtime(true) + 20;
 while (!file_exists($barrier . '/release') && microtime(true) < $deadline) { usleep(10000); }
@@ -290,6 +352,32 @@ if (!file_exists($barrier . '/release')) {
     exit(3);
 }
 try {
+    if ($lockRole === 'leader') {
+        Illuminate\Support\Facades\DB::beginTransaction();
+        $lockedDocument = Illuminate\Support\Facades\DB::table('documents')
+            ->where('tenant_id', $tenantId)
+            ->where('id', $documentId)
+            ->lockForUpdate()
+            ->first();
+        if ($lockedDocument === null) {
+            throw new RuntimeException('Controlled leader could not find the document.');
+        }
+        file_put_contents($barrier . '/leader.locked', 'locked');
+        $deadline = microtime(true) + 10;
+        while (!file_exists($barrier . '/loser.started') && microtime(true) < $deadline) { usleep(10000); }
+        if (!file_exists($barrier . '/loser.started')) {
+            throw new RuntimeException('Controlled loser did not start.');
+        }
+        usleep(100000);
+    } elseif ($lockRole === 'loser') {
+        $deadline = microtime(true) + 10;
+        while (!file_exists($barrier . '/leader.locked') && microtime(true) < $deadline) { usleep(10000); }
+        if (!file_exists($barrier . '/leader.locked')) {
+            throw new RuntimeException('Controlled leader did not acquire the row lock.');
+        }
+        file_put_contents($barrier . '/loser.started', 'started');
+    }
+
     if ($operation === 'submit') {
         $document = $app->make(App\Services\DocumentWorkflowService::class)->submit($tenantId, $documentId, $actorId);
         $result = ['operation' => $operation, 'status' => 'ok', 'approval' => $document->getRawOriginal('approval_status')];
@@ -327,9 +415,15 @@ try {
             'body' => json_decode($response->getContent(), true),
         ];
     }
+    if ($lockRole === 'leader') {
+        Illuminate\Support\Facades\DB::commit();
+    }
     echo 'GAP032_RESULT=' . json_encode($result) . PHP_EOL;
     exit(($result['status'] ?? null) === 'ok' ? 0 : 2);
 } catch (App\Exceptions\DocumentWorkflowException $exception) {
+    if (Illuminate\Support\Facades\DB::transactionLevel() > 0) {
+        Illuminate\Support\Facades\DB::rollBack();
+    }
     echo 'GAP032_RESULT=' . json_encode([
         'operation' => $operation,
         'status' => 'domain',
@@ -338,6 +432,9 @@ try {
     ]) . PHP_EOL;
     exit(2);
 } catch (Throwable $exception) {
+    if (Illuminate\Support\Facades\DB::transactionLevel() > 0) {
+        Illuminate\Support\Facades\DB::rollBack();
+    }
     echo 'GAP032_RESULT=' . json_encode([
         'operation' => $operation,
         'status' => 'error',

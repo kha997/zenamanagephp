@@ -236,10 +236,7 @@ class DocumentWorkflowServiceTest extends TestCase
 
     public function test_legacy_submitted_without_version_bound_submit_event_cannot_be_decided(): void
     {
-        $document = $this->makeVersionedDocument($this->canonicalState(
-            DocumentLifecycleStatus::DRAFT,
-            DocumentApprovalStatus::AWAITING_APPROVAL
-        ));
+        $document = $this->makeVersionedDocument($this->legacyState('submitted'));
 
         $this->assertWorkflowException(
             'LEGACY_APPROVAL_RECONCILIATION_REQUIRED',
@@ -252,7 +249,62 @@ class DocumentWorkflowServiceTest extends TestCase
             )
         );
 
-        $this->assertCanonicalState($document->fresh(), DocumentLifecycleStatus::DRAFT, DocumentApprovalStatus::AWAITING_APPROVAL);
+        $fresh = $document->fresh();
+        self::assertNull($fresh->getRawOriginal('lifecycle_status'));
+        self::assertNull($fresh->getRawOriginal('approval_status'));
+        self::assertSame('submitted', $fresh->getRawOriginal('status'));
+    }
+
+    public function test_decide_selects_context_bound_submitted_lineage_and_ignores_malformed_same_name_events(): void
+    {
+        $document = $this->makeVersionedDocument();
+        $originalVersionId = (string) $document->current_version_id;
+        $this->service->submit($this->tenantId(), (string) $document->id, $this->actorId());
+        $metadata = $document->fresh()->metadata;
+        $otherVersion = $this->makeVersion($document, 2);
+
+        DocumentApprovalEvent::query()->create([
+            'tenant_id' => $this->tenant->id,
+            'document_id' => $document->id,
+            'document_version_id' => $otherVersion->id,
+            'event' => 'submitted',
+            'from_approval_status' => DocumentApprovalStatus::APPROVED->value,
+            'to_approval_status' => DocumentApprovalStatus::AWAITING_APPROVAL->value,
+            'actor_id' => $this->actor->id,
+            'note' => null,
+            'context' => [
+                'submitted_by' => $metadata['submitted_by'],
+                'submitted_at' => $metadata['submitted_at'],
+            ],
+        ]);
+        DocumentApprovalEvent::query()->create([
+            'tenant_id' => $this->tenant->id,
+            'document_id' => $document->id,
+            'document_version_id' => $otherVersion->id,
+            'event' => 'submitted',
+            'from_approval_status' => DocumentApprovalStatus::NOT_SUBMITTED->value,
+            'to_approval_status' => DocumentApprovalStatus::AWAITING_APPROVAL->value,
+            'actor_id' => $this->actor->id,
+            'note' => null,
+            'context' => [
+                'submitted_by' => $metadata['submitted_by'],
+                'submitted_at' => '2000-01-01T00:00:00.000000Z',
+            ],
+        ]);
+
+        $this->service->decide(
+            $this->tenantId(),
+            (string) $document->id,
+            $this->actorId(),
+            DocumentDecision::APPROVED,
+            null
+        );
+
+        $decision = DocumentApprovalEvent::query()
+            ->where('document_id', $document->id)
+            ->where('event', 'approved')
+            ->sole();
+        self::assertSame($originalVersionId, $decision->document_version_id);
     }
 
     public function test_reopen_approved_resets_to_draft_not_submitted_and_preserves_historical_audit(): void
@@ -280,6 +332,55 @@ class DocumentWorkflowServiceTest extends TestCase
             ->where('event', 'reopened')
             ->sole();
         self::assertSame($decisionEvent->document_version_id, $reopen->document_version_id);
+    }
+
+    public function test_reopen_selects_context_bound_decision_lineage_and_ignores_malformed_same_name_events(): void
+    {
+        $document = $this->completedCycle(DocumentDecision::APPROVED, 'Canonical decision');
+        $originalVersionId = (string) $document->current_version_id;
+        $metadata = $document->metadata;
+        $otherVersion = $this->makeVersion($document, 2);
+
+        DocumentApprovalEvent::query()->create([
+            'tenant_id' => $this->tenant->id,
+            'document_id' => $document->id,
+            'document_version_id' => $otherVersion->id,
+            'event' => 'approved',
+            'from_approval_status' => DocumentApprovalStatus::NOT_SUBMITTED->value,
+            'to_approval_status' => DocumentApprovalStatus::APPROVED->value,
+            'actor_id' => $this->actor->id,
+            'note' => 'Canonical decision',
+            'context' => [
+                'decision' => 'approved',
+                'decision_by' => $metadata['decision_by'],
+                'decision_at' => $metadata['decision_at'],
+                'decision_note' => $metadata['decision_note'],
+            ],
+        ]);
+        DocumentApprovalEvent::query()->create([
+            'tenant_id' => $this->tenant->id,
+            'document_id' => $document->id,
+            'document_version_id' => $otherVersion->id,
+            'event' => 'approved',
+            'from_approval_status' => DocumentApprovalStatus::AWAITING_APPROVAL->value,
+            'to_approval_status' => DocumentApprovalStatus::APPROVED->value,
+            'actor_id' => $this->actor->id,
+            'note' => 'Canonical decision',
+            'context' => [
+                'decision' => 'approved',
+                'decision_by' => $metadata['decision_by'],
+                'decision_at' => '2000-01-01T00:00:00.000000Z',
+                'decision_note' => $metadata['decision_note'],
+            ],
+        ]);
+
+        $this->service->reopenForRevision($this->tenantId(), (string) $document->id, $this->actorId());
+
+        $reopened = DocumentApprovalEvent::query()
+            ->where('document_id', $document->id)
+            ->where('event', 'reopened')
+            ->sole();
+        self::assertSame($originalVersionId, $reopened->document_version_id);
     }
 
     public function test_legacy_approved_without_version_bound_decision_event_cannot_be_reopened(): void
@@ -506,14 +607,17 @@ class DocumentWorkflowServiceTest extends TestCase
 
     private function assertLegacyDecisionCannotReopen(DocumentApprovalStatus $approval): void
     {
-        $document = $this->makeVersionedDocument($this->canonicalState(DocumentLifecycleStatus::DRAFT, $approval));
+        $document = $this->makeVersionedDocument($this->legacyState($approval->value));
 
         $this->assertWorkflowException(
             'LEGACY_APPROVAL_RECONCILIATION_REQUIRED',
             fn (): Document => $this->service->reopenForRevision($this->tenantId(), (string) $document->id, $this->actorId())
         );
 
-        $this->assertCanonicalState($document->fresh(), DocumentLifecycleStatus::DRAFT, $approval);
+        $fresh = $document->fresh();
+        self::assertNull($fresh->getRawOriginal('lifecycle_status'));
+        self::assertNull($fresh->getRawOriginal('approval_status'));
+        self::assertSame($approval->value, $fresh->getRawOriginal('status'));
         self::assertSame(0, DocumentApprovalEvent::query()->where('document_id', $document->id)->count());
     }
 

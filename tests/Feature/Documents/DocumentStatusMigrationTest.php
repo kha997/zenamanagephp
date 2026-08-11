@@ -19,6 +19,23 @@ class DocumentStatusMigrationTest extends TestCase
 {
     use RefreshDatabase;
 
+    private static bool $mysqlDriverReported = false;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        if (env('GAP032_REQUIRE_MYSQL') === '1') {
+            $driver = DB::connection()->getDriverName();
+            self::assertSame('mysql', $driver);
+
+            if (! self::$mysqlDriverReported) {
+                fwrite(STDOUT, "GAP-032 migration driver: {$driver}\n");
+                self::$mysqlDriverReported = true;
+            }
+        }
+    }
+
     public function test_migration_adds_nullable_lifecycle_and_approval_columns_without_rewriting_legacy_row(): void
     {
         $migration = $this->canonicalStatusMigration();

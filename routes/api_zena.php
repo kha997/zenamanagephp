@@ -487,6 +487,7 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::post('/{id}/archive', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'archive'])->middleware('rbac:document.update')->name('documents.archive');
             Route::post('/{id}/reopen', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'reopen'])->middleware('rbac:document.update')->name('documents.reopen');
             Route::post('/{id}/reactivate', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'reactivate'])->middleware('rbac:document.update')->name('documents.reactivate');
+            Route::post('/{id}/approver', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'assignApprover'])->middleware('rbac:document.update')->name('documents.approver.assign');
             Route::put('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'update'])->middleware('rbac:document.update')->name('documents.update');
             Route::delete('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'destroy'])->middleware('rbac:document.delete')->name('documents.destroy');
         });

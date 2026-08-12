@@ -500,6 +500,42 @@ class SimpleDocumentController extends Controller
         return $this->zenaSuccessResponse($document, 'Document reactivated successfully');
     }
 
+    public function assignApprover(Request $request, string $id): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'approver_id' => 'nullable|string',
+        ]);
+        if ($validator->fails()) {
+            return ErrorEnvelopeService::validationError($validator->errors()->toArray());
+        }
+
+        $tenantId = $this->resolveTenantId();
+
+        $documentForAuth = app(\App\Services\DocumentApproverAssignmentService::class)->findForTenant($tenantId, $id);
+        if ($documentForAuth === null) {
+            return ErrorEnvelopeService::notFoundError('Document');
+        }
+        $this->authorize('assignApprover', $documentForAuth);
+
+        try {
+            $document = app(\App\Services\DocumentApproverAssignmentService::class)->assign(
+                $tenantId,
+                $id,
+                (string) Auth::id(),
+                $request->input('approver_id'),
+            );
+        } catch (\App\Exceptions\DocumentApproverAssignmentException $e) {
+            report($e);
+
+            return match ($e->reasonCode) {
+                'DOCUMENT_NOT_FOUND' => ErrorEnvelopeService::notFoundError('Document'),
+                default => ErrorEnvelopeService::conflictError('The proposed approver is not eligible for this document'),
+            };
+        }
+
+        return $this->zenaSuccessResponse($document, 'Document approver updated successfully');
+    }
+
     public function download(string $id)
     {
         $document = $this->findDocument($id);

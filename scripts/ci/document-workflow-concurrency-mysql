@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Runs tests/Feature/Concurrency/DocumentWorkflowConcurrencyTest.php against a
+# Runs tests/Feature/Services/DocumentWorkflowConcurrencyTest.php against a
 # real MySQL connection in CI. Modeled 1:1 on scripts/ci/rfi-escalation-concurrency-mysql
 # (GAP-031 concurrency verification must be a real merge gate, not an
 # optionally-skipped local test — see docs/superpowers/plans/2026-08-04-gap031-document-approval-workflow.md
@@ -86,7 +86,7 @@ php artisan optimize:clear
 php artisan migrate:fresh --force
 
 JUNIT_OUT="${RUNNER_TEMP:-/tmp}/document-workflow-concurrency-junit.xml"
-./vendor/bin/phpunit tests/Feature/Concurrency/DocumentWorkflowConcurrencyTest.php --log-junit "$JUNIT_OUT"
+./vendor/bin/phpunit tests/Feature/Services/DocumentWorkflowConcurrencyTest.php --log-junit "$JUNIT_OUT"
 
 # Same contract as scripts/ci/rfi-escalation-concurrency-mysql: this script
 # guarantees MySQL IS reachable via the preflight check above, so a SKIPPED

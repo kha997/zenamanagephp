@@ -66,7 +66,7 @@
                             @endif
                         </td>
                         <td>
-                            @if ($document->status === 'submitted')
+                            @if ($document->status === 'submitted' && $document->getRawOriginal('lifecycle_status') !== null && $document->getRawOriginal('approval_status') !== null)
                                 <form method="POST" action="{{ route('app.documents.workflow.approve', ['document' => $document->id]) }}" class="inline">
                                     @csrf
                                     <button type="submit" class="operator-button operator-button-primary">Duyệt</button>

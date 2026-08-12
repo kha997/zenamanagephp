@@ -59,7 +59,7 @@
                         <td class="text-sm text-slate-600">{{ $document->uploader?->name ?? '—' }}</td>
                         <td class="text-sm text-slate-600">{{ optional($document->created_at)->format('d/m/Y H:i') }}</td>
                         <td>
-                            @if ($document->status === 'draft')
+                            @if ($document->status === 'draft' && $document->getRawOriginal('lifecycle_status') !== null && $document->getRawOriginal('approval_status') !== null)
                                 <form method="POST" action="{{ route('app.documents.workflow.submit', ['document' => $document->id]) }}">
                                     @csrf
                                     <button type="submit" class="operator-button operator-button-secondary">Gửi duyệt</button>

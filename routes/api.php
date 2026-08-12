@@ -491,6 +491,10 @@ Route::group([], function () {
             Route::get('{document}/download', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'download'])->middleware('rbac:document.view');
             Route::post('{document}/versions', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'createVersion'])->middleware('rbac:document.update');
             Route::get('{document}/versions', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'getVersions'])->middleware('rbac:document.view');
+            Route::post('{document}/publish', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'publish'])->middleware('rbac:document.update');
+            Route::post('{document}/archive', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'archive'])->middleware('rbac:document.update');
+            Route::post('{document}/reopen', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'reopen'])->middleware('rbac:document.update');
+            Route::post('{document}/reactivate', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'reactivate'])->middleware('rbac:document.update');
         });
         
         /*

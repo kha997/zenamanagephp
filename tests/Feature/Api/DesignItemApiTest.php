@@ -4,6 +4,7 @@ namespace Tests\Feature\Api;
 
 use App\Http\Middleware\RoleBasedAccessControlMiddleware;
 use App\Models\DesignItem;
+use App\Models\Document;
 use App\Models\Project;
 use App\Models\Tenant;
 use App\Models\User;
@@ -368,6 +369,149 @@ class DesignItemApiTest extends TestCase
 
         $list = $this->getJson($this->route('documents.index', ['id' => $itemId]), $this->headersFor($this->userA));
         $list->assertStatus(200)->assertJsonCount(2, 'data');
+    }
+
+    public function test_design_item_first_upload_uses_canonical_creation_boundary_and_draft_not_submitted_state(): void
+    {
+        $item = DesignItem::query()->create([
+            'tenant_id' => (string) $this->tenantA->id,
+            'project_id' => (string) $this->projectA->id,
+            'name' => 'Canonical upload target',
+            'item_type' => DesignItem::TYPE_OTHER,
+            'review_status' => DesignItem::STATUS_DRAFT,
+            'created_by' => (string) $this->userA->id,
+        ]);
+        \Illuminate\Support\Facades\Storage::fake('local');
+
+        $this->post($this->route('documents.store', ['id' => $item->id]), [
+            'file' => \Illuminate\Http\UploadedFile::fake()->create('canonical-design.pdf', 20, 'application/pdf'),
+        ], $this->headersFor($this->userA))->assertCreated();
+
+        $this->assertDatabaseHas('documents', [
+            'tenant_id' => (string) $this->tenantA->id,
+            'linked_entity_type' => Document::ENTITY_TYPE_DESIGN_ITEM,
+            'linked_entity_id' => (string) $item->id,
+            'status' => 'draft',
+            'lifecycle_status' => 'draft',
+            'approval_status' => 'not-submitted',
+        ]);
+    }
+
+    public function test_design_item_upload_cannot_create_or_find_a_cross_tenant_document(): void
+    {
+        $item = DesignItem::query()->create([
+            'tenant_id' => (string) $this->tenantA->id,
+            'project_id' => (string) $this->projectA->id,
+            'name' => 'Tenant-scoped upload target',
+            'item_type' => DesignItem::TYPE_OTHER,
+            'review_status' => DesignItem::STATUS_DRAFT,
+            'created_by' => (string) $this->userA->id,
+        ]);
+        $foreign = Document::factory()->create([
+            'tenant_id' => (string) $this->tenantB->id,
+            'linked_entity_type' => Document::ENTITY_TYPE_DESIGN_ITEM,
+            'linked_entity_id' => (string) $item->id,
+        ]);
+        \Illuminate\Support\Facades\Storage::fake('local');
+
+        $this->post($this->route('documents.store', ['id' => $item->id]), [
+            'file' => \Illuminate\Http\UploadedFile::fake()->create('tenant-scoped.pdf', 20, 'application/pdf'),
+        ], $this->headersFor($this->userA))->assertCreated();
+
+        $this->assertDatabaseHas('documents', ['id' => $foreign->id, 'tenant_id' => (string) $this->tenantB->id]);
+        $this->assertDatabaseHas('documents', ['tenant_id' => (string) $this->tenantA->id, 'linked_entity_id' => (string) $item->id]);
+    }
+
+    public function test_design_item_version_upload_is_blocked_for_awaiting_approved_and_rejected_documents(): void
+    {
+        foreach ([null, 'approved', 'rejected'] as $decision) {
+            $tag = $decision ?? 'awaiting';
+            $item = $this->createDesignItem('Blocked upload target ' . ($decision ?? 'awaiting'));
+            \Illuminate\Support\Facades\Storage::fake('local');
+
+            $this->post($this->route('documents.store', ['id' => $item->id]), [
+                'file' => \Illuminate\Http\UploadedFile::fake()->createWithContent('v1.pdf', "%PDF-1.4 v1 {$tag}"),
+            ], $this->headersFor($this->userA))->assertCreated();
+
+            $document = Document::query()
+                ->where('tenant_id', (string) $this->tenantA->id)
+                ->forEntity(Document::ENTITY_TYPE_DESIGN_ITEM, (string) $item->id)
+                ->firstOrFail();
+
+            $workflow = $this->app->make(\App\Services\DocumentWorkflowService::class);
+            $workflow->submit((string) $this->tenantA->id, (string) $document->id, (string) $this->userA->id);
+            if ($decision !== null) {
+                $workflow->decide(
+                    (string) $this->tenantA->id,
+                    (string) $document->id,
+                    (string) $this->userA->id,
+                    \App\Enums\DocumentDecision::from($decision),
+                    null,
+                );
+            }
+
+            $currentVersionId = (string) $document->fresh()->current_version_id;
+
+            $this->post($this->route('documents.store', ['id' => $item->id]), [
+                'file' => \Illuminate\Http\UploadedFile::fake()->createWithContent('v2.pdf', "%PDF-1.4 v2 {$tag}"),
+            ], $this->headersFor($this->userA))->assertStatus(422);
+
+            $this->assertSame(1, \App\Models\DocumentVersion::query()->where('document_id', $document->id)->count());
+            $this->assertSame($currentVersionId, (string) $document->fresh()->current_version_id);
+        }
+    }
+
+    public function test_design_item_version_upload_is_tenant_scoped_and_produces_coherent_snapshot(): void
+    {
+        $item = $this->createDesignItem('Snapshot upload target');
+        $foreign = Document::factory()->create([
+            'tenant_id' => (string) $this->tenantB->id,
+            'linked_entity_type' => Document::ENTITY_TYPE_DESIGN_ITEM,
+            'linked_entity_id' => (string) $item->id,
+        ]);
+        \Illuminate\Support\Facades\Storage::fake('local');
+
+        $first = $this->post($this->route('documents.store', ['id' => $item->id]), [
+            'file' => \Illuminate\Http\UploadedFile::fake()->createWithContent('snapshot-v1.pdf', '%PDF-1.4 snapshot v1'),
+        ], $this->headersFor($this->userA))->assertCreated();
+
+        $document = Document::query()
+            ->where('tenant_id', (string) $this->tenantA->id)
+            ->forEntity(Document::ENTITY_TYPE_DESIGN_ITEM, (string) $item->id)
+            ->firstOrFail();
+
+        $this->assertNotSame((string) $foreign->id, (string) $document->id);
+        $this->assertSame((string) $this->tenantA->id, (string) $document->tenant_id);
+
+        $firstVersion = \App\Models\DocumentVersion::findOrFail($first->json('data.version_id'));
+        $this->assertSame('draft', $firstVersion->metadata['lifecycle_status'] ?? null);
+        $this->assertSame('not-submitted', $firstVersion->metadata['approval_status'] ?? null);
+        $this->assertSame('draft', $firstVersion->metadata['status'] ?? null);
+        $this->assertArrayHasKey('previous_version_id', $firstVersion->metadata);
+        $this->assertNull($firstVersion->metadata['previous_version_id']);
+        $this->assertSame((string) $firstVersion->id, (string) $document->fresh()->current_version_id);
+
+        $second = $this->post($this->route('documents.store', ['id' => $item->id]), [
+            'file' => \Illuminate\Http\UploadedFile::fake()->createWithContent('snapshot-v2.pdf', '%PDF-1.4 snapshot v2'),
+        ], $this->headersFor($this->userA))->assertCreated();
+
+        $secondVersion = \App\Models\DocumentVersion::findOrFail($second->json('data.version_id'));
+        $this->assertSame(2, $secondVersion->version_number);
+        $this->assertSame((string) $firstVersion->id, $secondVersion->metadata['previous_version_id'] ?? null);
+        $this->assertSame((string) $secondVersion->id, (string) $document->fresh()->current_version_id);
+        $this->assertSame(0, \App\Models\DocumentVersion::query()->where('document_id', $foreign->id)->count());
+    }
+
+    private function createDesignItem(string $name): DesignItem
+    {
+        return DesignItem::query()->create([
+            'tenant_id' => (string) $this->tenantA->id,
+            'project_id' => (string) $this->projectA->id,
+            'name' => $name,
+            'item_type' => DesignItem::TYPE_OTHER,
+            'review_status' => DesignItem::STATUS_DRAFT,
+            'created_by' => (string) $this->userA->id,
+        ]);
     }
 
     public function test_upload_requires_manage_permission(): void

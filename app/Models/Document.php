@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\User;
+use App\Models\Support\DocumentStatusResolver;
 use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -25,9 +26,12 @@ use App\Models\Project;
  * @property string|null $linked_entity_type
  * @property string|null $linked_entity_id
  * @property string|null $current_version_id
+ * @property int $version
  * @property array|null $tags
  * @property array<string, mixed>|null $metadata
  * @property string $status
+ * @property string|null $lifecycle_status
+ * @property string|null $approval_status
  * @property string $visibility
  * @property bool $client_approved
  * @property string|null $created_by
@@ -129,6 +133,8 @@ class Document extends Model
 
     protected $casts = [
         'metadata' => 'array',
+        'lifecycle_status' => 'string',
+        'approval_status' => 'string',
         'file_size' => 'integer',
         'version' => 'integer',
         'is_current_version' => 'boolean',
@@ -218,6 +224,56 @@ class Document extends Model
         return is_array($this->metadata) ? ($this->metadata['decision_note'] ?? null) : null;
     }
 
+    public function getLifecycleStatusAttribute(mixed $value): ?string
+    {
+        $rawLifecycleStatus = $this->getRawOriginal('lifecycle_status');
+
+        return (new DocumentStatusResolver())->lifecycle(
+            is_string($rawLifecycleStatus) ? $rawLifecycleStatus : null,
+            (string) $this->getRawOriginal('status')
+        )?->value;
+    }
+
+    public function getApprovalStatusAttribute(mixed $value): ?string
+    {
+        $rawApprovalStatus = $this->getRawOriginal('approval_status');
+
+        return (new DocumentStatusResolver())->approval(
+            is_string($rawApprovalStatus) ? $rawApprovalStatus : null,
+            (string) $this->getRawOriginal('status')
+        )?->value;
+    }
+
+    /** @return array<string, mixed> */
+    public function toArray(): array
+    {
+        $array = parent::toArray();
+        $resolver = new DocumentStatusResolver();
+        $rawLifecycleStatus = $this->getRawOriginal('lifecycle_status');
+        $rawApprovalStatus = $this->getRawOriginal('approval_status');
+        $legacyStatus = (string) $this->getRawOriginal('status');
+        $lifecycle = $resolver->lifecycle(
+            is_string($rawLifecycleStatus) ? $rawLifecycleStatus : null,
+            $legacyStatus
+        );
+        $approval = $resolver->approval(
+            is_string($rawApprovalStatus) ? $rawApprovalStatus : null,
+            $legacyStatus
+        );
+        $compatibilityStatus = $resolver->compatibilityStatus($lifecycle, $approval, $legacyStatus);
+        $array['lifecycle_status'] = $lifecycle?->value;
+        $array['approval_status'] = $approval?->value;
+        $array['status'] = $compatibilityStatus;
+
+        if ($lifecycle !== null || $approval !== null) {
+            $metadata = is_array($array['metadata'] ?? null) ? $array['metadata'] : [];
+            $metadata['status'] = $compatibilityStatus;
+            $array['metadata'] = $metadata;
+        }
+
+        return $array;
+    }
+
     /**
      * Quan hệ polymorphic với entity được liên kết
      */
@@ -278,44 +334,12 @@ class Document extends Model
     }
 
     /**
-     * Tạo version mới cho document
+     * GAP-032: version creation and `current_version_id` moves are owned by
+     * App\Services\DocumentVersionService, which allocates the number and writes the
+     * canonical snapshot under the governed documents row lock. The former
+     * createNewVersion()/revertToVersion() model mutators were removed because they
+     * bypassed that lock and the Approval eligibility rule.
      */
-    public function createNewVersion(array $versionData): DocumentVersion
-    {
-        $versionData['document_id'] = $this->id;
-        $versionData['version_number'] = $this->getNextVersionNumber();
-        
-        $newVersion = DocumentVersion::create($versionData);
-        
-        // Cập nhật current_version_id
-        $this->update(['current_version_id' => $newVersion->id]);
-        
-        return $newVersion;
-    }
-
-    /**
-     * Revert về version cũ
-     */
-    public function revertToVersion(int $versionNumber, string $createdBy, ?string $comment = null): ?DocumentVersion
-    {
-        $targetVersion = $this->versions()->where('version_number', $versionNumber)->first();
-        
-        if (!$targetVersion) {
-            return null;
-        }
-        
-        // Tạo version mới từ version cũ
-        $newVersionData = [
-            'file_path' => $targetVersion->file_path,
-            'storage_driver' => $targetVersion->storage_driver,
-            'comment' => $comment ?? "Reverted to version {$versionNumber}",
-            'metadata' => $targetVersion->metadata,
-            'created_by' => $createdBy,
-            'reverted_from_version_number' => $versionNumber,
-        ];
-        
-        return $this->createNewVersion($newVersionData);
-    }
 
     /**
      * Lấy version hiện tại

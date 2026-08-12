@@ -6,11 +6,17 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Illuminate\Validation\Rule;
+use App\Enums\DocumentApprovalStatus;
 use App\Models\Document;
+use App\Services\DocumentCreationService;
+use App\Services\DocumentStatusService;
+use App\Services\DocumentVersionService;
 use Src\CoreProject\Models\Project;
+use Src\Foundation\Services\FileStorageService;
 
 /**
  * Web Document Controller for document management interface
@@ -42,7 +48,7 @@ class DocumentController extends Controller
         }
 
         if ($request->filled('status')) {
-            $query->where('status', (string) $request->input('status'));
+            app(DocumentStatusService::class)->applyLegacyStatusFilter($query, (string) $request->input('status'));
         }
 
         return view('documents.index', [
@@ -81,7 +87,8 @@ class DocumentController extends Controller
      */
     public function store(
         Request $request,
-        \App\Http\Controllers\Api\SimpleDocumentController $apiController
+        DocumentCreationService $documentCreationService,
+        DocumentVersionService $documentVersionService,
     ): RedirectResponse {
         $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -90,36 +97,61 @@ class DocumentController extends Controller
             'file' => ['required', 'file', 'max:10240'],
         ]);
 
-        // Multipart: dựng request thủ công để giữ uploaded files
-        $apiRequest = Request::create(
-            $request->fullUrl(),
-            'POST',
-            array_merge(
-                $request->only(['title', 'project_id', 'document_type', 'description']),
-                ['status' => \App\Enums\DocumentWorkflowStatus::DRAFT->value]
-            ),
-            $request->cookies->all(),
-            $request->files->all(),
-            $request->server->all()
-        );
-        $apiRequest->headers->replace($request->headers->all());
-        $apiRequest->setLaravelSession($request->session());
-        $apiRequest->setUserResolver(static fn () => $request->user());
-
         try {
-            $response = $apiController->store($apiRequest);
-
-            $status = $response->getStatusCode();
-            if ($status >= 200 && $status < 300) {
-                return redirect('/app/documents')->with('success', 'Đã tải tài liệu lên');
+            $user = $request->user();
+            $tenantId = (string) $user?->tenant_id;
+            if ($tenantId === '') {
+                return redirect()->back()->withInput()->withErrors(['error' => 'Tenant context missing']);
             }
 
-            $payload = $response->getData(true);
+            $project = Project::query()->where('tenant_id', $tenantId)->whereKey((string) $request->input('project_id'))->first();
+            if (!$project) {
+                return redirect()->back()->withInput()->withErrors(['project_id' => 'Project not found.']);
+            }
 
-            return redirect()
-                ->back()
-                ->withInput()
-                ->with('error', (string) ($payload['message'] ?? 'Không thể tải tài liệu lên.'));
+            $file = $request->file('file');
+            $upload = app(FileStorageService::class)->uploadFile($file, 'local', 'documents/' . $project->id);
+            if (!$upload['success']) {
+                return redirect()->back()->withInput()->withErrors(['file' => 'Không thể tải tài liệu lên.']);
+            }
+
+            $fileInfo = $upload['file'];
+            DB::transaction(function () use ($documentCreationService, $documentVersionService, $request, $tenantId, $user, $project, $fileInfo): void {
+                $document = $documentCreationService->create([
+                    'project_id' => (string) $project->id,
+                    'name' => (string) $request->input('title'),
+                    'title' => (string) $request->input('title'),
+                    'document_type' => (string) $request->input('document_type'),
+                    'original_name' => $fileInfo['original_name'],
+                    'file_path' => $fileInfo['path'],
+                    'file_type' => strtolower((string) ($fileInfo['extension'] ?? 'document')),
+                    'mime_type' => $fileInfo['mime_type'],
+                    'file_size' => (int) $fileInfo['size'],
+                    'file_hash' => \Illuminate\Support\Str::ulid(),
+                    'category' => (string) $request->input('document_type'),
+                    'description' => $request->input('description'),
+                    'metadata' => array_filter([
+                        'document_type' => $request->input('document_type'),
+                        'description' => $request->input('description'),
+                    ], static fn (mixed $value): bool => $value !== null),
+                    'version' => 1,
+                    'is_current_version' => true,
+                ], $tenantId, (string) $user->id);
+                $document->refresh();
+
+                $documentVersionService->createVersion($tenantId, (string) $document->id, (string) $user->id, [
+                    'file_path' => $fileInfo['path'],
+                    'storage_driver' => config('filesystems.default', 'local'),
+                    'metadata' => [
+                        'original_filename' => $fileInfo['original_name'],
+                        'mime_type' => $fileInfo['mime_type'],
+                        'size' => (int) $fileInfo['size'],
+                    ],
+                    'expected_version_number' => 1,
+                ]);
+            });
+
+            return redirect('/app/documents')->with('success', 'Đã tải tài liệu lên');
         } catch (\Illuminate\Validation\ValidationException $exception) {
             return redirect()->back()->withErrors($exception->errors())->withInput();
         } catch (\Exception $e) {
@@ -187,8 +219,11 @@ class DocumentController extends Controller
                 $query->where('project_id', $request->input('project_id'));
             }
 
+            $statusService = app(DocumentStatusService::class);
             if ($request->filled('status')) {
-                $query->where('status', $request->input('status'));
+                $statusService->applyLegacyStatusFilter($query, (string) $request->input('status'));
+            } else {
+                $statusService->applyApprovalFilter($query, DocumentApprovalStatus::AWAITING_APPROVAL);
             }
 
             $documents = $query->orderBy('created_at', 'desc')->paginate(15);

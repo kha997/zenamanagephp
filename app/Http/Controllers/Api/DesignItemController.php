@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\DocumentWorkflowException;
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Models\DesignItem;
 use App\Models\Document;
 use App\Models\DocumentVersion;
+use App\Services\DocumentCreationService;
+use App\Services\DocumentVersionService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -316,15 +319,13 @@ class DesignItemController extends BaseApiController
         }
 
         $document = Document::query()
+            ->where('tenant_id', $tenantId)
             ->forEntity(Document::ENTITY_TYPE_DESIGN_ITEM, (string) $item->id)
             ->first();
 
         if (!$document instanceof Document) {
-            $document = Document::query()->create([
-                'tenant_id' => $tenantId,
+            $document = app(DocumentCreationService::class)->create([
                 'project_id' => (string) $item->project_id,
-                'uploaded_by' => (string) $user->id,
-                'created_by' => (string) $user->id,
                 'name' => (string) $file->getClientOriginalName(),
                 'original_name' => (string) $file->getClientOriginalName(),
                 'title' => (string) $item->name,
@@ -335,22 +336,36 @@ class DesignItemController extends BaseApiController
                 'file_hash' => (string) (hash_file('sha256', $file->getRealPath()) ?: Str::random(32)),
                 'linked_entity_type' => Document::ENTITY_TYPE_DESIGN_ITEM,
                 'linked_entity_id' => (string) $item->id,
-                'status' => 'active',
                 'visibility' => Document::VISIBILITY_INTERNAL,
-            ]);
+            ], $tenantId, (string) $user->id);
         }
 
-        $version = $document->createNewVersion([
-            'file_path' => $storedPath,
-            'storage_driver' => DocumentVersion::STORAGE_LOCAL,
-            'comment' => $request->input('comment'),
-            'metadata' => [
-                'original_filename' => (string) $file->getClientOriginalName(),
-                'mime_type' => (string) $file->getMimeType(),
-                'size' => (int) $file->getSize(),
-            ],
-            'created_by' => (string) $user->id,
-        ]);
+        try {
+            $version = app(DocumentVersionService::class)->createVersion(
+                $tenantId,
+                (string) $document->id,
+                (string) $user->id,
+                [
+                    'file_path' => $storedPath,
+                    'storage_driver' => DocumentVersion::STORAGE_LOCAL,
+                    'comment' => $request->input('comment'),
+                    'metadata' => [
+                        'original_filename' => (string) $file->getClientOriginalName(),
+                        'mime_type' => (string) $file->getMimeType(),
+                        'size' => (int) $file->getSize(),
+                    ],
+                ]
+            );
+        } catch (DocumentWorkflowException $e) {
+            report($e);
+
+            return match ($e->reasonCode) {
+                'DOCUMENT_NOT_FOUND' => $this->notFound('Document not found'),
+                default => $this->validationError([
+                    'file' => ['A new version requires a document that is not in an approval cycle.'],
+                ]),
+            };
+        }
 
         return $this->zenaSuccessResponse([
             'document_id' => (string) $document->id,
@@ -379,6 +394,7 @@ class DesignItemController extends BaseApiController
         $this->authorize('view', $item);
 
         $document = Document::query()
+            ->where('tenant_id', $tenantId)
             ->forEntity(Document::ENTITY_TYPE_DESIGN_ITEM, (string) $item->id)
             ->first();
 

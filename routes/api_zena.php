@@ -483,6 +483,10 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::post('/{id}/versions', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'createVersion'])->middleware('rbac:document.update')->name('documents.versions.store');
             Route::post('/{id}/submit', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'submit'])->middleware('rbac:document.update')->name('documents.submit');
             Route::post('/{id}/decision', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'decision'])->middleware('rbac:document.approve')->name('documents.decision');
+            Route::post('/{id}/publish', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'publish'])->middleware('rbac:document.update')->name('documents.publish');
+            Route::post('/{id}/archive', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'archive'])->middleware('rbac:document.update')->name('documents.archive');
+            Route::post('/{id}/reopen', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'reopen'])->middleware('rbac:document.update')->name('documents.reopen');
+            Route::post('/{id}/reactivate', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'reactivate'])->middleware('rbac:document.update')->name('documents.reactivate');
             Route::put('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'update'])->middleware('rbac:document.update')->name('documents.update');
             Route::delete('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'destroy'])->middleware('rbac:document.delete')->name('documents.destroy');
         });

@@ -6,15 +6,11 @@
     </testsuite>
     <testsuite name="Feature">
       <directory>tests/Feature</directory>
-      <directory>tests/Architecture</directory>
       <exclude>tests/Feature/Api</exclude>
     </testsuite>
     <testsuite name="Integration">
       <directory>tests/Integration</directory>
     </testsuite>
-    <!-- "Final Testing" suite removed 2026-07-14: it re-listed 4 files already in
-         the Feature suite, and PHPUnit 11 exits 1 on the resulting duplicate-file
-         runner warning even when all tests pass (broke Routes Guardrails CI). -->
   </testsuites>
   <groups>
     <exclude>
@@ -26,7 +22,6 @@
     <env name="BCRYPT_ROUNDS" value="4"/>
     <env name="BROADCAST_DRIVER" value="log"/>
     <env name="CACHE_DRIVER" value="array"/>
-    <env name="DB_CONNECTION" value="sqlite"/>
     <env name="MAIL_MAILER" value="array"/>
     <env name="QUEUE_CONNECTION" value="sync"/>
     <env name="SESSION_DRIVER" value="array"/>
@@ -40,13 +35,8 @@
     <env name="REDIS_QUEUE_DB" value="3"/>
     <env name="REDIS_PASSWORD" value=""/>
   </php>
-  <!-- Coverage report block removed 2026-07-14: it forced coverage collection on
-       EVERY run, and on driverless environments (CI uses coverage: none) PHPUnit 11
-       emits a "No code coverage driver available" runner warning and exits 1 even
-       when all tests pass. Coverage consumers pass CLI flags explicitly instead. -->
-
   <logging>
-    <junit outputFile="storage/app/junit.xml"/>
+    <junit outputFile="storage/app/junit-mysql.xml"/>
   </logging>
   <source>
     <include>

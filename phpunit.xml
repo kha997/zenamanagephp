@@ -6,6 +6,7 @@
     </testsuite>
     <testsuite name="Feature">
       <directory>tests/Feature</directory>
+      <directory>tests/Architecture</directory>
       <exclude>tests/Feature/Api</exclude>
     </testsuite>
     <testsuite name="Integration">

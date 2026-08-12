@@ -12,9 +12,9 @@ use Illuminate\View\View;
 use Illuminate\Validation\Rule;
 use App\Enums\DocumentApprovalStatus;
 use App\Models\Document;
-use App\Models\DocumentVersion;
 use App\Services\DocumentCreationService;
 use App\Services\DocumentStatusService;
+use App\Services\DocumentVersionService;
 use Src\CoreProject\Models\Project;
 use Src\Foundation\Services\FileStorageService;
 
@@ -88,6 +88,7 @@ class DocumentController extends Controller
     public function store(
         Request $request,
         DocumentCreationService $documentCreationService,
+        DocumentVersionService $documentVersionService,
     ): RedirectResponse {
         $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -115,7 +116,7 @@ class DocumentController extends Controller
             }
 
             $fileInfo = $upload['file'];
-            DB::transaction(function () use ($documentCreationService, $request, $tenantId, $user, $project, $fileInfo): void {
+            DB::transaction(function () use ($documentCreationService, $documentVersionService, $request, $tenantId, $user, $project, $fileInfo): void {
                 $document = $documentCreationService->create([
                     'project_id' => (string) $project->id,
                     'name' => (string) $request->input('title'),
@@ -138,19 +139,16 @@ class DocumentController extends Controller
                 ], $tenantId, (string) $user->id);
                 $document->refresh();
 
-                $version = DocumentVersion::query()->create([
-                    'document_id' => $document->id,
-                    'version_number' => 1,
+                $documentVersionService->createVersion($tenantId, (string) $document->id, (string) $user->id, [
                     'file_path' => $fileInfo['path'],
                     'storage_driver' => config('filesystems.default', 'local'),
-                    'metadata' => array_merge($document->metadata ?? [], [
+                    'metadata' => [
                         'original_filename' => $fileInfo['original_name'],
                         'mime_type' => $fileInfo['mime_type'],
                         'size' => (int) $fileInfo['size'],
-                    ]),
-                    'created_by' => (string) $user->id,
+                    ],
+                    'expected_version_number' => 1,
                 ]);
-                $document->forceFill(['current_version_id' => $version->id])->save();
             });
 
             return redirect('/app/documents')->with('success', 'Đã tải tài liệu lên');

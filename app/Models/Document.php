@@ -26,6 +26,7 @@ use App\Models\Project;
  * @property string|null $linked_entity_type
  * @property string|null $linked_entity_id
  * @property string|null $current_version_id
+ * @property int $version
  * @property array|null $tags
  * @property array<string, mixed>|null $metadata
  * @property string $status
@@ -333,44 +334,12 @@ class Document extends Model
     }
 
     /**
-     * Tạo version mới cho document
+     * GAP-032: version creation and `current_version_id` moves are owned by
+     * App\Services\DocumentVersionService, which allocates the number and writes the
+     * canonical snapshot under the governed documents row lock. The former
+     * createNewVersion()/revertToVersion() model mutators were removed because they
+     * bypassed that lock and the Approval eligibility rule.
      */
-    public function createNewVersion(array $versionData): DocumentVersion
-    {
-        $versionData['document_id'] = $this->id;
-        $versionData['version_number'] = $this->getNextVersionNumber();
-        
-        $newVersion = DocumentVersion::create($versionData);
-        
-        // Cập nhật current_version_id
-        $this->update(['current_version_id' => $newVersion->id]);
-        
-        return $newVersion;
-    }
-
-    /**
-     * Revert về version cũ
-     */
-    public function revertToVersion(int $versionNumber, string $createdBy, ?string $comment = null): ?DocumentVersion
-    {
-        $targetVersion = $this->versions()->where('version_number', $versionNumber)->first();
-        
-        if (!$targetVersion) {
-            return null;
-        }
-        
-        // Tạo version mới từ version cũ
-        $newVersionData = [
-            'file_path' => $targetVersion->file_path,
-            'storage_driver' => $targetVersion->storage_driver,
-            'comment' => $comment ?? "Reverted to version {$versionNumber}",
-            'metadata' => $targetVersion->metadata,
-            'created_by' => $createdBy,
-            'reverted_from_version_number' => $versionNumber,
-        ];
-        
-        return $this->createNewVersion($newVersionData);
-    }
 
     /**
      * Lấy version hiện tại

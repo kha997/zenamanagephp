@@ -61,6 +61,35 @@ final class DocumentWorkflowException extends RuntimeException
         );
     }
 
+    /**
+     * Version creation is only eligible while Approval is not-submitted. Awaiting content
+     * must complete its decision first; approved/rejected content must pass through an
+     * explicit Reopen. Version creation itself never reopens or normalises Approval.
+     */
+    public static function versionCreationBlocked(string $currentApprovalStatus): self
+    {
+        return new self(
+            'VERSION_CREATION_BLOCKED',
+            "Document versions can only be created while the approval dimension is not-submitted (current: {$currentApprovalStatus})."
+        );
+    }
+
+    public static function versionSequenceMismatch(int $expectedVersionNumber): self
+    {
+        return new self(
+            'VERSION_SEQUENCE_MISMATCH',
+            "Version must match the next sequential version number ({$expectedVersionNumber})."
+        );
+    }
+
+    public static function invalidGenericLifecycleTarget(string $requestedStatus): self
+    {
+        return new self(
+            'INVALID_GENERIC_LIFECYCLE_TARGET',
+            "Unsupported generic lifecycle status (requested: {$requestedStatus})."
+        );
+    }
+
     public static function invalidCanonicalState(string $currentStatus): self
     {
         return new self(

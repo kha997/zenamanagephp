@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\DocumentWorkflowException;
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Models\DesignItem;
 use App\Models\Document;
 use App\Models\DocumentVersion;
 use App\Services\DocumentCreationService;
+use App\Services\DocumentVersionService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -338,17 +340,32 @@ class DesignItemController extends BaseApiController
             ], $tenantId, (string) $user->id);
         }
 
-        $version = $document->createNewVersion([
-            'file_path' => $storedPath,
-            'storage_driver' => DocumentVersion::STORAGE_LOCAL,
-            'comment' => $request->input('comment'),
-            'metadata' => [
-                'original_filename' => (string) $file->getClientOriginalName(),
-                'mime_type' => (string) $file->getMimeType(),
-                'size' => (int) $file->getSize(),
-            ],
-            'created_by' => (string) $user->id,
-        ]);
+        try {
+            $version = app(DocumentVersionService::class)->createVersion(
+                $tenantId,
+                (string) $document->id,
+                (string) $user->id,
+                [
+                    'file_path' => $storedPath,
+                    'storage_driver' => DocumentVersion::STORAGE_LOCAL,
+                    'comment' => $request->input('comment'),
+                    'metadata' => [
+                        'original_filename' => (string) $file->getClientOriginalName(),
+                        'mime_type' => (string) $file->getMimeType(),
+                        'size' => (int) $file->getSize(),
+                    ],
+                ]
+            );
+        } catch (DocumentWorkflowException $e) {
+            report($e);
+
+            return match ($e->reasonCode) {
+                'DOCUMENT_NOT_FOUND' => $this->notFound('Document not found'),
+                default => $this->validationError([
+                    'file' => ['A new version requires a document that is not in an approval cycle.'],
+                ]),
+            };
+        }
 
         return $this->zenaSuccessResponse([
             'document_id' => (string) $document->id,

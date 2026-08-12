@@ -71,6 +71,54 @@ class DocumentVersion extends Model
     ];
 
     /**
+     * GAP-032 canonical snapshot keys written by App\Services\DocumentVersionService.
+     * They record the Lifecycle/Approval state resolved under the governed document
+     * row lock, plus the version and approval-event lineage current at that moment.
+     */
+    public const SNAPSHOT_LIFECYCLE_STATUS = 'lifecycle_status';
+    public const SNAPSHOT_APPROVAL_STATUS = 'approval_status';
+    public const SNAPSHOT_STATUS = 'status';
+    public const SNAPSHOT_PREVIOUS_VERSION_ID = 'previous_version_id';
+    public const SNAPSHOT_APPROVAL_EVENT_ID = 'approval_event_id';
+
+    public function snapshotLifecycleStatus(): ?string
+    {
+        return $this->snapshotValue(self::SNAPSHOT_LIFECYCLE_STATUS);
+    }
+
+    public function snapshotApprovalStatus(): ?string
+    {
+        return $this->snapshotValue(self::SNAPSHOT_APPROVAL_STATUS);
+    }
+
+    public function snapshotLegacyStatus(): ?string
+    {
+        return $this->snapshotValue(self::SNAPSHOT_STATUS);
+    }
+
+    public function snapshotPreviousVersionId(): ?string
+    {
+        return $this->snapshotValue(self::SNAPSHOT_PREVIOUS_VERSION_ID);
+    }
+
+    public function snapshotApprovalEventId(): ?string
+    {
+        return $this->snapshotValue(self::SNAPSHOT_APPROVAL_EVENT_ID);
+    }
+
+    private function snapshotValue(string $key): ?string
+    {
+        $metadata = $this->metadata;
+        if (! is_array($metadata)) {
+            return null;
+        }
+
+        $value = $metadata[$key] ?? null;
+
+        return is_string($value) ? $value : null;
+    }
+
+    /**
      * Quan hệ với Document
      */
     public function document(): BelongsTo

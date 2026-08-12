@@ -239,7 +239,7 @@ class DocumentVersioningTest extends TestCase
         $document->update(['current_version_id' => $version3->id]);
 
         // Revert về version 1
-        $revertedVersion = $document->revertToVersion(1, $this->user->id, 'Reverted to version 1');
+        $revertedVersion = $this->revertToVersionFixture($document, 1, 'Reverted to version 1');
 
         // Kiểm tra revert version được tạo
         $this->assertNotNull($revertedVersion);
@@ -492,7 +492,7 @@ class DocumentVersioningTest extends TestCase
         $document->update(['current_version_id' => $version3->id]);
 
         // 5. Revert về version 1
-        $revertedVersion = $document->revertToVersion(1, $this->user->id, 'Reverted to initial version');
+        $revertedVersion = $this->revertToVersionFixture($document, 1, 'Reverted to initial version');
 
         // 6. Test complete workflow
         $this->assertCount(4, $document->versions);
@@ -577,6 +577,32 @@ class DocumentVersioningTest extends TestCase
         $this->assertDatabaseHas('document_versions', [
             'document_id' => $documents[0]->id,
         ]);
+    }
+
+    /**
+     * GAP-032 removed Document::revertToVersion() as a production mutation API
+     * (version creation is owned by App\Services\DocumentVersionService under the
+     * governed row lock). These model-level tests keep exercising revert *data*
+     * shape, so the former model behaviour lives here as a plain test fixture.
+     */
+    private function revertToVersionFixture(Document $document, int $versionNumber, string $comment): DocumentVersion
+    {
+        $targetVersion = $document->versions()->where('version_number', $versionNumber)->firstOrFail();
+
+        $newVersion = DocumentVersion::create([
+            'document_id' => $document->id,
+            'version_number' => $document->getNextVersionNumber(),
+            'file_path' => $targetVersion->file_path,
+            'storage_driver' => $targetVersion->storage_driver,
+            'comment' => $comment,
+            'metadata' => $targetVersion->metadata,
+            'created_by' => $this->user->id,
+            'reverted_from_version_number' => $versionNumber,
+        ]);
+
+        $document->update(['current_version_id' => $newVersion->id]);
+
+        return $newVersion;
     }
 
     private function documentAttributes(array $overrides = []): array

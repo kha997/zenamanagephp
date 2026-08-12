@@ -556,18 +556,227 @@ class DocumentManagementTest extends TestCase
         ])->assertStatus(422);
     }
 
-    public function test_create_version_on_submitted_document_preserves_status(): void
+    public function test_version_snapshot_contains_resolved_lifecycle_approval_and_matching_legacy_projection(): void
     {
-        $document = $this->createDocument(['status' => 'submitted', 'metadata' => ['status' => 'submitted'], 'version' => 1]);
+        $create = $this->apiPostMultipart($this->namedRoute('v1.documents.store'), [
+            'project_id' => $this->project->id,
+            'title' => 'Snapshot Coherence',
+            'document_type' => 'drawing',
+            'status' => 'draft',
+            'file' => $this->createValidPdfUploadedFile('snapshot-v1.pdf'),
+        ])->assertCreated();
+
+        $documentId = $create->json('data.id');
+        $firstVersionId = $create->json('data.current_version_id');
+        $this->assertNotNull($firstVersionId);
+
+        $firstVersion = DocumentVersion::findOrFail($firstVersionId);
+        $this->assertSame(DocumentLifecycleStatus::DRAFT->value, $firstVersion->metadata['lifecycle_status'] ?? null);
+        $this->assertSame(DocumentApprovalStatus::NOT_SUBMITTED->value, $firstVersion->metadata['approval_status'] ?? null);
+        $this->assertSame('draft', $firstVersion->metadata['status'] ?? null);
+        $this->assertArrayHasKey('previous_version_id', $firstVersion->metadata);
+        $this->assertNull($firstVersion->metadata['previous_version_id']);
+        $this->assertArrayHasKey('approval_event_id', $firstVersion->metadata);
+        $this->assertNull($firstVersion->metadata['approval_event_id']);
+
+        $this->apiPostMultipart($this->namedRoute('v1.documents.versions.store', ['id' => $documentId]), [
+            'file' => $this->createValidPdfUploadedFile('snapshot-v2.pdf'),
+            'version' => 2,
+            'status' => 'review',
+        ])->assertCreated();
+
+        $document = Document::findOrFail($documentId);
+        $version = DocumentVersion::findOrFail($document->current_version_id);
+
+        $this->assertSame(DocumentLifecycleStatus::IN_REVIEW->value, $version->metadata['lifecycle_status'] ?? null);
+        $this->assertSame(DocumentApprovalStatus::NOT_SUBMITTED->value, $version->metadata['approval_status'] ?? null);
+        $this->assertSame('review', $version->metadata['status'] ?? null);
+        $this->assertSame($firstVersionId, $version->metadata['previous_version_id'] ?? null);
+
+        // The snapshot must equal the document's own resolved dimensions and legacy projection.
+        $this->assertSame($document->lifecycle_status, $version->metadata['lifecycle_status']);
+        $this->assertSame($document->approval_status, $version->metadata['approval_status']);
+        $this->assertSame($document->getRawOriginal('status'), $version->metadata['status']);
+    }
+
+    public function test_version_creation_is_blocked_while_awaiting_approval(): void
+    {
+        $document = $this->createCanonicallySubmittedDocument();
+        $currentVersionId = (string) $document->current_version_id;
 
         $this->apiPostMultipart($this->namedRoute('v1.documents.versions.store', ['id' => $document->id]), [
-            'file' => $this->createValidPdfUploadedFile('submitted-new-version.pdf'),
-            'version' => 2,
+            'file' => $this->createValidPdfUploadedFile('awaiting-new-version.pdf'),
         ])
-            ->assertCreated()
-            ->assertJsonPath('data.status', 'submitted');
+            ->assertStatus(422)
+            ->assertJsonPath('error.code', 'E422.VALIDATION');
 
-        $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'submitted']);
+        $document->refresh();
+        $this->assertSame('submitted', $document->getRawOriginal('status'));
+        $this->assertSame(DocumentApprovalStatus::AWAITING_APPROVAL->value, $document->getRawOriginal('approval_status'));
+        $this->assertSame($currentVersionId, (string) $document->current_version_id);
+        $this->assertSame(1, DocumentVersion::where('document_id', $document->id)->count());
+    }
+
+    public function test_version_creation_after_approval_or_rejection_requires_explicit_reopen(): void
+    {
+        foreach (['approved', 'rejected'] as $decision) {
+            $document = $this->createCanonicallySubmittedDocument();
+            $this->app->make(DocumentWorkflowService::class)->decide(
+                (string) $this->tenant->id,
+                (string) $document->id,
+                (string) $this->user->id,
+                \App\Enums\DocumentDecision::from($decision),
+                null,
+            );
+
+            $this->apiPostMultipart($this->namedRoute('v1.documents.versions.store', ['id' => $document->id]), [
+                'file' => $this->createValidPdfUploadedFile($decision . '-blocked-version.pdf'),
+            ])->assertStatus(422);
+
+            $this->assertSame(1, DocumentVersion::where('document_id', $document->id)->count());
+            $this->assertSame($decision, $document->fresh()->getRawOriginal('approval_status'));
+
+            $this->app->make(DocumentWorkflowService::class)->reopenForRevision(
+                (string) $this->tenant->id,
+                (string) $document->id,
+                (string) $this->user->id,
+            );
+
+            $this->apiPostMultipart($this->namedRoute('v1.documents.versions.store', ['id' => $document->id]), [
+                'file' => $this->createValidPdfUploadedFile($decision . '-reopened-version.pdf'),
+            ])->assertCreated();
+
+            $this->assertSame(2, DocumentVersion::where('document_id', $document->id)->count());
+        }
+    }
+
+    public function test_version_creation_after_reopen_preserves_prior_version_bound_decision_history(): void
+    {
+        $document = $this->createCanonicallySubmittedDocument();
+        $firstVersionId = (string) $document->current_version_id;
+
+        $this->app->make(DocumentWorkflowService::class)->decide(
+            (string) $this->tenant->id,
+            (string) $document->id,
+            (string) $this->user->id,
+            \App\Enums\DocumentDecision::APPROVED,
+            'Đồng ý',
+        );
+        $this->app->make(DocumentWorkflowService::class)->reopenForRevision(
+            (string) $this->tenant->id,
+            (string) $document->id,
+            (string) $this->user->id,
+        );
+
+        $historyBefore = DB::table('document_approval_events')
+            ->where('document_id', $document->id)
+            ->orderBy('id')
+            ->get()
+            ->map(static fn (object $row): array => [
+                'event' => $row->event,
+                'document_version_id' => $row->document_version_id,
+                'actor_id' => $row->actor_id,
+                'note' => $row->note,
+            ])
+            ->all();
+
+        $this->apiPostMultipart($this->namedRoute('v1.documents.versions.store', ['id' => $document->id]), [
+            'file' => $this->createValidPdfUploadedFile('post-reopen-version.pdf'),
+        ])->assertCreated();
+
+        $historyAfter = DB::table('document_approval_events')
+            ->where('document_id', $document->id)
+            ->orderBy('id')
+            ->get()
+            ->map(static fn (object $row): array => [
+                'event' => $row->event,
+                'document_version_id' => $row->document_version_id,
+                'actor_id' => $row->actor_id,
+                'note' => $row->note,
+            ])
+            ->all();
+
+        $this->assertSame($historyBefore, $historyAfter);
+        $this->assertCount(3, $historyAfter);
+        foreach ($historyAfter as $event) {
+            $this->assertSame($firstVersionId, $event['document_version_id']);
+        }
+
+        $document->refresh();
+        $this->assertNotSame($firstVersionId, (string) $document->current_version_id);
+        $this->assertSame(2, DocumentVersion::where('document_id', $document->id)->count());
+    }
+
+    public function test_version_payload_cannot_forge_status_or_workflow_audit_metadata(): void
+    {
+        $document = $this->createCanonicallySubmittedDocument();
+        $this->app->make(DocumentWorkflowService::class)->decide(
+            (string) $this->tenant->id,
+            (string) $document->id,
+            (string) $this->user->id,
+            \App\Enums\DocumentDecision::APPROVED,
+            'Đạt yêu cầu (quyết định thật)',
+        );
+        $this->app->make(DocumentWorkflowService::class)->reopenForRevision(
+            (string) $this->tenant->id,
+            (string) $document->id,
+            (string) $this->user->id,
+        );
+
+        $realSubmittedBy = (string) $document->fresh()->metadata['submitted_by'];
+        $forgedActorId = '01HZFORGEDACTORID000000001';
+
+        $response = $this->apiPostMultipart($this->namedRoute('v1.documents.versions.store', ['id' => $document->id]), [
+            'file' => $this->createValidPdfUploadedFile('forged-audit-version.pdf'),
+            'lifecycle_status' => 'archived',
+            'approval_status' => 'approved',
+            'metadata' => [
+                'status' => 'approved',
+                'lifecycle_status' => 'archived',
+                'approval_status' => 'approved',
+                'decision' => 'approved',
+                'decision_by' => $forgedActorId,
+                'decision_at' => now()->toISOString(),
+                'decision_note' => 'Bị giả mạo',
+                'submitted_by' => $forgedActorId,
+                'submitted_at' => now()->toISOString(),
+            ],
+        ])->assertCreated();
+
+        $document->refresh();
+        $this->assertSame('draft', $document->getRawOriginal('status'));
+        $this->assertSame(DocumentLifecycleStatus::DRAFT->value, $document->getRawOriginal('lifecycle_status'));
+        $this->assertSame(DocumentApprovalStatus::NOT_SUBMITTED->value, $document->getRawOriginal('approval_status'));
+        $this->assertSame($realSubmittedBy, $document->metadata['submitted_by'] ?? null);
+        $this->assertArrayNotHasKey('decision_by', $document->metadata);
+        $this->assertArrayNotHasKey('decision', $document->metadata);
+
+        $versionMetadata = DocumentVersion::findOrFail($response->json('data.current_version_id'))->metadata;
+        $this->assertSame(DocumentLifecycleStatus::DRAFT->value, $versionMetadata['lifecycle_status'] ?? null);
+        $this->assertSame(DocumentApprovalStatus::NOT_SUBMITTED->value, $versionMetadata['approval_status'] ?? null);
+        $this->assertSame('draft', $versionMetadata['status'] ?? null);
+        $this->assertArrayNotHasKey('decision_by', $versionMetadata);
+        $this->assertArrayNotHasKey('decision_note', $versionMetadata);
+        $this->assertArrayNotHasKey('submitted_by', $versionMetadata);
+    }
+
+    public function test_unrelated_edit_of_untouched_legacy_row_preserves_null_columns_and_exact_legacy_values(): void
+    {
+        $document = $this->createDocument([
+            'status' => 'legacy-unknown',
+            'metadata' => ['status' => 'legacy-unknown', 'custom' => 'preserve-me'],
+        ]);
+
+        $this->apiPatch($this->namedRoute('v1.documents.update.patch', ['id' => $document->id]), [
+            'title' => 'Chỉ đổi tiêu đề',
+        ])->assertOk();
+
+        $document->refresh();
+        $this->assertSame('legacy-unknown', $document->getRawOriginal('status'));
+        $this->assertNull($document->getRawOriginal('lifecycle_status'));
+        $this->assertNull($document->getRawOriginal('approval_status'));
+        $this->assertSame(['status' => 'legacy-unknown', 'custom' => 'preserve-me'], $document->metadata);
+        $this->assertSame('Chỉ đổi tiêu đề', $document->getRawOriginal('title'));
     }
 
     public function test_create_version_on_approved_document_rejects_generic_lifecycle_input(): void
@@ -924,8 +1133,10 @@ class DocumentManagementTest extends TestCase
         $this->assertArrayNotHasKey('lifecycle_status', $document->metadata);
         $this->assertArrayNotHasKey('approval_status', $document->metadata);
         $versionMetadata = DocumentVersion::findOrFail($version->json('data.current_version_id'))->metadata;
-        $this->assertArrayNotHasKey('lifecycle_status', $versionMetadata);
-        $this->assertArrayNotHasKey('approval_status', $versionMetadata);
+        // The version snapshot carries server-resolved dimensions, never the forged client values.
+        $this->assertSame('in-review', $versionMetadata['lifecycle_status'] ?? null);
+        $this->assertSame('not-submitted', $versionMetadata['approval_status'] ?? null);
+        $this->assertSame('review', $versionMetadata['status'] ?? null);
     }
 
     public function test_unrelated_api_edit_does_not_materialize_or_normalize_untouched_legacy_status(): void
@@ -1000,62 +1211,6 @@ class DocumentManagementTest extends TestCase
                 'file' => $this->createValidPdfUploadedFile('reserved-store-' . $reservedStatus . '.pdf'),
             ])->assertStatus(422);
         }
-    }
-
-    /**
-     * Amended (audit metadata forgery, not just the status column): a document
-     * already has real decision audit from a genuine DocumentWorkflowService::decide()
-     * call. An actor calling createVersion() with a crafted nested `metadata`
-     * blob must not be able to overwrite any of the 6 protected audit keys —
-     * on EITHER the parent document's metadata OR the new DocumentVersion row's
-     * metadata, since createVersionRecord() shares the same $metadata value.
-     */
-    public function test_create_version_cannot_forge_workflow_audit_metadata(): void
-    {
-        $document = $this->createDocument([
-            'status' => 'approved',
-            'metadata' => [
-                'status' => 'approved',
-                'decision' => 'approved',
-                'decision_by' => (string) $this->user->id,
-                'decision_at' => now()->subHour()->toISOString(),
-                'decision_note' => 'Đạt yêu cầu (quyết định thật)',
-                'submitted_by' => (string) $this->user->id,
-                'submitted_at' => now()->subHours(2)->toISOString(),
-            ],
-            'version' => 1,
-        ]);
-
-        $forgedActorId = '01HZFORGEDACTORID000000001';
-
-        $response = $this->apiPostMultipart($this->namedRoute('v1.documents.versions.store', ['id' => $document->id]), [
-            'file' => $this->createValidPdfUploadedFile('forged-audit-version.pdf'),
-            'version' => 2,
-            'metadata' => [
-                'status' => 'rejected',
-                'decision' => 'rejected',
-                'decision_by' => $forgedActorId,
-                'decision_at' => now()->toISOString(),
-                'decision_note' => 'Bị hủy bởi kẻ giả mạo',
-                'submitted_by' => $forgedActorId,
-                'submitted_at' => now()->toISOString(),
-            ],
-        ])->assertCreated();
-
-        $document->refresh();
-        $this->assertSame('approved', $document->status);
-        $this->assertSame('approved', $document->metadata['status']);
-        $this->assertSame('approved', $document->metadata['decision']);
-        $this->assertSame((string) $this->user->id, $document->metadata['decision_by']);
-        $this->assertSame('Đạt yêu cầu (quyết định thật)', $document->metadata['decision_note']);
-        $this->assertSame((string) $this->user->id, $document->metadata['submitted_by']);
-
-        $newVersionId = $response->json('data.current_version_id');
-        $versionMetadata = DocumentVersion::findOrFail($newVersionId)->metadata;
-        $this->assertSame('approved', $versionMetadata['status'] ?? null);
-        $this->assertSame('approved', $versionMetadata['decision'] ?? null);
-        $this->assertSame((string) $this->user->id, $versionMetadata['decision_by'] ?? null);
-        $this->assertNotSame($forgedActorId, $versionMetadata['decision_by'] ?? null);
     }
 
     /**

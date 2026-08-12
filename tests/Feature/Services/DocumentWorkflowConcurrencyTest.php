@@ -288,6 +288,80 @@ class DocumentWorkflowConcurrencyTest extends TestCase
         self::assertSame(1, DocumentVersion::query()->where('document_id', $document->id)->count());
     }
 
+    public function test_version_creation_racing_with_workflow_transition_cannot_commit_mixed_snapshot(): void
+    {
+        $this->requireRealMysql();
+        [$tenant, $actor, , $document] = $this->makeFixture();
+        $firstVersionId = (string) $document->current_version_id;
+
+        // The version writer holds the governed documents row lock first; the workflow
+        // transition must wait for it and can only ever see the committed post-version state.
+        $results = $this->race(
+            ['version', (string) $tenant->id, (string) $document->id, (string) $actor->id, ''],
+            ['submit', (string) $tenant->id, (string) $document->id, (string) $actor->id, ''],
+            true
+        );
+
+        $versionResult = collect($results)->firstWhere('operation', 'version');
+        $submitResult = collect($results)->firstWhere('operation', 'submit');
+        self::assertNotNull($versionResult, $this->resultDump($results));
+        self::assertNotNull($submitResult, $this->resultDump($results));
+        self::assertSame('ok', $versionResult['status'] ?? null, $this->resultDump($results));
+        self::assertSame(0, $versionResult['exit_code'] ?? null, $this->resultDump($results));
+        self::assertSame('ok', $submitResult['status'] ?? null, $this->resultDump($results));
+        self::assertSame(0, $submitResult['exit_code'] ?? null, $this->resultDump($results));
+        $this->assertObservedMysqlLockWait($versionResult, $submitResult, 'submit', (string) $document->id, $results);
+
+        $fresh = $document->fresh();
+        self::assertSame(2, DocumentVersion::query()->where('document_id', $document->id)->count(), $this->resultDump($results));
+        $newVersion = DocumentVersion::query()
+            ->where('document_id', $document->id)
+            ->where('version_number', 2)
+            ->sole();
+        self::assertSame((string) $newVersion->id, (string) $fresh->current_version_id, $this->resultDump($results));
+
+        // The snapshot is the state observed under the lock, never a half-applied mix.
+        $snapshot = $newVersion->metadata ?? [];
+        self::assertSame(DocumentLifecycleStatus::DRAFT->value, $snapshot['lifecycle_status'] ?? null, $this->resultDump($results));
+        self::assertSame(DocumentApprovalStatus::NOT_SUBMITTED->value, $snapshot['approval_status'] ?? null, $this->resultDump($results));
+        self::assertSame('draft', $snapshot['status'] ?? null, $this->resultDump($results));
+        self::assertSame($firstVersionId, $snapshot['previous_version_id'] ?? null, $this->resultDump($results));
+
+        // The workflow transition observed the committed version and bound its lineage to it.
+        self::assertSame(DocumentApprovalStatus::AWAITING_APPROVAL->value, $fresh->getRawOriginal('approval_status'), $this->resultDump($results));
+        $submitted = DocumentApprovalEvent::query()->where('document_id', $document->id)->where('event', 'submitted')->sole();
+        self::assertSame((string) $newVersion->id, (string) $submitted->document_version_id, $this->resultDump($results));
+        $this->assertSubmittedLineage($submitted, $fresh, $actor);
+    }
+
+    public function test_concurrent_version_creation_allocates_distinct_numbers_under_lock(): void
+    {
+        $this->requireRealMysql();
+        [$tenant, $actor, , $document] = $this->makeFixture();
+
+        $results = $this->race(
+            ['version', (string) $tenant->id, (string) $document->id, (string) $actor->id, ''],
+            ['version', (string) $tenant->id, (string) $document->id, (string) $actor->id, '']
+        );
+
+        foreach ($results as $result) {
+            self::assertSame('version', $result['operation'] ?? null, $this->resultDump($results));
+            self::assertSame('ok', $result['status'] ?? null, $this->resultDump($results));
+            self::assertSame(0, $result['exit_code'] ?? null, $this->resultDump($results));
+        }
+
+        $numbers = DocumentVersion::query()
+            ->where('document_id', $document->id)
+            ->orderBy('version_number')
+            ->pluck('version_number')
+            ->all();
+        self::assertSame([1, 2, 3], array_map('intval', $numbers), $this->resultDump($results));
+
+        $latest = DocumentVersion::query()->where('document_id', $document->id)->where('version_number', 3)->sole();
+        self::assertSame((string) $latest->id, (string) $document->fresh()->current_version_id, $this->resultDump($results));
+        self::assertSame(3, (int) $document->fresh()->version, $this->resultDump($results));
+    }
+
     /** @return array{Tenant, User, Project, Document} */
     private function makeFixture(): array
     {

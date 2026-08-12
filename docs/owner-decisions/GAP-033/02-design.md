@@ -19,7 +19,7 @@ decision_provenance:
   owner_response_reference: "Owner explicit Gate 2 approval in-session on 2026-08-12: 'Hướng C, đồng ý.' — approves the business model (Option C, hybrid) only. The three business-rule sub-questions (Câu hỏi 1/2/3 below) were NOT answered by this response and remain open; no answer to them is inferred."
   reconciliation_required: true
 supersedes: null
-superseded_by: null
+superseded_by: docs/owner-decisions/GAP-033/02-design-v2.md
 timestamps:
   created_at: "2026-08-12T21:26:08+07:00"
   updated_at: "2026-08-12T21:35:50+07:00"

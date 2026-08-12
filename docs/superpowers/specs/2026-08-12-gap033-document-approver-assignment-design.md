@@ -148,27 +148,23 @@ The team recommends Option C but presents all three so the Owner can weigh setup
 2. Otherwise, the document's project's designated manager (`pm_id`), if set.
 3. Otherwise, no specific designated approver — today's tenant/role-wide `document.approve` permission continues to govern, unchanged.
 
-### 6.2 Who may set or change the per-document approver
+### 6.2 Who may set or change the per-document approver — RESOLVED (Owner binding clarification, 2026-08-12)
 
-**Owner decision needed.** Two reasonable choices, not resolved here:
-- (a) The same set of people who can edit a document generally (today's `DocumentPolicy::update()` — `super_admin`/`admin`/`pm`/`designer`), or
-- (b) A narrower set, e.g. only the project manager or an admin, to prevent an ordinary editor from routing a document to whichever approver they prefer.
+**Decision: (b) — narrow set only.** Only the project's designated manager (`pm_id`) or a tenant Admin may set or change a document's per-document approver. General document editors (`designer`, or anyone else who merely holds `document.update`) may NOT self-route a document to a chosen approver. See `docs/owner-decisions/GAP-033/02-design-v2.md`.
 
-### 6.3 Does being the designated approver alone grant decision rights, or is `document.approve` still required in addition?
+### 6.3 Does being the designated approver alone grant decision rights, or is `document.approve` still required in addition? — RESOLVED (Owner binding clarification, 2026-08-12)
 
-**Owner decision needed — this is the single most consequential rule in this gate.** The existing `Ncr` precedent (§1.3) makes assignment **sufficient on its own** — an assigned user can resolve the record even without holding the broader role. Two options:
-- (a) **Follow the `Ncr` precedent exactly:** an assigned approver may decide the document even if they do not otherwise hold `document.approve` (e.g. a `designer` role user, explicitly named on one document, could approve that one document). This maximizes flexibility (any tenant user could in principle be named) but widens who can approve beyond today's role-based set, on a per-document basis, whenever an assignment is made.
-- (b) **Require both:** the assigned user must *also* independently hold `document.approve` (or a to-be-defined narrower permission) for the assignment to have any effect. This never widens today's set of possible approvers — assignment only narrows/designates *which* already-permitted person is expected to act, it never grants new capability. Safer by default, but assignment to someone outside the currently-permitted set (e.g. a specialist engineer without `document.approve`) would silently do nothing until that person is also given the permission — a likely source of confusion if not made an intentional business rule.
+**Decision: (b) — both required.** Being the designated approver does NOT by itself grant decision rights. The assigned user must *independently* hold `document.approve` (via their role) for the assignment to have any practical effect. **GAP-033 explicitly does NOT follow the `Ncr` precedent** (§1.3) of assignment-alone-suffices — this was a deliberate, Owner-made choice, not a default inherited from precedent. A document assigned to a person who does not (yet) hold `document.approve` records that assignment as an intent, but that person cannot decide the document until they are also granted the permission through the normal role/permission system. See `docs/owner-decisions/GAP-033/02-design-v2.md`.
+
+**Corollary — assignment-time validation (Owner-added mandatory rule):** the assignment action itself must be rejected outright (not silently accepted as a "pending" state) if the target user does not belong to the same tenant/project as the document, or is not eligible to hold `document.approve` at all. This is stricter than "accept and let it be inert until the permission is granted later" — an invalid target must be a hard rejection at assignment time.
 
 ### 6.4 Reassignment
 
-An authorized user (per §6.2) may change the designated approver on a document at any time before a decision is recorded, including after Submit. Reassignment does not itself create an approval-workflow event (GAP-032's `DocumentApprovalEvent` remains scoped to actual submit/decide/reopen/reactivate actions) — it is a document-level change, not an approval-dimension transition.
+Only the actors identified in §6.2 (project manager or tenant Admin) may change the designated approver on a document at any time before a decision is recorded, including after Submit. Reassignment does not itself create an approval-workflow event (GAP-032's `DocumentApprovalEvent` remains scoped to actual submit/decide/reopen/reactivate actions) — it is a document-level change, not an approval-dimension transition. It IS, however, subject to the audit-trail requirement in §6.8.
 
-### 6.5 Behavior across reopen/resubmit
+### 6.5 Behavior across reopen/resubmit — RESOLVED (Owner binding clarification, 2026-08-12)
 
-**Owner decision needed.** When a document is reopened (GAP-032 §6.6/§6.11: Approval resets to `not-submitted`), does the prior per-document assignment:
-- (a) **Persist** — the same person remains the designated approver for the next cycle unless explicitly changed, or
-- (b) **Clear** — the document reverts to "no specific assignment" (falls back to the project default, or to role-wide permission) and must be explicitly re-assigned before the next submission if a specific approver is wanted again.
+**Decision: (a) — persist.** When a document is reopened (GAP-032 §6.6/§6.11: Approval resets to `not-submitted`), the prior per-document assignment is NOT cleared. The same designated approver remains in effect for the next submission cycle unless a project manager or tenant Admin (§6.2) explicitly changes it. See `docs/owner-decisions/GAP-033/02-design-v2.md`.
 
 ### 6.6 Single approver only
 
@@ -177,6 +173,18 @@ This gate designs a single designated approver per document, matching every exis
 ### 6.7 Legacy data policy
 
 No bulk migration. Every existing document has no per-document approver by construction (the column does not exist yet); after implementation, every existing document row will have this field `NULL`, which resolves under §6.1 exactly as intended — falling through to the project default or to today's unchanged role-wide behavior. No document's current approvability changes as a side effect of this gate's implementation.
+
+### 6.8 Audit trail — mandatory (Owner-added rule, binding clarification 2026-08-12)
+
+Every change to a document's designated approver (initial assignment, reassignment, or clearing) must be recorded in an append-only audit trail: who made the change, what the prior and new designated approver were, and when. This follows the same non-destructive, non-overwriting audit principle already established for approval decisions in GAP-031/032 (`DocumentApprovalEvent`) — the exact mechanism (a new dedicated event type, a reused/extended event table, or a separate log) is an implementation-planning decision, not decided here, but the requirement that history is never deleted or silently overwritten is a binding business rule, not an implementation option.
+
+### 6.9 Assignment scope validation — mandatory (Owner-added rule, binding clarification 2026-08-12)
+
+An assignment (or reassignment) request must be rejected at the time it is made, before being persisted, if either:
+- the target user does not belong to the same tenant as the document (and, per the project-default fallback in §6.1, the same project where relevant), or
+- the target user is not eligible to hold `document.approve` at all (e.g. the permission does not exist for their role/tenant configuration).
+
+This is enforced at assignment time, not deferred to decision time — an invalid target is never silently stored as a dormant/pending assignment.
 
 ---
 
@@ -190,21 +198,23 @@ This Gate 2 design does not authorize, and does not contain:
 4. Multiple/sequential/parallel approvers (§6.6).
 5. **§7.5 (deferred to implementation planning, not a Gate 2 business question):** whether the project-level default reuses `projects.pm_id` directly, or a new dedicated `projects.default_document_approver_id` field is added instead, to avoid overloading a column that already carries broader "who manages this project" meaning elsewhere in the codebase.
 
-Implementation planning may begin only after explicit Owner Gate 2 approval, and only for whichever option and business-rule answers (§6.2, §6.3, §6.5) the Owner selects.
+Implementation planning is now authorized (Gate 2 fully approved, §8), strictly within the resolved scope: Option C plus the §6.2/§6.3/§6.5/§6.8/§6.9 rules exactly as decided. No expansion beyond this scope is authorized. Gate 3 (release approval) is prepared only after implementation, testing, review, and CI are complete — not authorized yet. No merge/release/deploy before Gate 3 Owner approval.
 
 ---
 
-## 8. Owner decision
+## 8. Owner decision — FINAL
 
 **Selected option:** Option C — hybrid (project-level default + optional per-document override)
 
-**Owner approval recorded at:** 2026-08-12T21:35:50+07:00
+**Initial approval recorded at:** 2026-08-12T21:35:50+07:00 ("Hướng C, đồng ý.")
 
-**Owner response, verbatim:** "Hướng C, đồng ý."
+**Binding clarification recorded at:** 2026-08-12T21:43:44+07:00 — see `docs/owner-decisions/GAP-033/02-design-v2.md` for the full verbatim record.
 
-**Still OPEN — not answered by the above, no answer inferred, required before Gate 3 implementation planning can be scoped:**
-- §6.2 — who may set/change the per-document approver
-- §6.3 — does assignment alone grant decision rights, or is `document.approve` still required in addition
-- §6.5 — does an assignment persist or clear across reopen/resubmit
+**All business rules RESOLVED:**
+- §6.2 (who may assign) — (b) project manager or tenant Admin only
+- §6.3 (does assignment alone grant decision rights) — (b) no, `document.approve` independently required
+- §6.5 (persist across reopen) — (a) yes, persists until explicitly changed
+- §6.8 (audit trail) — mandatory, Owner-added
+- §6.9 (assignment scope validation) — mandatory, Owner-added
 
-Gate 2 is recorded as APPROVED for the Option C business model selection only. A separate binding clarification on §6.2/§6.3/§6.5 is required before implementation planning for the parts of this design that depend on them, matching the precedent already established for GAP-032 (Gate 2 approved, followed by separate binding Owner rulings resolving specific open blockers before implementation dispatch).
+Gate 2 is fully approved. Implementation planning and implementation are authorized within this exact scope (see §7 above).

@@ -60,6 +60,29 @@ final class DocumentMutationOwnershipTest extends TestCase
     ];
 
     /**
+     * Version-surface writes no routed adapter may perform any more, governed or not.
+     *
+     * Every routed writer now delegates to DocumentVersionService, which is the only
+     * production code allowed to create a DocumentVersion row or move
+     * `documents.current_version_id`. Matching by regex rather than literal substring is
+     * deliberate: the pre-fix `Web\DocumentController@store` bypass wrote
+     * `DocumentVersion::query()->create([...])` and `forceFill(['current_version_id' => ...])`
+     * while legitimately referencing DocumentCreationService, so a literal
+     * `DocumentVersion::create` check would have stayed green on a live bypass.
+     *
+     * Constant reads (DocumentVersion::STORAGE_LOCAL, ::VALID_*, ::SNAPSHOT_*) are not writes.
+     *
+     * @var list<string>
+     */
+    private const FORBIDDEN_VERSION_WRITE_PATTERNS = [
+        '/\bDocumentVersion::(?!STORAGE_|VALID_|SNAPSHOT_)/',
+        '/\bnew\s+DocumentVersion\b/',
+        '/\bcurrent_version_id\b/',
+        '/\bcreateNewVersion\b/',
+        '/\brevertToVersion\b/',
+    ];
+
+    /**
      * Writes that only a governed service may perform.
      *
      * @var list<string>
@@ -115,7 +138,16 @@ final class DocumentMutationOwnershipTest extends TestCase
     ];
 
     /**
-     * Non-state surfaces that are allowlisted only because no route can reach them.
+     * Surfaces that write the documents / document_versions physical tables outside the
+     * governed services, allowlisted ONLY on positive evidence that no route reaches them.
+     *
+     * The last two reach the same physical tables through the divergent
+     * Src\DocumentManagement models, which the token-based inventory below cannot see:
+     * Src\...\DocumentController@createVersion calls $this->documentService->createNewVersion(),
+     * and App\Services\DocumentService::createNewVersion()/createDocumentVersion()/revertToVersion()
+     * write document_versions rows and current_version_id with no governed lock and no
+     * approval-eligibility check. "It uses the Src model" is not an ownership argument, so
+     * they are held to the same route-unreachability evidence as the other three.
      *
      * @var list<string>
      */
@@ -123,6 +155,8 @@ final class DocumentMutationOwnershipTest extends TestCase
         \App\Services\SecureUploadService::class,
         \App\Http\Controllers\DocumentController::class,
         \App\Http\Controllers\Web\DocumentManagementController::class,
+        \Src\DocumentManagement\Controllers\DocumentController::class,
+        \App\Services\DocumentService::class,
     ];
 
     public function test_every_routed_document_mutator_is_explicitly_classified(): void
@@ -167,9 +201,21 @@ final class DocumentMutationOwnershipTest extends TestCase
                 $usesGovernedService,
                 $key . ' is classified as a governed mutator but does not delegate to a governed service.'
             );
-            self::assertStringNotContainsString('DocumentVersion::create', $source, $key . ' writes DocumentVersion rows directly.');
-            self::assertStringNotContainsString('createNewVersion', $source, $key . ' uses a removed model mutation API.');
-            self::assertStringNotContainsString('revertToVersion', $source, $key . ' uses a removed model mutation API.');
+            // Delegating to a governed service is necessary but NOT sufficient: an adapter may
+            // call DocumentCreationService and still write a version row beside it. Only
+            // DocumentVersionService itself may touch the version surface, so the governed
+            // services are the sole exemption from the scan below.
+            if ($this->isGovernedServiceClass($class)) {
+                continue;
+            }
+            foreach (self::FORBIDDEN_VERSION_WRITE_PATTERNS as $pattern) {
+                self::assertSame(
+                    0,
+                    preg_match($pattern, $source),
+                    $key . ' is a governed adapter but writes the version surface directly (matched ' . $pattern . '); '
+                    . 'DocumentVersionService owns DocumentVersion rows and current_version_id.'
+                );
+            }
         }
     }
 
@@ -190,7 +236,9 @@ final class DocumentMutationOwnershipTest extends TestCase
             }
         }
 
-        // Evidence for the allowlisted surfaces: no route can reach them at all.
+        // Evidence for the allowlisted surfaces: no route reaches them, directly or through
+        // a routed controller. A service is never a route action itself, so the second check
+        // is what actually holds the allowlist honest for SecureUploadService/DocumentService.
         $routedClasses = $this->routedControllerClasses();
         foreach (self::UNROUTED_NON_STATE_SURFACES as $class) {
             self::assertNotContains(
@@ -198,13 +246,20 @@ final class DocumentMutationOwnershipTest extends TestCase
                 $routedClasses,
                 $class . ' is allowlisted as an unreachable non-state surface but is now routed; classify it explicitly instead.'
             );
+
+            foreach ($routedClasses as $routedClass) {
+                self::assertStringNotContainsString(
+                    $class,
+                    $this->classSource($routedClass),
+                    $class . ' is allowlisted as unreachable but routed controller ' . $routedClass . ' references it; '
+                    . 'migrate the caller to its governed service instead of extending the allowlist.'
+                );
+            }
         }
 
-        // App\Services\DocumentService is separately classified: it operates on the
-        // divergent Src\DocumentManagement\Models\Document, never on App\Models\Document.
-        $documentServiceSource = (string) file_get_contents(
-            (string) (new ReflectionClass(\App\Services\DocumentService::class))->getFileName()
-        );
+        // App\Services\DocumentService is additionally classified as out of scope: it operates
+        // on the divergent Src\DocumentManagement\Models\Document, never on App\Models\Document.
+        $documentServiceSource = $this->classSource(\App\Services\DocumentService::class);
         self::assertStringNotContainsString('App\\Models\\Document', $documentServiceSource);
         self::assertStringContainsString('Src\\DocumentManagement\\Models\\Document', $documentServiceSource);
     }
@@ -283,6 +338,24 @@ final class DocumentMutationOwnershipTest extends TestCase
         }
 
         return $properties;
+    }
+
+    private function isGovernedServiceClass(string $class): bool
+    {
+        $shortName = ($position = strrpos($class, '\\')) === false ? $class : substr($class, $position + 1);
+
+        return in_array($shortName, self::GOVERNED_SERVICES, true);
+    }
+
+    private function classSource(string $class): string
+    {
+        if (! class_exists($class)) {
+            return '';
+        }
+
+        $file = (new ReflectionClass($class))->getFileName();
+
+        return $file === false ? '' : (string) file_get_contents($file);
     }
 
     private function touchesDocumentSurface(string $source): bool

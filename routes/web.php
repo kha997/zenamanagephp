@@ -423,6 +423,7 @@ Route::get('/projects-enhanced', function() {
     Route::post('/documents/{document}/archive', [App\Http\Controllers\Web\DocumentWorkflowController::class, 'archive'])->middleware('rbac:document.update')->name('documents.workflow.archive');
     Route::post('/documents/{document}/reopen', [App\Http\Controllers\Web\DocumentWorkflowController::class, 'reopen'])->middleware('rbac:document.update')->name('documents.workflow.reopen');
     Route::post('/documents/{document}/reactivate', [App\Http\Controllers\Web\DocumentWorkflowController::class, 'reactivate'])->middleware('rbac:document.update')->name('documents.workflow.reactivate');
+    Route::post('/documents/{document}/approver', [App\Http\Controllers\Web\DocumentWorkflowController::class, 'assignApprover'])->middleware('rbac:document.update')->name('documents.approver.assign');
 
         // Team Routes
         Route::get('/team', function () {

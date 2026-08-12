@@ -395,6 +395,37 @@ class DocumentWorkflowControllerTest extends TestCase
         }
     }
 
+    public function test_projects_manager_can_assign_approver_via_web(): void
+    {
+        $pm = $this->createTenantUser($this->tenant, [], ['pm'], ['document.view', 'document.update', 'document.approve']);
+        $this->project->update(['pm_id' => $pm->id]);
+        $eligible = $this->createTenantUser($this->tenant, [], ['pm'], ['document.approve']);
+        $document = $this->makeDocument();
+
+        $response = $this->actingAs($pm)
+            ->withHeaders(['X-Tenant-ID' => (string) $this->tenant->id])
+            ->post(route('app.documents.approver.assign', ['document' => $document->id]), [
+                'approver_id' => $eligible->id,
+            ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+        self::assertSame($eligible->id, $document->fresh()->approver_id);
+    }
+
+    public function test_non_manager_cannot_assign_approver_via_web(): void
+    {
+        $document = $this->makeDocument();
+        $eligible = $this->createTenantUser($this->tenant, [], ['pm'], ['document.approve']);
+        $designer = $this->createTenantUser($this->tenant, [], ['designer'], ['document.update']);
+
+        $this->actingAs($designer)
+            ->withHeaders(['X-Tenant-ID' => (string) $this->tenant->id])
+            ->post(route('app.documents.approver.assign', ['document' => $document->id]), [
+                'approver_id' => $eligible->id,
+            ])->assertForbidden();
+    }
+
     /**
      * `UploadedFile::fake()->create()` produces content with no real file signature,
      * which fails `FileStorageService`'s `EnhancedMimeValidationService` signature check

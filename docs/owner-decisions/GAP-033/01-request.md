@@ -1,11 +1,11 @@
 ---
 work_id: GAP-033
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_more_info_or_decline_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-08-12-gap-033-document-approver-assignment-evidence.md
   plan: null
@@ -15,16 +15,22 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-08-12T21:22:12+07:00"
+  owner_response_reference: "Owner explicit Gate 1 approval in-session on 2026-08-12: 'Đồng ý tiến hành Gate 2.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-12T21:12:47+07:00"
-  updated_at: "2026-08-12T21:12:47+07:00"
+  updated_at: "2026-08-12T21:22:12+07:00"
 generated_by: agent
 ---
+
+## Gate 1 Owner Decision
+
+**APPROVED.** Owner đồng ý vấn đề này có thật và đáng để thiết kế giải pháp — cho phép tiến hành GAP-033 Gate 2 (thiết kế nghiệp vụ). Quyết định này KHÔNG cấp phép bất kỳ thiết kế cụ thể, cột dữ liệu, migration, mã nguồn, hay merge/release nào — những việc đó vẫn cần các Gate tiếp theo.
+
+**Nguồn gốc quyết định:** ghi nhận nội bộ repository dựa trên phản hồi rõ ràng của Owner trong phiên làm việc ngày 2026-08-12. `trust_level: claimed_repo_record` — đây KHÔNG phải một phê duyệt được xác thực bằng mật mã hay qua Decision Center.
 
 ## Owner Summary
 
@@ -79,6 +85,8 @@ Xử lý ngay (tiến hành Gate 2 thiết kế nghiệp vụ). Lý do: đây l�
 ## Decision Needed
 
 Owner chọn một trong: Đồng ý tiến hành Gate 2 thiết kế nghiệp vụ / Yêu cầu thêm thông tin / Từ chối / Hoãn lại.
+
+**Quyết định của chủ doanh nghiệp:** ☑ Đồng ý tiến hành Gate 2 thiết kế nghiệp vụ  ☐ Yêu cầu thêm thông tin  ☐ Từ chối  ☐ Hoãn lại
 
 ## What the owner is NOT being asked to decide
 

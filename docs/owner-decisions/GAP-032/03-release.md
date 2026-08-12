@@ -1,14 +1,14 @@
 ---
 work_id: GAP-032
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-10-gap032-document-status-semantics-design.md
   plan: docs/superpowers/plans/2026-08-10-gap032-document-status-semantics.md
@@ -18,26 +18,35 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-08-12T18:35:57+07:00"
+  owner_response_reference: "Owner explicit Gate 3 approval in-session on 2026-08-12: 'PHÁT HÀNH (APPROVED). Tôi chấp nhận residual risk được nêu trong Gate 3 packet. Cho phép ghi nhận quyết định Gate 3 theo đúng governance và thực hiện bước release/merge tiếp theo theo repository requirements. Không mở rộng phạm vi sang GAP-033.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-12T13:38:28+07:00"
-  updated_at: "2026-08-12T13:38:28+07:00"
+  updated_at: "2026-08-12T18:35:57+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "8/8 nhiệm vụ triển khai hoàn tất; rà soát toàn nhánh độc lập không còn phát hiện Nghiêm trọng/Quan trọng nào chưa xử lý; toàn bộ kiểm tra bắt buộc trên GitHub thật đều đạt tại đúng đầu nhánh, gồm cả kiểm tra hai tiến trình độc lập cùng thao tác trên MySQL thật."
+mandatory_technical_gate_summary: "Owner explicitly approved release for GAP-032 on 2026-08-12, bound to implementation-tree digest 6a5cbd15f00f4311c76611c7392ff5dc13e047544bad0e79e6c50a20e8d55a07 at PR head 2b2ce6e185077c4d3646bffd2e65f7b1460e1a0d. Verified before recording: local head equals remote head equals the approved head; PR state OPEN/Draft/unmerged; GitHub reports 31 required/optional check-runs green (deploy skipped by design, 0 failed/pending); recomputed digest matches the presented digest exactly. This is a packet-only decision record — no implementation, test, script, or workflow file was touched by this edit. Owner explicitly declined to expand scope to GAP-033."
 technical_evidence:
   subject_sha: "95c250e05dcf6b70bebcf755914753365812166d"
   implementation_tree_digest: "6a5cbd15f00f4311c76611c7392ff5dc13e047544bad0e79e6c50a20e8d55a07"
-  verified_pr_head_sha: "95c250e05dcf6b70bebcf755914753365812166d"
-  verified_at: "2026-08-12T13:38:28+07:00"
+  verified_pr_head_sha: "2b2ce6e185077c4d3646bffd2e65f7b1460e1a0d"
+  verified_at: "2026-08-12T18:35:57+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "6a5cbd15f00f4311c76611c7392ff5dc13e047544bad0e79e6c50a20e8d55a07"
+  decision_recorded_at: "2026-08-12T18:35:57+07:00"
 ---
+
+## OWNER GATE 3: APPROVED
+
+Không có yêu cầu chỉnh sửa nghiệp vụ. Owner chấp nhận toàn bộ rủi ro còn lại đã nêu (mục 7-8 dưới đây), bao gồm 10 điểm nhỏ kỹ thuật đã ghi nhận. Owner minh thị không mở rộng phạm vi sang GAP-033 trong quyết định này.
+
+Quyết định được ràng buộc với mã băm bằng chứng triển khai (implementation-tree digest):
+6a5cbd15f00f4311c76611c7392ff5dc13e047544bad0e79e6c50a20e8d55a07
+
+**Nguồn gốc quyết định:** ghi nhận nội bộ repository dựa trên phản hồi rõ ràng của Owner trong phiên làm việc ngày 2026-08-12. `trust_level: claimed_repo_record` — đây KHÔNG phải một phê duyệt được xác thực bằng mật mã hay qua Decision Center; đây là bản ghi của agent về những gì Owner đã phát biểu. Quyết định này ràng buộc với đúng mã băm bằng chứng nêu trên; bất kỳ thay đổi nào tới mã băm đó sau thời điểm này sẽ làm quyết định trở nên lỗi thời (stale) và cần xác minh kỹ thuật lại cùng một vòng rà soát Owner mới.
 
 ## Owner Summary
 
@@ -77,7 +86,7 @@ Có. Thay đổi cấu trúc dữ liệu chỉ thêm cột mới có thể để
 
 **9. Đề xuất của đội kỹ thuật:** Phát hành (Approve). Toàn bộ tiêu chí sẵn sàng kỹ thuật đã đạt; không còn vấn đề Nghiêm trọng/Quan trọng nào chưa xử lý.
 
-**Quyết định của chủ doanh nghiệp:** ☐ Phát hành  ☐ Yêu cầu chỉnh sửa nghiệp vụ  ☐ Hoãn phát hành
+**Quyết định của chủ doanh nghiệp:** ☑ Phát hành  ☐ Yêu cầu chỉnh sửa nghiệp vụ  ☐ Hoãn phát hành
 
 ## What the owner is NOT being asked to decide
 

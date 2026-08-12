@@ -37,6 +37,7 @@ final class DocumentMutationOwnershipTest extends TestCase
         'DocumentLifecycleService',
         'DocumentWorkflowService',
         'DocumentStatusService',
+        'DocumentApproverAssignmentService',
     ];
 
     /**
@@ -119,10 +120,10 @@ final class DocumentMutationOwnershipTest extends TestCase
         'App\Http\Controllers\Api\SimpleDocumentController@attachLink' => self::NON_STATE,
         'App\Http\Controllers\Api\SimpleDocumentController@detachLink' => self::NON_STATE,
         'App\Http\Controllers\Api\SimpleDocumentController@destroy' => self::NON_STATE,
-        // GAP-033: writes only documents.approver_id + document_approver_assignments,
-        // via DocumentApproverAssignmentService — a distinct concern from
-        // lifecycle_status/approval_status, not one of GOVERNED_SERVICES.
-        'App\Http\Controllers\Api\SimpleDocumentController@assignApprover' => self::NON_STATE,
+        // GAP-033: delegates to DocumentApproverAssignmentService, which follows the
+        // same governed-service pattern (tenant-scoped lock, transaction, single
+        // writer of a Document-surface field) as the other GOVERNED_SERVICES.
+        'App\Http\Controllers\Api\SimpleDocumentController@assignApprover' => self::GOVERNED,
 
         // Design item adapter (creates/updates the linked canonical Document).
         'App\Http\Controllers\Api\DesignItemController@uploadDocument' => self::GOVERNED,
@@ -136,10 +137,10 @@ final class DocumentMutationOwnershipTest extends TestCase
         'App\Http\Controllers\Web\DocumentWorkflowController@archive' => self::GOVERNED,
         'App\Http\Controllers\Web\DocumentWorkflowController@reopen' => self::GOVERNED,
         'App\Http\Controllers\Web\DocumentWorkflowController@reactivate' => self::GOVERNED,
-        // GAP-033: writes only documents.approver_id + document_approver_assignments,
-        // via DocumentApproverAssignmentService — a distinct concern from
-        // lifecycle_status/approval_status, not one of GOVERNED_SERVICES.
-        'App\Http\Controllers\Web\DocumentWorkflowController@assignApprover' => self::NON_STATE,
+        // GAP-033: delegates to DocumentApproverAssignmentService, which follows the
+        // same governed-service pattern (tenant-scoped lock, transaction, single
+        // writer of a Document-surface field) as the other GOVERNED_SERVICES.
+        'App\Http\Controllers\Web\DocumentWorkflowController@assignApprover' => self::GOVERNED,
 
         // Design item page adapter — delegates to the API adapter, writes nothing itself.
         'App\Http\Controllers\Web\DesignItemPageController@uploadDocument' => self::NON_STATE,

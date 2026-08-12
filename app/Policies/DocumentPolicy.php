@@ -119,4 +119,22 @@ class DocumentPolicy
 
         return $user->hasPermission('document.approve');
     }
+
+    /**
+     * GAP-033 §6.2: only the document's project's own manager, or a tenant
+     * Admin, may set or change the designated approver. Deliberately
+     * narrower than update() — general editors/designers may not.
+     */
+    public function assignApprover(User $user, Document $document)
+    {
+        if ($user->tenant_id !== $document->tenant_id) {
+            return false;
+        }
+
+        if ($user->hasRole(['super_admin', 'admin'])) {
+            return true;
+        }
+
+        return $document->project?->pm_id !== null && $user->id === $document->project?->pm_id;
+    }
 }

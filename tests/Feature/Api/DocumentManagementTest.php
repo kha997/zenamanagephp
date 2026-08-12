@@ -1002,6 +1002,39 @@ class DocumentManagementTest extends TestCase
         self::assertNotContains($draft->id, $ids);
     }
 
+    public function test_index_rejects_invalid_lifecycle_status_filter_value_with_422_instead_of_ignoring_it(): void
+    {
+        $draft = $this->createDocument([
+            'status' => 'draft',
+            'lifecycle_status' => DocumentLifecycleStatus::DRAFT->value,
+            'approval_status' => DocumentApprovalStatus::NOT_SUBMITTED->value,
+        ]);
+
+        $this->apiGet($this->namedRoute('v1.documents.index', query: ['lifecycle_status' => 'not-a-real-lifecycle']))
+            ->assertStatus(422)
+            ->assertJsonPath('error.code', 'E422.VALIDATION');
+
+        // Confirms the previous behaviour (silently dropping the filter and returning
+        // the unfiltered page) is gone: the document is not incidentally exposed by a 200.
+        self::assertNotNull($draft);
+    }
+
+    public function test_index_rejects_invalid_approval_status_filter_value_with_422_instead_of_ignoring_it(): void
+    {
+        $this->createDocument(['status' => 'submitted', 'metadata' => ['status' => 'submitted']]);
+
+        $this->apiGet($this->namedRoute('v1.documents.index', query: ['approval_status' => 'awaiting']))
+            ->assertStatus(422)
+            ->assertJsonPath('error.code', 'E422.VALIDATION');
+    }
+
+    public function test_index_rejects_oversized_legacy_status_filter_value_with_422(): void
+    {
+        $this->apiGet($this->namedRoute('v1.documents.index', query: ['status' => str_repeat('a', 256)]))
+            ->assertStatus(422)
+            ->assertJsonPath('error.code', 'E422.VALIDATION');
+    }
+
     public function test_generic_update_maps_active_to_draft_and_review_to_in_review_without_changing_approval(): void
     {
         $document = $this->createDocument(['status' => 'active', 'metadata' => ['status' => 'active']]);

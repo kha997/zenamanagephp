@@ -61,6 +61,16 @@ class SimpleDocumentController extends Controller
 
     public function index(Request $request)
     {
+        $validator = Validator::make($request->query(), [
+            'status' => ['sometimes', 'string', 'max:255'],
+            'lifecycle_status' => ['sometimes', 'string', Rule::enum(DocumentLifecycleStatus::class)],
+            'approval_status' => ['sometimes', 'string', Rule::enum(DocumentApprovalStatus::class)],
+        ]);
+
+        if ($validator->fails()) {
+            return ErrorEnvelopeService::validationError($validator->errors()->toArray());
+        }
+
         $perPage = $this->resolvePerPage($request);
         $statusService = app(DocumentStatusService::class);
         $paginator = Document::query()
@@ -74,14 +84,14 @@ class SimpleDocumentController extends Controller
                 fn (Builder $query) => $statusService->applyLegacyStatusFilter($query, $request->string('status')->toString())
             )
             ->when(
-                $request->filled('lifecycle_status') && DocumentLifecycleStatus::tryFrom($request->string('lifecycle_status')->toString()) !== null,
+                $request->filled('lifecycle_status'),
                 fn (Builder $query) => $statusService->applyLifecycleFilter(
                     $query,
                     DocumentLifecycleStatus::from($request->string('lifecycle_status')->toString())
                 )
             )
             ->when(
-                $request->filled('approval_status') && DocumentApprovalStatus::tryFrom($request->string('approval_status')->toString()) !== null,
+                $request->filled('approval_status'),
                 fn (Builder $query) => $statusService->applyApprovalFilter(
                     $query,
                     DocumentApprovalStatus::from($request->string('approval_status')->toString())

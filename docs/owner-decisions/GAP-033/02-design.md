@@ -1,11 +1,11 @@
 ---
 work_id: GAP-033
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_changes_or_decline"
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-12-gap033-document-approver-assignment-design.md
   plan: null
@@ -15,16 +15,29 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
-  reconciliation_required: false
+  recorded_at: "2026-08-12T21:35:50+07:00"
+  owner_response_reference: "Owner explicit Gate 2 approval in-session on 2026-08-12: 'Hướng C, đồng ý.' — approves the business model (Option C, hybrid) only. The three business-rule sub-questions (Câu hỏi 1/2/3 below) were NOT answered by this response and remain open; no answer to them is inferred."
+  reconciliation_required: true
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-12T21:26:08+07:00"
-  updated_at: "2026-08-12T21:26:08+07:00"
+  updated_at: "2026-08-12T21:35:50+07:00"
 generated_by: agent
 ---
+
+## Gate 2 Owner Decision
+
+**APPROVED — Hướng C (kết hợp: mặc định theo quản lý dự án + có thể chỉ định riêng khi cần).** Đây là mô hình nghiệp vụ được chọn cho GAP-033.
+
+**Còn để ngỏ, CHƯA được trả lời, CẦN có trước khi có thể lên kế hoạch triển khai (Gate 3):**
+- Câu hỏi 1 — Ai được quyền gán/đổi người duyệt cho một tài liệu?
+- Câu hỏi 2 — Được gán làm người duyệt có tự động được quyền duyệt luôn không, hay vẫn phải có quyền duyệt riêng?
+- Câu hỏi 3 — Khi tài liệu bị mở lại để sửa, người được gán trước đó có giữ nguyên không?
+
+Không có câu trả lời nào trong 3 câu trên được suy đoán hay tự ý chọn thay Owner. Gate 2 được ghi nhận là APPROVED cho việc chọn Hướng C; việc lên kế hoạch triển khai chi tiết (Gate 3) cho các cơ chế phụ thuộc vào 3 câu hỏi này sẽ cần một xác nhận ràng buộc riêng (binding clarification) trước khi có thể bắt đầu, theo đúng tiền lệ đã áp dụng cho GAP-032.
+
+**Nguồn gốc quyết định:** ghi nhận nội bộ repository dựa trên phản hồi rõ ràng của Owner trong phiên làm việc ngày 2026-08-12. `trust_level: claimed_repo_record`.
 
 ## Owner Summary
 
@@ -118,7 +131,9 @@ Trên trang tài liệu, người có quyền sẽ thấy thêm một chỗ đ�
 
 Owner chọn: (1) một trong 3 Hướng A/B/C, và (2) một lựa chọn cho mỗi Câu hỏi 1/2/3 ở trên — hoặc chọn: Yêu cầu chỉnh sửa thiết kế / Từ chối.
 
-**Quyết định của chủ doanh nghiệp về hướng giải pháp:** ☐ Hướng A  ☐ Hướng B  ☐ Hướng C (đề xuất)  ☐ Yêu cầu chỉnh sửa thiết kế  ☐ Từ chối
+**Quyết định của chủ doanh nghiệp về hướng giải pháp:** ☐ Hướng A  ☐ Hướng B  ☑ Hướng C (đề xuất)  ☐ Yêu cầu chỉnh sửa thiết kế  ☐ Từ chối
+
+**Lưu ý:** Câu hỏi 1/2/3 ở trên CHƯA được Owner trả lời trong quyết định này — xem "Gate 2 Owner Decision" ở đầu file.
 
 ## What the owner is NOT being asked to decide
 

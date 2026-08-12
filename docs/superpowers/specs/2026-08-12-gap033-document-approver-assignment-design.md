@@ -196,13 +196,15 @@ Implementation planning may begin only after explicit Owner Gate 2 approval, and
 
 ## 8. Owner decision
 
-**Selected option:** _pending Owner decision_
+**Selected option:** Option C — hybrid (project-level default + optional per-document override)
 
-**Owner answers needed on:**
+**Owner approval recorded at:** 2026-08-12T21:35:50+07:00
+
+**Owner response, verbatim:** "Hướng C, đồng ý."
+
+**Still OPEN — not answered by the above, no answer inferred, required before Gate 3 implementation planning can be scoped:**
 - §6.2 — who may set/change the per-document approver
 - §6.3 — does assignment alone grant decision rights, or is `document.approve` still required in addition
 - §6.5 — does an assignment persist or clear across reopen/resubmit
 
-**Owner approval recorded at:** _pending_
-
-**Binding design head:** _pending_
+Gate 2 is recorded as APPROVED for the Option C business model selection only. A separate binding clarification on §6.2/§6.3/§6.5 is required before implementation planning for the parts of this design that depend on them, matching the precedent already established for GAP-032 (Gate 2 approved, followed by separate binding Owner rulings resolving specific open blockers before implementation dispatch).

@@ -1,11 +1,11 @@
 ---
 work_id: GAP-011
 gate: 2
-gate_status: awaiting_owner
+gate_status: changes_requested
 owner_decision:
-  value: none
+  value: changes_requested
   authority: human_owner
-decision_requested: "approve_or_changes_or_decline"
+decision_requested: null
 references:
   spec: null
   plan: null
@@ -15,18 +15,22 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-13T17:00:30+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-13T17:09:28+07:00"
+  owner_response_reference: "Owner Gate 2 round 3 decision — CHANGES REQUESTED, recorded in-session on 2026-08-13 at fresh wall-clock time 2026-08-13T17:09:28+07:00 (actual time the decision was recorded, not an estimate). Substantive design remains accepted and not reopened: Option C with the corrected single-loader topology accepted in principle; Class A remains 2 KEEP (_debug/dashboard-data, _debug/test-login/{email}) / 19 REMOVE / 0 UNKNOWN; Class B remains 6 REMOVE / 1 KEEP (/debug/{path?} as a local-only developer convenience alias); testing-suite remains RETIRE; Class C remains strictly out of scope; VerifyCsrfToken.php remains untouched; conservative orphan-view deletion remains required. Gate 2 not yet approved because four contract details require correction: (1) freeze round 3 correctly — record this decision in this file's frontmatter (gate_status: changes_requested, owner_decision.value: changes_requested, superseded_by: docs/owner-decisions/GAP-011/02-design-v4.md), freeze permanently, create 02-design-v4.md as the new active awaiting_owner packet (supersedes: 02-design-v3.md), do not rewrite v1/v2/v3 afterward; (2) correct environment semantics — the final contract is _debug/dashboard-data and _debug/test-login/{email} present in local/testing/development, /debug/{path?} present in local ONLY (absent in testing/development/production), all Class A/B GAP-011 routes absent in production; correct every conflicting statement in the canonical protection contract, anti-drift test design, acceptance scenarios, and rollback criteria; add an explicit development acceptance test rather than inferring it from local/testing; (3) correct the wildcard redirect invariant — /debug/{path?} is a wildcard mapper (/debug/{path} -> /_debug/{path}) and cannot be validated by requiring a literal /_debug/{path} route to exist in a destination-membership set; replace with static ownership (declared only in routes/debug.php) + local-only registration + representative regression examples (e.g. /debug/dashboard-data -> 301 /_debug/dashboard-data, plus a login-mapping example preserving the path) + alias-absent-under-testing/development/production, without requiring every arbitrary {path} value to correspond to a valid debug endpoint; (4) preserve GAP-027 documentation-invariant semantics — ZENAMANAGE_PAGE_TREE_DIAGRAM_CURRENT.md currently classifies five debug claims as still runtime-backed (_debug/dashboard-data, _debug/test-permissions, POST _debug/test-login-simple, _debug/test-session-auth, _debug/test-login/{email}); GAP-011 removes three of those (test-permissions, test-login-simple, test-session-auth); implementation must update the documentation annotation and DebugRouteDocumentationInvariantTest together — move the three removed claims into an archived/removed-by-GAP-011 annotation while preserving their historical provenance, not merely shrink the test's hard-coded active array until it passes; do not rewrite the dated 2026-03-19 audit as though history changed; add ZENAMANAGE_PAGE_TREE_DIAGRAM_CURRENT.md to the anticipated implementation-file list; (5) correct lifecycle wording — replace any statement that orphan verification occurs at 'implementation time (Gate 3)' with the correct lifecycle: Gate 2 approval -> implementation/testing/technical review -> Gate 3 Owner release decision -> merge/release; orphan-view verification occurs during implementation, after Gate 2 approval and before the Gate 3 release decision, not as part of Gate 3 itself. Do not implement runtime code/tests yet; do not self-approve Gate 2; do not mark ready; do not merge."
   reconciliation_required: false
 supersedes: "docs/owner-decisions/GAP-011/02-design-v2.md"
-superseded_by: null
+superseded_by: "docs/owner-decisions/GAP-011/02-design-v4.md"
 timestamps:
   created_at: "2026-08-13T17:00:30+07:00"
-  updated_at: "2026-08-13T17:00:30+07:00"
+  updated_at: "2026-08-13T17:09:28+07:00"
 generated_by: agent
 ---
 
-## OWNER GATE 2: AWAITING OWNER DECISION (round 3) — design surface for Class A + Class B only
+## [FROZEN — ROUND 3, SUPERSEDED BY 02-design-v4.md] OWNER GATE 2: CHANGES REQUESTED — design surface for Class A + Class B only
+
+**Governance note (added at `2026-08-13T17:09:28+07:00`, per this work item's decision-immutability discipline established in round 3's own §0a — see `02-design-v4.md` §0 for the full round-4 correction record):** this file's body below is preserved verbatim as originally committed at `869fc6f1e6fbff8a1a0b5e7e2b3e321ece1ade3a` (`2026-08-13T17:03:25+07:00`). It received a further Owner **CHANGES REQUESTED** decision (verbatim in `decision_provenance.owner_response_reference` above) on four contract details — environment semantics, the wildcard invariant, GAP-027 documentation-invariant preservation, and lifecycle wording — none of which reopen the substantive design this round already got right (Option C topology, the 2/19/0 matrix, the 6/1 Class B disposition, `testing-suite` RETIRE, `VerifyCsrfToken.php` untouched, conservative view deletion). **No body text below has been altered.** The corrected, superseding design is `02-design-v4.md`.
+
+## OWNER GATE 2 (round 3, as originally presented): AWAITING OWNER DECISION — design surface for Class A + Class B only
 
 This packet does not implement anything. No route, middleware, test, or file has changed. It designs the canonical protection boundary for GAP-011's Owner-approved scope (Class A: 21 gated `/_debug/*` routes; Class B: 7 compatibility redirects) and asks the Owner to choose a structural architecture, a per-route disposition, and the invariant that will guard the boundary going forward. **Class C is out of scope by binding Gate 1 governance clarification and is not designed, decided, or bundled here.**
 

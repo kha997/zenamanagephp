@@ -1,11 +1,11 @@
 ---
 work_id: GAP-011
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_changes_or_decline"
+decision_requested: null
 references:
   spec: null
   plan: null
@@ -15,18 +15,18 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-13T17:09:56+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-13T17:35:20+07:00"
+  owner_response_reference: "Owner Gate 2 round 4 decision — APPROVE, recorded in-session on 2026-08-13 at fresh wall-clock time 2026-08-13T17:35:20+07:00 (actual time the decision was recorded, not an estimate). Approved and binding, per docs/owner-decisions/GAP-011/02-design-v4.md as written: Option C architecture (existing routes/debug.php, existing single loader in RouteServiceProvider, RouteServiceProvider as sole registration owner, file-level registration permitted at local/testing/development only, absent from production); Class A 2 KEEP (_debug/dashboard-data, _debug/test-login/{email}) / 19 REMOVE / 0 UNKNOWN; Class B 6 REMOVE / 1 KEEP (/debug/{path?}, local-only developer convenience alias); testing-suite and its cluster RETIRE; VerifyCsrfToken.php not modified under GAP-011; Class C strictly out of scope; dashboard-content.blade.php's adjacent _debug/dashboard-data defect flagged only, not fixed under GAP-011; view-file deletion only where implementation-time orphan verification proves the file is actually orphaned; GAP-027 documentation invariant preserved by updating ZENAMANAGE_PAGE_TREE_DIAGRAM_CURRENT.md and DebugRouteDocumentationInvariantTest together, not by deleting test expectations alone. Two binding implementation clarifications added at approval (see §13 of this file for the full record): (1) the static anti-drift guard must catch both future Class A route-declaration drift (any _debug/* route declared outside routes/debug.php) AND future Class B alias drift (any Route::redirect()/Route::permanentRedirect() or equivalent declared outside routes/debug.php whose destination targets /_debug/*) — both must fail CI, not only the Class A case; (2) the production route:cache regression test must run in an isolated/controlled process and must always restore/clear the generated route cache afterward, so it never pollutes subsequent test runs. Gate 2 approval authorizes implementation, testing, and technical review. It does NOT authorize mark-ready, merge, release, or production deployment — Gate 3 (Owner release decision) remains mandatory before merge/release and is NOT STARTED. Implementation scope: app/Providers/RouteServiceProvider.php, existing routes/debug.php, routes/web.php, ZENAMANAGE_PAGE_TREE_DIAGRAM_CURRENT.md, tests/Feature/DebugRouteDocumentationInvariantTest.php, tests/Feature/LegacyDebugRootRedirectTest.php, new architecture/boundary tests as designed, view files only where orphan verification passes. Not to be modified: DebugGateMiddleware (unless implementation evidence unexpectedly proves a change required — the current contract already matches it as designed), VerifyCsrfToken.php, Class C, dashboard-content.blade.php, the dated docs/audits/2026-03-19-debug-route-inventory.md. Before presenting Gate 3: prove exact route counts/dispositions after implementation, prove the local/testing/development/production environment matrix, prove cached and uncached production absence, prove the wildcard's local-only behavior, prove future Class A and Class B drift mutations are caught, prove the GAP-027 document/runtime invariant remains meaningful, run the full relevant regression suite, compute the Gate 3 implementation-tree digest, and present Gate 3 as awaiting_owner. Keep PR #260 draft throughout implementation/review. Do not self-approve Gate 3. Do not mark ready. Do not merge. Do not deploy."
   reconciliation_required: false
 supersedes: "docs/owner-decisions/GAP-011/02-design-v3.md"
 superseded_by: null
 timestamps:
   created_at: "2026-08-13T17:09:56+07:00"
-  updated_at: "2026-08-13T17:09:56+07:00"
+  updated_at: "2026-08-13T17:35:20+07:00"
 generated_by: agent
 ---
 
-## OWNER GATE 2: AWAITING OWNER DECISION (round 4) — design surface for Class A + Class B only
+## OWNER GATE 2: APPROVED (round 4) — design surface for Class A + Class B only
 
 This packet does not implement anything. No route, middleware, test, or file has changed. It designs the canonical protection boundary for GAP-011's Owner-approved scope (Class A: 21 gated `/_debug/*` routes; Class B: 7 compatibility redirects). **Class C is out of scope by binding Gate 1 governance clarification and is not designed, decided, or bundled here.**
 
@@ -59,10 +59,10 @@ This file (`02-design-v4.md`) is the new active packet: `gate_status: awaiting_o
 ## Authorization boundary
 
 - Gate 1: **APPROVED** (scope: Class A + Class B only)
-- Gate 2: **AWAITING OWNER DECISION** (round 4)
+- Gate 2: **APPROVED** (round 4, `2026-08-13T17:35:20+07:00`)
 - Gate 3: **NOT STARTED**
-- Implementation authorized: **NO**
-- Merge/release authorized: **NO**
+- Implementation, testing, and technical review authorized: **YES**
+- Mark-ready / merge / release / production deployment authorized: **NO** — Gate 3 (Owner release decision) remains mandatory before any of these.
 
 ---
 
@@ -228,14 +228,24 @@ CI at PR #260's most recent pushed head (`869fc6f1e6fbff8a1a0b5e7e2b3e321ece1ade
 
 ---
 
-## Decision Needed
+## 13. Binding implementation clarifications added at approval (Owner, round 4 approval)
 
-Owner chooses one:
-- **APPROVE** — Option C with the corrected single-loader topology, the unchanged 2 KEEP / 19 REMOVE / 0 UNKNOWN retention matrix, the unchanged 6 REMOVE / 1 KEEP Class B disposition, the corrected three-tier environment matrix (§1a), the corrected wildcard invariant (§5 item 4), the GAP-027 documentation-preservation plan (§9), and the corrected lifecycle wording (§10), as the design to carry into an implementation plan.
-- **CHANGES** — name what should still change.
-- **DECLINE** — do not proceed with GAP-011 Class A/B remediation at this time.
-- **DEFER** — revisit at a later date; no design decision recorded now.
+Two clarifications the Owner added at the moment of approval — binding on implementation, not reopening any design content above:
 
-## What the owner is NOT being asked to decide
+### 13a. The static anti-drift guard must catch Class B alias drift, not only Class A route-declaration drift
 
-Not being asked to re-approve the retention matrix, Class B disposition, `testing-suite` RETIRE, `VerifyCsrfToken.php` non-removal, or conservative view-deletion constraint — all already accepted in round 2 and confirmed not reopened in round 3. Only being asked to confirm: the explicit three-tier environment matrix (§1a), the corrected wildcard invariant (§5 item 4), the GAP-027 documentation-preservation plan (§9), and the corrected lifecycle wording (§10). Also not being asked to decide anything about Class C or the `dashboard-content.blade.php` adjacent defect — both remain out of scope.
+§5's static declaration-site guard (items 1-2) was designed around Class A: catching a future `_debug/*` route declared outside `routes/debug.php`. The Owner's binding clarification: the same guard must **also** catch the Class B-shaped mistake — a future `Route::redirect(...)`/`Route::permanentRedirect(...)` (or equivalent aliasing mechanism) declared **anywhere other than `routes/debug.php`** whose destination targets `/_debug/*`. Concretely, the static scan of `routes/*.php` (excluding `routes/debug.php`) must fail CI on either of:
+- any route declaration whose own path begins with `_debug` (the existing Class A check), **or**
+- any redirect/alias declaration whose **destination** matches `_debug/*` (the added Class B check) — regardless of what the alias's own source path looks like.
+
+This closes the exact gap the round-1/2/3 designs implicitly left open: a contributor could not add a new bare `_debug/*` route outside `routes/debug.php` (caught), but could still add a new compatibility redirect somewhere else in `routes/web.php` pointing back into `/_debug/*` without any test catching it, reintroducing the same class of drift GAP-011 exists to close for Class B specifically. The corrected static guard treats both as the same category of violation.
+
+### 13b. Production route:cache regression tests must be isolated and self-cleaning
+
+§5 item 5 (production-absence test, cached variant) and the route-cache confirmation from `02-design-v3.md` §2 require actually running `php artisan route:cache` under `APP_ENV=production` as part of the test suite. Binding clarification: this test must run in an **isolated/controlled process** (not mutating the shared route cache state of the process running the rest of the suite) and must **always restore or clear the generated route cache afterward** — in a `finally`/teardown, not only on the success path — so that a route cache artifact generated for this one assertion never leaks into or pollutes any test that runs after it in the same suite or CI job.
+
+---
+
+## Decision recorded
+
+**APPROVED** by the Owner, round 4, `2026-08-13T17:35:20+07:00` (verbatim decision text in `decision_provenance.owner_response_reference` above). Gate 2 is closed. Implementation, testing, and technical review are authorized within the scope stated in §11 (as amended by §13) and the Owner's explicit "not to be modified" list (`decision_provenance.owner_response_reference`: `DebugGateMiddleware` unless implementation evidence unexpectedly requires otherwise, `VerifyCsrfToken.php`, Class C, `dashboard-content.blade.php`, the dated `docs/audits/2026-03-19-debug-route-inventory.md`). Mark-ready, merge, release, and production deployment remain **not authorized** — Gate 3 (Owner release decision) is mandatory before any of those and is **NOT STARTED**. No `02-design-v5.md` was created for this approval, per the Owner's explicit instruction — this file (`02-design-v4.md`) is the final, approved Gate 2 packet.

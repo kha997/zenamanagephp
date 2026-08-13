@@ -58,6 +58,8 @@ final class DocumentMutationOwnershipTest extends TestCase
         "/'documents'/",
         '/\bcurrent_version_id\b/',
         '/\buploadDocument\b/',
+        '/\bDocumentApproverAssignmentService\b/',
+        '/\bapprover_id\b/',
     ];
 
     /**
@@ -84,6 +86,25 @@ final class DocumentMutationOwnershipTest extends TestCase
     ];
 
     /**
+     * Approver-surface writes no routed adapter may perform any more, governed or not.
+     *
+     * Every routed writer now delegates to DocumentApproverAssignmentService, which is the
+     * only production code allowed to write `documents.approver_id` or create
+     * `DocumentApproverAssignment` rows. Matching by regex rather than literal substring
+     * mirrors FORBIDDEN_VERSION_WRITE_PATTERNS above, for the same reason: a bypass could
+     * legitimately reference DocumentApproverAssignmentService in one line while writing
+     * `->approver_id =` or `forceFill(['approver_id' => ...])` directly in another.
+     *
+     * @var list<string>
+     */
+    private const FORBIDDEN_APPROVER_WRITE_PATTERNS = [
+        '/->approver_id\s*=/',
+        '/forceFill\(\s*\[[^\]]*\bapprover_id\b/s',
+        '/\bDocumentApproverAssignment::create\b/',
+        '/\bnew\s+DocumentApproverAssignment\b/',
+    ];
+
+    /**
      * Writes that only a governed service may perform.
      *
      * @var list<string>
@@ -99,6 +120,8 @@ final class DocumentMutationOwnershipTest extends TestCase
         'submitted_by',
         'decision_by',
         'document_approval_events',
+        'approver_id',
+        'document_approver_assignments',
     ];
 
     /**
@@ -223,6 +246,14 @@ final class DocumentMutationOwnershipTest extends TestCase
                     preg_match($pattern, $source),
                     $key . ' is a governed adapter but writes the version surface directly (matched ' . $pattern . '); '
                     . 'DocumentVersionService owns DocumentVersion rows and current_version_id.'
+                );
+            }
+            foreach (self::FORBIDDEN_APPROVER_WRITE_PATTERNS as $pattern) {
+                self::assertSame(
+                    0,
+                    preg_match($pattern, $source),
+                    $key . ' is a governed adapter but writes the approver surface directly (matched ' . $pattern . '); '
+                    . 'DocumentApproverAssignmentService owns approver_id and DocumentApproverAssignment rows.'
                 );
             }
         }

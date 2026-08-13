@@ -28,12 +28,12 @@ timestamps:
   updated_at: "2026-08-13T13:46:00+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "TBD_PENDING_DIGEST_COMPUTATION"
+mandatory_technical_gate_summary: "Sau khi sửa 3 lỗi Owner nêu ở Gate 3 lần trước, digest triển khai được tính lại tại commit 433d3e62 (bao gồm register đã khôi phục đúng phạm vi, 02-design-v2.md, và 03-release.md đã đóng băng ở quyết định correction_requested). Governance lint xác nhận cùng giá trị digest một cách độc lập trên CI. test-routes-guardrails PASS."
 technical_evidence:
-  subject_sha: "TBD_PENDING_DIGEST_COMPUTATION"
-  implementation_tree_digest: "TBD_PENDING_DIGEST_COMPUTATION"
-  verified_pr_head_sha: "TBD_PENDING_DIGEST_COMPUTATION"
-  verified_at: "2026-08-13T13:46:00+07:00"
+  subject_sha: "433d3e62890198b6232b8b351149438b9c3799b8"
+  implementation_tree_digest: "4b7300d46d9fa998e3e48c58cdc591fe629344b871970c97c2d383848c476a00"
+  verified_pr_head_sha: "433d3e62890198b6232b8b351149438b9c3799b8"
+  verified_at: "2026-08-13T13:32:34+07:00"
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null

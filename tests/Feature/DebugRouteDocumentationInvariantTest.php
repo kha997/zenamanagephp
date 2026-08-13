@@ -17,23 +17,43 @@ class DebugRouteDocumentationInvariantTest extends TestCase
         $this->assertStringContainsString('`docs/audits/2026-03-19-debug-route-inventory.md`', $doc);
     }
 
+    /**
+     * The document's own annotation must state the GAP-011 removal — this
+     * is what makes the two runtime tests above (active claims shrunk to 2,
+     * the 3 removed claims absent) a correspondence check against the
+     * document rather than an isolated runtime assertion with no document
+     * counterpart.
+     */
+    public function test_current_page_tree_documents_the_gap011_removal_with_provenance(): void
+    {
+        $doc = $this->currentPageTreeDocument();
+
+        $this->assertStringContainsString('Removed by GAP-011', $doc);
+        $this->assertStringContainsString('_debug/test-permissions', $doc);
+        $this->assertStringContainsString('_debug/test-login-simple', $doc);
+        $this->assertStringContainsString('_debug/test-session-auth', $doc);
+        $this->assertStringContainsString('docs/owner-decisions/GAP-011/', $doc);
+
+        // The "still active" annotation must no longer claim the 3 removed
+        // routes, and must still claim the 2 survivors.
+        $this->assertStringContainsString('/_debug/dashboard-data', $doc);
+        $this->assertStringContainsString('/_debug/test-login/{email}', $doc);
+    }
+
     public function test_current_page_tree_active_debug_claims_have_runtime_route_evidence(): void
     {
         $routes = $this->debugRoutesByUri();
 
+        // GAP-011 retention matrix: exactly 2 Class A routes survive.
+        // See docs/owner-decisions/GAP-011/02-design-v4.md.
         $expectedActiveClaims = [
             '_debug/dashboard-data',
-            '_debug/test-permissions',
-            '_debug/test-session-auth',
             '_debug/test-login/{email}',
         ];
 
         foreach ($expectedActiveClaims as $uri) {
             $this->assertArrayHasKey($uri, $routes, "Expected active debug claim [{$uri}] to exist in route:list output.");
         }
-
-        $this->assertArrayHasKey('_debug/test-login-simple', $routes, 'Expected active debug claim [_debug/test-login-simple] to exist in route:list output.');
-        $this->assertSame('POST', $routes['_debug/test-login-simple']['method'] ?? null, 'Expected [_debug/test-login-simple] to remain POST-only.');
     }
 
     public function test_current_page_tree_archived_debug_claims_do_not_have_runtime_route_evidence(): void
@@ -56,6 +76,35 @@ class DebugRouteDocumentationInvariantTest extends TestCase
 
         foreach ($archivedClaims as $uri) {
             $this->assertArrayNotHasKey($uri, $routes, "Archived debug claim [{$uri}] unexpectedly exists in route:list output.");
+        }
+    }
+
+    /**
+     * GAP-011 deliberately removed 3 of the 5 claims this test previously
+     * asserted were "active" — this is not the same category as the
+     * pre-existing "archived/unsupported" claims above (those were already
+     * unsupported as of the 2026-03-19 snapshot; these three were
+     * runtime-backed as of that snapshot and were removed later, by
+     * GAP-011). Kept as its own test so the document ↔ runtime
+     * correspondence this suite protects stays meaningful — this proves the
+     * removal actually happened at the runtime level, not merely that the
+     * test's own expectation array was shrunk.
+     *
+     * See ZENAMANAGE_PAGE_TREE_DIAGRAM_CURRENT.md's "Removed by GAP-011"
+     * annotation and docs/owner-decisions/GAP-011/02-design-v4.md §9.
+     */
+    public function test_current_page_tree_gap011_removed_claims_do_not_have_runtime_route_evidence(): void
+    {
+        $routes = $this->debugRoutesByUri();
+
+        $gap011RemovedClaims = [
+            '_debug/test-permissions',
+            '_debug/test-login-simple',
+            '_debug/test-session-auth',
+        ];
+
+        foreach ($gap011RemovedClaims as $uri) {
+            $this->assertArrayNotHasKey($uri, $routes, "Claim [{$uri}] was removed by GAP-011 and must not exist in route:list output.");
         }
     }
 

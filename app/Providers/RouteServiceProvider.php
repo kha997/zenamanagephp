@@ -51,8 +51,10 @@ class RouteServiceProvider extends ServiceProvider
             Route::middleware('web')
                 ->group(base_path('routes/web.php'));
                 
-            // Debug routes (only in local environment)
-            if (app()->environment('local')) {
+            // Debug routes (GAP-011: local/testing/development only; routes/debug.php
+            // is the sole legal declaration site for `_debug/*`, registered from this
+            // single call site only — see docs/owner-decisions/GAP-011/02-design-v4.md)
+            if (app()->environment(['local', 'testing', 'development'])) {
                 Route::middleware('web')
                     ->group(base_path('routes/debug.php'));
             }

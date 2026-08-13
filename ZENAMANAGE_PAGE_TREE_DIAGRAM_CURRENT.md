@@ -125,8 +125,9 @@ graph TD
     %% Debug Routes (historical note only; not a runtime manifest)
     ROOT --> DEBUG["🐛 Debug Routes<br/>HISTORICAL SNAPSHOT ONLY"]
     DEBUG --> DEBUG_CANON["Use canonical docs instead<br/>ZENAMANAGE_PAGE_TREE_DIAGRAM.md<br/>docs/audits/2026-03-19-debug-route-inventory.md"]
-    DEBUG --> DEBUG_ACTIVE["Claims from this snapshot still backed by 2026-03-19 runtime evidence<br/>/_debug/dashboard-data<br/>/_debug/test-permissions<br/>POST /_debug/test-login-simple<br/>/_debug/test-session-auth<br/>/_debug/test-login/{email}"]
+    DEBUG --> DEBUG_ACTIVE["Claims from this snapshot still backed by current runtime evidence<br/>/_debug/dashboard-data<br/>/_debug/test-login/{email}"]
     DEBUG --> DEBUG_ARCHIVED["Claims from this snapshot now archived or unsupported by runtime<br/>/_debug/info<br/>/_debug/projects-test<br/>/_debug/users-debug<br/>/_debug/tasks-debug<br/>/_debug/frontend-test<br/>/_debug/login-test<br/>/_debug/simple-test<br/>/_debug/navigation-test<br/>/_debug/api-docs"]
+    DEBUG --> DEBUG_REMOVED_GAP011["Removed by GAP-011 (was runtime-backed as of the 2026-03-19 snapshot; deliberately retired, see docs/owner-decisions/GAP-011/)<br/>/_debug/test-permissions<br/>POST /_debug/test-login-simple<br/>/_debug/test-session-auth"]
     DEBUG --> DEBUG_MOVED["Historical moved-root claims in this snapshot are not canonical current `_debug` docs<br/>/dashboard-data legacy redirect still exists<br/>/_debug/test-api-admin-dashboard not mounted<br/>/_debug/api-docs and /_debug/api-docs.json not mounted"]
     
     %% Legacy Routes (OPTIMIZED - 3-Phase Strategy)
@@ -237,8 +238,9 @@ graph TD
 
 5. **🐛 Debug Routes (historical snapshot only)**
    - ⚠️ **Non-canonical:** phần `_debug/*` trong file này khong con la runtime truth
-   - ✅ **Still active from this snapshot:** `/_debug/dashboard-data`, `/_debug/test-permissions`, `POST /_debug/test-login-simple`, `/_debug/test-session-auth`, `/_debug/test-login/{email}`
+   - ✅ **Still active from this snapshot:** `/_debug/dashboard-data`, `/_debug/test-login/{email}`
    - 🗃️ **Archived/historical from this snapshot:** `/_debug/info`, `/_debug/projects-test`, `/_debug/users-debug`, `/_debug/tasks-debug`, `/_debug/frontend-test`, `/_debug/login-test`, `/_debug/simple-test`, `/_debug/navigation-test`, `/_debug/api-docs`
+   - 🚧 **Removed by GAP-011** (was runtime-backed as of the 2026-03-19 snapshot; deliberately retired, see `docs/owner-decisions/GAP-011/`): `/_debug/test-permissions`, `POST /_debug/test-login-simple`, `/_debug/test-session-auth`
    - 🧭 **Current source of truth:** `docs/audits/2026-03-19-debug-route-inventory.md`
 
 6. **🔄 Legacy Routes (12 claimed historical redirect paths)**
@@ -346,8 +348,9 @@ graph TD
 #### **🐛 Debug Route Snapshot (Historical Only):**
 - ⚠️ **Demoted:** file nay khong con canonical cho `_debug/*`
 - ✅ **Protected runtime group still exists:** `routes/web.php` van mount `/_debug/*` behind `DebugGateMiddleware`
-- ✅ **Still evidenced from this snapshot:** `/_debug/dashboard-data`, `/_debug/test-permissions`, `POST /_debug/test-login-simple`, `/_debug/test-session-auth`, `/_debug/test-login/{email}`
+- ✅ **Still evidenced from this snapshot:** `/_debug/dashboard-data`, `/_debug/test-login/{email}`
 - 🗃️ **Archived snapshot claims:** `/_debug/info`, `/_debug/projects-test`, `/_debug/users-debug`, `/_debug/tasks-debug`, `/_debug/frontend-test`, `/_debug/login-test`, `/_debug/simple-test`, `/_debug/navigation-test`, `/_debug/api-docs`
+- 🚧 **Removed by GAP-011** (was runtime-backed as of the 2026-03-19 snapshot; deliberately retired, see `docs/owner-decisions/GAP-011/`): `/_debug/test-permissions`, `POST /_debug/test-login-simple`, `/_debug/test-session-auth`
 - ❌ **Unsupported moved claim in this snapshot:** `/_debug/test-api-admin-dashboard`
 - 🧾 **Use runtime inventory instead:** `docs/audits/2026-03-19-debug-route-inventory.md`
 

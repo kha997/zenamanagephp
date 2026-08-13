@@ -22,72 +22,86 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-13T14:01:12+07:00"
-  updated_at: "2026-08-13T16:00:35+07:00"
+  updated_at: "2026-08-13T16:14:53+07:00"
 generated_by: agent
 ---
 
 ## Owner Summary
-21 route `/_debug/*` đang thật sự mount ở runtime (xác nhận bằng `php artisan route:list`, không phải đếm dòng text), toàn bộ đã được `DebugGateMiddleware` chặn 404 ngoài `local/testing/development`. Vấn đề còn lại không phải lỗ hổng production — là thiếu ranh giới kiến trúc rõ ràng cho một bề mặt non-prod đáng kể, và một route redirect nằm ngoài nhóm `_debug/*` không được middleware này che (chi tiết bên dưới).
+21 route `/_debug/*` đang thật sự mount ở runtime, toàn bộ đã được `DebugGateMiddleware` chặn 404 ngoài `local/testing/development` — **không có claim lỗ hổng production**. Vấn đề còn lại: ranh giới kiến trúc cho toàn bộ bề mặt debug/dev-helper chưa hoàn chỉnh — bề mặt `_debug/*` khá lớn, invariant test hiện có chỉ theo danh sách cụ thể (không tổng quát), và có thêm các route/redirect/helper phát triển khác nằm ngoài namespace `_debug/*` được gate, một vài trong số đó thực thi logic có đặc quyền (không chỉ redirect). Gate 2 sẽ quyết định ranh giới canonical mong muốn.
 
 ## Vấn đề vận hành
-Đã xác minh chính xác bằng `php artisan route:list --json --path=_debug` trên baseline `origin/main` hiện tại (commit `1024b686`), không dùng `grep` (grep đếm dòng chứa chuỗi `_debug` trong source, không phải route runtime — lần trước dùng nhầm cách này cho ra con số 18 sai). Kết quả runtime chính xác: **21 route** đang active dưới `/_debug/*`, liệt kê đầy đủ ở mục Bằng chứng.
-
-Production đã được bảo vệ đúng — `DebugGateMiddleware` (`app/Http/Middleware/DebugGateMiddleware.php:16-24`, không đổi) chặn toàn bộ 21 route này trả 404 ngoài `local/testing/development`, xác nhận cả 21 route đều có `DebugGateMiddleware` trong middleware stack. **Không có claim nào về lỗ hổng production ở đây.**
-
-Vấn đề còn lại, phát biểu chính xác: (1) một bề mặt `/_debug/*` không nhỏ (21 route) vẫn nằm chung trong `routes/web.php` với route production thật, không có ranh giới file/namespace riêng; (2) `tests/Feature/DebugRouteDocumentationInvariantTest.php` (đã đóng cho GAP-027) chỉ so khớp một danh sách cố định các URI được liệt kê thủ công trong tài liệu (`active` vs `archived`) với route thật đang mount — đây là kiểm tra **từng phần theo danh sách cụ thể**, không phải một ràng buộc tổng quát kiểu "mọi route dưới `_debug/*` (hiện tại và tương lai) đều phải qua `DebugGateMiddleware`". Nếu ai thêm route debug mới mà quên khai báo trong danh sách test đó, test này không tự phát hiện được. (3) Có một route redirect **nằm ngoài nhóm `/_debug/*`, không có `DebugGateMiddleware`** — xem mục Bằng chứng.
+Phát biểu chính xác, súc tích theo đúng 3 điểm:
+1. **Truy cập production vào 21 endpoint `_debug/*` hiện đã được bảo vệ** — `DebugGateMiddleware` (`app/Http/Middleware/DebugGateMiddleware.php:16-24`, không đổi) chặn toàn bộ 21 route trả 404 ngoài `local/testing/development`, xác nhận từng route một, không suy đoán.
+2. **Ranh giới kiến trúc/debug-route chưa hoàn chỉnh**, vì ba lý do cộng gộp: (a) bề mặt debug lớn — không chỉ 21 route `_debug/*`, còn có 7 route redirect vào `_debug/*` nằm ngoài namespace gated, và một nhóm route/helper phát triển khác (`routes/api-simple.php`, `routes/debug_api.php`, `local/dev-login/operator`, các view test/demo trong `web.php`) hoàn toàn nằm ngoài `_debug/*`, được bảo vệ bằng cơ chế khác (env-gate tại thời điểm đăng ký route, không phải middleware runtime); (b) `tests/Feature/DebugRouteDocumentationInvariantTest.php` (đóng cho GAP-027) chỉ so khớp một danh sách URI cố định, không phải ràng buộc tổng quát "mọi route debug hiện tại và tương lai phải qua gate"; (c) một số helper phát triển này thực thi logic có đặc quyền thật (không chỉ redirect) — chi tiết đầy đủ ở mục Bằng chứng.
+3. **Không có claim exploit production nào ở đây.** Toàn bộ route/helper thực thi logic đặc quyền được liệt kê dưới đây đều bị chặn đăng ký (không tồn tại trong route table) ngoài `local`/`testing`, xác minh trực tiếp bằng cách chạy `route:list` dưới `APP_ENV=production` (mặc định) và không thấy chúng xuất hiện.
 
 ## Người dùng bị ảnh hưởng
 - Engineering agents/contributors đọc `routes/web.php` lần đầu — dễ nhầm route debug với route thật.
 - Không ảnh hưởng người dùng cuối/khách hàng — production đã an toàn theo middleware, kể cả với route redirect ngoài nhóm (giải thích ở mục Bằng chứng).
 
 ## Bằng chứng
-Xác minh lại trực tiếp trên `origin/main` hiện tại (commit `1024b686`, 2026-08-13), dùng route inventory thật thay vì đếm text:
+Baseline: `origin/main` commit `1024b686`, 2026-08-13. Phương pháp: `php artisan route:list --json` (không dùng `grep` — grep đếm dòng source text, không phải route runtime, đã gây sai số 18 vs 21 ở bản trước). **Lưu ý phương pháp quan trọng:** chạy `route:list` không có `.env` mặc định resolve `APP_ENV=production`, nên route chỉ đăng ký có điều kiện trong `local`/`testing` (`if (app()->environment([...]))`) sẽ KHÔNG xuất hiện trong lần quét đầu — đây chính xác là lý do route ngoài nhóm bị bỏ sót ở bản trước. Đã chạy lại có kiểm soát biến môi trường (`APP_ENV=local`, và `APP_ENV=local APP_DEBUG=true`) để lấy đủ toàn bộ inventory, đối chiếu chéo với route table dưới `production` mặc định.
 
-**Lệnh xác thực:** `php artisan route:list --json --path=_debug` (baseline `1024b686`).
+### Class A — Gated `/_debug/*` runtime routes (21)
+Toàn bộ đều có `App\Http\Middleware\DebugGateMiddleware` trong middleware stack, xác nhận từng route, active ở mọi environment (route luôn đăng ký, middleware chặn theo môi trường lúc request):
 
-**Số route runtime chính xác: 21**, toàn bộ đều có `App\Http\Middleware\DebugGateMiddleware` trong middleware stack (kiểm tra từng route, không suy đoán):
+| Method | URI |
+|---|---|
+| GET\|HEAD | `_debug/admin-dashboard-test`, `_debug/dashboard-data`, `_debug/final-integration`, `_debug/performance-optimization`, `_debug/tenant-dashboard-test`, `_debug/test`, `_debug/test-accessibility`, `_debug/test-api-admin-stats`, `_debug/test-auth`(+`Authenticate`), `_debug/test-auth-direct`(+`Authenticate`), `_debug/test-bypass`, `_debug/test-login/{email}`, `_debug/test-minimal`, `_debug/test-mobile-optimization`, `_debug/test-mobile-simple`, `_debug/test-permissions`, `_debug/test-session-auth`, `_debug/test-simple`, `_debug/test-web-guard`(+`Authenticate:web`), `_debug/testing-suite` |
+| POST | `_debug/test-login-simple` |
 
-| Method | URI | Gated bởi DebugGateMiddleware? |
-|---|---|---|
-| GET\|HEAD | `_debug/admin-dashboard-test` | YES |
-| GET\|HEAD | `_debug/dashboard-data` | YES |
-| GET\|HEAD | `_debug/final-integration` | YES |
-| GET\|HEAD | `_debug/performance-optimization` | YES |
-| GET\|HEAD | `_debug/tenant-dashboard-test` | YES |
-| GET\|HEAD | `_debug/test` | YES |
-| GET\|HEAD | `_debug/test-accessibility` | YES |
-| GET\|HEAD | `_debug/test-api-admin-stats` | YES |
-| GET\|HEAD | `_debug/test-auth` | YES (+ `Authenticate`) |
-| GET\|HEAD | `_debug/test-auth-direct` | YES (+ `Authenticate`) |
-| GET\|HEAD | `_debug/test-bypass` | YES |
-| POST | `_debug/test-login-simple` | YES |
-| GET\|HEAD | `_debug/test-login/{email}` | YES |
-| GET\|HEAD | `_debug/test-minimal` | YES |
-| GET\|HEAD | `_debug/test-mobile-optimization` | YES |
-| GET\|HEAD | `_debug/test-mobile-simple` | YES |
-| GET\|HEAD | `_debug/test-permissions` | YES |
-| GET\|HEAD | `_debug/test-session-auth` | YES |
-| GET\|HEAD | `_debug/test-simple` | YES |
-| GET\|HEAD | `_debug/test-web-guard` | YES (+ `Authenticate:web`) |
-| GET\|HEAD | `_debug/testing-suite` | YES |
+**Claim sai đã gỡ bỏ:** `_debug/info`, `_debug/projects-test`, `_debug/users-debug`, `_debug/tasks-debug` **KHÔNG active** — `DebugRouteDocumentationInvariantTest.php::test_current_page_tree_archived_debug_claims_do_not_have_runtime_route_evidence()` khẳng định archived; xác nhận độc lập bằng chính 21-route inventory (các URI đó không có mặt).
 
-**Claim sai đã gỡ bỏ (correction bắt buộc):** `_debug/info`, `_debug/projects-test`, `_debug/users-debug`, `_debug/tasks-debug` và các URI tương tự **KHÔNG active** — `tests/Feature/DebugRouteDocumentationInvariantTest.php::test_current_page_tree_archived_debug_claims_do_not_have_runtime_route_evidence()` khẳng định rõ các URI này đã archived và xác nhận vắng mặt khỏi route table thật; route inventory `--path=_debug` ở trên (21 route) xác nhận độc lập cùng kết luận — các URI đó không nằm trong danh sách 21 route runtime.
+**Login/auth helper trong Class A** (liệt kê để nhận diện, KHÔNG quyết định disposition): `_debug/test-auth`, `_debug/test-auth-direct`, `_debug/test-bypass`, `_debug/test-login/{email}`, `_debug/test-login-simple`, `_debug/test-web-guard`, `_debug/test-session-auth`, `_debug/test-permissions` — toàn bộ gated.
 
-**Login/auth helper routes (liệt kê riêng để nhận diện, KHÔNG quyết định disposition ở đây):** trong 21 route trên, các route liên quan xác thực/đăng nhập là `_debug/test-auth`, `_debug/test-auth-direct`, `_debug/test-bypass`, `_debug/test-login/{email}`, `_debug/test-login-simple`, `_debug/test-web-guard`, `_debug/test-session-auth`, `_debug/test-permissions` — toàn bộ đều gated bởi `DebugGateMiddleware`.
+### Class B — Ungated compatibility redirect vào `/_debug/*` (7, đầy đủ, không chỉ 1)
 
-**Debug-like route NẰM NGOÀI nhóm `/_debug/*` (phát hiện mới, quét toàn bộ `php artisan route:list --json`, 1164 route trong app):**
-- `GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS test-login/{email}` — action là `Illuminate\Routing\RedirectController`, middleware chỉ có `web` (**KHÔNG có `DebugGateMiddleware`**).
-- Đối chiếu `routes/web.php:788`: `Route::permanentRedirect('/test-login/{email}', '/_debug/test-login/{email}')`. Đây là redirect 301 nén cứng sang path `_debug/*` đã gated — route này **không tự thực thi logic login-bypass**, nó chỉ chuyển hướng trình duyệt tới đích đã được `DebugGateMiddleware` bảo vệ, nên không có exploit path thật qua route này (đích cuối vẫn bị chặn 404 ngoài local/testing/development). Tuy vậy đây đúng là "route giống-debug tồn tại ngoài nhóm `/_debug/*` được gate" — cần ghi nhận cho Gate 2 xem xét (giữ lại, xoá, hay gate luôn) chứ không tự quyết ở Gate 1 này.
-- Không tìm thấy route debug/test/bypass nào khác ngoài nhóm `_debug/*` qua quét từ khoá `debug|test-login|test-bypass|test-auth|bypass-login|dev-login` trên toàn bộ 1164 route.
+| Method | URI nguồn | Đích | Môi trường đăng ký | Middleware | Thực thi logic đặc quyền, hay chỉ redirect? |
+|---|---|---|---|---|---|
+| GET\|HEAD | `/dashboard-data` | `/_debug/dashboard-data` | luôn (mọi env) | `web` | Chỉ redirect (`RedirectController`) |
+| GET\|HEAD | `/test-api-admin-dashboard` | `/_debug/test-api-admin-stats` | luôn | `web` | Chỉ redirect |
+| GET\|HEAD | `/test-permissions` | `/_debug/test-permissions` | luôn | `web` | Chỉ redirect |
+| GET\|HEAD | `/test-api-admin-stats` | `/_debug/test-api-admin-stats` | luôn | `web` | Chỉ redirect |
+| GET\|HEAD | `/test-session-auth` | `/_debug/test-session-auth` | luôn | `web` | Chỉ redirect |
+| GET\|HEAD | `/test-login/{email}` | `/_debug/test-login/{email}` | luôn | `web` | Chỉ redirect |
+| GET\|HEAD | `/debug/{path?}` (wildcard) | `/_debug/{path}` | chỉ `local` | `web` | Chỉ redirect (closure gọi `redirect(...)`) |
+
+Cả 7 route đều xác nhận (đọc trực tiếp `routes/web.php:781-788` và `:583-587`) chỉ thực hiện redirect 301 tới đích đã gated — không route nào trong nhóm này tự thực thi logic đặc quyền. 6 route đầu đăng ký ở MỌI environment (kể cả production — nhưng đích cuối vẫn bị `DebugGateMiddleware` chặn ngoài local/testing/development, nên không có exploit path thật). Route thứ 7 chỉ đăng ký ở `local`.
+
+### Class C — Development helper khác ngoài `/_debug/*`, không phải redirect (đầy đủ, từ 3 nguồn: `routes/web.php`, `routes/api.php`, `routes/debug_api.php`)
+
+| Method | URI | Môi trường đăng ký | Middleware | Thực thi logic đặc quyền, hay chỉ redirect/view? |
+|---|---|---|---|---|
+| GET | `local/dev-login/operator` | `local`+`testing` | `web` | **CÓ ĐẶC QUYỀN** — tra user theo email query param, `Auth::login($user)` trực tiếp, không cần mật khẩu |
+| POST | `api/login` (trong `routes/debug_api.php`) | `local`+`testing` **và** `config('app.debug')=true` | `api` | **CÓ ĐẶC QUYỀN** — kiểm tra mật khẩu cứng `zena1234` với danh sách 8 email demo cố định, set session user giả nếu khớp |
+| POST | `api/v1/upload-document` (trong `routes/debug_api.php`) | `local`+`testing`+`app.debug` | `api` | **CÓ ĐẶC QUYỀN** — nhận file upload thật, ghi log, có side-effect |
+| GET | `admin-dashboard-complete` | `local`+`testing` | `web` | Chỉ render view |
+| GET | `admin-layout-system` | `local`+`testing` | `web` | Chỉ render view |
+| GET | `test-css-inline` | `local`+`testing` | `web` | Chỉ render view |
+| GET | `test-tailwind` | `local`+`testing` | `web` | Chỉ render view |
+| GET | `calendar-complete` | `local`+`testing` | `web` | Redirect nội bộ tới route thật (`app.calendar`), không phải `_debug/*` |
+| GET | `projects-complete` | `local`+`testing` | `web` | Redirect nội bộ tới route thật (`app.projects`) |
+| GET | `tasks-complete` | `local`+`testing` | `web` | Redirect nội bộ tới route thật (`app.tasks`) |
+| GET | `api/test` | `local`+`testing` | `api` | Chỉ JSON tĩnh |
+| GET | `api/test-controller` | `local`+`testing` | `api` | Gọi controller thật (`getCsrfToken`) — hành vi hợp lệ, không đặc quyền |
+| GET | `api/test-simple`, `api/test-error`, `api/documents-simple` (trong `debug_api.php`) | `local`+`testing`+`app.debug` | `api`(một số + `auth:sanctum,tenant.isolation,rbac`) | Chỉ JSON tĩnh/test, một nhóm đã sau `auth:sanctum` nên không phải bypass |
+
+**Đã xác minh không tồn tại trong route table production mặc định** (chạy `route:list` dưới `APP_ENV=production`, không xuất hiện) — đúng như claim môi trường ở trên, không suy đoán.
+
+### Đã kiểm tra và phân loại rõ ràng — KHÔNG bỏ sót, nhưng ngoài phạm vi GAP-011
+- **`_dusk/login/{userId}/{guard?}`, `_dusk/logout/{guard?}`, `_dusk/user/{guard?}`** — route do package Laravel Dusk (công cụ test trình duyệt) tự đăng ký ngoài production, không phải mã debug tự viết. Ngoài phạm vi ranh giới kiến trúc debug của GAP-011.
+- **`api-simple/*`** (6 route: `projects`, `projects-with-auth`, `projects-with-middleware`, `test`, `test-auth`, `test-new-middleware`) — đã là quyết định bảo mật riêng, tách biệt, xử lý trước đây (`routes/api-simple.php`, chỉ đăng ký ở `local`, xem commit `7d33620e "chore(security): lock down api-simple to local and protect tenant routes"`). Ngoài phạm vi GAP-011, không gộp lại đây.
+- **`login`/`logout`/`password/reset` (bare, không prefix, trong `routes/web.php` local/testing block)** — liên quan kiến trúc xác thực cốt lõi, không phải bề mặt debug. Route production cho `/login`/`/logout` bare không xuất hiện trong route table mặc định (chỉ có `portal/{tenantSlug}/login` theo tenant); đây là câu hỏi kiến trúc auth riêng biệt, **không xác minh hay claim gì thêm** về việc operator login production tồn tại qua đường nào khác — nằm ngoài phạm vi điều tra của GAP-011.
+- **`routes/debug.php`** (loaded chỉ ở `local`) — hiện **rỗng, toàn bộ route đã bị comment out** ("EMERGENCY: Debug routes completely disabled"), 0 route active. Không đóng góp gì vào bề mặt thật.
 
 ## Tác động nếu không xử lý
-Rủi ro thấp nhưng tích luỹ: mỗi route debug mới thêm vào không có ranh giới rõ sẽ tiếp tục làm `routes/web.php` khó đọc hơn; test bất biến hiện tại chỉ theo danh sách cụ thể nên không tự bắt được route debug mới thiếu gate; route redirect ngoài nhóm (`test-login/{email}`) là ví dụ cụ thể cho việc route liên quan-debug có thể nằm ngoài ranh giới `_debug/*` mà không ai chú ý.
+Rủi ro thấp nhưng tích luỹ và đa dạng hơn ước tính ban đầu: (1) mỗi route debug mới thêm vào `_debug/*` không có ranh giới rõ sẽ tiếp tục làm `routes/web.php` khó đọc hơn; (2) invariant test hiện tại chỉ theo danh sách cụ thể, không tự bắt được route debug mới thiếu gate; (3) 7 route redirect Class B và các helper Class C (đặc biệt 3 route CÓ ĐẶC QUYỀN — `local/dev-login/operator`, `api/login`, `api/v1/upload-document`) chứng minh cụ thể rằng cơ chế bảo vệ hiện tại không đồng nhất — một phần dựa vào `DebugGateMiddleware` (runtime), một phần dựa vào env-gate lúc đăng ký route (compile-time) — hai cơ chế khác nhau, không có nguồn xác thực duy nhất để audit toàn bộ bề mặt debug cùng lúc.
 
 ## Phạm vi đề xuất
-Thiết kế cụ thể thuộc Gate 2, KHÔNG quyết ở đây. Các hướng có thể cân nhắc ở Gate 2 (liệt kê để tham khảo, không phải danh sách đầy đủ, không ưu tiên hướng nào): tách 21 route `_debug/*` ra file route riêng để ranh giới rõ hơn; nâng invariant test hiện có (theo danh sách cụ thể) thành ràng buộc tổng quát hơn (mọi route dưới `_debug/*` phải qua `DebugGateMiddleware`, không cần liệt kê từng URI); và xử lý riêng route redirect `test-login/{email}` nằm ngoài nhóm gated (giữ/xoá/đưa vào gate).
+Thiết kế ranh giới canonical cụ thể thuộc Gate 2, KHÔNG quyết ở đây — không quyết định xoá, không quyết định giữ redirect, không quyết định `routes/debug.php`, không thiết kế invariant test mới. Gate 2 sẽ cần quyết định cho cả 3 lớp đã inventory: Class A (21 route gated), Class B (7 redirect ungated), Class C (14 helper khác, trong đó 3 route có đặc quyền thật). Phạm vi cụ thể của thiết kế đó thuộc Gate 2.
 
 ## Loại trừ rõ ràng
-Không đổi hành vi `DebugGateMiddleware` (đã đúng, không cần sửa). Không đụng tới bất kỳ route production thật nào ngoài `_debug/*` và route redirect `test-login/{email}` đã nêu. Không mở rộng sang GAP-024 (đã RESOLVED, không liên quan) hay GAP-027 (đã RESOLVED, đã đóng riêng).
+Không đổi hành vi `DebugGateMiddleware`, `routes/api-simple.php`, hay bất kỳ route production thật nào. Không mở rộng sang GAP-024 (đã RESOLVED) hay GAP-027 (đã RESOLVED). Không điều tra sâu thêm kiến trúc xác thực cốt lõi (`login`/`logout`/`portal` auth) — chỉ ghi nhận sự tồn tại của nó để không bỏ sót, không kết luận gì về nó.
 
 ## Đề xuất
 Đội kỹ thuật đề xuất: xử lý — rủi ro kỹ thuật thấp, phạm vi nhỏ, production đã an toàn sẵn nên không khẩn cấp nhưng dễ đóng dứt điểm.

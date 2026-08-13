@@ -10,7 +10,7 @@ references:
   spec: null
   plan: null
   branch: docs/GAP-035-route-name-collision-gate1-prep
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/261
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

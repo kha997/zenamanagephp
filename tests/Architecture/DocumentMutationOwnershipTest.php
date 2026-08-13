@@ -102,6 +102,8 @@ final class DocumentMutationOwnershipTest extends TestCase
         '/forceFill\(\s*\[[^\]]*\bapprover_id\b/s',
         '/\bDocumentApproverAssignment::create\b/',
         '/\bnew\s+DocumentApproverAssignment\b/',
+        // Mass-assignment bypass: ->update([...'approver_id'...]), ->fill([...]), ::create([...]).
+        '/(?:->update|->fill|::create|->create)\(\s*\[[^\]]*\bapprover_id\b/s',
     ];
 
     /**

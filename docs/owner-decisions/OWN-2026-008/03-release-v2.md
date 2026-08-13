@@ -1,14 +1,14 @@
 ---
 work_id: OWN-2026-008
 gate: 3
-gate_status: awaiting_owner
+gate_status: changes_requested
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: correction_requested
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-08-13-own-2026-008-register-reconciliation-evidence.md
   plan: null
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-13T13:46:00+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-13T13:41:45+07:00"
+  owner_response_reference: "Owner Gate 3 v2 decision — CHANGES REQUESTED, in-session on 2026-08-13: 'The implementation scope correction is accepted: the current register diff now matches Gate 2. However, Gate 3 cannot be approved because the governance packets contain impossible chronology metadata. GitHub records commit 433d3e62890198b6232b8b351149438b9c3799b8 at 2026-08-13T06:30:17Z (13:30:17+07:00), but files already contained in that commit claim creation/update/decision-recording times of 13:40, 13:45, and 13:46 +07:00. GitHub then records commit db51e8f8cb1d9cda55a7d27f708ef14e7c8c15aa at 13:32:56+07:00, while 03-release-v2.md still contains updated_at: 13:46:00+07:00. These timestamps are impossible and must not remain as authoritative governance provenance.' Do not self-approve Gate 3. Do not mark ready. Do not merge. Do not deploy."
   reconciliation_required: false
 supersedes: docs/owner-decisions/OWN-2026-008/03-release.md
-superseded_by: null
+superseded_by: docs/owner-decisions/OWN-2026-008/03-release-v3.md
 timestamps:
-  created_at: "2026-08-13T13:46:00+07:00"
-  updated_at: "2026-08-13T13:46:00+07:00"
+  created_at: "2026-08-13T13:30:17+07:00"
+  updated_at: "2026-08-13T13:41:45+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "Sau khi sửa 3 lỗi Owner nêu ở Gate 3 lần trước, digest triển khai được tính lại tại commit 433d3e62 (bao gồm register đã khôi phục đúng phạm vi, 02-design-v2.md, và 03-release.md đã đóng băng ở quyết định correction_requested). Governance lint xác nhận cùng giá trị digest một cách độc lập trên CI. test-routes-guardrails PASS."
@@ -35,11 +35,15 @@ technical_evidence:
   verified_pr_head_sha: "433d3e62890198b6232b8b351149438b9c3799b8"
   verified_at: "2026-08-13T13:32:34+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "4b7300d46d9fa998e3e48c58cdc591fe629344b871970c97c2d383848c476a00"
+  decision_recorded_at: "2026-08-13T13:41:45+07:00"
 ---
 
-## Gói quyết định phát hành (bản sửa — supersedes `03-release.md` sau Owner CHANGES REQUESTED)
+## OWNER GATE 3 v2 DECISION: CHANGES REQUESTED (2026-08-13T13:41:45+07:00)
+
+Implementation scope correction accepted — register diff khớp đúng Gate 2. Nhưng Gate 3 bị từ chối vì lỗi chronology: `created_at`/`updated_at` gốc của packet này (`13:46:00+07:00`) và của `02-design-v2.md` (`13:40:00+07:00`) là timestamp trong tương lai so với chính commit Git chứa chúng (`433d3e62` @ `13:30:17+07:00` theo `gh api`/`git show -s --format=%cI`, xác nhận độc lập cả hai nguồn). Nguyên nhân: các timestamp này được ước lượng thủ công (tăng dần theo số tròn) thay vì truy vấn đồng hồ thật tại thời điểm ghi file. **`created_at`/`updated_at` phía trên đã được sửa lại bằng timestamp Git commit xác thực** (`433d3e62` @ `13:30:17+07:00` cho lần tạo, `db51e8f8` @ `13:32:56+07:00` không dùng ở đây vì digest-fill không đổi nội dung quyết định) — đây là dữ liệu có thật, không phải ước lượng. Trường `decision_provenance.recorded_at`/`updated_at` ở trên phản ánh đúng thời điểm quyết định CHANGES REQUESTED này được ghi nhận (truy vấn đồng hồ thật ngay trước khi ghi file). **Packet này giờ đóng băng tại quyết định CHANGES REQUESTED — không được viết lại thêm.** Bản sửa xem tại `03-release-v3.md` (supersedes packet này).
+
+## Gói quyết định phát hành (bản gốc, giữ nguyên làm lịch sử — nội dung nghiệp vụ không đổi, chỉ chronology metadata phía trên đã sửa trước khi đóng băng)
 
 Packet này supersede `docs/owner-decisions/OWN-2026-008/03-release.md` theo đúng nguyên tắc bất biến (packet đó đã nhận quyết định `correction_requested`, đóng băng làm lịch sử, không sửa lại). Ba lỗi Owner nêu tại Gate 3 lần trước đã được sửa:
 

@@ -18,17 +18,21 @@ decision_provenance:
   recorded_at: "2026-08-13T13:15:00+07:00"
   owner_response_reference: "Owner explicit Gate 2 approval in-session on 2026-08-13: 'OWN-2026-008 — Gate 2 Owner Decision: APPROVE. Tôi phê duyệt business/design scope gồm đúng 4 reconciliation: GAP-027 → RESOLVED (verified 2026-08-13), GAP-028 → RESOLVED (verified 2026-08-13), GAP-029 → RESOLVED (verified 2026-08-13), GAP-033 → RESOLVED (verified 2026-08-13). Giữ nguyên toàn bộ historical title/description/notes/evidence hiện có; chỉ cập nhật current status và bổ sung evidence citation cần thiết. Không thay đổi trạng thái của bất kỳ gap nào khác. Không thay đổi application code, migration, route, test behavior, runtime behavior hoặc production data. Binding governance clarification: lifecycle được phê duyệt là Gate 2 approval → implement documentation reconciliation → technical verification/review → prepare Gate 3 → Owner Gate 3 decision → merge/release. Gate 2 approval này cho phép thực hiện đúng 4 thay đổi tài liệu đã duyệt và kiểm chứng chúng. Gate 3 chỉ chặn merge/release; không chặn implementation/testing/review sau Gate 2.'"
   reconciliation_required: false
-supersedes: docs/owner-decisions/OWN-2026-008/02-design.md
-superseded_by: docs/owner-decisions/OWN-2026-008/02-design-v3.md
+supersedes: docs/owner-decisions/OWN-2026-008/02-design-v2.md
+superseded_by: null
 timestamps:
-  created_at: "2026-08-13T13:40:00+07:00"
-  updated_at: "2026-08-13T13:40:00+07:00"
+  created_at: "2026-08-13T13:42:42+07:00"
+  updated_at: "2026-08-13T13:42:42+07:00"
 generated_by: agent
 ---
 
-## OWNER GATE 2: APPROVED (correction — internal-consistency fix, not a new business decision)
+## OWNER GATE 2: APPROVED (v3 — chronology-only correction, not a new business decision)
 
-This packet supersedes `docs/owner-decisions/OWN-2026-008/02-design.md` per the immutability rule (that packet's `owner_decision.value` was already `approved`, so it is never edited in place). **The approved Owner decision and its provenance are unchanged and carried forward verbatim** — same scope, same quote, same timestamp of the original approval. This packet fixes a single transcription/internal-consistency defect found during Gate 3 review: the base packet's "Loại trừ phạm vi" (out-of-scope) section erroneously listed GAP-027 and GAP-028 as excluded/untouched rows, even though the same packet's own "Trước/Sau" table (unchanged below) lists them as 2 of the 4 rows the Owner explicitly approved for reconciliation. That was a drafting contradiction, not a scope change — GAP-027 and GAP-028 were always part of the approved 4-row scope, and remain so here.
+**Packet này tồn tại chỉ vì `02-design-v2.md` chứa timestamp `generated_by: agent` không hợp lệ (`created_at`/`updated_at: 2026-08-13T13:40:00+07:00`) — timestamp này nằm TRONG TƯƠNG LAI so với chính commit Git chứa file đó (`433d3e62890198b6232b8b351149438b9c3799b8`, xác nhận qua cả `git show -s --format=%cI` và `gh api repos/.../commits/...` độc lập cho ra cùng kết quả `2026-08-13T13:30:17+07:00`).** Đây là lỗi ước lượng thủ công (tăng số tròn thay vì truy vấn đồng hồ thật), không phải lỗi nghiệp vụ.
+
+`02-design-v2.md` đã nhận quyết định Owner `approved` nên bất biến theo nguyên tắc packet — **không được sửa lại**, kể cả để vá timestamp. Packet này supersede nó chỉ để mang chronology hợp lệ; **quyết định Owner đã duyệt, phạm vi, và provenance giữ nguyên y hệt, không đổi một chữ nào** so với `02-design-v2.md` (và trước đó là `02-design.md` gốc) — xem `decision_provenance.owner_response_reference` phía trên, copy nguyên văn.
+
+`created_at`/`updated_at` của chính packet v3 này được lấy bằng cách truy vấn đồng hồ thật (`date -u` + chuyển múi giờ) ngay tại thời điểm tạo file — không ước lượng, không làm tròn.
 
 ## Owner Summary
 4 dòng trong `OPERATIONAL_GAP_REGISTER.md` (GAP-027, GAP-028, GAP-029, GAP-033) sẽ được cập nhật đúng trạng thái đã xác minh — chỉ đổi `Status` và bổ sung evidence citation, giữ nguyên toàn bộ nội dung lịch sử.
@@ -66,12 +70,13 @@ Không có thay đổi hành vi người dùng nào — không có UI, API, hay 
 - Given `OPERATIONAL_GAP_REGISTER.md` trước reconciliation, when đối chiếu với `origin/main` hiện tại, then đúng 4 dòng GAP-027/028/029/033 chuyển sang `RESOLVED (verified 2026-08-13)` với evidence citation tối thiểu, và không dòng nào khác — kể cả cột Ghi chú của chính 4 dòng này — bị đổi.
 - Given diff của commit reconciliation, when rà soát adversarial, then diff chỉ chạm `OPERATIONAL_GAP_REGISTER.md` + tài liệu governance (không có file `app/`, `routes/`, `database/migrations/`, `tests/*Feature*` hành vi thật nào bị đổi).
 - Given governance lint chạy trên toàn bộ packet Gate 1/Gate 2/Gate 3, then PASS 0 violations.
+- Given timestamp của bất kỳ packet nào trong OWN-2026-008, when đối chiếu với commit Git chứa nó, then timestamp đó không được nằm sau thời điểm commit (không "từ tương lai").
 
 ## Loại trừ phạm vi
-Không xử lý GAP-021 (UNVERIFIED, cần audit riêng), GAP-030 (deferred, cần quyết định capability model), GAP-015/GAP-019 (cần quyết định business riêng), GAP-011/012/013/014b/014c/016/017/018/020/026 — không dòng nào trong số này bị đổi bởi OWN-2026-008. **(Sửa so với `02-design.md`: GAP-027 và GAP-028 đã bị liệt kê nhầm vào danh sách này trong bản gốc — cả hai thực ra nằm TRONG phạm vi 4 dòng đã duyệt ở bảng Trước/Sau phía trên, không phải ngoài phạm vi. Đây là sửa lỗi transcription, không phải thay đổi quyết định nghiệp vụ.)**
+Không xử lý GAP-021 (UNVERIFIED, cần audit riêng), GAP-030 (deferred, cần quyết định capability model), GAP-015/GAP-019 (cần quyết định business riêng), GAP-011/012/013/014b/014c/016/017/018/020/026 — không dòng nào trong số này bị đổi bởi OWN-2026-008. GAP-027 và GAP-028 KHÔNG nằm trong danh sách loại trừ — cả hai nằm TRONG phạm vi 4 dòng đã duyệt ở bảng Trước/Sau phía trên (sửa đúng như đã chốt ở `02-design-v2.md`).
 
 ## Decision Needed
-**Owner đã chọn: Approve to proceed to implementation.** (Quyết định gốc không đổi — packet này chỉ sửa lỗi trình bày nội bộ.)
+**Owner đã chọn: Approve to proceed to implementation.** (Quyết định gốc không đổi — packet này chỉ sửa lỗi chronology, không phải quyết định nghiệp vụ mới.)
 
 ## What the owner is NOT being asked to decide
-Owner không được yêu cầu duyệt lại quyết định Gate 2 — quyết định đó đã ghi nhận và giữ nguyên. Owner cũng không được yêu cầu duyệt cách trình bày evidence doc, không được yêu cầu duyệt bất kỳ thay đổi mã nguồn nào (không có), và không được yêu cầu duyệt Gate 3/merge ở bước này.
+Owner không được yêu cầu duyệt lại quyết định Gate 2 — quyết định đó đã ghi nhận và giữ nguyên nội dung. Owner cũng không được yêu cầu duyệt cách trình bày evidence doc, không được yêu cầu duyệt bất kỳ thay đổi mã nguồn nào (không có), và không được yêu cầu duyệt Gate 3/merge ở bước này.

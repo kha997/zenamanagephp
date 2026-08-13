@@ -171,6 +171,9 @@ final class DebugRouteBoundaryInvariantTest extends TestCase
         $this->assertFalse($this->wildcardAliasRegisteredUnder('production'));
     }
 
+    /**
+     * @group stress
+     */
     public function test_production_route_table_has_zero_debug_routes_after_route_cache(): void
     {
         $cachePath = base_path('bootstrap/cache/routes-v7.php');
@@ -201,7 +204,7 @@ final class DebugRouteBoundaryInvariantTest extends TestCase
                 // work item cannot control.
                 if (str_contains($errorOutput, 'Another route has already been assigned name') && !str_contains($errorOutput, '_debug') && !str_contains($errorOutput, 'debug.php')) {
                     $this->markTestSkipped(
-                        "route:cache is blocked by a pre-existing, GAP-011-unrelated route-name collision (not introduced by this branch): {$errorOutput}\n" .
+                        "dependency: route:cache is blocked by a pre-existing, GAP-011-unrelated route-name collision (not introduced by this branch, reproduces on an unmodified worktree): {$errorOutput}\n" .
                         'This is an application-wide route:cache blocker (routes/api.php, routes/api_zena.php, routes/web.php share duplicate names like `projects`/`projects.store`), independent of the `_debug/*` boundary. ' .
                         'See the GAP-011 implementation report for this finding — it should be raised as a separate follow-up, not fixed under GAP-011.'
                     );

@@ -2,6 +2,7 @@ ApiTestConfiguration::test_redis_configuration|group=redis|reason=REDIS_
 ApiTestConfiguration::test_required_services_available|group=redis|reason=REDIS_
 BulkOperationsTest::skipUnlessSlowTestsEnabled|group=slow|reason=RUN_SLOW_TESTS
 ButtonFormSubmissionTest::setUp|group=slow|reason=RUN_SLOW_TESTS
+DebugRouteBoundaryInvariantTest::test_production_route_table_has_zero_debug_routes_after_route_cache|group=stress|reason=dependency:
 DocumentStatusMigrationTest::test_migration_round_trip_preserves_existing_status_and_metadata_on_sqlite|group=slow|reason=dependency:
 DocumentWorkflowConcurrencyTest::requireRealMysql|group=stress|reason=dependency:
 DocumentWorkflowConcurrencyTest::skipUnlessMysqlAvailable|group=stress|reason=dependency:

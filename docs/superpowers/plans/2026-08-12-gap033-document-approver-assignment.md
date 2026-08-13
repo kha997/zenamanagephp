@@ -1251,6 +1251,187 @@ git commit -m "fix(documents): address GAP-033 implementation review"
 
 If review finds no required correction, do not create an empty commit.
 
+---
+
+### Task 9: Enforce project-team membership on approver assignment (Owner reconciliation of I-2)
+
+**Owner clarification (post-Task-8 final review, not a new business-scope expansion — reconciliation of the already-approved Gate 2 rule "đúng phạm vi tenant/project"):** the assignment target must (1) belong to the same tenant, (2) be an active member of the document's specific project via `project_team_members`, AND (3) independently hold `document.approve`. Assignment must not grant approval authority by itself (unchanged from Task 4/§6.3).
+
+**Files:**
+- Modify: `app/Exceptions/DocumentApproverAssignmentException.php`
+- Modify: `app/Services/DocumentApproverAssignmentService.php`
+- Modify: `tests/Feature/Services/DocumentApproverAssignmentServiceTest.php`
+- Modify: `tests/Feature/Api/DocumentLifecycleActionsTest.php`
+
+**Interfaces:**
+- Consumes: `project_team_members` table (`project_id`, `user_id`, `left_at` nullable — existing, pre-GAP-033 schema; no migration in this task). Active membership = a row where `left_at IS NULL`.
+- Produces: `DocumentApproverAssignmentException::notProjectMember()` (new factory, reason code `APPROVER_NOT_PROJECT_MEMBER`) — consumed by the existing adapter `match($e->reasonCode)` blocks in `SimpleDocumentController::assignApprover()`/`DocumentWorkflowController::assignApprover()`, which already fall through to their existing `default =>` conflict/error-envelope arm for any non-`DOCUMENT_NOT_FOUND` code — no adapter code change required, but add one API-level test proving the new rejection surfaces correctly end-to-end.
+
+- [ ] **Step 1: Write failing tests**
+
+Add to `tests/Feature/Services/DocumentApproverAssignmentServiceTest.php` (extend `setUp()` to also create a `project_team_members` row for `$this->eligibleApprover` on `$this->project`, matching the Owner's scenario 1; the existing `$this->eligibleApprover` fixture becomes the "on the right project" case):
+
+```php
+    public function test_assign_succeeds_when_target_is_same_tenant_same_project_and_has_document_approve(): void
+    {
+        // $this->eligibleApprover is already same-tenant + document.approve (existing fixture).
+        // This test additionally requires setUp() to insert a project_team_members row for
+        // $this->eligibleApprover on $this->project (see Step 3 setUp() change below) — once
+        // that exists, this is the existing test_assign_sets_approver_id_and_writes_audit_row
+        // scenario, now passing BECAUSE of the membership row, not despite it.
+        $document = $this->service->assign(
+            $this->tenant->id,
+            $this->document->id,
+            $this->actor->id,
+            $this->eligibleApprover->id,
+        );
+
+        self::assertSame($this->eligibleApprover->id, $document->approver_id);
+    }
+
+    public function test_assign_rejects_target_in_a_different_project_same_tenant(): void
+    {
+        $otherProject = \App\Models\Project::factory()->create(['tenant_id' => $this->tenant->id]);
+        $otherProjectDocument = Document::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $otherProject->id,
+        ]);
+        // $this->eligibleApprover is a member of $this->project (per setUp()), NOT $otherProject.
+
+        $this->expectException(DocumentApproverAssignmentException::class);
+        try {
+            $this->service->assign($this->tenant->id, $otherProjectDocument->id, $this->actor->id, $this->eligibleApprover->id);
+        } catch (DocumentApproverAssignmentException $e) {
+            self::assertSame('APPROVER_NOT_PROJECT_MEMBER', $e->reasonCode);
+            self::assertDatabaseCount('document_approver_assignments', 0);
+            throw $e;
+        }
+    }
+
+    public function test_assign_rejects_target_who_is_project_member_but_lacks_document_approve(): void
+    {
+        $memberWithoutPermission = User::factory()->create(['tenant_id' => $this->tenant->id]);
+        \Illuminate\Support\Facades\DB::table('project_team_members')->insert([
+            'project_id' => $this->project->id,
+            'user_id' => $memberWithoutPermission->id,
+            'role' => 'member',
+            'joined_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->expectException(DocumentApproverAssignmentException::class);
+        try {
+            $this->service->assign($this->tenant->id, $this->document->id, $this->actor->id, $memberWithoutPermission->id);
+        } catch (DocumentApproverAssignmentException $e) {
+            self::assertSame('APPROVER_LACKS_PERMISSION', $e->reasonCode);
+            throw $e;
+        }
+    }
+
+    public function test_reassignment_also_enforces_project_membership(): void
+    {
+        $otherProject = \App\Models\Project::factory()->create(['tenant_id' => $this->tenant->id]);
+        $notAMember = $this->createTenantUser($this->tenant, [], ['pm'], ['document.approve']);
+
+        // First, a valid assignment.
+        $this->service->assign($this->tenant->id, $this->document->id, $this->actor->id, $this->eligibleApprover->id);
+
+        // Then a reassignment attempt to someone not on $this->project fails the same way.
+        $this->expectException(DocumentApproverAssignmentException::class);
+        try {
+            $this->service->assign($this->tenant->id, $this->document->id, $this->actor->id, $notAMember->id);
+        } catch (DocumentApproverAssignmentException $e) {
+            self::assertSame('APPROVER_NOT_PROJECT_MEMBER', $e->reasonCode);
+            // Confirm the FIRST assignment is untouched by the failed second attempt.
+            self::assertSame($this->eligibleApprover->id, $this->document->fresh()->approver_id);
+            throw $e;
+        }
+    }
+```
+
+Note: `test_assign_rejects_target_from_a_different_tenant` (existing, Task 4) already proves the tenant check still fires before any project-membership check for a cross-tenant target — no new test needed for that ordering, but confirm it still passes unchanged after this task's implementation (tenant check must remain first in the validation order).
+
+Add to `tests/Feature/Api/DocumentLifecycleActionsTest.php`:
+
+```php
+    public function test_assigning_a_target_from_a_different_project_returns_conflict(): void
+    {
+        $pm = $this->createTenantUser($this->tenant, [], ['pm'], ['document.view', 'document.update', 'document.approve']);
+        $this->project->update(['pm_id' => $pm->id]);
+        $otherProject = \App\Models\Project::factory()->create(['tenant_id' => $this->tenant->id]);
+        $notOnThisProject = $this->createTenantUser($this->tenant, [], ['pm'], ['document.approve']);
+        $document = $this->makeDocument(DocumentLifecycleStatus::DRAFT, DocumentApprovalStatus::NOT_SUBMITTED, $this->tenant, $this->project, $pm);
+
+        $this->apiAs($pm, $this->tenant);
+        $this->apiPost($this->zena('documents.approver.assign', ['id' => $document->id]), [
+            'approver_id' => $notOnThisProject->id,
+        ])->assertStatus(409);
+    }
+```
+
+- [ ] **Step 2: Run tests to verify they fail**
+
+Run: `APP_KEY="base64:LYHhwg4+zl3mLo+aeOaJ4U/Uw0y3w6K+zw1NP+PAoTk=" ./vendor/bin/phpunit tests/Feature/Services/DocumentApproverAssignmentServiceTest.php tests/Feature/Api/DocumentLifecycleActionsTest.php`
+Expected: FAIL — `notProjectMember()` factory doesn't exist yet; project-membership isn't checked yet, so several new tests either error or pass for the wrong reason (e.g. the different-project test would currently succeed when it should reject).
+
+- [ ] **Step 3: Implement the project-membership check**
+
+Add to `app/Exceptions/DocumentApproverAssignmentException.php`, alongside the existing factories:
+
+```php
+    public static function notProjectMember(): self
+    {
+        return new self(
+            'APPROVER_NOT_PROJECT_MEMBER',
+            'The proposed approver is not an active member of this document\'s project.'
+        );
+    }
+```
+
+Modify `DocumentApproverAssignmentService::assign()` — insert the project-membership check between the existing tenant check and the `document.approve` permission check (tenant check stays first; a cross-tenant target must never leak whether they'd otherwise have passed the project check):
+
+```php
+            if ($newApproverId !== null) {
+                $target = User::query()->find($newApproverId);
+                if ($target === null || $target->tenant_id !== $tenantId) {
+                    throw DocumentApproverAssignmentException::tenantMismatch();
+                }
+                $isProjectMember = DB::table('project_team_members')
+                    ->where('project_id', $document->project_id)
+                    ->where('user_id', $newApproverId)
+                    ->whereNull('left_at')
+                    ->exists();
+                if (! $isProjectMember) {
+                    throw DocumentApproverAssignmentException::notProjectMember();
+                }
+                if (! $target->hasPermission('document.approve')) {
+                    throw DocumentApproverAssignmentException::targetLacksApprovalPermission();
+                }
+            }
+```
+
+Update `tests/Feature/Services/DocumentApproverAssignmentServiceTest.php`'s `setUp()`: after creating `$this->eligibleApprover`, insert a `project_team_members` row for it on `$this->project` (mirror the raw-insert shape used in the new `test_assign_rejects_target_who_is_project_member_but_lacks_document_approve` test above, with `role: 'member'`), so the existing baseline tests (`test_assign_sets_approver_id_and_writes_audit_row`, `test_assign_with_null_clears_explicit_override_and_records_it`, `test_reassignment_persists_across_a_reopen_cycle`) keep passing under the new stricter check without modifying their own bodies.
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `APP_KEY="base64:LYHhwg4+zl3mLo+aeOaJ4U/Uw0y3w6K+zw1NP+PAoTk=" ./vendor/bin/phpunit tests/Feature/Services/DocumentApproverAssignmentServiceTest.php tests/Feature/Api/DocumentLifecycleActionsTest.php`
+Expected: PASS, all tests including the pre-existing ones from Tasks 4/5.
+
+- [ ] **Step 5: Regression and commit**
+
+```bash
+./vendor/bin/phpunit tests/Feature/Web/DocumentWorkflowControllerTest.php tests/Feature/Web/DocumentApprovalsPageTest.php tests/Unit/Policies/DocumentAssignApproverPolicyTest.php tests/Architecture/DocumentMutationOwnershipTest.php
+./vendor/bin/phpstan analyse --memory-limit=2G
+git diff --check
+git add app/Exceptions/DocumentApproverAssignmentException.php app/Services/DocumentApproverAssignmentService.php tests/Feature/Services/DocumentApproverAssignmentServiceTest.php tests/Feature/Api/DocumentLifecycleActionsTest.php
+git commit -m "fix(documents): enforce project-team membership on approver assignment (Owner reconciliation of I-2)"
+```
+
+All must pass/be clean before committing.
+
+---
+
 ## Production evidence decision
 
 **Production DB queried: NO.** Implementation can proceed because the migration is additive (nullable FK column plus a new append-only audit table), there is no backfill, and no existing document's approvability changes as a side effect (every existing row resolves through §6.1's fallback exactly as it does today). No correction or implementation step in this plan performs a production query.

@@ -12,7 +12,7 @@ class DebugRouteDocumentationInvariantTest extends TestCase
         $doc = $this->currentPageTreeDocument();
 
         $this->assertStringContainsString('HISTORICAL SNAPSHOT - NON-CANONICAL', $doc);
-        $this->assertStringContainsString('Do not use this file as the runtime source of truth for `/_debug/*` claims.', $doc);
+        $this->assertStringContainsString('Do not use this file, or the 2026-03-19 audit above, as the runtime source of truth for `/_debug/*` claims', $doc);
         $this->assertStringContainsString('`ZENAMANAGE_PAGE_TREE_DIAGRAM.md`', $doc);
         $this->assertStringContainsString('`docs/audits/2026-03-19-debug-route-inventory.md`', $doc);
     }
@@ -38,6 +38,49 @@ class DebugRouteDocumentationInvariantTest extends TestCase
         // routes, and must still claim the 2 survivors.
         $this->assertStringContainsString('/_debug/dashboard-data', $doc);
         $this->assertStringContainsString('/_debug/test-login/{email}', $doc);
+    }
+
+    /**
+     * The document must state *current* `_debug/*` ownership accurately —
+     * `routes/debug.php`, registered solely from `RouteServiceProvider`,
+     * `DebugGateMiddleware` on Class A — and must not repeat the stale
+     * pre-GAP-011 claim that `routes/web.php` mounts the `_debug/*`
+     * surface (true before GAP-011, false after: routes/web.php no longer
+     * declares any `_debug/*` route). It must also stop presenting the
+     * frozen `docs/audits/2026-03-19-debug-route-inventory.md` snapshot as
+     * the current runtime source of truth — that document is untouched
+     * (see the dedicated architecture test asserting it), but this file's
+     * own annotation of it must be corrected to "historical/pre-GAP-011
+     * baseline."
+     */
+    public function test_current_page_tree_states_current_debug_ownership_accurately(): void
+    {
+        $doc = $this->currentPageTreeDocument();
+
+        $this->assertStringContainsString('routes/debug.php', $doc);
+        $this->assertStringContainsString('RouteServiceProvider', $doc);
+        $this->assertStringContainsString('DebugGateMiddleware', $doc);
+
+        $this->assertStringNotContainsString(
+            'routes/web.php` van mount `/_debug/*`',
+            $doc,
+            'The stale pre-GAP-011 claim that routes/web.php mounts /_debug/* must not remain in the document.'
+        );
+        $this->assertStringNotContainsString(
+            'current `routes/web.php` still mounts the active `/_debug/*` surface',
+            $doc,
+            'The stale pre-GAP-011 claim that routes/web.php mounts /_debug/* must not remain in the document.'
+        );
+
+        $this->assertStringContainsString(
+            'Historical `_debug/*` runtime baseline (pre-GAP-011, as of 2026-03-19)',
+            $doc,
+            'The 2026-03-19 audit must be labeled a historical/pre-GAP-011 baseline, not the current runtime source of truth.'
+        );
+        $this->assertStringContainsString(
+            'no longer the current runtime source of truth',
+            $doc
+        );
     }
 
     public function test_current_page_tree_active_debug_claims_have_runtime_route_evidence(): void

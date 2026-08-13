@@ -14,21 +14,14 @@ use Tests\TestCase;
  * Design: docs/owner-decisions/GAP-011/02-design-v4.md
  *
  * These assertions are structural (declaration site, single loader,
- * middleware presence, environment scope), not a hand-maintained URI
- * allowlist — a future `_debug/*` route or alias declared outside
- * `routes/debug.php` fails here regardless of its name.
+ * middleware presence, environment scope) and source-discovered — no
+ * route file, provider, or bootstrap file is hard-coded. A future
+ * `routes/*.php` file, a future provider, or a future `_debug/*` route
+ * or alias declared anywhere outside `routes/debug.php` is caught here
+ * automatically, without editing this test.
  */
 final class DebugRouteBoundaryInvariantTest extends TestCase
 {
-    /** @var list<string> */
-    private const ROUTE_FILES = [
-        'routes/web.php',
-        'routes/api.php',
-        'routes/api-simple.php',
-        'routes/api_zena.php',
-        'routes/debug_api.php',
-    ];
-
     private const DEBUG_ROUTE_FILE = 'routes/debug.php';
 
     private const ROUTE_SERVICE_PROVIDER = 'app/Providers/RouteServiceProvider.php';
@@ -39,10 +32,13 @@ final class DebugRouteBoundaryInvariantTest extends TestCase
 
     public function test_no_debug_route_is_declared_outside_routes_debug_php(): void
     {
-        foreach ($this->otherRouteFilesThatExist() as $relativePath) {
-            foreach ($this->nonCommentLines($relativePath) as $lineNumber => $line) {
-                if (str_contains($line, 'Route::') && preg_match('/[\'"]_debug/', $line)) {
-                    $this->fail("Found a `_debug` route declaration outside routes/debug.php: {$relativePath}:{$lineNumber}\n{$line}");
+        foreach ($this->discoveredRouteFiles() as $relativePath) {
+            $content = $this->scannableContent($relativePath);
+
+            if (preg_match_all('/Route::\w+\s*\([^;]*?[\'"]_debug/s', $content, $matches, PREG_OFFSET_CAPTURE)) {
+                foreach ($matches[0] as [$snippet, $offset]) {
+                    $line = $this->lineNumberAtOffset($content, $offset);
+                    $this->fail("Found a `_debug` route declaration outside routes/debug.php: {$relativePath}:{$line}\n" . trim($snippet));
                 }
             }
         }
@@ -51,22 +47,25 @@ final class DebugRouteBoundaryInvariantTest extends TestCase
     }
 
     // ------------------------------------------------------------------
-    // Static Class B alias-drift guard
+    // Static Class B alias-drift guard (multiline-aware)
     // ------------------------------------------------------------------
 
     public function test_no_redirect_outside_routes_debug_php_targets_the_debug_namespace(): void
     {
-        foreach ($this->otherRouteFilesThatExist() as $relativePath) {
-            foreach ($this->nonCommentLines($relativePath) as $lineNumber => $line) {
-                if (!preg_match('/Route::(?:permanentRedirect|redirect)\s*\(/', $line)) {
-                    continue;
-                }
+        foreach ($this->discoveredRouteFiles() as $relativePath) {
+            $content = $this->scannableContent($relativePath);
 
-                if (preg_match('/Route::(?:permanentRedirect|redirect)\s*\([^,]+,\s*[\'"]([^\'"]*)[\'"]/', $line, $m)) {
-                    $destination = $m[1];
-                    if (str_starts_with(ltrim($destination, '/'), '_debug')) {
-                        $this->fail("Found a compatibility redirect outside routes/debug.php targeting the debug namespace: {$relativePath}:{$lineNumber} -> {$destination}\n{$line}");
-                    }
+            if (!preg_match_all('/Route::(?:permanentRedirect|redirect)\s*\((.*?)\)\s*;/s', $content, $calls, PREG_OFFSET_CAPTURE)) {
+                continue;
+            }
+
+            foreach ($calls[1] as $index => [$argsString, $offset]) {
+                preg_match_all('/[\'"]([^\'"]*)[\'"]/', $argsString, $stringLiterals);
+                $destination = $stringLiterals[1][1] ?? null; // 2nd string literal = redirect destination
+
+                if ($destination !== null && str_starts_with(ltrim($destination, '/'), '_debug')) {
+                    $line = $this->lineNumberAtOffset($content, $offset);
+                    $this->fail("Found a compatibility redirect outside routes/debug.php targeting the debug namespace: {$relativePath}:{$line} -> {$destination}");
                 }
             }
         }
@@ -83,8 +82,8 @@ final class DebugRouteBoundaryInvariantTest extends TestCase
         $referencingFiles = [];
 
         $candidates = array_merge(
-            [self::ROUTE_SERVICE_PROVIDER],
-            $this->otherRouteFilesThatExist()
+            $this->discoveredProviderAndBootstrapFiles(),
+            $this->discoveredRouteFiles()
         );
 
         foreach ($candidates as $relativePath) {
@@ -96,7 +95,7 @@ final class DebugRouteBoundaryInvariantTest extends TestCase
                 // Only count an actual code reference (base_path()/require/group()
                 // call) — a prose comment mentioning the filename must not count
                 // as a second registration site.
-                $mentionsDebugRouteFile = str_contains($line, "routes/debug.php") || str_contains($line, "routes'/debug.php");
+                $mentionsDebugRouteFile = str_contains($line, 'routes/debug.php') || str_contains($line, "routes'/debug.php");
                 $looksLikeCodeReference = str_contains($line, 'base_path(') || str_contains($line, 'require') || str_contains($line, '->group(');
 
                 if ($mentionsDebugRouteFile && $looksLikeCodeReference) {
@@ -109,7 +108,8 @@ final class DebugRouteBoundaryInvariantTest extends TestCase
         $this->assertSame(
             [self::ROUTE_SERVICE_PROVIDER],
             $referencingFiles,
-            'routes/debug.php must be registered from exactly one place: ' . self::ROUTE_SERVICE_PROVIDER
+            'routes/debug.php must be registered from exactly one place: ' . self::ROUTE_SERVICE_PROVIDER .
+            '. Found: ' . (empty($referencingFiles) ? '(none)' : implode(', ', $referencingFiles))
         );
     }
 
@@ -148,7 +148,7 @@ final class DebugRouteBoundaryInvariantTest extends TestCase
         }
 
         $productionUris = $this->debugRouteUrisUnder('production');
-        $this->assertSame([], $productionUris, 'Expected zero `_debug/*` routes under APP_ENV=production.');
+        $this->assertSame([], $productionUris, 'Expected zero `_debug/*` routes under APP_ENV=production (uncached).');
     }
 
     public function test_wildcard_alias_is_present_in_local_only(): void
@@ -156,12 +156,12 @@ final class DebugRouteBoundaryInvariantTest extends TestCase
         $this->assertTrue($this->wildcardAliasRegisteredUnder('local'), 'Expected /debug/{path?} present under APP_ENV=local.');
 
         foreach (['testing', 'development', 'production'] as $env) {
-            $this->assertFalse($this->wildcardAliasRegisteredUnder($env), "Expected /debug/{path?} absent under APP_ENV={$env}.");
+            $this->assertFalse($this->wildcardAliasRegisteredUnder($env), "Expected /debug/{path?} absent under APP_ENV={$env} (uncached).");
         }
     }
 
     // ------------------------------------------------------------------
-    // Production absence — uncached and cached, isolated + self-cleaning
+    // Production absence — uncached (PASS) and cached (BLOCKED, see below)
     // ------------------------------------------------------------------
 
     public function test_production_route_table_has_zero_debug_routes_uncached(): void
@@ -173,6 +173,18 @@ final class DebugRouteBoundaryInvariantTest extends TestCase
 
     /**
      * @group stress
+     *
+     * NOT a verification of cached production absence — this test is
+     * BLOCKED, not passing. `php artisan route:cache` cannot currently
+     * complete anywhere in this repository (any environment, on an
+     * unmodified worktree), because of a pre-existing, GAP-011-unrelated
+     * route-name collision between routes/api.php, routes/api_zena.php,
+     * and routes/web.php (multiple routes assigned the name
+     * `projects`/`projects.store`). Cached production absence for
+     * GAP-011's `_debug/*` boundary remains technically unproven until
+     * that collision is fixed and route:cache can actually run — see
+     * docs/owner-decisions/GAP-011/03-release.md for the recorded
+     * blocker. Do not read a SKIP here as a PASS.
      */
     public function test_production_route_table_has_zero_debug_routes_after_route_cache(): void
     {
@@ -193,20 +205,11 @@ final class DebugRouteBoundaryInvariantTest extends TestCase
             if (!$cacheResult->successful()) {
                 $errorOutput = $cacheResult->errorOutput() . $cacheResult->output();
 
-                // Pre-existing, GAP-011-unrelated defect: multiple business
-                // routes across routes/api.php, routes/api_zena.php, and
-                // routes/web.php share the route name `projects`/`projects.store`,
-                // which `route:cache`'s serialization step rejects. This blocks
-                // `route:cache` entirely, in every environment, independent of
-                // this branch or GAP-011's changes (reproduces identically on
-                // an unmodified worktree). Not in scope for GAP-011 to fix —
-                // skip with a clear pointer rather than fail on something this
-                // work item cannot control.
                 if (str_contains($errorOutput, 'Another route has already been assigned name') && !str_contains($errorOutput, '_debug') && !str_contains($errorOutput, 'debug.php')) {
                     $this->markTestSkipped(
-                        "dependency: route:cache is blocked by a pre-existing, GAP-011-unrelated route-name collision (not introduced by this branch, reproduces on an unmodified worktree): {$errorOutput}\n" .
+                        "dependency: BLOCKED (not PASS) — route:cache cannot complete due to a pre-existing, GAP-011-unrelated route-name collision (not introduced by this branch, reproduces on an unmodified worktree): {$errorOutput}\n" .
                         'This is an application-wide route:cache blocker (routes/api.php, routes/api_zena.php, routes/web.php share duplicate names like `projects`/`projects.store`), independent of the `_debug/*` boundary. ' .
-                        'See the GAP-011 implementation report for this finding — it should be raised as a separate follow-up, not fixed under GAP-011.'
+                        'Cached production absence for GAP-011 is technically unproven, not verified, as a result. See docs/owner-decisions/GAP-011/03-release.md — this is recorded as a Gate 3 technical blocker, not fixed under GAP-011.'
                     );
                 }
 
@@ -289,16 +292,56 @@ final class DebugRouteBoundaryInvariantTest extends TestCase
     }
 
     // ------------------------------------------------------------------
-    // Helpers
+    // Discovery helpers — no hard-coded file lists
     // ------------------------------------------------------------------
 
-    /** @return list<string> */
-    private function otherRouteFilesThatExist(): array
+    /**
+     * Every top-level routes/*.php file, excluding routes/debug.php
+     * itself. A new route file dropped into routes/ is picked up here
+     * automatically the next time this test runs — no edit required.
+     *
+     * @return list<string>
+     */
+    private function discoveredRouteFiles(): array
     {
+        $files = glob(base_path('routes/*.php')) ?: [];
+
+        $relative = array_map(
+            fn (string $absolute) => 'routes/' . basename($absolute),
+            $files
+        );
+
         return array_values(array_filter(
-            self::ROUTE_FILES,
-            fn (string $relativePath) => File::exists(base_path($relativePath))
+            $relative,
+            fn (string $relativePath) => $relativePath !== self::DEBUG_ROUTE_FILE
         ));
+    }
+
+    /**
+     * Every app/Providers/*.php file plus bootstrap/app.php — the set of
+     * places a second `routes/debug.php` loader could plausibly be
+     * introduced. A new provider file is picked up automatically.
+     *
+     * @return list<string>
+     */
+    private function discoveredProviderAndBootstrapFiles(): array
+    {
+        $providerFiles = glob(base_path('app/Providers/*.php')) ?: [];
+
+        $relative = array_map(
+            fn (string $absolute) => 'app/Providers/' . basename($absolute),
+            $providerFiles
+        );
+
+        if (File::exists(base_path('bootstrap/app.php'))) {
+            $relative[] = 'bootstrap/app.php';
+        }
+
+        if (File::exists(base_path('bootstrap/providers.php'))) {
+            $relative[] = 'bootstrap/providers.php';
+        }
+
+        return array_values(array_unique($relative));
     }
 
     /** @return array<int, string> line number (1-indexed) => line content, comment lines stripped */
@@ -318,6 +361,31 @@ final class DebugRouteBoundaryInvariantTest extends TestCase
         }
 
         return $result;
+    }
+
+    /**
+     * Full file content with `//`/`*`/`/*`-led comment lines blanked but
+     * line breaks preserved, so a multiline `preg_match` with the `s`
+     * (DOTALL) modifier can span statements that wrap across lines while
+     * `lineNumberAtOffset()` still reports an accurate line number.
+     */
+    private function scannableContent(string $relativePath): string
+    {
+        $lines = File::lines(base_path($relativePath))->toArray();
+
+        foreach ($lines as $i => $line) {
+            $trimmed = ltrim($line);
+            if (str_starts_with($trimmed, '//') || str_starts_with($trimmed, '*') || str_starts_with($trimmed, '/*')) {
+                $lines[$i] = '';
+            }
+        }
+
+        return implode("\n", $lines);
+    }
+
+    private function lineNumberAtOffset(string $content, int $offset): int
+    {
+        return substr_count(substr($content, 0, $offset), "\n") + 1;
     }
 
     /** @return list<string> */

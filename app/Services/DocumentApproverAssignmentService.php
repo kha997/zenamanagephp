@@ -39,6 +39,14 @@ class DocumentApproverAssignmentService
                 if ($target === null || $target->tenant_id !== $tenantId) {
                     throw DocumentApproverAssignmentException::tenantMismatch();
                 }
+                $isProjectMember = DB::table('project_team_members')
+                    ->where('project_id', $document->project_id)
+                    ->where('user_id', $newApproverId)
+                    ->whereNull('left_at')
+                    ->exists();
+                if (! $isProjectMember) {
+                    throw DocumentApproverAssignmentException::notProjectMember();
+                }
                 if (! $target->hasPermission('document.approve')) {
                     throw DocumentApproverAssignmentException::targetLacksApprovalPermission();
                 }

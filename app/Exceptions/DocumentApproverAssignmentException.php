@@ -33,4 +33,12 @@ final class DocumentApproverAssignmentException extends RuntimeException
             'The proposed approver does not currently hold document approval permission.'
         );
     }
+
+    public static function notProjectMember(): self
+    {
+        return new self(
+            'APPROVER_NOT_PROJECT_MEMBER',
+            'The proposed approver is not an active member of this document\'s project.'
+        );
+    }
 }

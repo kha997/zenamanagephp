@@ -235,6 +235,14 @@ class DocumentLifecycleActionsTest extends TestCase
         $pm = $this->createTenantUser($this->tenant, [], ['pm'], ['document.view', 'document.update', 'document.approve']);
         $this->project->update(['pm_id' => $pm->id]);
         $eligible = $this->createTenantUser($this->tenant, [], ['pm'], ['document.approve']);
+        \Illuminate\Support\Facades\DB::table('project_team_members')->insert([
+            'project_id' => $this->project->id,
+            'user_id' => $eligible->id,
+            'role' => 'member',
+            'joined_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
         $document = $this->makeDocument(DocumentLifecycleStatus::DRAFT, DocumentApprovalStatus::NOT_SUBMITTED, $this->tenant, $this->project, $pm);
 
         $this->apiAs($pm, $this->tenant);
@@ -266,6 +274,20 @@ class DocumentLifecycleActionsTest extends TestCase
         $this->apiAs($pm, $this->tenant);
         $this->apiPost($this->zena('documents.approver.assign', ['id' => $document->id]), [
             'approver_id' => $ineligible->id,
+        ])->assertStatus(409);
+    }
+
+    public function test_assigning_a_target_from_a_different_project_returns_conflict(): void
+    {
+        $pm = $this->createTenantUser($this->tenant, [], ['pm'], ['document.view', 'document.update', 'document.approve']);
+        $this->project->update(['pm_id' => $pm->id]);
+        $otherProject = \App\Models\Project::factory()->create(['tenant_id' => $this->tenant->id]);
+        $notOnThisProject = $this->createTenantUser($this->tenant, [], ['pm'], ['document.approve']);
+        $document = $this->makeDocument(DocumentLifecycleStatus::DRAFT, DocumentApprovalStatus::NOT_SUBMITTED, $this->tenant, $this->project, $pm);
+
+        $this->apiAs($pm, $this->tenant);
+        $this->apiPost($this->zena('documents.approver.assign', ['id' => $document->id]), [
+            'approver_id' => $notOnThisProject->id,
         ])->assertStatus(409);
     }
 

@@ -401,6 +401,14 @@ class DocumentWorkflowControllerTest extends TestCase
         $this->project->update(['pm_id' => $pm->id]);
         $eligible = $this->createTenantUser($this->tenant, [], ['pm'], ['document.approve']);
         $document = $this->makeDocument();
+        \Illuminate\Support\Facades\DB::table('project_team_members')->insert([
+            'project_id' => $this->project->id,
+            'user_id' => $eligible->id,
+            'role' => 'member',
+            'joined_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         $response = $this->actingAs($pm)
             ->withHeaders(['X-Tenant-ID' => (string) $this->tenant->id])

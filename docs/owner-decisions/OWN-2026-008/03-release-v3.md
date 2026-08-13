@@ -28,12 +28,12 @@ timestamps:
   updated_at: "2026-08-13T13:43:26+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "TBD_PENDING_DIGEST_COMPUTATION"
+mandatory_technical_gate_summary: "Digest triển khai tính lại tại commit 5abf227e (register giữ đúng phạm vi đã duyệt, chronology metadata đã sửa bằng nguồn xác thực, 03-release.md/02-design-v2.md đóng băng đúng nguyên tắc bất biến). test-routes-guardrails và Owner Governance Lint đều PASS tại đầu nhánh tương ứng."
 technical_evidence:
-  subject_sha: "TBD_PENDING_DIGEST_COMPUTATION"
-  implementation_tree_digest: "TBD_PENDING_DIGEST_COMPUTATION"
-  verified_pr_head_sha: "TBD_PENDING_DIGEST_COMPUTATION"
-  verified_at: "TBD_PENDING_DIGEST_COMPUTATION"
+  subject_sha: "5abf227ee59030260f813ab50e7055b3f03a6949"
+  implementation_tree_digest: "559b14bd0d4d4333bcfbb0672a717e685462790008d01a032bf99a4c71fdba3b"
+  verified_pr_head_sha: "5abf227ee59030260f813ab50e7055b3f03a6949"
+  verified_at: "2026-08-13T13:44:22+07:00"
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null

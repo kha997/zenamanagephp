@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web;
 use App\Enums\DocumentDecision;
 use App\Exceptions\DocumentWorkflowException;
 use App\Http\Controllers\Controller;
+use App\Services\DocumentApproverAssignmentService;
 use App\Services\DocumentLifecycleService;
 use App\Services\DocumentWorkflowService;
 use Illuminate\Http\RedirectResponse;
@@ -16,6 +17,7 @@ class DocumentWorkflowController extends Controller
     public function __construct(
         private readonly DocumentWorkflowService $workflow,
         private readonly DocumentLifecycleService $lifecycle,
+        private readonly DocumentApproverAssignmentService $approverAssignment,
     ) {
     }
 
@@ -212,5 +214,34 @@ class DocumentWorkflowController extends Controller
         return redirect()->back()->with('success', $decision === DocumentDecision::APPROVED
             ? 'Tài liệu đã được duyệt.'
             : 'Tài liệu đã bị từ chối.');
+    }
+
+    public function assignApprover(Request $request, string $documentId): RedirectResponse
+    {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+        $tenantId = (string) $user?->tenant_id;
+
+        $document = $this->approverAssignment->findForTenant($tenantId, $documentId);
+        if ($document === null) {
+            abort(404);
+        }
+
+        $this->authorize('assignApprover', $document);
+
+        try {
+            $this->approverAssignment->assign($tenantId, $documentId, (string) Auth::id(), $request->input('approver_id'));
+        } catch (\App\Exceptions\DocumentApproverAssignmentException $e) {
+            report($e);
+
+            return redirect()->back()->withErrors([
+                'error' => match ($e->reasonCode) {
+                    'DOCUMENT_NOT_FOUND' => 'Không tìm thấy tài liệu.',
+                    default => 'Người được chọn chưa đủ điều kiện làm người duyệt.',
+                },
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Đã cập nhật người duyệt.');
     }
 }

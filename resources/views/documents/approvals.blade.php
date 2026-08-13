@@ -44,7 +44,15 @@
         <x-ui.empty-state title="Không có tài liệu" description="Không có tài liệu nào khớp bộ lọc." />
     @else
         <x-ui.card>
-            <x-ui.data-table :headers="['Tài liệu', 'Dự án', 'Trạng thái', 'Người tải', 'Ngày tạo', 'Người xử lý', 'Hành động']">
+            @php
+                // Computed once (not per row) to avoid an N+1 role-check query:
+                // DocumentPolicy::assignApprover grants admins unconditionally, so
+                // that half of the check is safe to hoist; the per-document
+                // project-manager half stays inline below (no extra query, project
+                // is eager-loaded).
+                $isApproverAssignmentAdmin = auth()->user()?->hasRole(['super_admin', 'admin']) ?? false;
+            @endphp
+            <x-ui.data-table :headers="['Tài liệu', 'Dự án', 'Trạng thái', 'Người tải', 'Ngày tạo', 'Người xử lý', 'Người duyệt', 'Hành động']">
                 @foreach ($documents as $document)
                     <tr>
                         <td class="font-medium text-slate-900">{{ $document->title ?? $document->name }}</td>
@@ -63,6 +71,22 @@
                                 @endif
                             @else
                                 —
+                            @endif
+                        </td>
+                        <td class="text-sm text-slate-600">
+                            @if ($isApproverAssignmentAdmin || auth()->id() === $document->project?->pm_id)
+                                <form method="POST" action="{{ route('app.documents.approver.assign', ['document' => $document->id]) }}" class="inline-flex items-center gap-2">
+                                    @csrf
+                                    <select name="approver_id" class="operator-select operator-select-sm">
+                                        <option value="">— Chưa gán —</option>
+                                        @foreach ($eligibleApprovers as $eligible)
+                                            <option value="{{ $eligible->id }}" @selected($document->approver_id === $eligible->id)>{{ $eligible->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <button type="submit" class="operator-button operator-button-secondary operator-button-sm">Lưu</button>
+                                </form>
+                            @else
+                                {{ $document->effectiveApprover()?->name ?? '—' }}
                             @endif
                         </td>
                         <td>

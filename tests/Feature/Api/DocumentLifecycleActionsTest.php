@@ -230,6 +230,67 @@ class DocumentLifecycleActionsTest extends TestCase
         }
     }
 
+    public function test_project_manager_can_assign_approver(): void
+    {
+        $pm = $this->createTenantUser($this->tenant, [], ['pm'], ['document.view', 'document.update', 'document.approve']);
+        $this->project->update(['pm_id' => $pm->id]);
+        $eligible = $this->createTenantUser($this->tenant, [], ['pm'], ['document.approve']);
+        \Illuminate\Support\Facades\DB::table('project_team_members')->insert([
+            'project_id' => $this->project->id,
+            'user_id' => $eligible->id,
+            'role' => 'member',
+            'joined_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $document = $this->makeDocument(DocumentLifecycleStatus::DRAFT, DocumentApprovalStatus::NOT_SUBMITTED, $this->tenant, $this->project, $pm);
+
+        $this->apiAs($pm, $this->tenant);
+        $this->apiPost($this->zena('documents.approver.assign', ['id' => $document->id]), [
+            'approver_id' => $eligible->id,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.approver_id', $eligible->id);
+    }
+
+    public function test_designer_without_pm_or_admin_role_cannot_assign_approver(): void
+    {
+        $document = $this->makeDocument(DocumentLifecycleStatus::DRAFT, DocumentApprovalStatus::NOT_SUBMITTED);
+        $eligible = $this->createTenantUser($this->tenant, [], ['pm'], ['document.approve']);
+
+        // $this->actor is a 'designer', not the project's pm and not admin.
+        $this->apiPost($this->zena('documents.approver.assign', ['id' => $document->id]), [
+            'approver_id' => $eligible->id,
+        ])->assertForbidden();
+    }
+
+    public function test_assigning_a_target_without_document_approve_permission_returns_conflict(): void
+    {
+        $pm = $this->createTenantUser($this->tenant, [], ['pm'], ['document.view', 'document.update', 'document.approve']);
+        $this->project->update(['pm_id' => $pm->id]);
+        $ineligible = $this->createTenantUser($this->tenant, [], ['document-approver-ineligible'], ['document.view']);
+        $document = $this->makeDocument(DocumentLifecycleStatus::DRAFT, DocumentApprovalStatus::NOT_SUBMITTED, $this->tenant, $this->project, $pm);
+
+        $this->apiAs($pm, $this->tenant);
+        $this->apiPost($this->zena('documents.approver.assign', ['id' => $document->id]), [
+            'approver_id' => $ineligible->id,
+        ])->assertStatus(409);
+    }
+
+    public function test_assigning_a_target_from_a_different_project_returns_conflict(): void
+    {
+        $pm = $this->createTenantUser($this->tenant, [], ['pm'], ['document.view', 'document.update', 'document.approve']);
+        $this->project->update(['pm_id' => $pm->id]);
+        $otherProject = \App\Models\Project::factory()->create(['tenant_id' => $this->tenant->id]);
+        $notOnThisProject = $this->createTenantUser($this->tenant, [], ['pm'], ['document.approve']);
+        $document = $this->makeDocument(DocumentLifecycleStatus::DRAFT, DocumentApprovalStatus::NOT_SUBMITTED, $this->tenant, $this->project, $pm);
+
+        $this->apiAs($pm, $this->tenant);
+        $this->apiPost($this->zena('documents.approver.assign', ['id' => $document->id]), [
+            'approver_id' => $notOnThisProject->id,
+        ])->assertStatus(409);
+    }
+
     private function completedApprovalCycle(DocumentDecision $decision): Document
     {
         $document = $this->makeDocument(DocumentLifecycleStatus::DRAFT, DocumentApprovalStatus::NOT_SUBMITTED);

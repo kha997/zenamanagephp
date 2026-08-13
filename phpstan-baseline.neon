@@ -22729,6 +22729,24 @@ parameters:
 			path: app/Models/DesignItemRevision.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\Document\:\:\$approver\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Document.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Document\:\:\$approver_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Document.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Document\:\:\$project\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Document.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$file_path\.$#'
 			identifier: property.notFound
 			count: 1
@@ -29175,11 +29193,23 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Models\\Document\:\:\$tenant_id\.$#'
 			identifier: property.notFound
-			count: 7
+			count: 8
+			path: app/Policies/DocumentPolicy.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Document\:\:\$project\.$#'
+			identifier: property.notFound
+			count: 1
 			path: app/Policies/DocumentPolicy.php
 
 		-
 			message: '#^Method App\\Policies\\DocumentPolicy\:\:approve\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Policies/DocumentPolicy.php
+
+		-
+			message: '#^Method App\\Policies\\DocumentPolicy\:\:assignApprover\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
 			path: app/Policies/DocumentPolicy.php
@@ -36695,6 +36725,12 @@ parameters:
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Services/DeliverableTemplateVersionService.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Document\:\:\$approver_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/DocumentApproverAssignmentService.php
 
 		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Query\\Builder\:\:with\(\)\.$#'

@@ -129,6 +129,7 @@ class Document extends Model
         'is_current_version',
         'current_version_id',
         'parent_document_id',
+        'approver_id',
     ];
 
     protected $casts = [
@@ -181,6 +182,26 @@ class Document extends Model
     public function updater(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approver_id');
+    }
+
+    /**
+     * Resolution order (GAP-033, Owner Gate 2 §6.1): explicit per-document
+     * assignment, else the document's project manager, else no specific
+     * approver. Pure read — never writes, never authorizes.
+     */
+    public function effectiveApprover(): ?User
+    {
+        if ($this->approver_id !== null) {
+            return $this->approver;
+        }
+
+        return $this->project?->pm_id !== null ? $this->project?->manager : null;
     }
 
     /**

@@ -37,6 +37,7 @@ final class DocumentMutationOwnershipTest extends TestCase
         'DocumentLifecycleService',
         'DocumentWorkflowService',
         'DocumentStatusService',
+        'DocumentApproverAssignmentService',
     ];
 
     /**
@@ -57,6 +58,8 @@ final class DocumentMutationOwnershipTest extends TestCase
         "/'documents'/",
         '/\bcurrent_version_id\b/',
         '/\buploadDocument\b/',
+        '/\bDocumentApproverAssignmentService\b/',
+        '/\bapprover_id\b/',
     ];
 
     /**
@@ -83,6 +86,27 @@ final class DocumentMutationOwnershipTest extends TestCase
     ];
 
     /**
+     * Approver-surface writes no routed adapter may perform any more, governed or not.
+     *
+     * Every routed writer now delegates to DocumentApproverAssignmentService, which is the
+     * only production code allowed to write `documents.approver_id` or create
+     * `DocumentApproverAssignment` rows. Matching by regex rather than literal substring
+     * mirrors FORBIDDEN_VERSION_WRITE_PATTERNS above, for the same reason: a bypass could
+     * legitimately reference DocumentApproverAssignmentService in one line while writing
+     * `->approver_id =` or `forceFill(['approver_id' => ...])` directly in another.
+     *
+     * @var list<string>
+     */
+    private const FORBIDDEN_APPROVER_WRITE_PATTERNS = [
+        '/->approver_id\s*=/',
+        '/forceFill\(\s*\[[^\]]*\bapprover_id\b/s',
+        '/\bDocumentApproverAssignment::create\b/',
+        '/\bnew\s+DocumentApproverAssignment\b/',
+        // Mass-assignment bypass: ->update([...'approver_id'...]), ->fill([...]), ::create([...]).
+        '/(?:->update|->fill|::create|->create)\(\s*\[[^\]]*\bapprover_id\b/s',
+    ];
+
+    /**
      * Writes that only a governed service may perform.
      *
      * @var list<string>
@@ -98,6 +122,8 @@ final class DocumentMutationOwnershipTest extends TestCase
         'submitted_by',
         'decision_by',
         'document_approval_events',
+        'approver_id',
+        'document_approver_assignments',
     ];
 
     /**
@@ -119,6 +145,10 @@ final class DocumentMutationOwnershipTest extends TestCase
         'App\Http\Controllers\Api\SimpleDocumentController@attachLink' => self::NON_STATE,
         'App\Http\Controllers\Api\SimpleDocumentController@detachLink' => self::NON_STATE,
         'App\Http\Controllers\Api\SimpleDocumentController@destroy' => self::NON_STATE,
+        // GAP-033: delegates to DocumentApproverAssignmentService, which follows the
+        // same governed-service pattern (tenant-scoped lock, transaction, single
+        // writer of a Document-surface field) as the other GOVERNED_SERVICES.
+        'App\Http\Controllers\Api\SimpleDocumentController@assignApprover' => self::GOVERNED,
 
         // Design item adapter (creates/updates the linked canonical Document).
         'App\Http\Controllers\Api\DesignItemController@uploadDocument' => self::GOVERNED,
@@ -132,6 +162,10 @@ final class DocumentMutationOwnershipTest extends TestCase
         'App\Http\Controllers\Web\DocumentWorkflowController@archive' => self::GOVERNED,
         'App\Http\Controllers\Web\DocumentWorkflowController@reopen' => self::GOVERNED,
         'App\Http\Controllers\Web\DocumentWorkflowController@reactivate' => self::GOVERNED,
+        // GAP-033: delegates to DocumentApproverAssignmentService, which follows the
+        // same governed-service pattern (tenant-scoped lock, transaction, single
+        // writer of a Document-surface field) as the other GOVERNED_SERVICES.
+        'App\Http\Controllers\Web\DocumentWorkflowController@assignApprover' => self::GOVERNED,
 
         // Design item page adapter — delegates to the API adapter, writes nothing itself.
         'App\Http\Controllers\Web\DesignItemPageController@uploadDocument' => self::NON_STATE,
@@ -214,6 +248,14 @@ final class DocumentMutationOwnershipTest extends TestCase
                     preg_match($pattern, $source),
                     $key . ' is a governed adapter but writes the version surface directly (matched ' . $pattern . '); '
                     . 'DocumentVersionService owns DocumentVersion rows and current_version_id.'
+                );
+            }
+            foreach (self::FORBIDDEN_APPROVER_WRITE_PATTERNS as $pattern) {
+                self::assertSame(
+                    0,
+                    preg_match($pattern, $source),
+                    $key . ' is a governed adapter but writes the approver surface directly (matched ' . $pattern . '); '
+                    . 'DocumentApproverAssignmentService owns approver_id and DocumentApproverAssignment rows.'
                 );
             }
         }

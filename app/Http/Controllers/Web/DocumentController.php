@@ -212,7 +212,7 @@ class DocumentController extends Controller
         try {
             $tenantId = (string) Auth::user()?->tenant_id;
 
-            $query = Document::with(['project', 'uploader'])
+            $query = Document::with(['project.manager', 'uploader', 'approver'])
                 ->whereHas('project', fn ($projectQuery) => $projectQuery->where('tenant_id', $tenantId));
 
             if ($request->filled('project_id')) {
@@ -229,8 +229,13 @@ class DocumentController extends Controller
             $documents = $query->orderBy('created_at', 'desc')->paginate(15);
             $projects = Project::query()->where('tenant_id', $tenantId)->select('id', 'name')->get();
             $decisionUsers = $this->decisionUsersFor($documents, $tenantId);
+            $eligibleApprovers = \App\Models\User::query()
+                ->where('tenant_id', $tenantId)
+                ->whereHas('roles.permissions', fn ($q) => $q->where('name', 'document.approve'))
+                ->orderBy('name')
+                ->get(['id', 'name']);
 
-            return view('documents.approvals', compact('documents', 'projects', 'decisionUsers'));
+            return view('documents.approvals', compact('documents', 'projects', 'decisionUsers', 'eligibleApprovers'));
         } catch (\Throwable $e) {
             report($e);
 
@@ -238,6 +243,7 @@ class DocumentController extends Controller
                 'documents' => collect(),
                 'projects' => collect(),
                 'decisionUsers' => collect(),
+                'eligibleApprovers' => collect(),
                 'error' => 'Không thể tải danh sách tài liệu cần duyệt. Vui lòng thử lại sau.',
             ]);
         }

@@ -1,14 +1,14 @@
 ---
 work_id: OWN-2026-008
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-08-13-own-2026-008-register-reconciliation-evidence.md
   plan: null
@@ -18,26 +18,30 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-13T13:43:26+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-13T13:51:10+07:00"
+  owner_response_reference: "Owner Gate 3 v3 decision — APPROVE / PHÁT HÀNH, in-session on 2026-08-13: 'Tôi phê duyệt phát hành reconciliation đã được xác minh và được binding vào implementation-tree digest: 559b14bd0d4d4333bcfbb0672a717e685462790008d01a032bf99a4c71fdba3b. Phạm vi được phê duyệt vẫn đúng và chỉ gồm: GAP-027 → RESOLVED (verified 2026-08-13), GAP-028 → RESOLVED (verified 2026-08-13), GAP-029 → RESOLVED (verified 2026-08-13), GAP-033 → RESOLVED (verified 2026-08-13), với chỉ Status + evidence citation được thay đổi và Notes/history giữ nguyên theo Gate 2. Tôi chấp nhận disclosure rằng timestamp của superseded 03-release.md v1 là historical metadata defect và không được dùng làm chronology evidence; lịch sử quyết định vẫn được bảo toàn qua quoted Owner provenance và chuỗi supersession.' Không được thay đổi implementation scope sau approval; nếu implementation-tree digest thay đổi trước merge, approval này không còn đủ và phải dừng để báo Owner."
   reconciliation_required: false
 supersedes: docs/owner-decisions/OWN-2026-008/03-release-v2.md
 superseded_by: null
 timestamps:
   created_at: "2026-08-13T13:43:26+07:00"
-  updated_at: "2026-08-13T13:43:26+07:00"
+  updated_at: "2026-08-13T13:51:10+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "Digest triển khai tính lại tại commit 5abf227e (register giữ đúng phạm vi đã duyệt, chronology metadata đã sửa bằng nguồn xác thực, 03-release.md/02-design-v2.md đóng băng đúng nguyên tắc bất biến). test-routes-guardrails và Owner Governance Lint đều PASS tại đầu nhánh tương ứng."
+mandatory_technical_gate_summary: "Digest triển khai tính lại tại commit 5abf227e (register giữ đúng phạm vi đã duyệt, chronology metadata đã sửa bằng nguồn xác thực, 03-release.md/02-design-v2.md đóng băng đúng nguyên tắc bất biến). Re-verified zero-drift ngay trước khi ghi nhận approval tại bcdd13f4 -- cùng digest. test-routes-guardrails và Owner Governance Lint đều PASS tại đầu nhánh tương ứng."
 technical_evidence:
   subject_sha: "5abf227ee59030260f813ab50e7055b3f03a6949"
   implementation_tree_digest: "559b14bd0d4d4333bcfbb0672a717e685462790008d01a032bf99a4c71fdba3b"
   verified_pr_head_sha: "5abf227ee59030260f813ab50e7055b3f03a6949"
   verified_at: "2026-08-13T13:44:22+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "559b14bd0d4d4333bcfbb0672a717e685462790008d01a032bf99a4c71fdba3b"
+  decision_recorded_at: "2026-08-13T13:51:10+07:00"
 ---
+
+## OWNER GATE 3 v3 DECISION: APPROVED / PHÁT HÀNH (2026-08-13T13:51:10+07:00)
+
+Owner phê duyệt phát hành, binding vào implementation-tree digest `559b14bd0d4d4333bcfbb0672a717e685462790008d01a032bf99a4c71fdba3b`. Digest được re-verify zero-drift ngay trước khi ghi nhận quyết định này (tính lại tại `bcdd13f4`, kết quả giống hệt). Phạm vi phê duyệt không đổi: đúng và chỉ 4 dòng GAP-027/028/029/033 → `RESOLVED (verified 2026-08-13)`, Status + evidence citation tối thiểu, Notes/history giữ nguyên. Owner chấp nhận disclosure về defect chronology của `03-release.md` v1 (không dùng làm bằng chứng thời gian; quyết định vẫn hợp lệ qua quoted provenance + chuỗi supersession). **Không được thay đổi implementation scope sau approval này; nếu digest đổi trước merge, approval không còn hiệu lực và phải dừng lại báo Owner.**
 
 ## Gói quyết định phát hành (v3 — sửa lỗi chronology, implementation nghiệp vụ không đổi)
 

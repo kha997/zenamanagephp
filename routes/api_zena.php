@@ -84,7 +84,7 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
                     'timestamp' => now(),
                 ],
             ]);
-        })->middleware('rbac:auth.test.simple');
+        })->middleware('rbac:auth.test.simple')->name('debug.simple-test');
 
         Route::get('/minimal-auth-test', function () {
             try {
@@ -105,7 +105,7 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
                     'timestamp' => now(),
                 ]);
             }
-        })->middleware('rbac:auth.test.minimal');
+        })->middleware('rbac:auth.test.minimal')->name('debug.minimal-auth-test');
 
         Route::get('/sanctum-auth-test', function () {
             try {
@@ -126,7 +126,7 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
                     'timestamp' => now(),
                 ]);
             }
-        })->middleware('rbac:auth.test.sanctum');
+        })->middleware('rbac:auth.test.sanctum')->name('debug.sanctum-auth-test');
 
         Route::get('/me-test', function () {
             try {
@@ -168,7 +168,7 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
                     'timestamp' => now(),
                 ]);
             }
-        })->middleware('rbac:auth.test.me');
+        })->middleware('rbac:auth.test.me')->name('debug.me-test');
 
         Route::get('/auth-test', function () {
             return response()->json([
@@ -180,7 +180,7 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
                     'timestamp' => now(),
                 ],
             ]);
-        })->middleware('rbac:auth.test.auth');
+        })->middleware('rbac:auth.test.auth')->name('debug.auth-test');
 
         // Role-specific dashboard routes
         Route::group(['prefix' => 'pm'], function () {

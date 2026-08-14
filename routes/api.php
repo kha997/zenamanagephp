@@ -924,13 +924,13 @@ Route::prefix('v1')->as('api.v1.')->middleware(['auth:sanctum', 'tenant.isolatio
         | Simple User Management V2 Routes (With SimpleJwtAuth)
         |--------------------------------------------------------------------------
         */
-        Route::prefix('users-v2')->middleware(['production.security'])->group(function () {
-            Route::get('/', [UserControllerV2::class, 'index']);
-            Route::post('/', [UserControllerV2::class, 'store']);
-            Route::get('/profile', [UserControllerV2::class, 'profile']);
-            Route::get('/{id}', [UserControllerV2::class, 'show']);
-            Route::put('/{id}', [UserControllerV2::class, 'update']);
-            Route::delete('/{id}', [UserControllerV2::class, 'destroy']);
+        Route::prefix('users-v2')->as('users-v2.')->middleware(['production.security'])->group(function () {
+            Route::get('/', [UserControllerV2::class, 'index'])->name('index');
+            Route::post('/', [UserControllerV2::class, 'store'])->name('store');
+            Route::get('/profile', [UserControllerV2::class, 'profile'])->name('profile');
+            Route::get('/{id}', [UserControllerV2::class, 'show'])->name('show');
+            Route::put('/{id}', [UserControllerV2::class, 'update'])->name('update');
+            Route::delete('/{id}', [UserControllerV2::class, 'destroy'])->name('destroy');
         });
 
         /*
@@ -938,19 +938,19 @@ Route::prefix('v1')->as('api.v1.')->middleware(['auth:sanctum', 'tenant.isolatio
         | Task Assignment Routes
         |--------------------------------------------------------------------------
         */
-        Route::prefix('tasks')->group(function () {
-            Route::get('/{taskId}/assignments', [TaskAssignmentController::class, 'getTaskAssignments']);
-            Route::post('/{taskId}/assignments', [TaskAssignmentController::class, 'store']);
+        Route::prefix('tasks')->as('tasks.assignments.')->group(function () {
+            Route::get('/{taskId}/assignments', [TaskAssignmentController::class, 'getTaskAssignments'])->name('index');
+            Route::post('/{taskId}/assignments', [TaskAssignmentController::class, 'store'])->name('store');
         });
 
-        Route::prefix('assignments')->group(function () {
-            Route::put('/{assignmentId}', [TaskAssignmentController::class, 'update']);
-            Route::delete('/{assignmentId}', [TaskAssignmentController::class, 'destroy']);
+        Route::prefix('assignments')->as('assignments.')->group(function () {
+            Route::put('/{assignmentId}', [TaskAssignmentController::class, 'update'])->name('update');
+            Route::delete('/{assignmentId}', [TaskAssignmentController::class, 'destroy'])->name('destroy');
         });
 
-        Route::prefix('users')->group(function () {
-            Route::get('/{userId}/assignments', [TaskAssignmentController::class, 'getUserAssignments']);
-            Route::get('/{userId}/assignments/stats', [TaskAssignmentController::class, 'getUserStats']);
+        Route::prefix('users')->as('users.assignments.')->group(function () {
+            Route::get('/{userId}/assignments', [TaskAssignmentController::class, 'getUserAssignments'])->name('index');
+            Route::get('/{userId}/assignments/stats', [TaskAssignmentController::class, 'getUserStats'])->name('stats');
         });
     });
 });

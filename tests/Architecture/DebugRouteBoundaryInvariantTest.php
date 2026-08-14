@@ -174,17 +174,12 @@ final class DebugRouteBoundaryInvariantTest extends TestCase
     /**
      * @group stress
      *
-     * NOT a verification of cached production absence — this test is
-     * BLOCKED, not passing. `php artisan route:cache` cannot currently
-     * complete anywhere in this repository (any environment, on an
-     * unmodified worktree), because of a pre-existing, GAP-011-unrelated
-     * route-name collision between routes/api.php, routes/api_zena.php,
-     * and routes/web.php (multiple routes assigned the name
-     * `projects`/`projects.store`). Cached production absence for
-     * GAP-011's `_debug/*` boundary remains technically unproven until
-     * that collision is fixed and route:cache can actually run — see
-     * docs/owner-decisions/GAP-011/03-release.md for the recorded
-     * blocker. Do not read a SKIP here as a PASS.
+     * Verifies cached production absence of the `_debug/*` surface. This
+     * depends on `php artisan route:cache` succeeding, which required
+     * GAP-035 (duplicate route-name collision across routes/api.php,
+     * routes/api_zena.php, routes/web.php) to be fixed first — merged to
+     * main 2026-08-14 (PR #261). See docs/owner-decisions/GAP-011/03-release.md
+     * for the historical record of that dependency.
      */
     public function test_production_route_table_has_zero_debug_routes_after_route_cache(): void
     {
@@ -202,19 +197,7 @@ final class DebugRouteBoundaryInvariantTest extends TestCase
                 ->timeout(60)
                 ->run(['php', 'artisan', 'route:cache']);
 
-            if (!$cacheResult->successful()) {
-                $errorOutput = $cacheResult->errorOutput() . $cacheResult->output();
-
-                if (str_contains($errorOutput, 'Another route has already been assigned name') && !str_contains($errorOutput, '_debug') && !str_contains($errorOutput, 'debug.php')) {
-                    $this->markTestSkipped(
-                        "dependency: BLOCKED (not PASS) — route:cache cannot complete due to a pre-existing, GAP-011-unrelated route-name collision (not introduced by this branch, reproduces on an unmodified worktree): {$errorOutput}\n" .
-                        'This is an application-wide route:cache blocker (routes/api.php, routes/api_zena.php, routes/web.php share duplicate names like `projects`/`projects.store`), independent of the `_debug/*` boundary. ' .
-                        'Cached production absence for GAP-011 is technically unproven, not verified, as a result. See docs/owner-decisions/GAP-011/03-release.md — this is recorded as a Gate 3 technical blocker, not fixed under GAP-011.'
-                    );
-                }
-
-                $this->fail('route:cache failed for a reason that may be GAP-011-related: ' . $errorOutput);
-            }
+            $this->assertTrue($cacheResult->successful(), 'route:cache failed: ' . $cacheResult->errorOutput() . $cacheResult->output());
 
             $this->assertTrue(File::exists($cachePath), 'Expected a route cache file to be generated.');
 

@@ -7,8 +7,9 @@ Tài liệu này được giữ lại như historical snapshot của page-tree n
 **🔄 Phiên bản gốc:** 3.0 - Current State  
 **⚠️ Trạng thái hiện tại:** Historical snapshot - non-canonical
 **🧭 Canonical page tree:** `ZENAMANAGE_PAGE_TREE_DIAGRAM.md`
-**🧾 Canonical `_debug/*` runtime snapshot:** `docs/audits/2026-03-19-debug-route-inventory.md`
-**🚫 Boundary:** Do not use this file as the runtime source of truth for `/_debug/*` claims.
+**🧾 Historical `_debug/*` runtime baseline (pre-GAP-011, as of 2026-03-19):** `docs/audits/2026-03-19-debug-route-inventory.md` — frozen, unmodified by GAP-011; no longer the current runtime source of truth.
+**✅ Current `_debug/*` ownership (post-GAP-011):** `routes/debug.php` is the sole legal declaration site, registered solely from `app/Providers/RouteServiceProvider.php` (local/testing/development only — absent from production), with `DebugGateMiddleware` on every Class A route. See `docs/owner-decisions/GAP-011/` for the design and release record.
+**🚫 Boundary:** Do not use this file, or the 2026-03-19 audit above, as the runtime source of truth for `/_debug/*` claims — the route table and `docs/owner-decisions/GAP-011/` are authoritative.
 **📏 Count boundary:** Route/page totals in this file are historical/manual snapshot labels unless explicitly tied to 2026-03-19 runtime evidence.
 **🔐 Auth boundary:** This snapshot keeps the older web/page-tree auth narrative only. Current runtime auth entry points also span `/api/auth/*`, `/api/v1/auth/*`, `/api/zena/auth/*`, and debug-only helpers under `/_debug/*`.
 
@@ -124,9 +125,10 @@ graph TD
     
     %% Debug Routes (historical note only; not a runtime manifest)
     ROOT --> DEBUG["🐛 Debug Routes<br/>HISTORICAL SNAPSHOT ONLY"]
-    DEBUG --> DEBUG_CANON["Use canonical docs instead<br/>ZENAMANAGE_PAGE_TREE_DIAGRAM.md<br/>docs/audits/2026-03-19-debug-route-inventory.md"]
-    DEBUG --> DEBUG_ACTIVE["Claims from this snapshot still backed by 2026-03-19 runtime evidence<br/>/_debug/dashboard-data<br/>/_debug/test-permissions<br/>POST /_debug/test-login-simple<br/>/_debug/test-session-auth<br/>/_debug/test-login/{email}"]
+    DEBUG --> DEBUG_CANON["Canonical page tree: ZENAMANAGE_PAGE_TREE_DIAGRAM.md<br/>Historical pre-GAP-011 baseline (2026-03-19, not current): docs/audits/2026-03-19-debug-route-inventory.md<br/>Current _debug/* ownership: routes/debug.php via RouteServiceProvider, see docs/owner-decisions/GAP-011/"]
+    DEBUG --> DEBUG_ACTIVE["Claims from this snapshot still backed by current runtime evidence<br/>/_debug/dashboard-data<br/>/_debug/test-login/{email}"]
     DEBUG --> DEBUG_ARCHIVED["Claims from this snapshot now archived or unsupported by runtime<br/>/_debug/info<br/>/_debug/projects-test<br/>/_debug/users-debug<br/>/_debug/tasks-debug<br/>/_debug/frontend-test<br/>/_debug/login-test<br/>/_debug/simple-test<br/>/_debug/navigation-test<br/>/_debug/api-docs"]
+    DEBUG --> DEBUG_REMOVED_GAP011["Removed by GAP-011 (was runtime-backed as of the 2026-03-19 snapshot; deliberately retired, see docs/owner-decisions/GAP-011/)<br/>/_debug/test-permissions<br/>POST /_debug/test-login-simple<br/>/_debug/test-session-auth"]
     DEBUG --> DEBUG_MOVED["Historical moved-root claims in this snapshot are not canonical current `_debug` docs<br/>/dashboard-data legacy redirect still exists<br/>/_debug/test-api-admin-dashboard not mounted<br/>/_debug/api-docs and /_debug/api-docs.json not mounted"]
     
     %% Legacy Routes (OPTIMIZED - 3-Phase Strategy)
@@ -237,9 +239,10 @@ graph TD
 
 5. **🐛 Debug Routes (historical snapshot only)**
    - ⚠️ **Non-canonical:** phần `_debug/*` trong file này khong con la runtime truth
-   - ✅ **Still active from this snapshot:** `/_debug/dashboard-data`, `/_debug/test-permissions`, `POST /_debug/test-login-simple`, `/_debug/test-session-auth`, `/_debug/test-login/{email}`
+   - ✅ **Still active from this snapshot:** `/_debug/dashboard-data`, `/_debug/test-login/{email}`
    - 🗃️ **Archived/historical from this snapshot:** `/_debug/info`, `/_debug/projects-test`, `/_debug/users-debug`, `/_debug/tasks-debug`, `/_debug/frontend-test`, `/_debug/login-test`, `/_debug/simple-test`, `/_debug/navigation-test`, `/_debug/api-docs`
-   - 🧭 **Current source of truth:** `docs/audits/2026-03-19-debug-route-inventory.md`
+   - 🚧 **Removed by GAP-011** (was runtime-backed as of the 2026-03-19 snapshot; deliberately retired, see `docs/owner-decisions/GAP-011/`): `/_debug/test-permissions`, `POST /_debug/test-login-simple`, `/_debug/test-session-auth`
+   - 🧭 **Historical baseline (pre-GAP-011, 2026-03-19):** `docs/audits/2026-03-19-debug-route-inventory.md`. **Current ownership:** `routes/debug.php`, registered solely from `RouteServiceProvider`, `DebugGateMiddleware` on Class A — see `docs/owner-decisions/GAP-011/`.
 
 6. **🔄 Legacy Routes (12 claimed historical redirect paths)**
    - ✅ **Essential:** /dashboard, /projects, /tasks (high/medium traffic)
@@ -266,7 +269,7 @@ graph TD
 - **Current runtime boundary:** `php artisan route:list --json` on 2026-03-19 returns a much larger repo-wide route inventory, so this file is not a reliable source for full runtime counts.
 - **Legacy redirect plan still evidenced in `routes/web.php`:** 3 essential paths (`/dashboard`, `/projects`, `/tasks`) + 7 performance paths + 2 invitation paths.
 - **Authentication current-state note:** the web/debug entry points discussed here are narrower than the full auth surface. Current runtime evidence also shows mounted API auth families under `/api/auth/*`, `/api/v1/auth/*`, and `/api/zena/auth/*`; retired `/api-demo` is historical-only. See `docs/audits/2026-03-19-public-demo-artifact-audit.md`.
-- **Debug boundary:** historical note only in this file; use `docs/audits/2026-03-19-debug-route-inventory.md` for current `_debug/*` inventory.
+- **Debug boundary:** historical note only in this file. `docs/audits/2026-03-19-debug-route-inventory.md` is a frozen, pre-GAP-011 baseline, not the current `_debug/*` inventory — current ownership is `routes/debug.php`, registered solely from `app/Providers/RouteServiceProvider.php`, see `docs/owner-decisions/GAP-011/`.
 
 ### ✅ **TRẠNG THÁI HOÀN THÀNH:**
 
@@ -345,11 +348,12 @@ graph TD
 
 #### **🐛 Debug Route Snapshot (Historical Only):**
 - ⚠️ **Demoted:** file nay khong con canonical cho `_debug/*`
-- ✅ **Protected runtime group still exists:** `routes/web.php` van mount `/_debug/*` behind `DebugGateMiddleware`
-- ✅ **Still evidenced from this snapshot:** `/_debug/dashboard-data`, `/_debug/test-permissions`, `POST /_debug/test-login-simple`, `/_debug/test-session-auth`, `/_debug/test-login/{email}`
+- ✅ **Current ownership (post-GAP-011):** `routes/debug.php` is the sole legal declaration site for `_debug/*`, registered solely from `app/Providers/RouteServiceProvider.php` (local/testing/development only — absent from production), with `DebugGateMiddleware` on every Class A route. `routes/web.php` no longer mounts any `_debug/*` route — see `docs/owner-decisions/GAP-011/`.
+- ✅ **Still evidenced from this snapshot:** `/_debug/dashboard-data`, `/_debug/test-login/{email}`
 - 🗃️ **Archived snapshot claims:** `/_debug/info`, `/_debug/projects-test`, `/_debug/users-debug`, `/_debug/tasks-debug`, `/_debug/frontend-test`, `/_debug/login-test`, `/_debug/simple-test`, `/_debug/navigation-test`, `/_debug/api-docs`
+- 🚧 **Removed by GAP-011** (was runtime-backed as of the 2026-03-19 snapshot; deliberately retired, see `docs/owner-decisions/GAP-011/`): `/_debug/test-permissions`, `POST /_debug/test-login-simple`, `/_debug/test-session-auth`
 - ❌ **Unsupported moved claim in this snapshot:** `/_debug/test-api-admin-dashboard`
-- 🧾 **Use runtime inventory instead:** `docs/audits/2026-03-19-debug-route-inventory.md`
+- 🧾 **Historical baseline, not current:** `docs/audits/2026-03-19-debug-route-inventory.md` reflects the pre-GAP-011 runtime as of 2026-03-19; frozen, unmodified by GAP-011. Not the current runtime source of truth.
 
 ### 📋 **LEGACY ROUTE MANAGEMENT:**
 
@@ -373,7 +377,7 @@ graph TD
 ### 🐛 **DEBUG ROUTE MANAGEMENT:**
 
 #### **🔒 DebugGate Middleware:**
-- ✅ **Runtime evidence:** current `routes/web.php` still mounts the active `/_debug/*` surface behind `DebugGateMiddleware`
+- ✅ **Runtime evidence (post-GAP-011):** `routes/debug.php` — not `routes/web.php` — mounts the active `/_debug/*` surface behind `DebugGateMiddleware`, registered solely from `app/Providers/RouteServiceProvider.php`. `routes/web.php` no longer contains any `_debug/*` declaration.
 - ✅ **Environment Check:** Chỉ allow trong non-production environments
 - ✅ **IP Allowlist:** Production chỉ allow từ specific IPs
 - ✅ **Logging:** Log tất cả debug route access
@@ -381,9 +385,10 @@ graph TD
 
 #### **📁 Debug Namespace:**
 - ✅ **Location:** `/_debug/*` namespace
+- ✅ **Declaration site (post-GAP-011):** `routes/debug.php`, sole registration owner `app/Providers/RouteServiceProvider.php`
 - ✅ **Protection:** `DebugGateMiddleware`
-- ⚠️ **Current inventory lives elsewhere:** `docs/audits/2026-03-19-debug-route-inventory.md`
-- ⚠️ **This file only preserves historical page-tree intent and stale claims**
+- ⚠️ **Historical baseline, not current:** `docs/audits/2026-03-19-debug-route-inventory.md` reflects the pre-GAP-011 runtime as of 2026-03-19; frozen, unmodified. See `docs/owner-decisions/GAP-011/` for the current design/release record.
+- ⚠️ **This file only preserves historical page-tree intent and stale claims — the declaration-site/ownership lines above are the one deliberate exception, corrected by GAP-011 to keep this document truthful**
 
 #### **🚫 Production Safety:**
 - ✅ **No Root Test Routes:** Không deploy prod nếu còn test routes ở root

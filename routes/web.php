@@ -510,7 +510,7 @@ Route::post('/projects', function (Request $request) {
         'message' => 'Project created',
         'project' => $project
     ], 201);
-})->middleware($projectRouteMiddleware)->name('projects.store');
+})->middleware($projectRouteMiddleware)->name('web.projects.store');
 
 Route::get('/projects/create', function () {
     return redirect('/app/projects/create', 301);
@@ -523,7 +523,7 @@ Route::get('/projects/{project}', function (Project $project) {
         'description' => $project->description,
         'status' => $project->status
     ]);
-})->middleware(['auth', 'tenant.isolation', 'rbac:project.view'])->name('projects.show');
+})->middleware(['auth', 'tenant.isolation', 'rbac:project.view'])->name('web.projects.show');
 
 Route::put('/projects/{project}', function (Request $request, Project $project) {
     $data = $request->only(['name', 'description', 'code', 'status', 'budget_total']);
@@ -533,7 +533,7 @@ Route::put('/projects/{project}', function (Request $request, Project $project) 
         'message' => 'Project updated',
         'project' => $project->fresh()
     ], 200);
-})->middleware(['auth', 'tenant.isolation', 'rbac:project.update'])->name('projects.update');
+})->middleware(['auth', 'tenant.isolation', 'rbac:project.update'])->name('web.projects.update');
 
 Route::delete('/projects/{project}', function (Project $project) {
     $project->delete();
@@ -541,7 +541,7 @@ Route::delete('/projects/{project}', function (Project $project) {
     return response()->json([
         'message' => 'Project deleted'
     ], 200);
-})->middleware(['auth', 'tenant.isolation', 'rbac:project.delete'])->name('projects.destroy');
+})->middleware(['auth', 'tenant.isolation', 'rbac:project.delete'])->name('web.projects.destroy');
 
 Route::put('/profile', function (Request $request) {
     return response()->json(['message' => 'Profile updated via web endpoint'], 200);
@@ -557,7 +557,7 @@ Route::get('/documents/create', function () {
 
 Route::post('/tasks', [App\Http\Controllers\Web\TaskController::class, 'store'])
     ->middleware(['auth', 'tenant.isolation', 'rbac:task.create'])
-    ->name('tasks.store');
+    ->name('web.tasks.store');
 
 // Phase 2: Performance routes (moved to API)
 Route::permanentRedirect('/health', '/api/v1/public/health');

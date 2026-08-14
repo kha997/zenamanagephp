@@ -1,0 +1,228 @@
+---
+work_id: GAP-035
+gate: 2
+gate_status: changes_requested
+owner_decision:
+  value: changes_requested
+  authority: human_owner
+decision_requested: null
+references:
+  spec: null
+  plan: null
+  branch: docs/GAP-035-route-name-collision-gate1-prep
+  pr: https://github.com/kha997/zenamanagephp/pull/261
+  release: null
+decision_provenance:
+  trust_level: claimed_repo_record
+  recorded_by: agent
+  recorded_at: "2026-08-14T07:58:53+07:00"
+  owner_response_reference: "Owner Gate 2 round 1 decision — CHANGES REQUESTED, recorded in-session on 2026-08-14 at actual wall-clock time 2026-08-14T07:58:53+07:00. Overall design direction accepted: preserve the currently-winning bare projects.*/tasks.store names on the routes/api.php apiResource routes; rename only the losing routes/web.php side; assign unique names to all currently-unnamed children under api.v1.dashboard. and api.zena.; preserve method/URI/middleware/handler/tenant/RBAC/security/business behavior; no HTTP surface consolidation/deletion/redirect/Project-Task semantic change; GAP-011 untouched. Ten corrections required before approval: (1) freeze this round and supersede with 02-design-v2.md; (2) Group 6 mechanics corrected — a subgroup ->as() prefix alone is insufficient, all 12 leaf routes must each receive their own explicit unique ->name() terminal segment, approved target names: api.v1.dashboard.users-v2.index/store/profile/show/update/destroy, api.v1.dashboard.tasks.assignments.index/store, api.v1.dashboard.assignments.update/destroy, api.v1.dashboard.users.assignments.index/stats; (3) Group 7 confirmed as proposed, individual explicit names api.zena.debug.simple-test/minimal-auth-test/sanctum-auth-test/me-test/auth-test, no restructuring; (4) web-side naming prefix changed from legacy. to web. (web.projects.store/show/update/destroy, web.tasks.store) because these routes are live and directly tested, not authorized to be classified as deprecated/legacy; API-side names projects.store/show/update/destroy and tasks.store stay unchanged; (5) affected-route count corrected from 24 to 27 (10 from the five duplicate pairs + 12 api.v1.dashboard.* children + 5 api.zena.debug.* children), acceptance tests must cover all 27; (6) acceptance proof tightened — before/after verification for all 27 must bind method+URI+middleware+handler+final name, only the approved name changes allowed as differences, plus proof under both testing and production of zero duplicate names across the COMPLETE route collection including vendor routes, all five preserved names still resolving to the same API-side endpoints, route:cache succeeding, cached route:list remaining valid, and deterministic route:clear cleanup; (7) add a permanent, generic duplicate-name architecture guard that dynamically inspects the full runtime route collection and fails on any non-empty name appearing more than once — not hard-coded to only these 7 groups — mutation-proofed once with a temporary duplicate named route, confirmed to fail, reverted byte-clean; (8) preserve the evidence correction already made in Gate 1's addendum (colliding projects.*/tasks.store = routes/api.php apiResource vs routes/web.php; api.zena.projects.*/api.zena.tasks.store already unique, out of scope) without rewriting the frozen Gate 1 table; (9) PR #261 title corrected to not narrow the problem to Project routes; (10) re-present Gate 2 v2 with exact head SHA, supersession chain, exact-head CI, full 27-row mapping, explicit Group 6 leaf-name mechanics, web.* names, the permanent guard, and unchanged hard scope exclusions. Do not implement route changes yet. Do not touch GAP-011. Do not self-approve Gate 2. Do not mark ready. Do not merge or deploy."
+  reconciliation_required: false
+supersedes: null
+superseded_by: "docs/owner-decisions/GAP-035/02-design-v2.md"
+timestamps:
+  created_at: "2026-08-14T07:45:58+07:00"
+  updated_at: "2026-08-14T07:58:53+07:00"
+generated_by: agent
+---
+
+## [FROZEN — ROUND 1, SUPERSEDED BY 02-design-v2.md] OWNER GATE 2: CHANGES REQUESTED — routing/deployability design only, no implementation
+
+**Governance note (added at `2026-08-14T07:58:53+07:00`, per this repo's established decision-immutability discipline):** this file's body below is preserved verbatim as originally committed at `87d0ae61a06acdddf4b54faca7b6e0399eca0908`. It received an Owner **CHANGES REQUESTED** decision (verbatim in `decision_provenance.owner_response_reference` above) on ten points — the overall design direction (preserve winning API-side names, rename only the losing side, assign unique names to unnamed children, preserve all behavior, no HTTP surface consolidation) was accepted; the corrections are about naming mechanics, exact target names, count accuracy, acceptance-proof completeness, a permanent generic guard, and metadata. **No body text below has been altered.** The corrected, superseding design is `02-design-v2.md`.
+
+## OWNER GATE 2 (round 1, as originally presented): AWAITING OWNER DECISION — routing/deployability design only, no implementation
+
+This packet does not implement anything. No route, middleware, or handler has changed. It designs how to eliminate all 7 duplicate route-name groups so `php artisan route:cache` succeeds, strictly within the binding scope the Owner set at Gate 1 approval (`docs/owner-decisions/GAP-035/01-request.md`).
+
+## 0. Carried-forward invariants (binding, from Gate 1 approval)
+
+- **One canonical Project** — `App\Models\Project`, unchanged.
+- **No alternate Project semantics** — this design touches route *names* only.
+- **No Service Line changes.**
+- **No lifecycle changes** — no Project/Task business behavior, state machine, or workflow is touched.
+- **Route-name remediation only** — no merging, deleting, redirecting, or consolidating HTTP route surfaces. The bare `/projects*` closures stay separate from `Api\ProjectController`; `Web\TaskController` stays separate from `Api\TaskController`.
+- **Design Dependency Preflight re-confirmed live at Gate 1 approval time** (2026-08-14): PR #257 still pinned at `ded7cf9f558bd7960b5eff5836140b1e15255b9a`, unchanged since the original preflight. No redundant full reread performed, per Owner instruction.
+- **Complete-inventory re-verification (Owner-required):** `route:list --json` without `--except-vendor`, under both `APP_ENV=testing` and `APP_ENV=production`, returns identical route/name counts to the original `--except-vendor` scan (testing: 1186 routes / 791 named / 7 duplicate groups; production: 1164 / 776 / 7). No vendor/package route contributes a name collision. The 7 application-level groups below are the complete blocker set for the route collection `route:cache` actually serializes.
+
+## 1. Evidence correction (found while building this matrix — see Gate 1 addendum)
+
+Gate 1's original evidence table attributed the API-side route in the `projects.*`/`tasks.store` collisions to `routes/api_zena.php`. That was imprecise. The actual declaration sites, re-verified via `Route::getRoutes()` introspection (method, URI, full middleware stack, action) rather than static grep alone:
+
+- The colliding API-side routes are generated by `Route::apiResource('projects', \App\Http\Controllers\Api\ProjectController::class)` at **`routes/api.php:268`** and `Route::apiResource('tasks', \App\Http\Controllers\Api\TaskController::class)` at **`routes/api.php:582`** — both nested inside `Route::group(['middleware' => ['auth:sanctum', 'tenant.isolation', 'rbac']], ...)` opened at `routes/api.php:234`.
+- `routes/api_zena.php:217-221,266` declares its own `projects.*`/`tasks.store`-*looking* routes, but they are nested inside `Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], ...)` (opened at `routes/api_zena.php:12`), so their **actual, full names are `api.zena.projects.store`/`show`/`update`/`destroy` and `api.zena.tasks.store`**, mounted at `api/zena/projects*` / `api/zena/tasks` — these do **not** collide with anything and are **out of scope for renaming** (already unique).
+- Consequently, `tests/Feature/Api/SecurityTest.php`, `IntegrationTest.php`, and `TaskApiTest.php`'s `$this->zena('projects.store')`-style calls (via `tests/Traits/RouteNameTrait.php::zena()`, which prefixes with `api.zena.`) resolve to the **non-colliding** `api.zena.*` names, not the bare colliding ones. They are **not** real consumers of this collision — corrected from Gate 1's original (imprecise) attribution.
+
+## 2. Named-route compatibility findings (per Owner's compatibility rule)
+
+For each of the 7 groups, real named-route consumers were searched for via `route(...)`, `redirect()->route(...)`, `to_route(...)`, `URL::route(...)`, and test helpers that wrap them (`tests/Traits/RouteNameTrait.php`), across `app/`, `resources/`, `tests/`, `routes/`.
+
+| Group | Real named-route consumers found | Coincidental strings found (not constraints) |
+|---|---|---|
+| `projects.store`/`show`/`update`/`destroy` | **None.** | `app/Services/PermissionService.php:166,168,170` uses `'projects.update'`/`'projects.show'`/`'projects.destroy'` as **array keys in a permission map**, not a `route()` call — per Owner's binding rule, not a route-name consumer, does not constrain naming. |
+| `tasks.store` | **None.** | — |
+| `api.v1.dashboard.` | **None** — the literal name has a trailing empty segment and is not a usable lookup target; nothing in the codebase calls `route('api.v1.dashboard.')`. | — |
+| `api.zena.` | **None** — same reasoning; nothing calls `route('api.zena.')`. | — |
+
+**Current named-route-resolution winner for each collision (verified live via `route()` calls in `tinker`, not assumed):**
+
+| Name | `route(...)` output | Winner |
+|---|---|---|
+| `projects.store` | `http://localhost/api/projects` | `routes/api.php:268` `apiResource` → `Api\ProjectController@store` |
+| `projects.show` | `http://localhost/api/projects/{project}` | same `apiResource` → `Api\ProjectController@show` |
+| `projects.update` | `http://localhost/api/projects/{project}` | same `apiResource` → `Api\ProjectController@update` |
+| `projects.destroy` | `http://localhost/api/projects/{project}` | same `apiResource` → `Api\ProjectController@destroy` |
+| `tasks.store` | `http://localhost/api/tasks` | `routes/api.php:582` `apiResource` → `Api\TaskController@store` |
+
+Since no real named-route consumer was found for any of the 7 groups, there is no `route()`-based behavior to preserve by keeping any particular name unchanged. The design below still **keeps the current winners' names unchanged** (rather than renaming the winner) as the conservative default — this avoids touching `routes/api.php` at all for groups 1-5, minimizing the diff, and is not required by a consumer, only by preferring the smaller change.
+
+**Real non-named-route consumers found (URI-based, not name-based — must still be preserved per the binding "preserve URI/handler/behavior" scope, independent of naming):**
+
+| Route (URI) | Real consumers (direct HTTP calls, not via route name) |
+|---|---|
+| `POST /projects` (bare, web.php closure) | `tests/Feature/Buttons/ButtonCRUDTest.php` (2 call sites), `tests/Feature/CsrfProtectionTest.php` (2), `tests/Feature/SecurityFeaturesTest.php` (1), `tests/Feature/Buttons/ButtonAuthorizationTest.php` (2) — all call `$this->post('/projects', [...])` directly by URI. |
+| `POST /tasks` (bare, web.php closure) | `tests/Feature/CsrfProtectionTest.php`, `tests/Feature/Legacy/LegacyTaskCreationPersistsTest.php` — direct `$this->post('/tasks', ...)`. |
+
+These tests hit the literal URI, not a route name — renaming does not affect them, since URIs are unchanged by this design. Listed here because the Owner's binding scope requires preserving "request/response business behavior," and these are the concrete tests that would catch a regression if it were accidentally introduced.
+
+## 3. Route-by-route design matrix
+
+### 3a. Group 1 — `projects.store`
+
+| Field | API-side (kept) | Web-side (renamed) |
+|---|---|---|
+| Current name | `projects.store` | `projects.store` |
+| Method + URI | `POST api/projects` | `POST projects` |
+| Declaration source | `routes/api.php:268` (`Route::apiResource`) | `routes/web.php:513` (standalone closure) |
+| Middleware | `api, auth:sanctum, tenant.isolation, rbac` | `web, auth, tenant.isolation, rbac:project.create` |
+| Handler | `Api\ProjectController@store` | Closure (creates `Project` directly) |
+| Current named-route-resolution winner | **This one** (`route('projects.store')` → `/api/projects`) | — |
+| Verified real named-route consumers | None | None |
+| Proposed final name | `projects.store` (**unchanged**) | `legacy.projects.store` |
+| Compatibility impact | None — name, URI, middleware, handler all unchanged. | None on behavior — only the internal name string changes; URI/middleware/handler unchanged. No named-route consumer exists to break. |
+| Tests requiring update | None. | None functionally (bare-URI tests unaffected); if any test ever inspects the route's own name via reflection it would need updating, but none was found. |
+| Why runtime behavior is preserved | API side untouched entirely. Web side keeps exact URI/middleware/handler — only its internal `->name()` string changes from a colliding value to a unique one, which is invisible to any HTTP client and to every consumer found in §2. |
+
+### 3b. Group 2 — `projects.show`
+
+| Field | API-side (kept) | Web-side (renamed) |
+|---|---|---|
+| Current name | `projects.show` | `projects.show` |
+| Method + URI | `GET\|HEAD api/projects/{project}` | `GET\|HEAD projects/{project}` |
+| Declaration source | `routes/api.php:268` | `routes/web.php` (~519) |
+| Middleware | `api, auth:sanctum, tenant.isolation, rbac` | `web, auth, tenant.isolation, rbac:project.view` |
+| Handler | `Api\ProjectController@show` | Closure (returns id/name/description/status JSON) |
+| Current winner | **This one** | — |
+| Verified real consumers | None | None |
+| Proposed final name | `projects.show` (**unchanged**) | `legacy.projects.show` |
+| Compatibility impact | None | None — same reasoning as 3a |
+| Tests requiring update | None | None |
+
+### 3c. Group 3 — `projects.update`
+
+| Field | API-side (kept) | Web-side (renamed) |
+|---|---|---|
+| Current name | `projects.update` | `projects.update` |
+| Method + URI | `PUT\|PATCH api/projects/{project}` | `PUT projects/{project}` |
+| Declaration source | `routes/api.php:268` | `routes/web.php` (~527) |
+| Middleware | `api, auth:sanctum, tenant.isolation, rbac` | `web, auth, tenant.isolation, rbac:project.update` |
+| Handler | `Api\ProjectController@update` | Closure (updates fields, returns fresh JSON) |
+| Current winner | **This one** | — |
+| Verified real consumers | None | None |
+| Proposed final name | `projects.update` (**unchanged**) | `legacy.projects.update` |
+| Compatibility impact | None | None |
+| Tests requiring update | None | None |
+
+### 3d. Group 4 — `projects.destroy`
+
+| Field | API-side (kept) | Web-side (renamed) |
+|---|---|---|
+| Current name | `projects.destroy` | `projects.destroy` |
+| Method + URI | `DELETE api/projects/{project}` | `DELETE projects/{project}` |
+| Declaration source | `routes/api.php:268` | `routes/web.php:544` |
+| Middleware | `api, auth:sanctum, tenant.isolation, rbac` | `web, auth, tenant.isolation, rbac:project.delete` |
+| Handler | `Api\ProjectController@destroy` | Closure (deletes, returns JSON) |
+| Current winner | **This one** | — |
+| Verified real consumers | None | None |
+| Proposed final name | `projects.destroy` (**unchanged**) | `legacy.projects.destroy` |
+| Compatibility impact | None | None |
+| Tests requiring update | None | None |
+
+### 3e. Group 5 — `tasks.store`
+
+| Field | API-side (kept) | Web-side (renamed) |
+|---|---|---|
+| Current name | `tasks.store` | `tasks.store` |
+| Method + URI | `POST api/tasks` | `POST tasks` |
+| Declaration source | `routes/api.php:582` (`Route::apiResource`) | `routes/web.php:560` |
+| Middleware | `api, auth:sanctum, tenant.isolation, rbac` | `web, auth, tenant.isolation, rbac:task.create` |
+| Handler | `Api\TaskController@store` | `Web\TaskController@store` |
+| Current winner | **This one** (`route('tasks.store')` → `/api/tasks`) | — |
+| Verified real consumers | None | None |
+| Proposed final name | `tasks.store` (**unchanged**) | `legacy.tasks.store` |
+| Compatibility impact | None | None — `Web\TaskController` itself is untouched, only the route's `->name()` string changes. |
+| Tests requiring update | None | None |
+
+**Why `legacy.` as the prefix for the renamed web-side routes:** these 5 routes are bare-root (`/projects`, `/projects/{project}`, `/tasks`), distinct from both the documented tenant app surface (`/app/projects/*`, already separately named `app.projects.*` at `routes/web.php:358-367`, not part of this collision) and the API surface (`/api/projects/*`, `/api/tasks`). "Legacy" accurately describes their position in the route table (superseded-looking root-level duplicates of the app/API surfaces) without implying any change to their behavior. **Alternative naming is a Gate-2-level decision the Owner may redirect** — e.g. `root.projects.store` or `web.projects.store` — the specific string is not load-bearing for anyone (no consumer found), only its *uniqueness* is required.
+
+### 3f. Group 6 — `api.v1.dashboard.` (12 routes, currently unnamed children inheriting the bare group prefix)
+
+Declared inside `Route::prefix('v1')->as('api.v1.')->middleware([...])->group(...)` (`routes/api.php:785`) → `Route::prefix('dashboard')->as('dashboard.')->middleware([...])->group(...)` (`routes/api.php:840`) → four further nested `Route::prefix(...)->group(...)` calls with **no `->as()`**, so every route inside them currently has the literal name `api.v1.dashboard.` (empty final segment) — not 12 different names accidentally colliding, but 12 routes that never received their own name segment at all.
+
+| Sub-group | Declaration source | Method + URI | Handler | Proposed name suffix (appended to `api.v1.dashboard.`) |
+|---|---|---|---|---|
+| `users-v2` CRUD | `routes/api.php:927-933` | `GET/POST /users-v2`, `GET /users-v2/profile`, `GET/PUT/DELETE /users-v2/{id}` | `UserControllerV2@index/store/profile/show/update/destroy` | `users-v2.index`, `users-v2.store`, `users-v2.profile`, `users-v2.show`, `users-v2.update`, `users-v2.destroy` |
+| `tasks/{taskId}/assignments` | `routes/api.php:941-944` | `GET /tasks/{taskId}/assignments`, `POST /tasks/{taskId}/assignments` | `TaskAssignmentController@getTaskAssignments/store` | `tasks.assignments.index`, `tasks.assignments.store` |
+| `assignments/{assignmentId}` | `routes/api.php:946-949` | `PUT /assignments/{assignmentId}`, `DELETE /assignments/{assignmentId}` | `TaskAssignmentController@update/destroy` | `assignments.update`, `assignments.destroy` |
+| `users/{userId}/assignments` | `routes/api.php:951-954` | `GET /users/{userId}/assignments`, `GET /users/{userId}/assignments/stats` | `TaskAssignmentController@getUserAssignments/getUserStats` | `users.assignments.index`, `users.assignments.stats` |
+
+**Verified real consumers:** none call `route('api.v1.dashboard.')` or any of the 12 individual routes by name (confirmed §2). **Implementation approach:** add `->as('users-v2.')` etc. to each of the four already-existing nested `Route::prefix(...)->group(...)` calls (or an individual `->name(...)` per leaf route) — this only *adds* a previously-missing name suffix; it does not touch the `->as('api.v1.')` / `->as('dashboard.')` prefixes already correctly set at the outer levels, so every **already-valid named descendant** of `api.v1.` / `api.v1.dashboard.` elsewhere in the file (e.g. `api.v1.dashboard.customization.*`, `api.v1.dashboard.role_based.*`, `api.v1.dashboard.simple.*` — all of which already call their own `->as()`/`->name()` correctly and are not part of this collision) are completely unaffected.
+
+### 3g. Group 7 — `api.zena.` (5 routes, same "unnamed child inherits bare group prefix" pattern)
+
+Declared inside `Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], ...)` (`routes/api_zena.php:12`) → `Route::middleware(['auth:sanctum', ...])->group(...)` (`routes/api_zena.php:66`) → 5 individual `Route::get(...)` closures with no `->name()`.
+
+| Declaration source | Method + URI | Handler | Proposed name suffix (appended to `api.zena.`) |
+|---|---|---|---|
+| `routes/api_zena.php:78` | `GET /simple-test` | Closure (static JSON) | `debug.simple-test` |
+| `routes/api_zena.php:89` | `GET /minimal-auth-test` | Closure (reads `auth()->user()`) | `debug.minimal-auth-test` |
+| `routes/api_zena.php:110` | `GET /sanctum-auth-test` | Closure | `debug.sanctum-auth-test` |
+| `routes/api_zena.php:131` | `GET /me-test` | Closure | `debug.me-test` |
+| `routes/api_zena.php:173` | `GET /auth-test` | Closure | `debug.auth-test` |
+
+**Verified real consumers:** none (confirmed §2). **Collision check against existing valid descendants:** the same `api.zena.` group already has correctly-named children such as `api.zena.auth.logout`, `api.zena.auth.me`, `api.zena.auth.refresh`, `api.zena.health` (all declared with their own explicit `->name('auth.logout')` etc., which becomes `api.zena.auth.logout` once combined with the outer `as`). The proposed `api.zena.debug.*` suffixes do not collide with any of these existing names. **Implementation approach:** add an individual `->name('debug.simple-test')` etc. to each of the 5 closures — the smallest possible change, no group restructuring needed since these 5 don't share a common inner group of their own (each `Route::get(...)` call sits directly inside the auth:sanctum-middleware group at line 66, alongside the already-named `Route::prefix('auth')->group(...)` block).
+
+## 4. Acceptance contract (restated from Gate 1, to be proven at implementation time — not proven yet)
+
+- [ ] Zero duplicate names in the complete registered route collection (`route:list --json` grouped by `name`, no group with count > 1), under both `APP_ENV=testing` and `APP_ENV=production`.
+- [ ] `php artisan route:cache` succeeds under `APP_ENV=testing`.
+- [ ] `php artisan route:cache` succeeds under `APP_ENV=production`.
+- [ ] `route:clear`/cache cleanup is deterministic after tests (isolated process, cache always restored/cleared, including on failure — same discipline already established in `tests/Architecture/DebugRouteBoundaryInvariantTest.php` from GAP-011).
+- [ ] All 24 affected URIs (5 pairs × 2 + 12 + 5, see §3) still resolve to the exact same handler with the exact same middleware as documented in §3's tables — proven by a new architecture test comparing `route:list --json` output before/after on every affected URI, not just spot-checking.
+- [ ] `route('projects.store')`, `route('projects.show')`, `route('projects.update')`, `route('projects.destroy')`, `route('tasks.store')` continue to resolve to the exact same API-side URIs they resolve to today (no consumer depends on this, but the acceptance contract preserves it anyway as the conservative choice made in §3).
+- [ ] No Project/Task business behavior changed — no controller, closure body, service, or model touched; only `->name()`/`->as()` calls added or changed.
+- [ ] Full relevant regression suite remains green, including the specific consumer tests identified in §2 (`ButtonCRUDTest`, `CsrfProtectionTest`, `SecurityFeaturesTest`, `ButtonAuthorizationTest`, `LegacyTaskCreationPersistsTest`, `SecurityTest`, `IntegrationTest`, `TaskApiTest`) and `RouteHygieneTest` (asserts middleware presence by URI prefix, not by name — unaffected by renaming, but must still pass).
+
+## 5. Anticipated implementation files (for scoping only — not authorized to create/edit yet)
+
+- `routes/web.php` — add `->name('legacy.projects.store')` etc. to the 5 standalone closures at lines ~513-560 (name string only; no URI/middleware/handler change).
+- `routes/api.php` — add `->as('users-v2.')` (or equivalent per-route `->name(...)`) to the 4 nested groups at lines 927, 941, 946, 951 (name string only).
+- `routes/api_zena.php` — add `->name('debug.simple-test')` etc. to the 5 closures at lines 78, 89, 110, 131, 173 (name string only).
+- New or extended architecture test (final class name chosen at implementation time) — asserts zero duplicate names across the full route collection (both `--except-vendor` and without), asserts `route:cache` succeeds under `testing`/`production` with deterministic isolated cleanup, and asserts every affected URI's method/middleware/handler triple is byte-identical to §3's recorded baseline.
+- No change anticipated to any controller, closure body, service, model, migration, or Blade view.
+
+## 6. Alternatives considered for the naming scheme itself
+
+- **Rename the API-side (winning) routes instead of the web-side ones:** rejected as the higher-risk option for no benefit — the API-side names are what `route()` currently resolves to (even though no consumer was found), so keeping them unchanged is strictly safer than the alternative for identical implementation cost.
+- **Use `->name()` per individual route in groups 6/7 instead of `->as()` on the wrapping sub-groups (group 6 only):** either works; `->as()` on the existing nested group calls is marginally smaller diff since those groups already exist. Left as an implementation-time choice, not a Gate 2 decision — does not change the resulting names in §3f.
+- **Prefix web-side routes with something other than `legacy.`:** open to Owner redirection (§3e) — no consumer makes any specific string load-bearing, only uniqueness matters.
+
+## Decision Needed
+
+Owner chooses one:
+- **APPROVE** — the route-by-route matrix in §3, the `legacy.*` / `api.v1.dashboard.<sub>.*` / `api.zena.debug.*` naming scheme, and the acceptance contract in §4, as the design to carry into implementation.
+- **CHANGES** — name which specific proposed names, or which part of the matrix, should change (e.g., a different prefix than `legacy.`).
+- **DECLINE** — do not proceed with GAP-035 remediation at this time.
+
+## What the owner is NOT being asked to decide
+
+Not being asked to approve the exact PHP syntax (`->as()` vs. per-route `->name()`) or the new test's class name — only: the specific proposed final names in §3 (or their prefix convention), and whether the "keep the API-side winner unchanged, rename the web-side loser" approach is acceptable for groups 1-5. Not being asked to decide anything about merging the `projects.*`/`tasks.*` handler pairs, Project/Task business behavior, Service Line semantics, or GAP-011 — all explicitly out of scope per the Gate 1 binding clarification.

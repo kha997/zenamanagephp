@@ -1,11 +1,11 @@
 ---
 work_id: OWN-2026-009
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: null
   plan: null
@@ -15,14 +15,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-15T00:47:13+07:00"
-  owner_response_reference: "Owner directive in-session on 2026-08-15, following a full audit of PR #257 (ZENA One-Page Management / Control Tower design, head ded7cf9f558bd7960b5eff5836140b1e15255b9a) and PR #245 (Project Treasury & Cashflow, head cd8b79d861f4c1bae5278b6c57f29cd14e505594) against current origin/main (d0d89e84a858e8038e99ffbbf48e536ee297d8e0): 'Work ID: Use OWN-2026-009 for the docs-only ZENA One-Page Management canonical SSOT work. This is a governance/shared-semantics canonicalization item, not an operational defect, so use the OWN-* namespace rather than GAP-*. Topology: APPROVED — PR #257 remains KEEP_AS_ACTIVE_DESIGN_SOURCE, PR #245 remains KEEP_AS_ACTIVE_DESIGN_SOURCE, do not merge either source PR as part of this step. Create the canonical SSOT from exact current main. Reference the exact pinned heads of #257 and #245 as source evidence. Their content is design input, not runtime evidence and not release authority. Only after the governed canonical replacement is approved and merged may #257/#245 be considered for closure as superseded. Execute Phase 3 now for OWN-2026-009: verify current origin/main exact SHA immediately before branching; use an isolated clean branch/worktree; do not touch the pre-existing dirty primary checkout; create Gate 1 only; scope it to docs-only canonical shared semantics / SSOT; explicitly list runtime implementation as out of scope; reference PR #257 exact pinned head, PR #245 exact pinned head, Issue #248 + amendments where relevant, current-main reconciliation evidence; set Gate 1 to awaiting_owner; owner_decision.value: none; open a Draft PR; do not create Gate 2; do not self-approve, mark ready, merge, release or deploy. No runtime implementation is authorized.' This packet is submitted for that awaiting_owner review; it is not yet decided."
+  recorded_at: "2026-08-15T00:55:25+07:00"
+  owner_response_reference: "Owner Gate 1 decision — APPROVE, recorded in-session on 2026-08-15 against reviewed PR #262 head 5441195ade2a416d6d3f3870fa6fd6cde38a2f02: 'OWN-2026-009 — Gate 1 Owner Decision: APPROVE. Tôi phê duyệt Gate 1 cho phạm vi docs-only canonicalization of ZENA One-Page Management shared semantics / canonical SSOT như trình bày trong docs/owner-decisions/OWN-2026-009/01-request.md tại PR #262, current reviewed head 5441195ade2a416d6d3f3870fa6fd6cde38a2f02. Binding scope — In scope: one canonical CRM/Project semantic spine; multi-value Service Line taxonomy DESIGN/CONSTRUCTION/INSPECTION; Service Scope/Discipline kept separate from Service Line; Project Health shared read-model semantics; Project OPPM as consumer/read-drilldown, not a second PM system; Contract lifecycle != Contract attention; Cost != Cash != Revenue != Profit; missing finance data != zero/green/paid/certain; Treasury vs Finance Control vs Contract Control boundaries; implementation-vs-design matrix; recommended future implementation-slice decomposition; explicit source references to PR #257 and PR #245 exact pinned heads and Issue #248 amendments. Out of scope: any migration, model, controller, service, route or UI/runtime change; fixing Opportunity.service_category default; GAP-036; implementation of Service Line, CRM stages, Quote snapshot, Project OPPM, Control Tower, Contract Control, Finance Control or Treasury; closing or merging PR #257/#245; Today Workspace; production/deployment work; unrelated operational gaps. PR #257 and PR #245 remain active design sources only, not implementation or release authority. Authorization after this approval: record this Gate 1 approval in the active 01-request.md according to governance; after the Gate-1-record-only commit is pushed and governance lint is green, Gate 2 design preparation is authorized; Gate 2 must define the actual canonical SSOT document structure and exact normative semantics and must not expand into runtime implementation; keep PR #262 Draft; no merge/release authorization is granted; do not infer Gate 2 approval.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-15T00:47:13+07:00"
-  updated_at: "2026-08-15T00:47:13+07:00"
+  updated_at: "2026-08-15T00:55:25+07:00"
 generated_by: agent
 ---
 
@@ -70,7 +70,7 @@ Không có migration, model, controller, route, service, UI nào được tạo 
 Đội kỹ thuật đề xuất: tiến hành (fix now) — rủi ro thấp (chỉ tài liệu, không runtime), có bằng chứng đầy đủ từ audit, và có tiền lệ trực tiếp thành công cho việc chuẩn bị Gate 1 dạng "docs-only canonical SSOT" (`GAP-035` Gate 1, `OWN-2026-008`).
 
 ## Decision Needed
-Owner chọn một: Approve to proceed to design (Gate 2) / Request more information / Decline / Defer.
+**Owner đã chọn: Approve to proceed to design (Gate 2)**, với binding scope liệt kê trong `decision_provenance.owner_response_reference` — chốt tại PR #262 head `5441195ade2a416d6d3f3870fa6fd6cde38a2f02`. Gate 2 design preparation được uỷ quyền; Gate 2 owner_decision vẫn phải là quyết định riêng, không được suy luận từ phê duyệt Gate 1 này.
 
 ## What the owner is NOT being asked to decide
 Owner không được yêu cầu duyệt bất kỳ implementation nào (không có), không được yêu cầu duyệt Gate 2 content cụ thể (chưa soạn), không được yêu cầu quyết định đóng #257/#245 (đó là quyết định riêng, chỉ đặt ra sau khi bản SSOT được merge), và không được yêu cầu duyệt GAP-036 (báo cáo riêng, tách biệt work item).

@@ -25,15 +25,15 @@ supersedes: "docs/owner-decisions/GAP-011/03-release.md"
 superseded_by: null
 timestamps:
   created_at: "2026-08-14T18:08:09+07:00"
-  updated_at: "2026-08-14T18:08:09+07:00"
+  updated_at: "2026-08-14T18:30:08+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "The single previously-blocked mandatory criterion is now verified. GAP-035 (duplicate route-name collision blocking php artisan route:cache application-wide) merged to main 2026-08-14 with Owner Gate 3 approval. GAP-011's branch was reconciled against the new main (clean auto-merge, no conflicts — GAP-035's route renames and GAP-011's _debug removal touch disjoint lines) at 0f74ce86, then the cached-production-absence test (previously markTestSkipped with a BLOCKED reason) was re-run: route:cache now succeeds under production, and the assertion that the cached route table contains zero _debug/* routes and no /debug/{path?} wildcard now runs and PASSES for real, not a skip. The obsolete skip-guard branch and its stale docblock were removed as dead code (only reachable if route:cache failed, which it no longer does), along with the matching skipped-tests baseline entry. Full DebugRouteBoundaryInvariantTest suite: 11/11 pass, 61 assertions. Consumer/documentation regression (DebugRouteDocumentationInvariantTest, LegacyDebugRootRedirectTest): 11/11 pass. Cross-check that GAP-035's own guard still passes unmodified on this merged branch: 7/7 pass. Full local suite: 2186 tests, 7 failures — all in Tests\\Feature\\Dashboard\\DashboardApiTest, all the same pre-existing Illuminate\\Cache\\RedisStore::publish() undefined-method flake observed independently before this branch existed (local-Redis-availability/timing-dependent, not deterministic — a GAP-035 verification run on the same day showed 0 failures), unrelated to routes or to GAP-011/GAP-035 changes, not fixed under GAP-011. All exact-head CI checks are green on PR #260 at this SHA, including Owner Governance Lint and test-routes-guardrails."
 technical_evidence:
-  subject_sha: "2b1a256e5f245391bad25b897f3850fdcfdece3f"
-  implementation_tree_digest: "cef922bed9f586518529c89a873cacc8a34c2ec5ef9fdda102a9002631424ede"
-  verified_pr_head_sha: "2b1a256e5f245391bad25b897f3850fdcfdece3f"
-  verified_at: "2026-08-14T18:08:09+07:00"
+  subject_sha: "73cd2fc88cc3eb9731a52d86feb4a6ed3778448f"
+  implementation_tree_digest: "4332edd94f5dc109eb10be6a968a85afbb1fca15a26ada4ad31337561325ccf4"
+  verified_pr_head_sha: "73cd2fc88cc3eb9731a52d86feb4a6ed3778448f"
+  verified_at: "2026-08-14T18:30:08+07:00"
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null

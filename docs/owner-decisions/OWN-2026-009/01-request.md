@@ -10,7 +10,7 @@ references:
   spec: null
   plan: null
   branch: docs/OWN-2026-009-one-page-management-ssot-gate1
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/262
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

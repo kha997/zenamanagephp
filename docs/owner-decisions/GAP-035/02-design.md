@@ -1,11 +1,11 @@
 ---
 work_id: GAP-035
 gate: 2
-gate_status: awaiting_owner
+gate_status: changes_requested
 owner_decision:
-  value: none
+  value: changes_requested
   authority: human_owner
-decision_requested: "approve_or_changes_or_decline"
+decision_requested: null
 references:
   spec: null
   plan: null
@@ -15,18 +15,22 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-14T07:45:58+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-14T07:58:53+07:00"
+  owner_response_reference: "Owner Gate 2 round 1 decision — CHANGES REQUESTED, recorded in-session on 2026-08-14 at actual wall-clock time 2026-08-14T07:58:53+07:00. Overall design direction accepted: preserve the currently-winning bare projects.*/tasks.store names on the routes/api.php apiResource routes; rename only the losing routes/web.php side; assign unique names to all currently-unnamed children under api.v1.dashboard. and api.zena.; preserve method/URI/middleware/handler/tenant/RBAC/security/business behavior; no HTTP surface consolidation/deletion/redirect/Project-Task semantic change; GAP-011 untouched. Ten corrections required before approval: (1) freeze this round and supersede with 02-design-v2.md; (2) Group 6 mechanics corrected — a subgroup ->as() prefix alone is insufficient, all 12 leaf routes must each receive their own explicit unique ->name() terminal segment, approved target names: api.v1.dashboard.users-v2.index/store/profile/show/update/destroy, api.v1.dashboard.tasks.assignments.index/store, api.v1.dashboard.assignments.update/destroy, api.v1.dashboard.users.assignments.index/stats; (3) Group 7 confirmed as proposed, individual explicit names api.zena.debug.simple-test/minimal-auth-test/sanctum-auth-test/me-test/auth-test, no restructuring; (4) web-side naming prefix changed from legacy. to web. (web.projects.store/show/update/destroy, web.tasks.store) because these routes are live and directly tested, not authorized to be classified as deprecated/legacy; API-side names projects.store/show/update/destroy and tasks.store stay unchanged; (5) affected-route count corrected from 24 to 27 (10 from the five duplicate pairs + 12 api.v1.dashboard.* children + 5 api.zena.debug.* children), acceptance tests must cover all 27; (6) acceptance proof tightened — before/after verification for all 27 must bind method+URI+middleware+handler+final name, only the approved name changes allowed as differences, plus proof under both testing and production of zero duplicate names across the COMPLETE route collection including vendor routes, all five preserved names still resolving to the same API-side endpoints, route:cache succeeding, cached route:list remaining valid, and deterministic route:clear cleanup; (7) add a permanent, generic duplicate-name architecture guard that dynamically inspects the full runtime route collection and fails on any non-empty name appearing more than once — not hard-coded to only these 7 groups — mutation-proofed once with a temporary duplicate named route, confirmed to fail, reverted byte-clean; (8) preserve the evidence correction already made in Gate 1's addendum (colliding projects.*/tasks.store = routes/api.php apiResource vs routes/web.php; api.zena.projects.*/api.zena.tasks.store already unique, out of scope) without rewriting the frozen Gate 1 table; (9) PR #261 title corrected to not narrow the problem to Project routes; (10) re-present Gate 2 v2 with exact head SHA, supersession chain, exact-head CI, full 27-row mapping, explicit Group 6 leaf-name mechanics, web.* names, the permanent guard, and unchanged hard scope exclusions. Do not implement route changes yet. Do not touch GAP-011. Do not self-approve Gate 2. Do not mark ready. Do not merge or deploy."
   reconciliation_required: false
 supersedes: null
-superseded_by: null
+superseded_by: "docs/owner-decisions/GAP-035/02-design-v2.md"
 timestamps:
   created_at: "2026-08-14T07:45:58+07:00"
-  updated_at: "2026-08-14T07:45:58+07:00"
+  updated_at: "2026-08-14T07:58:53+07:00"
 generated_by: agent
 ---
 
-## OWNER GATE 2: AWAITING OWNER DECISION — routing/deployability design only, no implementation
+## [FROZEN — ROUND 1, SUPERSEDED BY 02-design-v2.md] OWNER GATE 2: CHANGES REQUESTED — routing/deployability design only, no implementation
+
+**Governance note (added at `2026-08-14T07:58:53+07:00`, per this repo's established decision-immutability discipline):** this file's body below is preserved verbatim as originally committed at `87d0ae61a06acdddf4b54faca7b6e0399eca0908`. It received an Owner **CHANGES REQUESTED** decision (verbatim in `decision_provenance.owner_response_reference` above) on ten points — the overall design direction (preserve winning API-side names, rename only the losing side, assign unique names to unnamed children, preserve all behavior, no HTTP surface consolidation) was accepted; the corrections are about naming mechanics, exact target names, count accuracy, acceptance-proof completeness, a permanent generic guard, and metadata. **No body text below has been altered.** The corrected, superseding design is `02-design-v2.md`.
+
+## OWNER GATE 2 (round 1, as originally presented): AWAITING OWNER DECISION — routing/deployability design only, no implementation
 
 This packet does not implement anything. No route, middleware, or handler has changed. It designs how to eliminate all 7 duplicate route-name groups so `php artisan route:cache` succeeds, strictly within the binding scope the Owner set at Gate 1 approval (`docs/owner-decisions/GAP-035/01-request.md`).
 

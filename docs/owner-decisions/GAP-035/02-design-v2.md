@@ -1,11 +1,11 @@
 ---
 work_id: GAP-035
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_changes_or_decline"
+decision_requested: null
 references:
   spec: null
   plan: null
@@ -15,18 +15,18 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-14T08:00:20+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-14T08:39:08+07:00"
+  owner_response_reference: "Owner Gate 2 round 2 decision — APPROVE, recorded in-session on 2026-08-14 at actual wall-clock time 2026-08-14T08:39:08+07:00, against design head d9f55edf544a3fb3f5c351bea62d4418e6f42e79. Binding approved design: Groups 1-5 preserve projects.store/show/update/destroy and tasks.store unchanged on the currently-winning routes/api.php apiResource routes; rename only the colliding routes/web.php side to web.projects.store/show/update/destroy and web.tasks.store. Group 6 (12 api.v1.dashboard.* routes): binding final names api.v1.dashboard.users-v2.index/store/profile/show/update/destroy, api.v1.dashboard.tasks.assignments.index/store, api.v1.dashboard.assignments.update/destroy, api.v1.dashboard.users.assignments.index/stats — a subgroup ->as(...) may compose the prefix but every one of the 12 leaves must have its own explicit terminal ->name(...); ->as() alone is not acceptable. Group 7 (5 routes): binding final names api.zena.debug.simple-test/minimal-auth-test/sanctum-auth-test/me-test/auth-test. Scope lock: implementation may change route-name declarations only, plus tests needed to prove the approved contract; for all 27 affected route entries preserve HTTP method, URI, middleware, handler/action, tenant/RBAC/security behavior, and request/response business behavior; do not merge/delete/redirect/consolidate routes, do not modify Project/Task controller behavior or closure bodies, do not modify models/services/business lifecycle, do not change Service Line semantics, do not rename the already-unique api.zena.projects.*/api.zena.tasks.store, do not touch GAP-011. Permanent regression guard: add a committed generic architecture test dynamically inspecting the complete runtime route collection (not an allowlist of the 7 known groups) that fails if any non-empty route name occurs more than once; before technical-ready declaration, mutation-proof the COMMITTED test itself (not solely the pre-implementation standalone-script proof) — introduce a temporary brand-new duplicate route name, prove the committed guard fails, revert byte-clean, prove the guard passes. Required implementation verification under both APP_ENV=testing and APP_ENV=production: zero duplicate non-empty route names across the complete route collection including package/vendor routes; all 27 approved entries have the expected final names; method/URI/middleware/handler unchanged from the approved baseline; the five preserved names still resolve to the same API-side endpoints; php artisan route:cache exits successfully; route inspection after cache generation succeeds and preserves the expected 27 entries; route:clear runs in teardown/finally and leaves no generated route cache behind, including failure paths; run the identified URI-consumer regression tests and relevant route/security tests, then the broader/full suite before Gate 3 where feasible. Anticipated runtime scope: routes/web.php, routes/api.php, routes/api_zena.php, new/updated architecture tests — any additional runtime/source file requires explicit evidence it is necessary to satisfy the approved contract, no casual scope broadening. Gate 2 approval authorizes implementation/testing only. No mark-ready. No merge. No release. No deployment. No self-approval of Gate 3."
   reconciliation_required: false
 supersedes: "docs/owner-decisions/GAP-035/02-design.md"
 superseded_by: null
 timestamps:
   created_at: "2026-08-14T08:00:20+07:00"
-  updated_at: "2026-08-14T08:00:20+07:00"
+  updated_at: "2026-08-14T08:39:08+07:00"
 generated_by: agent
 ---
 
-## OWNER GATE 2: AWAITING OWNER DECISION (round 2) — routing/deployability design only, no implementation
+## OWNER GATE 2: APPROVED (round 2) — routing/deployability design, implementation now authorized
 
 This packet does not implement anything. No route, middleware, or handler has changed. Round 1 (`docs/owner-decisions/GAP-035/02-design.md`, frozen) received Owner **CHANGES REQUESTED** — the overall direction was accepted (preserve winning API-side names, rename only the losing side, assign unique names to unnamed children, preserve all behavior, no HTTP surface consolidation, GAP-011 untouched); ten corrections are applied below. §0 maps each to where it is resolved.
 
@@ -224,13 +224,10 @@ PR #261's title is corrected outside this file (metadata-only edit, no new commi
 - GAP-011 remains completely untouched (separate branch/PR — `docs/GAP-011-debug-route-cleanup-gate1-prep` / PR #260).
 - The unrelated Redis/`DashboardApiTest` finding remains an unallocated observation, no Work ID.
 
-## Decision Needed
+## Decision recorded
 
-Owner chooses one:
-- **APPROVE** — the corrected 27-entry route-by-route matrix in §3 (with `web.*` web-side names and explicit per-leaf Group 6/7 names), the tightened acceptance contract in §4, and the permanent generic duplicate-name guard in §6, as the design to carry into implementation.
-- **CHANGES** — name what should still change.
-- **DECLINE** — do not proceed with GAP-035 remediation at this time.
+**APPROVED** by the Owner, round 2, `2026-08-14T08:39:08+07:00` (verbatim decision text in `decision_provenance.owner_response_reference` above), against design head `d9f55edf544a3fb3f5c351bea62d4418e6f42e79`. Gate 2 is closed. Implementation and testing are authorized within the scope stated in §5 (routes/web.php, routes/api.php, routes/api_zena.php, new/updated architecture tests) and the binding names in §3. Mark-ready, merge, release, and deployment remain **not authorized** — Gate 3 is mandatory before any of those and is **NOT STARTED**. No `02-design-v3.md` was created for this approval, per the Owner's explicit instruction — this file (`02-design-v2.md`) is the final, approved Gate 2 packet.
 
-## What the owner is NOT being asked to decide
+## What the owner was NOT asked to decide
 
-Not being asked to re-approve the overall direction (preserve winning names, rename only the losing side, GAP-011 untouched) — already accepted in round 1 and not reopened. Only being asked to confirm: the corrected `web.*` prefix, the explicit per-leaf Group 6 names, the 27-entry count and acceptance contract, and the permanent generic guard design. Not being asked to decide anything about merging handler pairs, Project/Task business behavior, Service Line semantics, or GAP-011 — all remain out of scope.
+Not asked to re-approve the overall direction (preserve winning names, rename only the losing side, GAP-011 untouched) — already accepted in round 1 and not reopened. Not asked to decide anything about merging handler pairs, Project/Task business behavior, Service Line semantics, or GAP-011 — all remain out of scope.

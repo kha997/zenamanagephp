@@ -22,10 +22,10 @@ decision_provenance:
   owner_response_reference: null
   reconciliation_required: false
 supersedes: null
-superseded_by: null
+superseded_by: "docs/owner-decisions/GAP-011/03-release-v2.md"
 timestamps:
   created_at: "2026-08-13T22:52:07+07:00"
-  updated_at: "2026-08-13T22:52:07+07:00"
+  updated_at: "2026-08-14T18:08:09+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "Chưa thể xác minh bảng route đã cache ở production không còn route _debug/* nào, vì lệnh route:cache hiện đang bị chặn toàn bộ repo bởi một lỗi trùng tên route không liên quan tới GAP-011."

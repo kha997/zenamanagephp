@@ -1,14 +1,14 @@
 ---
 work_id: GAP-035
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: null
   plan: null
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-08-14T13:36:07+07:00"
+  owner_response_reference: "Owner Gate 3 decision — APPROVE, recorded in-session on 2026-08-14 at actual wall-clock time 2026-08-14T13:36:07+07:00, bound to subject_sha 25b8049b995233a2e70dad51baa248f82a5e060c and implementation_tree_digest 8ccacbb418d4ebab4192dda9a977ac80f6d228837363ba22b66ff6e44c6e4098 (recomputed at approval time, zero drift confirmed against the packet's recorded value). Owner confirmed approval scope matches Gate 2: route-name declaration changes plus permanent duplicate-name regression guard, no HTTP surface change, no controller/business-behavior change, no GAP-011 changes. Owner authorized: record decision in this active packet (no new version); verify zero digest drift; require exact-head Owner Governance Lint and Routes Guardrails green; update PR metadata; mark ready; squash-merge; verify post-merge CI on main; verify actual deployment status (not assumed). Owner also directed that after GAP-035 merges, GAP-011 reconciles against the new main and reruns its cached-production Gate 3 evidence before GAP-011 goes back to the Owner."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-14T12:12:15+07:00"
-  updated_at: "2026-08-14T12:12:15+07:00"
+  updated_at: "2026-08-14T13:36:07+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "All 27 approved route-name entries verified against the Gate 2 (round 2) contract at PR head 25b8049b995233a2e70dad51baa248f82a5e060c: zero duplicate non-empty route names across the complete route collection under both APP_ENV=testing and APP_ENV=production, including vendor routes; the 27 renamed/preserved entries retain their pre-change method, URI, middleware, and handler/action; the five preserved API-side names (projects.store/show/update/destroy, tasks.store) still resolve to the same endpoints; the permanent generic duplicate-name guard is committed and was mutation-proved on the committed test itself (fresh temporary duplicate introduced, guard failed, reverted byte-clean, guard passed again); php artisan route:cache exits successfully under both environments; a strengthened cache-lifecycle test now proves the cached route:list output is tuple-identical (method, URI, middleware, action) to the uncached output for all 27 entries, per environment independently, not by cross-environment comparison; route:clear/cache-artifact cleanup runs in finally and restoration success is itself asserted. Consumer regression suite (8 files), route-guard CI script, and the full local suite (2169 tests, 0 failures) all pass. All exact-head CI checks are green on PR #261 at this SHA, including Owner Governance Lint, test-routes-guardrails, and Code Quality Analysis (PHPStan)."
@@ -35,9 +35,18 @@ technical_evidence:
   verified_pr_head_sha: "25b8049b995233a2e70dad51baa248f82a5e060c"
   verified_at: "2026-08-14T12:12:15+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "8ccacbb418d4ebab4192dda9a977ac80f6d228837363ba22b66ff6e44c6e4098"
+  decision_recorded_at: "2026-08-14T13:36:07+07:00"
 ---
+
+## OWNER GATE 3: APPROVED
+
+No business correction requested.
+
+The approval is bound to implementation-tree digest:
+8ccacbb418d4ebab4192dda9a977ac80f6d228837363ba22b66ff6e44c6e4098
+
+**Decision provenance:** repository-native claimed record based on the explicit owner response received in-session on 2026-08-14. `trust_level: claimed_repo_record` — this is NOT a cryptographically authenticated or Decision-Center-verified approval; it is an agent-recorded claim of what the owner stated. This decision is bound to the exact implementation-tree digest above; any change to that digest after this point invalidates the approval and requires renewed technical verification and a fresh owner review.
 
 ## Owner Summary
 Bảy nhóm tên route trùng lặp (27 route bị ảnh hưởng) đã được đổi tên theo đúng bảng tên cuối cùng owner đã duyệt ở Gate 2. Toàn bộ hành vi (đường dẫn, quyền, xử lý) giữ nguyên — chỉ đổi tên nội bộ. Lệnh `route:cache` (bắt buộc khi triển khai production) nay chạy thành công, không còn bị chặn. Đã kiểm chứng: bộ nhớ đệm route không làm sai lệch bất kỳ route nào trong 27 route theo dõi, ở cả môi trường kiểm thử lẫn production. Sẵn sàng phát hành, chờ quyết định.
@@ -70,7 +79,7 @@ Có — đây chỉ là đổi tên nội bộ, không đổi cấu trúc dữ l
 
 **9. Đề xuất của đội kỹ thuật:** Phát hành (Approve).
 
-**Quyết định của chủ doanh nghiệp:** ☐ Phát hành  ☐ Yêu cầu chỉnh sửa nghiệp vụ  ☐ Hoãn phát hành
+**Quyết định của chủ doanh nghiệp:** ☑ Phát hành  ☐ Yêu cầu chỉnh sửa nghiệp vụ  ☐ Hoãn phát hành
 
 ## What the owner is NOT being asked to decide
 Không được yêu cầu mở pull request kỹ thuật, đọc nhật ký kiểm tra tự động, xem mã nguồn, hay đọc bình luận review — mọi kết luận trên đã được đội kỹ thuật xác minh; owner chỉ quyết định có phát hành hay không.

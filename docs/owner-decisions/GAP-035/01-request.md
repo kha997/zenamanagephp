@@ -1,11 +1,11 @@
 ---
 work_id: GAP-035
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_more_info_or_decline_or_defer"
+decision_requested: null
 references:
   spec: null
   plan: null
@@ -15,16 +15,22 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-14T00:36:00+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-14T07:42:39+07:00"
+  owner_response_reference: "Owner Gate 1 decision — APPROVE WITH BINDING SCOPE CLARIFICATIONS, recorded in-session on 2026-08-14 at actual wall-clock time 2026-08-14T07:42:39+07:00. Approved problem statement: php artisan route:cache is blocked on clean current main by duplicate Laravel route names; GAP-035 is authorized to design a routing/deployability remediation for the duplicate-name condition only, without changing business behavior. Confirmed 7 application-level duplicate-name groups: projects.store, projects.show, projects.update, projects.destroy, tasks.store, api.v1.dashboard., api.zena. Binding scope: GAP-035 may change route names and add missing explicit route names only as necessary to eliminate collisions and make route:cache succeed. For every affected route, GAP-035 must preserve HTTP method, URI, middleware, handler/controller/closure, tenant/RBAC/security behavior, and request/response business behavior. No merging, deleting, redirecting, or consolidating HTTP route surfaces is authorized — in particular, do not merge the bare /projects* closures with Api\\ProjectController, do not merge Web\\TaskController with Api\\TaskController, do not change Project or Task lifecycle/business semantics, do not alter Service Line semantics, do not use GAP-035 to clean up legacy Project architecture. The phrase in the original Gate 1 packet suggesting HTTP paths might be merged 'if needed' is explicitly non-authoritative and is superseded by this clarification. Named-route compatibility rule: Gate 2 must distinguish a real Laravel named-route consumer (route(), redirect()->route(), to_route(), URL::route(), equivalent framework named-route lookup, or a test/helper that ultimately performs one) from a mere coincidental string such as a permission-map key; PermissionService string keys are not, by themselves, route-name consumers and must not constrain the naming design unless an actual route-name lookup is independently proven; for each collision, Gate 2 must record which current route wins named-route resolution today and preserve the behavior of any verified real consumer unless an explicit migration is designed and tested. Complete inventory requirement: before drafting Gate 2, re-run the duplicate-name inventory without --except-vendor under both APP_ENV=testing and APP_ENV=production to prove the 7 application-level groups are the complete blocker set for the route collection route:cache actually serializes; report any additional package/vendor collisions found without modifying vendor/package code or silently expanding scope. Design Dependency Preflight: the preflight already performed against PR #257 is accepted provisionally; re-confirm live before Gate 2 that PR #257 remains pinned at ded7cf9f558bd7960b5eff5836140b1e15255b9a — if unchanged, no redundant full reread is required, but Gate 2 must explicitly carry forward: one canonical Project, no alternate Project semantics, no Service Line changes, no lifecycle changes, route-name remediation only; if the pinned head has moved, rerun the full preflight against the new head before Gate 2. Do not implement yet. Do not rename any route before Gate 2 approval. Do not touch GAP-011. Do not mark PR ready. Do not merge or deploy. Do not self-approve Gate 2."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-14T00:36:00+07:00"
-  updated_at: "2026-08-14T00:36:00+07:00"
+  updated_at: "2026-08-14T07:42:39+07:00"
 generated_by: agent
 ---
+
+## Gate 1 approval addendum (added at approval time, does not alter the evidence below)
+
+- **Complete inventory re-verification (Owner-required before Gate 2):** re-ran the duplicate-name scan via `route:list --json` **without** `--except-vendor`, under both `APP_ENV=testing` and `APP_ENV=production`. Route counts were identical to the original `--except-vendor` scan (testing: 1186 routes / 791 named / 7 duplicate groups; production: 1164 / 776 / 7) — no vendor/package route contributed a name collision. The same 7 application-level groups are confirmed as the complete blocker set for the route collection `route:cache` actually serializes.
+- **Design Dependency Preflight re-confirmed live:** PR #257 is still pinned at exactly `ded7cf9f558bd7960b5eff5836140b1e15255b9a` (checked live at approval time via `gh pr view 257`) — unchanged since the original preflight, so no redundant full reread was performed, per the Owner's instruction.
+- **Evidence correction found while preparing Gate 2 (transparency note, not a rewrite of the table below):** the original evidence table's declaration-site column for the `projects.*`/`tasks.store` groups needs one precision correction, made explicitly in Gate 2 rather than edited here: the API-side route in each of these 5 pairs is generated by `Route::apiResource('projects', ...)` at `routes/api.php:268` and `Route::apiResource('tasks', ...)` at `routes/api.php:582` — **not** by `routes/api_zena.php`'s own `projects.*`/`tasks.store` declarations, which are actually named `api.zena.projects.*`/`api.zena.tasks.store` (inheriting the `api.zena.` group prefix) and do **not** collide with anything. Consequently, the `$this->zena('projects.store')`-style test calls originally cited as consumers of the bare colliding name actually resolve to the non-colliding `api.zena.projects.store` name and are not real consumers of the collision. Gate 2's route-by-route matrix carries the corrected declaration sites and consumer list.
 
 ## Owner Summary
 

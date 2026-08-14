@@ -233,30 +233,40 @@ final class RouteNameCollisionInvariantTest extends TestCase
     }
 
     // ------------------------------------------------------------------
-    // route:cache lifecycle — isolated, self-cleaning, both environments
+    // route:cache lifecycle — isolated, self-cleaning, both environments.
+    // Proves cached route:list is tuple-identical to uncached route:list
+    // for all 27 entries (method, URI, middleware, handler, name) — not
+    // just that the 27 names are present after caching.
     // ------------------------------------------------------------------
 
     /**
      * @group stress
      */
-    public function test_route_cache_succeeds_and_preserves_the_27_entries_under_testing_and_production(): void
+    public function test_route_cache_output_matches_uncached_output_for_the_27_entries_under_testing_and_production(): void
     {
         foreach (['testing', 'production'] as $env) {
-            $this->assertRouteCacheSucceedsAndPreservesEntries($env);
+            $this->assertCachedRouteTableMatchesUncachedForTheTrackedEntries($env);
         }
     }
 
-    private function assertRouteCacheSucceedsAndPreservesEntries(string $env): void
+    private function assertCachedRouteTableMatchesUncachedForTheTrackedEntries(string $env): void
     {
         $cachePath = base_path('bootstrap/cache/routes-v7.php');
         $preExisting = File::exists($cachePath);
         $backupPath = $preExisting ? $cachePath . '.gap035-test-backup' : null;
 
+        // 1. Preserve any pre-existing route cache exactly, then ensure an
+        //    uncached starting state for this test.
         if ($preExisting) {
             File::move($cachePath, $backupPath);
         }
+        $this->assertFalse(File::exists($cachePath), "Expected an uncached starting state under APP_ENV={$env} before this test begins.");
 
         try {
+            // 2. Uncached snapshot.
+            $uncachedSnapshot = $this->routeListSnapshot($env, self::EXPECTED_ROUTES);
+
+            // 3. Cache the routes.
             $cacheResult = Process::path(base_path())
                 ->env(['APP_ENV' => $env])
                 ->timeout(60)
@@ -265,21 +275,26 @@ final class RouteNameCollisionInvariantTest extends TestCase
             $this->assertTrue($cacheResult->successful(), "route:cache failed under APP_ENV={$env}: " . $cacheResult->errorOutput() . $cacheResult->output());
             $this->assertTrue(File::exists($cachePath), "Expected a route cache file to be generated under APP_ENV={$env}.");
 
-            $listResult = Process::path(base_path())
-                ->env(['APP_ENV' => $env])
-                ->timeout(60)
-                ->run(['php', 'artisan', 'route:list', '--json']);
+            // 4. Cached snapshot — same command, same extraction, now
+            //    reading from the compiled cache instead of live routes.
+            $cachedSnapshot = $this->routeListSnapshot($env, self::EXPECTED_ROUTES);
 
-            $this->assertTrue($listResult->successful(), "Cached route:list failed under APP_ENV={$env}: " . $listResult->errorOutput());
-
-            $decoded = $this->extractJsonArray($listResult->output());
-            $this->assertIsArray($decoded, "Cached route:list --json under APP_ENV={$env} did not return a JSON array.");
-
-            $namesPresent = collect($decoded)->pluck('name')->filter()->all();
-            foreach (array_keys(self::EXPECTED_ROUTES) as $expectedName) {
-                $this->assertContains($expectedName, $namesPresent, "Cached route table under APP_ENV={$env} is missing expected name [{$expectedName}].");
-            }
+            // 5. Tuple-for-tuple comparison: cached must equal uncached on
+            //    method + URI + middleware + action + name, for every one
+            //    of the 27 tracked entries — proving route:cache itself
+            //    introduces zero semantic drift. Not compared against any
+            //    hard-coded cross-environment baseline: testing is
+            //    compared only against its own cached self, production
+            //    only against its own cached self.
+            $this->assertSame(
+                $uncachedSnapshot,
+                $cachedSnapshot,
+                "Cached route:list diverged from uncached route:list under APP_ENV={$env} for one or more of the 27 GAP-035 entries."
+            );
         } finally {
+            // 6. Always clean up, including on failure: clear the cache,
+            //    delete any generated artifact, restore whatever pre-
+            //    existing cache was backed up, and verify the restoration.
             Process::path(base_path())->env(['APP_ENV' => $env])->run(['php', 'artisan', 'route:clear']);
 
             if (File::exists($cachePath)) {
@@ -289,7 +304,58 @@ final class RouteNameCollisionInvariantTest extends TestCase
             if ($preExisting && $backupPath !== null && File::exists($backupPath)) {
                 File::move($backupPath, $cachePath);
             }
+
+            if ($preExisting) {
+                $this->assertTrue(File::exists($cachePath), "Failed to restore the pre-existing route cache under APP_ENV={$env}.");
+            } else {
+                $this->assertFalse(File::exists($cachePath), "Failed to leave a clean (no-cache) state under APP_ENV={$env}.");
+            }
         }
+    }
+
+    /**
+     * Runs `route:list --json`, under the given environment, and extracts
+     * a normalized [name => [method, uri, middleware, action]] snapshot
+     * for exactly the tracked route names — used identically for both the
+     * uncached and cached reads so the two are directly comparable.
+     *
+     * @param array<string, mixed> $trackedRoutes keyed by route name; only the keys are used
+     * @return array<string, array{method: string, uri: string, middleware: list<string>, action: string}>
+     */
+    private function routeListSnapshot(string $env, array $trackedRoutes): array
+    {
+        $result = Process::path(base_path())
+            ->env(['APP_ENV' => $env])
+            ->timeout(60)
+            ->run(['php', 'artisan', 'route:list', '--json']);
+
+        $this->assertTrue($result->successful(), "route:list failed under APP_ENV={$env}: " . $result->errorOutput());
+
+        $decoded = $this->extractJsonArray($result->output());
+        $this->assertIsArray($decoded, "route:list --json under APP_ENV={$env} did not return a JSON array.");
+
+        $byName = [];
+        foreach ($decoded as $route) {
+            $name = $route['name'] ?? null;
+            if ($name !== null) {
+                $byName[$name] = $route;
+            }
+        }
+
+        $snapshot = [];
+        foreach (array_keys($trackedRoutes) as $name) {
+            $this->assertArrayHasKey($name, $byName, "route:list --json under APP_ENV={$env} is missing expected name [{$name}].");
+
+            $route = $byName[$name];
+            $snapshot[$name] = [
+                'method' => (string) ($route['method'] ?? ''),
+                'uri' => (string) ($route['uri'] ?? ''),
+                'middleware' => is_array($route['middleware'] ?? null) ? $route['middleware'] : [],
+                'action' => (string) ($route['action'] ?? ''),
+            ];
+        }
+
+        return $snapshot;
     }
 
     /**

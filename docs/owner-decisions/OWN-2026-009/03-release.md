@@ -1,14 +1,14 @@
 ---
 work_id: OWN-2026-009
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-15-zena-one-page-management-canonical-semantics.md
   plan: null
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-15T15:15:12+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-16T00:09:22+07:00"
+  owner_response_reference: "Owner Gate 3 decision — APPROVE, recorded in-session on 2026-08-16 against reviewed PR #262 head 8adad27010ea0658c9fe6df0b545eff5eefbf5e4: 'OWN-2026-009 — Gate 3 Owner Decision: APPROVE. Tôi, Owner, APPROVE Gate 3 của OWN-2026-009 tại PR #262, reviewed head 8adad27010ea0658c9fe6df0b545eff5eefbf5e4. Quyết định này phê duyệt release/merge documentation-only của OWN-2026-009 và được ràng buộc với implementation_tree_digest: 9b06eef020db4f07ed07f10900ccf260c259bc0efc63ac5eee4447fd6c4d9bf9. Tôi xác nhận Gate 3 correction đã được xử lý đạt yêu cầu: 3 payload files tại technical_evidence.subject_sha = e02dfe5536afe41bdd5f31a9447cacc58630fed5 được phân biệt rõ với 4 total files hiện có trên PR, file thứ tư là 03-release.md; evidence-freshness tại reviewed head hiện tại đã xác nhận digest không stale. Authorization: được phép record Gate 3 approval với provenance nguyên văn quyết định Owner này, bind owner_decision_binding.implementation_tree_digest vào digest nêu trên, sau đó thực hiện quy trình kỹ thuật để merge PR #262 vào main. Trước khi merge phải: xác nhận implementation-tree digest vẫn đúng 9b06eef020db4f07ed07f10900ccf260c259bc0efc63ac5eee4447fd6c4d9bf9; record Gate 3 approval bằng commit chỉ cập nhật governance/release packet; mark PR #262 ready; chạy/xác nhận toàn bộ required CI xanh trên exact release head; chỉ merge nếu không có payload/runtime drift. Nếu implementation-tree digest thay đổi, có thêm file ngoài phạm vi, hoặc required CI không xanh, dừng merge và quay lại Owner; không được tự sửa rồi coi approval này vẫn còn hiệu lực. Phạm vi release chỉ gồm documentation của OWN-2026-009. Không runtime implementation; không GAP-036; không Today Workspace; không sửa/merge/đóng PR #257 hoặc #245; không production/deployment. Sau merge, xác nhận merge commit trên main và post-merge required CI. Việc merge SSOT này không cấp phép triển khai bất kỳ slice §14 nào; mỗi slice vẫn cần Work ID và Gate 1 → Gate 2 → Gate 3 riêng.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-15T15:00:35+07:00"
-  updated_at: "2026-08-15T15:15:12+07:00"
+  updated_at: "2026-08-16T00:09:22+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "Cả 2 required check trên PR #262 đều PASS tại đúng đầu nhánh hiện tại của Gate 3. Diff toàn nhánh so với origin/main tại đầu nhánh hiện tại xác nhận CHỈ 4 file thay đổi (01-request.md, 02-design.md, 03-release.md, và canonical SSOT), tất cả trong docs/, toàn bộ là insertion — không có deletion, không có file app/, routes/, database/migrations/, hay tests/ nào xuất hiện trong diff. Evidence digest (technical_evidence) được tính tại subject_sha e02dfe5536afe41bdd5f31a9447cacc58630fed5 — thời điểm đó chỉ có 3 file payload (01-request.md, 02-design.md, canonical SSOT); 03-release.md chưa tồn tại nên không nằm trong tập 3 file đó, và cũng bị loại trừ khỏi digest computation theo thiết kế (packet-schema.yml's implementation_tree_digest_algorithm), nên việc thêm 03-release.md sau đó không làm digest lệch."
@@ -35,8 +35,8 @@ technical_evidence:
   verified_pr_head_sha: "2262c900da202cf8b1731f0f3b95c58c6c08e0fd"
   verified_at: "2026-08-15T15:15:12+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "9b06eef020db4f07ed07f10900ccf260c259bc0efc63ac5eee4447fd6c4d9bf9"
+  decision_recorded_at: "2026-08-16T00:09:22+07:00"
 ---
 
 ## Gói quyết định phát hành
@@ -61,7 +61,9 @@ owner_decision_binding:
 
 **10. Đề xuất của đội kỹ thuật:** Phát hành (Approve). Toàn bộ tiêu chí sẵn sàng kỹ thuật đã đạt; đúng và chỉ đúng phạm vi Gate 2 đã duyệt được thực hiện — canonical SSOT + Gate 1 (`01-request.md`) + Gate 2 (`02-design.md`), 3 file payload tại evidence subject `e02dfe5536afe41bdd5f31a9447cacc58630fed5` — cộng với chính Gate 3 packet này (`03-release.md`, file thứ 4, tự nó không phải một phần scope Gate 2 đã duyệt mà là bản ghi quyết định release, và bị loại trừ khỏi implementation-tree digest theo thiết kế); 0 vi phạm governance lint; 0 thay đổi ngoài `docs/`.
 
-**Quyết định của chủ doanh nghiệp:** ☐ Phát hành  ☐ Yêu cầu chỉnh sửa nghiệp vụ  ☐ Hoãn phát hành
+**Quyết định của chủ doanh nghiệp:** ☑ Phát hành  ☐ Yêu cầu chỉnh sửa nghiệp vụ  ☐ Hoãn phát hành
+
+**APPROVED (2026-08-16)** — Owner phê duyệt tại PR #262 head `8adad27010ea0658c9fe6df0b545eff5eefbf5e4`, ràng buộc với `implementation_tree_digest = 9b06eef020db4f07ed07f10900ccf260c259bc0efc63ac5eee4447fd6c4d9bf9`. Chi tiết nguyên văn tại `decision_provenance.owner_response_reference`. Phạm vi release: merge documentation của OWN-2026-009 vào `main`. Không cấp phép implementation cho bất kỳ slice §14 nào.
 
 ## What the owner is NOT being asked to decide
 Owner không được yêu cầu đọc CI log, source code, hay review comment — kết luận trên đã được xác minh độc lập (lint + diff review + CI). Owner cũng không được yêu cầu duyệt lại nội dung SSOT (đã duyệt ở Gate 2) hay bất kỳ implementation slice nào ở SSOT §14 — mỗi slice đó là quyết định Owner riêng, sau này, với Work ID và Gate lifecycle riêng. Owner cũng không được yêu cầu quyết định mark-PR-ready hay merge timing — đó là bước kỹ thuật riêng, chỉ thực hiện sau khi Owner phê duyệt Gate 3 ở đây.

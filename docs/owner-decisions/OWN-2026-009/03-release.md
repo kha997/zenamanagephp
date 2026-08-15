@@ -1,14 +1,14 @@
 ---
 work_id: OWN-2026-009
 gate: 3
-gate_status: awaiting_owner
+gate_status: changes_requested
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: correction_requested
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-15-zena-one-page-management-canonical-semantics.md
   plan: null
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-15T15:00:35+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-15T15:11:40+07:00"
+  owner_response_reference: "Owner Gate 3 decision — CORRECTION, recorded in-session on 2026-08-15 against reviewed PR #262 head cbf70bf48ba83fd7053ec2e2ca122fd74016e7df: 'OWN-2026-009 — Gate 3 Owner Decision: CORRECTION. Tôi, Owner, yêu cầu CORRECTION đối với Gate 3 của OWN-2026-009 tại PR #262, reviewed head cbf70bf48ba83fd7053ec2e2ca122fd74016e7df. Đây không phải yêu cầu thay đổi Gate 2 design, SSOT hoặc implementation-tree evidence. Tôi xác nhận Gate 2 approval vẫn có hiệu lực và technical evidence digest hiện tại không bị stale. Cần sửa duy nhất tính chính xác của Gate 3 release packet: technical_evidence.subject_sha = e02dfe5536afe41bdd5f31a9447cacc58630fed5 đại diện cho implementation/content tree trước khi tạo Gate 3 packet; tại SHA đó có 3 payload docs files: 01-request.md, 02-design.md, và canonical SSOT. Current PR head hiện có 4 changed files, tất cả đều dưới docs/: 01-request.md, 02-design.md, 03-release.md, và canonical SSOT. Vì vậy sửa mọi statement trong 03-release.md nói current branch/current HEAD có \"3 files\", \"3 Markdown files\", hoặc \"SSOT + 2 gate packets\". mandatory_technical_gate_summary, §5, §8 và §10 phải phân biệt rõ 3 payload files tại evidence subject SHA với 4 total PR files tại current Gate 3 head. Giữ nguyên implementation_tree_digest = 9b06eef020db4f07ed07f10900ccf260c259bc0efc63ac5eee4447fd6c4d9bf9 nếu repo governance tooling tiếp tục recompute và xác nhận nó fresh sau correction. Không thay đổi canonical SSOT. Không reopen Gate 2. Không runtime implementation. Không GAP-036. Không Today Workspace. Không sửa/merge/đóng #257 hoặc #245. Sau correction, rerun Owner Governance Lint + Routes Guardrails + evidence-freshness tại head SHA mới, rồi đưa Gate 3 trở lại awaiting_owner để tôi review. Không được suy luận Gate 3 approval. Không được mark ready hoặc merge PR #262 trước quyết định Gate 3 tiếp theo.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-15T15:00:35+07:00"
-  updated_at: "2026-08-15T15:00:35+07:00"
+  updated_at: "2026-08-15T15:11:40+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "Cả 2 required check trên PR #262 đều PASS tại đúng đầu nhánh (Owner Governance Lint, test-routes-guardrails). Diff toàn nhánh so với origin/main xác nhận CHỈ 3 file thay đổi, tất cả trong docs/, toàn bộ là insertion (không có deletion, không có file app/, routes/, database/migrations/, hay tests/ nào xuất hiện trong diff)."

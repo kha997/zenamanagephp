@@ -1,11 +1,11 @@
 ---
 work_id: OWN-2026-009
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-15-zena-one-page-management-canonical-semantics.md
   plan: null
@@ -15,20 +15,20 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-15T09:03:37+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-15T14:55:45+07:00"
+  owner_response_reference: "Owner Gate 2 Round 3 decision — APPROVE, recorded in-session on 2026-08-15 against reviewed PR #262 head d45adecd4cd471091d7bf732adebee36c8fedde5: 'OWN-2026-009 — Gate 2 Round 3 Owner Decision: APPROVE. Tôi, Owner, APPROVE Gate 2 của OWN-2026-009 tại PR #262, reviewed head d45adecd4cd471091d7bf732adebee36c8fedde5. Tôi xác nhận các yêu cầu thay đổi của Gate 2 Round 1 và Round 2 đã được xử lý đạt yêu cầu. Canonical design được phê duyệt là docs/superpowers/specs/2026-08-15-zena-one-page-management-canonical-semantics.md tại exact reviewed head nêu trên. Approval này xác nhận các shared semantics và boundaries trong SSOT, bao gồm: one CRM pipeline, one canonical Project; multi-value Service Line DESIGN / CONSTRUCTION / INSPECTION; Service Scope/Discipline tách khỏi Service Line; classification provenance và maturity rules; shared Project Health semantics; Project OPPM consumer boundary; Contract / Finance / Project Treasury ownership boundaries; Cost != Cash != Revenue != Profit và missing data != zero/green/certain; RBAC qualifiers giữ nguyên authorization model hiện hữu; ReportPageController::cashflow() là reuse target nhưng chi từ ContractExpense chưa được chứng minh là cash-basis và phải được audit trước Finance Control; roadmap 12 slice, trong đó Canonical Service-Line Foundation là một slice duy nhất, với Phase A Semantics Audit và Phase B Foundation Build. Authorization từ quyết định này: record Gate 2 approval với provenance nguyên văn quyết định Owner này và được phép chuẩn bị Gate 3 cho OWN-2026-009. Vì OWN-2026-009 là docs-only, Gate 3 chỉ được xem xét việc merge canonical documentation của PR #262. Approval Gate 2 này không tự nó cho phép merge PR #262 và không cho phép bất kỳ runtime implementation nào. Mọi implementation slice trong §14 vẫn phải có Work ID riêng và Gate 1 → Gate 2 → Gate 3 riêng. Không được dùng approval này làm implementation authorization. Giữ nguyên các exclusion: không GAP-036; không sửa/merge/đóng #257 hoặc #245; không Today Workspace; không runtime migration/model/controller/service/route/UI; không production/deployment. Khi record Gate 2 approval / chuẩn bị Gate 3, cập nhật PR #262 body để phản ánh chính xác Gate 2 Round 3 = APPROVED / Gate 3 preparation, thay cho wording Round 2 hiện còn stale. Không được suy luận Gate 3 approval. Không được merge cho đến khi Owner phê duyệt Gate 3.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-15T00:57:51+07:00"
-  updated_at: "2026-08-15T09:03:37+07:00"
+  updated_at: "2026-08-15T14:55:45+07:00"
 generated_by: agent
 ---
 
 # OWN-2026-009 — ZENA One-Page Management Canonical SSOT: Gate 2 Owner Packet
 
-**Status:** Gate 1 approved (2026-08-15, binding scope recorded in `01-request.md`). Gate 2: Round 1 changes requested by Owner (2026-08-15, 4 items); Round 2 changes requested by Owner (2026-08-15, 3/4 items confirmed resolved, 1 remaining — roadmap naming); this revision (Round 3) addresses the remaining item and returns to awaiting Owner review. No implementation, migration, schema change, route, controller, service, test, or merge is authorized until Gate 3 — and this work item authorizes no implementation at all; it only canonicalizes shared semantics for future slices to reference.
+**Status:** Gate 1 approved (2026-08-15, binding scope recorded in `01-request.md`). Gate 2: Round 1 changes requested (4 items); Round 2 changes requested (1 remaining item); **Round 3 — APPROVED by Owner (2026-08-15)** against reviewed head `d45adecd4cd471091d7bf732adebee36c8fedde5`. Gate 3 preparation is authorized; Gate 2 approval does not itself authorize merging PR #262 or any runtime implementation — see Gate 3 packet (`03-release.md`) for the merge-only decision now being prepared. No implementation, migration, schema change, route, controller, service, test, or merge is authorized by this work item at any point; it only canonicalizes shared semantics for future slices to reference.
 
 Full normative content: `docs/superpowers/specs/2026-08-15-zena-one-page-management-canonical-semantics.md` (15 sections). This packet summarizes it for Owner decision; it does not restate every rule.
 
@@ -96,7 +96,7 @@ Kế thừa nguyên vẹn từ Gate 1 (`01-request.md`): không migration/model/
 
 **Round 2 (đã xử lý):** Owner Request changes to the design, tại PR #262 head `3c3b2d5f3f20993410e046b9f65813bbc865b1ad` (2026-08-15) — xác nhận 3/4 mục Round 1 đạt yêu cầu (cashflow/Cost-vs-Cash, RBAC, PR metadata/CI); 01 mục blocking còn lại: roadmap naming bị mở rộng thành 2 slice thay vì thống nhất tên 1 slice. Chi tiết nguyên văn lưu trong lịch sử git tại commit `e0bcb2d5be896186e65f0375a6098c8f9d2082f5`. Đã hoàn nguyên về 1 slice duy nhất với sub-step audit→build bên trong (xem `## Revision log`).
 
-**Round 3 (đang chờ):** Owner chọn một: Approve to proceed to implementation *(= chuẩn bị Gate 3, chỉ merge tài liệu)* / Request changes to the design / Decline.
+**Round 3 (đã quyết định): Owner APPROVE**, tại PR #262 head `d45adecd4cd471091d7bf732adebee36c8fedde5` (2026-08-15). Chi tiết nguyên văn tại `decision_provenance.owner_response_reference`. Approval này KHÔNG tự nó cho phép merge PR #262 — chỉ cho phép chuẩn bị Gate 3 (`03-release.md`), quyết định merge tài liệu riêng, do Owner phê duyệt riêng.
 
 ## What the owner is NOT being asked to decide
 Owner không được yêu cầu duyệt bất kỳ implementation runtime nào (không có trong work item này); không được yêu cầu duyệt trước bất kỳ Gate 1/2/3 nào của các slice tương lai liệt kê ở SSOT §14 — mỗi slice đó là quyết định Owner riêng, sau này; không được yêu cầu quyết định đóng PR #257/#245 (đó là quyết định riêng, chỉ đặt ra sau khi bản SSOT này được merge); không được yêu cầu duyệt GAP-036 (báo cáo riêng).

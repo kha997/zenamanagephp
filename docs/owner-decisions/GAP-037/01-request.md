@@ -1,11 +1,11 @@
 ---
 work_id: GAP-037
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: null
   plan: null
@@ -15,14 +15,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-16T00:45:29+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-16T00:51:11+07:00"
+  owner_response_reference: "Owner Gate 1 Round 2 decision — APPROVE, recorded in-session on 2026-08-16 against reviewed PR #263 head c947b83157fadca337800927e3f60cf7e2c26bd9: 'GAP-037 — Gate 1 Round 2 Owner Decision: APPROVE. Tôi, Owner, APPROVE Gate 1 của GAP-037 tại PR #263, reviewed head c947b83157fadca337800927e3f60cf7e2c26bd9. Tôi xác nhận correction Round 1 đã được xử lý đạt yêu cầu. Gate 1 approval này chấp thuận business problem, scope và Gate 2 investigation approach cho Project Treasury theo canonical SSOT §§7–8, với PR #245 chỉ là non-normative design evidence. Gate 2 bắt buộc phải giải quyết đầy đủ bốn nhóm quyết định trước khi đề xuất schema: A. Cost authority — xác định quan hệ giữa ContractExpense, MaterialReceiptLine-derived cost, Component.actual_cost, Project.actual_cost/budget_actual và Treasury ledger. B. Cash authority — xác định canonical source cho actual project cash movements và quan hệ với ContractPayment, supplier/labor payments, owner contribution, internal transfers và advances/settlements. C. Economic-event / no-double-posting — xác định từng nguồn là input, projection, reconciliation target, referenced evidence hay source bị thay thế; không được ghi nhận một economic event hai lần. Treasury không được auto-sync Project.actual_cost trước khi Gate 2 giải quyết ownership của existing Component/Project rollup. D. Company cashflow integration — không tạo company-level cashflow calculator thứ hai và không mặc nhiên coi ContractExpense là cash paid. Các invariant tiếp tục binding: Cost != Cash != Revenue != Profit; Net Cash != Profit; missing financial data != zero/paid/certain. Authorization sau Gate 1 — Được phép: ghi nhận quyết định Gate 1 APPROVE này với provenance nguyên văn; sau record-only commit và required CI xanh, chuẩn bị Gate 2 design/investigation cho GAP-037. Chưa được phép: migration/schema; model/controller/service/route/UI; runtime implementation; implementation plan dựa trên schema chưa duyệt; tự chọn câu trả lời A–D rồi coi như Owner đã duyệt; merge PR #263; sửa/merge/đóng PR #245 hoặc #257; GAP-036; Today Workspace; sửa canonical SSOT stale metadata trong GAP-037; production/deployment. Gate 2 phải quay lại awaiting_owner với các phương án, trade-off, recommendation và migration/no-double-count implications rõ ràng. Không được suy luận Gate 2 approval từ quyết định này.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-16T00:27:36+07:00"
-  updated_at: "2026-08-16T00:45:29+07:00"
+  updated_at: "2026-08-16T00:51:11+07:00"
 generated_by: agent
 ---
 
@@ -82,7 +82,7 @@ Không có ở giai đoạn này: migration; schema; model; controller; service;
 ## Decision Needed
 **Round 1 (đã xử lý):** Owner Request more information, tại PR #263 head `21a3a04c0980376a67b8de671640188acd6b434b` (2026-08-16) — thiếu 1 cost path trong reconciliation: `Component.actual_cost` → `Project.actual_cost`/`budget_actual`. Chi tiết nguyên văn lưu tại commit `dcc645286fb202535cd5bcafde3882a9e34bd317`. Xem `## Revision log` phía trên cho tình trạng xử lý.
 
-**Round 2 (đang chờ):** Owner chọn một: Approve to proceed to design (Gate 2) / Request more information / Decline / Defer.
+**Round 2 (đã quyết định): Owner APPROVE**, tại PR #263 head `c947b83157fadca337800927e3f60cf7e2c26bd9` (2026-08-16). Chi tiết nguyên văn tại `decision_provenance.owner_response_reference`. Approval này cho phép chuẩn bị Gate 2 investigation (4 quyết định kiến trúc A-D) — không cấp phép schema/migration/runtime, không suy luận Gate 2 approval.
 
 ## Revision log
 - **Round 1 (PR head `21a3a04c0980376a67b8de671640188acd6b434b`):** Owner REQUEST CHANGES — verbatim decision recorded at commit `dcc645286fb202535cd5bcafde3882a9e34bd317`.

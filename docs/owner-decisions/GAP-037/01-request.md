@@ -1,11 +1,11 @@
 ---
 work_id: GAP-037
 gate: 1
-gate_status: awaiting_owner
+gate_status: changes_requested
 owner_decision:
-  value: none
+  value: more_info_requested
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: null
   plan: null
@@ -15,14 +15,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-16T00:27:36+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-16T00:43:10+07:00"
+  owner_response_reference: "Owner Gate 1 decision — REQUEST CHANGES, recorded in-session on 2026-08-16 against reviewed PR #263 head 21a3a04c0980376a67b8de671640188acd6b434b: 'GAP-037 — Gate 1 Owner Decision: REQUEST CHANGES. Tôi, Owner, yêu cầu chỉnh sửa Gate 1 của GAP-037 tại PR #263, reviewed head 21a3a04c0980376a67b8de671640188acd6b434b. Tôi đồng ý với mục tiêu, phạm vi và binding problem statement của GAP-037. Tuy nhiên Gate 1 runtime reconciliation hiện còn thiếu một cost path đang tồn tại và phải được bổ sung trước khi Gate 1 được phê duyệt. Required correction: Bổ sung audit path: Component.actual_cost → Project.actual_cost / budget_actual. Current runtime có Project::recalculateActualCost() và ProjectCalculationListener::recalculateProjectCost() tổng hợp actual_cost từ root Components. ComponentCostUpdated được nối với ProjectCalculationListener qua EventBus; Component.actual_cost cũng là writable input. Sửa các statement hiện nói hoặc ngụ ý rằng Project.actual_cost không có automatic calculation path hoặc chỉ có thể được set thủ công. Chính xác hơn phải ghi: Hiện tồn tại nhiều cost-like sources/path chưa được reconciliation: manual ContractExpense, material cost từ MaterialReceiptLine, và Component-derived Project.actual_cost/budget_actual. Chưa có bằng chứng cho phép coi bất kỳ nguồn nào trong số đó là canonical financial cost authority cho Treasury. Mở rộng Gate 2 Decision A — Cost authority để bắt buộc audit và quyết định quan hệ của: ContractExpense; MaterialReceiptLine-derived cost; Component.actual_cost; Project.actual_cost / budget_actual / related cost aliases; Treasury financial documents/ledger. Gate 2 phải xác định rõ metric Component/Project hiện hữu là planning/progress-management cost, financial incurred cost, manual rollup hay một semantic khác trước khi Treasury được phép ghi hoặc đồng bộ vào các field này. Mở rộng Gate 2 Decision C — Economic-event / no-double-posting để bao gồm Component/Project cost rollup. Treasury không được tự động synchronize Project.actual_cost cho đến khi xác định việc đó có duplicate/overwrite nguồn hiện hữu hay không. Giữ nguyên các phần đã đúng: Cost != Cash != Revenue != Profit; ContractExpense không chứng minh cash paid; MaterialReceiptLine tạo material-cost evidence nhưng không chứng minh supplier payment; ReportPageController::cashflow() không được duplicate và phần chi hiện không cash-basis; PR #245 chỉ là non-normative design evidence; 4 architecture decisions A–D vẫn là yêu cầu Gate 2. Scope của correction chỉ là Gate 1 documentation/reconciliation. Không migration/schema/model/controller/service/route/UI. Không implementation plan. Không Gate 2. Không sửa runtime. Không GAP-036. Không Today Workspace. Không sửa canonical SSOT. Không sửa/merge/đóng PR #245 hoặc PR #257. Ghi nhận quyết định REQUEST CHANGES này với provenance nguyên văn trước, sau đó chỉ sửa Gate 1 packet/PR wording cần thiết, chạy lại required CI và đưa Gate 1 trở về awaiting_owner tại head SHA mới. Không được suy luận Gate 1 approval.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-16T00:27:36+07:00"
-  updated_at: "2026-08-16T00:27:36+07:00"
+  updated_at: "2026-08-16T00:43:10+07:00"
 generated_by: agent
 ---
 
@@ -79,7 +79,7 @@ Không có ở giai đoạn này: migration; schema; model; controller; service;
 Đội kỹ thuật đề xuất: tiến hành (fix now, ở phạm vi Gate 1 → Gate 2 investigation). Vấn đề là có thật và có bằng chứng runtime cụ thể (không có nguồn cost/cash thống nhất); rủi ro double-count đã được xác định trước khi có bất kỳ schema nào, đúng tinh thần "audit trước khi code" mà toàn bộ chuỗi công việc OWN-2026-009 đã thiết lập.
 
 ## Decision Needed
-Owner chọn một: Approve to proceed to design (Gate 2) / Request more information / Decline / Defer.
+**Round 1 — Owner đã chọn: Request more information**, tại PR #263 head `21a3a04c0980376a67b8de671640188acd6b434b` (2026-08-16). Thiếu 1 cost path trong reconciliation: `Component.actual_cost` → `Project.actual_cost`/`budget_actual`. Chi tiết nguyên văn tại `decision_provenance.owner_response_reference`. Đang xử lý, xem `## Revision log` bên dưới sau khi bổ sung.
 
 ## What the owner is NOT being asked to decide
 Owner không được yêu cầu duyệt bất kỳ schema/migration/model/controller/service/route/UI nào (không có ở Gate 1 hay Gate 2 investigation). Owner không được yêu cầu duyệt cách trả lời 4 quyết định kiến trúc A-D — đó là nội dung Gate 2 sẽ đề xuất, Owner chỉ duyệt approach investigation ở đây. Owner cũng không được yêu cầu quyết định việc dọn dẹp stale metadata trên canonical SSOT hay xử lý GAP-036 — cả hai được ghi nhận riêng, tách biệt khỏi GAP-037.

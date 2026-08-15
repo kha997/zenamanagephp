@@ -1,11 +1,11 @@
 ---
 work_id: OWN-2026-009
 gate: 2
-gate_status: changes_requested
+gate_status: awaiting_owner
 owner_decision:
-  value: changes_requested
+  value: none
   authority: human_owner
-decision_requested: null
+decision_requested: approve_or_changes_or_decline
 references:
   spec: docs/superpowers/specs/2026-08-15-zena-one-page-management-canonical-semantics.md
   plan: null
@@ -15,14 +15,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-15T09:01:26+07:00"
-  owner_response_reference: "Owner Gate 2 Round 2 decision — REQUEST CHANGES, recorded in-session on 2026-08-15 against reviewed PR #262 head 3c3b2d5f3f20993410e046b9f65813bbc865b1ad: 'OWN-2026-009 — Gate 2 Round 2 Owner Decision: REQUEST CHANGES. Tôi, Owner, REQUEST CHANGES đối với Gate 2 Round 2 của OWN-2026-009 tại PR #262, reviewed head 3c3b2d5f3f20993410e046b9f65813bbc865b1ad. Tôi xác nhận các yêu cầu Round 1 về Cashflow/Cost-vs-Cash semantics, RBAC semantics và PR metadata/CI đã được xử lý đạt yêu cầu. Còn 01 thay đổi blocking: Roadmap naming consistency — yêu cầu Round 1 là thống nhất tên của cùng một slice giữa §12 và §14, không phải tách nó thành hai work item. Round 2 hiện đã tách Service-Line Taxonomy & Semantics Audit và Canonical Service-Line Foundation thành hai slice riêng, làm roadmap từ 12 thành 13 slice. Hãy hoàn nguyên việc mở rộng decomposition này và dùng một tên canonical thống nhất cho cùng work item; nếu cần thể hiện audit → build thì mô tả chúng như các phase/sub-step bên trong cùng slice, không tạo thêm slice chỉ để giải quyết naming mismatch. Đồng thời sửa Revision log của 02-design.md để không nói \"see decision_provenance.owner_response_reference\" khi field hiện tại là null; hãy trỏ chính xác đến historical decision commit 1f64703c3a482a0f76ff6879051a69f685820daa. Không thay đổi bất kỳ nội dung nào khác đã đạt ở Round 2. Không mở rộng scope. Không runtime implementation. Không Gate 3. Không merge PR #262. Không sửa/merge/đóng #257/#245. Không GAP-036. Không Today Workspace. Record quyết định Round 2 này theo Owner Governance, thực hiện đúng hai chỉnh sửa tài liệu nêu trên, rerun CI, rồi đưa Gate 2 trở lại awaiting_owner với head SHA mới + CI evidence để Owner review Round 3. Không được suy luận approval.'"
+  recorded_at: "2026-08-15T09:03:37+07:00"
+  owner_response_reference: null
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-15T00:57:51+07:00"
-  updated_at: "2026-08-15T09:01:26+07:00"
+  updated_at: "2026-08-15T09:03:37+07:00"
 generated_by: agent
 ---
 
@@ -39,7 +39,7 @@ Full normative content: `docs/superpowers/specs/2026-08-15-zena-one-page-managem
   1. SSOT §6.3/§8/§12: corrected cashflow claim — `ContractExpense` has no paid/status field (`app/Models/ContractExpense.php:33-40`, migration `2026_07_13_110100_create_contract_expenses_table.php:14-21`); `ReportPageController::cashflow()`'s `chi` side sums every row unconditionally by `expense_date` (`ReportPageController.php:87-96`), i.e. accrual-basis, not cash-basis. Reuse/no-duplication principle for the `thu` (cash-in, genuinely cash-basis via `ContractPayment.status`) side is preserved; the `chi` side now carries an explicit "must be audited before Finance Control treats it as canonical cash-out" flag instead of a false "already correct" claim. — **Owner confirmed adequate in Round 2.**
   2. SSOT §11: restored full qualifiers from the source design (PR #257 control-tower spec §12, verbatim) — Owner/Admin remain subject to RBAC; Staff have Today/My Work plus whatever additional project/resource data existing RBAC/project-visibility rules already grant. This document does not narrow or replace the existing authorization model. — **Owner confirmed adequate in Round 2.**
   3. PR #262 body: first non-empty line is now the authoritative `Work ID: OWN-2026-009` declaration (required by `scripts/ci/extract-work-id.sh`, confirmed root cause of the prior Owner Governance Lint CI failure); stale "No Gate 2 has been created" bullet removed. — **Owner confirmed adequate in Round 2.**
-  4. SSOT §14: split the former single item 1 into "Service-Line Taxonomy & Semantics Audit" and "Canonical Service-Line Foundation" as two distinct slices. — **Owner rejected in Round 2**: Round 1 asked for one unified name, not a second slice; roadmap grew from 12 to 13 items. Verbatim decision recorded at the Round 2 decision commit.
+  4. SSOT §14: split the former single item 1 into "Service-Line Taxonomy & Semantics Audit" and "Canonical Service-Line Foundation" as two distinct slices. — **Owner rejected in Round 2**: Round 1 asked for one unified name, not a second slice; roadmap grew from 12 to 13 items. Verbatim decision recorded at commit `e0bcb2d5be896186e65f0375a6098c8f9d2082f5`.
 - **Round 3 (this revision):** reverted §14 item 1 back to a single slice — **Canonical Service-Line Foundation** — with the audit and build work described as internal Phase A / Phase B of that one slice, not separate slices (roadmap back to 12 items); §12 item 5's cross-reference updated to point at "Phase B" of that slice instead of a second item. Fixed this Revision log's Round 1 line, which incorrectly pointed at `decision_provenance.owner_response_reference` (a field that gets reset to `null` each time gate_status returns to `awaiting_owner`) instead of the immutable git commit where that round's decision was actually recorded.
 
 ---
@@ -94,7 +94,7 @@ Kế thừa nguyên vẹn từ Gate 1 (`01-request.md`): không migration/model/
 ## Decision Needed
 **Round 1 (đã xử lý):** Owner Request changes to the design, tại PR #262 head `4836e7d9b886ad7b4537c4c1e71650984652794e` (2026-08-15) — 4 nhóm thay đổi bắt buộc, chi tiết nguyên văn còn lưu trong lịch sử git tại commit `1f64703c3a482a0f76ff6879051a69f685820daa`. Xem `## Revision log` phía trên cho tình trạng xử lý từng mục.
 
-**Round 2 (đã xử lý):** Owner Request changes to the design, tại PR #262 head `3c3b2d5f3f20993410e046b9f65813bbc865b1ad` (2026-08-15) — xác nhận 3/4 mục Round 1 đạt yêu cầu (cashflow/Cost-vs-Cash, RBAC, PR metadata/CI); 01 mục blocking còn lại: roadmap naming bị mở rộng thành 2 slice thay vì thống nhất tên 1 slice. Chi tiết nguyên văn lưu trong lịch sử git tại commit ghi Round 2 decision. Đã hoàn nguyên về 1 slice duy nhất với sub-step audit→build bên trong (xem `## Revision log`).
+**Round 2 (đã xử lý):** Owner Request changes to the design, tại PR #262 head `3c3b2d5f3f20993410e046b9f65813bbc865b1ad` (2026-08-15) — xác nhận 3/4 mục Round 1 đạt yêu cầu (cashflow/Cost-vs-Cash, RBAC, PR metadata/CI); 01 mục blocking còn lại: roadmap naming bị mở rộng thành 2 slice thay vì thống nhất tên 1 slice. Chi tiết nguyên văn lưu trong lịch sử git tại commit `e0bcb2d5be896186e65f0375a6098c8f9d2082f5`. Đã hoàn nguyên về 1 slice duy nhất với sub-step audit→build bên trong (xem `## Revision log`).
 
 **Round 3 (đang chờ):** Owner chọn một: Approve to proceed to implementation *(= chuẩn bị Gate 3, chỉ merge tài liệu)* / Request changes to the design / Decline.
 

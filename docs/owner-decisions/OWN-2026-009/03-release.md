@@ -28,7 +28,7 @@ timestamps:
   updated_at: "2026-08-15T15:11:40+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "Cả 2 required check trên PR #262 đều PASS tại đúng đầu nhánh (Owner Governance Lint, test-routes-guardrails). Diff toàn nhánh so với origin/main xác nhận CHỈ 3 file thay đổi, tất cả trong docs/, toàn bộ là insertion (không có deletion, không có file app/, routes/, database/migrations/, hay tests/ nào xuất hiện trong diff)."
+mandatory_technical_gate_summary: "Cả 2 required check trên PR #262 đều PASS tại đúng đầu nhánh hiện tại của Gate 3. Diff toàn nhánh so với origin/main tại đầu nhánh hiện tại xác nhận CHỈ 4 file thay đổi (01-request.md, 02-design.md, 03-release.md, và canonical SSOT), tất cả trong docs/, toàn bộ là insertion — không có deletion, không có file app/, routes/, database/migrations/, hay tests/ nào xuất hiện trong diff. Evidence digest (technical_evidence) được tính tại subject_sha e02dfe5536afe41bdd5f31a9447cacc58630fed5 — thời điểm đó chỉ có 3 file payload (01-request.md, 02-design.md, canonical SSOT); 03-release.md chưa tồn tại nên không nằm trong tập 3 file đó, và cũng bị loại trừ khỏi digest computation theo thiết kế (packet-schema.yml's implementation_tree_digest_algorithm), nên việc thêm 03-release.md sau đó không làm digest lệch."
 technical_evidence:
   subject_sha: "e02dfe5536afe41bdd5f31a9447cacc58630fed5"
   implementation_tree_digest: "9b06eef020db4f07ed07f10900ccf260c259bc0efc63ac5eee4447fd6c4d9bf9"
@@ -49,17 +49,17 @@ owner_decision_binding:
 
 **4. Rủi ro nào đã được đóng lại?** Rủi ro drift ngữ nghĩa giữa các slice triển khai tương lai (định nghĩa khác nhau cho "profit", "contract attention", "unique project count"...).
 
-**5. Đã kiểm thử những gì?** `php scripts/ssot/owner_governance_lint.php` PASS trên cả 3 packet (`01-request.md`, `02-design.md`, `03-release.md`) tại đầu nhánh hiện tại. `git diff origin/main..HEAD --stat` xác nhận đúng và chỉ đúng 3 file thay đổi (2 packet + 1 spec), toàn bộ trong `docs/`, toàn bộ insertion, 0 deletion, 0 file `app/`/`routes/`/`database/migrations/`/`tests/`. Trên PR #262 (draft), 2 required check (Owner Governance Lint, test-routes-guardrails) đều PASS tại đúng SHA `e02dfe5536afe41bdd5f31a9447cacc58630fed5`.
+**5. Đã kiểm thử những gì?** `php scripts/ssot/owner_governance_lint.php` PASS trên cả 3 packet (`01-request.md`, `02-design.md`, `03-release.md`) tại đầu nhánh hiện tại. `git diff origin/main..HEAD --stat` tại đầu nhánh hiện tại của Gate 3 xác nhận đúng và chỉ đúng **4 file thay đổi** — `01-request.md`, `02-design.md`, `03-release.md` (chính packet này), và canonical SSOT — toàn bộ trong `docs/`, toàn bộ insertion, 0 deletion, 0 file `app/`/`routes/`/`database/migrations/`/`tests/`. Phân biệt rõ với evidence subject: `technical_evidence.subject_sha` = `e02dfe5536afe41bdd5f31a9447cacc58630fed5` là commit **trước khi** `03-release.md` được tạo — tại SHA đó chỉ có **3 file payload** (`01-request.md`, `02-design.md`, canonical SSOT). Trên PR #262 (draft), 2 required check (Owner Governance Lint, test-routes-guardrails) đều PASS tại cả hai SHA — `e02dfe5536afe41bdd5f31a9447cacc58630fed5` (evidence subject) và đầu nhánh hiện tại của Gate 3.
 
 **6. Điều gì KHÔNG nằm trong phạm vi lần này?** Không có migration, model, controller, service, route, hay UI nào. Không sửa `Opportunity.service_category` default. Không GAP-036 (báo cáo riêng). Không đóng/merge PR #257 hoặc #245 — cả hai giữ nguyên `KEEP_AS_ACTIVE_DESIGN_SOURCE`, OPEN, Draft. Không đụng Today Workspace, production, hay deployment. Gate 3 này chỉ xét việc merge tài liệu — không tự nó cấp phép bất kỳ implementation slice nào liệt kê ở SSOT §14; mỗi slice vẫn cần Work ID và vòng đời Gate 1→2→3 riêng.
 
 **7. Vì sao các gap liên quan vẫn để riêng?** GAP-036 (Tier-5 cost/profit blind spot trong `OPERATIONAL_GAP_REGISTER.md`) được báo cáo riêng cho Owner, cố ý không gộp vào work item chỉ-tài-liệu này — đăng ký/triage của nó là quyết định Owner riêng.
 
-**8. Rủi ro còn lại là gì?** Thấp. Thay đổi chỉ là thêm 3 file Markdown mới vào `docs/`, không sửa file nào đang tồn tại, không có khả năng phá vỡ runtime hay CI khác ngoài chính governance lint (đã PASS).
+**8. Rủi ro còn lại là gì?** Thấp. Thay đổi chỉ là thêm 4 file Markdown mới vào `docs/` (3 file payload tại evidence subject + chính `03-release.md`), không sửa file nào đang tồn tại, không có khả năng phá vỡ runtime hay CI khác ngoài chính governance lint (đã PASS).
 
 **9. Có thể hoàn tác không?** Có, hoàn toàn — `git revert` bất kỳ lúc nào, không có tác động dữ liệu hay hệ thống vì không có migration/schema/runtime nào đi kèm.
 
-**10. Đề xuất của đội kỹ thuật:** Phát hành (Approve). Toàn bộ tiêu chí sẵn sàng kỹ thuật đã đạt; đúng và chỉ đúng phạm vi Gate 2 đã duyệt được thực hiện (SSOT + 2 gate packet); 0 vi phạm governance lint; 0 thay đổi ngoài `docs/`.
+**10. Đề xuất của đội kỹ thuật:** Phát hành (Approve). Toàn bộ tiêu chí sẵn sàng kỹ thuật đã đạt; đúng và chỉ đúng phạm vi Gate 2 đã duyệt được thực hiện — canonical SSOT + Gate 1 (`01-request.md`) + Gate 2 (`02-design.md`), 3 file payload tại evidence subject `e02dfe5536afe41bdd5f31a9447cacc58630fed5` — cộng với chính Gate 3 packet này (`03-release.md`, file thứ 4, tự nó không phải một phần scope Gate 2 đã duyệt mà là bản ghi quyết định release, và bị loại trừ khỏi implementation-tree digest theo thiết kế); 0 vi phạm governance lint; 0 thay đổi ngoài `docs/`.
 
 **Quyết định của chủ doanh nghiệp:** ☐ Phát hành  ☐ Yêu cầu chỉnh sửa nghiệp vụ  ☐ Hoãn phát hành
 

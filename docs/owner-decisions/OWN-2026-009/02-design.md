@@ -1,11 +1,11 @@
 ---
 work_id: OWN-2026-009
 gate: 2
-gate_status: changes_requested
+gate_status: awaiting_owner
 owner_decision:
-  value: changes_requested
+  value: none
   authority: human_owner
-decision_requested: null
+decision_requested: approve_or_changes_or_decline
 references:
   spec: docs/superpowers/specs/2026-08-15-zena-one-page-management-canonical-semantics.md
   plan: null
@@ -15,14 +15,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-15T08:39:58+07:00"
-  owner_response_reference: "Owner Gate 2 decision — REQUEST CHANGES, recorded in-session on 2026-08-15 against reviewed PR #262 head 4836e7d9b886ad7b4537c4c1e71650984652794e: 'OWN-2026-009 — Gate 2 Owner Decision: REQUEST CHANGES. Tôi, Owner, REQUEST CHANGES đối với Gate 2 của OWN-2026-009 tại PR #262, head 4836e7d9b886ad7b4537c4c1e71650984652794e. Đây là quyết định Gate 2 chính thức, không phải status report và không phải approval. Các thay đổi bắt buộc: (1) Cashflow semantics: Không canonicalize ReportPageController::cashflow() là \"already cash-basis-correct\"; không mặc nhiên coi ContractExpense là actual cash-out. Phải giữ nguyên nguyên tắc reuse/no-duplication nhưng audit và xác định rõ semantics Cost vs actual Cash trước Finance Control. (2) RBAC semantics: Khôi phục đầy đủ qualifier từ source design: Owner/Admin vẫn subject to RBAC; Staff ngoài Today/My Work vẫn có project/resource data theo existing RBAC/project visibility rules. SSOT không được thay thế hoặc tự thu hẹp authorization model. (3) Governance metadata/CI: PR #262 body phải có authoritative Work ID: OWN-2026-009, cập nhật nội dung Gate 2 hiện hành, xóa statement stale như \"No Gate 2 has been created\", và rerun governance CI đến trạng thái phù hợp/green. (4) Roadmap naming: Thống nhất tên giữa §12 và §14 cho Canonical Service-Line Foundation / Service-Line Taxonomy & Semantics Audit. Scope không thay đổi: docs-only; không runtime implementation; không GAP-036; không sửa/merge/đóng #257 hoặc #245; không đụng Today Workspace. Hãy record Gate 2 decision = request_changes với provenance là nguyên văn quyết định Owner này, sau đó chỉ thực hiện các chỉnh sửa docs/governance nêu trên. Sau khi sửa xong, đưa Gate 2 revision trở lại awaiting_owner với head SHA mới + CI evidence để tôi review lại. Không được suy luận approval. Không được tiến Gate 3. Không được merge PR #262.'"
+  recorded_at: "2026-08-15T08:43:22+07:00"
+  owner_response_reference: null
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-15T00:57:51+07:00"
-  updated_at: "2026-08-15T08:39:58+07:00"
+  updated_at: "2026-08-15T08:43:22+07:00"
 generated_by: agent
 ---
 
@@ -91,7 +91,9 @@ Không có — tài liệu governance, không có màn hình, không có thông 
 Kế thừa nguyên vẹn từ Gate 1 (`01-request.md`): không migration/model/controller/service/route/UI; không sửa `Opportunity.service_category` default; không GAP-036; không implementation của bất kỳ slice nào liệt kê ở SSOT §14; không đóng/merge PR #257/#245; không Today Workspace; không production/deployment; không gap vận hành khác.
 
 ## Decision Needed
-**Round 1 — Owner đã chọn: Request changes to the design**, tại PR #262 head `4836e7d9b886ad7b4537c4c1e71650984652794e` (2026-08-15). 4 nhóm thay đổi bắt buộc — chi tiết nguyên văn tại `decision_provenance.owner_response_reference`: (1) sửa cashflow/Cost-vs-Cash semantics trong SSOT; (2) khôi phục qualifier RBAC đầy đủ ở SSOT §11; (3) sửa PR body (Work ID declaration + xoá statement stale) và làm CI xanh; (4) thống nhất tên slice giữa SSOT §12 và §14. Xem `## Revision log` bên dưới cho tình trạng xử lý.
+**Round 1 (đã xử lý):** Owner Request changes to the design, tại PR #262 head `4836e7d9b886ad7b4537c4c1e71650984652794e` (2026-08-15) — 4 nhóm thay đổi bắt buộc, chi tiết nguyên văn còn lưu trong lịch sử git tại commit `1f64703c`. Xem `## Revision log` phía trên cho tình trạng xử lý từng mục.
+
+**Round 2 (đang chờ):** Cả 4 thay đổi đã áp dụng — Owner chọn một: Approve to proceed to implementation *(= chuẩn bị Gate 3, chỉ merge tài liệu)* / Request changes to the design / Decline.
 
 ## What the owner is NOT being asked to decide
 Owner không được yêu cầu duyệt bất kỳ implementation runtime nào (không có trong work item này); không được yêu cầu duyệt trước bất kỳ Gate 1/2/3 nào của các slice tương lai liệt kê ở SSOT §14 — mỗi slice đó là quyết định Owner riêng, sau này; không được yêu cầu quyết định đóng PR #257/#245 (đó là quyết định riêng, chỉ đặt ra sau khi bản SSOT này được merge); không được yêu cầu duyệt GAP-036 (báo cáo riêng).

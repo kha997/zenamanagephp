@@ -1,11 +1,11 @@
 ---
 work_id: OWN-2026-009
 gate: 2
-gate_status: awaiting_owner
+gate_status: changes_requested
 owner_decision:
-  value: none
+  value: changes_requested
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-15-zena-one-page-management-canonical-semantics.md
   plan: null
@@ -15,22 +15,31 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-15T00:57:51+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-15T08:39:58+07:00"
+  owner_response_reference: "Owner Gate 2 decision — REQUEST CHANGES, recorded in-session on 2026-08-15 against reviewed PR #262 head 4836e7d9b886ad7b4537c4c1e71650984652794e: 'OWN-2026-009 — Gate 2 Owner Decision: REQUEST CHANGES. Tôi, Owner, REQUEST CHANGES đối với Gate 2 của OWN-2026-009 tại PR #262, head 4836e7d9b886ad7b4537c4c1e71650984652794e. Đây là quyết định Gate 2 chính thức, không phải status report và không phải approval. Các thay đổi bắt buộc: (1) Cashflow semantics: Không canonicalize ReportPageController::cashflow() là \"already cash-basis-correct\"; không mặc nhiên coi ContractExpense là actual cash-out. Phải giữ nguyên nguyên tắc reuse/no-duplication nhưng audit và xác định rõ semantics Cost vs actual Cash trước Finance Control. (2) RBAC semantics: Khôi phục đầy đủ qualifier từ source design: Owner/Admin vẫn subject to RBAC; Staff ngoài Today/My Work vẫn có project/resource data theo existing RBAC/project visibility rules. SSOT không được thay thế hoặc tự thu hẹp authorization model. (3) Governance metadata/CI: PR #262 body phải có authoritative Work ID: OWN-2026-009, cập nhật nội dung Gate 2 hiện hành, xóa statement stale như \"No Gate 2 has been created\", và rerun governance CI đến trạng thái phù hợp/green. (4) Roadmap naming: Thống nhất tên giữa §12 và §14 cho Canonical Service-Line Foundation / Service-Line Taxonomy & Semantics Audit. Scope không thay đổi: docs-only; không runtime implementation; không GAP-036; không sửa/merge/đóng #257 hoặc #245; không đụng Today Workspace. Hãy record Gate 2 decision = request_changes với provenance là nguyên văn quyết định Owner này, sau đó chỉ thực hiện các chỉnh sửa docs/governance nêu trên. Sau khi sửa xong, đưa Gate 2 revision trở lại awaiting_owner với head SHA mới + CI evidence để tôi review lại. Không được suy luận approval. Không được tiến Gate 3. Không được merge PR #262.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-15T00:57:51+07:00"
-  updated_at: "2026-08-15T00:57:51+07:00"
+  updated_at: "2026-08-15T08:39:58+07:00"
 generated_by: agent
 ---
 
 # OWN-2026-009 — ZENA One-Page Management Canonical SSOT: Gate 2 Owner Packet
 
-**Status:** Gate 1 approved (2026-08-15, binding scope recorded in `01-request.md`). Gate 2 awaiting Owner review. No implementation, migration, schema change, route, controller, service, test, or merge is authorized until Gate 3 — and this work item authorizes no implementation at all; it only canonicalizes shared semantics for future slices to reference.
+**Status:** Gate 1 approved (2026-08-15, binding scope recorded in `01-request.md`). Gate 2: Round 1 changes requested by Owner (2026-08-15); this revision addresses all 4 required changes and returns to awaiting Owner review. No implementation, migration, schema change, route, controller, service, test, or merge is authorized until Gate 3 — and this work item authorizes no implementation at all; it only canonicalizes shared semantics for future slices to reference.
 
-Full normative content: `docs/superpowers/specs/2026-08-15-zena-one-page-management-canonical-semantics.md` (15 sections). This packet summarizes it for Owner decision; it does not restate every rule.
+Full normative content: `docs/superpowers/specs/2026-08-15-zena-one-page-management-canonical-semantics.md` (16 sections). This packet summarizes it for Owner decision; it does not restate every rule.
+
+## Revision log
+
+- **Round 1 (PR head `4836e7d9b886ad7b4537c4c1e71650984652794e`):** Owner REQUEST CHANGES — see `decision_provenance.owner_response_reference` for verbatim decision.
+- **Round 2 (this revision):**
+  1. SSOT §6.3/§8/§12: corrected cashflow claim — `ContractExpense` has no paid/status field (`app/Models/ContractExpense.php:33-40`, migration `2026_07_13_110100_create_contract_expenses_table.php:14-21`); `ReportPageController::cashflow()`'s `chi` side sums every row unconditionally by `expense_date` (`ReportPageController.php:87-96`), i.e. accrual-basis, not cash-basis. Reuse/no-duplication principle for the `thu` (cash-in, genuinely cash-basis via `ContractPayment.status`) side is preserved; the `chi` side now carries an explicit "must be audited before Finance Control treats it as canonical cash-out" flag instead of a false "already correct" claim.
+  2. SSOT §11: restored full qualifiers from the source design (PR #257 control-tower spec §12, verbatim) — Owner/Admin remain subject to RBAC; Staff have Today/My Work plus whatever additional project/resource data existing RBAC/project-visibility rules already grant. This document does not narrow or replace the existing authorization model.
+  3. PR #262 body: first non-empty line is now the authoritative `Work ID: OWN-2026-009` declaration (required by `scripts/ci/extract-work-id.sh`, confirmed root cause of the prior Owner Governance Lint CI failure); stale "No Gate 2 has been created" bullet removed.
+  4. SSOT §14: split the former single item 1 into "Service-Line Taxonomy & Semantics Audit" and "Canonical Service-Line Foundation" as two distinct slices (matching the original taxonomy doc's own decomposition), so §12's reference to the "Canonical Service-Line Foundation slice" now resolves to an actually-named §14 item.
 
 ---
 
@@ -82,7 +91,7 @@ Không có — tài liệu governance, không có màn hình, không có thông 
 Kế thừa nguyên vẹn từ Gate 1 (`01-request.md`): không migration/model/controller/service/route/UI; không sửa `Opportunity.service_category` default; không GAP-036; không implementation của bất kỳ slice nào liệt kê ở SSOT §14; không đóng/merge PR #257/#245; không Today Workspace; không production/deployment; không gap vận hành khác.
 
 ## Decision Needed
-Owner chọn một: Approve to proceed to implementation *(lưu ý: "implementation" ở đây chỉ nghĩa là chuẩn bị Gate 3 — merge tài liệu — vì work item này không có runtime implementation)* / Request changes to the design / Decline.
+**Round 1 — Owner đã chọn: Request changes to the design**, tại PR #262 head `4836e7d9b886ad7b4537c4c1e71650984652794e` (2026-08-15). 4 nhóm thay đổi bắt buộc — chi tiết nguyên văn tại `decision_provenance.owner_response_reference`: (1) sửa cashflow/Cost-vs-Cash semantics trong SSOT; (2) khôi phục qualifier RBAC đầy đủ ở SSOT §11; (3) sửa PR body (Work ID declaration + xoá statement stale) và làm CI xanh; (4) thống nhất tên slice giữa SSOT §12 và §14. Xem `## Revision log` bên dưới cho tình trạng xử lý.
 
 ## What the owner is NOT being asked to decide
 Owner không được yêu cầu duyệt bất kỳ implementation runtime nào (không có trong work item này); không được yêu cầu duyệt trước bất kỳ Gate 1/2/3 nào của các slice tương lai liệt kê ở SSOT §14 — mỗi slice đó là quyết định Owner riêng, sau này; không được yêu cầu quyết định đóng PR #257/#245 (đó là quyết định riêng, chỉ đặt ra sau khi bản SSOT này được merge); không được yêu cầu duyệt GAP-036 (báo cáo riêng).

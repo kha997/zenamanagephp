@@ -123,7 +123,7 @@ Any implementation slice must audit and reuse existing permission names before i
 | 2 | Treasury ↔ `ContractExpense`/`ContractPayment` integration boundary | Not yet decided — flagged as required at Project Treasury's own Gate 2 (§7.4) |
 | 3 | `INFERRED` row visibility policy in portfolio membership | Not yet decided — flagged as required at the Portfolio Membership Migration slice (§2.8) |
 | 4 | Whether/how Contract gets multi-value Service Lines | Subordinate to a not-yet-performed Contract consumer audit (§3.4) |
-| 5 | Exact Service Line persistence schema (join table naming, tenant-duplication approach) | Deferred to the **Canonical Service-Line Foundation** slice's own schema audit (§14 item 2) |
+| 5 | Exact Service Line persistence schema (join table naming, tenant-duplication approach) | Deferred to the **Canonical Service-Line Foundation** slice's Phase B (§14 item 1) |
 | 6 | `OPERATIONAL_GAP_REGISTER.md` Tier-5 cost/profit blind spot | Reported to Owner separately as GAP-036 candidate; not part of this document's scope |
 | 7 | `ReportPageController::cashflow()`'s `chi` (cash-out) side is accrual-basis, not cash-basis — `ContractExpense` has no paid/status field | Corrected 2026-08-15 (§6.3, §8 item 1) — must be audited and explicitly decided before Finance Control treats it as canonical cash-out |
 
@@ -140,19 +140,18 @@ These four sources remain **KEEP_AS_ACTIVE_DESIGN_SOURCE** (per Owner Gate 1 dec
 
 ## 14. Recommended implementation-slice decomposition (non-normative roadmap — each entry requires its own Work ID and Gate 1→2→3 lifecycle; order may be revised if repository dependencies justify it)
 
-1. Service-Line Taxonomy & Semantics Audit (investigation only — inventory legacy values, confirm consumer list, no schema change)
-2. **Canonical Service-Line Foundation** (the schema/build step referenced by §12 item 5: central value set, Opportunity/Project membership mechanism, provenance/trust fields — depends on item 1's audit)
-3. Shared Project Health Read Model + Shared Commercial/Financial Read Semantics (formalizes existing `ProjectAnalyticsController`/`BusinessKpiService`/`ReportPageController::cashflow` logic — including resolving §12 item 7 before this slice's own Finance-facing outputs are treated as canonical)
-4. CRM Classification UX & Gates (includes fixing the `architecture`-default conflict, §12 item 1)
-5. Opportunity→Project Propagation & Project Classification UX
-6. Quote Scope Snapshot
-7. Portfolio Membership Migration
-8. Commercial & Contract Control + Finance Control (company-wide)
-9. Resource Control
-10. Project OPPM (Issue #248)
-11. Operations Control Tower
-12. Project Treasury (independent/parallel-capable; its own Gate 2 must resolve §12 item 2)
-13. Legacy taxonomy retirement (only after all consumers migrated)
+1. **Canonical Service-Line Foundation** — one slice, one Work ID, two internal phases (not two separate slices): **Phase A, Semantics Audit** (investigation only — inventory legacy values, confirm consumer list, no schema change) then **Phase B, Foundation Build** (the schema/build step referenced by §12 item 5: central value set, Opportunity/Project membership mechanism, provenance/trust fields). Phase B does not start until Phase A's findings are reviewed.
+2. Shared Project Health Read Model + Shared Commercial/Financial Read Semantics (formalizes existing `ProjectAnalyticsController`/`BusinessKpiService`/`ReportPageController::cashflow` logic — including resolving §12 item 7 before this slice's own Finance-facing outputs are treated as canonical)
+3. CRM Classification UX & Gates (includes fixing the `architecture`-default conflict, §12 item 1)
+4. Opportunity→Project Propagation & Project Classification UX
+5. Quote Scope Snapshot
+6. Portfolio Membership Migration
+7. Commercial & Contract Control + Finance Control (company-wide)
+8. Resource Control
+9. Project OPPM (Issue #248)
+10. Operations Control Tower
+11. Project Treasury (independent/parallel-capable; its own Gate 2 must resolve §12 item 2)
+12. Legacy taxonomy retirement (only after all consumers migrated)
 
 ## 15. Implementation-vs-design matrix (evidence appendix)
 

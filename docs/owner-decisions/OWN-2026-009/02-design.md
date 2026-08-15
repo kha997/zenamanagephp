@@ -30,7 +30,7 @@ generated_by: agent
 
 **Status:** Gate 1 approved (2026-08-15, binding scope recorded in `01-request.md`). Gate 2: Round 1 changes requested by Owner (2026-08-15); this revision addresses all 4 required changes and returns to awaiting Owner review. No implementation, migration, schema change, route, controller, service, test, or merge is authorized until Gate 3 — and this work item authorizes no implementation at all; it only canonicalizes shared semantics for future slices to reference.
 
-Full normative content: `docs/superpowers/specs/2026-08-15-zena-one-page-management-canonical-semantics.md` (16 sections). This packet summarizes it for Owner decision; it does not restate every rule.
+Full normative content: `docs/superpowers/specs/2026-08-15-zena-one-page-management-canonical-semantics.md` (15 sections). This packet summarizes it for Owner decision; it does not restate every rule.
 
 ## Revision log
 

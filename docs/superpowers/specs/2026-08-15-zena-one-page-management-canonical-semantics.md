@@ -69,9 +69,10 @@ owner_gate_2_record: docs/owner-decisions/OWN-2026-009/02-design.md
 - Company receivables/aging, company cashflow, cost-vs-cash view, cross-project financial-health comparison → **Finance Control** (its own future slice/Work ID).
 - Detailed wallet/ledger/advance/reconciliation, transaction-level project cash mechanics → **Project Treasury** (§7).
 
-### 6.3 Reuse mandate (binds against duplication)
+### 6.3 Reuse mandate (binds against duplication) — corrected 2026-08-15 per Owner Gate 2 Round 1
 - `app/Services/BusinessKpiService.php:59-104` (`outstandingDebt()`, aging buckets: not_due/1-30/31-60/61-90/90+) is the existing receivables-aging computation. Finance Control must extend/formalize this service, not build a second aging engine.
-- `app/Http/Controllers/Web/ReportPageController.php:44-119` (route `operator.reports.cashflow`) is the existing, already cash-basis-correct company cashflow computation (labels its net figure `net`, never `profit`). Finance Control must reuse it, not recompute it.
+- `app/Http/Controllers/Web/ReportPageController.php:44-119` (route `operator.reports.cashflow`) is the existing company cashflow computation and the correct reuse target for Finance Control (no second cashflow calculation should be built) — **but its two sides are not equally cash-basis today, and this document does not certify it as "already correct."** The `thu` (cash-in) side is genuinely cash-basis: it branches on `ContractPayment.status === STATUS_PAID` and uses `paid_at` (`ReportPageController.php:65-79`), routing unpaid rows to a separate `cho_thu` (receivable) bucket instead. The `chi` (cash-out) side is **not** cash-basis: `app/Models/ContractExpense.php:33-40` and its migration (`database/migrations/2026_07_13_110100_create_contract_expenses_table.php:14-21`) have no `status`/`paid_at`/payment-state field at all, and `ReportPageController.php:87-96` sums every `ContractExpense.amount` unconditionally by `expense_date` — this is accrual-basis (expense incurred/recorded), not cash-basis (expense actually disbursed). Treating `ContractExpense.amount` as "actual cash-out" is therefore not supported by current code.
+- **Required before Finance Control**: an explicit audit of `ContractExpense`'s true business meaning (is `expense_date` a recognition date, a recorded-in-system date, or sometimes a paid date depending on category?) and a decision — made at Finance Control's own Gate 2, not here — on whether to (a) add a paid/disbursed state to `ContractExpense`, (b) source `chi` from a different, genuinely cash-basis record, or (c) explicitly relabel the existing `chi` figure as a cost/accrual view rather than a cash view. Until that decision is made, any surface built on `cashflow()`'s `chi` figure must present it as cost-incurred, not cash-paid, per the invariant in §8.
 - `app/Models/PaymentCertificate.php` (draft→submitted→approved, retention/advance-deduction/net-payable fields) and `Contract`'s `retention_percent`/`advance_amount`/`advance_recovery_percent` fields are the existing reuse targets for payment-certificate and retention/advance concepts — do not duplicate.
 
 ### 6.4 Inspection Commercial Gate
@@ -86,7 +87,7 @@ Classification (§2, which Service Lines apply) is separate from the Commercial 
 
 ## 8. Financial invariants (normative, apply to every surface: OPPM, Contract Control, Finance Control, Project Treasury, Control Tower)
 
-1. **Cost ≠ Cash ≠ Revenue ≠ Profit.** Cost incurred, cash paid, cash received, receivable, contract value, and revenue/profit are distinct concepts. A material receipt recording incurred cost does not prove the supplier has been paid.
+1. **Cost ≠ Cash ≠ Revenue ≠ Profit.** Cost incurred, cash paid, cash received, receivable, contract value, and revenue/profit are distinct concepts. A material receipt recording incurred cost does not prove the supplier has been paid. **Live example of this invariant currently at risk in the codebase (§6.3):** `ContractExpense.amount` records cost incurred, not confirmed cash paid — no field distinguishes the two — so a surface that reports it as "cash out" would violate this rule today.
 2. **Net Cash ≠ Profit.** `cash received − cash paid` is a cash/net-cash figure only, never labeled profit, margin, earned revenue, or accounting income, unless a future approved accounting model explicitly defines those terms.
 3. **Missing financial data ≠ zero / green / paid / certain.** Every financial surface must render an explicit "unknown"/"unavailable" state for missing data rather than defaulting to a value that implies certainty.
 4. **Contract lifecycle ≠ Contract attention** (restated from §6.1 — applies everywhere the lifecycle field is displayed).
@@ -103,9 +104,16 @@ Classification (§2, which Service Lines apply) is separate from the Commercial 
 2. Legacy classification ambiguity (§2.5) is resolved by marking rows `NEEDS_REVIEW`/`UNKNOWN`, never by silent reinterpretation.
 3. `Opportunity.service_category` defaulting to `'architecture'` (`database/migrations/2026_07_09_100000_create_leads_table.php:47-48`, and the Lead→Opportunity conversion flow) is a **currently active violation** of Rule §2.4. It is recorded here as evidence; fixing it is explicitly out of scope for OWN-2026-009 (Owner directive) and is deferred to the CRM Classification UX & Gates implementation slice (§14).
 
-## 11. Roles (normative, carried from source design, subject to the repository's actual permission names at implementation time)
+## 11. Roles (normative, carried from source design, subject to the repository's actual permission names at implementation time) — corrected 2026-08-15 per Owner Gate 2 Round 1
 
-Owner/Admin: company-wide visibility. PM: accountable-project + team scope. Team Lead: authorized team members. Staff: personal Today/My Work scope only. Any implementation slice must audit and reuse existing permission names before introducing new ones.
+Restated verbatim from the source design (PR #257 control-tower spec §12) rather than compressed, because the compression previously here silently dropped RBAC qualifiers:
+
+- **Owner/Admin**: company-wide tenant view, **subject to RBAC** — this is a description of typical scope under the existing authorization model, not a bypass of it.
+- **PM**: projects for which the user is accountable, plus authorized team scope.
+- **Team Lead**: authorized team members and their relevant project work.
+- **Staff**: personal Today/My Work, **and** whatever additional project/resource data existing RBAC and project-visibility rules already grant them. "Staff: Today/My Work" describes the scope of the *personalized action-required view*, not a ceiling on all data Staff may see — this document does not narrow, replace, or reinterpret the existing authorization model.
+
+Any implementation slice must audit and reuse existing permission names before introducing new ones; none of the above authorizes a new permission model on its own.
 
 ## 12. Known conflicts and open items surfaced during reconciliation
 
@@ -115,8 +123,9 @@ Owner/Admin: company-wide visibility. PM: accountable-project + team scope. Team
 | 2 | Treasury ↔ `ContractExpense`/`ContractPayment` integration boundary | Not yet decided — flagged as required at Project Treasury's own Gate 2 (§7.4) |
 | 3 | `INFERRED` row visibility policy in portfolio membership | Not yet decided — flagged as required at the Portfolio Membership Migration slice (§2.8) |
 | 4 | Whether/how Contract gets multi-value Service Lines | Subordinate to a not-yet-performed Contract consumer audit (§3.4) |
-| 5 | Exact Service Line persistence schema (join table naming, tenant-duplication approach) | Deferred to the Canonical Service-Line Foundation slice's own schema audit (§14) |
+| 5 | Exact Service Line persistence schema (join table naming, tenant-duplication approach) | Deferred to the **Canonical Service-Line Foundation** slice's own schema audit (§14 item 2) |
 | 6 | `OPERATIONAL_GAP_REGISTER.md` Tier-5 cost/profit blind spot | Reported to Owner separately as GAP-036 candidate; not part of this document's scope |
+| 7 | `ReportPageController::cashflow()`'s `chi` (cash-out) side is accrual-basis, not cash-basis — `ContractExpense` has no paid/status field | Corrected 2026-08-15 (§6.3, §8 item 1) — must be audited and explicitly decided before Finance Control treats it as canonical cash-out |
 
 None of the above block Gate 2 approval of this document — each is an implementation-slice-level decision the source designs themselves already deferred, not a defect in the shared semantics stated above.
 
@@ -131,18 +140,19 @@ These four sources remain **KEEP_AS_ACTIVE_DESIGN_SOURCE** (per Owner Gate 1 dec
 
 ## 14. Recommended implementation-slice decomposition (non-normative roadmap — each entry requires its own Work ID and Gate 1→2→3 lifecycle; order may be revised if repository dependencies justify it)
 
-1. Service-Line Taxonomy & Semantics Audit
-2. Shared Project Health Read Model + Shared Commercial/Financial Read Semantics (formalizes existing `ProjectAnalyticsController`/`BusinessKpiService`/`ReportPageController::cashflow` logic)
-3. CRM Classification UX & Gates (includes fixing the `architecture`-default conflict, §12 item 1)
-4. Opportunity→Project Propagation & Project Classification UX
-5. Quote Scope Snapshot
-6. Portfolio Membership Migration
-7. Commercial & Contract Control + Finance Control (company-wide)
-8. Resource Control
-9. Project OPPM (Issue #248)
-10. Operations Control Tower
-11. Project Treasury (independent/parallel-capable; its own Gate 2 must resolve §12 item 2)
-12. Legacy taxonomy retirement (only after all consumers migrated)
+1. Service-Line Taxonomy & Semantics Audit (investigation only — inventory legacy values, confirm consumer list, no schema change)
+2. **Canonical Service-Line Foundation** (the schema/build step referenced by §12 item 5: central value set, Opportunity/Project membership mechanism, provenance/trust fields — depends on item 1's audit)
+3. Shared Project Health Read Model + Shared Commercial/Financial Read Semantics (formalizes existing `ProjectAnalyticsController`/`BusinessKpiService`/`ReportPageController::cashflow` logic — including resolving §12 item 7 before this slice's own Finance-facing outputs are treated as canonical)
+4. CRM Classification UX & Gates (includes fixing the `architecture`-default conflict, §12 item 1)
+5. Opportunity→Project Propagation & Project Classification UX
+6. Quote Scope Snapshot
+7. Portfolio Membership Migration
+8. Commercial & Contract Control + Finance Control (company-wide)
+9. Resource Control
+10. Project OPPM (Issue #248)
+11. Operations Control Tower
+12. Project Treasury (independent/parallel-capable; its own Gate 2 must resolve §12 item 2)
+13. Legacy taxonomy retirement (only after all consumers migrated)
 
 ## 15. Implementation-vs-design matrix (evidence appendix)
 
@@ -160,7 +170,7 @@ These four sources remain **KEEP_AS_ACTIVE_DESIGN_SOURCE** (per Owner Gate 1 dec
 | Contract attention | DESIGN_ONLY_NOT_IMPLEMENTED | Only a Project-level ad hoc analog exists |
 | PaymentCertificate/retention/advance | SUPPORTED_BY_CURRENT_IMPLEMENTATION | `PaymentCertificate.php`, `Contract.php:46-64` |
 | Receivables aging | PARTIALLY_IMPLEMENTED | `BusinessKpiService.php:59-104` |
-| Company cashflow | SUPPORTED_BY_CURRENT_IMPLEMENTATION | `ReportPageController.php:44-119` |
+| Company cashflow | PARTIALLY_IMPLEMENTED — cash-in side correct, cash-out side accrual-basis (§6.3, §12 item 7) | `ReportPageController.php:44-119`; `ContractExpense.php:33-40` has no paid/status field |
 | Project financial health | DESIGN_ONLY_NOT_IMPLEMENTED | No such service exists |
 | OPPM / Control Tower / Portfolios | DESIGN_ONLY_NOT_IMPLEMENTED (100%) | Zero code hits repo-wide |
 | Today Workspace overlap | NO CONFLICT | Confirmed clean separation |

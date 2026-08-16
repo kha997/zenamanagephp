@@ -1,11 +1,11 @@
 ---
 work_id: GAP-037
 gate: 2
-gate_status: awaiting_owner
+gate_status: changes_requested
 owner_decision:
-  value: none
+  value: changes_requested
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-16-gap037-project-treasury-architecture-decisions.md
   plan: null
@@ -15,14 +15,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-16T20:19:30+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-16T20:58:07+07:00"
+  owner_response_reference: "Owner Gate 2 Schema Proposal Revision 12 decision -- REQUEST CHANGES, recorded in-session on 2026-08-16 against reviewed PR #263 head 19c60f680635a0243790c6540e54f98b67afe781: 'GAP-037 -- Gate 2 Schema Proposal Revision 12 -- Owner Decision: REQUEST CHANGES. Toi, Owner, yeu cau chinh sua schema proposal tai PR #263, reviewed head 19c60f680635a0243790c6540e54f98b67afe781. Toi xac nhan Revision 12 da xu ly dat cac phan: Case A paid-status gate; exact posting conservation matrix; atomic leg-ledger reversal; expense approval gate; inverse reconciliation lifecycle; va phan at-most-once/amount-equality cua document reversal. Architecture A3 + A4-a + A.5 / B2 + B2-T / C / D van approved, frozen, khong mo lai. Revision 13 chi can closure cac diem con lai: Exact document-level economic reversal: reversal phai la equal-and-opposite cua original ve amount va endpoints; original chi chuyen reversed atomically khi reversal economic posting thuc su post. Directional external-party provenance: thay single ambiguous counterparty_id bang source_party_id/destination_party_id hoac equivalent unambiguous representation; funding/owner contribution/advance return phai giu duoc nguon party; expense/advance phai giu destination party; reversal swap dung endpoints. Advance-cash conservation: originating advance document phai type/amount/party-match va unique; advance_return phai exactly-one link toi cash_return/apply, same amount va same advance party; khong cho advance outstanding va wallet cash movement drift. Case A leg settlement gate phai yeu cau canonical payment status=paid va paid_at IS NOT NULL. Giu nguyen toan bo phan v12 da dat: 14-table architecture; 12 composite-FK targets; explicit Case A endpoint; full-target endpoint completion; posting matrix; leg-reversal atomicity; B2-T no-second-payment-fact; cost allocation many-to-many; approval/reconciliation lifecycle; Tier-B/project isolation; MySQL/SQLite concurrency; A4-a; D no company-cashflow edit; zero existing-table/data migration; #245/#257 untouched. Record REQUEST CHANGES truoc vao 02-design-v12.md, freeze v12, sau do tao self-contained 02-design-v13.md, rerun required CI va quay lai awaiting_owner. Khong suy luan schema approval hoac Gate 3 authorization.'"
   reconciliation_required: false
 supersedes: docs/owner-decisions/GAP-037/02-design-v11.md
 superseded_by: null
 timestamps:
   created_at: "2026-08-16T20:19:30+07:00"
-  updated_at: "2026-08-16T20:19:30+07:00"
+  updated_at: "2026-08-16T20:58:07+07:00"
 generated_by: agent
 ---
 
@@ -343,7 +343,7 @@ Index: `(reconciliation_id)`, `(ledger_entry_id)`, `(actor_id)`.
 Kế thừa nguyên vẹn từ mọi round trước: không migration file thật; không model/controller/service/route/UI/test thật; không seed/backfill; không implementation plan coi schema này là đã duyệt cho Gate 3; không Gate 3 tự suy luận; không mark PR ready; không merge PR #263; không sửa/merge/đóng PR #245 hoặc #257; không GAP-036; không Today Workspace; không sửa canonical SSOT stale metadata; không production/deployment; không thiết kế external-destination leg representation; không sửa `ReportPageController::cashflow()`.
 
 ## Decision Needed
-Owner chọn một: Approve corrected schema proposal to proceed toward Gate 3 preparation / Request further changes / Decline.
+**Resolved 2026-08-16T20:58:07+07:00 — Owner Decision: REQUEST CHANGES.** All 6 of Revision 12's invariants were confirmed achieved — Case A paid-status gate, exact posting conservation matrix, atomic leg↔ledger reversal, expense approval gate, inverse reconciliation lifecycle, and document reversal's at-most-once/amount-equality portion. Architecture A3+A4-a+A.5/B2+B2-T/C/D remains approved, frozen, not reopened. Revision 13 must close 4 remaining points: (1) exact document-level economic reversal — equal-and-opposite endpoints, not just amount, and the original transitions to `reversed` atomically only when the reversal's own economic posting actually posts; (2) directional external-party provenance — replace the single ambiguous `counterparty_id` with `source_party_id`/`destination_party_id`, so `funding`/`owner_contribution`/`advance_return` retain their source party and `expense`/`advance` retain their destination party, with reversals swapping endpoints exactly; (3) advance↔cash conservation — the originating advance document must type/amount/party-match and be unique, `advance_return` must have exactly-one linked `cash_return`/`apply` settlement with matching amount and party, and advance-outstanding bookkeeping must never drift from actual wallet cash movement; (4) the Case A leg-settlement gate must also require `ContractPayment.paid_at IS NOT NULL`, not `status = 'paid'` alone. This packet (`02-design-v12.md`) is now **frozen** — no further edits. `docs/owner-decisions/GAP-037/02-design-v13.md` (self-contained) follows in the next commit.
 
 ## What the owner is NOT being asked to decide
 Owner không được yêu cầu duyệt migration file thật hay chi tiết implementation. Owner cũng không được yêu cầu duyệt lại architecture set A3/A4-a/A.5/B2/B2-T/C/D — đã approved, không mở lại. Owner cũng không được yêu cầu duyệt overpayment/prepayment semantics, hay thiết kế external-destination leg representation (nêu là future extension point, chưa thiết kế ở đây).

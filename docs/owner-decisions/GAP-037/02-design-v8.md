@@ -1,11 +1,11 @@
 ---
 work_id: GAP-037
 gate: 2
-gate_status: awaiting_owner
+gate_status: changes_requested
 owner_decision:
-  value: none
+  value: changes_requested
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-16-gap037-project-treasury-architecture-decisions.md
   plan: null
@@ -15,14 +15,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-16T18:17:11+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-16T18:46:10+07:00"
+  owner_response_reference: "Owner Gate 2 Schema Proposal Revision 8 decision — REQUEST CHANGES, recorded in-session on 2026-08-16 against reviewed PR #263 head 43897988d486adf0e07b48edcbe33c131e139bbb: 'GAP-037 — Gate 2 Schema Proposal Revision 8 — Owner Decision: REQUEST CHANGES. Tôi, Owner, yêu cầu chỉnh sửa schema proposal tại PR #263, reviewed head 43897988d486adf0e07b48edcbe33c131e139bbb. Tôi xác nhận hai correction của Revision 8 đã xử lý đúng yêu cầu trước: Treasury-internal same-project rules đã được bổ sung cho các nhóm đã nêu; financial-document-linked route đã có exact amount equality và reconciliation branching theo posting_path. Architecture A3 + A4-a + A.5 / B2 + B2-T / C / D vẫn approved, frozen và không được mở lại. Revision 9 chỉ cần xử lý ba closure items: 1. Preserve route/document amount equality throughout lifecycle. Sau khi một document chọn posting_path=via_route, financial_document.amount và linked route total_allocated_amount không được drift. Prefer immutable after route attachment; nếu cho update thì equality phải được revalidated atomically under the same locks. 2. Require economic route completion before posted_reconciled. Với via_route, việc tất cả ledger entries hiện có đã reconciled chưa đủ. Document chỉ được posted_reconciled khi linked route đã hoàn thành toàn bộ economic movement của document và toàn bộ applicable route-ledger entries có active reconciliation. Nếu dùng route.status=completed, phải định nghĩa binding completion predicate; status không được set tùy ý trong khi route còn partial. 3. Close route eligibility and remaining derived-project joins. Với schema hiện tại (from_wallet_id nullable, to_wallet_id required), via_route chỉ được dùng cho document types mà endpoint model biểu diễn được. Không cho expense/advance cash-out chọn route nếu chưa có external-destination representation. Đồng thời bind same-project cho advance_settlement ↔ financial_document và cho cost_settlement_allocation giữa Treasury-side source và external cost source. Giữ nguyên toàn bộ v8 còn lại: 14 tables; 12 composite-FK targets; B2-T; route external-entry conservation; signed immutable ledger; reversal semantics; advance/cost allocation conservation; reconciliation actor; MySQL/SQLite locking; Tier-B rules; zero existing-table changes; #245/#257 untouched; không migration/model/controller/service/route/UI/tests; không Gate 3. Record REQUEST CHANGES trước vào 02-design-v8.md, freeze v8, tạo self-contained 02-design-v9.md, chạy lại required CI và quay lại awaiting_owner. Không được suy luận schema approval hoặc Gate 3 authorization.'"
   reconciliation_required: false
 supersedes: docs/owner-decisions/GAP-037/02-design-v7.md
 superseded_by: null
 timestamps:
   created_at: "2026-08-16T18:17:11+07:00"
-  updated_at: "2026-08-16T18:17:11+07:00"
+  updated_at: "2026-08-16T18:46:10+07:00"
 generated_by: agent
 ---
 
@@ -234,7 +234,7 @@ Index: `(reconciliation_id)`, `(ledger_entry_id)`, `(actor_id)`.
 Kế thừa nguyên vẹn từ mọi round trước: không migration file thật; không model/controller/service/route/UI/test thật; không seed/backfill; không implementation plan coi schema này là đã duyệt cho Gate 3; không Gate 3 tự suy luận; không mark PR ready; không merge PR #263; không sửa/merge/đóng PR #245 hoặc #257; không GAP-036; không Today Workspace; không sửa canonical SSOT stale metadata; không production/deployment.
 
 ## Decision Needed
-Owner chọn một: Approve corrected schema proposal to proceed toward Gate 3 preparation / Request further changes / Decline.
+**Owner đã chọn: Request changes**, tại PR #263 head `43897988d486adf0e07b48edcbe33c131e139bbb` (2026-08-16) — xác nhận 2 correction của Revision 8 đạt yêu cầu; 3 closure items còn lại: (1) preserve route/document amount equality throughout lifecycle (immutable after attachment); (2) require binding route-completion predicate before posted_reconciled for via_route, not just entry-level reconciliation; (3) close route eligibility (expense/advance not eligible for via_route until external-destination representation exists) and remaining derived-project joins (advance_settlement↔financial_document, cost_settlement_allocation's Treasury-side project source). Architecture A3+A4-a+A.5/B2+B2-T/C/D confirmed unchanged. Chi tiết nguyên văn tại `decision_provenance.owner_response_reference`. **This packet (`02-design-v8.md`) is now frozen — no further content edits.** `docs/owner-decisions/GAP-037/02-design-v9.md`, self-contained, addressing these 3 points, follows in the next commit.
 
 ## What the owner is NOT being asked to decide
 Owner không được yêu cầu duyệt migration file thật hay chi tiết implementation. Owner cũng không được yêu cầu duyệt lại architecture set A3/A4-a/A.5/B2/B2-T/C/D — đã approved, không mở lại. Owner cũng không được yêu cầu duyệt overpayment/prepayment semantics.

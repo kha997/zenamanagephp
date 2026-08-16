@@ -1,11 +1,11 @@
 ---
 work_id: GAP-037
 gate: 2
-gate_status: awaiting_owner
+gate_status: changes_requested
 owner_decision:
-  value: none
+  value: changes_requested
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-16-gap037-project-treasury-architecture-decisions.md
   plan: null
@@ -15,14 +15,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-16T17:33:04+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-16T17:53:22+07:00"
+  owner_response_reference: "Owner Gate 2 Schema Proposal Revision 5 decision — REQUEST CHANGES, recorded in-session on 2026-08-16 against reviewed PR #263 head 46b69b8308aa95a713a0ba4a948d8dbdf87b508f: 'GAP-037 — Gate 2 Schema Proposal Revision 5 — Owner Decision: REQUEST CHANGES. Tôi, Owner, yêu cầu chỉnh sửa schema proposal tại PR #263, reviewed head 46b69b8308aa95a713a0ba4a948d8dbdf87b508f. Architecture set A3 + A4-a + A.5 / B2 + B2-T / C / D vẫn approved, frozen và không được mở lại. Revision 6 chỉ xử lý các điểm sau: 1. Composite self-FK targets — Bổ sung UNIQUE(tenant_id,id) cho treasury_cost_settlement_allocations; treasury_reconciliation_entries; vì cả hai đều có composite self-FK. Cập nhật target-index inventory từ 10 lên đúng 12 tables. 2. Correct ledger reversal semantics — Không áp dụng direction=apply cho treasury_ledger_entries. Ledger reversal phải target original non-reversal entry, giữ same economic source/wallet/amount, dùng opposite debit/credit direction, at-most-once, no reversal-of-reversal. apply|reverse tiếp tục dùng cho allocation/advance/reconciliation event tables. 3. Fix fund-chain uniqueness — Không dùng UNIQUE(fund_chain_id, member_financial_document_id, member_payment_route_id) để chống duplicates khi một member column luôn NULL. Dùng hai unique constraints tương đương: (fund_chain_id, member_financial_document_id) và (fund_chain_id, member_payment_route_id) hoặc một cross-engine equivalent thực sự enforce được. 4. Restore complete settlement conservation — V6 phải self-contained và restate: exact net cost-allocation formula; direct expense: net allocations = financial document amount before posting; per canonical cost source: 0 <= net allocation <= canonical incurred amount; approved-expense advance settlement: net cost allocations linked to that settlement = settlement amount; 0 <= outstanding advance <= original advance.amount; writes violating any bound are rejected. Giữ nguyên rule material prepayment không được giả thành incurred cost. 5. Serialize route-custody writes — Thêm route-leg custody vào concurrency-protected aggregate invariants. Route-leg create/post phải lock parent route (or equivalent stable serialization subject), recompute available custody, validate, then persist leg + ledger movements atomically. 6. Engine-accurate concurrency wording — MySQL dùng FOR UPDATE; SQLite test path dùng explicit SQLite-equivalent write serialization such as BEGIN IMMEDIATE/equivalent. Không tuyên bố SQLite có row-level SELECT ... FOR UPDATE. Giữ nguyên tất cả phần v5 đã đạt: typed nullable source FKs + XOR CHECKs; frozen posting_path; exactly-once original ledger posting; advance settlement zero second cash-out; reconciliation actor; whole-entry reconciliation; 14-table count; migration order; zero existing-table changes; PR #245/#257 untouched; không migration/model/controller/service/route/UI/tests thật; không Gate 3. Ghi nhận REQUEST CHANGES trước bằng governance-record-only commit vào 02-design-v5.md, freeze v5, sau đó tạo self-contained 02-design-v6.md, rerun required CI và quay lại awaiting_owner. Không được suy luận schema approval hoặc Gate 3 authorization.'"
   reconciliation_required: false
 supersedes: docs/owner-decisions/GAP-037/02-design-v4.md
 superseded_by: null
 timestamps:
   created_at: "2026-08-16T17:33:04+07:00"
-  updated_at: "2026-08-16T17:33:04+07:00"
+  updated_at: "2026-08-16T17:53:22+07:00"
 generated_by: agent
 ---
 
@@ -380,7 +380,7 @@ No table in this final order is ever created before a table it holds a real FK t
 Kế thừa nguyên vẹn từ mọi round trước: không migration file thật; không model/controller/service/route/UI/test thật; không seed/backfill; không implementation plan coi schema này là đã duyệt cho Gate 3; không Gate 3 tự suy luận; không mark PR ready; không merge PR #263; không sửa/merge/đóng PR #245 hoặc #257; không GAP-036; không Today Workspace; không sửa canonical SSOT stale metadata; không production/deployment.
 
 ## Decision Needed
-Owner chọn một: Approve corrected schema proposal to proceed toward Gate 3 preparation / Request further changes / Decline.
+**Owner đã chọn: Request changes**, tại PR #263 head `46b69b8308aa95a713a0ba4a948d8dbdf87b508f` (2026-08-16) — 6 điểm: 2 missing composite self-FK unique indexes (10→12); ledger reversal wrongly framed as apply/reverse instead of debit/credit-opposite; fund-chain uniqueness broken by NULL non-collision; settlement conservation bounds need full restatement; route-leg custody writes need the same concurrency protection as the other 5 aggregate checks; SQLite falsely implied to support row-level `FOR UPDATE`. Architecture set A3+A4-a+A.5/B2+B2-T/C/D confirmed unchanged. Chi tiết nguyên văn tại `decision_provenance.owner_response_reference`. **This packet (`02-design-v5.md`) is now frozen — no further content edits.** `docs/owner-decisions/GAP-037/02-design-v6.md`, self-contained, addressing these 6 points, follows in the next commit.
 
 ## What the owner is NOT being asked to decide
 Owner không được yêu cầu duyệt migration file thật hay chi tiết implementation (exact service/method/class names, exact lock-acquisition code). Owner cũng không được yêu cầu duyệt lại architecture set A3/A4-a/A.5/B2/B2-T/C/D — đã approved, không mở lại bởi revision này. Owner cũng không được yêu cầu duyệt overpayment/prepayment semantics — carve-out chỉ xác nhận phạm vi, không đề xuất thiết kế cho trường hợp đó.

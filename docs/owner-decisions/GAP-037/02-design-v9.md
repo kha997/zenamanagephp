@@ -1,11 +1,11 @@
 ---
 work_id: GAP-037
 gate: 2
-gate_status: awaiting_owner
+gate_status: changes_requested
 owner_decision:
-  value: none
+  value: changes_requested
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-16-gap037-project-treasury-architecture-decisions.md
   plan: null
@@ -15,14 +15,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-16T18:47:25+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-16T18:58:47+07:00"
+  owner_response_reference: "Owner Gate 2 Schema Proposal Revision 9 decision -- REQUEST CHANGES, recorded in-session on 2026-08-16 against reviewed PR #263 head f8b3d5c03810c3d02b26c3e09ab6fcb7ae8fba8c: 'GAP-037 -- Gate 2 Schema Proposal Revision 9 -- Owner Decision: REQUEST CHANGES. Toi, Owner, yeu cau chinh sua schema proposal tai PR #263, reviewed head f8b3d5c03810c3d02b26c3e09ab6fcb7ae8fba8c. Toi xac nhan 3 closure items cua Revision 9 da xu ly dung huong va architecture A3 + A4-a + A.5 / B2 + B2-T / C / D van approved, frozen, khong mo lai. Revision 10 chi xu ly hai diem: 1. Make financial-document route completion endpoint-aware. Khong dung mot predicate chung sum route custody = total_allocated_amount cho moi document type. Voi wallet-terminating inbound documents, completed phai chung minh full amount da toi chinh destination_wallet_id, khong con residual o intermediary wallets. Voi internal_transfer, completed phai chung minh net route effect: source_wallet = -amount, destination_wallet = +amount, all intermediary wallets = 0, dong thoi khong con leg in_transit. posted_reconciled cua via_route tiep tuc yeu cau route completed theo predicate nay va toan bo applicable ledger entries reconciled. 2. Determine reversal route eligibility from the reversal's own endpoint shape. Khong inherit eligibility mot cach may moc tu original document. Neu reversal tao wallet-to-external movement ma current leg schema khong bieu dien duoc, reversal phai direct. Reversal chi duoc via_route khi chinh source/destination shape sau reversal nam trong kha nang bieu dien hien tai cua payment_route_legs. Khong thiet ke external-destination leg trong work item nay. Giu nguyen toan bo v9 con lai: amount immutability; 14 tables; 12 composite-FK targets; B2-T; signed ledger; reversal/allocation semantics; Tier-B/project integrity; advance settlement; reconciliation actor; MySQL/SQLite locking; zero existing-table changes; #245/#257 untouched; khong runtime/schema implementation; khong Gate 3. Record REQUEST CHANGES truoc vao 02-design-v9.md, freeze v9, tao self-contained 02-design-v10.md, rerun required CI va quay lai awaiting_owner. Khong duoc suy luan schema approval hoac Gate 3 authorization.'"
   reconciliation_required: false
 supersedes: docs/owner-decisions/GAP-037/02-design-v8.md
 superseded_by: null
 timestamps:
   created_at: "2026-08-16T18:47:25+07:00"
-  updated_at: "2026-08-16T18:47:25+07:00"
+  updated_at: "2026-08-16T18:58:47+07:00"
 generated_by: agent
 ---
 
@@ -254,7 +254,7 @@ Index: `(reconciliation_id)`, `(ledger_entry_id)`, `(actor_id)`.
 Kế thừa nguyên vẹn từ mọi round trước: không migration file thật; không model/controller/service/route/UI/test thật; không seed/backfill; không implementation plan coi schema này là đã duyệt cho Gate 3; không Gate 3 tự suy luận; không mark PR ready; không merge PR #263; không sửa/merge/đóng PR #245 hoặc #257; không GAP-036; không Today Workspace; không sửa canonical SSOT stale metadata; không production/deployment.
 
 ## Decision Needed
-Owner chọn một: Approve corrected schema proposal to proceed toward Gate 3 preparation / Request further changes / Decline.
+**Resolved 2026-08-16T18:58:47+07:00 — Owner Decision: REQUEST CHANGES.** The 3 closure items from Revision 8 were confirmed handled correctly; architecture A3+A4-a+A.5/B2+B2-T/C/D remains approved, frozen, not reopened. Two further points required: (1) make financial-document route completion endpoint-aware — no single generic "sum route custody = total_allocated_amount" predicate for every document type; wallet-terminating inbound documents must prove the full amount reached `destination_wallet_id` specifically with no residual at intermediary wallets; `internal_transfer` must prove the net route effect (`source_wallet = -amount`, `destination_wallet = +amount`, all intermediary wallets `= 0`), with no leg `in_transit`; (2) determine reversal route eligibility from the reversal's own endpoint shape, not inherited mechanically from the original document — a reversal producing a wallet-to-external movement the current leg schema cannot represent must be `direct`; `via_route` is only permitted when the reversal's own resulting source/destination shape is representable by the current `payment_route_legs` model. This packet (`02-design-v9.md`) is now **frozen** — no further edits. `docs/owner-decisions/GAP-037/02-design-v10.md` (self-contained) follows in the next commit.
 
 ## What the owner is NOT being asked to decide
 Owner không được yêu cầu duyệt migration file thật hay chi tiết implementation. Owner cũng không được yêu cầu duyệt lại architecture set A3/A4-a/A.5/B2/B2-T/C/D — đã approved, không mở lại. Owner cũng không được yêu cầu duyệt overpayment/prepayment semantics, hay thiết kế external-destination leg representation (nêu là future extension point, chưa thiết kế ở đây).

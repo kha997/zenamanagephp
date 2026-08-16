@@ -1,11 +1,11 @@
 ---
 work_id: GAP-037
 gate: 2
-gate_status: awaiting_owner
+gate_status: changes_requested
 owner_decision:
-  value: none
+  value: changes_requested
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-16-gap037-project-treasury-architecture-decisions.md
   plan: null
@@ -15,14 +15,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-16T17:01:00+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-16T17:18:58+07:00"
+  owner_response_reference: "Owner Gate 2 Schema Proposal Revision 3 decision — REQUEST CHANGES, recorded in-session on 2026-08-16 against reviewed PR #263 head f46ca60b85db048cb5916a953a41fcbcb8e14f7d: 'GAP-037 — Gate 2 Schema Proposal Revision 3 — Owner Decision: REQUEST CHANGES. Tôi, Owner, yêu cầu chỉnh sửa Gate 2 schema proposal của GAP-037 tại PR #263, reviewed head f46ca60b85db048cb5916a953a41fcbcb8e14f7d. Tôi xác nhận 8 correction của Revision 2 đã được xử lý theo đúng hướng và architecture set đã approved A3 + A4-a + A.5 / B2 + B2-T / C / D vẫn giữ nguyên, không mở lại. Tuy nhiên schema chưa đủ điều kiện tiến tới Gate 3. Revision tiếp theo phải xử lý các điểm sau: 1. Exclusive ledger-source + idempotency — Xác định rõ khi một Treasury-native financial document có payment route thì wallet movement chỉ được post bởi một source. Binding rule phải ngăn một economic movement vừa được post từ financial_document vừa từ payment_route_leg. Bổ sung deterministic exactly-once/idempotency invariant cho ledger posting theo source_type/source_id. 2. Advance/prepayment → cost settlement without second cash-out — Xác định concrete semantic khi supplier advance đã trả trước, sau đó cost thực sự phát sinh. Settling an existing advance against ContractExpense/MaterialReceiptLine không được tạo một wallet debit/cash-out lần hai. Phải định nghĩa rõ relationship giữa original advance financial document, treasury_advance_settlements và treasury_cost_settlement_allocations, cùng conservation equation cho outstanding advance. 3. Reconciliation — route-leg-sourced ledger entries phải có thể được reconciled; route lifecycle status không thay thế external-evidence reconciliation; reconciliation.wallet_id bắt buộc bằng ledger_entry.wallet_id; thay PostgreSQL-style partial unique rule UNIQUE (...) WHERE status=active bằng một concrete MySQL-compatible design hoặc explicit transactional-locking invariant; reversal của reconciliation phải audit được rõ ràng. 4. Complete same-tenant/same-project invariants — Bổ sung binding validation cho chính treasury_ledger_entries.source_type/source_id cùng approval, fund-chain member, reconciliation/wallet và mọi polymorphic/non-DB-FK target còn lại. Không chỉ same tenant; nơi có Project semantics phải chứng minh same project. 5. Allocation reversal semantics — Chọn một deterministic append/reversal model cho treasury_cost_settlement_allocations. Phải xác định rõ original row, reversal row/status, link direction và exact formula tính net active allocation để over-settlement cap luôn đúng. Áp dụng pattern nhất quán cho advance settlement/reconciliation nơi phù hợp. 6. Exact schema inventory — Reconcile tuyên bố 15 CREATE TABLE với migration inventory hiện chỉ có 14 rows. Phải đưa ra exact physical-table count và dependency-safe migration order không mâu thuẫn. Revision mới phải self-contained đủ để Owner duyệt toàn bộ concrete schema, đặc biệt phải bao gồm concrete definitions cho advances/advance settlements/fund chains thay vì chỉ dựa ngầm vào superseded v2. Giữ nguyên các phần đã đạt: debit/credit wallet balance formula; reversal_of_entry_id; source/destination wallet fields; partial-route custody bằng net ledger movements; B2-T ContractPayment route không tạo second commercial-payment document; new additive Treasury approval table; cumulative cost over-settlement cap; material prepayment không được giả thành incurred cost; whole-entry reconciliation decision; zero changes to existing tables/data; A4-a absolute no-read/write/sync Component/Project cost fields; D không sửa ReportPageController::cashflow(); PR #245/#257 untouched; không migration/model/controller/service/route/UI/tests thật; không Gate 3. Ghi nhận REQUEST CHANGES này trước bằng governance-record-only commit vào 02-design-v3.md; sau đó freeze v3 và tạo 02-design-v4.md superseding nó. Chạy lại required CI và đưa v4 về awaiting_owner tại exact new head. Không được suy luận schema approval hoặc Gate 3 authorization.'"
   reconciliation_required: false
 supersedes: docs/owner-decisions/GAP-037/02-design-v2.md
 superseded_by: null
 timestamps:
   created_at: "2026-08-16T17:01:00+07:00"
-  updated_at: "2026-08-16T17:01:00+07:00"
+  updated_at: "2026-08-16T17:18:58+07:00"
 generated_by: agent
 ---
 
@@ -268,7 +268,7 @@ No table in this order is ever created before a table it has a **real, DB-enforc
 Kế thừa nguyên vẹn từ mọi round trước: không migration file thật; không model/controller/service/route/UI/test thật; không seed/backfill; không implementation plan coi schema này là đã duyệt cho Gate 3; không Gate 3 tự suy luận; không mark PR ready; không merge PR #263; không sửa/merge/đóng PR #245 hoặc #257; không GAP-036; không Today Workspace; không sửa canonical SSOT stale metadata; không production/deployment.
 
 ## Decision Needed
-Owner chọn một: Approve corrected schema proposal to proceed toward Gate 3 preparation / Request further changes / Decline.
+**Owner đã chọn: Request changes**, tại PR #263 head `f46ca60b85db048cb5916a953a41fcbcb8e14f7d` (2026-08-16) — 8 correction của Revision 2 xác nhận đúng hướng; 6 điểm bắt buộc còn lại: exclusive ledger-source + idempotency; advance/prepayment settlement không tạo second cash-out; reconciliation coverage cho route-leg entries + MySQL-compatible uniqueness + audit reversal; complete tenant/project invariants; deterministic allocation reversal model; exact schema inventory (15 vs 14 mismatch). Architecture set A3+A4-a+A.5/B2+B2-T/C/D confirmed unchanged. Chi tiết nguyên văn tại `decision_provenance.owner_response_reference`. **This packet (`02-design-v3.md`) is now frozen — no further content edits.** `docs/owner-decisions/GAP-037/02-design-v4.md`, self-contained, addressing these 6 points, follows in the next commit.
 
 ## What the owner is NOT being asked to decide
 Owner không được yêu cầu duyệt migration file thật hay chi tiết implementation (transaction boundaries, service/class names). Owner cũng không được yêu cầu duyệt lại architecture set A3/A4-a/A.5/B2/B2-T/C/D — đã approved, không mở lại bởi revision này. Owner cũng không được yêu cầu duyệt overpayment/prepayment semantics — §4.3 chỉ carve-out phạm vi, không đề xuất thiết kế cho trường hợp đó.

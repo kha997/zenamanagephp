@@ -1,11 +1,11 @@
 ---
 work_id: GAP-037
 gate: 2
-gate_status: awaiting_owner
+gate_status: changes_requested
 owner_decision:
-  value: none
+  value: changes_requested
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-16-gap037-project-treasury-architecture-decisions.md
   plan: null
@@ -15,14 +15,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-16T17:54:33+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-16T18:05:13+07:00"
+  owner_response_reference: "Owner Gate 2 Schema Proposal Revision 6 decision — REQUEST CHANGES, recorded in-session on 2026-08-16 against reviewed PR #263 head 22de0cc8af3a1ed9a428bc6506aa426a507b33e8: 'GAP-037 — Gate 2 Schema Proposal Revision 6 — Owner Decision: REQUEST CHANGES. Tôi, Owner, yêu cầu chỉnh sửa schema proposal tại PR #263, reviewed head 22de0cc8af3a1ed9a428bc6506aa426a507b33e8. Tôi xác nhận các correction của Revision 6 đã xử lý đúng yêu cầu trước và architecture set A3 + A4-a + A.5 / B2 + B2-T / C / D vẫn approved, frozen và không được mở lại. Revision 7 chỉ cần xử lý ba điểm: 1. Restore Tier-B tenant/project invariants in the self-contained packet — Restate binding same-tenant/same-project validation for linked_contract_payment_id; cost_source_contract_expense_id; cost_source_material_receipt_line_id. Single-column existing-table FKs prove existence only and do not replace tenant/project ownership validation. 2. Make advance-settlement reversal compatible with settlement completeness — Separate completeness semantics for apply and reverse approved-expense settlements. Apply settlement must be created with cost allocations whose total equals its amount. Reverse settlement must target an existing apply settlement and atomically create exact compensating reverse allocations for that settlement's still-active cost allocations, with equal magnitude. Do not apply one positive net allocations = settlement.amount equation indiscriminately to both apply and reverse rows. Preserve: 0 <= outstanding_advance <= advance.amount and per-cost-source allocation bounds after the transaction. 3. Define external first-leg custody semantics — For a route leg with from_wallet_id IS NULL, do not perform a nonexistent wallet-custody check. Treat it as an external-entry leg whose amount is bounded by the route's remaining economic allocation, under the same parent-route serialization. For legs with a real from_wallet_id, retain v6's wallet-custody check. External-entry + all subsequent movements must conserve total_allocated_amount; historical legs remain non-additive and must never reconstruct client/investor-paid amount. Keep everything else from v6 unchanged, including: 14-table count; typed nullable FKs + XOR CHECKs; frozen posting path; signed ledger + exactly-once posting; corrected ledger reversal; event-log reversal model; two fund-chain uniqueness indexes; 12 composite-FK targets; settlement/cost bounds; route locking; MySQL FOR UPDATE / SQLite BEGIN IMMEDIATE; reconciliation actor and whole-entry reconciliation; zero changes to existing tables/data; PR #245/#257 untouched; no migration/model/controller/service/route/UI/tests; no Gate 3. Ghi nhận REQUEST CHANGES này trước bằng governance-record-only commit vào 02-design-v6.md; freeze v6; sau đó tạo self-contained 02-design-v7.md, rerun required CI và quay lại awaiting_owner. Không được suy luận schema approval hoặc Gate 3 authorization.'"
   reconciliation_required: false
 supersedes: docs/owner-decisions/GAP-037/02-design-v5.md
 superseded_by: null
 timestamps:
   created_at: "2026-08-16T17:54:33+07:00"
-  updated_at: "2026-08-16T17:54:33+07:00"
+  updated_at: "2026-08-16T18:05:13+07:00"
 generated_by: agent
 ---
 
@@ -328,7 +328,7 @@ No table created before a table it holds a real FK to. **No migration file exist
 Kế thừa nguyên vẹn từ mọi round trước: không migration file thật; không model/controller/service/route/UI/test thật; không seed/backfill; không implementation plan coi schema này là đã duyệt cho Gate 3; không Gate 3 tự suy luận; không mark PR ready; không merge PR #263; không sửa/merge/đóng PR #245 hoặc #257; không GAP-036; không Today Workspace; không sửa canonical SSOT stale metadata; không production/deployment.
 
 ## Decision Needed
-Owner chọn một: Approve corrected schema proposal to proceed toward Gate 3 preparation / Request further changes / Decline.
+**Owner đã chọn: Request changes**, tại PR #263 head `22de0cc8af3a1ed9a428bc6506aa426a507b33e8` (2026-08-16) — 3 điểm: Tier-B tenant/project invariants missing from the self-contained packet; advance-settlement reversal wrongly used one indiscriminate net-equals-amount equation instead of separate apply/reverse completeness; route-leg external-entry (`from_wallet_id IS NULL`) custody semantics undefined. Architecture set A3+A4-a+A.5/B2+B2-T/C/D confirmed unchanged. Chi tiết nguyên văn tại `decision_provenance.owner_response_reference`. **This packet (`02-design-v6.md`) is now frozen — no further content edits.** `docs/owner-decisions/GAP-037/02-design-v7.md`, self-contained, addressing these 3 points, follows in the next commit.
 
 ## What the owner is NOT being asked to decide
 Owner không được yêu cầu duyệt migration file thật hay chi tiết implementation. Owner cũng không được yêu cầu duyệt lại architecture set A3/A4-a/A.5/B2/B2-T/C/D — đã approved, không mở lại. Owner cũng không được yêu cầu duyệt overpayment/prepayment semantics.

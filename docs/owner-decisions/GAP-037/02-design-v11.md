@@ -1,11 +1,11 @@
 ---
 work_id: GAP-037
 gate: 2
-gate_status: awaiting_owner
+gate_status: changes_requested
 owner_decision:
-  value: none
+  value: changes_requested
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-16-gap037-project-treasury-architecture-decisions.md
   plan: null
@@ -15,14 +15,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-16T19:33:40+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-16T20:18:07+07:00"
+  owner_response_reference: "Owner Gate 2 Schema Proposal Revision 11 decision -- REQUEST CHANGES, recorded in-session on 2026-08-16 against reviewed PR #263 head b7a58f781b8d61c88935770136398346ca4bb24b: 'GAP-037 -- Gate 2 Schema Proposal Revision 11 -- Owner Decision: REQUEST CHANGES. Toi, Owner, yeu cau chinh sua schema proposal tai PR #263, reviewed head b7a58f781b8d61c88935770136398346ca4bb24b. Toi xac nhan hai correction cua Revision 11 da dat: Case A co explicit expected_destination_wallet_id; route completion su dung full unreduced target. Architecture A3 + A4-a + A.5 / B2 + B2-T / C / D van approved, frozen, khong mo lai. Revision 12 la consolidated closure round va phai bo sung sau binding invariants: Case A custody chi duoc post sau canonical ContractPayment thuc su paid; exact document/route-leg-to-ledger posting conservation matrix; atomic leg-reversal/ledger-reversal coupling; exact/at-most-once document-level reversal; unambiguous external-party direction plus advance/cash-return semantic binding; expense approval gate va inverse reconciliation lifecycle. Giu nguyen cac phan v11 da dat: 14-table architecture; 12 composite-FK targets; Case A explicit endpoint; full-target endpoint-aware completion; reversal eligibility from own endpoint shape; amount immutability; B2-T no second ContractPayment fact; many-to-many cost allocation; advance-settlement no-second-cash-out rule; Tier-B/project integrity; reconciliation actor; MySQL/SQLite concurrency; A4-a exclusion; D no ReportPageController::cashflow() edit; zero existing-table/data migration; #245/#257 untouched. Record REQUEST CHANGES truoc vao 02-design-v11.md, freeze v11, sau do tao self-contained 02-design-v12.md, rerun required CI va quay lai awaiting_owner. Khong suy luan schema approval hoac Gate 3 authorization.'"
   reconciliation_required: false
 supersedes: docs/owner-decisions/GAP-037/02-design-v10.md
 superseded_by: null
 timestamps:
   created_at: "2026-08-16T19:33:40+07:00"
-  updated_at: "2026-08-16T19:33:40+07:00"
+  updated_at: "2026-08-16T20:18:07+07:00"
 generated_by: agent
 ---
 
@@ -266,7 +266,7 @@ Index: `(reconciliation_id)`, `(ledger_entry_id)`, `(actor_id)`.
 Kế thừa nguyên vẹn từ mọi round trước: không migration file thật; không model/controller/service/route/UI/test thật; không seed/backfill; không implementation plan coi schema này là đã duyệt cho Gate 3; không Gate 3 tự suy luận; không mark PR ready; không merge PR #263; không sửa/merge/đóng PR #245 hoặc #257; không GAP-036; không Today Workspace; không sửa canonical SSOT stale metadata; không production/deployment; không thiết kế external-destination leg representation.
 
 ## Decision Needed
-Owner chọn một: Approve corrected schema proposal to proceed toward Gate 3 preparation / Request further changes / Decline.
+**Resolved 2026-08-16T20:18:07+07:00 — Owner Decision: REQUEST CHANGES.** Both corrections in Revision 11 (explicit Case A `expected_destination_wallet_id`, full unreduced completion target) were confirmed achieved; architecture A3+A4-a+A.5/B2+B2-T/C/D remains approved, frozen, not reopened. Revision 12 is a **consolidated closure round** requiring 6 new binding invariants: (1) Case A custody may only post after the canonical `ContractPayment` is actually paid; (2) an exact document/route-leg → ledger posting conservation matrix; (3) atomic leg-reversal ↔ ledger-reversal coupling; (4) exact, at-most-once document-level reversal; (5) unambiguous external-party direction plus advance/cash-return semantic binding; (6) an expense approval gate and inverse reconciliation lifecycle. This packet (`02-design-v11.md`) is now **frozen** — no further edits. `docs/owner-decisions/GAP-037/02-design-v12.md` (self-contained) follows in the next commit.
 
 ## What the owner is NOT being asked to decide
 Owner không được yêu cầu duyệt migration file thật hay chi tiết implementation. Owner cũng không được yêu cầu duyệt lại architecture set A3/A4-a/A.5/B2/B2-T/C/D — đã approved, không mở lại. Owner cũng không được yêu cầu duyệt overpayment/prepayment semantics, hay thiết kế external-destination leg representation (nêu là future extension point, chưa thiết kế ở đây).

@@ -1,11 +1,11 @@
 ---
 work_id: GAP-037
 gate: 2
-gate_status: awaiting_owner
+gate_status: changes_requested
 owner_decision:
-  value: none
+  value: changes_requested
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-16-gap037-project-treasury-architecture-decisions.md
   plan: null
@@ -15,14 +15,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-16T18:06:21+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-16T18:16:05+07:00"
+  owner_response_reference: "Owner Gate 2 Schema Proposal Revision 7 decision — REQUEST CHANGES, recorded in-session on 2026-08-16 against reviewed PR #263 head d2c44e76ef919c114c7a45b10dbc694a24c4336e: 'GAP-037 — Gate 2 Schema Proposal Revision 7 — Owner Decision: REQUEST CHANGES. Tôi, Owner, yêu cầu chỉnh sửa schema proposal tại PR #263, reviewed head d2c44e76ef919c114c7a45b10dbc694a24c4336e. Tôi xác nhận ba correction của Revision 7 đã xử lý đạt yêu cầu: Tier-B same-tenant/same-project rules cho các existing-table FKs đã được phục hồi; advance-settlement apply/reverse completeness đã được tách đúng và compensating allocations được tạo atomically; external-entry route leg đã có conservation rule đúng, không còn giả định from_wallet_id tồn tại. Architecture set A3 + A4-a + A.5 / B2 + B2-T / C / D vẫn approved, frozen và không được mở lại. Revision 8 chỉ cần xử lý hai nhóm invariant: 1. Treasury-internal same-project integrity — Composite (tenant_id,id) FK chỉ bảo đảm tenant, không bảo đảm project. Bổ sung binding application/service-layer project-compatibility rules cho mọi Treasury-to-Treasury reference có project semantics, tối thiểu: route ↔ linked financial document; advance ↔ originating financial document; fund chain ↔ member document/route; financial-document reversal/replacement; project-scoped wallet references from financial documents and route legs; ledger source ↔ wallet project compatibility. Company/shared wallets với project_id = NULL được phép khi wallet semantics cho phép. 2. Financial-document-linked route conservation and reconciliation — Khi treasury_payment_routes.linked_financial_document_id được set: route.total_allocated_amount = linked_financial_document.amount phải là binding invariant. Vì một financial document chỉ có tối đa một route và posting_path=via_route là sole ledger-posting path, route đó phải represent toàn bộ economic amount của document. Định nghĩa deterministic reconciliation theo posting path: direct → document-sourced ledger entries; via_route → ledger entries sourced from the linked route's legs. posted_reconciled chỉ được đạt khi toàn bộ applicable active ledger movements của chosen path đã được reconciled. Giữ nguyên toàn bộ v7 còn lại, bao gồm: 14-table schema; 12 composite-FK targets; typed nullable FKs + XOR CHECKs; frozen posting path; ContractPayment B2-T conservation; external-entry and wallet-backed route custody; signed immutable ledger; exactly-once posting; corrected ledger reversal; apply/reverse event-log reversal; cost/advance settlement conservation; two fund-chain uniqueness indexes; MySQL FOR UPDATE / SQLite BEGIN IMMEDIATE; reconciliation actor; Tier-B external-table validation; zero existing-table changes; PR #245/#257 untouched; no migration/model/controller/service/route/UI/tests; no Gate 3. Record REQUEST CHANGES first in 02-design-v7.md, freeze it, then create self-contained 02-design-v8.md, rerun required CI and return awaiting_owner. Không được suy luận schema approval hoặc Gate 3 authorization.'"
   reconciliation_required: false
 supersedes: docs/owner-decisions/GAP-037/02-design-v6.md
 superseded_by: null
 timestamps:
   created_at: "2026-08-16T18:06:21+07:00"
-  updated_at: "2026-08-16T18:06:21+07:00"
+  updated_at: "2026-08-16T18:16:05+07:00"
 generated_by: agent
 ---
 
@@ -279,7 +279,7 @@ Not required: `treasury_expense_approvals`, `treasury_fund_chain_members`.
 Kế thừa nguyên vẹn từ mọi round trước: không migration file thật; không model/controller/service/route/UI/test thật; không seed/backfill; không implementation plan coi schema này là đã duyệt cho Gate 3; không Gate 3 tự suy luận; không mark PR ready; không merge PR #263; không sửa/merge/đóng PR #245 hoặc #257; không GAP-036; không Today Workspace; không sửa canonical SSOT stale metadata; không production/deployment.
 
 ## Decision Needed
-Owner chọn một: Approve corrected schema proposal to proceed toward Gate 3 preparation / Request further changes / Decline.
+**Owner đã chọn: Request changes**, tại PR #263 head `d2c44e76ef919c114c7a45b10dbc694a24c4336e` (2026-08-16) — xác nhận 3 correction của Revision 7 đạt yêu cầu; 2 nhóm invariant còn lại: (1) Treasury-internal same-project integrity cho mọi reference nội bộ có project semantics (composite FK chỉ bảo đảm tenant, không bảo đảm project); (2) financial-document-linked route conservation (`route.total_allocated_amount = linked_financial_document.amount`, binding) + deterministic reconciliation theo posting_path. Architecture set A3+A4-a+A.5/B2+B2-T/C/D confirmed unchanged. Chi tiết nguyên văn tại `decision_provenance.owner_response_reference`. **This packet (`02-design-v7.md`) is now frozen — no further content edits.** `docs/owner-decisions/GAP-037/02-design-v8.md`, self-contained, addressing these 2 points, follows in the next commit.
 
 ## What the owner is NOT being asked to decide
 Owner không được yêu cầu duyệt migration file thật hay chi tiết implementation. Owner cũng không được yêu cầu duyệt lại architecture set A3/A4-a/A.5/B2/B2-T/C/D — đã approved, không mở lại. Owner cũng không được yêu cầu duyệt overpayment/prepayment semantics.

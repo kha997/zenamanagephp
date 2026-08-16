@@ -19,7 +19,7 @@ decision_provenance:
   owner_response_reference: null
   reconciliation_required: false
 supersedes: docs/owner-decisions/GAP-037/02-design-v13.md
-superseded_by: null
+superseded_by: docs/owner-decisions/GAP-037/02-design-v15.md
 timestamps:
   created_at: "2026-08-16T22:10:40+07:00"
   updated_at: "2026-08-16T22:10:40+07:00"
@@ -31,6 +31,8 @@ generated_by: agent
 **Status:** Gate 1 approved. Gate 2 architecture decisions **approved** (`docs/owner-decisions/GAP-037/02-design.md`, frozen) — **A3 + A4-a + A.5 / B2 + B2-T / C / D**, not reopened. Fully self-contained. Still Gate 2 — a proposal, not implementation. No migration file, model, controller, service, route, UI, or test exists or is authorized by this packet.
 
 **Database compatibility (unchanged verification):** MySQL for production/dev (`config/database.php`, `.env.example`), SQLite for the test suite (`.env.testing`, `phpunit.xml`).
+
+**Superseded without an Owner round-trip:** per an explicit Owner instruction to close this schema to a single recommend-ready-for-approval revision without using the Owner as an interim QA pass, this packet was independently re-audited (not by Owner decision) and found not fully self-contained plus six further closure gaps; `docs/owner-decisions/GAP-037/02-design-v15.md` (self-contained, closure-audited) supersedes it. This packet (`02-design-v14.md`) is now frozen — no further edits.
 
 ---
 

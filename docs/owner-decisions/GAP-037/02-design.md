@@ -1,11 +1,11 @@
 ---
 work_id: GAP-037
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-16-gap037-project-treasury-architecture-decisions.md
   plan: null
@@ -15,14 +15,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-16T09:28:13+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-16T16:14:44+07:00"
+  owner_response_reference: "Owner Gate 2 Round 3 decision — APPROVE, recorded in-session on 2026-08-16 against reviewed PR #263 head 82eb98a6b31a43f8f682d340fe5e5eab91384744: 'GAP-037 — Gate 2 Round 3 Owner Decision: APPROVE. Tôi, Owner, APPROVE Gate 2 architecture decisions của GAP-037 tại PR #263, reviewed head 82eb98a6b31a43f8f682d340fe5e5eab91384744. Tôi xác nhận các correction của Round 1 và Round 2 đã được xử lý đạt yêu cầu. Architecture set được phê duyệt: A3 + A4-a + A.5 / B2 + B2-T / C / D. Option B1 — Treasury absorbs/replaces ContractPayment — explicitly NOT selected. A3 — Cost/Cash separation: ContractExpense và MaterialReceiptLine tiếp tục chứa cost-incurred facts theo boundary hiện hữu; Treasury sở hữu cash-paid/cash-movement side, không tự biến thành second cost authority; expense settlement phải liên kết với canonical cost evidence; không cho phép generic unlinked expense posting; nếu expense chưa có cost record, cost record phải được tạo/xác định trong cùng atomic business operation trước hoặc cùng lúc với cash settlement. A4-a — Component/Project cost rollup: Component.actual_cost, Project.actual_cost, Project.budget_actual là explicit non-goal của Treasury v1; Treasury v1 không đọc các field này để suy luận financial cost, không ghi các field này, không gọi Project::recalculateActualCost(), không gọi/trigger ProjectCalculationListener::recalculateProjectCost() để synchronize Treasury, không coi chúng là financial source of truth; semantic ownership của cost rollup này được defer sang một explicit future decision. A.5 — Settlement cardinality: Cost <-> cash settlement phải hỗ trợ ở cấp domain one cost -> many payments; one payment -> many cost records; partial allocation; reversal/replacement với allocation-level auditability; không được thiết kế thành một singular 1:1 linked_source_type/linked_source_id relationship. B2 — Cash authority: ContractPayment tiếp tục là canonical authority cho client->company commercial payment lifecycle; Treasury trở thành canonical transaction-level source cho các cash mechanics mà ContractPayment không sở hữu, bao gồm supplier/labor/material payment, owner financing/contribution, internal transfers, advances/settlements, wallet custody và reconciliation. B2-T — ContractPayment-linked funding traceability: khi một ContractPayment cần Treasury route/custody/wallet traceability, ContractPayment.amount/status/paid_at là sole authority của commercial paid fact; Treasury không tạo second client-payment fact; Treasury chỉ ghi allocation/route/custody/location facts của cùng economic event; tổng economic allocation qua các Treasury routes của một ContractPayment không được vượt ContractPayment.amount; historical route legs là non-additive movement history và không được cộng lại để tính investor/client paid; A->C=100, C->Y=100 vẫn là một economic allocation 100, không phải 200; current custody phải reconcile với allocated amount, có xét partial routing, reversal/refund; investor/client-paid metric chỉ được lấy từ ContractPayment, đúng một lần. C — Economic-event / no-double-posting: mỗi economic fact chỉ có một canonical authority; Treasury allocations/references không được biến thành duplicate cost hoặc duplicate commercial payment; immutable posting, reversal/replacement và allocation auditability phải được bảo toàn trong schema proposal. D — Company cashflow integration: GAP-037 không sửa, thay thế hoặc tạo competitor cho ReportPageController::cashflow(); existing chi accrual-vs-cash issue tiếp tục thuộc future Finance Control Gate 2; Treasury chỉ tạo canonical project-level cash facts để Finance Control có thể consume sau này theo approved integration boundary. Financial invariants tiếp tục binding: Cost != Cash != Revenue != Profit; Net Cash != Profit; Missing financial data != zero/green/paid/certain. Authorization sau Gate 2 approval này — Được phép: ghi nhận quyết định APPROVE này trước, bằng governance-record-only commit với provenance nguyên văn; sau khi required CI xanh, chuẩn bị Gate 2 schema-proposal revision dựa chính xác trên architecture set đã duyệt; schema proposal được phép xác định concrete tables, relationships, columns, constraints, state machines, indexes, tenant/project isolation và migration strategy; đối chiếu schema proposal với PR #245 nhưng PR #245 tiếp tục chỉ là non-normative design evidence. Chưa được phép: tạo migration thực tế; tạo/chỉnh model; controller/service/route/UI; runtime tests cho implementation; seed/backfill; implementation plan coi schema là đã duyệt trước khi schema-proposal revision quay lại Owner; Gate 3; mark PR ready; merge PR #263; sửa/merge/đóng PR #245 hoặc #257; GAP-036; Today Workspace; sửa canonical SSOT stale metadata; production/deployment. Schema-proposal revision phải quay lại Gate 2 awaiting_owner với exact head SHA và required CI evidence. Nếu schema proposal phát hiện architecture conflict mới, không được tự thay đổi A3/A4-a/A.5/B2/B2-T/C/D; phải đưa conflict trở lại Owner dưới một Gate 2 revision. Không được suy luận schema approval, Gate 3 approval hoặc implementation authorization từ quyết định này.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-16T00:53:25+07:00"
-  updated_at: "2026-08-16T09:28:13+07:00"
+  updated_at: "2026-08-16T16:14:44+07:00"
 generated_by: agent
 ---
 
@@ -75,7 +75,7 @@ Kế thừa nguyên vẹn từ Gate 1: không migration/schema/model/controller/
 
 **Round 2 (đã xử lý):** Owner Request changes, tại PR #263 head `6f7dd74402ce29acd96ce6b117054e064c192e58` (2026-08-16) — xác nhận 4/5 điểm Round 1 đạt yêu cầu; 2 correction bắt buộc còn lại: (1) sửa funding-route conservation invariant (không cộng leg amount, dùng allocation-level conservation); (2) đổi tên §B.1 thành §B2-T để không xung đột với Option B1 (không được chọn). Chi tiết nguyên văn lưu tại commit `ccd12e81cf0ee1372f645a12d40537b1bfecc36a`. Xem `## Revision log` phía trên cho tình trạng xử lý.
 
-**Round 3 (đang chờ):** Owner chọn một: Approve recommended set (A3 + A4-a + A.5 / B2 + funding-traceability extension B2-T / C / D — Option B1 KHÔNG được chọn) to proceed toward a concrete schema proposal / Request changes to one or more decisions / Decline.
+**Round 3 (đã quyết định): Owner APPROVE**, tại PR #263 head `82eb98a6b31a43f8f682d340fe5e5eab91384744` (2026-08-16). Architecture set đã duyệt: **A3 + A4-a + A.5 / B2 + B2-T / C / D** (Option B1 KHÔNG được chọn). Chi tiết nguyên văn tại `decision_provenance.owner_response_reference`. **Packet này (`02-design.md`) is now frozen as the approved architecture-decision record — no further content edits.** Approval authorizes preparing a schema-proposal Gate 2 revision (`02-design-v2.md`, will supersede this file) — concrete tables/relationships/columns/constraints/state machines/indexes/tenant isolation/migration strategy — still no actual migration/model/controller/service/route/UI/tests, still no Gate 3, still no merge.
 
 ## What the owner is NOT being asked to decide
 Owner không được yêu cầu duyệt bất kỳ tên bảng/cột/migration cụ thể nào — đó là nội dung của Gate 2 revision kế tiếp (schema proposal), chưa có ở đây. Owner cũng không được yêu cầu duyệt cách Finance Control tương lai sẽ tích hợp Treasury — đó là quyết định của chính slice Finance Control, chỉ được ghi nhận ranh giới ở đây (Decision D). Owner cũng không được yêu cầu quyết định số phận của `Component.actual_cost`/`Project.actual_cost` rollup — A4-a chỉ đề xuất hoãn lại, không giải quyết.

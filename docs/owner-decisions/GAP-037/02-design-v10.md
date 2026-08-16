@@ -1,11 +1,11 @@
 ---
 work_id: GAP-037
 gate: 2
-gate_status: awaiting_owner
+gate_status: changes_requested
 owner_decision:
-  value: none
+  value: changes_requested
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-16-gap037-project-treasury-architecture-decisions.md
   plan: null
@@ -15,14 +15,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-16T18:59:40+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-16T19:32:27+07:00"
+  owner_response_reference: "Owner Gate 2 Schema Proposal Revision 10 decision -- REQUEST CHANGES, recorded in-session on 2026-08-16 against reviewed PR #263 head 72a2e29c604bb802ef0d26036b3d74a805f670ac: 'GAP-037 -- Gate 2 Schema Proposal Revision 10 -- Owner Decision: REQUEST CHANGES. Toi, Owner, yeu cau chinh sua schema proposal tai PR #263, reviewed head 72a2e29c604bb802ef0d26036b3d74a805f670ac. Toi xac nhan hai correction cua Revision 10 da xu ly dung yeu cau truoc: financial-document route completion da endpoint-aware; reversal via_route eligibility da duoc xac dinh tu chinh endpoint shape cua reversal document. Architecture A3 + A4-a + A.5 / B2 + B2-T / C / D van approved, frozen va khong duoc mo lai. Revision 11 chi xu ly hai diem: 1. Give ContractPayment-linked routes an explicit completion endpoint. Case A khong duoc dua vao mot terminal wallet by construction khong ton tai trong schema. Bo sung mot binding expected/terminal destination wallet cho ContractPayment-linked route -- preferably expected_destination_wallet_id -- va yeu cau completed chi khi full active route allocation da toi chinh wallet do, intermediary wallets net zero. Giu same-tenant/same-project/wallet compatibility rules. 2. Do not reduce economic completion target because a route leg was reversed. Xoa total_allocated_amount - R khoi completion semantics. Leg reversal chi triet tieu mot movement; no khong giam route.total_allocated_amount, financial_document.amount hay canonical ContractPayment allocation. Voi financial-document route, completed van phai chung minh full total_allocated_amount tai endpoint dung; voi internal transfer, full -amount/+amount; voi ContractPayment route, full amount tai expected destination. Neu leg bi reverse do sai movement, route tiep tuc partial cho toi khi replacement movement hoan tat. Neu economic route bi huy, dung cancelled; neu financial document bi dao, dung reversal financial document theo schema hien huu. Giu nguyen toan bo v10 con lai: reversal eligibility theo own endpoint shape; amount immutability; 14-table architecture; 12 composite-FK targets; B2-T; signed immutable ledger; allocation/advance semantics; Tier-B/project integrity; reconciliation actor; MySQL/SQLite concurrency; zero existing-table changes; PR #245/#257 untouched; khong runtime/schema implementation; khong Gate 3. Record REQUEST CHANGES truoc vao 02-design-v10.md, freeze v10, tao self-contained 02-design-v11.md, rerun required CI va quay lai awaiting_owner. Khong duoc suy luan schema approval hoac Gate 3 authorization.'"
   reconciliation_required: false
 supersedes: docs/owner-decisions/GAP-037/02-design-v9.md
 superseded_by: null
 timestamps:
   created_at: "2026-08-16T18:59:40+07:00"
-  updated_at: "2026-08-16T18:59:40+07:00"
+  updated_at: "2026-08-16T19:32:27+07:00"
 generated_by: agent
 ---
 
@@ -267,7 +267,7 @@ Index: `(reconciliation_id)`, `(ledger_entry_id)`, `(actor_id)`.
 Kế thừa nguyên vẹn từ mọi round trước: không migration file thật; không model/controller/service/route/UI/test thật; không seed/backfill; không implementation plan coi schema này là đã duyệt cho Gate 3; không Gate 3 tự suy luận; không mark PR ready; không merge PR #263; không sửa/merge/đóng PR #245 hoặc #257; không GAP-036; không Today Workspace; không sửa canonical SSOT stale metadata; không production/deployment; không thiết kế external-destination leg representation.
 
 ## Decision Needed
-Owner chọn một: Approve corrected schema proposal to proceed toward Gate 3 preparation / Request further changes / Decline.
+**Resolved 2026-08-16T19:32:27+07:00 — Owner Decision: REQUEST CHANGES.** Both corrections in Revision 10 (endpoint-aware completion, reversal eligibility from own endpoint shape) were confirmed handled correctly; architecture A3+A4-a+A.5/B2+B2-T/C/D remains approved, frozen, not reopened. Two further points required: (1) give `ContractPayment`-linked (Case A) routes an explicit binding completion endpoint (`expected_destination_wallet_id`) instead of relying on an unmodeled "terminal wallet by construction," with the same same-tenant/same-project/wallet-compatibility rules as every other wallet reference; (2) remove `total_allocated_amount - R` from every completion predicate — a reversed leg cancels a movement, it does not shrink the economic target; completion must always be checked against the full, unreduced `total_allocated_amount` (or financial-document `amount`, or expected `ContractPayment` allocation) reaching the correct endpoint, with a route staying `partial` until a replacement movement actually completes it. This packet (`02-design-v10.md`) is now **frozen** — no further edits. `docs/owner-decisions/GAP-037/02-design-v11.md` (self-contained) follows in the next commit.
 
 ## What the owner is NOT being asked to decide
 Owner không được yêu cầu duyệt migration file thật hay chi tiết implementation. Owner cũng không được yêu cầu duyệt lại architecture set A3/A4-a/A.5/B2/B2-T/C/D — đã approved, không mở lại. Owner cũng không được yêu cầu duyệt overpayment/prepayment semantics, hay thiết kế external-destination leg representation (nêu là future extension point, chưa thiết kế ở đây).

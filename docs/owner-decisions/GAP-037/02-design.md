@@ -1,11 +1,11 @@
 ---
 work_id: GAP-037
 gate: 2
-gate_status: changes_requested
+gate_status: awaiting_owner
 owner_decision:
-  value: changes_requested
+  value: none
   authority: human_owner
-decision_requested: null
+decision_requested: approve_or_changes_or_decline
 references:
   spec: docs/superpowers/specs/2026-08-16-gap037-project-treasury-architecture-decisions.md
   plan: null
@@ -15,14 +15,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-16T09:24:38+07:00"
-  owner_response_reference: "Owner Gate 2 Round 2 decision — REQUEST CHANGES, recorded in-session on 2026-08-16 against reviewed PR #263 head 6f7dd74402ce29acd96ce6b117054e064c192e58: 'GAP-037 — Gate 2 Round 2 Owner Decision: REQUEST CHANGES. Tôi, Owner, yêu cầu chỉnh sửa Gate 2 của GAP-037 tại PR #263, reviewed head 6f7dd74402ce29acd96ce6b117054e064c192e58. Tôi xác nhận các correction Round 1 về: cấm generic unlinked expense; settlement cardinality many-to-many/partial/reversal; PR body; migration wording; nguyên tắc ContractPayment commercial truth vs Treasury custody/location truth đã đi đúng hướng. Tuy nhiên còn 2 correction bắt buộc trước khi Gate 2 có thể được phê duyệt. 1. Sửa funding-route conservation invariant — Không được sử dụng invariant sum(route legs) <= ContractPayment.amount vì một economic payment có thể đi qua nhiều serial legs. Ví dụ A→C→Y với 100 có thể có leg A→C = 100 và leg C→Y = 100; tổng historical leg amount = 200 nhưng economic payment vẫn chỉ là 100. Gate 2 phải thay bằng nguyên tắc: ContractPayment là sole authority của commercial paid fact; Treasury route/custody records chỉ trace cùng economic event đó; nếu một ContractPayment được phân bổ cho một hoặc nhiều Treasury routes thì tổng economic allocation của các routes không được vượt ContractPayment.amount; historical route-leg amounts không được cộng lại để xác định investor-paid amount hoặc để enforce giới hạn trên; route legs là movement history của số tiền đã allocation; current custody/location state phải bảo toàn economic amount, có xét partial routing, reversal/refund; investor/client paid metric chỉ được assert/count từ commercial payment fact đúng một lần. Không chọn bảng/cột ở correction này; chỉ sửa domain invariant. 2. Loại bỏ ambiguity giữa Option B1 và §B.1 — Current Gate 2 dùng B1 cho hai nghĩa: Option B1 = Treasury absorbs ContractPayment — không recommended; §B.1 = funding-traceability extension của recommended B2. Đổi tên extension mới thành một identifier không xung đột, ví dụ B2-T hoặc B2a. Sửa toàn bộ Owner-facing recommended-set wording để không bao giờ ghi B2/B1. Recommended set phải được biểu diễn rõ theo nghĩa: A3 + A4-a + A.5 / B2 + funding-traceability extension / C / D và phải khẳng định Option B1 không được chọn. Giữ nguyên các phần đã đạt: A3 Cost/Cash separation; không generic unlinked expense; A.5 many-to-many/partial allocation; A4-a Component/Project cost explicit non-goal; Treasury tuyệt đối không đọc/ghi/sync Component.actual_cost, Project.actual_cost, budget_actual trong v1; B2 giữ ContractPayment làm canonical commercial payment lifecycle; D không sửa ReportPageController::cashflow(); không migration/schema/runtime/Gate 3; Gate 1 vẫn approved; PR #245/#257 không thay đổi. Ghi nhận REQUEST CHANGES này trước bằng governance-record-only commit với provenance nguyên văn; sau đó chỉ sửa Gate 2 packet/spec/PR body cần thiết, chạy lại required CI và đưa Gate 2 về awaiting_owner. Không được suy luận Gate 2 approval.'"
+  recorded_at: "2026-08-16T09:28:13+07:00"
+  owner_response_reference: null
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-16T00:53:25+07:00"
-  updated_at: "2026-08-16T09:24:38+07:00"
+  updated_at: "2026-08-16T09:28:13+07:00"
 generated_by: agent
 ---
 

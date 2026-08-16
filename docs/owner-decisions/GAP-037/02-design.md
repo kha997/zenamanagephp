@@ -1,11 +1,11 @@
 ---
 work_id: GAP-037
 gate: 2
-gate_status: awaiting_owner
+gate_status: changes_requested
 owner_decision:
-  value: none
+  value: changes_requested
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-16-gap037-project-treasury-architecture-decisions.md
   plan: null
@@ -15,14 +15,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-16T00:53:25+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-16T08:46:42+07:00"
+  owner_response_reference: "Owner Gate 2 Round 1 decision — REQUEST CHANGES, recorded in-session on 2026-08-16 against reviewed PR #263 head 1748303e262bb4f03a1486c4ea29e5b8eab5d0e6: 'GAP-037 — Gate 2 Round 1 Owner Decision: REQUEST CHANGES. Tôi, Owner, yêu cầu chỉnh sửa Gate 2 của GAP-037 tại PR #263, reviewed head 1748303e262bb4f03a1486c4ea29e5b8eab5d0e6. Tôi đồng ý về nguyên tắc với hướng recommended set A3 / A4-a / B2 / D, đặc biệt: Cost != Cash != Revenue != Profit; Treasury không thay thế Contract payment lifecycle; Component/Project cost rollup có thể được defer khỏi Treasury v1 nếu Treasury bị cấm tuyệt đối đọc/ghi/synchronize các field này; ReportPageController::cashflow() không được sửa trong GAP-037. Tuy nhiên trước khi Gate 2 được phê duyệt, cần xử lý các điểm sau: 1. ContractPayment ↔ Treasury funding traceability — B2 phải xác định rõ quan hệ khi một client/investor payment thuộc ContractPayment nhưng đồng thời cần Treasury payment-route/wallet traceability, đặc biệt use case A → C → Y. ContractPayment tiếp tục sở hữu commercial payment lifecycle và không được duplicate. Nhưng Gate 2 phải quyết định rõ Treasury có thể ghi những route/custody/wallet facts nào cho cùng economic event, cách chúng reference ContractPayment, đâu là authoritative amount/status, và cách bảo đảm: investor/client paid amount chỉ được tính một lần; route in-transit được theo dõi; project-wallet receipt/balance vẫn tính được; không tạo một second funding economic event. Không để quyết định này sang schema revision. 2. Không cho phép unlinked expense bypass Cost/Cash separation — Với A3, một Treasury cash-out mang semantic payment against incurred cost / expense settlement phải reference canonical cost evidence. Không sử dụng no_linked_source: true như một generic escape hatch cho expense. Cash movement không có cost source chỉ hợp lệ nếu bản chất nó là non-cost movement như internal transfer, advance, owner financing hoặc loại tương đương. Nếu thực sự là expense/cost chưa có source record, Gate 2 phải quy định cost record phải được tạo/xác định theo canonical cost path trước hoặc trong một atomic business operation; Treasury không được âm thầm trở thành cost authority qua một unlinked cash-out. 3. Settlement cardinality — Gate 2 phải xác nhận ở cấp domain rằng relation giữa Treasury payment và cost evidence hỗ trợ: one cost → multiple partial payments; one payment → multiple cost records/material lines; partial allocation; reversal/replacement với allocation auditability. Chưa cần chọn bảng/cột, nhưng không được khóa architecture vào một singular linked_source_type/linked_source_id nếu cơ chế đó không biểu diễn được các trường hợp trên. 4. Documentation accuracy — Cập nhật PR #263 body để phản ánh Gate 1 đã approved và Gate 2 hiện awaiting_owner. Sửa wording Migration implications: none thành wording chính xác: không migration dữ liệu/bảng hiện hữu theo recommended option; future Treasury implementation vẫn sẽ cần additive schema migrations, nhưng schema chưa được duyệt hoặc đề xuất ở revision này. Giữ nguyên các phần đã đạt: A4-a explicit non-goal cho Component.actual_cost / Project.actual_cost / budget_actual; Treasury tuyệt đối không đọc/ghi/sync các field trên trong v1; B2 giữ ContractPayment làm canonical commercial payment lifecycle; Decision D giữ Finance Control ownership đối với company cashflow integration; PR #245 chỉ là non-normative design source; không runtime/schema/migration/code/Gate 3. Scope correction: chỉ Gate 2 docs/design. Gate 1 vẫn approved và không mở lại. Ghi nhận REQUEST CHANGES này trước bằng governance-record-only commit với provenance nguyên văn. Sau đó sửa Gate 2 packet/spec + PR body, chạy lại required CI và đưa Gate 2 trở về awaiting_owner tại head mới. Không được suy luận Gate 2 approval.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-16T00:53:25+07:00"
-  updated_at: "2026-08-16T00:53:25+07:00"
+  updated_at: "2026-08-16T08:46:42+07:00"
 generated_by: agent
 ---
 
@@ -59,7 +59,7 @@ Every recommended option (A3, A4-a, B2) is purely additive: new Treasury tables 
 Kế thừa nguyên vẹn từ Gate 1: không migration/schema/model/controller/service/route/UI; không implementation plan dựa trên option chưa duyệt; không GAP-036; không Today Workspace; không sửa canonical SSOT (kể cả stale metadata); không sửa/merge/đóng PR #245 hoặc #257; không production/deployment. Việc chọn một option ở đây không tự nó là schema — schema cụ thể (bảng, cột, migration) vẫn cần một Gate 2 revision hoặc Gate 3 riêng, tuỳ theo mức độ Owner muốn duyệt từng bước.
 
 ## Decision Needed
-Owner chọn một: Approve recommended set (A3/A4-a/B2/D) to proceed toward a concrete schema proposal / Request changes to one or more decisions / Decline.
+**Round 1 — Owner đã chọn: Request changes**, tại PR #263 head `1748303e262bb4f03a1486c4ea29e5b8eab5d0e6` (2026-08-16). Đồng ý nguyên tắc A3/A4-a/B2/D nhưng yêu cầu 4 điểm bổ sung trước khi duyệt: (1) ContractPayment↔Treasury funding traceability; (2) cấm unlinked expense escape hatch; (3) settlement cardinality (partial/many-to-many/reversal); (4) documentation accuracy (PR body, migration wording). Chi tiết nguyên văn tại `decision_provenance.owner_response_reference`. Xem `## Revision log` bên dưới sau khi xử lý.
 
 ## What the owner is NOT being asked to decide
 Owner không được yêu cầu duyệt bất kỳ tên bảng/cột/migration cụ thể nào — đó là nội dung của Gate 2 revision kế tiếp (schema proposal), chưa có ở đây. Owner cũng không được yêu cầu duyệt cách Finance Control tương lai sẽ tích hợp Treasury — đó là quyết định của chính slice Finance Control, chỉ được ghi nhận ranh giới ở đây (Decision D). Owner cũng không được yêu cầu quyết định số phận của `Component.actual_cost`/`Project.actual_cost` rollup — A4-a chỉ đề xuất hoãn lại, không giải quyết.

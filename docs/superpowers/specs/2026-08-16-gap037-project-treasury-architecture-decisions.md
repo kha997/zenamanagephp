@@ -42,9 +42,24 @@ Treasury does not own cost data at all. It reads and displays `ContractExpense` 
 - **Con:** contradicts PR #245's own design (design evidence, not binding, but a real signal of business intent) which explicitly wants a `document_type: expense` ledger row with an approval workflow (draft→submitted→approved→posted) — that workflow has no home in this option.
 
 ### Option A3 — Treasury owns the cash side of a cost event; cost data stays where it is (recommended)
-A Treasury `ledger_entries` row of type "expense" (cash-out) is only ever created **when money actually moves**, and it **must reference** the originating `ContractExpense` or `MaterialReceiptLine` record it is paying down (a `linked_source_type`/`linked_source_id` pair, or explicit `no_linked_source: true` for a genuinely new manual cash-out not yet tied to a recorded cost, e.g. petty cash). `ContractExpense` and `MaterialReceiptLine` remain the systems of record for **cost incurred**; Treasury becomes the system of record for **cash paid against that cost**. `Component`/`Project` cost rollup is excluded entirely (see §A.4 below) — not classified, not migrated, not read.
-- **Pro:** no data migration; respects PR #245's approval-workflow intent (the workflow now gates "is this expense approved to be paid," not "is this expense real"); the link field is exactly the no-double-posting mechanism (§C).
-- **Con:** requires Gate 2 (whichever revision proposes schema) to define the link field precisely enough that it can't silently be left null and become a second untracked cost entry.
+A Treasury `ledger_entries` row of type "expense" (cash-out) is only ever created **when money actually moves**, and it **must reference** the originating `ContractExpense` or `MaterialReceiptLine` record(s) it is paying down (see §A.5 for the cardinality this reference must support). `Component`/`Project` cost rollup is excluded entirely (see §A.4 below) — not classified, not migrated, not read.
+
+**Corrected per Owner Gate 2 Round 1 — no generic unlinked-expense escape hatch.** An earlier draft of this option allowed an unlinked cash-out ("no linked source") for any "genuinely new manual entry," using petty cash as the example. That framing was too broad: it would let Treasury silently become a cost authority any time a link was simply omitted, defeating the entire point of A3. The corrected rule:
+- **Unlinked cash-out entries are valid ONLY for movement types that are not, by definition, a cost/expense settlement** — internal transfer, advance issuance, owner contribution/financing, and equivalent non-cost movements (per PR #245 §5.1.10/§17: these explicitly don't touch project expense).
+- **If a cash-out is genuinely an expense/cost settlement and no cost record exists yet**, Treasury must not post it as an unlinked cash-out. The canonical cost record (`ContractExpense` or a `MaterialReceiptLine`-backed cost, per the existing cost-entry paths) must be created or identified as part of the **same atomic business operation** as the cash-out posting — e.g. "record and immediately settle a new expense" is one transaction that creates the `ContractExpense` row and the linked Treasury cash-out row together, never a cash-out alone with cost implied. This is a domain rule, binding on any future schema proposal; exact transaction/service boundaries are schema-proposal-time detail, not decided here.
+- **Petty cash**, if it needs to exist as a concept at all, is therefore either (a) modeled as its own non-cost-movement type (like an advance) until a real cost record settles it, or (b) requires the atomic cost-record-creation path above — it is never an example of a valid unlinked "expense."
+
+- **Pro:** no data migration; respects PR #245's approval-workflow intent (the workflow now gates "is this expense approved to be paid," not "is this expense real"); the link mechanism (now precisely scoped) is exactly the no-double-posting mechanism (§C), with no silent-omission gap.
+- **Con:** requires Gate 2 (whichever revision proposes schema) to define the link/allocation mechanism precisely enough to support the cardinality in §A.5, not just a single foreign key.
+
+### A.5 — Settlement cardinality (domain requirement, not schema — added per Owner Gate 2 Round 1)
+The relationship between a Treasury cash-out and the cost record(s) it settles must, at the domain level, support all of the following — this constrains any future schema proposal; it does not itself pick tables/columns:
+- **One cost → multiple partial payments.** A single `ContractExpense`/`MaterialReceiptLine`-derived cost may be settled across several Treasury cash-outs over time (e.g. a large subcontractor invoice paid in installments).
+- **One payment → multiple cost records.** A single Treasury cash-out may settle several `ContractExpense`/`MaterialReceiptLine` rows at once (e.g. one bank transfer covering several material receipts from the same supplier).
+- **Partial allocation.** A cash-out amount may only partially cover a given cost record's remaining balance, and the remainder must stay trackable as still-outstanding.
+- **Reversal/replacement with allocation auditability.** If a cash-out is reversed or replaced (per PR #245's existing immutable-posting/reversal design, §5.8/§8), every allocation it made to a cost record must be reversible/traceable back to the specific allocation, not just to the cash-out as a whole.
+
+**Binding constraint on schema:** a single `linked_source_type`/`linked_source_id` foreign key pair on the cash-out row — a strict 1:1 relationship — cannot represent any of the four cases above and must not be the architecture locked in at schema-proposal time. The eventual schema needs an explicit allocation/settlement concept between cash-outs and cost records (many-to-many, with a per-allocation amount and its own auditable state), not a single reference field. This document does not name that concept's tables/columns — only that a 1:1 link is insufficient and must not be assumed.
 
 ### A.4 — What to do about `Component`/`Project` cost rollup
 This is the piece Gate 1 Round 1 found missing. Two sub-options:
@@ -80,7 +95,18 @@ This matches what PR #245's own 12-table design already implies by omission — 
 - **Pro:** zero migration; matches SSOT §7.2 exactly; matches PR #245's actual (if implicit) scope.
 - **Con:** two cash systems coexist long-term (`ContractPayment` for client-in, Treasury for everything else) — a future company-wide Finance Control slice has to read both. This is explicitly acceptable: SSOT §6.2 already assigns that integration job to Finance Control, not to Treasury.
 
-**Recommendation:** B2.
+### B.1 — ContractPayment ↔ Treasury funding traceability (added per Owner Gate 2 Round 1)
+B2's clean partition ("Treasury owns what `ContractPayment` doesn't") is not the whole story once a client/investor payment needs **route, custody, or wallet traceability after it's received** — e.g. a client pays into a company account (A), which routes through an intermediary (C) before landing in a project-specific wallet (Y). This is a real case PR #245's own `payment_routes`/`payment_route_legs` design already anticipates (§5 of that design), and it is a `ContractPayment`-sourced event, not a Treasury-originated one — B2 as originally stated didn't say what Treasury is allowed to record about it.
+
+**Resolved relationship (binding, not deferred to a schema revision):**
+- `ContractPayment` remains the sole authority for **whether and how much was commercially paid** — its `amount`/`status`/`paid_at` are the only place that fact is asserted. Treasury never re-asserts "the client paid $X"; it only ever asserts "the money that `ContractPayment` already says was paid is now physically at wallet/custody location Z."
+- A Treasury funding-type `ledger_entries`/route record for a `ContractPayment`-sourced event **must** carry a mandatory link back to the specific `ContractPayment` row (same link-field pattern as §A.3/§A.5, not a separate mechanism). The route's total in-transit + settled amount across all its legs can never exceed the linked `ContractPayment.amount` — Treasury's route legs subdivide/track an already-recorded amount, they do not manufacture a new one.
+- **Investor/client paid amount counted once:** enforced structurally by the link — the "paid" fact lives only in `ContractPayment`; Treasury route legs are custody/location facts about that one fact, not independent payment facts. A reconciliation/consistency check (defined at schema-proposal time, not here) must be able to verify `sum(route legs for a ContractPayment) <= ContractPayment.amount` at any time.
+- **Route in-transit tracking:** Treasury may show a `ContractPayment` marked `paid` as still "in transit" through custody (e.g. received at company account A, not yet at project wallet Y) — this is exactly what payment-route legs are for, and does not contradict `ContractPayment.status = paid`, which only asserts "the company has been paid," not "the money has reached its final custody destination."
+- **Project-wallet receipt/balance:** computed from Treasury's own route-leg/wallet ledger, which is authoritative for *location*, while `ContractPayment` stays authoritative for *commercial fact*. These are two different questions about the same economic event, not two competing sources of the same fact.
+- **No second funding economic event:** a `ContractPayment`-sourced Treasury route record is never itself a `financial_documents`/`funding` document independent of the `ContractPayment` it traces — it is a custody projection of that one commercial event, linked, not duplicated.
+
+**Recommendation:** B2, extended with B.1's binding funding-traceability relationship above — not deferred to a later schema revision, per Owner instruction.
 
 ---
 
@@ -90,9 +116,9 @@ This matches what PR #245's own 12-table design already implies by omission — 
 
 | Source | Role under the A3/B2 recommendation | Mechanism preventing double-posting |
 |---|---|---|
-| `ContractPayment` | **Referenced evidence / input** — Treasury never writes here | N/A — Treasury has no write path to this table |
-| `ContractExpense` | **Referenced evidence** for the cost side of a cash-out posting | Every Treasury cash-out `ledger_entries` row of type "expense" carries a mandatory link to the `ContractExpense` row it settles (or an explicit "no linked source" flag for a genuinely new manual entry) |
-| `MaterialReceiptLine` | **Referenced evidence** for the cost side of a cash-out posting | Same link mechanism as above |
+| `ContractPayment` (the payment fact itself: amount/status/paid_at) | **Referenced evidence / input — never re-written or re-asserted.** Treasury has no write path to this table and never posts a second "amount paid" fact for the same event. Treasury *may* record custody/route/wallet facts *about* a `ContractPayment`-sourced event (§B.1) — that is a different kind of fact (location, not commercial payment) | `sum(linked Treasury route legs for a ContractPayment) <= ContractPayment.amount`, enforced at whichever layer implements §B.1 |
+| `ContractExpense` | **Referenced evidence** for the cost side of a cash-out posting | Every Treasury expense-settlement cash-out carries a mandatory allocation to one or more `ContractExpense` rows (§A.5) — an unlinked cash-out is valid only for a non-cost movement type (transfer/advance/owner financing), never for an expense settlement (§A.3 correction) |
+| `MaterialReceiptLine` | **Referenced evidence** for the cost side of a cash-out posting | Same allocation mechanism as above |
 | `Component.actual_cost`/`Project.actual_cost`/`budget_actual` | **Out of scope entirely** (§A.4, option A4-a) | Treasury code introduces no call path to `Project::recalculateActualCost()` or `ProjectCalculationListener::recalculateProjectCost()`, and no Treasury write touches these three fields, full stop — this is a binding exclusion carried into any future schema proposal, not merely a recommendation |
 
 **Binding rule (regardless of which cost/cash option the Owner ultimately picks):** Treasury must never auto-synchronize `Project.actual_cost` until a *separate, explicit* decision determines whether doing so would duplicate or overwrite the existing Component/Project rollup — this is Gate 1's own binding instruction, restated here as a hard constraint on every option above, not something any option is free to relax.
@@ -113,14 +139,16 @@ What GAP-037 *does* produce, once Treasury is canonical (per SSOT §7.3's layeri
 
 | Decision | Recommended option |
 |---|---|
-| A. Cost authority | A3 — Treasury owns cash-out postings referencing existing cost records; cost data stays in `ContractExpense`/`MaterialReceiptLine` |
+| A. Cost authority | A3 — Treasury owns cash-out postings allocated to existing cost records; cost data stays in `ContractExpense`/`MaterialReceiptLine` |
 | A.4 Component/Project rollup | A4-a — explicit non-goal for Treasury v1; deferred, not resolved |
+| A.5 Settlement cardinality | Domain requirement for many-to-many allocation with partial/reversal auditability — no 1:1 link |
 | B. Cash authority | B2 — Treasury canonical for everything `ContractPayment` doesn't already cover; `ContractPayment` untouched |
-| C. No-double-posting | Mandatory link field on every Treasury cash-out entry; hard exclusion on any Component/Project write |
+| B.1 Funding traceability | Treasury may record route/custody/wallet facts about a `ContractPayment`-sourced event, always linked, never re-asserting the payment fact itself |
+| C. No-double-posting | Mandatory allocation on every expense-settlement cash-out; unlinked postings restricted to genuinely non-cost movements only; hard exclusion on any Component/Project write |
 | D. Cashflow integration | No changes to `ReportPageController::cashflow()`; that decision belongs to a future Finance Control slice |
 
-**Migration implications of the recommended set:** none. Every recommended option is additive — new Treasury tables plus a link field pattern, zero changes to existing schema, zero data migration, zero UI/report changes. This is a direct consequence of choosing A3/B2 over A1/B1.
+**Migration implications of the recommended set — corrected per Owner Gate 2 Round 1.** No migration of *existing* data or tables is required to adopt this recommended set — `ContractPayment`, `ContractExpense`, `MaterialReceiptLine`, `Component`, and `Project` are all read-only from Treasury's perspective (or, for Component/Project, not touched at all) and none of their current rows change. This does **not** mean Treasury requires no migrations at all: implementing Treasury still requires additive schema migrations for its own new tables (the ledger/wallet/allocation/route model from PR #245, revised per §A.5/§B.1 above) — those migrations are simply not designed, named, or proposed in this Gate 2 revision. A concrete schema proposal is a distinct, later step.
 
-**No-double-count guarantee under the recommended set:** every economic event has exactly one canonical source. Cost-incurred events stay in `ContractExpense`/`MaterialReceiptLine`. Cash-in events from clients stay in `ContractPayment`. Every other cash event becomes canonical in Treasury. The only new relationship introduced is a reference link from a Treasury cash-out row back to the cost record it settles — a link, not a second copy.
+**No-double-count guarantee under the recommended set:** every economic event has exactly one canonical source. Cost-incurred events stay in `ContractExpense`/`MaterialReceiptLine`. Commercial payment facts from clients stay in `ContractPayment`. Every other cash event becomes canonical in Treasury. The only new relationships introduced are (a) an allocation between a Treasury cash-out and the cost record(s) it settles, supporting the cardinality in §A.5, and (b) a link between a Treasury route/custody record and the `ContractPayment` it traces (§B.1) — both are references to an existing fact, never a second copy of that fact.
 
 If the Owner prefers a different option for any of A/B — for example A1 (full migration) or B1 (Treasury absorbs `ContractPayment`) — that changes the migration-risk profile substantially and would need to be stated explicitly before any schema proposal is drafted.

@@ -1,11 +1,11 @@
 ---
 work_id: GAP-037
 gate: 2
-gate_status: awaiting_owner
+gate_status: changes_requested
 owner_decision:
-  value: none
+  value: changes_requested
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-16-gap037-project-treasury-architecture-decisions.md
   plan: null
@@ -15,14 +15,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-16T22:25:13+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-16T22:42:22+07:00"
+  owner_response_reference: "Owner Gate 2 Schema Proposal Revision 15 decision -- REQUEST CHANGES, recorded in-session on 2026-08-16 against reviewed PR #263 head ce784fbfbee1bc30f9c8bcada05f6c9428c4b327: 'GAP-037 -- Gate 2 Schema Proposal Revision 15 -- Owner Decision: REQUEST CHANGES. Reviewed head: ce784fbfbee1bc30f9c8bcada05f6c9428c4b327. Revision 15 materially improves the proposal and is genuinely self-contained in structure, but final consistency review found five binding contradictions/omissions that must be closed before schema approval: correct Sec 2.2d settlement-net mathematics; distinguish approved-expense manual reversal from cash-return economic document reversal; restore complete immutable-posting semantics required by approved architecture C; prohibit whole-document reversal of a partial/incomplete via_route original; prevent reconciliation reversal from moving an economically reversed document back to posted_unreconciled. In the same revision, correct Case-B scenario 18.12, update PR current-revision metadata, and add positive-magnitude constraints for all economic amount fields. Architecture A3 + A4-a + A.5 / B2 + B2-T / C / D remains approved and frozen; none of these corrections reopen it. After correction, perform another full normative-rule <-> scenario <-> concurrency/idempotency consistency audit and return only if the agent itself recommends READY FOR OWNER APPROVAL. No Gate 3, merge, implementation authorization, or modification of PR #245/#257 is inferred.'"
   reconciliation_required: false
 supersedes: docs/owner-decisions/GAP-037/02-design-v14.md
-superseded_by: null
+superseded_by: docs/owner-decisions/GAP-037/02-design-v16.md
 timestamps:
   created_at: "2026-08-16T22:25:13+07:00"
-  updated_at: "2026-08-16T22:25:13+07:00"
+  updated_at: "2026-08-16T22:42:22+07:00"
 generated_by: agent
 ---
 
@@ -33,6 +33,8 @@ generated_by: agent
 **Database compatibility:** MySQL for production/dev (`config/database.php`, `.env.example`), SQLite for the test suite (`.env.testing`, `phpunit.xml`).
 
 **Repo fact previously verified, restated:** `ContractPayment.paid_at` is a real, nullable `@property \Carbon\Carbon|null` column (`app/Models/ContractPayment.php`, cast `'date'`), distinct from `status`.
+
+**Owner decision recorded 2026-08-16T22:42:22+07:00 — REQUEST CHANGES**, against reviewed head `ce784fbfbee1bc30f9c8bcada05f6c9428c4b327`. Five binding corrections required (§2.2d settlement-net math; distinguish approved-expense manual reversal from cash-return document-coupled reversal; restore general immutable-posting/closed-status-transition semantics per Architecture C; prohibit reversal creation against a partial/incomplete `via_route` original; stop reconciliation reversal from regressing an already-`reversed` document), plus three same-revision corrections (Case-B scenario 18.12; PR current-revision metadata; positive-magnitude constraints on every economic amount field). Architecture A3+A4-a+A.5/B2+B2-T/C/D remains approved, frozen, not reopened. Verbatim text in `decision_provenance.owner_response_reference`. **This packet (`02-design-v15.md`) is now frozen — no further content edits.** `docs/owner-decisions/GAP-037/02-design-v16.md`, self-contained, follows in the next commit.
 
 ---
 
@@ -462,9 +464,9 @@ Simulated against the fixed design above. Each scenario states: **canonical fact
 Kế thừa nguyên vẹn từ mọi round trước: không migration file thật; không model/controller/service/route/UI/test thật; không seed/backfill; không implementation plan coi schema này là đã duyệt cho Gate 3; không Gate 3 tự suy luận; không mark PR ready; không merge PR #263; không sửa/merge/đóng PR #245 hoặc #257; không GAP-036; không Today Workspace; không sửa canonical SSOT stale metadata; không production/deployment; không thiết kế external-destination leg representation; không sửa `ReportPageController::cashflow()`.
 
 ## Decision Needed
-Owner chọn một: Approve corrected schema proposal to proceed toward Gate 3 preparation / Request further changes / Decline.
+**Resolved 2026-08-16T22:42:22+07:00 — Owner Decision: REQUEST CHANGES.** The agent's "ready for approval" self-assessment below was contradicted by the Owner's own final consistency review, which found 5 further binding contradictions/omissions plus 3 same-revision corrections (see the verbatim decision above and `decision_provenance.owner_response_reference`). Architecture A3+A4-a+A.5/B2+B2-T/C/D remains approved, frozen, not reopened. This packet (`02-design-v15.md`) is now **frozen** — no further edits. `docs/owner-decisions/GAP-037/02-design-v16.md` (self-contained) follows in the next commit.
 
-**Agent recommendation (not a decision, not binding):** every blocker in the Owner's brief for this round is closed (§0), and the closure audit (§18) found no further material inconsistency inside the approved architecture. This packet is, in the agent's assessment, ready for Owner approval.
+**Agent recommendation recorded at the time this packet was submitted (superseded by the Owner's finding above — kept verbatim for the record, not restated as current):** every blocker in the prior round's brief was closed (§0), and the closure audit (§18) found no further material inconsistency the agent itself detected. This packet was, in the agent's assessment at the time, ready for Owner approval; the Owner's independent review found otherwise.
 
 ## What the owner is NOT being asked to decide
 Owner không được yêu cầu duyệt migration file thật hay chi tiết implementation. Owner cũng không được yêu cầu duyệt lại architecture set A3/A4-a/A.5/B2/B2-T/C/D — đã approved, không mở lại. Owner cũng không được yêu cầu duyệt overpayment/prepayment semantics, hay thiết kế external-destination leg representation (nêu là future extension point, chưa thiết kế ở đây).

@@ -1,11 +1,11 @@
 ---
 work_id: GAP-037
 gate: 2
-gate_status: awaiting_owner
+gate_status: changes_requested
 owner_decision:
-  value: none
+  value: changes_requested
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-16-gap037-project-treasury-architecture-decisions.md
   plan: null
@@ -15,14 +15,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-16T17:20:14+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-16T17:31:49+07:00"
+  owner_response_reference: "Owner Gate 2 Schema Proposal Revision 4 decision — REQUEST CHANGES, recorded in-session on 2026-08-16 against reviewed PR #263 head bd75f5f063605d80ac6289e92cdf0e856b5c0f98: 'GAP-037 — Gate 2 Schema Proposal Revision 4 — Owner Decision: REQUEST CHANGES. Tôi, Owner, yêu cầu chỉnh sửa schema proposal của GAP-037 tại PR #263, reviewed head bd75f5f063605d80ac6289e92cdf0e856b5c0f98. Tôi xác nhận Revision 4 đã xử lý đúng các correction trước và architecture set A3 + A4-a + A.5 / B2 + B2-T / C / D vẫn approved, frozen và không được mở lại. Revision 5 chỉ cần xử lý các schema/invariant gaps sau: 1. Remove impossible conditional FK — treasury_payment_routes.linked_source_id không được đồng thời là polymorphic financial_document|contract_payment nhưng lại có real FK chỉ khi linked_source_type=financial_document. Chọn concrete implementable model: preferably split typed nullable source columns with an exactly-one constraint; hoặc keep the polymorphic pair wholly application-validated. Không được tuyên bố một conditional MySQL FK không thể tồn tại như mô tả hiện nay. 2. Freeze posting-path choice before posting — Binding invariant: một financial document dùng direct-post path hoặc route-leg-post path, không bao giờ cả hai; route association phải được xác lập trước posting; sau khi document hoặc route đã sinh ledger entry, không được attach/detach/relink route theo cách thay đổi posting source. at most one route một mình chưa đủ để bảo đảm exclusivity. 3. Exact reversal invariant — Với ledger entries, cost-settlement allocations, advance settlements và reconciliation entries: reverse row chỉ được trỏ vào một apply/original row hợp lệ; phải cùng economic subject; reverse amount phải bằng đúng original amount; một original/apply chỉ được reverse tối đa một lần; reverse của reverse không được dùng như arbitrary compensation; nếu cần undo một reversal phải đi theo explicit forward correction rule được schema cho phép. Net formulas hiện tại được giữ nguyên nhưng chỉ chạy trên các valid compensating reversals. 4. Concurrency-safe aggregate invariants — Mọi service-layer aggregate check phải đi cùng binding transactional serialization rule. Ít nhất phải bảo vệ: ContractPayment route-allocation conservation; cost over-settlement cap; advance outstanding settlement cap; active reconciliation uniqueness; financial-document posting-source selection. Có thể dùng row lock / equivalent serialization mechanism; không cần chốt tên class/method ở Gate 2, nhưng simple unlocked check-then-insert là không đủ. 5. Reconciliation reversal actor audit — Schema phải lưu hoặc deterministically derive được actor thực hiện reverse reconciliation. Không dùng cụm implicit actor trail nếu schema không chứa relationship chứng minh actor đó. Prefer explicit actor on the immutable reconciliation event row, hoặc một equivalent action-header design. 6. Composite-FK target indexes — Vì schema dùng composite (tenant_id,id) FKs, Revision 5 phải ghi binding index requirement cho mọi Treasury table đóng vai trò referenced target: UNIQUE/eligible index (tenant_id, id) theo DB compatibility được repo support. Không để migration implementation tự suy luận constraint prerequisite này. Giữ nguyên toàn bộ các phần đã đạt: exact table count 12 primary + 2 joins = 14 CREATE TABLEs; source/destination wallets; debit/credit ledger semantics; route->ledger bridge; B2-T ContractPayment route không tạo second commercial-payment document; partial-route custody bằng net signed movements; advance->cost settlement tạo zero second cash-out; outstanding-advance conservation equation; material prepayment không được giả thành incurred cost; cumulative cost over-settlement cap; reconciliation áp dụng cho cả financial-document và route-leg ledger entries; reconciliation wallet-match rule; whole-entry reconciliation; separate additive treasury_expense_approvals; Tier-B same-tenant/same-project validation; zero changes to existing tables/data; A4-a absolute no-read/write/sync Component/Project cost fields; D không sửa ReportPageController::cashflow(); PR #245/#257 untouched; không migration/model/controller/service/route/UI/tests thật; không Gate 3. Ghi nhận REQUEST CHANGES này trước bằng governance-record-only commit vào 02-design-v4.md; sau đó freeze v4 và tạo self-contained 02-design-v5.md superseding nó. Chạy lại required CI và đưa v5 về awaiting_owner tại exact new head. Không được suy luận schema approval hoặc Gate 3 authorization.'"
   reconciliation_required: false
 supersedes: docs/owner-decisions/GAP-037/02-design-v3.md
 superseded_by: null
 timestamps:
   created_at: "2026-08-16T17:20:14+07:00"
-  updated_at: "2026-08-16T17:20:14+07:00"
+  updated_at: "2026-08-16T17:31:49+07:00"
 generated_by: agent
 ---
 
@@ -316,7 +316,7 @@ No table in this order is ever created before a table it holds a real composite 
 Kế thừa nguyên vẹn từ mọi round trước: không migration file thật; không model/controller/service/route/UI/test thật; không seed/backfill; không implementation plan coi schema này là đã duyệt cho Gate 3; không Gate 3 tự suy luận; không mark PR ready; không merge PR #263; không sửa/merge/đóng PR #245 hoặc #257; không GAP-036; không Today Workspace; không sửa canonical SSOT stale metadata; không production/deployment.
 
 ## Decision Needed
-Owner chọn một: Approve corrected schema proposal to proceed toward Gate 3 preparation / Request further changes / Decline.
+**Owner đã chọn: Request changes**, tại PR #263 head `bd75f5f063605d80ac6289e92cdf0e856b5c0f98` (2026-08-16) — 6 điểm bắt buộc: remove impossible conditional FK on `linked_source_id`; freeze posting-path choice before posting; exact reversal invariant (same-subject, exact-amount, at-most-once, no-reverse-of-reverse); concurrency-safe serialization for 5 named aggregate checks; explicit actor on reconciliation reversal; binding composite-FK-target index requirement. Architecture set A3+A4-a+A.5/B2+B2-T/C/D confirmed unchanged. Chi tiết nguyên văn tại `decision_provenance.owner_response_reference`. **This packet (`02-design-v4.md`) is now frozen — no further content edits.** `docs/owner-decisions/GAP-037/02-design-v5.md`, self-contained, addressing these 6 points, follows in the next commit.
 
 ## What the owner is NOT being asked to decide
 Owner không được yêu cầu duyệt migration file thật hay chi tiết implementation (transaction boundaries, service/class names, exact `TreasuryReferentialIntegrityService` implementation). Owner cũng không được yêu cầu duyệt lại architecture set A3/A4-a/A.5/B2/B2-T/C/D — đã approved, không mở lại bởi revision này. Owner cũng không được yêu cầu duyệt overpayment/prepayment semantics — §6.3's carve-out chỉ xác nhận phạm vi, không đề xuất thiết kế cho trường hợp đó.

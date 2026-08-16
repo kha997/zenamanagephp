@@ -1,11 +1,11 @@
 ---
 work_id: GAP-037
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-16-gap037-project-treasury-architecture-decisions.md
   plan: null
@@ -15,24 +15,26 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-16T23:15:00+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-17T06:50:06+07:00"
+  owner_response_reference: "Owner Gate 2 Schema Proposal Revision 17 decision -- APPROVE, recorded in-session on 2026-08-17 against reviewed PR #263 head 579623dcf122a1af7e9c60cdd4191c80fa4089aa: 'GAP-037 -- Gate 2 Schema Proposal Revision 17 -- Owner Decision: APPROVE. Toi, Owner, APPROVE Gate 2 Schema Proposal Revision 17 cua GAP-037 tai PR #263, reviewed head 579623dcf122a1af7e9c60cdd4191c80fa4089aa. Toi xac nhan Revision 17 da dong boundary con lai cua Revision 16: reversal creation tuan thu global lock order 1->2->3->4->5->6; document-level reversal cua via_route original phai re-verify original route van full-target completed tai chinh economic-completion transaction; khi original route va reversal route cung duoc khoa, route rows duoc khoa deterministic lower-id-first. Toi dong thoi xac nhan schema proposal tong the tai Revision 17 phu hop voi architecture da duyet A3 + A4-a + A.5 / B2 + B2-T / C / D, bao gom Cost/Cash separation, ContractPayment no-second-paid-fact, many-to-many cost settlement, directional party provenance, immutable posting, reversal/replacement auditability, advance/cash conservation, route conservation, reconciliation lifecycle, tenant/project isolation va fixed concurrency ordering. Gate 2 Schema Proposal: APPROVED. Quyet dinh nay chi cho phep ghi nhan Gate 2 approval va chuan bi Gate 3 cho GAP-037 theo Owner Control Layer. No khong tu dong authorize migration/runtime implementation, khong mark PR ready, khong merge PR #263, khong sua/merge/dong PR #245/#257, va khong suy luan Gate 3 approval.'"
   reconciliation_required: false
 supersedes: docs/owner-decisions/GAP-037/02-design-v16.md
 superseded_by: null
 timestamps:
   created_at: "2026-08-16T23:15:00+07:00"
-  updated_at: "2026-08-16T23:15:00+07:00"
+  updated_at: "2026-08-17T06:50:06+07:00"
 generated_by: agent
 ---
 
-# GAP-037 — Project Treasury: Gate 2 Revision 17 — Via-Route-Original Reversal Concurrency Closure (Fully Self-Contained)
+# GAP-037 — Project Treasury: Gate 2 Revision 17 — Via-Route-Original Reversal Concurrency Closure (Fully Self-Contained, **APPROVED**)
 
-**Status:** Gate 1 approved. Gate 2 architecture decisions **approved** (`docs/owner-decisions/GAP-037/02-design.md`, frozen) — **A3 + A4-a + A.5 / B2 + B2-T / C / D**, not reopened. Still Gate 2 — a proposal, not implementation. No migration file, model, controller, service, route, UI, or test exists or is authorized by this packet. **This revision restates every table, field, constraint, index, state transition, conservation rule, posting-matrix row, reversal rule, Tier-B rule, project/tenant rule, reconciliation rule, and lock rule from scratch. Nothing in this packet depends on "unchanged from vN" for a binding invariant — every rule below is the complete, current, binding text.**
+**Status:** Gate 1 approved. Gate 2 architecture decisions **approved** (`docs/owner-decisions/GAP-037/02-design.md`, frozen) — **A3 + A4-a + A.5 / B2 + B2-T / C / D**, not reopened. **Gate 2 schema proposal (this packet): APPROVED — 2026-08-17T06:50:06+07:00, reviewed head `579623dcf122a1af7e9c60cdd4191c80fa4089aa`.** Still no migration file, model, controller, service, route, UI, or test exists or is authorized by this packet — approval authorizes recording the Gate 2 approval and preparing Gate 3, nothing more (see `## Decision Needed` below for the complete, verbatim boundary). **This revision restates every table, field, constraint, index, state transition, conservation rule, posting-matrix row, reversal rule, Tier-B rule, project/tenant rule, reconciliation rule, and lock rule from scratch. Nothing in this packet depends on "unchanged from vN" for a binding invariant — every rule below is the complete, current, binding text.**
 
 **Database compatibility:** MySQL for production/dev (`config/database.php`, `.env.example`), SQLite for the test suite (`.env.testing`, `phpunit.xml`).
 
 **Repo fact previously verified, restated:** `ContractPayment.paid_at` is a real, nullable `@property \Carbon\Carbon|null` column (`app/Models/ContractPayment.php`, cast `'date'`), distinct from `status`.
+
+**Owner decision recorded 2026-08-17T06:50:06+07:00 — APPROVE**, against reviewed head `579623dcf122a1af7e9c60cdd4191c80fa4089aa`. The Owner confirmed Revision 17 closes Revision 16's remaining boundary (corrected global lock order for reversal creation; completion-time re-verification that a `via_route` original's route is still full-target `completed`; deterministic lower-route-id-first ordering when both original and reversal routes are locked) and confirmed the overall schema proposal conforms to the approved architecture A3+A4-a+A.5/B2+B2-T/C/D. Verbatim text in `decision_provenance.owner_response_reference`. **This packet (`02-design-v17.md`) is now the approved, frozen Gate 2 schema proposal — no further content edits.**
 
 ---
 
@@ -506,17 +508,15 @@ Simulated against the fixed design above. Each scenario states: **canonical fact
 ---
 
 ## 19. Trạng thái và bước tiếp theo
-- Nếu Owner Approve: chuẩn bị Gate 3 cho GAP-037 — vẫn chỉ là quyết định merge tài liệu.
-- Nếu Owner Request changes: sẽ tạo `02-design-v18.md` (supersedes bản này).
-- Nếu Owner Decline: dừng GAP-037 ở schema-proposal này.
+- **Owner đã Approve (2026-08-17T06:50:06+07:00).** Gate 2 schema proposal cho GAP-037: **APPROVED**. Bước tiếp theo: chuẩn bị Gate 3 cho GAP-037 theo Owner Control Layer — vẫn chỉ là chuẩn bị, không tự động authorize migration/runtime implementation, không mark PR ready, không merge PR #263, không suy luận Gate 3 approval.
 
 ## 20. Loại trừ phạm vi
 Kế thừa nguyên vẹn từ mọi round trước: không migration file thật; không model/controller/service/route/UI/test thật; không seed/backfill; không implementation plan coi schema này là đã duyệt cho Gate 3; không Gate 3 tự suy luận; không mark PR ready; không merge PR #263; không sửa/merge/đóng PR #245 hoặc #257; không GAP-036; không Today Workspace; không sửa canonical SSOT stale metadata; không production/deployment; không thiết kế external-destination leg representation; không sửa `ReportPageController::cashflow()`.
 
 ## Decision Needed
-Owner chọn một: Approve corrected schema proposal to proceed toward Gate 3 preparation / Request further changes / Decline.
+**Resolved 2026-08-17T06:50:06+07:00 — Owner Decision: APPROVE.** Revision 17 closes Revision 16's remaining concurrency boundary (corrected global lock order for reversal creation against a `via_route` original; completion-time re-verification that the original's route is still full-target `completed`; deterministic lower-route-id-first ordering when both original and reversal routes are locked). The Owner also confirmed the overall schema proposal conforms to the approved architecture A3+A4-a+A.5/B2+B2-T/C/D across every binding invariant this packet restates — Cost/Cash separation, `ContractPayment` no-second-paid-fact, many-to-many cost settlement, directional party provenance, immutable posting, reversal/replacement auditability, advance/cash conservation, route conservation, reconciliation lifecycle, tenant/project isolation, fixed concurrency ordering. **Gate 2 Schema Proposal: APPROVED.** This decision authorizes recording the Gate 2 approval and preparing Gate 3 for GAP-037 per the Owner Control Layer — it does **not** authorize migration/runtime implementation, does not mark PR #263 ready, does not merge PR #263, does not modify/merge/close PR #245 or #257, and does not itself infer Gate 3 approval. Verbatim text in `decision_provenance.owner_response_reference`. This packet (`02-design-v17.md`) is the approved, frozen Gate 2 schema proposal.
 
-**Agent recommendation (not a decision, not binding):** the single remaining concurrency boundary identified in the Owner's Revision 16 REQUEST CHANGES decision — reversal-creation's lock order for a `via_route` original's route, and the missing completion-time re-check that the original's route hasn't regressed since creation — is closed in this revision (§2.2 check #6's locking clause, new §2.2e, corrected §11). Five dedicated adversarial scenarios (18.15c-g) were added specifically targeting this boundary, and a fresh full normative-rule ↔ scenario ↔ concurrency/idempotency audit found no further material counterexample. This packet is, in the agent's assessment, ready for Owner approval.
+**Agent recommendation recorded at the time this packet was submitted (superseded by the Owner's decision above — kept verbatim for the record):** the single remaining concurrency boundary identified in the Owner's Revision 16 REQUEST CHANGES decision — reversal-creation's lock order for a `via_route` original's route, and the missing completion-time re-check that the original's route hasn't regressed since creation — was closed in this revision (§2.2 check #6's locking clause, new §2.2e, corrected §11). Five dedicated adversarial scenarios (18.15c-g) were added specifically targeting this boundary, and a fresh full normative-rule ↔ scenario ↔ concurrency/idempotency audit found no further material counterexample. This packet was, in the agent's assessment, ready for Owner approval — and the Owner agreed.
 
 ## What the owner is NOT being asked to decide
 Owner không được yêu cầu duyệt migration file thật hay chi tiết implementation. Owner cũng không được yêu cầu duyệt lại architecture set A3/A4-a/A.5/B2/B2-T/C/D — đã approved, không mở lại. Owner cũng không được yêu cầu duyệt overpayment/prepayment semantics, hay thiết kế external-destination leg representation (nêu là future extension point, chưa thiết kế ở đây).

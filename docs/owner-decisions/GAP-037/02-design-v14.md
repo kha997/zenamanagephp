@@ -1,11 +1,11 @@
 ---
 work_id: GAP-037
 gate: 2
-gate_status: awaiting_owner
+gate_status: superseded
 owner_decision:
   value: none
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-16-gap037-project-treasury-architecture-decisions.md
   plan: null
@@ -22,7 +22,7 @@ supersedes: docs/owner-decisions/GAP-037/02-design-v13.md
 superseded_by: docs/owner-decisions/GAP-037/02-design-v15.md
 timestamps:
   created_at: "2026-08-16T22:10:40+07:00"
-  updated_at: "2026-08-16T22:10:40+07:00"
+  updated_at: "2026-08-18T06:21:51+07:00"
 generated_by: agent
 ---
 

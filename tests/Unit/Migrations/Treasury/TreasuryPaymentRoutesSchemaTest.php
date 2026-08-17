@@ -49,4 +49,60 @@ class TreasuryPaymentRoutesSchemaTest extends TestCase
             'linked_financial_document_id' => $doc->id,
         ]);
     }
+
+    public function test_exactly_one_of_linked_document_or_contract_payment_is_enforced(): void
+    {
+        $tenant = \App\Models\Tenant::factory()->create();
+        $user = \App\Models\User::factory()->create(['tenant_id' => $tenant->id]);
+        $project = \App\Models\Project::factory()->create(['tenant_id' => $tenant->id]);
+        $wallet = \App\Models\Treasury\TreasuryWallet::create([
+            'tenant_id' => $tenant->id, 'wallet_type' => 'bank', 'name' => 'W',
+        ]);
+        $doc = \App\Models\Treasury\TreasuryFinancialDocument::create([
+            'tenant_id' => $tenant->id, 'project_id' => $project->id,
+            'document_type' => 'funding', 'status' => 'draft',
+            'amount' => 100, 'destination_wallet_id' => $wallet->id,
+            'created_by' => $user->id,
+        ]);
+        $contract = \App\Models\Contract::factory()->create([
+            'tenant_id' => $tenant->id, 'project_id' => $project->id,
+            'created_by' => $user->id,
+        ]);
+        $contractPayment = \App\Models\ContractPayment::factory()->create([
+            'tenant_id' => $tenant->id, 'contract_id' => $contract->id,
+        ]);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('/exactly one of/');
+
+        \App\Models\Treasury\TreasuryPaymentRoute::create([
+            'tenant_id' => $tenant->id, 'project_id' => $project->id,
+            'total_allocated_amount' => 100, 'status' => 'planned',
+            'linked_financial_document_id' => $doc->id,
+            'linked_contract_payment_id' => $contractPayment->id,
+        ]);
+    }
+
+    public function test_co_nullable_contract_payment_and_expected_wallet_is_enforced(): void
+    {
+        $tenant = \App\Models\Tenant::factory()->create();
+        $user = \App\Models\User::factory()->create(['tenant_id' => $tenant->id]);
+        $project = \App\Models\Project::factory()->create(['tenant_id' => $tenant->id]);
+        $contract = \App\Models\Contract::factory()->create([
+            'tenant_id' => $tenant->id, 'project_id' => $project->id,
+            'created_by' => $user->id,
+        ]);
+        $contractPayment = \App\Models\ContractPayment::factory()->create([
+            'tenant_id' => $tenant->id, 'contract_id' => $contract->id,
+        ]);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('/must be both null or both set together/');
+
+        \App\Models\Treasury\TreasuryPaymentRoute::create([
+            'tenant_id' => $tenant->id, 'project_id' => $project->id,
+            'total_allocated_amount' => 100, 'status' => 'planned',
+            'linked_contract_payment_id' => $contractPayment->id,
+        ]);
+    }
 }

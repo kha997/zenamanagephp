@@ -36,12 +36,13 @@ return new class extends Migration
                 ['tenant_id', 'wallet_id'],
                 'tle_wallet_fk'
             )->references(['tenant_id', 'id'])->on('treasury_wallets');
+            $table->unique(['tenant_id', 'id'], 'tle_tenant_id_id_unique');
+
             $table->foreign(
                 ['tenant_id', 'reversal_of_entry_id'],
                 'tle_reversal_of_fk'
             )->references(['tenant_id', 'id'])->on('treasury_ledger_entries');
 
-            $table->unique(['tenant_id', 'id'], 'tle_tenant_id_id_unique');
             $table->unique('reversal_of_entry_id', 'tle_reversal_of_entry_unique');
             $table->unique('original_posting_key', 'tle_original_posting_key_unique');
             $table->index(['source_financial_document_id'], 'tle_src_doc_idx');

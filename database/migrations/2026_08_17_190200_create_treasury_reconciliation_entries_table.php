@@ -28,6 +28,8 @@ return new class extends Migration
                 ['tenant_id', 'ledger_entry_id'],
                 'trce_ledger_entry_fk'
             )->references(['tenant_id', 'id'])->on('treasury_ledger_entries');
+            $table->unique(['tenant_id', 'id'], 'trce_tenant_id_id_unique');
+
             $table->foreign(
                 ['tenant_id', 'reverses_reconciliation_entry_id'],
                 'trce_reverses_entry_fk'
@@ -35,7 +37,6 @@ return new class extends Migration
             $table->foreign('actor_id', 'trce_actor_id_fk')
                 ->references('id')->on('users');
 
-            $table->unique(['tenant_id', 'id'], 'trce_tenant_id_id_unique');
             $table->unique('reverses_reconciliation_entry_id', 'trce_reverses_entry_unique');
             $table->index(['reconciliation_id'], 'trce_reconciliation_idx');
             $table->index(['ledger_entry_id'], 'trce_ledger_entry_idx');

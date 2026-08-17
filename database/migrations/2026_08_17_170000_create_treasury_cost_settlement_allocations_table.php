@@ -34,12 +34,13 @@ return new class extends Migration
                 ->references('id')->on('contract_expenses');
             $table->foreign('cost_source_material_receipt_line_id', 'tcsa_cost_source_mrl_fk')
                 ->references('id')->on('material_receipt_lines');
+            $table->unique(['tenant_id', 'id'], 'tcsa_tenant_id_id_unique');
+
             $table->foreign(
                 ['tenant_id', 'reverses_allocation_id'],
                 'tcsa_reverses_allocation_fk'
             )->references(['tenant_id', 'id'])->on('treasury_cost_settlement_allocations');
 
-            $table->unique(['tenant_id', 'id'], 'tcsa_tenant_id_id_unique');
             $table->unique('reverses_allocation_id', 'tcsa_reverses_allocation_unique');
             $table->index(['financial_document_id'], 'tcsa_financial_doc_idx');
             $table->index(['advance_settlement_id'], 'tcsa_advance_settlement_idx');

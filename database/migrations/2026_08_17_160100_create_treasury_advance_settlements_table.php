@@ -29,12 +29,13 @@ return new class extends Migration
                 ['tenant_id', 'financial_document_id'],
                 'tas_financial_doc_fk'
             )->references(['tenant_id', 'id'])->on('treasury_financial_documents');
+            $table->unique(['tenant_id', 'id'], 'tas_tenant_id_id_unique');
+
             $table->foreign(
                 ['tenant_id', 'reverses_settlement_id'],
                 'tas_reverses_settlement_fk'
             )->references(['tenant_id', 'id'])->on('treasury_advance_settlements');
 
-            $table->unique(['tenant_id', 'id'], 'tas_tenant_id_id_unique');
             $table->unique('reverses_settlement_id', 'tas_reverses_settlement_unique');
             $table->unique('financial_document_id', 'tas_financial_document_unique');
             $table->index(['advance_id'], 'tas_advance_idx');

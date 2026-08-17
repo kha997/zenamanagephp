@@ -45,12 +45,13 @@ return new class extends Migration
                 ->references(['tenant_id', 'id'])->on('treasury_financial_parties');
             $table->foreign(['tenant_id', 'destination_party_id'], 'tfd_dst_party_fk')
                 ->references(['tenant_id', 'id'])->on('treasury_financial_parties');
+            $table->unique(['tenant_id', 'id'], 'tfd_tenant_id_id_unique');
+
             $table->foreign(['tenant_id', 'reversed_document_id'], 'tfd_reversed_doc_fk')
                 ->references(['tenant_id', 'id'])->on('treasury_financial_documents');
             $table->foreign(['tenant_id', 'replacement_document_id'], 'tfd_replacement_doc_fk')
                 ->references(['tenant_id', 'id'])->on('treasury_financial_documents');
 
-            $table->unique(['tenant_id', 'id'], 'tfd_tenant_id_id_unique');
             $table->unique('reversed_document_id', 'tfd_reversed_document_id_unique');
             $table->index(['tenant_id'], 'tfd_tenant_id_idx');
             $table->index(['project_id'], 'tfd_project_id_idx');

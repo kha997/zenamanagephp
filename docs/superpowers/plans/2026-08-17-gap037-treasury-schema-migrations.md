@@ -461,26 +461,27 @@ namespace App\Models\Treasury\Concerns;
  * `saving` event, instead of as literal SQL CHECK constraints. Multi-row /
  * multi-table invariants (settlement conservation, lock ordering, the
  * reversal state machine) are explicitly NOT covered by this trait — see
- * docs/superpowers/plans/2026-08-17-gap037-treasury-schema-migrations.md's
- * Global Constraints section.
+ * this plan's Global Constraints section.
+ *
+ * Consuming models declare whichever of the five config arrays they need
+ * as their own `protected static array $<name> = [...]` properties:
+ * `$positiveAmountColumns`, `$mutuallyExclusivePairs`, `$exactlyOneOfGroups`,
+ * `$coNullablePairs`, `$allowedValues` — see each foreach below for shape.
+ *
+ * Deliberately NOT declared as properties on this trait: PHP raises a fatal
+ * "definition differs and is considered incompatible" error when a class
+ * using a trait redeclares a typed trait property with a different default
+ * value (verified on PHP 8.2 — applies regardless of `static`). Since every
+ * consuming model needs a *different* default for these arrays, the trait
+ * cannot declare them itself; `treasuryRowInvariantConfig()` below reads
+ * them via `property_exists()` instead, defaulting to `[]` for any array a
+ * consuming model doesn't declare. This does not change how consuming
+ * models are written — every later task still declares its own
+ * `protected static array $positiveAmountColumns = ['amount']` etc.
+ * exactly as shown in each task below.
  */
 trait EnforcesRowInvariants
 {
-    /** @var list<string> columns that must be > 0 when set */
-    protected static array $positiveAmountColumns = [];
-
-    /** @var list<array{0:string,1:string}> at most one of the pair may be non-null */
-    protected static array $mutuallyExclusivePairs = [];
-
-    /** @var list<list<string>> exactly one column in each group must be non-null */
-    protected static array $exactlyOneOfGroups = [];
-
-    /** @var list<array{0:string,1:string}> both null together, or both non-null together */
-    protected static array $coNullablePairs = [];
-
-    /** @var array<string,list<string>> column => allowed values */
-    protected static array $allowedValues = [];
-
     protected static function bootEnforcesRowInvariants(): void
     {
         static::saving(function ($model): void {
@@ -488,22 +489,28 @@ trait EnforcesRowInvariants
         });
     }
 
+    /** @return array<mixed> */
+    protected static function treasuryRowInvariantConfig(string $property): array
+    {
+        return property_exists(static::class, $property) ? (array) static::${$property} : [];
+    }
+
     protected function runTreasuryRowChecks(): void
     {
-        foreach (static::$positiveAmountColumns as $column) {
+        foreach (static::treasuryRowInvariantConfig('positiveAmountColumns') as $column) {
             $value = $this->getAttribute($column);
             if ($value !== null && (float) $value <= 0) {
                 throw new \InvalidArgumentException("{$column} must be > 0, got {$value}");
             }
         }
 
-        foreach (static::$mutuallyExclusivePairs as [$a, $b]) {
+        foreach (static::treasuryRowInvariantConfig('mutuallyExclusivePairs') as [$a, $b]) {
             if ($this->getAttribute($a) !== null && $this->getAttribute($b) !== null) {
                 throw new \InvalidArgumentException("{$a} and {$b} are mutually exclusive — at most one may be set");
             }
         }
 
-        foreach (static::$exactlyOneOfGroups as $group) {
+        foreach (static::treasuryRowInvariantConfig('exactlyOneOfGroups') as $group) {
             $setCount = 0;
             foreach ($group as $column) {
                 if ($this->getAttribute($column) !== null) {
@@ -516,7 +523,7 @@ trait EnforcesRowInvariants
             }
         }
 
-        foreach (static::$coNullablePairs as [$a, $b]) {
+        foreach (static::treasuryRowInvariantConfig('coNullablePairs') as [$a, $b]) {
             $aSet = $this->getAttribute($a) !== null;
             $bSet = $this->getAttribute($b) !== null;
             if ($aSet !== $bSet) {
@@ -524,7 +531,7 @@ trait EnforcesRowInvariants
             }
         }
 
-        foreach (static::$allowedValues as $column => $values) {
+        foreach (static::treasuryRowInvariantConfig('allowedValues') as $column => $values) {
             $value = $this->getAttribute($column);
             if ($value !== null && !in_array($value, $values, true)) {
                 $list = implode(', ', $values);
@@ -1237,11 +1244,13 @@ class TreasuryLedgerEntriesSchemaTest extends TestCase
     {
         $tenant = \App\Models\Tenant::factory()->create();
         $user = \App\Models\User::factory()->create(['tenant_id' => $tenant->id]);
+        $project = \App\Models\Project::factory()->create(['tenant_id' => $tenant->id]);
         $wallet = \App\Models\Treasury\TreasuryWallet::create([
             'tenant_id' => $tenant->id, 'wallet_type' => 'bank', 'name' => 'W',
         ]);
         $doc = \App\Models\Treasury\TreasuryFinancialDocument::create([
-            'tenant_id' => $tenant->id, 'document_type' => 'funding', 'status' => 'posted_unreconciled',
+            'tenant_id' => $tenant->id, 'project_id' => $project->id,
+            'document_type' => 'funding', 'status' => 'posted_unreconciled',
             'amount' => 100, 'destination_wallet_id' => $wallet->id,
             'created_by' => $user->id,
         ]);

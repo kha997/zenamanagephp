@@ -1,0 +1,92 @@
+---
+work_id: GAP-037
+gate: 1
+gate_status: approved
+owner_decision:
+  value: approved
+  authority: human_owner
+decision_requested: null
+references:
+  spec: null
+  plan: null
+  branch: docs/GAP-037-project-treasury-gate1-prep
+  pr: https://github.com/kha997/zenamanagephp/pull/263
+  release: null
+decision_provenance:
+  trust_level: claimed_repo_record
+  recorded_by: agent
+  recorded_at: "2026-08-16T00:51:11+07:00"
+  owner_response_reference: "Owner Gate 1 Round 2 decision — APPROVE, recorded in-session on 2026-08-16 against reviewed PR #263 head c947b83157fadca337800927e3f60cf7e2c26bd9: 'GAP-037 — Gate 1 Round 2 Owner Decision: APPROVE. Tôi, Owner, APPROVE Gate 1 của GAP-037 tại PR #263, reviewed head c947b83157fadca337800927e3f60cf7e2c26bd9. Tôi xác nhận correction Round 1 đã được xử lý đạt yêu cầu. Gate 1 approval này chấp thuận business problem, scope và Gate 2 investigation approach cho Project Treasury theo canonical SSOT §§7–8, với PR #245 chỉ là non-normative design evidence. Gate 2 bắt buộc phải giải quyết đầy đủ bốn nhóm quyết định trước khi đề xuất schema: A. Cost authority — xác định quan hệ giữa ContractExpense, MaterialReceiptLine-derived cost, Component.actual_cost, Project.actual_cost/budget_actual và Treasury ledger. B. Cash authority — xác định canonical source cho actual project cash movements và quan hệ với ContractPayment, supplier/labor payments, owner contribution, internal transfers và advances/settlements. C. Economic-event / no-double-posting — xác định từng nguồn là input, projection, reconciliation target, referenced evidence hay source bị thay thế; không được ghi nhận một economic event hai lần. Treasury không được auto-sync Project.actual_cost trước khi Gate 2 giải quyết ownership của existing Component/Project rollup. D. Company cashflow integration — không tạo company-level cashflow calculator thứ hai và không mặc nhiên coi ContractExpense là cash paid. Các invariant tiếp tục binding: Cost != Cash != Revenue != Profit; Net Cash != Profit; missing financial data != zero/paid/certain. Authorization sau Gate 1 — Được phép: ghi nhận quyết định Gate 1 APPROVE này với provenance nguyên văn; sau record-only commit và required CI xanh, chuẩn bị Gate 2 design/investigation cho GAP-037. Chưa được phép: migration/schema; model/controller/service/route/UI; runtime implementation; implementation plan dựa trên schema chưa duyệt; tự chọn câu trả lời A–D rồi coi như Owner đã duyệt; merge PR #263; sửa/merge/đóng PR #245 hoặc #257; GAP-036; Today Workspace; sửa canonical SSOT stale metadata trong GAP-037; production/deployment. Gate 2 phải quay lại awaiting_owner với các phương án, trade-off, recommendation và migration/no-double-count implications rõ ràng. Không được suy luận Gate 2 approval từ quyết định này.'"
+  reconciliation_required: false
+supersedes: null
+superseded_by: null
+timestamps:
+  created_at: "2026-08-16T00:27:36+07:00"
+  updated_at: "2026-08-16T00:51:11+07:00"
+generated_by: agent
+---
+
+## Owner Summary
+ZENA chưa có cơ chế theo dõi dòng tiền cấp dự án (project cash) một cách đáng tin cậy — "chi phí" hiện nằm rải rác ở 2-3 nguồn không liên kết, không có nguồn nào ghi nhận "đã trả tiền thật hay chưa". GAP-037 xin phép chuẩn bị Gate 1 cho một Work ID Project Treasury mới, triển khai theo canonical SSOT §§7–8 (đã Owner-approved, merged), dùng PR #245 chỉ làm bằng chứng thiết kế non-normative — không phải thẩm quyền triển khai.
+
+## Vấn đề vận hành
+Audit runtime hiện tại (dưới đây) xác nhận: không có nguồn "cost" hay "cash" thống nhất nào tồn tại cho một dự án. Cụ thể:
+- `ContractExpense` (`app/Models/ContractExpense.php:33-40`) ghi "chi phí" thủ công (labor/subcontractor/design_outsource/misc) nhưng **cố ý không** cho phép nhập vật tư (docblock dòng 10-14: "Material cost is NOT entered here... a manual materials category would double-count it") và **không có** trường trạng thái thanh toán (`status`/`paid_at`) — chỉ có `expense_date`, không phân biệt được "đã ghi nhận" với "đã trả tiền".
+- Chi phí vật tư nằm ở `MaterialReceiptLine` (`app/Models/MaterialReceiptLine.php`), qua `Api\ContractController::costSummary()` (`ContractController.php:268-306`) — cũng chỉ có `unit_cost`/`quantity_received` tại thời điểm nhận hàng, **không có** trường thanh toán nào.
+- `costSummary()` **không** cộng gộp `ContractExpense` với chi phí vật tư — đây là 2 con số tách biệt hoàn toàn, không có nơi nào trong code hiện tại cộng chúng lại thành "tổng chi phí dự án".
+- **`Project.actual_cost`/`budget_actual` KHÔNG phải là field chỉ set thủ công — có một automatic rollup path đang hoạt động, riêng biệt với `ContractExpense`/`MaterialReceiptLine`.** `Component.actual_cost` (`app/Models/Component.php:39-76`, fillable, mặc định `0.0`) là input; khi thay đổi, `Component.php:128-138` dispatch event `ComponentCostUpdated` (`src/CoreProject/Events/ComponentCostUpdated.php`) qua Laravel `Event` và `EventBus`. `src/CoreProject/Listeners/ProjectCalculationListener::handleComponentCostUpdated()` (dòng 58-71) bắt event này và gọi `recalculateProjectCost()` (dòng 135-162) — hàm này tính tổng `actual_cost` của các root Component rồi `forceFill(['budget_actual' => $newCost, 'actual_cost' => $newCost])->save()` lên `Project`, sau đó publish `Project.Cost.Updated`. Song song còn có `Project::recalculateActualCost()` (`app/Models/Project.php:419-436`) — có thể gọi trực tiếp qua `Web\ProjectController::recalculateActualCost()` (`ProjectController.php:362`) hoặc `Api\ProjectController::recalculateActualCost()` (`ProjectController.php:486`) — tính tổng `rootComponents.actual_cost` và ghi vào `Project.actual_cost`, dispatch `Project.Project.CostUpdated` qua `EventBus`. Đây là 2 đường ghi riêng biệt (event-driven qua `ProjectCalculationListener`, và gọi trực tiếp qua controller) cùng ghi vào `Project.actual_cost`/`budget_actual`, hoàn toàn tách biệt khỏi `ContractExpense` và `MaterialReceiptLine`.
+- **Kết luận đã sửa (thay cho kết luận cũ sai):** hiện tồn tại nhiều cost-like sources/path chưa được reconciliation: manual `ContractExpense`, material cost từ `MaterialReceiptLine`, và Component-derived `Project.actual_cost`/`budget_actual`. Chưa có bằng chứng cho phép coi bất kỳ nguồn nào trong số đó là canonical financial cost authority cho Treasury — `Component.actual_cost` rất có thể là planning/progress-management cost (chi phí kế hoạch/tiến độ theo WBS), không nhất thiết là financial incurred cost theo nghĩa kế toán, nhưng đây là giả định cần Gate 2 audit, không phải kết luận đã xác nhận.
+- Phía "cash" duy nhất có ý nghĩa thật là `ContractPayment` (`status`: planned/paid/overdue + `paid_at`) — nhưng chỉ theo dõi tiền **thu vào** từ khách hàng qua hợp đồng, không theo dõi tiền **chi ra** cho nhà cung cấp/nhân công.
+- `ReportPageController::cashflow()` (route `operator.reports.cashflow`, `ReportPageController.php:44-119`) là công cụ cashflow công ty đã có — phía "thu" (`thu`) đúng cash-basis (dùng `ContractPayment.status===paid`+`paid_at`), nhưng phía "chi" (`chi`) cộng `ContractExpense.amount` vô điều kiện theo `expense_date` — tức accrual, không phải cash-basis. Canonical SSOT §6.3/§8 đã ghi nhận đây là vi phạm bất biến Cost≠Cash đang tồn tại trong code, và cấm coi `ContractExpense` là "đã trả tiền" cho đến khi có quyết định kiến trúc riêng.
+
+## Người dùng bị ảnh hưởng
+- PM/Owner cần biết dự án đã chi bao nhiêu tiền mặt thật, còn nợ nhà cung cấp bao nhiêu — hiện không thể trả lời chính xác.
+- Kế toán/thủ quỹ (nếu có) không có nơi ghi nhận tạm ứng, hoàn ứng, chuyển khoản nội bộ giữa các ví/tài khoản dự án.
+- Các slice tương lai (Finance Control, Project OPPM) phụ thuộc vào một nguồn cash đáng tin cậy mà hiện chưa tồn tại — canonical SSOT §7.3 đã quy định chúng phải chờ Treasury "canonical" trước khi dùng số liệu Treasury thật.
+
+## Bằng chứng
+- Canonical SSOT: `docs/superpowers/specs/2026-08-15-zena-one-page-management-canonical-semantics.md` §§6.3, 7, 8, 12 (items 2 và 7), 13, 14 — đọc tại `main` `4016e601ba8ca967a02b28ed7cf21ebfa1292e08` (đã fetch lại, xác nhận không drift).
+- PR #245 pinned head `cd8b79d861f4c1bae5278b6c57f29cd14e505594` (OPEN, Draft, không đổi) — `docs/superpowers/specs/2026-08-07-project-treasury-cashflow-design.md`, 12-bảng ledger model (financial_parties, project_wallets, financial_documents, ledger_entries, payment_routes/legs, fund_chains, advances/advance_settlements, expense_approvals, reconciliations), §17 13 quyết định Owner đã chốt trong tài liệu gốc (posting ngay `posted_unreconciled`, expense cần duyệt, X có thể tự duyệt nhưng phải audit, internal transfer không ảnh hưởng revenue/expense/profit, route đa chặng chỉ đếm 1 lần, bản ghi đã post là bất biến).
+- Issue #244 (`kha997/zenamanagephp#244`) — thân bài gốc, 0 comment, cùng 13 quyết định trên; không có amendment nào cần đọc thêm.
+- Runtime audit (file:line ở trên): `ContractExpense.php`, `ContractPayment.php`, `MaterialReceipt.php`, `MaterialReceiptLine.php`, `Api\ContractController::costSummary()`, `ReportPageController::cashflow()`, `app/Models/Project.php:419-436` (`recalculateActualCost()`), `app/Models/Component.php:39-138` (`actual_cost` fillable + `ComponentCostUpdated` dispatch), `src/CoreProject/Listeners/ProjectCalculationListener.php:58-162` (`handleComponentCostUpdated()`/`recalculateProjectCost()`), `src/CoreProject/Events/ComponentCostUpdated.php`, `Web\ProjectController.php:362`, `Api\ProjectController.php:486` — không có model/service `Treasury`/`Wallet`/`Ledger` nào tồn tại (grep `app/`, `database/migrations/`, `routes/`, `src/` → 0 kết quả).
+- Ghi nhận riêng (không xử lý ở đây): canonical SSOT trên `main` hiện còn dòng trạng thái đầu tài liệu ghi "Gate 2 preparing/awaiting Owner review. Gate 3 not started" dù OWN-2026-009 đã qua đủ Gate 1→2→3 và merge — đây là stale documentation metadata, đề xuất xử lý bằng một governance/docs cleanup work item riêng, không gộp vào GAP-037.
+
+## Tác động nếu không xử lý
+Không có nguồn sự thật (source of truth) cho dòng tiền dự án — PM/Owner tiếp tục phải tự tổng hợp thủ công từ nhiều nơi, dễ nhầm "đã ghi nhận chi phí" với "đã trả tiền", và các slice tương lai (Finance Control, Project OPPM) không có gì đáng tin cậy để hiển thị ngoài các con số công ty tổng hợp hiện tại (vốn chính bản thân cũng có vấn đề cash-basis ở phía chi, theo SSOT §6.3).
+
+## Phạm vi đề xuất
+**Binding problem statement (không được diễn giải lại thành "Implement Project Treasury theo PR #245"):**
+
+> Triển khai Project Treasury theo canonical SSOT §§7–8, sử dụng PR #245 tại pinned head `cd8b79d861f4c1bae5278b6c57f29cd14e505594` chỉ làm non-normative design evidence; trước mọi schema implementation phải giải quyết ownership/integration boundary giữa Treasury ledger với `ContractPayment`, `ContractExpense`, `MaterialReceiptLine`-derived cost, và existing company cashflow semantics (`ReportPageController::cashflow()`).
+
+Project Treasury được định nghĩa (theo SSOT §7.1-7.2) là: transaction-level project cash mechanics — ledger / wallet / advances / transfers / reconciliation / evidence. Project Treasury **không phải**: statutory accounting, general ledger, revenue recognition, company P&L, duplicate receivables engine, duplicate company cashflow engine, và không được duplicate Contract payment lifecycle.
+
+**Gate 1 này chỉ xin phép:** reconciliation đã thực hiện ở trên; xác định business problem; xác định dependency/boundary; chuẩn bị Gate 1 Owner packet; đề xuất phạm vi điều tra cho Gate 2.
+
+**Gate 2 (nếu Gate 1 được duyệt) bắt buộc phải trả lời đủ 4 quyết định kiến trúc sau trước khi được phép đề xuất bất kỳ schema nào:**
+
+**A. Cost authority** — Xác định canonical source hoặc composition rule của "cost incurred", audit và quyết định quan hệ của đủ 5 nguồn: `ContractExpense`; chi phí vật tư từ `MaterialReceiptLine`; `Component.actual_cost`; `Project.actual_cost`/`budget_actual`/các alias liên quan; Treasury financial documents/ledger. Phải ngăn double-count chi phí vật tư — runtime hiện đã cố ý không cho nhập vật tư vào `ContractExpense` chính vì lý do này (xem Bằng chứng). Gate 2 phải xác định rõ metric `Component`/`Project` hiện hữu là planning/progress-management cost, financial incurred cost, manual rollup, hay một semantic khác, **trước khi** Treasury được phép ghi hoặc đồng bộ vào các field này.
+
+**B. Cash authority** — Xác định Treasury ledger có trở thành canonical source cho actual project cash movements hay không; nếu có, phải định nghĩa quan hệ với `ContractPayment`, thanh toán cho `ContractExpense`, thanh toán nhà cung cấp/vật tư, owner contribution, internal transfers, advances/settlements.
+
+**C. Economic-event / no-double-posting rule** — Với từng nguồn hiện hữu (`ContractPayment`, `ContractExpense`, `MaterialReceiptLine`, và **Component/Project cost rollup**), Gate 2 phải xác định rõ vai trò: input, projection, reconciliation target, referenced evidence, hay bị Treasury thay thế làm canonical source. Không được để cùng một giao dịch kinh tế bị ghi nhận hai lần chỉ vì tồn tại ở hai model. Riêng với Component/Project rollup: Treasury **không được** tự động synchronize `Project.actual_cost` cho đến khi Gate 2 xác định việc đó có duplicate/overwrite nguồn hiện hữu (`ProjectCalculationListener::recalculateProjectCost()`, `Project::recalculateActualCost()`) hay không.
+
+**D. Company cashflow integration** — Treasury không được tạo company-level cashflow calculator thứ hai cạnh tranh với `ReportPageController::cashflow()` (SSOT §6.3: đây là reuse target đã xác nhận), nhưng cũng không được sao chép/mặc nhiên kế thừa cách hiểu sai hiện tại rằng `ContractExpense` = tiền đã chi. Gate 2 phải xác định cách Finance Control/shared read semantics tương lai tiêu thụ Treasury cash facts sau khi Treasury trở thành canonical.
+
+## Loại trừ rõ ràng
+Không có ở giai đoạn này: migration; schema; model; controller; service; route; UI; permission; test cho runtime feature; seed/data migration; sửa `ReportPageController::cashflow()`; sửa `ContractExpense`; sửa `MaterialReceipt`/`MaterialReceiptLine`; implementation Finance Control; implementation Project OPPM; GAP-036; Today Workspace; production/deployment. Không sửa, merge hoặc đóng PR #245 hoặc PR #257. Không sửa dòng trạng thái stale trên canonical SSOT (ghi nhận riêng, xử lý bằng work item khác nếu cần).
+
+## Đề xuất
+Đội kỹ thuật đề xuất: tiến hành (fix now, ở phạm vi Gate 1 → Gate 2 investigation). Vấn đề là có thật và có bằng chứng runtime cụ thể (không có nguồn cost/cash thống nhất); rủi ro double-count đã được xác định trước khi có bất kỳ schema nào, đúng tinh thần "audit trước khi code" mà toàn bộ chuỗi công việc OWN-2026-009 đã thiết lập.
+
+## Decision Needed
+**Round 1 (đã xử lý):** Owner Request more information, tại PR #263 head `21a3a04c0980376a67b8de671640188acd6b434b` (2026-08-16) — thiếu 1 cost path trong reconciliation: `Component.actual_cost` → `Project.actual_cost`/`budget_actual`. Chi tiết nguyên văn lưu tại commit `dcc645286fb202535cd5bcafde3882a9e34bd317`. Xem `## Revision log` phía trên cho tình trạng xử lý.
+
+**Round 2 (đã quyết định): Owner APPROVE**, tại PR #263 head `c947b83157fadca337800927e3f60cf7e2c26bd9` (2026-08-16). Chi tiết nguyên văn tại `decision_provenance.owner_response_reference`. Approval này cho phép chuẩn bị Gate 2 investigation (4 quyết định kiến trúc A-D) — không cấp phép schema/migration/runtime, không suy luận Gate 2 approval.
+
+## Revision log
+- **Round 1 (PR head `21a3a04c0980376a67b8de671640188acd6b434b`):** Owner REQUEST CHANGES — verbatim decision recorded at commit `dcc645286fb202535cd5bcafde3882a9e34bd317`.
+- **Round 2 (this revision):** bổ sung cost path còn thiếu — `Component.actual_cost` → `Project.actual_cost`/`budget_actual` qua `ProjectCalculationListener::recalculateProjectCost()` (event-driven) và `Project::recalculateActualCost()` (gọi trực tiếp) — vào mục Vấn đề vận hành và Bằng chứng; sửa kết luận sai "không có nguồn tính toán canonical, chỉ có thể set thủ công" thành kết luận đúng: nhiều cost-like source/path chưa reconciliation, chưa có bằng chứng nguồn nào là canonical; mở rộng Gate 2 Decision A (5 nguồn thay vì 3) và Decision C (thêm Component/Project rollup + cấm auto-sync trước khi Gate 2 quyết định).
+
+## What the owner is NOT being asked to decide
+Owner không được yêu cầu duyệt bất kỳ schema/migration/model/controller/service/route/UI nào (không có ở Gate 1 hay Gate 2 investigation). Owner không được yêu cầu duyệt cách trả lời 4 quyết định kiến trúc A-D — đó là nội dung Gate 2 sẽ đề xuất, Owner chỉ duyệt approach investigation ở đây. Owner cũng không được yêu cầu quyết định việc dọn dẹp stale metadata trên canonical SSOT hay xử lý GAP-036 — cả hai được ghi nhận riêng, tách biệt khỏi GAP-037.

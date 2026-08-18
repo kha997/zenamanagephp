@@ -1,11 +1,11 @@
 ---
 work_id: GAP-038
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: null
   plan: null
@@ -14,17 +14,23 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-08-18T09:45:00+07:00"
+  owner_response_reference: "Owner Gate 1 decision -- APPROVE, recorded in-session on 2026-08-18 in direct reply to the GAP-038 packet set (this Gate 1 request delivered alongside GAP-038's Gate 2 design-deviation decision). Owner's verbatim reply: 'APPROVE Option B' -- read in context as approving both documents this single reply responded to: Gate 1 (business request: build the already-Owner-approved GAP-037 v17 schema as real code) and Gate 2 (see 02-design.md's own decision_provenance for the Option B selection itself). Authorization scope: this Gate 1 approval confirms the problem is real and correctly scoped and authorizes GAP-038 to proceed toward Gate 2-approved implementation. It does not, by itself, authorize merge, deploy, or any production change -- that is GAP-038's own future Gate 3, not opened by this decision. It does not reopen or alter GAP-037 Gate 1, Gate 2 architecture, 02-design-v17.md, 03-release.md, or PR #263."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-18T09:10:00+07:00"
-  updated_at: "2026-08-18T09:10:00+07:00"
+  updated_at: "2026-08-18T09:45:00+07:00"
 generated_by: agent
 ---
+
+## Decision Recorded
+
+**Resolved 2026-08-18T09:45:00+07:00 — Owner Decision: APPROVE.** See
+`decision_provenance.owner_response_reference` above for the exact verbatim
+reply and authorization scope.
 
 ## Owner Summary
 

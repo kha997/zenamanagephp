@@ -1,11 +1,11 @@
 ---
 work_id: GAP-038
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/owner-decisions/GAP-037/02-design-v17.md
   plan: null
@@ -14,17 +14,25 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-08-18T09:45:00+07:00"
+  owner_response_reference: "Owner Gate 2 decision -- APPROVE OPTION B, recorded in-session on 2026-08-18 in direct reply to this packet's three-option presentation (Option A: accept application-layer-only deviation; Option B: require native DB CHECK constraints, engineering-recommended; Option C: request an alternative design), against reviewed main HEAD dbe662972755493f675970e30022083622a9f066 and preserved WIP HEAD cdf17b91dceb9b5bc7a578a5d4884144f926bf06 (re-verified unchanged immediately before recording this decision). Owner's verbatim reply: 'APPROVE Option B'. Binding selection: GAP-038's implementation MUST add native database CHECK constraints for all 8 rows/clauses listed in this packet's 'Affected approved constraints' table, via DB::statement() -- ALTER TABLE ... ADD CONSTRAINT ... CHECK (...) on MySQL after Schema::create(), and CHECK clauses written directly into the initial CREATE TABLE statement on SQLite (all 14 tables are newly created, never altered, so this is available on both drivers). The application-layer EnforcesRowInvariants trait MAY remain in place as defense-in-depth per Option B's own text, but the native DB constraint is the authoritative guarantee, not a substitute for it. Authorization scope: this decision authorizes GAP-038 implementation to proceed using Option B's design -- it does not authorize merge, deploy, or any production change (GAP-038's own future Gate 3, not opened here); it does not modify, merge, or authorize merging the preserved WIP branch cdf17b91 as-is (that branch currently implements Option A and does not yet conform to this decision -- any future implementation work must add the CHECK constraints before that branch, or its successor, may be considered Gate-2-conformant); it does not reopen or alter GAP-037 Gate 1, Gate 2 architecture, 02-design-v17.md, 03-release.md, or PR #263, all of which remain exactly as previously approved."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-18T09:10:00+07:00"
-  updated_at: "2026-08-18T09:10:00+07:00"
+  updated_at: "2026-08-18T09:45:00+07:00"
 generated_by: agent
 ---
+
+## Decision Recorded
+
+**Resolved 2026-08-18T09:45:00+07:00 — Owner Decision: APPROVE OPTION B.**
+Native DB `CHECK` constraints are required for all 8 rows in the "Affected
+approved constraints" table. `EnforcesRowInvariants` may remain as
+defense-in-depth. See `decision_provenance.owner_response_reference` above
+for the exact verbatim reply and full authorization boundary.
 
 ## Owner Summary
 

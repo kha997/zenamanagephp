@@ -9,7 +9,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('treasury_fund_chain_members', function (Blueprint $table) {
+        TreasuryCheckConstraint::createTableWithChecks('treasury_fund_chain_members', function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->ulid('tenant_id');
             $table->ulid('fund_chain_id');
@@ -36,14 +36,9 @@ return new class extends Migration
             $table->unique('member_financial_document_id', 'tfcm_member_doc_unique');
             $table->unique('member_payment_route_id', 'tfcm_member_route_unique');
             $table->index(['fund_chain_id'], 'tfcm_fund_chain_idx');
-        });
-
-        TreasuryCheckConstraint::add(
-            'treasury_fund_chain_members',
-            'tfcm_member_exactly_one_chk',
-            '(member_financial_document_id IS NULL) != (member_payment_route_id IS NULL)',
-            '(NEW.member_financial_document_id IS NULL) != (NEW.member_payment_route_id IS NULL)'
-        );
+        }, [
+            'tfcm_member_exactly_one_chk' => '(member_financial_document_id IS NULL) != (member_payment_route_id IS NULL)',
+        ]);
     }
 
     public function down(): void

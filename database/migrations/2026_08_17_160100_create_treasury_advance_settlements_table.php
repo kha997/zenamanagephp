@@ -9,7 +9,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('treasury_advance_settlements', function (Blueprint $table) {
+        TreasuryCheckConstraint::createTableWithChecks('treasury_advance_settlements', function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->ulid('tenant_id');
             $table->ulid('advance_id');
@@ -40,14 +40,9 @@ return new class extends Migration
             $table->unique('reverses_settlement_id', 'tas_reverses_settlement_unique');
             $table->unique('financial_document_id', 'tas_financial_document_unique');
             $table->index(['advance_id'], 'tas_advance_idx');
-        });
-
-        TreasuryCheckConstraint::add(
-            'treasury_advance_settlements',
-            'tas_amount_positive_chk',
-            'amount > 0',
-            'NEW.amount > 0'
-        );
+        }, [
+            'tas_amount_positive_chk' => 'amount > 0',
+        ]);
     }
 
     public function down(): void

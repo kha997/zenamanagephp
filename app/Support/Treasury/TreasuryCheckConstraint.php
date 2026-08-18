@@ -2,74 +2,102 @@
 
 namespace App\Support\Treasury;
 
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
- * Adds a native, database-engine-enforced CHECK-equivalent constraint to a
- * Treasury table, per GAP-038 Gate 2 (Option B): the database itself must
- * reject a violating row regardless of write path (Eloquent, bulk insert,
- * raw SQL, tinker) -- EnforcesRowInvariants remains as defense-in-depth,
- * not as the authoritative guarantee.
+ * Creates a Treasury table with the native database CHECK constraints that
+ * GAP-037 v17's schema requires, per GAP-038 Gate 2 (Option B, Owner
+ * APPROVED): the database itself must reject a violating row regardless of
+ * write path (Eloquent, bulk insert, raw SQL, tinker) -- EnforcesRowInvariants
+ * remains as defense-in-depth, not as the authoritative guarantee.
  *
  * MySQL supports CHECK constraints natively since 8.0.16 (this repo's
- * CI/production target is `mysql:8.0`), added here via ALTER TABLE after
+ * CI/production target is `mysql:8.0`), added via ALTER TABLE after
  * Schema::create() -- no ordering hazard, unlike composite-FK-vs-unique
- * ordering (see the migration this trait's sibling code already fixed).
+ * ordering (see the migration this class's sibling code already fixed).
  *
- * SQLite cannot ALTER TABLE ADD CONSTRAINT CHECK after creation. A pair of
- * BEFORE INSERT / BEFORE UPDATE triggers that RAISE(ABORT, ...) on
- * violation is the semantically equivalent native mechanism: it is
- * DB-engine-enforced, not application code, and is not bypassable by a raw
- * SQL write any more than a real CHECK constraint would be. SQLite
- * automatically drops a table's triggers when the table itself is dropped,
- * so no explicit teardown is needed beyond the existing
- * Schema::dropIfExists() in each migration's down().
+ * SQLite cannot ALTER TABLE ADD CONSTRAINT CHECK after creation, but a
+ * CHECK clause CAN be part of the table's *initial* CREATE TABLE statement
+ * (every affected table here is newly created, never altered, so this is
+ * always available). Laravel's Blueprint has no fluent check() builder on
+ * any driver (verified directly against vendor/laravel/framework -- no
+ * grammar class anywhere compiles a CHECK clause), so the approved-literal
+ * DDL is produced here without hand-duplicating column/FK/index
+ * definitions (which would risk silent drift from what the migration
+ * closure actually declares): the SAME closure Schema::create() would have
+ * received is run through a real Blueprint to get Laravel's own compiled
+ * `create table (...)` SQL string via Blueprint::toSql() -- byte-identical
+ * to what Schema::create() would have executed -- and only that one
+ * string is text-spliced to insert `, CONSTRAINT ... CHECK (...)` clauses
+ * immediately before its closing parenthesis, before executing every
+ * statement Blueprint::toSql() returned (create table, then any
+ * unique/index statements, in the same order Blueprint::build() itself
+ * uses). Columns, foreign keys, the primary key, and every other command
+ * are Laravel's own untouched compiler output.
  */
 final class TreasuryCheckConstraint
 {
     /**
-     * @param string $mysqlExpression Boolean SQL expression using bare column
-     *   names, valid inside `CHECK (...)` on MySQL 8.
-     * @param string $sqliteWhenExpression The same boolean condition, with
-     *   columns qualified as `NEW.<column>` for use in a trigger's WHEN
-     *   clause. Kept as an explicit, separate, human-reviewable expression
-     *   (not auto-derived from $mysqlExpression) so both driver's exact
-     *   enforced condition is visible side by side in the migration.
+     * @param \Closure(Blueprint):void $definition Identical to what would be
+     *   passed to Schema::create() -- columns, foreign keys, indexes.
+     * @param array<string, string> $checks constraint name => boolean SQL
+     *   expression using bare column names, valid as a CHECK(...) body on
+     *   both MySQL 8 and SQLite (this repository's two supported drivers).
+     *   The exact same expression is used verbatim on both engines.
      */
-    public static function add(
-        string $table,
-        string $name,
-        string $mysqlExpression,
-        string $sqliteWhenExpression
-    ): void {
+    public static function createTableWithChecks(string $table, \Closure $definition, array $checks): void
+    {
         if (DB::getDriverName() === 'sqlite') {
-            self::addSqliteTriggers($table, $name, $sqliteWhenExpression);
+            self::createSqliteTableWithInlineChecks($table, $definition, $checks);
 
             return;
         }
 
-        DB::statement(sprintf(
-            'ALTER TABLE `%s` ADD CONSTRAINT `%s` CHECK (%s)',
-            $table,
-            $name,
-            $mysqlExpression
-        ));
+        Schema::create($table, $definition);
+
+        foreach ($checks as $name => $expression) {
+            DB::statement(sprintf(
+                'ALTER TABLE `%s` ADD CONSTRAINT `%s` CHECK (%s)',
+                $table,
+                $name,
+                $expression
+            ));
+        }
     }
 
-    private static function addSqliteTriggers(string $table, string $name, string $whenExpression): void
+    /**
+     * @param \Closure(Blueprint):void $definition
+     * @param array<string, string> $checks
+     */
+    private static function createSqliteTableWithInlineChecks(string $table, \Closure $definition, array $checks): void
     {
-        foreach (['ins' => 'INSERT', 'upd' => 'UPDATE'] as $suffix => $event) {
-            DB::statement(sprintf(
-                "CREATE TRIGGER %s_%s BEFORE %s ON %s
-                 WHEN NOT (%s)
-                 BEGIN SELECT RAISE(ABORT, '%s'); END",
-                $name,
-                $suffix,
-                $event,
-                $table,
-                $whenExpression,
-                addslashes("{$name}: CHECK constraint violated")
-            ));
+        $connection = Schema::getConnection();
+
+        $blueprint = new Blueprint($connection, $table);
+        $blueprint->create();
+        $definition($blueprint);
+
+        $checkClauses = [];
+        foreach ($checks as $name => $expression) {
+            $checkClauses[] = sprintf('CONSTRAINT "%s" CHECK (%s)', $name, $expression);
+        }
+        $checkSql = $checkClauses === [] ? '' : ', '.implode(', ', $checkClauses);
+
+        foreach ($blueprint->toSql() as $statement) {
+            if (str_starts_with($statement, 'create table') && $checkSql !== '') {
+                if (!str_ends_with($statement, ')')) {
+                    throw new \LogicException(
+                        "Unexpected SQLite create-table statement shape for `{$table}` -- ".
+                        'refusing to splice CHECK clauses into an unrecognized statement: '.$statement
+                    );
+                }
+
+                $statement = substr($statement, 0, -1).$checkSql.')';
+            }
+
+            $connection->statement($statement);
         }
     }
 }

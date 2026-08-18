@@ -9,7 +9,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('treasury_cost_settlement_allocations', function (Blueprint $table) {
+        TreasuryCheckConstraint::createTableWithChecks('treasury_cost_settlement_allocations', function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->ulid('tenant_id');
             $table->ulid('financial_document_id')->nullable();
@@ -45,26 +45,11 @@ return new class extends Migration
             $table->unique('reverses_allocation_id', 'tcsa_reverses_allocation_unique');
             $table->index(['financial_document_id'], 'tcsa_financial_doc_idx');
             $table->index(['advance_settlement_id'], 'tcsa_advance_settlement_idx');
-        });
-
-        TreasuryCheckConstraint::add(
-            'treasury_cost_settlement_allocations',
-            'tcsa_amount_positive_chk',
-            'allocated_amount > 0',
-            'NEW.allocated_amount > 0'
-        );
-        TreasuryCheckConstraint::add(
-            'treasury_cost_settlement_allocations',
-            'tcsa_source_exactly_one_chk',
-            '(financial_document_id IS NULL) != (advance_settlement_id IS NULL)',
-            '(NEW.financial_document_id IS NULL) != (NEW.advance_settlement_id IS NULL)'
-        );
-        TreasuryCheckConstraint::add(
-            'treasury_cost_settlement_allocations',
-            'tcsa_cost_source_exactly_one_chk',
-            '(cost_source_contract_expense_id IS NULL) != (cost_source_material_receipt_line_id IS NULL)',
-            '(NEW.cost_source_contract_expense_id IS NULL) != (NEW.cost_source_material_receipt_line_id IS NULL)'
-        );
+        }, [
+            'tcsa_amount_positive_chk' => 'allocated_amount > 0',
+            'tcsa_source_exactly_one_chk' => '(financial_document_id IS NULL) != (advance_settlement_id IS NULL)',
+            'tcsa_cost_source_exactly_one_chk' => '(cost_source_contract_expense_id IS NULL) != (cost_source_material_receipt_line_id IS NULL)',
+        ]);
     }
 
     public function down(): void

@@ -1,17 +1,42 @@
 # GAP-038 Option B — v17 CHECK conformance implementation mapping
 
-Mechanism: `App\Support\Treasury\TreasuryCheckConstraint::add($table, $name,
-$mysqlExpression, $sqliteTriggerWhenExpression)`, called after
-`Schema::create()` in each migration's `up()`. On MySQL it runs
-`ALTER TABLE ... ADD CONSTRAINT ... CHECK (...)` (available since MySQL
-8.0.16; this repo's CI/production target is `mysql:8.0`). On SQLite (which
-cannot `ALTER TABLE ADD CONSTRAINT CHECK`) it creates a pair of
-`BEFORE INSERT`/`BEFORE UPDATE` triggers that `RAISE(ABORT, ...)` when the
-row violates the condition — a native, DB-engine-level mechanism, not app
-layer; SQLite automatically drops a table's triggers when the table itself
-is dropped, so no explicit rollback step is needed beyond the existing
-`Schema::dropIfExists()`. `EnforcesRowInvariants` (Eloquent `saving` event)
-remains in every model unchanged, as defense-in-depth per Option B.
+**Correction (2026-08-18, Owner REQUEST CHANGES on candidate `f4cefe59`):**
+the first candidate used SQLite `BEFORE INSERT`/`BEFORE UPDATE` triggers as
+a DB-enforced substitute for SQLite `CHECK` clauses. Though genuinely
+DB-engine-enforced and semantically equivalent, this was a design
+deviation from the literal approved Option B ("the same approved CHECK
+expressions embedded as actual CHECK clauses in the initial CREATE TABLE")
+and was not authorized as a silent substitution. Corrected below.
+
+Mechanism: `App\Support\Treasury\TreasuryCheckConstraint::createTableWithChecks(
+$table, $definition, $checks)`, called in place of `Schema::create()` in
+each affected migration's `up()`. `$checks` is `[constraintName =>
+booleanExpression]`; the exact same expression string is used verbatim on
+both drivers (no `NEW.`-qualification needed — a `CHECK` clause in a
+`CREATE TABLE` statement, unlike a trigger's `WHEN` clause, references bare
+column names on both engines).
+
+- **MySQL:** `$definition` runs through `Schema::create()` unchanged, then
+  `ALTER TABLE ... ADD CONSTRAINT ... CHECK (...)` is run for each check
+  (available since MySQL 8.0.16; this repo's CI/production target is
+  `mysql:8.0`).
+- **SQLite** (cannot `ALTER TABLE ADD CONSTRAINT CHECK` after creation, but
+  a `CHECK` clause CAN be part of the table's *initial* `CREATE TABLE` —
+  every affected table here is newly created, never altered): `$definition`
+  is run through a real `Blueprint` to obtain Laravel's own compiled
+  `create table (...)` SQL string via `Blueprint::toSql()` — byte-identical
+  to what `Schema::create()` would have executed, so columns/FKs/PK/indexes
+  are Laravel's own untouched compiler output, never hand-duplicated — and
+  only that one string is text-spliced to insert
+  `, CONSTRAINT "name" CHECK (expr)` clauses immediately before its closing
+  parenthesis, before executing every statement in the same order
+  `Blueprint::build()` itself uses.
+
+Verified via direct `sqlite_master` introspection (not merely by observing
+rejected writes) that every table's `CREATE TABLE` SQL text contains a real
+`CONSTRAINT "..." CHECK (...)` clause and that zero triggers exist on any
+Treasury table. `EnforcesRowInvariants` (Eloquent `saving` event) remains
+in every model unchanged, as defense-in-depth per Option B.
 
 | # | v17 CHECK (verbatim) | Table.column(s) | Current app-layer guard | MySQL native | SQLite native | Raw-SQL-rejection test |
 |---|---|---|---|---|---|---|

@@ -9,7 +9,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('treasury_ledger_entries', function (Blueprint $table) {
+        TreasuryCheckConstraint::createTableWithChecks('treasury_ledger_entries', function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->ulid('tenant_id');
             $table->ulid('source_financial_document_id')->nullable();
@@ -49,20 +49,10 @@ return new class extends Migration
             $table->index(['source_financial_document_id'], 'tle_src_doc_idx');
             $table->index(['source_payment_route_leg_id'], 'tle_src_leg_idx');
             $table->index(['wallet_id', 'posted_at'], 'tle_wallet_posted_idx');
-        });
-
-        TreasuryCheckConstraint::add(
-            'treasury_ledger_entries',
-            'tle_amount_positive_chk',
-            'amount > 0',
-            'NEW.amount > 0'
-        );
-        TreasuryCheckConstraint::add(
-            'treasury_ledger_entries',
-            'tle_source_exactly_one_chk',
-            '(source_financial_document_id IS NULL) != (source_payment_route_leg_id IS NULL)',
-            '(NEW.source_financial_document_id IS NULL) != (NEW.source_payment_route_leg_id IS NULL)'
-        );
+        }, [
+            'tle_amount_positive_chk' => 'amount > 0',
+            'tle_source_exactly_one_chk' => '(source_financial_document_id IS NULL) != (source_payment_route_leg_id IS NULL)',
+        ]);
     }
 
     public function down(): void

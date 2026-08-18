@@ -9,7 +9,10 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('treasury_financial_documents', function (Blueprint $table) {
+        // v17 CHECK constraints -- GAP-038 Gate 2 Option B. See
+        // docs/superpowers/plans/2026-08-18-gap038-treasury-native-check-constraints.md
+        // for the full mapping.
+        TreasuryCheckConstraint::createTableWithChecks('treasury_financial_documents', function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->ulid('tenant_id');
             $table->ulid('project_id');
@@ -56,29 +59,11 @@ return new class extends Migration
             $table->unique('reversed_document_id', 'tfd_reversed_document_id_unique');
             $table->index(['tenant_id'], 'tfd_tenant_id_idx');
             $table->index(['project_id'], 'tfd_project_id_idx');
-        });
-
-        // v17 CHECK constraints -- GAP-038 Gate 2 Option B. See
-        // docs/superpowers/plans/2026-08-18-gap038-treasury-native-check-constraints.md
-        // for the full mapping.
-        TreasuryCheckConstraint::add(
-            'treasury_financial_documents',
-            'tfd_amount_positive_chk',
-            'amount > 0',
-            'NEW.amount > 0'
-        );
-        TreasuryCheckConstraint::add(
-            'treasury_financial_documents',
-            'tfd_source_mutex_chk',
-            'NOT (source_wallet_id IS NOT NULL AND source_party_id IS NOT NULL)',
-            'NOT (NEW.source_wallet_id IS NOT NULL AND NEW.source_party_id IS NOT NULL)'
-        );
-        TreasuryCheckConstraint::add(
-            'treasury_financial_documents',
-            'tfd_destination_mutex_chk',
-            'NOT (destination_wallet_id IS NOT NULL AND destination_party_id IS NOT NULL)',
-            'NOT (NEW.destination_wallet_id IS NOT NULL AND NEW.destination_party_id IS NOT NULL)'
-        );
+        }, [
+            'tfd_amount_positive_chk' => 'amount > 0',
+            'tfd_source_mutex_chk' => 'NOT (source_wallet_id IS NOT NULL AND source_party_id IS NOT NULL)',
+            'tfd_destination_mutex_chk' => 'NOT (destination_wallet_id IS NOT NULL AND destination_party_id IS NOT NULL)',
+        ]);
     }
 
     public function down(): void

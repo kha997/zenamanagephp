@@ -19,39 +19,52 @@ decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
   recorded_at: "2026-08-18T18:40:00+07:00"
-  owner_response_reference: "Owner Gate 3 decision -- APPROVE, recorded in-session on 2026-08-18 in direct reply to the GAP-038 Gate 3 packet presented against reviewed PR #265 head be5a21eef1fae3c3562533f656358cdc5ef023ee and implementation_tree_digest 0ebffd51d72a809e101dd7467b66046e072c10c1359b1d55e2e0c28e23ee961e -- independently re-verified live immediately before recording this decision: PR #265 still Draft/mergeable at head be5a21ee (zero drift since the packet was presented), main HEAD unchanged, preserved WIP branch worktree-gap037-treasury-migrations unchanged at cdf17b91, and the digest recomputed against be5a21ee matched 0ebffd51... exactly. Owner's verbatim decision message: 'GAP-038 GATE 3 -- OWNER DECISION. Decision: APPROVE. I approve GAP-038 Gate 3 for the exact implementation represented by the current verified implementation tree.' The Owner's message explicitly named and accepted as verified basis: PR #265 head be5a21eef1fae3c3562533f656358cdc5ef023ee; technical implementation evidence subject b9f8578bbc6bb9d8c3171761f5d56d2b6c58c3ff (the difference to current head being the Gate 3 release packet only, no implementation drift); implementation_tree_digest 0ebffd51d72a809e101dd7467b66046e072c10c1359b1d55e2e0c28e23ee961e; the real-MySQL 8.0 evidence (24/24 native CHECK rejection/acceptance tests, 0 skipped; information_schema.CHECK_CONSTRAINTS 1/1 test, 15/15 constraint assertions; dedicated Treasury Native CHECK Constraints (real MySQL) CI job pass; Owner Governance evidence-freshness verification pass; required CI green at current head). The Owner explicitly acknowledged and disposed of the residual FOREIGN_KEY_CHECKS-disabled-for-MySQL-testing finding: it does NOT block this Gate 3 (pre-existing, testing-environment-only, unrelated to Option B, and the CHECK constraints themselves have independent real-MySQL + schema-catalog evidence), must NOT be fixed inside GAP-038, and must be recorded as a separate follow-up technical-debt item for later Owner prioritization with no implication it was resolved here. Authorization scope, per the Owner's own explicit statement: this approval authorizes merge of the approved GAP-038 implementation after the normal post-decision governance and exact-head CI gates pass. It does NOT authorize production deployment, production data migration, reopening GAP-037, modifying GAP-038 Gate 1/2, fixing the unrelated FOREIGN_KEY_CHECKS testing-infrastructure finding, or touching the preserved GAP-037 WIP branch. The Owner explicitly required: if any implementation-tree digest drift occurs after this approval, STOP -- this approval does not cover a changed implementation, and the work must return for re-verification/re-binding."
+  owner_response_reference: "Owner Gate 3 decision -- APPROVE, recorded in-session on 2026-08-18 in direct reply to the GAP-038 Gate 3 packet presented against reviewed PR #265 head be5a21eef1fae3c3562533f656358cdc5ef023ee and implementation_tree_digest 0ebffd51d72a809e101dd7467b66046e072c10c1359b1d55e2e0c28e23ee961e -- independently re-verified live immediately before recording this decision: PR #265 still Draft/mergeable at head be5a21ee (zero drift since the packet was presented), main HEAD unchanged, preserved WIP branch worktree-gap037-treasury-migrations unchanged at cdf17b91, and the digest recomputed against be5a21ee matched 0ebffd51... exactly. Owner's verbatim decision message: 'GAP-038 GATE 3 -- OWNER DECISION. Decision: APPROVE. I approve GAP-038 Gate 3 for the exact implementation represented by the current verified implementation tree.' The Owner's message explicitly named and accepted as verified basis: PR #265 head be5a21eef1fae3c3562533f656358cdc5ef023ee; technical implementation evidence subject b9f8578bbc6bb9d8c3171761f5d56d2b6c58c3ff (the difference to current head being the Gate 3 release packet only, no implementation drift); implementation_tree_digest 0ebffd51d72a809e101dd7467b66046e072c10c1359b1d55e2e0c28e23ee961e; the real-MySQL 8.0 evidence (24/24 native CHECK rejection/acceptance tests, 0 skipped; information_schema.CHECK_CONSTRAINTS 1/1 test, 15/15 constraint assertions; dedicated Treasury Native CHECK Constraints (real MySQL) CI job pass; Owner Governance evidence-freshness verification pass; required CI green at current head). The Owner explicitly acknowledged and disposed of the residual FOREIGN_KEY_CHECKS-disabled-for-MySQL-testing finding: it does NOT block this Gate 3 (pre-existing, testing-environment-only, unrelated to Option B, and the CHECK constraints themselves have independent real-MySQL + schema-catalog evidence), must NOT be fixed inside GAP-038, and must be recorded as a separate follow-up technical-debt item for later Owner prioritization with no implication it was resolved here. Authorization scope, per the Owner's own explicit statement: this approval authorizes merge of the approved GAP-038 implementation after the normal post-decision governance and exact-head CI gates pass. It does NOT authorize production deployment, production data migration, reopening GAP-037, modifying GAP-038 Gate 1/2, fixing the unrelated FOREIGN_KEY_CHECKS testing-infrastructure finding, or touching the preserved GAP-037 WIP branch. The Owner explicitly required: if any implementation-tree digest drift occurs after this approval, STOP -- this approval does not cover a changed implementation, and the work must return for re-verification/re-binding. RE-BIND EVENT (2026-08-18T18:55:00+07:00): GitHub branch protection required PR #265 to update its branch before merge (this branch was forked before GAP-037's docs merged to main; main itself did not move -- it remained dbe662972755493f675970e30022083622a9f066 throughout, exactly as verified at Owner-decision time). Merged origin/main (single commit dbe66297, the already-known, already-approved GAP-037 governance docs -- pure addition, zero overlap with any GAP-038 file) into this branch, producing merge commit a68e6731. Re-verified before re-binding: `git diff 7b11e897..a68e6731 -- . ':!docs/owner-decisions/GAP-037' ':!docs/superpowers/specs/2026-08-16-gap037-project-treasury-architecture-decisions.md'` is empty -- zero content drift on every file this PR previously touched. This is exactly the digest-drift contingency the Owner's own decision anticipated (\"return for re-verification/re-binding\"): the tree digest necessarily changed (new digest bb59bfedd455fd9edeb7964958d401f35757bcb5d0d2d2879120aa0604e1561c, computed at a68e6731) because the digest hashes the complete tree, but GAP-038's own implementation content is byte-identical to what the Owner approved. Re-verified after the merge: required CI green at a68e6731, evidence-freshness passes against the updated digest. Re-bound per the Owner's own instruction, not re-asked as a fresh decision, since no GAP-038 content changed -- only a mechanical branch-protection-required merge of already-known main content."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-18T17:25:00+07:00"
-  updated_at: "2026-08-18T18:40:00+07:00"
+  updated_at: "2026-08-18T18:55:00+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-038 Gate 2 Option B (native database CHECK constraints for GAP-037 v17's 15 single-row invariants) is now implemented and independently verified against real MySQL 8.0 and real SQLite, not merely believed to work. Correction history on this branch: candidate f4cefe59 used SQLite triggers as a DB-enforced substitute for the approved CHECK-clause design -- Owner REQUEST CHANGES rejected this as a design deviation even though functionally equivalent; candidate 6fbdc2f9 replaced it with genuine inline SQLite CHECK clauses (verified via direct sqlite_master introspection: all 15 named CONSTRAINT...CHECK clauses physically present, zero triggers). A first MySQL CI evidence attempt was itself found to be vacuous (this repo's tests/bootstrap.php silently forces every test onto an isolated SQLite database unless ZENA_INVARIANTS_DB=mysql is set, which also silently breaks the named 'mysql' Eloquent connection by overwriting DB_DATABASE) -- corrected by adding a dedicated CI job (scripts/ci/treasury-check-constraints-mysql, modeled on this repo's own proven document-workflow-concurrency-mysql/rfi-escalation-concurrency-mysql pattern) that sets ZENA_INVARIANTS_DB=mysql and strictly fails if any CHECK-relevant test skips. That job's final run (PR #265 head b9f8578bbc6bb9d8c3171761f5d56d2b6c58c3ff) genuinely exercised real MySQL: 24/24 raw-SQL-bypassing-Eloquent tests passed (every one of the 15 CHECK invariants both rejects an invalid row and accepts a valid one), and a separate information_schema.CHECK_CONSTRAINTS introspection test independently confirmed all 15 named constraints physically exist in MySQL's own schema catalog (15 assertions, not inferred from write-rejection alone). One genuine, pre-existing, out-of-scope finding surfaced by this being the first-ever real-MySQL run of any Treasury test: database/migrations/2025_09_20_145756_disable_foreign_keys_for_testing.php (repo-wide, predates GAP-037/038, unrelated to CHECK constraints) issues SET FOREIGN_KEY_CHECKS=0 for the whole MySQL testing session, which made one unrelated pre-existing test (TreasuryWalletsSchemaTest::test_custodian_party_composite_foreign_key_is_enforced, expecting an FK violation) pass vacuously instead of throwing. This is reported here as a residual finding, not fixed (repo-wide testing-environment scope, not a Treasury/Option-B defect) -- see §8 below."
 technical_evidence:
   subject_sha: "b9f8578bbc6bb9d8c3171761f5d56d2b6c58c3ff"
-  implementation_tree_digest: "0ebffd51d72a809e101dd7467b66046e072c10c1359b1d55e2e0c28e23ee961e"
-  verified_pr_head_sha: "b9f8578bbc6bb9d8c3171761f5d56d2b6c58c3ff"
-  verified_at: "2026-08-18T17:25:00+07:00"
+  implementation_tree_digest: "bb59bfedd455fd9edeb7964958d401f35757bcb5d0d2d2879120aa0604e1561c"
+  verified_pr_head_sha: "a68e67314a1a811b7afe604bdeffe9983c2cea45"
+  verified_at: "2026-08-18T18:55:00+07:00"
 owner_decision_binding:
-  implementation_tree_digest: "0ebffd51d72a809e101dd7467b66046e072c10c1359b1d55e2e0c28e23ee961e"
-  decision_recorded_at: "2026-08-18T18:40:00+07:00"
+  implementation_tree_digest: "bb59bfedd455fd9edeb7964958d401f35757bcb5d0d2d2879120aa0604e1561c"
+  decision_recorded_at: "2026-08-18T18:55:00+07:00"
 ---
 
 ## Decision Recorded
 
-**Resolved 2026-08-18T18:40:00+07:00 — Owner Decision: APPROVE.** Bound to
-PR #265 head `be5a21eef1fae3c3562533f656358cdc5ef023ee` and
+**Resolved 2026-08-18T18:40:00+07:00 — Owner Decision: APPROVE.** Originally
+bound to PR #265 head `be5a21eef1fae3c3562533f656358cdc5ef023ee` and
 `implementation_tree_digest`
 `0ebffd51d72a809e101dd7467b66046e072c10c1359b1d55e2e0c28e23ee961e`, zero
-drift re-verified immediately before recording. See
-`decision_provenance.owner_response_reference` above for the exact
-verbatim decision, verified basis, residual-finding disposition, and full
-authorization boundary. **Separate follow-up recommended, not authorized
-or begun here:** the `FOREIGN_KEY_CHECKS`-disabled-for-MySQL-testing
-finding (§7/§8 below) should be logged as its own technical-debt /
-test-infrastructure item for future Owner prioritization.
+drift re-verified immediately before recording.
+
+**Re-bound 2026-08-18T18:55:00+07:00** after a GitHub-branch-protection-required
+merge of `origin/main` (a single, already-known, already-approved GAP-037
+governance-docs commit; `main` itself never moved) produced merge commit
+`a68e67314a1a811b7afe604bdeffe9983c2cea45`. Re-verified before re-binding:
+**zero content drift** on every file this PR previously touched (diff
+against everything except the newly merged-in GAP-037 doc paths is empty).
+New `implementation_tree_digest`
+`bb59bfedd455fd9edeb7964958d401f35757bcb5d0d2d2879120aa0604e1561c`
+(necessarily different, since the digest hashes the complete tree) — see
+`decision_provenance.owner_response_reference` for the full re-bind
+record, matching the Owner's own explicit contingency instruction
+("return for re-verification/re-binding" on any post-approval digest
+drift).
+
+**Separate follow-up recommended, not authorized or begun here:** the
+`FOREIGN_KEY_CHECKS`-disabled-for-MySQL-testing finding (§7/§8 below)
+should be logged as its own technical-debt / test-infrastructure item for
+future Owner prioritization.
 
 ## Gói quyết định phát hành
 

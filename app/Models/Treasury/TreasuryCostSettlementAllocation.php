@@ -39,13 +39,16 @@ class TreasuryCostSettlementAllocation extends Model
         'direction', 'allocated_amount', 'reverses_allocation_id',
     ];
 
+    /** @var list<string> */
     protected static array $positiveAmountColumns = ['allocated_amount'];
 
+    /** @var list<list<string>> */
     protected static array $exactlyOneOfGroups = [
         ['financial_document_id', 'advance_settlement_id'],
         ['cost_source_contract_expense_id', 'cost_source_material_receipt_line_id'],
     ];
 
+    /** @var array<string,list<string>> */
     protected static array $allowedValues = [
         'direction' => [self::DIRECTION_APPLY, self::DIRECTION_REVERSE],
     ];

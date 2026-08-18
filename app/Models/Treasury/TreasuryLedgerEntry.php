@@ -41,16 +41,20 @@ class TreasuryLedgerEntry extends Model
         'reversal_of_entry_id', 'original_posting_key',
     ];
 
+    /** @var array<string,string> */
     protected $casts = [
         'posted_at' => 'datetime',
     ];
 
+    /** @var list<string> */
     protected static array $positiveAmountColumns = ['amount'];
 
+    /** @var list<list<string>> */
     protected static array $exactlyOneOfGroups = [
         ['source_financial_document_id', 'source_payment_route_leg_id'],
     ];
 
+    /** @var array<string,list<string>> */
     protected static array $allowedValues = [
         'direction' => [self::DIRECTION_DEBIT, self::DIRECTION_CREDIT],
     ];

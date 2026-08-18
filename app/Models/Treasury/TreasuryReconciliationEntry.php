@@ -36,6 +36,7 @@ class TreasuryReconciliationEntry extends Model
         'reverses_reconciliation_entry_id', 'actor_id',
     ];
 
+    /** @var array<string,list<string>> */
     protected static array $allowedValues = [
         'direction' => [self::DIRECTION_APPLY, self::DIRECTION_REVERSE],
     ];

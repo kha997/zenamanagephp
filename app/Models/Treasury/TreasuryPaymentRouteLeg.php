@@ -38,12 +38,15 @@ class TreasuryPaymentRouteLeg extends Model
         'to_wallet_id', 'amount', 'status', 'occurred_at',
     ];
 
+    /** @var array<string,string> */
     protected $casts = [
         'occurred_at' => 'datetime',
     ];
 
+    /** @var list<string> */
     protected static array $positiveAmountColumns = ['amount'];
 
+    /** @var array<string,list<string>> */
     protected static array $allowedValues = [
         'status' => [self::STATUS_IN_TRANSIT, self::STATUS_SETTLED, self::STATUS_REVERSED],
     ];

@@ -33,6 +33,7 @@ class TreasuryExpenseApproval extends Model
         'to_status', 'actor_id', 'note', 'context',
     ];
 
+    /** @var array<string,string> */
     protected $casts = [
         'context' => 'array',
     ];

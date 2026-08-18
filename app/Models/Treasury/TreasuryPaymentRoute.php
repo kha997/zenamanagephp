@@ -40,16 +40,20 @@ class TreasuryPaymentRoute extends Model
         'expected_destination_wallet_id',
     ];
 
+    /** @var list<string> */
     protected static array $positiveAmountColumns = ['total_allocated_amount'];
 
+    /** @var list<list<string>> */
     protected static array $exactlyOneOfGroups = [
         ['linked_financial_document_id', 'linked_contract_payment_id'],
     ];
 
+    /** @var list<array{0:string,1:string}> */
     protected static array $coNullablePairs = [
         ['linked_contract_payment_id', 'expected_destination_wallet_id'],
     ];
 
+    /** @var array<string,list<string>> */
     protected static array $allowedValues = [
         'status' => [self::STATUS_PLANNED, self::STATUS_PARTIAL, self::STATUS_COMPLETED, self::STATUS_CANCELLED],
     ];

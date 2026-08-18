@@ -32,6 +32,7 @@ class TreasuryAdvance extends Model
         'originating_financial_document_id', 'amount',
     ];
 
+    /** @var list<string> */
     protected static array $positiveAmountColumns = ['amount'];
 
     /** @return BelongsTo<TreasuryFinancialParty, $this> */

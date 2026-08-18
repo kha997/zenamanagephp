@@ -40,8 +40,10 @@ class TreasuryAdvanceSettlement extends Model
         'financial_document_id', 'reverses_settlement_id',
     ];
 
+    /** @var list<string> */
     protected static array $positiveAmountColumns = ['amount'];
 
+    /** @var array<string,list<string>> */
     protected static array $allowedValues = [
         'settlement_type' => [self::SETTLEMENT_TYPE_APPROVED_EXPENSE, self::SETTLEMENT_TYPE_CASH_RETURN],
         'direction' => [self::DIRECTION_APPLY, self::DIRECTION_REVERSE],

@@ -65,18 +65,22 @@ class TreasuryFinancialDocument extends Model
         'reversed_document_id', 'replacement_document_id',
     ];
 
+    /** @var array<string,string> */
     protected $casts = [
         'amount' => 'decimal:2',
         'posted_at' => 'datetime',
     ];
 
+    /** @var list<string> */
     protected static array $positiveAmountColumns = ['amount'];
 
+    /** @var list<array{0:string,1:string}> */
     protected static array $mutuallyExclusivePairs = [
         ['source_wallet_id', 'source_party_id'],
         ['destination_wallet_id', 'destination_party_id'],
     ];
 
+    /** @var array<string,list<string>> */
     protected static array $allowedValues = [
         'document_type' => [
             self::TYPE_FUNDING, self::TYPE_INTERNAL_TRANSFER, self::TYPE_EXPENSE,

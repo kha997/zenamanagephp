@@ -29,6 +29,7 @@ class TreasuryFundChainMember extends Model
         'tenant_id', 'fund_chain_id', 'member_financial_document_id', 'member_payment_route_id',
     ];
 
+    /** @var list<list<string>> */
     protected static array $exactlyOneOfGroups = [
         ['member_financial_document_id', 'member_payment_route_id'],
     ];

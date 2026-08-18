@@ -30,6 +30,7 @@ class TreasuryReconciliation extends Model
         'reconciled_at', 'reconciled_by',
     ];
 
+    /** @var array<string,string> */
     protected $casts = [
         'reconciled_at' => 'datetime',
     ];

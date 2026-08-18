@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Runs the GAP-038 Gate 2 Option B native-CHECK-constraint conformance
+# suite against a real MySQL connection in CI. Modeled 1:1 on
+# scripts/ci/document-workflow-concurrency-mysql /
+# scripts/ci/rfi-escalation-concurrency-mysql: this repo's general "Unit
+# Tests" job forces every test onto an isolated per-process SQLite database
+# via tests/bootstrap.php (ZENA_INVARIANTS_DB unset -> DB_CONNECTION and
+# DB_DATABASE are both overridden to sqlite before Laravel boots, which
+# also clobbers the *named* "mysql" connection's DB_DATABASE env value) --
+# so TreasuryNativeCheckConstraintsMysqlTest.php's own
+# DB::connection('mysql') reachability guard could never succeed there,
+# regardless of whether a real mysql:8.0 service is running. Setting
+# ZENA_INVARIANTS_DB=mysql (as this script does) is what stops
+# tests/bootstrap.php from performing that override, so the named "mysql"
+# connection genuinely resolves to the real service below.
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
+cd "$ROOT_DIR"
+
+export APP_ENV=testing
+export DB_CONNECTION=mysql
+export PCOV_ENABLED=0
+export ZENA_INVARIANTS_DB=mysql
+
+resolve_with_precedence() {
+    local default_value="$1"
+    shift
+    local env_var
+    for env_var in "$@"; do
+        local env_value
+        env_value="${!env_var:-}"
+        if [[ -n "$env_value" ]]; then
+            printf '%s' "$env_value"
+            return 0
+        fi
+    done
+    printf '%s' "$default_value"
+}
+
+resolve_host_with_fallback() {
+    local host="$1"
+    if [[ "$host" != "mysql" ]]; then
+        printf '%s' "$host"
+        return 0
+    fi
+
+    if python3 -c 'import socket, sys; socket.gethostbyname(sys.argv[1])' "$host" >/dev/null 2>&1; then
+        printf '%s' "$host"
+    else
+        printf '127.0.0.1'
+    fi
+}
+
+RESOLVED_DB_HOST=$(resolve_with_precedence "mysql" MYSQL_HOST ZENA_MYSQL_HOST DB_HOST)
+RESOLVED_DB_HOST=$(resolve_host_with_fallback "$RESOLVED_DB_HOST")
+RESOLVED_DB_PORT=$(resolve_with_precedence "3306" MYSQL_PORT ZENA_MYSQL_PORT DB_PORT)
+RESOLVED_DB_DATABASE=$(resolve_with_precedence "zenamanage_test" MYSQL_DATABASE ZENA_MYSQL_DATABASE DB_DATABASE)
+RESOLVED_DB_USERNAME=$(resolve_with_precedence "root" MYSQL_USERNAME ZENA_MYSQL_USERNAME DB_USERNAME)
+RESOLVED_DB_PASSWORD=$(resolve_with_precedence "" MYSQL_PASSWORD ZENA_MYSQL_PASSWORD DB_PASSWORD)
+
+export DB_HOST="$RESOLVED_DB_HOST"
+export DB_PORT="$RESOLVED_DB_PORT"
+export DB_DATABASE="$RESOLVED_DB_DATABASE"
+export DB_USERNAME="$RESOLVED_DB_USERNAME"
+export DB_PASSWORD="$RESOLVED_DB_PASSWORD"
+
+mysql_preflight_connection() {
+    php -r '
+try {
+    $host = getenv("DB_HOST") ?: "mysql";
+    $port = getenv("DB_PORT") ?: 3306;
+    $db = getenv("DB_DATABASE") ?: "zenamanage_test";
+    $user = getenv("DB_USERNAME") ?: "root";
+    $pass = getenv("DB_PASSWORD") ?: "";
+    $dsn = sprintf("mysql:host=%s;port=%s;dbname=%s", $host, $port, $db);
+    new PDO($dsn, $user, $pass, [PDO::ATTR_TIMEOUT => 5, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    printf("Preflight MySQL connection succeeded (%s:%s/%s)\n", $host, $port, $db);
+} catch (Throwable $e) {
+    fwrite(STDERR, "MySQL connection preflight failed: " . $e->getMessage() . "\n");
+    exit(1);
+}
+'
+}
+
+mysql_preflight_connection
+
+mkdir -p resources/views storage/framework/views storage/framework/cache bootstrap/cache
+
+php artisan optimize:clear
+php artisan migrate:fresh --force
+
+# Step 1: the dedicated MySQL-connection rejection/acceptance suite
+# (24 tests: every one of v17's 15 CHECK invariants, both a violating raw
+# insert rejected and a valid raw insert accepted, all via the named
+# "mysql" connection). Every test in this file calls
+# skipUnlessMysqlAvailable() first -- which would make this whole job pass
+# vacuously if MySQL were silently unreachable. Since this script's
+# preflight above already guarantees MySQL IS reachable, any SKIPPED
+# result here means the test's own connection check disagrees with our
+# preflight -- fail loudly instead of reporting a false green (same
+# contract as scripts/ci/document-workflow-concurrency-mysql).
+REJECTION_JUNIT="${RUNNER_TEMP:-/tmp}/treasury-check-constraints-mysql-rejection-junit.xml"
+./vendor/bin/phpunit tests/Unit/Migrations/Treasury/TreasuryNativeCheckConstraintsMysqlTest.php --log-junit "$REJECTION_JUNIT"
+
+if grep -q 'skipped="[1-9]' "$REJECTION_JUNIT" 2>/dev/null; then
+    echo "ERROR: TreasuryNativeCheckConstraintsMysqlTest reported a SKIP despite MySQL being reachable per preflight — this must never be a silent pass." >&2
+    echo "Skip reason(s) from the junit report:" >&2
+    grep -A2 '<skipped' "$REJECTION_JUNIT" >&2 || true
+    exit 1
+fi
+
+# Step 2: independent schema introspection proving the CHECK constraints
+# physically exist in information_schema.CHECK_CONSTRAINTS (not merely
+# that a violating write happens to be rejected). Same
+# never-silently-skip contract as step 1, scoped to just this one method
+# since the file's other two methods are SQLite-specific and legitimately
+# skip whenever the default connection isn't sqlite (which it never is in
+# this script).
+INTROSPECTION_JUNIT="${RUNNER_TEMP:-/tmp}/treasury-check-constraints-mysql-introspection-junit.xml"
+./vendor/bin/phpunit tests/Unit/Migrations/Treasury/TreasuryCheckConstraintIntrospectionTest.php \
+    --filter test_mysql_check_constraints_are_visible_in_information_schema \
+    --log-junit "$INTROSPECTION_JUNIT"
+
+if grep -q 'skipped="[1-9]' "$INTROSPECTION_JUNIT" 2>/dev/null; then
+    echo "ERROR: test_mysql_check_constraints_are_visible_in_information_schema reported a SKIP despite MySQL being reachable per preflight — this must never be a silent pass." >&2
+    echo "Skip reason(s) from the junit report:" >&2
+    grep -A2 '<skipped' "$INTROSPECTION_JUNIT" >&2 || true
+    exit 1
+fi
+
+# Step 3: full Treasury suite against this same real MySQL connection
+# (the default connection here genuinely is mysql, since ZENA_INVARIANTS_DB=mysql
+# stops tests/bootstrap.php from overriding it to an isolated SQLite file).
+# TreasuryCheckConstraintIntrospectionTest's two SQLite-specific methods
+# guard on "default driver is not sqlite" and are EXPECTED to skip here,
+# since the default driver genuinely is mysql in this script --
+# informational only, not gated on zero skips.
+FULL_SUITE_JUNIT="${RUNNER_TEMP:-/tmp}/treasury-check-constraints-mysql-full-suite-junit.xml"
+./vendor/bin/phpunit tests/Unit/Migrations/Treasury tests/Unit/Models/Treasury --log-junit "$FULL_SUITE_JUNIT"

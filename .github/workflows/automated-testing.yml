@@ -600,6 +600,109 @@ jobs:
           echo "- Command: ./scripts/ci/document-workflow-concurrency-mysql"
         } >> "$GITHUB_STEP_SUMMARY"
 
+  treasury-check-constraints-mysql:
+    name: Treasury Native CHECK Constraints (real MySQL)
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: laravel
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      SUITE_NAME: Treasury native CHECK constraints (real MySQL)
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: laravel
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+
+    - name: Docs lint (no unsupported commands)
+      run: bash scripts/ci/docs-lint.sh
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ env.PHP_VERSION }}
+        extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, redis, gd, zip, bcmath, opcache
+
+    - name: Cache Composer dependencies
+      uses: actions/cache@v5
+      with:
+        path: vendor
+        key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-php-
+
+    - name: Install Composer dependencies
+      run: composer install --prefer-dist --no-progress --no-suggest
+
+    - name: 🧱 Environment prep
+      run: |
+        echo "::group::Environment prep"
+        cp .env.example .env
+        sed -i 's/^CACHE_DRIVER=.*/CACHE_DRIVER=file/' .env
+        sed -i 's/^SESSION_DRIVER=.*/SESSION_DRIVER=file/' .env
+        php artisan key:generate
+        for i in {1..30}; do
+          if mysqladmin ping -h 127.0.0.1 -proot --silent; then
+            echo 'MySQL ready'
+            mysql_ready=true
+            break
+          fi
+          sleep 2
+        done
+        if [ "${mysql_ready:-}" != "true" ]; then
+          echo 'MySQL did not become ready in time' >&2
+          exit 1
+        fi
+        mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS laravel;"
+        echo "::endgroup::"
+
+    - name: 🧪 Treasury native CHECK constraints (real MySQL)
+      run: |
+        echo "::group::Treasury native CHECK constraints (real MySQL)"
+        ./scripts/ci/treasury-check-constraints-mysql
+        echo "::endgroup::"
+
+    - name: Failure context
+      if: failure()
+      run: |
+        echo "::group::Failure context — laravel.log"
+        if [ -f storage/logs/laravel.log ]; then
+          echo "---- storage/logs/laravel.log (last 200 lines) ----"
+          tail -n 200 storage/logs/laravel.log
+        else
+          echo "storage/logs/laravel.log not present"
+        fi
+        echo "::endgroup::"
+
+    - name: 🧾 Job summary
+      if: always()
+      run: |
+        {
+          echo "## Job summary"
+          echo "- Job: ${{ job.name }}"
+          echo "- PHP version: ${{ env.PHP_VERSION }}"
+          echo "- Suite: ${SUITE_NAME:-n/a}"
+          echo "- DB connection: ${DB_CONNECTION:-n/a}"
+          echo "- Command: ./scripts/ci/treasury-check-constraints-mysql"
+        } >> "$GITHUB_STEP_SUMMARY"
+
   feature-tests:
     name: Feature Tests
     runs-on: ubuntu-latest

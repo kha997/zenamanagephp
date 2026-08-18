@@ -1,30 +1,36 @@
 ---
 work_id: GAP-039
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_more_info_or_decline_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-08-18-gap-039-mysql-fk-testing-integrity-evidence.md
   plan: null
   branch: docs/GAP-039-mysql-fk-testing-integrity
-  pr: null
+  pr: "https://github.com/kha997/zenamanagephp/pull/266"
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-18T22:43:00+07:00"
-  owner_response_reference: null
-  reconciliation_required: false
+  recorded_at: "2026-08-18T23:14:00+07:00"
+  owner_response_reference: "Owner chat message, 2026-08-18: 'GAP-039 — Gate 1 Owner Decision: APPROVE... reviewed head 5b5dbf048d1a78f7b351e062648852a5a98ae3e9... Approval này chỉ cho phép chuyển sang Gate 2 để thiết kế quality/testing contract. Chưa cho phép sửa workflow, bootstrap, PHPUnit config, test code hoặc production code; chưa implementation plan; chưa Gate 3; chưa mark PR ready; chưa merge hoặc deploy.'"
+  reconciliation_required: true
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-18T22:43:00+07:00"
-  updated_at: "2026-08-18T22:43:00+07:00"
+  updated_at: "2026-08-18T23:14:00+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner phê duyệt GAP-039 Gate 1 lúc `2026-08-18T23:14:00+07:00`, đã review head `5b5dbf048d1a78f7b351e062648852a5a98ae3e9` của PR #266. Owner xác nhận phạm vi ghi nhận trong Gate 1 evidence là đúng: 16 job definitions / 17 matrix-expanded executions trên 6 workflow file âm thầm chạy SQLite thay vì MySQL như tuyên bố, cộng với finding riêng về `QualityAssuranceTest::test_database_constraints` không thực sự chạy được phần kiểm tra khoá ngoại.
+
+Quyết định này CHỈ cho phép chuyển sang chuẩn bị thiết kế Gate 2 (quality/testing contract). Quyết định này KHÔNG cho phép: sửa bất kỳ file workflow, `tests/bootstrap.php`, cấu hình PHPUnit, test code, hay production code nào; không có implementation plan; Gate 3 CHƯA BẮT ĐẦU; PR #266 KHÔNG được đánh dấu ready-for-review hay merge; không deploy. Gói Gate 2 khi hoàn thành phải quay lại trạng thái `awaiting_owner` để Owner ra quyết định riêng, trước khi bất kỳ implementation nào bắt đầu.
 
 ## Owner Summary
 CI tuyên bố (qua service container MySQL 8.0 + biến `DB_CONNECTION=mysql`) rằng nhiều pipeline kiểm thử chạy trên MySQL thật, nhưng thực tế **17 lượt chạy job** trong **6 workflow** (kể cả pipeline gác cổng PR chính `ci-cd.yml`) âm thầm chạy trên SQLite thay vì MySQL — vì cơ chế chọn backend chỉ "mở khoá" MySQL thật khi có biến `ZENA_INVARIANTS_DB=mysql`, mà 17/19 lượt chạy đó không hề đặt biến này. Riêng biệt, bài test duy nhất trong repo tuyên bố kiểm tra ràng buộc khoá ngoại (`QualityAssuranceTest::test_database_constraints`) không bao giờ thực thi được phần kiểm tra đó, ở bất kỳ cấu hình nào.
@@ -54,8 +60,8 @@ Không đụng đến GAP-037 (schema Treasury, đã duyệt Gate 2) hay GAP-038
 ## Đề xuất
 Đội kỹ thuật đề xuất: owner phê duyệt để tiến hành thiết kế chi tiết (Gate 2) cho GAP-039, với 2 nhánh cần thiết kế riêng biệt nhưng trong cùng work item — (a) đảm bảo mọi job tuyên bố/dựng MySQL cho PHPUnit phải thật sự chạy trên MySQL đó theo kiểu fail-closed, hoặc được đổi nhãn trung thực thành SQLite; (b) sửa `QualityAssuranceTest::test_database_constraints` để phần kiểm tra khoá ngoại thật sự chạy được và không còn bị loại nhóm ngoài ý muốn.
 
-## Decision Needed
-Owner chọn một trong: Phê duyệt để tiến hành thiết kế Gate 2 / Yêu cầu thêm thông tin / Từ chối / Hoãn lại.
+## Decision Recorded
+Owner đã **phê duyệt để tiến hành thiết kế Gate 2**. Implementation authorized: **NO**. Sửa workflow/bootstrap/PHPUnit config/test code/production code: **NO**. Gate 3: **NOT STARTED**. PR #266 ready-for-review/merge: **NO**. Deploy: **NO**. Gói Gate 2 phải quay lại `awaiting_owner` để Owner quyết định riêng trước khi implementation bắt đầu.
 
 ## What the owner is NOT being asked to decide
 Owner không được yêu cầu phê duyệt bất kỳ thay đổi mã nguồn, file workflow CI, biến môi trường cụ thể, hay cơ chế kỹ thuật triển khai nào ở bước này — chỉ xác nhận vấn đề là có thật (đã có bằng chứng thực nghiệm) và đáng để thiết kế giải pháp. Owner cũng không quyết định về GAP-037, GAP-038, hay bất kỳ gap nào khác trong quyết định này. Không có mã sản xuất, không có Gate 3, không có merge nào được cấp phép bởi tài liệu này.

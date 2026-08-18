@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 
+use App\Support\Treasury\TreasuryCheckConstraint;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -49,6 +50,19 @@ return new class extends Migration
             $table->index(['source_payment_route_leg_id'], 'tle_src_leg_idx');
             $table->index(['wallet_id', 'posted_at'], 'tle_wallet_posted_idx');
         });
+
+        TreasuryCheckConstraint::add(
+            'treasury_ledger_entries',
+            'tle_amount_positive_chk',
+            'amount > 0',
+            'NEW.amount > 0'
+        );
+        TreasuryCheckConstraint::add(
+            'treasury_ledger_entries',
+            'tle_source_exactly_one_chk',
+            '(source_financial_document_id IS NULL) != (source_payment_route_leg_id IS NULL)',
+            '(NEW.source_financial_document_id IS NULL) != (NEW.source_payment_route_leg_id IS NULL)'
+        );
     }
 
     public function down(): void

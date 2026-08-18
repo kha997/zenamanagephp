@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 
+use App\Support\Treasury\TreasuryCheckConstraint;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -40,6 +41,13 @@ return new class extends Migration
             $table->unique('financial_document_id', 'tas_financial_document_unique');
             $table->index(['advance_id'], 'tas_advance_idx');
         });
+
+        TreasuryCheckConstraint::add(
+            'treasury_advance_settlements',
+            'tas_amount_positive_chk',
+            'amount > 0',
+            'NEW.amount > 0'
+        );
     }
 
     public function down(): void

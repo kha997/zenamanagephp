@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 
+use App\Support\Treasury\TreasuryCheckConstraint;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -36,6 +37,13 @@ return new class extends Migration
             $table->unique('member_payment_route_id', 'tfcm_member_route_unique');
             $table->index(['fund_chain_id'], 'tfcm_fund_chain_idx');
         });
+
+        TreasuryCheckConstraint::add(
+            'treasury_fund_chain_members',
+            'tfcm_member_exactly_one_chk',
+            '(member_financial_document_id IS NULL) != (member_payment_route_id IS NULL)',
+            '(NEW.member_financial_document_id IS NULL) != (NEW.member_payment_route_id IS NULL)'
+        );
     }
 
     public function down(): void

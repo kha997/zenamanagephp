@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 
+use App\Support\Treasury\TreasuryCheckConstraint;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -45,6 +46,25 @@ return new class extends Migration
             $table->index(['financial_document_id'], 'tcsa_financial_doc_idx');
             $table->index(['advance_settlement_id'], 'tcsa_advance_settlement_idx');
         });
+
+        TreasuryCheckConstraint::add(
+            'treasury_cost_settlement_allocations',
+            'tcsa_amount_positive_chk',
+            'allocated_amount > 0',
+            'NEW.allocated_amount > 0'
+        );
+        TreasuryCheckConstraint::add(
+            'treasury_cost_settlement_allocations',
+            'tcsa_source_exactly_one_chk',
+            '(financial_document_id IS NULL) != (advance_settlement_id IS NULL)',
+            '(NEW.financial_document_id IS NULL) != (NEW.advance_settlement_id IS NULL)'
+        );
+        TreasuryCheckConstraint::add(
+            'treasury_cost_settlement_allocations',
+            'tcsa_cost_source_exactly_one_chk',
+            '(cost_source_contract_expense_id IS NULL) != (cost_source_material_receipt_line_id IS NULL)',
+            '(NEW.cost_source_contract_expense_id IS NULL) != (NEW.cost_source_material_receipt_line_id IS NULL)'
+        );
     }
 
     public function down(): void

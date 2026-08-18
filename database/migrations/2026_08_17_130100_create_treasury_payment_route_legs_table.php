@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 
+use App\Support\Treasury\TreasuryCheckConstraint;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -38,6 +39,13 @@ return new class extends Migration
             $table->unique(['tenant_id', 'id'], 'tprl_tenant_id_id_unique');
             $table->index(['payment_route_id'], 'tprl_route_idx');
         });
+
+        TreasuryCheckConstraint::add(
+            'treasury_payment_route_legs',
+            'tprl_amount_positive_chk',
+            'amount > 0',
+            'NEW.amount > 0'
+        );
     }
 
     public function down(): void

@@ -40,10 +40,15 @@ class TreasuryCheckConstraintIntrospectionTest extends TestCase
         ];
     }
 
+    /** @group stress */
     public function test_every_approved_check_constraint_physically_exists_in_sqlite_schema(): void
     {
         if (DB::getDriverName() !== 'sqlite') {
-            $this->markTestSkipped('SQLite-specific schema introspection; see the MySQL-path equivalent verified via CI SHOW CREATE TABLE / information_schema.');
+            $this->markTestSkipped(
+                'dependency: SQLite-specific schema introspection (sqlite_master). '
+                . 'Current connection driver is "'.DB::getDriverName().'", not sqlite; '
+                . 'see test_mysql_check_constraints_are_visible_in_information_schema for the MySQL-path equivalent.'
+            );
         }
 
         foreach ($this->expectedChecks() as $table => $checkNames) {
@@ -63,10 +68,15 @@ class TreasuryCheckConstraintIntrospectionTest extends TestCase
         }
     }
 
+    /** @group stress */
     public function test_no_trigger_based_enforcement_exists_on_any_treasury_table(): void
     {
         if (DB::getDriverName() !== 'sqlite') {
-            $this->markTestSkipped('SQLite-specific: confirms Option B correction removed the earlier trigger-based substitute.');
+            $this->markTestSkipped(
+                'dependency: SQLite-specific trigger-absence check (confirms the Option B correction '
+                . 'removed the earlier trigger-based substitute). Current connection driver is "'
+                . DB::getDriverName().'", not sqlite.'
+            );
         }
 
         foreach (array_keys($this->expectedChecks()) as $table) {
@@ -83,10 +93,15 @@ class TreasuryCheckConstraintIntrospectionTest extends TestCase
         }
     }
 
+    /** @group stress */
     public function test_mysql_check_constraints_are_visible_in_information_schema(): void
     {
         if (DB::getDriverName() !== 'mysql') {
-            $this->markTestSkipped('MySQL-specific information_schema introspection; runs for real under this repository\'s automated-testing.yml CI (DB_CONNECTION=mysql).');
+            $this->markTestSkipped(
+                'dependency: MySQL-specific information_schema.CHECK_CONSTRAINTS introspection. '
+                . 'Current connection driver is "'.DB::getDriverName().'", not mysql; runs for real '
+                . 'under this repository\'s automated-testing.yml CI (DB_CONNECTION=mysql).'
+            );
         }
 
         foreach ($this->expectedChecks() as $table => $checkNames) {

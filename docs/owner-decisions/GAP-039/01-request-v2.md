@@ -1,7 +1,7 @@
 ---
 work_id: GAP-039
 gate: 1
-gate_status: superseded
+gate_status: approved
 owner_decision:
   value: approved
   authority: human_owner
@@ -17,16 +17,14 @@ decision_provenance:
   recorded_by: agent
   recorded_at: "2026-08-18T23:14:00+07:00"
   owner_response_reference: "Owner chat message, 2026-08-18: 'GAP-039 — Gate 1 Owner Decision: APPROVE... reviewed head 5b5dbf048d1a78f7b351e062648852a5a98ae3e9... Approval này chỉ cho phép chuyển sang Gate 2 để thiết kế quality/testing contract. Chưa cho phép sửa workflow, bootstrap, PHPUnit config, test code hoặc production code; chưa implementation plan; chưa Gate 3; chưa mark PR ready; chưa merge hoặc deploy.'"
-  reconciliation_required: true
-supersedes: null
-superseded_by: docs/owner-decisions/GAP-039/01-request-v2.md
+  reconciliation_required: false
+supersedes: docs/owner-decisions/GAP-039/01-request.md
+superseded_by: null
 timestamps:
-  created_at: "2026-08-18T22:43:00+07:00"
-  updated_at: "2026-08-18T23:14:00+07:00"
+  created_at: "2026-08-18T23:14:00+07:00"
+  updated_at: "2026-08-18T23:28:00+07:00"
 generated_by: agent
 ---
-
-> **SUPERSEDED — provenance-record correction, not a re-decision.** This file is kept verbatim as the historical record of the original Gate 1 approval. It contained one governance-record defect (`decision_provenance.reconciliation_required: true`, which is only valid once a Decision Center exists to reconcile against — during the current repository-native phase this field is `false` by definition). See `docs/owner-decisions/GAP-039/01-request-v2.md` for the corrected record. The Owner's Gate 1 APPROVED decision itself is unchanged and remains in force; nothing about the business decision was reopened, reinterpreted, or broadened.
 
 ## OWNER GATE 1: APPROVED
 
@@ -36,6 +34,13 @@ Quyết định này CHỈ cho phép chuyển sang chuẩn bị thiết kế Gat
 
 ## Owner Summary
 CI tuyên bố (qua service container MySQL 8.0 + biến `DB_CONNECTION=mysql`) rằng nhiều pipeline kiểm thử chạy trên MySQL thật, nhưng thực tế **17 lượt chạy job** trong **6 workflow** (kể cả pipeline gác cổng PR chính `ci-cd.yml`) âm thầm chạy trên SQLite thay vì MySQL — vì cơ chế chọn backend chỉ "mở khoá" MySQL thật khi có biến `ZENA_INVARIANTS_DB=mysql`, mà 17/19 lượt chạy đó không hề đặt biến này. Riêng biệt, bài test duy nhất trong repo tuyên bố kiểm tra ràng buộc khoá ngoại (`QualityAssuranceTest::test_database_constraints`) không bao giờ thực thi được phần kiểm tra đó, ở bất kỳ cấu hình nào.
+
+## Ghi chú về bản sửa (v2)
+Bản v2 này **chỉ sửa một lỗi trong bản ghi provenance** của hồ sơ gốc (`01-request.md`) — hồ sơ gốc ghi `decision_provenance.reconciliation_required: true`, nhưng theo thiết kế chuẩn của Owner Control Layer, trong giai đoạn hiện tại (repository-native, chưa có Decision Center độc lập để đối chiếu), trường này phải là `false` theo định nghĩa; giá trị `true` chỉ dành riêng cho tình huống tương lai khi có sai lệch cần đối chiếu với một bản ghi Decision Center có thẩm quyền. Hồ sơ gốc đã được giữ nguyên làm bản ghi lịch sử có thể kiểm toán (`gate_status: superseded`, không bị xoá hay viết đè). Bản v2 này:
+- **Không** mở rộng, diễn giải lại, hay thay đổi phạm vi quyết định Gate 1 đã được owner duyệt;
+- **Không** cấp thêm bất kỳ thẩm quyền nghiệp vụ mới hay rộng hơn nào;
+- **Không** phê duyệt lại, phê duyệt thêm, hay tái quyết định bất cứ điều gì — quyết định "Owner Gate 1 APPROVED" ban đầu **vẫn còn nguyên giá trị**, bản v2 chỉ chép lại đúng quyết định đó với `decision_provenance.reconciliation_required` được sửa đúng;
+- Mọi nội dung khác (Owner Summary, Vấn đề vận hành, Bằng chứng, Phạm vi, Loại trừ, Decision Recorded) giữ nguyên y hệt bản gốc.
 
 ## Vấn đề vận hành
 `tests/bootstrap.php` (bootstrap của PHPUnit) sẽ ép `DB_CONNECTION=sqlite` ngay từ đầu mỗi lần chạy test, trừ khi biến môi trường `ZENA_INVARIANTS_DB=mysql` được đặt trước đó. Biến này chỉ được đặt ở đúng 3 nơi trong toàn repo — cả 3 đều là script `scripts/ci/*-mysql` dùng cho 3 job riêng biệt (`zena-invariants-mysql`, `rfi-escalation-concurrency-mysql`, `document-workflow-concurrency-mysql`). 16 định nghĩa job khác (17 lượt chạy sau khi tính cả ma trận), trải trên 6 file workflow (`ci-cd.yml`, `button-tests.yml`, `a11y-perf-testing.yml`, `production.yml`, `routes-guardrails.yml`, `automated-testing.yml`), đều dựng container MySQL 8.0, đặt `DB_CONNECTION=mysql`, có job còn `migrate`/`db:seed` thật lên MySQL đó — nhưng bước chạy PHPUnit thật sự lại lặng lẽ dùng SQLite, không cảnh báo, không fail. Đã xác minh cơ chế này bằng thực nghiệm (chạy PHPUnit thật cục bộ với các tổ hợp biến môi trường khác nhau), không chỉ suy luận tĩnh từ YAML.

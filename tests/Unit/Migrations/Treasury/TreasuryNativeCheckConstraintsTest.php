@@ -10,24 +10,21 @@ use Tests\TestCase;
 use Tests\Unit\Migrations\Treasury\Concerns\BuildsTreasuryCheckFixtures;
 
 /**
- * GAP-038 Gate 2 Option B conformance proof: every row written here via
+ * GAP-038 Gate 2 Option B conformance proof (SQLite path -- this
+ * repository's default local/test connection). Every row written here via
  * DB::table()->insert() is a raw query-builder write that never
  * instantiates an Eloquent model and never fires the `saving` event --
  * EnforcesRowInvariants cannot run for any insert in this file. If a
  * violating row is still rejected, the rejection came from the database
- * engine itself (a real CHECK constraint on MySQL, or the equivalent
- * BEFORE INSERT trigger on SQLite -- see App\Support\Treasury\
- * TreasuryCheckConstraint), not from application code.
+ * engine itself (a real inline CHECK constraint -- see App\Support\
+ * Treasury\TreasuryCheckConstraint), not from application code.
  *
- * This file's DB connection is whatever `DB_CONNECTION` resolves to for
- * the current test run -- `sqlite` locally (phpunit.xml's default,
- * unmodified by this file) and `mysql` in this repository's
- * `automated-testing.yml` CI job, which exports DB_CONNECTION=mysql as a
- * real environment variable before invoking phpunit (phpunit.xml's
- * <env name="DB_CONNECTION" value="sqlite"/> has no force="true", so it
- * never overrides an already-set real env var -- standard PHPUnit
- * precedence). The same test file therefore proves both of this
- * repository's two supported database paths without duplication.
+ * See TreasuryNativeCheckConstraintsMysqlTest.php for the MySQL-path
+ * equivalent, which explicitly targets the named "mysql" connection
+ * (required: this repository's phpunit.xml pins DB_CONNECTION=sqlite
+ * without force="true", which wins over any real DB_CONNECTION=mysql
+ * environment variable a CI job sets -- verified empirically, not
+ * assumed).
  */
 class TreasuryNativeCheckConstraintsTest extends TestCase
 {

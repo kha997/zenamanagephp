@@ -96,17 +96,26 @@ class TreasuryCheckConstraintIntrospectionTest extends TestCase
     /** @group stress */
     public function test_mysql_check_constraints_are_visible_in_information_schema(): void
     {
-        if (DB::getDriverName() !== 'mysql') {
+        // This repository's phpunit.xml pins DB_CONNECTION=sqlite without
+        // force="true", which wins over any real DB_CONNECTION=mysql a CI
+        // job's shell environment sets (verified empirically) -- so the
+        // default connection is always sqlite here. The named "mysql"
+        // connection (config/database.php) must be targeted explicitly,
+        // exactly as this repo's own DocumentWorkflowConcurrencyTest does.
+        try {
+            DB::connection('mysql')->select('SELECT 1');
+        } catch (\Throwable $e) {
             $this->markTestSkipped(
                 'dependency: MySQL-specific information_schema.CHECK_CONSTRAINTS introspection. '
-                . 'Current connection driver is "'.DB::getDriverName().'", not mysql; runs for real '
-                . 'under this repository\'s automated-testing.yml CI (DB_CONNECTION=mysql).'
+                . 'The "mysql" connection in config/database.php is not reachable in this '
+                . 'environment (' . $e->getMessage() . '). Runs for real under this repository\'s '
+                . 'automated-testing.yml CI (mysql:8.0 service).'
             );
         }
 
         foreach ($this->expectedChecks() as $table => $checkNames) {
             foreach ($checkNames as $name) {
-                $row = DB::selectOne(
+                $row = DB::connection('mysql')->selectOne(
                     'SELECT CHECK_CLAUSE FROM information_schema.CHECK_CONSTRAINTS '.
                     'WHERE CONSTRAINT_SCHEMA = DATABASE() AND CONSTRAINT_NAME = ?',
                     [$name]

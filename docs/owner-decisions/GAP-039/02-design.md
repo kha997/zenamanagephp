@@ -10,7 +10,7 @@ references:
   spec: docs/superpowers/specs/2026-08-18-gap-039-mysql-testing-integrity-design.md
   plan: null
   branch: docs/GAP-039-gate2-continuation
-  pr: null
+  pr: "https://github.com/kha997/zenamanagephp/pull/267"
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
@@ -22,15 +22,11 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-18T23:37:00+07:00"
-  updated_at: "2026-08-18T23:58:00+07:00"
+  updated_at: "2026-08-19T16:17:00+07:00"
 generated_by: agent
 ---
 
-## Ghi chú round 2 (sau phản hồi Owner)
-Owner đã REQUEST CHANGES trên bản round 1 của gói này (không lưu thành file riêng vì gói round 1 chưa từng được owner quyết định — `owner_decision.value` vẫn là `none` suốt round 1, nên đây là sửa tại chỗ, không phải version mới). Lý do: gói trộn lẫn quyết định nghiệp vụ với chi tiết kỹ thuật triển khai (tên script, biến môi trường, cấu hình PHPUnit/Dusk, kiểm tra PDO, tên test method, chiến lược parse YAML, cấu trúc thư viện shell). Toàn bộ nội dung kỹ thuật đó đã được chuyển sang `docs/superpowers/specs/2026-08-18-gap-039-mysql-testing-integrity-design.md` — không mất công nghiên cứu, chỉ đổi chỗ lưu. Gói này (round 2) chỉ còn phần Owner cần quyết định. Hướng B + C (đã được Owner xác nhận "đúng hướng" ở round 1) giữ nguyên không đổi; round 2 không đổi hướng, chỉ tách layer.
-
-## Ghi chú tách PR (round 2, tiếp theo)
-Gói round 2 ở trên (PR #266) không đạt CI xanh vì lý do quản trị thuần tuý, không liên quan nội dung GAP-039: PR #266 còn chứa `docs/audits/2026-08-18-gap-039-mysql-fk-testing-integrity-evidence.md` (bằng chứng Gate 1), nằm ngoài danh sách thư mục được miễn trừ của cơ chế OWN-2026-005 (`docs/owner-decisions/**`, `docs/superpowers/specs/**`, `docs/superpowers/plans/**`), nên PR đó không bao giờ đạt được miễn trừ "design-only" cho spec Gate 2 tự tham chiếu gói Gate 2 chưa duyệt của chính nó. Theo chỉ đạo Owner, Gate 2 được tách sang PR mới này (diff chỉ gồm đúng 4 file quản trị/thiết kế, không có `docs/audits/**`) để đạt CI xanh thật. PR #266 vẫn là nguồn bằng chứng/lịch sử Gate 1 (đã APPROVED), không bị sửa hay xoá bằng chứng để né lint. Đây KHÔNG phải sửa `owner_governance_lint.php`/cơ chế miễn trừ — phát hiện về khoảng trống của cơ chế miễn trừ được ghi nhận riêng, không xử lý dưới GAP-039.
+Gate 2 tiếp nối từ Gate 1 đã được Owner APPROVE tại PR #266 (lịch sử/bằng chứng Gate 1 vẫn giữ nguyên ở đó).
 
 ## Owner Summary
 CI hiện có nhiều pipeline nói rằng đang kiểm thử trên MySQL thật, nhưng phần lớn trong số đó âm thầm chạy trên SQLite. Đề xuất: công khai chia mọi nhóm kiểm thử thành 2 tầng rõ ràng — SQLite (nhanh, cho logic ứng dụng) và MySQL parity (cho các kiểm tra mà sai khác giữa 2 loại database có thể ảnh hưởng đến tính đúng đắn ở production) — và đảm bảo CI không bao giờ tự nhận đã kiểm thử MySQL nếu không chứng minh được điều đó thật.
@@ -54,7 +50,14 @@ CI không bao giờ được báo hoặc ngầm ám chỉ "đã kiểm thử MyS
 **Không yêu cầu toàn bộ bộ test (hiện ~3.037 test method) phải chạy trên MySQL** — phần lớn logic nghiệp vụ, kiểm tra HTTP contract, validation không phụ thuộc loại database engine và tiếp tục chạy nhanh trên SQLite như mặc định.
 
 ## Chi phí CI
-Các nhóm được chuyển sang tầng MySQL parity sẽ chạy chậm hơn đáng kể so với SQLite (dữ liệu đo được trong lịch sử CI thật của repo cho thấy chênh lệch tới hàng chục lần đối với một nhóm test truy vấn nhiều). Owner chấp nhận mức tăng chi phí này ở phạm vi hợp lý cho các nhóm parity (không phải toàn bộ suite) — với điều kiện chi phí thực tế phải được đo lại bằng số liệu thật trong evidence khi triển khai (implementation), không dừng ở ước tính thiết kế.
+Các nhóm được chuyển sang tầng MySQL parity sẽ chạy chậm hơn đáng kể so với SQLite (dữ liệu đo được trong lịch sử CI thật của repo cho thấy chênh lệch tới hàng chục lần đối với một nhóm test truy vấn nhiều). Đề xuất Owner chấp nhận mức tăng chi phí này ở phạm vi hợp lý cho các nhóm parity (không phải toàn bộ suite) — với điều kiện chi phí thực tế phải được đo lại bằng số liệu thật trong evidence khi triển khai (implementation), không dừng ở ước tính thiết kế.
+
+## Kịch bản chấp nhận
+- Một job tuyên bố/dựng MySQL cho PHPUnit phải chứng minh được đó thật sự là MySQL trước khi test chạy, nếu không phải fail — không được âm thầm chạy SQLite rồi báo xanh.
+- Một nhóm chỉ cần SQLite không được tự nhận/ngầm hiển thị như thể đã kiểm thử trên MySQL.
+- Kiểm tra ràng buộc khoá ngoại và kiểm tra ràng buộc unique phải cùng thực thi được độc lập — không cái nào là mã chết hay bị loại nhóm ngoài ý muốn.
+- Nếu tương lai có thay đổi CI làm một job quay lại âm thầm dùng SQLite dù tuyên bố MySQL, phải có cơ chế tự động bắt được, không phải chờ audit thủ công phát hiện lại.
+- Chi phí CI tăng thêm cho các nhóm MySQL parity phải được đo bằng số liệu thật và báo cáo lại trong evidence khi triển khai, không dừng ở ước tính thiết kế.
 
 ## Vòng đời / thẩm quyền sau khi Gate 2 được duyệt
 Nếu Owner **APPROVE** Gate 2 này: đội kỹ thuật được phép lập kế hoạch triển khai (implementation plan) và tiến hành implementation, testing, review. **Gate 3 chỉ mở ra bước quyết định của Owner sau khi implementation đã hoàn tất và đủ điều kiện kỹ thuật (technical readiness)** — Gate 3 approval là bước duy nhất cho phép release/merge/deploy, không phải một bước xét duyệt trung gian nào khác chen giữa Gate 2 và implementation.

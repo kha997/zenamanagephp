@@ -1068,6 +1068,7 @@ jobs:
             perf_slug: dashboard
     env:
       APP_ENV: testing
+      ZENA_INVARIANTS_DB: mysql
       DB_CONNECTION: mysql
       DB_HOST: 127.0.0.1
       DB_PORT: 3306
@@ -1075,7 +1076,7 @@ jobs:
       DB_USERNAME: test_user
       DB_PASSWORD: test_password
       SUITE_NAME: Performance tests
-    
+
     services:
       mysql:
         image: mysql:8.0
@@ -1089,7 +1090,7 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=10
-     
+
       redis:
         image: redis:7-alpine
         ports:
@@ -1164,6 +1165,12 @@ jobs:
         php artisan migrate --env=testing --force
         php artisan db:seed --env=testing --force
         echo "::endgroup::"
+
+    - name: Verify MySQL is genuinely reachable (GAP-039)
+      run: |
+        source scripts/ci/lib/mysql-fail-closed.sh
+        zena_mysql_ensure_connection
+        zena_mysql_preflight_connection
 
     - name: 🧪 Performance tests
       env:

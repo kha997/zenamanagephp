@@ -44,4 +44,23 @@ if ($invariantsMode !== 'mysql') {
             @unlink($sqlitePath);
         }
     });
+} else {
+    // Real MySQL: by construction, every scripts/ci/*-mysql entrypoint runs
+    // migrate:fresh as its own, separate OS process BEFORE this one starts,
+    // so schema is already current. Tell RefreshDatabase not to re-run its
+    // own internal migrate:fresh on the first test that uses it (GAP-039):
+    // that redundant, in-process migrate:fresh would re-execute every
+    // migration — including 2025_09_20_145756_disable_foreign_keys_for_testing's
+    // MySQL branch — on the SAME live connection the test's own queries
+    // then use, silently leaving FOREIGN_KEY_CHECKS=0 for at least that
+    // first test method.
+    //
+    // This must be set here, once, before any test class boots — not from
+    // a TestCase hook: every test class does its own `use RefreshDatabase`,
+    // and PHP resolves a trait method declared at the child class over one
+    // merely inherited from a parent class, so a parent-class override of
+    // a RefreshDatabase hook method is silently never called (confirmed by
+    // reproduction — the override never executes for any of this repo's
+    // RefreshDatabase-using test classes).
+    \Illuminate\Foundation\Testing\RefreshDatabaseState::$migrated = true;
 }

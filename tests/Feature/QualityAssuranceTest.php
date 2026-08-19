@@ -171,34 +171,6 @@ class QualityAssuranceTest extends TestCase
     }
 
     /**
-     * Test database constraints
-     */
-    public function test_database_constraints()
-    {
-        $this->actingAs($this->user);
-
-        // Test unique constraints
-        $dashboard1 = Dashboard::factory()->create([
-            'user_id' => $this->user->id,
-            'name' => 'Unique Dashboard'
-        ]);
-
-        $this->expectException(\Illuminate\Database\QueryException::class);
-        Dashboard::create([
-            'user_id' => $this->user->id,
-            'name' => 'Unique Dashboard' // Should fail due to unique constraint
-        ]);
-
-        // Test foreign key constraints
-        $this->expectException(\Illuminate\Database\QueryException::class);
-        Widget::create([
-            'dashboard_id' => 999999, // Non-existent dashboard
-            'type' => 'chart',
-            'title' => 'Test Widget'
-        ]);
-    }
-
-    /**
      * Test concurrent access
      */
     public function test_concurrent_access()

@@ -1,11 +1,11 @@
 ---
 work_id: GAP-039
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_changes_or_decline"
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-18-gap-039-mysql-testing-integrity-design.md
   plan: null
@@ -14,17 +14,25 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-08-19T16:23:00+07:00"
+  owner_response_reference: "Owner chat message, 2026-08-19: 'GAP-039 — Gate 2 Owner Decision: APPROVE... reviewed head 7a7813b861ca9cb0f500c07999eb1c83cf36668a... phê duyệt quality/testing contract... hai tầng SQLite/MySQL parity; CI không được tuyên bố MySQL nếu không chứng minh được MySQL thật; guardrail chống hồi quy; FK/unique regression coverage độc lập; chỉ chạy MySQL parity cho những nhóm thực sự cần production-database fidelity. Chấp nhận MySQL-parity suites có thể tăng thời gian/chi phí CI trong phạm vi hợp lý, với điều kiện chi phí thực tế phải được đo và báo cáo trong technical evidence trước Gate 3. Approval này cho phép engineering lập implementation plan và tiến hành implementation, testing, technical review... không cho phép release, merge hoặc deploy. Gate 3 chưa được phê duyệt và chỉ được đưa về awaiting_owner sau khi implementation hoàn tất, required evidence đầy đủ và technical readiness đạt yêu cầu.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-18T23:37:00+07:00"
-  updated_at: "2026-08-19T16:17:00+07:00"
+  updated_at: "2026-08-19T16:23:00+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 2: APPROVED
+
+Owner phê duyệt GAP-039 Gate 2 lúc `2026-08-19T16:23:00+07:00`, đã review head `7a7813b861ca9cb0f500c07999eb1c83cf36668a` của PR #267. Owner phê duyệt quality/testing contract: mô hình hai tầng SQLite/MySQL parity; CI không được tuyên bố MySQL nếu không chứng minh được MySQL thật; guardrail chống hồi quy; FK/unique regression coverage độc lập; chỉ chạy MySQL parity cho những nhóm thực sự cần production-database fidelity. Owner chấp nhận MySQL-parity suites có thể làm tăng thời gian/chi phí CI trong phạm vi hợp lý, với điều kiện chi phí thực tế phải được đo và báo cáo trong technical evidence trước Gate 3.
+
+**Được phép:** đội kỹ thuật lập implementation plan và tiến hành implementation, testing, technical review theo đúng approved Gate 2 design (bao gồm engineering spec tại `docs/superpowers/specs/2026-08-18-gap-039-mysql-testing-integrity-design.md`).
+
+**KHÔNG được phép:** release, merge, hay deploy. Gate 3 **CHƯA ĐƯỢC PHÊ DUYỆT** và chỉ chuyển về `awaiting_owner` sau khi implementation hoàn tất, đầy đủ required evidence, và đạt technical readiness.
 
 Gate 2 tiếp nối từ Gate 1 đã được Owner APPROVE tại PR #266 (lịch sử/bằng chứng Gate 1 vẫn giữ nguyên ở đó).
 
@@ -65,8 +73,8 @@ Nếu Owner **APPROVE** Gate 2 này: đội kỹ thuật được phép lập k�
 ## Loại trừ phạm vi
 Không đụng đến GAP-037 (schema Treasury) hay GAP-038 (ràng buộc CHECK Treasury) — work item độc lập. Không mở rộng phạm vi thành dọn dẹp trùng lặp giữa các workflow CI (một phát hiện riêng, đã ghi nhận trong spec kỹ thuật, không xử lý trong GAP-039). Gate 2 này không thay đổi bất kỳ file workflow, `tests/bootstrap.php`, cấu hình PHPUnit, test code, hay production code nào — thuần tuý là thiết kế/quyết định phạm vi.
 
-## Decision Needed
-Owner chọn một trong: **Approve** (cho phép lập kế hoạch triển khai và bắt đầu implementation) / **Request changes** (yêu cầu sửa lại thiết kế) / **Decline**.
+## Decision Recorded
+Owner đã **APPROVE** Gate 2. Implementation plan: **được phép lập**. Implementation/testing/technical review: **được phép tiến hành**. Release/merge/deploy: **KHÔNG được phép**. Gate 3: **CHƯA ĐƯỢC PHÊ DUYỆT** — chỉ chuyển về `awaiting_owner` sau khi implementation hoàn tất, đầy đủ evidence, và đạt technical readiness.
 
 ## What the owner is NOT being asked to decide
 Owner không được yêu cầu chọn tên script, biến môi trường, file cấu hình PHPUnit/Dusk, cơ chế kiểm tra PDO, chiến lược parse YAML, cấu trúc thư viện shell, hay tên/tổ chức file test cụ thể — toàn bộ những chi tiết đó thuộc `docs/superpowers/specs/2026-08-18-gap-039-mysql-testing-integrity-design.md`, do đội kỹ thuật sở hữu. Owner chỉ được yêu cầu quyết định về nguyên tắc phân tầng SQLite/MySQL parity, yêu cầu về guardrail chống hồi quy, yêu cầu tách kiểm tra khoá ngoại/unique độc lập, và mức chi phí CI tăng thêm chấp nhận được. Quyết định này không phê duyệt implementation, không mở Gate 3, không cho phép merge hay deploy.

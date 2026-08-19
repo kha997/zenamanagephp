@@ -8,6 +8,7 @@ on:
       - 'docs/superpowers/plans/**'
       - 'docs/superpowers/specs/**'
       - '.github/PULL_REQUEST_TEMPLATE.md'
+      - '.github/workflows/**'
       - 'PROJECT_CONSTITUTION.md'
   push:
     branches: [ "main" ]
@@ -16,6 +17,7 @@ on:
       - 'docs/owner-governance/**'
       - 'docs/superpowers/plans/**'
       - 'docs/superpowers/specs/**'
+      - '.github/workflows/**'
 
 jobs:
   owner-governance-lint:
@@ -54,6 +56,9 @@ jobs:
 
       - name: Structural validation (schema + enums + contradictions)
         run: php scripts/ssot/owner_governance_lint.php
+
+      - name: MySQL claim truthfulness (GAP-039 regression guard)
+        run: php scripts/ci/lint-mysql-claim-truthfulness.php
 
       - name: Gate-ordering enforcement (effective-date boundary)
         env:

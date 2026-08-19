@@ -53,7 +53,12 @@ class DatabaseConstraintsTest extends TestCase
         ]);
 
         $this->expectException(QueryException::class);
-        $this->expectExceptionMessageMatches('/23000/');
+        // SQLSTATE 23000 alone doesn't discriminate a unique violation from
+        // a NOT NULL/FK violation (all three share it on both SQLite and
+        // MySQL) — that ambiguity is exactly what let this test mask an
+        // unrelated NOT NULL failure before. Require the driver's own
+        // unique-violation wording too.
+        $this->expectExceptionMessageMatches('/23000.*(unique constraint|duplicate entry)/is');
 
         Dashboard::create([
             'tenant_id' => $this->user->tenant_id,
@@ -77,7 +82,7 @@ class DatabaseConstraintsTest extends TestCase
         $this->actingAs($this->user);
 
         $this->expectException(QueryException::class);
-        $this->expectExceptionMessageMatches('/23000/');
+        $this->expectExceptionMessageMatches('/23000.*foreign key constraint/is');
 
         Widget::create([
             'tenant_id' => $this->user->tenant_id,

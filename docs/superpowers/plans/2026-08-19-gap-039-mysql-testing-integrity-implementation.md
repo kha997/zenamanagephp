@@ -31,12 +31,14 @@
 **Modified:**
 - `scripts/ci/zena-invariants-mysql`, `scripts/ci/rfi-escalation-concurrency-mysql`, `scripts/ci/document-workflow-concurrency-mysql`, `scripts/ci/treasury-check-constraints-mysql` — source the shared library instead of duplicating it
 - `tests/Feature/QualityAssuranceTest.php` — remove `test_database_constraints` (moved to `DatabaseConstraintsTest`)
+- `phpunit.xml` — exclude the new `mysql-parity` group from default runs (mirrors the existing `performance` exclusion)
+- `tests/Feature/TenantIsolationProjectsTest.php` — add class-level `@group mysql-parity`
 - `.github/workflows/automated-testing.yml` — 5 jobs (`unit-tests`, `feature-tests`, `api-tests-fast`, `api-tests-slow`, `integration-tests`) reclassified SQLite-only; `performance-tests` matrix reclassified MySQL-parity
 - `.github/workflows/ci-cd.yml` — `test` job's "Execute tests" step reclassified SQLite-only (its separate "Prove GAP-032 migrations" step is untouched — already correct)
 - `.github/workflows/button-tests.yml` — `feature-tests`/`security-tests` reclassified SQLite-only; `browser-tests` gets an explicit fail-closed MySQL preflight (making its already-real MySQL usage deliberate instead of accidental)
 - `.github/workflows/a11y-perf-testing.yml` — `accessibility-tests` reclassified SQLite-only; `performance-budget`/`performance-heavy`/`e2e-tests` reclassified MySQL-parity
 - `.github/workflows/production.yml` — `test` job reclassified SQLite-only
-- `.github/workflows/routes-guardrails.yml` — `RouteHygieneTest` step reclassified SQLite-only; `TenantIsolationProjectsTest` step reclassified MySQL-parity
+- `.github/workflows/routes-guardrails.yml` — `RouteHygieneTest` step reclassified SQLite-only; `TenantIsolationProjectsTest` step reclassified as a group-routed MySQL-parity step (also covers `DatabaseConstraintsTest`'s FK test)
 - `.github/workflows/owner-governance-lint.yml` — add the new regression-guard lint as a step
 
 ---
@@ -516,9 +518,10 @@ This task cannot be fully verified locally (no MySQL server available in most de
 **Files:**
 - Create: `tests/Feature/DatabaseConstraintsTest.php`
 - Modify: `tests/Feature/QualityAssuranceTest.php:172-199` (delete the `test_database_constraints` method and its docblock)
+- Modify: `phpunit.xml` (exclude the new `mysql-parity` group from default runs)
 
 **Interfaces:**
-- Produces: `DatabaseConstraintsTest::test_unique_constraint_violation_throws()` (default tier, no group), `DatabaseConstraintsTest::test_foreign_key_constraint_violation_throws()` (tagged `@group mysql-parity`, consumed by Task 6's routes-guardrails-style MySQL-parity routing — see Task 8).
+- Produces: `DatabaseConstraintsTest::test_unique_constraint_violation_throws()` (default tier, no group), `DatabaseConstraintsTest::test_foreign_key_constraint_violation_throws()` (tagged `@group mysql-parity`, consumed by Task 11's group-routed MySQL-parity step in `routes-guardrails.yml`).
 
 - [ ] **Step 1: Write the new test file**
 
@@ -623,17 +626,48 @@ Expected: `OK (1 test, 1 assertion)`. This confirms SQLite enforces `UNIQUE` cor
 - [ ] **Step 4: Run the FK-constraint case and confirm it is reachable (SQLite will not enforce it — that's expected and is the whole point of Gate 2's design)**
 
 Run: `./vendor/bin/phpunit tests/Feature/DatabaseConstraintsTest.php --filter test_foreign_key_constraint_violation_throws`
-Expected on SQLite (this local run): likely **FAILS** with "Failed asserting that exception of type QueryException is thrown" — this is expected and correct on SQLite; it is not a bug in the test. The point of tagging it `@group mysql-parity` (Task 8 wires the CI routing) is that it must run against real MySQL to be a meaningful assertion. Confirm the failure mode is exactly "no exception thrown" (i.e. the `Widget::create()` call silently succeeded), not a PHP fatal error or missing-class error — that would indicate an unrelated defect in `Widget`/`Dashboard` and must be recorded separately per this plan's Global Constraints, not silently patched here.
+Expected on SQLite (this local run): likely **FAILS** with "Failed asserting that exception of type QueryException is thrown" — this is expected and correct on SQLite; it is not a bug in the test. The point of tagging it `@group mysql-parity` (Task 11 wires this test's CI routing — see that task) is that it must run against real MySQL to be a meaningful assertion. Confirm the failure mode is exactly "no exception thrown" (i.e. the `Widget::create()` call silently succeeded), not a PHP fatal error or missing-class error — that would indicate an unrelated defect in `Widget`/`Dashboard` and must be recorded separately per this plan's Global Constraints, not silently patched here.
 
-- [ ] **Step 5: Confirm `QualityAssuranceTest` still runs (with the method removed) and nothing else broke**
+- [ ] **Step 5: Exclude the new `mysql-parity` group from every default PHPUnit run**
+
+Without this, `test_foreign_key_constraint_violation_throws` (which fails on SQLite by design — Step 4) would run and fail inside every "honest SQLite" job this plan creates (Tasks 6, 7, 8, 9, 10), breaking CI red across the board — mirroring the existing `performance` group exclusion exactly.
+
+Read the current file:
+```bash
+grep -n "<groups>" -A5 phpunit.xml
+```
+
+Before:
+```xml
+  <groups>
+    <exclude>
+      <group>performance</group>
+    </exclude>
+  </groups>
+```
+
+After:
+```xml
+  <groups>
+    <exclude>
+      <group>performance</group>
+      <group>mysql-parity</group>
+    </exclude>
+  </groups>
+```
+
+- [ ] **Step 6: Confirm the default suite no longer runs the FK test, and `QualityAssuranceTest` still runs (with the method removed) and nothing else broke**
+
+Run: `./vendor/bin/phpunit tests/Feature/DatabaseConstraintsTest.php`
+Expected: `OK (1 test, 1 assertion)` — only `test_unique_constraint_violation_throws` runs; `test_foreign_key_constraint_violation_throws` is now excluded by default (confirming Step 5's exclusion took effect — this is the regression check for Step 5).
 
 Run: `./vendor/bin/phpunit tests/Feature/QualityAssuranceTest.php --group=performance`
 Expected: the remaining 15 tests run; none reference `test_database_constraints`.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add tests/Feature/DatabaseConstraintsTest.php tests/Feature/QualityAssuranceTest.php
+git add tests/Feature/DatabaseConstraintsTest.php tests/Feature/QualityAssuranceTest.php phpunit.xml
 git commit -m "test(GAP-039): split QualityAssuranceTest FK/unique constraints into independently-reachable tests"
 ```
 
@@ -731,10 +765,6 @@ function run_lint(string $lintScript, string $target): array
     $exitCode = 0;
     exec('php ' . escapeshellarg($lintScript) . ' ' . escapeshellarg($target) . ' 2>&1', $output, $exitCode);
     return [$exitCode, implode("\n", $output)];
-}
-
-function assert_exit(string $desc, int $expected, int $actual, string &$pass, string &$fail): void
-{
 }
 
 [$exitCode, $output] = run_lint($lintScript, $fixturesDir . '/bad-unguarded-mysql-claim.yml');
@@ -1441,8 +1471,10 @@ git commit -m "ci(GAP-039): remove unused mysql service from production.yml test
 
 **Files:**
 - Modify: `.github/workflows/routes-guardrails.yml`
+- Modify: `tests/Feature/TenantIsolationProjectsTest.php` (add class-level `@group mysql-parity`)
 
-**Interfaces:** none.
+**Interfaces:**
+- Consumes: `@group mysql-parity` (Task 3) — this task's CI step becomes the canonical MySQL-parity runner for every test tagged with that group, not just `TenantIsolationProjectsTest`. This is what makes `DatabaseConstraintsTest::test_foreign_key_constraint_violation_throws` (Task 3) actually execute against real MySQL somewhere in CI — without this task, it would be excluded from every SQLite job (Task 3 Step 5) and never run anywhere.
 
 - [ ] **Step 1: `RouteHygieneTest` step — remove its MySQL env, since it's pure route-table introspection with no MySQL-specific need**
 
@@ -1472,7 +1504,28 @@ After:
         run: php artisan test --filter RouteHygieneTest
 ```
 
-- [ ] **Step 2: `TenantIsolationProjectsTest` step — add `ZENA_INVARIANTS_DB: mysql` (its `DB_CONNECTION`/host/port/etc. are already correct)**
+- [ ] **Step 2: Tag `TenantIsolationProjectsTest` with `@group mysql-parity`**
+
+```bash
+grep -n "^class TenantIsolationProjectsTest" tests/Feature/TenantIsolationProjectsTest.php
+```
+
+Before:
+```php
+class TenantIsolationProjectsTest extends TestCase
+{
+```
+
+After:
+```php
+/**
+ * @group mysql-parity
+ */
+class TenantIsolationProjectsTest extends TestCase
+{
+```
+
+- [ ] **Step 3: `TenantIsolationProjectsTest` step — route by group instead of by filter, so this step becomes the canonical MySQL-parity runner for every `@group mysql-parity`-tagged test in the repo (not just this one class), and add `ZENA_INVARIANTS_DB: mysql`**
 
 Before:
 ```yaml
@@ -1491,7 +1544,7 @@ Before:
 
 After:
 ```yaml
-      - name: Run TenantIsolationProjectsTest (MySQL parity — real tenant-isolation queries against real schema; see docs/superpowers/specs/2026-08-18-gap-039-mysql-testing-integrity-design.md §3)
+      - name: Run MySQL-parity tests (TenantIsolationProjectsTest + every @group mysql-parity test — real tenant-isolation queries and DB-constraint checks against real schema; see docs/superpowers/specs/2026-08-18-gap-039-mysql-testing-integrity-design.md §3)
         env:
           APP_ENV: testing
           ZENA_INVARIANTS_DB: mysql
@@ -1506,25 +1559,25 @@ After:
           source scripts/ci/lib/mysql-fail-closed.sh
           zena_mysql_ensure_connection
           zena_mysql_preflight_connection
-          php artisan test --filter TenantIsolationProjectsTest
+          php artisan test --group=mysql-parity
 ```
 
 (The job's earlier `Migrate test DB` step already runs `php artisan migrate:fresh --env=testing --force` against real MySQL via `.env.testing`, which is a separate artisan-CLI process unaffected by `tests/bootstrap.php` — unchanged, still correct.)
 
-- [ ] **Step 3: Verify YAML validity and lint**
+- [ ] **Step 4: Verify YAML validity and lint**
 
 Run: `php -r "require 'vendor/autoload.php'; Symfony\Component\Yaml\Yaml::parseFile('.github/workflows/routes-guardrails.yml'); echo \"valid\n\";"`
 Run: `php scripts/ci/lint-mysql-claim-truthfulness.php .github/workflows/routes-guardrails.yml`
-Expected: clean (this job's single `mysql:` service is legitimately used by the now-fail-closed `TenantIsolationProjectsTest` step, and `RouteHygieneTest`'s step no longer claims MySQL it doesn't use).
+Expected: clean (this job's single `mysql:` service is legitimately used by the now-fail-closed MySQL-parity step, and `RouteHygieneTest`'s step no longer claims MySQL it doesn't use).
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add .github/workflows/routes-guardrails.yml
-git commit -m "ci(GAP-039): routes-guardrails — RouteHygieneTest honest SQLite, TenantIsolationProjectsTest genuine MySQL parity"
+git add .github/workflows/routes-guardrails.yml tests/Feature/TenantIsolationProjectsTest.php
+git commit -m "ci(GAP-039): routes-guardrails — RouteHygieneTest honest SQLite, group-routed MySQL-parity step covers TenantIsolationProjectsTest + DatabaseConstraintsTest FK test"
 ```
 
-- [ ] **Step 5: Real verification (requires push + CI)** — confirm both steps still pass.
+- [ ] **Step 6: Real verification (requires push + CI)** — confirm both steps still pass, and specifically confirm the MySQL-parity step's output shows 2 tests run (all of `TenantIsolationProjectsTest`'s methods plus `DatabaseConstraintsTest::test_foreign_key_constraint_violation_throws`), not just `TenantIsolationProjectsTest`'s — this is the acceptance check that the FK test (Task 3) is no longer orphaned.
 
 ---
 
@@ -1543,7 +1596,7 @@ Expected: `✅ lint-mysql-claim-truthfulness PASS (<N> file(s) scanned)`, exit 0
 - [ ] **Step 2: Run the full local test suite (SQLite) to confirm nothing broke**
 
 Run: `./vendor/bin/phpunit`
-Expected: same pass/fail profile as before this plan's changes, modulo `DatabaseConstraintsTest::test_foreign_key_constraint_violation_throws` (Task 3) which is expected to fail on SQLite by design — confirm it's the *only* new failure, and that its failure mode is still "no exception thrown" (not a fatal error).
+Expected: same pass/fail profile as before this plan's changes — `DatabaseConstraintsTest::test_foreign_key_constraint_violation_throws` (Task 3) is excluded from this default run by the `mysql-parity` group exclusion (Task 3 Step 5), so it does not appear as a failure here; it only runs for real in Task 11's routes-guardrails.yml MySQL-parity step.
 
 - [ ] **Step 3: Run `owner_governance_lint.php` and `docs-lint.sh` (this plan touches no `docs/owner-decisions/**` content, but confirm nothing regressed)**
 

@@ -30,10 +30,10 @@ generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "Toàn bộ CI bắt buộc xanh trên head cuối d9ba35d0; final whole-branch review đã resolve hoàn toàn (2 Critical + 2 Important đã sửa và xác minh lại độc lập; 1 Important ghi nhận thành GAP-040 riêng theo đúng khuyến nghị của reviewer, không sửa dưới GAP-039); chi phí CI đã đo bằng số liệu thật từ gh api, không dùng lại ước tính Gate 2."
 technical_evidence:
-  subject_sha: "d9ba35d04cb808091b9cf2773acc4263cd240ce1"
-  implementation_tree_digest: "819807cb615d9ba5778b077c9fb50dd4739366cb3be6829019ff18778f15bc97"
-  verified_pr_head_sha: "d9ba35d04cb808091b9cf2773acc4263cd240ce1"
-  verified_at: "2026-08-20T04:47:00+07:00"
+  subject_sha: "94f259ddc11a60bbc2863b024d7ecaaedd473833"
+  implementation_tree_digest: "a0d22ae608284bfb2021b4994c3f2f74b4a80ee577a281a691abdf7cb37d4c1e"
+  verified_pr_head_sha: "94f259ddc11a60bbc2863b024d7ecaaedd473833"
+  verified_at: "2026-08-20T05:05:00+07:00"
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null

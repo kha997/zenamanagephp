@@ -45,10 +45,25 @@ if ($invariantsMode !== 'mysql') {
         }
     });
 } else {
-    // Real MySQL: by construction, every scripts/ci/*-mysql entrypoint runs
-    // migrate:fresh as its own, separate OS process BEFORE this one starts,
-    // so schema is already current. Tell RefreshDatabase not to re-run its
-    // own internal migrate:fresh on the first test that uses it (GAP-039):
+    // Real MySQL: this is a hard contract, not just a convenience —
+    // ZENA_INVARIANTS_DB=mysql must never be set in a process whose schema
+    // hasn't already been migrated by an earlier, separate OS process. Every
+    // current caller upholds it: the 4 scripts/ci/*-mysql entrypoints
+    // (zena-invariants-mysql, rfi-escalation-concurrency-mysql,
+    // document-workflow-concurrency-mysql, treasury-check-constraints-mysql)
+    // each run migrate:fresh --force before invoking PHPUnit, and every
+    // workflow step/job that sets ZENA_INVARIANTS_DB=mysql directly
+    // (routes-guardrails.yml's mysql-parity step; automated-testing.yml's
+    // performance-tests; ci-cd.yml's "Prove GAP-032 migrations" step;
+    // a11y-perf-testing.yml's performance-budget/performance-heavy/
+    // e2e-tests) runs its own "php artisan migrate[:fresh] --force" step
+    // first. A future caller that sets this variable without migrating
+    // first will get "table doesn't exist" failures instead of an
+    // auto-migrate — that's intentional (see below), not a bug to route
+    // around by re-adding a Schema::hasTable() check here.
+    //
+    // Tell RefreshDatabase not to re-run its own internal migrate:fresh on
+    // the first test that uses it (GAP-039):
     // that redundant, in-process migrate:fresh would re-execute every
     // migration — including 2025_09_20_145756_disable_foreign_keys_for_testing's
     // MySQL branch — on the SAME live connection the test's own queries

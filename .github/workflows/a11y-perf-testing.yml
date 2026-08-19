@@ -51,9 +51,13 @@ jobs:
     - name: Install Composer dependencies
       run: composer install --no-progress --prefer-dist --optimize-autoloader
 
-    - name: Setup environment
+    - name: Setup environment (SQLite — see docs/superpowers/specs/2026-08-18-gap-039-mysql-testing-integrity-design.md §3)
       run: |
         cp .env.example .env
+        echo "DB_CONNECTION=sqlite" >> .env
+        echo "DB_DATABASE=${{ github.workspace }}/database/database.sqlite" >> .env
+        mkdir -p database
+        touch database/database.sqlite
         php artisan key:generate
         php artisan config:cache
         php artisan route:cache

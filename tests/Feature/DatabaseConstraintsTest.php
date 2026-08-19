@@ -15,8 +15,8 @@ use Tests\TestCase;
  * which combined a unique-constraint assertion and a foreign-key-constraint
  * assertion in one method with two sequential expectException() calls — the
  * first exception ended the method before the FK assertion ever executed,
- * making it permanently dead code (see docs/audits/2026-08-18-gap-039-mysql-fk-testing-integrity-evidence.md
- * §5/§6). Split into two independent methods so both are reachable.
+ * making it permanently dead code (see GAP-039 Gate 1 evidence §5/§6).
+ * Split into two independent methods so both are reachable.
  */
 class DatabaseConstraintsTest extends TestCase
 {
@@ -41,16 +41,25 @@ class DatabaseConstraintsTest extends TestCase
     {
         $this->actingAs($this->user);
 
+        // dashboards has exactly one unique index: slug (see
+        // database/migrations/2026_02_10_000001_create_dashboards_table.php).
+        // There is no unique constraint on (user_id, name), so both rows
+        // must carry a valid tenant_id or the second create() would throw
+        // on an unrelated NOT NULL violation instead.
         Dashboard::factory()->create([
+            'tenant_id' => $this->user->tenant_id,
             'user_id' => $this->user->id,
-            'name' => 'Unique Dashboard',
+            'slug' => 'gap-039-unique-constraint-test-slug',
         ]);
 
         $this->expectException(QueryException::class);
+        $this->expectExceptionMessageMatches('/23000/');
 
         Dashboard::create([
+            'tenant_id' => $this->user->tenant_id,
             'user_id' => $this->user->id,
-            'name' => 'Unique Dashboard', // duplicate name -> unique constraint violation
+            'name' => 'Another Dashboard',
+            'slug' => 'gap-039-unique-constraint-test-slug', // duplicate slug -> unique constraint violation
         ]);
     }
 
@@ -68,6 +77,7 @@ class DatabaseConstraintsTest extends TestCase
         $this->actingAs($this->user);
 
         $this->expectException(QueryException::class);
+        $this->expectExceptionMessageMatches('/23000/');
 
         Widget::create([
             'tenant_id' => $this->user->tenant_id,

@@ -23,7 +23,16 @@ class LegacyRouteRollbackTest extends TestCase
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        RefreshDatabaseState::$migrated = false;
+
+        // GAP-039: on the MySQL-parity path (ZENA_INVARIANTS_DB=mysql), an
+        // unconditional reset here would re-arm RefreshDatabase's own
+        // in-process migrate:fresh on the next test in this class, silently
+        // re-executing 2025_09_20_145756_disable_foreign_keys_for_testing's
+        // MySQL branch on the live connection — see tests/bootstrap.php's
+        // mysql branch.
+        if (getenv('ZENA_INVARIANTS_DB') !== 'mysql') {
+            RefreshDatabaseState::$migrated = false;
+        }
     }
 
     protected function setUp(): void

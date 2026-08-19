@@ -83,6 +83,11 @@ jobs:
     - name: Install Composer dependencies
       run: composer install --prefer-dist --no-progress --no-suggest
 
+    - name: Generate application key (GAP-039 — job no longer writes .env.testing itself)
+      run: |
+        php -r "file_exists('.env') || copy('.env.example', '.env');"
+        php artisan key:generate
+
     - name: 🧪 Unit tests (SQLite — business logic, no MySQL-engine-specific behavior under test; see docs/superpowers/specs/2026-08-18-gap-039-mysql-testing-integrity-design.md §3)
       env:
         APP_ENV: testing
@@ -690,6 +695,11 @@ jobs:
     - name: Install Composer dependencies
       run: composer install --prefer-dist --no-progress --no-suggest
 
+    - name: Generate application key (GAP-039 — job no longer writes .env.testing itself)
+      run: |
+        php -r "file_exists('.env') || copy('.env.example', '.env');"
+        php artisan key:generate
+
     - name: 🧪 Feature tests (SQLite — business logic, no MySQL-engine-specific behavior under test; see docs/superpowers/specs/2026-08-18-gap-039-mysql-testing-integrity-design.md §3)
       env:
         APP_ENV: testing
@@ -801,6 +811,11 @@ jobs:
     - name: Install Composer dependencies
       run: composer install --prefer-dist --no-progress --no-suggest
 
+    - name: Generate application key (GAP-039 — job no longer writes .env.testing itself)
+      run: |
+        php -r "file_exists('.env') || copy('.env.example', '.env');"
+        php artisan key:generate
+
     - name: 🧪 Fast API tests (SQLite — business logic, no MySQL-engine-specific behavior under test; see docs/superpowers/specs/2026-08-18-gap-039-mysql-testing-integrity-design.md §3)
       run: |
         echo "::group::Fast API tests"
@@ -888,6 +903,11 @@ jobs:
 
     - name: Install Composer dependencies
       run: composer install --prefer-dist --no-progress --no-suggest
+
+    - name: Generate application key (GAP-039 — job no longer writes .env.testing itself)
+      run: |
+        php -r "file_exists('.env') || copy('.env.example', '.env');"
+        php artisan key:generate
 
     - name: Debug timeout environment (manual only)
       if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_timeout == 'true' }}
@@ -989,6 +1009,11 @@ jobs:
 
     - name: Install Composer dependencies
       run: composer install --prefer-dist --no-progress --no-suggest
+
+    - name: Generate application key (GAP-039 — job no longer writes .env.testing itself)
+      run: |
+        php -r "file_exists('.env') || copy('.env.example', '.env');"
+        php artisan key:generate
 
     - name: 🧪 Integration tests (SQLite — business logic, no MySQL-engine-specific behavior under test; see docs/superpowers/specs/2026-08-18-gap-039-mysql-testing-integrity-design.md §3)
       env:

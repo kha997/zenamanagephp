@@ -95,6 +95,20 @@ abstract class TestCase extends BaseTestCase
     private function ensureTestingSchema(): void
     {
         if (Schema::hasTable('tenants')) {
+            // Schema already exists (e.g. migrated by an earlier, separate CI
+            // step against a real database — see scripts/ci/*-mysql). Mark it
+            // migrated so RefreshDatabase::refreshTestDatabase() does not run
+            // its own redundant migrate:fresh on the first test of this
+            // process (RefreshDatabaseState::$migrated defaults to false in
+            // every fresh PHP process). Leaving this unset was a real defect
+            // (GAP-039): that redundant internal migrate:fresh re-executes
+            // every migration — including
+            // 2025_09_20_145756_disable_foreign_keys_for_testing's MySQL
+            // branch — on the SAME live connection the test's own queries
+            // then use, silently leaving FOREIGN_KEY_CHECKS=0 for the rest
+            // of the process regardless of any separate-process protection
+            // upstream.
+            RefreshDatabaseState::$migrated = true;
             return;
         }
 

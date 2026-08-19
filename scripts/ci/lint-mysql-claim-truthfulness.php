@@ -132,12 +132,21 @@ function mysql_lint_job_uses_fail_closed_entrypoint(array $job): bool
             if (!$usesMysqlConfig) {
                 continue;
             }
-            $hasZenaInvariantsDb = str_contains($run, 'ZENA_INVARIANTS_DB');
-            if (!$hasZenaInvariantsDb) {
+            // Value-aware: tests/bootstrap.php only fails closed when
+            // ZENA_INVARIANTS_DB is exactly the literal string "mysql" —
+            // `if ($invariantsMode !== 'mysql') { ...falls back to sqlite... }`.
+            // A mere key/substring presence check would wrongly trust
+            // ZENA_INVARIANTS_DB: '' or ZENA_INVARIANTS_DB: sqlite as safe.
+            $isZenaInvariantsMysql = (bool) preg_match(
+                '/ZENA_INVARIANTS_DB[=:]\s*[\'"]?mysql[\'"]?\b/',
+                $run
+            );
+            if (!$isZenaInvariantsMysql) {
                 $env = $step['env'] ?? [];
-                $hasZenaInvariantsDb = is_array($env) && array_key_exists('ZENA_INVARIANTS_DB', $env);
+                $isZenaInvariantsMysql = is_array($env)
+                    && ($env['ZENA_INVARIANTS_DB'] ?? null) === 'mysql';
             }
-            if ($hasZenaInvariantsDb) {
+            if ($isZenaInvariantsMysql) {
                 return true;
             }
         }

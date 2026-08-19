@@ -10,6 +10,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use Tests\Traits\AuthenticationTrait;
 
+/**
+ * @group mysql-parity
+ */
 class TenantIsolationProjectsTest extends TestCase
 {
     use RefreshDatabase;

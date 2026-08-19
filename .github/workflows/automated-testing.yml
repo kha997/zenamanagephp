@@ -42,28 +42,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       APP_ENV: testing
-      DB_CONNECTION: mysql
-      DB_HOST: 127.0.0.1
-      DB_PORT: 3306
-      DB_DATABASE: zenamanage_test
-      DB_USERNAME: test_user
-      DB_PASSWORD: test_password
       SUITE_NAME: Unit tests
-    
+
     services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: laravel
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
-      
       redis:
         image: redis:7-alpine
         ports:
@@ -102,47 +83,7 @@ jobs:
     - name: Install Composer dependencies
       run: composer install --prefer-dist --no-progress --no-suggest
 
-    - name: 🧱 DB setup & migrations
-      env:
-        APP_ENV: testing
-      run: |
-        echo "::group::DB setup & migrations"
-        cp .env.example .env.testing
-        php artisan key:generate --env=testing --force
-        set_kv() {
-          local key="$1"
-          local value="$2"
-          if grep -q "^${key}=" .env.testing; then
-            sed -i "s|^${key}=.*|${key}=${value}|" .env.testing
-          else
-            echo "${key}=${value}" >> .env.testing
-          fi
-        }
-        set_kv DB_CONNECTION mysql
-        set_kv DB_HOST 127.0.0.1
-        set_kv DB_PORT 3306
-        set_kv DB_DATABASE zenamanage_test
-        set_kv DB_USERNAME test_user
-        set_kv DB_PASSWORD test_password
-        set_kv REDIS_HOST 127.0.0.1
-        set_kv REDIS_PORT 6379
-        set_kv CACHE_DRIVER array
-        set_kv SESSION_DRIVER array
-        set_kv QUEUE_CONNECTION sync
-        for i in {1..30}; do
-          if mysqladmin ping -h 127.0.0.1 -uroot -proot --silent; then
-            echo 'MySQL ready'
-            break
-          fi
-          sleep 2
-        done
-        mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS zenamanage_test;"
-        mysql -h 127.0.0.1 -uroot -proot -e "CREATE USER IF NOT EXISTS 'test_user'@'%' IDENTIFIED BY 'test_password';"
-        mysql -h 127.0.0.1 -uroot -proot -e "GRANT ALL PRIVILEGES ON zenamanage_test.* TO 'test_user'@'%'; FLUSH PRIVILEGES;"
-        php artisan migrate --env=testing --force
-        echo "::endgroup::"
-
-    - name: 🧪 Unit tests
+    - name: 🧪 Unit tests (SQLite — business logic, no MySQL-engine-specific behavior under test; see docs/superpowers/specs/2026-08-18-gap-039-mysql-testing-integrity-design.md §3)
       env:
         APP_ENV: testing
       run: |
@@ -708,28 +649,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       APP_ENV: testing
-      DB_CONNECTION: mysql
-      DB_HOST: 127.0.0.1
-      DB_PORT: 3306
-      DB_DATABASE: zenamanage_test
-      DB_USERNAME: test_user
-      DB_PASSWORD: test_password
       SUITE_NAME: Feature tests
-    
+
     services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: laravel
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
-     
       redis:
         image: redis:7-alpine
         ports:
@@ -768,48 +690,7 @@ jobs:
     - name: Install Composer dependencies
       run: composer install --prefer-dist --no-progress --no-suggest
 
-    - name: 🧱 DB setup & migrations
-      env:
-        APP_ENV: testing
-      run: |
-        echo "::group::DB setup & migrations"
-        cp .env.example .env.testing
-        php artisan key:generate --env=testing --force
-        set_kv() {
-          local key="$1"
-          local value="$2"
-          if grep -q "^${key}=" .env.testing; then
-            sed -i "s|^${key}=.*|${key}=${value}|" .env.testing
-          else
-            echo "${key}=${value}" >> .env.testing
-          fi
-        }
-        set_kv DB_CONNECTION mysql
-        set_kv DB_HOST 127.0.0.1
-        set_kv DB_PORT 3306
-        set_kv DB_DATABASE zenamanage_test
-        set_kv DB_USERNAME test_user
-        set_kv DB_PASSWORD test_password
-        set_kv REDIS_HOST 127.0.0.1
-        set_kv REDIS_PORT 6379
-        set_kv CACHE_DRIVER array
-        set_kv SESSION_DRIVER array
-        set_kv QUEUE_CONNECTION sync
-        for i in {1..30}; do
-          if mysqladmin ping -h 127.0.0.1 -uroot -proot --silent; then
-            echo 'MySQL ready'
-            break
-          fi
-          sleep 2
-        done
-        mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS zenamanage_test;"
-        mysql -h 127.0.0.1 -uroot -proot -e "CREATE USER IF NOT EXISTS 'test_user'@'%' IDENTIFIED BY 'test_password';"
-        mysql -h 127.0.0.1 -uroot -proot -e "GRANT ALL PRIVILEGES ON zenamanage_test.* TO 'test_user'@'%'; FLUSH PRIVILEGES;"
-        php artisan migrate --env=testing --force
-        php artisan db:seed --env=testing --force
-        echo "::endgroup::"
-
-    - name: 🧪 Feature tests
+    - name: 🧪 Feature tests (SQLite — business logic, no MySQL-engine-specific behavior under test; see docs/superpowers/specs/2026-08-18-gap-039-mysql-testing-integrity-design.md §3)
       env:
         APP_ENV: testing
       run: |
@@ -879,28 +760,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      DB_CONNECTION: mysql
-      DB_HOST: 127.0.0.1
-      DB_PORT: 3306
-      DB_DATABASE: laravel
-      DB_USERNAME: root
-      DB_PASSWORD: root
       SUITE_NAME: API tests (Fast)
-    
+
     services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: laravel
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
-     
       redis:
         image: redis:7-alpine
         ports:
@@ -939,23 +801,7 @@ jobs:
     - name: Install Composer dependencies
       run: composer install --prefer-dist --no-progress --no-suggest
 
-    - name: 🧱 DB setup & migrations
-      run: |
-        echo "::group::DB setup & migrations"
-        cp .env.example .env
-        php artisan key:generate
-        mkdir -p resources/views storage/framework/views bootstrap/cache
-        mysql -h 127.0.0.1 -u root -proot -e "CREATE DATABASE IF NOT EXISTS laravel;"
-        php artisan migrate:fresh --env=testing --force
-        php artisan db:seed --env=testing --force
-        php artisan cache:clear
-        php artisan config:clear
-        php artisan event:clear || true
-        php artisan route:clear
-        if [ -d "resources/views" ]; then php artisan view:clear; else echo "Skipping view:clear (resources/views not present)"; fi
-        echo "::endgroup::"
-
-    - name: 🧪 Fast API tests
+    - name: 🧪 Fast API tests (SQLite — business logic, no MySQL-engine-specific behavior under test; see docs/superpowers/specs/2026-08-18-gap-039-mysql-testing-integrity-design.md §3)
       run: |
         echo "::group::Fast API tests"
         php artisan test tests/Feature/Api --stop-on-failure --exclude-group=slow
@@ -1002,28 +848,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      DB_CONNECTION: mysql
-      DB_HOST: 127.0.0.1
-      DB_PORT: 3306
-      DB_DATABASE: laravel
-      DB_USERNAME: root
-      DB_PASSWORD: root
       SUITE_NAME: API tests (Slow)
-    
+
     services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: laravel
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
-     
       redis:
         image: redis:7-alpine
         ports:
@@ -1062,22 +889,6 @@ jobs:
     - name: Install Composer dependencies
       run: composer install --prefer-dist --no-progress --no-suggest
 
-    - name: 🧱 DB setup & migrations
-      run: |
-        echo "::group::DB setup & migrations"
-        cp .env.example .env
-        php artisan key:generate
-        mkdir -p resources/views storage/framework/views bootstrap/cache
-        mysql -h 127.0.0.1 -u root -proot -e "CREATE DATABASE IF NOT EXISTS laravel;"
-        php artisan migrate:fresh --env=testing --force
-        php artisan db:seed --env=testing --force
-        php artisan cache:clear
-        php artisan config:clear
-        php artisan event:clear || true
-        php artisan route:clear
-        if [ -d "resources/views" ]; then php artisan view:clear; else echo "Skipping view:clear (resources/views not present)"; fi
-        echo "::endgroup::"
-
     - name: Debug timeout environment (manual only)
       if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_timeout == 'true' }}
       run: |
@@ -1091,7 +902,7 @@ jobs:
         date
         echo "::endgroup::"
 
-    - name: 🧪 Slow API tests
+    - name: 🧪 Slow API tests (SQLite — business logic, no MySQL-engine-specific behavior under test; see docs/superpowers/specs/2026-08-18-gap-039-mysql-testing-integrity-design.md §3)
       run: |
         echo "::group::Slow API tests"
         php artisan test tests/Feature/Api --stop-on-failure --group=slow
@@ -1138,28 +949,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       APP_ENV: testing
-      DB_CONNECTION: mysql
-      DB_HOST: 127.0.0.1
-      DB_PORT: 3306
-      DB_DATABASE: zenamanage_test
-      DB_USERNAME: test_user
-      DB_PASSWORD: test_password
       SUITE_NAME: Integration tests
-    
+
     services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: laravel
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
-     
       redis:
         image: redis:7-alpine
         ports:
@@ -1198,48 +990,7 @@ jobs:
     - name: Install Composer dependencies
       run: composer install --prefer-dist --no-progress --no-suggest
 
-    - name: 🧱 DB setup & migrations
-      env:
-        APP_ENV: testing
-      run: |
-        echo "::group::DB setup & migrations"
-        cp .env.example .env.testing
-        php artisan key:generate --env=testing --force
-        set_kv() {
-          local key="$1"
-          local value="$2"
-          if grep -q "^${key}=" .env.testing; then
-            sed -i "s|^${key}=.*|${key}=${value}|" .env.testing
-          else
-            echo "${key}=${value}" >> .env.testing
-          fi
-        }
-        set_kv DB_CONNECTION mysql
-        set_kv DB_HOST 127.0.0.1
-        set_kv DB_PORT 3306
-        set_kv DB_DATABASE zenamanage_test
-        set_kv DB_USERNAME test_user
-        set_kv DB_PASSWORD test_password
-        set_kv REDIS_HOST 127.0.0.1
-        set_kv REDIS_PORT 6379
-        set_kv CACHE_DRIVER array
-        set_kv SESSION_DRIVER array
-        set_kv QUEUE_CONNECTION sync
-        for i in {1..30}; do
-          if mysqladmin ping -h 127.0.0.1 -uroot -proot --silent; then
-            echo 'MySQL ready'
-            break
-          fi
-          sleep 2
-        done
-        mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS zenamanage_test;"
-        mysql -h 127.0.0.1 -uroot -proot -e "CREATE USER IF NOT EXISTS 'test_user'@'%' IDENTIFIED BY 'test_password';"
-        mysql -h 127.0.0.1 -uroot -proot -e "GRANT ALL PRIVILEGES ON zenamanage_test.* TO 'test_user'@'%'; FLUSH PRIVILEGES;"
-        php artisan migrate --env=testing --force
-        php artisan db:seed --env=testing --force
-        echo "::endgroup::"
-
-    - name: 🧪 Integration tests
+    - name: 🧪 Integration tests (SQLite — business logic, no MySQL-engine-specific behavior under test; see docs/superpowers/specs/2026-08-18-gap-039-mysql-testing-integrity-design.md §3)
       env:
         APP_ENV: testing
       run: |

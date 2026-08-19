@@ -70,9 +70,10 @@ class DatabaseConstraintsTest extends TestCase
         $this->expectException(QueryException::class);
 
         Widget::create([
+            'tenant_id' => $this->user->tenant_id,
             'dashboard_id' => 999999, // non-existent dashboard -> FK constraint violation
             'type' => 'chart',
-            'title' => 'Test Widget',
+            'name' => 'Test Widget',
         ]);
     }
 }

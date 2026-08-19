@@ -57,5 +57,14 @@ if ($exitCode === 0) {
     $fail++;
 }
 
+[$exitCode, $output] = run_lint($lintScript, $fixturesDir . '/bad-bare-mysql-image-tag.yml');
+if ($exitCode !== 0) {
+    echo "PASS: bad-bare-mysql-image-tag.yml is flagged (exit $exitCode)\n";
+    $pass++;
+} else {
+    echo "FAIL: bad-bare-mysql-image-tag.yml was NOT flagged (exit 0)\nOutput:\n$output\n";
+    $fail++;
+}
+
 echo "\nlint-mysql-claim-truthfulness.test.php: $pass passed, $fail failed\n";
 exit($fail === 0 ? 0 : 1);

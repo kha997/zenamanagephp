@@ -53,7 +53,11 @@ function mysql_lint_job_has_mysql_service(array $job): bool
             continue;
         }
         $image = $service['image'] ?? '';
-        if (is_string($image) && str_starts_with($image, 'mysql:')) {
+        // A bare `image: mysql` (no tag) is valid GitHub Actions syntax and
+        // implicitly pulls `:latest` — must be treated identically to a
+        // tagged `mysql:8.0`, otherwise a job can silently evade this guard
+        // just by dropping its tag.
+        if (is_string($image) && ($image === 'mysql' || str_starts_with($image, 'mysql:'))) {
             return true;
         }
     }
@@ -88,6 +92,15 @@ function mysql_lint_job_invokes_phpunit(array $job): bool
     return false;
 }
 
+// NOTE: this matches by *name pattern* only (any `run:` substring ending in
+// `-mysql` at a word boundary, or the shared library path) — it does not
+// verify that the referenced script's contents are actually fail-closed. A
+// script merely named `*-mysql` that isn't genuinely fail-closed would be
+// incorrectly trusted. This is a deliberate scope tradeoff (static text
+// analysis of workflow YAML, not the referenced shell scripts) — acceptable
+// because the recognized names are a short, deliberately curated list
+// (scripts/ci/*-mysql, scripts/ci/lib/mysql-fail-closed.sh), not attacker-
+// controlled or externally contributed.
 function mysql_lint_job_uses_fail_closed_entrypoint(array $job): bool
 {
     foreach (mysql_lint_job_run_commands($job) as $run) {
@@ -133,7 +146,7 @@ foreach ($targets as $file) {
             continue; // Routed through a known fail-closed entrypoint — trusted.
         }
 
-        $violations[] = basename($file) . ": {$jobName}: provisions a mysql: service and invokes PHPUnit/Dusk, but no step routes through a fail-closed entrypoint (scripts/ci/*-mysql or scripts/ci/lib/mysql-fail-closed.sh) — this job will silently run SQLite instead of the MySQL it claims. See docs/superpowers/specs/2026-08-18-gap-039-mysql-testing-integrity-design.md §5.";
+        $violations[] = basename($file) . ": {$jobName}: provisions a mysql: service and invokes PHPUnit/Dusk, but no step routes through a fail-closed entrypoint (scripts/ci/*-mysql or scripts/ci/lib/mysql-fail-closed.sh) — this job will silently run SQLite instead of the MySQL it claims. See docs/superpowers/plans/2026-08-19-gap-039-mysql-testing-integrity-implementation.md (Task 4).";
     }
 }
 

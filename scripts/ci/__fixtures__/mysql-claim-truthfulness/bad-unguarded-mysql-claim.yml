@@ -1,0 +1,12 @@
+name: Fixture — bad
+on: push
+jobs:
+  bad-job:
+    runs-on: ubuntu-latest
+    env:
+      DB_CONNECTION: mysql
+    services:
+      mysql:
+        image: mysql:8.0
+    steps:
+      - run: php artisan test

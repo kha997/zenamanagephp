@@ -1,0 +1,12 @@
+name: Fixture — good, fail-closed
+on: push
+jobs:
+  good-job:
+    runs-on: ubuntu-latest
+    env:
+      DB_CONNECTION: mysql
+    services:
+      mysql:
+        image: mysql:8.0
+    steps:
+      - run: bash scripts/ci/zena-invariants-mysql

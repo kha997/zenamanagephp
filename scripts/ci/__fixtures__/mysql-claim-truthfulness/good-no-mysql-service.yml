@@ -1,0 +1,7 @@
+name: Fixture — good, honest SQLite (no mysql service at all)
+on: push
+jobs:
+  sqlite-job:
+    runs-on: ubuntu-latest
+    steps:
+      - run: php artisan test

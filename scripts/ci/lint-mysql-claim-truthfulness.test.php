@@ -66,5 +66,23 @@ if ($exitCode !== 0) {
     $fail++;
 }
 
+[$exitCode, $output] = run_lint($lintScript, $fixturesDir . '/good-fail-closed-phpunit-mysql-config.yml');
+if ($exitCode === 0) {
+    echo "PASS: good-fail-closed-phpunit-mysql-config.yml is clean\n";
+    $pass++;
+} else {
+    echo "FAIL: good-fail-closed-phpunit-mysql-config.yml was incorrectly flagged\nOutput:\n$output\n";
+    $fail++;
+}
+
+[$exitCode, $output] = run_lint($lintScript, $fixturesDir . '/bad-phpunit-mysql-config-without-invariants-db.yml');
+if ($exitCode !== 0) {
+    echo "PASS: bad-phpunit-mysql-config-without-invariants-db.yml is flagged (exit $exitCode)\n";
+    $pass++;
+} else {
+    echo "FAIL: bad-phpunit-mysql-config-without-invariants-db.yml was NOT flagged (exit 0)\nOutput:\n$output\n";
+    $fail++;
+}
+
 echo "\nlint-mysql-claim-truthfulness.test.php: $pass passed, $fail failed\n";
 exit($fail === 0 ? 0 : 1);

@@ -111,6 +111,38 @@ function mysql_lint_job_uses_fail_closed_entrypoint(array $job): bool
             return true;
         }
     }
+
+    // A step that pairs ZENA_INVARIANTS_DB (set via the step's `env:`, or
+    // inline in its `run:`) with an explicit phpunit.mysql.xml configuration
+    // is equivalently fail-closed: that config has no
+    // <env name="DB_CONNECTION" value="sqlite"/> override, so it is only
+    // safe when paired with ZENA_INVARIANTS_DB=mysql — same underlying
+    // guarantee as the scripts/ci/*-mysql entrypoints, just expressed as an
+    // env var + PHPUnit config pairing inline in the workflow step instead
+    // of a wrapper script.
+    $steps = $job['steps'] ?? [];
+    if (is_array($steps)) {
+        foreach ($steps as $step) {
+            if (!is_array($step) || !isset($step['run']) || !is_string($step['run'])) {
+                continue;
+            }
+            $run = $step['run'];
+            $usesMysqlConfig = str_contains($run, '--configuration phpunit.mysql.xml')
+                || str_contains($run, '-c phpunit.mysql.xml');
+            if (!$usesMysqlConfig) {
+                continue;
+            }
+            $hasZenaInvariantsDb = str_contains($run, 'ZENA_INVARIANTS_DB');
+            if (!$hasZenaInvariantsDb) {
+                $env = $step['env'] ?? [];
+                $hasZenaInvariantsDb = is_array($env) && array_key_exists('ZENA_INVARIANTS_DB', $env);
+            }
+            if ($hasZenaInvariantsDb) {
+                return true;
+            }
+        }
+    }
+
     return false;
 }
 

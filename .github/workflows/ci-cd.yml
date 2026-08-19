@@ -82,14 +82,7 @@ jobs:
         mkdir -p database
         touch database/database.sqlite
     
-    - name: Execute tests (Unit and Feature tests) via PHPUnit
-      env:
-        DB_CONNECTION: mysql
-        DB_HOST: 127.0.0.1
-        DB_PORT: 3306
-        DB_DATABASE: zenamanage_test
-        DB_USERNAME: root
-        DB_PASSWORD: password
+    - name: Execute tests (Unit and Feature tests) via PHPUnit — SQLite (business logic; see docs/superpowers/specs/2026-08-18-gap-039-mysql-testing-integrity-design.md §3)
       run: php artisan test --coverage --coverage-clover=coverage.xml
 
     - name: Upload coverage reports to Codecov

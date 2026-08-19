@@ -95,25 +95,41 @@ abstract class TestCase extends BaseTestCase
     private function ensureTestingSchema(): void
     {
         if (Schema::hasTable('tenants')) {
-            // Schema already exists (e.g. migrated by an earlier, separate CI
-            // step against a real database — see scripts/ci/*-mysql). Mark it
-            // migrated so RefreshDatabase::refreshTestDatabase() does not run
-            // its own redundant migrate:fresh on the first test of this
-            // process (RefreshDatabaseState::$migrated defaults to false in
-            // every fresh PHP process). Leaving this unset was a real defect
-            // (GAP-039): that redundant internal migrate:fresh re-executes
-            // every migration — including
-            // 2025_09_20_145756_disable_foreign_keys_for_testing's MySQL
-            // branch — on the SAME live connection the test's own queries
-            // then use, silently leaving FOREIGN_KEY_CHECKS=0 for the rest
-            // of the process regardless of any separate-process protection
-            // upstream.
-            RefreshDatabaseState::$migrated = true;
             return;
         }
 
         RefreshDatabaseState::$migrated = false;
         Artisan::call('migrate:fresh', ['--env' => 'testing']);
+    }
+
+    /**
+     * RefreshDatabase (used by most Feature tests) calls this hook — via
+     * refreshDatabase() — BEFORE it decides whether to run its own internal
+     * migrate:fresh (refreshTestDatabase(), gated on the static
+     * RefreshDatabaseState::$migrated flag, which defaults to false in every
+     * fresh PHP process). setUp() below calls parent::setUp() — which is
+     * what triggers that whole RefreshDatabase decision — BEFORE
+     * ensureTestingSchema() ever runs, so setting the flag there is one step
+     * too late to matter (GAP-039: verified via a read-only reproduction —
+     * the redundant internal migrate:fresh still fired with that placement).
+     * This hook runs early enough. Scoped to the real-MySQL CI path only
+     * (ZENA_INVARIANTS_DB=mysql, schema already migrated by an earlier,
+     * separate process — see scripts/ci/*-mysql): that redundant in-process
+     * migrate:fresh re-executes every migration, including
+     * 2025_09_20_145756_disable_foreign_keys_for_testing's MySQL branch, on
+     * the SAME live connection the test's own queries then use, silently
+     * leaving FOREIGN_KEY_CHECKS=0 for at least the first test method of the
+     * process. Deliberately NOT applied to the SQLite path: every local/CI
+     * SQLite run gets a brand-new, always-empty, per-process file (see
+     * tests/bootstrap.php), where RefreshDatabase's normal re-migrate-if-
+     * schema-changed behavior between test classes is correct and must stay
+     * intact.
+     */
+    protected function beforeRefreshingDatabase()
+    {
+        if (getenv('ZENA_INVARIANTS_DB') === 'mysql' && Schema::hasTable('tenants')) {
+            RefreshDatabaseState::$migrated = true;
+        }
     }
 
     private function registerArrayBindingWatch(): void

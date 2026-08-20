@@ -1,0 +1,37 @@
+<?php declare(strict_types=1);
+
+namespace Tests\Unit\Migrations\Treasury;
+
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\GAP040ColdStartTransactionIsolationAssertions;
+use Tests\TestCase;
+
+class TreasuryTransactionIsolationColdStartTest extends TestCase
+{
+    use RefreshDatabase;
+    use GAP040ColdStartTransactionIsolationAssertions;
+
+    protected function setUp(): void
+    {
+        self::$coldStartProbe = [];
+        $this->forceGenuineColdStartForNextSetUp();
+        parent::setUp();
+    }
+
+    protected function tearDown(): void
+    {
+        self::$coldStartProbe = null;
+        parent::tearDown();
+    }
+
+    public function test_a_cold_start_bootstrap_does_not_break_transaction_isolation(): void
+    {
+        $this->assertColdStartInvariantHeld();
+        $this->writeMarkerRow();
+    }
+
+    public function test_b_rolled_back_write_is_absent_via_independent_connection(): void
+    {
+        $this->assertMarkerRowAbsentViaIndependentConnection();
+    }
+}

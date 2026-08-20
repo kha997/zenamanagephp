@@ -1,0 +1,16 @@
+name: Fixture — good, fail-closed via ZENA_INVARIANTS_DB + phpunit.mysql.xml
+on: push
+jobs:
+  good-job:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+    steps:
+      - name: Prove migrations on MySQL
+        env:
+          ZENA_INVARIANTS_DB: mysql
+          DB_CONNECTION: mysql
+        run: |
+          php artisan migrate:fresh --force
+          ./vendor/bin/phpunit --configuration phpunit.mysql.xml tests/Feature/SomeTest.php

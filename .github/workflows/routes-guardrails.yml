@@ -81,22 +81,17 @@ jobs:
         run: |
           php artisan migrate:fresh --env=testing --force
 
-      - name: Run RouteHygieneTest
+      - name: Run RouteHygieneTest (SQLite — pure route-table introspection, no MySQL-specific behavior; see docs/superpowers/specs/2026-08-18-gap-039-mysql-testing-integrity-design.md §3)
         env:
           APP_ENV: testing
-          DB_CONNECTION: mysql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 3306
-          DB_DATABASE: zenamanage_test
-          DB_USERNAME: root
-          DB_PASSWORD: ""
           TERM: dumb
         # PHPUnit 11 removed --no-interaction and -v pass-through options
         run: php artisan test --filter RouteHygieneTest
 
-      - name: Run TenantIsolationProjectsTest
+      - name: Run MySQL-parity tests (TenantIsolationProjectsTest + every @group mysql-parity test — real tenant-isolation queries and DB-constraint checks against real schema; see docs/superpowers/specs/2026-08-18-gap-039-mysql-testing-integrity-design.md §3)
         env:
           APP_ENV: testing
+          ZENA_INVARIANTS_DB: mysql
           DB_CONNECTION: mysql
           DB_HOST: 127.0.0.1
           DB_PORT: 3306
@@ -104,7 +99,11 @@ jobs:
           DB_USERNAME: root
           DB_PASSWORD: ""
           TERM: dumb
-        run: php artisan test --filter TenantIsolationProjectsTest
+        run: |
+          source scripts/ci/lib/mysql-fail-closed.sh
+          zena_mysql_ensure_connection
+          zena_mysql_preflight_connection
+          php artisan test --group=mysql-parity
 
       - name: Route guard (no double prefix, no dup METHOD+URI)
         run: |

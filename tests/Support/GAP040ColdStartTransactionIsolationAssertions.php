@@ -24,6 +24,8 @@ trait GAP040ColdStartTransactionIsolationAssertions
         $probe = TestCase::$coldStartProbe;
         $this->assertNotNull($probe, 'Cold-start probe was not populated — setUp() must set TestCase::$coldStartProbe = [] before calling parent::setUp().');
 
+        fwrite(STDERR, "\n[GAP-040 probe] " . json_encode($probe) . "\n");
+
         $this->assertFalse(
             $probe['table_existed_before_bootstrap'],
             'zena_roles already existed before bootstrap ran — this run is not exercising the cold-start case. This test must be the first RefreshDatabase test executed in its process/job.'
@@ -39,6 +41,16 @@ trait GAP040ColdStartTransactionIsolationAssertions
             1,
             $probe['transaction_level_after_bootstrap'],
             'Transaction level changed across the RBAC compat bootstrap — the bootstrap DDL affected the main transacted connection (implicit-commit defect present).'
+        );
+
+        $this->assertTrue(
+            $probe['pdo_in_transaction_before_bootstrap'],
+            'PDO::inTransaction() was already false before the bootstrap ran — RefreshDatabase never actually had an open transaction on this connection.'
+        );
+
+        $this->assertTrue(
+            $probe['pdo_in_transaction_after_bootstrap'],
+            'PDO::inTransaction() is false after the RBAC compat bootstrap — this is direct, server-reported proof of the GAP-040 implicit-commit defect.'
         );
 
         // Only meaningful once the fix populates bootstrap_connection_id;

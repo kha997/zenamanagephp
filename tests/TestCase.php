@@ -220,6 +220,7 @@ abstract class TestCase extends BaseTestCase
             self::$coldStartProbe['transaction_level_before_bootstrap'] = DB::transactionLevel();
             if (config('database.default') !== 'sqlite') {
                 self::$coldStartProbe['main_connection_id'] = (int) DB::selectOne('SELECT CONNECTION_ID() AS id')->id;
+                self::$coldStartProbe['pdo_in_transaction_before_bootstrap'] = DB::connection()->getPdo()->inTransaction();
             }
         }
 
@@ -267,6 +268,9 @@ abstract class TestCase extends BaseTestCase
 
         if (self::$coldStartProbe !== null) {
             self::$coldStartProbe['transaction_level_after_bootstrap'] = DB::transactionLevel();
+            if (config('database.default') !== 'sqlite') {
+                self::$coldStartProbe['pdo_in_transaction_after_bootstrap'] = DB::connection()->getPdo()->inTransaction();
+            }
         }
     }
 

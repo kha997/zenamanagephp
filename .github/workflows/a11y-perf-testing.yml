@@ -410,6 +410,10 @@ jobs:
     - name: Run E2E tests
       run: php artisan test tests/E2E --stop-on-failure
 
+    - name: Run GAP-040 cold-start transaction-isolation proof (isolated — see docs/audits/2026-08-20-gap-040-testcase-mysql-transaction-isolation-evidence.md)
+      if: always()
+      run: php artisan test tests/E2E/TransactionIsolationColdStartTest.php
+
     - name: Generate E2E report
       run: |
         php artisan test tests/E2E --junit --log-junit=e2e-results.xml

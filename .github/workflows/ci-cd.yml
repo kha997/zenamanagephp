@@ -75,7 +75,7 @@ jobs:
         DB_PASSWORD: password
       run: |
         php artisan migrate:fresh --force
-        ./vendor/bin/phpunit --configuration phpunit.mysql.xml tests/Feature/Documents/DocumentStatusMigrationTest.php
+        ./vendor/bin/phpunit --configuration phpunit.mysql.xml tests/Feature/Documents/DocumentStatusMigrationTest.php tests/Feature/Documents/TransactionIsolationColdStartTest.php
     
     - name: Create Database
       run: |

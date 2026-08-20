@@ -25,6 +25,7 @@ class ZenaTransactionIsolationColdStartTest extends TestCase
     protected function setUp(): void
     {
         self::$coldStartProbe = [];
+        $this->forceGenuineColdStartForNextSetUp();
         parent::setUp();
     }
 

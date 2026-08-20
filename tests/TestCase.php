@@ -200,8 +200,33 @@ abstract class TestCase extends BaseTestCase
         $this->ensureSqliteZenaRbacTables();
     }
 
+    /**
+     * Test-only introspection point for the GAP-040 cold-start transaction-
+     * isolation regression proof. Null in every ordinary test; set to an
+     * empty array only by the dedicated cold-start test classes before
+     * calling parent::setUp(), so this method can record what happened
+     * during their setUp() without affecting any other test.
+     *
+     * @var array<string, bool|int>|null
+     */
+    public static ?array $coldStartProbe = null;
+
     private function ensureSqliteZenaRbacTables(): void
     {
+        $tableExistedBeforeBootstrap = Schema::hasTable('zena_roles');
+
+        if (self::$coldStartProbe !== null) {
+            self::$coldStartProbe['table_existed_before_bootstrap'] = $tableExistedBeforeBootstrap;
+            self::$coldStartProbe['transaction_level_before_bootstrap'] = DB::transactionLevel();
+            if (config('database.default') !== 'sqlite') {
+                self::$coldStartProbe['main_connection_id'] = (int) DB::selectOne('SELECT CONNECTION_ID() AS id')->id;
+            }
+        }
+
+        if ($tableExistedBeforeBootstrap) {
+            return;
+        }
+
         Schema::dropIfExists('zena_role_permissions');
         Schema::dropIfExists('zena_user_roles');
         Schema::dropIfExists('zena_roles');
@@ -239,6 +264,10 @@ abstract class TestCase extends BaseTestCase
             $table->string('role_id');
             $table->timestamps();
         });
+
+        if (self::$coldStartProbe !== null) {
+            self::$coldStartProbe['transaction_level_after_bootstrap'] = DB::transactionLevel();
+        }
     }
 
     private function ensureSqliteDocumentsBackupTable(): void

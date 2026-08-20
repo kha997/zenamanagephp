@@ -1,14 +1,14 @@
 ---
 work_id: GAP-040
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-20-gap-040-testcase-mysql-transaction-isolation-design.md
   plan: docs/superpowers/plans/2026-08-20-gap-040-testcase-mysql-transaction-isolation.md
@@ -17,15 +17,15 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-08-20T17:00:00+07:00"
+  owner_response_reference: "Owner chat message, 2026-08-20: 'GAP-040 — GATE 3 OWNER DECISION: APPROVED. Owner approves release of GAP-040 based on the corrected Gate 3 evidence. Reviewed PR: #272; reviewed final head: 42e2628f6a3151148f5c0ce6dc40a38b140203b8; implementation evidence subject: f8f4d1102d40188eb71024c8eab834a9efbae88f; approved implementation-tree digest: c9425c973300ef31310221c89bb942f7b1f3f07d9e45aaa501a86818af1dde18; technical readiness: ready; residual risk: low. The Owner accepts the corrected evidence that the GAP-040 acceptance contract is satisfied: real-MySQL RefreshDatabase transaction isolation is preserved from the first test of a fresh process onward; RBAC compatibility tables remain available for test execution; bootstrap DDL uses a distinct non-transacted MySQL session; and no production schema, migration, RBAC/authorization, or tenant-semantic change is part of GAP-040. The corrected rollback proof is specifically part of this approval. The previously rejected false-green harness is not an approved basis.' Owner also directed: Gate-3-decision-record-only commit; verify digest remains exactly c9425c97... and diff is only 03-release.md; verify all mandatory CI green on the exact new head before release; if digest changes or a mandatory gate turns red, STOP; if clean, mark PR ready, squash merge via repository-standard method, no bypass of branch protection/required checks, no additional implementation commit before merge; after merge observe (not infer) the real Production Deployment workflow and report actual execution/skip status; verify post-merge CI and deployment on the exact squash-merge commit before considering GAP-040 closed; GAP-041/GAP-042 (PR #270) remain separate, not fixed/closed by this release; after successful merge, close PR #269 and PR #271 as historical/superseded (not merged), pointing to canonical PR #272, and remove their stale branches only after proving no unique required content remains, plus remove the PR #272 feature branch after successful merge if normal housekeeping permits; do not touch PR #270."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-20T13:20:00+07:00"
-  updated_at: "2026-08-20T16:00:00+07:00"
+  updated_at: "2026-08-20T17:00:00+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "v2 — evidence refreshed after Owner Gate 3 CORRECTION REQUIRED (rollback-proof false-green defect found and fixed; see body §0). On refreshed head f8f4d1102d40188eb71024c8eab834a9efbae88f: 9 distinct workflow runs triggered for this head (some workflows fire twice — once on `push` to a `feature/*` branch, once on `pull_request` to main — which is why the flat gh-pr-checks context count differs from distinct-workflow-run count; both are reported explicitly in body §8, not blended). Workflow-run level: 8 SUCCESS + 1 FAILURE (Owner Governance Lint, on the stale-digest head prior to this refresh — expected to flip to SUCCESS once this record's digest matches). gh-pr-checks context level (job granularity, includes the push+pull_request duplication): 51 SUCCESS + 1 FAILURE (same Owner Governance Lint) + 1 SKIPPING (`deploy`, by design, not merged). Cold-start transaction-isolation invariant re-proven with a CORRECTED harness (writer-only cold-start forcing, PHPUnit #[Depends] for ordering/value-passing, no shared migrate:fresh between write and independent verification, no skip-based false-green paths) — RED confirmed on pre-fix code (b61abc2f) on 2 surfaces, GREEN confirmed on post-fix code on all 5 approved surfaces, each with direct PDO::inTransaction() server-truth + distinct bootstrap CONNECTION_ID() + independent-PDO rollback verification. SQLite/RBAC regression reconfirmed on this exact head via CI (not local — local environment has broken PHP extensions unrelated to this branch)."
@@ -35,9 +35,19 @@ technical_evidence:
   verified_pr_head_sha: "f8f4d1102d40188eb71024c8eab834a9efbae88f"
   verified_at: "2026-08-20T16:00:00+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "c9425c973300ef31310221c89bb942f7b1f3f07d9e45aaa501a86818af1dde18"
+  decision_recorded_at: "2026-08-20T17:00:00+07:00"
 ---
+
+## OWNER GATE 3: APPROVED
+
+Owner phê duyệt GAP-040 Gate 3 / release lúc `2026-08-20T17:00:00+07:00`, đã review head `42e2628f6a3151148f5c0ce6dc40a38b140203b8` của PR #272 (implementation evidence subject `f8f4d1102d40188eb71024c8eab834a9efbae88f`; implementation-tree digest đã phê duyệt `c9425c973300ef31310221c89bb942f7b1f3f07d9e45aaa501a86818af1dde18`; technical readiness `ready`; residual risk `low`). Owner xác nhận contract nghiệm thu GAP-040 đã thoả: transaction isolation của `RefreshDatabase` trên MySQL thật được giữ nguyên kể từ test đầu tiên của tiến trình mới; bảng tương thích RBAC vẫn khả dụng cho test; DDL bootstrap dùng session MySQL riêng không nằm trong transaction; không có thay đổi schema/migration/RBAC-authorization/ngữ nghĩa tenant production nào thuộc GAP-040. Bằng chứng rollback đã sửa (sau khi v1 bị từ chối vì lỗi false-green) là cơ sở chính thức của phê duyệt này — harness cũ đã bị từ chối KHÔNG phải cơ sở được duyệt.
+
+**Được phép:** merge PR #272 vào `main` theo đúng phương thức merge chuẩn của repo (squash), không bỏ qua branch protection hay required checks, không force merge, không thêm implementation commit nào giữa lúc phê duyệt và lúc merge. Sau merge: quan sát (không suy đoán) kết quả thật của Production Deployment workflow, xác minh CI/deploy trên đúng commit squash-merge trước khi coi GAP-040 đã đóng.
+
+**Điều kiện bắt buộc trước khi merge:** implementation-tree digest sau khi ghi nhận quyết định này phải giữ nguyên `c9425c973300ef31310221c89bb942f7b1f3f07d9e45aaa501a86818af1dde18` (chỉ được đổi nếu commit khác biệt duy nhất là chính file `03-release.md` này); nếu digest đổi vì bất kỳ lý do nào khác, phê duyệt này KHÔNG còn bao phủ implementation đã thay đổi và phải dừng lại.
+
+`GAP-041`/`GAP-042` (PR #270, đã ghi tại `OPERATIONAL_GAP_REGISTER.md`) tiếp tục là work item quản trị riêng, KHÔNG thuộc phạm vi đóng của GAP-040, không được sửa/đóng như hệ quả của việc merge này. 2 lỗi có sẵn không liên quan (E2E `CriticalUserFlowsE2ETest`, 1 Treasury FK test) cũng không trở thành phạm vi GAP-040 chỉ vì được phát hiện trong lúc xác minh.
 
 ## Owner Summary
 

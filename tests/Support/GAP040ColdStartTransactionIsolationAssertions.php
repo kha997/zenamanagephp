@@ -32,10 +32,11 @@ trait GAP040ColdStartTransactionIsolationAssertions
         }
     }
 
+    /** @group stress */
     protected function assertColdStartInvariantHeld(): void
     {
         if (config('database.default') !== 'mysql') {
-            $this->markTestSkipped('This proof only exercises the GAP-040 invariant against a real MySQL connection; this test also carries a group not excluded from the default SQLite suite, so it is reachable there too — skip rather than fail is correct here.');
+            $this->markTestSkipped('dependency: this proof only exercises the GAP-040 invariant against a real MySQL connection; this test also carries a group not excluded from the default SQLite suite, so it is reachable there too — skip rather than fail is correct here.');
         }
 
         $probe = TestCase::$coldStartProbe;
@@ -44,7 +45,7 @@ trait GAP040ColdStartTransactionIsolationAssertions
         fwrite(STDERR, "\n[GAP-040 probe] " . json_encode($probe) . "\n");
 
         if ($probe['table_existed_before_bootstrap']) {
-            $this->markTestSkipped('zena_roles already existed before bootstrap ran — an earlier test class in this process already captured the genuine cold-start moment. This is expected and does not indicate a problem: the fix keeps the main transaction genuinely open (see the routes-guardrails.yml run where this exact class observed and proved the cold-start case directly), so the RBAC compat table persists for the rest of the process instead of being torn down and rebuilt every test the way the pre-fix code did.');
+            $this->markTestSkipped('dependency: zena_roles already existed before bootstrap ran — an earlier test class in this process already captured the genuine cold-start moment. This is expected and does not indicate a problem: the fix keeps the main transaction genuinely open (see the routes-guardrails.yml run where this exact class observed and proved the cold-start case directly), so the RBAC compat table persists for the rest of the process instead of being torn down and rebuilt every test the way the pre-fix code did.');
         }
 
         $this->assertSame(
@@ -91,12 +92,13 @@ trait GAP040ColdStartTransactionIsolationAssertions
         return $tenant->id;
     }
 
+    /** @group stress */
     protected function assertMarkerRowAbsentViaIndependentConnection(): void
     {
         $markerPath = $this->coldStartMarkerFilePath();
 
         if (!file_exists($markerPath)) {
-            $this->markTestSkipped('No cold-start marker file found — the write-side test must run first, in the same process, before this verification test.');
+            $this->markTestSkipped('dependency: no cold-start marker file found — the write-side test must run first, in the same process, before this verification test.');
         }
 
         $tenantId = trim((string) file_get_contents($markerPath));

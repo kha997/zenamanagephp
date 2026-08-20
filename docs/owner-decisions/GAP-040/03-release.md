@@ -25,15 +25,15 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-20T13:20:00+07:00"
-  updated_at: "2026-08-20T13:20:00+07:00"
+  updated_at: "2026-08-20T16:00:00+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "52 CI check bắt buộc SUCCESS + đúng 1 job deploy SKIPPED (đúng thiết kế, không merge) trên head bằng chứng 1082f3d3edb010100490b7517b917a6398c6809d. Cold-start transaction-isolation invariant được chứng minh thực nghiệm, trực tiếp qua PDO::inTransaction() (server-truth, không phải bộ đếm in-process của Laravel) trên cả 5 bề mặt CI thật-MySQL đã duyệt ở Gate 1/2: routes-guardrails.yml mysql-parity, zena-invariants-mysql, treasury-check-constraints-mysql, e2e-tests (bước cô lập riêng do 1 lỗi E2E có sẵn không liên quan chặn --stop-on-failure), và bước chứng minh MySQL GAP-032 trong ci-cd.yml. Bộ test SQLite hồi quy đầy đủ (2308 test, 0 lỗi) chạy cục bộ, không đổi so với trước. RBAC compat (ZenaAuthFlowInvariantTest) xác nhận còn nguyên vẹn cả 2 driver. 2 lỗi có sẵn không liên quan (E2E CriticalUserFlowsE2ETest, 1 Treasury FK test) xác minh giống hệt trên origin/main chưa sửa — không do GAP-040 gây ra, không sửa ở đây. Không hấp thụ GAP-041/GAP-042 (register không đổi, diff xác nhận bằng git diff)."
+mandatory_technical_gate_summary: "v2 — evidence refreshed after Owner Gate 3 CORRECTION REQUIRED (rollback-proof false-green defect found and fixed; see body §0). On refreshed head f8f4d1102d40188eb71024c8eab834a9efbae88f: 9 distinct workflow runs triggered for this head (some workflows fire twice — once on `push` to a `feature/*` branch, once on `pull_request` to main — which is why the flat gh-pr-checks context count differs from distinct-workflow-run count; both are reported explicitly in body §8, not blended). Workflow-run level: 8 SUCCESS + 1 FAILURE (Owner Governance Lint, on the stale-digest head prior to this refresh — expected to flip to SUCCESS once this record's digest matches). gh-pr-checks context level (job granularity, includes the push+pull_request duplication): 51 SUCCESS + 1 FAILURE (same Owner Governance Lint) + 1 SKIPPING (`deploy`, by design, not merged). Cold-start transaction-isolation invariant re-proven with a CORRECTED harness (writer-only cold-start forcing, PHPUnit #[Depends] for ordering/value-passing, no shared migrate:fresh between write and independent verification, no skip-based false-green paths) — RED confirmed on pre-fix code (b61abc2f) on 2 surfaces, GREEN confirmed on post-fix code on all 5 approved surfaces, each with direct PDO::inTransaction() server-truth + distinct bootstrap CONNECTION_ID() + independent-PDO rollback verification. SQLite/RBAC regression reconfirmed on this exact head via CI (not local — local environment has broken PHP extensions unrelated to this branch)."
 technical_evidence:
-  subject_sha: "1082f3d3edb010100490b7517b917a6398c6809d"
-  implementation_tree_digest: "4f8e3168983a4926f99f14d724b52101c8fe1af45217cefcfa841de439bf82f3"
-  verified_pr_head_sha: "1082f3d3edb010100490b7517b917a6398c6809d"
-  verified_at: "2026-08-20T13:10:00+07:00"
+  subject_sha: "f8f4d1102d40188eb71024c8eab834a9efbae88f"
+  implementation_tree_digest: "c9425c973300ef31310221c89bb942f7b1f3f07d9e45aaa501a86818af1dde18"
+  verified_pr_head_sha: "f8f4d1102d40188eb71024c8eab834a9efbae88f"
+  verified_at: "2026-08-20T16:00:00+07:00"
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null
@@ -41,7 +41,20 @@ owner_decision_binding:
 
 ## Owner Summary
 
-`tests/TestCase.php::ensureSqliteZenaRbacTables()` từng chạy DDL vô điều kiện trên connection MySQL thật đã có transaction `RefreshDatabase` mở sẵn, và mỗi DDL đó âm thầm implicit-COMMIT transaction đang mở — đã **chứng minh trực tiếp bằng thực nghiệm** trên CI thật (không chỉ suy luận): `PDO::inTransaction()` đo được `true` trước bootstrap, `false` sau bootstrap, trên mã cũ chưa sửa. Bản vá đưa DDL này sang một session MySQL thứ hai, đăng ký lúc runtime trong `tests/TestCase.php` (không sửa `config/database.php` đã commit), không nằm trong danh sách connection bị `RefreshDatabase` transact — kết quả đo lại: `PDO::inTransaction()` giữ nguyên `true` xuyên suốt bootstrap, trên cả 5 bề mặt CI thật-MySQL đã duyệt ở Gate 1/Gate 2, mỗi bề mặt đều có bằng chứng riêng (connection ID của session bootstrap khác connection ID chính, viết dữ liệu ở test A biến mất khi test B kiểm tra qua connection độc lập).
+`tests/TestCase.php::ensureSqliteZenaRbacTables()` từng chạy DDL vô điều kiện trên connection MySQL thật đã có transaction `RefreshDatabase` mở sẵn, và mỗi DDL đó âm thầm implicit-COMMIT transaction đang mở — đã **chứng minh trực tiếp bằng thực nghiệm** trên CI thật (không chỉ suy luận): `PDO::inTransaction()` đo được `true` trước bootstrap, `false` sau bootstrap, trên mã cũ chưa sửa. Bản vá đưa DDL này sang một session MySQL thứ hai, đăng ký lúc runtime trong `tests/TestCase.php` (không sửa `config/database.php` đã commit), không nằm trong danh sách connection bị `RefreshDatabase` transact — kết quả đo lại: `PDO::inTransaction()` giữ nguyên `true` xuyên suốt bootstrap, trên cả 5 bề mặt CI thật-MySQL đã duyệt ở Gate 1/Gate 2.
+
+## §0 — Correction made in response to Owner Gate 3 review (v1 rejected)
+
+Owner reviewed v1 (subject SHA `1082f3d3`) and found a real defect in the **rollback acceptance proof**, not in the Option C fix itself: every cold-start test class's `setUp()` unconditionally called `forceGenuineColdStartForNextSetUp()` (forcing `RefreshDatabaseState::$migrated = false`), including the verifier ("test B")'s own `setUp()`. That meant a fresh `migrate:fresh` ran between the writer test's teardown and the verifier's independent-connection read — wiping the marker row regardless of whether `RefreshDatabase`'s rollback actually worked. The proof could pass on fully broken code.
+
+**Corrected** (all detail in `tests/Support/GAP040ColdStartTransactionIsolationAssertions.php` and the 5 consuming test classes, commits `d3c6637e` + `f8f4d110` on this branch):
+- Only the writer test's `setUp()` forces cold start now, gated on `$this->name() === self::WRITER_TEST` (an explicit class constant, not a naming convention alone).
+- Ordering and value-passing between writer and verifier now use PHPUnit's `#[Depends]` attribute — the verifier receives the written tenant id as a typed method parameter (PHPUnit guarantees the writer runs first and only calls the verifier if the writer didn't fail/error/skip), not a shared file-based marker.
+- The file-based marker mechanism was removed entirely.
+- Skip-based false-green paths removed from the mandatory proof: a cold-start test finding `zena_roles` already present is now a hard failure (`assertFalse`), not a skip — with deterministic forcing in place, that state means the forcing mechanism itself is broken, not a legitimate alternate outcome. The "not on a real MySQL connection" skip remains (legitimate: these files are also reachable from the default SQLite suite, no excluded `@group`).
+- The verifier's row-count assertion requires its argument and is unconditional (no skip path at all).
+
+**RED/GREEN re-established** (§3 below) on the corrected harness: FAILS on pre-fix code, PASSES on the Option C fix, on all 5 approved surfaces, with actual captured execution evidence per surface — not inferred from "shares a trait."
 
 ## Gói quyết định phát hành — GAP-040: TestCase MySQL transaction isolation
 
@@ -51,25 +64,47 @@ Xem `docs/audits/2026-08-20-gap-040-testcase-mysql-transaction-isolation-evidenc
 **2. Đã sửa gì, đúng ranh giới đã duyệt chưa?**
 Đúng contract Gate 2 đã duyệt: loại bỏ hoàn toàn (không phải giảm) DDL trên connection đã có transaction, kể cả test đầu tiên của tiến trình mới (cold start) — dùng Option C (session bootstrap riêng), không dùng Option B (existence-guard đơn thuần, biết trước sẽ còn sót 1 ca cold-start). Giữ nguyên các bảng tương thích RBAC trên mọi driver — không ai bị mất quyền truy cập bảng `zena_*`. Không sửa `RBACManager`, `Src\RBAC\Models\*`, migration nào, hay `config/database.php` đã commit. Không đụng GAP-041/GAP-042 (PR #270, độc lập, không phải phụ thuộc của release này).
 
-**3. Bằng chứng hồi quy — chứng minh hành vi thật, không chỉ hình dạng mã.**
-Mỗi bề mặt trong 5 bề mặt đã duyệt có cùng chuỗi bằng chứng, đo trực tiếp qua `PDO::inTransaction()` (server-truth) + `CONNECTION_ID()` (xác nhận session bootstrap thật sự tách biệt) + ghi một dòng dữ liệu rồi xác minh độc lập qua connection PDO mới hoàn toàn rằng dòng đó đã biến mất sau rollback:
-- `routes-guardrails.yml` (`--group=mysql-parity`): xác nhận.
-- `automated-testing.yml`'s `zena-invariants-mysql`: xác nhận.
-- `automated-testing.yml`'s `treasury-check-constraints-mysql`: xác nhận (1 lỗi FK có sẵn không liên quan trong `TreasuryWalletsSchemaTest`, đã xác minh giống hệt trên `origin/main` chưa sửa, không do GAP-040, không sửa ở đây — script tự thiết kế "informational, not gating" từ trước).
-- `a11y-perf-testing.yml`'s `e2e-tests`: xác nhận, qua một step CI cô lập riêng (`if: always()`) — step gốc `--stop-on-failure` bị 1 lỗi có sẵn không liên quan (`CriticalUserFlowsE2ETest`) chặn, xác minh giống hệt trên `origin/main` chưa sửa qua workflow_dispatch thủ công.
-- `ci-cd.yml`'s bước chứng minh MySQL GAP-032: xác nhận, qua 1 dòng CI invocation thêm file test vào lệnh `phpunit` sẵn có.
+**3. Bằng chứng hồi quy — RED/GREEN, hành vi thật, không chỉ hình dạng mã.**
 
-**4. Hồi quy SQLite và RBAC.**
-Bộ test SQLite đầy đủ (`--testsuite=Unit,Feature,Integration`) chạy cục bộ: 2308 test, 0 lỗi, 42 skip (đúng như thiết kế — bao gồm các test cold-start mới tự skip khi không phải MySQL). `ZenaAuthFlowInvariantTest` (test RBAC thật duy nhất đã xác nhận phụ thuộc bảng compat) PASS trên cả đường SQLite lẫn MySQL-parity.
+RED (harness đã sửa, chạy trên mã CHƯA sửa — `tests/TestCase.php` revert về commit `b61abc2f`, có probe `PDO::inTransaction()` nhưng CHƯA có cơ chế session cô lập): xác nhận FAIL đúng lý do trên 2 bề mặt kiểm tra trực tiếp (PR throwaway #275, đã đóng sau khi ghi nhận bằng chứng, không merge):
+- `routes-guardrails.yml`: `[GAP-040 probe] {"pdo_in_transaction_before_bootstrap":true,...,"pdo_in_transaction_after_bootstrap":false}` → `Failed asserting that false is true.` — test B tự động SKIPPED (hệ quả `#[Depends]` khi test A fail, không phải false-green).
+- `ci-cd.yml`'s bước GAP-032: cùng pattern chính xác, `pdo_in_transaction_after_bootstrap: false`, `Failed asserting that false is true.`
+
+GREEN (harness đã sửa, chạy trên mã ĐÃ sửa — head `f8f4d110`), bằng chứng thực thi riêng cho cả 5 bề mặt, không suy diễn từ "dùng chung trait":
+- `routes-guardrails.yml` (`--group=mysql-parity`): `main_connection_id:17, bootstrap_connection_id:26, pdo_in_transaction_after_bootstrap:true` → `PASS ZenaTransactionIsolationColdStartTest`.
+- `automated-testing.yml`'s `zena-invariants-mysql`: `main_connection_id:19, bootstrap_connection_id:24, pdo_in_transaction_after_bootstrap:true` → `PASS ZenaInvariantsTransactionIsolationColdStartTest`.
+- `automated-testing.yml`'s `treasury-check-constraints-mysql`: `main_connection_id:20, bootstrap_connection_id:25, pdo_in_transaction_after_bootstrap:true` → PASS (1 lỗi FK có sẵn không liên quan trong `TreasuryWalletsSchemaTest`, xác minh giống hệt trên `origin/main` chưa sửa, script tự thiết kế "informational, not gating" từ trước GAP-040).
+- `a11y-perf-testing.yml`'s `e2e-tests` (step cô lập riêng, `if: always()`, vì step gốc `--stop-on-failure` bị `CriticalUserFlowsE2ETest` — lỗi có sẵn không liên quan, xác minh giống hệt trên `origin/main` chưa sửa qua `workflow_dispatch` thủ công — chặn): `main_connection_id:18, bootstrap_connection_id:22, pdo_in_transaction_after_bootstrap:true` → 2 test PASS (10 assertions).
+- `ci-cd.yml`'s bước chứng minh MySQL GAP-032: `main_connection_id:15, bootstrap_connection_id:70, pdo_in_transaction_after_bootstrap:true` → PASS, job "Tests: 19, Assertions: 103, ... Skipped: 1" (0 failures).
+
+Mỗi bề mặt: connection ID session bootstrap khác connection ID chính (session thật sự tách biệt) + transaction chính vẫn mở xuyên suốt bootstrap + dòng dữ liệu ghi ở test A biến mất khi test B kiểm tra qua PDO độc lập hoàn toàn mới, KHÔNG có migrate:fresh/truncate/reset nào chạy giữa lúc A teardown và B đọc.
+
+**4. Hồi quy SQLite và RBAC — xác nhận lại trên CI (không dùng lại số đo cục bộ).**
+Môi trường local của agent có extension PHP hỏng không liên quan (Redis thiếu `publish()`) gây 7-9 lỗi cục bộ không tái lập được trên CI thật — không dùng số đo cục bộ làm bằng chứng chính. Trên CI thật, head `f8f4d110`: `Unit Tests`, `Feature Tests`, `Integration Tests`, `API Tests (Fast)`, `API Tests (Slow)` đều SUCCESS (0 lỗi) — đây mới là bằng chứng hồi quy SQLite chính thức. `ZenaAuthFlowInvariantTest` PASS trên cả `Feature Tests` (SQLite) và `Zena RBAC/Tenant Invariants (MySQL parity)` (MySQL thật), trên head này.
 
 **5. Phạm vi loại trừ đã giữ đúng.**
-`git diff origin/main...1082f3d3` xác nhận không đụng: `OPERATIONAL_GAP_REGISTER.md`, `config/database.php`, `app/Services/RBACManager.php`, `database/migrations/`, `src/RBAC/`. Diff đầy đủ: 15 file, toàn bộ nằm trong `tests/TestCase.php`, test mới, doc GAP-040, plan, và 1 dòng CI invocation ở `ci-cd.yml` + 1 step CI mới cô lập ở `a11y-perf-testing.yml`.
+`git diff origin/main...f8f4d110` xác nhận không đụng: `OPERATIONAL_GAP_REGISTER.md`, `config/database.php`, `app/Services/RBACManager.php`, `database/migrations/`, `src/RBAC/`.
 
 **6. Rủi ro tồn dư.**
-`low`. Cơ chế hoàn chỉnh (Option C) đã được chọn và chứng minh trên cả 5 bề mặt, không phải Option B với ca cold-start còn sót đã biết trước. Rủi ro còn lại: (a) cơ chế session-runtime-registration là engineering mới trong repo — đã chứng minh hoạt động đúng bằng thực nghiệm trên toàn bộ 5 bề mặt CI thật, không chỉ 1; (b) 2 lỗi có sẵn không liên quan (E2E, Treasury FK) vẫn tồn tại — đã xác minh không phải do thay đổi này, ngoài phạm vi GAP-040.
+`low`. Cơ chế hoàn chỉnh (Option C) đã chọn và chứng minh trên cả 5 bề mặt bằng harness đã sửa đúng (không còn lỗ hổng false-green). Rủi ro còn lại: (a) cơ chế session-runtime-registration + `#[Depends]` là engineering mới trong repo — đã chứng minh hoạt động đúng bằng RED/GREEN thực nghiệm, không chỉ suy luận; (b) 2 lỗi có sẵn không liên quan (E2E, Treasury FK) vẫn tồn tại — đã xác minh không phải do thay đổi này, ngoài phạm vi GAP-040.
 
-**7. Đề xuất.**
-Đội kỹ thuật đề xuất Owner phê duyệt Gate 3 / release cho GAP-040, cho phép merge PR #272 vào `main` theo đúng phương thức merge chuẩn của repo (không bỏ qua branch protection hay required checks).
+**7. Final whole-branch review (yêu cầu tại điểm 7 của Owner) — tự review đối kháng.**
+Tự đặt câu hỏi: bằng cách nào proof đã sửa có thể pass mà rollback thật không xảy ra?
+- `#[Depends]` không tôn trọng thứ tự? — Không: PHPUnit luôn build lại thứ tự thực thi theo đồ thị phụ thuộc, không phụ thuộc thứ tự khai báo hay `--order-by`; đã xác nhận không có `--order-by=random`/`resolveDependencies` ở bất kỳ 5 lệnh CI nào.
+- Test B chạy dù A không thật sự chạy? — Không: cùng class, cùng `@group`; nếu A fail/error, PHPUnit tự SKIP B (đã quan sát trực tiếp trong RED demo).
+- `$this->name()` check sai tên method, khiến A không force cold-start mà không ai biết? — Nếu sai, A sẽ tìm thấy `zena_roles` đã tồn tại và FAIL cứng (không skip) — lỗi lộ ra ngay, không có false-green.
+- PDO độc lập đọc snapshot cũ (stale read) thay vì trạng thái thật? — Không: connection hoàn toàn mới, autocommit, không có transaction nào đang mở trước đó nên không có snapshot cũ để đọc.
+- Race condition giữa A teardown và B đọc? — Không: `rollBack()` của `RefreshDatabase` chạy đồng bộ, chặn cho tới khi MySQL xác nhận, trước khi A's tearDown() trả về; PHPUnit thực thi B's setUp() tuần tự sau đó trong cùng tiến trình.
+Không tìm được đường nào proof pass mà rollback không thật xảy ra, trong phạm vi review này.
+
+**8. CI — phân loại chính xác theo yêu cầu Owner (không trộn nhiều "vũ trụ" kiểm tra).**
+Trên head `f8f4d110`, 9 workflow run riêng biệt được kích hoạt (2 workflow tự kích hoạt 2 lần — 1 lần từ `push` lên nhánh `feature/*`, 1 lần từ `pull_request` lên `main` — đây là nguyên nhân số lượng context ở mức job khác số lượng workflow run):
+- **Mức workflow run** (9 run): 8 SUCCESS, 1 FAILURE (`Owner Governance Lint` — do digest cũ trong bản v1 của chính file này, dự kiến chuyển SUCCESS ngay khi commit ghi nhận digest mới này được đẩy lên).
+- **Mức context `gh pr checks` (job)**: 53 context — 51 SUCCESS, 1 FAILURE (cùng `Owner Governance Lint`), 1 SKIPPING (`deploy`, đúng thiết kế, không merge).
+- Không trộn: không tính lại các lần rerun trùng, không tính run `workflow_dispatch` thủ công (RED demo PR throwaway, a11y-perf-testing.yml E2E xác minh) vào tổng này — các run đó được trích dẫn riêng, có link riêng, ở mục 3.
+
+**9. Đề xuất.**
+Đội kỹ thuật đề xuất Owner phê duyệt Gate 3 / release cho GAP-040, cho phép merge PR #272 vào `main` theo đúng phương thức merge chuẩn của repo (không bỏ qua branch protection hay required checks), SAU KHI xác nhận commit ghi nhận digest mới này đã làm `Owner Governance Lint` chuyển SUCCESS.
 
 ## What the owner is NOT being asked to decide
 

@@ -25,15 +25,15 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-20T04:47:00+07:00"
-  updated_at: "2026-08-20T04:47:00+07:00"
+  updated_at: "2026-08-20T06:10:00+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "Toàn bộ CI bắt buộc xanh trên head cuối d9ba35d0; final whole-branch review đã resolve hoàn toàn (2 Critical + 2 Important đã sửa và xác minh lại độc lập; 1 Important ghi nhận thành GAP-040 riêng theo đúng khuyến nghị của reviewer, không sửa dưới GAP-039); chi phí CI đã đo bằng số liệu thật từ gh api, không dùng lại ước tính Gate 2."
+mandatory_technical_gate_summary: "31 CI job bắt buộc SUCCESS + đúng 1 job deploy SKIPPED (không phải lỏng lẻo nói '32 xanh') trên head bằng chứng d7779e24; final whole-branch review đã resolve hoàn toàn (2 Critical + 2 Important đã sửa và xác minh lại độc lập qua scoped re-review riêng; 1 Important ghi nhận thành GAP-040 theo đúng khuyến nghị của reviewer, không sửa dưới GAP-039); chi phí CI đã đo lại bằng số liệu thật ở đúng head cuối (Part 2 của docs/audits/2026-08-20-gap-039-ci-cost-measurement.md), không dùng lại số đo ở head trung gian."
 technical_evidence:
-  subject_sha: "94f259ddc11a60bbc2863b024d7ecaaedd473833"
-  implementation_tree_digest: "a0d22ae608284bfb2021b4994c3f2f74b4a80ee577a281a691abdf7cb37d4c1e"
-  verified_pr_head_sha: "94f259ddc11a60bbc2863b024d7ecaaedd473833"
-  verified_at: "2026-08-20T05:05:00+07:00"
+  subject_sha: "d7779e241ad0d71efcff371d0a0aa85af7963f8f"
+  implementation_tree_digest: "c4901e25a1ecdbefea2a271b108b478b101909200825ca985ec4b96392612a18"
+  verified_pr_head_sha: "d7779e241ad0d71efcff371d0a0aa85af7963f8f"
+  verified_at: "2026-08-20T06:10:00+07:00"
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null
@@ -73,9 +73,19 @@ Guard chống hồi quy (`lint-mysql-claim-truthfulness.php`) có 4 giới hạn
 Thấp. Không có thay đổi mã ứng dụng/nghiệp vụ (`app/`, `src/`, `database/`, `routes/`, `config/` — 0 thay đổi, xác nhận qua `git diff --stat`). Không có migration nào bị chạm. Một thay đổi phạm vi kiểm thử có thật: `TenantIsolationProjectsTest` nay chỉ chạy ở bước MySQL-parity của `routes-guardrails.yml` (gắn `@group mysql-parity`), không còn chạy trong bộ test mặc định cục bộ — vẫn được CI PR gate, chỉ không còn chạy khi gõ `./vendor/bin/phpunit` trần.
 
 ## Kỹ thuật xác minh (tóm tắt cho Owner, không cần đọc code)
-- CI bắt buộc: toàn bộ xanh trên head cuối `d9ba35d0` (đã `gh pr checks --watch` xác nhận).
-- Local: 2302/2302 test (7 lỗi Redis cục bộ đã biết trước, không liên quan GAP-039, xác nhận qua git-stash bisect).
-- Review toàn nhánh cuối: 1 vòng ban đầu ("With fixes") → 1 gói sửa → 1 vòng xác minh phạm vi hẹp → RESOLVED cả 2 Critical + 2 Important đã sửa; 1 Important ghi nhận GAP-040; các phát hiện Minor còn lại ghi trong ledger, không chặn.
-- Digest cây triển khai (`implementation_tree_digest`) đã tính thật bằng `owner_governance_compute_implementation_tree_digest()` trên head `d9ba35d0`, không phải placeholder.
+
+**Implementation evidence subject SHA (head bằng chứng — commit làm bằng chứng CI/digest cho gói này):** `d7779e24` (`d7779e241ad0d71efcff371d0a0aa85af7963f8f`).
+
+**PR head mà CI thật đã được kiểm tra trực tiếp:** `d7779e24` — cùng một commit, không lệch. Đây là commit gần nhất đã đưa CI thật lên GitHub Actions và được xác nhận qua `gh pr checks 268`.
+
+**Digest cây triển khai hiện tại:** `c4901e25a1ecdbefea2a271b108b478b101909200825ca985ec4b96392612a18` — tính thật bằng `owner_governance_compute_implementation_tree_digest()` trên head `d7779e24`, không phải placeholder. Đã xác minh: chạy lại phép tính này ngay trước và ngay sau commit chỉ sửa `docs/owner-decisions/GAP-039/03-release.md` cho ra cùng một giá trị digest — đúng như quy tắc tự loại trừ (self-reference exclusion) trong `packet-schema.yml`.
+
+**Nếu PR head hiện tại khác `d7779e24`:** commit khác biệt duy nhất là bản ghi Gate 3 này (`03-release.md`) — không có thay đổi nào khác. Nếu về sau head PR #268 tiếp tục dịch chuyển chỉ vì các lần cập nhật gói Gate 3 (không phải vì thay đổi implementation), digest ở trên vẫn còn đúng theo đúng cơ chế tự loại trừ; nếu head dịch chuyển vì bất kỳ file nào khác ngoài `03-release.md`, digest sẽ đổi và gói này lập tức trở nên STALE (được `check-evidence-freshness.sh`/`owner_governance_lint.php` tự phát hiện, không cần thông báo thủ công).
+
+**Trạng thái CI chính xác trên head `d7779e24`:** 31 job bắt buộc **SUCCESS**, đúng 1 job (`deploy`) **SKIPPED** (đúng theo thiết kế — chỉ chạy khi merge vào `main`, không chạy trên nhánh PR). Không phải cách nói lỏng lẻo "32 job xanh" — đã liệt kê và đếm chính xác qua `gh pr checks 268`, bao gồm cả việc `Owner Governance Lint` job's evidence-freshness self-check ban đầu fail vì tự chạy sớm hơn các job MySQL-parity chậm hơn (Treasury ~27 phút) — đây là hành vi polling có giới hạn 5 phút đã biết trước trong chính script, không phải lỗi thật; đã đợi các job khác xanh rồi chạy lại đúng job đó, kết quả xanh sạch.
+
+**Kết quả review toàn nhánh cuối cùng:** 1 vòng ban đầu trả về "With fixes" (2 Critical + 4 Important) → 1 gói sửa duy nhất (theo đúng quy tắc "một vòng sửa, một vòng review phạm vi hẹp") → 1 vòng xác minh phạm vi hẹp độc lập xác nhận **RESOLVED** cả 4 mục (2 Critical đã sửa đúng; 2 Important đã sửa đúng cùng lúc; 1 Important ghi nhận thành `GAP-040` theo đúng khuyến nghị của reviewer, không sửa dưới GAP-039). 2 điểm còn sót nhỏ không chặn do vòng xác minh phạm vi hẹp nêu ra (SQLSTATE assertion chưa phân biệt loại vi phạm; trích dẫn dòng GAP-040 lệch ~7/1 dòng) đã được sửa luôn trong cùng phiên. Các phát hiện Minor còn lại + 4 giới hạn phát hiện đã biết của guard chống hồi quy được ghi trong ledger và trong `mandatory_technical_gate_summary`, không chặn phát hành.
+
+**Chi phí CI hiện tại (bằng chứng đã đo lại đúng ở head cuối):** `docs/audits/2026-08-20-gap-039-ci-cost-measurement.md` Part 2 (FINAL, AUTHORITATIVE) — đo lại toàn bộ job có khả năng bị ảnh hưởng bởi các commit sau lần đo đầu tiên, dùng timestamp thật từ `gh api` trên head `14189e2d` (run `32305896514`, cùng nội dung code với head bằng chứng `d7779e24` — 2 commit chênh lệch giữa chúng chỉ là tài liệu governance, không đổi code CI). Kết luận: cả 5 job chuyển thật về SQLite lẫn 2 job chuyển thật lên MySQL-parity đều **nhanh hơn** mốc trước GAP-039 (chi phí ròng do GAP-039 gây ra là **âm**, không phải dương); job MySQL-parity tham chiếu sẵn có giữ hệ số chậm ~14.5×, cùng dải với ước tính Gate 2 (~19.6×) qua cả 3 lần đo (baseline/trung gian/cuối); dị thường Treasury (8.520s ở head trung gian) đã được đo lại ở head cuối và xác nhận là sự cố hạ tầng một lần, không tái diễn (quay lại ~1.614s, khớp baseline ~1.598s) — không phải chi phí do GAP-039, không phải hồi quy.
 
 **Quyết định cần Owner:** phê duyệt phát hành (approved) / yêu cầu sửa (correction_requested) / hoãn (deferred).

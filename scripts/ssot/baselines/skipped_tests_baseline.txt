@@ -10,8 +10,7 @@ FinalSystemTest::skipUnlessStressTestsEnabled|group=stress|reason=RUN_STRESS_TES
 FinalSystemTest::test_documentation_system|group=slow|reason=dependency:
 FinalSystemTest::test_support_ticket_system|group=slow|reason=dependency:
 FinalSystemTest::test_system_health_monitoring|group=slow|reason=dependency:
-GAP040ColdStartTransactionIsolationAssertions::assertColdStartInvariantHeld|group=stress|reason=dependency:
-GAP040ColdStartTransactionIsolationAssertions::assertMarkerRowAbsentViaIndependentConnection|group=stress|reason=dependency:
+GAP040ColdStartTransactionIsolationAssertions::proveColdStartAndWriteMarker|group=stress|reason=dependency:
 LoadTest::setUp|group=load|reason=RUN_LOAD_TESTS
 LoadTest::skipIfAppIsUnreachable|group=slow|reason=dependency:
 PerformanceIntegrationTest::it_can_handle_alerts_performance|group=slow|reason=RUN_SLOW_TESTS

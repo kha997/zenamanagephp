@@ -1,11 +1,11 @@
 ---
 work_id: GAP-040
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_changes_or_decline"
+decision_requested: null
 references:
   spec: docs/audits/2026-08-20-gap-040-testcase-mysql-transaction-isolation-evidence.md
   plan: null
@@ -14,19 +14,25 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-08-20T14:00:00+07:00"
+  owner_response_reference: "Owner chat message, 2026-08-20: 'GAP-040 — GATE 1 OWNER DECISION: APPROVE... PR: #269, reviewed head 6f04ef723964101a660f0996a1d7438dc2b856a0, baseline 87a4307fdcf8117d8cac4b11c2cb27cb637ada5a... APPROVED. I accept that GAP-040 is a real test-infrastructure integrity problem worth proceeding to Gate 2 design. The approved problem statement is: Tests\\TestCase::ensureSqliteZenaRbacTables() performs unconditional DDL on real-MySQL test paths. For test classes where RefreshDatabase has already opened a transaction, MySQL implicit-commit behavior can defeat the transaction isolation that CI is relying upon, weakening confidence in tenant/data-integrity and other MySQL-parity evidence. I also accept the corrected v2 affected-surface analysis as the Gate 1 basis. End-to-end test-state leakage has not been empirically reproduced and must continue to be described as such; do not rewrite that limitation as demonstrated production/runtime failure.' Owner also directed: Gate 2 design authorized, implementation not authorized; the zero-test performance-tests/performance-budget/performance-heavy group-name mismatch is out of GAP-040 scope and must be tracked as a separate gap if confirmed, not silently fixed here; Design Dependency Preflight not currently required but must trigger if a proposed fix touches production Treasury schema/tenant semantics/business behavior; Gate 2 submission may need a separate Draft PR from canonical baseline per the GAP-039 precedent if --enforce-gate-ordering requires it, cross-referencing PR #269."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-20T00:00:00+07:00"
-  updated_at: "2026-08-20T00:00:00+07:00"
+  updated_at: "2026-08-20T14:00:00+07:00"
 generated_by: agent
 ---
 
-> **v2 — correction/resubmission, not an Owner decision.** Owner requested changes on the v1 submission: the affected-surface inventory was built from a stale local checkout instead of exact `origin/main`, materially understating exposure, and the PR-body governance check was failing evidence-freshness. This version corrects both. No Owner decision has been recorded yet; `gate_status` remains `awaiting_owner` and `owner_decision.value` remains `none`.
+> **v2 — Gate 1 APPROVED.** Owner requested changes on the initial v1 submission (affected-surface inventory built from a stale local checkout instead of exact `origin/main`, and a failing PR-body governance check); v2 corrected both (see commit history and PR #269). Owner subsequently reviewed v2 at head `6f04ef723964101a660f0996a1d7438dc2b856a0` and **approved** Gate 1. This section records that approval; the substantive v2 evidence-derived content below (Owner Summary, affected-surface inventory, evidence references, etc.) is unchanged from the approved submission.
+
+## OWNER GATE 1: APPROVED
+
+Owner phê duyệt GAP-040 Gate 1 lúc `2026-08-20T14:00:00+07:00`, đã review head `6f04ef723964101a660f0996a1d7438dc2b856a0` của PR #269 (baseline `87a4307fdcf8117d8cac4b11c2cb27cb637ada5a`). Owner xác nhận GAP-040 là vấn đề test-infrastructure integrity có thật, đáng để chuyển sang Gate 2 design. Problem statement được duyệt: `Tests\TestCase::ensureSqliteZenaRbacTables()` thực thi DDL vô điều kiện trên các đường test MySQL thật; đối với các test class mà `RefreshDatabase` đã mở transaction, hành vi implicit-commit của MySQL có thể vô hiệu hoá transaction isolation mà CI đang phụ thuộc vào, làm suy yếu độ tin cậy của bằng chứng tenant/data-integrity và MySQL-parity khác. Owner cũng chấp nhận bản phân tích affected-surface v2 đã sửa làm cơ sở Gate 1. Rò rỉ trạng thái test đầu-cuối CHƯA được tái hiện thực nghiệm và phải tiếp tục được mô tả đúng như vậy — không được viết lại thành lỗi runtime/production đã chứng minh.
+
+Quyết định này CHỈ cho phép chuyển sang Gate 2 design. Implementation KHÔNG được cấp phép. Phát hiện riêng về `performance-tests`/`performance-budget`/`performance-heavy` có thể chạy 0 test do lệch tên group KHÔNG thuộc phạm vi GAP-040 — phải được xác minh độc lập và đăng ký dưới Work ID riêng nếu xác nhận đúng, không được âm thầm sửa trong GAP-040. Design Dependency Preflight hiện KHÔNG bắt buộc, nhưng nếu giải pháp đề xuất đụng đến schema Treasury sản xuất, ngữ nghĩa tenant chính tắc, hay hành vi nghiệp vụ, phải DỪNG và chạy preflight tương ứng trước khi thiết kế phần đó. Gói Gate 2 khi hoàn thành phải quay lại `awaiting_owner` để Owner ra quyết định riêng, trước khi bất kỳ implementation nào bắt đầu; nếu `--enforce-gate-ordering` không cho phép gói Gate 2 nằm chung PR với lịch sử Gate 1, tạo Draft PR riêng từ baseline chính tắc, tham chiếu rõ PR #269, theo đúng tiền lệ GAP-039.
 
 ## Owner Summary
 

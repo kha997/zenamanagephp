@@ -1,11 +1,11 @@
 ---
 work_id: GAP-040
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_changes_or_decline"
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-20-gap-040-testcase-mysql-transaction-isolation-design.md
   plan: null
@@ -14,21 +14,27 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-08-20T16:00:00+07:00"
+  owner_response_reference: "Owner chat message, 2026-08-20: 'GAP-040 — GATE 2 OWNER DECISION: APPROVE... PR: #271, reviewed head a98dee41b429650fdc084d97b4295a24681a9ddf... Gate 1 approved record: PR #269, head 78602d29ce66e63f782be49f98b493ba53c91fff... The approved acceptance contract is: GAP-040 is complete only when real-MySQL RefreshDatabase tests preserve transaction isolation from the first test of a fresh process onward, while retaining the required zena_* RBAC compatibility tables for test execution, without changing production schema, RBAC/authorization behavior, migrations, or tenant semantics. Option C, or a technically equivalent complete solution, is the required target. Option B may be used only as an implementation experiment/stepping stone. It is not an acceptable Gate-3-complete result. If no complete solution can be implemented safely within the approved boundary, STOP and return to Owner. Do not silently downgrade the acceptance contract.' Owner also directed: consolidate the unchanged-in-substance Gate 1 material from PR #269 into the implementation branch/PR chain before planning/code, rerun governance lint on the complete consolidated changed-file set; write the implementation plan under docs/superpowers/plans/2026-08-20-gap-040-testcase-mysql-transaction-isolation.md via the Superpowers writing-plans workflow, covering the cold-start harness, all 5 approved real-MySQL surfaces, SQLite preservation, RBAC compat preservation, preferred runtime-only secondary connection with a config fallback authorized only if shown infeasible; implementation surface excludes production migrations/RBACManager/Src\\RBAC\\Models/production authorization/tenant semantics/GAP-041/GAP-042 — any of those triggers STOP + Design Dependency Preflight; cold-start proof is a hard release condition through all 5 surfaces; GAP-041/GAP-042 (PR #270) remain independent, not fixed under GAP-040, not a dependency; proceed with subagent-driven-development + TDD after plan self-review, with defined STOP triggers; Gate 3 only after complete cold-start isolation is empirically demonstrated on all 5 surfaces, SQLite clean, RBAC compat intact, no GAP-041/042 absorbed, exact-head CI green, technical readiness ready — then set awaiting_owner and stop for release decision; no merge/release/deploy authorized by Gate 2."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-20T00:00:00+07:00"
-  updated_at: "2026-08-20T15:00:00+07:00"
+  updated_at: "2026-08-20T16:00:00+07:00"
 generated_by: agent
 ---
 
-> **v2 — correction/resubmission, not an Owner decision.** Owner requested changes on v1 (head `04cbfd13a56936cef96d655ec81d080882ae5b28`): Option B could not remain the shippable target while the approved invariant requires zero DDL on the transacted connection including the first test; the regression proof needed an explicit cold-start requirement, not just an ordered pair that could run warm; Option C's connection-registration mechanism needed to not silently imply a checked-in `config/database.php` change while also saying no config changes are approved; the RBAC production-fidelity finding needed its own separate Work ID. All four are corrected below and in the engineering spec. No Owner decision has been recorded yet; `gate_status` remains `awaiting_owner` and `owner_decision.value` remains `none`.
+## OWNER GATE 2: APPROVED
 
-Gate 2 tiếp nối từ Gate 1 đã được Owner APPROVE tại PR #269 (lịch sử/bằng chứng Gate 1 vẫn giữ nguyên ở đó, head `78602d29ce66e63f782be49f98b493ba53c91fff`). Gói này được đặt trong một Draft PR riêng (PR #271), cắt từ `origin/main` sạch (`87a4307fdcf8117d8cac4b11c2cb27cb637ada5a`), theo đúng tiền lệ GAP-039 — không trộn lịch sử/bằng chứng Gate 1 với gói Gate 2.
+Owner phê duyệt GAP-040 Gate 2 lúc `2026-08-20T16:00:00+07:00`, đã review head `a98dee41b429650fdc084d97b4295a24681a9ddf` của PR #271 (Gate 1 approved record: PR #269, head `78602d29ce66e63f782be49f98b493ba53c91fff`). Hợp đồng nghiệm thu được duyệt: GAP-040 chỉ hoàn tất khi test `RefreshDatabase` trên MySQL thật giữ được transaction isolation kể từ test ĐẦU TIÊN của tiến trình mới trở đi, đồng thời giữ nguyên các bảng tương thích RBAC `zena_*` cần thiết để test chạy được, không đổi schema/hành vi RBAC-authorization/migration/ngữ nghĩa tenant production. Option C (hoặc giải pháp hoàn chỉnh tương đương) là mục tiêu bắt buộc; Option B chỉ được dùng như bước đệm/thử nghiệm implementation, KHÔNG được là kết quả hoàn tất Gate 3. Nếu không thể triển khai an toàn một giải pháp hoàn chỉnh trong ranh giới đã duyệt, đội kỹ thuật phải DỪNG và quay lại Owner — không được âm thầm hạ hợp đồng nghiệm thu.
+
+**Được phép:** hợp nhất bằng chứng/lịch sử Gate 1 (PR #269) vào chuỗi branch/PR implementation, lập implementation plan (`docs/superpowers/plans/2026-08-20-gap-040-testcase-mysql-transaction-isolation.md`), và tiến hành implementation/testing/technical review theo đúng ranh giới đã duyệt.
+
+**KHÔNG được phép:** sửa migration production, `RBACManager`, `Src\RBAC\Models\*`, hành vi authorization production, ngữ nghĩa tenant chính tắc, hay bất kỳ phần nào của GAP-041/GAP-042. Nếu implementation cần bất kỳ thay đổi bị cấm nào ở trên, phải DỪNG và chạy Design Dependency Preflight tương ứng trước khi tiếp tục. Release/merge/deploy KHÔNG được phép. Gate 3 CHƯA ĐƯỢC PHÊ DUYỆT và chỉ chuyển về `awaiting_owner` sau khi cold-start isolation được chứng minh thực nghiệm trên cả 5 bề mặt, bộ test SQLite vẫn xanh, hành vi tương thích RBAC còn nguyên vẹn, không có phần nào của GAP-041/GAP-042 bị hấp thụ vào, và CI đúng head yêu cầu đã xanh.
+
+Gate 2 tiếp nối từ Gate 1 đã được Owner APPROVE tại PR #269 (lịch sử/bằng chứng Gate 1 vẫn giữ nguyên ở đó, head `78602d29ce66e63f782be49f98b493ba53c91fff`). Gói này được đặt trong một Draft PR riêng (PR #271), cắt từ `origin/main` sạch (`87a4307fdcf8117d8cac4b11c2cb27cb637ada5a`), theo đúng tiền lệ GAP-039 — không trộn lịch sử/bằng chứng Gate 1 với gói Gate 2. Theo chỉ đạo Owner, lịch sử/bằng chứng Gate 1 sẽ được hợp nhất vào chuỗi implementation trước khi lập plan/code (xem bước tiếp theo, không thuộc phạm vi của chính commit ghi nhận quyết định này).
 
 ## Owner Summary
 

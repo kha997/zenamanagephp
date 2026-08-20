@@ -1,14 +1,14 @@
 ---
 work_id: GAP-039
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-18-gap-039-mysql-testing-integrity-design.md
   plan: docs/superpowers/plans/2026-08-19-gap-039-mysql-testing-integrity-implementation.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-08-20T09:50:00+07:00"
+  owner_response_reference: "Owner chat message, 2026-08-20: 'GAP-039 — GATE 3 OWNER DECISION: APPROVE. Tôi, Owner, APPROVE Gate 3 / release cho GAP-039. Decision reviewed against: PR #268; current PR head: 51483e5802a3555c92191b6f66995c9ceb0d6133; implementation evidence subject SHA: d7779e241ad0d71efcff371d0a0aa85af7963f8f; approved implementation-tree digest: c4901e25a1ecdbefea2a271b108b478b101909200825ca985ec4b96392612a18; technical readiness: ready; exact CI result: 31 SUCCESS + 1 expected deploy SKIPPED; final whole-branch review findings resolved/adjudicated as recorded; residual risk rating: low. Owner accepts the documented residual limitations, including GAP-040 remaining a separately governed work item and the known governance evidence-poll timing limitation. Neither is a blocker to GAP-039 release. ... Gate 3 approval authorizes this merge/release.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-20T04:47:00+07:00"
-  updated_at: "2026-08-20T06:10:00+07:00"
+  updated_at: "2026-08-20T09:50:00+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "31 CI job bắt buộc SUCCESS + đúng 1 job deploy SKIPPED (không phải lỏng lẻo nói '32 xanh') trên head bằng chứng d7779e24; final whole-branch review đã resolve hoàn toàn (2 Critical + 2 Important đã sửa và xác minh lại độc lập qua scoped re-review riêng; 1 Important ghi nhận thành GAP-040 theo đúng khuyến nghị của reviewer, không sửa dưới GAP-039); chi phí CI đã đo lại bằng số liệu thật ở đúng head cuối (Part 2 của docs/audits/2026-08-20-gap-039-ci-cost-measurement.md), không dùng lại số đo ở head trung gian."
@@ -35,9 +35,19 @@ technical_evidence:
   verified_pr_head_sha: "d7779e241ad0d71efcff371d0a0aa85af7963f8f"
   verified_at: "2026-08-20T06:10:00+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "c4901e25a1ecdbefea2a271b108b478b101909200825ca985ec4b96392612a18"
+  decision_recorded_at: "2026-08-20T09:50:00+07:00"
 ---
+
+## OWNER GATE 3: APPROVED
+
+Owner phê duyệt GAP-039 Gate 3 / release lúc `2026-08-20T09:50:00+07:00`, đã review head `51483e5802a3555c92191b6f66995c9ceb0d6133` của PR #268 (đúng bằng head hiện tại của nhánh và của PR tại thời điểm phê duyệt). Owner xác nhận: implementation evidence subject SHA `d7779e241ad0d71efcff371d0a0aa85af7963f8f`; implementation-tree digest đã phê duyệt `c4901e25a1ecdbefea2a271b108b478b101909200825ca985ec4b96392612a18`; technical readiness `ready`; CI chính xác 31 SUCCESS + 1 `deploy` SKIPPED (đúng thiết kế); kết quả review toàn nhánh cuối cùng đã resolve/adjudicate như đã ghi nhận; residual risk rating `low`. Owner chấp nhận các giới hạn tồn dư đã ghi nhận, gồm `GAP-040` tiếp tục là work item quản trị riêng và giới hạn thời gian polling của evidence-freshness đã biết — cả hai đều không chặn phát hành GAP-039.
+
+**Được phép:** merge PR #268 vào `main` theo đúng phương thức merge được duyệt sẵn của repo, không bỏ qua branch protection hay required checks; kiểm tra và báo cáo trung thực kết quả deploy workflow thật (nếu có chạy) sau merge, không tạo cơ chế deploy thủ công/ad-hoc.
+
+**Điều kiện bắt buộc trước khi merge:** implementation-tree digest sau khi ghi nhận quyết định này phải giữ nguyên `c4901e25a1ecdbefea2a271b108b478b101909200825ca985ec4b96392612a18` (chỉ được đổi nếu commit khác biệt duy nhất là chính file `03-release.md` này); nếu digest đổi vì bất kỳ lý do nào khác, phê duyệt này KHÔNG còn bao phủ implementation đã thay đổi và phải dừng lại.
+
+`GAP-040` (đã ghi tại `OPERATIONAL_GAP_REGISTER.md`) tiếp tục là work item quản trị riêng, KHÔNG thuộc phạm vi đóng của GAP-039.
 
 ## Owner Summary
 

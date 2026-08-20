@@ -228,11 +228,12 @@ abstract class TestCase extends BaseTestCase
             return;
         }
 
-        $schema = config('database.default') === 'sqlite'
-            ? Schema::connection(config('database.default'))
-            : $this->zenaRbacBootstrapSchema();
+        Schema::dropIfExists('zena_role_permissions');
+        Schema::dropIfExists('zena_user_roles');
+        Schema::dropIfExists('zena_roles');
+        Schema::dropIfExists('zena_permissions');
 
-        $schema->create('zena_permissions', function (Blueprint $table) {
+        Schema::create('zena_permissions', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->string('code')->unique();
             $table->string('module');
@@ -242,7 +243,7 @@ abstract class TestCase extends BaseTestCase
             $table->timestamps();
         });
 
-        $schema->create('zena_roles', function (Blueprint $table) {
+        Schema::create('zena_roles', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->string('name')->unique();
             $table->string('scope')->default('system');
@@ -252,22 +253,18 @@ abstract class TestCase extends BaseTestCase
             $table->timestamps();
         });
 
-        $schema->create('zena_role_permissions', function (Blueprint $table) {
+        Schema::create('zena_role_permissions', function (Blueprint $table) {
             $table->string('role_id');
             $table->string('permission_id');
             $table->boolean('allow_override')->default(false);
             $table->timestamps();
         });
 
-        $schema->create('zena_user_roles', function (Blueprint $table) {
+        Schema::create('zena_user_roles', function (Blueprint $table) {
             $table->string('user_id');
             $table->string('role_id');
             $table->timestamps();
         });
-
-        if (config('database.default') !== 'sqlite') {
-            DB::purge('zena_ddl_bootstrap');
-        }
 
         if (self::$coldStartProbe !== null) {
             self::$coldStartProbe['transaction_level_after_bootstrap'] = DB::transactionLevel();
@@ -275,40 +272,6 @@ abstract class TestCase extends BaseTestCase
                 self::$coldStartProbe['pdo_in_transaction_after_bootstrap'] = DB::connection()->getPdo()->inTransaction();
             }
         }
-    }
-
-    /**
-     * Registers (once) and returns a Schema builder for a second MySQL
-     * session, pointed at the identical physical database as the active
-     * connection, that is never enlisted in RefreshDatabase's
-     * connectionsToTransact() and never a pooled/persistent PDO handle —
-     * so its DDL's implicit commit only affects its own session, never the
-     * test's already-open transaction (GAP-040).
-     */
-    private function zenaRbacBootstrapSchema(): \Illuminate\Database\Schema\Builder
-    {
-        $activeConnectionName = config('database.default');
-        $bootstrapConfig = config("database.connections.{$activeConnectionName}");
-
-        // Force a genuinely distinct session: a pooled/persistent PDO handle
-        // with identical DSN+credentials could otherwise be silently reused
-        // by PHP for both connection names, defeating the whole mechanism.
-        $bootstrapConfig['options'] = array_filter(
-            (array) ($bootstrapConfig['options'] ?? []),
-            fn ($key) => $key !== \PDO::ATTR_PERSISTENT,
-            ARRAY_FILTER_USE_KEY
-        );
-        $bootstrapConfig['options'][\PDO::ATTR_PERSISTENT] = false;
-
-        config(['database.connections.zena_ddl_bootstrap' => $bootstrapConfig]);
-        DB::purge('zena_ddl_bootstrap');
-
-        if (self::$coldStartProbe !== null) {
-            self::$coldStartProbe['bootstrap_connection_id'] = (int) DB::connection('zena_ddl_bootstrap')
-                ->selectOne('SELECT CONNECTION_ID() AS id')->id;
-        }
-
-        return Schema::connection('zena_ddl_bootstrap');
     }
 
     private function ensureSqliteDocumentsBackupTable(): void

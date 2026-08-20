@@ -7,17 +7,13 @@ use Tests\Support\GAP040ColdStartTransactionIsolationAssertions;
 use Tests\TestCase;
 
 /**
- * @group mysql-parity
+ * @group zena-invariants
  *
- * Covers routes-guardrails.yml's `--group=mysql-parity` surface only. A
- * second file, ZenaInvariantsTransactionIsolationColdStartTest, covers
- * zena-invariants-mysql — PHPUnit's group-exclude mechanism only cancels
- * an exclude for a group actually passed via --group, so a single test
- * carrying both `mysql-parity` (excluded by default in phpunit.xml) and
- * `zena-invariants` (not excluded) is still dropped by --group=zena-invariants
- * runs, which never mentions mysql-parity to cancel that exclude.
+ * Covers automated-testing.yml's zena-invariants-mysql surface. See
+ * ZenaTransactionIsolationColdStartTest's docblock for why this is a
+ * separate file rather than a second @group on that class.
  */
-class ZenaTransactionIsolationColdStartTest extends TestCase
+class ZenaInvariantsTransactionIsolationColdStartTest extends TestCase
 {
     use RefreshDatabase;
     use GAP040ColdStartTransactionIsolationAssertions;

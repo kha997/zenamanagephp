@@ -3,6 +3,7 @@
 namespace Tests\Feature\Documents;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Depends;
 use Tests\Support\GAP040ColdStartTransactionIsolationAssertions;
 use Tests\TestCase;
 
@@ -11,10 +12,14 @@ class TransactionIsolationColdStartTest extends TestCase
     use RefreshDatabase;
     use GAP040ColdStartTransactionIsolationAssertions;
 
+    private const WRITER_TEST = 'test_a_writes_marker_after_proving_cold_start_invariant';
+
     protected function setUp(): void
     {
         self::$coldStartProbe = [];
-        $this->forceGenuineColdStartForNextSetUp();
+        if ($this->name() === self::WRITER_TEST) {
+            $this->forceGenuineColdStartForNextSetUp();
+        }
         parent::setUp();
     }
 
@@ -24,14 +29,14 @@ class TransactionIsolationColdStartTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_a_cold_start_bootstrap_does_not_break_transaction_isolation(): void
+    public function test_a_writes_marker_after_proving_cold_start_invariant(): string
     {
-        $this->assertColdStartInvariantHeld();
-        $this->writeMarkerRow();
+        return $this->proveColdStartAndWriteMarker();
     }
 
-    public function test_b_rolled_back_write_is_absent_via_independent_connection(): void
+    #[Depends(self::WRITER_TEST)]
+    public function test_b_rolled_back_write_is_absent_via_independent_connection(string $tenantId): void
     {
-        $this->assertMarkerRowAbsentViaIndependentConnection();
+        $this->assertMarkerRowAbsentViaIndependentConnection($tenantId);
     }
 }

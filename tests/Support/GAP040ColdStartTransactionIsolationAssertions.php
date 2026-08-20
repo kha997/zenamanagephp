@@ -4,22 +4,31 @@ namespace Tests\Support;
 
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabaseState;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
  * Shared GAP-040 cold-start transaction-isolation regression proof.
  * Consumed by one test class per Gate-1-approved real-MySQL surface.
+ *
+ * Corrected per Owner Gate 3 review: the writer test (proveColdStartAndWriteMarker)
+ * is the ONLY method that forces a genuine cold start
+ * (RefreshDatabaseState::$migrated = false). The verifier
+ * (assertMarkerRowAbsentViaIndependentConnection) must NOT force one — doing so
+ * would trigger another migrate:fresh between the writer's teardown and the
+ * verifier's read, wiping the marker row regardless of whether RefreshDatabase's
+ * rollback actually worked, producing a false green. Ordering and value-passing
+ * between the two are guaranteed by PHPUnit's #[Depends] attribute on the
+ * consuming test classes, not by method-name convention or discovery order.
  */
 trait GAP040ColdStartTransactionIsolationAssertions
 {
     /**
      * Forces the next parent::setUp() to genuinely re-run migrate:fresh
      * before opening this test's RefreshDatabase transaction, so the
-     * cold-start case is deterministically observed regardless of whether
-     * this class happens to be first in its process — rather than relying
-     * on file/class discovery order. Safe to call unconditionally: it only
+     * cold-start case is deterministically observed. Call this ONLY from
+     * the writer test's setUp() — never from the verifier's — per the
+     * class-level doc comment above. Safe to call unconditionally: it only
      * has an effect when the active connection is MySQL, and reads the
      * connection via getenv() (set by tests/bootstrap.php before any test
      * runs) rather than config(), since the app container does not exist
@@ -32,11 +41,21 @@ trait GAP040ColdStartTransactionIsolationAssertions
         }
     }
 
-    /** @group stress */
-    protected function assertColdStartInvariantHeld(): void
+    /**
+     * Writer half of the proof. Must run under a setUp() that called
+     * forceGenuineColdStartForNextSetUp() first. Proves the cold-start
+     * invariant with hard, non-skippable assertions on real MySQL — a
+     * failure to observe genuine cold start is a real defect (the forcing
+     * mechanism itself broken), not a legitimate alternate state, so it is
+     * NOT swallowed as a skip. Returns the written row's id for the
+     * verifier to consume via #[Depends].
+     *
+     * @group stress
+     */
+    protected function proveColdStartAndWriteMarker(): string
     {
         if (config('database.default') !== 'mysql') {
-            $this->markTestSkipped('dependency: this proof only exercises the GAP-040 invariant against a real MySQL connection; this test also carries a group not excluded from the default SQLite suite, so it is reachable there too — skip rather than fail is correct here.');
+            $this->markTestSkipped('dependency: this proof only exercises the GAP-040 invariant against a real MySQL connection; this test class is also reachable from the default SQLite suite (no excluded @group), so a legitimate skip is correct there.');
         }
 
         $probe = TestCase::$coldStartProbe;
@@ -44,9 +63,10 @@ trait GAP040ColdStartTransactionIsolationAssertions
 
         fwrite(STDERR, "\n[GAP-040 probe] " . json_encode($probe) . "\n");
 
-        if ($probe['table_existed_before_bootstrap']) {
-            $this->markTestSkipped('dependency: zena_roles already existed before bootstrap ran — an earlier test class in this process already captured the genuine cold-start moment. This is expected and does not indicate a problem: the fix keeps the main transaction genuinely open (see the routes-guardrails.yml run where this exact class observed and proved the cold-start case directly), so the RBAC compat table persists for the rest of the process instead of being torn down and rebuilt every test the way the pre-fix code did.');
-        }
+        $this->assertFalse(
+            $probe['table_existed_before_bootstrap'],
+            'zena_roles already existed before bootstrap ran despite forceGenuineColdStartForNextSetUp() — the deterministic cold-start forcing mechanism itself is broken. This must fail, not skip: a genuine cold start was required and did not occur.'
+        );
 
         $this->assertSame(
             1,
@@ -70,39 +90,43 @@ trait GAP040ColdStartTransactionIsolationAssertions
             'PDO::inTransaction() is false after the RBAC compat bootstrap — this is direct, server-reported proof of the GAP-040 implicit-commit defect.'
         );
 
-        // Only meaningful once the fix populates bootstrap_connection_id;
-        // absent pre-fix, where no separate session exists yet to compare.
-        if (array_key_exists('bootstrap_connection_id', $probe)) {
-            $this->assertNotSame(
-                $probe['main_connection_id'],
-                $probe['bootstrap_connection_id'],
-                'The RBAC compat bootstrap ran on the same MySQL session (CONNECTION_ID) as the main transacted connection — not a genuinely separate session.'
-            );
-        }
-    }
+        $this->assertArrayHasKey(
+            'bootstrap_connection_id',
+            $probe,
+            'No separate bootstrap session was recorded — the isolated-connection mechanism did not run.'
+        );
 
-    protected function writeMarkerRow(): string
-    {
+        $this->assertNotSame(
+            $probe['main_connection_id'],
+            $probe['bootstrap_connection_id'],
+            'The RBAC compat bootstrap ran on the same MySQL session (CONNECTION_ID) as the main transacted connection — not a genuinely separate session.'
+        );
+
         $tenant = Tenant::factory()->create([
             'name' => 'gap040-cold-start-' . (string) Str::uuid(),
         ]);
 
-        file_put_contents($this->coldStartMarkerFilePath(), $tenant->id);
-
         return $tenant->id;
     }
 
-    /** @group stress */
-    protected function assertMarkerRowAbsentViaIndependentConnection(): void
+    /**
+     * Verifier half of the proof. Must run under a setUp() that did NOT
+     * call forceGenuineColdStartForNextSetUp() — no migrate:fresh, no
+     * truncate, no reset of any kind may occur between the writer's
+     * teardown and this read. The only mechanism that can make $tenantId
+     * disappear is the rollback being proved. Queries via a brand-new,
+     * non-persistent PDO connection — never a Laravel-managed connection —
+     * so the read cannot be satisfied by in-process transaction visibility
+     * artifacts. A missing/empty $tenantId is a hard failure (fail closed),
+     * never a skip: PHPUnit's #[Depends] on the consuming test class is
+     * what supplies it, and a broken dependency there is itself a defect
+     * worth surfacing loudly, not hiding.
+     *
+     * @group stress
+     */
+    protected function assertMarkerRowAbsentViaIndependentConnection(string $tenantId): void
     {
-        $markerPath = $this->coldStartMarkerFilePath();
-
-        if (!file_exists($markerPath)) {
-            $this->markTestSkipped('dependency: no cold-start marker file found — the write-side test must run first, in the same process, before this verification test.');
-        }
-
-        $tenantId = trim((string) file_get_contents($markerPath));
-        @unlink($markerPath);
+        $this->assertNotSame('', $tenantId, 'No marker tenant id was supplied by the writer test — the #[Depends] value-passing itself is broken.');
 
         $pdo = new \PDO(
             sprintf(
@@ -123,12 +147,7 @@ trait GAP040ColdStartTransactionIsolationAssertions
         $this->assertSame(
             0,
             $count,
-            'A fresh, independent PDO connection (not reusing any Laravel-managed connection) still finds the cold-start test row — RefreshDatabase rollback did not take effect.'
+            'A fresh, independent PDO connection (not reusing any Laravel-managed connection, and with no migrate:fresh/truncate/reset having run since the writer test wrote this row) still finds the cold-start test row — RefreshDatabase rollback did not take effect.'
         );
-    }
-
-    private function coldStartMarkerFilePath(): string
-    {
-        return storage_path('app/gap040-cold-start-marker.txt');
     }
 }

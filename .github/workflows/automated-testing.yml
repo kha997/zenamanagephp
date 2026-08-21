@@ -1202,7 +1202,7 @@ jobs:
         APP_ENV: testing
       run: |
         echo "::group::Performance tests"
-        php artisan test "${{ matrix.perf_file }}"
+        php artisan test "${{ matrix.perf_file }}" --group=performance --fail-on-empty-test-suite
         echo "::endgroup::"
 
     - name: Generate Performance Report

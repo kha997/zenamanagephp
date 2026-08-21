@@ -175,7 +175,7 @@ Keep `tableInsertDefaults()`'s current PRAGMA-based branch for SQLite, add a par
 
 - **Clarity:** worse than A — two code paths to read and keep in sync for identical semantic intent.
 - **Custom SQL:** required for both branches (PRAGMA already bespoke; a new hand-written `information_schema` query would be needed too).
-- **Metadata-format normalization:** now the test helper's own responsibility (reconciling MySQL's unquoted defaults against SQLite's quoted ones) instead of the framework's — duplicating work `Schema::getColumns()` already does correctly.
+- **Metadata normalization:** worse than A — the helper would have to own two driver-specific query/result shapes before feeding their raw default values through the same literal-normalization semantics. This reimplements the metadata abstraction `Schema::getColumns()` already provides; it does not avoid the helper's existing quote-stripping responsibility.
 - **Maintenance cost:** higher — any future driver added to CI (e.g. PostgreSQL, mentioned nowhere in this repo today but a real possibility) would need a third branch.
 - **Verdict:** the pattern this repo already uses elsewhere (e.g. `2025_09_20_145756_disable_foreign_keys_for_testing.php`) is justified there because Laravel has no portable API for disabling FK checks — but for column-default introspection, a portable API *does* exist (Option A), so paying this complexity cost here is not justified.
 

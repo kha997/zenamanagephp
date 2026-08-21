@@ -5,7 +5,7 @@ gate_status: awaiting_owner
 owner_decision:
   value: none
   authority: human_owner
-decision_requested: "Approve, reject, or request changes to the Gate-2 design for fixing PerformanceMonitoringTest::tableInsertDefaults()'s SQLite-only PRAGMA call: recommended approach is Option A (replace with Laravel's framework-native Schema::getColumns(), verified present in installed Laravel 12.63.0, no driver branching needed)."
+decision_requested: "approve_or_changes_or_decline"
 references:
   spec: docs/superpowers/specs/2026-08-21-gap-043-performance-test-mysql-portability-design.md
   plan: null

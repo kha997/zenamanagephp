@@ -1,30 +1,36 @@
 ---
 work_id: GAP-041
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_changes_or_decline"
+decision_requested: null
 references:
   spec: docs/audits/2026-08-21-gap-041-zero-test-performance-ci-evidence.md
   plan: null
   branch: docs/GAP-041-gate1-investigation
-  pr: null
+  pr: 276
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-21T08:01:00+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-21T15:30:00+07:00"
+  owner_response_reference: "Owner chat message, 2026-08-21: 'GAP-041 — OWNER GATE 1 DECISION: APPROVE... Gate 1 PR: #276, reviewed Gate-1 head 98a45eac9d2819caa0ea40c572f2a0ac8d675aa3, canonical baseline 0b77747551a3e0da08e3e41c73a0a88f529b19f3... I APPROVE GAP-041 Gate 1. I accept the Gate-1 evidence and the following problem statement: GAP-041 is a CI truthfulness/test-selection integrity defect. performance-tests has been live-proven on exact canonical main to pass real-MySQL preflight, select zero PHPUnit tests, and still finish successfully. performance-budget and performance-heavy are independently proven to have zero matching test groups by deterministic repo inspection/local PHPUnit selection, but their current live workflows fail earlier because of a separate missing-script defect, so they must NOT be described as currently live false-green. This approval authorizes Gate 2 design only. It does NOT authorize implementation, merge, release, deployment, GAP-042 work, or repair of the unrelated missing-script defect.' Owner also directed: rehydrate from repository not prior chat before any mutation; reconcile OPERATIONAL_GAP_REGISTER.md GAP-041 wording so it no longer implies all three jobs are currently live-green while executing zero tests (factual SSOT correction only, not scope expansion); do not register/investigate/fix the missing .github/scripts/ci_prepare_testing_env.sh defect under GAP-041; Gate 2 must reconstruct intended semantics of all three jobs independently rather than jumping to '--group' as the answer, separate correct-selection from fail-closed-truthfulness as two design concerns, explicitly address the masked-job (performance-budget/performance-heavy) verification problem, and finish at gate_status: awaiting_owner with no implementation plan or code."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-21T08:01:00+07:00"
-  updated_at: "2026-08-21T08:01:00+07:00"
+  updated_at: "2026-08-21T15:30:00+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner phê duyệt GAP-041 Gate 1 lúc `2026-08-21T15:30:00+07:00`, đã review head `98a45eac9d2819caa0ea40c572f2a0ac8d675aa3` của PR #276 (canonical baseline `0b77747551a3e0da08e3e41c73a0a88f529b19f3`). Owner xác nhận GAP-041 là một lỗi CI truthfulness/test-selection integrity có thật: `performance-tests` đã được chứng minh SỐNG trên đúng head chính tắc hiện tại là vượt qua preflight MySQL thật, chọn 0 test PHPUnit, và vẫn báo hoàn tất thành công. `performance-budget` và `performance-heavy` được chứng minh độc lập là có 0 test khớp group bằng kiểm tra repo tất định/lựa chọn PHPUnit cục bộ, nhưng workflow sống hiện tại của chúng fail sớm hơn vì một lỗi thiếu-script riêng biệt — do đó KHÔNG được mô tả là đang live false-green hiện nay.
+
+Quyết định này CHỈ cho phép chuyển sang Gate 2 design. KHÔNG cấp phép implementation, merge, release, deployment, công việc GAP-042, hay sửa lỗi thiếu-script không liên quan. Owner cũng chỉ đạo: rehydrate từ repository (không phải chat trước) trước bất kỳ thay đổi nào; đối chiếu lại cách diễn đạt dòng GAP-041 trong `OPERATIONAL_GAP_REGISTER.md` để không còn ngụ ý cả 3 job hiện đang live-green trong khi chạy 0 test (chỉ là sửa SSOT thực tế, không mở rộng phạm vi); không đăng ký/điều tra/sửa lỗi thiếu `.github/scripts/ci_prepare_testing_env.sh` dưới GAP-041; Gate 2 phải tái dựng ngữ nghĩa dự kiến của cả 3 job một cách độc lập thay vì nhảy thẳng đến `--group`, tách "lựa chọn test đúng" và "fail-closed truthfulness" thành 2 mối quan tâm thiết kế riêng, giải quyết rõ ràng vấn đề xác minh job-bị-che-khuất (`performance-budget`/`performance-heavy`), và kết thúc ở `gate_status: awaiting_owner` mà không có implementation plan hay code.
 
 ## Owner Summary
 Ba job CI tuyên bố kiểm thử hiệu năng trên MySQL thật (`automated-testing.yml`'s `performance-tests`, `a11y-perf-testing.yml`'s `performance-budget`/`performance-heavy`) — cả ba đều dựng container MySQL 8.0 thật, đặt biến kết nối thật, và chạy fail-closed preflight (`zena_mysql_ensure_connection`/`zena_mysql_preflight_connection`, cơ chế GAP-039) trước bước test. Nhưng lệnh PHPUnit thực tế của cả ba job chọn **0 test**, do lệch tên nhóm (`@group`) giữa lệnh CI và annotation trên chính các file test — và với `performance-tests`, job vẫn báo `success` dù không chạy test nào.

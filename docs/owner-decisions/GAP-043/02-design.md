@@ -10,19 +10,19 @@ references:
   spec: docs/superpowers/specs/2026-08-21-gap-043-performance-test-mysql-portability-design.md
   plan: null
   branch: docs/GAP-043-gate2-design
-  pr: null
+  pr: "https://github.com/kha997/zenamanagephp/pull/280"
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-21T21:30:00+07:00"
-  owner_response_reference: null
-  reconciliation_required: false
+  recorded_at: "2026-08-21T22:15:00+07:00"
+  owner_response_reference: "Owner Gate-2 review round 1 (2026-08-21): REQUEST CHANGES on head a1cde2aa — 5 findings (incomplete load-bearing inventory missing budget_total; Option C rejection too absolute, needed C1/C2/C3 breakdown; Option A acceptance-contract PRAGMA wording conflated framework-internal SQLite dispatch with GAP-043-owned raw SQL; SQLite verification contract cited a nonexistent CI lane instead of an explicit --group=performance command; PR/governance-semantics provenance gaps in this packet). v2 (this revision) addresses all 5 with a LOCAL Schema::getColumns() probe against genuine MySQL 8.0 + SQLite, corrected 12-pair inventory, corrected Option C/acceptance-contract/SQLite-verification text, and corrected references/governance wording."
+  reconciliation_required: true
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-21T21:30:00+07:00"
-  updated_at: "2026-08-21T21:30:00+07:00"
+  updated_at: "2026-08-21T22:15:00+07:00"
 generated_by: agent
 ---
 
@@ -44,7 +44,7 @@ Same as Gate 1: engineering team (currently blocked from a real MySQL-passing `P
 
 ## Bằng chứng (Evidence)
 
-Full technical evidence, column inventory, framework-API verification (with exact `vendor/laravel/framework` file/line citations), and 4-option comparison are in `docs/superpowers/specs/2026-08-21-gap-043-performance-test-mysql-portability-design.md`. No LOCAL probe execution was performed for this Gate 2 — verification was via reading installed framework source directly (authoritative for API existence/shape) plus static reading of migrations and factories; this was judged sufficient at design stage, with LIVE MySQL verification deferred to Gate 3 per the acceptance contract in the design doc.
+Full technical evidence, corrected 12-pair column inventory (7 `projects` + 5 `tasks`, corrected from v1's incomplete 11), framework-API verification (with exact `vendor/laravel/framework` file/line citations), a LOCAL runtime probe against genuine migrated MySQL 8.0 (throwaway Docker container) and genuine migrated SQLite comparing raw and normalized `Schema::getColumns()` output for both tables, and the corrected 4-option comparison (including the C1/C2/C3 breakdown of Option C) are in `docs/superpowers/specs/2026-08-21-gap-043-performance-test-mysql-portability-design.md`. LIVE MySQL verification remains deferred to Gate 3 per the acceptance contract in the design doc — the LOCAL probe in this v2 does not substitute for it.
 
 ## Tác động nếu không xử lý (Impact if unaddressed)
 
@@ -52,7 +52,9 @@ Unchanged from Gate 1: `performance-tests` (monitoring leg) stays permanently re
 
 ## Phạm vi đề xuất (Proposed scope)
 
-**Future implementation surface (not yet authorized — Gate 3 implementation requires separate authorization after this Gate 2 is approved):** `tests/Performance/PerformanceMonitoringTest.php`, specifically the body of the private `tableInsertDefaults()` method only. No other file. No application code, migration, schema, model, RBAC/tenant, or CRM/Project/Service-Line/OPPM/Finance/Treasury domain logic is implicated — Design Dependency Preflight is not triggered.
+**Future implementation surface:** `tests/Performance/PerformanceMonitoringTest.php`, specifically the body of the private `tableInsertDefaults()` method only. No other file. No application code, migration, schema, model, RBAC/tenant, or CRM/Project/Service-Line/OPPM/Finance/Treasury domain logic is implicated — Design Dependency Preflight is not triggered.
+
+**Governance semantics (corrected in this v2 — v1 conflated Gate 2 and Gate 3 authorization):** per this register's canonical lifecycle, Gate 1 approval accepts the problem/evidence; **Gate 2 approval accepts the design AND authorizes implementation within the approved scope** (it does not require a further separate authorization step before implementation may begin); Gate 3 is the release decision — no ready/merge/release/deploy before Gate-3 approval. This Gate-2 packet, once approved, would authorize implementation of Option A confined to the surface above; it would **not** by itself authorize merge, release, or deployment — those remain gated on Gate 3.
 
 **Attribution-safe Gate-3 acceptance contract** (full text in the design doc): GAP-043's GREEN claim is scoped to the 6 tests that fail directly on the PRAGMA call today, not the whole test class — `test_api_performance_budgets` (masked by GAP-044) is explicitly carved out and evaluated separately so GAP-044's unresolved state cannot block or falsely credit GAP-043's closure.
 
@@ -62,4 +64,4 @@ GAP-041 (already fixed, not reopened), GAP-042 (RBAC, unrelated), GAP-044 (SAVEP
 
 ## Quyết định cần Owner (Decision requested)
 
-Approve Option A as the Gate-2 design, or reject/request changes. This Gate 2 packet does **not** authorize implementation, test-code changes, Gate 3, or merge/release — those require a separate Owner decision after this design is approved.
+Approve Option A as the Gate-2 design, or reject/request changes. Per the corrected governance semantics above: approving this packet would authorize implementation of Option A within the stated scope, but would **not** authorize Gate 3, merge, release, or deployment — those remain separately gated.

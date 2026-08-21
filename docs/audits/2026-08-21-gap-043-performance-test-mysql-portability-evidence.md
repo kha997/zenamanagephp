@@ -3,14 +3,14 @@
 **Date:** 2026-08-21
 **Gate:** 1 (investigation only — no fix, no Gate 2, no implementation)
 **Canonical baseline:** `origin/main` `25cab7f4955ed9a9b5d0c7113c19ca1ea679c3ac`
-**Investigation branch:** `docs/GAP-043-044-045-register-discovery` (worktree `.worktrees/GAP-041-register-043-044-045`)
+**Investigation branch:** `docs/GAP-043-gate1-investigation` (worktree `.worktrees/GAP-043-gate1-investigation`), PR [#279](https://github.com/kha997/zenamanagephp/pull/279)
 **Registered:** `OPERATIONAL_GAP_REGISTER.md` row `GAP-043` (added by PR #278, commit `25cab7f4`, discovered during GAP-041 LIVE execution)
 
 ## Owner Summary
 
 `PerformanceMonitoringTest::tableInsertDefaults()` (`tests/Performance/PerformanceMonitoringTest.php:445-460`) calls `DB::select("PRAGMA table_info({$table})")` — SQLite-only schema-introspection syntax. On real MySQL this is a hard syntax error (`SQLSTATE[42000]`), not a soft degradation. The helper is reached by exactly **7 of the 10** test methods in this class (the 7 that call `createTestData()`); the other 3 build their fixtures directly via model factories and never reach it. Because this test class only ever ran on SQLite until GAP-041's Option D repair made the CI job's test-selection real (previously the job silently selected 0 tests and reported `success`), this MySQL-specific failure was never exposed until GitHub Actions run `32471481216` (2026-08-21), job `96739005481`.
 
-This Gate 1 independently reproduced and traced that LIVE failure, confirmed the test-code blob executed in that run is byte-identical to current canonical `main`, confirmed the defect's exact call path and blast radius, and confirmed no other SQLite-specific syntax exists anywhere else in this test class. The defect is genuinely test-only (no application/production code, migration, model, or schema is implicated). One masking interaction with the separately-registered GAP-044 (SAVEPOINT) was found and is documented below without being absorbed into this gap.
+This Gate 1 independently retrieved and revalidated that existing LIVE failure (no new LOCAL execution was performed — see Section D), confirmed the test-code blob executed in that run is byte-identical to current canonical `main`, confirmed the defect's exact call path and blast radius, and confirmed no other SQLite-specific syntax exists anywhere else in this test class. The defect is genuinely test-only (no application/production code, migration, model, or schema is implicated). One masking interaction with the separately-registered GAP-044 (SAVEPOINT) was found and is documented below without being absorbed into this gap.
 
 ## A. Exact call path
 
@@ -83,32 +83,23 @@ tests/Performance/PerformanceMonitoringTest.php:445  private function tableInser
 ```
 No other file references this helper. It is not a shared trait method — it is private to this one class.
 
-### `PRAGMA` — 17 occurrences repo-wide, only 1 is the GAP-043 defect
+### `PRAGMA` — exact tracked-tree count
 
-| File | Context | In scope for GAP-043? |
-|---|---|---|
-| `tests/Performance/PerformanceMonitoringTest.php:449` | `tableInsertDefaults()` — **the defect** | **Yes** |
-| `database/migrations/2025_09_20_071043_add_missing_performance_indexes.php:130` | `PRAGMA index_list` | No — driver-guarded (`if ($driver === 'sqlite')`), verified below |
-| `database/migrations/2025_09_20_145756_disable_foreign_keys_for_testing.php:20,37` | `PRAGMA foreign_keys=OFF/ON` | No — explicitly branches `sqlite` vs `mysql` (`SET FOREIGN_KEY_CHECKS`), verified by reading the file directly |
-| `database/migrations/2025_09_20_160000_fix_notifications_table_schema.php:151` | `PRAGMA index_list` | No — migration-time introspection, not this test |
-| `database/migrations/2025_09_20_132400_add_missing_fields_to_components_table.php:78,108` | `PRAGMA index_list`/`foreign_key_list` | No — same migration pattern |
-| `database/migrations/2025_09_20_164912_add_missing_columns_to_task_assignments_table.php:112,136` | `PRAGMA foreign_key_list`/`index_list` | No — same migration pattern |
-| `database/migrations/2025_09_22_013614_add_missing_indexes_for_n1_optimization.php:170,202` | `PRAGMA index_list`/`index_info` | No — same migration pattern |
-| `app/Http/Controllers/Admin/MaintenanceController.php:355` | `PRAGMA optimize` | No — application maintenance command, out of test scope |
-| `app/Console/Commands/MaintenanceCommand.php:128-129` | `PRAGMA optimize`/`integrity_check` | No — same |
-| `tests/Integration/FinalSystemTest.php:40` | `PRAGMA foreign_keys=OFF` (unguarded) | **No, but flagged as a related latent risk** — see below |
-| `tests/Feature/DashboardAnalyticsSimpleTest.php:45` | same pattern (unguarded) | Same flag |
-| `tests/Feature/DashboardAnalyticsTest.php:37` | same pattern (unguarded) | Same flag |
-| `tests/Feature/DocumentVersioningNoFKTest.php:30` | same pattern (unguarded) | Same flag |
-| `tests/Feature/NotificationSystemTest.php:45` | same pattern (unguarded) | Same flag |
-| `tests/Feature/BulkOperationsTest.php:49` | same pattern (unguarded) | Same flag |
-| `tests/Feature/UserManagementSimpleTest.php:30` | same pattern (unguarded) | Same flag |
-| `tests/Feature/UserManagementAuthenticationTest.php:30` | same pattern (unguarded) | Same flag |
-| `tests/Feature/Integration/EventWorkflowTest.php:42` | same pattern (unguarded) | Same flag |
-| `tests/Feature/Integration/InterModuleCommunicationTest.php:40` | same pattern (unguarded) | Same flag |
-| `tests/Feature/Api/ExportTenantIsolationTest.php:382` | `PRAGMA defer_foreign_keys = ON` (unguarded) | Same flag |
+Command used: `git grep -n "PRAGMA" -- '*.php'` (git-tracked working tree at this branch's head, scoped to executable PHP source — `app/`, `database/migrations/`, `tests/`; this is not a whole-repo/all-file-type count, and it excludes anything untracked or outside `*.php`).
 
-**Related latent-risk finding (explicitly NOT part of GAP-043's scope, reported per instruction E rather than silently fixed):** 10 Feature/Integration test files call `\DB::statement('PRAGMA foreign_keys=OFF;')` or equivalent unguarded, with no driver check. Gate 1 confirmed via `.github/workflows/automated-testing.yml` that none of these files are currently ever executed against MySQL: the only CI jobs that set `DB_CONNECTION: mysql` are `zena-invariants-mysql`, `rfi-escalation-concurrency-mysql`, `document-workflow-concurrency-mysql`, `treasury-check-constraints-mysql`, and `performance-tests` (matrix: only `PerformanceMonitoringTest.php` and `DashboardPerformanceTest.php`) — none of which include these 10 files. The project's default `phpunit.xml` sets `DB_CONNECTION=sqlite`, which is what these 10 files run under in every other job. This is therefore a **dormant** portability risk, not a currently-failing one, and is out of scope for GAP-043 (which is specifically the LIVE-confirmed, currently-failing `PerformanceMonitoringTest.php` defect). It is recorded here so it is not silently absorbed or silently fixed, per instruction E. No new gap is registered for it in this document — that determination belongs to the Owner/register maintainer, not to this Gate 1 packet.
+Result: **25 line-occurrences across 20 unique files.** These four categories are exhaustive and non-overlapping (every occurrence appears in exactly one category):
+
+| Category | Files | Lines | Verified how |
+|---|---|---|---|
+| **GAP-043 defect itself** | 1 (`tests/Performance/PerformanceMonitoringTest.php:449`) | 1 | Unguarded — no driver check anywhere in the file (Section B) |
+| **Driver-guarded migration/app introspection** | 8 (`app/Console/Commands/MaintenanceCommand.php`, `app/Http/Controllers/Admin/MaintenanceController.php`, `database/migrations/2025_09_20_071043_add_missing_performance_indexes.php`, `database/migrations/2025_09_20_132400_add_missing_fields_to_components_table.php`, `database/migrations/2025_09_20_145756_disable_foreign_keys_for_testing.php`, `database/migrations/2025_09_20_160000_fix_notifications_table_schema.php`, `database/migrations/2025_09_20_164912_add_missing_columns_to_task_assignments_table.php`, `database/migrations/2025_09_22_013614_add_missing_indexes_for_n1_optimization.php`) | 13 | Each `PRAGMA` call individually confirmed sitting inside an `if ($driver === 'sqlite')` (or equivalent `getDriverName()`) branch with an explicit MySQL-equivalent alternative (`SET FOREIGN_KEY_CHECKS`, or migration-only introspection gated the same way) — read directly, not inferred |
+| **Unguarded `PRAGMA foreign_keys=OFF` in Feature/Integration tests** | 10 (`tests/Integration/FinalSystemTest.php`, `tests/Feature/DashboardAnalyticsSimpleTest.php`, `tests/Feature/DashboardAnalyticsTest.php`, `tests/Feature/DocumentVersioningNoFKTest.php`, `tests/Feature/NotificationSystemTest.php`, `tests/Feature/BulkOperationsTest.php`, `tests/Feature/UserManagementSimpleTest.php`, `tests/Feature/UserManagementAuthenticationTest.php`, `tests/Feature/Integration/EventWorkflowTest.php`, `tests/Feature/Integration/InterModuleCommunicationTest.php`) | 10 | No driver check present; flagged as a related latent risk below — **kept as its own category, distinct from the next row** |
+| **Unguarded `PRAGMA defer_foreign_keys` in one Feature test** | 1 (`tests/Feature/Api/ExportTenantIsolationTest.php:382`) | 1 | A different PRAGMA statement (`defer_foreign_keys`, not `foreign_keys=OFF`) with a different purpose (deferring FK checks mid-test to simulate a stale reference, not disabling them for setup) — reported as its own row rather than folded into the `foreign_keys=OFF` count above, since conflating the two would misstate what each does |
+| **Total** | **20** | **25** | — |
+
+Only the first category (1 file, 1 line) is the GAP-043 defect. The second category (8 files, 13 lines) is confirmed safe by direct reading, not by pattern-matching alone. The third and fourth categories (11 files, 11 lines combined) are a related-but-out-of-scope finding, detailed next.
+
+**Related latent-risk finding (explicitly NOT part of GAP-043's scope, reported per instruction E rather than silently fixed):** 10 Feature/Integration test files call `\DB::statement('PRAGMA foreign_keys=OFF;')` unguarded (no driver check), and a separate 1 file (`ExportTenantIsolationTest.php`) calls the distinct `PRAGMA defer_foreign_keys = ON` statement, also unguarded — 11 files total, kept as two distinct sub-findings rather than one, since they are different statements with different intents. Gate 1 confirmed via `.github/workflows/automated-testing.yml` that none of these 11 files are currently ever executed against MySQL: the only CI jobs that set `DB_CONNECTION: mysql` are `zena-invariants-mysql`, `rfi-escalation-concurrency-mysql`, `document-workflow-concurrency-mysql`, `treasury-check-constraints-mysql`, and `performance-tests` (matrix: only `PerformanceMonitoringTest.php` and `DashboardPerformanceTest.php`) — none of which include these 11 files. The project's default `phpunit.xml` sets `DB_CONNECTION=sqlite`, which is what these 11 files run under in every other job. This is therefore a **dormant** portability risk, not a currently-failing one, and is out of scope for GAP-043 (which is specifically the LIVE-confirmed, currently-failing `PerformanceMonitoringTest.php` defect). It is recorded here so it is not silently absorbed or silently fixed, per instruction E. No new gap is registered for it in this document — that determination belongs to the Owner/register maintainer, not to this Gate 1 packet.
 
 ### Other SQLite-specific code in `PerformanceMonitoringTest.php` likely to fail immediately after PRAGMA is fixed
 
@@ -129,8 +120,8 @@ Read the full file (`tests/Performance/PerformanceMonitoringTest.php`, 478 lines
 | 1 | LIVE MySQL run failure, monitoring leg: `Tests: 7 failed, 3 passed (9 assertions)`, 6 of 7 failures show `SQLSTATE[42000] ... near 'PRAGMA table_info(projects)'`, 1 of 7 shows `SQLSTATE[42000] ... SAVEPOINT trans2 does not exist` | **LIVE** | GitHub Actions run `32471481216`, job `96739005481` (`Performance Tests (tests/Performance/PerformanceMonitoringTest.php)`), retrieved via `gh run view --job 96739005481 --log` |
 | 2 | LIVE MySQL run, dashboard leg: 0 occurrences of `PRAGMA` in the log; 2 failures present are unrelated to GAP-043 (SAVEPOINT / latency-budget) | **LIVE** | GitHub Actions run `32471481216`, job `96739005491` (`Performance Tests (tests/Performance/DashboardPerformanceTest.php)`) |
 | 3 | `tableInsertDefaults()` source (lines 445-460), call sites (366, 368), and full file read confirming no other MySQL-incompatible code | **STATIC** | `tests/Performance/PerformanceMonitoringTest.php` at current canonical `main` (`origin/main` `25cab7f4`) |
-| 4 | Test-code blob byte-identity across the LIVE run's commit, canonical `main`, and this investigation branch | **STATIC** | `git rev-parse <ref>:tests/Performance/PerformanceMonitoringTest.php` — all three resolve to blob `af50d58f3aebba90879119547c582a16e6d55b76`: `bde3589c` (GAP-041 implementation SHA at time of the LIVE run), `origin/main` (`25cab7f4`), and `HEAD` of this investigation branch (`5c2ff1cc`) |
-| 5 | Repo-wide `PRAGMA` and `tableInsertDefaults` occurrence inventory (17 and 3 hits respectively) | **STATIC** | `grep -rn` over the working tree at current branch head |
+| 4 | Test-code blob byte-identity across the LIVE run's commit, canonical `main`, and this investigation branch | **STATIC** | `git rev-parse <ref>:tests/Performance/PerformanceMonitoringTest.php` — all three resolve to blob `af50d58f3aebba90879119547c582a16e6d55b76`: `bde3589c` (GAP-041 implementation SHA at time of the LIVE run), `origin/main` (`25cab7f4`), and `HEAD` of this investigation branch (`docs/GAP-043-gate1-investigation`, PR #279) |
+| 5 | Tracked-tree `PRAGMA` inventory (25 line-occurrences / 20 unique `*.php` files, classified into 4 non-overlapping categories) and `tableInsertDefaults` inventory (1 definition, 2 call sites, 1 file) | **STATIC** | `git grep -n "PRAGMA" -- '*.php'` and `git grep -rn 'tableInsertDefaults' -- '*.php'` over the tracked working tree at this branch's head |
 | 6 | CI job → DB driver mapping (`DB_CONNECTION: mysql` only in 5 named jobs; default `phpunit.xml` sets `sqlite`) | **STATIC** | `.github/workflows/automated-testing.yml`, `phpunit.xml` |
 | 7 | Prior GAP-041 provenance record classifying GAP-043/044/045 and confirming no test/app code was touched in that session | **STATIC** (documentary, not independently re-run) | `docs/audits/2026-08-21-gap-041-implementation-blocked-technical-evidence.md`, committed at `1f96afca` on `feature/GAP-041-ci-test-selection-truthfulness` (not yet merged to `main`) |
 
@@ -142,17 +133,17 @@ Read the full file (`tests/Performance/PerformanceMonitoringTest.php`, 478 lines
 - **GAP-044** (SAVEPOINT): the `test_api_performance_budgets` masking interaction is documented in Section A but not investigated further — its root cause (fixture/transaction machinery in `FixtureFactory`/`TenantUserFactoryTrait`) is explicitly GAP-044's Gate 1 to perform, per the register's own text ("Gate 1 BẮT BUỘC phải đối chiếu lại với công việc transaction-isolation của GAP-040"). This packet stops at noting the interaction exists.
 - **GAP-045** (latency budget): not touched — that symptom appears only in `DashboardPerformanceTest.php`, which this packet confirms (item 2 above) has zero PRAGMA occurrences and is therefore structurally unrelated to GAP-043.
 - **GAP-042** (RBAC production-fidelity): unrelated domain, not touched, not referenced beyond the register's own cross-listing.
-- The dormant unguarded-`PRAGMA` pattern in 10 Feature/Integration test files (Section C) is reported as a classified finding, not investigated further or absorbed into GAP-043's scope, per instruction E's "classify and stop."
+- The dormant unguarded-`PRAGMA` pattern in 11 Feature/Integration test files (10 `foreign_keys=OFF` + 1 `defer_foreign_keys`, Section C) is reported as a classified finding, not investigated further or absorbed into GAP-043's scope, per instruction E's "classify and stop."
 
 ## F. What remains unknown
 
 - Whether `test_api_performance_budgets` would hit the GAP-043 PRAGMA error if GAP-044's SAVEPOINT defect were fixed first — plausible by code-path analysis (it also calls `createTestData()`) but **not proven LIVE**, since GAP-044 currently masks it.
 - Whether `tableInsertDefaults()`'s default-reconstruction is strictly necessary for any test's pass/fail outcome (vs. purely defensive) — Section B lists two candidate framings; Gate 1 does not adjudicate which is correct, as doing so risks pre-selecting a fix design (e.g. "just delete the helper" vs. "port it to be driver-aware") that belongs to Gate 2.
 - The original authorial intent behind writing `tableInsertDefaults()` with SQLite-only syntax and no driver branch (oversight vs. an assumption that this suite would only ever run on SQLite) — inferred from absence of any driver-guard pattern in this file, but not confirmable via git blame/PR-description archaeology within this Gate 1's scope.
-- Whether the Owner wants the dormant unguarded-`PRAGMA` pattern in the 10 other Feature/Integration test files (Section C) registered as its own gap, monitored, or left as-is given it is not currently exercised against MySQL by any CI job.
+- Whether the Owner wants the dormant unguarded-`PRAGMA` pattern in the 11 other Feature/Integration test files (Section C) registered as its own gap, monitored, or left as-is given it is not currently exercised against MySQL by any CI job.
 
 ## Scope confirmation
 
 **The problem is genuinely test-only.** No application code, model, migration, schema, RBAC/tenant semantics, or Finance/Treasury/OPPM domain logic is implicated — the defect is fully contained to one private helper method and its two call sites inside `tests/Performance/PerformanceMonitoringTest.php`. No Design Dependency Preflight is triggered by this Gate 1's findings, since nothing here indicates a production-domain change would be required to address it. Should Gate 2 later determine the fix requires touching schema/migrations (e.g. to introduce a portable way of reading column defaults across drivers) rather than only test code, that determination and any resulting preflight belong to Gate 2, not this packet.
 
-**No additional downstream portability risks were found within `PerformanceMonitoringTest.php` itself** beyond the one `PRAGMA table_info` call (Section C). One related-but-out-of-scope dormant risk was found and classified (unguarded `PRAGMA foreign_keys=OFF` across 10 other test files, currently never exercised against MySQL) and is reported without being absorbed or fixed.
+**No additional downstream portability risks were found within `PerformanceMonitoringTest.php` itself** beyond the one `PRAGMA table_info` call (Section C). One related-but-out-of-scope dormant risk was found and classified (11 other test files with unguarded PRAGMA statements — 10 `foreign_keys=OFF` plus 1 `defer_foreign_keys`, currently never exercised against MySQL) and is reported without being absorbed or fixed.

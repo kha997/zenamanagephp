@@ -9,8 +9,8 @@ decision_requested: "approve_or_changes_or_decline"
 references:
   spec: docs/audits/2026-08-21-gap-043-performance-test-mysql-portability-evidence.md
   plan: null
-  branch: docs/GAP-043-044-045-register-discovery
-  pr: null
+  branch: docs/GAP-043-gate1-investigation
+  pr: "https://github.com/kha997/zenamanagephp/pull/279"
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-21T19:14:00+07:00"
-  updated_at: "2026-08-21T19:14:00+07:00"
+  updated_at: "2026-08-21T20:08:00+07:00"
 generated_by: agent
 ---
 
@@ -36,7 +36,7 @@ Bảy trong số 10 test method của `PerformanceMonitoringTest` gọi `createT
 
 Đọc toàn bộ 478 dòng file: không tìm thấy cú pháp MySQL-không-tương-thích nào khác ngoài dòng 449. Blast radius bên trong file này được xác nhận đóng kín ở một dòng/một helper.
 
-Tìm kiếm toàn repo cho `PRAGMA` (17 lần xuất hiện) và `tableInsertDefaults` (chỉ 1 định nghĩa, 2 điểm gọi, cùng 1 file): 6 lần khác nằm trong migration đã có driver-guard (`if ($driver === 'sqlite')`/`mysql` branch rõ ràng — không phải lỗi); 2 lần trong lệnh bảo trì ứng dụng (`PRAGMA optimize`) ngoài phạm vi test. 10 file test Feature/Integration khác gọi `PRAGMA foreign_keys=OFF` không có driver-guard — nhưng xác nhận qua `.github/workflows/automated-testing.yml` rằng không CI job nào hiện chạy các file này trên MySQL (chỉ 5 job đặt `DB_CONNECTION: mysql`, không job nào trong đó bao gồm 10 file này; `phpunit.xml` mặc định `sqlite`). Đây là rủi ro portability **đang ngủ yên (dormant)**, được ghi nhận và phân loại riêng, KHÔNG hấp thụ vào GAP-043, KHÔNG tự sửa.
+`git grep -n "PRAGMA" -- '*.php'` trên tracked tree (chỉ mã PHP thực thi — `app/`, `database/migrations/`, `tests/`, không phải toàn repo/mọi loại file) cho đúng **25 dòng xuất hiện trên 20 file duy nhất**, chia 4 nhóm không chồng lấn: (1) 1 file/1 dòng — chính defect GAP-043 (`PerformanceMonitoringTest.php:449`); (2) 8 file/13 dòng — migration + lệnh bảo trì ứng dụng, đã xác nhận từng dòng đều nằm trong nhánh driver-guard (`if ($driver === 'sqlite')`, có nhánh MySQL tương đương) — đọc trực tiếp, không suy luận; (3) 10 file/10 dòng — test Feature/Integration gọi `PRAGMA foreign_keys=OFF` không có driver-guard; (4) 1 file/1 dòng — riêng `ExportTenantIsolationTest.php` gọi `PRAGMA defer_foreign_keys = ON` (câu lệnh khác, mục đích khác, tách riêng khỏi nhóm (3) để không gộp nhầm). `tableInsertDefaults`: chỉ 1 định nghĩa, 2 điểm gọi, cùng 1 file. Nhóm (3)+(4) — 11 file tổng cộng — xác nhận qua `.github/workflows/automated-testing.yml` rằng không CI job nào hiện chạy các file này trên MySQL (chỉ 5 job đặt `DB_CONNECTION: mysql`, không job nào trong đó bao gồm 11 file này; `phpunit.xml` mặc định `sqlite`). Đây là rủi ro portability **đang ngủ yên (dormant)**, được ghi nhận và phân loại riêng, KHÔNG hấp thụ vào GAP-043, KHÔNG tự sửa.
 
 ## Người dùng bị ảnh hưởng
 

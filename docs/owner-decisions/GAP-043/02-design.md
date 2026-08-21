@@ -1,11 +1,11 @@
 ---
 work_id: GAP-043
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_changes_or_decline"
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-21-gap-043-performance-test-mysql-portability-design.md
   plan: null
@@ -15,18 +15,35 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-21T22:15:00+07:00"
-  owner_response_reference: "Owner Gate-2 review round 1 (2026-08-21): REQUEST CHANGES on head a1cde2aa — 5 findings (incomplete load-bearing inventory missing budget_total; Option C rejection too absolute, needed C1/C2/C3 breakdown; Option A acceptance-contract PRAGMA wording conflated framework-internal SQLite dispatch with GAP-043-owned raw SQL; SQLite verification contract cited a nonexistent CI lane instead of an explicit --group=performance command; PR/governance-semantics provenance gaps in this packet). v2 (this revision) addresses all 5 with a LOCAL Schema::getColumns() probe against genuine MySQL 8.0 + SQLite, corrected 12-pair inventory, corrected Option C/acceptance-contract/SQLite-verification text, and corrected references/governance wording."
-  reconciliation_required: true
+  recorded_at: "2026-08-21T22:45:00+07:00"
+  owner_response_reference: "Owner Gate-2 APPROVAL (2026-08-21), PR #280, reviewed design head aa551240cb02ea8b06d11b39bfef0e91d48cf657, canonical baseline 25cab7f4955ed9a9b5d0c7113c19ca1ea679c3ac: APPROVE GAP-043 Gate 2 v2 — Option A (Laravel Schema::getColumns($table)) approved as the technical design; approved implementation boundary strictly tests/Performance/PerformanceMonitoringTest.php private tableInsertDefaults(string $table): array, no other surface without returning to Owner; binding design semantics reaffirmed (12-pair load-bearing inventory: projects budget_total/estimated_hours/actual_hours/risk_level/is_template/completion_percentage/actual_cost, tasks risk_level/complexity/effort_points/time_spent/is_billable; Schema::getColumns() portable at the Laravel API boundary; SQLite/MySQL raw default representations not required to be byte-identical; framework processors normalize structure only; existing helper quote-stripping logic reconciles the SQLite-quoted-vs-MySQL-unquoted literal difference; no driver-specific schema SQL to be introduced; keep current bulk-insert/full-row-shape semantics; GAP-044/045/042 and dormant PRAGMA findings not absorbed); Gate 2 approval authorizes implementation only within the approved scope and does NOT authorize ready/merge/release/deploy, which remain blocked pending Gate 3 Owner approval. Owner also authorized two non-substantive epistemic wording corrections applied in this same commit: Correction A (framework processors normalize metadata structure only, not literal default representation — reconciling SQLite-quoted-vs-MySQL-unquoted literals is tableInsertDefaults()'s existing quote-stripping logic, not the processors) and Correction B (generation == null proves only that a column is not a generated column, not that its default is a literal rather than a SQL expression — the literal-vs-expression conclusion for the 12 load-bearing defaults rests on the LOCAL probe's raw values plus the migrations' plain ->default($scalar) declarations). No option/recommendation/inventory/acceptance-contract change was authorized or made beyond these two wording corrections."
+  reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-21T21:30:00+07:00"
-  updated_at: "2026-08-21T22:15:00+07:00"
+  updated_at: "2026-08-21T22:45:00+07:00"
 generated_by: agent
 ---
 
-## GATE 2: AWAITING OWNER DECISION
+## OWNER GATE 2: APPROVED
+
+Owner approved GAP-043 Gate 2 v2 (PR #280, reviewed head `aa551240cb02ea8b06d11b39bfef0e91d48cf657`, canonical baseline `25cab7f4955ed9a9b5d0c7113c19ca1ea679c3ac`). Approved technical design: **Option A — Laravel `Schema::getColumns($table)`**. Approved implementation boundary: `tests/Performance/PerformanceMonitoringTest.php`, specifically `private tableInsertDefaults(string $table): array` only — no other implementation surface is approved unless new evidence proves this boundary insufficient, in which case implementation must stop and return to Owner.
+
+**Binding design semantics reaffirmed by this approval:**
+1. `tableInsertDefaults()` is load-bearing for raw bulk fixtures.
+2. Correct load-bearing DB-default inventory — 12 table-column pairs: `projects` (`budget_total`, `estimated_hours`, `actual_hours`, `risk_level`, `is_template`, `completion_percentage`, `actual_cost`); `tasks` (`risk_level`, `complexity`, `effort_points`, `time_spent`, `is_billable`).
+3. `Schema::getColumns()` is portable at the Laravel API boundary.
+4. SQLite and MySQL raw default representations are NOT required to be byte-identical.
+5. Framework processors provide the common structured metadata shape (not literal-value normalization).
+6. The existing quote-stripping logic in `tableInsertDefaults()` is responsible for reconciling the SQLite-quoted-vs-MySQL-unquoted literal representation difference.
+7. No driver-specific schema SQL is to be introduced.
+8. Current bulk-insert/full-row-shape semantics are kept as-is.
+9. GAP-044/GAP-045/GAP-042 and the dormant PRAGMA findings are not absorbed into this scope.
+10. Gate 2 approval authorizes implementation only within the approved scope.
+11. Gate 2 approval does **not** authorize ready/merge/release/deploy — those remain blocked pending Gate 3 Owner approval.
+
+**Owner-authorized non-substantive wording corrections applied in this same commit** (design doc only, no option/recommendation/inventory/acceptance-contract change): Correction A — framework processors normalize metadata *structure*, not the raw literal default representation; the existing `tableInsertDefaults()` quote-stripping logic (not the processors) reconciles the SQLite-quoted-vs-MySQL-unquoted difference. Correction B — `generation == null` proves only that a column is not a *generated* column; it is not evidence about literal-vs-SQL-expression default status. That determination rests on the LOCAL probe's raw values (plain literal text, no expression syntax) and the migrations' plain `->default($scalar)` declarations.
 
 ## Owner Summary
 
@@ -54,7 +71,7 @@ Unchanged from Gate 1: `performance-tests` (monitoring leg) stays permanently re
 
 **Future implementation surface:** `tests/Performance/PerformanceMonitoringTest.php`, specifically the body of the private `tableInsertDefaults()` method only. No other file. No application code, migration, schema, model, RBAC/tenant, or CRM/Project/Service-Line/OPPM/Finance/Treasury domain logic is implicated — Design Dependency Preflight is not triggered.
 
-**Governance semantics (corrected in this v2 — v1 conflated Gate 2 and Gate 3 authorization):** per this register's canonical lifecycle, Gate 1 approval accepts the problem/evidence; **Gate 2 approval accepts the design AND authorizes implementation within the approved scope** (it does not require a further separate authorization step before implementation may begin); Gate 3 is the release decision — no ready/merge/release/deploy before Gate-3 approval. This Gate-2 packet, once approved, would authorize implementation of Option A confined to the surface above; it would **not** by itself authorize merge, release, or deployment — those remain gated on Gate 3.
+**Governance semantics:** per this register's canonical lifecycle, Gate 1 approval accepts the problem/evidence; **Gate 2 approval accepts the design AND authorizes implementation within the approved scope**; Gate 3 is the release decision — no ready/merge/release/deploy before Gate-3 approval. This Gate-2 packet is now **approved** — implementation of Option A confined to `tableInsertDefaults()` is authorized. Merge, release, and deployment remain gated on Gate 3, not yet started.
 
 **Attribution-safe Gate-3 acceptance contract** (full text in the design doc): GAP-043's GREEN claim is scoped to the 6 tests that fail directly on the PRAGMA call today, not the whole test class — `test_api_performance_budgets` (masked by GAP-044) is explicitly carved out and evaluated separately so GAP-044's unresolved state cannot block or falsely credit GAP-043's closure.
 
@@ -62,6 +79,6 @@ Unchanged from Gate 1: `performance-tests` (monitoring leg) stays permanently re
 
 GAP-041 (already fixed, not reopened), GAP-042 (RBAC, unrelated), GAP-044 (SAVEPOINT — not investigated, only the masking interaction is accounted for in the acceptance contract), GAP-045 (confirmed structurally unrelated at Gate 1). The 11 dormant unguarded-`PRAGMA` occurrences in other Feature/Integration test files (cataloged at Gate 1) remain out of scope — not fixed, not refactored, no new gap auto-registered.
 
-## Quyết định cần Owner (Decision requested)
+## Quyết định Owner (Owner decision)
 
-Approve Option A as the Gate-2 design, or reject/request changes. Per the corrected governance semantics above: approving this packet would authorize implementation of Option A within the stated scope, but would **not** authorize Gate 3, merge, release, or deployment — those remain separately gated.
+**APPROVED** (2026-08-21). Option A (`Schema::getColumns()`) is the approved technical design; implementation is authorized strictly within `tests/Performance/PerformanceMonitoringTest.php`'s `tableInsertDefaults()`. This approval does **not** authorize Gate 3, merge, release, or deployment — those remain separately gated and were not part of this decision.

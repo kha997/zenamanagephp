@@ -70,7 +70,7 @@ Whether this is actually necessary for these tests to pass their asserted behavi
 
 **Was it written for SQLite-only execution, or intended to be portable?** The surrounding code shows no driver branching anywhere in this file (no `DB::getDriverName()` check, no `if ($isSqlite)` guard) — contrast with `database/migrations/2025_09_20_145756_disable_foreign_keys_for_testing.php`, which explicitly branches `sqlite` → `PRAGMA foreign_keys=OFF` vs `mysql` → `SET FOREIGN_KEY_CHECKS=0`. `tableInsertDefaults()` has no MySQL branch at all — there is no dead/unreachable MySQL-equivalent code sitting unused nearby. Combined with the fact this file carries no comment or docblock restricting it to SQLite, and the CI job matrix (`automated-testing.yml`'s `performance-tests`) has always declared `DB_CONNECTION: mysql` as its intended, sole test backend (see `database/migrations/...` for the project's established sqlite/mysql dual-driver convention elsewhere), the evidence is consistent with this helper having been written and never exercised against its declared target (MySQL) — i.e., portability was very likely the intent (this is the only DB the job has ever declared), and the SQLite-only syntax is an oversight rather than a deliberate SQLite-only design, though Gate 1 cannot read the original author's intent with certainty and defers the final characterization to Gate 2/Owner.
 
-## C. Blast radius (exhaustive repo search)
+## C. Blast radius (exhaustive tracked-PHP search)
 
 Searched patterns: `PRAGMA`, `tableInsertDefaults`, and equivalent SQLite-only schema introspection.
 

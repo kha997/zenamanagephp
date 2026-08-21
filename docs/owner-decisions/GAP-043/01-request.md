@@ -1,11 +1,11 @@
 ---
 work_id: GAP-043
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approve
   authority: human_owner
-decision_requested: "approve_or_changes_or_decline"
+decision_requested: null
 references:
   spec: docs/audits/2026-08-21-gap-043-performance-test-mysql-portability-evidence.md
   plan: null
@@ -15,16 +15,32 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-21T19:14:00+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-21T20:20:00+07:00"
+  owner_response_reference: "Owner chat message, 2026-08-21: 'GAP-043 — GATE 1 OWNER DECISION: APPROVE ... PR: #279, Reviewed Gate-1 head: 6d698645caff4546deee4d1e5cf40c7ec1c7fe40, Canonical reviewed baseline: 25cab7f4955ed9a9b5d0c7113c19ca1ea679c3ac ... APPROVE GAP-043 Gate 1 v2. The Gate-1 problem/evidence boundary is accepted ... Gate 1 does NOT select a technical solution ... Owner inventory clarification: the corrected 25-line/20-file PRAGMA inventory is specifically `git grep -n \"PRAGMA\" -- '"'"'*.php'"'"'` over tracked PHP files, not a claim about every file type in the entire repository — correct only the remaining imprecise labels (\"repo-wide grep\", \"exhaustive repo search\") to \"tracked-PHP inventory\"/\"exhaustive tracked-PHP search\", non-substantive wording only, no technical findings/counts altered.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-21T19:14:00+07:00"
-  updated_at: "2026-08-21T20:08:00+07:00"
+  updated_at: "2026-08-21T20:20:00+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner phê duyệt GAP-043 Gate 1 (v2) lúc `2026-08-21T20:20:00+07:00`, đã review PR #279 tại head `6d698645caff4546deee4d1e5cf40c7ec1c7fe40`, đối chiếu canonical baseline `25cab7f4955ed9a9b5d0c7113c19ca1ea679c3ac`. Phạm vi vấn đề/bằng chứng Gate 1 được chấp nhận.
+
+Các phát hiện ràng buộc (binding findings) Owner xác nhận:
+1. `PerformanceMonitoringTest::tableInsertDefaults()` chứa `PRAGMA table_info(...)` chỉ SQLite hiểu, lỗi trên MySQL thật.
+2. 7/10 test method gọi cấu trúc `createTestData() -> tableInsertDefaults()`.
+3. Bằng chứng LIVE: 6 method lỗi trực tiếp tại lệnh PRAGMA; 3 method không gọi helper thì PASS.
+4. Caller thứ 7 (`test_api_performance_budgets`) **KHÔNG** phải lỗi LIVE trực tiếp của GAP-043 — LIVE execution của nó bị che khuất sớm hơn bởi triệu chứng SAVEPOINT của GAP-044. Giữ nguyên phân biệt: **6 LIVE trực tiếp + 1 STATIC-reachable/LIVE-masked + 3 không bị ảnh hưởng.**
+5. Defect vẫn là test-side theo bằng chứng hiện tại. Không đụng application/schema/RBAC/tenant/business semantics.
+6. Gate 1 KHÔNG chọn giải pháp kỹ thuật.
+
+**Owner inventory clarification:** Inventory PRAGMA 25 dòng/20 file đã sửa là kết quả cụ thể của `git grep -n "PRAGMA" -- '*.php'` trên tracked PHP files — KHÔNG phải tuyên bố về mọi loại file trong toàn repo. Theo chỉ đạo Owner, đã sửa 2 nhãn phạm vi còn thiếu chính xác trong đợt ghi nhận approval này: "repo-wide grep" (trong `01-request.md`) → "tracked-PHP inventory grep"; heading "exhaustive repo search" (trong audit doc, mục C) → "exhaustive tracked-PHP search". Đây là sửa wording epistemic không ảnh hưởng nội dung, được uỷ quyền cùng lúc với việc ghi nhận quyết định Owner này. Không có phát hiện kỹ thuật hay số đếm nào bị thay đổi.
+
+Quyết định này CHỈ xác nhận phạm vi vấn đề/bằng chứng Gate 1. KHÔNG cho phép Gate 2, KHÔNG sửa test, KHÔNG implementation, KHÔNG công việc GAP-044/GAP-045/GAP-042, KHÔNG merge/release/deploy trong phiên ghi nhận approval này. PR #279 vẫn giữ trạng thái Draft.
 
 ## Owner Summary
 
@@ -44,7 +60,7 @@ Bảy trong số 10 test method của `PerformanceMonitoringTest` gọi `createT
 
 ## Bằng chứng
 
-Đầy đủ tại `docs/audits/2026-08-21-gap-043-performance-test-mysql-portability-evidence.md`: LIVE evidence (GitHub Actions run `32471481216`, job `96739005481` monitoring leg + job `96739005491` dashboard leg xác nhận KHÔNG có PRAGMA ở đó); STATIC evidence (source code tại `origin/main` `25cab7f4`, blob-hash byte-identity giữa commit chạy LIVE/`main`/nhánh điều tra này); repo-wide grep cho `PRAGMA`/`tableInsertDefaults`; đối chiếu CI workflow để xác nhận driver mapping từng job. Không có LOCAL reproduction (không cần thiết — LIVE + STATIC đã đủ xác lập vấn đề, call path, và blast radius).
+Đầy đủ tại `docs/audits/2026-08-21-gap-043-performance-test-mysql-portability-evidence.md`: LIVE evidence (GitHub Actions run `32471481216`, job `96739005481` monitoring leg + job `96739005491` dashboard leg xác nhận KHÔNG có PRAGMA ở đó); STATIC evidence (source code tại `origin/main` `25cab7f4`, blob-hash byte-identity giữa commit chạy LIVE/`main`/nhánh điều tra này); tracked-PHP inventory grep cho `PRAGMA`/`tableInsertDefaults`; đối chiếu CI workflow để xác nhận driver mapping từng job. Không có LOCAL reproduction (không cần thiết — LIVE + STATIC đã đủ xác lập vấn đề, call path, và blast radius).
 
 ## Tác động nếu không xử lý
 

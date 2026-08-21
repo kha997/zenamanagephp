@@ -3,7 +3,7 @@ work_id: GAP-043
 gate: 1
 gate_status: approved
 owner_decision:
-  value: approve
+  value: approved
   authority: human_owner
 decision_requested: null
 references:

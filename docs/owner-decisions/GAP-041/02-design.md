@@ -1,28 +1,28 @@
 ---
 work_id: GAP-041
 gate: 2
-gate_status: awaiting_owner
+gate_status: changes_requested
 owner_decision:
-  value: none
+  value: changes_requested
   authority: human_owner
-decision_requested: "approve_or_changes_or_decline"
+decision_requested: null
 references:
   spec: docs/audits/2026-08-21-gap-041-zero-test-performance-ci-evidence.md
   plan: null
   branch: docs/GAP-041-gate2-design
-  pr: null
+  pr: 277
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-21T15:45:00+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-21T16:10:00+07:00"
+  owner_response_reference: "Owner Gate 2 decision — REQUEST CHANGES, recorded against PR #277 head 372a2d97fcb083a46e331be35d2a5430892c0796 (Gate 1 approved record: PR #276 commit 74635722e7465ff043a257c78d6de040f5bf85c5): 'GAP-041 — GATE 2 OWNER DECISION: REQUEST CHANGES ... The investigation/reconstruction is accepted as useful evidence, but the recommended Option A is not yet internally consistent with that evidence. NO implementation is authorized. Keep PR #277 Draft and revise Gate 2 only. OWNER FINDING 1 — SEMANTIC TRUTHFULNESS: changing performance-budget/performance-heavy to --group performance while continuing to present them as Performance Budget Tests/Performance Heavy Tests does NOT establish semantic truthfulness — it changes the failure mode from zero tests under a claimed tier to real generic tests under a tier claim those tests do not actually implement. That is not an acceptable completion of GAP-041. Also correct the statement that the jobs are relabeled honestly unless the design actually changes/removes their semantic labels. OWNER DIRECTION — ADD A HYBRID OPTION: add and seriously evaluate Option D — repair the real performance surface, retire the phantom tiers: performance-tests retains the job, restores its real file-matrix population via --group performance override, adds native --fail-on-empty-test-suite, preserves the existing real-MySQL preflight; performance-budget/performance-heavy retire these two misleading CI job claims rather than pointing them both at the generic performance group, do NOT create fake annotations, do NOT invent budget/heavy tests under GAP-041, do NOT pretend PERF_ITERATIONS/PERF_SEED_COUNT create a meaningful heavy profile. If genuine budget/heavy tiers are desirable later, that should be a separately scoped work item. Compare revised Option D against B and C and state clearly whether A is still recommended after applying the CI-truthfulness invariant. Owner preference is Option D unless repository evidence demonstrates a concrete reason those two phantom jobs must remain. OWNER FINDING 2 — GATE 3 CONTRACT: remove the Gate-3 escape hatch in prior §5.4 (LIVE-required-but-STATIC/LOCAL-acceptable-with-LIVE-pending is self-contradictory and not permitted). Only two valid models: (A) if performance-budget/performance-heavy remain executable jobs, their required LIVE proof remains mandatory and GAP-041 Gate 3 is BLOCKED until the independent missing-script defect is resolved and those jobs genuinely reach PHPUnit; or (B) if the revised design retires those nonexistent tier jobs, they no longer require PHPUnit live-execution proof — instead Gate 3 must prove, on the exact implementation tree, that the misleading CI claims have actually been removed, and that the surviving performance-tests job satisfies its full LIVE acceptance contract. No Gate-3-complete-but-LIVE-pending state is permitted. REVISE THE ACCEPTANCE CONTRACT: for every surviving job require job claim/name matches what is actually tested, intended population is real and traceable, >=1 intended test executes in LIVE GitHub Actions on the exact implementation tree, zero-selection causes non-zero failure via --fail-on-empty-test-suite or technically equivalent native fail-closed behavior, evidence classification remains honest; for any retired phantom job require proof the misleading claim is removed rather than replaced with another unsupported claim; do not weaken LIVE to STATIC/LOCAL. MISSING-SCRIPT DEFECT remains OUT OF SCOPE for GAP-041, do not fix it here, continue recommending a separate Operational Gap work item, do not create/implement it in this correction unless separately authorized; if Option D is selected, explicitly note that retiring the two phantom tiers removes their missing-script dependency from GAP-041's own Gate-3 path but does NOT resolve the independent missing-script defect affecting the rest of a11y-perf-testing.yml. GATE-2 ARTIFACT CONSISTENCY: reconcile the Gate-2 packet so summary/recommended option/acceptance contract/scope/Owner-facing report all say the same thing; inspect frontmatter reference semantics against prior Gate-2 packets such as GAP-040 — if references.spec at Gate 2 is expected to identify the Gate-2 engineering design, do not leave it pointing only to the carried-forward Gate-1 audit merely because that makes the path resolve; follow the canonical repository convention, not just what passes lint; do not create unnecessary artifacts if the governance convention does not require them, document the finding either way. STOP CONDITIONS: no workflow edits, no test edits, no application edits, no implementation plan, no GAP-042 work, no missing-script repair, no merge/release/deploy. Revise the Gate-2 design on PR #277, keep gate_status: awaiting_owner and owner_decision.value: none once revised, run the exact-head governance checks again, then STOP and report new Gate-2 head SHA, files changed, whether Option D was added, final recommendation and reasoning, exact surviving/retired CI semantics, revised Gate-3 acceptance contract, whether every LIVE requirement is now hard/non-waivable, disposition of the missing-script dependency, references.spec reconciliation result, exact-head CI results, and confirmation that no implementation/GAP-042/missing-script fix occurred. Wait for a new Owner Gate-2 decision.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-21T15:45:00+07:00"
-  updated_at: "2026-08-21T15:45:00+07:00"
+  updated_at: "2026-08-21T16:10:00+07:00"
 generated_by: agent
 ---
 

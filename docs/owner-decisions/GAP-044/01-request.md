@@ -60,6 +60,49 @@ This document and the companion evidence document have been amended
 accordingly. `gate_status` remains `awaiting_owner`; no Owner approval is
 recorded by this revision.
 
+## Owner Gate 1 review round 2 (2026-08-22): CHANGES REQUIRED — item A accepted, item B now resolved — not an approval
+
+Owner reviewed PR #283 at head `c46223a7d9e23e038b3c672a553003107c75c470`
+and returned **DECISION: CHANGES REQUIRED** (correction round 2; not an
+approval; `gate_status` remained `awaiting_owner` throughout). **Item A
+(GAP-040 false-green, §H1) was accepted outright** — Owner directed not to
+redo it or touch any GAP-040 file, which this revision honors. The only
+remaining Gate-1 blocker was **item B: identify the original masked
+`Throwable`**, this time by faithfully replicating the *authoritative*
+failing run (`32557247386`, job `96993284455` — genuine MySQL 8.0,
+`migrate` **and** `db:seed --env=testing --force`, truthful
+`--group=performance --fail-on-empty-test-suite` selector) rather than the
+simplified/substitute environment (`routes-guardrails.yml`, which lacks
+`db:seed`) the first two attempts used.
+
+**Resolved this revision.** A third, exact-match disposable harness
+(`investigate/GAP-044-exact-match-harness`, GitHub Actions run
+`32562591732`, deleted after capture) reused the real
+`automated-testing.yml` `performance-tests` job unmodified except for two
+purely-additive, never-committed diagnostics: a runtime patch to the
+*installed* (gitignored) vendor copy of `ManagesTransactions.php` logging
+the original `Throwable` immediately before Laravel's own rollback call,
+and a disposable query-listener ring buffer in `tests/TestCase.php`. Both
+were deleted with the branch; neither changed control flow or altered the
+real `SAVEPOINT trans2 does not exist` symptom, which still occurred
+identically. **Reproduced on the first attempt, identically on both
+Performance test files:** the original exception is
+`Illuminate\Database\UniqueConstraintViolationException` (SQLSTATE `23000`,
+MySQL error `1062`, duplicate entry `'project.read'` for key
+`permissions.permissions_code_unique`) — a genuine, independent seeding/
+lookup-key mismatch between `TenantUserFactoryTrait`'s lookup-by-`name` and
+a pre-existing seeded `permissions` row whose `code` already equals
+`'project.read'`. Classified **B — a test-data/seeding defect**, not
+expected Eloquent race handling; full causal chain, evidence, and remaining
+narrow uncertainty (why the seeded row's `name` doesn't match its `code`,
+given `PermissionSeeder`'s own code sets them equal) recorded in evidence
+document §I1. This finding is documented and characterized, not fixed, not
+absorbed into GAP-044's implementation scope.
+
+This document and the companion evidence document have been amended
+accordingly. `gate_status` remains `awaiting_owner`; no Owner approval is
+recorded by this revision.
+
 ## Owner Summary
 
 `SQLSTATE[42000]: Syntax error or access violation: 1305 SAVEPOINT trans2
@@ -151,9 +194,13 @@ grep across all of GAP-040's 5 approved surfaces and 102 repo-wide
 `FixtureFactory`/`TenantUserFactoryTrait` consumers; a second disposable
 writer/verifier discriminating harness (GitHub Actions runs `32560499974`/
 `32560820613`, throwaway Draft PR #284, closed unmerged) that directly tested
-and confirmed the GAP-040 false-green hypothesis; two independent disposable
-attempts to capture the masked original exception, both unsuccessful,
-reported honestly as unresolved.
+and confirmed the GAP-040 false-green hypothesis; a third, exact-match
+disposable harness (GitHub Actions run `32562591732`, deleted after capture)
+that faithfully replicated the authoritative failing run's full pipeline
+(including its `db:seed` step) and, via runtime-only never-committed vendor
+instrumentation, captured the original masked exception —
+`UniqueConstraintViolationException`, SQLSTATE 23000/MySQL 1062, duplicate
+`code='project.read'` — identically on both Performance test files.
 
 ## Tác động nếu không xử lý
 
@@ -169,7 +216,7 @@ nested-transaction-consuming call (such as `firstOrCreate()`) afterward.
 
 ## Phạm vi đề xuất
 
-Gate 1 confirms only: (1) the root-cause mechanism is established via live,
+Gate 1 confirms: (1) the root-cause mechanism is established via live,
 server-observed MySQL evidence, not inference — `tests/TestCase.php`'s three
 unguarded sibling methods (`ensureInteractionLogsTable`/`ensureProjectPhasesTable`/`ensureProjectTasksTable`)
 implicit-commit `RefreshDatabase`'s transaction on the first cold-start test,
@@ -180,18 +227,24 @@ second, directly-tested finding: GAP-040's own Gate-3 cold-start rollback
 proof is false-green for the same reason, confirmed via a dedicated
 disposable writer/verifier harness on genuine MySQL — this is reported as
 evidence for Owner consideration, not as a reclassification of GAP-040's
-released status, and no GAP-040 file is touched; (4) a Gate 2 design
-decision is needed on the specific remediation mechanism (e.g. extending
+released status, and no GAP-040 file is touched; (4) the originating
+exception has now been identified, via a faithful exact-match reproduction
+of the authoritative failing run: `UniqueConstraintViolationException`
+(SQLSTATE 23000, MySQL 1062) from a genuine `permissions` table
+duplicate-`code` collision on `'project.read'`, whose root is a
+seeding/lookup-key mismatch (classification B — test-data/seeding defect,
+not expected Eloquent race handling) that GAP-044's transaction mechanism
+then masks and whose Eloquent's own built-in graceful recovery it defeats;
+this finding is documented, not fixed, not absorbed into GAP-044's scope;
+(5) a Gate 2 design decision is needed on the specific remediation
+mechanism for the transaction-desynchronization root cause (e.g. extending
 GAP-040's isolated-`zena_ddl_bootstrap`-connection pattern to these three
 siblings, or an equivalent complete solution) and on what regression
 evidence would prove the invariant restored across whichever surfaces Gate
 2 scopes, this time using a proof design immune to the false-green mode
-identified in (3); (5) one open item — the exact originating exception
-inside `Permission::create()`'s/`Role::create()`'s wrapped closure —
-actively investigated via two independent disposable-harness attempts this
-pass, not reproduced, remains unresolved and is flagged as a candidate
-Gate 2 (or further Gate 1) investigation item, not guessed at here. Gate 1
-does not select a technical mechanism.
+identified in (3); the seeding/lookup mismatch (4) is a separate, Owner-
+scoped decision if pursued, not automatically part of Gate 2's remediation.
+Gate 1 does not select a technical mechanism for either.
 
 ## Loại trừ rõ ràng
 
@@ -206,9 +259,12 @@ budget — the one `DashboardPerformanceTest` failure attributable to GAP-045
 is confirmed structurally distinct from this SAVEPOINT mechanism and is not
 investigated here). No test, application, migration, or workflow code is
 changed by this Gate 1 submission — this document and its companion
-evidence file are the only contents of this PR (plus two disposable
-evidence-harness branches, both already deleted/closed unmerged, never
-presented as implementation). No business-domain semantics, tenant
+evidence file are the only contents of this PR (plus three disposable
+evidence-harness branches used across this investigation, all already
+deleted/closed unmerged, never presented as implementation — including
+runtime-only vendor instrumentation that patched only a `composer
+install`-generated, gitignored `vendor/` copy in a disposable CI job and
+was never committed to any branch). No business-domain semantics, tenant
 behavior, or production schema are proposed to change; per the governance
 classification in the evidence document, this does not require the Design
 Dependency Preflight unless Gate 2 investigation later shows otherwise, in
@@ -223,7 +279,11 @@ cùng file, nhưng chưa được sửa cho 3 method anh em của nó; đồng t
 nhận phát hiện mới (đã kiểm chứng bằng thực nghiệm, không suy luận):
 bằng chứng rollback Gate-3 của chính GAP-040 là false-green vì cùng lý do
 này — báo cáo để Owner xem xét, không tự ý thay đổi trạng thái đã release
-của GAP-040. Không chọn cơ chế kỹ thuật cụ thể ở Gate 1.
+của GAP-040; và exception gốc bị che khuất đã được xác định đầy đủ
+(`UniqueConstraintViolationException`, xung đột dữ liệu seed thật trên
+`permissions.code='project.read'`) — một lỗi test-data/seeding riêng biệt
+(loại B), được ghi nhận và phân loại, không sửa, không mở rộng phạm vi
+GAP-044. Không chọn cơ chế kỹ thuật cụ thể ở Gate 1.
 
 ## What the owner is NOT being asked to decide
 

@@ -50,10 +50,20 @@ rollback. A second disposable, never-merged discriminating harness (branch
 `investigate/GAP-044-gap040-proof-discriminator`, GitHub Actions runs
 `32560499974`/`32560820613` via throwaway PR #284, closed unmerged, branch
 deleted) was built and run on genuine MySQL to answer this directly. **Result:
-CONFIRMED FALSE-GREEN — see §H1 (new) below.** A parallel attempt to capture
-the masked original exception behind the `ROLLBACK TO SAVEPOINT` path (§I)
-was also made using the same harness; it did **not** succeed in reproducing
-the original throw and is reported honestly as unresolved (§I).
+CONFIRMED FALSE-GREEN — see §H1 below.**
+
+**Revision note 2 (this pass):** the same review also required identifying
+the original masked exception behind the `ROLLBACK TO SAVEPOINT` path. Two
+initial attempts using the writer/verifier harness's environment did not
+reproduce it. A third, **exact-match** disposable harness
+(`investigate/GAP-044-exact-match-harness`, GitHub Actions run `32562591732`,
+deleted after capture) that faithfully replicated the authoritative failing
+run's full pipeline — including its `db:seed` step, missing from the
+earlier attempts — reproduced it on the first try via runtime-only,
+never-committed vendor instrumentation. **Result: CONFIRMED — the original
+exception is `Illuminate\Database\UniqueConstraintViolationException`
+(SQLSTATE 23000, MySQL 1062, duplicate `code='project.read'`), a genuine,
+independent seeding/lookup-key mismatch — see §I1 below.**
 
 ## A. Is the symptom reproduced on current canonical `main`?
 
@@ -329,54 +339,100 @@ real transaction was implicit-committed away — that part is proven
 end-to-end from server-observed probe data plus exact Laravel framework
 source.
 
-### I1. Attempt to capture the masked original exception (Owner authorization Part B) — attempted, NOT reproduced, reported honestly
+### I1. The masked original exception — CONFIRMED (this revision, via an exact-match harness)
 
-Per Owner instruction, an attempt was made to capture the original,
-unmasked `Throwable` inside `createOrFirst()`'s wrapped `create()` call —
-the exception that must occur for the `ROLLBACK TO SAVEPOINT` path to be
-reached at all — using disposable instrumentation only (no vendor edits).
-Since Eloquent's `createOrFirst()`/`withSavepointIfNeeded()` cannot be
-hooked from outside without editing vendor code, the disposable harness
-(same branch as §H1) instead **manually reimplemented the identical
-operation**: it opened the same savepoint Eloquent would (via
-`DB::connection()->beginTransaction()`, gated on the identical
-`transactionLevel() > 0` precondition `withSavepointIfNeeded()` checks),
-attempted the same `Permission::create()`/`Role::create()` calls with the
-same values, and caught any resulting exception in its own try/catch
-**before** attempting any rollback — so a genuine original exception, had
-one occurred, would have been captured unmasked.
+**Revision note:** two earlier attempts (historical record — disposable
+branch `investigate/GAP-044-gap040-proof-discriminator`, same run as §H1)
+tried to capture this exception: (1) a manual replica of
+`ensurePermissionAttached()`'s exact logic with the real role/permission
+values, and (2) a faithful call to the real, unmodified
+`TenantUserFactoryTrait::createTenantUser()`. **Neither reproduced any
+exception** — both succeeded cleanly. Both ran on `routes-guardrails.yml`'s
+environment, which lacks the `php artisan db:seed --env=testing --force`
+step the authoritative failing run (`32557247386`, job `96993284455`)
+actually has — this later proved to be the decisive missing ingredient
+(see below: the collision is with seeded data). Per Owner instruction, a
+third, **exact-match** disposable harness was built that reuses the real
+`automated-testing.yml` `performance-tests` job unmodified (same MySQL 8.0
+service, same `migrate` + `db:seed --env=testing --force`, same
+`PerformanceMonitoringTest.php`, same `FixtureFactory`/`TenantUserFactoryTrait`
+path, same `--group=performance --fail-on-empty-test-suite` selector),
+adding only two purely-additive, non-committed diagnostics: (a) a
+runtime patch (`scripts/ci/gap044-disposable-patch-vendor.php`, applied
+after `composer install`, never committed as a vendor change) to the
+**installed** copy of `Illuminate\Database\Concerns\ManagesTransactions.php`,
+logging the original `Throwable` — class, message, code, previous exception,
+connection state — immediately **before** `handleTransactionException()`
+calls `$this->rollBack()` (the exact point the Owner specified, where the
+real `ROLLBACK TO SAVEPOINT` failure would otherwise mask it); and (b) a
+disposable query-listener ring buffer added to `tests/TestCase.php`
+(`$gap044RecentQueries`, gated on `GAP044_CAPTURE_ORIGINAL_THROWABLE=1`,
+read by the vendor patch) showing the SQL immediately preceding the capture.
+Neither addition changes control flow or swallows the exception — the real
+`SAVEPOINT trans2 does not exist` symptom still occurred identically
+afterward, confirming the instrumentation did not alter the failure.
 
-Two variants were run, both on a forced cold start (`RefreshDatabaseState::$migrated
-= false`, same technique as §H1), both confirmed to be operating under the
-exact same implicit-commit condition (`pdoInTransaction=false` at entry,
-matching §D-G):
+**Reproduced on the first exact-match attempt, identically on both
+`PerformanceMonitoringTest.php` and `DashboardPerformanceTest.php`**
+(GitHub Actions run `32562591732`, jobs `97006383932` and `97006383949`,
+disposable branch `investigate/GAP-044-exact-match-harness`, workflow-
+dispatched, deleted after evidence capture):
 
-1. **Manual replica** (`test_c_capture_masked_exception`): reimplemented `ensurePermissionAttached()`'s exact logic (role `project_manager`, permissions `project.read`/`project.write`, matching `createTenantUserWithRbac('project_manager', 'project_manager', ...)`'s real call shape) — **`Permission::create()` succeeded cleanly for both permissions, no exception thrown.**
-2. **Faithful reproduction** (`test_d_faithful_reproduction`): called the **real, unmodified** `Tests\Traits\TenantUserFactoryTrait::createTenantUser()` directly (the test class simply `use`s the trait, exactly as any ordinary consuming test does — no trait file edited), with the exact real role (`project_manager`) — **also succeeded cleanly, no exception thrown, no `SAVEPOINT`/PDOException of any kind.**
+```
+[GAP044-ORIGINAL-THROWABLE] class=Illuminate\Database\UniqueConstraintViolationException
+message=SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry
+'project.read' for key 'permissions.permissions_code_unique' (Connection: mysql,
+Host: 127.0.0.1, Port: 3306, Database: zenamanage_test, SQL: insert into
+`permissions` (`name`, `code`, `module`, `action`, `description`, `id`,
+`updated_at`, `created_at`) values (project.read, project.read, project, read,
+Project read, 01m0m9qp1qp7eve2qbrx0ay5pz, ...))
+code='23000' previous_class=PDOException
+previous_message=SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate
+entry 'project.read' for key 'permissions.permissions_code_unique'
+transactionLevel=2 pdoInTransaction=false connectionId=22 connectionName=mysql
+```
 
-**Result: the original masked exception was NOT reproduced by this Gate 1,
-despite two independent attempts including a faithful call to the real,
-unmodified trait under the confirmed implicit-commit condition.** This
-means the LIVE `SAVEPOINT trans2 does not exist` failures observed in §A
-require some additional condition beyond "cold start + implicit commit +
-`firstOrCreate` on `project_manager`/`project.read`/`project.write`" that
-this harness did not reproduce. A plausible, but **not confirmed**,
-candidate difference: the real `performance-tests` CI job's DB-setup step
-runs `php artisan migrate` **and** `php artisan db:seed --env=testing
---force` before PHPUnit starts, whereas `routes-guardrails.yml` (where this
-harness ran, to reuse its already-truthful `--group=mysql-parity` selector)
-runs only `php artisan migrate:fresh` with **no seeding** — meaning the two
-environments' `roles`/`permissions` table contents differ before the
-in-process `RefreshDatabase`-internal `migrate:fresh` and the subsequent
-implicit-commit cycle occur. This difference was not tested further this
-pass.
+The `GAP044-RECENT-QUERY` buffer immediately preceding it shows the exact
+operation chronologically: `insert tenants` → `insert users` → `select roles
+where name='project_manager'` (miss) → `insert roles` (`project_manager`,
+succeeds) → `insert user_roles` → `select permissions where name='project.read'`
+(**miss — no row found**) → the failing `insert into permissions (...code='project.read'...)`.
 
-**Per Owner instruction, no assumption is made that this is "expected
-Eloquent `createOrFirst` race handling."** The original exception's
-identity remains unresolved. What is separately proven with certainty
-(§D-H, independent of this unresolved item) is the exact mechanism by which
-*any* exception reaching that call path, whatever its cause, becomes the
-misleading `SAVEPOINT trans2 does not exist` message.
+**Original Throwable, fully identified:**
+- **Class:** `Illuminate\Database\UniqueConstraintViolationException` (wrapping a `PDOException`).
+- **SQLSTATE / driver code:** `23000`, MySQL error `1062`.
+- **Model / operation:** `App\Models\Permission::firstOrCreate(['name' => 'project.read'], [...])`, called from `TenantUserFactoryTrait::ensurePermissionAttached()` — the lookup (`WHERE name = 'project.read'`) finds nothing, so Eloquent's `createOrFirst()` attempts `Permission::create([...])`.
+- **Exact create attributes:** `name=project.read, code=project.read, module=project, action=read, description="Project read"`.
+- **Exact conflict:** the `INSERT` collides on the **`code`** column's unique index (`permissions_code_unique`) — a row with `code='project.read'` **already exists** in the `permissions` table, even though the earlier `WHERE name='project.read'` lookup found no matching row (i.e., that pre-existing row's `name` value is **not** `'project.read'`).
+- **Row origin:** the job's DB-setup step runs `Database\Seeders\PermissionSeeder`, which does create a `code='project.read'` row (confirmed in the job's seeder output log, `PermissionSeeder ... DONE`) via `Permission::firstOrCreate(['code' => $permData['code']], $permData + ['name' => $permData['code']])` — which on its face sets `name` equal to `code`. Whether this is genuinely the same row the test collided with, or the collision is with some other/duplicate write, could not be fully confirmed without a live row dump of the `permissions` table at the moment of failure — this specific detail (why the pre-existing row's `name` does not match its `code`, given the seeder's own code sets them equal) is flagged as an open, secondary uncertainty in §O; it does not affect the certainty of the primary finding (a genuine `UniqueConstraintViolationException` from a real duplicate `code`, not a phantom/masked artifact).
+- **Timing:** the capture occurs ~0.7s after `php artisan test` starts — consistent with `RefreshDatabaseState::$migrated` already being `true` when this test began (i.e., `RefreshDatabase`'s own internal `migrate:fresh` did not re-run for this test, leaving the job-level seed data from `PermissionSeeder` intact) rather than a freshly re-migrated (and hence necessarily empty) `permissions` table — consistent with, though not independently proven beyond, the observed timing.
+
+**Complete causal chain, now fully established:**
+
+1. Job-level DB setup runs `php artisan migrate --env=testing --force` then `php artisan db:seed --env=testing --force`, which (via `PermissionSeeder`) creates a `permissions` row with `code='project.read'`.
+2. PHPUnit process starts; the first `RefreshDatabase` test's `setUp()` opens a real transaction, then `ensureInteractionLogsTable()`/`ensureProjectPhasesTable()`/`ensureProjectTasksTable()` (§D-G) implicit-commit it via unguarded `CREATE TABLE` DDL — confirmed again here (`pdoInTransaction=false` at capture time).
+3. `createTenantUserWithRbac()` → `TenantUserFactoryTrait::ensurePermissionAttached()` calls `Permission::firstOrCreate(['name' => 'project.read'], [...])`.
+4. The lookup `WHERE name = 'project.read'` does not match the pre-existing seeded row (name mismatch, §O), so Eloquent proceeds to `createOrFirst()`'s `create()` path.
+5. `withSavepointIfNeeded()` sees `transactionLevel() > 0` (Laravel's PHP-side counter, still stuck at `1` from the implicit commit in step 2) and wraps the `create()` in `DB::transaction()`, which opens `SAVEPOINT trans2` — auto-discarded per the mechanism in §D, since there is no real active transaction on the connection.
+6. The `INSERT` genuinely fails: `UniqueConstraintViolationException` (1062, duplicate `code`) — a **real, independent, correctly-thrown exception**, unrelated to GAP-044's transaction mechanism.
+7. `DB::transaction()`'s catch (`handleTransactionException`) attempts to roll back to the (already-discarded) savepoint — `ROLLBACK TO SAVEPOINT trans2` — which fails with `SAVEPOINT trans2 does not exist` (§C-D), because the savepoint never really existed inside a live transaction.
+8. This secondary `PDOException` propagates out of `withSavepointIfNeeded()`/`transaction()` as a completely different exception type than the original `UniqueConstraintViolationException` — **bypassing `createOrFirst()`'s own built-in graceful-recovery `catch (UniqueConstraintViolationException $e) { return ...->first() ?? throw $e; }` block entirely**, since by the time control reaches that catch, the exception in flight is no longer a `UniqueConstraintViolationException`. This is a second, previously-unrecognized consequence of GAP-044's mechanism: it does not just cause a confusing error message — it actively **defeats Eloquent's own designed-for-this-exact-scenario race/duplicate recovery mechanism**.
+9. The resulting `PDOException: SAVEPOINT trans2 does not exist` is what surfaces as the LIVE test failure.
+
+**Classification (per Owner's A/B/C/D framework): B — a test-data/seeding
+defect** (a genuine `name`/`code` lookup-vs-uniqueness mismatch between
+`TenantUserFactoryTrait`'s lookup key and `PermissionSeeder`'s data,
+producing a real duplicate-key collision on first contact) **compounded by,
+but analytically separable from, GAP-044's transaction mechanism** (which
+converts what Eloquent's own `createOrFirst()` is specifically designed to
+handle gracefully into an unrecoverable, misleading error). **Not
+classification A** — this is not normal/expected race handling working as
+intended; Eloquent's own recovery path exists specifically for this
+scenario and is being defeated by GAP-044's mechanism, not exercised
+successfully. Per §7 of the Owner's authorization, this seeding/lookup
+mismatch is documented here and characterized, but **not fixed** and **not
+absorbed into GAP-044's implementation scope** — that is an Owner scoping
+decision if pursued.
 
 ## J. Trace the shared call path (per Owner authorization §5)
 
@@ -446,13 +502,11 @@ was never really inside a live transaction. (PRIMARY, CONFIRMED)**
 - Discriminating experiment: instrument `ensureInteractionLogsTable()`/`ensureProjectPhasesTable()`/`ensureProjectTasksTable()` with the same probe pattern as GAP-040's `coldStartProbe` and observe `pdoInTransaction` before/after on real MySQL. **Result: performed this pass, confirms H1 (§D-G).**
 
 **H2 — The specific exception thrown inside `createOrFirst()`'s wrapped
-`create()` call (needed to reach the `ROLLBACK TO SAVEPOINT` code path at
-all) is a genuine `UniqueConstraintViolationException` racing against
-already-seeded `roles`/`permissions` rows from the job's one-time
-`db:seed`. (SECONDARY, ATTEMPTED, NOT CONFIRMED — NOT REPRODUCED)**
-- Evidence for: `createOrFirst()`'s own purpose (documented: "Attempt to create the record. If a unique constraint violation occurs...") is specifically designed around exactly this race; the failure is observed only on the very first `RefreshDatabase` test of a process, when the job-level one-time `db:seed` step's data and the in-test `RefreshDatabase`-internal `migrate:fresh` (which wipes and does not reseed) interact in a way not fully traced this pass.
-- Evidence against: **actively tested and not observed.** §I1 reports two independent disposable-harness attempts — a manual replica of `ensurePermissionAttached()`'s exact logic, and a faithful call to the real, unmodified `TenantUserFactoryTrait::createTenantUser()` — both under the confirmed implicit-commit cold-start condition, both with the correct real role/permission values. Neither threw any exception at all; `Permission::create()` succeeded cleanly both times. This does not disprove H2 (the real `performance-tests` job's `db:seed` step, absent from the `routes-guardrails.yml` environment this harness ran in, is a plausible missing ingredient — §I1), but it means H2 is **not confirmed** and must not be assumed.
-- Discriminating experiment: performed this pass (§I1) via disposable instrumentation; **inconclusive** — did not reproduce the original exception. A further experiment instrumenting the actual `performance-tests` job's own environment (with its real `db:seed` step) would be needed to resolve this, left for Gate 2 if pursued.
+`create()` call is a genuine `UniqueConstraintViolationException` colliding
+with a job-level-seeded `permissions` row. (CONFIRMED, this revision — see §I1)**
+- Evidence for: direct capture via an exact-match disposable harness (§I1) — `Illuminate\Database\UniqueConstraintViolationException`, SQLSTATE `23000`/MySQL `1062`, `Duplicate entry 'project.read' for key 'permissions.permissions_code_unique'`, on `Permission::firstOrCreate(['name'=>'project.read'], [...])`'s `create()` call, reproduced identically on both `PerformanceMonitoringTest.php` and `DashboardPerformanceTest.php` on the first attempt.
+- Evidence against: none found on the exact-match harness. The two earlier attempts (§I1, historical) did not reproduce it — resolved by identifying the missing ingredient (the `db:seed` step) rather than contradicting H2.
+- Discriminating experiment: performed this pass (§I1) via an exact-match disposable harness replicating the authoritative job's full pipeline (MySQL 8.0, `migrate`+`db:seed`, real `PerformanceMonitoringTest.php`, truthful selector) plus a runtime-only, never-committed vendor instrumentation patch capturing the original `Throwable` immediately before Laravel's own rollback call. **Result: confirms H2.**
 
 **H3 — GAP-040's Gate-3 cold-start rollback proof is a false-green, defeated
 by the same three unfixed sibling methods causing the verifier's
@@ -462,18 +516,21 @@ by the same three unfixed sibling methods causing the verifier's
 - Evidence against: none found.
 - Discriminating experiment: performed this pass, a dedicated disposable writer/verifier harness (§H1) — result confirms H3.
 
-Neither H1 nor H3 proposes a fix. H1/H3 are confirmed root-cause/consequence
-findings; H2 is an open question about what specifically triggers the
-`SAVEPOINT`-masking mechanism to become visible on the first test of a
-process, actively tested and left unresolved by this Gate 1.
+Neither H1, H2, nor H3 proposes a fix. All three are now confirmed
+findings: H1 is the transaction-desynchronization mechanism itself; H2 is
+the specific triggering condition (a real, independent seeding/lookup
+mismatch producing a genuine duplicate-key exception that H1's mechanism
+then masks and whose graceful Eloquent recovery it defeats); H3 is
+GAP-040's own proof being defeated by the same H1 mechanism.
 
 ## O. What remains uncertain
 
-- The exact exception type/message thrown inside `Permission::create()`'s (or `Role::create()`'s) `createOrFirst()`-wrapped closure that triggers the `ROLLBACK TO SAVEPOINT` attempt in the first place (§I1, H2) — **actively investigated this pass via two independent disposable-harness attempts, not reproduced.** The most plausible untested variable is the real `performance-tests` job's `db:seed` step, absent from the `routes-guardrails.yml` environment used for this attempt.
+- **The exact reason the pre-existing `permissions` row's `name` column does not match its `code` column** (§I1) — `PermissionSeeder`'s own code sets `name` equal to `code` for this row, so a live row-dump of the `permissions` table at the moment of collision would be needed to fully explain the mismatch (e.g. a different/earlier write, a subtly different seeder path, or a data artifact from a prior run in the same ephemeral database) — not independently confirmed this pass. This is a narrow, secondary detail; it does not weaken the confirmed finding that a genuine `UniqueConstraintViolationException` on the `code` column occurs.
 - Whether GAP-040's other 4 approved surfaces (beyond `PerformanceMonitoringTest`/`DashboardPerformanceTest`, which were directly probed for §D-G, and the `mysql-parity` surface directly probed for §H1) would show a *visible* SAVEPOINT failure if run as the first test of a fresh process — the underlying implicit-commit mechanism is confirmed present for all of them by code-path necessity (§L), but visible failure was only independently reproduced for the two Performance test files; the false-green marker-disappearance mechanism (§H1) was independently confirmed on the `mysql-parity` surface too.
-- Whether any other nested-transaction-consuming call pattern besides `Eloquent::firstOrCreate()`/`createOrFirst()`/`updateOrCreate()` could also trigger this same class of visible failure elsewhere in the repo.
+- Whether any other nested-transaction-consuming call pattern besides `Eloquent::firstOrCreate()`/`createOrFirst()`/`updateOrCreate()` could also trigger this same class of visible failure elsewhere in the repo, and whether other seeded/looked-up value pairs (beyond `project.read`) have the same latent `name`/`code` mismatch.
 - Whether `DashboardPerformanceTest`'s separate `it_can_load_alerts_with_large_dataset_quickly` latency-budget miss (504.7ms vs 450ms, GAP-045) is itself measurably affected by running in a process where an earlier test's transaction was implicitly defeated (i.e., whether GAP-044 and GAP-045 have any causal interaction beyond both surfacing in the same LIVE run) — not investigated this pass, out of GAP-044's scope per the Owner authorization.
 - **What governance action, if any, GAP-040's now-questionable Gate-3 evidence record requires** — this Gate 1 reports the discovery (§H1) but does not decide this; it is an Owner decision, and no GAP-040 file is edited by this PR.
+- **What governance action, if any, the confirmed seeding/lookup-key mismatch (§I1, classification B) requires** — reported here as a distinct finding, not fixed, not absorbed into GAP-044's scope; an Owner scoping decision if pursued (per Owner authorization §7).
 
 ## P. Scope confirmation / Design Dependency Preflight
 
@@ -510,26 +567,37 @@ currently indicates that will be necessary (the working control case,
 | 9 | GAP-043's Gate 3 LIVE evidence, prior masking-interaction note | **STATIC** (documentary) | `docs/owner-decisions/GAP-043/03-release.md`, `docs/audits/2026-08-21-gap-043-performance-test-mysql-portability-evidence.md` |
 | 10 | Blast-radius grep: which `RefreshDatabase` classes use `FixtureFactory`/`TenantUserFactoryTrait`, which GAP-040 surfaces `extends TestCase` | **STATIC** | `grep -rl "@group zena-invariants" tests/`, `grep -rl "@group mysql-parity" tests/`, direct `grep -n "extends TestCase"` on GAP-040's 5 approved surface files |
 | 11 | Writer/verifier discriminating probe log confirming GAP-040's cold-start rollback proof is false-green (§H1): marker visible immediately after write, still visible before verifier's `parent::setUp()`, `RefreshDatabaseState::$migrated=false` at that point, marker gone after — reproduced on 2 independent runs | **LIVE** | GitHub Actions runs `32560499974` and `32560820613`, job `97001212756`/`97001970755` (`test-routes-guardrails`, `--group=mysql-parity`), disposable branch `investigate/GAP-044-gap040-proof-discriminator`, throwaway Draft PR #284 (closed unmerged, branch deleted after capture) |
-| 12 | Masked-exception-capture attempt log (§I1): both the manual replica and the faithful real-trait call succeeded cleanly with no exception, under the confirmed implicit-commit condition | **LIVE** | same runs, job `97001970755` (`test_c_capture_masked_exception`/`test_d_faithful_reproduction`) |
+| 12 | First 2 masked-exception-capture attempts (§I1, historical): both the manual replica and the faithful real-trait call succeeded cleanly with no exception, under the confirmed implicit-commit condition but without job-level seeding | **LIVE** | GitHub Actions runs `32560499974`/`32560820613`, job `97001970755` (`test_c_capture_masked_exception`/`test_d_faithful_reproduction`) |
+| 13 | Exact-match harness: original `Throwable` captured via runtime-only vendor instrumentation (never committed) immediately before Laravel's rollback call, identical on both Performance test files — `UniqueConstraintViolationException`, SQLSTATE 23000/MySQL 1062, duplicate `code='project.read'` on `permissions_code_unique` | **LIVE** | GitHub Actions run `32562591732`, jobs `97006383932` (`PerformanceMonitoringTest.php`) and `97006383949` (`DashboardPerformanceTest.php`), disposable branch `investigate/GAP-044-exact-match-harness` (workflow-dispatched, deleted after capture) |
+| 14 | `database/seeders/PermissionSeeder.php`, `database/seeders/DatabaseSeeder.php` source confirming `PermissionSeeder` creates a `code='project.read'` row as part of the job's `db:seed` step | **STATIC** | same baseline |
 
 ## Explicit exclusions
 
 Does not modify `tests/TestCase.php`, `FixtureFactory.php`,
-`TenantUserFactoryTrait.php`, any workflow file, any migration, or any
-application/production code — this document and its companion
-`docs/owner-decisions/GAP-044/01-request.md` are the only contents of this
-Gate-1 PR. Both disposable evidence-harness branches
-(`investigate/GAP-044-disposable-evidence-harness` and
-`investigate/GAP-044-gap040-proof-discriminator`, the latter via throwaway
-Draft PR #284) have been deleted/closed unmerged and contributed no content
-to this PR's diff. Does not reopen or modify GAP-040's already-released
-decision record (`docs/owner-decisions/GAP-040/*`) — §H/§H1's findings are
-reported as new evidence for Owner consideration, not as a unilateral
+`TenantUserFactoryTrait.php`, `database/seeders/PermissionSeeder.php`, any
+workflow file, any migration, or any application/production code — this
+document and its companion `docs/owner-decisions/GAP-044/01-request.md` are
+the only contents of this Gate-1 PR. All three disposable evidence-harness
+branches used across this investigation
+(`investigate/GAP-044-disposable-evidence-harness`,
+`investigate/GAP-044-gap040-proof-discriminator` via throwaway Draft PR
+#284, and `investigate/GAP-044-exact-match-harness`) have been
+deleted/closed unmerged and contributed no content to this PR's diff — this
+includes the runtime-only vendor instrumentation
+(`scripts/ci/gap044-disposable-patch-vendor.php`), which patched only the
+`composer install`-generated, gitignored `vendor/` copy in that disposable
+CI job and was never committed to any branch's `vendor/` directory, and was
+never part of the disposable branch's own `vendor/` (gitignored, not
+tracked). Does not reopen or modify GAP-040's already-released decision
+record (`docs/owner-decisions/GAP-040/*`) — §H/§H1's findings are reported
+as new evidence for Owner consideration, not as a unilateral
 reclassification of GAP-040's release status. Does not touch GAP-041 (selector truthfulness —
 only its already-Owner-approved overlay mechanism was reused, unmerged, for
 evidence-gathering, exactly as GAP-043's precedent established), GAP-042
 (RBAC production-fidelity — unrelated), or GAP-045 (latency budget — the one
 `DashboardPerformanceTest` failure attributable to GAP-045 is noted as
-structurally distinct and not investigated further here). Does not select a
+structurally distinct and not investigated further here). Does not fix the
+confirmed seeding/lookup-key mismatch (§I1) — documented and classified
+only, not remediated, not absorbed into GAP-044's scope. Does not select a
 technical fix mechanism for GAP-044 — that is Gate 2's decision, if
 authorized. `OPERATIONAL_GAP_REGISTER.md` is not modified by this Gate-1 PR.

@@ -1,11 +1,11 @@
 ---
 work_id: GAP-044
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-08-22-gap-044-savepoint-trans2-root-cause-evidence.md
   plan: null
@@ -16,15 +16,26 @@ decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
   recorded_at: "2026-08-22T00:00:00+07:00"
-  owner_response_reference: null
+  owner_response_reference: "Owner chat message, 2026-08-22: 'GAP-044 — OWNER GATE 1 DECISION / DECISION: APPROVED', approved exact Gate-1 head c7945a1a8d502ba2f817f9d5d82d854fe5eab412, PR #283. Owner accepted the Gate-1 evidence as sufficient and complete: (1) the MySQL transaction-desynchronization mechanism (ensureInteractionLogsTable()/ensureProjectPhasesTable()/ensureProjectTasksTable() implicit-committing RefreshDatabase's transaction, causing later SAVEPOINT trans2 rollback failures); (2) GAP-040's Gate-3 writer/verifier rollback proof confirmed false-green (marker disappearance caused by verifier-side migrate:fresh after RefreshDatabaseState::$migrated reset, not genuine rollback) — GAP-040 historical Owner records preserved unchanged; (3) the original masked Throwable identified via the exact-match seeded MySQL harness as Illuminate\\Database\\UniqueConstraintViolationException, SQLSTATE 23000, MySQL 1062, constraint permissions.permissions_code_unique, duplicate 'project.read', from TenantUserFactoryTrait::ensurePermissionAttached()'s Permission::firstOrCreate(['name'=>'project.read'], ['code'=>'project.read', ...]). Owner additionally reconciled the narrow residual uncertainty (why the pre-existing permissions row did not match on name) as NOT a Gate-1 blocker, independently tracing it via existing repository evidence: DatabaseSeeder runs RoleSeeder before PermissionSeeder; RoleSeeder creates a permissions row with code='project.read' without setting name (permissions.name is nullable); PermissionSeeder's own firstOrCreate is keyed by code, so finding the row already present, it does not backfill name; TenantUserFactoryTrait later looks up by name='project.read', misses the NULL-name row, and attempts a duplicate insert on code='project.read'. This also matches the repository's pre-existing AUD-28 finding. Owner therefore classified the complete observed failure as a COMPOUND test-infrastructure defect: (A) transaction integrity defect + (B) permission identity/fixture lookup mismatch. Owner directed: record this Gate-1 approval in 01-request.md ONLY, do not modify the audit evidence document (approved evidence blob must remain byte-unchanged), do not mark PR ready, do not merge PR #283; after fresh exact-head Owner Governance Lint + Routes Guardrails pass, Gate 2 (design only, no implementation) is authorized, remaining awaiting_owner; do not edit RoleSeeder or any GAP-040/041/042/043/045 artifact under GAP-044 unless separately authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-22T00:00:00+07:00"
-  updated_at: "2026-08-22T00:00:00+07:00"
+  updated_at: "2026-08-22T16:00:00+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-044 Gate 1 at exact head `c7945a1a8d502ba2f817f9d5d82d854fe5eab412` of PR #283. The Gate-1 evidence is accepted as sufficient and complete:
+
+1. **MySQL transaction desynchronization** — `tests/TestCase.php`'s `ensureInteractionLogsTable()`/`ensureProjectPhasesTable()`/`ensureProjectTasksTable()` can execute `CREATE TABLE` DDL on `RefreshDatabase`'s already-transacted default connection; on genuine MySQL this implicit-commits the physical PDO transaction while Laravel's `transactionLevel()` remains non-zero — the mechanism that makes a later nested savepoint rollback fail with `SQLSTATE[42000] 1305 SAVEPOINT trans2 does not exist`.
+2. **GAP-040 acceptance proof** — GAP-040's Gate-3 writer/verifier rollback proof is confirmed false-green: the marker disappearance was caused by verifier-side `migrate:fresh` after `RefreshDatabaseState::$migrated` was reset, not by genuine rollback. GAP-040's historical Owner decision records are preserved unchanged; this PR does not edit any GAP-040 artifact.
+3. **Original masked Throwable** — the exact-match seeded MySQL harness identified `Illuminate\Database\UniqueConstraintViolationException`, SQLSTATE `23000`, MySQL `1062`, constraint `permissions.permissions_code_unique`, duplicate `project.read`, from `TenantUserFactoryTrait::ensurePermissionAttached()`'s `Permission::firstOrCreate(['name' => 'project.read'], ['code' => 'project.read', ...])`.
+4. **Complete trigger provenance — Owner reconciliation.** The narrow residual uncertainty reported in the Gate-1 audit (§O of the evidence document — why the pre-existing `permissions` row did not match on `name`) is **not** a Gate-1 blocker. Owner independently reconciled it against existing repository evidence: `DatabaseSeeder` runs `RoleSeeder` **before** `PermissionSeeder`; `RoleSeeder` creates a `permissions` row with `code='project.read'` **without setting `name`** (`permissions.name` is nullable); `PermissionSeeder`'s own `firstOrCreate` is keyed by `code`, so on finding that row already present, it does not backfill `name`; `TenantUserFactoryTrait` later looks up by `name='project.read'`, misses the `NULL`-name row, and attempts a duplicate insert on `code='project.read'`. This matches the repository's pre-existing **AUD-28** finding. The complete observed failure is therefore a **compound test-infrastructure defect**: (A) transaction integrity defect + (B) permission identity/fixture lookup mismatch.
+
+**Scope of this approval:** confirms the Gate-1 problem statement, root-cause chain, and evidence are sound and complete. Does **not** approve any code change, technical remediation mechanism, or workflow change. Does **not** mark PR #283 ready for review or merge it. Gate 2 (design only) is authorized to proceed after this decision-record commit and fresh exact-head CI are verified green, and must remain `gate_status: awaiting_owner` / `owner_decision.value: none` — no implementation until a separate Owner Gate-2 decision.
 
 ## Owner Gate 1 review round 1 (2026-08-22): CHANGES REQUIRED — not an approval
 

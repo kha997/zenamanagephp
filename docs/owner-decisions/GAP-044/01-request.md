@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-08-22-gap-044-savepoint-trans2-root-cause-evidence.md
   plan: null
   branch: docs/GAP-044-gate1-investigation
-  pr: null
+  pr: "https://github.com/kha997/zenamanagephp/pull/283"
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
@@ -25,6 +25,40 @@ timestamps:
   updated_at: "2026-08-22T00:00:00+07:00"
 generated_by: agent
 ---
+
+## Owner Gate 1 review round 1 (2026-08-22): CHANGES REQUIRED — not an approval
+
+Owner reviewed PR #283 at head `98a2706d2de9df71b64ee292261fc8b716cb5eca` and
+returned **DECISION: CHANGES REQUIRED** (not an approval; `gate_status`
+remained `awaiting_owner` throughout). The primary transaction-desynchronization
+finding was accepted as factually supported (genuine MySQL evidence truthful;
+`ensureInteractionLogsTable()` directly observed implicit-committing the
+`RefreshDatabase` transaction; `PDO::inTransaction()` flips `true`→`false`;
+Laravel `transactionLevel()` remains `1`; physical `CONNECTION_ID` unchanged;
+the `SAVEPOINT trans2` rollback failure is real). Two material evidence gaps
+were identified and required resolution before resubmission:
+
+1. **GAP-040 acceptance-proof reconciliation** — the three implicated sibling
+   helpers already existed at the GAP-040 baseline; a concrete second
+   false-green hypothesis in GAP-040's own v2 rollback proof needed to be
+   tested via a disposable, genuine-MySQL discriminating harness, not
+   inferred from code alone. **Resolved this revision** — see evidence
+   document §H1: a disposable writer/verifier harness confirmed the
+   hypothesis. GAP-040's cold-start rollback proof is now assessed as
+   **false-green** for the same reason GAP-044 itself exists. GAP-040's
+   historical decision record is preserved unedited; no GAP-040 file is
+   touched by this PR; this Gate 1 does not claim GAP-040's technical
+   acceptance contract remains satisfied.
+2. **Capture the masked original exception** — attempted this revision via
+   disposable instrumentation (two independent approaches, including a
+   faithful call to the real, unmodified `TenantUserFactoryTrait`). **Not
+   reproduced** — reported honestly as unresolved in evidence document §I1,
+   per Owner instruction not to assume it is expected Eloquent
+   `createOrFirst()` race handling.
+
+This document and the companion evidence document have been amended
+accordingly. `gate_status` remains `awaiting_owner`; no Owner approval is
+recorded by this revision.
 
 ## Owner Summary
 
@@ -91,11 +125,16 @@ Engineering team relying on GAP-040's release as having fully closed
 MySQL transaction-isolation defeat across its 5 approved real-MySQL
 surfaces — that closure does not actually hold, because three sibling
 methods to the one GAP-040 fixed retain the identical unguarded-DDL pattern.
-GAP-041 (currently `blocked_technical`) remains blocked pending GAP-044 (and
-GAP-045) resolution before it can present a fully-green LIVE Gate 3.
-Any test author relying on `Tests\TestCase`'s `RefreshDatabase` guarantee on
-real MySQL inherits the same silent exposure on the first test of a fresh
-process.
+More specifically: **the specific regression evidence GAP-040's own Gate 3
+relied on to prove that closure (its writer/verifier cold-start rollback
+proof) is now confirmed, by direct experiment, to be false-green** — the
+marker-row disappearance it reports is explained by a `migrate:fresh`
+schema wipe triggered by this same defect, not by genuine `RefreshDatabase`
+rollback (see evidence doc §H1). GAP-041 (currently `blocked_technical`)
+remains blocked pending GAP-044 (and GAP-045) resolution before it can
+present a fully-green LIVE Gate 3. Any test author relying on
+`Tests\TestCase`'s `RefreshDatabase` guarantee on real MySQL inherits the
+same silent exposure on the first test of a fresh process.
 
 ## Bằng chứng
 
@@ -109,7 +148,12 @@ operation, its origin, and its cause; migration-inventory confirming the
 three implicated tables have no migration; GAP-040 gate-record cross-check
 confirming its approved scope never covered these three methods; blast-radius
 grep across all of GAP-040's 5 approved surfaces and 102 repo-wide
-`FixtureFactory`/`TenantUserFactoryTrait` consumers.
+`FixtureFactory`/`TenantUserFactoryTrait` consumers; a second disposable
+writer/verifier discriminating harness (GitHub Actions runs `32560499974`/
+`32560820613`, throwaway Draft PR #284, closed unmerged) that directly tested
+and confirmed the GAP-040 false-green hypothesis; two independent disposable
+attempts to capture the masked original exception, both unsuccessful,
+reported honestly as unresolved.
 
 ## Tác động nếu không xử lý
 
@@ -132,43 +176,54 @@ implicit-commit `RefreshDatabase`'s transaction on the first cold-start test,
 exactly mirroring GAP-040's already-diagnosed-and-fixed defect pattern for a
 different method in the same file; (2) the defect is genuinely test-only —
 no application/schema/RBAC/tenant/business semantics are implicated; (3) a
-Gate 2 design decision is needed on the specific remediation mechanism (e.g.
-extending GAP-040's isolated-`zena_ddl_bootstrap`-connection pattern to
-these three siblings, or an equivalent complete solution) and on what
-regression evidence would prove the invariant restored across whichever
-surfaces Gate 2 scopes; (4) one open item — the exact originating exception
-inside `Permission::create()`'s/`Role::create()`'s wrapped closure — remains
-unresolved and is flagged as a candidate Gate 2 (or Gate 1 follow-up)
-investigation item, not guessed at here. Gate 1 does not select a technical
-mechanism.
+second, directly-tested finding: GAP-040's own Gate-3 cold-start rollback
+proof is false-green for the same reason, confirmed via a dedicated
+disposable writer/verifier harness on genuine MySQL — this is reported as
+evidence for Owner consideration, not as a reclassification of GAP-040's
+released status, and no GAP-040 file is touched; (4) a Gate 2 design
+decision is needed on the specific remediation mechanism (e.g. extending
+GAP-040's isolated-`zena_ddl_bootstrap`-connection pattern to these three
+siblings, or an equivalent complete solution) and on what regression
+evidence would prove the invariant restored across whichever surfaces Gate
+2 scopes, this time using a proof design immune to the false-green mode
+identified in (3); (5) one open item — the exact originating exception
+inside `Permission::create()`'s/`Role::create()`'s wrapped closure —
+actively investigated via two independent disposable-harness attempts this
+pass, not reproduced, remains unresolved and is flagged as a candidate
+Gate 2 (or further Gate 1) investigation item, not guessed at here. Gate 1
+does not select a technical mechanism.
 
 ## Loại trừ rõ ràng
 
 Does not reopen or modify GAP-040's already-released decision record
-(`docs/owner-decisions/GAP-040/*`) — §H of the evidence document reports new
-evidence for Owner consideration only. Does not touch GAP-041 (only reused
-its already-Owner-approved selector-overlay mechanism, unmerged, purely for
+(`docs/owner-decisions/GAP-040/*`) — §H/§H1 of the evidence document report
+new evidence for Owner consideration only; GAP-040's historical decision
+record is preserved unedited. Does not touch GAP-041 (only reused its
+already-Owner-approved selector-overlay mechanism, unmerged, purely for
 evidence-gathering — identical precedent to GAP-043's own disposable
 harness), GAP-042 (RBAC production-fidelity, unrelated), or GAP-045 (latency
 budget — the one `DashboardPerformanceTest` failure attributable to GAP-045
 is confirmed structurally distinct from this SAVEPOINT mechanism and is not
 investigated here). No test, application, migration, or workflow code is
 changed by this Gate 1 submission — this document and its companion
-evidence file are the only contents of this PR (plus the disposable
-evidence-harness branch, already deleted, never merged, never presented as
-implementation). No business-domain semantics, tenant behavior, or
-production schema are proposed to change; per the governance classification
-in the evidence document, this does not require the Design Dependency
-Preflight unless Gate 2 investigation later shows otherwise, in which case
-work stops and that preflight runs before any design/plan/code.
+evidence file are the only contents of this PR (plus two disposable
+evidence-harness branches, both already deleted/closed unmerged, never
+presented as implementation). No business-domain semantics, tenant
+behavior, or production schema are proposed to change; per the governance
+classification in the evidence document, this does not require the Design
+Dependency Preflight unless Gate 2 investigation later shows otherwise, in
+which case work stops and that preflight runs before any design/plan/code.
 
 ## Đề xuất
 
 Đội kỹ thuật đề xuất: Owner phê duyệt để xác nhận phạm vi/bằng chứng Gate 1
 — root cause đã được xác lập bằng bằng chứng LIVE trên MySQL thật (không chỉ
 suy luận), là cùng một loại lỗi GAP-040 đã sửa cho một method khác trong
-cùng file, nhưng chưa được sửa cho 3 method anh em của nó. Không chọn cơ chế
-kỹ thuật cụ thể ở Gate 1.
+cùng file, nhưng chưa được sửa cho 3 method anh em của nó; đồng thời xác
+nhận phát hiện mới (đã kiểm chứng bằng thực nghiệm, không suy luận):
+bằng chứng rollback Gate-3 của chính GAP-040 là false-green vì cùng lý do
+này — báo cáo để Owner xem xét, không tự ý thay đổi trạng thái đã release
+của GAP-040. Không chọn cơ chế kỹ thuật cụ thể ở Gate 1.
 
 ## What the owner is NOT being asked to decide
 

@@ -37,6 +37,24 @@ capture, GitHub Actions run `32557247386`) with `DB::transactionLevel()` /
 `setUp()` boundary. The probe data is a direct, server-observed proof of the
 full causal chain below — not an inference from log text alone.
 
+**Revision note (this pass):** Owner review of the first submission of this
+document identified that the three implicated sibling helpers already
+existed and were already called from `TestCase::setUp()` at the GAP-040
+baseline, and asked whether GAP-040's own already-Owner-approved cold-start
+rollback proof could itself be a second, distinct false-green — i.e.,
+whether the "marker row absent" result GAP-040's proof reports is actually
+caused by the *verifier* test's own `migrate:fresh` wiping the schema
+(triggered by this exact implicit-commit mechanism poisoning
+`RefreshDatabaseState::$migrated`), not by a genuine `RefreshDatabase`
+rollback. A second disposable, never-merged discriminating harness (branch
+`investigate/GAP-044-gap040-proof-discriminator`, GitHub Actions runs
+`32560499974`/`32560820613` via throwaway PR #284, closed unmerged, branch
+deleted) was built and run on genuine MySQL to answer this directly. **Result:
+CONFIRMED FALSE-GREEN — see §H1 (new) below.** A parallel attempt to capture
+the masked original exception behind the `ROLLBACK TO SAVEPOINT` path (§I)
+was also made using the same harness; it did **not** succeed in reproducing
+the original throw and is reported honestly as unresolved (§I).
+
 ## A. Is the symptom reproduced on current canonical `main`?
 
 **Yes.** Reproduced LIVE on `main`'s exact tree (canonical baseline
@@ -206,7 +224,7 @@ behavior**, established from evidence, not assumed:
 - GAP-040's approved scope was explicitly `tests/TestCase.php::ensureSqliteZenaRbacTables()` — its Gate 2 spec, Gate 3 evidence, and final-diff review (`git diff origin/main...f8f4d110`) confirm the fix touched only that one method; its three siblings (`ensureInteractionLogsTable`, `ensureProjectPhasesTable`, `ensureProjectTasksTable`), sitting a few lines below it in the same file, were never in scope and were never mentioned in any GAP-040 gate document.
 - GAP-040 explicitly did **not** claim to fix every unguarded-DDL-on-transacted-connection defect in `tests/TestCase.php` — only the one it diagnosed (`ensureSqliteZenaRbacTables()`). GAP-040's own release evidence (§7, "Rủi ro tồn dư") does not mention these three siblings at all; they were not discovered during that investigation.
 - GAP-044's root cause (§D-G above) is the **exact same defect class** — unconditional `Schema::create()` DDL, guarded only by an existence check, executed directly on the shared/transacted connection with no driver guard and no isolated-connection routing — applied to three different, migration-less, test-only tables GAP-040's fix never touched.
-- GAP-040's own cold-start proof mechanism (`tests/Support/GAP040ColdStartTransactionIsolationAssertions.php`) is unaffected and remains structurally sound for the one method it covers (`ensureSqliteZenaRbacTables()`) — probe data confirms `ensureSqliteZenaRbacTables()`'s own bootstrap (via `zenaRbacBootstrapSchema()`/`zena_ddl_bootstrap`) does **not** flip `pdoInTransaction`; only the three *unfixed* siblings do (see raw probe sequence: `after_ensureSqliteSubmittalsTable` — which calls `ensureSqliteZenaRbacTables()` internally — still shows `pdoInTransaction=true`; the flip to `false` happens strictly later, at `after_ensureInteractionLogsTable`).
+- `ensureSqliteZenaRbacTables()`'s own bootstrap (via `zenaRbacBootstrapSchema()`/`zena_ddl_bootstrap`) is independently confirmed, this pass, to **not** flip `pdoInTransaction` itself — probe data shows `after_ensureSqliteSubmittalsTable` (which calls `ensureSqliteZenaRbacTables()` internally) still reads `pdoInTransaction=true`; the flip to `false` happens strictly later, at `after_ensureInteractionLogsTable`. **This narrow claim about the one method's own bootstrap mechanism is unchanged.** However — critically, and corrected in this revision — this does **not** mean GAP-040's overall Owner-approved cold-start *rollback proof* (the end-to-end claim that a marker row written by the writer test is genuinely gone by the time the verifier reads it, proving real transactional rollback) remains valid. §H1 below reports a live-confirmed second false-green mechanism that defeats that proof through the *same* three unfixed sibling methods, independently of `ensureSqliteZenaRbacTables()` itself.
 
 GAP-040's approved acceptance contract ("no DDL statement may execute on
 [the transacted] connection between the moment `RefreshDatabase`'s
@@ -216,6 +234,79 @@ for those same 5 surfaces, because three siblings of the method GAP-040 did
 fix still violate that exact invariant. This is stated as a fact established
 by this Gate 1's evidence, not as a request to reopen or re-litigate GAP-040's
 already-released decision record.
+
+### H1. GAP-040's Gate-3 cold-start rollback proof — CONFIRMED FALSE-GREEN (new finding, this revision)
+
+**This is a governance-significant finding about a previously Owner-approved
+Gate-3 evidence record. It is reported as new evidence for Owner
+consideration. GAP-040's historical decision record is preserved unedited;
+nothing in `docs/owner-decisions/GAP-040/*` is modified by this PR.**
+
+GAP-040's Gate 3 release evidence (`docs/owner-decisions/GAP-040/03-release.md`
+§3) presented, as its primary regression proof, a writer/verifier test pair
+in which a marker row is written inside a cold-start test, and a second,
+independent-PDO check confirms the row is absent — interpreted as proof that
+`RefreshDatabase`'s real rollback removed it. The Owner's review of this
+Gate-1 submission identified a second, distinct possible explanation:
+that the three sibling methods now known to implicit-commit the outer
+transaction (§D-G) were **already present at the GAP-040 baseline**, and
+could cause the *verifier* test's own `parent::setUp()` to run
+`migrate:fresh` (via `RefreshDatabaseState::$migrated` being reset to
+`false` by `RefreshDatabase`'s own self-healing check, §J) — which would
+wipe the marker row via schema reset, not via any genuine transactional
+rollback, producing an indistinguishable "marker absent" result.
+
+**A disposable, never-merged discriminating harness was built and run on
+genuine MySQL 8.0 to test this directly** (branch
+`investigate/GAP-044-gap040-proof-discriminator`, self-contained — it
+touches no GAP-040 file; it forces cold start via the same public
+`Illuminate\Foundation\Testing\RefreshDatabaseState::$migrated` mechanism
+GAP-040's own trait uses, independently reimplemented; GitHub Actions runs
+`32560499974` and `32560820613`, via throwaway Draft PR #284 against
+`routes-guardrails.yml`'s `--group=mysql-parity` step, closed unmerged,
+branch deleted immediately after evidence capture). The harness captured,
+via an independent raw-PDO connection (env-var-driven, not
+`config()`-driven, so it works even before the Laravel app is booted) at
+every boundary the Owner specified:
+
+```
+[GAP044-DISC] test=...::test_a_writer   label=after_full_writer_parent_setUp        pdoInTransaction=false connectionId=16
+[GAP044-DISC] test=...::test_a_writer   label=after_marker_insert                    pdoInTransaction=false connectionId=16
+[GAP044-DISC] test=...::test_a_writer   label=independent_pdo_before_writer_teardown tenant_id=01M0... marker_visible=true
+[GAP044-DISC] test=...::test_b_verifier label=before_verifier_parent_setUp           migrated=false marker_visible=true
+[GAP044-DISC] test=...::test_b_verifier label=after_verifier_parent_setUp            pdoInTransaction=false connectionId=16
+[GAP044-DISC] test=...::test_b_verifier label=verifier_summary tenant_id=01M0... migrated_before_verifier_setUp=false
+    marker_visible_before_verifier_setUp=true marker_visible_after_verifier_setUp=false
+    CONCLUSION=DISAPPEARED_DURING_VERIFIER_SETUP_WITH_MIGRATED_FALSE_ie_LIKELY_MIGRATE_FRESH
+```
+
+Reproduced identically across both runs (`32560499974` and `32560820613`,
+the second after a role-name correction unrelated to this conclusion).
+Reading each captured fact directly:
+
+1. **Writer PDO state after FULL `parent::setUp()`:** `pdoInTransaction=false` — the writer test's own transaction was *already* implicit-committed by the time its `setUp()` finished, before the marker was even written. This is the same mechanism as §D-G, now observed on the exact GAP-040 writer/verifier scenario.
+2. **Marker visible via independent PDO, BEFORE the writer's own teardown runs:** `true` — the marker row is visible to a completely independent connection *immediately* after insertion, before any rollback could possibly have occurred. This alone proves the writer's insert was never actually protected by an isolated transaction — it was committed on write, exactly consistent with (1).
+3. **Marker state immediately before the verifier's `parent::setUp()` runs (i.e., after the writer's own teardown, before any migrate:fresh the verifier's own setup might trigger):** still `true` — the marker had **not yet disappeared** at this point.
+4. **`RefreshDatabaseState::$migrated` at that same point:** `false` — confirming `RefreshDatabase`'s self-healing check (§J) fired during the writer's teardown (because `pdoInTransaction()` read `false` there too), meaning the verifier's own `refreshTestDatabase()` is about to run `migrate:fresh`.
+5. **Marker state after the verifier's `parent::setUp()` completes:** `false` — the marker is gone.
+6. **Conclusion, directly derivable from (3)+(4)+(5):** the marker disappeared *during the verifier's own `parent::setUp()`*, at exactly the point where `$migrated=false` causes `migrate:fresh` to run — **not** during the writer's teardown (where it was still present, per (3)), and not via any rollback (there was no genuine open transaction to roll back, per (1)-(2)).
+
+**This confirms the Owner's second false-green hypothesis exactly as
+specified: GAP-040's writer/verifier "marker absent" result is explained by
+`migrate:fresh` schema-wiping the marker between the writer's teardown and
+the verifier's read, not by `RefreshDatabase`'s rollback genuinely working.**
+The same three unfixed sibling methods that cause GAP-044's visible
+`SAVEPOINT` failures also silently defeat the specific evidence GAP-040's
+Gate 3 relied on to prove its own fix — because those three methods were
+never part of GAP-040's fix and were present, unchanged, at every stage of
+GAP-040's own Gate 3 evidence-gathering.
+
+**Explicit corrections, per Owner instruction:**
+- GAP-040's *implementation surface* was one helper (`ensureSqliteZenaRbacTables()`only).
+- GAP-040's Owner-*approved acceptance contract* was broader: real-MySQL `RefreshDatabase` transaction isolation preserved end-to-end from the first test of a fresh process onward, proven by cold-start rollback evidence, across all 5 approved surfaces.
+- The evidence GAP-040 used to claim that broader contract was satisfied is now shown, by direct experiment, to be **unreliable in this exact scenario** — a `migrate:fresh`-caused disappearance is observationally indistinguishable, in GAP-040's own proof design, from a genuine rollback-caused disappearance.
+- **This Gate 1 does NOT claim GAP-040's technical acceptance contract remains satisfied.** That claim cannot currently be made with confidence, given this finding.
+- This Gate 1 does **not** reclassify GAP-040's released status, does **not** edit any GAP-040 file, and does **not** decide what governance action (if any) GAP-040 itself requires — that is an Owner decision, reported here as a discovery, consistent with how GAP-040's own Gate 2 handled its own mid-investigation discovery about `zena_roles`/`zena_permissions` (§1 of that gap's design spec) without reopening GAP-039.
 
 ## I. What exact code path owns the root cause?
 
@@ -232,23 +323,60 @@ test class extending `Tests\TestCase`, immediately after the (now GAP-040-fixed)
 `ensureSqliteSubmittalsTable()`/`ensureSqliteZenaRbacTables()`/`ensureSqliteDocumentsBackupTable()`
 calls.
 
-**What remains genuinely open** (not resolved by this Gate 1, flagged
-explicitly rather than guessed at): the *exact* reason `Permission::create()`/
-`Role::create()`'s wrapped closure throws specifically on the very first
-`RefreshDatabase` test of a process (triggering the `ROLLBACK TO SAVEPOINT`
-path at all) is not fully traced. The mechanism in §C-H fully explains *why*
-a `ROLLBACK TO SAVEPOINT trans2` fails with "does not exist" whenever it is
-attempted on a connection whose real transaction was implicit-committed away
-— that part is proven end-to-end from server-observed probe data plus exact
-Laravel framework source. What is not yet independently proven is the
-originating `UniqueConstraintViolationException` (or other exception) inside
-`createOrFirst()`'s wrapped `create()` call that triggers the rollback
-attempt in the first place — plausible given `createOrFirst()`'s own
-docblock ("Attempt to create the record. If a unique constraint violation
-occurs, attempt to find the matching record") exists specifically to handle
-races on this exact call pattern, but not independently confirmed against
-this specific data in this Gate 1. See §J (hypotheses) and §L (what remains
-uncertain).
+The mechanism in §C-H fully explains *why* a `ROLLBACK TO SAVEPOINT trans2`
+fails with "does not exist" whenever it is attempted on a connection whose
+real transaction was implicit-committed away — that part is proven
+end-to-end from server-observed probe data plus exact Laravel framework
+source.
+
+### I1. Attempt to capture the masked original exception (Owner authorization Part B) — attempted, NOT reproduced, reported honestly
+
+Per Owner instruction, an attempt was made to capture the original,
+unmasked `Throwable` inside `createOrFirst()`'s wrapped `create()` call —
+the exception that must occur for the `ROLLBACK TO SAVEPOINT` path to be
+reached at all — using disposable instrumentation only (no vendor edits).
+Since Eloquent's `createOrFirst()`/`withSavepointIfNeeded()` cannot be
+hooked from outside without editing vendor code, the disposable harness
+(same branch as §H1) instead **manually reimplemented the identical
+operation**: it opened the same savepoint Eloquent would (via
+`DB::connection()->beginTransaction()`, gated on the identical
+`transactionLevel() > 0` precondition `withSavepointIfNeeded()` checks),
+attempted the same `Permission::create()`/`Role::create()` calls with the
+same values, and caught any resulting exception in its own try/catch
+**before** attempting any rollback — so a genuine original exception, had
+one occurred, would have been captured unmasked.
+
+Two variants were run, both on a forced cold start (`RefreshDatabaseState::$migrated
+= false`, same technique as §H1), both confirmed to be operating under the
+exact same implicit-commit condition (`pdoInTransaction=false` at entry,
+matching §D-G):
+
+1. **Manual replica** (`test_c_capture_masked_exception`): reimplemented `ensurePermissionAttached()`'s exact logic (role `project_manager`, permissions `project.read`/`project.write`, matching `createTenantUserWithRbac('project_manager', 'project_manager', ...)`'s real call shape) — **`Permission::create()` succeeded cleanly for both permissions, no exception thrown.**
+2. **Faithful reproduction** (`test_d_faithful_reproduction`): called the **real, unmodified** `Tests\Traits\TenantUserFactoryTrait::createTenantUser()` directly (the test class simply `use`s the trait, exactly as any ordinary consuming test does — no trait file edited), with the exact real role (`project_manager`) — **also succeeded cleanly, no exception thrown, no `SAVEPOINT`/PDOException of any kind.**
+
+**Result: the original masked exception was NOT reproduced by this Gate 1,
+despite two independent attempts including a faithful call to the real,
+unmodified trait under the confirmed implicit-commit condition.** This
+means the LIVE `SAVEPOINT trans2 does not exist` failures observed in §A
+require some additional condition beyond "cold start + implicit commit +
+`firstOrCreate` on `project_manager`/`project.read`/`project.write`" that
+this harness did not reproduce. A plausible, but **not confirmed**,
+candidate difference: the real `performance-tests` CI job's DB-setup step
+runs `php artisan migrate` **and** `php artisan db:seed --env=testing
+--force` before PHPUnit starts, whereas `routes-guardrails.yml` (where this
+harness ran, to reuse its already-truthful `--group=mysql-parity` selector)
+runs only `php artisan migrate:fresh` with **no seeding** — meaning the two
+environments' `roles`/`permissions` table contents differ before the
+in-process `RefreshDatabase`-internal `migrate:fresh` and the subsequent
+implicit-commit cycle occur. This difference was not tested further this
+pass.
+
+**Per Owner instruction, no assumption is made that this is "expected
+Eloquent `createOrFirst` race handling."** The original exception's
+identity remains unresolved. What is separately proven with certainty
+(§D-H, independent of this unresolved item) is the exact mechanism by which
+*any* exception reaching that call path, whatever its cause, becomes the
+misleading `SAVEPOINT trans2 does not exist` message.
 
 ## J. Trace the shared call path (per Owner authorization §5)
 
@@ -321,22 +449,31 @@ was never really inside a live transaction. (PRIMARY, CONFIRMED)**
 `create()` call (needed to reach the `ROLLBACK TO SAVEPOINT` code path at
 all) is a genuine `UniqueConstraintViolationException` racing against
 already-seeded `roles`/`permissions` rows from the job's one-time
-`db:seed`. (SECONDARY, NOT YET CONFIRMED)**
+`db:seed`. (SECONDARY, ATTEMPTED, NOT CONFIRMED — NOT REPRODUCED)**
 - Evidence for: `createOrFirst()`'s own purpose (documented: "Attempt to create the record. If a unique constraint violation occurs...") is specifically designed around exactly this race; the failure is observed only on the very first `RefreshDatabase` test of a process, when the job-level one-time `db:seed` step's data and the in-test `RefreshDatabase`-internal `migrate:fresh` (which wipes and does not reseed) interact in a way not fully traced this pass.
-- Evidence against: not independently verified — no direct evidence (e.g. a captured `UniqueConstraintViolationException` message) was captured distinguishing this from some other exception type inside the closure.
-- Discriminating experiment (not performed, left for Gate 2 if pursued): add a probe inside `TenantUserFactoryTrait::ensurePermissionAttached()` that catches and logs the *original* exception class/message from `Permission::create()` before it is masked by the SAVEPOINT rollback failure, on real MySQL, first-test-of-process.
+- Evidence against: **actively tested and not observed.** §I1 reports two independent disposable-harness attempts — a manual replica of `ensurePermissionAttached()`'s exact logic, and a faithful call to the real, unmodified `TenantUserFactoryTrait::createTenantUser()` — both under the confirmed implicit-commit cold-start condition, both with the correct real role/permission values. Neither threw any exception at all; `Permission::create()` succeeded cleanly both times. This does not disprove H2 (the real `performance-tests` job's `db:seed` step, absent from the `routes-guardrails.yml` environment this harness ran in, is a plausible missing ingredient — §I1), but it means H2 is **not confirmed** and must not be assumed.
+- Discriminating experiment: performed this pass (§I1) via disposable instrumentation; **inconclusive** — did not reproduce the original exception. A further experiment instrumenting the actual `performance-tests` job's own environment (with its real `db:seed` step) would be needed to resolve this, left for Gate 2 if pursued.
 
-Neither hypothesis proposes a fix. H1 is the confirmed root cause of the
-`SAVEPOINT trans2 does not exist` **mechanism**; H2 is an open question about
-exactly what triggers that mechanism to become visible on the specific first
-test of a process, left unresolved by this Gate 1.
+**H3 — GAP-040's Gate-3 cold-start rollback proof is a false-green, defeated
+by the same three unfixed sibling methods causing the verifier's
+`migrate:fresh` to wipe the marker instead of a genuine rollback removing it.
+(CONFIRMED, this revision — see §H1)**
+- Evidence for: full server-observed writer/verifier probe chain (§H1) — marker visible immediately after write (proving no real isolation ever existed), still visible immediately before the verifier's own `parent::setUp()`, `RefreshDatabaseState::$migrated=false` at that exact point (proving `migrate:fresh` is about to run), marker gone immediately after — reproduced identically across two independent runs.
+- Evidence against: none found.
+- Discriminating experiment: performed this pass, a dedicated disposable writer/verifier harness (§H1) — result confirms H3.
+
+Neither H1 nor H3 proposes a fix. H1/H3 are confirmed root-cause/consequence
+findings; H2 is an open question about what specifically triggers the
+`SAVEPOINT`-masking mechanism to become visible on the first test of a
+process, actively tested and left unresolved by this Gate 1.
 
 ## O. What remains uncertain
 
-- The exact exception type/message thrown inside `Permission::create()`'s (or `Role::create()`'s) `createOrFirst()`-wrapped closure that triggers the `ROLLBACK TO SAVEPOINT` attempt in the first place (§N, H2).
-- Whether GAP-040's other 4 approved surfaces (beyond `PerformanceMonitoringTest`/`DashboardPerformanceTest`, which were directly probed) would show a *visible* SAVEPOINT failure if run as the first test of a fresh process — the underlying implicit-commit mechanism is confirmed present for all of them by code-path necessity (§L), but visible failure was only independently reproduced for the two Performance test files.
+- The exact exception type/message thrown inside `Permission::create()`'s (or `Role::create()`'s) `createOrFirst()`-wrapped closure that triggers the `ROLLBACK TO SAVEPOINT` attempt in the first place (§I1, H2) — **actively investigated this pass via two independent disposable-harness attempts, not reproduced.** The most plausible untested variable is the real `performance-tests` job's `db:seed` step, absent from the `routes-guardrails.yml` environment used for this attempt.
+- Whether GAP-040's other 4 approved surfaces (beyond `PerformanceMonitoringTest`/`DashboardPerformanceTest`, which were directly probed for §D-G, and the `mysql-parity` surface directly probed for §H1) would show a *visible* SAVEPOINT failure if run as the first test of a fresh process — the underlying implicit-commit mechanism is confirmed present for all of them by code-path necessity (§L), but visible failure was only independently reproduced for the two Performance test files; the false-green marker-disappearance mechanism (§H1) was independently confirmed on the `mysql-parity` surface too.
 - Whether any other nested-transaction-consuming call pattern besides `Eloquent::firstOrCreate()`/`createOrFirst()`/`updateOrCreate()` could also trigger this same class of visible failure elsewhere in the repo.
 - Whether `DashboardPerformanceTest`'s separate `it_can_load_alerts_with_large_dataset_quickly` latency-budget miss (504.7ms vs 450ms, GAP-045) is itself measurably affected by running in a process where an earlier test's transaction was implicitly defeated (i.e., whether GAP-044 and GAP-045 have any causal interaction beyond both surfacing in the same LIVE run) — not investigated this pass, out of GAP-044's scope per the Owner authorization.
+- **What governance action, if any, GAP-040's now-questionable Gate-3 evidence record requires** — this Gate 1 reports the discovery (§H1) but does not decide this; it is an Owner decision, and no GAP-040 file is edited by this PR.
 
 ## P. Scope confirmation / Design Dependency Preflight
 
@@ -372,6 +509,8 @@ currently indicates that will be necessary (the working control case,
 | 8 | GAP-040's Gate 1/2/3 records confirming approved scope was `ensureSqliteZenaRbacTables()` only | **STATIC** (documentary) | `docs/owner-decisions/GAP-040/01-request.md`, `02-design.md`, `03-release.md`; `docs/audits/2026-08-20-gap-040-testcase-mysql-transaction-isolation-evidence.md`; `docs/superpowers/specs/2026-08-20-gap-040-testcase-mysql-transaction-isolation-design.md`; `docs/superpowers/plans/2026-08-20-gap-040-testcase-mysql-transaction-isolation.md` |
 | 9 | GAP-043's Gate 3 LIVE evidence, prior masking-interaction note | **STATIC** (documentary) | `docs/owner-decisions/GAP-043/03-release.md`, `docs/audits/2026-08-21-gap-043-performance-test-mysql-portability-evidence.md` |
 | 10 | Blast-radius grep: which `RefreshDatabase` classes use `FixtureFactory`/`TenantUserFactoryTrait`, which GAP-040 surfaces `extends TestCase` | **STATIC** | `grep -rl "@group zena-invariants" tests/`, `grep -rl "@group mysql-parity" tests/`, direct `grep -n "extends TestCase"` on GAP-040's 5 approved surface files |
+| 11 | Writer/verifier discriminating probe log confirming GAP-040's cold-start rollback proof is false-green (§H1): marker visible immediately after write, still visible before verifier's `parent::setUp()`, `RefreshDatabaseState::$migrated=false` at that point, marker gone after — reproduced on 2 independent runs | **LIVE** | GitHub Actions runs `32560499974` and `32560820613`, job `97001212756`/`97001970755` (`test-routes-guardrails`, `--group=mysql-parity`), disposable branch `investigate/GAP-044-gap040-proof-discriminator`, throwaway Draft PR #284 (closed unmerged, branch deleted after capture) |
+| 12 | Masked-exception-capture attempt log (§I1): both the manual replica and the faithful real-trait call succeeded cleanly with no exception, under the confirmed implicit-commit condition | **LIVE** | same runs, job `97001970755` (`test_c_capture_masked_exception`/`test_d_faithful_reproduction`) |
 
 ## Explicit exclusions
 
@@ -379,10 +518,14 @@ Does not modify `tests/TestCase.php`, `FixtureFactory.php`,
 `TenantUserFactoryTrait.php`, any workflow file, any migration, or any
 application/production code — this document and its companion
 `docs/owner-decisions/GAP-044/01-request.md` are the only contents of this
-Gate-1 PR. Does not reopen or modify GAP-040's already-released decision
-record (`docs/owner-decisions/GAP-040/*`) — §H's finding is reported as new
-evidence for Owner consideration, not as a unilateral reclassification of
-GAP-040's release status. Does not touch GAP-041 (selector truthfulness —
+Gate-1 PR. Both disposable evidence-harness branches
+(`investigate/GAP-044-disposable-evidence-harness` and
+`investigate/GAP-044-gap040-proof-discriminator`, the latter via throwaway
+Draft PR #284) have been deleted/closed unmerged and contributed no content
+to this PR's diff. Does not reopen or modify GAP-040's already-released
+decision record (`docs/owner-decisions/GAP-040/*`) — §H/§H1's findings are
+reported as new evidence for Owner consideration, not as a unilateral
+reclassification of GAP-040's release status. Does not touch GAP-041 (selector truthfulness —
 only its already-Owner-approved overlay mechanism was reused, unmerged, for
 evidence-gathering, exactly as GAP-043's precedent established), GAP-042
 (RBAC production-fidelity — unrelated), or GAP-045 (latency budget — the one

@@ -383,7 +383,11 @@ abstract class TestCase extends BaseTestCase
 
         $this->gap044ProbeBeforeHelper('interaction_logs');
 
-        Schema::create('interaction_logs', function (Blueprint $table) {
+        $schema = config('database.default') === 'sqlite'
+            ? Schema::connection(config('database.default'))
+            : $this->zenaRbacBootstrapSchema();
+
+        $schema->create('interaction_logs', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->string('tenant_id')->nullable();
             $table->string('project_id');
@@ -398,6 +402,10 @@ abstract class TestCase extends BaseTestCase
             $table->softDeletes();
         });
 
+        if (config('database.default') !== 'sqlite') {
+            DB::purge('zena_ddl_bootstrap');
+        }
+
         $this->gap044ProbeAfterHelper('interaction_logs');
     }
 
@@ -409,7 +417,11 @@ abstract class TestCase extends BaseTestCase
 
         $this->gap044ProbeBeforeHelper('project_phases');
 
-        Schema::create('project_phases', function (Blueprint $table) {
+        $schema = config('database.default') === 'sqlite'
+            ? Schema::connection(config('database.default'))
+            : $this->zenaRbacBootstrapSchema();
+
+        $schema->create('project_phases', function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->ulid('project_id');
             $table->string('name');
@@ -422,6 +434,10 @@ abstract class TestCase extends BaseTestCase
             $table->softDeletes();
         });
 
+        if (config('database.default') !== 'sqlite') {
+            DB::purge('zena_ddl_bootstrap');
+        }
+
         $this->gap044ProbeAfterHelper('project_phases');
     }
 
@@ -433,7 +449,11 @@ abstract class TestCase extends BaseTestCase
 
         $this->gap044ProbeBeforeHelper('project_tasks');
 
-        Schema::create('project_tasks', function (Blueprint $table) {
+        $schema = config('database.default') === 'sqlite'
+            ? Schema::connection(config('database.default'))
+            : $this->zenaRbacBootstrapSchema();
+
+        $schema->create('project_tasks', function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->ulid('project_id');
             $table->ulid('phase_id')->nullable();
@@ -451,6 +471,10 @@ abstract class TestCase extends BaseTestCase
             $table->timestamps();
             $table->softDeletes();
         });
+
+        if (config('database.default') !== 'sqlite') {
+            DB::purge('zena_ddl_bootstrap');
+        }
 
         $this->gap044ProbeAfterHelper('project_tasks');
     }

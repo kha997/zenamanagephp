@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Depends;
 use Tests\TestCase;
+use Tests\Traits\TenantUserFactoryTrait;
 
 /**
  * GAP-044 DISPOSABLE DISCRIMINATING HARNESS.
@@ -40,13 +41,14 @@ use Tests\TestCase;
 class GAP044Gap040ProofDiscriminatorTest extends TestCase
 {
     use RefreshDatabase;
+    use TenantUserFactoryTrait;
 
     private static ?bool $migratedBeforeVerifierSetUp = null;
     private static ?bool $markerVisibleBeforeVerifierSetUp = null;
 
     protected function setUp(): void
     {
-        if ($this->name() === 'test_a_writer' || $this->name() === 'test_c_capture_masked_exception') {
+        if ($this->name() === 'test_a_writer' || $this->name() === 'test_c_capture_masked_exception' || $this->name() === 'test_d_faithful_reproduction') {
             // Force genuine cold start, identical technique to GAP-040's own
             // forceGenuineColdStartForNextSetUp() — but implemented here
             // independently so no GAP-040 file is touched. Forcing this
@@ -175,11 +177,27 @@ class GAP044Gap040ProofDiscriminatorTest extends TestCase
             'is_active' => true,
         ]);
 
+        // Match the EXACT role name PerformanceMonitoringTest/DashboardPerformanceTest
+        // use via createTenantUserWithRbac($tenant, 'project_manager', 'project_manager', ...).
         $role = \App\Models\Role::firstOrCreate(
-            ['name' => 'super_admin'],
-            ['scope' => 'system', 'description' => 'Super Admin', 'is_active' => true]
+            ['name' => 'project_manager'],
+            ['scope' => 'system', 'description' => 'Project Manager', 'is_active' => true]
         );
         $user->roles()->syncWithoutDetaching($role->id);
+
+        // FixtureFactory::createTenantUserWithRbac() also does a SECOND,
+        // independent Role::firstOrCreate() call for the same name right
+        // after createTenantUser() returns (tests/Support/SSOT/FixtureFactory.php
+        // lines ~53-61) — replicate that exact double-call shape too, in case
+        // the second lookup/create attempt (not the first) is what races.
+        $roleAgain = \App\Models\Role::firstOrCreate(
+            ['name' => 'project_manager'],
+            ['scope' => 'system', 'description' => 'Project Manager', 'is_active' => true]
+        );
+        $this->rawLog(sprintf(
+            'label=second_role_firstOrCreate same_id=%s',
+            $roleAgain->id === $role->id ? 'true' : 'false'
+        ));
 
         // Exact same permission set TenantUserFactoryTrait::assignApiRoles()
         // uses by default: ['project.read', 'project.write'].
@@ -249,6 +267,47 @@ class GAP044Gap040ProofDiscriminatorTest extends TestCase
                 str_replace("\n", ' ', (string) $rollbackExceptionMessage)
             ));
         }
+
+        $this->assertTrue(true, 'This harness only emits evidence; it does not assert GAP-044 pass/fail.');
+    }
+
+    /**
+     * PART B, calibration check — calls the REAL, unmodified
+     * TenantUserFactoryTrait::createTenantUser() (this test class simply
+     * `use`s that trait, exactly as any ordinary consuming test does; no
+     * trait file is edited) under the exact real role/permission values
+     * PerformanceMonitoringTest/DashboardPerformanceTest use, to confirm
+     * whether this harness's cold-start forcing genuinely reproduces the
+     * masked SAVEPOINT failure at all. If it does, that confirms the
+     * conditions match and the inability to independently unmask the
+     * original exception via test_c's manual replica is a genuine open
+     * question, not a setup mismatch.
+     */
+    public function test_d_faithful_reproduction(): void
+    {
+        $this->probe('before_faithful_reproduction');
+
+        $tenant = Tenant::factory()->create();
+
+        $caughtClass = null;
+        $caughtMessage = null;
+
+        try {
+            $this->createTenantUser($tenant, [
+                'name' => 'SSOT User',
+                'email' => 'ssot+' . (string) Str::uuid() . '@example.test',
+                'role' => 'project_manager',
+            ], ['project_manager'], []);
+        } catch (\Throwable $e) {
+            $caughtClass = get_class($e);
+            $caughtMessage = $e->getMessage();
+        }
+
+        $this->rawLog(sprintf(
+            'label=faithful_reproduction_result caught_class=%s caught_message=%s',
+            $caughtClass ?? 'null (no exception — real trait call succeeded cleanly)',
+            str_replace("\n", ' ', (string) $caughtMessage)
+        ));
 
         $this->assertTrue(true, 'This harness only emits evidence; it does not assert GAP-044 pass/fail.');
     }

@@ -235,3 +235,46 @@ taken. This recommendation is **not** an Owner decision.
 The Owner is not being asked to decide GAP-044, GAP-045, or GAP-041 in this
 packet — all three are explicitly out of scope, reproduced-but-not-fixed
 downstream defects/work items with their own separate governance lifecycles.
+
+## Post-decision release authorization and execution
+
+This section is an addendum recording what happened **after** decision-record
+commit `03b2d7f0b2a3151ff3b1dbd93d54d9948bed654f` was pushed. It does not
+alter the historical record above: at the moment `03b2d7f0` was recorded,
+ready-for-review, merge, release, and production deployment were explicitly
+**not yet authorized** and required a subsequent, separate Owner instruction.
+
+That subsequent Owner instruction was given on 2026-08-22
+("GAP-043 — OWNER GATE 3 APPROVAL ... AUTHORIZED: PREPARE GATE 3 PACKET" →
+release phases), authorizing ready-for-review, squash merge, and post-merge
+verification, subject to no implementation-tree drift between the approved
+decision-record commit and the moment of merge.
+
+**Binding facts:**
+
+- Decision-record head: `03b2d7f0b2a3151ff3b1dbd93d54d9948bed654f`.
+- Owner Governance Lint run: `32540964162` — **SUCCESS**.
+- Routes Guardrails run: `32540964168` — **SUCCESS**.
+- Pre-merge main: `25cab7f4955ed9a9b5d0c7113c19ca1ea679c3ac` — confirmed unchanged from the canonical baseline immediately before merge, no drift.
+- Merged PR: **#281**.
+- Squash-merge SHA: `c345df2d8344dbf8005feba372b115e18be6e5c8`.
+- Merge timestamp: `2026-08-22T08:16:30+07:00`.
+- Post-merge main: `c345df2d8344dbf8005feba372b115e18be6e5c8`.
+
+**Confirmed at merge time:**
+
+- The implementation tree did not drift between decision-record and merge — the approved digest `00b8b40ae3fe77234b98317238065c072b98330315836644e195a6126f62ba4e` and the approved test blob `954d37ca6c8433c784fbb3f436293eb1aa213d72` both remained exactly as bound in this packet.
+- GAP-043 was released to `main` at `c345df2d8344dbf8005feba372b115e18be6e5c8`.
+- GAP-044, GAP-045, and GAP-041 remain separate, untouched, still-open work items — not resolved or closed by this release.
+- The disposable GAP-043 evidence harness (`b727eec3a175db1adcdbde16a29ca87c7afe0c46`, branch `feature/GAP-043-live-validation-c429`) was **not** merged — it was deleted after this packet captured its run/job IDs.
+
+### Production Deployment provenance (re-read from the actual log, not inferred)
+
+- Production Deployment workflow run: `32542953520` (event `push`, branch `main`, exact `headSha` = `c345df2d8344dbf8005feba372b115e18be6e5c8` — the exact squash-merge commit, confirmed via the run's own metadata).
+- `deploy` job: `96957003904`, conclusion `success`.
+- The `deploy` job contains no checkout step and no SSH-deploy step — its only substantive step is `Gate production secrets`, which ran and printed, verbatim:
+  ```
+  Skipping deploy because secrets missing: PRODUCTION_HOST PRODUCTION_USER PRODUCTION_SSH_KEY PRODUCTION_URL
+  ```
+  and set `ready=false`.
+- **`deployment_status: skipped_missing_secrets`.** The job's `success` conclusion reflects the gate script itself exiting cleanly, not a completed deployment. **No production deployment occurred.**

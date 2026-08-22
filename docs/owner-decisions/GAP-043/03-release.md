@@ -240,15 +240,17 @@ downstream defects/work items with their own separate governance lifecycles.
 
 This section is an addendum recording what happened **after** decision-record
 commit `03b2d7f0b2a3151ff3b1dbd93d54d9948bed654f` was pushed. It does not
-alter the historical record above: at the moment `03b2d7f0` was recorded,
-ready-for-review, merge, release, and production deployment were explicitly
-**not yet authorized** and required a subsequent, separate Owner instruction.
+alter the historical record above.
 
-That subsequent Owner instruction was given on 2026-08-22
-("GAP-043 — OWNER GATE 3 APPROVAL ... AUTHORIZED: PREPARE GATE 3 PACKET" →
-release phases), authorizing ready-for-review, squash merge, and post-merge
-verification, subject to no implementation-tree drift between the approved
-decision-record commit and the moment of merge.
+The Owner's Gate-3 approval directive itself included conditional
+authorization for the release phases after the Gate-3 decision-record commit
+was pushed, provided fresh exact-head governance checks passed and the
+approved implementation tree did not drift. The concurrently-recorded
+`03b2d7f0` packet used narrower wording stating that ready/merge/release were
+not yet authorized; that wording is preserved above as the historical
+repository record, while this addendum records the controlling Owner
+directive and the release actions actually executed under its stated
+conditions.
 
 **Binding facts:**
 

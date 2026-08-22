@@ -446,14 +446,14 @@ class PerformanceMonitoringTest extends TestCase
     {
         $defaults = [];
 
-        foreach (DB::select("PRAGMA table_info({$table})") as $column) {
-            $default = $column->dflt_value;
+        foreach (Schema::getColumns($table) as $column) {
+            $default = $column['default'];
 
             if ($default === null || strtoupper((string) $default) === 'NULL') {
                 continue;
             }
 
-            $defaults[$column->name] = preg_replace("/^'(.*)'$/", '$1', (string) $default);
+            $defaults[$column['name']] = preg_replace("/^'(.*)'$/", '$1', (string) $default);
         }
 
         return $defaults;

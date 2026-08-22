@@ -32,6 +32,11 @@ technical_evidence:
   implementation_tree_digest: "716ea9cf50e4ab5ccbe478bd3a6ccf63aab2043e6dbd069db5a2b850eddf3d28"
   verified_pr_head_sha: "4361c5f59cbba548664a68d0b84fb440c9b54da3"
   verified_at: "2026-08-23T00:00:00+07:00"
+residual_risk_rating: low
+mandatory_technical_gate_summary: "Both Owner Gate-2-approved surfaces (Surface 1: TestCase.php transaction isolation; Surface 2: TenantUserFactoryTrait.php permission lookup identity) implemented and verified GREEN with RED-first TDD evidence. Discriminating rollback-vs-migrate:fresh proof (the exact mechanism that caught GAP-040's own false-green) re-verified PASS on all 5 GAP-040-approved real-MySQL surfaces at subject SHA 4361c5f5. Authoritative seeded PerformanceMonitoringTest (10/10 passed, 45 assertions) and DashboardPerformanceTest (19/19 passed, 157 assertions) pipelines both show zero SAVEPOINT-1305 and zero duplicate-permission-1062 failures, obtained via a disposable never-merged GAP-041 selector overlay since GAP-041 itself remains separately open/unfixed on main. Full local SQLite regression: 2309/2309 passed, 0 failures. RoleSeeder/PermissionSeeder/migrations/register/workflows and all GAP-040/041/042/043/045 artifacts confirmed untouched (zero-diff). Two pre-existing, unrelated failures re-observed (1 Treasury FK-constraint test, 1 CriticalUserFlowsE2ETest) — both already documented as non-gating at GAP-040 Gate 3, not attributable to GAP-044. browser-tests CI job status pending at packet-preparation time, not part of the discriminating acceptance contract. This is a prepared packet only: gate_status remains awaiting_owner, owner_decision.value remains none, no Owner decision has been recorded, no merge/release/deployment is authorized."
+owner_decision_binding:
+  implementation_tree_digest: null
+  decision_recorded_at: null
 ---
 
 # GAP-044 — TestCase Transaction Isolation + Permission Lookup Identity: Gate 3 Release Request

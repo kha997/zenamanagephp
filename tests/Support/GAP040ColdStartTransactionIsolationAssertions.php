@@ -227,17 +227,27 @@ trait GAP040ColdStartTransactionIsolationAssertions
         );
     }
 
+    /**
+     * GAP-044: reads connection parameters via getenv() rather than
+     * config(), because captureDiscriminatingStateBeforeVerifierSetUp()
+     * must call this BEFORE parent::setUp() runs — at which point the
+     * Laravel application container does not exist yet, so config() is
+     * unavailable (BindingResolutionException: Target class [config] does
+     * not exist). Same reasoning as forceGenuineColdStartForNextSetUp()'s
+     * own use of getenv() above. Falls back to the same defaults the CI
+     * jobs' MySQL service containers use.
+     */
     private function independentPdoSeesTenant(string $tenantId): bool
     {
         $pdo = new \PDO(
             sprintf(
                 'mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4',
-                config('database.connections.mysql.host'),
-                config('database.connections.mysql.port'),
-                config('database.connections.mysql.database')
+                getenv('DB_HOST') ?: '127.0.0.1',
+                getenv('DB_PORT') ?: '3306',
+                getenv('DB_DATABASE') ?: 'zenamanage_test'
             ),
-            config('database.connections.mysql.username'),
-            config('database.connections.mysql.password'),
+            getenv('DB_USERNAME') ?: 'root',
+            getenv('DB_PASSWORD') ?: '',
             [\PDO::ATTR_PERSISTENT => false, \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION]
         );
 

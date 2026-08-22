@@ -1,14 +1,14 @@
 ---
 work_id: GAP-043
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_changes_or_decline"
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-21-gap-043-performance-test-mysql-portability-design.md
   plan: docs/superpowers/plans/2026-08-21-gap-043-performance-test-mysql-portability-implementation.md
@@ -18,32 +18,32 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
-  reconciliation_required: true
+  recorded_at: "2026-08-22T07:36:13+07:00"
+  owner_response_reference: "Owner explicit Gate 3 approval in-session on 2026-08-22 ('GAP-043 — OWNER GATE 3 DECISION / Decision: APPROVED'), binding implementation-tree digest 00b8b40ae3fe77234b98317238065c072b98330315836644e195a6126f62ba4e, release-candidate c429f40cf89b8afea3e3ab404e37809525d5bdb5, submission HEAD 4369baa8487dd8e539ff16a1cd408e2b8accf2e3, and authoritative LIVE evidence via disposable harness b727eec3a175db1adcdbde16a29ca87c7afe0c46, run 32500162627, monitoring job 96827745378. Authorized action limited to recording this decision record; Ready-for-review flip, merge, release and production deployment explicitly NOT yet authorized."
+  reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-21T23:15:00+07:00"
-  updated_at: "2026-08-21T23:15:00+07:00"
+  updated_at: "2026-08-22T07:36:13+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "Agent-prepared Gate 3 submission, NOT an Owner decision. Release-candidate implementation commit c429f40cf89b8afea3e3ab404e37809525d5bdb5 (PR #281, currently Draft) swaps SQLite-only `PRAGMA table_info` for portable `Schema::getColumns()` inside tests/Performance/PerformanceMonitoringTest.php's private tableInsertDefaults() — exactly the Gate 2-approved Option A boundary, no other file changed. LIVE truthful evidence obtained via a disposable, non-merged evidence-harness branch/commit (b727eec3a175db1adcdbde16a29ca87c7afe0c46, parent == c429f40c exactly, one-line workflow overlay only, never to be merged into #281): GitHub Actions run 32500162627, job 96827745378, genuine MySQL 8.0.46, preflight succeeded, truthful command `php artisan test tests/Performance/PerformanceMonitoringTest.php --group=performance --fail-on-empty-test-suite` actually executed the intended 10-test population (1 failed, 9 passed, 43 assertions). All six GAP-043-owned methods (page/database-query/memory-usage/concurrent-request/large-dataset/cache performance) PASS with zero PRAGMA/table_info/SQLite-schema-introspection errors — the approved portability defect is LIVE-verified removed. The job is red only because of a separately-registered GAP-044 defect (test_api_performance_budgets, SQLSTATE[42000] SAVEPOINT trans2 does not exist) that this Gate 3 does not fix, claim fixed, or make itself contingent on. GAP-045 (DashboardPerformanceTest, run 32500162627 job 96827745282: 2 failed/17 passed/153 assertions — one instance of the same GAP-044 SAVEPOINT class, one unrelated 452.17ms-vs-450ms alerts latency-budget miss) is likewise out of scope. Gate-3 conclusion is attribution-based (which specific tests pass/fail and why), not 'entire workflow green.'"
+mandatory_technical_gate_summary: "Owner approved Gate 3 for GAP-043 on 2026-08-22 (in-session human-owner instruction), bound to implementation-tree digest 00b8b40ae3fe77234b98317238065c072b98330315836644e195a6126f62ba4e at Gate-3 submission HEAD 4369baa8487dd8e539ff16a1cd408e2b8accf2e3 (release-candidate implementation commit c429f40cf89b8afea3e3ab404e37809525d5bdb5). Verified before recording: remote PR head equals submission HEAD exactly; PR state OPEN/Draft/unmerged; recomputed digest at both c429f40c and 4369baa matches the Owner-bound digest exactly (the only tree difference between the two commits is this packet file, which the digest excludes by construction); corrected PR-body provenance accepted by Owner (authoritative LIVE evidence = disposable harness b727eec3a175db1adcdbde16a29ca87c7afe0c46, run 32500162627, monitoring job 96827745378; historical false-green job 96821445679 removed from evidence). This is a decision-record-only edit: no implementation, test, workflow, Gate-1/Gate-2, or other file touched. Ready-for-review flip, merge, release and production deployment remain NOT authorized pending the next explicit Owner instruction."
 technical_evidence:
   subject_sha: "c429f40cf89b8afea3e3ab404e37809525d5bdb5"
   implementation_tree_digest: "00b8b40ae3fe77234b98317238065c072b98330315836644e195a6126f62ba4e"
-  verified_pr_head_sha: "c429f40cf89b8afea3e3ab404e37809525d5bdb5"
-  verified_at: "2026-08-21T23:15:00+07:00"
+  verified_pr_head_sha: "4369baa8487dd8e539ff16a1cd408e2b8accf2e3"
+  verified_at: "2026-08-22T07:36:13+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "00b8b40ae3fe77234b98317238065c072b98330315836644e195a6126f62ba4e"
+  decision_recorded_at: "2026-08-22T07:36:13+07:00"
 ---
 
 # GAP-043 — PerformanceMonitoringTest MySQL Portability: Gate 3 Release Request
 
-## STATUS: AWAITING OWNER DECISION — NOT AN APPROVAL
+## OWNER GATE 3: APPROVED
 
-This packet is prepared by the agent following the Owner's 2026-08-21 message
+This packet was prepared by the agent following the Owner's 2026-08-21 message
 "GAP-043 — OWNER IMPLEMENTATION REVIEW / DECISION: CODE ACCEPTED / LIVE
 EVIDENCE REQUIRED" (which accepted the implementation code but withheld Gate
 3 pending truthful LIVE MySQL evidence) and the Owner's subsequent 2026-08-21
@@ -51,11 +51,29 @@ message "GAP-043 — OWNER REVIEW / DECISION: TECHNICAL ACCEPTANCE SATISFIED /
 AUTHORIZED NEXT STEP: PREPARE GATE 3 PACKET" (which found the technical
 acceptance contract now satisfied by the LIVE evidence obtained via the
 disposable validation branch, and authorized *preparing and submitting* this
-Gate 3 packet — explicitly **not** Gate 3 approval).
+Gate 3 packet).
 
-No Owner Gate 3 decision has been recorded. `owner_decision.value: none`,
-`decision_provenance.reconciliation_required: true`. PR #281 remains Draft.
-No merge, release, or deploy has occurred or is authorized by this packet.
+**Owner Gate 3 decision: APPROVED**, received as an explicit in-session
+human-owner instruction on 2026-08-22 ("GAP-043 — OWNER GATE 3 DECISION /
+Decision: APPROVED") and recorded in this document's governance fields at
+`2026-08-22T07:36:13+07:00`. The Owner accepted the MySQL portability defect
+as fixed (all six GAP-043-owned methods passing under genuine LIVE MySQL
+evidence with zero PRAGMA/table_info failures), accepted the corrected PR-body
+provenance (authoritative binding: disposable harness
+`b727eec3a175db1adcdbde16a29ca87c7afe0c46`, run `32500162627`, monitoring job
+`96827745378`; historical false-green job `96821445679` rejected as release
+evidence), confirmed exact-head governance CI green at submission HEAD
+`4369baa8487dd8e539ff16a1cd408e2b8accf2e3`, and bound the approval to
+implementation-tree digest
+`00b8b40ae3fe77234b98317238065c072b98330315836644e195a6126f62ba4e`.
+
+Scope of the authorization at recording time: **recording this Owner Gate-3
+approval in this packet only**. Ready-for-review flip, merge, release, and
+production deployment are explicitly NOT yet authorized; they require the next
+explicit Owner instruction after this decision-record commit and its resulting
+governance state are verified. PR #281 remains Draft. The disposable
+evidence-harness overlay (`b727eec3`) remains validation-only and must never
+be merged into GAP-043.
 
 ## Three SHAs — do not conflate
 

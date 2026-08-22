@@ -1,30 +1,45 @@
 ---
 work_id: GAP-044
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-22-gap-044-testcase-transaction-and-permission-lookup-design.md
   plan: null
   branch: docs/GAP-044-gate2-design
-  pr: null
+  pr: "https://github.com/kha997/zenamanagephp/pull/285"
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
   recorded_at: "2026-08-22T00:00:00+07:00"
-  owner_response_reference: null
+  owner_response_reference: "Owner chat message, 2026-08-23: 'GAP-044 — OWNER GATE 2 DECISION / DECISION: APPROVED / APPROVED OPTION: A — COMPLETE TEST-INFRASTRUCTURE REMEDIATION'. Approved exact Gate-2 submission head a7e1e1f11a00511f0bba3cb1d5e3d4dab5178c42 (PR #285); approved Gate-2 packet blob 442d3c120f20ab9272c48f0e62c459f9f9925293; approved engineering-spec blob 300b68381fb647c30841a98b61ccbb7022622c9e; canonical main at Owner review 4a89693ba0a3efa1bb377645cae2fbe481865f81 — all three verified to match exactly at recording time. Owner accepted Option A's two required functional surfaces: Surface 1 — fix ensureInteractionLogsTable()/ensureProjectPhasesTable()/ensureProjectTasksTable() in tests/TestCase.php by reusing the existing GAP-040 non-transacted zena_ddl_bootstrap mechanism (A2-style direct reuse acceptable; A1-style rename/generalization acceptable only if a mechanical same-file refactor that does not widen behavior/scope; do not introduce a new bootstrap architecture); Surface 2 — in tests/Traits/TenantUserFactoryTrait.php, change ensurePermissionAttached()'s Permission identity lookup from ['name' => $permissionName] to canonical ['code' => $permissionName], retaining name/module/action/description as creation defaults, without backfilling or mutating an already-existing NULL-name row. Owner scope clarification: the design's 'implementation surface confined to tests/TestCase.php and tests/Traits/TenantUserFactoryTrait.php' means the FUNCTIONAL fix surface only — it does not prohibit the permanent regression-test/support files required by the approved §5 acceptance contract, which are explicitly authorized and required; the implementation plan must name every test/support file to be created or modified and justify each; no unrelated test refactor is authorized. Explicit exclusions maintained: database/seeders/RoleSeeder.php, PermissionSeeder.php, any other seeder, migrations, application production code, production RBAC/authorization semantics, workflow selectors/files, and all GAP-040/041/042/043/045 artifacts remain untouched; AUD-28 remains separate; if implementation evidence shows a production change is actually required, STOP before making it and return to Owner. Owner directed: record this Gate-2 approval in 02-design.md ONLY (engineering spec, Gate-1 audit, and Gate-1 packet blobs must remain byte-identical); after fresh exact-head Owner Governance Lint + Routes Guardrails pass, write a full implementation plan (docs/superpowers/plans/2026-08-23-gap-044-testcase-transaction-and-permission-lookup-implementation.md) mapping every engineering-spec §5 requirement to a task/test/evidence step, self-reviewed against the approved spec, before any code is touched; implement via RED→GREEN→REFACTOR TDD on a fresh implementation branch cut from the Gate-2 approval-record head (not reusing PR #285 as the implementation PR), in a new Draft PR, first body line exactly 'Work ID: GAP-044', not marked ready; after implementation, run the full required GREEN verification (targeted regression tests, genuine-MySQL cold-start proof, all 5 GAP-040 surfaces re-verified with the new discriminating rollback proof, the truthful seeded PerformanceMonitoringTest and DashboardPerformanceTest pipelines, GAP-045's latency assertion reported separately and never treated as GAP-044 pass/fail, and all normally-triggered CI reported truthfully); then compute the canonical implementation-tree digest, verify Gate-1/Gate-2 artifacts did not drift, and prepare (but do NOT submit for merge/release) docs/owner-decisions/GAP-044/03-release.md, remaining gate_status: awaiting_owner, owner_decision.value: none, pending a separate future Owner Gate-3 review. No ready-for-review, merge, release, or deployment authorized by this decision."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-22T00:00:00+07:00"
-  updated_at: "2026-08-22T00:00:00+07:00"
+  updated_at: "2026-08-23T00:00:00+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 2: APPROVED — OPTION A
+
+Owner approved GAP-044 Gate 2 at exact submission head `a7e1e1f11a00511f0bba3cb1d5e3d4dab5178c42` of PR #285, binding the approval to Gate-2 packet blob `442d3c120f20ab9272c48f0e62c459f9f9925293` and engineering-spec blob `300b68381fb647c30841a98b61ccbb7022622c9e` (both verified unchanged at recording time), reviewed against canonical main `4a89693ba0a3efa1bb377645cae2fbe481865f81`.
+
+**Approved Option A — complete test-infrastructure remediation, both surfaces:**
+
+1. **Surface 1 (transaction isolation):** fix `ensureInteractionLogsTable()`/`ensureProjectPhasesTable()`/`ensureProjectTasksTable()` in `tests/TestCase.php` by reusing the existing GAP-040 non-transacted `zena_ddl_bootstrap` mechanism. A2-style direct reuse is acceptable; A1-style rename/generalization is acceptable **only** as a mechanical same-file refactor that does not widen behavior or scope. No new bootstrap architecture.
+2. **Surface 2 (permission fixture identity):** in `tests/Traits/TenantUserFactoryTrait.php`, change `ensurePermissionAttached()`'s `Permission` lookup from `['name' => $permissionName]` to canonical `['code' => $permissionName]`, retaining `name`/`module`/`action`/`description` as creation defaults only — never backfilling or mutating an already-existing row merely because its `name` is `NULL`.
+
+**Scope clarification (binding):** "implementation surface confined to two files" means the **functional** fix surface. Permanent regression-test/support files required by the approved §5 acceptance contract are explicitly **authorized and required** — not an unrelated test refactor. The implementation plan must name and justify every test/support file to be created or modified.
+
+**Explicit exclusions maintained:** `database/seeders/RoleSeeder.php`, `PermissionSeeder.php`, any other seeder, migrations, application production code, production RBAC/authorization semantics, workflow selector/files, and all GAP-040/041/042/043/045 artifacts. `AUD-28` remains separate. If implementation evidence shows a production change is actually required, work must STOP before making it and return to Owner.
+
+**Authorized next steps, strictly in order:** (1) this decision-record commit, touching only this file; (2) fresh exact-head Owner Governance Lint + Routes Guardrails, both green; (3) a full implementation plan, self-reviewed against the approved spec, before any code is touched; (4) RED→GREEN→REFACTOR TDD on a fresh implementation branch cut from this approval-record head, in a new Draft PR (not reusing PR #285), first body line exactly `Work ID: GAP-044`, never marked ready; (5) full required GREEN verification per engineering-spec §5, GAP-045 reported separately and never absorbed into GAP-044's pass/fail; (6) implementation-tree digest computed and Gate-1/Gate-2 drift verified; (7) a prepared (not submitted) Gate-3 packet, remaining `gate_status: awaiting_owner`. **No ready-for-review, merge, release, or deployment is authorized by this decision.**
 
 ## Gate 2 — awaiting Owner decision
 

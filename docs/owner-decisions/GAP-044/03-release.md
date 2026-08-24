@@ -25,7 +25,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-23T00:00:00+07:00"
-  updated_at: "2026-08-23T00:00:00+07:00"
+  updated_at: "2026-08-24T00:00:00+07:00"
 generated_by: agent
 technical_evidence:
   subject_sha: "4361c5f59cbba548664a68d0b84fb440c9b54da3"
@@ -33,7 +33,7 @@ technical_evidence:
   verified_pr_head_sha: "4361c5f59cbba548664a68d0b84fb440c9b54da3"
   verified_at: "2026-08-23T00:00:00+07:00"
 residual_risk_rating: low
-mandatory_technical_gate_summary: "Both Owner Gate-2-approved surfaces (Surface 1: TestCase.php transaction isolation; Surface 2: TenantUserFactoryTrait.php permission lookup identity) implemented and verified GREEN with RED-first TDD evidence. Discriminating rollback-vs-migrate:fresh proof (the exact mechanism that caught GAP-040's own false-green) re-verified PASS on all 5 GAP-040-approved real-MySQL surfaces at subject SHA 4361c5f5. Authoritative seeded PerformanceMonitoringTest (10/10 passed, 45 assertions) and DashboardPerformanceTest (19/19 passed, 157 assertions) pipelines both show zero SAVEPOINT-1305 and zero duplicate-permission-1062 failures, obtained via a disposable never-merged GAP-041 selector overlay since GAP-041 itself remains separately open/unfixed on main. Full local SQLite regression: 2309/2309 passed, 0 failures. RoleSeeder/PermissionSeeder/migrations/register/workflows and all GAP-040/041/042/043/045 artifacts confirmed untouched (zero-diff). Two pre-existing, unrelated failures re-observed (1 Treasury FK-constraint test, 1 CriticalUserFlowsE2ETest) — both already documented as non-gating at GAP-040 Gate 3, not attributable to GAP-044. browser-tests CI job status pending at packet-preparation time, not part of the discriminating acceptance contract. This is a prepared packet only: gate_status remains awaiting_owner, owner_decision.value remains none, no Owner decision has been recorded, no merge/release/deployment is authorized."
+mandatory_technical_gate_summary: "Both Owner Gate-2-approved surfaces (Surface 1: TestCase.php transaction isolation; Surface 2: TenantUserFactoryTrait.php permission lookup identity) implemented and verified GREEN with RED-first TDD evidence. Discriminating rollback-vs-migrate:fresh proof (the exact mechanism that caught GAP-040's own false-green) re-verified PASS on all 5 GAP-040-approved real-MySQL surfaces at subject SHA 4361c5f5: immediately before the verifier's own parent::setUp(), RefreshDatabaseState::$migrated===true (no migrate:fresh pending) AND the marker is already absent via independent PDO — so its disappearance is attributable to the writer's own teardown rollback, not a verifier-side schema wipe. Authoritative seeded PerformanceMonitoringTest (10/10 passed, 45 assertions) and DashboardPerformanceTest (19/19 passed, 157 assertions) pipelines both show zero SAVEPOINT-1305 and zero duplicate-permission-1062 failures, obtained via a disposable never-merged GAP-041 selector overlay since GAP-041 itself remains separately open/unfixed on main. Full local SQLite regression: 2309/2309 passed, 0 failures. RoleSeeder/PermissionSeeder/migrations/register/workflows and all GAP-040/041/042/043/045 artifacts confirmed untouched (zero-diff). Two pre-existing, unrelated failures re-observed (1 Treasury FK-constraint test, 1 CriticalUserFlowsE2ETest) — both already documented as non-gating at GAP-040 Gate 3, not attributable to GAP-044. All current normal PR #286 checks are green as of this correction, including browser-tests (run 32606356420, job 97112063351, SUCCESS) and Owner Governance Lint (run 32606356397, rerun SUCCESS after the evidence-freshness timing gotcha). This is a prepared packet only: gate_status remains awaiting_owner, owner_decision.value remains none, no Owner decision has been recorded, no merge/release/deployment is authorized."
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null
@@ -42,6 +42,8 @@ owner_decision_binding:
 # GAP-044 — TestCase Transaction Isolation + Permission Lookup Identity: Gate 3 Release Request
 
 **This packet is PREPARED, not submitted for a release decision. `gate_status: awaiting_owner`, `owner_decision.value: none`. PR #286 is not marked ready. No merge, release, or deployment is authorized by this document — it awaits a separate, explicit Owner Gate-3 review and decision.**
+
+**Revision note:** Owner reviewed the first submission of this packet (live PR head `a0577deb`) and returned **DECISION: CHANGES REQUIRED, scoped to Gate-3 evidence/documentation only** — the implementation itself (Surface 1, Surface 2, all regression tests) was explicitly accepted as-is, no code change authorized or required. This revision corrects: (1) the discriminating-rollback-proof prose, which previously stated the marker was "still independently visible immediately before the verifier's `parent::setUp()`" — logically incorrect and inconsistent with the permanent regression test, corrected below to the actual proven discriminator (marker already *absent* at that boundary, combined with `$migrated === true` proving no `migrate:fresh` was pending); (2) the subject-file classification, corrected from an undifferentiated "8 remaining files" to the precise 2 functional + 7 regression/support + 1 implementation-plan breakdown; (3) stale CI status (`browser-tests` was pending at first submission, now confirmed SUCCESS, along with a rerun-confirmed Owner Governance Lint). Implementation subject SHA (`4361c5f59cbba548664a68d0b84fb440c9b54da3`) and implementation-tree digest (`716ea9cf50e4ab5ccbe478bd3a6ccf63aab2043e6dbd069db5a2b850eddf3d28`) are unchanged — this correction touches only this one document.
 
 ## Summary
 
@@ -80,7 +82,12 @@ Two disposable, never-merged evidence-harness branches were used during implemen
  10 files changed, 1296 insertions(+), 38 deletions(-)
 ```
 
-Functional fix surface: exactly `tests/TestCase.php` (Surface 1) and `tests/Traits/TenantUserFactoryTrait.php` (Surface 2), matching the Owner-approved boundary. The remaining 8 files are the permanent regression-test/support files explicitly authorized and required by the Owner's Gate-2 scope clarification. No production/application code, no migration, no seeder, no workflow file.
+Of these 10 subject files:
+- **2 functional implementation files** (the Owner-approved fix boundary): `tests/TestCase.php` (Surface 1) and `tests/Traits/TenantUserFactoryTrait.php` (Surface 2).
+- **7 permanent regression/test-support files**, explicitly authorized and required by the Owner's Gate-2 scope clarification: `tests/Support/GAP040ColdStartTransactionIsolationAssertions.php` and the 5 consuming test classes (`tests/Feature/Zena/ZenaTransactionIsolationColdStartTest.php`, `tests/Feature/Zena/ZenaInvariantsTransactionIsolationColdStartTest.php`, `tests/Unit/Migrations/Treasury/TreasuryTransactionIsolationColdStartTest.php`, `tests/E2E/TransactionIsolationColdStartTest.php`, `tests/Feature/Documents/TransactionIsolationColdStartTest.php`), plus the new `tests/Feature/Zena/PermissionCanonicalIdentityRegressionTest.php`.
+- **1 mandatory implementation-plan document**: `docs/superpowers/plans/2026-08-23-gap-044-testcase-transaction-and-permission-lookup-implementation.md`.
+
+No production/application code, no migration, no seeder, no workflow file. (This 10-file count is the implementation subject's own diff, `git diff 2bfc7db5...4361c5f5` — distinct from PR #286's current total changed-file count, which additionally includes the Gate-1/Gate-2 approved governance artifacts carried forward byte-identically and this Gate-3 packet itself; see the PR body for that total.)
 
 ## RED evidence
 
@@ -110,7 +117,13 @@ Tests:    4 passed (32 assertions)
 
 ## Discriminating rollback proof — distinguishes rollback from migrate:fresh
 
-Confirmed via the same GREEN run above: `assertMarkerDisappearedViaRollbackNotMigrateFresh()` (new, per Owner Gate-2 §G requirement) passed as part of the 4-test/32-assertion PASS — meaning `RefreshDatabaseState::$migrated === true` and the marker was still independently visible immediately before the verifier's own `parent::setUp()` ran, so the marker's later absence is attributable to the writer's own `RefreshDatabase` rollback specifically, not a `migrate:fresh` schema wipe. This is structurally the same false-green-resistant design used in GAP-044 Gate 1's own §H1 investigation (which is what caught GAP-040's original false-green) — reused here as the permanent regression proof.
+Confirmed via the same GREEN run above: `assertMarkerDisappearedViaRollbackNotMigrateFresh()` (new, per Owner Gate-2 §G requirement) passed as part of the 4-test/32-assertion PASS. The permanent proof is implemented in `tests/Support/GAP040ColdStartTransactionIsolationAssertions.php`, specifically `captureDiscriminatingStateBeforeVerifierSetUp()` (captures state) and `assertMarkerDisappearedViaRollbackNotMigrateFresh()` (asserts on it). The actual proven discriminator, immediately **before** the verifier's own `parent::setUp()` runs:
+
+1. `RefreshDatabaseState::$migrated === true` — therefore the verifier's own `parent::setUp()` is **not** about to perform a `migrate:fresh`.
+2. The marker is **already absent** via the independent PDO check (`markerVisibleBeforeVerifierSetUp === false`) — therefore the row disappeared **before** the verifier's setup could have affected the database at all.
+3. Combined with the writer having held a genuine, live `RefreshDatabase` transaction, this attributes the disappearance to the writer's own teardown rollback, rather than to verifier-side `migrate:fresh`.
+
+This is **not** a claim that an independent PDO connection saw an uncommitted marker while the writer's transaction was still open — that would contradict normal transaction isolation and is not what this proof asserts. The marker is written and (in the false-green scenario) would remain visible past teardown only if removed by something other than rollback; this discriminator instead confirms it is *already gone* by the earliest point a `migrate:fresh` alternative explanation could apply, while `$migrated` confirms no such `migrate:fresh` was even pending at that point — jointly ruling out the false-green mechanism GAP-044 Gate 1 §H1 found in GAP-040's own proof, without asserting anything inconsistent with isolation.
 
 ## All 5 GAP-040-approved MySQL surfaces — re-verified with the new discriminating proof
 
@@ -144,18 +157,21 @@ Same overlay, same run, job `97109342500`:
 
 `./vendor/bin/phpunit --testsuite=Unit,Feature,Integration`: **2309 tests, 17192 assertions, 0 failures, 0 errors, 42 skipped** (pre-existing, unrelated to this branch), 501 deprecation notices (pre-existing PHPUnit 12 doc-comment-metadata warnings, unrelated).
 
-## CI run/job inventory (exact-head `4361c5f59cbba548664a68d0b84fb440c9b54da3`, PR #286)
+## CI run/job inventory
 
-All checks green except the one pre-existing/unrelated E2E job and (at packet-preparation time) `browser-tests`, still in progress:
+**Current normal PR #286 checks, at exact-head `a0577deb7ddf2c96e485f29714e06795a53dd2cb` (implementation subject unchanged at `4361c5f59cbba548664a68d0b84fb440c9b54da3`): all SUCCESS.**
 
-- Owner Governance Lint — PASS (run `32604805504`, job `97108220553`).
-- Routes Guardrails (`test-routes-guardrails`) — PASS (run `32604805365`, job `97108220067`).
-- Automated Testing (push event) — all jobs PASS (run `32604803549`): Zena RBAC/Tenant Invariants (MySQL parity) `97108215990`, Zena RBAC/Tenant Invariants `97108216091`, Treasury Native CHECK Constraints (real MySQL) `97108216073`, Document Workflow Concurrency (real MySQL) `97108216015`, RFI Escalation Concurrency (real MySQL) `97108216117`, Performance Tests (monitoring) `97108216107`, Performance Tests (dashboard) `97108216178`, Unit/Feature/Integration/API Tests (Fast/Slow)/Security Tests/Repo Hygiene Guards — all PASS.
-- CI/CD Pipeline — `code-quality` PASS, `test` PASS (run `32604805512`, job `97108220583`, 7m55s), `deploy` skipped by design (not merged).
-- Code Quality & Security — all scans PASS.
-- Staging Smoke — PASS.
-- Button Test Suite (`button-inventory-check`, `feature-tests`, `security-tests`) — PASS. `browser-tests` — in progress at packet-preparation time; result to be confirmed and reported truthfully before any Gate-3 Owner decision is requested to act on this packet.
-- `a11y-perf-testing.yml` (manually dispatched, run `32605264549`): `E2E Tests` job conclusion `failure` — attributable entirely to the pre-existing, unrelated `CriticalUserFlowsE2ETest` failure (§ above); our discriminating proof step within that job passed.
+- Owner Governance Lint — SUCCESS (run `32606356397`; the initial attempt on this head hit the known evidence-freshness timing gotcha — it requires all other PR checks green before confirming `technical_readiness: ready` — and was rerun after `browser-tests` completed; the rerun is SUCCESS).
+- Routes Guardrails (`test-routes-guardrails`) — SUCCESS (run `32606356418`).
+- Button Test Suite `browser-tests` — SUCCESS (run `32606356420`, job `97112063351`).
+- Automated Testing — SUCCESS (all jobs, including Zena RBAC/Tenant Invariants (MySQL parity), Zena RBAC/Tenant Invariants, Treasury Native CHECK Constraints (real MySQL), Document Workflow Concurrency (real MySQL), RFI Escalation Concurrency (real MySQL), Performance Tests (monitoring/dashboard), Unit/Feature/Integration/API Tests (Fast/Slow)/Security Tests/Repo Hygiene Guards).
+- CI/CD Pipeline — SUCCESS (`code-quality`, `test`; `deploy` skipped by design, not merged).
+- Code Quality & Security — SUCCESS (all scans).
+- Staging Smoke — SUCCESS.
+
+**Distinct from the above: the historical/manual GAP-044 acceptance-evidence surface, not a normal PR-triggered check.** `a11y-perf-testing.yml`, manually dispatched at implementation-subject head `4361c5f5` (run `32605264549`) specifically to exercise the E2E surface (one of GAP-040's 5 approved MySQL surfaces, which does not run automatically on push/PR): the `E2E Tests` job's **GAP-044 discriminator step PASSED** (2 tests, 22 assertions, all 3 helpers `pdo_in_transaction_after: true`); the **job's overall conclusion remains `failure`**, caused entirely by the separate, pre-existing, unrelated `CriticalUserFlowsE2ETest` failure (§ "All 5 GAP-040-approved MySQL surfaces" above). This historical run and its documented red/pass split are not rewritten or reinterpreted by this correction — they are preserved exactly as originally recorded, since that distinction (discriminator PASS vs. job-level pre-existing failure) is itself part of the truthful evidence.
+
+The earlier PerformanceMonitoringTest/DashboardPerformanceTest seeded-pipeline evidence (§ above) used a separate, now-deleted disposable overlay branch cut from this same implementation-subject head `4361c5f5` — unaffected by this correction, not rerun.
 
 ## Confirmation: RoleSeeder / AUD-28 untouched
 
@@ -182,7 +198,7 @@ Both empty — byte-identical to their approved states.
 ## Implementation risks / residual uncertainties
 
 - **GAP-041 remains open.** `automated-testing.yml`'s `performance-tests` job, as committed on `main`, still silently selects 0 tests. The authoritative seeded evidence above required a disposable overlay to obtain truthfully; the same false-green-by-omission would recur for anyone re-running the plain `main`-committed job until GAP-041 is separately fixed. This is not a GAP-044 defect and is explicitly not fixed here.
-- **`browser-tests` job status pending at packet-preparation time** — not one of the 5 GAP-040 surfaces or part of the discriminating acceptance contract, but a normally-triggered CI check on this PR; its result should be confirmed before any Owner Gate-3 action, per the instruction to report every failure truthfully.
+- **`browser-tests` — resolved.** Not one of the 5 GAP-040 surfaces or part of the discriminating acceptance contract, but a normally-triggered CI check on this PR; confirmed SUCCESS (run `32606356420`, job `97112063351`) as of this correction.
 - **The narrow Gate-1 §I1 uncertainty** (exact reason the seeded `permissions` row's `name` is `NULL` rather than absent) was independently reconciled by Owner at Gate-1 approval (`RoleSeeder` → `PermissionSeeder` → `name=NULL`, matching AUD-28) and is not re-litigated here; the fix (Surface 2) is correct regardless of that provenance detail, since it operates on the actual unique constraint (`code`), not on any assumption about how the row came to exist.
 - **One pre-existing, unrelated Treasury FK-constraint test failure** and **one pre-existing, unrelated `CriticalUserFlowsE2ETest` failure** were both re-observed during this implementation's CI runs, identical in nature to what GAP-040's own Gate 3 evidence already documented as non-gating/informational and unrelated — not newly introduced, not investigated further here (out of GAP-044's scope).
 - **A1-style generalization of the isolated-connection mechanism was not attempted** — the A2-style direct-reuse implementation (calling the existing `zenaRbacBootstrapSchema()` method as-is) was sufficient and is the smaller, Owner-preferred diff; no `TestCase.php` mechanism rename or extraction was needed.

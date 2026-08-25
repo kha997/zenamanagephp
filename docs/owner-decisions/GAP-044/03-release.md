@@ -1,14 +1,14 @@
 ---
 work_id: GAP-044
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-22-gap-044-testcase-transaction-and-permission-lookup-design.md
   plan: docs/superpowers/plans/2026-08-23-gap-044-testcase-transaction-and-permission-lookup-implementation.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-23T00:00:00+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-25T00:00:00+07:00"
+  owner_response_reference: "Owner chat message, 2026-08-25: 'GAP-044 — GATE 3 OWNER DECISION: APPROVED'. Reviewed PR #286, reviewed head 36b8fbcf2fd87a7ea537daaec32ca8c10b52a6c6; approved implementation evidence subject 4361c5f59cbba548664a68d0b84fb440c9b54da3; owner-approved implementation-tree digest 716ea9cf50e4ab5ccbe478bd3a6ccf63aab2043e6dbd069db5a2b850eddf3d28; technical readiness READY; residual risk LOW. Owner accepted the corrected Gate-3 evidence and approved release of GAP-044, specifically accepting: (1) Surface 1 — tests/TestCase.php routes all three formerly unsafe sibling DDL helpers through GAP-040's existing isolated zena_ddl_bootstrap connection; (2) Surface 2 — TenantUserFactoryTrait permission identity lookup uses canonical Permission.code rather than name; (3) the strengthened rollback discriminator (immediately before verifier parent::setUp(), RefreshDatabaseState::$migrated===true AND the marker is already absent via independent PDO, ruling out verifier-side migrate:fresh); (4) all five approved genuine-MySQL transaction-isolation surfaces carry the strengthened proof; (5) seeded genuine-MySQL acceptance evidence — PerformanceMonitoringTest 10/10 PASS (45 assertions), DashboardPerformanceTest 19/19 PASS (157 assertions), zero GAP-044 SAVEPOINT 1305, zero GAP-044 duplicate-permission 1062; (6) the two historically observed unrelated failures (Treasury FK test, CriticalUserFlowsE2ETest) remain outside GAP-044; (7) GAP-045 remains separate and OPEN, no latency threshold changed, no GAP-045 completion implied. Owner directed: record this decision in 03-release.md ONLY; verify the decision-record commit differs from 36b8fbcf only in this file and that the implementation-tree digest remains exactly 716ea9cf...; verify fresh exact-head Owner Governance Lint and Routes Guardrails SUCCESS before release; then mark PR #286 ready, squash-merge to main via the repository-standard method with an expected-head safeguard, no force merge, no branch-protection bypass, no implementation commit sneaked in between approval and merge; after merge, independently observe (not infer) post-merge required CI and the Production Deployment workflow on the exact squash-merge SHA, reporting the actual deploy/skip status; do not modify or close GAP-041/042/043/045; GAP-045 remains independently open regardless of the single passing latency observation in the GAP-044 evidence run; do not claim GAP-044 CLOSED until post-merge CI and deployment status have both been observed on the exact merge SHA."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-23T00:00:00+07:00"
-  updated_at: "2026-08-24T00:00:00+07:00"
+  updated_at: "2026-08-25T00:00:00+07:00"
 generated_by: agent
 technical_evidence:
   subject_sha: "4361c5f59cbba548664a68d0b84fb440c9b54da3"
@@ -33,15 +33,19 @@ technical_evidence:
   verified_pr_head_sha: "4361c5f59cbba548664a68d0b84fb440c9b54da3"
   verified_at: "2026-08-23T00:00:00+07:00"
 residual_risk_rating: low
-mandatory_technical_gate_summary: "Both Owner Gate-2-approved surfaces (Surface 1: TestCase.php transaction isolation; Surface 2: TenantUserFactoryTrait.php permission lookup identity) implemented and verified GREEN with RED-first TDD evidence. Discriminating rollback-vs-migrate:fresh proof (the exact mechanism that caught GAP-040's own false-green) re-verified PASS on all 5 GAP-040-approved real-MySQL surfaces at subject SHA 4361c5f5: immediately before the verifier's own parent::setUp(), RefreshDatabaseState::$migrated===true (no migrate:fresh pending) AND the marker is already absent via independent PDO — so its disappearance is attributable to the writer's own teardown rollback, not a verifier-side schema wipe. Authoritative seeded PerformanceMonitoringTest (10/10 passed, 45 assertions) and DashboardPerformanceTest (19/19 passed, 157 assertions) pipelines both show zero SAVEPOINT-1305 and zero duplicate-permission-1062 failures, obtained via a disposable never-merged GAP-041 selector overlay since GAP-041 itself remains separately open/unfixed on main. Full local SQLite regression: 2309/2309 passed, 0 failures. RoleSeeder/PermissionSeeder/migrations/register/workflows and all GAP-040/041/042/043/045 artifacts confirmed untouched (zero-diff). Two pre-existing, unrelated failures re-observed (1 Treasury FK-constraint test, 1 CriticalUserFlowsE2ETest) — both already documented as non-gating at GAP-040 Gate 3, not attributable to GAP-044. All current normal PR #286 checks are green as of this correction, including browser-tests (run 32606356420, job 97112063351, SUCCESS) and Owner Governance Lint (run 32606356397, rerun SUCCESS after the evidence-freshness timing gotcha). This is a prepared packet only: gate_status remains awaiting_owner, owner_decision.value remains none, no Owner decision has been recorded, no merge/release/deployment is authorized."
+mandatory_technical_gate_summary: "Both Owner Gate-2-approved surfaces (Surface 1: TestCase.php transaction isolation; Surface 2: TenantUserFactoryTrait.php permission lookup identity) implemented and verified GREEN with RED-first TDD evidence. Discriminating rollback-vs-migrate:fresh proof (the exact mechanism that caught GAP-040's own false-green) re-verified PASS on all 5 GAP-040-approved real-MySQL surfaces at subject SHA 4361c5f5: immediately before the verifier's own parent::setUp(), RefreshDatabaseState::$migrated===true (no migrate:fresh pending) AND the marker is already absent via independent PDO — so its disappearance is attributable to the writer's own teardown rollback, not a verifier-side schema wipe. Authoritative seeded PerformanceMonitoringTest (10/10 passed, 45 assertions) and DashboardPerformanceTest (19/19 passed, 157 assertions) pipelines both show zero SAVEPOINT-1305 and zero duplicate-permission-1062 failures, obtained via a disposable never-merged GAP-041 selector overlay since GAP-041 itself remains separately open/unfixed on main. Full local SQLite regression: 2309/2309 passed, 0 failures. RoleSeeder/PermissionSeeder/migrations/register/workflows and all GAP-040/041/042/043/045 artifacts confirmed untouched (zero-diff). Two pre-existing, unrelated failures re-observed (1 Treasury FK-constraint test, 1 CriticalUserFlowsE2ETest) — both already documented as non-gating at GAP-040 Gate 3, not attributable to GAP-044. All current normal PR #286 checks are green as of this correction, including browser-tests (run 32606356420, job 97112063351, SUCCESS) and Owner Governance Lint (run 32606356397, rerun SUCCESS after the evidence-freshness timing gotcha). Owner Gate-3 decision: APPROVED 2026-08-25, bound to implementation-tree digest 716ea9cf50e4ab5ccbe478bd3a6ccf63aab2043e6dbd069db5a2b850eddf3d28 at decision-record head. Release (mark-ready, squash-merge, post-merge CI/deployment observation) proceeds under this approval, per the Owner's explicit release-sequence authorization."
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "716ea9cf50e4ab5ccbe478bd3a6ccf63aab2043e6dbd069db5a2b850eddf3d28"
+  decision_recorded_at: "2026-08-25T00:00:00+07:00"
 ---
 
 # GAP-044 — TestCase Transaction Isolation + Permission Lookup Identity: Gate 3 Release Request
 
-**This packet is PREPARED, not submitted for a release decision. `gate_status: awaiting_owner`, `owner_decision.value: none`. PR #286 is not marked ready. No merge, release, or deployment is authorized by this document — it awaits a separate, explicit Owner Gate-3 review and decision.**
+## OWNER GATE 3: APPROVED
+
+Owner approved GAP-044 Gate 3 / release at `2026-08-25T00:00:00+07:00`, reviewed PR #286 at head `36b8fbcf2fd87a7ea537daaec32ca8c10b52a6c6`, approved implementation evidence subject `4361c5f59cbba548664a68d0b84fb440c9b54da3`, bound to implementation-tree digest `716ea9cf50e4ab5ccbe478bd3a6ccf63aab2043e6dbd069db5a2b850eddf3d28`, technical readiness `ready`, residual risk `low`. Full acceptance detail recorded in `decision_provenance.owner_response_reference` above.
+
+**Authorized by this approval:** recording this decision-record commit (this file only); fresh exact-head Owner Governance Lint + Routes Guardrails verification; marking PR #286 ready for review; squash-merging PR #286 to `main` via the repository-standard method, expected-head safeguard, no force, no branch-protection bypass, no implementation commit between approval and merge; post-merge observation (not inference) of required CI and the Production Deployment workflow on the exact squash-merge SHA. GAP-041/042/043/045 remain untouched, not modified or closed by this release — GAP-045 specifically remains independently open regardless of the single passing latency observation in the GAP-044 evidence run. GAP-044 is not to be reported CLOSED until post-merge CI and deployment status have both been directly observed on the exact merge SHA (recorded as a post-merge addendum to this document once available, per repository convention).
 
 **Revision note:** Owner reviewed the first submission of this packet (live PR head `a0577deb`) and returned **DECISION: CHANGES REQUIRED, scoped to Gate-3 evidence/documentation only** — the implementation itself (Surface 1, Surface 2, all regression tests) was explicitly accepted as-is, no code change authorized or required. This revision corrects: (1) the discriminating-rollback-proof prose, which previously stated the marker was "still independently visible immediately before the verifier's `parent::setUp()`" — logically incorrect and inconsistent with the permanent regression test, corrected below to the actual proven discriminator (marker already *absent* at that boundary, combined with `$migrated === true` proving no `migrate:fresh` was pending); (2) the subject-file classification, corrected from an undifferentiated "8 remaining files" to the precise 2 functional + 7 regression/support + 1 implementation-plan breakdown; (3) stale CI status (`browser-tests` was pending at first submission, now confirmed SUCCESS, along with a rerun-confirmed Owner Governance Lint). Implementation subject SHA (`4361c5f59cbba548664a68d0b84fb440c9b54da3`) and implementation-tree digest (`716ea9cf50e4ab5ccbe478bd3a6ccf63aab2043e6dbd069db5a2b850eddf3d28`) are unchanged — this correction touches only this one document.
 

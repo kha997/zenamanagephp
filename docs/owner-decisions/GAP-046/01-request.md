@@ -1,30 +1,36 @@
 ---
 work_id: GAP-046
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_proceed"
+decision_requested: null
 references:
   spec: docs/audits/2026-08-25-gap-046-service-line-semantics-audit.md
   plan: null
   branch: docs/GAP-046-service-line-semantics-audit
-  pr: null
+  pr: "https://github.com/kha997/zenamanagephp/pull/287"
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-25T05:34:18Z"
-  owner_response_reference: null
+  recorded_at: "2026-08-25T05:54:54Z"
+  owner_response_reference: "Owner decision relayed via coordinator session, 2026-08-25: 'GAP-046 GATE 1 — OWNER DECISION / Decision: APPROVE. I approve GAP-046 Gate 1 on the currently verified Gate-1 submission: PR #287, Gate-1 reviewed head 6f9cd2d9cb9162d807c9e3688b766fb097912554. Canonical main independently re-verified by Owner: c3a1226059bcf5a573aad1eebf8f1333331d9ad2, zero drift. LIVE CI on the exact reviewed head has now completed: Owner Governance Lint: SUCCESS, Routes Guardrails: SUCCESS. This approval confirms: the problem is real; the Phase-A semantics audit is sufficient; GAP-046 may proceed to Gate 2 design. It DOES NOT authorize implementation.' Both CI results independently re-verified live by the agent via `gh pr checks 287` at the same head immediately before this record was written (Owner Governance Lint: pass 27s; test-routes-guardrails: pass 1m56s) — both matched the Owner's stated results. Owner additionally issued a MANDATORY OWNER SCOPE CLARIFICATION FOR GATE 2, binding on the Gate-2 design that follows this approval: GAP-046 Phase B owns only the canonical Service-Line value set, the Opportunity/Project membership persistence mechanism, the CONFIRMED/INFERRED/NEEDS_REVIEW/UNKNOWN provenance representation, migration/backfill mechanics strictly necessary to establish that foundation, and narrowly necessary compatibility mechanics — and explicitly must NOT implement: (1) fixing the live 'architecture' default write-path (assigned to the future 'CRM Classification UX & Gates' slice), (2) runtime Opportunity→Project Service-Line propagation (assigned to the future 'Opportunity→Project Propagation & Project Classification UX' slice), (3) CRM stage gates/classification UX, (4) Quote Scope Snapshot, (5) Contract Service-Line implementation, (6) Portfolio Membership behavior, (7) Project OPPM, (8) Operations Control Tower, (9) Finance/Treasury behavior. Owner also directed that legacy `architecture` rows must NOT be backfilled as CONFIRMED DESIGN — provenance uncertainty must be preserved per the canonical model. This packet's evidence document (docs/audits/2026-08-25-gap-046-service-line-semantics-audit.md) is preserved byte-unchanged by this decision record, per this repository's established convention (see GAP-044/01-request.md)."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-25T05:34:18Z"
-  updated_at: "2026-08-25T05:34:18Z"
+  updated_at: "2026-08-25T05:54:54Z"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-046 Gate 1 at reviewed head `6f9cd2d9cb9162d807c9e3688b766fb097912554` (PR #287), against independently re-verified canonical main `c3a1226059bcf5a573aad1eebf8f1333331d9ad2` (zero drift), with both LIVE CI checks on that exact head passing (`Owner Governance Lint`, `test-routes-guardrails`) — re-confirmed by the agent via `gh pr checks 287` immediately before this record was written. This approval confirms the problem is real and the Phase-A semantics audit is sufficient; it authorizes proceeding to Gate 2 design only, and does **not** authorize any implementation.
+
+**Binding Gate-2 scope clarification issued with this approval** (full verbatim text in `decision_provenance.owner_response_reference` above): GAP-046 Phase B's Gate 2 design must confine itself to the canonical Service-Line value set, the Opportunity/Project membership persistence mechanism, the CONFIRMED/INFERRED/NEEDS_REVIEW/UNKNOWN provenance representation, and migration/backfill mechanics strictly necessary to establish that foundation (backfilling legacy values conservatively, never as CONFIRMED). It must not design or scope: the live-default write-path fix, runtime Opportunity→Project propagation wiring, CRM classification UX/gates, Quote Scope Snapshot, Contract Service-Line implementation, Portfolio Membership, Project OPPM, Control Tower, or Finance/Treasury — each belongs to its own future Work ID per the SSOT §14 roadmap. `BusinessKpiService`/`DesignItemPageController` (Gate 1's discovered consumers) are not automatically implementation surfaces; compatibility treatment for them is in scope only if Gate 2 proves it strictly necessary.
 
 ## Owner Summary
 Đội kỹ thuật đã rà soát toàn bộ hệ thống phân loại "Service Line" (Design/Construction/Inspection) từ Lead → Opportunity → Quote → Contract → Project. Hiện tại chỉ có một cột duy nhất (`Opportunity.service_category`), là giá trị đơn (không đa giá trị), và tự động mặc định thành "architecture" một cách âm thầm ở 3 chỗ trong code — vi phạm đúng quy tắc đã được Owner duyệt trong tài liệu SSOT ngày 2026-08-15. Đây là Phase A (chỉ điều tra, không sửa gì) của một Work ID lớn hơn đã được chính SSOT đó lên kế hoạch trước.

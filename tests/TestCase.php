@@ -311,6 +311,33 @@ abstract class TestCase extends BaseTestCase
         return Schema::connection('zena_ddl_bootstrap');
     }
 
+    /**
+     * GAP-044 Surface 1 regression instrumentation. Records, per helper
+     * table, whether the server-observed PDO transaction state survived
+     * that helper's DDL — the exact evidence the GAP-044 Gate-1 audit
+     * (docs/audits/2026-08-22-gap-044-savepoint-trans2-root-cause-evidence.md
+     * §D-G) used to establish the implicit-commit defect. No-ops when
+     * TestCase::$coldStartProbe is null (every ordinary test) or on
+     * SQLite (which does not implicit-commit on DDL the way MySQL does).
+     */
+    private function gap044ProbeBeforeHelper(string $tableName): void
+    {
+        if (self::$coldStartProbe === null || config('database.default') === 'sqlite') {
+            return;
+        }
+
+        self::$coldStartProbe['helpers'][$tableName]['pdo_in_transaction_before'] = DB::connection()->getPdo()->inTransaction();
+    }
+
+    private function gap044ProbeAfterHelper(string $tableName): void
+    {
+        if (self::$coldStartProbe === null || config('database.default') === 'sqlite') {
+            return;
+        }
+
+        self::$coldStartProbe['helpers'][$tableName]['pdo_in_transaction_after'] = DB::connection()->getPdo()->inTransaction();
+    }
+
     private function ensureSqliteDocumentsBackupTable(): void
     {
         if (env('DB_CONNECTION') !== 'sqlite') {
@@ -354,7 +381,13 @@ abstract class TestCase extends BaseTestCase
             return;
         }
 
-        Schema::create('interaction_logs', function (Blueprint $table) {
+        $this->gap044ProbeBeforeHelper('interaction_logs');
+
+        $schema = config('database.default') === 'sqlite'
+            ? Schema::connection(config('database.default'))
+            : $this->zenaRbacBootstrapSchema();
+
+        $schema->create('interaction_logs', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->string('tenant_id')->nullable();
             $table->string('project_id');
@@ -368,6 +401,12 @@ abstract class TestCase extends BaseTestCase
             $table->timestamps();
             $table->softDeletes();
         });
+
+        if (config('database.default') !== 'sqlite') {
+            DB::purge('zena_ddl_bootstrap');
+        }
+
+        $this->gap044ProbeAfterHelper('interaction_logs');
     }
 
     private function ensureProjectPhasesTable(): void
@@ -376,7 +415,13 @@ abstract class TestCase extends BaseTestCase
             return;
         }
 
-        Schema::create('project_phases', function (Blueprint $table) {
+        $this->gap044ProbeBeforeHelper('project_phases');
+
+        $schema = config('database.default') === 'sqlite'
+            ? Schema::connection(config('database.default'))
+            : $this->zenaRbacBootstrapSchema();
+
+        $schema->create('project_phases', function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->ulid('project_id');
             $table->string('name');
@@ -388,6 +433,12 @@ abstract class TestCase extends BaseTestCase
             $table->timestamps();
             $table->softDeletes();
         });
+
+        if (config('database.default') !== 'sqlite') {
+            DB::purge('zena_ddl_bootstrap');
+        }
+
+        $this->gap044ProbeAfterHelper('project_phases');
     }
 
     private function ensureProjectTasksTable(): void
@@ -396,7 +447,13 @@ abstract class TestCase extends BaseTestCase
             return;
         }
 
-        Schema::create('project_tasks', function (Blueprint $table) {
+        $this->gap044ProbeBeforeHelper('project_tasks');
+
+        $schema = config('database.default') === 'sqlite'
+            ? Schema::connection(config('database.default'))
+            : $this->zenaRbacBootstrapSchema();
+
+        $schema->create('project_tasks', function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->ulid('project_id');
             $table->ulid('phase_id')->nullable();
@@ -414,6 +471,12 @@ abstract class TestCase extends BaseTestCase
             $table->timestamps();
             $table->softDeletes();
         });
+
+        if (config('database.default') !== 'sqlite') {
+            DB::purge('zena_ddl_bootstrap');
+        }
+
+        $this->gap044ProbeAfterHelper('project_tasks');
     }
 
     protected function apiTenantHeaders(string $token, string $tenantId, array $extra = []): array

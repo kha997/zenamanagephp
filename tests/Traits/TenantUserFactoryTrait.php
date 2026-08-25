@@ -57,9 +57,9 @@ trait TenantUserFactoryTrait
         foreach ($permissionNames as $permissionName) {
             $parts = explode('.', $permissionName);
             $permission = Permission::firstOrCreate(
-                ['name' => $permissionName],
+                ['code' => $permissionName],
                 [
-                    'code' => $permissionName,
+                    'name' => $permissionName,
                     'module' => $parts[0] ?? $permissionName,
                     'action' => $parts[1] ?? '*',
                     'description' => ucfirst(str_replace('.', ' ', $permissionName)),

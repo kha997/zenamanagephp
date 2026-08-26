@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-08-26-gap-047-owner-governance-lint-evidence.md
   plan: null
   branch: docs/GAP-047-owner-governance-lint-evidence
-  pr: null
+  pr: "https://github.com/kha997/zenamanagephp/pull/289"
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-26T12:43:00+07:00"
-  updated_at: "2026-08-26T12:43:00+07:00"
+  updated_at: "2026-08-26T12:48:00+07:00"
 generated_by: agent
 ---
 

@@ -1,11 +1,11 @@
 ---
 work_id: GAP-047
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_more_info_or_decline_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-08-26-gap-047-owner-governance-lint-evidence.md
   plan: null
@@ -15,16 +15,39 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-26T12:43:00+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-08-26T13:37:00+07:00"
+  owner_response_reference: "Owner directive, 2026-08-26: 'OWNER DECISION: APPROVE GATE 1' for GAP-047 on the reviewed exact head 4991c68c20bcf3255def47ed5eba38333e0a3bc3 of PR #289 (base main f913f040063fc628ad8f425b5f01ff5da960d742, state OPEN/Draft/mergeable, diff limited to docs/audits/2026-08-26-gap-047-owner-governance-lint-evidence.md and docs/owner-decisions/GAP-047/01-request.md, LIVE Owner Governance Lint SUCCESS, LIVE Routes Guardrails SUCCESS). Owner confirmed both governance defects are sufficiently proven: (A) the OWN-2026-005 awaiting-owner design-only classification excludes docs/audits/**, so an otherwise legitimate docs-only Gate 2 presentation that also carries conventional Gate 1 audit evidence can incorrectly fail with gate-2-not-approved; (B) bulk governed-document discovery can silently skip a new spec/plan lacking required governance frontmatter because filename fallback recognition is case-sensitive and the bulk-scan unrecognized-file branch continues without emitting missing-governance-frontmatter. This approval authorizes GATE 2 DESIGN ONLY; it does not authorize implementation. Owner directed: record this Gate-1 approval in 01-request.md only; do not rewrite or reinterpret the Gate-1 evidence document; do not modify owner_governance_lint.php, workflows, governance schema, tests, application code, migrations, GAP-046 artifacts, or PR #288; after the approval-record head is clean and exact-head CI is green, make PR #289 ready and merge it as a Gate-1-only docs record using the repository's normal squash-merge method (this is a documentation merge, not a production deployment); Gate 2 must be filed on a fresh branch cut from the post-Gate-1 canonical main, not on the PR #289 branch, and must remain gate_status: awaiting_owner / owner_decision.value: none pending a separate Owner Gate-2 decision. Owner's stated architectural preference for Gate 2 is option A1 (narrowly add docs/audits/ to the existing design-only prefix set) for Defect A and option B3 (explicit path-level grandfathering of historical non-frontmatter governed documents, then fail-closed for every non-grandfathered spec/plan lacking frontmatter regardless of filename casing or Work-ID recognizability) for Defect B, unless Gate 2's evidence disproves either preference."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-26T12:43:00+07:00"
-  updated_at: "2026-08-26T12:48:00+07:00"
+  updated_at: "2026-08-26T13:37:00+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-047 Gate 1 at exact head `4991c68c20bcf3255def47ed5eba38333e0a3bc3` of PR #289 (base `main` `f913f040063fc628ad8f425b5f01ff5da960d742`, state OPEN/Draft/mergeable at review time, diff limited to `docs/audits/2026-08-26-gap-047-owner-governance-lint-evidence.md` and this file, LIVE `Owner Governance Lint` SUCCESS, LIVE `test-routes-guardrails` SUCCESS). Owner independently reverified this exact state before issuing the decision.
+
+The Gate-1 evidence is accepted as sufficient and complete for both defects:
+
+1. **Defect A (false-red)** — the OWN-2026-005 awaiting-owner design-only classification excludes `docs/audits/**`, so an otherwise legitimate docs-only Gate 2 presentation that also carries conventional Gate 1 audit evidence can incorrectly fail with `gate-2-not-approved`.
+2. **Defect B (false-green)** — bulk governed-document discovery can silently skip a new spec/plan lacking required governance frontmatter because filename fallback recognition is case-sensitive and the bulk-scan unrecognized-file branch `continue`s without emitting `missing-governance-frontmatter`.
+
+**Scope of this approval:** confirms the Gate-1 problem statement and evidence are sound and complete for both defects. Authorizes **Gate 2 design only** — comparing alternatives for both defects and producing a governed engineering design spec. Does **not** authorize implementation, does **not** select the exact correction, and does **not** change any Owner decision semantics or packet enum meanings.
+
+**Owner's stated architectural preference for Gate 2**, to be confirmed or disproven by evidence rather than assumed:
+
+- Defect A: option A1 — narrowly add `docs/audits/` to the existing design-only documentation prefix set (not a broader `docs/**` exemption, and not a wholesale replacement of path-prefix classification).
+- Defect B: option B3 — explicit, finite, reviewable path-level grandfathering of the existing historical non-frontmatter governed-document paths, then fail-closed for every non-grandfathered spec/plan lacking required frontmatter, regardless of filename casing or whether the filename contains a recognizable Work-ID token.
+
+**Explicit process directives bound to this approval:**
+
+- Record this Gate-1 approval in `01-request.md` only; the companion Gate-1 evidence document (`docs/audits/2026-08-26-gap-047-owner-governance-lint-evidence.md`) is **not** rewritten or reinterpreted and remains byte-unchanged by this approval.
+- No change is authorized to `scripts/ssot/owner_governance_lint.php`, workflows, governance schema, tests, application code, migrations, GAP-046 artifacts, or PR #288.
+- After this approval-record head is clean and exact-head CI is verified green, PR #289 is made ready and merged as a **Gate-1-only docs record** using the repository's normal squash-merge method. This is a documentation merge, not a production deployment.
+- Gate 2 must be filed on a **fresh branch cut from the post-Gate-1 canonical `main`**, not on the PR #289 branch, and must remain `gate_status: awaiting_owner` / `owner_decision.value: none` pending a separate Owner Gate-2 decision. Gate 2 is not self-approved by the agent executing this workflow.
 
 ## Owner Summary
 

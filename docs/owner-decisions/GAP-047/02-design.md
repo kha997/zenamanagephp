@@ -5,7 +5,6 @@ gate_status: approved
 owner_decision:
   value: approved
   authority: human_owner
-decision_requested: "approve_or_changes_or_decline"
 references:
   spec: docs/superpowers/specs/2026-08-26-gap-047-owner-governance-lint-defects-design.md
   plan: null

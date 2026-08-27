@@ -28,7 +28,7 @@ timestamps:
   updated_at: "2026-08-27T14:00:00+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "GAP-047 implementation (Defect A: docs/audits/ added to the design-only prefix allowlist; Defect B: B3 fail-closed exact-path frontmatter grandfather mechanism) is technically complete and verified. Full TDD RED->GREEN evidence recorded for both defects and the grandfather-config loader. All 19 Owner-specified regression cases (1-19) plus 10 loader fail-closed cases pass. tests/Unit/OwnerGovernance/ = 187/187 pass; full Unit testsuite = 904/904 pass, 0 failures. Local `php scripts/ssot/owner_governance_lint.php` and `--enforce-gate-ordering` both PASS against the real repository tree (93 files scanned, 0 violations; grandfather list byte-verified against the independently recomputed set). LIVE CI on implementation PR #291 exact head b23a6a011f56c8c0b318d204557c64efed623ba5 is fully green across all 31 checks, including the two Owner-designated required checks: Owner Governance Lint (pass) and test-routes-guardrails (pass). No workflow, application, database, route, or resource file was touched; docs/owner-governance/legacy-work-ids.txt is unmodified; GAP-046 and PR #288 are untouched; the 7 historical work items referenced by the grandfather file (GAP-032/037/038/039/040/043/044) are byte-unchanged. This Gate 3 packet records technical readiness only; it does not request or imply Ready-for-review, merge, release, or deployment authorization, which remain pending explicit Owner instruction."
+mandatory_technical_gate_summary: "GAP-047 implementation (Defect A: docs/audits/ added to the design-only prefix allowlist; Defect B: B3 fail-closed exact-path frontmatter grandfather mechanism) is technically complete and verified. Full TDD RED->GREEN evidence recorded for both defects and the grandfather-config loader. All 19 Owner-specified regression cases (1-19) pass, plus all 11 GrandfatherLoaderTest.php tests (8 fail-closed rejection cases: missing file, unreadable file, absolute path, traversal, wrong root, non-.md, duplicate entry, malformed/control-character entry; and 3 acceptance/normal-semantics cases: blank/comment handling, valid exact paths, empty-after-comments behavior). tests/Unit/OwnerGovernance/ = 187/187 pass; full Unit testsuite = 904/904 pass, 0 failures. Local `php scripts/ssot/owner_governance_lint.php` and `--enforce-gate-ordering` both PASS against the real repository tree (93 files scanned, 0 violations; grandfather list byte-verified against the independently recomputed set). LIVE CI on implementation PR #291 exact head b23a6a011f56c8c0b318d204557c64efed623ba5 is fully green across all 31 checks, including the two Owner-designated required checks: Owner Governance Lint (pass) and test-routes-guardrails (pass). No workflow, application, database, route, or resource file was touched; docs/owner-governance/legacy-work-ids.txt is unmodified; GAP-046 and PR #288 are untouched; the 7 historical work items referenced by the grandfather file (GAP-032/037/038/039/040/043/044) are byte-unchanged. This Gate 3 packet records technical readiness only; it does not request or imply Ready-for-review, merge, release, or deployment authorization, which remain pending explicit Owner instruction."
 technical_evidence:
   subject_sha: "b23a6a011f56c8c0b318d204557c64efed623ba5"
   implementation_tree_digest: "1273b9c9402cbf859763798291c3c1ced91224477aa75ce7a7b27ae0ec741c08"
@@ -139,7 +139,13 @@ byte-unchanged — only their exact paths are listed as grandfather entries.
 - Final grandfather-file entry count: 103, independently re-verified
   byte-identical to the computed set via `diff` (exit 0).
 - `tests/Unit/OwnerGovernance/`: 187/187 pass (includes all 19 Owner-specified
-  regression cases plus 11 grandfather-loader fail-closed cases).
+  regression cases plus all 11 `GrandfatherLoaderTest.php` tests: 8
+  fail-closed rejection cases — missing file, unreadable file, absolute
+  path, traversal, wrong root, non-.md, duplicate entry,
+  malformed/control-character entry — and 3 acceptance/normal-semantics
+  cases — blank/comment handling, valid exact paths, empty-after-comments
+  behavior. Freshly re-verified via `vendor/bin/phpunit tests/Unit/OwnerGovernance/GrandfatherLoaderTest.php`
+  → `OK (11 tests, 11 assertions)`.).
 - `vendor/bin/phpunit --testsuite Unit`: 904/904 pass, 0 failures.
 - `php scripts/ssot/owner_governance_lint.php`: PASS (93 files, 0 violations).
 - `php scripts/ssot/owner_governance_lint.php --enforce-gate-ordering`: PASS

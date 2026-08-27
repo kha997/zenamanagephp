@@ -433,6 +433,7 @@ const OWNER_GOVERNANCE_DESIGN_ONLY_PATH_PREFIXES = [
     'docs/owner-decisions/',
     'docs/superpowers/specs/',
     'docs/superpowers/plans/',
+    'docs/audits/',
 ];
 
 /**

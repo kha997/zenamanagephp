@@ -1203,7 +1203,17 @@ Add to `GateOrderingFrontmatterGrandfatherTest.php`:
 vendor/bin/phpunit tests/Unit/OwnerGovernance/GateOrderingFrontmatterGrandfatherTest.php --filter case18
 ```
 
-Expected: PASS. If it fails, the grandfather file (Task 4) is incomplete or a real repo file changed since generation — re-run Task 4's generation command against the CURRENT tree (not the recorded snapshot) and diff, per the plan's drift-check discipline; do not hand-add entries.
+Expected: PASS. If it fails, the grandfather file does NOT get silently regenerated against the current tree — that would let the grandfather set automatically grow, which Binding Clarification A forbids. Instead, follow this explicit fail-closed sequence:
+
+1. Do **not** regenerate the grandfather file yet.
+2. Recompute the current missing-complete-frontmatter set `C` (same method as Task 0: `docs/superpowers/{specs,plans}/*.md` at the current verified `origin/main`, using the lint's own frontmatter-completeness definition).
+3. Reconstruct/retain the Owner-reviewed reference set `R` from the exact `OWNER_REVIEWED_BASELINE_SHA` (`6a371405feeb44b644dcf16e76ee1c1a214c7134`) — never from the current tree.
+4. Compute `NEW = C - R`, `RESOLVED = R - C`, `G = C ∩ R`.
+5. If `NEW` is **non-empty**: **STOP.** Report every exact `NEW` path. Do **not** regenerate the grandfather file. Do **not** add the new path. Do **not** reinterpret it as historical. Do **not** continue implementation — this requires a separate, explicit Owner decision.
+6. Only when `NEW` is empty may a deterministic regeneration be considered, and its output **must** be exactly `G = C ∩ R` — never a broader "everything currently missing frontmatter" set.
+7. Any regeneration must still be independently diff-verified against the freshly computed `G`, exactly as Task 4 Step 4 does.
+
+**Binding invariant:** the grandfather set may equal or shrink from the Owner-reviewed historical universe (`R`), but may never automatically grow. A case-18 failure is a signal to run this diagnostic sequence, never a license to silently widen the exemption list.
 
 - [ ] **Step 3: Run the complete OwnerGovernance unit test directory**
 

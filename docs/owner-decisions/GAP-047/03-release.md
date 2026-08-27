@@ -32,8 +32,8 @@ mandatory_technical_gate_summary: "GAP-047 implementation (Defect A: docs/audits
 technical_evidence:
   subject_sha: "b23a6a011f56c8c0b318d204557c64efed623ba5"
   implementation_tree_digest: "1273b9c9402cbf859763798291c3c1ced91224477aa75ce7a7b27ae0ec741c08"
-  verified_pr_head_sha: "b23a6a011f56c8c0b318d204557c64efed623ba5"
-  verified_at: "2026-08-27T12:42:00+07:00"
+  verified_pr_head_sha: "24ced3e808eaced8bdf4082434ebd113acd8e902"
+  verified_at: "2026-08-27T12:50:00+07:00"
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null

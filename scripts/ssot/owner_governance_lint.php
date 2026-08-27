@@ -465,6 +465,87 @@ function owner_governance_changed_files_are_design_only(array $changedFiles): bo
 }
 
 /**
+ * GAP-047 Defect B, Binding Clarification B: deterministic, fail-closed
+ * loader for docs/owner-governance/grandfathered-nonfrontmatter-documents.txt.
+ * Never returns an empty array as a substitute for a real error — a
+ * missing/unreadable/malformed configuration file is always a hard
+ * RuntimeException, distinguishable from a legitimately-empty (but present
+ * and well-formed) grandfather list, which DOES return [].
+ *
+ * Accepted line shape: blank (ignored), a '#'-prefixed comment (ignored),
+ * or an exact repo-relative path under EXACTLY one of the two approved
+ * roots (docs/superpowers/specs/, docs/superpowers/plans/), ending in
+ * '.md', containing no path-traversal segment, never absolute, never
+ * duplicated.
+ *
+ * @return array<int, string>
+ */
+function owner_governance_load_grandfathered_paths(string $path): array
+{
+    if (!is_file($path) || !is_readable($path)) {
+        throw new \RuntimeException("grandfather-config: '{$path}' does not exist or is not readable — this is a hard lint failure, never silently treated as zero grandfathered entries.");
+    }
+
+    $raw = file_get_contents($path);
+    if ($raw === false) {
+        throw new \RuntimeException("grandfather-config: '{$path}' could not be read.");
+    }
+
+    $allowedRoots = ['docs/superpowers/specs/', 'docs/superpowers/plans/'];
+    $entries = [];
+    $lineNumber = 0;
+    foreach (explode("\n", $raw) as $line) {
+        $lineNumber++;
+        $trimmed = trim($line);
+        if ($trimmed === '' || str_starts_with($trimmed, '#')) {
+            continue;
+        }
+
+        // Malformed: control characters (tabs, etc.) anywhere in the entry.
+        if (preg_match('/[\x00-\x1F]/', $trimmed) === 1) {
+            throw new \RuntimeException("grandfather-config: '{$path}' line {$lineNumber}: entry contains a control character — malformed.");
+        }
+
+        // Absolute path rejected.
+        if (str_starts_with($trimmed, '/')) {
+            throw new \RuntimeException("grandfather-config: '{$path}' line {$lineNumber}: absolute path '{$trimmed}' is not permitted — entries must be repo-relative.");
+        }
+
+        // Path traversal rejected.
+        $segments = explode('/', $trimmed);
+        if (in_array('..', $segments, true) || in_array('.', $segments, true)) {
+            throw new \RuntimeException("grandfather-config: '{$path}' line {$lineNumber}: entry '{$trimmed}' contains a path-traversal segment — not permitted.");
+        }
+
+        // Must be under exactly one of the two approved roots.
+        $underApprovedRoot = false;
+        foreach ($allowedRoots as $root) {
+            if (str_starts_with($trimmed, $root) && $trimmed !== $root) {
+                $underApprovedRoot = true;
+                break;
+            }
+        }
+        if (!$underApprovedRoot) {
+            throw new \RuntimeException("grandfather-config: '{$path}' line {$lineNumber}: entry '{$trimmed}' is not under one of the two approved roots (docs/superpowers/specs/, docs/superpowers/plans/).");
+        }
+
+        // Must be a .md document.
+        if (!str_ends_with($trimmed, '.md')) {
+            throw new \RuntimeException("grandfather-config: '{$path}' line {$lineNumber}: entry '{$trimmed}' does not end in '.md'.");
+        }
+
+        // Duplicate rejected.
+        if (in_array($trimmed, $entries, true)) {
+            throw new \RuntimeException("grandfather-config: '{$path}' line {$lineNumber}: duplicate entry '{$trimmed}'.");
+        }
+
+        $entries[] = $trimmed;
+    }
+
+    return $entries;
+}
+
+/**
  * Gate-ordering enforcement (Task 9, revised by OWN-2026-005).
  *
  * Scans $governedDocFiles (docs/superpowers/plans/*.md + .../specs/*.md by

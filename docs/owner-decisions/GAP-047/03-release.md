@@ -1,14 +1,14 @@
 ---
 work_id: GAP-047
 gate: 3
-gate_status: changes_requested
+gate_status: awaiting_owner
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: correction_requested
+  value: none
   authority: human_owner
-decision_requested: null
+decision_requested: "approve_or_correction_or_defer"
 references:
   spec: docs/superpowers/specs/2026-08-26-gap-047-owner-governance-lint-defects-design.md
   plan: docs/superpowers/plans/2026-08-27-gap-047-owner-governance-lint-implementation.md
@@ -25,15 +25,15 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-27T12:42:00+07:00"
-  updated_at: "2026-08-27T14:00:00+07:00"
+  updated_at: "2026-08-27T14:37:00+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "GAP-047 implementation (Defect A: docs/audits/ added to the design-only prefix allowlist; Defect B: B3 fail-closed exact-path frontmatter grandfather mechanism) is technically complete and verified. Full TDD RED->GREEN evidence recorded for both defects and the grandfather-config loader. All 19 Owner-specified regression cases (1-19) pass, plus all 11 GrandfatherLoaderTest.php tests (8 fail-closed rejection cases: missing file, unreadable file, absolute path, traversal, wrong root, non-.md, duplicate entry, malformed/control-character entry; and 3 acceptance/normal-semantics cases: blank/comment handling, valid exact paths, empty-after-comments behavior). tests/Unit/OwnerGovernance/ = 187/187 pass; full Unit testsuite = 904/904 pass, 0 failures. Local `php scripts/ssot/owner_governance_lint.php` and `--enforce-gate-ordering` both PASS against the real repository tree (93 files scanned, 0 violations; grandfather list byte-verified against the independently recomputed set). LIVE CI on implementation PR #291 exact head b23a6a011f56c8c0b318d204557c64efed623ba5 is fully green across all 31 checks, including the two Owner-designated required checks: Owner Governance Lint (pass) and test-routes-guardrails (pass). No workflow, application, database, route, or resource file was touched; docs/owner-governance/legacy-work-ids.txt is unmodified; GAP-046 and PR #288 are untouched; the 7 historical work items referenced by the grandfather file (GAP-032/037/038/039/040/043/044) are byte-unchanged. This Gate 3 packet records technical readiness only; it does not request or imply Ready-for-review, merge, release, or deployment authorization, which remain pending explicit Owner instruction."
+mandatory_technical_gate_summary: "GAP-047 implementation (Defect A: docs/audits/ added to the design-only prefix allowlist; Defect B: B3 fail-closed exact-path frontmatter grandfather mechanism) is technically complete and verified; unchanged since Owner's correction-requested review (Correction Round 1 above) — Owner accepted A1/B3/R=103/C=103/NEW=0/grandfather=103/scope discipline. This re-presentation corrects only the two documentation/governance artifacts the Owner identified: (1) the implementation plan's Task 7/case-18 recovery instruction now specifies the explicit fail-closed NEW-must-be-empty-or-STOP sequence instead of a current-tree regeneration; (2) this packet's test-count claims are corrected to the true, freshly re-verified breakdown. Because the implementation plan is part of the implementation tree, this correction moved the implementation-tree digest from 1273b9c9402cbf859763798291c3c1ced91224477aa75ce7a7b27ae0ec741c08 (Owner-reviewed head) to 31f595749905dc4ee03d6208f3e647fb59b7b8b776e791c3d8c43e8188247657 (new subject_sha dd32e6e2f0f49364bc5153dceb8552f0e4f1a516) — verified by recomputing the digest independently at both dd32e6e2 and the current PR head, confirming byte-for-byte equality (only this Gate-3 record file differs between them, which is excluded from the digest by construction). Fresh re-verification after both corrections: all 19 Owner-specified regression cases (1-19) pass, plus all 11 GrandfatherLoaderTest.php tests (8 fail-closed rejection cases: missing file, unreadable file, absolute path, traversal, wrong root, non-.md, duplicate entry, malformed/control-character entry; and 3 acceptance/normal-semantics cases: blank/comment handling, valid exact paths, empty-after-comments behavior) — freshly run standalone: OK (11 tests, 11 assertions). tests/Unit/OwnerGovernance/ = 187/187 pass (fresh run); full Unit testsuite = 904/904 pass, 0 failures (fresh run, 27 pre-existing unrelated skips). Local `php scripts/ssot/owner_governance_lint.php` and `--enforce-gate-ordering` both PASS against the real repository tree (94 files scanned, 0 violations — grandfather list unchanged, byte-verified against the independently recomputed set; R=103/C=103/NEW=0 freshly reconfirmed against unchanged origin/main e5cbcce508cf5f3b4344f0117dbe08972bb4bc7e). No workflow, application, database, route, or resource file was touched in either round; docs/owner-governance/legacy-work-ids.txt, scripts/ssot/owner_governance_lint.php, the grandfather file, and every test file remain byte-identical to the Owner-reviewed head — this remediation touched only the implementation plan and this Gate-3 record, per Owner's scope lock. GAP-046 and PR #288 are untouched; the 7 historical work items referenced by the grandfather file (GAP-032/037/038/039/040/043/044) remain byte-unchanged. This Gate 3 packet records technical readiness only; it does not request or imply Ready-for-review, merge, release, or deployment authorization, which remain pending explicit Owner instruction."
 technical_evidence:
-  subject_sha: "b23a6a011f56c8c0b318d204557c64efed623ba5"
-  implementation_tree_digest: "1273b9c9402cbf859763798291c3c1ced91224477aa75ce7a7b27ae0ec741c08"
-  verified_pr_head_sha: "24ced3e808eaced8bdf4082434ebd113acd8e902"
-  verified_at: "2026-08-27T12:50:00+07:00"
+  subject_sha: "dd32e6e2f0f49364bc5153dceb8552f0e4f1a516"
+  implementation_tree_digest: "31f595749905dc4ee03d6208f3e647fb59b7b8b776e791c3d8c43e8188247657"
+  verified_pr_head_sha: "dd32e6e2f0f49364bc5153dceb8552f0e4f1a516"
+  verified_at: "2026-08-27T14:37:00+07:00"
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null
@@ -78,7 +78,7 @@ historical evidence of this correction round.
 This decision is preserved here as permanent provenance and is not erased
 by the packet's return to `awaiting_owner` below.
 
-## Status: CORRECTION REQUESTED (remediation in progress — see Correction Round 1 above)
+## Status: AWAITING OWNER (re-presented after Correction Round 1 remediation above)
 
 This packet is prepared per the agent's implementation directive (GAP-047,
 following the Owner-approved Gate 2 design in
@@ -89,16 +89,18 @@ review only. **It does not authorize Ready-for-review, merge, release, or
 production deployment** — those require a separate, explicit Owner
 instruction after this packet is reviewed.
 
-## What changed (the release-candidate diff, `e5cbcce508cf5f3b4344f0117dbe08972bb4bc7e` → `b23a6a011f56c8c0b318d204557c64efed623ba5`)
+## What changed (the release-candidate diff, `e5cbcce508cf5f3b4344f0117dbe08972bb4bc7e` → `dd32e6e2f0f49364bc5153dceb8552f0e4f1a516`)
 
 ```
  docs/owner-governance/grandfathered-nonfrontmatter-documents.txt          |  130 ++ (new)
- docs/superpowers/plans/2026-08-27-gap-047-owner-governance-lint-implementation.md | 1268 ++ (new)
+ docs/superpowers/plans/2026-08-27-gap-047-owner-governance-lint-implementation.md | 1278 ++ (new; Correction Round 1 replaced the 1-line case-18 recovery instruction with the explicit 10-line fail-closed sequence, net +10 lines vs the Owner-reviewed head)
  scripts/ssot/owner_governance_lint.php                                    |  185 +-
  tests/Unit/OwnerGovernance/GateOrderingDesignOnlyExemptionTest.php        |   98 ++
  tests/Unit/OwnerGovernance/GateOrderingFrontmatterGrandfatherTest.php     |  338 ++ (new)
  tests/Unit/OwnerGovernance/GrandfatherLoaderTest.php                      |  128 ++ (new)
 ```
+
+(Unchanged since Correction Round 1: `scripts/ssot/owner_governance_lint.php` and all three test files are byte-identical to the Owner-reviewed head `7857827e4221950e40b9c33d680c2bbe3efb8433` — only the implementation plan changed, per Owner's scope lock.)
 
 **Defect A (A1):** `docs/audits/` added to `OWNER_GOVERNANCE_DESIGN_ONLY_PATH_PREFIXES`
 (one-line, additive). **Defect B (B3):** the case-sensitive-filename-driven
@@ -121,9 +123,13 @@ byte-unchanged — only their exact paths are listed as grandfather entries.
    (main, prior to this work; also the approved Gate-2 PR #290 squash-merge SHA).
 2. **Release-candidate implementation commit (subject_sha, what would merge
    if approved, and what this packet's `technical_evidence.implementation_tree_digest`
-   is computed against):** `b23a6a011f56c8c0b318d204557c64efed623ba5`
-   (PR #291 head at the time this Gate 3 packet was authored, Draft).
-3. This packet's own commit (adding this file) is excluded from the
+   is computed against):** `dd32e6e2f0f49364bc5153dceb8552f0e4f1a516`
+   (the last commit to change non-Gate-3-record content — the Correction
+   Round 1 plan fix — on PR #291, Draft). Superseded from the originally
+   reviewed `b23a6a011f56c8c0b318d204557c64efed623ba5` because the plan
+   correction changed the implementation tree; the digest was refreshed
+   accordingly (see Correction Round 1 above and `mandatory_technical_gate_summary`).
+3. This packet's own commits (adding/editing this file) are excluded from the
    implementation-tree digest by construction (`owner_governance_compute_implementation_tree_digest()`
    excludes exactly `docs/owner-decisions/GAP-047/03-release*.md`), so the
    digest is unchanged whether it is recomputed before or after this
@@ -146,14 +152,26 @@ byte-unchanged — only their exact paths are listed as grandfather entries.
   cases — blank/comment handling, valid exact paths, empty-after-comments
   behavior. Freshly re-verified via `vendor/bin/phpunit tests/Unit/OwnerGovernance/GrandfatherLoaderTest.php`
   → `OK (11 tests, 11 assertions)`.).
-- `vendor/bin/phpunit --testsuite Unit`: 904/904 pass, 0 failures.
-- `php scripts/ssot/owner_governance_lint.php`: PASS (93 files, 0 violations).
+- `vendor/bin/phpunit --testsuite Unit`: 904/904 pass, 0 failures (fresh
+  re-run after Correction Round 1).
+- `php scripts/ssot/owner_governance_lint.php`: PASS (94 files scanned —
+  the count includes this Gate-3 record itself; 0 violations).
 - `php scripts/ssot/owner_governance_lint.php --enforce-gate-ordering`: PASS
   (real repository tree, real grandfather file, zero
-  `missing-governance-frontmatter` violations).
-- LIVE CI on PR #291 exact head `b23a6a011f56c8c0b318d204557c64efed623ba5`:
-  all 31 checks green, including `Owner Governance Lint` and
-  `test-routes-guardrails`.
+  `missing-governance-frontmatter` violations; fresh re-run).
+- **Round 1** LIVE CI, PR #291 exact reviewed head
+  `7857827e4221950e40b9c33d680c2bbe3efb8433`: 31/31 checks green (including
+  `Owner Governance Lint` and `test-routes-guardrails`), `deploy` correctly
+  skipping. A transient CI-timing artifact was observed and resolved on this
+  head: the first automated run of `Owner Governance Lint` failed only with
+  an evidence-freshness 300-second wait-timeout message while sibling jobs
+  were still legitimately running; re-running just that job
+  (`gh run rerun 33043412424 --failed`) passed clean with zero code/content
+  changes — an orchestration timing artifact, not a defect. **Round 2**
+  (post-remediation) LIVE CI on the new exact head is pending push and will
+  be verified before this packet is considered ready for Owner re-review;
+  see the implementation session's live verification for the confirmed
+  fresh result.
 
 ## Decision needed
 

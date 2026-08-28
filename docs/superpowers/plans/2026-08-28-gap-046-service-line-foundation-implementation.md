@@ -1,5 +1,7 @@
 ---
 work_id: GAP-046
+owner_governance_version: 1
+owner_gate_2_record: docs/owner-decisions/GAP-046/02-design.md
 plan_status: ready
 derived_from:
   gate2_design: docs/superpowers/specs/2026-08-25-gap-046-service-line-foundation-design.md

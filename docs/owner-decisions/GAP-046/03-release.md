@@ -1,14 +1,14 @@
 ---
 work_id: GAP-046
 gate: 3
-gate_status: awaiting_owner
+gate_status: changes_requested
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: correction_requested
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-25-gap-046-service-line-foundation-design.md
   plan: docs/superpowers/plans/2026-08-28-gap-046-service-line-foundation-implementation.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-08-29T00:00:00Z"
+  owner_response_reference: "Owner Gate 3 decision, GAP-046, Correction Round 1 (relayed via coordinator session): 'OWNER GATE-3 DECISION: CORRECTION REQUESTED (Round 1)'. Reviewed exact state: PR #292 head 63f8636fa77bdfc73401cc9bcd25f52c759fd82f, subject_sha 037758fff502d738eac31e1a08a8e7a4e3701c2b, implementation_tree_digest 35d9d9c8d44a745aa284cbfaf77b03039801b091a90da2a069b535ad604a472b, canonical main 9944e1b50de515accb68bd5fd67347747620c6d3. DECISION: CORRECTION REQUESTED, not approved. Owner directed 7 substantive corrections before Gate 3 approval, all within the existing approved Gate-2 §11 boundary (no Gate-2 reopening, no new Work ID): (1) EnforcesServiceLineIntegrity must also reject a mismatch between the ACTING/CURRENT tenant context (app('tenant') / current_tenant_id / request attribute tenant_id, same precedence as TenantScope, TenantScope itself not modified) and the parent's true tenant, not only an explicitly-set conflicting child.tenant_id — with strict RED tests first for both Opportunity and Project sides proving zero rows persisted; a legitimate no-current-tenant-context CLI backfill write must remain permitted. (2) Integrity enforcement must cover updates as well as creates (service_line/provenance/parent-resolvability/tenant congruence), via a saving-equivalent hook, with RED tests first for invalid-service_line update, invalid-provenance update, and cross-tenant parent-reassignment update, both sides where applicable. (3) Acceptance J's test must be strengthened to a discriminating scenario: an Opportunity with a legacy mappable category whose converted_project_id points at a real, pre-existing Project — proving the backfill command creates the expected Opportunity-side row while creating zero rows for the linked historical Project. (4) Acceptance K's test must be strengthened: create a WON Opportunity that already carries a real canonical Service-Line membership row before conversion, run the real conversion endpoint, and prove that membership row survives unchanged on the Opportunity side while the new Project receives zero rows — proving no propagation even when canonical data exists to propagate, without modifying OpportunityController. (5) GAP-046 DB behavior (migration/table behavior, unique constraint, tenant-parent integrity, Opportunity backfill mapping, backfill idempotency) must be proven inside this repo's canonical @group mysql-parity live-CI mechanism, not only a local Docker harness, with live-log proof of the specific GAP-046 test names actually executing on real MySQL — 'migrations built successfully' alone is insufficient. (6) Add an index on (tenant_id, service_line) to both new migrations (explicit stable names, existing unique constraints retained) since parent_id currently sits between tenant_id and service_line in the unique index's B-tree order, inefficient for 'all X-tenant subjects with Service-Line Y' queries — verified on SQLite and real MySQL SHOW INDEX/SHOW CREATE TABLE. (7) Strict TDD required throughout (RED first, minimum fix, GREEN, preserved evidence). Remediation scope is explicitly bounded to EnforcesServiceLineIntegrity.php, the two new migrations, the three existing GAP-046 test files, optionally one new narrowly-focused MySQL-parity test file, and truthful updates to the implementation plan and this Gate-3 packet; OpportunityController, LeadController, CrmPageController, DesignItemPageController, BusinessKpiService, service_category behavior, any pre-existing migration, routes/**, resources/**, RBAC/policies, projects.tenant_id schema, CRM classification UX, Quote/Contract classification, Portfolio/OPPM/Control-Tower/Finance/Treasury, GAP-041/042/045/047, and .github/** remain explicitly forbidden — if any forbidden surface appears necessary, the agent must stop and report back rather than proceed. Because these corrections change implementation content, the old subject_sha/digest above become historical only and must not be reused as current Gate-3 evidence; a new subject_sha and freshly recomputed implementation_tree_digest are required for re-presentation. PR #292 must remain Draft throughout — no Ready-flip, merge, deploy, self-approval, or new Work ID authorized by this decision. This Correction Round 1 record is permanent and must never be erased or overwritten by the re-presented packet.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-28T09:18:14Z"
-  updated_at: "2026-08-28T16:26:22Z"
+  updated_at: "2026-08-29T00:00:00Z"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-046 implementation (Canonical Service-Line Foundation: ServiceLine/ServiceLineProvenance constants; opportunity_service_lines + project_service_lines migrations, Option B; OpportunityServiceLine/ProjectServiceLine models sharing EnforcesServiceLineIntegrity for value validation + parent-derived tenant_id enforcement; Opportunity::serviceLines()/Project::serviceLines() relations; service-lines:backfill-opportunities idempotent Opportunity-side-only backfill) is technically complete, strictly within the approved Gate-2 §11 boundary, and verified. Diff against canonical baseline 9944e1b50de515accb68bd5fd67347747620c6d3 is exactly 15 files, 1583 insertions, 0 deletions, 0 modifications to any pre-existing production file's behavior beyond the two additive relation methods on Opportunity.php/Project.php (12/13 lines each, doc comment + method only) — confirmed by explicit grep across the diff for OpportunityController, LeadController, CrmPageController, DesignItemPageController, BusinessKpiService, and every pre-existing migration filename: zero matches. TDD followed strictly: every behavior slice (constants, migrations, models+relations, backfill command, no-propagation regression) was committed only after its test was observed RED for the expected reason (class/method/command not found) and then GREEN. 24 focused GAP-046 tests pass on SQLite; the same 24 were independently re-run against a real MySQL 8.0 container (same image used by this repo's CI) with identical results, and the two new migrations' up()/down() round-trip was verified separately on both SQLite and that real MySQL instance, confirming SHOW CREATE TABLE output carries genuine DB-level FK constraints (opp_service_lines_tenant_id_foreign, opp_service_lines_opportunity_id_foreign, proj_service_lines_tenant_id_foreign, proj_service_lines_project_id_foreign, both created_by FKs) and the (tenant_id, opportunity_id, service_line) / (tenant_id, project_id, service_line) unique constraints — not merely SQLite-level or application-level claims. All acceptance criteria A-K independently proven by name (see full report). All 33 live CI checks on exact PR #292 head 037758fff502d738eac31e1a08a8e7a4e3701c2b are green (Owner Governance Lint, test-routes-guardrails, Unit/Feature/Integration/API Tests, Zena RBAC/Tenant Invariants incl. MySQL parity, Document Workflow/RFI Escalation/Treasury Native CHECK Constraints real-MySQL jobs, Security/Code-Quality/Dependency/License/Docker scans, Performance Tests, browser-tests, staging-smoke, coverage-report, quality-gate); deploy correctly shows 'skipping' (no production deployment occurred or is implied, consistent with this repo's established pattern when deploy secrets are not configured for a Draft PR). One real defect was found and fixed during CI verification, not silently absorbed: PHPStan flagged missingType.generics on the four new relation methods (no Larastan in this repo, so HasMany/BelongsTo generics must be declared explicitly) — fixed with the exact @return <Type><Generic> PHPDoc convention already used by Project::designItems(), annotation-only, zero behavior change, re-verified green both locally (all 24 GAP-046 tests still pass) and on the next live CI run. This packet requests Owner Gate 3 decision only; it does not request or imply Ready-for-review, merge, release, or deployment authorization."
@@ -41,7 +41,59 @@ owner_decision_binding:
 
 # GAP-046 — Canonical Service-Line Foundation: Gate 3 Release Request
 
-## Status: awaiting_owner — technical readiness complete, Owner Gate 3 decision requested
+## Correction Round 1 — Owner Gate 3 Review (permanent record — never erased)
+
+**Owner Gate 3 decision: CORRECTION REQUESTED.** Reviewed exact state: PR
+#292 head `63f8636fa77bdfc73401cc9bcd25f52c759fd82f`, subject_sha
+`037758fff502d738eac31e1a08a8e7a4e3701c2b`, implementation_tree_digest
+`35d9d9c8d44a745aa284cbfaf77b03039801b091a90da2a069b535ad604a472b`,
+canonical main `9944e1b50de515accb68bd5fd67347747620c6d3`. The full verbatim
+directive is recorded in this file's frontmatter
+`decision_provenance.owner_response_reference` field above. Summary of the
+7 directed corrections, all within the existing approved Gate-2 §11
+boundary (no Gate-2 reopening, no new Work ID):
+
+1. **Current/acting-tenant enforcement** — `EnforcesServiceLineIntegrity`
+   must also reject a mismatch between the acting/current tenant context
+   (same precedence as `TenantScope`: `app('tenant')` →
+   `current_tenant_id` → request attribute `tenant_id`; `TenantScope`
+   itself not modified) and the parent's true tenant — not only an
+   explicitly-set conflicting `child.tenant_id`. A no-current-tenant-context
+   CLI backfill write must remain permitted.
+2. **Update-path integrity** — the same invariants (canonical
+   `service_line`, canonical `provenance`, resolvable parent, tenant
+   congruence) must also be enforced on `update`, not only `create`.
+3. **Strengthen acceptance J** — prove the backfill command creates zero
+   rows for a Project that is the real, linked `converted_project_id`
+   target of a legacy-mappable Opportunity, not just an unrelated empty
+   Project.
+4. **Strengthen acceptance K** — prove that an Opportunity carrying a real
+   canonical Service-Line row *before* WON conversion still shows zero
+   propagation to the new Project (and its own row survives unchanged),
+   not just an Opportunity with no rows to propagate in the first place.
+5. **Canonical MySQL-parity CI coverage** — GAP-046 DB behavior must run
+   inside this repo's `@group mysql-parity` live-CI mechanism with
+   log-verified proof of the specific test names executing on real MySQL,
+   not only a local Docker harness.
+6. **Set-membership index** — add `(tenant_id, service_line)` indexes to
+   both new migrations (existing unique constraints retained), since
+   `parent_id` currently sits between `tenant_id` and `service_line` in
+   the unique index's B-tree order.
+7. **Strict TDD** required throughout for every correction above.
+
+Remediation scope: `app/Models/Concerns/EnforcesServiceLineIntegrity.php`,
+the two new migrations, the three existing GAP-046 test files, optionally
+one new narrowly-focused MySQL-parity test file, and truthful updates to
+the implementation plan and this packet. Everything else (including
+`OpportunityController`, `LeadController`, any pre-existing migration,
+`.github/**`) remains explicitly forbidden. Old `subject_sha`/digest above
+are historical only as of this correction — superseded by a fresh
+subject_sha/digest once remediation completes. This Round 1 record is
+preserved permanently and must not be removed by any future revision.
+
+---
+
+## Status (post-remediation): re-presented — see "Re-Presentation" section below
 
 This packet is prepared following the approved GAP-046 Gate 2 design
 (`docs/owner-decisions/GAP-046/02-design.md`, Owner Round 2 FINAL APPROVAL,

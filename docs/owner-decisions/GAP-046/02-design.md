@@ -1,29 +1,42 @@
 ---
 work_id: GAP-046
 gate: 2
-gate_status: awaiting_owner
+gate_status: changes_requested
 owner_decision:
-  value: none
+  value: changes_requested
   authority: human_owner
-decision_requested: "approve_or_changes_or_decline"
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-25-gap-046-service-line-foundation-design.md
   plan: null
   branch: docs/GAP-046-gate2-design
-  pr: null
+  pr: "https://github.com/kha997/zenamanagephp/pull/288"
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-26T00:29:24Z"
-  owner_response_reference: null
+  recorded_at: "2026-08-28T00:00:00Z"
+  owner_response_reference: "Owner Gate 2 Round 1 decision — CHANGES REQUESTED, reviewed exact PR head b4073f771db10f8f3aeac7cd0f56b6776a5ee532 (canonical main at time of review: f36cfaf7dc4100ed41cc7f7262ba81fdef7bd99a). Owner LOCKS two design choices now: (1) Persistence architecture — OPTION B APPROVED IN PRINCIPLE, explicit non-polymorphic opportunity_service_lines/project_service_lines join tables; do not reopen polymorphic/JSON/boolean-column alternatives. (2) Historical Project backfill — OPTION A SELECTED, NO one-time Project historical backfill; existing Projects with no canonical classification remain UNKNOWN-by-absence; do not infer Project membership from historical Opportunity data in GAP-046. Gate 2 as a whole is NOT approved yet; three corrections required before re-presentation: (A) UNKNOWN/NEEDS_REVIEW semantics — canonical service_line stays exactly DESIGN/CONSTRUCTION/INSPECTION, no fourth value; a membership row may exist only when a canonical line is actually known/candidate-specific; legacy architecture/interior/landscape/structure/mep -> DESIGN/INFERRED, construction -> CONSTRUCTION/INFERRED, inspection/consulting/combined_package -> create NO membership row (preserve legacy service_category as evidence; legacy 'inspection' UI value denotes ambiguous 'Giám sát' per SSOT 2026-08-15 canonical-semantics doc §2.5, not standalone INSPECTION), null/unrecognized -> create NO row (UNKNOWN-by-absence); no runtime CRM UX/remediation workflow authorized in this Work ID. (B) tenant-parent integrity — child.tenant_id must be derived from its parent, never independently trusted from request/caller input; two independent FKs (child->tenant, child->parent) do not by themselves prove tenant congruence; Opportunity backfill must copy tenant_id from the Opportunity; future relation-based writes must enforce parent tenant identity and fail closed on mismatch; add a cross-tenant rejection acceptance case; no broad projects.tenant_id schema remediation in GAP-046, state the portability limitation explicitly if a portable composite FK cannot be added without touching that legacy schema. (C) governance lifecycle wording — remove any wording implying Gate 3 is the implementation step; correct lifecycle is Gate 2 Owner approval -> NEW implementation session -> implementation plan -> TDD implementation -> technical verification -> Gate 3 packet awaiting_owner -> Owner Gate 3 review -> release/merge only after Gate 3 approval. Acceptance matrix must add explicit coverage for: canonical service_line accepts exactly DESIGN/CONSTRUCTION/INSPECTION; invalid canonical value rejected; legacy architecture-family creates only DESIGN/INFERRED; legacy construction creates only CONSTRUCTION/INFERRED; legacy inspection/consulting/combined_package creates no row; null/unrecognized creates no row and stays UNKNOWN-by-absence; backfill never creates CONFIRMED; backfill is idempotent; cross-tenant parent/child write is rejected; Project historical backfill count is exactly zero; runtime Opportunity->Project propagation remains absent. No implementation authorized by this decision. Do not merge, do not self-approve. Corrections to be executed exactly, then Gate 2 re-presented as awaiting_owner for Owner Round 2 review, with this Round 1 record preserved permanently in the packet body."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-25T05:54:54Z"
-  updated_at: "2026-08-26T00:29:24Z"
+  updated_at: "2026-08-28T00:00:00Z"
 generated_by: agent
+---
+
+## Owner Decision History (permanent record — never erased)
+
+### Round 1 — CHANGES REQUESTED (recorded 2026-08-28)
+
+Owner reviewed exact PR head `b4073f771db10f8f3aeac7cd0f56b6776a5ee532` (canonical main at review time: `f36cfaf7dc4100ed41cc7f7262ba81fdef7bd99a`). Decision: **CHANGES REQUESTED**. Full text of the decision is recorded verbatim in this file's frontmatter `decision_provenance.owner_response_reference` above. Summary:
+
+- **Locked in principle:** Option B (explicit `opportunity_service_lines`/`project_service_lines` join tables) — not reopened.
+- **Locked:** Historical Project backfill — Option A, NO one-time Project backfill in GAP-046; existing Projects with no canonical classification remain UNKNOWN-by-absence.
+- **Three corrections required** before re-presentation: (A) UNKNOWN/NEEDS_REVIEW membership semantics corrected — no membership row without a known canonical line, legacy `inspection`/`consulting`/`combined_package`/null create no row; (B) tenant-parent integrity invariant corrected — `tenant_id` must be derived from the parent, never independently trusted, with a cross-tenant rejection acceptance case added; (C) governance lifecycle wording corrected — Gate 3 is the release gate, not the implementation step.
+- Gate 2 as a whole was **not approved** at this round. This document and its companion spec were revised per the corrections below and the packet is now re-presented as `awaiting_owner` for Owner Round 2 review (see current frontmatter `gate_status`). This Round 1 record is preserved permanently and must not be removed by any future revision.
+
 ---
 
 ## Provenance note (mechanical split, 2026-08-26)

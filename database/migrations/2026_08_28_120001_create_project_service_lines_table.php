@@ -36,6 +36,12 @@ return new class extends Migration
 
             $table->unique(['tenant_id', 'project_id', 'service_line'], 'proj_service_lines_unique');
             $table->index(['tenant_id', 'project_id'], 'proj_service_lines_tenant_proj_index');
+            // Gate 3 Correction Round 1, item 6: the unique index above
+            // orders parent_id before service_line, so it does not
+            // efficiently serve "all X-tenant subjects with Service-Line
+            // Y" set-membership queries. Dedicated index for that access
+            // pattern.
+            $table->index(['tenant_id', 'service_line'], 'proj_service_lines_tenant_line_index');
         });
     }
 

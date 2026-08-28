@@ -242,6 +242,220 @@ class ServiceLineFoundationTest extends TestCase
         }
     }
 
+    // --- Gate 3 Correction Round 1, item 1: acting/current tenant mismatch
+    // rejected even with NO explicit child tenant_id (Opportunity side) ---
+    public function test_acting_tenant_mismatch_is_rejected_for_opportunity_even_without_explicit_child_tenant_id(): void
+    {
+        $tenantA = Tenant::factory()->create();
+        $tenantB = Tenant::factory()->create();
+        $opportunityOfTenantB = $this->makeOpportunity($tenantB);
+
+        app()->instance('tenant', $tenantA);
+        try {
+            $this->expectException(RuntimeException::class);
+            try {
+                $opportunityOfTenantB->serviceLines()->create([
+                    'service_line' => ServiceLine::DESIGN,
+                    'provenance' => ServiceLineProvenance::INFERRED,
+                ]);
+            } finally {
+                $this->assertSame(0, OpportunityServiceLine::query()->withoutGlobalScope('tenant')->count());
+            }
+        } finally {
+            app()->forgetInstance('tenant');
+        }
+    }
+
+    // --- Gate 3 Correction Round 1, item 1: acting/current tenant mismatch
+    // rejected even with NO explicit child tenant_id (Project side) ---
+    public function test_acting_tenant_mismatch_is_rejected_for_project_even_without_explicit_child_tenant_id(): void
+    {
+        $tenantA = Tenant::factory()->create();
+        $tenantB = Tenant::factory()->create();
+        $projectOfTenantB = $this->makeProject($tenantB);
+
+        app()->instance('tenant', $tenantA);
+        try {
+            $this->expectException(RuntimeException::class);
+            try {
+                $projectOfTenantB->serviceLines()->create([
+                    'service_line' => ServiceLine::CONSTRUCTION,
+                    'provenance' => ServiceLineProvenance::INFERRED,
+                ]);
+            } finally {
+                $this->assertSame(0, ProjectServiceLine::query()->withoutGlobalScope('tenant')->count());
+            }
+        } finally {
+            app()->forgetInstance('tenant');
+        }
+    }
+
+    // --- Gate 3 Correction Round 1, item 1: matching acting tenant still
+    // succeeds (regression guard on the new check) ---
+    public function test_acting_tenant_matching_parent_tenant_is_permitted(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $opportunity = $this->makeOpportunity($tenant);
+
+        app()->instance('tenant', $tenant);
+        try {
+            $row = $opportunity->serviceLines()->create([
+                'service_line' => ServiceLine::DESIGN,
+                'provenance' => ServiceLineProvenance::INFERRED,
+            ]);
+            $this->assertSame((string) $tenant->id, (string) $row->tenant_id);
+        } finally {
+            app()->forgetInstance('tenant');
+        }
+    }
+
+    // --- Gate 3 Correction Round 1, item 2: update-path integrity — A (invalid service_line), Opportunity side ---
+    public function test_update_to_invalid_service_line_is_rejected_for_opportunity(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $opportunity = $this->makeOpportunity($tenant);
+
+        $row = $opportunity->serviceLines()->create([
+            'service_line' => ServiceLine::DESIGN,
+            'provenance' => ServiceLineProvenance::INFERRED,
+        ]);
+        $row->service_line = 'BOGUS';
+
+        $this->expectException(InvalidArgumentException::class);
+        try {
+            $row->save();
+        } finally {
+            $this->assertSame(ServiceLine::DESIGN, $row->fresh()->service_line);
+        }
+    }
+
+    // --- Gate 3 Correction Round 1, item 2: update-path integrity — B (invalid provenance), Opportunity side ---
+    public function test_update_to_invalid_provenance_is_rejected_for_opportunity(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $opportunity = $this->makeOpportunity($tenant);
+
+        $row = $opportunity->serviceLines()->create([
+            'service_line' => ServiceLine::DESIGN,
+            'provenance' => ServiceLineProvenance::INFERRED,
+        ]);
+        $row->provenance = 'BOGUS';
+
+        $this->expectException(InvalidArgumentException::class);
+        try {
+            $row->save();
+        } finally {
+            $this->assertSame(ServiceLineProvenance::INFERRED, $row->fresh()->provenance);
+        }
+    }
+
+    // --- Gate 3 Correction Round 1, item 2: update-path integrity — C (parent reassigned cross-tenant), Opportunity side ---
+    public function test_update_reassigning_parent_to_different_tenant_is_rejected_for_opportunity(): void
+    {
+        $tenantA = Tenant::factory()->create();
+        $tenantB = Tenant::factory()->create();
+        $opportunityA = $this->makeOpportunity($tenantA);
+        $opportunityB = $this->makeOpportunity($tenantB);
+
+        $row = $opportunityA->serviceLines()->create([
+            'service_line' => ServiceLine::DESIGN,
+            'provenance' => ServiceLineProvenance::INFERRED,
+        ]);
+        $row->opportunity_id = (string) $opportunityB->id;
+
+        $this->expectException(RuntimeException::class);
+        try {
+            $row->save();
+        } finally {
+            $fresh = $row->fresh();
+            $this->assertSame((string) $opportunityA->id, (string) $fresh->opportunity_id);
+            $this->assertSame((string) $tenantA->id, (string) $fresh->tenant_id);
+        }
+    }
+
+    // --- Gate 3 Correction Round 1, item 2: update-path integrity — A (invalid service_line), Project side ---
+    public function test_update_to_invalid_service_line_is_rejected_for_project(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $project = $this->makeProject($tenant);
+
+        $row = $project->serviceLines()->create([
+            'service_line' => ServiceLine::CONSTRUCTION,
+            'provenance' => ServiceLineProvenance::INFERRED,
+        ]);
+        $row->service_line = 'BOGUS';
+
+        $this->expectException(InvalidArgumentException::class);
+        try {
+            $row->save();
+        } finally {
+            $this->assertSame(ServiceLine::CONSTRUCTION, $row->fresh()->service_line);
+        }
+    }
+
+    // --- Gate 3 Correction Round 1, item 2: update-path integrity — B (invalid provenance), Project side ---
+    public function test_update_to_invalid_provenance_is_rejected_for_project(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $project = $this->makeProject($tenant);
+
+        $row = $project->serviceLines()->create([
+            'service_line' => ServiceLine::CONSTRUCTION,
+            'provenance' => ServiceLineProvenance::INFERRED,
+        ]);
+        $row->provenance = 'BOGUS';
+
+        $this->expectException(InvalidArgumentException::class);
+        try {
+            $row->save();
+        } finally {
+            $this->assertSame(ServiceLineProvenance::INFERRED, $row->fresh()->provenance);
+        }
+    }
+
+    // --- Gate 3 Correction Round 1, item 2: update-path integrity — C (parent reassigned cross-tenant), Project side ---
+    public function test_update_reassigning_parent_to_different_tenant_is_rejected_for_project(): void
+    {
+        $tenantA = Tenant::factory()->create();
+        $tenantB = Tenant::factory()->create();
+        $projectA = $this->makeProject($tenantA);
+        $projectB = $this->makeProject($tenantB);
+
+        $row = $projectA->serviceLines()->create([
+            'service_line' => ServiceLine::CONSTRUCTION,
+            'provenance' => ServiceLineProvenance::INFERRED,
+        ]);
+        $row->project_id = (string) $projectB->id;
+
+        $this->expectException(RuntimeException::class);
+        try {
+            $row->save();
+        } finally {
+            $fresh = $row->fresh();
+            $this->assertSame((string) $projectA->id, (string) $fresh->project_id);
+            $this->assertSame((string) $tenantA->id, (string) $fresh->tenant_id);
+        }
+    }
+
+    // --- Gate 3 Correction Round 1, item 6: (tenant_id, service_line) index exists on both new tables ---
+    public function test_tenant_service_line_index_exists_on_both_tables(): void
+    {
+        $connection = \Illuminate\Support\Facades\DB::connection();
+        $driver = $connection->getDriverName();
+
+        if ($driver === 'sqlite') {
+            $oppIndexes = collect($connection->select("PRAGMA index_list('opportunity_service_lines')"))->pluck('name');
+            $projIndexes = collect($connection->select("PRAGMA index_list('project_service_lines')"))->pluck('name');
+            $this->assertTrue($oppIndexes->contains('opp_service_lines_tenant_line_index'));
+            $this->assertTrue($projIndexes->contains('proj_service_lines_tenant_line_index'));
+        } else {
+            $oppIndexes = collect($connection->select('SHOW INDEX FROM opportunity_service_lines'))->pluck('Key_name');
+            $projIndexes = collect($connection->select('SHOW INDEX FROM project_service_lines'))->pluck('Key_name');
+            $this->assertTrue($oppIndexes->contains('opp_service_lines_tenant_line_index'));
+            $this->assertTrue($projIndexes->contains('proj_service_lines_tenant_line_index'));
+        }
+    }
+
     // --- J: project-side backfill count is zero (no GAP-046 mechanism populates it) ---
     public function test_project_service_lines_table_has_zero_rows_by_default(): void
     {

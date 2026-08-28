@@ -355,6 +355,17 @@ class Project extends Model
     }
 
     /**
+     * GAP-046 — canonical Service-Line membership rows for this Project
+     * (Gate 2 §11 read/write relation, no business-flow wiring beyond
+     * this). No GAP-046 mechanism populates this for pre-existing
+     * Projects (Gate 2 §7, decided Option A — zero historical backfill).
+     */
+    public function serviceLines(): HasMany
+    {
+        return $this->hasMany(ProjectServiceLine::class, 'project_id');
+    }
+
+    /**
      * Tính toán lại tiến độ dự án từ components
      */
     public function recalculateProgress(): void

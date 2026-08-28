@@ -142,6 +142,16 @@ class Opportunity extends Model
         return $this->belongsTo(Project::class, 'converted_project_id');
     }
 
+    /**
+     * GAP-046 — canonical Service-Line membership rows for this
+     * Opportunity (Gate 2 §11 read/write relation, no business-flow
+     * wiring beyond this).
+     */
+    public function serviceLines(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(OpportunityServiceLine::class, 'opportunity_id');
+    }
+
     public function scopeForTenant($query, string $tenantId)
     {
         return $query->where('tenant_id', $tenantId);

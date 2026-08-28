@@ -146,6 +146,8 @@ class Opportunity extends Model
      * GAP-046 — canonical Service-Line membership rows for this
      * Opportunity (Gate 2 §11 read/write relation, no business-flow
      * wiring beyond this).
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\OpportunityServiceLine, $this>
      */
     public function serviceLines(): \Illuminate\Database\Eloquent\Relations\HasMany
     {

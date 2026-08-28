@@ -359,6 +359,8 @@ class Project extends Model
      * (Gate 2 §11 read/write relation, no business-flow wiring beyond
      * this). No GAP-046 mechanism populates this for pre-existing
      * Projects (Gate 2 §7, decided Option A — zero historical backfill).
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\ProjectServiceLine, $this>
      */
     public function serviceLines(): HasMany
     {

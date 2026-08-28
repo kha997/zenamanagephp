@@ -41,6 +41,9 @@ class OpportunityServiceLine extends Model
         'created_by',
     ];
 
+    /**
+     * @return BelongsTo<Opportunity, $this>
+     */
     public function opportunity(): BelongsTo
     {
         return $this->belongsTo(Opportunity::class, 'opportunity_id');

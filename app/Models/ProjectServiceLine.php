@@ -44,6 +44,9 @@ class ProjectServiceLine extends Model
         'created_by',
     ];
 
+    /**
+     * @return BelongsTo<Project, $this>
+     */
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class, 'project_id');

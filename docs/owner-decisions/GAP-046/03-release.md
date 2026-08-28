@@ -25,7 +25,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-28T09:18:14Z"
-  updated_at: "2026-08-28T09:18:14Z"
+  updated_at: "2026-08-28T09:40:46Z"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-046 implementation (Canonical Service-Line Foundation: ServiceLine/ServiceLineProvenance constants; opportunity_service_lines + project_service_lines migrations, Option B; OpportunityServiceLine/ProjectServiceLine models sharing EnforcesServiceLineIntegrity for value validation + parent-derived tenant_id enforcement; Opportunity::serviceLines()/Project::serviceLines() relations; service-lines:backfill-opportunities idempotent Opportunity-side-only backfill) is technically complete, strictly within the approved Gate-2 §11 boundary, and verified. Diff against canonical baseline 9944e1b50de515accb68bd5fd67347747620c6d3 is exactly 15 files, 1583 insertions, 0 deletions, 0 modifications to any pre-existing production file's behavior beyond the two additive relation methods on Opportunity.php/Project.php (12/13 lines each, doc comment + method only) — confirmed by explicit grep across the diff for OpportunityController, LeadController, CrmPageController, DesignItemPageController, BusinessKpiService, and every pre-existing migration filename: zero matches. TDD followed strictly: every behavior slice (constants, migrations, models+relations, backfill command, no-propagation regression) was committed only after its test was observed RED for the expected reason (class/method/command not found) and then GREEN. 24 focused GAP-046 tests pass on SQLite; the same 24 were independently re-run against a real MySQL 8.0 container (same image used by this repo's CI) with identical results, and the two new migrations' up()/down() round-trip was verified separately on both SQLite and that real MySQL instance, confirming SHOW CREATE TABLE output carries genuine DB-level FK constraints (opp_service_lines_tenant_id_foreign, opp_service_lines_opportunity_id_foreign, proj_service_lines_tenant_id_foreign, proj_service_lines_project_id_foreign, both created_by FKs) and the (tenant_id, opportunity_id, service_line) / (tenant_id, project_id, service_line) unique constraints — not merely SQLite-level or application-level claims. All acceptance criteria A-K independently proven by name (see full report). All 33 live CI checks on exact PR #292 head 037758fff502d738eac31e1a08a8e7a4e3701c2b are green (Owner Governance Lint, test-routes-guardrails, Unit/Feature/Integration/API Tests, Zena RBAC/Tenant Invariants incl. MySQL parity, Document Workflow/RFI Escalation/Treasury Native CHECK Constraints real-MySQL jobs, Security/Code-Quality/Dependency/License/Docker scans, Performance Tests, browser-tests, staging-smoke, coverage-report, quality-gate); deploy correctly shows 'skipping' (no production deployment occurred or is implied, consistent with this repo's established pattern when deploy secrets are not configured for a Draft PR). One real defect was found and fixed during CI verification, not silently absorbed: PHPStan flagged missingType.generics on the four new relation methods (no Larastan in this repo, so HasMany/BelongsTo generics must be declared explicitly) — fixed with the exact @return <Type><Generic> PHPDoc convention already used by Project::designItems(), annotation-only, zero behavior change, re-verified green both locally (all 24 GAP-046 tests still pass) and on the next live CI run. This packet requests Owner Gate 3 decision only; it does not request or imply Ready-for-review, merge, release, or deployment authorization."
@@ -223,6 +223,24 @@ repo has no Larastan, so `HasMany`/`BelongsTo` generics require explicit
 convention). Fixed in commit `037758ff`, annotation-only, zero behavior
 change, re-verified green both locally (24/24 GAP-046 tests) and on the
 next live CI run.
+
+A second, non-code CI-timing artifact was observed and resolved on this
+Gate-3-record commit (`a4da050b`), the same class of artifact previously
+documented in GAP-039/GAP-043/GAP-047: `Owner Governance Lint`'s
+evidence-freshness step ran early in the check matrix and, per its
+designed fail-closed behavior, correctly failed because `browser-tests`
+(a ~17-19 minute job) and its downstream `coverage-report`/`quality-gate`
+jobs had not yet reached a terminal state within evidence-freshness's
+300-second wait window — `gate_status is 'awaiting_owner' but 2 other
+check(s) on PR #292's current head are not green (pending or failed) after
+waiting up to 300s`. This is the check working as designed, not a defect:
+once `browser-tests`/`coverage-report`/`quality-gate` genuinely finished
+green, `gh run rerun 33158919014 --failed` was run and `Owner Governance
+Lint` passed clean (27s) with zero code/content changes. All 34 checks on
+the exact Gate-3-record head `a4da050b7fc08ec46fa9d2dd786425da2f536098`
+(the current PR head, one commit past `subject_sha` — only this Gate-3
+record file differs, excluded from the digest by construction) are green,
+independently re-verified via `gh pr checks 292` after full settlement.
 
 ## Residual risks / known limitations (stated truthfully, not blocking)
 

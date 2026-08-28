@@ -237,4 +237,60 @@ class BackfillOpportunityServiceLinesTest extends TestCase
         $after = Opportunity::query()->orderBy('id')->pluck('service_category', 'id')->all();
         $this->assertSame($before, $after);
     }
+
+    /**
+     * @group mysql-parity
+     *
+     * Gate 3 Correction Round 1, item 6 (canonical MySQL-parity CI
+     * coverage) — Opportunity backfill mapping, proven against real
+     * MySQL. Covers a representative slice of the mapping (architecture
+     * family -> DESIGN/INFERRED, construction -> CONSTRUCTION/INFERRED,
+     * inspection -> zero rows) rather than repeating the full SQLite
+     * matrix.
+     */
+    public function test_opportunity_backfill_mapping_on_real_mysql(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $map = $this->seedOneOpportunityPerLegacyValue($tenant);
+
+        Artisan::call('service-lines:backfill-opportunities');
+
+        $architectureRows = OpportunityServiceLine::query()->where('opportunity_id', $map['architecture']->id)->get();
+        $this->assertCount(1, $architectureRows);
+        $this->assertSame(ServiceLine::DESIGN, $architectureRows->first()->service_line);
+        $this->assertSame(ServiceLineProvenance::INFERRED, $architectureRows->first()->provenance);
+
+        $constructionRows = OpportunityServiceLine::query()->where('opportunity_id', $map['construction']->id)->get();
+        $this->assertCount(1, $constructionRows);
+        $this->assertSame(ServiceLine::CONSTRUCTION, $constructionRows->first()->service_line);
+        $this->assertSame(ServiceLineProvenance::INFERRED, $constructionRows->first()->provenance);
+
+        $this->assertSame(
+            0,
+            OpportunityServiceLine::query()->where('opportunity_id', $map['inspection']->id)->count()
+        );
+    }
+
+    /**
+     * @group mysql-parity
+     *
+     * Gate 3 Correction Round 1, item 6 — backfill idempotency, proven
+     * against real MySQL (firstOrCreate's unique-constraint-keyed lookup
+     * behaves identically to SQLite, but this proves it live rather than
+     * inferring it).
+     */
+    public function test_backfill_is_idempotent_on_real_mysql(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $this->seedOneOpportunityPerLegacyValue($tenant);
+
+        Artisan::call('service-lines:backfill-opportunities');
+        $firstRunCount = OpportunityServiceLine::query()->count();
+
+        Artisan::call('service-lines:backfill-opportunities');
+        $secondRunCount = OpportunityServiceLine::query()->count();
+
+        $this->assertGreaterThan(0, $firstRunCount);
+        $this->assertSame($firstRunCount, $secondRunCount);
+    }
 }

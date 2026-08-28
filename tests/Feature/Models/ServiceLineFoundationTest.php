@@ -479,4 +479,95 @@ class ServiceLineFoundationTest extends TestCase
 
         \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
     }
+
+    /**
+     * @group mysql-parity
+     *
+     * Gate 3 Correction Round 1, item 6 (canonical MySQL-parity CI
+     * coverage) — table/migration behavior. Runs only under
+     * `--group=mysql-parity` against a real MySQL connection (this repo's
+     * canonical mechanism); a local Docker harness alone is not
+     * sufficient evidence per the Owner's correction.
+     */
+    public function test_migration_creates_expected_tables_and_columns_on_real_mysql(): void
+    {
+        foreach (['opportunity_service_lines', 'project_service_lines'] as $table) {
+            $this->assertTrue(\Illuminate\Support\Facades\Schema::hasTable($table));
+            foreach (['id', 'tenant_id', 'service_line', 'provenance', 'source', 'created_by', 'created_at', 'updated_at'] as $column) {
+                $this->assertTrue(
+                    \Illuminate\Support\Facades\Schema::hasColumn($table, $column),
+                    "expected column [{$column}] on table [{$table}]"
+                );
+            }
+        }
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasColumn('opportunity_service_lines', 'opportunity_id'));
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasColumn('project_service_lines', 'project_id'));
+    }
+
+    /**
+     * @group mysql-parity
+     *
+     * Gate 3 Correction Round 1, item 6 — unique membership constraint,
+     * proven against real MySQL (a genuine duplicate-key QueryException
+     * from MySQL's InnoDB engine, not SQLite's).
+     */
+    public function test_duplicate_membership_is_rejected_by_unique_constraint_on_real_mysql(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $opportunity = $this->makeOpportunity($tenant);
+
+        $opportunity->serviceLines()->create([
+            'service_line' => ServiceLine::DESIGN,
+            'provenance' => ServiceLineProvenance::INFERRED,
+        ]);
+
+        $this->expectException(QueryException::class);
+        $opportunity->serviceLines()->create([
+            'service_line' => ServiceLine::DESIGN,
+            'provenance' => ServiceLineProvenance::CONFIRMED,
+        ]);
+    }
+
+    /**
+     * @group mysql-parity
+     *
+     * Gate 3 Correction Round 1, item 6 — tenant-parent integrity
+     * behavior, proven against real MySQL: both the explicit-child-
+     * tenant-mismatch path and the acting/current-tenant-mismatch path
+     * (Correction Round 1 item 1).
+     */
+    public function test_cross_tenant_writes_are_rejected_on_real_mysql(): void
+    {
+        $tenantA = Tenant::factory()->create();
+        $tenantB = Tenant::factory()->create();
+        $opportunityOfTenantB = $this->makeOpportunity($tenantB);
+
+        $row = new OpportunityServiceLine();
+        $row->tenant_id = (string) $tenantA->id;
+        $row->opportunity_id = (string) $opportunityOfTenantB->id;
+        $row->service_line = ServiceLine::DESIGN;
+        $row->provenance = ServiceLineProvenance::INFERRED;
+
+        try {
+            $row->save();
+            $this->fail('expected RuntimeException for explicit cross-tenant write');
+        } catch (RuntimeException $e) {
+            $this->assertSame(0, OpportunityServiceLine::query()->withoutGlobalScope('tenant')->count());
+        }
+
+        app()->instance('tenant', $tenantA);
+        try {
+            try {
+                $opportunityOfTenantB->serviceLines()->create([
+                    'service_line' => ServiceLine::CONSTRUCTION,
+                    'provenance' => ServiceLineProvenance::INFERRED,
+                ]);
+                $this->fail('expected RuntimeException for acting-tenant-context mismatch');
+            } catch (RuntimeException $e) {
+                $this->assertSame(0, OpportunityServiceLine::query()->withoutGlobalScope('tenant')->count());
+            }
+        } finally {
+            app()->forgetInstance('tenant');
+        }
+    }
 }

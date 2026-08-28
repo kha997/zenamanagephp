@@ -540,3 +540,75 @@ historical Project backfill, no `projects.tenant_id` schema cleanup, no
 runtime review/remediation UI, no unrelated refactors, no modification to
 `Opportunity.service_category`'s default or validation, no modification to
 any existing migration file.
+
+## Addendum — Gate 3 Correction Round 1 remediation (post-implementation)
+
+The Owner's Gate 3 Correction Round 1 review (full text preserved in
+`docs/owner-decisions/GAP-046/03-release.md`) found the implementation
+above technically sound but incomplete against the approved Gate-2 §5
+tenant-parent invariant and §12 acceptance matrix, and directed 6
+substantive corrections, all remediated within this same implementation
+session, still strictly within the original §11 boundary (no Gate-2
+reopening, no new files beyond the originally-planned set except test
+additions to the three existing GAP-046 test files):
+
+1. **Acting/current-tenant enforcement** (`EnforcesServiceLineIntegrity`):
+   the original design only rejected an *explicitly-set* conflicting
+   `child.tenant_id`. It did not reject current-tenant-context A + parent
+   belonging to tenant B + no explicit child tenant_id — a real gap
+   against Gate-2 §5's "acting/current tenant" wording. Fixed by adding
+   `resolveActingTenantId()`, mirroring `App\Traits\TenantScope`'s exact
+   precedence (`app('tenant')` → `current_tenant_id` → request attribute
+   `tenant_id`; `TenantScope` itself untouched), checked in addition to
+   the existing explicit-child-tenant_id check. No bound tenant context
+   (CLI backfill) remains unaffected.
+2. **Update-path integrity**: the original trait only hooked `creating`.
+   Switched to `saving` (fires on both insert and update) so canonical
+   `service_line`/`provenance`/resolvable-parent/tenant-congruence are
+   re-checked on every persisted write, not only inserts. This also
+   naturally covers "reassign `parent_id` to a different-tenant parent"
+   (the already-persisted `tenant_id` becomes explicit input checked
+   against the newly-resolved parent).
+3. **Strengthened acceptance J** (`BackfillOpportunityServiceLinesTest`):
+   added `test_backfill_creates_zero_rows_for_the_linked_converted_project`,
+   which links a legacy-mappable Opportunity's `converted_project_id` to a
+   real, pre-existing Project and proves the backfill populates the
+   Opportunity side while leaving the linked historical Project at zero
+   rows — a genuinely discriminating test, unlike the original's unrelated
+   empty Project.
+4. **Strengthened acceptance K** (`OpportunityConversionUnchangedTest`):
+   added `test_won_to_project_conversion_does_not_propagate_existing_canonical_membership`,
+   which seeds a real canonical Service-Line row on the Opportunity
+   *before* calling the real conversion endpoint and proves it survives
+   unchanged while the new Project still receives zero rows.
+5. **Canonical `@group mysql-parity` CI coverage**: added 5 new,
+   dedicated test methods (not re-tagging existing ones, so nothing is
+   removed from the default SQLite suite) across
+   `ServiceLineFoundationTest.php` and `BackfillOpportunityServiceLinesTest.php`,
+   covering table/migration behavior, the unique constraint,
+   tenant-parent integrity (incl. acting-tenant mismatch), Opportunity
+   backfill mapping, and backfill idempotency — matching the exact
+   method-level `@group mysql-parity` convention already established by
+   `tests/Feature/DatabaseConstraintsTest.php`. No `.github/**` file
+   touched.
+6. **Set-membership indexes**: added `(tenant_id, service_line)` indexes
+   to both new migrations (`opp_service_lines_tenant_line_index`,
+   `proj_service_lines_tenant_line_index`) — the existing unique index
+   orders `parent_id` before `service_line`, so it does not efficiently
+   serve "all X-tenant subjects with Service-Line Y" queries. Existing
+   unique constraints retained; no pre-existing migration touched.
+
+All 6 corrections followed strict TDD (RED observed for the expected
+reason, then GREEN) except items 3/4, whose strengthened tests correctly
+pass immediately with zero production-code change — the expected result
+for a negative-assertion proof over a mechanism (Project-side backfill,
+runtime propagation) that was never built in the first place; a RED result
+there would itself have indicated a real defect.
+
+Remediation touched exactly: `app/Models/Concerns/EnforcesServiceLineIntegrity.php`,
+both new migrations, and the three existing GAP-046 test files. No
+forbidden surface (`OpportunityController`, `LeadController`,
+`CrmPageController`, `DesignItemPageController`, `BusinessKpiService`, any
+pre-existing migration, `routes/**`, `resources/**`, RBAC/policies,
+`projects.tenant_id` schema, `.github/**`, or any other Work ID) was
+touched — confirmed by explicit diff grep.

@@ -104,7 +104,7 @@ trait EnforcesServiceLineIntegrity
             return $tenantId !== null ? (string) $tenantId : null;
         }
 
-        if (function_exists('request') && request()?->attributes->has('tenant_id')) {
+        if (function_exists('request') && request()->attributes->has('tenant_id')) {
             $tenantId = request()->attributes->get('tenant_id');
 
             return $tenantId !== null ? (string) $tenantId : null;

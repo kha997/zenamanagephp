@@ -1,14 +1,14 @@
 ---
 work_id: GAP-046
 gate: 3
-gate_status: changes_requested
+gate_status: awaiting_owner
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: correction_requested
+  value: none
   authority: human_owner
-decision_requested: null
+decision_requested: "approve_or_correction_or_defer"
 references:
   spec: docs/superpowers/specs/2026-08-25-gap-046-service-line-foundation-design.md
   plan: docs/superpowers/plans/2026-08-28-gap-046-service-line-foundation-implementation.md
@@ -25,15 +25,15 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-28T09:18:14Z"
-  updated_at: "2026-08-29T00:00:00Z"
+  updated_at: "2026-08-28T18:46:38Z"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "GAP-046 implementation (Canonical Service-Line Foundation: ServiceLine/ServiceLineProvenance constants; opportunity_service_lines + project_service_lines migrations, Option B; OpportunityServiceLine/ProjectServiceLine models sharing EnforcesServiceLineIntegrity for value validation + parent-derived tenant_id enforcement; Opportunity::serviceLines()/Project::serviceLines() relations; service-lines:backfill-opportunities idempotent Opportunity-side-only backfill) is technically complete, strictly within the approved Gate-2 §11 boundary, and verified. Diff against canonical baseline 9944e1b50de515accb68bd5fd67347747620c6d3 is exactly 15 files, 1583 insertions, 0 deletions, 0 modifications to any pre-existing production file's behavior beyond the two additive relation methods on Opportunity.php/Project.php (12/13 lines each, doc comment + method only) — confirmed by explicit grep across the diff for OpportunityController, LeadController, CrmPageController, DesignItemPageController, BusinessKpiService, and every pre-existing migration filename: zero matches. TDD followed strictly: every behavior slice (constants, migrations, models+relations, backfill command, no-propagation regression) was committed only after its test was observed RED for the expected reason (class/method/command not found) and then GREEN. 24 focused GAP-046 tests pass on SQLite; the same 24 were independently re-run against a real MySQL 8.0 container (same image used by this repo's CI) with identical results, and the two new migrations' up()/down() round-trip was verified separately on both SQLite and that real MySQL instance, confirming SHOW CREATE TABLE output carries genuine DB-level FK constraints (opp_service_lines_tenant_id_foreign, opp_service_lines_opportunity_id_foreign, proj_service_lines_tenant_id_foreign, proj_service_lines_project_id_foreign, both created_by FKs) and the (tenant_id, opportunity_id, service_line) / (tenant_id, project_id, service_line) unique constraints — not merely SQLite-level or application-level claims. All acceptance criteria A-K independently proven by name (see full report). All 33 live CI checks on exact PR #292 head 037758fff502d738eac31e1a08a8e7a4e3701c2b are green (Owner Governance Lint, test-routes-guardrails, Unit/Feature/Integration/API Tests, Zena RBAC/Tenant Invariants incl. MySQL parity, Document Workflow/RFI Escalation/Treasury Native CHECK Constraints real-MySQL jobs, Security/Code-Quality/Dependency/License/Docker scans, Performance Tests, browser-tests, staging-smoke, coverage-report, quality-gate); deploy correctly shows 'skipping' (no production deployment occurred or is implied, consistent with this repo's established pattern when deploy secrets are not configured for a Draft PR). One real defect was found and fixed during CI verification, not silently absorbed: PHPStan flagged missingType.generics on the four new relation methods (no Larastan in this repo, so HasMany/BelongsTo generics must be declared explicitly) — fixed with the exact @return <Type><Generic> PHPDoc convention already used by Project::designItems(), annotation-only, zero behavior change, re-verified green both locally (all 24 GAP-046 tests still pass) and on the next live CI run. This packet requests Owner Gate 3 decision only; it does not request or imply Ready-for-review, merge, release, or deployment authorization."
+mandatory_technical_gate_summary: "RE-PRESENTATION after Owner Gate 3 Correction Round 1 (full directive preserved verbatim in decision_provenance.owner_response_reference and in this file's 'Correction Round 1' body section). All 6 directed corrections are remediated and independently re-verified: (1) EnforcesServiceLineIntegrity now also rejects an acting/current-tenant-context mismatch (mirroring TenantScope's exact precedence: app('tenant') -> current_tenant_id -> request attribute tenant_id) even with no explicit child tenant_id set, proven by 3 new RED->GREEN tests per side; (2) the trait now hooks `saving` (not `creating`), enforcing canonical service_line/provenance/resolvable-parent/tenant-congruence on updates too, proven by 3 new RED->GREEN tests per side (invalid service_line update, invalid provenance update, cross-tenant parent-reassignment update); (3) acceptance J is now proven via a real Opportunity.converted_project_id link to a pre-existing Project (not an unrelated empty one); (4) acceptance K is now proven with a real canonical Service-Line row seeded on the Opportunity BEFORE conversion, surviving unchanged while the new Project stays at zero rows; (5) GAP-046 DB behavior now runs inside this repo's canonical @group mysql-parity live-CI mechanism via 5 new dedicated test methods (not replacing/removing any default-suite test) added to the two existing GAP-046 test files, matching the exact method-level-tag convention already established by tests/Feature/DatabaseConstraintsTest.php; live-log-verified via `gh run view --job=98944492511 --log` on PR #292's Zena RBAC/Tenant Invariants (MySQL parity) job -- all 5 GAP-046 test method names appear explicitly in that job's own log output with a final `Tests: 41 passed (1278 assertions)` summary and zero FAILURES/ERRORS; (6) both new migrations now carry an explicit (tenant_id, service_line) index (opp_service_lines_tenant_line_index / proj_service_lines_tenant_line_index), independently verified present via SQLite PRAGMA index_list AND real MySQL SHOW INDEX. Remediation touched exactly: app/Models/Concerns/EnforcesServiceLineIntegrity.php, both new migrations, and the three existing GAP-046 test files (36/36 default-suite GAP-046 tests pass, up from 24; +5 mysql-parity-only tests) -- confirmed by explicit diff grep that no forbidden surface (OpportunityController, LeadController, CrmPageController, DesignItemPageController, BusinessKpiService, any pre-existing migration, routes/**, resources/**, .github/**, GAP-041/042/045/047) was touched. One additional real defect was found and fixed during this remediation's own CI verification: PHPStan's nullsafe.neverNull on request()?->attributes in the new resolveActingTenantId() helper (request()'s return type resolves non-nullable; fixed by dropping the unnecessary ?->, zero behavior change). Full local regression suite re-run post-remediation: 2374 tests, 7 pre-existing failures byte-identical by name to the Round-0 set (all in Tests\\Feature\\Dashboard\\DashboardApiTest, unrelated to GAP-046), zero new failures. All 33 live CI checks green on exact current subject_sha/PR-head 829d275f1d9f68af9859db9a558404ed600f20c5 (Owner Governance Lint, test-routes-guardrails, Zena RBAC/Tenant Invariants MySQL parity, Unit/Feature/Integration/API Tests, all real-MySQL concurrency/constraint jobs, security/quality scans, browser-tests polled to genuine 16m33s completion, quality-gate) -- zero evidence-freshness timing-race reruns needed this round (unlike Round 0's two occurrences). deploy correctly shows 'skipping'; workflow success is not described as a deployment. This packet requests Owner Gate 3 decision only; it does not request or imply Ready-for-review, merge, release, or deployment authorization. No self-approval: owner_decision.value stays none, owner_decision_binding stays null."
 technical_evidence:
-  subject_sha: "037758fff502d738eac31e1a08a8e7a4e3701c2b"
-  implementation_tree_digest: "35d9d9c8d44a745aa284cbfaf77b03039801b091a90da2a069b535ad604a472b"
-  verified_pr_head_sha: "037758fff502d738eac31e1a08a8e7a4e3701c2b"
-  verified_at: "2026-08-28T09:18:14Z"
+  subject_sha: "829d275f1d9f68af9859db9a558404ed600f20c5"
+  implementation_tree_digest: "acb7c8dac62a2b750711a0462991c0cfe0527d4698f0c4a9392f21a9e69ced2c"
+  verified_pr_head_sha: "829d275f1d9f68af9859db9a558404ed600f20c5"
+  verified_at: "2026-08-28T18:46:38Z"
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null
@@ -93,166 +93,170 @@ preserved permanently and must not be removed by any future revision.
 
 ---
 
-## Status (post-remediation): re-presented — see "Re-Presentation" section below
+## Original Submission (Round 0) — historical, superseded by remediation below
+
+The original submission (subject_sha `037758fff502d738eac31e1a08a8e7a4e3701c2b`,
+digest `35d9d9c8d44a745aa284cbfaf77b03039801b091a90da2a069b535ad604a472b`)
+was reviewed and returned **CORRECTION REQUESTED** above. Its full original
+evidence body (three-SHAs table, diff stat, acceptance-matrix table,
+MySQL-evidence section, local/CI verification summaries, and two
+evidence-freshness timing-race notes on the now-superseded intermediate
+heads `a4da050b`/`54be709e`) is preserved verbatim in this file's git
+history (commits `a4da050b` through `63f8636f`) and is **not** repeated
+here to avoid stale "current PR head" claims, per the Owner's explicit
+instruction. That evidence is historical only — do not cite it as current
+Gate-3 evidence. The remediated, current evidence is below.
+
+## Round 1 Remediation Complete — Re-Presentation
 
 This packet is prepared following the approved GAP-046 Gate 2 design
 (`docs/owner-decisions/GAP-046/02-design.md`, Owner Round 2 FINAL APPROVAL,
-squash-merged to main at `9944e1b50de515accb68bd5fd67347747620c6d3`) and the
-implementation plan `docs/superpowers/plans/2026-08-28-gap-046-service-line-foundation-implementation.md`.
-It records technical readiness for Owner review only. **It does not
-authorize Ready-for-review, merge, release, or production deployment** —
-those require a separate, explicit Owner instruction after Gate 3 is
-decided.
+squash-merged to main at `9944e1b50de515accb68bd5fd67347747620c6d3`), the
+implementation plan `docs/superpowers/plans/2026-08-28-gap-046-service-line-foundation-implementation.md`
+(see its "Addendum — Gate 3 Correction Round 1 remediation" section), and
+the Correction Round 1 directive recorded permanently above. It records
+technical readiness for Owner review only. **It does not authorize
+Ready-for-review, merge, release, or production deployment** — those
+require a separate, explicit Owner instruction after Gate 3 is decided.
 
-## Three SHAs — do not conflate
+### Three SHAs — do not conflate
 
 1. **Canonical implementation baseline:** `9944e1b50de515accb68bd5fd67347747620c6d3`
-   (main, the approved Gate-2 PR #288 squash-merge SHA; verified identical
-   to `origin/main` at the start of this implementation session — zero
-   drift).
-2. **Implementation subject_sha / current PR head (identical in this
-   case):** `037758fff502d738eac31e1a08a8e7a4e3701c2b` — the last commit on
-   PR #292 before this Gate-3 record; what `technical_evidence.implementation_tree_digest`
-   is computed against.
-3. This packet's own commit (adding this file) is excluded from the
+   (main, the approved Gate-2 PR #288 squash-merge SHA — unchanged since
+   Round 0, zero drift).
+2. **Implementation subject_sha (current, superseding Round 0's
+   `037758ff`):** `829d275f1d9f68af9859db9a558404ed600f20c5` — the last
+   commit on PR #292 changing non-Gate-3-record content; what
+   `technical_evidence.implementation_tree_digest` below is computed
+   against.
+3. **Current PR head (identical to subject_sha as of this packet's
+   commit):** `829d275f1d9f68af9859db9a558404ed600f20c5`. This packet's
+   own commit (adding/updating this file) is excluded from the
    implementation-tree digest by construction
-   (`owner_governance_compute_implementation_tree_digest()` excludes exactly
-   `docs/owner-decisions/GAP-046/03-release*.md`), so the digest is
-   unchanged whether recomputed before or after this file's own commit —
-   only a change to any OTHER file would move it.
+   (`owner_governance_compute_implementation_tree_digest()` excludes
+   exactly `docs/owner-decisions/GAP-046/03-release*.md`), so pushing this
+   commit alone will not move the digest away from the value recorded
+   below — only a change to any OTHER file would.
 
-## What changed (`9944e1b50de515accb68bd5fd67347747620c6d3` → `037758fff502d738eac31e1a08a8e7a4e3701c2b`)
+### Remediation diff (`63f8636f` Round-0 head → `829d275f` current subject_sha)
 
 ```
- app/Console/Commands/BackfillOpportunityServiceLines.php                          | 122 ++
- app/Models/Concerns/EnforcesServiceLineIntegrity.php                              |  64 ++
- app/Models/Opportunity.php                                                        |  12 +
- app/Models/OpportunityServiceLine.php                                             |  60 ++
- app/Models/Project.php                                                            |  13 +
- app/Models/ProjectServiceLine.php                                                 |  63 ++
- app/Support/ServiceLine.php                                                       |  20 ++
- app/Support/ServiceLineProvenance.php                                             |  24 ++
- database/migrations/2026_08_28_120000_create_opportunity_service_lines_table.php  |  43 ++
- database/migrations/2026_08_28_120001_create_project_service_lines_table.php      |  46 ++
- docs/superpowers/plans/2026-08-28-gap-046-service-line-foundation-implementation.md | 542 ++
- tests/Feature/Console/BackfillOpportunityServiceLinesTest.php                     | 191 ++
- tests/Feature/Crm/OpportunityConversionUnchangedTest.php                          |  86 ++
- tests/Feature/Models/ServiceLineFoundationTest.php                                | 268 ++
- tests/Unit/Support/ServiceLineTest.php                                            |  29 ++
- 15 files changed, 1583 insertions(+)
+ app/Models/Concerns/EnforcesServiceLineIntegrity.php                              |  60 ++--
+ database/migrations/2026_08_28_120000_create_opportunity_service_lines_table.php  |   6 +
+ database/migrations/2026_08_28_120001_create_project_service_lines_table.php      |   6 +
+ docs/superpowers/plans/2026-08-28-gap-046-service-line-foundation-implementation.md |  72 ++
+ tests/Feature/Console/BackfillOpportunityServiceLinesTest.php                     | 105 ++
+ tests/Feature/Crm/OpportunityConversionUnchangedTest.php                          |  76 ++
+ tests/Feature/Models/ServiceLineFoundationTest.php                                | 305 ++
+ 7 files changed (across 5 commits: a1706725, a828d126, 530f6549, cdeb1e5f, 829d275f)
 ```
 
-Exactly the substantive scope §11 of the approved Gate-2 design authorized:
-2 migrations, shared value constants, 2 thin models + shared integrity
-trait, 2 relations (12/13-line additive diffs on `Opportunity.php`/`Project.php`
-— doc comment + method only, no other line touched), 1 backfill command,
-focused tests, the implementation plan, and (this commit) the Gate-3
-packet. No unrelated file. Explicit grep across the full diff for
+Exactly the remediation scope the Correction Round 1 directive authorized:
+`EnforcesServiceLineIntegrity.php`, both new migrations, the three existing
+GAP-046 test files, and truthful plan/packet updates. No new test file was
+needed (5 new `@group mysql-parity` methods were added to the two existing
+test files instead, per the directive's own preference for tagging
+existing files). Explicit grep across the full remediation diff for
 `OpportunityController`, `LeadController`, `CrmPageController`,
-`DesignItemPageController`, `BusinessKpiService`, and every pre-existing
-migration filename: **zero matches**.
+`DesignItemPageController`, `BusinessKpiService`, any pre-existing
+migration, `routes/`, `resources/`, `.github/`, and GAP-041/042/045/047:
+**zero matches**.
 
-## Acceptance matrix (Gate 2 §12) — proof by test
+### Acceptance matrix (Gate 2 §12) — proof by test, updated
 
 | # | Criterion | Proof |
 |---|---|---|
 | A | `service_line` accepts exactly DESIGN/CONSTRUCTION/INSPECTION | `ServiceLineFoundationTest::test_service_line_accepts_exactly_the_three_canonical_values` |
-| B | Invalid `service_line`/`provenance` rejected | `test_invalid_service_line_is_rejected`, `test_invalid_provenance_is_rejected` |
+| B | Invalid `service_line`/`provenance` rejected (create AND update) | `test_invalid_service_line_is_rejected`, `test_invalid_provenance_is_rejected`, `test_update_to_invalid_service_line_is_rejected_for_opportunity`, `test_update_to_invalid_provenance_is_rejected_for_opportunity`, `test_update_to_invalid_service_line_is_rejected_for_project`, `test_update_to_invalid_provenance_is_rejected_for_project` |
 | C | Legacy architecture family → DESIGN/INFERRED only | `BackfillOpportunityServiceLinesTest::test_architecture_family_creates_only_design_inferred_rows` |
 | D | Legacy construction → CONSTRUCTION/INFERRED only | `test_construction_creates_only_construction_inferred_row` |
 | E | inspection/consulting/combined_package → zero rows | `test_inspection_consulting_combined_package_create_zero_rows` |
-| F | null/unrecognized → zero rows | `test_unrecognized_creates_zero_rows` (unrecognized string proxy — `service_category` is NOT NULL at the DB level, so a literal null is not representable; documented in the test) |
+| F | null/unrecognized → zero rows | `test_unrecognized_creates_zero_rows` (unrecognized-string proxy — `service_category` is NOT NULL at the DB level; documented in the test) |
 | G | Backfill never CONFIRMED | `test_backfill_never_creates_confirmed_provenance` |
-| H | Backfill idempotent | `test_backfill_is_idempotent` |
-| I | Cross-tenant write rejected, both sides | `ServiceLineFoundationTest::test_cross_tenant_write_is_rejected_for_opportunity`, `test_cross_tenant_write_is_rejected_for_project` |
-| J | Project-side backfill count exactly zero | `test_project_service_lines_table_has_zero_rows_by_default` (+ no Project-side backfill mechanism exists anywhere in the diff) |
-| K | No runtime Opportunity→Project propagation | `OpportunityConversionUnchangedTest::test_won_to_project_conversion_creates_zero_service_line_rows` |
+| H | Backfill idempotent | `test_backfill_is_idempotent` (+ `test_backfill_is_idempotent_on_real_mysql`) |
+| I | Cross-tenant write rejected, both sides, both explicit-child-tenant-id AND acting/current-tenant-context mismatch, both create AND update | `test_cross_tenant_write_is_rejected_for_opportunity`, `test_cross_tenant_write_is_rejected_for_project`, `test_acting_tenant_mismatch_is_rejected_for_opportunity_even_without_explicit_child_tenant_id`, `test_acting_tenant_mismatch_is_rejected_for_project_even_without_explicit_child_tenant_id`, `test_acting_tenant_matching_parent_tenant_is_permitted`, `test_update_reassigning_parent_to_different_tenant_is_rejected_for_opportunity`, `test_update_reassigning_parent_to_different_tenant_is_rejected_for_project` (+ `test_cross_tenant_writes_are_rejected_on_real_mysql`) |
+| J | Project historical-backfill count exactly zero, proven against a REAL linked converted_project_id | `test_backfill_creates_zero_rows_for_the_linked_converted_project` (strengthened per Correction Round 1 item 3; supersedes the original `test_project_service_lines_table_has_zero_rows_by_default`, which remains as an additional, weaker check) |
+| K | No runtime Opportunity→Project propagation, proven even when the Opportunity carries a REAL canonical membership row before conversion | `test_won_to_project_conversion_does_not_propagate_existing_canonical_membership` (strengthened per Correction Round 1 item 4; supersedes the original `test_won_to_project_conversion_creates_zero_service_line_rows`, which remains as an additional, weaker check) |
 
-Also proven: tenant-scoped visibility (`test_tenant_scoped_visibility`),
-unique-constraint duplicate rejection via real DB exception
-(`test_duplicate_membership_is_rejected_by_unique_constraint`), tenant_id
-derivation from parent (`test_tenant_id_is_derived_from_opportunity_parent_not_caller_input`),
-both relations' seeded-row behavior, migration up/down round-trip
-(`test_migration_round_trip_leaves_no_trace`), dry-run writes nothing,
-`service_category` never modified by backfill.
+Also proven: tenant-scoped visibility, unique-constraint duplicate
+rejection via real DB exception (SQLite AND real MySQL), tenant_id
+derivation from parent, both relations' seeded-row behavior, migration
+up/down round-trip, dry-run writes nothing, `service_category` never
+modified by backfill, `(tenant_id, service_line)` index exists on both
+tables (SQLite `PRAGMA index_list` AND real MySQL `SHOW INDEX`).
 
-## MySQL vs SQLite vs application-layer — explicit distinction
+### MySQL vs SQLite vs application-layer — explicit distinction, updated
 
-- **SQLite:** `php artisan migrate:fresh --env=testing` succeeds (full
-  existing chain + the 2 new migrations); `migrate:rollback --step=2`
-  removes exactly `opportunity_service_lines`/`project_service_lines`,
-  confirmed via `Schema::hasTable()`, with `opportunities`/`projects`
-  confirmed still present and unaltered.
-- **Real MySQL 8.0** (local Docker `mysql:8.0`, the same image this repo's
-  CI uses as a service container): identical migrate/rollback round-trip
-  verified independently; `SHOW CREATE TABLE opportunity_service_lines` /
-  `project_service_lines` inspected directly, confirming genuine DB-level
-  `CONSTRAINT ... FOREIGN KEY` clauses (not merely declared in the
-  migration) for `tenant_id`, `opportunity_id`/`project_id`, and
-  `created_by`, plus a genuine `UNIQUE KEY` on
-  `(tenant_id, opportunity_id|project_id, service_line)`; all 24 focused
-  GAP-046 tests re-run against this real MySQL instance with identical
-  pass results to SQLite, including the unique-constraint-violation test
-  (raises a real MySQL duplicate-key `QueryException`, not a SQLite-only
-  behavior).
-- **Live CI real MySQL:** PR #292's `test-routes-guardrails`,
-  `Document Workflow Concurrency (real MySQL)`, `RFI Escalation
-  Concurrency (real MySQL)`, and `Treasury Native CHECK Constraints (real
-  MySQL)` jobs all independently ran `php artisan migrate:fresh` (building
-  the complete schema including the two new tables) against a real
-  `mysql:8.0` GitHub Actions service container and passed — corroborating
-  the local Docker evidence above in the exact CI environment. The two new
-  GAP-046 test files are not tagged `@group mysql-parity` and so do not run
-  inside CI's dedicated `mysql-parity`-filtered step specifically; the
-  local real-MySQL run above is the evidence source for GAP-046's own
-  test-level MySQL behavior, corroborated by CI's independent proof that
-  the migrations build cleanly on the exact same MySQL image/version.
+- **SQLite:** migrate/rollback round-trip re-verified clean after
+  remediation (only the two GAP-046 tables affected).
+- **Real MySQL 8.0** (local Docker `mysql:8.0`, same image as CI): migrate/
+  rollback round-trip re-verified clean; `SHOW INDEX FROM opportunity_service_lines`/
+  `project_service_lines` independently confirms the new
+  `opp_service_lines_tenant_line_index`/`proj_service_lines_tenant_line_index`
+  indexes exist with the expected `(tenant_id, service_line)` column
+  order; all 36 default-suite GAP-046 tests plus all 5 new
+  `@group mysql-parity` tests re-run against this instance, 41/41 pass.
+- **Live CI canonical `@group mysql-parity` mechanism (Correction Round 1
+  item 5 — the specific gap the Owner identified):** PR #292's
+  `Zena RBAC/Tenant Invariants (MySQL parity)` job (run `33199324422`,
+  job `98944492511`) log independently inspected via
+  `gh run view --job=98944492511 --log`: explicitly names all 5 new
+  GAP-046 test methods executing (`Tests\Feature\Console\BackfillOpportunityServiceLinesTest::test_opportunity_backfill_mapping_on_real_mysql`,
+  `::test_backfill_is_idempotent_on_real_mysql`,
+  `Tests\Feature\Models\ServiceLineFoundationTest::test_migration_creates_expected_tables_and_columns_on_real_mysql`,
+  `::test_duplicate_membership_is_rejected_by_unique_constraint_on_real_mysql`,
+  `::test_cross_tenant_writes_are_rejected_on_real_mysql` — each appears
+  by name in that job's own log output, not inferred), with the job's
+  final summary line `Tests: 41 passed (1278 assertions)` and zero
+  FAILURES/ERRORS anywhere in the log. This directly satisfies the Owner's
+  instruction that "migrations built successfully" is not sufficient —
+  this is test-name-level, log-verified proof of GAP-046 behavior
+  executing on real MySQL inside the canonical CI mechanism.
 - **Application-layer tenant congruence (explicitly not a DB-level
-  guarantee, per Gate 2 §5's stated limitation):** the cross-tenant-write
-  rejection (criterion I) is enforced by `EnforcesServiceLineIntegrity`'s
-  `creating` hook at the Eloquent model layer, not by a portable composite
-  DB-level `(tenant_id, opportunity_id)`/`(tenant_id, project_id)` FK —
-  `projects.tenant_id`'s legacy `string` (non-`ulid`) typing makes a
-  portable such constraint on the Project side impractical within this
-  Work ID's scope, exactly as Gate 2 §5 anticipated and explicitly
-  permitted this design not to attempt. This is stated here truthfully,
-  not implied to be a DB-level guarantee.
+  guarantee, per Gate 2 §5's stated limitation — unchanged by remediation,
+  still truthfully stated):** `projects.tenant_id`'s legacy `string`
+  (non-`ulid`) typing still makes a portable composite DB-level FK
+  impractical on the Project side within this Work ID's scope. The
+  remediation strengthens the *application-layer* enforcement (acting-tenant
+  check, update-path check) but does not and was not directed to change
+  this stated DB-level limitation.
 
-## Local verification summary
+### Local verification summary (post-remediation)
 
-- `tests/Unit/Support/ServiceLineTest.php`: 3/3 pass.
-- `tests/Feature/Models/ServiceLineFoundationTest.php`: 12/12 pass.
-- `tests/Feature/Console/BackfillOpportunityServiceLinesTest.php`: 8/8 pass.
-- `tests/Feature/Crm/OpportunityConversionUnchangedTest.php`: 1/1 pass.
-- Total focused: **24/24 pass**, on both SQLite and real MySQL 8.0.
-- `tests/Unit/Services/BusinessKpiServiceTest.php`,
-  `tests/Feature/Zena/AiDesignItemSuggestionTest.php`,
-  `tests/Feature/Models/TenantScopedCrmModelsTest.php`,
-  `tests/Feature/Models/OpportunityAppointmentModelTest.php`: 24/24 pass,
-  unmodified — zero regression in the two documented `service_category`
-  consumers or the broader CRM tenant-scoping guard.
-- Full local suite (`--testsuite=Unit,Feature,Integration`, SQLite, with
-  the complete GAP-046 diff present): 2353 tests, 2346 pass, 7 pre-existing
-  failures, all in `Tests\Feature\Dashboard\DashboardApiTest` (dashboard
-  widget customization — an area with no code path touched by this diff;
-  consistent with previously-documented Redis-cache-store debt unrelated to
-  CRM/Opportunity/Project). 42 skipped (pre-existing, unrelated).
-- `php scripts/ssot/owner_governance_lint.php`: PASS (95 files scanned, 0
+- All four GAP-046 test files, default suite: **36/36 pass** (was 24 at
+  Round 0; +9 new integrity tests, +1 new J test, +1 new K test, +1 index
+  test = +12, netting 36; two Round-0 tests were superseded-but-retained
+  rather than deleted).
+- The same 36, re-run against real MySQL 8.0: **36/36 pass**, identical
+  results to SQLite.
+- The 5 new `@group mysql-parity`-tagged tests: **5/5 pass** locally
+  against real MySQL, confirmed excluded from the default run (`--list-tests`
+  and `--exclude-group mysql-parity` both show exactly the pre-existing 22
+  in `ServiceLineFoundationTest`/9 in `BackfillOpportunityServiceLinesTest`
+  visible by default; `--group mysql-parity` shows exactly the 5 new ones).
+- Regression suite (`BusinessKpiServiceTest`, `AiDesignItemSuggestionTest`,
+  `TenantScopedCrmModelsTest`, `OpportunityAppointmentModelTest`): 24/24
+  pass, unmodified.
+- Combined focused + regression: **60/60 pass**.
+- Full local suite (`--testsuite=Unit,Feature,Integration`, SQLite, full
+  post-remediation diff present): 2374 tests, 2367 pass, **7 pre-existing
+  failures — byte-identical to the exact same 7 `Tests\Feature\Dashboard\DashboardApiTest`
+  methods reported at Round 0** (confirmed by name-for-name comparison),
+  42 skipped (pre-existing, unrelated). Zero new failures from remediation.
+- `php scripts/ssot/owner_governance_lint.php`: PASS (96 files, 0
   violations).
 - `php scripts/ssot/owner_governance_lint.php --enforce-gate-ordering`:
-  PASS (0 violations) — required one fix during this session: the
-  implementation plan initially lacked `owner_governance_version`/
-  `owner_gate_2_record` frontmatter fields required by
-  `docs/owner-governance/GOVERNED_DOCUMENT_FRONTMATTER.md`; corrected in
-  commit `907bd847`, re-verified PASS.
-- `php scripts/ci/lint-mysql-claim-truthfulness.php`: PASS (15 files
-  scanned).
+  PASS (0 violations).
+- `php scripts/ci/lint-mysql-claim-truthfulness.php`: PASS.
+- Migration round-trip (SQLite AND real MySQL): re-verified clean after
+  remediation, both directions, only the two GAP-046 tables affected.
 
-## Live CI — exact PR #292 head `037758fff502d738eac31e1a08a8e7a4e3701c2b`
+### Live CI — exact current subject_sha / PR head `829d275f1d9f68af9859db9a558404ed600f20c5`
 
-All 33 checks green (`gh pr checks 292`, independently re-verified after
-full settlement, including a job — `browser-tests` — that took ~19 minutes
-and was polled to completion rather than assumed):
+All 33 checks green, independently re-verified via direct synchronous
+`gh pr checks 292` calls after full settlement (exit code 0, zero
+reruns needed this round — unlike Round 0, no evidence-freshness timing
+race occurred on this head):
 
 API Tests (Fast), API Tests (Slow), Code Quality Analysis, Dependency
 Vulnerability Scan, Docker Security Scan, Document Workflow Concurrency
@@ -261,100 +265,74 @@ Vulnerability Scan, Docker Security Scan, Document Workflow Concurrency
 Performance Tests (PerformanceMonitoringTest.php), RFI Escalation
 Concurrency (real MySQL), Repo Hygiene Guards, Security Tests, Security
 Vulnerability Scan, Test Coverage Report, Treasury Native CHECK Constraints
-(real MySQL), Trivy, Unit Tests, Zena RBAC/Tenant Invariants, Zena
-RBAC/Tenant Invariants (MySQL parity), browser-tests, button-inventory-check,
+(real MySQL), Trivy, Unit Tests, Zena RBAC/Tenant Invariants, **Zena
+RBAC/Tenant Invariants (MySQL parity)** (log-inspected, see above),
+browser-tests (16m33s, polled to genuine completion), button-inventory-check,
 code-quality, coverage-report, feature-tests, security-tests, staging-smoke,
 **test-routes-guardrails**, test, quality-gate — all `pass`. `deploy`:
-`skipping` (no deployment occurred or is implied).
+`skipping` (no deployment occurred or is implied; workflow success is not
+described as a deployment).
 
-One genuine defect was found by live CI and fixed within approved scope: an
-earlier head (`e420b192`) failed the `Security Tests` job's PHPStan step
-with 4 `missingType.generics` errors on the 4 new relation methods (this
-repo has no Larastan, so `HasMany`/`BelongsTo` generics require explicit
-`@return` PHPDoc — confirmed via the existing `Project::designItems()`
-convention). Fixed in commit `037758ff`, annotation-only, zero behavior
-change, re-verified green both locally (24/24 GAP-046 tests) and on the
-next live CI run.
+Two genuine defects were found by live CI during remediation and fixed
+within approved scope, not silently absorbed:
 
-A second, non-code CI-timing artifact was observed and resolved on this
-Gate-3-record commit (`a4da050b`), the same class of artifact previously
-documented in GAP-039/GAP-043/GAP-047: `Owner Governance Lint`'s
-evidence-freshness step ran early in the check matrix and, per its
-designed fail-closed behavior, correctly failed because `browser-tests`
-(a ~17-19 minute job) and its downstream `coverage-report`/`quality-gate`
-jobs had not yet reached a terminal state within evidence-freshness's
-300-second wait window — `gate_status is 'awaiting_owner' but 2 other
-check(s) on PR #292's current head are not green (pending or failed) after
-waiting up to 300s`. This is the check working as designed, not a defect:
-once `browser-tests`/`coverage-report`/`quality-gate` genuinely finished
-green, `gh run rerun 33158919014 --failed` was run and `Owner Governance
-Lint` passed clean (27s) with zero code/content changes. All 34 checks on
-the Gate-3-record head `a4da050b7fc08ec46fa9d2dd786425da2f536098`
-(one commit past `subject_sha` — only this Gate-3 record file differs,
-excluded from the digest by construction) were green, independently
-re-verified via `gh pr checks 292` after full settlement.
+1. An intermediate head (`cdeb1e5f`) failed `Code Quality Analysis`/
+   `Security Tests`' PHPStan step with `nullsafe.neverNull` on
+   `EnforcesServiceLineIntegrity::resolveActingTenantId()` —
+   `request()?->attributes` flagged because PHPStan resolves `request()`'s
+   return type as non-nullable. Fixed in commit `829d275f`: dropped the
+   unnecessary `?->` (the `function_exists('request')` guard already
+   covers the helper-undefined case). Annotation/syntax-only, zero
+   behavior change.
+2. (Carried forward from Round 0, already fixed before Correction Round 1:
+   the 4 `missingType.generics` PHPStan findings on the new relation
+   methods, fixed in commit `037758ff` — not reintroduced by remediation.)
 
-Because every push (including a Gate-3-record-only push) re-triggers this
-repository's full CI matrix, committing the paragraph above (at head
-`54be709e38b6087a22471f8678163e159add6aa3`, also a Gate-3-record-only
-commit, digest/subject_sha still unchanged) triggered a fresh CI run that
-hit the identical evidence-freshness timing race a second time, for the
-identical structural reason (`browser-tests` ~18 minutes,
-`coverage-report`/`quality-gate` downstream of it, evidence-freshness's
-300s window elapsing first). Resolved identically:
-`gh run rerun 33160398473 --failed` after independently confirming, via a
-direct synchronous `gh pr checks 292` call, that every other check
-(including `browser-tests` at 17m55s and `test` at 8m58s) had already
-reached a genuine terminal `pass` state — `Owner Governance Lint` then
-passed clean (35s). Final direct verification: `gh pr checks 292` exits
-0, all 33 checks `pass` plus `deploy: skipping`, at exact head
-`54be709e38b6087a22471f8678163e159add6aa3` (`gh pr view 292` confirms this
-is the current PR head, state OPEN, Draft, mergeable). This two-for-two
-pattern (timing race → identical one-line targeted rerun → clean pass)
-confirms the mechanism is a structural property of this repo's CI
-matrix interacting with Gate-3-packet-only commits, not a GAP-046 defect;
-any further Gate-3-record-only push should be expected to need the same
-treatment.
+Both fixes re-verified green locally and on the immediately following live
+CI run, with zero test regressions.
 
-## Residual risks / known limitations (stated truthfully, not blocking)
+### Residual risks / known limitations (stated truthfully, not blocking)
 
-1. **Application-layer-only tenant congruence on the Project side** — see
-   "MySQL vs SQLite vs application-layer" above. This is a stated Gate-2 §5
-   design limitation, not a defect introduced by this implementation.
-2. **`null`/unrecognized backfill case F is tested via an "unrecognized
-   string" proxy, not a literal NULL** — `opportunities.service_category`
-   is `NOT NULL` at the DB level, so a literal null cannot be seeded; the
-   test documents this explicitly. Behaviorally equivalent (the backfill's
-   `MAP` lookup returns `null` for both an unrecognized string and — were
-   it possible — an actual NULL, since neither is a map key).
-3. **GAP-046 test files are not tagged `@group mysql-parity`**, so they run
-   under a local real-MySQL harness (this session) and are corroborated
-   by, but not literally inside, CI's dedicated mysql-parity-filtered
-   step. The migrations themselves ARE proven live in CI via the
-   `migrate:fresh` step shared by every real-MySQL CI job.
-4. **7 pre-existing `DashboardApiTest` failures** remain in the local full
-   suite, unrelated to GAP-046 (Dashboard widget customization, no code
-   path shared with this diff) — flagged here for completeness, not
-   attributed to this Work ID.
+1. **Application-layer-only tenant congruence on the Project side** —
+   unchanged Gate-2 §5 stated limitation; the remediation strengthens
+   application-layer enforcement (acting-tenant, update-path) but a
+   portable DB-level composite FK on the Project side remains out of scope
+   per Gate 2 §5 and per Correction Round 1 (which did not direct
+   `projects.tenant_id` schema work).
+2. **`null`/unrecognized backfill case F is tested via an
+   "unrecognized string" proxy, not a literal NULL** — `service_category`
+   is `NOT NULL` at the DB level; documented in the test; behaviorally
+   equivalent.
+3. **7 pre-existing `DashboardApiTest` failures** remain in the local full
+   suite, unrelated to GAP-046, byte-identical to the Round-0 set —
+   flagged for completeness, not attributed to this Work ID.
+4. **The two Round-0 "weaker" J/K tests were retained, not deleted**, per
+   general test-hygiene practice (broader coverage, no conflict with the
+   stronger versions) — both continue to pass and are listed in the
+   acceptance matrix above alongside their stronger replacements.
 
-## Explicit confirmation — excluded slices untouched
+### Explicit confirmation — excluded slices and forbidden surfaces untouched
 
 No CRM classification UX, stage gates, Quote Scope Snapshot, Contract
 Service-Line classification, Portfolio membership behavior, Project OPPM,
 Operations Control Tower, Finance/Treasury, historical Project backfill,
 `projects.tenant_id` schema normalization, runtime review/remediation UI,
-or unrelated refactor was built or touched. `Opportunity.service_category`'s
-default and validation are unmodified.
-`OpportunityController::convert()`/`createContract()`, `LeadController`,
-WON→Project propagation are unmodified (proven by
-`OpportunityConversionUnchangedTest`, which exercises the unmodified
-conversion path and asserts zero Service-Line propagation).
+or unrelated refactor was built or touched, in either the original
+submission or the Round 1 remediation. `Opportunity.service_category`'s
+default and validation are unmodified. `OpportunityController`,
+`LeadController`, `CrmPageController`, `DesignItemPageController`,
+`BusinessKpiService`, any pre-existing migration, `routes/**`,
+`resources/**`, RBAC/policies, `.github/**`, and GAP-041/042/045/047 were
+not touched by the remediation — confirmed by explicit diff grep across
+the full remediation commit range. WON→Project propagation remains absent
+(proven, strengthened, by `test_won_to_project_conversion_does_not_propagate_existing_canonical_membership`).
 
-## What this packet does NOT authorize
+### What this packet does NOT authorize
 
 This Gate 3 packet requests an Owner Gate 3 decision only. It does not
 authorize Ready-for-review, merge, release, or production deployment —
 those remain separate, explicit Owner decisions pending a Gate 3 approval
 and a subsequent, separate release instruction, per this repository's
 established convention (see e.g. GAP-043's and GAP-047's Gate 3 records).
-PR #292 remains Draft/unmerged.
+PR #292 remains Draft/unmerged throughout Correction Round 1 and this
+re-presentation.

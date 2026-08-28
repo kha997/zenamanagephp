@@ -5,6 +5,8 @@ namespace Tests\Feature\Console;
 use App\Models\Account;
 use App\Models\Opportunity;
 use App\Models\OpportunityServiceLine;
+use App\Models\Project;
+use App\Models\ProjectServiceLine;
 use App\Models\Tenant;
 use App\Support\ServiceLine;
 use App\Support\ServiceLineProvenance;
@@ -175,6 +177,53 @@ class BackfillOpportunityServiceLinesTest extends TestCase
         Artisan::call('service-lines:backfill-opportunities', ['--dry-run' => true]);
 
         $this->assertSame(0, OpportunityServiceLine::query()->count());
+    }
+
+    // --- Gate 3 Correction Round 1, item 4: strengthened acceptance J —
+    // the backfill must create the expected Opportunity-side row while
+    // creating ZERO rows for the real, linked converted_project_id
+    // Project, not merely an unrelated empty Project (which was too weak
+    // to discriminate a Project-side-backfill bug from correct behavior). ---
+    public function test_backfill_creates_zero_rows_for_the_linked_converted_project(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = $this->createTenantUser($tenant, [], ['admin'], []);
+        $account = Account::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'display_name' => 'Converted Project Test Account',
+        ]);
+
+        $project = Project::factory()->create([
+            'tenant_id' => (string) $tenant->id,
+            'created_by' => (string) $user->id,
+            'pm_id' => (string) $user->id,
+        ]);
+
+        $opportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Opportunity already converted to a real Project',
+            'service_category' => 'architecture',
+            'pipeline_stage' => Opportunity::STAGE_WON,
+            'sales_owner_id' => (string) $user->id,
+            'created_by' => (string) $user->id,
+            'converted_project_id' => (string) $project->id,
+        ]);
+
+        Artisan::call('service-lines:backfill-opportunities');
+
+        $opportunityRows = OpportunityServiceLine::query()
+            ->where('opportunity_id', $opportunity->id)
+            ->get();
+        $this->assertCount(1, $opportunityRows, 'expected exactly 1 Opportunity-side row for the converted Opportunity');
+        $this->assertSame(ServiceLine::DESIGN, $opportunityRows->first()->service_line);
+        $this->assertSame(ServiceLineProvenance::INFERRED, $opportunityRows->first()->provenance);
+
+        $this->assertSame(
+            0,
+            ProjectServiceLine::query()->where('project_id', $project->id)->count(),
+            'the GAP-046 backfill command must never populate project_service_lines for the linked historical Project (acceptance J).'
+        );
     }
 
     public function test_service_category_column_is_never_modified_by_backfill(): void

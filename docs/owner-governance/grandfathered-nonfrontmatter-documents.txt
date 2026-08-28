@@ -1,0 +1,130 @@
+# Snapshot baseline main: e5cbcce508cf5f3b4344f0117dbe08972bb4bc7e
+# This is the exact verified canonical origin/main SHA the GAP-047
+# implementation branch (fix/GAP-047-owner-governance-lint) was cut from,
+# recorded BEFORE any implementation mutation, per
+# docs/owner-decisions/GAP-047/02-design.md Correction 1. This is NOT and
+# must never be the SHA of the commit that adds this file.
+#
+# Reason: docs/superpowers/specs/*.md and docs/superpowers/plans/*.md files
+# that existed at the snapshot baseline without complete governance
+# frontmatter (work_id + owner_governance_version + owner_gate_2_record).
+# Exempt from the missing-governance-frontmatter check ONLY at this exact
+# path. A NEW file, even for the same work_id, is NOT covered by this list
+# and must carry frontmatter or fail.
+#
+# This file is a FROZEN HISTORICAL SNAPSHOT, not a rolling allowlist:
+# - Removing an entry (because the file gained real frontmatter, or was
+#   deleted) is always safe.
+# - Adding a NEW entry for a file that did not exist at the snapshot
+#   baseline requires its own reviewable, governed change (same discipline
+#   as docs/owner-governance/legacy-work-ids.txt) and must never become a
+#   routine way to skip writing frontmatter for new work.
+# - This list is generated once, by a documented one-off command (see
+#   docs/superpowers/plans/2026-08-27-gap-047-owner-governance-lint-implementation.md
+#   Task 4), never by a permanent script.
+#
+# Entries: 103, one exact repo-relative path per line, sorted.
+
+docs/superpowers/plans/2026-07-09-design-item-phase1.md
+docs/superpowers/plans/2026-07-10-zena-boq-integration-phase2.md
+docs/superpowers/plans/2026-07-10-zena-boq-phase3-quote-display.md
+docs/superpowers/plans/2026-07-10-zena-boq-phase4-contract-automation.md
+docs/superpowers/plans/2026-07-11-zena-boq-phase5-business-kpis.md
+docs/superpowers/plans/2026-07-11-zena-boq-phase6-client-portal.md
+docs/superpowers/plans/2026-07-12-hardening-slice-and-completion-roadmap.md
+docs/superpowers/plans/2026-07-12-project-model-consolidation-discovery.md
+docs/superpowers/plans/2026-07-12-zena-boq-phase7-ai-lead-suggestion.md
+docs/superpowers/plans/2026-07-12-zena-boq-phase8-ai-design-item-suggestion.md
+docs/superpowers/plans/2026-07-12-zena-boq-phase9-ai-document-checklist.md
+docs/superpowers/plans/2026-07-13-contract-centric-management.md
+docs/superpowers/plans/2026-07-13-design-pm-completion.md
+docs/superpowers/plans/2026-07-13-opencode-handoff-2.md
+docs/superpowers/plans/2026-07-13-opencode-handoff-3.md
+docs/superpowers/plans/2026-07-13-opencode-handoff-4.md
+docs/superpowers/plans/2026-07-13-opencode-handoff.md
+docs/superpowers/plans/2026-07-14-document-generation-1.md
+docs/superpowers/plans/2026-07-14-document-templates.md
+docs/superpowers/plans/2026-07-14-opencode-handoff-5.md
+docs/superpowers/plans/2026-07-14-opencode-handoff-6.md
+docs/superpowers/plans/2026-07-14-payment-certificates.md
+docs/superpowers/plans/2026-07-14-portal-client-actions.md
+docs/superpowers/plans/2026-07-14-pr-163-description.md
+docs/superpowers/plans/2026-07-14-retention-advance-deductions.md
+docs/superpowers/plans/2026-07-15-native-quotes.md
+docs/superpowers/plans/2026-07-15-quote-client-portal.md
+docs/superpowers/plans/2026-07-15-quote-commercial.md
+docs/superpowers/plans/2026-07-16-crm-appointments.md
+docs/superpowers/plans/2026-07-16-portal-payment-schedule.md
+docs/superpowers/plans/2026-07-16-quote-document-context.md
+docs/superpowers/plans/2026-07-16-receivables-aging.md
+docs/superpowers/plans/2026-07-17-quote-price-evidence.md
+docs/superpowers/plans/2026-07-19-cashflow-report.md
+docs/superpowers/plans/2026-07-19-goal8-opportunity-ai-summary.md
+docs/superpowers/plans/2026-07-19-project-baseline-delay.md
+docs/superpowers/plans/2026-07-19-workload-view.md
+docs/superpowers/plans/2026-07-20-my-work-page.md
+docs/superpowers/plans/2026-07-20-work-template-apply-ui.md
+docs/superpowers/plans/2026-07-21-operator-alpine-deadcode-fix.md
+docs/superpowers/plans/2026-07-21-site-diary-autofill.md
+docs/superpowers/plans/2026-07-22-dead-milestone-template-api-removal.md
+docs/superpowers/plans/2026-07-22-rbac-web-friendly-error.md
+docs/superpowers/plans/2026-07-22-submittal-vendor-select.md
+docs/superpowers/plans/2026-07-24-submittal-resubmit-lifecycle.md
+docs/superpowers/plans/2026-07-25-dashboard-data-trust-guardrails-implementation.md
+docs/superpowers/plans/2026-07-25-gap-029-submittal-resubmit-ui.md
+docs/superpowers/plans/2026-07-26-rfi-lifecycle-escalation-implementation.md
+docs/superpowers/plans/2026-07-30-appointment-type-site-visit-meeting.md
+docs/superpowers/plans/2026-07-30-pipeline-drag-drop-implementation-plan.md
+docs/superpowers/plans/2026-07-31-today-workspace-mvp.md
+docs/superpowers/plans/2026-08-04-gap031-document-approval-workflow.md
+docs/superpowers/plans/2026-08-04-owner-control-layer-repo-governance-foundation.md
+docs/superpowers/plans/2026-08-07-gap-034-export-tenant-isolation-implementation.md
+docs/superpowers/plans/2026-08-12-gap033-document-approver-assignment.md
+docs/superpowers/plans/2026-08-17-gap037-treasury-schema-migrations.md
+docs/superpowers/plans/2026-08-18-gap038-treasury-native-check-constraints.md
+docs/superpowers/plans/2026-08-19-gap-039-mysql-testing-integrity-implementation.md
+docs/superpowers/plans/2026-08-20-gap-040-testcase-mysql-transaction-isolation.md
+docs/superpowers/plans/2026-08-21-gap-043-performance-test-mysql-portability-implementation.md
+docs/superpowers/plans/2026-08-23-gap-044-testcase-transaction-and-permission-lookup-implementation.md
+docs/superpowers/specs/2026-07-09-zena-ops-roadmap-design.md
+docs/superpowers/specs/2026-07-12-project-model-consolidation-design.md
+docs/superpowers/specs/2026-07-13-contract-centric-management-design.md
+docs/superpowers/specs/2026-07-13-design-pm-completion-design.md
+docs/superpowers/specs/2026-07-14-document-generation-1-design.md
+docs/superpowers/specs/2026-07-14-document-templates-design.md
+docs/superpowers/specs/2026-07-14-payment-certificates-design.md
+docs/superpowers/specs/2026-07-14-portal-client-actions-design.md
+docs/superpowers/specs/2026-07-14-retention-advance-deductions-design.md
+docs/superpowers/specs/2026-07-15-native-quotes-design.md
+docs/superpowers/specs/2026-07-15-quote-client-portal-design.md
+docs/superpowers/specs/2026-07-15-quote-commercial-design.md
+docs/superpowers/specs/2026-07-16-crm-appointments-design.md
+docs/superpowers/specs/2026-07-16-knowledge-base-design.md
+docs/superpowers/specs/2026-07-16-portal-payment-schedule-design.md
+docs/superpowers/specs/2026-07-16-quote-document-context-design.md
+docs/superpowers/specs/2026-07-16-receivables-aging-design.md
+docs/superpowers/specs/2026-07-17-horizon-supervisor-mismatch.md
+docs/superpowers/specs/2026-07-17-quote-price-evidence-design.md
+docs/superpowers/specs/2026-07-19-cashflow-report-design.md
+docs/superpowers/specs/2026-07-19-goal8-opportunity-ai-summary-design.md
+docs/superpowers/specs/2026-07-19-project-baseline-delay-design.md
+docs/superpowers/specs/2026-07-19-workload-view-design.md
+docs/superpowers/specs/2026-07-20-my-work-page-design.md
+docs/superpowers/specs/2026-07-20-work-template-apply-ui.md
+docs/superpowers/specs/2026-07-21-site-diary-autofill-design.md
+docs/superpowers/specs/2026-07-22-dead-milestone-template-api-removal-design.md
+docs/superpowers/specs/2026-07-22-rbac-web-friendly-error-design.md
+docs/superpowers/specs/2026-07-22-submittal-vendor-select-design.md
+docs/superpowers/specs/2026-07-24-submittal-resubmit-design.md
+docs/superpowers/specs/2026-07-25-dashboard-data-trust-guardrails-design.md
+docs/superpowers/specs/2026-07-25-gap-029-submittal-resubmit-ui-design.md
+docs/superpowers/specs/2026-07-26-rfi-lifecycle-escalation-design.md
+docs/superpowers/specs/2026-07-30-appointment-type-site-visit-meeting-design.md
+docs/superpowers/specs/2026-07-30-pipeline-drag-drop-design.md
+docs/superpowers/specs/2026-07-31-today-workspace-mvp-design.md
+docs/superpowers/specs/2026-08-04-gap031-document-approval-workflow-design.md
+docs/superpowers/specs/2026-08-04-non-technical-owner-control-layer-design.md
+docs/superpowers/specs/2026-08-10-gap032-document-status-semantics-design.md
+docs/superpowers/specs/2026-08-12-gap033-document-approver-assignment-design.md
+docs/superpowers/specs/2026-08-21-gap-043-performance-test-mysql-portability-design.md
+docs/superpowers/specs/2026-08-22-gap-044-testcase-transaction-and-permission-lookup-design.md

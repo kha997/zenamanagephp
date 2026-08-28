@@ -443,4 +443,102 @@ MD;
         $rules = array_map(fn ($v) => $v->rule, $violationsWithTrickyFile);
         $this->assertContains('gate-2-not-approved', $rules, 'A filename starting with app/ must still be classified as non-design-only, even if a substring after a comma looks like an allowed path.');
     }
+
+    // --- GAP-047 Defect A: docs/audits/** design-only classification ---
+
+    /**
+     * Case 1: an awaiting_owner Gate 2 docs-only presentation whose changed
+     * files span all FOUR intended design-only prefixes — including
+     * docs/audits/** (Gate 1 evidence) — must be classified design-only.
+     * Before A1, docs/audits/** is NOT in the prefix list, so this must FAIL
+     * (return false) until the production fix lands.
+     */
+    public function test_gap047_case1_design_only_helper_accepts_docs_audits_prefix(): void
+    {
+        $changedFiles = [
+            'docs/audits/2026-08-26-gap-047-owner-governance-lint-evidence.md',
+            'docs/owner-decisions/GAP-047/01-request.md',
+            'docs/owner-decisions/GAP-047/02-design.md',
+            'docs/superpowers/specs/2026-08-26-gap-047-owner-governance-lint-defects-design.md',
+        ];
+
+        $this->assertTrue(
+            \owner_governance_changed_files_are_design_only($changedFiles),
+            'A docs-only diff spanning docs/audits/**, docs/owner-decisions/**, and docs/superpowers/specs/** must be classified design-only (GAP-047 Defect A / A1).'
+        );
+    }
+
+    /**
+     * Case 1, end-to-end through the gate-ordering function: the same
+     * docs-only diff (including docs/audits/**) against an awaiting_owner
+     * Gate 2 packet must PASS with zero violations.
+     */
+    public function test_gap047_case1_end_to_end_awaiting_owner_with_docs_audits_in_diff_passes(): void
+    {
+        $root = $this->makeTempRoot();
+        $workId = 'GAP-947';
+        $gate2Rel = "docs/owner-decisions/{$workId}/02-design.md";
+        $specRel = 'docs/superpowers/specs/2026-08-07-fixture-gap047-case1.md';
+        $auditRel = 'docs/audits/2026-08-07-fixture-gap047-case1-evidence.md';
+
+        $this->writeFile($root, $gate2Rel, $this->gate2Frontmatter($workId, 'awaiting_owner', 'none'));
+        $this->writeFile($root, $specRel, $this->specFrontmatter($workId, $gate2Rel));
+        $this->writeFile($root, $auditRel, "# Fixture Gate 1 evidence.\n");
+
+        $violations = \owner_governance_enforce_gate_ordering(
+            [$root . '/' . $specRel],
+            true,
+            $root,
+            [],
+            [$gate2Rel, $specRel, $auditRel]
+        );
+
+        $this->assertSame([], $violations, 'GAP-047 case 1: docs-only diff including docs/audits/** against awaiting_owner Gate 2 must PASS.');
+    }
+
+    /** Case 2: same submission + a changed app/** file must FAIL. */
+    public function test_gap047_case2_design_only_plus_app_file_fails(): void
+    {
+        $changedFiles = [
+            'docs/audits/2026-08-26-gap-047-owner-governance-lint-evidence.md',
+            'docs/owner-decisions/GAP-047/01-request.md',
+            'docs/owner-decisions/GAP-047/02-design.md',
+            'docs/superpowers/specs/2026-08-26-gap-047-owner-governance-lint-defects-design.md',
+            'app/Http/Controllers/Api/ExportController.php',
+        ];
+        $this->assertFalse(\owner_governance_changed_files_are_design_only($changedFiles), 'GAP-047 case 2: an app/** file in the diff must forfeit design-only classification.');
+    }
+
+    /** Case 3: same submission + a changed scripts/** file must FAIL. */
+    public function test_gap047_case3_design_only_plus_scripts_file_fails(): void
+    {
+        $changedFiles = [
+            'docs/audits/2026-08-26-gap-047-owner-governance-lint-evidence.md',
+            'docs/owner-decisions/GAP-047/02-design.md',
+            'scripts/ssot/owner_governance_lint.php',
+        ];
+        $this->assertFalse(\owner_governance_changed_files_are_design_only($changedFiles), 'GAP-047 case 3: a scripts/** file in the diff must forfeit design-only classification.');
+    }
+
+    /** Case 4: same submission + a changed tests/** file must FAIL. */
+    public function test_gap047_case4_design_only_plus_tests_file_fails(): void
+    {
+        $changedFiles = [
+            'docs/audits/2026-08-26-gap-047-owner-governance-lint-evidence.md',
+            'docs/owner-decisions/GAP-047/02-design.md',
+            'tests/Unit/OwnerGovernance/GateOrderingDesignOnlyExemptionTest.php',
+        ];
+        $this->assertFalse(\owner_governance_changed_files_are_design_only($changedFiles), 'GAP-047 case 4: a tests/** file in the diff must forfeit design-only classification.');
+    }
+
+    /** Case 5: same submission + a changed docs/owner-governance/** file must FAIL — A1 deliberately does not add this prefix. */
+    public function test_gap047_case5_design_only_plus_owner_governance_config_file_fails(): void
+    {
+        $changedFiles = [
+            'docs/audits/2026-08-26-gap-047-owner-governance-lint-evidence.md',
+            'docs/owner-decisions/GAP-047/02-design.md',
+            'docs/owner-governance/grandfathered-nonfrontmatter-documents.txt',
+        ];
+        $this->assertFalse(\owner_governance_changed_files_are_design_only($changedFiles), 'GAP-047 case 5: docs/owner-governance/** must never be design-only — it is governance configuration, not documentation.');
+    }
 }

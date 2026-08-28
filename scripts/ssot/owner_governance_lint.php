@@ -433,6 +433,7 @@ const OWNER_GOVERNANCE_DESIGN_ONLY_PATH_PREFIXES = [
     'docs/owner-decisions/',
     'docs/superpowers/specs/',
     'docs/superpowers/plans/',
+    'docs/audits/',
 ];
 
 /**
@@ -461,6 +462,87 @@ function owner_governance_changed_files_are_design_only(array $changedFiles): bo
     }
 
     return true;
+}
+
+/**
+ * GAP-047 Defect B, Binding Clarification B: deterministic, fail-closed
+ * loader for docs/owner-governance/grandfathered-nonfrontmatter-documents.txt.
+ * Never returns an empty array as a substitute for a real error — a
+ * missing/unreadable/malformed configuration file is always a hard
+ * RuntimeException, distinguishable from a legitimately-empty (but present
+ * and well-formed) grandfather list, which DOES return [].
+ *
+ * Accepted line shape: blank (ignored), a '#'-prefixed comment (ignored),
+ * or an exact repo-relative path under EXACTLY one of the two approved
+ * roots (docs/superpowers/specs/, docs/superpowers/plans/), ending in
+ * '.md', containing no path-traversal segment, never absolute, never
+ * duplicated.
+ *
+ * @return array<int, string>
+ */
+function owner_governance_load_grandfathered_paths(string $path): array
+{
+    if (!is_file($path) || !is_readable($path)) {
+        throw new \RuntimeException("grandfather-config: '{$path}' does not exist or is not readable — this is a hard lint failure, never silently treated as zero grandfathered entries.");
+    }
+
+    $raw = file_get_contents($path);
+    if ($raw === false) {
+        throw new \RuntimeException("grandfather-config: '{$path}' could not be read.");
+    }
+
+    $allowedRoots = ['docs/superpowers/specs/', 'docs/superpowers/plans/'];
+    $entries = [];
+    $lineNumber = 0;
+    foreach (explode("\n", $raw) as $line) {
+        $lineNumber++;
+        $trimmed = trim($line);
+        if ($trimmed === '' || str_starts_with($trimmed, '#')) {
+            continue;
+        }
+
+        // Malformed: control characters (tabs, etc.) anywhere in the entry.
+        if (preg_match('/[\x00-\x1F]/', $trimmed) === 1) {
+            throw new \RuntimeException("grandfather-config: '{$path}' line {$lineNumber}: entry contains a control character — malformed.");
+        }
+
+        // Absolute path rejected.
+        if (str_starts_with($trimmed, '/')) {
+            throw new \RuntimeException("grandfather-config: '{$path}' line {$lineNumber}: absolute path '{$trimmed}' is not permitted — entries must be repo-relative.");
+        }
+
+        // Path traversal rejected.
+        $segments = explode('/', $trimmed);
+        if (in_array('..', $segments, true) || in_array('.', $segments, true)) {
+            throw new \RuntimeException("grandfather-config: '{$path}' line {$lineNumber}: entry '{$trimmed}' contains a path-traversal segment — not permitted.");
+        }
+
+        // Must be under exactly one of the two approved roots.
+        $underApprovedRoot = false;
+        foreach ($allowedRoots as $root) {
+            if (str_starts_with($trimmed, $root) && $trimmed !== $root) {
+                $underApprovedRoot = true;
+                break;
+            }
+        }
+        if (!$underApprovedRoot) {
+            throw new \RuntimeException("grandfather-config: '{$path}' line {$lineNumber}: entry '{$trimmed}' is not under one of the two approved roots (docs/superpowers/specs/, docs/superpowers/plans/).");
+        }
+
+        // Must be a .md document.
+        if (!str_ends_with($trimmed, '.md')) {
+            throw new \RuntimeException("grandfather-config: '{$path}' line {$lineNumber}: entry '{$trimmed}' does not end in '.md'.");
+        }
+
+        // Duplicate rejected.
+        if (in_array($trimmed, $entries, true)) {
+            throw new \RuntimeException("grandfather-config: '{$path}' line {$lineNumber}: duplicate entry '{$trimmed}'.");
+        }
+
+        $entries[] = $trimmed;
+    }
+
+    return $entries;
 }
 
 /**
@@ -494,6 +576,16 @@ function owner_governance_changed_files_are_design_only(array $changedFiles): bo
  * @param array<int, string> $governedDocFiles
  * @param array<int, string> $legacyIds
  * @param array<int, string>|null $changedFiles
+ * @param array<int, string>|null $grandfatheredPaths GAP-047 Defect B / B3:
+ *   exact repo-relative paths (as they appear after stripping $repoRoot,
+ *   matching the same normalization owner_governance_load_grandfathered_paths()
+ *   entries use) exempted from case (C) "no usable governance frontmatter"
+ *   enforcement — the ONLY way a no-frontmatter file may pass. `null` means
+ *   no grandfather list was supplied, so no no-frontmatter file can pass
+ *   (fail closed — never interpreted as "everything is grandfathered").
+ *   Filename shape, casing, and Work-ID-token presence have ZERO pass/fail
+ *   authority anywhere in this function; only exact-path grandfather-list
+ *   membership does.
  * @return OwnerGovernanceLintViolation[]
  */
 function owner_governance_enforce_gate_ordering(
@@ -501,7 +593,8 @@ function owner_governance_enforce_gate_ordering(
     bool $scanningExplicitFiles,
     string $repoRoot,
     array $legacyIds,
-    ?array $changedFiles = null
+    ?array $changedFiles = null,
+    ?array $grandfatheredPaths = null
 ): array {
     $orderingViolations = [];
 
@@ -509,71 +602,63 @@ function owner_governance_enforce_gate_ordering(
         $basename = basename($docFile);
         $content = file_get_contents($docFile);
 
-        // Correction 3: frontmatter is the PRIMARY, authoritative source.
-        // Filename regex is FALLBACK-ONLY, and only ever used to identify
-        // a document as legacy — never to identify a NEW work_id.
+        // GAP-047 Defect B / B3: filename parsing has ZERO pass/fail
+        // authority. Three-way decision tree, driven entirely by
+        // frontmatter presence/completeness and (only in case C) the
+        // exact-path grandfather list — never by filename shape, casing,
+        // or a recognizable Work-ID token.
         $workId = null;
         $hasGovernanceFrontmatter = false;
         $docFm = null;
+        $frontmatterPresent = false;
         if (preg_match('/^---\n(.*?)\n---\n/s', $content, $fmMatch)) {
             $docFm = Yaml::parse($fmMatch[1]);
             if (is_array($docFm) && isset($docFm['work_id'])) {
+                $frontmatterPresent = true;
                 $workId = $docFm['work_id'];
                 $hasGovernanceFrontmatter = isset($docFm['owner_governance_version'], $docFm['owner_gate_2_record']);
             }
         }
 
-        if ($workId === null) {
-            // No frontmatter work_id — fall back to filename regex, but
-            // ONLY to check whether this is a pre-existing legacy file.
-            if (preg_match('/\b(GAP-\d{3}|OWN-\d{4}-\d{3})\b/', $basename, $idMatch)) {
-                $filenameWorkId = $idMatch[1];
-                if (in_array($filenameWorkId, $legacyIds, true)) {
-                    continue; // Genuinely legacy — filename-only reference is acceptable for pre-existing documents.
-                }
-                // Not on the legacy list and has no frontmatter: this is either a
-                // new document that should have declared frontmatter and didn't,
-                // or a filename coincidentally containing an ID pattern. Either
-                // way, per Correction 3, filename text alone cannot establish a
-                // NEW work_id's governance status — this is exactly the case
-                // Correction 3 exists to close.
-                $orderingViolations[] = new OwnerGovernanceLintViolation(
-                    $basename,
-                    'missing-governance-frontmatter',
-                    "File references '{$filenameWorkId}' in its filename but is not on the legacy exemption list and has no governance frontmatter (work_id/owner_governance_version/owner_gate_2_record). New governed work must declare frontmatter explicitly — see docs/owner-governance/GOVERNED_DOCUMENT_FRONTMATTER.md."
-                );
-                continue;
+        // Case (C): no usable governance frontmatter at all (no work_id key
+        // found in a parsed frontmatter block, or no frontmatter block at
+        // all). Filename-token regex, if it matches, is used ONLY to word
+        // the diagnostic message — it has no bearing on pass/fail. This
+        // replaces the old case-sensitive-filename-driven bulk-scan
+        // silent-skip (GAP-047 Defect B): every no-frontmatter file, bulk
+        // scan or explicit target, is now evaluated identically.
+        if (!$frontmatterPresent) {
+            $relativeDocPath = str_starts_with($docFile, $repoRoot)
+                ? ltrim(substr($docFile, strlen($repoRoot)), '/')
+                : $docFile;
+
+            $isGrandfathered = $grandfatheredPaths !== null && in_array($relativeDocPath, $grandfatheredPaths, true);
+            if ($isGrandfathered) {
+                continue; // The ONLY way a no-frontmatter file passes.
             }
 
-            if (!$scanningExplicitFiles) {
-                // Bulk directory scan: a document with neither frontmatter nor a
-                // filename-recognizable work-ID token is unidentifiable by this
-                // lint — not this check's concern (matches original behavior for
-                // truly unrelated docs, and for the pre-existing corpus whose
-                // filenames don't carry a recognizable token, e.g. GAP-031's
-                // real plan/spec files which use lowercase "gap031").
-                continue;
+            // Diagnostic-only filename token lookup (zero pass/fail authority).
+            $filenameToken = null;
+            if (preg_match('/\b(GAP-\d{3}|OWN-\d{4}-\d{3})\b/i', $basename, $idMatch)) {
+                $filenameToken = $idMatch[1];
             }
+            $message = $filenameToken !== null
+                ? "File appears to reference '{$filenameToken}' by filename but is not on the frontmatter-grandfather list (docs/owner-governance/grandfathered-nonfrontmatter-documents.txt) and has no governance frontmatter (work_id/owner_governance_version/owner_gate_2_record). New governed work must declare frontmatter explicitly — see docs/owner-governance/GOVERNED_DOCUMENT_FRONTMATTER.md."
+                : 'File has no governance frontmatter (work_id/owner_governance_version/owner_gate_2_record) and is not on the frontmatter-grandfather list (docs/owner-governance/grandfathered-nonfrontmatter-documents.txt). New governed work must declare frontmatter explicitly — see docs/owner-governance/GOVERNED_DOCUMENT_FRONTMATTER.md.';
 
-            // Explicitly targeted file, with neither frontmatter nor a
-            // filename-recognizable work-ID token: still fails. An explicit
-            // target is a deliberate request to check this document's
-            // governance — filename-regex fallback exists only to recognize
-            // LEGACY documents, never to excuse an explicitly-checked document
-            // from needing frontmatter.
-            $orderingViolations[] = new OwnerGovernanceLintViolation(
-                $basename,
-                'missing-governance-frontmatter',
-                'File has no governance frontmatter (work_id/owner_governance_version/owner_gate_2_record) and no recognizable work-ID token in its filename either. New governed work must declare frontmatter explicitly — see docs/owner-governance/GOVERNED_DOCUMENT_FRONTMATTER.md.'
-            );
+            $orderingViolations[] = new OwnerGovernanceLintViolation($basename, 'missing-governance-frontmatter', $message);
             continue;
         }
 
+        // Case (A) vs (B): frontmatter IS present (work_id key found).
+        // legacy-work-ids.txt continues its existing purpose here — but
+        // ONLY once a frontmatter work_id is already known, never in case (C).
         if (in_array($workId, $legacyIds, true)) {
             continue; // Explicitly exempt, even if it also has frontmatter.
         }
 
         if (!$hasGovernanceFrontmatter) {
+            // Case (B): incomplete.
             $orderingViolations[] = new OwnerGovernanceLintViolation(
                 $basename,
                 'incomplete-governance-frontmatter',
@@ -581,6 +666,7 @@ function owner_governance_enforce_gate_ordering(
             );
             continue;
         }
+        // Case (A): complete — fall through to the unchanged Gate-2-record resolution logic below.
 
         $gate2Path = $repoRoot . "/docs/owner-decisions/{$workId}/02-design.md";
         if (!is_file($gate2Path)) {
@@ -705,6 +791,16 @@ if (realpath($argv[0] ?? '') === __FILE__) {
             fn ($line) => $line !== '' && !str_starts_with($line, '#')
         );
 
+        // GAP-047 Defect B / Binding Clarification B: this call is
+        // deliberately OUTSIDE any try/catch — every one of the loader's
+        // fail-closed conditions (missing/unreadable/malformed config,
+        // invalid entry shape) must propagate as an uncaught fatal, which
+        // PHP CLI reports on STDERR with a non-zero exit code. Never
+        // silently degrade to "no grandfather entries".
+        $grandfatheredPaths = owner_governance_load_grandfathered_paths(
+            $repoRoot . '/docs/owner-governance/grandfathered-nonfrontmatter-documents.txt'
+        );
+
         // With no explicit file/dir targets on the CLI, scan the standard
         // governed-document directories (docs/superpowers/plans, .../specs).
         // With explicit targets (e.g. running this directly against a
@@ -753,7 +849,8 @@ if (realpath($argv[0] ?? '') === __FILE__) {
             $scanningExplicitFiles,
             $repoRoot,
             $legacyIds,
-            $changedFiles
+            $changedFiles,
+            $grandfatheredPaths
         );
 
         foreach ($orderingViolations as $violation) {

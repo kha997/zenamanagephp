@@ -1,11 +1,11 @@
 ---
 work_id: GAP-046
 gate: 2
-gate_status: changes_requested
+gate_status: awaiting_owner
 owner_decision:
-  value: changes_requested
+  value: none
   authority: human_owner
-decision_requested: null
+decision_requested: "approve_or_changes_or_decline"
 references:
   spec: docs/superpowers/specs/2026-08-25-gap-046-service-line-foundation-design.md
   plan: null
@@ -15,14 +15,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-28T00:00:00Z"
-  owner_response_reference: "Owner Gate 2 Round 1 decision — CHANGES REQUESTED, reviewed exact PR head b4073f771db10f8f3aeac7cd0f56b6776a5ee532 (canonical main at time of review: f36cfaf7dc4100ed41cc7f7262ba81fdef7bd99a). Owner LOCKS two design choices now: (1) Persistence architecture — OPTION B APPROVED IN PRINCIPLE, explicit non-polymorphic opportunity_service_lines/project_service_lines join tables; do not reopen polymorphic/JSON/boolean-column alternatives. (2) Historical Project backfill — OPTION A SELECTED, NO one-time Project historical backfill; existing Projects with no canonical classification remain UNKNOWN-by-absence; do not infer Project membership from historical Opportunity data in GAP-046. Gate 2 as a whole is NOT approved yet; three corrections required before re-presentation: (A) UNKNOWN/NEEDS_REVIEW semantics — canonical service_line stays exactly DESIGN/CONSTRUCTION/INSPECTION, no fourth value; a membership row may exist only when a canonical line is actually known/candidate-specific; legacy architecture/interior/landscape/structure/mep -> DESIGN/INFERRED, construction -> CONSTRUCTION/INFERRED, inspection/consulting/combined_package -> create NO membership row (preserve legacy service_category as evidence; legacy 'inspection' UI value denotes ambiguous 'Giám sát' per SSOT 2026-08-15 canonical-semantics doc §2.5, not standalone INSPECTION), null/unrecognized -> create NO row (UNKNOWN-by-absence); no runtime CRM UX/remediation workflow authorized in this Work ID. (B) tenant-parent integrity — child.tenant_id must be derived from its parent, never independently trusted from request/caller input; two independent FKs (child->tenant, child->parent) do not by themselves prove tenant congruence; Opportunity backfill must copy tenant_id from the Opportunity; future relation-based writes must enforce parent tenant identity and fail closed on mismatch; add a cross-tenant rejection acceptance case; no broad projects.tenant_id schema remediation in GAP-046, state the portability limitation explicitly if a portable composite FK cannot be added without touching that legacy schema. (C) governance lifecycle wording — remove any wording implying Gate 3 is the implementation step; correct lifecycle is Gate 2 Owner approval -> NEW implementation session -> implementation plan -> TDD implementation -> technical verification -> Gate 3 packet awaiting_owner -> Owner Gate 3 review -> release/merge only after Gate 3 approval. Acceptance matrix must add explicit coverage for: canonical service_line accepts exactly DESIGN/CONSTRUCTION/INSPECTION; invalid canonical value rejected; legacy architecture-family creates only DESIGN/INFERRED; legacy construction creates only CONSTRUCTION/INFERRED; legacy inspection/consulting/combined_package creates no row; null/unrecognized creates no row and stays UNKNOWN-by-absence; backfill never creates CONFIRMED; backfill is idempotent; cross-tenant parent/child write is rejected; Project historical backfill count is exactly zero; runtime Opportunity->Project propagation remains absent. No implementation authorized by this decision. Do not merge, do not self-approve. Corrections to be executed exactly, then Gate 2 re-presented as awaiting_owner for Owner Round 2 review, with this Round 1 record preserved permanently in the packet body."
+  recorded_at: "2026-08-28T00:10:00Z"
+  owner_response_reference: null
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-25T05:54:54Z"
-  updated_at: "2026-08-28T00:00:00Z"
+  updated_at: "2026-08-28T00:10:00Z"
 generated_by: agent
 ---
 

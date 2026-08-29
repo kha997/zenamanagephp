@@ -10,7 +10,7 @@ references:
   spec: docs/superpowers/specs/2026-08-30-gap-048-crm-classification-ux-gates-design.md
   plan: null
   branch: docs/GAP-048-gate2-crm-classification-design
-  pr: null
+  pr: "https://github.com/kha997/zenamanagephp/pull/294"
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

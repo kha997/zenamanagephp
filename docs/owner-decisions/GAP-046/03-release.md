@@ -25,7 +25,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-28T09:18:14Z"
-  updated_at: "2026-08-28T18:46:38Z"
+  updated_at: "2026-08-29T00:33:53Z"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "RE-PRESENTATION after Owner Gate 3 Correction Round 1 (full directive preserved verbatim in decision_provenance.owner_response_reference and in this file's 'Correction Round 1' body section). All 6 directed corrections are remediated and independently re-verified: (1) EnforcesServiceLineIntegrity now also rejects an acting/current-tenant-context mismatch (mirroring TenantScope's exact precedence: app('tenant') -> current_tenant_id -> request attribute tenant_id) even with no explicit child tenant_id set, proven by 3 new RED->GREEN tests per side; (2) the trait now hooks `saving` (not `creating`), enforcing canonical service_line/provenance/resolvable-parent/tenant-congruence on updates too, proven by 3 new RED->GREEN tests per side (invalid service_line update, invalid provenance update, cross-tenant parent-reassignment update); (3) acceptance J is now proven via a real Opportunity.converted_project_id link to a pre-existing Project (not an unrelated empty one); (4) acceptance K is now proven with a real canonical Service-Line row seeded on the Opportunity BEFORE conversion, surviving unchanged while the new Project stays at zero rows; (5) GAP-046 DB behavior now runs inside this repo's canonical @group mysql-parity live-CI mechanism via 5 new dedicated test methods (not replacing/removing any default-suite test) added to the two existing GAP-046 test files, matching the exact method-level-tag convention already established by tests/Feature/DatabaseConstraintsTest.php; live-log-verified via `gh run view --job=98944492511 --log` on PR #292's Zena RBAC/Tenant Invariants (MySQL parity) job -- all 5 GAP-046 test method names appear explicitly in that job's own log output with a final `Tests: 41 passed (1278 assertions)` summary and zero FAILURES/ERRORS; (6) both new migrations now carry an explicit (tenant_id, service_line) index (opp_service_lines_tenant_line_index / proj_service_lines_tenant_line_index), independently verified present via SQLite PRAGMA index_list AND real MySQL SHOW INDEX. Remediation touched exactly: app/Models/Concerns/EnforcesServiceLineIntegrity.php, both new migrations, and the three existing GAP-046 test files (36/36 default-suite GAP-046 tests pass, up from 24; +5 mysql-parity-only tests) -- confirmed by explicit diff grep that no forbidden surface (OpportunityController, LeadController, CrmPageController, DesignItemPageController, BusinessKpiService, any pre-existing migration, routes/**, resources/**, .github/**, GAP-041/042/045/047) was touched. One additional real defect was found and fixed during this remediation's own CI verification: PHPStan's nullsafe.neverNull on request()?->attributes in the new resolveActingTenantId() helper (request()'s return type resolves non-nullable; fixed by dropping the unnecessary ?->, zero behavior change). Full local regression suite re-run post-remediation: 2374 tests, 7 pre-existing failures byte-identical by name to the Round-0 set (all in Tests\\Feature\\Dashboard\\DashboardApiTest, unrelated to GAP-046), zero new failures. All 33 live CI checks green on exact current subject_sha/PR-head 829d275f1d9f68af9859db9a558404ed600f20c5 (Owner Governance Lint, test-routes-guardrails, Zena RBAC/Tenant Invariants MySQL parity, Unit/Feature/Integration/API Tests, all real-MySQL concurrency/constraint jobs, security/quality scans, browser-tests polled to genuine 16m33s completion, quality-gate) -- zero evidence-freshness timing-race reruns needed this round (unlike Round 0's two occurrences). deploy correctly shows 'skipping'; workflow success is not described as a deployment. This packet requests Owner Gate 3 decision only; it does not request or imply Ready-for-review, merge, release, or deployment authorization. No self-approval: owner_decision.value stays none, owner_decision_binding stays null."
@@ -211,7 +211,11 @@ tables (SQLite `PRAGMA index_list` AND real MySQL `SHOW INDEX`).
   FAILURES/ERRORS anywhere in the log. This directly satisfies the Owner's
   instruction that "migrations built successfully" is not sufficient —
   this is test-name-level, log-verified proof of GAP-046 behavior
-  executing on real MySQL inside the canonical CI mechanism.
+  executing on real MySQL inside the canonical CI mechanism. Independently
+  reconfirmed a second time on this packet's own subsequent commit
+  (`7a705c6b`, the current PR head, one commit past `subject_sha`,
+  digest-unaffected): job `98950530192` log shows the identical 5 test
+  names and an identical `Tests: 41 passed (1278 assertions)` summary.
 - **Application-layer tenant congruence (explicitly not a DB-level
   guarantee, per Gate 2 §5's stated limitation — unchanged by remediation,
   still truthfully stated):** `projects.tenant_id`'s legacy `string`
@@ -251,12 +255,19 @@ tables (SQLite `PRAGMA index_list` AND real MySQL `SHOW INDEX`).
 - Migration round-trip (SQLite AND real MySQL): re-verified clean after
   remediation, both directions, only the two GAP-046 tables affected.
 
-### Live CI — exact current subject_sha / PR head `829d275f1d9f68af9859db9a558404ed600f20c5`
+### Live CI — subject_sha `829d275f1d9f68af9859db9a558404ed600f20c5`, current PR head `7a705c6be936df80ca33f2bd8c79e600de2a4567`
 
-All 33 checks green, independently re-verified via direct synchronous
-`gh pr checks 292` calls after full settlement (exit code 0, zero
-reruns needed this round — unlike Round 0, no evidence-freshness timing
-race occurred on this head):
+All 33 checks green on `829d275f` itself, independently re-verified via
+direct synchronous `gh pr checks 292` calls after full settlement (exit
+code 0, zero reruns needed on that head). Pushing this packet's own
+re-presentation commit (`7a705c6b`, Gate-3-record-only, digest/subject_sha
+unaffected) re-triggered the full CI matrix as expected; that run hit the
+same previously-documented evidence-freshness timing race once
+(`browser-tests` took an unusually long 35m4s this time) — resolved
+identically via `gh run rerun 33201118307 --failed` after independently
+confirming every other check had genuinely reached a terminal `pass`
+state. Final direct verification on the current PR head `7a705c6b`: `gh
+pr checks 292` exits 0, all 33 checks `pass`, `deploy: skipping`:
 
 API Tests (Fast), API Tests (Slow), Code Quality Analysis, Dependency
 Vulnerability Scan, Docker Security Scan, Document Workflow Concurrency

@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-08-29-gap-048-crm-classification-gates-audit.md
   plan: null
   branch: docs/GAP-048-gate1-crm-classification-audit
-  pr: null
+  pr: "https://github.com/kha997/zenamanagephp/pull/293"
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

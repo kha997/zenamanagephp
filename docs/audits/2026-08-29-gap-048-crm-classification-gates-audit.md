@@ -1,5 +1,21 @@
 # GAP-048 — CRM Classification UX & Gates: Gate-1 Problem/Evidence Audit
 
+**Round 1 correction notice:** Owner reviewed the initial submission (PR
+#293, head `47bd1ba5`) and returned **MORE INFO / TARGETED CORRECTION
+REQUESTED** — not a rejection; the core problem was substantively
+validated. Two corrections were directed and are applied throughout this
+re-presentation: (1) a runtime-evidence narrative contradiction, corrected
+in §2 below and in the wording of every subsequent reference to the
+GAP-046 regression test; (2) an incomplete Quote-lifecycle audit — the
+original §9 inferred a single "formal Quote creation" enforcement point
+from `CrmPageController::storeQuote()` alone; this has been replaced with
+a complete native+portal+external Quote lifecycle audit (new §9), H8 has
+been reframed (§15), and the Gate-2 boundary wording (§19) no longer
+pre-selects an enforcement point. The full verbatim Owner directive and
+permanent Round-1 history are recorded in
+`docs/owner-decisions/GAP-048/01-request.md`. All 13 other Round-0
+findings were explicitly reaffirmed by Owner and are unchanged below.
+
 **Status:** Gate 1, evidence-only. This document authorizes no migration,
 model, controller, service, route, or UI change. It proves the current-state
 problem and blast radius so an Owner can decide whether to authorize Gate 2
@@ -100,6 +116,31 @@ from runtime confirmation, this is marked explicitly. No repository file was
 modified to reach this conclusion (`git status` clean throughout, confirmed
 below in §24).
 
+**Corrected wording — GAP-046's WON-conversion regression test (Owner
+Round 1 correction #1):** a prior version of this document's companion
+Gate-1 packet stated the team "reran" GAP-046's existing regression test
+in this session, which contradicted the paragraph above. That was
+inaccurate and is corrected here explicitly, distinguishing three separate
+facts:
+
+- **(A)** `tests/Feature/Crm/OpportunityConversionUnchangedTest.php` was
+  read in full and its control flow traced against `OpportunityController::convert()`
+  and `OpportunityStageTransitionService::transition()` (§8/§10 below) — a
+  static-reading activity, not execution.
+- **(B)** GAP-046's own previously-recorded Gate-3 release evidence
+  (`docs/owner-decisions/GAP-046/03-release.md`, acceptance-matrix
+  criterion K and its live-CI verification sections) independently
+  establishes that this exact test passed on the released baseline via
+  real GitHub Actions CI runs — that is committed, already-existing
+  evidence this audit cites, not evidence this audit generated.
+- **(C)** this GAP-048 Gate-1 session itself did **not** rerun
+  PHPUnit or perform any runtime reproduction — no `vendor/` is installed
+  in this worktree, and no fresh test execution occurred. The claim "WON
+  conversion today performs zero Service-Line reads or writes" throughout
+  this document rests on (A) and (B) together — static deterministic
+  control-flow proof plus a prior, independently-verified, already-recorded
+  passing-test fact — never on a fabricated or implied fresh run.
+
 ---
 
 ## 3. Active Opportunity write-path inventory
@@ -119,7 +160,7 @@ below in §24).
 | `routes/web.php:821` | POST `/crm/opportunities/{id}/stage` | `Web\CrmPageController@updateStage` | `rbac:crm.manage` |
 | `routes/web.php:822` | POST `/crm/opportunities/{id}/convert` | `Web\CrmPageController@convertOpportunity` | `rbac:crm.convert` |
 | `routes/web.php:825` | POST `/crm/opportunities/{id}/create-contract` | `Web\CrmPageController@createContract` | `rbac:crm.manage` |
-| `routes/web.php:828` | POST `/crm/opportunities/{id}/quotes` | `Web\CrmPageController@storeQuote` | (route group default) |
+| `routes/web.php:828` | POST `/crm/opportunities/{id}/quotes` | `Web\CrmPageController@storeQuote` | `rbac:crm.manage` (corrected — full Quote lifecycle route table in §9.2/§9.4) |
 
 The web routes are thin wrappers that call the same underlying API
 controller server-side (Web `convertOpportunity`/`updateStage`/`createContract`
@@ -378,32 +419,170 @@ regardless of an Opportunity's canonical membership state.
 
 ---
 
-## 9. Formal Quote creation gate evidence
+## 9. Complete Quote lifecycle gate evidence
 
-`Web\CrmPageController::storeQuote()`, `app/Http/Controllers/Web/CrmPageController.php:645-668`:
+**Round 1 correction:** the original version of this section inferred a
+single "formal Quote creation" enforcement point from `storeQuote()`
+alone. Owner directed a complete lifecycle audit. Below is every native,
+portal, and external-integration Quote state transition found in the
+repository, each independently read in full.
+
+### 9.1 Quote state model
+
+`app/Models/Quote.php:41-61`:
 
 ```php
-657: $quote = Quote::query()->create([
-         'tenant_id' => $tenantId,
-         'opportunity_id' => (string) $opp->id,
-         'quote_number' => Quote::nextNumber($tenantId),
-         'revision_no' => Quote::nextRevision((string) $opp->id),
-         'status' => Quote::STATUS_DRAFT,
-         'created_by' => $this->actorUserId(),
-     ]);
+41: public const STATUS_DRAFT = 'draft';
+42: public const STATUS_SENT = 'sent';
+43: public const STATUS_ACCEPTED = 'accepted';
+44: public const STATUS_REJECTED = 'rejected';
+45: public const STATUS_SUPERSEDED = 'superseded';
+...
+57: self::STATUS_DRAFT => [self::STATUS_SENT, self::STATUS_SUPERSEDED],
+58: self::STATUS_SENT => [self::STATUS_ACCEPTED, self::STATUS_REJECTED, self::STATUS_SUPERSEDED],
+59: self::STATUS_REJECTED => [self::STATUS_SUPERSEDED],
+60: self::STATUS_ACCEPTED => [],
+61: self::STATUS_SUPERSEDED => [],
 ```
 
-**Zero reference** to `service_category`, `ServiceLine`,
-`OpportunityServiceLine`, or provenance anywhere in this method (full-file
-grep, zero hits). Quote creation is unconditioned on classification of any
-kind — legacy or canonical, zero rows, only-INFERRED rows, or ambiguous
-legacy value with zero canonical rows all currently produce the identical
-outcome (a draft Quote is created). No separate API `QuoteController` for
-Opportunity-linked quote creation exists (`find app -iname "*QuoteController*"`
-returns only the client-portal read-only `PortalQuoteController`). This
-directly confirms **H8 (formal Quote creation does not enforce confirmed
-Service Lines) as CONFIRMED**, by direct code reading rather than
-inference from a missing keyword search alone.
+`canTransition()` (`Quote.php:127`) is a pure state-membership check
+against this table — no classification input of any kind.
+
+### 9.2 Native lifecycle matrix
+
+| Path | Route | Actor | Authorization | Source state | Destination state | Reads canonical Opportunity Service Lines? | Checks CONFIRMED provenance? | Checks legacy `service_category`? | Reachable with unclassified Opportunity? |
+|---|---|---|---|---|---|---|---|---|---|
+| **A. DRAFT creation** — `CrmPageController::storeQuote()`, `app/Http/Controllers/Web/CrmPageController.php:645-668` | `POST /crm/opportunities/{id}/quotes` (`routes/web.php:828`) | Operator | `rbac:crm.manage` | (new Quote) | `DRAFT` | No — zero reference to `ServiceLine`/`OpportunityServiceLine`/`service_category` in the full method body | No | No | **Yes** — no gate of any kind on the source Opportunity's classification |
+| **B. Revision (new Draft) creation** — `CrmPageController::reviseQuote()`, `app/Http/Controllers/Web/CrmPageController.php:1088-1140+` | `POST /crm/quotes/{id}/revise` (`routes/web.php:835`) | Operator | `rbac:crm.manage` | any existing Quote | new `DRAFT` (copies `opportunity_id`, line items, discount/vat/terms from the original — full method read, lines 1101-1124 shown) | No | No | No | **Yes** — copies the same `opportunity_id` with no re-check of any kind |
+| **C. Formal send (DRAFT→SENT)** — `CrmPageController::sendQuote()`, `app/Http/Controllers/Web/CrmPageController.php:979-1028` | `POST /crm/quotes/{id}/send` (`routes/web.php:832`) | Operator | `rbac:crm.manage` | `DRAFT` (`Quote::canTransition()` gate) | `SENT` | No | No | No | **Yes** — the only preconditions checked are `canTransition()` (state-machine membership) and `$hasLines` (at least one `QuoteLineItem` exists, line 996-1003); zero reference to `service_category`/`ServiceLine` anywhere in the method |
+| **D. Operator acceptance** — `CrmPageController::acceptQuote()`, `app/Http/Controllers/Web/CrmPageController.php:1030-1057` | `POST /crm/quotes/{id}/accept` (`routes/web.php:833`) | Operator | `rbac:crm.manage` | `SENT` (`canTransition()` gate) | `ACCEPTED` (delegates to `QuoteLifecycleService::accept()`, §9.3) | No | No | No | **Yes** |
+| **E. Operator rejection** — `CrmPageController::rejectQuote()`, `app/Http/Controllers/Web/CrmPageController.php:1059-1086` | `POST /crm/quotes/{id}/reject` (`routes/web.php:834`) | Operator | `rbac:crm.manage` | `SENT` (`canTransition()` gate) | `REJECTED` (delegates to `QuoteLifecycleService::reject()`, §9.3) | No | No | No | **Yes** |
+
+### 9.3 Shared lifecycle service — `app/Services/QuoteLifecycleService.php` (full file read)
+
+Both `accept(Quote $quote, array $context)` (lines 16-57) and
+`reject(Quote $quote, array $context)` (lines 63-96) — the single shared
+implementation called by both the operator paths (§9.2 D/E) and the
+client-portal paths (§9.4) — perform, in full: a `canTransition()` state
+check, the `Quote` status/`decided_at` update, on acceptance a supersession
+sweep of sibling Quotes for the same `opportunity_id` (lines 30-35), and an
+`EventRecord` write. **Zero reference to `service_category`, `ServiceLine`,
+`OpportunityServiceLine`, or any provenance concept anywhere in this file**
+(full-file grep, zero hits) — this is the one place in the entire Quote
+lifecycle where operator and portal acceptance/rejection logic converge,
+and it is unconditioned on classification of any kind.
+
+### 9.4 Client-portal lifecycle — `app/Http/Controllers/Web/Portal/PortalQuoteController.php` (full relevant methods read)
+
+| Path | Route | Actor | Authorization | Source state | Destination state | Classification checks |
+|---|---|---|---|---|---|---|
+| **F. Portal acceptance** — `accept()`, lines 52-77 | `POST /portal/{tenantSlug}/quotes/{id}/accept` (`routes/web.php:860`) | Client-portal account (`Auth::guard('client')`) | `portal.auth` middleware (route group, `routes/web.php:851`) + `throttle:portal-actions`; ownership enforced by `findOwnedQuote()` (lines 22-33, join on `opportunities.account_id = $account->id`, and excludes `STATUS_DRAFT` — a portal user can never see/act on a Draft) | `SENT` (checked at line 61, not via `canTransition()` directly but an equivalent explicit status check) | `ACCEPTED` (delegates to the same `QuoteLifecycleService::accept()`, §9.3) | None — same shared service, same zero-classification-check conclusion |
+| **G. Portal rejection** — `reject()`, lines 79-107 | `POST /portal/{tenantSlug}/quotes/{id}/reject` | Client-portal account | Same as F | `SENT` | `REJECTED` (delegates to `QuoteLifecycleService::reject()`) | None |
+
+**Authorization note:** the portal path uses a distinct authentication
+guard (`client`, not the operator `rbac:crm.*` permission model) and a
+distinct authorization mechanism (query-scoped ownership via
+`findOwnedQuote()`, not `OpportunityPolicy`/`QuotePolicy`). This is a
+structurally different actor/authorization class from every other path
+audited in this document (§13) — flagged here as evidence, not as a
+defect; it is consistent with a legitimate client-facing surface.
+
+### 9.5 External Quote integration (zena-boq-core) — reconciliation required per Owner directive §4
+
+Three methods in `app/Http/Controllers/Api/OpportunityController.php` form
+a separate, parallel "external Quote" concept that does not use the native
+`Quote` model at all:
+
+- **`linkExternalBoqProject()`**, lines 593-631. Route not in the table
+  above (API-only, `rbac:crm.manage`-gated via `$this->authorize('update', $opportunity)`
+  at line 614, plus a separate `ZenaBoqIntegrationService::isTenantAuthorized()`
+  tenant-integration gate at line 604). Sets `opportunity->external_boq_project_code`.
+  **Zero reference to `service_category`/`ServiceLine`/`OpportunityServiceLine`**
+  in the full method body.
+- **`syncExternalQuote()`**, lines 633-691. Same authorization pattern
+  (`$this->authorize('update', $opportunity)` line 654 + tenant-integration
+  gate line 644). Pulls the latest external quote via
+  `ZenaBoqIntegrationService::fetchLatestQuote()` (line 662) and persists,
+  verbatim from the external system, onto the `Opportunity` row itself
+  (not a `Quote` row): `external_quote_id`, and
+  `external_quote_snapshot = ['revision', 'subtotal', 'vat_amount', 'total',
+  'status', 'calibration', 'issued_at']` (lines 665-676) — `status` here is
+  the **external** system's own quote status string (e.g. `'ACCEPTED'`),
+  not derived from or checked against the native `Quote::STATUS_*` enum or
+  any canonical/legacy classification. **Zero reference to
+  `service_category`/`ServiceLine`/`OpportunityServiceLine`** in the full
+  method body.
+- **`createContract()`**, lines 422-579 (already partially cited in §3.5;
+  now read in full for this correction). Lines 462-476 are the exact
+  commercial-prerequisite check:
+
+  ```php
+  462: $snapshot = $opportunity->external_quote_snapshot ?? [];
+  463: $nativeQuote = Quote::query()
+  464:     ->where('opportunity_id', (string) $opportunity->id)
+  465:     ->where('tenant_id', $tenantId)
+  466:     ->where('status', Quote::STATUS_ACCEPTED)
+  467:     ->first();
+  469: $hasExternalAccepted = ($snapshot['status'] ?? null) === 'ACCEPTED';
+  470: $hasNativeAccepted = $nativeQuote instanceof Quote;
+  472: if (! $hasNativeAccepted && ! $hasExternalAccepted) {
+  473:     return $this->validationError([
+  474:         'quote' => ['Either a native accepted quote or an accepted external quote is required to generate a contract.'],
+  475:     ]);
+  476: }
+  ```
+
+  `createContract()` treats a native `Quote` at `STATUS_ACCEPTED` and an
+  external `external_quote_snapshot['status'] === 'ACCEPTED'` as
+  **equally valid, either being sufficient** to pass the commercial-
+  prerequisite gate and proceed to create a `Project`/`Contract`. **Full-method
+  grep confirms zero reference to `service_category`, `ServiceLine`, or
+  `OpportunityServiceLine` anywhere in `createContract()`** — the same
+  conclusion as every other path in this section.
+
+**Determination (Owner directive §4, answered directly):**
+
+- **Does external Quote linking/syncing have any canonical Service-Line
+  gate?** No — confirmed by full-method reading of both
+  `linkExternalBoqProject()` and `syncExternalQuote()`, zero references
+  found.
+- **Can an externally ACCEPTED Quote exist while Opportunity canonical
+  Service-Line membership is zero/unconfirmed?** **Yes** — `syncExternalQuote()`
+  persists `external_quote_snapshot['status']` directly from the external
+  system's own response with no cross-check against
+  `opportunity_service_lines` (or against `service_category`) at all;
+  nothing in the sync path reads or requires canonical membership.
+- **Does this create a potential bypass Gate 2 must account for?** **Yes,
+  structurally, stated as evidence not as a design decision:** because
+  `createContract()` accepts a native-OR-external accepted Quote as
+  equally sufficient (§9.5 above), any future gate placed only on the
+  *native* Quote lifecycle (§9.2/§9.3/§9.4) would leave the external path
+  fully unconstrained — an Opportunity could reach `createContract()`
+  purely through `syncExternalQuote()` pulling an `'ACCEPTED'` snapshot
+  from zena-boq-core, with zero native `Quote` rows and zero canonical
+  Service-Line rows involved anywhere. This is recorded as a **Gate-2
+  design dependency to be accounted for**, not solved here. Per the Owner
+  directive, this does **not** pull zena-boq-core itself into GAP-048's
+  implementation scope merely because the integration exists — if Gate 2
+  design work determines an actual change to the external system is
+  necessary, that must be flagged to Owner as its own dependency rather
+  than silently absorbed into this Work ID's scope.
+
+### 9.6 Summary conclusion for §9
+
+Across all three lifecycle families found — native operator (DRAFT
+creation, revision, send, accept, reject), client-portal (accept, reject),
+and external zena-boq-core synchronization feeding `createContract()`'s
+commercial-prerequisite check — **zero transition point anywhere checks
+`service_category`, canonical Service-Line membership, or CONFIRMED
+provenance.** No single method is "the" formal-Quote gate; the lifecycle
+has at least three architecturally distinct transition families (native
+DRAFT→SENT→ACCEPTED/REJECTED via a shared `QuoteLifecycleService`, a
+client-portal variant of the same shared service, and a wholly separate
+external-system-driven `Opportunity`-level snapshot consumed directly by
+`createContract()`), none of which is currently a candidate "the" gate
+belongs on by default — that placement is explicitly a Gate-2 decision
+(§19).
 
 ---
 
@@ -601,10 +780,13 @@ production reference).
    asserts the persisted value equals `'architecture'`. A regression here
    (e.g. an accidental removal of the fallback, or the opposite — an
    accidental strengthening of it) would go undetected today.
-2. **No test exists for Quote creation (`storeQuote`) proving it is
-   unconditioned on classification** — unlike the explicit,
+2. **No test exists for any Quote lifecycle transition (creation,
+   revision, send, accept/reject — native or portal — or the external
+   zena-boq-core sync/`createContract()` acceptance check) proving any of
+   them is unconditioned on classification** — unlike the explicit,
    purpose-built `OpportunityConversionUnchangedTest` for `convert()`,
-   there is no equivalent negative-assertion guard for Quote creation.
+   there is no equivalent negative-assertion guard anywhere in the Quote
+   lifecycle (§9).
 3. **No test exercises cross-tenant isolation specifically on the
    Opportunity create/update/convert routes** beyond the structural
    `OpportunityPolicy` tenant-match check and `OpportunityConversionUnchangedTest`'s
@@ -626,7 +808,7 @@ production reference).
 | H5 | Canonical Opportunity Service-Line rows are not used by CRM UX | **CONFIRMED** | Zero `ServiceLine`/provenance references anywhere in `resources/views/` (§7) |
 | H6 | No supported user confirmation path exists for CONFIRMED provenance | **CONFIRMED** | §11 — zero construction sites for `provenance = CONFIRMED` anywhere in `app/`/`src/`; only CLI backfill (INFERRED-only) writes the tables at all |
 | H7 | Pipeline transitions do not enforce confirmed Service Lines | **CONFIRMED** | `OpportunityStageTransitionService::transition()` full-file read, zero Service-Line references (§8) |
-| H8 | Formal Quote creation does not enforce confirmed Service Lines | **CONFIRMED** | `CrmPageController::storeQuote()` full-method read, zero Service-Line references (§9) |
+| H8 | Formal Quote creation does not enforce confirmed Service Lines | **CONFIRMED, reframed across the complete lifecycle (Owner Round 1 correction #2)** | Not evidenced by `storeQuote()` alone. Confirmed independently across every native, portal, and external transition point found: (a) DRAFT creation — `storeQuote()`; (b) DRAFT revision — `reviseQuote()`; (c) DRAFT→SENT formalization — `sendQuote()`; (d) operator ACCEPTED/REJECTED — `acceptQuote()`/`rejectQuote()` via the shared `QuoteLifecycleService::accept()`/`reject()`; (e) client-portal ACCEPTED/REJECTED — `PortalQuoteController::accept()`/`reject()`, delegating to the same shared service; (f) external zena-boq-core synchronization feeding `createContract()`'s native-OR-external-accepted commercial-prerequisite check — `linkExternalBoqProject()`/`syncExternalQuote()`/`createContract()`. Full-method reads of all of the above (§9) found zero reference to `service_category`, `ServiceLine`, `OpportunityServiceLine`, or provenance at any of these 6+ transition points. |
 | H9 | WON→Project conversion does not enforce confirmed Service Lines | **CONFIRMED** | `OpportunityController::convert()` / `OpportunityConversionUnchangedTest.php` (§8/§10), including the discriminating pre-seeded-INFERRED-row test |
 | H10 | Legacy `service_category` remains authoritative for downstream consumers | **CONFIRMED** | `BusinessKpiService::serviceCategoryPerformance()`, `DesignItemPageController` (§12) — both are real, single-value, currently-authoritative consumers with no canonical-membership awareness |
 | H11 | Legacy "inspection"/"Giám sát" semantics are ambiguous relative to standalone INSPECTION | **CONFIRMED** | `leads.blade.php:92` labels legacy `inspection` as "Giám sát"; a wholly separate QC/NCR "inspections" module exists under the same English word with no code-level relationship to either the legacy enum or `ServiceLine::INSPECTION` (§7); the SSOT itself (§2.5, §2.6) already documents this exact risk normatively |
@@ -670,9 +852,20 @@ into the canonical `CONFIRMED` provenance state at all.
   Operations Control Tower — SSOT §14 items 4–10) inherits this problem
   transitively unless GAP-048 resolves it first, consistent with the SSOT's
   own ordering.
+- **Gate-2 design-dependency risk (Owner Round 1 addition, §9.5):** the
+  zena-boq-core external Quote integration means any future Quote gate
+  confined to the native `Quote` lifecycle alone would leave
+  `createContract()`'s external-accepted-snapshot path fully unconstrained
+  — this is not a defect today (no gate exists on either path yet), but it
+  is a structural fact Gate 2 design must explicitly account for rather
+  than discover after choosing a native-only gate placement.
 - **Not currently a security/tenant-isolation blast radius** — §13 found
   no separate vulnerability; the existing RBAC/tenant pattern already
-  governs every classification-changing path found.
+  governs every classification-changing path found. The client-portal
+  Quote-acceptance path (§9.4) uses a structurally different
+  authentication/authorization mechanism (`client` guard + ownership
+  query, not `rbac:crm.*`) than every other path in this audit — noted as
+  a structural difference, not a vulnerability finding.
 
 ## 18. Explicit unknowns
 
@@ -723,12 +916,27 @@ require silently expanding scope):**
 - Removing the silent Architecture default at its two confirmed call sites
   (`OpportunityController.php:217`, `LeadController.php:304`) while
   preserving genuinely-unclassified Opportunities.
-- Pipeline `scope_defined`-and-downstream gate,
-  formal-Quote-creation gate, and WON-conversion gate, each verified in
-  this audit to currently have a single, centralized enforcement point
-  (`OpportunityStageTransitionService::transition()`, `CrmPageController::storeQuote()`,
-  `OpportunityController::convert()` respectively) — a narrow surface, not
-  a scattered one, which is favorable evidence for scope feasibility.
+- **Pipeline gate:** verified in this audit to have a single, centralized
+  enforcement point today (`OpportunityStageTransitionService::transition()`,
+  §8) — a narrow surface, favorable evidence for scope feasibility.
+- **WON-conversion gate:** verified to have a single enforcement point
+  today (`OpportunityController::convert()`, §10).
+- **Formal-Quote gate:** **correction (Owner Round 1) — this is NOT a
+  single centralized enforcement point.** §9 found at least three
+  architecturally distinct transition families: native operator lifecycle
+  (DRAFT creation/revision/send/accept/reject, converging on the shared
+  `QuoteLifecycleService`), a client-portal variant of the same shared
+  service under a different auth guard, and a wholly separate
+  zena-boq-core external-sync path feeding `createContract()`'s
+  native-OR-external-accepted check. **Gate 2 must decide the canonical
+  Quote-classification enforcement point** after considering this actual
+  lifecycle — for example (not a recommendation, illustrative only, listed
+  to show the decision space, not to pre-select it): gating at native
+  DRAFT creation, at DRAFT→SENT formalization, at every ACCEPTED
+  transition (operator and portal), at `createContract()`'s
+  commercial-prerequisite check (which would need to address the external
+  path too, §9.5), or some combination. This audit intentionally does not
+  select among these.
 - Narrow legacy `service_category` compatibility for the two confirmed
   active consumers (`BusinessKpiService::serviceCategoryPerformance()`,
   `DesignItemPageController`) — their exact compatibility treatment is a

@@ -1,14 +1,14 @@
 ---
 work_id: GAP-046
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-25-gap-046-service-line-foundation-design.md
   plan: docs/superpowers/plans/2026-08-28-gap-046-service-line-foundation-implementation.md
@@ -18,25 +18,25 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-08-29T00:00:00Z"
-  owner_response_reference: "Owner Gate 3 decision, GAP-046, Correction Round 1 (relayed via coordinator session): 'OWNER GATE-3 DECISION: CORRECTION REQUESTED (Round 1)'. Reviewed exact state: PR #292 head 63f8636fa77bdfc73401cc9bcd25f52c759fd82f, subject_sha 037758fff502d738eac31e1a08a8e7a4e3701c2b, implementation_tree_digest 35d9d9c8d44a745aa284cbfaf77b03039801b091a90da2a069b535ad604a472b, canonical main 9944e1b50de515accb68bd5fd67347747620c6d3. DECISION: CORRECTION REQUESTED, not approved. Owner directed 7 substantive corrections before Gate 3 approval, all within the existing approved Gate-2 §11 boundary (no Gate-2 reopening, no new Work ID): (1) EnforcesServiceLineIntegrity must also reject a mismatch between the ACTING/CURRENT tenant context (app('tenant') / current_tenant_id / request attribute tenant_id, same precedence as TenantScope, TenantScope itself not modified) and the parent's true tenant, not only an explicitly-set conflicting child.tenant_id — with strict RED tests first for both Opportunity and Project sides proving zero rows persisted; a legitimate no-current-tenant-context CLI backfill write must remain permitted. (2) Integrity enforcement must cover updates as well as creates (service_line/provenance/parent-resolvability/tenant congruence), via a saving-equivalent hook, with RED tests first for invalid-service_line update, invalid-provenance update, and cross-tenant parent-reassignment update, both sides where applicable. (3) Acceptance J's test must be strengthened to a discriminating scenario: an Opportunity with a legacy mappable category whose converted_project_id points at a real, pre-existing Project — proving the backfill command creates the expected Opportunity-side row while creating zero rows for the linked historical Project. (4) Acceptance K's test must be strengthened: create a WON Opportunity that already carries a real canonical Service-Line membership row before conversion, run the real conversion endpoint, and prove that membership row survives unchanged on the Opportunity side while the new Project receives zero rows — proving no propagation even when canonical data exists to propagate, without modifying OpportunityController. (5) GAP-046 DB behavior (migration/table behavior, unique constraint, tenant-parent integrity, Opportunity backfill mapping, backfill idempotency) must be proven inside this repo's canonical @group mysql-parity live-CI mechanism, not only a local Docker harness, with live-log proof of the specific GAP-046 test names actually executing on real MySQL — 'migrations built successfully' alone is insufficient. (6) Add an index on (tenant_id, service_line) to both new migrations (explicit stable names, existing unique constraints retained) since parent_id currently sits between tenant_id and service_line in the unique index's B-tree order, inefficient for 'all X-tenant subjects with Service-Line Y' queries — verified on SQLite and real MySQL SHOW INDEX/SHOW CREATE TABLE. (7) Strict TDD required throughout (RED first, minimum fix, GREEN, preserved evidence). Remediation scope is explicitly bounded to EnforcesServiceLineIntegrity.php, the two new migrations, the three existing GAP-046 test files, optionally one new narrowly-focused MySQL-parity test file, and truthful updates to the implementation plan and this Gate-3 packet; OpportunityController, LeadController, CrmPageController, DesignItemPageController, BusinessKpiService, service_category behavior, any pre-existing migration, routes/**, resources/**, RBAC/policies, projects.tenant_id schema, CRM classification UX, Quote/Contract classification, Portfolio/OPPM/Control-Tower/Finance/Treasury, GAP-041/042/045/047, and .github/** remain explicitly forbidden — if any forbidden surface appears necessary, the agent must stop and report back rather than proceed. Because these corrections change implementation content, the old subject_sha/digest above become historical only and must not be reused as current Gate-3 evidence; a new subject_sha and freshly recomputed implementation_tree_digest are required for re-presentation. PR #292 must remain Draft throughout — no Ready-flip, merge, deploy, self-approval, or new Work ID authorized by this decision. This Correction Round 1 record is permanent and must never be erased or overwritten by the re-presented packet.'"
+  recorded_at: "2026-08-29T04:06:14Z"
+  owner_response_reference: "Owner Gate 3 decision, GAP-046, Correction Round 1 (relayed via coordinator session): 'OWNER GATE-3 DECISION: CORRECTION REQUESTED (Round 1)'. Reviewed exact state: PR #292 head 63f8636fa77bdfc73401cc9bcd25f52c759fd82f, subject_sha 037758fff502d738eac31e1a08a8e7a4e3701c2b, implementation_tree_digest 35d9d9c8d44a745aa284cbfaf77b03039801b091a90da2a069b535ad604a472b, canonical main 9944e1b50de515accb68bd5fd67347747620c6d3. DECISION: CORRECTION REQUESTED, not approved. Owner directed 7 substantive corrections before Gate 3 approval, all within the existing approved Gate-2 §11 boundary (no Gate-2 reopening, no new Work ID): (1) EnforcesServiceLineIntegrity must also reject a mismatch between the ACTING/CURRENT tenant context (app('tenant') / current_tenant_id / request attribute tenant_id, same precedence as TenantScope, TenantScope itself not modified) and the parent's true tenant, not only an explicitly-set conflicting child.tenant_id — with strict RED tests first for both Opportunity and Project sides proving zero rows persisted; a legitimate no-current-tenant-context CLI backfill write must remain permitted. (2) Integrity enforcement must cover updates as well as creates (service_line/provenance/parent-resolvability/tenant congruence), via a saving-equivalent hook, with RED tests first for invalid-service_line update, invalid-provenance update, and cross-tenant parent-reassignment update, both sides where applicable. (3) Acceptance J's test must be strengthened to a discriminating scenario: an Opportunity with a legacy mappable category whose converted_project_id points at a real, pre-existing Project — proving the backfill command creates the expected Opportunity-side row while creating zero rows for the linked historical Project. (4) Acceptance K's test must be strengthened: create a WON Opportunity that already carries a real canonical Service-Line membership row before conversion, run the real conversion endpoint, and prove that membership row survives unchanged on the Opportunity side while the new Project receives zero rows — proving no propagation even when canonical data exists to propagate, without modifying OpportunityController. (5) GAP-046 DB behavior (migration/table behavior, unique constraint, tenant-parent integrity, Opportunity backfill mapping, backfill idempotency) must be proven inside this repo's canonical @group mysql-parity live-CI mechanism, not only a local Docker harness, with live-log proof of the specific GAP-046 test names actually executing on real MySQL — 'migrations built successfully' alone is insufficient. (6) Add an index on (tenant_id, service_line) to both new migrations (explicit stable names, existing unique constraints retained) since parent_id currently sits between tenant_id and service_line in the unique index's B-tree order, inefficient for 'all X-tenant subjects with Service-Line Y' queries — verified on SQLite and real MySQL SHOW INDEX/SHOW CREATE TABLE. (7) Strict TDD required throughout (RED first, minimum fix, GREEN, preserved evidence). Remediation scope is explicitly bounded to EnforcesServiceLineIntegrity.php, the two new migrations, the three existing GAP-046 test files, optionally one new narrowly-focused MySQL-parity test file, and truthful updates to the implementation plan and this Gate-3 packet; OpportunityController, LeadController, CrmPageController, DesignItemPageController, BusinessKpiService, service_category behavior, any pre-existing migration, routes/**, resources/**, RBAC/policies, projects.tenant_id schema, CRM classification UX, Quote/Contract classification, Portfolio/OPPM/Control-Tower/Finance/Treasury, GAP-041/042/045/047, and .github/** remain explicitly forbidden — if any forbidden surface appears necessary, the agent must stop and report back rather than proceed. Because these corrections change implementation content, the old subject_sha/digest above become historical only and must not be reused as current Gate-3 evidence; a new subject_sha and freshly recomputed implementation_tree_digest are required for re-presentation. PR #292 must remain Draft throughout — no Ready-flip, merge, deploy, self-approval, or new Work ID authorized by this decision. This Correction Round 1 record is permanent and must never be erased or overwritten by the re-presented packet.' | Owner Gate 3 decision, GAP-046, Round 2 (relayed via coordinator session): 'OWNER GATE-3 ROUND 2 DECISION: DEFER (reason: exact-head CI evidence settlement only — NO technical code changes requested)'. All Round 1 substantive corrections ACCEPTED by Owner: acting-tenant fail-closed, TenantScope precedence mirrored without modifying TenantScope, saving-hook covers create+update, invalid updates rejected, parent reassignment cannot violate tenant integrity, discriminating J/K acceptance tests, MySQL-parity coverage, new composite indexes, scope stayed within GAP-046. Owner independently observed Owner Governance Lint RED on exact head f32b525f00302f584408e3b22701d5e87f8d0abd and diagnosed it as the same evidence-freshness 300s timing race previously documented — explicitly NOT a GAP-046 implementation defect, explicitly directing no code change. Directed: settle all non-governance required checks to genuine terminal green on exact head f32b525f (verified: all pass, browser-tests 49m47s genuine completion, deploy correctly skipping); prove via direct log inspection that the 5 GAP-046 mysql-parity test methods actually executed on real MySQL on this exact head (verified: job 99023630158, all 5 method names present, Tests: 41 passed (1278 assertions), zero FAILURES/ERRORS, job conclusion success); rerun only the failed Owner Governance Lint job (run 33223924796) via `gh run rerun 33223924796 --failed` bound to the same exact SHA, no new commit (executed: rerun job 99031009123, passed 35s, checkout ref confirmed f32b525f00302f584408e3b22701d5e87f8d0abd, all 4 sub-steps PASS individually — structural validation, MySQL claim truthfulness, gate-ordering, evidence-freshness — evidence-freshness explicitly confirmed digest acb7c8dac62a2b750711a0462991c0cfe0527d4698f0c4a9392f21a9e69ced2c matches the current implementation tree). Zero files/commits changed during this Round 2 evidence-settlement — confirmed via git status/git rev-parse before and after. Round 2 itself made no approval decision; it deferred pending this settlement, to be followed by a separate Final decision. Round 2's message contained a transcription error in the quoted digest string, corrected below.' | Owner Gate 3 FINAL decision, GAP-046 (relayed via coordinator session): 'OWNER GATE-3 FINAL DECISION: APPROVED. This is strictly bound to the verified implementation tree.' Binding values, independently reconfirmed by the agent before recording: canonical main reviewed 9944e1b50de515accb68bd5fd67347747620c6d3 (re-fetched and matched at record time); technical implementation subject 829d275f1d9f68af9859db9a558404ed600f20c5; final pre-approval PR head reviewed f32b525f00302f584408e3b22701d5e87f8d0abd; BINDING implementation-tree digest acb7c8dac62a2b750711a0462991c0cfe0527d4698f0c4a9392f21a9e69ced2c — Owner explicitly corrected the Round 2 message's transcription error in the digest string, confirming acb7c8dac62a2b750711a0462991c0cfe0527d4698f0c4a9392f21a9e69ced2c as authoritative, independently corroborated by this file's own technical_evidence field, the agent's own repo digest computation, and the successful evidence-freshness rerun (job 99031009123). Owner independently verified: canonical main, reviewed pre-approval PR head, implementation subject, binding digest, Owner Governance run 33223924796, successful evidence-freshness rerun job 99031009123, real MySQL-parity job 99023630158 (mysql:8.0/MySQL 8.0.46, DB_CONNECTION=mysql, real connection preflight succeeded, both GAP-046 migrations executed, all 5 GAP-046 mysql-parity methods discovered/executed: Tests\\Feature\\Models\\ServiceLineFoundationTest::test_migration_creates_expected_tables_and_columns_on_real_mysql, ::test_duplicate_membership_is_rejected_by_unique_constraint_on_real_mysql, ::test_cross_tenant_writes_are_rejected_on_real_mysql, Tests\\Feature\\Console\\BackfillOpportunityServiceLinesTest::test_opportunity_backfill_mapping_on_real_mysql, ::test_backfill_is_idempotent_on_real_mysql, final result 41 passed / 1278 assertions / zero failures). Owner noted truthfully that the real-MySQL PR-triggered CI workflow used GitHub's generated merge ref 8cc6de706e65dc9246b34bb8effb62e880fefd1b (= Merge(f32b525f into 9944e1b5)), not a direct checkout of the source head SHA itself — recorded here for accuracy, not describing that job as directly checking out the source head. This approval authorizes release ONLY for implementation-tree digest acb7c8dac62a2b750711a0462991c0cfe0527d4698f0c4a9392f21a9e69ced2c: proceed through this approval-record commit (docs/owner-decisions/GAP-046/03-release.md only — any other file change before merge invalidates this approval), post-approval-record-commit CI verification on the new exact PR head (governance evidence must reprove the binding digest unchanged), a pre-merge drift check against canonical main, and — if and only if every condition holds — mark PR #292 Ready for Review and squash-merge into main. No manual production-deployment trigger; no deployment claim unless a real deploy job proves it. Post-merge, independently verify PR MERGED state, exact squash-merge SHA, canonical main advancing to that SHA, expected GAP-046 files present with no unexpected files, post-merge required workflows green, and true production-deployment status from the actual deploy job/log.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-28T09:18:14Z"
-  updated_at: "2026-08-29T00:33:53Z"
+  updated_at: "2026-08-29T04:06:14Z"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "RE-PRESENTATION after Owner Gate 3 Correction Round 1 (full directive preserved verbatim in decision_provenance.owner_response_reference and in this file's 'Correction Round 1' body section). All 6 directed corrections are remediated and independently re-verified: (1) EnforcesServiceLineIntegrity now also rejects an acting/current-tenant-context mismatch (mirroring TenantScope's exact precedence: app('tenant') -> current_tenant_id -> request attribute tenant_id) even with no explicit child tenant_id set, proven by 3 new RED->GREEN tests per side; (2) the trait now hooks `saving` (not `creating`), enforcing canonical service_line/provenance/resolvable-parent/tenant-congruence on updates too, proven by 3 new RED->GREEN tests per side (invalid service_line update, invalid provenance update, cross-tenant parent-reassignment update); (3) acceptance J is now proven via a real Opportunity.converted_project_id link to a pre-existing Project (not an unrelated empty one); (4) acceptance K is now proven with a real canonical Service-Line row seeded on the Opportunity BEFORE conversion, surviving unchanged while the new Project stays at zero rows; (5) GAP-046 DB behavior now runs inside this repo's canonical @group mysql-parity live-CI mechanism via 5 new dedicated test methods (not replacing/removing any default-suite test) added to the two existing GAP-046 test files, matching the exact method-level-tag convention already established by tests/Feature/DatabaseConstraintsTest.php; live-log-verified via `gh run view --job=98944492511 --log` on PR #292's Zena RBAC/Tenant Invariants (MySQL parity) job -- all 5 GAP-046 test method names appear explicitly in that job's own log output with a final `Tests: 41 passed (1278 assertions)` summary and zero FAILURES/ERRORS; (6) both new migrations now carry an explicit (tenant_id, service_line) index (opp_service_lines_tenant_line_index / proj_service_lines_tenant_line_index), independently verified present via SQLite PRAGMA index_list AND real MySQL SHOW INDEX. Remediation touched exactly: app/Models/Concerns/EnforcesServiceLineIntegrity.php, both new migrations, and the three existing GAP-046 test files (36/36 default-suite GAP-046 tests pass, up from 24; +5 mysql-parity-only tests) -- confirmed by explicit diff grep that no forbidden surface (OpportunityController, LeadController, CrmPageController, DesignItemPageController, BusinessKpiService, any pre-existing migration, routes/**, resources/**, .github/**, GAP-041/042/045/047) was touched. One additional real defect was found and fixed during this remediation's own CI verification: PHPStan's nullsafe.neverNull on request()?->attributes in the new resolveActingTenantId() helper (request()'s return type resolves non-nullable; fixed by dropping the unnecessary ?->, zero behavior change). Full local regression suite re-run post-remediation: 2374 tests, 7 pre-existing failures byte-identical by name to the Round-0 set (all in Tests\\Feature\\Dashboard\\DashboardApiTest, unrelated to GAP-046), zero new failures. All 33 live CI checks green on exact current subject_sha/PR-head 829d275f1d9f68af9859db9a558404ed600f20c5 (Owner Governance Lint, test-routes-guardrails, Zena RBAC/Tenant Invariants MySQL parity, Unit/Feature/Integration/API Tests, all real-MySQL concurrency/constraint jobs, security/quality scans, browser-tests polled to genuine 16m33s completion, quality-gate) -- zero evidence-freshness timing-race reruns needed this round (unlike Round 0's two occurrences). deploy correctly shows 'skipping'; workflow success is not described as a deployment. This packet requests Owner Gate 3 decision only; it does not request or imply Ready-for-review, merge, release, or deployment authorization. No self-approval: owner_decision.value stays none, owner_decision_binding stays null."
+mandatory_technical_gate_summary: "RE-PRESENTATION after Owner Gate 3 Correction Round 1 (full directive preserved verbatim in decision_provenance.owner_response_reference and in this file's 'Correction Round 1' body section). All 6 directed corrections are remediated and independently re-verified: (1) EnforcesServiceLineIntegrity now also rejects an acting/current-tenant-context mismatch (mirroring TenantScope's exact precedence: app('tenant') -> current_tenant_id -> request attribute tenant_id) even with no explicit child tenant_id set, proven by 3 new RED->GREEN tests per side; (2) the trait now hooks `saving` (not `creating`), enforcing canonical service_line/provenance/resolvable-parent/tenant-congruence on updates too, proven by 3 new RED->GREEN tests per side (invalid service_line update, invalid provenance update, cross-tenant parent-reassignment update); (3) acceptance J is now proven via a real Opportunity.converted_project_id link to a pre-existing Project (not an unrelated empty one); (4) acceptance K is now proven with a real canonical Service-Line row seeded on the Opportunity BEFORE conversion, surviving unchanged while the new Project stays at zero rows; (5) GAP-046 DB behavior now runs inside this repo's canonical @group mysql-parity live-CI mechanism via 5 new dedicated test methods (not replacing/removing any default-suite test) added to the two existing GAP-046 test files, matching the exact method-level-tag convention already established by tests/Feature/DatabaseConstraintsTest.php; live-log-verified via `gh run view --job=98944492511 --log` on PR #292's Zena RBAC/Tenant Invariants (MySQL parity) job -- all 5 GAP-046 test method names appear explicitly in that job's own log output with a final `Tests: 41 passed (1278 assertions)` summary and zero FAILURES/ERRORS; (6) both new migrations now carry an explicit (tenant_id, service_line) index (opp_service_lines_tenant_line_index / proj_service_lines_tenant_line_index), independently verified present via SQLite PRAGMA index_list AND real MySQL SHOW INDEX. Remediation touched exactly: app/Models/Concerns/EnforcesServiceLineIntegrity.php, both new migrations, and the three existing GAP-046 test files (36/36 default-suite GAP-046 tests pass, up from 24; +5 mysql-parity-only tests) -- confirmed by explicit diff grep that no forbidden surface (OpportunityController, LeadController, CrmPageController, DesignItemPageController, BusinessKpiService, any pre-existing migration, routes/**, resources/**, .github/**, GAP-041/042/045/047) was touched. GAP-046 IS NOW OWNER-APPROVED FOR RELEASE, bound strictly to subject_sha 829d275f1d9f68af9859db9a558404ed600f20c5 / implementation_tree_digest acb7c8dac62a2b750711a0462991c0cfe0527d4698f0c4a9392f21a9e69ced2c. Round 2 (DEFER) settled all live CI on exact head f32b525f00302f584408e3b22701d5e87f8d0abd to genuine terminal green with zero code changes, live-log-proved the 5 GAP-046 mysql-parity test methods executing on real MySQL, and re-verified the Owner Governance Lint evidence-freshness binding via a targeted job rerun (no new commit). This approval-record commit changes only this file; the implementation-tree digest is unaffected by construction. Post-approval-record CI and a pre-merge drift check against canonical main remain required before Ready-for-review/merge."
 technical_evidence:
   subject_sha: "829d275f1d9f68af9859db9a558404ed600f20c5"
   implementation_tree_digest: "acb7c8dac62a2b750711a0462991c0cfe0527d4698f0c4a9392f21a9e69ced2c"
-  verified_pr_head_sha: "829d275f1d9f68af9859db9a558404ed600f20c5"
-  verified_at: "2026-08-28T18:46:38Z"
+  verified_pr_head_sha: "f32b525f00302f584408e3b22701d5e87f8d0abd"
+  verified_at: "2026-08-29T02:36:37Z"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "acb7c8dac62a2b750711a0462991c0cfe0527d4698f0c4a9392f21a9e69ced2c"
+  decision_recorded_at: "2026-08-29T04:06:14Z"
 ---
 
 # GAP-046 — Canonical Service-Line Foundation: Gate 3 Release Request
@@ -119,24 +119,38 @@ technical readiness for Owner review only. **It does not authorize
 Ready-for-review, merge, release, or production deployment** — those
 require a separate, explicit Owner instruction after Gate 3 is decided.
 
-### Three SHAs — do not conflate
+### Three/four SHAs — do not conflate (corrected: the Round-1 re-presentation's
+### claim that "current PR head" equalled subject_sha went stale the moment
+### that packet commit itself was pushed — corrected here, not repeated)
 
 1. **Canonical implementation baseline:** `9944e1b50de515accb68bd5fd67347747620c6d3`
    (main, the approved Gate-2 PR #288 squash-merge SHA — unchanged since
-   Round 0, zero drift).
-2. **Implementation subject_sha (current, superseding Round 0's
-   `037758ff`):** `829d275f1d9f68af9859db9a558404ed600f20c5` — the last
-   commit on PR #292 changing non-Gate-3-record content; what
+   Round 0, zero drift, independently re-fetched and reconfirmed at FINAL
+   APPROVAL recording time).
+2. **Implementation subject_sha (unchanged since Round 1 remediation,
+   Owner-approved):** `829d275f1d9f68af9859db9a558404ed600f20c5` — the
+   last commit on PR #292 that changed non-Gate-3-record content; what
    `technical_evidence.implementation_tree_digest` below is computed
-   against.
-3. **Current PR head (identical to subject_sha as of this packet's
-   commit):** `829d275f1d9f68af9859db9a558404ed600f20c5`. This packet's
-   own commit (adding/updating this file) is excluded from the
-   implementation-tree digest by construction
-   (`owner_governance_compute_implementation_tree_digest()` excludes
-   exactly `docs/owner-decisions/GAP-046/03-release*.md`), so pushing this
-   commit alone will not move the digest away from the value recorded
-   below — only a change to any OTHER file would.
+   against, and what the FINAL APPROVAL below is strictly bound to.
+3. **Reviewed pre-approval PR head (Round 2 DEFER evidence-settlement
+   target, Owner-reviewed):** `f32b525f00302f584408e3b22701d5e87f8d0abd`
+   — three Gate-3-record-only commits past subject_sha
+   (`7a705c6b`, `f32b525f` itself being the second of those, plus one
+   more content-free packet edit); digest unaffected throughout, as
+   proven repeatedly by independent recomputation (see FINAL APPROVAL
+   section below).
+4. **Approval-record commit/head (this commit; its exact SHA is recorded
+   in this file's own git history once committed, and independently
+   reverified against live CI immediately after pushing — see below):**
+   changes only this file. Gate-3 packet files
+   (`docs/owner-decisions/GAP-046/03-release*.md`) are excluded from the
+   implementation-tree digest **by governance construction**
+   (`owner_governance_compute_implementation_tree_digest()` in
+   `scripts/ssot/owner_governance_lint.php` excludes exactly that path),
+   so this commit cannot and does not move the digest away from
+   `acb7c8dac62a2b750711a0462991c0cfe0527d4698f0c4a9392f21a9e69ced2c` —
+   this will be independently reverified after pushing, per the Owner's
+   explicit instruction, not merely asserted.
 
 ### Remediation diff (`63f8636f` Round-0 head → `829d275f` current subject_sha)
 
@@ -255,7 +269,7 @@ tables (SQLite `PRAGMA index_list` AND real MySQL `SHOW INDEX`).
 - Migration round-trip (SQLite AND real MySQL): re-verified clean after
   remediation, both directions, only the two GAP-046 tables affected.
 
-### Live CI — subject_sha `829d275f1d9f68af9859db9a558404ed600f20c5`, current PR head `7a705c6be936df80ca33f2bd8c79e600de2a4567`
+### Live CI at Round 1 remediation completion — subject_sha `829d275f1d9f68af9859db9a558404ed600f20c5` (historical snapshot; superseded as the "current head" narrative by the Round 2 section further below, subject_sha/digest themselves unchanged)
 
 All 33 checks green on `829d275f` itself, independently re-verified via
 direct synchronous `gh pr checks 292` calls after full settlement (exit
@@ -302,6 +316,129 @@ within approved scope, not silently absorbed:
 Both fixes re-verified green locally and on the immediately following live
 CI run, with zero test regressions.
 
+---
+
+## Round 2 — Owner Gate 3 DEFER, exact-head CI evidence settlement (permanent record — never erased)
+
+**Owner Gate 3 decision: DEFER** (reason: exact-head CI evidence
+settlement only — no technical code changes requested). Full verbatim
+directive preserved in this file's frontmatter
+`decision_provenance.owner_response_reference` above. Owner accepted all
+7 Round 1 corrections as correctly remediated (acting-tenant fail-closed,
+`TenantScope` precedence mirrored without modifying `TenantScope`, the
+`saving` hook covering create+update, invalid updates rejected, parent
+reassignment cannot violate tenant integrity, discriminating J/K
+acceptance tests, MySQL-parity coverage, new composite indexes, scope
+discipline held throughout). Owner independently observed `Owner
+Governance Lint` RED on exact head `f32b525f00302f584408e3b22701d5e87f8d0abd`
+(run `33223924796`) and correctly diagnosed it, without any code
+inspection being needed, as the same evidence-freshness 300-second timing
+race documented repeatedly in this and prior Work IDs' Gate-3 history —
+explicitly **not** a GAP-046 implementation defect, explicitly directing
+**no** code, test, migration, or workflow change to "fix" it.
+
+**Settlement performed, zero repository content changes, PR head held
+constant at `f32b525f00302f584408e3b22701d5e87f8d0abd` throughout:**
+
+1. All non-governance required checks on exact head `f32b525f` verified
+   terminal green via direct synchronous `gh pr checks 292` calls: API
+   Tests (Fast/Slow), Code Quality Analysis, Dependency Vulnerability
+   Scan, Docker Security Scan, Document Workflow Concurrency (real
+   MySQL), Feature Tests, Integration Tests, License Compliance Scan,
+   Performance Tests ×2, RFI Escalation Concurrency (real MySQL), Repo
+   Hygiene Guards, Security Tests, Security Vulnerability Scan, Test
+   Coverage Report, Treasury Native CHECK Constraints (real MySQL),
+   Trivy, Unit Tests, Zena RBAC/Tenant Invariants (+ MySQL parity),
+   browser-tests (49m47s — unusually long but genuinely completed, polled
+   to actual terminal state, not assumed), button-inventory-check,
+   code-quality, coverage-report, feature-tests, security-tests,
+   staging-smoke, test-routes-guardrails, test, quality-gate — all
+   `pass`. `deploy: skipping`.
+2. Canonical `@group mysql-parity` mechanism log-inspected directly on
+   this exact head via `gh run view --job=99023630158 --log` (job
+   conclusion: `success`): all 5 GAP-046 test methods present by name —
+   `Tests\Feature\Models\ServiceLineFoundationTest::test_migration_creates_expected_tables_and_columns_on_real_mysql`,
+   `::test_duplicate_membership_is_rejected_by_unique_constraint_on_real_mysql`,
+   `::test_cross_tenant_writes_are_rejected_on_real_mysql`,
+   `Tests\Feature\Console\BackfillOpportunityServiceLinesTest::test_opportunity_backfill_mapping_on_real_mysql`,
+   `::test_backfill_is_idempotent_on_real_mysql` — final summary
+   `Tests: 41 passed (1278 assertions)`, zero FAILURES/ERRORS.
+3. Only the failed `Owner Governance Lint` job (run `33223924796`)
+   rerun via `gh run rerun 33223924796 --failed` — no new commit, bound
+   to the same exact SHA. New job `99031009123`, `pass` (35s). Log
+   directly confirms: `Checkout` step `ref: f32b525f00302f584408e3b22701d5e87f8d0abd`;
+   all 4 sub-steps individually PASS — Structural validation
+   (`✅ owner-governance-lint PASS (96 file(s) scanned, 0 violations)`),
+   MySQL claim truthfulness
+   (`✅ lint-mysql-claim-truthfulness PASS (15 file(s) scanned)`),
+   Gate-ordering (`✅ owner-governance-lint --enforce-gate-ordering PASS`),
+   Evidence-freshness (env block explicitly shows
+   `PR_HEAD_SHA: f32b525f00302f584408e3b22701d5e87f8d0abd`; output:
+   `✅ docs/owner-decisions/GAP-046/03-release.md's implementation-tree
+   digest matches the current implementation tree
+   (acb7c8dac62a2b750711a0462991c0cfe0527d4698f0c4a9392f21a9e69ced2c) —
+   evidence is fresh, decision is not stale.`).
+4. Zero repository changes throughout: `git status --short` empty,
+   `git rev-parse HEAD` identical (`f32b525f00302f584408e3b22701d5e87f8d0abd`)
+   before and after, confirmed via direct commands, not inferred.
+
+Round 2 itself recorded no approval — it deferred pending exactly this
+settlement, explicitly reserving the approval decision for a separate,
+later Owner instruction (recorded as FINAL APPROVAL immediately below).
+This Round 2 record is preserved permanently and must not be removed by
+any future revision.
+
+---
+
+## FINAL APPROVAL — Owner Gate 3 Review (permanent record — never erased)
+
+**Owner Gate 3 decision: APPROVED.** Full verbatim directive preserved in
+this file's frontmatter `decision_provenance.owner_response_reference`
+above. Strictly bound to the verified implementation tree:
+
+- Canonical main reviewed: `9944e1b50de515accb68bd5fd67347747620c6d3`
+  (independently re-fetched and reconfirmed identical at recording time).
+- Technical implementation subject: `829d275f1d9f68af9859db9a558404ed600f20c5`.
+- Final pre-approval PR head reviewed: `f32b525f00302f584408e3b22701d5e87f8d0abd`.
+- **BINDING implementation-tree digest:**
+  `acb7c8dac62a2b750711a0462991c0cfe0527d4698f0c4a9392f21a9e69ced2c` —
+  the Round 2 DEFER message's quoted digest string contained a
+  transcription error; this is the authoritative value, independently
+  corroborated three ways: this file's own `technical_evidence` field,
+  the agent's own repo-canonical digest recomputation
+  (`owner_governance_compute_implementation_tree_digest()`), and the
+  live evidence-freshness rerun (job `99031009123`) quoted verbatim
+  above.
+
+Owner independently verified: canonical main; reviewed pre-approval PR
+head; implementation subject; binding digest; Owner Governance run
+`33223924796`; the successful evidence-freshness rerun job
+`99031009123`; the real MySQL-parity job `99023630158` — `mysql:8.0` /
+MySQL `8.0.46`, `DB_CONNECTION=mysql`, real connection preflight
+succeeded, both GAP-046 migrations executed, all 5 GAP-046 mysql-parity
+methods discovered and executed (listed in the Round 2 section above),
+final result **41 passed / 1278 assertions / zero failures**. Owner
+additionally noted, for accuracy, that the real-MySQL PR-triggered CI
+workflow runs against GitHub's generated merge ref
+`8cc6de706e65dc9246b34bb8effb62e880fefd1b` (= `Merge(f32b525f into
+9944e1b5)`), not a direct checkout of the source head SHA itself — that
+merge ref is not itself a claim of a direct source-head checkout in this
+or any prior GAP-046 evidence section.
+
+**Scope of this approval:** authorizes release **only** for
+implementation-tree digest
+`acb7c8dac62a2b750711a0462991c0cfe0527d4698f0c4a9392f21a9e69ced2c`. Any
+modification to any file other than this Gate-3 record before merge
+invalidates this approval. Authorizes, in strict sequence, each gated on
+the previous step's success: (1) this approval-record commit
+(`docs/owner-decisions/GAP-046/03-release.md` only); (2) post-commit live
+CI verification on the new exact PR head, reproving the binding digest
+unchanged; (3) a pre-merge drift check against canonical main; (4) — if
+and only if every prior condition holds — marking PR #292 Ready for
+Review and squash-merging into main. Does **not** authorize a manual
+production-deployment trigger, and no production-deployment claim is
+authorized unless a real deploy job's own log proves it.
+
 ### Residual risks / known limitations (stated truthfully, not blocking)
 
 1. **Application-layer-only tenant congruence on the Project side** —
@@ -338,12 +475,17 @@ not touched by the remediation — confirmed by explicit diff grep across
 the full remediation commit range. WON→Project propagation remains absent
 (proven, strengthened, by `test_won_to_project_conversion_does_not_propagate_existing_canonical_membership`).
 
-### What this packet does NOT authorize
+### Status after FINAL APPROVAL — what is and is not yet authorized
 
-This Gate 3 packet requests an Owner Gate 3 decision only. It does not
-authorize Ready-for-review, merge, release, or production deployment —
-those remain separate, explicit Owner decisions pending a Gate 3 approval
-and a subsequent, separate release instruction, per this repository's
-established convention (see e.g. GAP-043's and GAP-047's Gate 3 records).
-PR #292 remains Draft/unmerged throughout Correction Round 1 and this
-re-presentation.
+Gate 3 is **APPROVED** (see FINAL APPROVAL section above), bound strictly
+to implementation-tree digest
+`acb7c8dac62a2b750711a0462991c0cfe0527d4698f0c4a9392f21a9e69ced2c`. This
+approval authorizes, in the strict gated sequence stated above, this
+approval-record commit, post-commit CI reverification, a pre-merge drift
+check, and — only if every condition holds — Ready-for-review and a
+squash-merge. It does **not** itself authorize a manual production-deployment
+trigger, and no deployment is to be claimed unless a real deploy job's own
+log proves it. PR #292 remains Draft/unmerged as of this commit; any
+subsequent Ready-flip/merge/deploy step is recorded separately, later in
+this same document, only after being independently performed and
+verified.

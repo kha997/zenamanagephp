@@ -488,26 +488,40 @@ class OpportunityController extends BaseApiController
             return $this->validationError($validator->errors());
         }
 
-        $project = DB::transaction(function () use ($opportunity, $request, $user, $tenantId): Project {
-            $project = Project::query()->create([
-                'tenant_id' => $tenantId,
-                'name' => (string) $request->input('project_name', $opportunity->opportunity_name),
-                'code' => 'PRJ-'.Str::upper(Str::random(8)),
-                'description' => $opportunity->service_scope_summary,
-                'status' => 'planning',
-                'progress' => 0,
-                'budget_total' => $opportunity->estimated_project_value ?? ($opportunity->estimated_fee ?? 0),
-                'start_date' => $request->input('start_date'),
-                'end_date' => $request->input('end_date'),
-                'pm_id' => $opportunity->technical_owner_id ?? $opportunity->sales_owner_id,
-                'created_by' => (string) $user->id,
-            ]);
+        try {
+            $project = DB::transaction(function () use ($opportunity, $request, $user, $tenantId): Project {
+                // GAP-048 §12/§19 — defense-in-depth classification gate,
+                // Opportunity row locked first (canonical lock order),
+                // re-checked under lock inside this same transaction.
+                $locked = Opportunity::query()->whereKey($opportunity->id)->lockForUpdate()->firstOrFail();
+                if (! $locked->hasConfirmedServiceLine()) {
+                    throw ValidationException::withMessages([
+                        'service_line' => ['At least one confirmed Service Line is required before converting to a project.'],
+                    ]);
+                }
 
-            $opportunity->converted_project_id = (string) $project->id;
-            $opportunity->save();
+                $project = Project::query()->create([
+                    'tenant_id' => $tenantId,
+                    'name' => (string) $request->input('project_name', $opportunity->opportunity_name),
+                    'code' => 'PRJ-'.Str::upper(Str::random(8)),
+                    'description' => $opportunity->service_scope_summary,
+                    'status' => 'planning',
+                    'progress' => 0,
+                    'budget_total' => $opportunity->estimated_project_value ?? ($opportunity->estimated_fee ?? 0),
+                    'start_date' => $request->input('start_date'),
+                    'end_date' => $request->input('end_date'),
+                    'pm_id' => $opportunity->technical_owner_id ?? $opportunity->sales_owner_id,
+                    'created_by' => (string) $user->id,
+                ]);
 
-            return $project;
-        });
+                $locked->converted_project_id = (string) $project->id;
+                $locked->save();
+
+                return $project;
+            });
+        } catch (ValidationException $exception) {
+            return $this->validationError($exception->errors());
+        }
 
         $this->recordEvent($opportunity, 'crm.opportunity.converted', [
             'project_id' => (string) $project->id,
@@ -581,6 +595,25 @@ class OpportunityController extends BaseApiController
         if (! $hasNativeAccepted && ! $hasExternalAccepted) {
             return $this->validationError([
                 'quote' => ['Either a native accepted quote or an accepted external quote is required to generate a contract.'],
+            ]);
+        }
+
+        // GAP-048 §12/§13/§19 — independent createContract() gate: the one
+        // point where native-accepted and external-accepted Quote paths
+        // converge (§13). Opportunity row locked first (canonical lock
+        // order), re-checked under lock (held for the duration of this
+        // check via an explicit transaction — lockForUpdate() alone has no
+        // locking effect outside a transaction on MySQL). This applies
+        // whether or not a Project still needs to be created below.
+        $gateBlocked = DB::transaction(function () use ($opportunity): bool {
+            $locked = Opportunity::query()->whereKey($opportunity->id)->lockForUpdate()->firstOrFail();
+
+            return ! $locked->hasConfirmedServiceLine();
+        });
+
+        if ($gateBlocked) {
+            return $this->validationError([
+                'service_line' => ['At least one confirmed Service Line is required before generating a contract.'],
             ]);
         }
 

@@ -55,6 +55,17 @@ class OpportunityConversionUnchangedTest extends TestCase
             'created_by' => (string) $user->id,
         ]);
 
+        // GAP-048 §12 — convert() is now gated on >=1 CONFIRMED canonical
+        // Service Line; seed the minimum required so this test can still
+        // reach the conversion call it is actually exercising. This does
+        // not weaken the propagation proof below: the assertion changes
+        // from "zero rows" to "still exactly the one seeded row, no
+        // additional rows created by conversion."
+        $opportunity->serviceLines()->create([
+            'service_line' => ServiceLine::DESIGN,
+            'provenance' => ServiceLineProvenance::CONFIRMED,
+        ]);
+
         $token = $user->createToken('propagation-regression-test')->plainTextToken;
         $headers = [
             'Accept' => 'application/json',
@@ -80,9 +91,9 @@ class OpportunityConversionUnchangedTest extends TestCase
             'GAP-046 must not add any runtime Opportunity -> Project Service-Line propagation.'
         );
         $this->assertSame(
-            0,
+            1,
             $opportunity->serviceLines()->count(),
-            'Conversion must not implicitly classify the converting Opportunity either.'
+            'Conversion must not implicitly add further classification to the converting Opportunity beyond the one seeded CONFIRMED line the GAP-048 gate required.'
         );
     }
 
@@ -123,9 +134,13 @@ class OpportunityConversionUnchangedTest extends TestCase
             'created_by' => (string) $user->id,
         ]);
 
+        // GAP-048 §12 — convert() is now gated on >=1 CONFIRMED canonical
+        // Service Line, so the pre-existing membership this test seeds
+        // must be CONFIRMED (an INFERRED-only row would now be rejected
+        // by the gate before propagation could even be tested).
         $membership = $opportunity->serviceLines()->create([
             'service_line' => ServiceLine::DESIGN,
-            'provenance' => ServiceLineProvenance::INFERRED,
+            'provenance' => ServiceLineProvenance::CONFIRMED,
         ]);
 
         $token = $user->createToken('propagation-guard-test')->plainTextToken;
@@ -151,7 +166,7 @@ class OpportunityConversionUnchangedTest extends TestCase
         $this->assertCount(1, $survivingRows, 'the pre-existing canonical membership must survive conversion unchanged.');
         $this->assertSame($membership->id, $survivingRows->first()->id);
         $this->assertSame(ServiceLine::DESIGN, $survivingRows->first()->service_line);
-        $this->assertSame(ServiceLineProvenance::INFERRED, $survivingRows->first()->provenance);
+        $this->assertSame(ServiceLineProvenance::CONFIRMED, $survivingRows->first()->provenance);
 
         $this->assertSame(
             0,

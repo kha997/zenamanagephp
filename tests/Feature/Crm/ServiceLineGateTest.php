@@ -5,6 +5,8 @@ namespace Tests\Feature\Crm;
 use App\Http\Middleware\RoleBasedAccessControlMiddleware;
 use App\Models\Account;
 use App\Models\Opportunity;
+use App\Models\Quote;
+use App\Models\QuoteLineItem;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Crm\OpportunityStageTransitionService;
@@ -24,6 +26,12 @@ class ServiceLineGateTest extends TestCase
 {
     use RefreshDatabase;
     use TenantUserFactoryTrait;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->get('/login');
+    }
 
     private function fixture(string $stage): array
     {
@@ -103,5 +111,94 @@ class ServiceLineGateTest extends TestCase
 
         $this->expectException(ValidationException::class);
         app(OpportunityStageTransitionService::class)->transition($actor, $opportunity, Opportunity::STAGE_WON, null);
+    }
+
+    private function authHeaders(User $user): array
+    {
+        $token = $user->createToken('gap048-quote-gate-test')->plainTextToken;
+
+        return [
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+            'X-Tenant-ID' => (string) $user->tenant_id,
+            'Authorization' => 'Bearer ' . $token,
+        ];
+    }
+
+    // Case K — sendQuote() blocked without CONFIRMED
+    public function test_send_quote_blocked_without_confirmed(): void
+    {
+        [$actor, $opportunity] = $this->fixture(Opportunity::STAGE_NEW_LEAD);
+        $quote = Quote::factory()->create(['tenant_id' => $opportunity->tenant_id, 'opportunity_id' => $opportunity->id, 'status' => Quote::STATUS_DRAFT]);
+        QuoteLineItem::factory()->create(['tenant_id' => $opportunity->tenant_id, 'quote_id' => $quote->id]);
+
+        $response = $this->actingAs($actor)->post(route('operator.crm.quotes.send', ['id' => $quote->id]));
+
+        $response->assertRedirect();
+        $this->assertSame(Quote::STATUS_DRAFT, $quote->fresh()->status);
+    }
+
+    public function test_send_quote_allowed_with_confirmed(): void
+    {
+        [$actor, $opportunity] = $this->fixture(Opportunity::STAGE_NEW_LEAD);
+        $opportunity->serviceLines()->create(['service_line' => ServiceLine::DESIGN, 'provenance' => ServiceLineProvenance::CONFIRMED]);
+        $quote = Quote::factory()->create(['tenant_id' => $opportunity->tenant_id, 'opportunity_id' => $opportunity->id, 'status' => Quote::STATUS_DRAFT]);
+        QuoteLineItem::factory()->create(['tenant_id' => $opportunity->tenant_id, 'quote_id' => $quote->id]);
+
+        $response = $this->actingAs($actor)->post(route('operator.crm.quotes.send', ['id' => $quote->id]));
+
+        $response->assertRedirect();
+        $this->assertSame(Quote::STATUS_SENT, $quote->fresh()->status);
+    }
+
+    // Case L — external accepted snapshot syncs freely, but createContract() is blocked
+    public function test_create_contract_blocked_without_confirmed_even_with_external_accepted_snapshot(): void
+    {
+        $this->app['router']->aliasMiddleware('rbac', RoleBasedAccessControlMiddleware::class);
+        $tenant = Tenant::factory()->create();
+        $actor = $this->createTenantUser($tenant, [], ['admin'], ['crm.view', 'crm.manage', 'crm.convert']);
+        $account = Account::query()->create(['tenant_id' => (string) $tenant->id, 'account_type' => Account::TYPE_INDIVIDUAL, 'display_name' => 'L account', 'status' => Account::STATUS_ACTIVE]);
+        $opportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Case L',
+            'pipeline_stage' => Opportunity::STAGE_WON,
+            'created_by' => (string) $actor->id,
+            'external_quote_snapshot' => ['status' => 'ACCEPTED', 'total' => 1000],
+        ]);
+
+        $response = $this->postJson(
+            route('api.zena.crm.opportunities.create-contract', ['id' => $opportunity->id], false),
+            [],
+            $this->authHeaders($actor)
+        );
+
+        $response->assertStatus(422);
+        $this->assertArrayHasKey('service_line', $response->json('error.details.data'));
+    }
+
+    // Case M — already-WON legacy Opportunity still blocked (no grandfather)
+    public function test_already_won_opportunity_convert_blocked_until_confirmed(): void
+    {
+        $this->app['router']->aliasMiddleware('rbac', RoleBasedAccessControlMiddleware::class);
+        $tenant = Tenant::factory()->create();
+        $actor = $this->createTenantUser($tenant, [], ['admin'], ['crm.view', 'crm.manage', 'crm.convert']);
+        $account = Account::query()->create(['tenant_id' => (string) $tenant->id, 'account_type' => Account::TYPE_INDIVIDUAL, 'display_name' => 'M account', 'status' => Account::STATUS_ACTIVE]);
+        $opportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Case M',
+            'pipeline_stage' => Opportunity::STAGE_WON,
+            'created_by' => (string) $actor->id,
+        ]);
+
+        $response = $this->postJson(
+            route('api.zena.crm.opportunities.convert', ['id' => $opportunity->id], false),
+            [],
+            $this->authHeaders($actor)
+        );
+
+        $response->assertStatus(422);
+        $this->assertArrayHasKey('service_line', $response->json('error.details.data'));
     }
 }

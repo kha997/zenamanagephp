@@ -1040,27 +1040,50 @@ class CrmPageController extends Controller
             return back()->with('error', 'Cần ít nhất một dòng để gửi báo giá.');
         }
 
-        $subtotal = QuoteLineItem::query()
-            ->where('quote_id', $quote->id)
-            ->where('tenant_id', $tenantId)
-            ->sum('amount');
+        // GAP-048 §13/§19 — the native formal-Quote gate (DRAFT->SENT).
+        // Canonical lock order: Opportunity row locked first, before the
+        // Quote row is mutated below, all inside one transaction so the
+        // lock is held for the duration of the gate check + mutation.
+        $blocked = false;
 
-        $totals = Quote::computeTotals($subtotal, (float) $quote->discount_percent, (float) $quote->vat_percent);
-        $quote->update([
-            'status' => Quote::STATUS_SENT,
-            'sent_at' => now(),
-            'subtotal' => $subtotal,
-        ] + $totals);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($quote, $tenantId, &$blocked): void {
+            $opportunity = \App\Models\Opportunity::query()
+                ->whereKey($quote->opportunity_id)
+                ->lockForUpdate()
+                ->first();
 
-        EventRecord::query()->create([
-            'tenant_id' => $tenantId,
-            'aggregate_type' => 'quote',
-            'aggregate_id' => (string) $quote->id,
-            'event_key' => 'quote.sent',
-            'actor_user_id' => Auth::id() ? (string) Auth::id() : null,
-            'payload' => ['quote_number' => $quote->quote_number],
-            'occurred_at' => now(),
-        ]);
+            if ($opportunity instanceof \App\Models\Opportunity && ! $opportunity->hasConfirmedServiceLine()) {
+                $blocked = true;
+
+                return;
+            }
+
+            $subtotal = QuoteLineItem::query()
+                ->where('quote_id', $quote->id)
+                ->where('tenant_id', $tenantId)
+                ->sum('amount');
+
+            $totals = Quote::computeTotals($subtotal, (float) $quote->discount_percent, (float) $quote->vat_percent);
+            $quote->update([
+                'status' => Quote::STATUS_SENT,
+                'sent_at' => now(),
+                'subtotal' => $subtotal,
+            ] + $totals);
+
+            EventRecord::query()->create([
+                'tenant_id' => $tenantId,
+                'aggregate_type' => 'quote',
+                'aggregate_id' => (string) $quote->id,
+                'event_key' => 'quote.sent',
+                'actor_user_id' => Auth::id() ? (string) Auth::id() : null,
+                'payload' => ['quote_number' => $quote->quote_number],
+                'occurred_at' => now(),
+            ]);
+        });
+
+        if ($blocked) {
+            return back()->with('error', 'Cần ít nhất một Service Line đã xác nhận trước khi gửi báo giá chính thức.');
+        }
 
         return back()->with('success', 'Đã gửi báo giá.');
     }

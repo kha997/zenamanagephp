@@ -1,3 +1,9 @@
+---
+work_id: GAP-048
+owner_governance_version: 1
+owner_gate_2_record: docs/owner-decisions/GAP-048/02-design.md
+---
+
 # GAP-048 — CRM Classification UX & Gates — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

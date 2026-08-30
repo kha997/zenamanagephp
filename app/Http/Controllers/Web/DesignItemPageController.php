@@ -91,10 +91,28 @@ class DesignItemPageController extends Controller
         $projectId = (string) $request->input('project_id');
         $itemType = (string) $request->input('item_type');
 
-        $serviceCategory = Opportunity::query()
+        $opportunity = Opportunity::query()
             ->where('tenant_id', $tenantId)
             ->where('converted_project_id', $projectId)
-            ->value('service_category');
+            ->first();
+
+        // GAP-048 §14 — read ALL CONFIRMED canonical Service Lines, in the
+        // stable canonical order (DESIGN, CONSTRUCTION, INSPECTION). If
+        // >=1 CONFIRMED line exists, the complete set wins over the legacy
+        // scalar (never collapsed to one arbitrary line). Zero CONFIRMED
+        // lines (including INFERRED-only) falls back to the nullable
+        // legacy scalar exactly as before.
+        $confirmedLines = $opportunity
+            ? $opportunity->serviceLines()
+                ->where('provenance', \App\Support\ServiceLineProvenance::CONFIRMED)
+                ->pluck('service_line')
+                ->all()
+            : [];
+        $orderedConfirmed = array_values(array_intersect(\App\Support\ServiceLine::VALUES, $confirmedLines));
+
+        $serviceCategory = count($orderedConfirmed) > 0
+            ? implode(', ', $orderedConfirmed)
+            : $opportunity?->service_category;
 
         $suggestion = $aiAssistService->suggestDesignItemDescription($itemType, $serviceCategory);
 

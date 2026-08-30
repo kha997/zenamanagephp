@@ -117,6 +117,108 @@ class AiDesignItemSuggestionTest extends TestCase
         });
     }
 
+    // GAP-048 §14 — when >=1 CONFIRMED canonical Service Line exists, the
+    // complete stable-order set ("DESIGN, CONSTRUCTION") is passed as AI
+    // context, winning over a conflicting legacy scalar, never collapsed
+    // to a single line.
+    public function test_passes_complete_confirmed_set_not_legacy_scalar(): void
+    {
+        $opportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => \App\Models\Account::query()->create([
+                'tenant_id' => (string) $this->tenant->id,
+                'account_type' => \App\Models\Account::TYPE_INDIVIDUAL,
+                'display_name' => 'Khach hang',
+                'status' => \App\Models\Account::STATUS_ACTIVE,
+            ])->id,
+            'opportunity_name' => 'Co hoi design-build',
+            'service_category' => 'interior',
+            'pipeline_stage' => Opportunity::STAGE_WON,
+            'sales_owner_id' => (string) $this->user->id,
+            'created_by' => (string) $this->user->id,
+            'converted_project_id' => (string) $this->project->id,
+        ]);
+        $opportunity->serviceLines()->create(['service_line' => \App\Support\ServiceLine::CONSTRUCTION, 'provenance' => \App\Support\ServiceLineProvenance::CONFIRMED]);
+        $opportunity->serviceLines()->create(['service_line' => \App\Support\ServiceLine::DESIGN, 'provenance' => \App\Support\ServiceLineProvenance::CONFIRMED]);
+
+        Http::fake([
+            self::ENDPOINT => Http::response([
+                'content' => [[
+                    'type' => 'tool_use',
+                    'name' => 'suggest_design_item_description',
+                    'input' => ['description' => 'Mô tả.'],
+                ]],
+            ], 200),
+        ]);
+
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $this->actingAs($this->user)
+            ->get(route('operator.design-items.create'), $headers)
+            ->assertOk();
+
+        $this->actingAs($this->user)
+            ->post(route('operator.design-items.suggest-description'), [
+                'project_id' => (string) $this->project->id,
+                'item_type' => 'concept',
+            ], $headers);
+
+        Http::assertSent(function ($request) {
+            $content = $request->data()['messages'][0]['content'];
+
+            return str_contains($content, 'DESIGN, CONSTRUCTION') && ! str_contains($content, 'interior');
+        });
+    }
+
+    // INFERRED-only does NOT outrank the legacy-scalar fallback.
+    public function test_inferred_only_falls_back_to_legacy_scalar(): void
+    {
+        $opportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => \App\Models\Account::query()->create([
+                'tenant_id' => (string) $this->tenant->id,
+                'account_type' => \App\Models\Account::TYPE_INDIVIDUAL,
+                'display_name' => 'Khach hang',
+                'status' => \App\Models\Account::STATUS_ACTIVE,
+            ])->id,
+            'opportunity_name' => 'Co hoi inferred-only',
+            'service_category' => 'landscape',
+            'pipeline_stage' => Opportunity::STAGE_WON,
+            'sales_owner_id' => (string) $this->user->id,
+            'created_by' => (string) $this->user->id,
+            'converted_project_id' => (string) $this->project->id,
+        ]);
+        $opportunity->serviceLines()->create(['service_line' => \App\Support\ServiceLine::DESIGN, 'provenance' => \App\Support\ServiceLineProvenance::INFERRED]);
+
+        Http::fake([
+            self::ENDPOINT => Http::response([
+                'content' => [[
+                    'type' => 'tool_use',
+                    'name' => 'suggest_design_item_description',
+                    'input' => ['description' => 'Mô tả.'],
+                ]],
+            ], 200),
+        ]);
+
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $this->actingAs($this->user)
+            ->get(route('operator.design-items.create'), $headers)
+            ->assertOk();
+
+        $this->actingAs($this->user)
+            ->post(route('operator.design-items.suggest-description'), [
+                'project_id' => (string) $this->project->id,
+                'item_type' => 'concept',
+            ], $headers);
+
+        Http::assertSent(function ($request) {
+            $content = $request->data()['messages'][0]['content'];
+
+            return str_contains($content, 'landscape') && ! str_contains($content, 'DESIGN');
+        });
+    }
+
     public function test_returns_503_when_ai_service_unavailable(): void
     {
         Http::fake([self::ENDPOINT => Http::response(['error' => 'down'], 500)]);

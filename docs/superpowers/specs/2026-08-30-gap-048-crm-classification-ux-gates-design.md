@@ -6,7 +6,7 @@ owner_gate_2_record: docs/owner-decisions/GAP-048/02-design.md
 
 # GAP-048 — CRM Classification UX & Gates: Design (Gate 2)
 
-**Status:** Gate 2, Round 2 re-presentation, awaiting Owner review.
+**Status:** Gate 2, Round 3 re-presentation, awaiting Owner review.
 **This document is docs-only.** It authorizes no migration, model,
 controller, service, route, or UI change by itself. Gate 2 approval (if
 granted) authorizes a bounded implementation to *begin*, in a separate
@@ -31,9 +31,29 @@ including the corrected "complete CONFIRMED set, not one arbitrary line"
 rule for `DesignItemPageController` (§14); (6) external Quote
 synchronization vs. local-use semantics are now explicitly distinguished
 (§13); (7) the "gates initially inert" rollout mode is removed — gates are
-active at deployment (§20). A shared `CONFIRMED`-predicate requirement is
-also added (§10, new). The full verbatim Owner directive and permanent
-Round-1 history are recorded in `docs/owner-decisions/GAP-048/02-design.md`.
+active at deployment (§21). A shared `CONFIRMED`-predicate requirement is
+also added (§10, new).
+
+**Round 2 correction notice:** Owner reviewed the Round-1-corrected
+submission (head `10985db3`) and returned a **second, FINAL, targeted
+CHANGES REQUESTED** — concurrency/atomic-consistency only; all seven
+Round-1 corrections were explicitly accepted and are **not** reopened
+below. Owner identified a genuine check-then-act race: each individual
+operation in the Round-1 design checked the `CONFIRMED` predicate
+correctly in isolation, but nothing serialized two concurrent operations
+against the same Opportunity row, so a classification-reconciliation
+request and a gated-transition request racing each other could both pass
+their own check and jointly commit an illegal state (e.g.
+`scope_defined` + zero `CONFIRMED`). This is corrected by a new §19,
+"Concurrency & Atomic Consistency" (row-level serialization, canonical
+lock ordering, mandatory re-check-under-lock, legacy-writer atomicity,
+deadlock/retry semantics), and three new real-MySQL concurrency
+acceptance tests added to §18. Sections §19 onward are renumbered by +1
+from the Round-1 version to make room for the new §19 (old §19→§20, old
+§20→§21, old §21→§22, old §22→§23, old §23→§24, old §24→§25) — content
+of those sections is otherwise unchanged from Round 1. The full verbatim
+Owner directives and permanent Round-1 + Round-2 history are recorded in
+`docs/owner-decisions/GAP-048/02-design.md`.
 
 **Preconditions verified before drafting this design** (Design Dependency
 Preflight, re-run per Owner instruction against the new canonical main):
@@ -322,7 +342,7 @@ follow-up write.
 `INFERRED` rows are produced only by the shared legacy mapper (§4) — at
 Opportunity create, at Lead conversion, at legacy-scalar update
 reconciliation, or via the existing idempotent CLI backfill command for
-already-existing Opportunities (§20) — **never** by a raw UI toggle (§3).
+already-existing Opportunities (§21) — **never** by a raw UI toggle (§3).
 An `INFERRED` row alone **never** satisfies any gate (§10-§13) or counts
 toward the §5 lifecycle invariant — only `CONFIRMED` does.
 
@@ -521,7 +541,7 @@ No new response shape.
 3. These exits remain allowed regardless of classification, with no
    change: `lost`, `no_bid`, `nurture`, Quote rejection.
 4. The existing GAP-046 backfill command may be re-run to seed `INFERRED`
-   rows as a **user aid only** (§4/§20) — `INFERRED` **never** constitutes
+   rows as a **user aid only** (§4/§21) — `INFERRED` **never** constitutes
    grace and **never** satisfies any gate or the §5 invariant.
 
 **No grandfather bypass. No time-based grace period. No automatic
@@ -531,7 +551,7 @@ carry any exception logic beyond the `lost`/`no_bid`/`nurture`/reject
 exemptions already stated. This section previously framed the policy as
 an open Gate-3/business question; that framing is removed.
 
-## 18. Test strategy (categories only — no tests written in this session; expanded per Round 1 Correction #11)
+## 18. Test strategy (categories only — no tests written in this session; expanded per Round 1 Correction #11 and Round 2 concurrency correction)
 
 **A.** Direct Opportunity `store()`: omitted `service_category` →
 persisted `NULL` + zero canonical rows.
@@ -574,7 +594,139 @@ now also covering the §5 operation's explicit tenant check (not merely
 `EnforcesServiceLineIntegrity`, since that trait cannot cover the delete
 half).
 
-## 19. MySQL/SQLite parity
+**Concurrency acceptance evidence (NEW — Round 2 Correction, real MySQL
+required, SQLite-only evidence is not sufficient for row-lock semantics;
+tag under this repository's existing `@group mysql-parity` mechanism
+where suitable, per §19):**
+
+**CONCURRENCY-1.** Initial state: a pre-scope Opportunity with `{DESIGN /
+CONFIRMED}`. Race two concurrent requests against the same Opportunity:
+(a) classification reconciliation toward `{}` (zero confirmed), and (b) a
+gated pipeline transition into `scope_defined`. Required outcome, proven
+against real MySQL: it must be **impossible** for the final committed
+state to be `scope_defined` + zero `CONFIRMED` — one of the two
+operations must observe the serialized post-lock state and reject. This
+is the exact race Owner's Round 2 directive specified as currently
+possible without serialization (§19).
+
+**CONCURRENCY-2.** Initial state: a `DRAFT` native Quote on an
+Opportunity with `{DESIGN / CONFIRMED}`. Race (a) classification
+reconciliation toward `{}` against (b) `sendQuote()`. Required outcome,
+proven against real MySQL: it must be impossible for the final committed
+state to be Quote `SENT` + zero `CONFIRMED`.
+
+**CONCURRENCY-3.** A legacy `service_category` `update()` whose
+mapper-owned `INFERRED` reconciliation step fails (e.g. a simulated
+constraint violation): required proof that the scalar update itself rolls
+back too — no partially-applied state (legacy value changed but canonical
+reconciliation silently absent), proving §19's legacy-writer atomicity
+rule.
+
+**Must not use sequential/non-discriminating calls to fake this
+evidence** — a test that merely calls operation A then operation B in
+sequence cannot prove serialization; the test harness must genuinely
+interleave two concurrent connections/transactions against the same
+Opportunity row (e.g. one transaction holds the row lock while a second
+attempts the competing operation, proving the second either blocks until
+the first commits/rolls back or is correctly rejected against the
+post-lock state) for CONCURRENCY-1/2 to be discriminating.
+
+## 19. Concurrency & Atomic Consistency (NEW — Round 2 Correction)
+
+**The defect Owner identified:** the Round-1 design ensured every
+individual operation *checks* the shared `CONFIRMED` predicate (§10)
+correctly, but nothing in that design *serialized* two operations racing
+against the same Opportunity. Neither `OpportunityStageTransitionService::transition()`
+nor `CrmPageController::sendQuote()` locks the parent Opportunity row
+today (Gate-1 audit, full-method reads). Concrete forbidden race, stated
+by Owner: an Opportunity at `survey_or_inputs_received` with `{DESIGN /
+CONFIRMED}` receives concurrent Request A (transition to `scope_defined`)
+and Request B (reconcile confirmed set to `{}`); without serialization, A
+can read-and-pass the gate, B can read the old pre-scope stage and permit
+the empty set, and both commit — yielding an illegal final state
+(`scope_defined` with zero `CONFIRMED`). Equivalent races exist between
+classification reconciliation and `sendQuote()`, `convert()`, and
+`createContract()`, and any other operation that both relies on the
+`CONFIRMED` predicate and can alter a lifecycle state that changes
+whether zero classification is legal.
+
+**Binding design: one canonical Opportunity-row serialization rule.**
+Every business operation that can establish, consume, or remove the
+`CONFIRMED` invariant on an Opportunity must serialize against the
+**same** parent Opportunity row. This applies, at minimum, to: (A)
+classification desired-set reconciliation (§5); (B) the gated pipeline
+transition (§11); (C) native `sendQuote()` (§13); (D)
+`OpportunityController::convert()` (§12); (E) `createContract()` (§12/§13);
+(F) the legacy `service_category` update + mapper reconciliation (§4).
+One consistent transaction/locking discipline for all six:
+
+1. Begin a DB transaction.
+2. Acquire an **exclusive row lock** on the authoritative Opportunity row
+   for the subject Opportunity (conceptually `SELECT ... FOR UPDATE` /
+   Laravel's `lockForUpdate()` — exact code structure is an
+   implementation-time decision, not fixed here).
+3. **Re-read all state relevant to the operation AFTER the lock is
+   held** — current `pipeline_stage`, current `CONFIRMED` membership,
+   relevant native Quote status, external accepted snapshot where
+   applicable. **Never validate against a model instance loaded before
+   lock acquisition** — this is a binding prohibition on check-then-act
+   (restated explicitly, with more detail, later in this section).
+4. Evaluate the shared `CONFIRMED` predicate (§10) / lifecycle invariant
+   (§5) under that lock, against the freshly-read state.
+5. Perform the lifecycle or classification mutation.
+6. Write the corresponding `EventRecord`(s) in the same transaction,
+   where applicable (consistent with §6/§5's existing transactional-
+   coherence requirement).
+7. Commit.
+
+**Canonical lock order (binding, to avoid turning this fix into a
+deadlock source):** the authoritative **Opportunity row is always locked
+first**; any related child rows this operation also needs (Service-Line
+membership rows, Quote rows, other child rows) are locked **after** the
+Opportunity row, never before. No GAP-048 path may lock a child Quote or
+Service-Line row first and only later attempt the Opportunity lock while
+a different path does the reverse — that inverted-order combination is
+exactly what produces a deadlock under concurrent load. Exact query
+implementation remains an implementation-time decision; the ordering rule
+itself is binding.
+
+**Legacy writer atomicity (§4, tightened here):** for
+`OpportunityController::store()`, `LeadController::convert()`, and
+`OpportunityController::update()`, the write of the legacy scalar and the
+synchronization of its mapper-owned `INFERRED` canonical membership must
+happen as **one** atomic business operation, under the same Opportunity
+lock discipline above — never a partially-applied state. On `update()`:
+the scalar mutation and the mapper-owned `INFERRED` reconciliation occur
+in one transaction; a failure in the canonical-reconciliation step rolls
+back the scalar change too. On creation/Lead-conversion: Opportunity
+creation and its mapper-derived `INFERRED` membership creation are one
+atomic operation — a canonical-row creation failure must not leave behind
+a persisted Opportunity whose legacy scalar implies a classification that
+silently never got its corresponding canonical row. `CONFIRMED` rows
+remain protected exactly as already designed (§4 rule 2) — this
+correction is about atomicity/failure-handling, not about reopening which
+rows the legacy mapper may touch.
+
+**Recheck-under-lock, not check-then-act (binding, in addition to §10's
+shared predicate, not a replacement for it):** the shared predicate (§10)
+states *what* to check; this section states *when*. The decisive
+predicate check for every invariant-sensitive operation must occur
+**inside the transaction, after the Opportunity lock is acquired, against
+freshly-re-read state** — never `read Opportunity → check predicate →
+later begin transaction → mutate`, which is exactly the check-then-act
+pattern that produces the CONCURRENCY-1/CONCURRENCY-2 races (§18). A
+predicate evaluated before lock acquisition is advisory/UX-only (e.g. to
+decide whether to even show a "Confirm" button state) and must never be
+treated as the operation's authoritative gate decision.
+
+**Deadlock/retry behavior:** this design does not introduce a silent
+retry that can bypass the invariant. Normal framework/database deadlock
+retry behavior may be used if already standard in this codebase, but
+**after any retry the operation must reacquire the Opportunity lock,
+re-read state, and re-evaluate the predicate/invariant from scratch** —
+the gate decision is never cached across a retry attempt.
+
+## 20. MySQL/SQLite parity
 
 Unchanged from Round 1: the nullable-`service_category` migration (§9)
 verified on SQLite and real MySQL, following this repository's
@@ -582,7 +734,7 @@ established parity pattern. No new table introduced — this design uses
 GAP-046's existing tables and the existing `EventRecord` table, both
 already portable.
 
-## 20. Rollout/backfill boundaries (corrected — Round 1 Correction #9, "gates initially inert" mode removed)
+## 21. Rollout/backfill boundaries (corrected — Round 1 Correction #9, "gates initially inert" mode removed)
 
 **Round-1 error, corrected:** the initial design recommended shipping the
 gates "initially inert" and enabling them later via an unspecified
@@ -603,7 +755,7 @@ execution of the backfill cannot be proven at Gate 3, that must be
 reported truthfully — it must never be claimed to have occurred without
 proof.**
 
-## 21. What this design explicitly does NOT solve
+## 22. What this design explicitly does NOT solve
 
 - Exact UI copy/Vietnamese wording for the new classification panel and
   gate error messages.
@@ -622,11 +774,15 @@ proof.**
   Snapshot persistence, Contract multi-Service-Line, Portfolio, Project
   Health, Commercial/Finance/Resource Control, OPPM, Control Tower,
   Treasury, legacy-taxonomy retirement, GAP-041/042/045.
-- **(Resolved in this round, no longer listed as undecided): the
+- **(Resolved in Round 1, no longer listed as undecided): the
   in-flight/grace policy (§17) and the rollout-gate-activation mode
-  (§20)** — both are now Owner-decided, not open questions.
+  (§21)** — both are Owner-decided, not open questions.
+- Exact locking/transaction code structure (query builder calls, retry
+  middleware configuration) implementing §19's serialization rule — the
+  serialization/lock-order/recheck-under-lock requirements themselves are
+  binding; their precise code shape is an implementation-time decision.
 
-## 22. Loại trừ rõ ràng (restated)
+## 23. Loại trừ rõ ràng (restated)
 
 Không thiết kế/triển khai: Opportunity→Project Service-Line propagation;
 Project classification UX; lịch sử backfill phía Project; Quote Scope
@@ -635,23 +791,27 @@ Project OPPM; Operations Control Tower; Finance/Treasury; retirement cuối
 cùng của taxonomy cũ; GAP-041/GAP-042/GAP-045. Không sửa đổi
 zena-boq-core. Không có chế độ "cổng tạm tắt" (inert-gate) khi triển
 khai — cổng luôn hoạt động ngay khi release. Không có ân hạn/grace theo
-thời gian hay theo giai đoạn có sẵn. Gate 2 này không viết code, không
-viết migration, không viết test, không viết implementation plan.
+thời gian hay theo giai đoạn có sẵn. Không có cơ chế retry ngầm có thể bỏ
+qua kiểm tra bất biến — mọi lần thử lại đều phải khoá lại, đọc lại, kiểm
+tra lại từ đầu (§19). Gate 2 này không viết code, không viết migration,
+không viết test, không viết implementation plan.
 
-## 23. Decision Needed
+## 24. Decision Needed
 
 Owner chọn một trong: Approve (cho phép mở phiên triển khai riêng, đúng
 ranh giới đã sửa ở trên) / Yêu cầu sửa đổi thêm (changes_requested) / Từ
 chối (declined).
 
-## 24. What the owner is NOT being asked to decide
+## 25. What the owner is NOT being asked to decide
 
 Owner không được yêu cầu duyệt tên route/controller/method/migration/event
-key cụ thể, hay câu chữ UI chính xác — đó là quyết định ở phiên triển khai
-trong ranh giới đã duyệt. Owner đã quyết định (không còn là câu hỏi mở):
-chính sách không-ân-hạn cho deal dở dang (§17); gỡ bỏ chế độ cổng-tạm-tắt
-khi rollout (§20); đặt cổng Quote tại `sendQuote()` + `createContract()`
-(§13); chiến lược migration nullable cho `service_category` (§9); ranh
-giới ingestion-vs-local-use cho Quote ngoài zena-boq-core (§13); quy tắc
-tập CONFIRMED đầy đủ (không phải 1 dòng tuỳ ý) cho gợi ý AI hạng mục thiết
-kế (§14).
+key cụ thể, cấu trúc lock/transaction chính xác, hay câu chữ UI chính xác
+— đó là quyết định ở phiên triển khai trong ranh giới đã duyệt. Owner đã
+quyết định (không còn là câu hỏi mở): chính sách không-ân-hạn cho deal dở
+dang (§17); gỡ bỏ chế độ cổng-tạm-tắt khi rollout (§21); đặt cổng Quote
+tại `sendQuote()` + `createContract()` (§13); chiến lược migration
+nullable cho `service_category` (§9); ranh giới ingestion-vs-local-use cho
+Quote ngoài zena-boq-core (§13); quy tắc tập CONFIRMED đầy đủ (không phải
+1 dòng tuỳ ý) cho gợi ý AI hạng mục thiết kế (§14); và quy tắc khoá hàng
+Opportunity + thứ tự khoá chuẩn + bắt buộc kiểm tra lại dưới khoá (§19,
+Round 2).

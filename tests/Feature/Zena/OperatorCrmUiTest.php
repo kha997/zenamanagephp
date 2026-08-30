@@ -103,6 +103,17 @@ class OperatorCrmUiTest extends TestCase
             ->assertOk()
             ->assertSee('Nha pho Anh Tuan');
 
+        // GAP-048 §11/§17 — the pipeline gate now requires >=1 CONFIRMED
+        // canonical Service Line before entering `won` (and every other
+        // active sales stage). Lead conversion above only produced an
+        // INFERRED row (from the shared legacy mapper); explicitly confirm
+        // it via the new classification action before transitioning stage.
+        $this->actingAs($this->user)
+            ->post(route('operator.crm.opportunities.service-lines', $opportunity->id), [
+                'service_lines' => [\App\Support\ServiceLine::DESIGN],
+            ], $headers)
+            ->assertRedirect();
+
         $stage = $this->actingAs($this->user)
             ->post(route('operator.crm.opportunities.stage', $opportunity->id), [
                 'pipeline_stage' => Opportunity::STAGE_WON,
@@ -824,6 +835,13 @@ class OperatorCrmUiTest extends TestCase
             'external_quote_snapshot' => ['revision' => 1, 'total' => 75000000, 'status' => 'ACCEPTED'],
         ]);
 
+        // GAP-048 §12/§13 — createContract() is now gated on >=1 CONFIRMED
+        // canonical Service Line.
+        $opportunity->serviceLines()->create([
+            'service_line' => \App\Support\ServiceLine::DESIGN,
+            'provenance' => \App\Support\ServiceLineProvenance::CONFIRMED,
+        ]);
+
         $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
 
         $this->actingAs($this->user)
@@ -898,6 +916,13 @@ class OperatorCrmUiTest extends TestCase
             'external_boq_project_code' => 'PRJ-009',
             'external_quote_id' => 'quote_ui_2',
             'external_quote_snapshot' => ['revision' => 1, 'total' => 90000000, 'status' => 'ACCEPTED'],
+        ]);
+
+        // GAP-048 §12/§13 — createContract() is now gated on >=1 CONFIRMED
+        // canonical Service Line.
+        $opportunity->serviceLines()->create([
+            'service_line' => \App\Support\ServiceLine::DESIGN,
+            'provenance' => \App\Support\ServiceLineProvenance::CONFIRMED,
         ]);
 
         $headers = ['X-Tenant-ID' => (string) $this->tenant->id];

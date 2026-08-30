@@ -406,6 +406,16 @@ class CrmPageController extends Controller
             'boqCard' => $this->buildBoqCardViewModel($opportunity),
             'canManageBoq' => (bool) Auth::user()?->hasPermission('crm.manage'),
             'contractCard' => $this->buildContractCardViewModel($opportunity),
+            // GAP-048 §3 — canonical Service-Line classification panel:
+            // keyed by ServiceLine value so the Blade view can render a
+            // checkbox pre-checked for any existing CONFIRMED/INFERRED row.
+            'serviceLineValues' => \App\Support\ServiceLine::VALUES,
+            'confirmedServiceLines' => $opportunity->serviceLines()
+                ->where('provenance', \App\Support\ServiceLineProvenance::CONFIRMED)
+                ->pluck('service_line')->all(),
+            'inferredServiceLines' => $opportunity->serviceLines()
+                ->where('provenance', \App\Support\ServiceLineProvenance::INFERRED)
+                ->pluck('service_line')->all(),
             'users' => User::query()
                 ->where('tenant_id', $tenantId)
                 ->orderBy('name')

@@ -319,6 +319,16 @@ class OpportunityController extends BaseApiController
                 // legacy mapper") holds by construction.
                 $mappedLine = \App\Support\LegacyServiceCategoryMapper::mapToServiceLine($incomingCategory);
 
+                // GAP-048 §19/CONCURRENCY-3 — test-only failure-injection
+                // seam, inert unless the exact env var below is set to '1'
+                // (never true outside the CONCURRENCY-3 test/console
+                // command). Proves the scalar mutation above rolls back
+                // together with a failed canonical-reconciliation step,
+                // inside the SAME transaction — no partially-applied state.
+                if (($_SERVER['GAP048_SIMULATE_MAPPER_FAILURE'] ?? getenv('GAP048_SIMULATE_MAPPER_FAILURE')) === '1') {
+                    throw new \RuntimeException('GAP-048 CONCURRENCY-3: simulated mapper reconciliation failure.');
+                }
+
                 $mapperOwnedRows = \App\Models\OpportunityServiceLine::query()
                     ->where('opportunity_id', $locked->id)
                     ->where('provenance', \App\Support\ServiceLineProvenance::INFERRED)

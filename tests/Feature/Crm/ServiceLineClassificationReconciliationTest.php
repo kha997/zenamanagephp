@@ -246,6 +246,43 @@ class ServiceLineClassificationReconciliationTest extends TestCase
         $this->service()->reconcile($actorB, $opportunity, [ServiceLine::DESIGN]);
     }
 
+    // GAP-048 §19/CONCURRENCY-3 — a failure in the mapper-owned INFERRED
+    // reconciliation step must roll back the legacy scalar write too, no
+    // partially-applied state. Exercised here via update()'s test-only
+    // failure-injection seam (inert unless GAP048_SIMULATE_MAPPER_FAILURE=1).
+    public function test_update_rolls_back_scalar_when_mapper_reconciliation_fails(): void
+    {
+        $this->app['router']->aliasMiddleware('rbac', RoleBasedAccessControlMiddleware::class);
+        $tenant = Tenant::factory()->create();
+        $user = $this->createTenantUser($tenant, [], ['admin'], ['crm.view', 'crm.manage']);
+        $account = Account::query()->create(['tenant_id' => (string) $tenant->id, 'account_type' => Account::TYPE_INDIVIDUAL, 'display_name' => 'CONCURRENCY-3 account', 'status' => Account::STATUS_ACTIVE]);
+        $opportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'CONCURRENCY-3',
+            'service_category' => 'architecture',
+            'pipeline_stage' => Opportunity::STAGE_NEW_LEAD,
+            'created_by' => (string) $user->id,
+        ]);
+
+        $token = $user->createToken('gap048-concurrency3')->plainTextToken;
+        $headers = ['Accept' => 'application/json', 'Content-Type' => 'application/json', 'X-Tenant-ID' => (string) $user->tenant_id, 'Authorization' => 'Bearer ' . $token];
+
+        putenv('GAP048_SIMULATE_MAPPER_FAILURE=1');
+        $_SERVER['GAP048_SIMULATE_MAPPER_FAILURE'] = '1';
+        try {
+            $response = $this->putJson(route('api.zena.crm.opportunities.update', ['id' => $opportunity->id], false), ['service_category' => 'construction'], $headers);
+            $this->assertGreaterThanOrEqual(500, $response->getStatusCode(), 'The simulated mapper failure must surface as a server error, not a silent success.');
+        } finally {
+            putenv('GAP048_SIMULATE_MAPPER_FAILURE');
+            unset($_SERVER['GAP048_SIMULATE_MAPPER_FAILURE']);
+        }
+
+        $fresh = $opportunity->fresh();
+        $this->assertSame('architecture', $fresh->service_category, 'Scalar must roll back together with the failed canonical reconciliation.');
+        $this->assertSame(0, OpportunityServiceLine::query()->where('opportunity_id', $opportunity->id)->where('service_line', ServiceLine::CONSTRUCTION)->count());
+    }
+
     // Invalid Service-Line value rejected
     public function test_reconcile_rejects_invalid_service_line_value(): void
     {

@@ -13,6 +13,7 @@ FinalSystemTest::test_system_health_monitoring|group=slow|reason=dependency:
 GAP040ColdStartTransactionIsolationAssertions::proveColdStartAndWriteMarker|group=stress|reason=dependency:
 LoadTest::setUp|group=load|reason=RUN_LOAD_TESTS
 LoadTest::skipIfAppIsUnreachable|group=slow|reason=dependency:
+OpportunityServiceLineConcurrencyTest::skipUnlessMysqlAvailable|group=stress|reason=dependency:
 PerformanceIntegrationTest::it_can_handle_alerts_performance|group=slow|reason=RUN_SLOW_TESTS
 PerformanceIntegrationTest::it_can_handle_stress_testing|group=stress|reason=RUN_STRESS_TESTS
 PerformanceTest::skipUnlessSlowTestsEnabled|group=slow|reason=RUN_SLOW_TESTS

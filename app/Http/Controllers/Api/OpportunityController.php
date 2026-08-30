@@ -13,6 +13,7 @@ use App\Models\Opportunity;
 use App\Models\Project;
 use App\Models\Quote;
 use App\Models\QuoteLineItem;
+use App\Services\Crm\OpportunityServiceLineClassificationService;
 use App\Services\Crm\OpportunityStageTransitionService;
 use App\Services\ZenaBoqIntegrationService;
 use Illuminate\Database\Eloquent\Builder;
@@ -303,6 +304,48 @@ class OpportunityController extends BaseApiController
             $this->serialize($opportunity->fresh() ?? $opportunity),
             'Opportunity updated successfully'
         );
+    }
+
+    /**
+     * GAP-048 §3/§5 — explicit "Confirm classification" write. The desired
+     * canonical Service-Line set is submitted whole; the atomic
+     * reconciliation service handles CONFIRMED promotion, mapper-owned
+     * INFERRED removal, the lifecycle invariant, and the audit trail.
+     */
+    public function updateServiceLines(Request $request, string $id, OpportunityServiceLineClassificationService $service): JsonResponse
+    {
+        $user = Auth::user();
+        if (! $user) {
+            return $this->unauthorized('Authentication required');
+        }
+
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === '') {
+            return $this->errorResponse('Tenant context missing', 400);
+        }
+
+        $opportunity = $this->scopedQuery($tenantId)->whereKey($id)->first();
+        if (! $opportunity instanceof Opportunity) {
+            return $this->notFound('Opportunity not found');
+        }
+
+        $this->authorize('update', $opportunity);
+
+        $validator = Validator::make($request->all(), [
+            'service_lines' => ['present', 'array'],
+            'service_lines.*' => [Rule::in(\App\Support\ServiceLine::VALUES)],
+        ]);
+        if ($validator->fails()) {
+            return $this->validationError($validator->errors());
+        }
+
+        try {
+            $opportunity = $service->reconcile($user, $opportunity, $request->input('service_lines', []));
+        } catch (ValidationException $exception) {
+            return $this->validationError($exception->errors());
+        }
+
+        return $this->zenaSuccessResponse($this->serialize($opportunity), 'Service-Line classification updated successfully');
     }
 
     public function updateStage(Request $request, string $id): JsonResponse

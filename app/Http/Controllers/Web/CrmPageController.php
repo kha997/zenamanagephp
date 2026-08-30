@@ -554,6 +554,44 @@ class CrmPageController extends Controller
         return back()->with('success', 'Đã chuyển giai đoạn');
     }
 
+    /**
+     * GAP-048 §3/§5 — web wrapper for the explicit "Confirm classification"
+     * action, delegating to the same atomic reconciliation service used by
+     * the API path.
+     */
+    public function confirmServiceLines(Request $request, string $id): RedirectResponse
+    {
+        $validated = $request->validate([
+            'service_lines' => ['array'],
+            'service_lines.*' => [\Illuminate\Validation\Rule::in(\App\Support\ServiceLine::VALUES)],
+        ]);
+
+        $tenantId = $this->tenantId();
+
+        try {
+            $opportunity = Opportunity::forTenant($tenantId)->findOrFail($id);
+        } catch (ModelNotFoundException) {
+            return back()->with('error', 'Không tìm thấy cơ hội bán hàng.');
+        }
+
+        /** @var User $authUser */
+        $authUser = Auth::user();
+
+        try {
+            app(\App\Services\Crm\OpportunityServiceLineClassificationService::class)->reconcile(
+                $authUser,
+                $opportunity,
+                $validated['service_lines'] ?? []
+            );
+        } catch (ValidationException $exception) {
+            return back()->withErrors($exception->errors())->withInput();
+        } catch (AuthorizationException) {
+            return back()->with('error', 'Bạn không có quyền thực hiện thao tác này.');
+        }
+
+        return back()->with('success', 'Đã xác nhận phân loại Service Line.');
+    }
+
     public function convertOpportunity(Request $request, string $id, ApiOpportunityController $apiController): RedirectResponse
     {
         $validated = $request->validate([

@@ -375,6 +375,7 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::get('/opportunities/{id}', [\App\Http\Controllers\Api\OpportunityController::class, 'show'])->middleware('rbac:crm.view')->name('crm.opportunities.show');
             Route::put('/opportunities/{id}', [\App\Http\Controllers\Api\OpportunityController::class, 'update'])->middleware('rbac:crm.manage')->name('crm.opportunities.update');
             Route::post('/opportunities/{id}/stage', [\App\Http\Controllers\Api\OpportunityController::class, 'updateStage'])->middleware('rbac:crm.manage')->name('crm.opportunities.stage');
+            Route::post('/opportunities/{id}/service-lines', [\App\Http\Controllers\Api\OpportunityController::class, 'updateServiceLines'])->middleware('rbac:crm.manage')->name('crm.opportunities.service-lines');
             Route::post('/opportunities/{id}/convert', [\App\Http\Controllers\Api\OpportunityController::class, 'convert'])->middleware('rbac:crm.convert')->name('crm.opportunities.convert');
             Route::post('/opportunities/{id}/boq-link', [\App\Http\Controllers\Api\OpportunityController::class, 'linkExternalBoqProject'])->middleware('rbac:crm.manage')->name('crm.opportunities.boq-link');
             Route::post('/opportunities/{id}/boq-sync', [\App\Http\Controllers\Api\OpportunityController::class, 'syncExternalQuote'])->middleware('rbac:crm.manage')->name('crm.opportunities.boq-sync');

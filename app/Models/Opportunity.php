@@ -163,4 +163,22 @@ class Opportunity extends Model
     {
         return in_array((string) $this->pipeline_stage, self::TERMINAL_STAGES, true);
     }
+
+    /**
+     * GAP-048 §10 — the single shared CONFIRMED predicate. Every gate
+     * (pipeline transition, sendQuote(), convert(), createContract(), the
+     * §5 classification-mutation lifecycle invariant) MUST call this
+     * method rather than writing its own independent count(...) query.
+     *
+     * This is a pure read — it does not lock. Callers needing the
+     * lock-safe authoritative answer must call this on a model instance
+     * obtained AFTER `lockForUpdate()` inside their own transaction
+     * (design §19).
+     */
+    public function hasConfirmedServiceLine(): bool
+    {
+        return $this->serviceLines()
+            ->where('provenance', \App\Support\ServiceLineProvenance::CONFIRMED)
+            ->exists();
+    }
 }

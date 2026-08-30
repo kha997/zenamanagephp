@@ -6,12 +6,34 @@ owner_gate_2_record: docs/owner-decisions/GAP-048/02-design.md
 
 # GAP-048 — CRM Classification UX & Gates: Design (Gate 2)
 
-**Status:** Gate 2, awaiting Owner review. **This document is docs-only.**
-It authorizes no migration, model, controller, service, route, or UI
-change by itself. Gate 2 approval (if granted) authorizes a bounded
-implementation to *begin*, in a separate future implementation session/PR,
-strictly within this document's §11 boundary — no implementation occurs
-in the session that writes this document.
+**Status:** Gate 2, Round 2 re-presentation, awaiting Owner review.
+**This document is docs-only.** It authorizes no migration, model,
+controller, service, route, or UI change by itself. Gate 2 approval (if
+granted) authorizes a bounded implementation to *begin*, in a separate
+future implementation session/PR, strictly within this document's
+boundary — no implementation occurs in the session that writes this
+document.
+
+**Round 1 correction notice:** Owner reviewed the initial submission (PR
+#294, head `deaa7a81`) and returned **CHANGES REQUESTED** — a targeted
+design correction, not a rejection; the overall design direction was
+accepted. Seven corrections were directed and are applied throughout this
+re-presentation: (1) the in-flight/grace policy is now Owner-decided (no
+grandfather, no time-based grace — §17, was previously left open); (2) a
+complete legacy→canonical synchronization contract now covers all three
+active `service_category` writers, not just Lead conversion (§4, new);
+(3) classification mutation is now an atomic desired-set reconciliation
+with an explicit lifecycle invariant and delete/tenant safety design (§5,
+replaces the old simple "promote-in-place" description); (4) the
+multi-select UI write contract is now precise (§3); (5) the two legacy
+consumers' multi-line/INFERRED/CONFIRMED behavior is now fully specified,
+including the corrected "complete CONFIRMED set, not one arbitrary line"
+rule for `DesignItemPageController` (§14); (6) external Quote
+synchronization vs. local-use semantics are now explicitly distinguished
+(§13); (7) the "gates initially inert" rollout mode is removed — gates are
+active at deployment (§20). A shared `CONFIRMED`-predicate requirement is
+also added (§10, new). The full verbatim Owner directive and permanent
+Round-1 history are recorded in `docs/owner-decisions/GAP-048/02-design.md`.
 
 **Preconditions verified before drafting this design** (Design Dependency
 Preflight, re-run per Owner instruction against the new canonical main):
@@ -24,7 +46,8 @@ Preflight, re-run per Owner instruction against the new canonical main):
   Opportunity, Quote, Project, or Service-Line source file changed**
   between the Gate-1 audit and this Gate-2 design. The Gate-1 evidence
   (file:line citations throughout) therefore remains current and does not
-  need re-verification against a moved target.
+  need re-verification against a moved target. Re-confirmed unchanged at
+  Round 2 (still `e71b5508`, verified again before this correction round).
 - Canonical SSOT (`docs/superpowers/specs/2026-08-15-zena-one-page-management-canonical-semantics.md`)
   re-read: §2 (Service-Line taxonomy), §3 (classification maturity through
   the funnel), §10 (legacy migration principles) — unchanged, still
@@ -33,7 +56,10 @@ Preflight, re-run per Owner instruction against the new canonical main):
   and Gate 3 release record (`docs/owner-decisions/GAP-046/03-release.md`)
   re-read: the persistence foundation (`opportunity_service_lines`/
   `project_service_lines`, `EnforcesServiceLineIntegrity`, the backfill
-  command) is binding and must be reused, not reimplemented.
+  command) is binding and must be reused, not reimplemented. **Correction
+  #3 below (§5) explicitly corrects an over-claim in the Round-1 design
+  about what `EnforcesServiceLineIntegrity` actually protects** (it hooks
+  Eloquent `saving` — create/update only, never `delete`).
 - GAP-048's own approved Gate 1 (`docs/owner-decisions/GAP-048/01-request.md`,
   both Round 1 and Round 2 history) and its audit
   (`docs/audits/2026-08-29-gap-048-crm-classification-gates-audit.md`)
@@ -88,410 +114,507 @@ and `DesignItemPageController`. Full boundary and the explicit
 out-of-scope list: `docs/owner-decisions/GAP-048/01-request.md`, Round 2
 history.
 
-**Scope-boundary verification (Owner directive §3):** this design was
-checked against every out-of-scope item (Opportunity→Project propagation,
-Project classification UX/backfill, Quote Scope Snapshot persistence,
-Contract multi-Service-Line, Portfolio, Project Health, Commercial/Finance/
-Resource Control, OPPM, Control Tower, Treasury, legacy-taxonomy
-retirement, GAP-041/042/045). **None of them was found to be genuinely
-required** for this design to be coherent — the Quote-gate design (§11)
-closes the external-Quote bypass identified in Gate 1 entirely from
-GAP-048's own side (gating `createContract()` in this codebase), without
-requiring any change to zena-boq-core itself. No scope expansion is
-proposed or silently assumed.
+**Scope-boundary verification (Owner directive §3, Gate-1 Round 2):** this
+design was checked against every out-of-scope item (Opportunity→Project
+propagation, Project classification UX/backfill, Quote Scope Snapshot
+persistence, Contract multi-Service-Line, Portfolio, Project Health,
+Commercial/Finance/Resource Control, OPPM, Control Tower, Treasury,
+legacy-taxonomy retirement, GAP-041/042/045). **None of them was found to
+be genuinely required** for this design to be coherent — the Quote-gate
+design (§13) closes the external-Quote bypass identified in Gate 1
+entirely from GAP-048's own side (gating `createContract()` in this
+codebase), without requiring any change to zena-boq-core itself
+(clarified further per Round 1 Correction #6, §13). No scope expansion is
+proposed or silently assumed. Re-verified at Round 2: none of the Round-1
+corrections required touching any out-of-scope item either.
 
 ## 3. Canonical classification write model and UX
 
-**Alternatives considered:**
+**Alternatives considered** (unchanged from Round 1):
 
 - **A. Replace the legacy scalar `<select>` outright** with a canonical
   multi-select of the 3 values, writing directly to
-  `opportunity_service_lines`. Simplest UX, but removes the
-  `service_category` data-entry point that `BusinessKpiService`/
-  `DesignItemPageController` still read (§8), forcing their compatibility
-  question to be resolved immediately rather than on a bridge.
+  `opportunity_service_lines`. Rejected — forces the §14 compatibility
+  question immediately.
 - **B. Add a canonical multi-select alongside the untouched legacy
   `<select>`,** with an explicit, separate "Confirm classification"
-  action distinct from merely checking boxes. Preserves the legacy data
-  point for existing consumers during the compatibility bridge (§8) while
-  establishing the new truthful, multi-valued, provenance-aware surface.
-- **C. Auto-infer only** (reuse the legacy→canonical mapping at
-  conversion time) with a lightweight "confirm" toggle, no manual
-  multi-select at all. Fastest to ship, but does not give users a way to
-  express a Service Line the legacy 9-value taxonomy cannot represent
-  cleanly (e.g. a genuinely Design-Build Opportunity), and does not
-  satisfy "truthful classification UX" as strongly as B.
+  action. Selected.
+- **C. Auto-infer only**, no manual multi-select. Rejected — cannot
+  express a Service Line the legacy taxonomy cannot represent cleanly.
 
-**Decision: B, with C's inference folded in as an assist, not a
-replacement.** At Lead-conversion time, the legacy `<select>` is retained
-unchanged for now (compatibility bridge, §8), and the exact same
-legacy→canonical mapping table GAP-046's backfill command already encodes
-(`architecture`-family→`DESIGN`/`INFERRED`, `construction`→`CONSTRUCTION`/
-`INFERRED`, `inspection`/`consulting`/`combined_package`/null→no row) is
-run **synchronously, in-request**, immediately seeding `INFERRED` rows for
-the new Opportunity — this is a genuine reuse, not a new mapping: the
-mapping logic must be extracted into one shared, single-source class (e.g.
-`App\Support\LegacyServiceCategoryMapper`) consumed by both the existing
-CLI backfill command and this new in-request call, so the two never drift.
-The Opportunity detail page gains a new canonical multi-select panel
-showing the current membership (checked = row exists) plus each row's
-provenance badge (`INFERRED`/`CONFIRMED`); checking/unchecking without
-confirming changes nothing (`INFERRED` state only comes from the legacy
-mapping or an explicit future manual add, never from casually toggling a
-checkbox); a distinct **"Confirm classification"** action is the only way
-to write/promote a `CONFIRMED` row (§4). This satisfies "explicit
-confirmation" as a deliberate second act, not an accidental side effect of
-selection.
+**Decision: B, with C's inference folded in as an assist.** At
+Lead-conversion time, the legacy `<select>` is retained (compatibility
+bridge, §14), and the shared legacy→canonical mapper (§4) seeds `INFERRED`
+rows synchronously.
 
-## 4. Confirmation workflow (INFERRED/unset → CONFIRMED)
+**UI write contract — corrected and made precise (Round 1 Correction #4):**
 
-**Alternatives considered:**
+- The canonical multi-select control itself is an **unpersisted form
+  draft**. Checking or unchecking a box, by itself, writes nothing —
+  neither an `INFERRED` row nor a `CONFIRMED` row.
+- Clicking **"Confirm classification"** submits the complete desired
+  canonical set (0..N of `DESIGN`/`CONSTRUCTION`/`INSPECTION`) as one
+  atomic request.
+- Every Service Line present in the submitted set becomes (or remains)
+  `CONFIRMED` on the Opportunity.
+- Every mapper-owned `INFERRED` row **not** present in the submitted set
+  is reconciled/removed according to the atomic mutation rules in §5 (a
+  `CONFIRMED` row is never silently dropped merely because a later
+  legacy-scalar edit no longer maps to it — see §4 rule 4).
+- **No UI action creates a manual `INFERRED` row.** `INFERRED` remains
+  exclusively system-derived from the legacy mapper (§4) — the Round-1
+  design's speculative reference to a "possible future manual-add-without-
+  confirm path" is removed; that capability is not part of GAP-048.
+- The exact atomic reconciliation transaction (what happens to the DB
+  rows and audit trail when "Confirm classification" is submitted) is
+  specified in §5, not here — this section defines only the UI-facing
+  contract.
 
-- **Promote-in-place:** update the existing `OpportunityServiceLine` row's
-  `provenance` column from `INFERRED` to `CONFIRMED` (or create a fresh
-  `CONFIRMED` row if none existed). Reuses `EnforcesServiceLineIntegrity`'s
-  already-built update-path enforcement (GAP-046 Gate-3 Correction Round 1
-  item 2) directly — no new integrity logic needed.
-- **Create-new-and-supersede:** always insert a new `CONFIRMED` row and
-  mark the prior `INFERRED` row logically superseded/soft-deleted. Gives a
-  denser audit trail on the row itself, but requires a new
-  supersession/soft-delete concept the GAP-046 schema does not have (it
-  has no `status`/`superseded_by` column on either Service-Line table) —
-  would need its own schema change, out of proportion to the problem.
+## 4. Legacy→canonical synchronization contract for all active writer paths (NEW — Round 1 Correction #2)
 
-**Decision: promote-in-place**, via an ordinary Eloquent `update()` (for
-an existing row) or `create()` (for a value with no prior row), gated by
-`crm.manage` (§13) and always paired with an `EventRecord` write (§5). No
-schema change to the GAP-046 tables is proposed. Actor: any user
-authorized to edit the Opportunity today (§13 — no new permission tier).
+The Round-1 design only described synchronous inference at Lead
+conversion. Owner correctly identified this as incomplete: the Gate-1
+audit's own writer inventory names **three** live `service_category`
+write paths, and Gate 2 must define one coherent contract covering all
+three, not one.
 
-## 5. Auditability
+**Single mapping source (binding):** the exact legacy→canonical mapping
+GAP-046's backfill command already encodes must be extracted into **one**
+shared mapping source (illustrative name: `App\Support\LegacyServiceCategoryMapper`)
+— `architecture`/`interior`/`landscape`/`structure`/`mep` → `DESIGN`/
+`INFERRED`; `construction` → `CONSTRUCTION`/`INFERRED`;
+`inspection`/`consulting`/`combined_package`/null/unrecognized → no
+membership row. The existing CLI backfill command and every runtime
+call site below must consume this **same** source — the mapping table is
+never duplicated.
+
+**A. Direct Opportunity create — `Api\OpportunityController::store()`:**
+after §9's nullable migration ships, an omitted/unmapped
+`service_category` persists as `NULL` and produces zero canonical rows;
+an unambiguous legacy value runs through the shared mapper and produces
+exactly the same `INFERRED` row the backfill command would have produced
+for that value. This must behave identically to Lead conversion (rule B)
+for the same input value — one behavior, two entry points, one shared
+mapper.
+
+**B. Lead→Opportunity conversion — `Api\LeadController::convert()`:**
+identical rule to A, run synchronously in-request (as already described
+in §3).
+
+**C. Opportunity `service_category` UPDATE —
+`Api\OpportunityController::update()` (the writer the Round-1 design
+omitted entirely):** this is where canonical/legacy drift could be
+introduced if handled naively, so the following ownership rule is
+**binding**:
+
+1. A membership row created by the mapper (mapper-owned, currently
+   `INFERRED`) **may** be reconciled to match the newly-supplied legacy
+   scalar on update — e.g. changing `service_category` from
+   `architecture` to `construction` reconciles the mapper-owned `DESIGN`/
+   `INFERRED` row to `CONSTRUCTION`/`INFERRED`.
+2. **A `CONFIRMED` row is NEVER overwritten, demoted, or deleted by the
+   legacy mapper, under any legacy-scalar edit.** A human's explicit
+   confirmation is never silently reinterpreted by an unrelated scalar
+   field changing.
+3. An ambiguous/null legacy value on update produces no new mapper-owned
+   inferred membership (same rule as create).
+4. Changing the legacy scalar is never allowed to reinterpret or remove
+   an existing `CONFIRMED` human decision — this is the same invariant
+   §5's atomic mutation design enforces from the confirmation side; this
+   rule states it from the legacy-update side so the two can never
+   contradict each other.
+5. The implementation may distinguish "mapper-owned" rows from
+   human-confirmed rows via the existing `provenance` column value
+   (`INFERRED` rows are always mapper-owned in this design; a row can only
+   become `CONFIRMED` through the explicit confirmation action in §5,
+   never through the legacy mapper) — no new column is required for this
+   distinction, but the exact mechanism is an implementation-time choice
+   bound by the semantic ownership rule above.
+
+**Backfill command unchanged:** the existing CLI
+`service-lines:backfill-opportunities` remains idempotent and
+`INFERRED`-only — this design does not turn it into a `CONFIRMED`
+mechanism, and does not add any new command.
+
+## 5. Confirmation / reclassification — atomic mutation, lifecycle invariant, and delete/tenant safety (corrected — Round 1 Correction #3)
+
+**Round-1 error, corrected:** the initial design described confirm/remove
+as ordinary `EnforcesServiceLineIntegrity`-protected writes and implied a
+naked child-row DELETE endpoint would be safe because that trait
+validates it. **This is wrong and is corrected here.**
+`EnforcesServiceLineIntegrity` (GAP-046) hooks Eloquent's `saving` event —
+it protects `create`/`update` only. **A DELETE does not pass through
+`saving`**, so a delete endpoint's correctness cannot depend on that
+trait. This design no longer proposes any naked child-row DELETE.
+
+**Corrected design — one atomic desired-set reconciliation operation:**
+
+```
+user selects the desired canonical set (unpersisted UI draft, §3)
+  -> explicit "Confirm classification" action
+  -> ONE database transaction that:
+       (a) reconciles the Opportunity's canonical membership set to
+           exactly the submitted set, subject to the invariant below,
+       (b) writes the corresponding EventRecord(s) audit trail,
+     both inside the same transaction (transactionally coherent — an
+     audit record is never written for a reconciliation that didn't
+     commit, and vice versa).
+```
+
+**Binding invariant, enforced by this operation itself (not by
+`EnforcesServiceLineIntegrity`, which cannot see deletes):** if the
+Opportunity's current `pipeline_stage` is one of `scope_defined,
+proposal_draft, proposal_sent, negotiation, contracting, won`, then the
+**resulting** canonical membership set after the transaction commits must
+still contain ≥1 `CONFIRMED` Service Line. Consequently:
+
+- A **pre-scope** Opportunity (stage before `scope_defined`) may
+  legitimately reconcile back down to zero confirmed membership — nothing
+  downstream depends on it yet.
+- An **active/gated** Opportunity (stage in the list above) may change
+  its classification (e.g. atomically replace `DESIGN` with
+  `CONSTRUCTION` in one transaction, never passing through an
+  externally-observable zero-confirmed intermediate state), but it
+  **cannot** reconcile to a set with zero `CONFIRMED` members — the
+  operation must reject (and roll back, writing no partial state) a
+  submitted set that would leave an active/gated Opportunity with no
+  `CONFIRMED` line.
+- The same invariant is additionally checked against any **already-formal
+  commercial state that depends on trustworthy classification**, not only
+  `pipeline_stage`: at minimum, an Opportunity with a native Quote at
+  `SENT` or `ACCEPTED`, an `external_quote_snapshot.status === 'ACCEPTED'`,
+  or an already-`won` stage must retain ≥1 `CONFIRMED` line after any
+  reconciliation — this is the same predicate as §10's shared
+  `CONFIRMED` check, evaluated defensively at mutation time as well as at
+  each individual gate.
+
+**Delete/tenant safety, stated explicitly (since the underlying `saving`
+trait cannot cover this):** the reconciliation operation's authorization
+and tenant-scoping must be enforced **explicitly** in the operation
+itself — parent (Opportunity) and tenant match verified the same way
+every other Opportunity-mutating controller method in this codebase
+already does (Gate-1 audit §13), **not** delegated to
+`EnforcesServiceLineIntegrity` for the removal half of the operation. The
+`create`/`update` half of the same transaction still benefits from that
+trait's existing enforcement as a second, redundant layer — but the
+transaction's own explicit tenant/parent check is what makes the
+operation safe overall, including its delete component.
+
+## 6. Auditability
 
 Reuse `App\Models\EventRecord` — already the established pattern for
-every other Opportunity/Quote lifecycle write in this codebase
-(`crm.opportunity.converted`, `quote.sent`, `quote.accepted`, etc., all
-cited in the Gate-1 audit §6/§9). New event keys (illustrative, exact
-naming is an implementation-time decision, not decided here):
-`crm.opportunity.service_line_confirmed`,
-`crm.opportunity.service_line_added` (a fresh `INFERRED`→none-existed
-case does not occur through the confirm action, but a possible future
-manual-add-without-confirm action would use this),
-`crm.opportunity.service_line_removed`. Payload: `service_line`,
-`prior_provenance`, `new_provenance`, `actor_user_id` (already the
-convention `EventRecord` payloads follow elsewhere in this codebase). No
-new audit table — `EventRecord` already serves this purpose for the rest
-of CRM.
+every other Opportunity/Quote lifecycle write in this codebase. Event
+keys (illustrative, exact naming is an implementation-time decision):
+`crm.opportunity.service_line_confirmed` (a line entered or remained in
+the submitted set), `crm.opportunity.service_line_removed` (a
+mapper-owned `INFERRED` line reconciled out, or a `CONFIRMED` line
+removed by a pre-scope Opportunity's legitimate zero-return per §5).
+**The Round-1 design's speculative `service_line_added` event key for a
+"future manual-add-without-confirm path" is removed** — that path does
+not exist in this design (§3). Payload: `service_line`,
+`prior_provenance`, `new_provenance` (or `null` for removal),
+`actor_user_id`. Written inside the same transaction as the membership
+reconciliation (§5) — never as a separate, potentially-inconsistent
+follow-up write.
 
-## 6. INFERRED handling
+## 7. INFERRED handling
 
-As stated in §3: `INFERRED` rows are produced only by the shared legacy
-mapper (run at Lead-conversion time, and available to be re-run
-idempotently by the existing GAP-046 backfill command for
-already-existing Opportunities, §18) — never by a raw UI toggle. An
-`INFERRED` row alone **never** satisfies any of the gates in §9-§11 (only
-`CONFIRMED` does) — this is the same rule GAP-046's own Gate-1 evidence
-already proved is necessary (Gate-1 audit §10 scenario B).
+`INFERRED` rows are produced only by the shared legacy mapper (§4) — at
+Opportunity create, at Lead conversion, at legacy-scalar update
+reconciliation, or via the existing idempotent CLI backfill command for
+already-existing Opportunities (§20) — **never** by a raw UI toggle (§3).
+An `INFERRED` row alone **never** satisfies any gate (§10-§13) or counts
+toward the §5 lifecycle invariant — only `CONFIRMED` does.
 
-## 7. UNKNOWN / NEEDS_REVIEW representation
+## 8. UNKNOWN / NEEDS_REVIEW representation
 
-**These are never persisted as rows** — this repeats and does not
-reopen GAP-046's binding rule (Gate 2 §4/§7: "no membership row without a
-known canonical line"). They are **read-time-derived states**, computed
-from (a) the count/provenance of canonical rows and (b) the legacy
-`service_category` scalar, via a small new read-side value
-object/query (illustrative name: `OpportunityClassificationState`,
-exact implementation shape is a Gate-3-time decision):
+**These are never persisted as rows** — GAP-046's binding rule ("no
+membership row without a known canonical line") is not reopened. They are
+**read-time-derived states**, computed from (a) the count/provenance of
+canonical rows and (b) the legacy `service_category` scalar, via a small
+read-side value object/query (illustrative name:
+`OpportunityClassificationState`):
 
 - **Classified:** ≥1 canonical row exists (report the set, each with its
   provenance).
-- **NEEDS_REVIEW (subject-level, not a membership row):** zero canonical
-  rows exist, but `service_category` ∈ `{inspection, consulting,
-  combined_package}` — the ambiguous legacy set GAP-046's own mapping
-  already refuses to convert into a row.
-- **UNKNOWN-by-absence (subject-level, not a membership row):** zero
-  canonical rows exist and `service_category` is null/unrecognized (in
-  practice today, `service_category` is `NOT NULL` with the current
-  Architecture default — see §8 for why this becomes truthfully possible
-  only after the migration in §8 ships).
+- **NEEDS_REVIEW (subject-level, not a row):** zero canonical rows exist,
+  but `service_category` ∈ `{inspection, consulting, combined_package}`.
+- **UNKNOWN-by-absence (subject-level, not a row):** zero canonical rows
+  exist and `service_category` is `NULL`/unrecognized.
 
-This state is what the UI (§3) and any future reporting surface render —
-never a fabricated `UNKNOWN`/`NEEDS_REVIEW` row in
-`opportunity_service_lines`.
+## 9. Architecture-default removal + DB default — safe migration strategy
 
-## 8. Architecture-default removal + DB default — safe migration strategy
+**Decision (unchanged from Round 1): nullable migration.**
+`service_category` becomes nullable, its DB `DEFAULT 'architecture'` is
+dropped, and both application-level fallbacks
+(`OpportunityController.php:217`, `LeadController.php:304`) are removed,
+so an omitted classification persists as `NULL` — verified on SQLite
+**and** real MySQL in the future implementation session, not decided
+further here. **Historical data is not touched or reclassified** —
+existing `'architecture'` rows stay exactly `'architecture'`; only the
+mechanism producing new false values is removed (SSOT §10.1/§10.2).
+Rejected alternatives (sentinel value; gate-only/no-migration) — see
+Round 1 rationale, unchanged.
 
-**Alternatives considered:**
+## 10. Shared CONFIRMED predicate (NEW — Round 1 Correction #10)
 
-- **1. Nullable migration:** alter `opportunities.service_category` to be
-  nullable, drop the `DEFAULT 'architecture'` at the DB level, and remove
-  the two application-level `?? 'architecture'` fallbacks
-  (`OpportunityController.php:217`, `LeadController.php:304`), so an
-  omitted classification is truthfully persisted as `NULL`. This is the
-  only option that makes §7's "UNKNOWN-by-absence" state truthfully
-  representable at the legacy-column level too, and directly satisfies
-  SSOT §2.4 ("never default to Design/Architecture; missing classification
-  must remain UNKNOWN/unclassified").
-- **2. Sentinel value:** introduce a new explicit string (e.g.
-  `'unclassified'`) as a 10th legal `service_category` value instead of
-  nullability. Avoids a nullable-column migration, but fabricates a new
-  taxonomy value the SSOT never defined, and conflicts with the
-  established principle (Gate-1 audit, GAP-046 binding rules) that
-  absence — not a sentinel string — represents "unknown."
-- **3. Leave the DB/application default as-is, gate only on the canonical
-  side.** Simplest, zero migration — but leaves SSOT §2.4/§10.3's already-
-  recorded "active violation" unresolved, which is explicitly named in the
-  Gate-1-approved problem boundary as something Gate 2 must address (§2,
-  item D).
+The same business invariant — **"the Opportunity has at least one
+`CONFIRMED` canonical Service-Line membership"** — is now independently
+evaluated at five surfaces in this design: the pipeline transition gate
+(§11), `sendQuote()` (§13), `convert()`/`createContract()` (§12/§13), and
+the §5 classification-mutation lifecycle invariant. **Binding design
+rule:** all five must be backed by **one shared domain predicate/helper**
+(illustrative shape: a method such as
+`Opportunity::hasConfirmedServiceLine(): bool` or an equivalent
+single-source service), never five independently-written `count(...)`
+queries that could silently diverge (e.g. one checking `>= 1` while
+another accidentally checks `> 1`, or one forgetting to filter by
+`provenance`). Exact class/method name and location are implementation
+details; the single-source requirement is the binding decision.
 
-**Decision: Option 1.** `service_category` becomes nullable, its DB
-`DEFAULT 'architecture'` is dropped, and both application-level fallbacks
-are removed so an omitted classification persists as `NULL` — this is a
-real ALTER COLUMN migration, to be written and verified (SQLite **and**
-real MySQL, per this repo's established parity-verification pattern used
-throughout GAP-046/GAP-043/GAP-044) in the future implementation session,
-not in this design document. **Historical data is not touched or
-reclassified** — every existing `'architecture'` row (real or previously
-defaulted, indistinguishable, per the Gate-1 audit) stays exactly
-`'architecture'` in the column; this migration only removes the
-*mechanism* that produces new false-Architecture values going forward,
-consistent with SSOT §10.1 ("no destructive migration is authorized") and
-§10.2 ("legacy ambiguity is resolved by marking rows NEEDS_REVIEW/UNKNOWN,
-never by silent reinterpretation" — reinterpreting existing rows is
-exactly what this design does NOT do).
+## 11. Pipeline classification gate
 
-## 9. Pipeline classification gate
+**Placement decision (unchanged):** a single, centralized check inside
+`OpportunityStageTransitionService::transition()` — no scattered gate.
+**Exact stage boundary:** fires when `$to` is `scope_defined` or any of
+`proposal_draft, proposal_sent, negotiation, contracting, won`. **Explicit
+exemption:** transitions into `lost`, `no_bid`, `nurture` are **never**
+gated. Requirement: the shared predicate (§10) must be true — an
+`INFERRED`-only Opportunity is blocked. **No grandfather/time-based
+exception of any kind** (§17) — this applies identically to an
+Opportunity already sitting in a gated stage before this feature ships;
+only its **next** transition into another gated stage is checked, per
+§17's resolved policy. Failure UX: §16.
 
-**Placement decision:** a single, centralized check inside the existing
-`OpportunityStageTransitionService::transition()` (Gate-1 audit §8 already
-confirms this is the one and only enforcement point for every stage
-transition across every caller) — no new scattered gate. **Exact stage
-boundary:** the gate fires when `$to` is `scope_defined` or any of
-`proposal_draft, proposal_sent, negotiation, contracting, won` (the
-"downstream active" stages per SSOT §3.2's own wording). **Explicit
-exemption, stated as a design decision, not an oversight:** transitions
-into `lost`, `no_bid`, and `nurture` are **never** gated — an
-Opportunity must always be closeable/archivable/deferrable regardless of
-classification state; forcing classification merely to decline or shelve
-a deal would be a genuine UX regression with no SSOT justification.
-Requirement: `count(opportunity->serviceLines()->where('provenance', 'CONFIRMED')) >= 1`
-— an `INFERRED`-only Opportunity is blocked (Gate-1 audit §10 scenario B,
-directly enforced here). Failure UX: §14.
+## 12. WON→Project conversion gate
 
-## 10. WON→Project conversion gate
+**Placement decision (unchanged):** the pipeline gate (§11) already
+blocks entry into `won`, but a second, redundant, defense-in-depth check
+using the same shared predicate (§10) is added directly inside
+`OpportunityController::convert()` and inside `createContract()`'s inline
+Project-creation branch. Rationale unchanged from Round 1: negligible
+cost; guards against any future capability reopening the gap between
+reaching `won` and calling `convert()`; the Owner boundary names this gate
+as its own explicit requirement. **No grandfather exception** — an
+Opportunity already `won` before this feature ships is still blocked from
+`convert()`/`createContract()` until it gains ≥1 `CONFIRMED` line (§17).
+**No propagation is added.**
 
-**Placement decision:** the pipeline gate (§9) already blocks entry into
-`won` without ≥1 `CONFIRMED` row, so by the time `OpportunityController::convert()`
-runs, classification should already be guaranteed. **Decision: add a
-second, redundant, defense-in-depth check directly inside `convert()`
-(and inside `createContract()`'s inline Project-creation branch) rather
-than relying solely on the pipeline gate.** Rationale: (a) negligible
-cost; (b) guards against any future capability (e.g. a not-yet-designed
-"remove Service Line" action) silently reopening the gap between reaching
-`won` and calling `convert()`; (c) the Owner's approved boundary names the
-WON gate as its own explicit requirement (item F), distinct from the
-pipeline gate — treating it as automatically covered by §9 alone would
-under-deliver that requirement. **No propagation is added** — this gate
-only reads `opportunity_service_lines`; it never writes
-`project_service_lines` (GAP-046's own binding exclusion, restated, not
-reopened).
+## 13. Formal-Quote gate — placement across the full lifecycle
 
-## 11. Formal-Quote gate — placement across the full lifecycle
+**Decision (unchanged from Round 1): gate at native `sendQuote()`
+(`DRAFT`→`SENT`) + an independent `createContract()` gate**, both using
+the shared predicate (§10). `sendQuote()` transitively secures the entire
+native+portal accept/reject lifecycle (state machine requires `SENT`
+before `ACCEPTED`/`REJECTED`); `createContract()` is the one point where
+native-accepted and external-accepted paths converge, so it must be
+gated independently. **Explicit exemptions (unchanged):** `rejectQuote()`/
+`PortalQuoteController::reject()` and `reviseQuote()`-at-creation are
+never gated.
 
-This is the section Owner's Gate-1 Round 1 correction specifically
-required to be resolved with the real lifecycle, not assumed.
+**External Quote synchronization vs. local use — explicit semantic
+distinction (NEW, Round 1 Correction #6):** Owner directed this design to
+state precisely *why* `syncExternalQuote()`/`linkExternalBoqProject()`
+themselves are not gated, so the design does not imply
+`createContract()` somehow prevents zena-boq-core from issuing or
+accepting a Quote. The distinction:
 
-**Alternatives considered (see Gate-1 audit §9 for the full lifecycle
-evidence each of these is compared against):**
+- `linkExternalBoqProject()`/`syncExternalQuote()` are **evidence
+  ingestion / synchronization of an external fact.** This application does
+  not control, and has no authority over, whether zena-boq-core has
+  already issued or accepted a Quote — that decision happens entirely
+  inside the external system.
+- Therefore **GAP-048 does not reject or hide synchronization** solely
+  because local Opportunity classification is incomplete. An
+  `external_quote_snapshot.status === 'ACCEPTED'` may be synced and
+  displayed at any time, regardless of classification state — gating
+  synchronization itself would misrepresent an already-true external fact.
+- **The first consequential *local* action that relies on that accepted
+  external Quote — `createContract()` — is what must fail closed**
+  without ≥1 `CONFIRMED` line. The gate is on this codebase's own
+  decision to create a local `Contract`/`Project` from that external
+  fact, not on knowing or displaying the fact itself.
+- Net effect, stated plainly: an externally-accepted Quote may be visible/
+  synced while classification is incomplete, but it **may not be used to
+  create the local Contract/Project** until the classification
+  requirement is satisfied. Nothing about `linkExternalBoqProject()`/
+  `syncExternalQuote()` changes; zena-boq-core itself requires no change
+  (§2).
 
-- **A. Gate at native DRAFT creation** (`storeQuote()`/`reviseQuote()`).
-  Earliest possible point. Rejected: blocks routine internal
-  drafting/estimation work that legitimately happens before scope is
-  fully settled; SSOT §3.3 defines the *formal* commercial moment as
-  issuance ("A sent/accepted Quote is a historical commercial artifact"),
-  not drafting.
-- **B. Gate at native DRAFT→SENT formalization** (`sendQuote()`).
-  Directly matches SSOT §3.3's own definition of the formal commercial
-  moment. Covers the native operator lifecycle completely and, because
-  the state machine requires `SENT` before `ACCEPTED`/`REJECTED`
-  (`Quote::TRANSITIONS`, Gate-1 audit §9.1), transitively covers both the
-  operator-accept and client-portal-accept paths (§9.2 D, §9.4 F) without
-  needing a second gate at acceptance. Does **not** cover the external
-  zena-boq-core path, which never creates a native `Quote` row at all.
-- **C. Gate at every ACCEPTED transition** (operator + portal,
-  `QuoteLifecycleService::accept()`). Redundant with B for the native
-  lifecycle (a Quote cannot reach `SENT`→`ACCEPTED` without having already
-  passed a gate at `SENT`); adds no coverage the SENT gate doesn't already
-  provide, while gating one method deeper than necessary.
-- **D. Gate at `createContract()`'s commercial-prerequisite check.**
-  Necessary regardless of A/B/C, because this is the **one point** where
-  the native-Quote-accepted path and the external-zena-boq-accepted-
-  snapshot path converge (Gate-1 audit §9.5) — a gate confined to the
-  native lifecycle alone (any of A/B/C) would leave the external path
-  fully unconstrained, which is exactly the bypass Owner's Round 1
-  directive required this design to account for.
+## 14. Legacy `service_category` compatibility strategy
 
-**Decision: B + D together, not either alone.** Gate at native
-`sendQuote()` (`DRAFT`→`SENT`) — this is "the formal Quote" per SSOT
-§3.3, and transitively secures the entire native+portal accept/reject
-lifecycle behind it — **and** independently gate `createContract()`
-itself, checking `count(...CONFIRMED) >= 1` unconditionally, regardless of
-whether the accepted Quote is native or external. This satisfies the
-Owner's explicit requirement: *"a native-only classification gate must
-NOT be presented as complete unless the external path is demonstrably
-covered elsewhere"* — here the external path is covered by the second,
-independent `createContract()` gate, not by assuming the native gate
-extends to it.
+**`BusinessKpiService::serviceCategoryPerformance()` — stated as an
+explicit temporary compatibility decision, not an omission (Round 1
+Correction #5):** continues reading `service_category` unchanged in
+GAP-048; `NULL` (possible once §9 ships) becomes an explicit
+"Unclassified" bucket rather than being silently dropped or grouped under
+an empty key; **it does not become multi-Service-Line aware in GAP-048**
+— canonical `CONFIRMED`/`INFERRED` rows do not change KPI bucketing in
+this Work ID. Deferred to the SSOT's own later "Shared Project Health Read
+Model" slice (§14 item 2 of the SSOT roadmap).
 
-**Explicit exemptions, stated as decisions:** `rejectQuote()`/
-`PortalQuoteController::reject()` are **never** gated — a Quote must
-always be rejectable regardless of classification state, symmetric with
-§9's `lost`/`no_bid` exemption. `reviseQuote()` (creating a new `DRAFT`
-copy) is **not** gated at creation (consistent with rejecting Option A
-above) — its own eventual `sendQuote()` call is gated like any other
-Quote's, so no special-case logic is needed for revisions.
+**`DesignItemPageController`/`AiAssistService` — corrected, precise rule
+(Round 1 Correction #5; the previous "prefer CONFIRMED DESIGN-family
+classification" wording is removed as ambiguous, non-canonical
+terminology, and wrong for collapsing a set to one line):**
 
-**External path — explicitly not requiring a zena-boq-core change:** the
-`createContract()` gate is enforced entirely on this codebase's own side
-(refusing to proceed past the commercial-prerequisite check without
-`CONFIRMED` classification, regardless of which quote source satisfied
-`$hasNativeAccepted`/`$hasExternalAccepted`). Nothing about
-`linkExternalBoqProject()`/`syncExternalQuote()` needs to change. This
-confirms the §2 scope-boundary verification: zena-boq-core does not need
-to become part of GAP-048.
+1. Read **all** `CONFIRMED` canonical Service Lines for the Opportunity
+   behind the converted Project (not one arbitrarily selected value).
+2. Order deterministically in the canonical stable order: `DESIGN,
+   CONSTRUCTION, INSPECTION`.
+3. If **one or more** `CONFIRMED` lines exist: pass the **complete
+   stable set** as AI context (e.g. a Design-Build Opportunity confirmed
+   as both `DESIGN` and `CONSTRUCTION` passes `"DESIGN, CONSTRUCTION"`,
+   never just one of the two). `AiAssistService` currently accepts a
+   nullable string context — the implementation may serialize the set
+   deterministically into that string, or make a narrow signature
+   improvement; exact code shape is an implementation-time decision, not
+   fixed here.
+4. If **zero** `CONFIRMED` rows exist: fall back to the nullable legacy
+   `service_category` scalar (unchanged from Round 1's "degrade to
+   legacy" principle).
+5. If both a `CONFIRMED` set and a legacy scalar exist: the **`CONFIRMED`
+   set wins** — the legacy scalar is not consulted at all in that case.
+6. **`INFERRED`-only does NOT outrank the legacy-scalar fallback** for
+   this narrow compatibility bridge — an `INFERRED`-only Opportunity
+   behaves the same as a zero-`CONFIRMED` Opportunity for this consumer
+   (falls back to the legacy scalar), consistent with `INFERRED` never
+   satisfying anything else in this design either.
 
-## 12. Legacy `service_category` compatibility strategy
+## 15. Tenant/RBAC design
 
-**`BusinessKpiService::serviceCategoryPerformance()` (Gate-1 audit §12):**
-continues reading `service_category` unchanged for now — this design does
-**not** rewrite it to be canonical-Service-Line-aware (that is a
-reporting-surface migration of its own scale, consistent with the SSOT's
-own roadmap ordering, §14 item 2, "Shared Project Health Read Model +
-Shared Commercial/Financial Read Semantics," which is explicitly a later,
-separate slice). **Compatibility decision required now, because §8 makes
-the column nullable:** the report must add an explicit "Unclassified"
-bucket for `NULL`, rather than silently dropping those rows or grouping
-them under an empty-string key — this is the one behavior change this
-slice does require of that consumer, to avoid it silently mis-reporting
-once nulls become possible. Multi-Service-Line-aware reporting (e.g.
-counting a Design-Build Opportunity once in each of two buckets) is
-**explicitly out of scope** for this compatibility bridge.
+**No new permission is proposed.** The classification-selection UI and
+the §5 atomic confirm/reconcile operation reuse the existing `crm.manage`
+permission — checked against the Owner Decision Rules' four-question
+anti-escalation test: unchanged conclusion from Round 1, no new
+permission tier warranted. **§5's explicit tenant/parent check** (not a
+reliance on `EnforcesServiceLineIntegrity` for the delete half of the
+operation) is what makes this safe end-to-end, including for the
+membership-removal component the trait cannot see.
 
-**`DesignItemPageController` AI-suggestion consumer (Gate-1 audit §12,
-`->value('service_category')` → `AiAssistService::suggestDesignItemDescription()`):**
-compatibility bridge, not a rewrite: prefer the Opportunity's canonical
-`CONFIRMED` `DESIGN`-family classification as the AI-suggestion input
-when one exists; **fall back to the legacy `service_category` scalar**
-only when no canonical `CONFIRMED` row exists (i.e. exactly the same
-truthful "prefer canonical, degrade to legacy" pattern, not a forced
-cutover). Exact fallback code shape is an implementation-time decision.
+## 16. Failure/error UX when a gate blocks an action
 
-## 13. Tenant/RBAC design
-
-**No new permission is proposed.** Both the classification-selection UI
-and the confirm/remove actions reuse the existing `crm.manage` permission
-(the same permission that already governs Opportunity `store`/`update`) —
-checked against the Owner Decision Rules' four-question anti-escalation
-test (`docs/owner-governance/OWNER_DECISION_RULES.md`): this does not
-change what a user can do beyond what `crm.manage` already implies (edit
-an Opportunity's business-meaning fields), does not change data
-visibility beyond what `crm.view` already grants, does not shift decision
-responsibility to a new role, and does not change risk the business
-carries in a way that warrants a new permission tier — introducing a
-narrower `crm.classify`/`crm.confirm` permission was considered and
-rejected as unnecessary granularity (YAGNI) unless Owner specifically
-wants a narrower confirm-only role in a future round. **Every new write
-path (confirm, remove) goes through the existing, unmodified
-`EnforcesServiceLineIntegrity` trait** (GAP-046, tenant-parent-derivation,
-acting-tenant-context check) — reused exactly as-is, not reimplemented,
-per the binding constraint in §7 of the Owner directive. New controller
-methods derive `tenant_id` the same way every existing Opportunity
-controller method already does (never trusted from request input).
-
-## 14. Failure/error UX when a gate blocks an action
-
-Reuse the exact response conventions already established in the audited
-controllers (Gate-1 audit §3.2/§9): API paths return
+Unchanged from Round 1: reuse the exact response conventions already
+established in the audited controllers — API paths return
 `$this->validationError([...])` with a distinct key (illustrative:
-`'service_line' => ['At least one confirmed Service Line is required...']`,
-mirroring `createContract()`'s existing `'quote' => [...]` key
-convention); web paths return `back()->with('error', ...)`. No new
-response shape is introduced.
+`'service_line' => [...]`, mirroring `createContract()`'s existing
+`'quote'` key convention); web paths return `back()->with('error', ...)`.
+No new response shape.
 
-## 15. Backward compatibility for current records
+## 17. Backward compatibility for current records — in-flight policy (RESOLVED, Round 1 Correction #1 — no longer an open question)
 
-**Open question surfaced, not resolved here (explicitly deferred to
-Gate-3 planning / Owner input):** every existing Opportunity today has
-zero canonical rows (Gate-1 audit, confirmed repo-wide). Gates in §9-§11
-only fire **on transition**, not on read/display of an already-existing
-record — an Opportunity already sitting in e.g. `negotiation` is not
-retroactively blocked from remaining there, but it *would* be blocked
-from its *next* transition once these gates ship, unless it already has
-(or gains) a `CONFIRMED` row. This could strand legitimate in-flight
-deals that predate classification. **This design recommends, but does
-not decide, running the existing GAP-046 backfill command
-(`service-lines:backfill-opportunities`, already idempotent, already
-produces only `INFERRED`) across existing non-terminal Opportunities
-before the gates ship** — but `INFERRED` alone still does not satisfy the
-gate (§6), so a real business decision is needed on whether in-flight
-deals get a one-time grace/grandfather allowance or must be manually
-confirmed. **This is flagged as an explicit open question for Gate 3
-planning and Owner input**, not silently decided by this design.
+**Owner decision, binding, not deferred to Gate 3:**
 
-## 16. Test strategy (categories only — no tests written in this session)
+1. Existing Opportunities are **not** retroactively invalidated merely
+   because, at deployment time, they already sit in `scope_defined,
+   proposal_draft, proposal_sent, negotiation, contracting, won`. They
+   remain readable and otherwise visible — nothing about their current,
+   already-reached state is disturbed.
+2. However, their **next** gated business action requires ≥1 `CONFIRMED`
+   canonical Service Line, with **no exception**. Concretely:
+   `negotiation`→`contracting`: blocked until `CONFIRMED`.
+   `contracting`→`won`: blocked until `CONFIRMED`.
+   An existing `won` Opportunity calling `convert()`: blocked until
+   `CONFIRMED`. An existing `won` Opportunity calling `createContract()`:
+   blocked until `CONFIRMED`. Sending a native Quote (`sendQuote()`):
+   blocked until `CONFIRMED`.
+3. These exits remain allowed regardless of classification, with no
+   change: `lost`, `no_bid`, `nurture`, Quote rejection.
+4. The existing GAP-046 backfill command may be re-run to seed `INFERRED`
+   rows as a **user aid only** (§4/§20) — `INFERRED` **never** constitutes
+   grace and **never** satisfies any gate or the §5 invariant.
 
-Discriminating negative cases: unclassified Opportunity blocked from
-`scope_defined`; unclassified Quote blocked from `sendQuote()`;
-unclassified Opportunity blocked from `createContract()` via the **native**
-path; unclassified Opportunity blocked from `createContract()` via the
-**external accepted-snapshot** path (directly closing the Gate-1-identified
-bypass — this is the single most important new negative test this design
-implies); `INFERRED`-only classification still blocked at every gate
-(proves `INFERRED` insufficiency is preserved). Discriminating positive
-cases: `CONFIRMED`-classified Opportunity passes every gate; promoting
-`INFERRED`→`CONFIRMED` via the new confirm action then passes; `lost`/
-`no_bid`/`nurture` transitions and Quote rejection are never blocked
-regardless of classification (proves the exemptions in §9/§11 are real,
-not accidental gaps). Security: cross-tenant confirm/remove attempts
-rejected (reusing GAP-046's existing cross-tenant test pattern).
+**No grandfather bypass. No time-based grace period. No automatic
+`CONFIRMED` promotion. No gate bypass based on record age or pre-existing
+stage.** This is now the binding design for §11/§12/§13/§5 — none of them
+carry any exception logic beyond the `lost`/`no_bid`/`nurture`/reject
+exemptions already stated. This section previously framed the policy as
+an open Gate-3/business question; that framing is removed.
 
-## 17. MySQL/SQLite parity
+## 18. Test strategy (categories only — no tests written in this session; expanded per Round 1 Correction #11)
 
-The nullable-`service_category` migration (§8) must be verified on both
-SQLite and real MySQL, following this repository's established parity
-pattern (GAP-046/GAP-043/GAP-044: local + Docker MySQL 8.0 + the
-`@group mysql-parity` live-CI mechanism). No new table is introduced by
-this design — it uses GAP-046's existing `opportunity_service_lines`
-table and the existing `EventRecord` table, both already MySQL/SQLite
-portable.
+**A.** Direct Opportunity `store()`: omitted `service_category` →
+persisted `NULL` + zero canonical rows.
+**B.** Direct Opportunity `store()`: `construction` →
+`CONSTRUCTION`/`INFERRED`.
+**C.** Lead conversion: identical mapping outcome to B for the same input.
+**D.** Opportunity legacy-category `update()`: mapper-owned `INFERRED`
+row reconciled to the newly-supplied scalar.
+**E.** Legacy-category `update()` never overwrites/demotes/deletes an
+existing `CONFIRMED` row.
+**F.** Active-stage (`scope_defined`+) last-`CONFIRMED`-line removal via
+the §5 operation is rejected (invariant enforced).
+**G.** Atomic confirmed-set replacement (e.g. `DESIGN`→`CONSTRUCTION` in
+one transaction) succeeds without an externally-observable zero-confirmed
+state.
+**H.** Pre-scope Opportunity's confirmed set may legitimately return to
+zero via §5.
+**I.** Multiple `CONFIRMED` Service Lines survive as a set (not collapsed
+to one) through reconciliation.
+**J.** `DesignItemPageController`/`AiAssistService` context preserves the
+**complete** confirmed set, stable order — covering zero classification,
+one confirmed line, multiple confirmed lines, `INFERRED`-only (falls back
+to legacy), and confirmed-set-vs-conflicting-legacy-scalar (confirmed set
+wins).
+**K.** Native Quote `sendQuote()` gate blocks without `CONFIRMED`.
+**L.** External accepted snapshot may sync freely (`syncExternalQuote()`
+unblocked), but `createContract()` is blocked until `CONFIRMED` — proving
+§13's ingestion-vs-local-use distinction is real, not just documentation.
+**M.** An already-`won` legacy Opportunity (existing before this feature
+ships) must gain `CONFIRMED` classification before `convert()`/
+`createContract()` succeeds — proves §17's no-grandfather policy.
+**N.** No grandfather/time-based bypass exists anywhere — an explicit
+negative test asserting record age/pre-existing stage has zero effect on
+gate outcome.
+**O.** `lost`/`no_bid`/`nurture` transitions and Quote rejection remain
+available with zero classification, unconditionally.
+**Security (unchanged from Round 1):** cross-tenant confirm/reconcile
+attempts rejected, reusing GAP-046's existing cross-tenant test pattern,
+now also covering the §5 operation's explicit tenant check (not merely
+`EnforcesServiceLineIntegrity`, since that trait cannot cover the delete
+half).
 
-## 18. Rollout/backfill boundaries
+## 19. MySQL/SQLite parity
 
-**No historical Project backfill** — GAP-046's binding "Option A, zero
-Project backfill" decision is not reopened. The Opportunity-side backfill
-command (already built, already idempotent) may be re-run as an
-operational rollout step to seed `INFERRED` rows for existing
-Opportunities (§15) — this is reuse of an existing tool, not new code.
-**Recommended (not decided) rollout sequencing** for the future
-implementation/Gate-3 planning: (1) ship the nullable migration + new UX +
-confirm workflow with the gates initially inert (mergeable without
-immediately blocking any existing workflow); (2) re-run the backfill
-command; (3) enable the gates after Owner/business decides the §15 grace
-question. This sequencing is a recommendation surfaced for Gate 3
-planning, not authorized or decided by this Gate 2 document.
+Unchanged from Round 1: the nullable-`service_category` migration (§9)
+verified on SQLite and real MySQL, following this repository's
+established parity pattern. No new table introduced — this design uses
+GAP-046's existing tables and the existing `EventRecord` table, both
+already portable.
 
-## 19. What this design explicitly does NOT solve
+## 20. Rollout/backfill boundaries (corrected — Round 1 Correction #9, "gates initially inert" mode removed)
 
-- The exact grace-period/grandfather policy for in-flight Opportunities
-  (§15) — a business decision, not an engineering one.
+**Round-1 error, corrected:** the initial design recommended shipping the
+gates "initially inert" and enabling them later via an unspecified
+activation mechanism. Owner correctly identified this as implying an
+undesigned feature-flag/activation mechanism that would itself constitute
+a hidden bypass state. **This is removed.**
+
+**Owner decision, binding:** GAP-048 does not introduce any hidden
+inert-gate mode. **When GAP-048 is actually deployed/released, its gates
+(§11/§12/§13) are active** — there is no separate "enable" step. **No
+historical Project backfill** (GAP-046's binding zero-backfill decision,
+not reopened). The pre-existing Opportunity-side backfill command may be
+run as a rollout aid to populate `INFERRED` rows ahead of deployment
+(§17 item 4) — it is **not required** to fabricate `CONFIRMED`, it **does
+not bypass** any gate, and users must explicitly confirm (§5) before their
+next gated action regardless of whether the backfill ran. **If production
+execution of the backfill cannot be proven at Gate 3, that must be
+reported truthfully — it must never be claimed to have occurred without
+proof.**
+
+## 21. What this design explicitly does NOT solve
+
 - Exact UI copy/Vietnamese wording for the new classification panel and
   gate error messages.
-- Exact migration SQL, route names, controller/method names, and
-  event-key strings — all illustrative in this document, decided at
-  implementation time within this design's boundary.
+- Exact migration SQL, route names, controller/method names, event-key
+  strings, and the exact shape of the §10 shared predicate helper — all
+  illustrative in this document, decided at implementation time within
+  this design's boundary.
 - Full multi-Service-Line-aware rewrite of `BusinessKpiService`/any
-  reporting surface (§12) — deferred to the SSOT's own later "Shared
+  reporting surface (§14) — deferred to the SSOT's own later "Shared
   Project Health Read Model" slice.
-- Any change to zena-boq-core itself — not needed by this design (§11);
+- Any change to zena-boq-core itself — not needed by this design (§13);
   if a future implementation session discovers it genuinely is needed,
   that must be flagged to Owner as a new dependency, not silently done.
 - Every item in the Owner-directed out-of-scope list (§2): Opportunity→
@@ -499,31 +622,36 @@ planning, not authorized or decided by this Gate 2 document.
   Snapshot persistence, Contract multi-Service-Line, Portfolio, Project
   Health, Commercial/Finance/Resource Control, OPPM, Control Tower,
   Treasury, legacy-taxonomy retirement, GAP-041/042/045.
+- **(Resolved in this round, no longer listed as undecided): the
+  in-flight/grace policy (§17) and the rollout-gate-activation mode
+  (§20)** — both are now Owner-decided, not open questions.
 
-## 20. Loại trừ rõ ràng (restated)
+## 22. Loại trừ rõ ràng (restated)
 
 Không thiết kế/triển khai: Opportunity→Project Service-Line propagation;
 Project classification UX; lịch sử backfill phía Project; Quote Scope
 Snapshot persistence; Contract multi-Service-Line; Portfolio Membership;
 Project OPPM; Operations Control Tower; Finance/Treasury; retirement cuối
 cùng của taxonomy cũ; GAP-041/GAP-042/GAP-045. Không sửa đổi
-zena-boq-core. Gate 2 này không viết code, không viết migration, không
-viết test, không viết implementation plan.
+zena-boq-core. Không có chế độ "cổng tạm tắt" (inert-gate) khi triển
+khai — cổng luôn hoạt động ngay khi release. Không có ân hạn/grace theo
+thời gian hay theo giai đoạn có sẵn. Gate 2 này không viết code, không
+viết migration, không viết test, không viết implementation plan.
 
-## 21. Decision Needed
+## 23. Decision Needed
 
 Owner chọn một trong: Approve (cho phép mở phiên triển khai riêng, đúng
-ranh giới §3-§18 ở trên) / Yêu cầu sửa đổi (changes_requested) / Từ chối
-(declined).
+ranh giới đã sửa ở trên) / Yêu cầu sửa đổi thêm (changes_requested) / Từ
+chối (declined).
 
-## 22. What the owner is NOT being asked to decide
+## 24. What the owner is NOT being asked to decide
 
-Owner không được yêu cầu duyệt tên route/controller/method/migration cụ
-thể, chuỗi sự kiện audit cụ thể, hay câu chữ UI chính xác — đó là quyết
-định ở phiên triển khai trong ranh giới đã duyệt. Owner **được** yêu cầu
-quyết định (hoặc xác nhận đội kỹ thuật quyết định đúng): lựa chọn đặt cổng
-Quote tại `sendQuote()` + `createContract()` thay vì `storeQuote()` (§11);
-chiến lược migration nullable cho `service_category` thay vì sentinel
-value (§8); việc không mở rộng phạm vi sang zena-boq-core (§2/§11); và câu
-hỏi mở về chính sách ân hạn cho deal đang xử lý dở (§15, cần input kinh
-doanh trước khi triển khai).
+Owner không được yêu cầu duyệt tên route/controller/method/migration/event
+key cụ thể, hay câu chữ UI chính xác — đó là quyết định ở phiên triển khai
+trong ranh giới đã duyệt. Owner đã quyết định (không còn là câu hỏi mở):
+chính sách không-ân-hạn cho deal dở dang (§17); gỡ bỏ chế độ cổng-tạm-tắt
+khi rollout (§20); đặt cổng Quote tại `sendQuote()` + `createContract()`
+(§13); chiến lược migration nullable cho `service_category` (§9); ranh
+giới ingestion-vs-local-use cho Quote ngoài zena-boq-core (§13); quy tắc
+tập CONFIRMED đầy đủ (không phải 1 dòng tuỳ ý) cho gợi ý AI hạng mục thiết
+kế (§14).

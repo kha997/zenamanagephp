@@ -93,6 +93,72 @@ class ServiceLineClassificationReconciliationTest extends TestCase
         return [$user, $opportunity];
     }
 
+    // Case D — update() reconciles mapper-owned INFERRED row to the new scalar
+    public function test_update_reconciles_mapper_owned_inferred_row_to_new_scalar(): void
+    {
+        $this->app['router']->aliasMiddleware('rbac', RoleBasedAccessControlMiddleware::class);
+        $tenant = Tenant::factory()->create();
+        $user = $this->createTenantUser($tenant, [], ['admin'], ['crm.view', 'crm.manage']);
+        $account = Account::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'account_type' => Account::TYPE_INDIVIDUAL,
+            'display_name' => 'Case D account',
+            'status' => Account::STATUS_ACTIVE,
+        ]);
+        $opportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Case D',
+            'service_category' => 'architecture',
+            'pipeline_stage' => Opportunity::STAGE_NEW_LEAD,
+            'created_by' => (string) $user->id,
+        ]);
+        $opportunity->serviceLines()->create(['service_line' => ServiceLine::DESIGN, 'provenance' => ServiceLineProvenance::INFERRED, 'source' => 'writer:store']);
+
+        $token = $user->createToken('gap048-case-d')->plainTextToken;
+        $headers = ['Accept' => 'application/json', 'Content-Type' => 'application/json', 'X-Tenant-ID' => (string) $user->tenant_id, 'Authorization' => 'Bearer ' . $token];
+
+        $response = $this->putJson(route('api.zena.crm.opportunities.update', ['id' => $opportunity->id], false), ['service_category' => 'construction'], $headers);
+
+        $response->assertOk();
+        $rows = OpportunityServiceLine::query()->where('opportunity_id', $opportunity->id)->get();
+        $this->assertCount(1, $rows);
+        $this->assertSame(ServiceLine::CONSTRUCTION, $rows->first()->service_line);
+        $this->assertSame(ServiceLineProvenance::INFERRED, $rows->first()->provenance);
+    }
+
+    // Case E — update() never overwrites/demotes/deletes an existing CONFIRMED row
+    public function test_update_never_overwrites_confirmed_row(): void
+    {
+        $this->app['router']->aliasMiddleware('rbac', RoleBasedAccessControlMiddleware::class);
+        $tenant = Tenant::factory()->create();
+        $user = $this->createTenantUser($tenant, [], ['admin'], ['crm.view', 'crm.manage']);
+        $account = Account::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'account_type' => Account::TYPE_INDIVIDUAL,
+            'display_name' => 'Case E account',
+            'status' => Account::STATUS_ACTIVE,
+        ]);
+        $opportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Case E',
+            'service_category' => 'architecture',
+            'pipeline_stage' => Opportunity::STAGE_NEW_LEAD,
+            'created_by' => (string) $user->id,
+        ]);
+        $opportunity->serviceLines()->create(['service_line' => ServiceLine::DESIGN, 'provenance' => ServiceLineProvenance::CONFIRMED, 'source' => 'confirm:ui']);
+
+        $token = $user->createToken('gap048-case-e')->plainTextToken;
+        $headers = ['Accept' => 'application/json', 'Content-Type' => 'application/json', 'X-Tenant-ID' => (string) $user->tenant_id, 'Authorization' => 'Bearer ' . $token];
+
+        $response = $this->putJson(route('api.zena.crm.opportunities.update', ['id' => $opportunity->id], false), ['service_category' => 'construction'], $headers);
+
+        $response->assertOk();
+        $rows = OpportunityServiceLine::query()->where('opportunity_id', $opportunity->id)->get();
+        $this->assertTrue($rows->contains(fn ($r) => $r->service_line === ServiceLine::DESIGN && $r->provenance === ServiceLineProvenance::CONFIRMED));
+    }
+
     // Case F — active-stage last-CONFIRMED-line removal rejected
     public function test_reconcile_rejects_removing_last_confirmed_line_on_active_stage(): void
     {

@@ -293,12 +293,61 @@ class OpportunityController extends BaseApiController
             return $this->validationError($validator->errors());
         }
 
-        $opportunity->fill($request->only([
-            'account_id', 'opportunity_name', 'service_category', 'service_scope_summary',
-            'forecast_category', 'estimated_fee', 'estimated_project_value', 'probability',
-            'expected_close_date', 'sales_owner_id', 'technical_owner_id', 'priority',
-        ]));
-        $opportunity->save();
+        $opportunityId = $opportunity->id;
+        $categoryChanging = $request->has('service_category');
+        $incomingCategory = $request->input('service_category');
+
+        $opportunity = DB::transaction(function () use ($opportunityId, $request, $categoryChanging, $incomingCategory): Opportunity {
+            // Canonical lock order: Opportunity row first (GAP-048 §19).
+            $locked = Opportunity::query()
+                ->whereKey($opportunityId)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $locked->fill($request->only([
+                'account_id', 'opportunity_name', 'service_category', 'service_scope_summary',
+                'forecast_category', 'estimated_fee', 'estimated_project_value', 'probability',
+                'expected_close_date', 'sales_owner_id', 'technical_owner_id', 'priority',
+            ]));
+            $locked->save();
+
+            if ($categoryChanging) {
+                // GAP-048 §4 rule C — mapper-owned INFERRED reconciliation
+                // only. A CONFIRMED row is structurally never selected by
+                // the `provenance = INFERRED` filter below, so rule §4.2
+                // ("CONFIRMED is never overwritten/demoted/deleted by the
+                // legacy mapper") holds by construction.
+                $mappedLine = \App\Support\LegacyServiceCategoryMapper::mapToServiceLine($incomingCategory);
+
+                $mapperOwnedRows = \App\Models\OpportunityServiceLine::query()
+                    ->where('opportunity_id', $locked->id)
+                    ->where('provenance', \App\Support\ServiceLineProvenance::INFERRED)
+                    ->get();
+
+                foreach ($mapperOwnedRows as $row) {
+                    if ($row->service_line !== $mappedLine) {
+                        $row->delete();
+                    }
+                }
+
+                if ($mappedLine !== null) {
+                    $exists = \App\Models\OpportunityServiceLine::query()
+                        ->where('opportunity_id', $locked->id)
+                        ->where('service_line', $mappedLine)
+                        ->exists();
+
+                    if (! $exists) {
+                        $locked->serviceLines()->create([
+                            'service_line' => $mappedLine,
+                            'provenance' => \App\Support\ServiceLineProvenance::INFERRED,
+                            'source' => 'writer:update',
+                        ]);
+                    }
+                }
+            }
+
+            return $locked;
+        });
 
         return $this->zenaSuccessResponse(
             $this->serialize($opportunity->fresh() ?? $opportunity),

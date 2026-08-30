@@ -260,6 +260,13 @@ class CrmApiTest extends TestCase
     {
         $opportunity = $this->createOpportunity(['pipeline_stage' => Opportunity::STAGE_WON]);
 
+        // GAP-048 §12/§13 — convert() is now gated on >=1 CONFIRMED canonical
+        // Service Line.
+        $opportunity->serviceLines()->create([
+            'service_line' => \App\Support\ServiceLine::DESIGN,
+            'provenance' => \App\Support\ServiceLineProvenance::CONFIRMED,
+        ]);
+
         $response = $this->postJson($this->route('opportunities.convert', ['id' => $opportunity->id]), [
             'project_name' => 'Dự án Biệt thự Thảo Điền',
         ], $this->headersFor($this->userA));
@@ -473,6 +480,13 @@ class CrmApiTest extends TestCase
 
         $this->assertNull($opportunity->converted_project_id);
 
+        // GAP-048 §12/§13 — createContract() is now gated on >=1 CONFIRMED
+        // canonical Service Line.
+        $opportunity->serviceLines()->create([
+            'service_line' => \App\Support\ServiceLine::DESIGN,
+            'provenance' => \App\Support\ServiceLineProvenance::CONFIRMED,
+        ]);
+
         $response = $this->postJson(
             $this->route('opportunities.create-contract', ['id' => $opportunity->id]),
             [],
@@ -514,6 +528,13 @@ class CrmApiTest extends TestCase
             'external_quote_snapshot' => ['revision' => 1, 'total' => 100000000, 'status' => 'ACCEPTED'],
         ]);
 
+        // GAP-048 §12/§13 — createContract() is now gated on >=1 CONFIRMED
+        // canonical Service Line.
+        $opportunity->serviceLines()->create([
+            'service_line' => \App\Support\ServiceLine::DESIGN,
+            'provenance' => \App\Support\ServiceLineProvenance::CONFIRMED,
+        ]);
+
         $response = $this->postJson(
             $this->route('opportunities.create-contract', ['id' => $opportunity->id]),
             [],
@@ -537,6 +558,13 @@ class CrmApiTest extends TestCase
             'external_boq_project_code' => 'PRJ-006',
             'external_quote_id' => 'quote_won_3',
             'external_quote_snapshot' => ['revision' => 1, 'total' => 50000000, 'status' => 'ACCEPTED'],
+        ]);
+
+        // GAP-048 §12/§13 — createContract() is now gated on >=1 CONFIRMED
+        // canonical Service Line.
+        $opportunity->serviceLines()->create([
+            'service_line' => \App\Support\ServiceLine::DESIGN,
+            'provenance' => \App\Support\ServiceLineProvenance::CONFIRMED,
         ]);
 
         $first = $this->postJson(
@@ -591,6 +619,13 @@ class CrmApiTest extends TestCase
             'pipeline_stage' => Opportunity::STAGE_WON,
             'external_boq_project_code' => 'PRJ-PERM1',
             'external_quote_snapshot' => ['revision' => 1, 'total' => 50000000, 'status' => 'ACCEPTED'],
+        ]);
+
+        // GAP-048 §12/§13 — createContract() is now gated on >=1 CONFIRMED
+        // canonical Service Line.
+        $opportunity->serviceLines()->create([
+            'service_line' => \App\Support\ServiceLine::DESIGN,
+            'provenance' => \App\Support\ServiceLineProvenance::CONFIRMED,
         ]);
 
         $response = $this->postJson(

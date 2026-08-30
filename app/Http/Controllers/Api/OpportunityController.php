@@ -210,23 +210,40 @@ class OpportunityController extends BaseApiController
             return $this->validationError($validator->errors());
         }
 
-        $opportunity = Opportunity::query()->create([
-            'tenant_id' => $tenantId,
-            'account_id' => (string) $request->input('account_id'),
-            'opportunity_name' => (string) $request->input('opportunity_name'),
-            'service_category' => (string) $request->input('service_category', 'architecture'),
-            'service_scope_summary' => $request->input('service_scope_summary'),
-            'pipeline_stage' => Opportunity::STAGE_NEW_LEAD,
-            'forecast_category' => (string) $request->input('forecast_category', 'pipeline'),
-            'estimated_fee' => $request->input('estimated_fee'),
-            'estimated_project_value' => $request->input('estimated_project_value'),
-            'probability' => $request->input('probability'),
-            'expected_close_date' => $request->input('expected_close_date'),
-            'sales_owner_id' => $request->input('sales_owner_id', (string) $user->id),
-            'technical_owner_id' => $request->input('technical_owner_id'),
-            'priority' => (string) $request->input('priority', 'medium'),
-            'created_by' => (string) $user->id,
-        ]);
+        $opportunity = DB::transaction(function () use ($request, $tenantId, $user): Opportunity {
+            $legacyCategory = $request->input('service_category');
+
+            $opportunity = Opportunity::query()->create([
+                'tenant_id' => $tenantId,
+                'account_id' => (string) $request->input('account_id'),
+                'opportunity_name' => (string) $request->input('opportunity_name'),
+                'service_category' => $legacyCategory,
+                'service_scope_summary' => $request->input('service_scope_summary'),
+                'pipeline_stage' => Opportunity::STAGE_NEW_LEAD,
+                'forecast_category' => (string) $request->input('forecast_category', 'pipeline'),
+                'estimated_fee' => $request->input('estimated_fee'),
+                'estimated_project_value' => $request->input('estimated_project_value'),
+                'probability' => $request->input('probability'),
+                'expected_close_date' => $request->input('expected_close_date'),
+                'sales_owner_id' => $request->input('sales_owner_id', (string) $user->id),
+                'technical_owner_id' => $request->input('technical_owner_id'),
+                'priority' => (string) $request->input('priority', 'medium'),
+                'created_by' => (string) $user->id,
+            ]);
+
+            // GAP-048 §4 — legacy->canonical synchronization, shared mapper,
+            // same atomic operation as the Opportunity creation itself.
+            $mappedLine = \App\Support\LegacyServiceCategoryMapper::mapToServiceLine($legacyCategory);
+            if ($mappedLine !== null) {
+                $opportunity->serviceLines()->create([
+                    'service_line' => $mappedLine,
+                    'provenance' => \App\Support\ServiceLineProvenance::INFERRED,
+                    'source' => 'writer:store',
+                ]);
+            }
+
+            return $opportunity;
+        });
 
         $this->recordEvent($opportunity, 'crm.opportunity.created', [
             'opportunity_name' => $opportunity->opportunity_name,

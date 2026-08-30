@@ -39,6 +39,7 @@ class OpportunityServiceLineClassificationService
 
         return DB::transaction(function () use ($actor, $opportunity, $desiredServiceLines): Opportunity {
             // Canonical lock order: Opportunity row FIRST.
+            /** @var Opportunity $locked */
             $locked = Opportunity::query()
                 ->withoutGlobalScope('tenant')
                 ->whereKey($opportunity->id)
@@ -53,6 +54,7 @@ class OpportunityServiceLineClassificationService
                 );
             }
 
+            /** @var \Illuminate\Support\Collection<int, OpportunityServiceLine> $existingRows */
             $existingRows = OpportunityServiceLine::query()
                 ->where('opportunity_id', $locked->id)
                 ->lockForUpdate()
@@ -144,6 +146,9 @@ class OpportunityServiceLineClassificationService
         return ($snapshot['status'] ?? null) === 'ACCEPTED';
     }
 
+    /**
+     * @param array<string, mixed> $payload
+     */
     private function recordEvent(Opportunity $opportunity, User $actor, string $eventKey, array $payload): void
     {
         EventRecord::query()->create([

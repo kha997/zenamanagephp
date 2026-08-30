@@ -46,6 +46,7 @@ class OpportunityStageTransitionService
             // Canonical lock order: Opportunity row first (GAP-048 §19).
             // Re-read state AFTER the lock — never validate against a
             // model instance loaded before lock acquisition.
+            /** @var Opportunity $locked */
             $locked = Opportunity::query()
                 ->whereKey($opportunity->id)
                 ->lockForUpdate()

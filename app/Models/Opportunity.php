@@ -14,9 +14,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $tenant_id
  * @property string $opportunity_name
  * @property string $pipeline_stage
+ * @property string|null $service_category
  * @property string|null $lost_reason
  * @property string|null $forecast_category
  * @property string|null $converted_project_id
+ * @property array<string, mixed>|null $external_quote_snapshot
  * @property-read Account|null $account
  * @method static \Illuminate\Database\Eloquent\Builder<static> forTenant(string $tenantId)
  */

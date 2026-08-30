@@ -138,6 +138,7 @@ class BusinessKpiService
     public function serviceCategoryPerformance(string $tenantId): array
     {
         return Cache::remember("business_kpi_service_category_performance_{$tenantId}", 60, function () use ($tenantId): array {
+            /** @var \Illuminate\Support\Collection<int, Opportunity> $rows */
             $rows = Opportunity::query()
                 ->where('tenant_id', $tenantId)
                 ->whereIn('pipeline_stage', self::TERMINAL_LOST_STAGES)

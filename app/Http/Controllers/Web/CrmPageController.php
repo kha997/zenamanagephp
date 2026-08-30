@@ -1057,12 +1057,13 @@ class CrmPageController extends Controller
         $blocked = false;
 
         \Illuminate\Support\Facades\DB::transaction(function () use ($quote, $tenantId, &$blocked): void {
+            /** @var \App\Models\Opportunity|null $opportunity */
             $opportunity = \App\Models\Opportunity::query()
                 ->whereKey($quote->opportunity_id)
                 ->lockForUpdate()
                 ->first();
 
-            if ($opportunity instanceof \App\Models\Opportunity && ! $opportunity->hasConfirmedServiceLine()) {
+            if ($opportunity !== null && ! $opportunity->hasConfirmedServiceLine()) {
                 $blocked = true;
 
                 return;

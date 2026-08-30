@@ -29,14 +29,15 @@ class OpportunityConcurrencyTestSendQuote extends Command
         $controller->sendQuote(new Request(), (string) $this->argument('quote_id'));
 
         $fresh = Quote::on('mysql')->find($this->argument('quote_id'));
+        $status = $fresh !== null ? $fresh->status : 'not-found';
 
-        if ($fresh?->status === Quote::STATUS_SENT) {
+        if ($status === Quote::STATUS_SENT) {
             $this->line('OK SENT');
 
             return self::SUCCESS;
         }
 
-        $this->line('CONFLICT ' . ($fresh?->status ?? 'not-found'));
+        $this->line('CONFLICT ' . $status);
 
         return self::FAILURE;
     }

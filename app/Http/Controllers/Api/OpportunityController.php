@@ -299,6 +299,7 @@ class OpportunityController extends BaseApiController
 
         $opportunity = DB::transaction(function () use ($opportunityId, $request, $categoryChanging, $incomingCategory): Opportunity {
             // Canonical lock order: Opportunity row first (GAP-048 §19).
+            /** @var Opportunity $locked */
             $locked = Opportunity::query()
                 ->whereKey($opportunityId)
                 ->lockForUpdate()
@@ -373,6 +374,7 @@ class OpportunityController extends BaseApiController
      */
     public function updateServiceLines(Request $request, string $id, OpportunityServiceLineClassificationService $service): JsonResponse
     {
+        /** @var \App\Models\User|null $user */
         $user = Auth::user();
         if (! $user) {
             return $this->unauthorized('Authentication required');
@@ -455,8 +457,58 @@ class OpportunityController extends BaseApiController
     /**
      * WON → tạo Project (nối phễu sale sang vận hành).
      */
+    /**
+     * GAP-048 §12/§19 — defense-in-depth classification gate, Opportunity
+     * row locked first (canonical lock order), re-checked under lock
+     * inside this same transaction.
+     *
+     * @throws ValidationException if the Opportunity has zero CONFIRMED canonical Service Lines
+     */
+    private function convertOpportunityToProjectLocked(Opportunity $opportunity, Request $request, \App\Models\User $user, string $tenantId): Project
+    {
+        $project = DB::transaction(function () use ($opportunity, $request, $user, $tenantId): ?Project {
+            /** @var Opportunity $locked */
+            $locked = Opportunity::query()->whereKey($opportunity->id)->lockForUpdate()->firstOrFail();
+            if (! $locked->hasConfirmedServiceLine()) {
+                // Gate rejection: no mutation has happened yet, so letting
+                // this transaction commit as a no-op is harmless — the
+                // throw below (outside the closure) is what the caller
+                // actually observes.
+                return null;
+            }
+
+            $project = Project::query()->create([
+                'tenant_id' => $tenantId,
+                'name' => (string) $request->input('project_name', $opportunity->opportunity_name),
+                'code' => 'PRJ-'.Str::upper(Str::random(8)),
+                'description' => $opportunity->service_scope_summary,
+                'status' => 'planning',
+                'progress' => 0,
+                'budget_total' => $opportunity->estimated_project_value ?? ($opportunity->estimated_fee ?? 0),
+                'start_date' => $request->input('start_date'),
+                'end_date' => $request->input('end_date'),
+                'pm_id' => $opportunity->technical_owner_id ?? $opportunity->sales_owner_id,
+                'created_by' => (string) $user->id,
+            ]);
+
+            $locked->converted_project_id = (string) $project->id;
+            $locked->save();
+
+            return $project;
+        });
+
+        if ($project === null) {
+            throw ValidationException::withMessages([
+                'service_line' => ['At least one confirmed Service Line is required before converting to a project.'],
+            ]);
+        }
+
+        return $project;
+    }
+
     public function convert(Request $request, string $id): JsonResponse
     {
+        /** @var \App\Models\User|null $user */
         $user = Auth::user();
 
         if (! $user) {
@@ -499,36 +551,7 @@ class OpportunityController extends BaseApiController
         }
 
         try {
-            $project = DB::transaction(function () use ($opportunity, $request, $user, $tenantId): Project {
-                // GAP-048 §12/§19 — defense-in-depth classification gate,
-                // Opportunity row locked first (canonical lock order),
-                // re-checked under lock inside this same transaction.
-                $locked = Opportunity::query()->whereKey($opportunity->id)->lockForUpdate()->firstOrFail();
-                if (! $locked->hasConfirmedServiceLine()) {
-                    throw ValidationException::withMessages([
-                        'service_line' => ['At least one confirmed Service Line is required before converting to a project.'],
-                    ]);
-                }
-
-                $project = Project::query()->create([
-                    'tenant_id' => $tenantId,
-                    'name' => (string) $request->input('project_name', $opportunity->opportunity_name),
-                    'code' => 'PRJ-'.Str::upper(Str::random(8)),
-                    'description' => $opportunity->service_scope_summary,
-                    'status' => 'planning',
-                    'progress' => 0,
-                    'budget_total' => $opportunity->estimated_project_value ?? ($opportunity->estimated_fee ?? 0),
-                    'start_date' => $request->input('start_date'),
-                    'end_date' => $request->input('end_date'),
-                    'pm_id' => $opportunity->technical_owner_id ?? $opportunity->sales_owner_id,
-                    'created_by' => (string) $user->id,
-                ]);
-
-                $locked->converted_project_id = (string) $project->id;
-                $locked->save();
-
-                return $project;
-            });
+            $project = $this->convertOpportunityToProjectLocked($opportunity, $request, $user, $tenantId);
         } catch (ValidationException $exception) {
             return $this->validationError($exception->errors());
         }
@@ -616,6 +639,7 @@ class OpportunityController extends BaseApiController
         // locking effect outside a transaction on MySQL). This applies
         // whether or not a Project still needs to be created below.
         $gateBlocked = DB::transaction(function () use ($opportunity): bool {
+            /** @var Opportunity $locked */
             $locked = Opportunity::query()->whereKey($opportunity->id)->lockForUpdate()->firstOrFail();
 
             return ! $locked->hasConfirmedServiceLine();

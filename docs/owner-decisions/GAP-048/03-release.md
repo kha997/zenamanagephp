@@ -32,8 +32,8 @@ mandatory_technical_gate_summary: "GAP-048 implementation (canonical multi-value
 technical_evidence:
   subject_sha: "2ae7d5721887812123a099b725b50437f2acb7ca"
   implementation_tree_digest: "91d3c2763edafa553d14a7a022d7f49c0761ca251a7db798686eb348cd697685"
-  verified_pr_head_sha: "2ae7d5721887812123a099b725b50437f2acb7ca"
-  verified_at: "2026-08-31T00:10:00+07:00"
+  verified_pr_head_sha: "0ed3b6cfde973ad17b9b8bd92a65b6158bea4bbf"
+  verified_at: "2026-08-31T22:20:00+07:00"
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null
@@ -53,11 +53,15 @@ after this Gate-3 decision.
   start):** `dd7ed7c9` (PR #294 squash-merge).
 - **Implementation branch:** `feat/GAP-048-crm-classification-ux-gates`.
 - **Implementation PR (Draft, unmerged, mergeable):** [#295](https://github.com/kha997/zenamanagephp/pull/295).
-- **Exact PR head / subject_sha (identical — no Gate-3-record-only commits
-  have been made yet on top of this evidence):** `d12c01cc1cb64c42d5577c28f80a598054751e4b`.
+- **subject_sha (last content-changing commit; what `implementation_tree_digest`
+  is computed against):** `2ae7d5721887812123a099b725b50437f2acb7ca`.
+- **verified_pr_head_sha (exact PR head whose live CI was confirmed
+  all-green; differs from subject_sha only by this Gate-3 packet's own
+  SHA-recording commit, excluded from the digest by construction):**
+  `0ed3b6cfde973ad17b9b8bd92a65b6158bea4bbf`.
 - **Implementation plan:** `docs/superpowers/plans/2026-08-30-gap-048-crm-classification-ux-gates-implementation.md`.
 
-## What changed (`dd7ed7c9` → `d12c01cc1cb64c42d5577c28f80a598054751e4b`)
+## What changed (`dd7ed7c9` → `2ae7d5721887812123a099b725b50437f2acb7ca`)
 
 ```
  app/Console/Commands/BackfillOpportunityServiceLines.php                    |   19 +-
@@ -350,16 +354,28 @@ the real HTTP endpoint (`ServiceLineClassificationReconciliationTest::test_updat
 
 ## Exact implementation tree digest and Gate-3 packet state
 
-- **subject_sha / verified_pr_head_sha:** see this file's frontmatter
-  `technical_evidence` block (identical values — this is the exact head
-  whose live CI was inspected, all applicable checks green).
+- **subject_sha:** `2ae7d5721887812123a099b725b50437f2acb7ca` — the last
+  commit that changed any non-Gate-3-record content (the mechanical
+  `ReportPageController.php` fix). This is what
+  `technical_evidence.implementation_tree_digest` is computed against.
+- **verified_pr_head_sha:** `0ed3b6cfde973ad17b9b8bd92a65b6158bea4bbf` — the
+  exact PR #295 head whose live CI was independently confirmed all-green
+  (32/32 applicable checks, `deploy` correctly skipping). This head differs
+  from `subject_sha` only by this Gate-3 packet's own SHA-recording commit,
+  which is excluded from the digest by construction.
 - **implementation_tree_digest** (`sha256`, computed via this repository's
   own `owner_governance_compute_implementation_tree_digest()` in
   `scripts/ssot/owner_governance_lint.php`, excluding only this exact Gate-3
   record file): see frontmatter — independently re-verified by recomputing
-  it at the commit that adds this exact packet content and confirming
-  byte-for-byte equality with the value computed one commit earlier (proves
-  the exclusion mechanism is working, not just trusted).
+  it at both `subject_sha` and at the commit that records these exact SHA
+  values (`0ed3b6cf`) and confirming byte-for-byte equality
+  (`91d3c2763edafa553d14a7a022d7f49c0761ca251a7db798686eb348cd697685` both
+  times), proving the exclusion mechanism is working, not just trusted.
+  `Owner Governance Lint`'s evidence-freshness check independently
+  confirmed this at `0ed3b6cf` after one re-run needed to clear a known,
+  documented 300-second sibling-job polling race (the check first ran
+  before other jobs on the same head had finished; re-running it once
+  those jobs were green passed cleanly with zero code change).
 - **Gate-3 packet state:** `awaiting_owner`, `owner_decision.value: none`,
   `owner_decision_binding` both null. No Owner decision has been recorded
   yet.

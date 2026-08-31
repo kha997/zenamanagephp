@@ -161,6 +161,25 @@ class ReportPageController extends Controller
     }
 
     /**
+     * @return iterable<list<mixed>>
+     */
+    private function projectRows(string $tenantId): iterable
+    {
+        foreach (Project::query()->where('tenant_id', $tenantId)->orderBy('name')->lazy() as $project) {
+            yield [
+                $project->code,
+                $project->name,
+                $project->status,
+                $project->progress,
+                $project->budget_total,
+                $project->actual_cost,
+                (string) $project->start_date,
+                (string) $project->end_date,
+            ];
+        }
+    }
+
+    /**
      * @return array{0: list<string>, 1: iterable<list<mixed>>}
      */
     private function buildDataset(string $dataset, string $tenantId, string $projectId): array
@@ -168,20 +187,7 @@ class ReportPageController extends Controller
         return match ($dataset) {
             'projects' => [
                 ['Mã', 'Tên dự án', 'Trạng thái', 'Tiến độ (%)', 'Ngân sách', 'Chi phí thực tế', 'Bắt đầu', 'Kết thúc'],
-                Project::query()
-                    ->where('tenant_id', $tenantId)
-                    ->orderBy('name')
-                    ->lazy()
-                    ->map(fn (Project $project): array => [
-                        $project->code,
-                        $project->name,
-                        $project->status,
-                        $project->progress,
-                        $project->budget_total,
-                        $project->actual_cost,
-                        (string) $project->start_date,
-                        (string) $project->end_date,
-                    ]),
+                $this->projectRows($tenantId),
             ],
             'tasks' => [
                 ['Tên công việc', 'Dự án', 'Trạng thái', 'Ưu tiên', 'Tiến độ (%)', 'Bắt đầu', 'Kết thúc'],

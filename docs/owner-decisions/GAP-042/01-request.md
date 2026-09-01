@@ -1,11 +1,11 @@
 ---
 work_id: GAP-042
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_more_info_or_decline_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-09-01-gap-042-rbac-production-fidelity-evidence.md
   plan: null
@@ -15,16 +15,24 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-09-01T00:00:00+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-09-01T21:26:00+07:00"
+  owner_response_reference: "GAP-042 Gate 1 decision (relayed via coordinator session, not a directly witnessed live Owner chat interaction in this agent session — recorded honestly as such per decision_provenance.trust_level: claimed_repo_record): 'The Owner has reviewed your GAP-042 Gate 1 evidence and made a decision: APPROVED. The reproduced production-fidelity defect and the Gate-1 problem boundary are approved as you documented them.' Relayed at exact PR #297 head 0f4c85db012ed9dd562601c94afcd3f3fbac1974 (canonical main at submission time ed8ca00b120064165f54c2ee9c8c44e946a0ef88, PR state OPEN/Draft/mergeable, diff limited to docs/audits/2026-09-01-gap-042-rbac-production-fidelity-evidence.md + docs/owner-decisions/GAP-042/01-request.md, LIVE Owner Governance Lint SUCCESS, LIVE test-routes-guardrails SUCCESS on that exact head after a metadata-only PR-body fix — first non-empty line corrected to the literal 'Work ID: GAP-042' declaration required by scripts/ci/extract-work-id.sh; no evidence content was changed to obtain this). This approval accepts: the Gate-1 finding (Src\RBAC\Models\Role/Permission, tables zena_roles/zena_permissions, are live-routed via /api/v1/rbac/* and broken on any correctly-migrated production MySQL 8.0 database — LIVE-reproduced via clean migrate:fresh, real Eloquent probe, and a full real-HTTP/Sanctum-auth/tenant round trip returning HTTP 500) and the proposed smallest Gate 2 problem boundary (Src\RBAC\Models\Role/Permission and their direct consumers — Src\RBAC\Services\RBACManager and the 5 controllers in src/RBAC/Controllers/ — explicitly excluding the two incidental adjacent defects noted in the evidence: missing AssignmentController::getUserRoles(), and the CompensationController/Src\RBAC\Middleware\RBACMiddleware constructor-wiring defect). This approval authorizes GATE 2 DESIGN ONLY; it does not authorize implementation. Owner directed: record this Gate-1 approval in 01-request.md only, do not rewrite or reinterpret the Gate-1 evidence document; keep PR #297 as Draft (it is the Gate-1 historical record, not to be merged); Gate 2 design work must evaluate at minimum (A) converging Src\RBAC consumers onto the canonical roles/permissions/role_permissions/user_roles tables/models, (B) a thin compatibility/adapter layer preserving Src\RBAC classes/API against the standard schema, and (C) retiring/de-duplicating the Src\RBAC model/service path in favor of App\Models\Role/Permission — a legacy-compatibility-table/view approach may be analyzed but recreating permanent zena_roles/zena_permissions duplicate authorities merely to make old code/tests pass is not to be recommended absent compelling evidence; Gate 2 must not start implementation, must not touch GAP-041/GAP-045 or production deployment, and must remain gate_status: awaiting_owner / owner_decision.value: none pending a separate Owner Gate-2 decision."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-01T00:00:00+07:00"
-  updated_at: "2026-09-01T00:00:00+07:00"
+  updated_at: "2026-09-01T21:26:00+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-042 Gate 1 (decision relayed via the coordinating session — see `decision_provenance.owner_response_reference` above for the exact, honestly-attributed text and reviewed head). Reviewed exact PR #297 head `0f4c85db012ed9dd562601c94afcd3f3fbac1974`, canonical main at submission time `ed8ca00b120064165f54c2ee9c8c44e946a0ef88`, both `Owner Governance Lint` and `test-routes-guardrails` LIVE-green on that exact head after a metadata-only PR-body fix (first non-empty line corrected to the literal `Work ID: GAP-042` declaration `scripts/ci/extract-work-id.sh` requires; no evidence content changed).
+
+The Gate-1 finding is accepted as documented: `Src\RBAC\Models\Role`/`Permission` (tables `zena_roles`/`zena_permissions`) are live-routed via `/api/v1/rbac/*` and broken on any correctly-migrated production MySQL 8.0 database, LIVE-reproduced end-to-end (clean `migrate:fresh`, no test harness, real Eloquent probe, and a full real-HTTP/Sanctum-auth/tenant round trip returning HTTP 500 on `GET /api/v1/rbac/roles` and `/permissions`). The proposed smallest Gate 2 problem boundary is accepted: `Src\RBAC\Models\Role`/`Permission` and their direct consumers (`Src\RBAC\Services\RBACManager`, the 5 controllers in `src/RBAC/Controllers/`) — explicitly excluding the two incidental adjacent defects noted in the evidence (missing `AssignmentController::getUserRoles()`; the `CompensationController`/`Src\RBAC\Middleware\RBACMiddleware` constructor-wiring defect).
+
+This approval authorizes **GATE 2 DESIGN ONLY**. Implementation is **not authorized**. PR #297 remains **Draft** — it is the Gate-1 historical record and is not to be merged. Gate 2 must evaluate, at minimum: (A) converging `Src\RBAC` consumers onto the canonical `roles`/`permissions`/`role_permissions`/`user_roles` tables/models; (B) a thin compatibility/adapter layer preserving `Src\RBAC` classes/API against the standard schema; (C) retiring/de-duplicating the `Src\RBAC` model/service path in favor of `App\Models\Role`/`Permission`. A legacy-compatibility-table/view approach may be analyzed, but recreating permanent `zena_roles`/`zena_permissions` duplicate authorities merely to make old code/tests pass is not to be recommended absent compelling evidence. Gate 2 must not start implementation, must not touch GAP-041/GAP-045 or production deployment, and must remain `gate_status: awaiting_owner` / `owner_decision.value: none` pending a separate Owner Gate-2 decision.
 
 ## Owner Summary
 

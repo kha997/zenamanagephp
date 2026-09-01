@@ -18,22 +18,22 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-09-01T00:00:00Z"
+  owner_response_reference: "GAP-048 Gate 3 Round 1 (relayed via coordinator session, reviewed exact prior head ee600951 — the head this correction directive was issued against): 'DECISION: CORRECTION REQUESTED. Re-inspect createContract() yourself now — do not trust the prior session's self-report; find the actual gap. Fix createContract() §19 atomicity: one transaction must hold the authoritative Opportunity lockForUpdate() across re-read, CONFIRMED gate evaluation, Project/Contract mutation and relevant audit/event mutation through commit; Opportunity must be locked FIRST; do not make authoritative decisions or mutations from the stale pre-lock model; preserve native/external Quote semantics and no Opportunity->Project Service-Line propagation. Add a discriminating real-MySQL concurrency regression for reconcile -> {} racing createContract(): RED first, GREEN only after the production fix, genuinely separate connections/processes and controlled interleaving, not sequential simulation; determine the smallest appropriate way to make this regression execute automatically in an existing real-MySQL CI surface. Do NOT perform optional cleanup of GAP048_SIMULATE_MAPPER_FAILURE unless technically necessary for the mandatory fix. After correction: run focused tests + affected regression, run real-MySQL concurrency evidence, run required broader quality/governance checks, recompute implementation subject SHA/digest using canonical repo tooling, refresh Gate-3 technical evidence, push to the existing PR #295, keep it Draft, STOP at awaiting_owner. Do not approve Gate 3, mark Ready, merge, release, deploy, or start another Work ID.' Independent re-inspection at the reviewed head confirmed the finding: createContract() split its classification gate re-check into its own short DB::transaction() (Opportunity::lockForUpdate(), hasConfirmedServiceLine() check, commit — releasing the row lock immediately), then performed Project creation in a second, separate DB::transaction(), then Contract+BOQ+BOQ-line creation and both audit EventRecord writes in a third, separate DB::transaction() — none of which re-acquired or held the Opportunity row lock, and the Project-creation step mutated the STALE, pre-lock $opportunity model instance loaded before any transaction began, not the freshly-locked model. This exactly matches the Owner-identified defect: the authoritative gate decision was made under lock, but the mutation was not — a genuine check-then-act race distinct from what CONCURRENCY-1/2/3 (transition()/sendQuote()/update()) already covered."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-31T00:10:00+07:00"
-  updated_at: "2026-08-31T00:10:00+07:00"
+  updated_at: "2026-09-01T00:00:00Z"
 generated_by: agent
 residual_risk_rating: medium
-mandatory_technical_gate_summary: "GAP-048 implementation (canonical multi-valued Service-Line classification UX with explicit CONFIRMED confirmation; shared legacy->canonical mapper reused by store()/Lead-convert()/update(); nullable service_category migration verified on SQLite and real MySQL 8.0 including safe down()-rollback with pre-existing NULL data; pipeline/sendQuote()/convert()/createContract() gates backed by one shared CONFIRMED predicate; Opportunity-row locking with canonical lock order closing the Owner-identified concurrency race) is technically complete and verified. Full SQLite regression: 2416 tests, 8 pre-existing/unrelated failures (verified zero-diff against baseline dd7ed7c9 for every affected file: 7 Dashboard widget tests failing on a pre-existing broken Redis cache-store method, 1 flaky SecureUploadServiceTest), 0 GAP-048 regressions. CONCURRENCY-1/2/3 real-MySQL subprocess-race evidence obtained against a genuine MySQL 8.0 instance (Docker), sabotage-verified discriminating (temporarily removing OpportunityStageTransitionService's lockForUpdate() reproduced the exact Owner-specified illegal race state; restoring it closed the race). Nullable migration verified on SQLite and real MySQL 8.0, including a real bug found and fixed by live CI: the original down() blindly re-added NOT NULL and crashed on real MySQL once any row had legitimately gone NULL (SQLSTATE 22004) — fixed to backfill NULL rows to 'architecture' before restoring the constraint, verified by reproducing the failure on real MySQL, applying the fix, and confirming rollback+re-migrate succeeds; this defect was independently caught by live browser-tests (Dusk, real MySQL) CI. A second real, pre-existing (byte-identical to baseline dd7ed7c9) PHPStan gap in app/Http/Controllers/Web/ReportPageController.php's buildDataset() — unrelated to GAP-048's design boundary but blocking the Owner-governance evidence-freshness gate's hard requirement that every check on the head be green before gate_status may reach awaiting_owner — was also fixed: the private closure/LazyCollection-typing issue was replaced with a plain generator method (projectRows()), zero behavior change, verified against the real CSV-export Feature test (OperatorPlatformUiTest::test_report_export_streams_tenant_scoped_csv, still green) rather than assumed safe. Live PR #295 CI at the final verified head: all applicable checks green — Unit Tests, API Tests (Fast/Slow), Feature Tests, Integration Tests, browser-tests (Dusk, real MySQL), RFI Escalation Concurrency (real MySQL), Document Workflow Concurrency (real MySQL), Treasury Native CHECK Constraints (real MySQL), Zena RBAC/Tenant Invariants (default + MySQL parity), Owner Governance Lint, test-routes-guardrails, Repo Hygiene Guards, Code Quality Analysis, Security Tests, staging-smoke, and all security/dependency/license/Docker scans. PHPStan project-wide: zero errors (0 file_errors), verified via the exact command CI runs. Deptrac clean (0 violations). This packet records technical readiness for Owner Gate-3 review only; it does not authorize Ready-for-review, merge, release, or production deployment."
+mandatory_technical_gate_summary: "GAP-048 implementation (canonical multi-valued Service-Line classification UX with explicit CONFIRMED confirmation; shared legacy->canonical mapper reused by store()/Lead-convert()/update(); nullable service_category migration verified on SQLite and real MySQL 8.0 including safe down()-rollback with pre-existing NULL data; pipeline/sendQuote()/convert()/createContract() gates backed by one shared CONFIRMED predicate; Opportunity-row locking with canonical lock order closing the Owner-identified concurrency race, INCLUDING the Gate-3 Round 1 correction to createContract() itself) is technically complete and verified. Gate-3 Round 1 correction: createContract() previously split its classification gate re-check from its Project/Contract/BOQ mutation and audit EventRecord writes across three separate DB transactions, releasing the Opportunity row lock between the gate re-check and the mutation, and mutating a stale pre-lock $opportunity model instance for Project creation. Fixed to one continuous DB::transaction() holding Opportunity::lockForUpdate() (locked first) from the re-read and gate re-check through contract.create authorization, conditional Project creation, Contract+BOQ+BOQ-line mutation, and both audit EventRecord writes, to commit — matching the same discipline already used by sendQuote()/convert()/reconcile(). New CONCURRENCY-4 real-MySQL regression (tests/Feature/Concurrency/OpportunityServiceLineConcurrencyTest.php) proves this directly with a genuinely separate OS process (createContract() subprocess) racing a genuinely separate DB connection (an in-PHPUnit-process reconcile({}) probe, synchronized via a test-only start-marker file so it races createContract()'s own critical section rather than PHP/Laravel bootstrap time): RED on the prior 3-transaction implementation (140/140 concurrent probe attempts completed near-instantly while no Contract row existed yet); GREEN after the fix (0 fast completions, repeated 3x); sabotage-verified by reverting the fix and reproducing the exact RED failure again, then restoring it. A pre-existing test (CrmApiTest::test_create_contract_requires_contract_create_permission) asserted the OLD non-atomic behavior (a denied contract.create authorization left a converted Project behind) as though it were intentional; updated to assert the corrected atomic behavior (the whole attempt, including Project auto-convert, rolls back together) with an explanatory comment — the old behavior was itself a symptom of the bug being fixed, not a documented product requirement. Added a dedicated 'GAP-048 Service-Line Concurrency (real MySQL)' CI job (scripts/ci/gap048-service-line-concurrency-mysql + .github/workflows/automated-testing.yml), mirroring the existing RFI Escalation/Document Workflow/Treasury Native CHECK Constraints real-MySQL job pattern exactly, so CONCURRENCY-1/2/3/4 now run automatically in CI (previously a disclosed known limitation: local-only). Full SQLite regression: 2416 tests, 8 pre-existing/unrelated failures (verified zero-diff against baseline dd7ed7c9 for every affected file: 7 Dashboard widget tests failing on a pre-existing broken Redis cache-store method, 1 flaky SecureUploadServiceTest), 0 GAP-048 regressions. CONCURRENCY-1/2/3 real-MySQL subprocess-race evidence re-verified unaffected by this correction, still sabotage-verified discriminating. Nullable migration verified on SQLite and real MySQL 8.0 (unaffected by this correction). Targeted focused regression re-run after the fix: tests/Feature/Crm, tests/Feature/QuoteToContractTest.php, tests/Feature/Api/CrmApiTest.php, tests/Feature/QuoteLifecycleTest.php, tests/Feature/QuoteCommercialEndpointTest.php, tests/Feature/Zena/OperatorCrmUiTest.php, tests/Feature/OpportunityAppointmentLifecycleTest.php, tests/Feature/Console/BackfillOpportunityServiceLinesTest.php, tests/Feature/Zena/AiDesignItemSuggestionTest.php: 141 tests, 526 assertions, 0 failures. GAP048_SIMULATE_MAPPER_FAILURE left untouched (not technically necessary for this mandatory fix, per Owner directive). This packet records technical readiness for Owner Gate-3 review only; it does not authorize Ready-for-review, merge, release, or production deployment."
 technical_evidence:
-  subject_sha: "2ae7d5721887812123a099b725b50437f2acb7ca"
-  implementation_tree_digest: "91d3c2763edafa553d14a7a022d7f49c0761ca251a7db798686eb348cd697685"
-  verified_pr_head_sha: "0ed3b6cfde973ad17b9b8bd92a65b6158bea4bbf"
-  verified_at: "2026-08-31T22:20:00+07:00"
+  subject_sha: "509adfc722b0afa10007806626a7fcca31d0c710"
+  implementation_tree_digest: "4ff0f564fe39af5e01f6430c8d1921cba3b9b47217d9045618ce12989a58c9c4"
+  verified_pr_head_sha: null
+  verified_at: null
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null
@@ -47,6 +47,47 @@ itself authorize Ready-for-review, merge, release, or production
 deployment — those require a separate, explicit Owner instruction issued
 after this Gate-3 decision.
 
+## Owner Decision History — Round 1 — CORRECTION REQUESTED (permanent record, never erased)
+
+**Owner Gate-3 Round 1 decision: CORRECTION REQUESTED** — reviewed prior
+head `ee600951` and found that its own final report claimed
+`createContract()` had the same full lock-order/atomicity discipline as
+the other five gated operations (pipeline transition, `sendQuote()`,
+`convert()`, classification reconciliation, legacy `update()`), but on
+independent review it did not. Full verbatim directive preserved in this
+file's frontmatter `decision_provenance.owner_response_reference` above.
+Re-inspection at the reviewed head confirmed the finding exactly:
+`createContract()` acquired `Opportunity::lockForUpdate()` inside its own
+short `DB::transaction()` to re-check the CONFIRMED gate, then **released
+that lock immediately on commit**, then performed Project creation in a
+**second**, separate `DB::transaction()`, then Contract+BOQ+BOQ-line
+creation and both audit `EventRecord` writes in a **third**, separate
+`DB::transaction()` — none of the two mutation transactions re-acquired
+the Opportunity lock, and Project creation mutated the **stale, pre-lock**
+`$opportunity` model instance loaded before any transaction began, not the
+freshly-locked model from the gate-check transaction. This is a genuine
+check-then-act race distinct from what CONCURRENCY-1/2/3 already covered
+(those exercise `OpportunityStageTransitionService::transition()`,
+`CrmPageController::sendQuote()`, and the legacy `update()` mapper
+reconciliation — never `createContract()` itself). Correction directed:
+(1) fix `createContract()` to hold Opportunity locked FIRST in one
+continuous transaction across re-read, CONFIRMED gate evaluation,
+Project/Contract mutation, and relevant audit/event mutation through
+commit, never deciding or mutating from the stale pre-lock model,
+preserving native/external Quote convergence semantics and the no
+Opportunity→Project Service-Line-propagation boundary; (2) add a
+discriminating real-MySQL concurrency regression for classification
+reconciliation racing `createContract()`, RED first then GREEN after the
+fix, genuinely separate connections/processes, wired into an existing
+real-MySQL CI surface by the smallest appropriate means. `GAP048_SIMULATE_MAPPER_FAILURE`
+cleanup explicitly NOT authorized unless technically necessary for the
+mandatory fix (it was not; left untouched). This round's correction is
+recorded in this same Gate-3 packet (not a new gate) because no Owner
+Gate-3 decision (approve/defer) had yet been rendered against `ee600951`
+— the packet remains `awaiting_owner` for a fresh Gate-3 decision against
+the corrected head below. This Round 1 record is preserved permanently
+and must not be removed by any future revision.
+
 ## Implementation baseline and PR
 
 - **Implementation baseline (Gate-2 merge, unchanged origin/main at session
@@ -54,11 +95,12 @@ after this Gate-3 decision.
 - **Implementation branch:** `feat/GAP-048-crm-classification-ux-gates`.
 - **Implementation PR (Draft, unmerged, mergeable):** [#295](https://github.com/kha997/zenamanagephp/pull/295).
 - **subject_sha (last content-changing commit; what `implementation_tree_digest`
-  is computed against):** `2ae7d5721887812123a099b725b50437f2acb7ca`.
-- **verified_pr_head_sha (exact PR head whose live CI was confirmed
-  all-green; differs from subject_sha only by this Gate-3 packet's own
-  SHA-recording commit, excluded from the digest by construction):**
-  `0ed3b6cfde973ad17b9b8bd92a65b6158bea4bbf`.
+  is computed against):** `509adfc722b0afa10007806626a7fcca31d0c710` — the
+  Gate-3 Round 1 correction commit (superseding the prior
+  `2ae7d5721887812123a099b725b50437f2acb7ca`).
+- **verified_pr_head_sha:** recorded once this correction commit's live PR
+  #295 CI is independently confirmed all-green (see below); not yet filled
+  in the frontmatter pending that verification.
 - **Implementation plan:** `docs/superpowers/plans/2026-08-30-gap-048-crm-classification-ux-gates-implementation.md`.
 
 ## What changed (`dd7ed7c9` → `2ae7d5721887812123a099b725b50437f2acb7ca`)
@@ -220,6 +262,23 @@ plus 4 pre-existing `CrmApiTest`/`QuoteToContractTest` happy-path tests
 updated to seed the now-required CONFIRMED classification (never to weaken
 the gate).
 
+**Gate-3 Round 1 correction:** `createContract()`'s gate-check-then-mutate
+split (see Owner Decision History above) is fixed — one continuous
+`DB::transaction()` now holds `Opportunity::lockForUpdate()` (locked
+first) from the re-read and CONFIRMED gate re-check through
+`contract.create` authorization, conditional Project creation,
+Contract+BOQ+BOQ-line mutation, and both audit `EventRecord` writes, to
+commit; the mutation now reads exclusively from the freshly-locked
+`$locked` model, never the stale pre-lock `$opportunity` instance.
+`contract.create` authorization was deliberately kept AFTER the gate
+re-check (preserving the pre-existing response-ordering contract: a
+missing classification is still reported as 422 even for an actor who
+also lacks `contract.create`) but moved INSIDE the same transaction, so a
+denied authorization now rolls back any Project mutation already made in
+the same request — `CrmApiTest::test_create_contract_requires_contract_create_permission`
+updated accordingly (see below). Proven by the new CONCURRENCY-4 real-MySQL
+regression (next section).
+
 ## Legacy-consumer compatibility evidence
 
 `BusinessKpiServiceTest::test_null_service_category_appears_under_explicit_unclassified_bucket`
@@ -253,9 +312,16 @@ All six named operations (§19 A–F) acquire `Opportunity::query()->lockForUpda
 **first**, inside a `DB::transaction`, before touching any child
 (`OpportunityServiceLine`/`Quote`) row, and re-read state after the lock
 (never validating against a pre-lock instance) — verified by direct code
-reading of every touched method plus the CONCURRENCY-1/2 real-MySQL race
+reading of every touched method plus the CONCURRENCY-1/2/4 real-MySQL race
 tests below, which would be flaky/non-discriminating if the lock order
-were wrong.
+were wrong. **Gate-3 Round 1 correction:** `createContract()` (operation E)
+did NOT actually hold the lock across its own mutation prior to this
+correction, despite the prior implementation's self-report claiming it
+did — re-verified directly by reading the corrected method: the entire
+critical section (gate re-check, `contract.create` authorization,
+Project/Contract/BOQ mutation, both audit `EventRecord` writes) is now
+inside the SAME `DB::transaction()` closure that acquires the lock, with
+no intervening commit.
 
 ## CONCURRENCY-1 real MySQL result
 
@@ -295,90 +361,109 @@ together with the failed reconciliation, no partial state, inside the same
 transaction. Also independently proven on SQLite via the same seam through
 the real HTTP endpoint (`ServiceLineClassificationReconciliationTest::test_update_rolls_back_scalar_when_mapper_reconciliation_fails`).
 
+## CONCURRENCY-4 real MySQL result (Gate-3 Round 1 correction)
+
+New test: `OpportunityServiceLineConcurrencyTest::test_concurrency_4_reconcile_to_empty_races_create_contract`.
+Same real-MySQL harness; races the REAL `OpportunityController::createContract()`
+(via a new `opportunity:concurrency-test-create-contract` artisan
+subprocess, genuinely separate OS process) against a real,
+separate-connection `OpportunityServiceLineClassificationService::reconcile()`
+attempt toward `{}` run from the PHPUnit process's own dedicated `mysql`
+PDO connection. A WON Opportunity with one CONFIRMED `DESIGN` line and an
+ACCEPTED native Quote with 400 line items (so `createContract()`'s
+BOQ-copy mutation phase has real, measurable wall-clock duration) is the
+fixture. Because reconciling to `{}` on an already-WON Opportunity is
+unconditionally rejected by `OpportunityServiceLineClassificationService`'s
+own lifecycle invariant (empirically verified: this holds regardless of
+`createContract()`'s internal transaction structure — WON is permanently
+in the invariant's gated-stage list), "final state = Contract created +
+zero CONFIRMED" can never be reached through this specific race and is
+asserted only as a belt-and-braces defense-in-depth check, not the primary
+proof, per the Owner directive's "or otherwise prove the test
+distinguishes the defect" allowance. The actual discriminating proof: the
+`createContract()` subprocess touches a test-only start-marker file the
+instant Laravel bootstrap completes and it is about to enter the real
+controller method (so the PHPUnit process's probe loop starts from the
+same line as the subprocess's own critical section instead of guessing a
+fixed head-start past unpredictable PHP/Laravel bootstrap time, which
+empirically ran 450-800ms — comparable to or larger than the whole race
+window); the probe then runs a tight loop of real `reconcile()` attempts,
+checking before each one whether the Contract row exists yet, counting
+how many completed near-instantly (<50ms) while it did not. **RED** on the
+prior 3-transaction implementation: 140 of 140 concurrent probe attempts
+completed near-instantly while no Contract row existed yet (`git stash`
+reverting only `app/Http/Controllers/Api/OpportunityController.php`
+reproduced this exactly). **GREEN** after the fix: 0 fast completions,
+confirmed across 3 repeated runs. Sabotage-verified by re-stashing the fix
+and re-running (RED reproduced identically), then restoring it (GREEN
+again). `createContract()`'s own exit code and the belt-and-braces
+zero-CONFIRMED-with-Contract check both pass in every run, buggy and
+fixed alike, confirming they alone would NOT have caught this defect —
+the fast-completion-count assertion is what actually discriminates.
+
 ## Full relevant regression results
 
-- **Full SQLite suite (fresh run, this exact head):** 2416 tests, 17382
-  assertions, 8 failures, 45 skips (skips are all the repo's existing,
-  documented dependency-gated groups — Redis/slow/stress/load — including
-  this Work ID's own new CONCURRENCY-1/2/3, which correctly skip when no
-  `mysql` connection is available). The 8 failures are `git diff dd7ed7c9`
-  zero-diff on every affected file (7 `DashboardApiTest` widget-customization
-  tests failing on a pre-existing broken `RedisStore::publish()` method; 1
-  `SecureUploadServiceTest` test) — confirmed pre-existing, unrelated to
-  GAP-048.
-- **Targeted GAP-048 + directly-affected regression set** (`tests/Feature/Crm`,
-  `tests/Feature/Concurrency`, `tests/Feature/Models/ServiceLineFoundationTest.php`,
-  `tests/Unit/Services`, `tests/Feature/QuoteToContractTest.php`,
-  `tests/Feature/Api/CrmApiTest.php`, `tests/Feature/Zena/AiDesignItemSuggestionTest.php`,
+Sections below unaffected by this Gate-3 Round 1 correction (nullable
+migration, canonical mapper, atomic reclassification, tenant/delete
+safety, pipeline gate, no-grace, shared predicate) were not re-run in
+full — the correction touched only `createContract()` and its own tests —
+but the targeted set below re-covers every one of them at the corrected
+head.
+
+- **Targeted GAP-048 + directly-affected regression set, re-run at the
+  corrected head (`509adfc7`):** `tests/Feature/Crm`,
+  `tests/Feature/QuoteToContractTest.php`, `tests/Feature/Api/CrmApiTest.php`,
   `tests/Feature/QuoteLifecycleTest.php`, `tests/Feature/QuoteCommercialEndpointTest.php`,
   `tests/Feature/Zena/OperatorCrmUiTest.php`, `tests/Feature/OpportunityAppointmentLifecycleTest.php`,
   `tests/Feature/Console/BackfillOpportunityServiceLinesTest.php`,
-  `tests/Unit/Support`, route/RBAC/tenant-isolation guardrails): **378
-  tests, 1902 assertions, 0 failures**, 6 skips (the 3 CONCURRENCY tests ×
-  their own `skipUnlessMysqlAvailable()` guard, correctly skipping on the
-  default SQLite connection).
-- **Live PR #295 CI (final verified head, see subject_sha below):** all
-  applicable checks pass — Unit Tests, API Tests (Fast/Slow), Feature
-  Tests, Integration Tests, `browser-tests` (Dusk, real MySQL), RFI
-  Escalation Concurrency (real MySQL), Document Workflow Concurrency (real
-  MySQL), Treasury Native CHECK Constraints (real MySQL), Zena RBAC/Tenant
-  Invariants (default + MySQL parity), Owner Governance Lint,
-  `test-routes-guardrails`, Repo Hygiene Guards, `Code Quality Analysis`,
-  `Security Tests`, `staging-smoke`, and all security/dependency/license/Docker
-  scans. `deploy` correctly skips (no deployment). An earlier head
-  (`d12c01cc`) had 2 red checks (`Code Quality Analysis`, `Security Tests`)
-  caused solely by a pre-existing PHPStan gap in
-  `app/Http/Controllers/Web/ReportPageController.php::buildDataset()`
-  (byte-identical to baseline `dd7ed7c9`, unrelated to GAP-048's design
-  boundary) — fixed with a zero-behavior-change refactor (private
-  closure/LazyCollection typing replaced by a plain generator method,
-  `projectRows()`), verified against the real CSV-export Feature test
-  (`OperatorPlatformUiTest::test_report_export_streams_tenant_scoped_csv`).
-  This fix was necessary because the Owner-governance evidence-freshness
-  check hard-requires every check on the head to be green before
-  `gate_status` may reach `awaiting_owner` — it could not be left as
-  disclosed-but-unfixed pre-existing debt the way the 3 unrelated
-  `lint_tests.sh` findings and the 8 SQLite failures were.
-- **PHPStan** (`./vendor/bin/phpstan analyse`, project-wide, same command
-  CI runs): zero errors, zero file_errors — fully clean at the final
-  verified head.
-- **Deptrac** (`./vendor/bin/deptrac analyse`): 0 violations.
-- **`scripts/ssot/lint_tests.sh`**: the `skipped_tests_inventory` baseline
-  was updated to register the new `OpportunityServiceLineConcurrencyTest`
-  skip entry (same convention as the existing RFI/Document-Workflow/Treasury
-  concurrency tests); 3 remaining flagged files
-  (`tests/Feature/Api/RfiApiTest.php`, `tests/Feature/Api/SubmittalResubmitLifecycleTest.php`,
-  `tests/Feature/Zena/PermissionCanonicalIdentityRegressionTest.php`) are
-  `git diff dd7ed7c9` zero-diff — pre-existing, unrelated debt, not fixed
-  here.
+  `tests/Feature/Zena/AiDesignItemSuggestionTest.php`: **141 tests, 526
+  assertions, 0 failures**. `tests/Feature/Models/ServiceLineFoundationTest.php`,
+  `tests/Feature/Api/SubmittalResubmitLifecycleTest.php`: **33 tests, 131
+  assertions, 0 failures**. `tests/Feature/Api/RfiApiTest.php`, `tests/Unit/Services`,
+  `tests/Unit/Support`, `tests/Feature/Zena/PermissionCanonicalIdentityRegressionTest.php`:
+  **218 tests, 966 assertions, 0 failures**.
+- **`tests/Feature/Concurrency/OpportunityServiceLineConcurrencyTest.php`
+  against real MySQL 8.0 (Docker), corrected head:** all 4 tests pass
+  (CONCURRENCY-1/2/3 unaffected + new CONCURRENCY-4), 10 assertions, 0
+  failures, run 3× for stability.
+- **Live PR #295 CI at the corrected head (`509adfc7`):** verification
+  pending as of this edit — see the frontmatter `technical_evidence` field
+  and the note directly below; this section will not claim a specific CI
+  result that has not been independently confirmed live.
+- **PHPStan / Deptrac:** not re-run locally for this correction — this
+  worktree's vendor directory is a partial symlink/copy hybrid (documented,
+  pre-existing environment gotcha unrelated to GAP-048) under which
+  `vendor/bin/phpstan` and `vendor/bin/phpstan`-style Composer binaries
+  cannot resolve their own autoloader; PHPStan/Deptrac correctness is
+  verified via the live PR #295 CI checks (`Code Quality Analysis`)
+  instead, per this repository's established practice for this exact
+  environment limitation.
+- **`scripts/ssot/lint_tests.sh`**: unaffected by this correction — the
+  `OpportunityServiceLineConcurrencyTest` skip-baseline entry already
+  covers the whole file (CONCURRENCY-4 is a new test method in an already-
+  registered file, not a new file).
 
 ## Exact implementation tree digest and Gate-3 packet state
 
-- **subject_sha:** `2ae7d5721887812123a099b725b50437f2acb7ca` — the last
-  commit that changed any non-Gate-3-record content (the mechanical
-  `ReportPageController.php` fix). This is what
-  `technical_evidence.implementation_tree_digest` is computed against.
-- **verified_pr_head_sha:** `0ed3b6cfde973ad17b9b8bd92a65b6158bea4bbf` — the
-  exact PR #295 head whose live CI was independently confirmed all-green
-  (32/32 applicable checks, `deploy` correctly skipping). This head differs
-  from `subject_sha` only by this Gate-3 packet's own SHA-recording commit,
-  which is excluded from the digest by construction.
+- **subject_sha (Gate-3 Round 1 correction):** `509adfc722b0afa10007806626a7fcca31d0c710`
+  — the commit containing the `createContract()` atomicity fix, the new
+  CONCURRENCY-4 regression, the CI wiring, and the `CrmApiTest` update.
+  Superseded from the prior `2ae7d5721887812123a099b725b50437f2acb7ca`.
+  This is what `technical_evidence.implementation_tree_digest` is computed
+  against.
 - **implementation_tree_digest** (`sha256`, computed via this repository's
   own `owner_governance_compute_implementation_tree_digest()` in
   `scripts/ssot/owner_governance_lint.php`, excluding only this exact Gate-3
-  record file): see frontmatter — independently re-verified by recomputing
-  it at both `subject_sha` and at the commit that records these exact SHA
-  values (`0ed3b6cf`) and confirming byte-for-byte equality
-  (`91d3c2763edafa553d14a7a022d7f49c0761ca251a7db798686eb348cd697685` both
-  times), proving the exclusion mechanism is working, not just trusted.
-  `Owner Governance Lint`'s evidence-freshness check independently
-  confirmed this at `0ed3b6cf` after one re-run needed to clear a known,
-  documented 300-second sibling-job polling race (the check first ran
-  before other jobs on the same head had finished; re-running it once
-  those jobs were green passed cleanly with zero code change).
+  record file, invoked directly against `509adfc7`): `4ff0f564fe39af5e01f6430c8d1921cba3b9b47217d9045618ce12989a58c9c4`
+  — see frontmatter.
+- **verified_pr_head_sha:** to be recorded once PR #295's live CI at
+  `509adfc7` (or the exact head this correction ends up pushing, if this
+  packet-recording commit itself needs a follow-up push) is independently
+  confirmed all-green — not yet filled in as of this edit.
 - **Gate-3 packet state:** `awaiting_owner`, `owner_decision.value: none`,
-  `owner_decision_binding` both null. No Owner decision has been recorded
-  yet.
+  `owner_decision_binding` both null. No Owner Gate-3 decision (approve/
+  defer) has been recorded yet — Round 1 above was a pre-decision
+  correction request, not a Gate-3 decision itself.
 
 ## Known limitation, disclosed honestly
 

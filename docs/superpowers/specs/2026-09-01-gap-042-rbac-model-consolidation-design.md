@@ -1,0 +1,157 @@
+---
+work_id: GAP-042
+owner_governance_version: 1
+owner_gate_2_record: docs/owner-decisions/GAP-042/02-design.md
+---
+
+# GAP-042 — `Src\RBAC` Model Consolidation: Gate 2 Design
+
+> Design-only. No code, test, migration, or deployment-configuration change is made by this document or this PR. Builds on the Owner-approved Gate 1 problem boundary (`docs/owner-decisions/GAP-042/01-request.md`): `Src\RBAC\Models\Role`/`Permission` and their direct consumers — `Src\RBAC\Services\RBACManager` and the 5 controllers in `src/RBAC/Controllers/`. The two incidental adjacent defects identified in Gate 1 (missing `AssignmentController::getUserRoles()`; the `CompensationController`/`Src\RBAC\Middleware\RBACMiddleware` constructor-wiring defect) remain explicitly out of scope.
+
+**Baseline for this design:** `origin/main @ ed8ca00b120064165f54c2ee9c8c44e946a0ef88` (re-verified via `git fetch origin`, no drift since Gate 1).
+
+## 1. Objective
+
+Design the smallest safe remediation that restores the live `/api/v1/rbac/*` API to production fidelity while establishing **one** authoritative RBAC data model — no split-brain between `Src\RBAC\Models\Role`/`Permission` (`zena_roles`/`zena_permissions`) and `App\Models\Role`/`Permission` (`roles`/`permissions`).
+
+## 2. Full consumer inventory of the approved boundary
+
+Every symbol inside the approved boundary that touches `zena_roles`/`zena_permissions`/`zena_role_permissions`/`zena_user_roles`, found by direct code inspection this pass:
+
+| File | Symbol | Table(s) touched |
+|---|---|---|
+| `src/RBAC/Models/Role.php` | `Role` model, `permissions()`, `systemUsers()` | `zena_roles` (primary), `zena_role_permissions` (pivot, hardcoded string in `belongsToMany()`), `zena_user_roles` (pivot, hardcoded string) |
+| `src/RBAC/Models/Permission.php` | `Permission` model, `roles()` | `zena_permissions` (primary), `zena_role_permissions` (pivot, hardcoded string) |
+| `src/RBAC/Controllers/RoleController.php` | `index`, `store`, `show`, `update`, `destroy`, `syncPermissions`, `getRolesByScope` (partially — some methods live in `RBACController`) | `Role::query()`/`create()`/`find()`/`with('permissions')`, `Permission::whereIn('code', ...)` |
+| `src/RBAC/Controllers/PermissionController.php` | `index`, `store`, `show`, `update`, `destroy` | `Permission::query()`/`create()`/`generateCode()` |
+| `src/RBAC/Controllers/RBACController.php` | `getRolesByScope`, `getPermissionHierarchy`, `getUserEffectivePermissions`, `checkUserPermission`, `bulkAssignRoles`, `getAuditLog` | `Role::query()`, `Permission::select(...)`, plus everything `RBACManager` touches (below) |
+| `src/RBAC/Controllers/AssignmentController.php` | `assignUserRoles`, `removeUserRole`, `getProjectUsers`, `assignProjectRole`, `removeProjectRole` (NOT `getUserRoles` — that method does not exist, per Gate 1's incidental finding, out of scope) | `Role::find()` (scope checks: `SCOPE_SYSTEM`/`SCOPE_CUSTOM`/`SCOPE_PROJECT`), plus `RBACManager`'s assignment methods |
+| `src/RBAC/Controllers/PermissionMatrixController.php` | `export`, `import`, `validateCsv`, `getTemplate` | via `Src\RBAC\Services\PermissionMatrixService` |
+| `src/RBAC/Services/PermissionMatrixService.php` | `export`/`import`/CSV round-trip | `Role::with('permissions')`, `Permission::generateCode()`, `Permission::firstOrCreate()`, `Role::where('name', ...)` |
+| `src/RBAC/Services/RBACManager.php` | `calculateEffectivePermissions`/`computeEffectivePermissions`, `getSystemPermissionsWithOverride`, `getCustomPermissionsWithOverride`, `getProjectPermissionsWithOverride`, `hasPermission`, `hasAllPermissions`, `hasAnyPermission`, `getDetailedPermissions`, role-assignment methods (system/custom/project) | `Role` (via `UserRoleSystem`/`UserRoleCustom`/`UserRoleProject`'s `role()` relation, unqualified `Role::class` inside `Src\RBAC\Models`, resolving to `zena_roles`), and transitively `Permission`/`zena_role_permissions` via `role.permissions` eager-load |
+
+**New finding, this pass (within the approved boundary, since `RBACManager` is explicitly included):** `RBACManager::getCustomPermissionsWithOverride()` queries `Src\RBAC\Models\UserRoleCustom`, whose `$table = 'custom_user_roles'`. Repo-wide migration search (`grep -rl "custom_user_roles" database/migrations/`) finds **zero** migrations for this table — it has never existed on any environment, ever, independent of the `zena_*` rename. This is a second, distinct schema gap inside the approved boundary, not investigated further at Gate 1 (which scoped to `Role`/`Permission`) but surfaced here because `RBACManager`'s custom-permission layer is unconditionally part of `computeEffectivePermissions()`'s 3-layer merge. Not live-reproduced this pass (would require a user with a `custom`-scope role assignment, which nothing in the live system can currently create, since `custom_user_roles` doesn't exist) — flagged for the Gate 2 acceptance-test matrix and the implementation plan, not resolved here.
+
+**Confirmed unaffected / already correct within the module:** `Src\RBAC\Models\RolePermission` (a `Pivot` subclass at `src/RBAC/Models/RolePermission.php`) already declares `protected $table = 'role_permissions'` — the **standard**, post-rename name — but is **not referenced anywhere in the codebase** (`grep -rln "RBAC\\\\Models\\\\RolePermission"` returns nothing). It is dead code, evidence that a prior, incomplete attempt at this exact convergence already exists in the repository and was never finished or wired in. `UserRoleSystem` (`system_user_roles`) and `UserRoleProject` (`project_user_roles`) both have real migrations and are schema-sound; only their `role()` relation resolves to the broken `Role` class.
+
+## 3. Schema/behavioral compatibility — evidence
+
+Both model pairs' underlying tables originate from the **same** migration (`zena_roles`/`zena_permissions` were `Schema::rename()`d to `roles`/`permissions`, not recreated) — the columns are, and always have been, physically identical except for one later addition:
+
+| | `Src\RBAC\Models\Role` fillable | `App\Models\Role` fillable | Table columns (`roles`, current `main`) |
+|---|---|---|---|
+| | `name`, `scope`, `allow_override`, `description` | `name`, `scope`, `allow_override`, `description`, `is_active`, `tenant_id` | `id`, `name` (unique), `scope`, `allow_override`, `description`, `is_active`, `tenant_id`, timestamps |
+
+| | `Src\RBAC\Models\Permission` fillable | `App\Models\Permission` fillable | Table columns (`permissions`, current `main`) |
+|---|---|---|---|
+| | `code`, `module`, `action`, `description` | `code`, `name`, `module`, `action`, `description` | `id`, `code` (unique), `module`, `action`, `description`, `is_active`, `name` (nullable, added `2026_01_30_000001_add_name_to_permissions_table.php`), timestamps |
+
+`Src\RBAC\Models\Role`'s fillable set is a strict subset of `App\Models\Role`'s; same for `Permission`. Both `Permission` classes auto-generate `code` from `module`+`action` on create when empty (`Src\RBAC\Models\Permission::boot()` vs. the equivalent in `App\Models\Permission::boot()`) — identical behavior, independently implemented twice.
+
+Pivot tables: `zena_role_permissions`→`role_permissions` and `zena_user_roles`→`user_roles` are the same rename pattern — `role_id`, `permission_id`/`user_id`, `allow_override` (role_permissions only), timestamps, composite primary key. No migration has altered `role_permissions`' or `user_roles`' columns since the rename (confirmed: only `permissions` received a post-rename column addition, per §2's migration grep). **Conclusion: the schemas are behaviorally compatible by construction — they are the same tables under different historical names, not two independently-evolved schemas that happen to look similar.**
+
+One material behavioral difference found, not a schema difference: `RoleController::store()` (`src/RBAC/Controllers/RoleController.php:96-101`) never sets `tenant_id` on `Role::create()`, and its duplicate-name check (`Role::where('name', ...)->where('scope', ...)->exists()`) is not tenant-scoped either — role names are currently unique **globally**, not per-tenant, in the `Src\RBAC` module's own logic. This is not a regression risk from convergence — `App\Models\Role`'s `roles` table already carries the same global `roles_name_unique` index (confirmed in the rename migration, §3 of the Gate-1 evidence) — but it means neither model pair enforces per-tenant role-name uniqueness today. Convergence does not need to fix this (out of the approved boundary; flagged as a pre-existing, shared characteristic, not something Option A/B/C changes for better or worse).
+
+## 4. Options comparison
+
+### Option A — Converge onto canonical `roles`/`permissions`/`role_permissions`/`user_roles` (via `App\Models\Role`/`Permission`, or `Src\RBAC` classes repointed to the same tables)
+
+**Mechanism:** Either (a) delete `Src\RBAC\Models\Role`/`Permission` and have `src/RBAC/Controllers/*`/`RBACManager`/`PermissionMatrixService` use `App\Models\Role`/`Permission` directly, or (a′) keep the `Src\RBAC\Models\Role`/`Permission` class names (so no `use` statement churn across 9+ consumer files) but change `protected $table` from `zena_roles`/`zena_permissions` to `roles`/`permissions`, and change the two hardcoded pivot-table strings in `Role::permissions()`/`Permission::roles()` from `zena_role_permissions` to `role_permissions` (already what `Src\RBAC\Models\RolePermission` — currently dead — declares). `UserRoleSystem`/`UserRoleCustom`/`UserRoleProject`'s `role()` relation needs no change if `Role::class` still resolves within `Src\RBAC\Models` — it would just point at the now-repointed table.
+
+**Pros:** Zero new tables, zero new migrations for `Role`/`Permission`/`role_permissions`/`user_roles` (schema already exists, already seeded, already the live source of truth for the `rbac:` authorization gate itself). Smallest possible diff — 2 model files' `$table`/pivot-string values, no controller/service logic changes required (fillable subset means no field ever gets silently dropped). Immediately closes the split-brain: one authoritative table set, used by both the authorization gate and the business logic behind it. Matches the already-existing-but-dead `RolePermission` pivot model's stated intent.
+
+**Cons:** `Src\RBAC\Models\Permission`'s fillable (`code, module, action, description`) omits `name`, which `App\Models\Permission`'s callers may rely on being settable; since `permissions.name` is nullable (added later, per §3), this is a non-breaking gap, not a conflict — existing `Src\RBAC`-created rows simply leave `name` null, exactly as `PermissionSeeder`'s own rows already sometimes do (this is the AUD-28 pattern GAP-044 already documented, not a new risk). `custom_user_roles` still needs a decision regardless of this option (§2).
+
+### Option B — Thin compatibility/adapter layer, `Src\RBAC` classes/API preserved as-is against the standard schema
+
+**Mechanism:** Same table repointing as Option A, but additionally wrap `Src\RBAC\Models\Role`/`Permission` in an explicit adapter (e.g., extend `App\Models\Role`/`Permission` instead of `Illuminate\Database\Eloquent\Model` directly, remapping the narrower `Src\RBAC` fillable/constant surface — `Role::VALID_SCOPES`, `Permission::generateCode()` — onto the parent).
+
+**Pros:** Slightly more explicit "this is the same underlying entity, different historical API" statement in code; a single class hierarchy point if the two APIs need to diverge again later for some reason.
+
+**Cons:** More moving parts than Option A for no behavioral difference given §3's finding that the fillable sets are already a strict subset — inheritance adds a coupling axis (any future change to `App\Models\Role` silently propagates to `Src\RBAC\Models\Role`) without buying anything Option A's direct table-repoint doesn't already achieve. Effectively Option A with extra indirection; **not recommended as a separate mechanism** unless Gate 2 review surfaces a concrete reason the two APIs must diverge.
+
+### Option C — Retire/de-duplicate `Src\RBAC` model/service path entirely, route `/api/v1/rbac/*` through `App\Models\Role`/`Permission` directly
+
+**Mechanism:** Delete `Src\RBAC\Models\Role`/`Permission`/`RolePermission`; rewrite the 5 controllers + `PermissionMatrixService` to use `App\Models\Role`/`Permission` and `App\Models\User::roles()`/`hasPermission()` instead of `RBACManager`'s 3-layer computation; decide the fate of `RBACManager`'s system/custom/project layering (either port it to operate against `App\Models\Role` + the existing `system_user_roles`/`project_user_roles` tables plus a new `custom_user_roles` migration, or drop the 3-layer model in favor of `App\Models\User`'s flat `roles()`/`hasPermission()`).
+
+**Pros:** Eliminates the duplicate class hierarchy entirely — no `Src\RBAC\Models\Role` vs `App\Models\Role` naming confusion for future readers. Removes the now-dead `App\Http\Controllers\{RoleController,PermissionController,AssignmentController,RBACController}` / `App\Services\{RBACManager,PermissionMatrixService}` orphan-duplicate question too, if folded into the same cleanup (though that cleanup is explicitly **not** part of GAP-042's approved boundary, per Gate 1 — see §7).
+
+**Cons:** By far the largest diff of the three — touches every consumer file's imports and internals, not just 2 models' table pointers; the 3-layer System/Custom/Project permission-override model (`RBACManager::computeEffectivePermissions()`, §2 of the Gate-1 evidence, §2 above) is materially richer than `App\Models\User`'s flat `hasRole()`/`hasPermission()` (least-privilege intersection across layers, `allow_override` per layer) — collapsing it to the flat model is a **behavior change**, not a bug fix, and is exactly the kind of business-semantics decision the repository's Design Dependency Preflight exists to catch (§7). Rewriting 5 controllers + a service class carries materially more regression risk than repointing 2 `$table` properties, for a benefit (naming clarity) that Option A's dead-code note (`RolePermission` already unused) shows can be achieved incrementally later without forcing the whole rewrite now.
+
+### Legacy-compatibility-table/view variant (evaluated, not recommended)
+
+Recreating `zena_roles`/`zena_permissions` as either permanent duplicate tables (kept in sync with `roles`/`permissions` via triggers/observers) or database views over `roles`/`permissions` was evaluated per the Owner's explicit request to consider it. **Not recommended:**
+- A duplicate table reintroduces exactly the split-brain authority problem Gate 1 diagnosed (two tables, one truth, requiring a sync mechanism that can itself drift) — the opposite of the Owner's stated goal ("establishing ONE authoritative RBAC data model... Avoid split-brain RBAC data").
+- A read-only view could serve `SELECT`-only consumers, but `Src\RBAC\Controllers\RoleController::store/update/destroy`, `PermissionController::store/update/destroy`, and `RBACManager`'s role-assignment methods (§2) all write — a view does not support arbitrary writes back to a renamed base table without additional (and MySQL-version-sensitive) `INSTEAD OF`-trigger machinery Laravel's schema builder does not manage, adding operational complexity with no compatibility benefit Option A doesn't already provide directly.
+- No consumer in the approved boundary (§2) requires the literal string `zena_roles`/`zena_permissions` to exist for any reason other than that being the currently-hardcoded (and broken) table name — i.e., nothing needs the *name* `zena_roles`, only working Role data. A compatibility shim solves a problem no live consumer actually has.
+
+### Recommendation: **Option A** (direct table repoint, keeping `Src\RBAC\Models\Role`/`Permission` class names to minimize consumer-file churn)
+
+Rationale: §3 establishes the schemas are the same tables historically, not independently-evolved ones — there is nothing to "adapt" (Option B) or "port behavior across" (Option C) that Option A's direct repoint doesn't already carry for free, because the fillable/relationship surface is already a compatible subset. Option C's larger rewrite is justified only if the Owner separately decides to collapse the 3-layer permission model into the flat one — a business-semantics decision this Gate 2 does not make (§7) and that the Gate-1-approved boundary did not ask for. Option A is reversible (§9), requires no new migration for the primary defect (§6), and directly satisfies "avoid split-brain" by making `roles`/`permissions` the single table set for both the authorization gate and the business logic behind it, on day one.
+
+## 5. API compatibility for `/api/v1/rbac/*`
+
+Option A changes zero route signatures, zero request/response shapes, zero controller method bodies (only the two models' `$table`/pivot-string values change) — every one of the ~20 routes in `src/RBAC/routes/api.php` keeps its existing URL, HTTP verb, request validation, and JSON response shape. The only externally observable change is that these endpoints **start working** (200s where they previously would 500) once real Role/Permission rows exist in `roles`/`permissions` — there is no compatibility break to manage because nothing about the wire contract changes.
+
+## 6. Tenant isolation and tenant_id semantics
+
+- `roles.tenant_id` exists (nullable, from the original `add_tenant_id_to_zena_roles_table` migration); `permissions` has no `tenant_id` column in either schema (permissions are module/action-scoped, not tenant-scoped, in both systems today — unchanged by this design).
+- Neither `Src\RBAC\Models\Role` nor `App\Models\Role` applies an automatic tenant-scoping trait (no `TenantScope`/`BelongsToTenant` on either) — tenant scoping for roles is enforced, if at all, at the query/controller level, not the ORM level, in both systems equally today. Option A does not change this; it is a pre-existing characteristic of both model pairs, not something this design introduces or removes.
+- `RoleController::store()`'s duplicate-name check is global (name+scope, no tenant filter) in `Src\RBAC` today — Option A does not change this behavior (no controller logic changes); it is noted as a pre-existing characteristic, not a regression, and is explicitly out of the approved boundary to fix here.
+- The acceptance test contract (§10) includes a tenant-isolation assertion at the level GAP-042 actually touches: a user's role/permission grants and the `rbac:<code>` middleware gate must continue to behave identically per-tenant after convergence — i.e., convergence must not be observed to leak Role/Permission visibility across tenants relative to current (pre-fix) behavior. It does not newly invent per-tenant role-name uniqueness, which is out of scope.
+
+## 7. Governance classification / Design Dependency Preflight
+
+Option A is a **data-source repoint only** — no new business rule, no new tenant semantics, no new authorization behavior, no change to the 3-layer System/Custom/Project permission-override model's *logic* (only which physical tables back it). Per the same reasoning GAP-040/GAP-044 used for their own test-infrastructure-only scope (and the Gate-1 evidence's own governance classification, §8 of `docs/audits/2026-09-01-gap-042-rbac-production-fidelity-evidence.md`), **this does not trigger the Design Dependency Preflight**, because no canonical business-domain semantics are being changed — the tables being converged onto are already the tenant's live, seeded, authoritative `roles`/`permissions` data. If implementation planning later reveals that closing the `custom_user_roles` gap (§2) requires a genuinely new business decision (e.g., what a "custom" role layer means going forward, not just where its rows live), work must stop and the appropriate preflight must run before that specific sub-decision proceeds — flagged, not resolved, here.
+
+## 8. Seeder/factory implications
+
+No seeder currently targets `zena_roles`/`zena_permissions` in the production `DatabaseSeeder` chain (confirmed at Gate 1: `RoleSeeder`, `PermissionSeeder`, `RolePermissionSeeder`, `ZenaAdminRolePermissionSeeder`, `ZenaPermissionsSeeder`, `SimpleRoleSeeder`, `ZenaProjectManagerRolePermissionSeeder` all already target `App\Models\Role`/`Permission`/`roles`/`permissions` despite several files' "Zena"-branded names — confirmed by direct `use` statement inspection this pass). Only `database/seeders/TestDatabaseSeeder.php` references `Src\RBAC\Models\Role`/`Permission`, and it is **not** wired into `DatabaseSeeder`'s production chain (confirmed: `grep -n "TestDatabaseSeeder" database/seeders/DatabaseSeeder.php` returns nothing). Under Option A, this means: **zero production seeder changes are required** — the already-seeded `roles`/`permissions` data becomes immediately visible through `Src\RBAC`'s endpoints once the table pointer changes. `TestDatabaseSeeder.php` itself is test-support tooling; whether it needs updating (to stop implying `zena_*` tables are a legitimate target) is an implementation-time cleanup question, not a Gate 2 design decision, and does not block the primary fix.
+
+## 9. What must happen to `ensureSqliteZenaRbacTables()` and `RbacApiTest`
+
+This is the acceptance contract's central requirement (per Owner instruction: tests must no longer be able to manufacture a production-impossible schema and hide this class of defect).
+
+- **`tests/TestCase.php::ensureSqliteZenaRbacTables()`** (and its `zenaRbacBootstrapSchema()`/`zena_ddl_bootstrap` machinery) must be **removed**, not merely left inert, once `Src\RBAC\Models\Role`/`Permission` no longer reference `zena_roles`/`zena_permissions`. Leaving it in place after the table repoint would make it genuinely dead code (nothing left to create tables for) — implementation must delete it and its call site (`tests/TestCase.php:200`), not just skip calling it, so that a future engineer cannot silently reintroduce a `zena_*`-pointed model and have this shim start masking the same defect class again.
+- **`tests/Feature/RbacApiTest.php`** currently imports and asserts against **both** `App\Models\Role`/`Permission` and `Src\RBAC\Models\Role`/`Permission` (`tests/Feature/RbacApiTest.php:9-12`) as if they were two different, both-real entity sets. Under Option A they become the same underlying tables — the test's own setup (`createRolesAndPermissions()`, `grantAppRbacPermissions()`) must be audited at implementation time to remove any assumption that a `Src\RBAC\Models\Role` row and an `App\Models\Role` row with the same name/scope are two independent objects (post-convergence, `Src\RBAC\Models\Role::where(...)` and `App\Models\Role::where(...)` query the identical table). This test must be updated to exercise the real, converged path — not deleted, since it is the only existing coverage of this live route surface.
+- **New, mandatory:** a production-fidelity test (§10) that runs the `/api/v1/rbac/*` surface against a schema produced by `php artisan migrate:fresh` alone, with `ensureSqliteZenaRbacTables()` already removed — this is what makes "tests can no longer hide this defect" a checkable fact rather than a claim.
+
+## 10. Required acceptance design (Gate 3 verification criteria — not built at Gate 2)
+
+All of the following must **fail on current `main`** (proving they actually test the defect) and **pass only after the eventual Option A remediation**:
+
+1. **Clean genuine MySQL 8.0 bootstrap, no PHPUnit schema shim.** A CI job (or a documented, exactly-reproducible manual procedure equivalent to Gate 1's disposable-container method) that runs `php artisan migrate:fresh` against a real MySQL 8.0 instance with `ensureSqliteZenaRbacTables()` already deleted from `tests/TestCase.php`, and independently inventories the resulting tables.
+2. **Assertion that the application does NOT require `zena_roles`/`zena_permissions`.** A direct check (e.g. `SHOW TABLES LIKE 'zena_roles'` / `'zena_permissions'` returning empty) run against that same clean schema — the negative-space proof, not just a positive proof that `roles`/`permissions` work.
+3. **Authenticated + authorized real `/api/v1/rbac/roles` and `/permissions` HTTP paths succeed.** A real HTTP request (not a facade/internal call) with valid Sanctum auth, valid tenant header, and a real, granted `role.view`/`permission.view` permission on `App\Models\Permission`, against the clean schema, must return HTTP 200 with real data — the same request shape Gate 1's evidence used to prove the current HTTP 500.
+4. **Denied access remains denied.** The same requests, with a user lacking the required permission, must still return HTTP 403 through the unaffected `rbac:<code>` gate — proving convergence did not accidentally loosen authorization.
+5. **Tenant isolation remains intact.** Two tenants, each with their own Role/Permission rows and users, must not see each other's roles/permissions through `/api/v1/rbac/roles` — proving convergence did not introduce cross-tenant visibility (§6 — this asserts no regression relative to current pre-fix behavior, not a new per-tenant-uniqueness guarantee).
+6. **Representative Role/Permission CRUD and assignment operate on the canonical tables.** At minimum: create a Role (`POST /roles`), create a Permission (`POST /permissions`), sync permissions to a role (`POST /roles/{role}/permissions`), assign a role to a user (`POST /assignments/users/{user}/roles`) — each verified, after the HTTP call, by an independent query against `roles`/`permissions`/`role_permissions`/`user_roles` (not `zena_*`), proving writes land on the canonical tables.
+7. **CI runs the production-fidelity proof without `Tests\TestCase::ensureSqliteZenaRbacTables()` masking it.** The test class(es) implementing 1-6 above must not extend `Tests\TestCase` in a way that still has access to the now-deleted shim, or must otherwise be structurally incapable of silently recreating `zena_roles`/`zena_permissions` — this is the direct discriminating check that closes the exact masking mechanism Gate 1's §5e demonstrated.
+
+Explicitly **not** required by this acceptance contract (per the approved boundary): any test for `AssignmentController::getUserRoles()` (doesn't exist, separate defect) or for the `CompensationController`/`Src\RBAC\Middleware\RBACMiddleware` constructor-wiring defect (separate defect) — those remain undecided, unfixed, and unregistered under GAP-042.
+
+## 11. Whether any new migration is necessary
+
+**For the primary defect (Role/Permission):** No. `roles`/`permissions`/`role_permissions`/`user_roles` already exist, are already correctly shaped (§3), and are already the live table set the `rbac:` middleware gate itself uses. Option A is a code-only change (2 files' `$table`/pivot-string values). This directly satisfies the Owner's stated preference: "prefer fixing code against the already-canonical schema over introducing unnecessary schema churn."
+
+**For the `custom_user_roles` gap (§2, new finding):** A genuine open question, not resolved here. `Src\RBAC\Models\UserRoleCustom` (and its `App\Models\UserRoleCustom` duplicate) point at a table with zero migrations anywhere. Two honest options for implementation planning, neither selected here: (a) add a migration creating `custom_user_roles` (mirroring `system_user_roles`'/`project_user_roles`'s existing shape), completing the 3-layer model as originally designed; or (b) determine, before writing that migration, whether the "custom" permission layer is actually used/intended anywhere in the live product (no live route or UI reference to a "custom" role-assignment flow was found in this pass's grep of `src/RBAC/Controllers/*` — `AssignmentController`'s `SCOPE_CUSTOM` branch exists but its callers were not traced end-to-end to a UI surface this pass). This is flagged as a required implementation-planning question, not answered here, and does not block Option A's primary Role/Permission fix (the custom-layer query simply continues to either throw the same class of error it throws today, or return empty results if never populated — no worse than current `main`).
+
+## 12. Migration/data safety for already-migrated environments
+
+No environment has ever had non-empty `zena_roles`/`zena_permissions` data reachable through this code path in production, because (a) no environment has ever successfully served a live `/api/v1/rbac/*` request past the point of a `QueryException` (per Gate 1's evidence — the defect exists from the very first post-rename migration onward), and (b) `zena_roles`/`zena_permissions` themselves have not existed as tables since the rename migration ran, on any environment that has run migrations past `2025_09_19`. There is no data to migrate, merge, or reconcile between the two tables — this is purely a code pointer fix, not a data migration. `roles`/`permissions` already hold whatever real Role/Permission data exists today (seeded via `RoleSeeder`/`PermissionSeeder`, §8).
+
+## 13. Rollback behavior
+
+Option A's rollback is reverting the 2 model files' `$table`/pivot-string values (a plain code revert, `git revert`) — no migration `down()` to run, no data to restore, since no schema changes accompany the primary fix. If a `custom_user_roles` migration is later added (§11), its `down()` must `dropIfExists('custom_user_roles')`, matching the existing sibling migrations' pattern (`2025_09_23_000000_create_system_user_roles_table.php`, `2026_02_02_020000_create_project_user_roles_table.php`) — to be written at implementation time, not designed here beyond noting the precedent to follow.
+
+## 14. Loại trừ rõ ràng (explicit exclusions)
+
+Does not implement anything — no code, test, migration, or deployment-configuration file is changed by this Gate 2 submission. Does not fix or absorb the two incidental adjacent defects (`AssignmentController::getUserRoles()`; `CompensationController`/`Src\RBAC\Middleware\RBACMiddleware` constructor-wiring). Does not decide the `custom_user_roles` question (§11) — flagged for implementation planning. Does not touch `App\Http\Controllers\{RoleController,PermissionController,AssignmentController,RBACController}`/`App\Services\{RBACManager,PermissionMatrixService}` (confirmed orphaned/unrouted at Gate 1) — their disposition (delete as dead code, or leave) is a separate, lower-stakes cleanup question, not part of this design. Does not touch GAP-041, GAP-045, or production deployment. Does not reopen or modify any GAP-040/GAP-044/GAP-047 file or decision record.
+
+## 15. Decision Needed
+
+Owner chooses: Approve Option A (converge onto canonical `roles`/`permissions`/`role_permissions`/`user_roles`, keeping `Src\RBAC\Models\Role`/`Permission` class names, `Src\RBAC\Models\RolePermission` reactivated as the pivot model) as the Gate 2 design, authorizing implementation planning — or request changes / decline / defer, or select Option B/C instead with rationale.
+
+## 16. What the owner is NOT being asked to decide
+
+Not being asked to approve any specific line-level implementation diff (that is the implementation plan, after Gate 2 approval). Not being asked to decide the `custom_user_roles` question (§11) beyond acknowledging it is a real, separate, in-boundary finding that implementation planning must resolve explicitly (not silently). Not being asked to decide the fate of the orphaned `App\Http\Controllers`/`App\Services` duplicates, or the two incidental adjacent defects — all three remain out of scope pending separate Work IDs if pursued.

@@ -25,7 +25,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-31T00:10:00+07:00"
-  updated_at: "2026-09-01T05:35:00Z"
+  updated_at: "2026-09-01T11:15:00Z"
 generated_by: agent
 residual_risk_rating: medium
 mandatory_technical_gate_summary: "GAP-048 implementation (canonical multi-valued Service-Line classification UX with explicit CONFIRMED confirmation; shared legacy->canonical mapper reused by store()/Lead-convert()/update(); nullable service_category migration verified on SQLite and real MySQL 8.0 including safe down()-rollback with pre-existing NULL data; pipeline/sendQuote()/convert()/createContract() gates backed by one shared CONFIRMED predicate; Opportunity-row locking with canonical lock order closing the Owner-identified concurrency race, INCLUDING the Gate-3 Round 1 correction to createContract() itself) is technically complete and verified. Gate-3 Round 1 correction: createContract() previously split its classification gate re-check from its Project/Contract/BOQ mutation and audit EventRecord writes across three separate DB transactions, releasing the Opportunity row lock between the gate re-check and the mutation, and mutating a stale pre-lock $opportunity model instance for Project creation. Fixed to one continuous DB::transaction() holding Opportunity::lockForUpdate() (locked first) from the re-read and gate re-check through contract.create authorization, conditional Project creation, Contract+BOQ+BOQ-line mutation, and both audit EventRecord writes, to commit — matching the same discipline already used by sendQuote()/convert()/reconcile(). New CONCURRENCY-4 real-MySQL regression (tests/Feature/Concurrency/OpportunityServiceLineConcurrencyTest.php) proves this directly with a genuinely separate OS process (createContract() subprocess) racing a genuinely separate DB connection (an in-PHPUnit-process reconcile({}) probe, synchronized via a test-only start-marker file so it races createContract()'s own critical section rather than PHP/Laravel bootstrap time): RED on the prior 3-transaction implementation (140/140 concurrent probe attempts completed near-instantly while no Contract row existed yet); GREEN after the fix (0 fast completions, repeated 3x); sabotage-verified by reverting the fix and reproducing the exact RED failure again, then restoring it. A pre-existing test (CrmApiTest::test_create_contract_requires_contract_create_permission) asserted the OLD non-atomic behavior (a denied contract.create authorization left a converted Project behind) as though it were intentional; updated to assert the corrected atomic behavior (the whole attempt, including Project auto-convert, rolls back together) with an explanatory comment — the old behavior was itself a symptom of the bug being fixed, not a documented product requirement. Added a dedicated 'GAP-048 Service-Line Concurrency (real MySQL)' CI job (scripts/ci/gap048-service-line-concurrency-mysql + .github/workflows/automated-testing.yml), mirroring the existing RFI Escalation/Document Workflow/Treasury Native CHECK Constraints real-MySQL job pattern exactly, so CONCURRENCY-1/2/3/4 now run automatically in CI (previously a disclosed known limitation: local-only). Full SQLite regression: 2416 tests, 8 pre-existing/unrelated failures (verified zero-diff against baseline dd7ed7c9 for every affected file: 7 Dashboard widget tests failing on a pre-existing broken Redis cache-store method, 1 flaky SecureUploadServiceTest), 0 GAP-048 regressions. CONCURRENCY-1/2/3 real-MySQL subprocess-race evidence re-verified unaffected by this correction, still sabotage-verified discriminating. Nullable migration verified on SQLite and real MySQL 8.0 (unaffected by this correction). Targeted focused regression re-run after the fix: tests/Feature/Crm, tests/Feature/QuoteToContractTest.php, tests/Feature/Api/CrmApiTest.php, tests/Feature/QuoteLifecycleTest.php, tests/Feature/QuoteCommercialEndpointTest.php, tests/Feature/Zena/OperatorCrmUiTest.php, tests/Feature/OpportunityAppointmentLifecycleTest.php, tests/Feature/Console/BackfillOpportunityServiceLinesTest.php, tests/Feature/Zena/AiDesignItemSuggestionTest.php: 141 tests, 526 assertions, 0 failures. GAP048_SIMULATE_MAPPER_FAILURE left untouched (not technically necessary for this mandatory fix, per Owner directive). Owner Gate-3 decision: APPROVED 2026-09-01, bound to implementation-tree digest 0bfd5dfc8d321c763acf5d4099bcc83afac174a95444df2a32157ee57df723c5 at subject_sha 141024d79935d691e3bd205726f0e5ff562d8aac (decision-record head 87d83ea4). Release (mark-ready, merge, post-merge CI/deployment observation) proceeds under this approval, per the Owner's explicit release-sequence authorization."
@@ -41,18 +41,19 @@ owner_decision_binding:
 
 # GAP-048 — CRM Classification UX & Gates: Gate 3 Release Request
 
-## OWNER GATE 3: APPROVED
+## GAP-048 STATUS: CLOSED — RELEASED
 
-**Status: `approved`.** Owner Gate-3 decision: **APPROVED** on 2026-09-01,
-bound to implementation-tree digest
+**Owner Gate-3 decision: APPROVED** on 2026-09-01, bound to
+implementation-tree digest
 `0bfd5dfc8d321c763acf5d4099bcc83afac174a95444df2a32157ee57df723c5` at
 subject_sha `141024d79935d691e3bd205726f0e5ff562d8aac` (decision-record
-head `87d83ea4`). This approval authorizes the release sequence (mark PR
-#295 Ready, merge, post-merge CI/deployment verification) per the Owner's
-explicit release-sequence authorization recorded in this file's
-frontmatter `decision_provenance.owner_response_reference` (Round 2)
-above. See "Owner Decision History — Round 2 — APPROVED" below for the
-full record.
+head `67480d57`). **Merged to `main` at
+`a790758978dc9ded439a823860ecdb1ee8e9bee9`**, post-merge CI verified
+terminal green, **NOT deployed to production** (deployment secrets not
+configured in this environment — see "Release execution record" below for
+the full, independently-verified sequence and exact deployment-job
+evidence). See "Owner Decision History — Round 2 — APPROVED" for the full
+approval record.
 
 ## Owner Decision History — Round 1 — CORRECTION REQUESTED (permanent record, never erased)
 
@@ -550,7 +551,72 @@ not yet; they were run manually against real MySQL in this session with
 sabotage verification, and the honest evidence above reflects exactly
 that, no more.
 
-## What this packet does NOT authorize
+## Release execution record (GAP-048 CLOSED — RELEASED)
+
+Executed in this same session immediately after the Owner's explicit
+Gate-3 APPROVED decision (Round 2, above), per the Owner's explicit
+release-sequence authorization.
+
+1. **Approval-record commit:** `67480d5703f2a5a33f700b882051d80ad4bd8e1b`
+   (this file only — `git diff --name-only` showed exactly
+   `docs/owner-decisions/GAP-048/03-release.md`).
+2. **Post-approval verification before merge:** implementation binding
+   re-verified unchanged (`implementation_tree_digest` recomputed directly
+   against subject_sha `141024d79935d691e3bd205726f0e5ff562d8aac`, still
+   `0bfd5dfc8d321c763acf5d4099bcc83afac174a95444df2a32157ee57df723c5`);
+   live CI at the exact approval-record head confirmed 32/32 applicable
+   checks green, `deploy` correctly skipping (pre-merge); `origin/main`
+   re-fetched and confirmed still `dd7ed7c9` (no drift).
+3. **Marked Ready:** PR #295 flipped from Draft to Ready for Review — head
+   remained `67480d57` (no new commit), confirmed immediately before and
+   after.
+4. **Merge, guarded against head drift:** `gh pr merge 295 --squash
+   --match-head-commit 67480d5703f2a5a33f700b882051d80ad4bd8e1b` — the
+   `--match-head-commit` guard would have failed the merge had the head
+   moved between the last verification and the merge call; it did not.
+5. **Merge SHA:** `a790758978dc9ded439a823860ecdb1ee8e9bee9`.
+6. **`origin/main` verified equal to the release result:** `git fetch
+   origin main` then `git log -1 --format=%H origin/main` returned
+   `a790758978dc9ded439a823860ecdb1ee8e9bee9` exactly.
+7. **Post-merge CI on the merge commit, inspected to completion:** all
+   workflows triggered on `main` at `a790758978dc9ded439a823860ecdb1ee8e9bee9`
+   (Automated Testing, Code Quality & Security, Owner Governance Lint,
+   Routes Guardrails, Auth Guard Lint, CI/CD Pipeline, Staging Smoke,
+   Production Deployment, Button Test Suite) reached terminal green,
+   including `browser-tests`. One job (`Zena RBAC/Tenant Invariants (MySQL
+   parity)`) initially failed with `Failed to initialize container
+   mysql:8.0` / `One or more containers failed to start` — a CI-runner
+   Docker-container-startup flake, not a code regression: the identical
+   code had already passed this same job on the pre-merge PR head
+   `67480d57` moments earlier. Re-run (no content change) succeeded.
+8. **Actual deployment truth (from the real job logs, not inferred from
+   workflow "success"):** two separate `deploy` jobs ran on the merge
+   commit, from two different workflows, and **neither performed an
+   actual production deployment**:
+   - One job's entire body is a placeholder: `echo "Deploying to
+     production..."` / `# Add your deployment commands here` — no real
+     deployment logic exists; it trivially "succeeds" every time
+     regardless of environment state.
+   - The other has a real secrets gate that printed `Skipping deploy
+     because secrets missing: PRODUCTION_HOST PRODUCTION_USER
+     PRODUCTION_SSH_KEY PRODUCTION_URL` and skipped — consistent with the
+     same documented, disclosed limitation observed at every prior
+     GAP-04x release in this repository (production deployment secrets
+     are not configured in this environment). Both jobs' `conclusion:
+     success` reflects the gate/placeholder logic succeeding, not an
+     actual deployment occurring.
+9. **GAP-048 status: CLOSED — RELEASED to `main`, NOT deployed to
+   production.** No further action authorized under this Work ID; a real
+   production deployment (were it ever executed) would require a
+   separate, explicit Owner instruction and properly configured
+   deployment secrets, neither of which this session performed or was
+   authorized to perform.
+
+## What this packet does NOT authorize (historical — superseded by the Release execution record above)
+
+*(Preserved for the historical record: this is what the packet stated
+while `gate_status` was still `awaiting_owner`, before the Owner's Round 2
+APPROVED decision and the release sequence executed above.)*
 
 This Gate-3 packet does not authorize Ready-for-review, merge, release, or
 production deployment. Those remain separate, explicit Owner decisions to

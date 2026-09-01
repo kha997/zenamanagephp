@@ -7,6 +7,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Src\RBAC\Services\PermissionMatrixService;
 use Src\Foundation\EventBus;
+use App\Services\TenantContext;
 
 /**
  * Controller quản lý Permission Matrix CSV import/export
@@ -31,7 +32,7 @@ class PermissionMatrixController
     public function export(Request $request): Response
     {
         try {
-            $csvContent = $this->permissionMatrixService->exportToCSV();
+            $csvContent = $this->permissionMatrixService->exportToCSV(TenantContext::id($request));
             
             // Phát sự kiện
             $this->eventBus->publish('rbac.permission.matrix.exported', [
@@ -113,7 +114,8 @@ class PermissionMatrixController
             // Thực hiện import
             $result = $this->permissionMatrixService->importFromCSV(
                 $csvContent,
-                (int) $request->get('user_id')
+                (int) $request->get('user_id'),
+                TenantContext::id($request)
             );
             
             if (!$result['success']) {

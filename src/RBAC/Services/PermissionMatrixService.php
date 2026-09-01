@@ -25,9 +25,9 @@ class PermissionMatrixService
      * 
      * @return string CSV content
      */
-    public function exportToCSV(): string
+    public function exportToCSV(?string $tenantId = null): string
     {
-        $roles = Role::with('permissions')->get();
+        $roles = Role::query()->tenantVisible($tenantId)->with('permissions')->get();
         
         $csvData = [];
         $csvData[] = ['role_name', 'module', 'action', 'permission_code', 'allow'];
@@ -58,12 +58,16 @@ class PermissionMatrixService
 
     /**
      * Import permission matrix từ CSV
-     * 
+     *
      * @param string $csvContent Nội dung CSV
      * @param int $actorId ID của user thực hiện import
+     * @param string|null $tenantId GAP-042 §6: caller's tenant context. When
+     *        provided, role lookup uses the grouped tenant-visibility
+     *        predicate and a resolved global role is skipped (§6 global-role
+     *        read/write policy) instead of being silently mutated.
      * @return array Kết quả import
      */
-    public function importFromCSV(string $csvContent, int $actorId): array
+    public function importFromCSV(string $csvContent, int $actorId, ?string $tenantId = null): array
     {
         $lines = str_getcsv($csvContent, "\n");
         
@@ -151,18 +155,33 @@ class PermissionMatrixService
         // Sync permissions cho từng role
         $rolesUpdated = 0;
         foreach ($rolePermissions as $roleName => $permissionCodes) {
-            // Tìm role (ưu tiên system scope)
-            $role = Role::where('name', $roleName)
-                       ->orderByRaw("FIELD(scope, 'system', 'custom', 'project')")
-                       ->first();
-            
+            // Tìm role (ưu tiên system scope) — GAP-042 §6 grouped tenant-visibility
+            // predicate: never chain a bare orWhere before the name/orderBy filters.
+            $role = Role::where(function ($q) use ($tenantId) {
+                    $q->whereNull('tenant_id');
+                    if ($tenantId !== null) {
+                        $q->orWhere('tenant_id', $tenantId);
+                    }
+                })
+                ->where('name', $roleName)
+                ->orderByRaw("FIELD(scope, 'system', 'custom', 'project')")
+                ->first();
+
             if (!$role) {
                 $errors[] = "Role '{$roleName}' không tồn tại";
                 continue;
             }
-            
-            // Sync permissions
-            $role->permissions()->sync($permissionCodes);
+
+            // GAP-042 §6 global-role read/write policy: a CSV import must not
+            // silently write to a global (tenant_id IS NULL) role.
+            if ($role->tenant_id === null) {
+                $errors[] = "Role '{$roleName}' là role hệ thống, không thể import permissions qua CSV";
+                continue;
+            }
+
+            // Sync permissions — resolve code -> id, sync() requires primary keys.
+            $permissionIds = Permission::whereIn('code', $permissionCodes)->pluck('id')->toArray();
+            $role->permissions()->sync($permissionIds);
             $rolesUpdated++;
             
             // Phát sự kiện

@@ -8,6 +8,8 @@ use Src\RBAC\Models\UserRoleSystem;
 use Src\RBAC\Models\UserRoleCustom;
 use Src\RBAC\Models\UserRoleProject;
 use Src\Foundation\EventBus;
+use App\Models\User;
+use App\Models\Project;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -256,23 +258,49 @@ class RBACManager
     }
 
     /**
-     * Gán role cho user ở lớp system
+     * GAP-042 §6a: target user must belong to the caller's tenant. No
+     * global/system-user exception exists — none is evidenced anywhere in the
+     * codebase, per the approved Gate-2 design.
      */
-    public function assignSystemRole(string $userId, string $roleId): bool
+    private function userBelongsToTenant(string $userId, string $tenantId): bool
     {
+        return User::where('id', $userId)->where('tenant_id', $tenantId)->exists();
+    }
+
+    /**
+     * GAP-042 §6a: target project must belong to the caller's tenant.
+     */
+    private function projectBelongsToTenant(string $projectId, string $tenantId): bool
+    {
+        return Project::where('id', $projectId)->where('tenant_id', $tenantId)->exists();
+    }
+
+    /**
+     * Gán role cho user ở lớp system — GAP-042 §6a fail-closed tenant checks.
+     *
+     * System-scope roles are global (tenant_id IS NULL) by definition (§6), so
+     * once scope is confirmed no further role-tenant check is needed; the
+     * target user must still belong to the caller's tenant.
+     */
+    public function assignSystemRole(string $userId, string $roleId, string $tenantId): bool
+    {
+        if (!$this->userBelongsToTenant($userId, $tenantId)) {
+            return false;
+        }
+
         $role = Role::where('id', $roleId)
             ->where('scope', Role::SCOPE_SYSTEM)
             ->first();
-    
+
         if (!$role) {
             return false;
         }
-    
+
         // Thay thế firstOrCreate() bằng exists() check và create() riêng biệt
         $exists = UserRoleSystem::where('user_id', $userId)
             ->where('role_id', $roleId)
             ->exists();
-            
+
         if (!$exists) {
             UserRoleSystem::create([
                 'user_id' => $userId,
@@ -285,6 +313,9 @@ class RBACManager
 
         // Phát sự kiện
         $this->eventBus->publish('rbac.assignment.changed', [
+            'entityId' => $userId,
+            'projectId' => $tenantId,
+            'actorId' => $tenantId,
             'userId' => $userId,
             'roleId' => $roleId,
             'scope' => 'system',
@@ -296,12 +327,20 @@ class RBACManager
     }
 
     /**
-     * Gán role cho user ở lớp custom
+     * Gán role cho user ở lớp custom — GAP-042 §6a fail-closed tenant checks.
+     *
+     * Fails closed (no write) unless the target user AND the target role both
+     * belong to the caller's tenant.
      */
-    public function assignCustomRole(string $userId, string $roleId): bool
+    public function assignCustomRole(string $userId, string $roleId, string $tenantId): bool
     {
+        if (!$this->userBelongsToTenant($userId, $tenantId)) {
+            return false;
+        }
+
         $role = Role::where('id', $roleId)
             ->where('scope', Role::SCOPE_CUSTOM)
+            ->where('tenant_id', $tenantId)
             ->first();
 
         if (!$role) {
@@ -318,6 +357,9 @@ class RBACManager
 
         // Phát sự kiện
         $this->eventBus->publish('rbac.assignment.changed', [
+            'entityId' => $userId,
+            'projectId' => $tenantId,
+            'actorId' => $tenantId,
             'userId' => $userId,
             'roleId' => $roleId,
             'scope' => 'custom',
@@ -329,12 +371,25 @@ class RBACManager
     }
 
     /**
-     * Gán role cho user ở lớp project
+     * Gán role cho user ở lớp project — GAP-042 §6a fail-closed tenant checks.
+     *
+     * Fails closed unless the target user, the target role, AND the target
+     * project all belong to the caller's tenant. All identities are validated
+     * before any write (no partial writes).
      */
-    public function assignProjectRole(string $userId, string $roleId, string $projectId): bool
+    public function assignProjectRole(string $userId, string $roleId, string $projectId, string $tenantId): bool
     {
+        if (!$this->userBelongsToTenant($userId, $tenantId)) {
+            return false;
+        }
+
+        if (!$this->projectBelongsToTenant($projectId, $tenantId)) {
+            return false;
+        }
+
         $role = Role::where('id', $roleId)
             ->where('scope', Role::SCOPE_PROJECT)
+            ->where('tenant_id', $tenantId)
             ->first();
 
         if (!$role) {
@@ -352,6 +407,8 @@ class RBACManager
 
         // Phát sự kiện
         $this->eventBus->publish('rbac.assignment.changed', [
+            'entityId' => $userId,
+            'actorId' => $tenantId,
             'userId' => $userId,
             'roleId' => $roleId,
             'projectId' => $projectId,
@@ -364,10 +421,17 @@ class RBACManager
     }
 
     /**
-     * Hủy gán role cho user
+     * Hủy gán role cho user — GAP-042 §6a: verify the existing assignment
+     * row's user belongs to the caller's tenant before deleting; behaves like
+     * "not found" (0 rows deleted) for a cross-tenant target, never revealing
+     * whether a cross-tenant row exists.
      */
-    public function revokeRole(string $userId, string $roleId, string $scope, ?string $projectId = null): bool
+    public function revokeRole(string $userId, string $roleId, string $scope, ?string $projectId, string $tenantId): bool
     {
+        if (!$this->userBelongsToTenant($userId, $tenantId)) {
+            return false;
+        }
+
         $deleted = false;
 
         switch ($scope) {
@@ -376,13 +440,13 @@ class RBACManager
                     ->where('role_id', $roleId)
                     ->delete() > 0;
                 break;
-                
+
             case 'custom':
                 $deleted = UserRoleCustom::where('user_id', $userId)
                     ->where('role_id', $roleId)
                     ->delete() > 0;
                 break;
-                
+
             case 'project':
                 if ($projectId) {
                     $deleted = UserRoleProject::where('user_id', $userId)
@@ -399,9 +463,11 @@ class RBACManager
 
             // Phát sự kiện
             $this->eventBus->publish('rbac.assignment.changed', [
+                'entityId' => $userId,
+                'actorId' => $tenantId,
+                'projectId' => $projectId ?? $tenantId,
                 'userId' => $userId,
                 'roleId' => $roleId,
-                'projectId' => $projectId,
                 'scope' => $scope,
                 'action' => 'revoked',
                 'timestamp' => now()->toISOString()

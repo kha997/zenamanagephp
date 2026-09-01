@@ -140,4 +140,106 @@ class PermissionController
             'data' => ['permission' => PermissionResource::make($permission)]
         ], 201);
     }
+
+    /**
+     * Lấy thông tin permission cụ thể.
+     * GET /api/v1/rbac/permissions/{id}
+     *
+     * GAP-042 §0.1 / §2a-analogue: this route was already live and wired but
+     * targeted a nonexistent method (unconditional HTTP 500) — restored using
+     * the same remediation pattern §2a already established for
+     * AssignmentController's missing methods. Permissions carry no tenant_id
+     * column (§2e/§3) — no tenant scoping applies here, unlike RoleController.
+     */
+    public function show(string $id): JsonResponse
+    {
+        $permission = Permission::find($id);
+
+        if (!$permission) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Permission không tồn tại'
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => ['permission' => PermissionResource::make($permission)]
+        ]);
+    }
+
+    /**
+     * Cập nhật permission.
+     * PUT /api/v1/rbac/permissions/{id}
+     */
+    public function update(Request $request, string $id): JsonResponse
+    {
+        $permission = Permission::find($id);
+
+        if (!$permission) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Permission không tồn tại'
+            ], 404);
+        }
+
+        $permission->update($request->only(['description']));
+
+        $this->eventBus->publish('rbac.permission.updated', [
+            'entityId' => $permission->id,
+            'projectId' => 'system',
+            'permissionId' => $permission->id,
+            'code' => $permission->code,
+            'actorId' => (string) ($request->get('user_id') ?? 'system'),
+            'timestamp' => now()->toISOString()
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => ['permission' => PermissionResource::make($permission->fresh())]
+        ]);
+    }
+
+    /**
+     * Xóa permission.
+     * DELETE /api/v1/rbac/permissions/{id}
+     */
+    public function destroy(Request $request, string $id): JsonResponse
+    {
+        $permission = Permission::find($id);
+
+        if (!$permission) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Permission không tồn tại'
+            ], 404);
+        }
+
+        $inUse = $permission->roles()->exists();
+
+        if ($inUse) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Không thể xóa permission đang được sử dụng'
+            ], 400);
+        }
+
+        $permissionId = $permission->id;
+        $permission->delete();
+
+        $this->eventBus->publish('rbac.permission.deleted', [
+            'entityId' => $permissionId,
+            'projectId' => 'system',
+            'permissionId' => $permissionId,
+            'actorId' => (string) ($request->get('user_id') ?? 'system'),
+            'timestamp' => now()->toISOString()
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'message' => 'Permission đã được xóa thành công'
+            ]
+        ]);
+    }
 }

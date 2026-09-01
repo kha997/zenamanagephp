@@ -28,18 +28,17 @@ class RBACController
      * Lấy effective permissions của user trong context cụ thể
      * GET /api/v1/rbac/users/{user}/effective-permissions
      */
-    public function getUserEffectivePermissions(Request $request, int $userId): JsonResponse
+    public function getUserEffectivePermissions(Request $request, string $userId): JsonResponse
     {
         try {
             $projectId = $request->get('project_id');
             $tenantId = TenantContext::id($request);
-            
-            $effectivePermissions = $this->rbacManager->getUserEffectivePermissions(
+
+            $effectivePermissions = $this->rbacManager->calculateEffectivePermissions(
                 $userId,
-                $projectId,
-                $tenantId
+                $projectId
             );
-            
+
             return response()->json([
                 'status' => 'success',
                 'data' => [
@@ -63,27 +62,26 @@ class RBACController
      * Kiểm tra permission cụ thể của user
      * POST /api/v1/rbac/users/{user}/check-permission
      */
-    public function checkUserPermission(Request $request, int $userId): JsonResponse
+    public function checkUserPermission(Request $request, string $userId): JsonResponse
     {
         $permissionCode = $request->get('permission_code');
         $projectId = $request->get('project_id');
         $tenantId = TenantContext::id($request);
-        
+
         if (empty($permissionCode)) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Permission code không được để trống'
             ], 400);
         }
-        
+
         try {
-            $hasPermission = $this->rbacManager->userHasPermission(
+            $hasPermission = $this->rbacManager->hasPermission(
                 $userId,
                 $permissionCode,
-                $projectId,
-                $tenantId
+                $projectId
             );
-            
+
             return response()->json([
                 'status' => 'success',
                 'data' => [
@@ -113,8 +111,8 @@ class RBACController
         $scope = $request->get('scope', 'all');
         $tenantId = TenantContext::id($request);
         
-        $query = Role::query();
-        
+        $query = Role::query()->tenantVisible($tenantId);
+
         if ($scope !== 'all') {
             $validScopes = ['system', 'custom', 'project'];
             if (!in_array($scope, $validScopes, true)) {
@@ -123,14 +121,10 @@ class RBACController
                     'message' => 'Scope không hợp lệ. Chỉ chấp nhận: ' . implode(', ', $validScopes)
                 ], 400);
             }
-            
+
             $query->where('scope', $scope);
         }
-        
-        if ($tenantId) {
-            $query->where('tenant_id', $tenantId);
-        }
-        
+
         $roles = $query->with('permissions')->orderBy('scope')->orderBy('name')->get();
         
         return response()->json([
@@ -206,35 +200,45 @@ class RBACController
             ], 400);
         }
         
+        $tenantId = TenantContext::id($request);
+
+        if ($tenantId === null) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Tenant context không hợp lệ'
+            ], 400);
+        }
+
         try {
             $results = [];
             $actorId = $request->get('user_id');
-            
+
             foreach ($userIds as $userId) {
                 foreach ($roleIds as $roleId) {
                     if ($scope === 'system') {
-                        $this->rbacManager->assignSystemRole($userId, $roleId, $actorId);
+                        $assigned = $this->rbacManager->assignSystemRole($userId, $roleId, $tenantId);
                     } else {
-                        $this->rbacManager->assignProjectRole($userId, $projectId, $roleId, $actorId);
+                        $assigned = $this->rbacManager->assignProjectRole($userId, $roleId, $projectId, $tenantId);
                     }
-                    
+
                     $results[] = [
                         'user_id' => $userId,
                         'role_id' => $roleId,
                         'project_id' => $projectId,
                         'scope' => $scope,
-                        'assigned' => true
+                        'assigned' => $assigned
                     ];
                 }
             }
             
             // Phát sự kiện
-            $this->eventBus->publish('rbac.roles.bulk.assigned', [
+            $this->eventBus->publish('rbac.role.bulkAssigned', [
+                'entityId' => (string) ($actorId ?? $tenantId),
                 'userIds' => $userIds,
                 'roleIds' => $roleIds,
-                'projectId' => $projectId,
+                'projectId' => (string) ($projectId ?? $tenantId),
                 'scope' => $scope,
-                'actorId' => $actorId,
+                'actorId' => (string) ($actorId ?? $tenantId),
                 'timestamp' => now()->toISOString()
             ]);
             

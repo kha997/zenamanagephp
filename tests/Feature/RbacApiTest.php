@@ -96,10 +96,18 @@ class RbacApiTest extends TestCase
             'role.assign',
         ];
 
+        // GAP-042: Src\RBAC\Models\Permission and App\Models\Permission now
+        // query the identical 'permissions' table (Option A convergence).
+        // createRolesAndPermissions() above may have already inserted a row
+        // for an overlapping code (e.g. 'role.create') via the Src\RBAC
+        // factory, which does not set 'name' to match the code. This gate
+        // check (App\Models\User::hasPermission()) matches on 'name', not
+        // 'code' — updateOrCreate() (not firstOrCreate()) so this method is
+        // authoritative for 'name' regardless of insertion order.
         $permissionIds = collect($permissionCodes)->map(function (string $code) {
             [$module, $action] = explode('.', $code, 2);
 
-            return AppPermission::firstOrCreate(
+            return AppPermission::updateOrCreate(
                 ['code' => $code],
                 [
                     'name' => $code,
@@ -187,7 +195,7 @@ class RbacApiTest extends TestCase
                      ]
                  ]);
 
-        $this->assertDatabaseHas('zena_roles', [
+        $this->assertDatabaseHas('roles', [
             'name' => 'Project Manager',
             'scope' => 'custom'
         ]);
@@ -200,8 +208,12 @@ class RbacApiTest extends TestCase
     {
         Sanctum::actingAs($this->user);
 
+        // GAP-042 §6: a custom-scope role with no tenant_id is a global role,
+        // read-only through this tenant-scoped surface — must be bound to
+        // this test's own tenant to exercise a genuinely mutable role.
         $role = Role::factory()->create([
-            'scope' => 'custom'
+            'scope' => 'custom',
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $updateData = [
@@ -224,7 +236,7 @@ class RbacApiTest extends TestCase
                      ]
                  ]);
 
-        $this->assertDatabaseHas('zena_roles', [
+        $this->assertDatabaseHas('roles', [
             'id' => $role->id,
             'name' => 'Updated Role Name'
         ]);
@@ -237,8 +249,10 @@ class RbacApiTest extends TestCase
     {
         Sanctum::actingAs($this->user);
 
+        // GAP-042 §6: bind to this test's own tenant — see test_can_update_role.
         $role = Role::factory()->create([
-            'scope' => 'custom'
+            'scope' => 'custom',
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $response = $this->withHeaders([
@@ -253,7 +267,7 @@ class RbacApiTest extends TestCase
                      ]
                  ]);
 
-        $this->assertDatabaseMissing('zena_roles', [
+        $this->assertDatabaseMissing('roles', [
             'id' => $role->id
         ]);
     }
@@ -299,7 +313,11 @@ class RbacApiTest extends TestCase
             'tenant_id' => $this->tenant->id
         ]);
         
-        $role = Role::factory()->create();
+        // GAP-042 §6a: assignSystemRole() now verifies the target role
+        // actually has scope=system (closes a previously-unchecked gap) —
+        // this test must use a deterministic system-scope role, not the
+        // factory's random default scope.
+        $role = Role::factory()->create(['scope' => 'system']);
 
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->token,
@@ -334,7 +352,7 @@ class RbacApiTest extends TestCase
             'tenant_id' => $this->tenant->id
         ]);
         
-        $role = Role::factory()->create();
+        $role = Role::factory()->create(['scope' => 'system']);
         $targetUser->systemRoles()->attach($role->id);
 
         $response = $this->withHeaders([

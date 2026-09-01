@@ -84,44 +84,21 @@ trait GAP040ColdStartTransactionIsolationAssertions
 
         fwrite(STDERR, "\n[GAP-040/GAP-044 probe] " . json_encode($probe) . "\n");
 
-        $this->assertFalse(
-            $probe['table_existed_before_bootstrap'],
-            'zena_roles already existed before bootstrap ran despite forceGenuineColdStartForNextSetUp() — the deterministic cold-start forcing mechanism itself is broken. This must fail, not skip: a genuine cold start was required and did not occur.'
-        );
-
-        $this->assertSame(
-            1,
-            $probe['transaction_level_before_bootstrap'],
-            'RefreshDatabase transaction was not open before the RBAC compat bootstrap ran.'
-        );
-
-        $this->assertSame(
-            1,
-            $probe['transaction_level_after_bootstrap'],
-            'Transaction level changed across the RBAC compat bootstrap — the bootstrap DDL affected the main transacted connection (implicit-commit defect present).'
-        );
-
-        $this->assertTrue(
-            $probe['pdo_in_transaction_before_bootstrap'],
-            'PDO::inTransaction() was already false before the bootstrap ran — RefreshDatabase never actually had an open transaction on this connection.'
-        );
-
-        $this->assertTrue(
-            $probe['pdo_in_transaction_after_bootstrap'],
-            'PDO::inTransaction() is false after the RBAC compat bootstrap — this is direct, server-reported proof of the GAP-040 implicit-commit defect.'
-        );
-
-        $this->assertArrayHasKey(
-            'bootstrap_connection_id',
-            $probe,
-            'No separate bootstrap session was recorded — the isolated-connection mechanism did not run.'
-        );
-
-        $this->assertNotSame(
-            $probe['main_connection_id'],
-            $probe['bootstrap_connection_id'],
-            'The RBAC compat bootstrap ran on the same MySQL session (CONNECTION_ID) as the main transacted connection — not a genuinely separate session.'
-        );
+        // GAP-042: tests/TestCase.php::ensureSqliteZenaRbacTables() — the RBAC
+        // compat-schema bootstrap this proof originally instrumented — was
+        // deleted as part of GAP-042's approved remediation (it manufactured
+        // a production-impossible zena_roles/zena_permissions schema on top
+        // of the same isolated-connection mechanism proven here). The
+        // dedicated RBAC-bootstrap probe keys (table_existed_before_bootstrap,
+        // transaction_level_before/after_bootstrap, bootstrap_connection_id,
+        // pdo_in_transaction_before/after_bootstrap) no longer exist. The
+        // underlying GAP-040/GAP-044 implicit-commit invariant remains proven
+        // below via the three still-live sibling helpers
+        // (interaction_logs/project_phases/project_tasks), which still use
+        // the same isolated zenaRbacBootstrapSchema() second-connection
+        // mechanism — GAP-042 did not remove that shared helper, only the
+        // RBAC-schema-manufacturing call site (§0.4 of the GAP-042
+        // implementation plan).
 
         // GAP-044 Surface 1: the three previously-unfixed sibling helpers
         // must exhibit the identical invariant now.

@@ -197,7 +197,6 @@ abstract class TestCase extends BaseTestCase
             });
         }
 
-        $this->ensureSqliteZenaRbacTables();
     }
 
     /**
@@ -210,72 +209,6 @@ abstract class TestCase extends BaseTestCase
      * @var array<string, bool|int>|null
      */
     public static ?array $coldStartProbe = null;
-
-    private function ensureSqliteZenaRbacTables(): void
-    {
-        $tableExistedBeforeBootstrap = Schema::hasTable('zena_roles');
-
-        if (self::$coldStartProbe !== null) {
-            self::$coldStartProbe['table_existed_before_bootstrap'] = $tableExistedBeforeBootstrap;
-            self::$coldStartProbe['transaction_level_before_bootstrap'] = DB::transactionLevel();
-            if (config('database.default') !== 'sqlite') {
-                self::$coldStartProbe['main_connection_id'] = (int) DB::selectOne('SELECT CONNECTION_ID() AS id')->id;
-                self::$coldStartProbe['pdo_in_transaction_before_bootstrap'] = DB::connection()->getPdo()->inTransaction();
-            }
-        }
-
-        if ($tableExistedBeforeBootstrap) {
-            return;
-        }
-
-        $schema = config('database.default') === 'sqlite'
-            ? Schema::connection(config('database.default'))
-            : $this->zenaRbacBootstrapSchema();
-
-        $schema->create('zena_permissions', function (Blueprint $table) {
-            $table->string('id')->primary();
-            $table->string('code')->unique();
-            $table->string('module');
-            $table->string('action');
-            $table->text('description')->nullable();
-            $table->boolean('is_active')->default(true);
-            $table->timestamps();
-        });
-
-        $schema->create('zena_roles', function (Blueprint $table) {
-            $table->string('id')->primary();
-            $table->string('name')->unique();
-            $table->string('scope')->default('system');
-            $table->boolean('allow_override')->default(false);
-            $table->text('description')->nullable();
-            $table->boolean('is_active')->default(true);
-            $table->timestamps();
-        });
-
-        $schema->create('zena_role_permissions', function (Blueprint $table) {
-            $table->string('role_id');
-            $table->string('permission_id');
-            $table->boolean('allow_override')->default(false);
-            $table->timestamps();
-        });
-
-        $schema->create('zena_user_roles', function (Blueprint $table) {
-            $table->string('user_id');
-            $table->string('role_id');
-            $table->timestamps();
-        });
-
-        if (config('database.default') !== 'sqlite') {
-            DB::purge('zena_ddl_bootstrap');
-        }
-
-        if (self::$coldStartProbe !== null) {
-            self::$coldStartProbe['transaction_level_after_bootstrap'] = DB::transactionLevel();
-            if (config('database.default') !== 'sqlite') {
-                self::$coldStartProbe['pdo_in_transaction_after_bootstrap'] = DB::connection()->getPdo()->inTransaction();
-            }
-        }
-    }
 
     /**
      * Registers (once) and returns a Schema builder for a second MySQL

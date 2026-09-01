@@ -32,8 +32,8 @@ mandatory_technical_gate_summary: "GAP-048 implementation (canonical multi-value
 technical_evidence:
   subject_sha: "141024d79935d691e3bd205726f0e5ff562d8aac"
   implementation_tree_digest: "0bfd5dfc8d321c763acf5d4099bcc83afac174a95444df2a32157ee57df723c5"
-  verified_pr_head_sha: null
-  verified_at: null
+  verified_pr_head_sha: "cd0f8bd17d36e7f85853e4cbe6b019f3189af4b7"
+  verified_at: "2026-09-01T05:10:00Z"
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null
@@ -98,9 +98,11 @@ and must not be removed by any future revision.
   is computed against):** `141024d79935d691e3bd205726f0e5ff562d8aac` — the
   Gate-3 Round 1 correction commit (superseding the prior
   `2ae7d5721887812123a099b725b50437f2acb7ca`).
-- **verified_pr_head_sha:** recorded once this correction commit's live PR
-  #295 CI is independently confirmed all-green (see below); not yet filled
-  in the frontmatter pending that verification.
+- **verified_pr_head_sha:** `cd0f8bd17d36e7f85853e4cbe6b019f3189af4b7` — the
+  exact PR #295 head (this Gate-3 packet's own SHA-recording commit,
+  differing from `subject_sha` by construction) whose live CI was
+  independently confirmed all-green: 32/32 applicable checks pass,
+  `deploy` correctly skipping (see CI status below).
 - **Implementation plan:** `docs/superpowers/plans/2026-08-30-gap-048-crm-classification-ux-gates-implementation.md`.
 
 ## What changed (`dd7ed7c9` → `2ae7d5721887812123a099b725b50437f2acb7ca`)
@@ -451,9 +453,9 @@ head.
   documented 300-second evidence-freshness sibling-job timing race — its
   own log shows `gate_status is 'awaiting_owner' but 4 other check(s) ...
   are not green (pending or failed) after waiting up to 300s`, which
-  included the two genuinely-failing siblings above; this will be re-run
-  once all siblings are independently confirmed green at `141024d7`, not
-  treated as a content issue.
+  included the two genuinely-failing siblings above; re-run (no content
+  change) at the final verified head `cd0f8bd1` once all siblings were
+  independently confirmed green, and passed in 28s.
 - **PHPStan / Deptrac** (project-wide, exact CI command): verified via the
   live PR #295 `Code Quality Analysis` check at head `141024d7` (see CI
   status below) — this worktree cannot run `phpstan`/Composer binaries
@@ -477,10 +479,15 @@ head.
   `scripts/ssot/owner_governance_lint.php`, excluding only this exact Gate-3
   record file, invoked directly against `141024d7`): `0bfd5dfc8d321c763acf5d4099bcc83afac174a95444df2a32157ee57df723c5`
   — see frontmatter.
-- **verified_pr_head_sha:** to be recorded once PR #295's live CI at
-  `141024d7` (or the exact head this correction ends up pushing, if this
-  packet-recording commit itself needs a follow-up push) is independently
-  confirmed all-green — not yet filled in as of this edit.
+- **verified_pr_head_sha:** `cd0f8bd17d36e7f85853e4cbe6b019f3189af4b7` — the
+  exact PR #295 head (this Gate-3 packet's own SHA-recording commit,
+  differing from `subject_sha` by construction) whose live CI was
+  independently confirmed all-green: 32/32 applicable checks pass
+  (`Code Quality Analysis`, `Security Tests`, `Owner Governance Lint`
+  after one no-content-change re-run to clear the documented 300s
+  sibling-job evidence-freshness race, all real-MySQL concurrency jobs
+  including the new `GAP-048 Service-Line Concurrency`, and every other
+  applicable check), `deploy` correctly skipping.
 - **Gate-3 packet state:** `awaiting_owner`, `owner_decision.value: none`,
   `owner_decision_binding` both null. No Owner Gate-3 decision (approve/
   defer) has been recorded yet — Round 1 above was a pre-decision

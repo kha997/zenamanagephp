@@ -1,5 +1,7 @@
 ---
 work_id: GAP-042
+owner_governance_version: 1
+owner_gate_2_record: docs/owner-decisions/GAP-042/02-design.md
 plan_type: implementation
 baseline: 673855f69a3633b64c378e965ae409ed3a098c50
 gate2_spec: docs/superpowers/specs/2026-09-01-gap-042-rbac-model-consolidation-design.md

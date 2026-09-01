@@ -470,13 +470,23 @@ class ServiceLineFoundationTest extends TestCase
         $this->assertTrue(\Illuminate\Support\Facades\Schema::hasTable('opportunity_service_lines'));
         $this->assertTrue(\Illuminate\Support\Facades\Schema::hasTable('project_service_lines'));
 
-        // GAP-048 added one further migration
-        // (2026_08_30_100000_make_opportunities_service_category_nullable)
-        // on top of GAP-046's two table-creation migrations, so a clean
-        // round-trip of exactly the GAP-046 migrations now requires
-        // rolling back 3 steps (GAP-048's migration first, then the two
-        // GAP-046 table migrations), not 2.
-        \Illuminate\Support\Facades\Artisan::call('migrate:rollback', ['--step' => 3, '--force' => true]);
+        // GAP-042: a hardcoded `--step` count here is fragile to ANY later
+        // migration added anywhere in the repo (GAP-042 itself added
+        // 2026_09_02_000000_create_custom_user_roles_table.php, which is
+        // now the newest migration overall and would have been the one
+        // rolled back by a naive `--step 3`, not this test's intended
+        // three GAP-046/048 migrations). Target the exact migration files
+        // this test cares about via `--path`, so it stays correct
+        // regardless of migration count added afterward by any future
+        // Work ID.
+        \Illuminate\Support\Facades\Artisan::call('migrate:rollback', [
+            '--path' => [
+                'database/migrations/2026_08_30_100000_make_opportunities_service_category_nullable.php',
+                'database/migrations/2026_08_28_120001_create_project_service_lines_table.php',
+                'database/migrations/2026_08_28_120000_create_opportunity_service_lines_table.php',
+            ],
+            '--force' => true,
+        ]);
 
         $this->assertFalse(\Illuminate\Support\Facades\Schema::hasTable('opportunity_service_lines'));
         $this->assertFalse(\Illuminate\Support\Facades\Schema::hasTable('project_service_lines'));

@@ -25,6 +25,7 @@ use App\Models\User;
  * @property string $id ULID của project (primary key)
  * @property string $tenant_id ID công ty (ULID)
  * @property string $name Tên dự án
+ * @property string $code Mã dự án
  * @property string|null $description Mô tả
  * @property \Carbon\Carbon|null $start_date Ngày bắt đầu
  * @property \Carbon\Carbon|null $end_date Ngày kết thúc

@@ -171,6 +171,20 @@ class BusinessKpiServiceTest extends TestCase
         $this->assertSame(150000000.0, $result['architecture']['avg_fee']);
     }
 
+    // GAP-048 §14 — NULL service_category (possible once the nullable
+    // migration ships) becomes an explicit "unclassified" bucket, not
+    // silently dropped from the report.
+    public function test_null_service_category_appears_under_explicit_unclassified_bucket(): void
+    {
+        $this->createOpportunity(['service_category' => null, 'pipeline_stage' => Opportunity::STAGE_WON, 'estimated_fee' => 100000000]);
+
+        $result = $this->service->serviceCategoryPerformance((string) $this->tenant->id);
+
+        $this->assertArrayHasKey('unclassified', $result);
+        $this->assertSame(1, $result['unclassified']['won']);
+        $this->assertSame(1, $result['unclassified']['total']);
+    }
+
     public function test_kpis_are_tenant_isolated(): void
     {
         $otherTenant = Tenant::factory()->create();

@@ -297,17 +297,30 @@ class LeadController extends BaseApiController
                     'status' => Account::STATUS_ACTIVE,
                 ]);
 
+            $legacyCategory = $request->input('service_category');
+
             $opportunity = Opportunity::query()->create([
                 'tenant_id' => $tenantId,
                 'account_id' => (string) $account->id,
                 'opportunity_name' => (string) $request->input('opportunity_name'),
-                'service_category' => (string) $request->input('service_category', 'architecture'),
+                'service_category' => $legacyCategory,
                 'service_scope_summary' => $request->input('service_scope_summary', $lead->project_description),
                 'pipeline_stage' => Opportunity::STAGE_NEW_LEAD,
                 'estimated_fee' => $request->input('estimated_fee'),
                 'sales_owner_id' => (string) $user->id,
                 'created_by' => (string) $user->id,
             ]);
+
+            // GAP-048 §4 — identical shared-mapper synchronization to
+            // OpportunityController::store(), same atomic operation.
+            $mappedLine = \App\Support\LegacyServiceCategoryMapper::mapToServiceLine($legacyCategory);
+            if ($mappedLine !== null) {
+                $opportunity->serviceLines()->create([
+                    'service_line' => $mappedLine,
+                    'provenance' => \App\Support\ServiceLineProvenance::INFERRED,
+                    'source' => 'writer:lead_convert',
+                ]);
+            }
 
             $lead->status = Lead::STATUS_CONVERTED;
             $lead->converted_opportunity_id = (string) $opportunity->id;

@@ -118,6 +118,13 @@ class QuoteLifecycleTest extends TestCase
         ['user' => $user, 'opportunity' => $opp] = $this->makeOpportunity($tenant);
         $this->actingAs($user);
 
+        // GAP-048 §13 — sendQuote() is now gated on >=1 CONFIRMED canonical
+        // Service Line.
+        $opp->serviceLines()->create([
+            'service_line' => \App\Support\ServiceLine::DESIGN,
+            'provenance' => \App\Support\ServiceLineProvenance::CONFIRMED,
+        ]);
+
         $quote = $this->makeQuote($tenant, $opp, lines: [
             ['name' => 'A', 'unit' => 'pcs', 'quantity' => 1, 'unit_price' => 50000],
         ]);

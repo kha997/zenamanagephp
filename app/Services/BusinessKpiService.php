@@ -138,15 +138,19 @@ class BusinessKpiService
     public function serviceCategoryPerformance(string $tenantId): array
     {
         return Cache::remember("business_kpi_service_category_performance_{$tenantId}", 60, function () use ($tenantId): array {
+            /** @var \Illuminate\Support\Collection<int, Opportunity> $rows */
             $rows = Opportunity::query()
                 ->where('tenant_id', $tenantId)
                 ->whereIn('pipeline_stage', self::TERMINAL_LOST_STAGES)
-                ->whereNotNull('service_category')
                 ->get(['service_category', 'pipeline_stage', 'estimated_fee', 'external_quote_snapshot']);
 
             $result = [];
 
-            foreach ($rows->groupBy('service_category') as $category => $group) {
+            // GAP-048 §14 — a NULL service_category (possible once the
+            // nullable migration ships) becomes an explicit "unclassified"
+            // bucket rather than being silently dropped. This remains a
+            // deliberate single-value bridge, not multi-Service-Line aware.
+            foreach ($rows->groupBy(fn (Opportunity $opportunity) => $opportunity->service_category ?? 'unclassified') as $category => $group) {
                 $total = $group->count();
                 $wonOpportunities = $group->where('pipeline_stage', Opportunity::STAGE_WON);
                 $won = $wonOpportunities->count();

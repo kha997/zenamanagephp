@@ -57,6 +57,13 @@ class QuoteToContractTest extends TestCase
             'created_by' => (string) $user->id,
         ]);
 
+        // GAP-048 §12/§13 — createContract() is now gated on >=1 CONFIRMED
+        // canonical Service Line.
+        $opp->serviceLines()->create([
+            'service_line' => \App\Support\ServiceLine::DESIGN,
+            'provenance' => \App\Support\ServiceLineProvenance::CONFIRMED,
+        ]);
+
         return ['tenant' => $tenant, 'user' => $user, 'opportunity' => $opp, 'account' => $account];
     }
 

@@ -14,9 +14,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $tenant_id
  * @property string $opportunity_name
  * @property string $pipeline_stage
+ * @property string|null $service_category
  * @property string|null $lost_reason
  * @property string|null $forecast_category
  * @property string|null $converted_project_id
+ * @property array<string, mixed>|null $external_quote_snapshot
  * @property-read Account|null $account
  * @method static \Illuminate\Database\Eloquent\Builder<static> forTenant(string $tenantId)
  */
@@ -162,5 +164,23 @@ class Opportunity extends Model
     public function isTerminal(): bool
     {
         return in_array((string) $this->pipeline_stage, self::TERMINAL_STAGES, true);
+    }
+
+    /**
+     * GAP-048 §10 — the single shared CONFIRMED predicate. Every gate
+     * (pipeline transition, sendQuote(), convert(), createContract(), the
+     * §5 classification-mutation lifecycle invariant) MUST call this
+     * method rather than writing its own independent count(...) query.
+     *
+     * This is a pure read — it does not lock. Callers needing the
+     * lock-safe authoritative answer must call this on a model instance
+     * obtained AFTER `lockForUpdate()` inside their own transaction
+     * (design §19).
+     */
+    public function hasConfirmedServiceLine(): bool
+    {
+        return $this->serviceLines()
+            ->where('provenance', \App\Support\ServiceLineProvenance::CONFIRMED)
+            ->exists();
     }
 }

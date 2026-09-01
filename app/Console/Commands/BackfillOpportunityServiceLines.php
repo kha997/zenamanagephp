@@ -4,7 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Opportunity;
 use App\Models\OpportunityServiceLine;
-use App\Support\ServiceLine;
+use App\Support\LegacyServiceCategoryMapper;
 use App\Support\ServiceLineProvenance;
 use Illuminate\Console\Command;
 
@@ -28,21 +28,6 @@ class BackfillOpportunityServiceLines extends Command
     protected $signature = 'service-lines:backfill-opportunities {--chunk=500} {--dry-run}';
 
     protected $description = 'Backfill canonical Service-Line rows for Opportunities from their legacy service_category (GAP-046)';
-
-    /**
-     * @var array<string, string>
-     */
-    private const MAP = [
-        'architecture' => ServiceLine::DESIGN,
-        'interior' => ServiceLine::DESIGN,
-        'landscape' => ServiceLine::DESIGN,
-        'structure' => ServiceLine::DESIGN,
-        'mep' => ServiceLine::DESIGN,
-        'construction' => ServiceLine::CONSTRUCTION,
-        // inspection, consulting, combined_package, and any unrecognized
-        // value are deliberately absent from this map — no membership row
-        // is created for them (Gate 2 §7 cases E/F).
-    ];
 
     public function handle(): int
     {
@@ -71,7 +56,7 @@ class BackfillOpportunityServiceLines extends Command
             &$alreadyPresent
         ): void {
             foreach ($rows as $opportunity) {
-                $line = self::MAP[$opportunity->service_category] ?? null;
+                $line = LegacyServiceCategoryMapper::mapToServiceLine($opportunity->service_category);
 
                 if ($line === null) {
                     $skipped++;

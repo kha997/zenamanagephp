@@ -260,6 +260,13 @@ class CrmApiTest extends TestCase
     {
         $opportunity = $this->createOpportunity(['pipeline_stage' => Opportunity::STAGE_WON]);
 
+        // GAP-048 §12/§13 — convert() is now gated on >=1 CONFIRMED canonical
+        // Service Line.
+        $opportunity->serviceLines()->create([
+            'service_line' => \App\Support\ServiceLine::DESIGN,
+            'provenance' => \App\Support\ServiceLineProvenance::CONFIRMED,
+        ]);
+
         $response = $this->postJson($this->route('opportunities.convert', ['id' => $opportunity->id]), [
             'project_name' => 'Dự án Biệt thự Thảo Điền',
         ], $this->headersFor($this->userA));
@@ -473,6 +480,13 @@ class CrmApiTest extends TestCase
 
         $this->assertNull($opportunity->converted_project_id);
 
+        // GAP-048 §12/§13 — createContract() is now gated on >=1 CONFIRMED
+        // canonical Service Line.
+        $opportunity->serviceLines()->create([
+            'service_line' => \App\Support\ServiceLine::DESIGN,
+            'provenance' => \App\Support\ServiceLineProvenance::CONFIRMED,
+        ]);
+
         $response = $this->postJson(
             $this->route('opportunities.create-contract', ['id' => $opportunity->id]),
             [],
@@ -514,6 +528,13 @@ class CrmApiTest extends TestCase
             'external_quote_snapshot' => ['revision' => 1, 'total' => 100000000, 'status' => 'ACCEPTED'],
         ]);
 
+        // GAP-048 §12/§13 — createContract() is now gated on >=1 CONFIRMED
+        // canonical Service Line.
+        $opportunity->serviceLines()->create([
+            'service_line' => \App\Support\ServiceLine::DESIGN,
+            'provenance' => \App\Support\ServiceLineProvenance::CONFIRMED,
+        ]);
+
         $response = $this->postJson(
             $this->route('opportunities.create-contract', ['id' => $opportunity->id]),
             [],
@@ -537,6 +558,13 @@ class CrmApiTest extends TestCase
             'external_boq_project_code' => 'PRJ-006',
             'external_quote_id' => 'quote_won_3',
             'external_quote_snapshot' => ['revision' => 1, 'total' => 50000000, 'status' => 'ACCEPTED'],
+        ]);
+
+        // GAP-048 §12/§13 — createContract() is now gated on >=1 CONFIRMED
+        // canonical Service Line.
+        $opportunity->serviceLines()->create([
+            'service_line' => \App\Support\ServiceLine::DESIGN,
+            'provenance' => \App\Support\ServiceLineProvenance::CONFIRMED,
         ]);
 
         $first = $this->postJson(
@@ -593,6 +621,13 @@ class CrmApiTest extends TestCase
             'external_quote_snapshot' => ['revision' => 1, 'total' => 50000000, 'status' => 'ACCEPTED'],
         ]);
 
+        // GAP-048 §12/§13 — createContract() is now gated on >=1 CONFIRMED
+        // canonical Service Line.
+        $opportunity->serviceLines()->create([
+            'service_line' => \App\Support\ServiceLine::DESIGN,
+            'provenance' => \App\Support\ServiceLineProvenance::CONFIRMED,
+        ]);
+
         $response = $this->postJson(
             $this->route('opportunities.create-contract', ['id' => $opportunity->id]),
             [],
@@ -603,11 +638,19 @@ class CrmApiTest extends TestCase
 
         $this->assertDatabaseMissing('contracts', ['source_opportunity_id' => (string) $opportunity->id]);
 
-        // The auto-convert step (guarded by 'crm.convert', which this user does have) runs
-        // BEFORE the 'contract.create' authorization check in createContract(), so the
-        // opportunity IS converted even though contract creation is blocked afterward.
+        // GAP-048 §19 Gate-3 correction: createContract() now holds the
+        // Opportunity row lock in ONE continuous transaction from the
+        // classification gate re-check through the Project/Contract
+        // mutation and 'contract.create' authorization to commit. A prior
+        // implementation split the auto-convert (Project creation) into
+        // its own separate transaction that committed BEFORE the
+        // 'contract.create' authorization check, so a denied contract
+        // still left a converted Project behind — a partially-applied
+        // state. That is no longer possible: the authorization failure now
+        // rolls back the whole attempt, including any Project creation
+        // made earlier in this same request.
         $opportunity->refresh();
-        $this->assertNotNull($opportunity->converted_project_id);
+        $this->assertNull($opportunity->converted_project_id);
     }
 
     public function test_unauthenticated_request_is_rejected(): void

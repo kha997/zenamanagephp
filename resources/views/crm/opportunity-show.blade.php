@@ -76,6 +76,34 @@
         @endif
     </x-ui.card>
 
+    <x-ui.card title="Service Line (phân loại chuẩn)">
+        <p class="text-sm text-slate-600">
+            Chọn Service Line rồi bấm "Xác nhận phân loại" để ghi nhận CONFIRMED —
+            chỉ tick chọn không tự lưu gì cả. Cần ít nhất một Service Line đã xác nhận
+            trước khi chuyển vào các bước bán hàng chính thức, gửi báo giá, hoặc tạo hợp đồng.
+        </p>
+        <form method="POST" action="{{ route('operator.crm.opportunities.service-lines', $opportunity->id) }}" class="mt-3 flex flex-wrap items-end gap-4">
+            @csrf
+            @foreach ($serviceLineValues as $line)
+                <label class="flex items-center gap-2 text-sm">
+                    <input
+                        type="checkbox"
+                        name="service_lines[]"
+                        value="{{ $line }}"
+                        @checked(in_array($line, $confirmedServiceLines, true) || in_array($line, $inferredServiceLines, true))
+                    >
+                    {{ $line }}
+                    @if (in_array($line, $confirmedServiceLines, true))
+                        <x-ui.status-badge status="confirmed" />
+                    @elseif (in_array($line, $inferredServiceLines, true))
+                        <x-ui.status-badge status="inferred" />
+                    @endif
+                </label>
+            @endforeach
+            <button type="submit" class="operator-button operator-button-primary">Xác nhận phân loại</button>
+        </form>
+    </x-ui.card>
+
     @if (!$opportunity->isTerminal())
         <x-ui.card title="Chuyển giai đoạn">
             <form method="POST" action="{{ route('operator.crm.opportunities.stage', $opportunity->id) }}" class="flex flex-wrap items-end gap-3">

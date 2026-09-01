@@ -406,6 +406,16 @@ class CrmPageController extends Controller
             'boqCard' => $this->buildBoqCardViewModel($opportunity),
             'canManageBoq' => (bool) Auth::user()?->hasPermission('crm.manage'),
             'contractCard' => $this->buildContractCardViewModel($opportunity),
+            // GAP-048 §3 — canonical Service-Line classification panel:
+            // keyed by ServiceLine value so the Blade view can render a
+            // checkbox pre-checked for any existing CONFIRMED/INFERRED row.
+            'serviceLineValues' => \App\Support\ServiceLine::VALUES,
+            'confirmedServiceLines' => $opportunity->serviceLines()
+                ->where('provenance', \App\Support\ServiceLineProvenance::CONFIRMED)
+                ->pluck('service_line')->all(),
+            'inferredServiceLines' => $opportunity->serviceLines()
+                ->where('provenance', \App\Support\ServiceLineProvenance::INFERRED)
+                ->pluck('service_line')->all(),
             'users' => User::query()
                 ->where('tenant_id', $tenantId)
                 ->orderBy('name')
@@ -552,6 +562,44 @@ class CrmPageController extends Controller
         }
 
         return back()->with('success', 'Đã chuyển giai đoạn');
+    }
+
+    /**
+     * GAP-048 §3/§5 — web wrapper for the explicit "Confirm classification"
+     * action, delegating to the same atomic reconciliation service used by
+     * the API path.
+     */
+    public function confirmServiceLines(Request $request, string $id): RedirectResponse
+    {
+        $validated = $request->validate([
+            'service_lines' => ['array'],
+            'service_lines.*' => [\Illuminate\Validation\Rule::in(\App\Support\ServiceLine::VALUES)],
+        ]);
+
+        $tenantId = $this->tenantId();
+
+        try {
+            $opportunity = Opportunity::forTenant($tenantId)->findOrFail($id);
+        } catch (ModelNotFoundException) {
+            return back()->with('error', 'Không tìm thấy cơ hội bán hàng.');
+        }
+
+        /** @var User $authUser */
+        $authUser = Auth::user();
+
+        try {
+            app(\App\Services\Crm\OpportunityServiceLineClassificationService::class)->reconcile(
+                $authUser,
+                $opportunity,
+                $validated['service_lines'] ?? []
+            );
+        } catch (ValidationException $exception) {
+            return back()->withErrors($exception->errors())->withInput();
+        } catch (AuthorizationException) {
+            return back()->with('error', 'Bạn không có quyền thực hiện thao tác này.');
+        }
+
+        return back()->with('success', 'Đã xác nhận phân loại Service Line.');
     }
 
     public function convertOpportunity(Request $request, string $id, ApiOpportunityController $apiController): RedirectResponse
@@ -1002,27 +1050,51 @@ class CrmPageController extends Controller
             return back()->with('error', 'Cần ít nhất một dòng để gửi báo giá.');
         }
 
-        $subtotal = QuoteLineItem::query()
-            ->where('quote_id', $quote->id)
-            ->where('tenant_id', $tenantId)
-            ->sum('amount');
+        // GAP-048 §13/§19 — the native formal-Quote gate (DRAFT->SENT).
+        // Canonical lock order: Opportunity row locked first, before the
+        // Quote row is mutated below, all inside one transaction so the
+        // lock is held for the duration of the gate check + mutation.
+        $blocked = false;
 
-        $totals = Quote::computeTotals($subtotal, (float) $quote->discount_percent, (float) $quote->vat_percent);
-        $quote->update([
-            'status' => Quote::STATUS_SENT,
-            'sent_at' => now(),
-            'subtotal' => $subtotal,
-        ] + $totals);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($quote, $tenantId, &$blocked): void {
+            /** @var \App\Models\Opportunity|null $opportunity */
+            $opportunity = \App\Models\Opportunity::query()
+                ->whereKey($quote->opportunity_id)
+                ->lockForUpdate()
+                ->first();
 
-        EventRecord::query()->create([
-            'tenant_id' => $tenantId,
-            'aggregate_type' => 'quote',
-            'aggregate_id' => (string) $quote->id,
-            'event_key' => 'quote.sent',
-            'actor_user_id' => Auth::id() ? (string) Auth::id() : null,
-            'payload' => ['quote_number' => $quote->quote_number],
-            'occurred_at' => now(),
-        ]);
+            if ($opportunity !== null && ! $opportunity->hasConfirmedServiceLine()) {
+                $blocked = true;
+
+                return;
+            }
+
+            $subtotal = QuoteLineItem::query()
+                ->where('quote_id', $quote->id)
+                ->where('tenant_id', $tenantId)
+                ->sum('amount');
+
+            $totals = Quote::computeTotals($subtotal, (float) $quote->discount_percent, (float) $quote->vat_percent);
+            $quote->update([
+                'status' => Quote::STATUS_SENT,
+                'sent_at' => now(),
+                'subtotal' => $subtotal,
+            ] + $totals);
+
+            EventRecord::query()->create([
+                'tenant_id' => $tenantId,
+                'aggregate_type' => 'quote',
+                'aggregate_id' => (string) $quote->id,
+                'event_key' => 'quote.sent',
+                'actor_user_id' => Auth::id() ? (string) Auth::id() : null,
+                'payload' => ['quote_number' => $quote->quote_number],
+                'occurred_at' => now(),
+            ]);
+        });
+
+        if ($blocked) {
+            return back()->with('error', 'Cần ít nhất một Service Line đã xác nhận trước khi gửi báo giá chính thức.');
+        }
 
         return back()->with('success', 'Đã gửi báo giá.');
     }

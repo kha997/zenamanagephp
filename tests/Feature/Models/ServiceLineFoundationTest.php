@@ -470,7 +470,13 @@ class ServiceLineFoundationTest extends TestCase
         $this->assertTrue(\Illuminate\Support\Facades\Schema::hasTable('opportunity_service_lines'));
         $this->assertTrue(\Illuminate\Support\Facades\Schema::hasTable('project_service_lines'));
 
-        \Illuminate\Support\Facades\Artisan::call('migrate:rollback', ['--step' => 2, '--force' => true]);
+        // GAP-048 added one further migration
+        // (2026_08_30_100000_make_opportunities_service_category_nullable)
+        // on top of GAP-046's two table-creation migrations, so a clean
+        // round-trip of exactly the GAP-046 migrations now requires
+        // rolling back 3 steps (GAP-048's migration first, then the two
+        // GAP-046 table migrations), not 2.
+        \Illuminate\Support\Facades\Artisan::call('migrate:rollback', ['--step' => 3, '--force' => true]);
 
         $this->assertFalse(\Illuminate\Support\Facades\Schema::hasTable('opportunity_service_lines'));
         $this->assertFalse(\Illuminate\Support\Facades\Schema::hasTable('project_service_lines'));
@@ -478,6 +484,9 @@ class ServiceLineFoundationTest extends TestCase
         $this->assertTrue(\Illuminate\Support\Facades\Schema::hasTable('projects'));
 
         \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasTable('opportunity_service_lines'));
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasTable('project_service_lines'));
     }
 
     /**

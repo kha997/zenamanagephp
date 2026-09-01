@@ -13,6 +13,7 @@ use App\Models\Opportunity;
 use App\Models\Project;
 use App\Models\Quote;
 use App\Models\QuoteLineItem;
+use App\Services\Crm\OpportunityServiceLineClassificationService;
 use App\Services\Crm\OpportunityStageTransitionService;
 use App\Services\ZenaBoqIntegrationService;
 use Illuminate\Database\Eloquent\Builder;
@@ -210,23 +211,40 @@ class OpportunityController extends BaseApiController
             return $this->validationError($validator->errors());
         }
 
-        $opportunity = Opportunity::query()->create([
-            'tenant_id' => $tenantId,
-            'account_id' => (string) $request->input('account_id'),
-            'opportunity_name' => (string) $request->input('opportunity_name'),
-            'service_category' => (string) $request->input('service_category', 'architecture'),
-            'service_scope_summary' => $request->input('service_scope_summary'),
-            'pipeline_stage' => Opportunity::STAGE_NEW_LEAD,
-            'forecast_category' => (string) $request->input('forecast_category', 'pipeline'),
-            'estimated_fee' => $request->input('estimated_fee'),
-            'estimated_project_value' => $request->input('estimated_project_value'),
-            'probability' => $request->input('probability'),
-            'expected_close_date' => $request->input('expected_close_date'),
-            'sales_owner_id' => $request->input('sales_owner_id', (string) $user->id),
-            'technical_owner_id' => $request->input('technical_owner_id'),
-            'priority' => (string) $request->input('priority', 'medium'),
-            'created_by' => (string) $user->id,
-        ]);
+        $opportunity = DB::transaction(function () use ($request, $tenantId, $user): Opportunity {
+            $legacyCategory = $request->input('service_category');
+
+            $opportunity = Opportunity::query()->create([
+                'tenant_id' => $tenantId,
+                'account_id' => (string) $request->input('account_id'),
+                'opportunity_name' => (string) $request->input('opportunity_name'),
+                'service_category' => $legacyCategory,
+                'service_scope_summary' => $request->input('service_scope_summary'),
+                'pipeline_stage' => Opportunity::STAGE_NEW_LEAD,
+                'forecast_category' => (string) $request->input('forecast_category', 'pipeline'),
+                'estimated_fee' => $request->input('estimated_fee'),
+                'estimated_project_value' => $request->input('estimated_project_value'),
+                'probability' => $request->input('probability'),
+                'expected_close_date' => $request->input('expected_close_date'),
+                'sales_owner_id' => $request->input('sales_owner_id', (string) $user->id),
+                'technical_owner_id' => $request->input('technical_owner_id'),
+                'priority' => (string) $request->input('priority', 'medium'),
+                'created_by' => (string) $user->id,
+            ]);
+
+            // GAP-048 §4 — legacy->canonical synchronization, shared mapper,
+            // same atomic operation as the Opportunity creation itself.
+            $mappedLine = \App\Support\LegacyServiceCategoryMapper::mapToServiceLine($legacyCategory);
+            if ($mappedLine !== null) {
+                $opportunity->serviceLines()->create([
+                    'service_line' => $mappedLine,
+                    'provenance' => \App\Support\ServiceLineProvenance::INFERRED,
+                    'source' => 'writer:store',
+                ]);
+            }
+
+            return $opportunity;
+        });
 
         $this->recordEvent($opportunity, 'crm.opportunity.created', [
             'opportunity_name' => $opportunity->opportunity_name,
@@ -275,17 +293,120 @@ class OpportunityController extends BaseApiController
             return $this->validationError($validator->errors());
         }
 
-        $opportunity->fill($request->only([
-            'account_id', 'opportunity_name', 'service_category', 'service_scope_summary',
-            'forecast_category', 'estimated_fee', 'estimated_project_value', 'probability',
-            'expected_close_date', 'sales_owner_id', 'technical_owner_id', 'priority',
-        ]));
-        $opportunity->save();
+        $opportunityId = $opportunity->id;
+        $categoryChanging = $request->has('service_category');
+        $incomingCategory = $request->input('service_category');
+
+        $opportunity = DB::transaction(function () use ($opportunityId, $request, $categoryChanging, $incomingCategory): Opportunity {
+            // Canonical lock order: Opportunity row first (GAP-048 §19).
+            /** @var Opportunity $locked */
+            $locked = Opportunity::query()
+                ->whereKey($opportunityId)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $locked->fill($request->only([
+                'account_id', 'opportunity_name', 'service_category', 'service_scope_summary',
+                'forecast_category', 'estimated_fee', 'estimated_project_value', 'probability',
+                'expected_close_date', 'sales_owner_id', 'technical_owner_id', 'priority',
+            ]));
+            $locked->save();
+
+            if ($categoryChanging) {
+                // GAP-048 §4 rule C — mapper-owned INFERRED reconciliation
+                // only. A CONFIRMED row is structurally never selected by
+                // the `provenance = INFERRED` filter below, so rule §4.2
+                // ("CONFIRMED is never overwritten/demoted/deleted by the
+                // legacy mapper") holds by construction.
+                $mappedLine = \App\Support\LegacyServiceCategoryMapper::mapToServiceLine($incomingCategory);
+
+                // GAP-048 §19/CONCURRENCY-3 — test-only failure-injection
+                // seam, inert unless the exact env var below is set to '1'
+                // (never true outside the CONCURRENCY-3 test/console
+                // command). Proves the scalar mutation above rolls back
+                // together with a failed canonical-reconciliation step,
+                // inside the SAME transaction — no partially-applied state.
+                if (($_SERVER['GAP048_SIMULATE_MAPPER_FAILURE'] ?? getenv('GAP048_SIMULATE_MAPPER_FAILURE')) === '1') {
+                    throw new \RuntimeException('GAP-048 CONCURRENCY-3: simulated mapper reconciliation failure.');
+                }
+
+                $mapperOwnedRows = \App\Models\OpportunityServiceLine::query()
+                    ->where('opportunity_id', $locked->id)
+                    ->where('provenance', \App\Support\ServiceLineProvenance::INFERRED)
+                    ->get();
+
+                foreach ($mapperOwnedRows as $row) {
+                    if ($row->service_line !== $mappedLine) {
+                        $row->delete();
+                    }
+                }
+
+                if ($mappedLine !== null) {
+                    $exists = \App\Models\OpportunityServiceLine::query()
+                        ->where('opportunity_id', $locked->id)
+                        ->where('service_line', $mappedLine)
+                        ->exists();
+
+                    if (! $exists) {
+                        $locked->serviceLines()->create([
+                            'service_line' => $mappedLine,
+                            'provenance' => \App\Support\ServiceLineProvenance::INFERRED,
+                            'source' => 'writer:update',
+                        ]);
+                    }
+                }
+            }
+
+            return $locked;
+        });
 
         return $this->zenaSuccessResponse(
             $this->serialize($opportunity->fresh() ?? $opportunity),
             'Opportunity updated successfully'
         );
+    }
+
+    /**
+     * GAP-048 §3/§5 — explicit "Confirm classification" write. The desired
+     * canonical Service-Line set is submitted whole; the atomic
+     * reconciliation service handles CONFIRMED promotion, mapper-owned
+     * INFERRED removal, the lifecycle invariant, and the audit trail.
+     */
+    public function updateServiceLines(Request $request, string $id, OpportunityServiceLineClassificationService $service): JsonResponse
+    {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+        if (! $user) {
+            return $this->unauthorized('Authentication required');
+        }
+
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === '') {
+            return $this->errorResponse('Tenant context missing', 400);
+        }
+
+        $opportunity = $this->scopedQuery($tenantId)->whereKey($id)->first();
+        if (! $opportunity instanceof Opportunity) {
+            return $this->notFound('Opportunity not found');
+        }
+
+        $this->authorize('update', $opportunity);
+
+        $validator = Validator::make($request->all(), [
+            'service_lines' => ['present', 'array'],
+            'service_lines.*' => [Rule::in(\App\Support\ServiceLine::VALUES)],
+        ]);
+        if ($validator->fails()) {
+            return $this->validationError($validator->errors());
+        }
+
+        try {
+            $opportunity = $service->reconcile($user, $opportunity, $request->input('service_lines', []));
+        } catch (ValidationException $exception) {
+            return $this->validationError($exception->errors());
+        }
+
+        return $this->zenaSuccessResponse($this->serialize($opportunity), 'Service-Line classification updated successfully');
     }
 
     public function updateStage(Request $request, string $id): JsonResponse
@@ -336,8 +457,58 @@ class OpportunityController extends BaseApiController
     /**
      * WON → tạo Project (nối phễu sale sang vận hành).
      */
+    /**
+     * GAP-048 §12/§19 — defense-in-depth classification gate, Opportunity
+     * row locked first (canonical lock order), re-checked under lock
+     * inside this same transaction.
+     *
+     * @throws ValidationException if the Opportunity has zero CONFIRMED canonical Service Lines
+     */
+    private function convertOpportunityToProjectLocked(Opportunity $opportunity, Request $request, \App\Models\User $user, string $tenantId): Project
+    {
+        $project = DB::transaction(function () use ($opportunity, $request, $user, $tenantId): ?Project {
+            /** @var Opportunity $locked */
+            $locked = Opportunity::query()->whereKey($opportunity->id)->lockForUpdate()->firstOrFail();
+            if (! $locked->hasConfirmedServiceLine()) {
+                // Gate rejection: no mutation has happened yet, so letting
+                // this transaction commit as a no-op is harmless — the
+                // throw below (outside the closure) is what the caller
+                // actually observes.
+                return null;
+            }
+
+            $project = Project::query()->create([
+                'tenant_id' => $tenantId,
+                'name' => (string) $request->input('project_name', $opportunity->opportunity_name),
+                'code' => 'PRJ-'.Str::upper(Str::random(8)),
+                'description' => $opportunity->service_scope_summary,
+                'status' => 'planning',
+                'progress' => 0,
+                'budget_total' => $opportunity->estimated_project_value ?? ($opportunity->estimated_fee ?? 0),
+                'start_date' => $request->input('start_date'),
+                'end_date' => $request->input('end_date'),
+                'pm_id' => $opportunity->technical_owner_id ?? $opportunity->sales_owner_id,
+                'created_by' => (string) $user->id,
+            ]);
+
+            $locked->converted_project_id = (string) $project->id;
+            $locked->save();
+
+            return $project;
+        });
+
+        if ($project === null) {
+            throw ValidationException::withMessages([
+                'service_line' => ['At least one confirmed Service Line is required before converting to a project.'],
+            ]);
+        }
+
+        return $project;
+    }
+
     public function convert(Request $request, string $id): JsonResponse
     {
+        /** @var \App\Models\User|null $user */
         $user = Auth::user();
 
         if (! $user) {
@@ -379,26 +550,11 @@ class OpportunityController extends BaseApiController
             return $this->validationError($validator->errors());
         }
 
-        $project = DB::transaction(function () use ($opportunity, $request, $user, $tenantId): Project {
-            $project = Project::query()->create([
-                'tenant_id' => $tenantId,
-                'name' => (string) $request->input('project_name', $opportunity->opportunity_name),
-                'code' => 'PRJ-'.Str::upper(Str::random(8)),
-                'description' => $opportunity->service_scope_summary,
-                'status' => 'planning',
-                'progress' => 0,
-                'budget_total' => $opportunity->estimated_project_value ?? ($opportunity->estimated_fee ?? 0),
-                'start_date' => $request->input('start_date'),
-                'end_date' => $request->input('end_date'),
-                'pm_id' => $opportunity->technical_owner_id ?? $opportunity->sales_owner_id,
-                'created_by' => (string) $user->id,
-            ]);
-
-            $opportunity->converted_project_id = (string) $project->id;
-            $opportunity->save();
-
-            return $project;
-        });
+        try {
+            $project = $this->convertOpportunityToProjectLocked($opportunity, $request, $user, $tenantId);
+        } catch (ValidationException $exception) {
+            return $this->validationError($exception->errors());
+        }
 
         $this->recordEvent($opportunity, 'crm.opportunity.converted', [
             'project_id' => (string) $project->id,
@@ -475,52 +631,83 @@ class OpportunityController extends BaseApiController
             ]);
         }
 
-        $projectId = $opportunity->converted_project_id;
+        // GAP-048 §12/§13/§19 (Gate-3 correction) — independent
+        // createContract() gate: the one point where native-accepted and
+        // external-accepted Quote paths converge (§13). ONE continuous
+        // transaction holds the authoritative Opportunity row lock
+        // (canonical lock order: Opportunity row FIRST) from the re-read
+        // and CONFIRMED gate re-check, through the Project/Contract/BOQ
+        // mutation and the audit EventRecord write(s), to commit — never
+        // making the authoritative decision or mutation from the stale
+        // pre-lock `$opportunity` model instance loaded above. A prior
+        // implementation split this into 3 separate transactions (gate
+        // check / Project creation / Contract creation), releasing the row
+        // lock between the gate re-check and the mutation; that is the
+        // exact defect this single transaction closes. `contract.create`
+        // authorization is checked AFTER the gate re-check (preserving the
+        // pre-existing response-ordering contract: a missing classification
+        // is reported as 422 even for an actor who also lacks
+        // `contract.create`) but still INSIDE the same transaction, so an
+        // authorization failure rolls back any Project mutation already
+        // made in this same request instead of leaving a partially-applied
+        // state.
+        // The classification gate returns null (no mutation attempted, so
+        // letting the transaction commit as a no-op is harmless) rather
+        // than throwing, so the outer scope decides the HTTP response —
+        // mirroring the same established pattern already used by
+        // convertOpportunityToProjectLocked() above, and avoiding a
+        // cross-closure exception boundary PHPStan's flow analysis cannot
+        // trace back to an enclosing try/catch.
+        $contract = DB::transaction(function () use (
+            $opportunity, $tenantId, $user,
+            $hasNativeAccepted, $nativeQuote, $snapshot
+        ): ?Contract {
+            /** @var Opportunity $locked */
+            $locked = Opportunity::query()->whereKey($opportunity->id)->lockForUpdate()->firstOrFail();
 
-        if (! $projectId) {
-            $this->authorize('convert', $opportunity);
+            if (! $locked->hasConfirmedServiceLine()) {
+                return null;
+            }
 
-            $project = DB::transaction(function () use ($opportunity, $user, $tenantId): Project {
+            $this->authorize('create', Contract::class);
+
+            $projectId = $locked->converted_project_id;
+            $project = null;
+
+            if (! $projectId) {
+                $this->authorize('convert', $locked);
+
                 $project = Project::query()->create([
                     'tenant_id' => $tenantId,
-                    'name' => (string) $opportunity->opportunity_name,
+                    'name' => (string) $locked->opportunity_name,
                     'code' => 'PRJ-'.Str::upper(Str::random(8)),
-                    'description' => $opportunity->service_scope_summary,
+                    'description' => $locked->service_scope_summary,
                     'status' => 'planning',
                     'progress' => 0,
-                    'budget_total' => $opportunity->estimated_project_value ?? ($opportunity->estimated_fee ?? 0),
-                    'pm_id' => $opportunity->technical_owner_id ?? $opportunity->sales_owner_id,
+                    'budget_total' => $locked->estimated_project_value ?? ($locked->estimated_fee ?? 0),
+                    'pm_id' => $locked->technical_owner_id ?? $locked->sales_owner_id,
                     'created_by' => (string) $user->id,
                 ]);
 
-                $opportunity->converted_project_id = (string) $project->id;
-                $opportunity->save();
+                $locked->converted_project_id = (string) $project->id;
+                $locked->save();
 
-                return $project;
-            });
+                $projectId = (string) $project->id;
 
-            $this->recordEvent($opportunity, 'crm.opportunity.converted', [
-                'project_id' => (string) $project->id,
-                'project_name' => (string) $project->name,
-            ]);
+                $this->recordEvent($locked, 'crm.opportunity.converted', [
+                    'project_id' => (string) $project->id,
+                    'project_name' => (string) $project->name,
+                ]);
+            }
 
-            $projectId = (string) $project->id;
-        }
+            $account = $locked->account;
+            $clientName = $account?->display_name ?? '';
 
-        $this->authorize('create', Contract::class);
-
-        $account = $opportunity->account;
-        $clientName = $account?->display_name ?? '';
-
-        $contract = DB::transaction(function () use (
-            $tenantId, $projectId, $opportunity, $user, $clientName,
-            $hasNativeAccepted, $nativeQuote, $snapshot
-        ): Contract {
             $contract = Contract::query()->create([
                 'tenant_id' => $tenantId,
                 'project_id' => $projectId,
-                'source_opportunity_id' => (string) $opportunity->id,
-                'source_quote_id' => $hasNativeAccepted ? (string) $nativeQuote->id : ($opportunity->external_quote_id ?? null),
+                'source_opportunity_id' => (string) $locked->id,
+                'source_quote_id' => $hasNativeAccepted ? (string) $nativeQuote->id : ($locked->external_quote_id ?? null),
                 'source_quote_revision' => $hasNativeAccepted ? $nativeQuote->revision_no : ($snapshot['revision'] ?? null),
                 'code' => $this->generateContractCode(),
                 'title' => 'Hợp đồng dịch vụ - '.$clientName,
@@ -559,14 +746,22 @@ class OpportunityController extends BaseApiController
                 }
             }
 
+            $this->recordEvent($locked, 'crm.opportunity.contract_created', [
+                'contract_id' => (string) $contract->id,
+                'project_id' => $projectId,
+                'total_value' => (float) $contract->total_value,
+            ]);
+
             return $contract;
         });
 
-        $this->recordEvent($opportunity, 'crm.opportunity.contract_created', [
-            'contract_id' => (string) $contract->id,
-            'project_id' => $projectId,
-            'total_value' => (float) $contract->total_value,
-        ]);
+        if ($contract === null) {
+            return $this->validationError([
+                'service_line' => ['At least one confirmed Service Line is required before generating a contract.'],
+            ]);
+        }
+
+        $projectId = (string) $contract->project_id;
 
         return $this->zenaSuccessResponse(
             [

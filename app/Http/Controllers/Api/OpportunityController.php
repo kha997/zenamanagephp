@@ -631,118 +631,130 @@ class OpportunityController extends BaseApiController
             ]);
         }
 
-        // GAP-048 §12/§13/§19 — independent createContract() gate: the one
-        // point where native-accepted and external-accepted Quote paths
-        // converge (§13). Opportunity row locked first (canonical lock
-        // order), re-checked under lock (held for the duration of this
-        // check via an explicit transaction — lockForUpdate() alone has no
-        // locking effect outside a transaction on MySQL). This applies
-        // whether or not a Project still needs to be created below.
-        $gateBlocked = DB::transaction(function () use ($opportunity): bool {
-            /** @var Opportunity $locked */
-            $locked = Opportunity::query()->whereKey($opportunity->id)->lockForUpdate()->firstOrFail();
+        // GAP-048 §12/§13/§19 (Gate-3 correction) — independent
+        // createContract() gate: the one point where native-accepted and
+        // external-accepted Quote paths converge (§13). ONE continuous
+        // transaction holds the authoritative Opportunity row lock
+        // (canonical lock order: Opportunity row FIRST) from the re-read
+        // and CONFIRMED gate re-check, through the Project/Contract/BOQ
+        // mutation and the audit EventRecord write(s), to commit — never
+        // making the authoritative decision or mutation from the stale
+        // pre-lock `$opportunity` model instance loaded above. A prior
+        // implementation split this into 3 separate transactions (gate
+        // check / Project creation / Contract creation), releasing the row
+        // lock between the gate re-check and the mutation; that is the
+        // exact defect this single transaction closes. `contract.create`
+        // authorization is checked AFTER the gate re-check (preserving the
+        // pre-existing response-ordering contract: a missing classification
+        // is reported as 422 even for an actor who also lacks
+        // `contract.create`) but still INSIDE the same transaction, so an
+        // authorization failure rolls back any Project mutation already
+        // made in this same request instead of leaving a partially-applied
+        // state.
+        try {
+            $contract = DB::transaction(function () use (
+                $opportunity, $tenantId, $user,
+                $hasNativeAccepted, $nativeQuote, $snapshot
+            ): Contract {
+                /** @var Opportunity $locked */
+                $locked = Opportunity::query()->whereKey($opportunity->id)->lockForUpdate()->firstOrFail();
 
-            return ! $locked->hasConfirmedServiceLine();
-        });
+                if (! $locked->hasConfirmedServiceLine()) {
+                    throw ValidationException::withMessages([
+                        'service_line' => ['At least one confirmed Service Line is required before generating a contract.'],
+                    ]);
+                }
 
-        if ($gateBlocked) {
-            return $this->validationError([
-                'service_line' => ['At least one confirmed Service Line is required before generating a contract.'],
-            ]);
-        }
+                $this->authorize('create', Contract::class);
 
-        $projectId = $opportunity->converted_project_id;
+                $projectId = $locked->converted_project_id;
+                $project = null;
 
-        if (! $projectId) {
-            $this->authorize('convert', $opportunity);
+                if (! $projectId) {
+                    $this->authorize('convert', $locked);
 
-            $project = DB::transaction(function () use ($opportunity, $user, $tenantId): Project {
-                $project = Project::query()->create([
+                    $project = Project::query()->create([
+                        'tenant_id' => $tenantId,
+                        'name' => (string) $locked->opportunity_name,
+                        'code' => 'PRJ-'.Str::upper(Str::random(8)),
+                        'description' => $locked->service_scope_summary,
+                        'status' => 'planning',
+                        'progress' => 0,
+                        'budget_total' => $locked->estimated_project_value ?? ($locked->estimated_fee ?? 0),
+                        'pm_id' => $locked->technical_owner_id ?? $locked->sales_owner_id,
+                        'created_by' => (string) $user->id,
+                    ]);
+
+                    $locked->converted_project_id = (string) $project->id;
+                    $locked->save();
+
+                    $projectId = (string) $project->id;
+
+                    $this->recordEvent($locked, 'crm.opportunity.converted', [
+                        'project_id' => (string) $project->id,
+                        'project_name' => (string) $project->name,
+                    ]);
+                }
+
+                $account = $locked->account;
+                $clientName = $account?->display_name ?? '';
+
+                $contract = Contract::query()->create([
                     'tenant_id' => $tenantId,
-                    'name' => (string) $opportunity->opportunity_name,
-                    'code' => 'PRJ-'.Str::upper(Str::random(8)),
-                    'description' => $opportunity->service_scope_summary,
-                    'status' => 'planning',
-                    'progress' => 0,
-                    'budget_total' => $opportunity->estimated_project_value ?? ($opportunity->estimated_fee ?? 0),
-                    'pm_id' => $opportunity->technical_owner_id ?? $opportunity->sales_owner_id,
+                    'project_id' => $projectId,
+                    'source_opportunity_id' => (string) $locked->id,
+                    'source_quote_id' => $hasNativeAccepted ? (string) $nativeQuote->id : ($locked->external_quote_id ?? null),
+                    'source_quote_revision' => $hasNativeAccepted ? $nativeQuote->revision_no : ($snapshot['revision'] ?? null),
+                    'code' => $this->generateContractCode(),
+                    'title' => 'Hợp đồng dịch vụ - '.$clientName,
+                    'client_name' => $clientName,
+                    'total_value' => $hasNativeAccepted ? (float) ($nativeQuote->total ?: $nativeQuote->subtotal) : (float) ($snapshot['total'] ?? 0),
+                    'currency' => 'VND',
                     'created_by' => (string) $user->id,
                 ]);
 
-                $opportunity->converted_project_id = (string) $project->id;
-                $opportunity->save();
+                // When native quote: create BOQ + copy lines
+                if ($hasNativeAccepted) {
+                    $boq = Boq::query()->create([
+                        'tenant_id' => $tenantId,
+                        'project_id' => $projectId,
+                        'contract_id' => (string) $contract->id,
+                        'code' => 'BOQ-'.$contract->code,
+                        'name' => $clientName,
+                    ]);
 
-                return $project;
-            });
+                    $quoteLines = QuoteLineItem::query()
+                        ->where('quote_id', (string) $nativeQuote->id)
+                        ->where('tenant_id', $tenantId)
+                        ->orderBy('sort_order')
+                        ->get();
 
-            $this->recordEvent($opportunity, 'crm.opportunity.converted', [
-                'project_id' => (string) $project->id,
-                'project_name' => (string) $project->name,
-            ]);
+                    foreach ($quoteLines as $ql) {
+                        BoqLineItem::query()->create([
+                            'tenant_id' => $tenantId,
+                            'boq_id' => (string) $boq->id,
+                            'code' => $ql->code,
+                            'name' => $ql->name,
+                            'quantity' => $ql->quantity,
+                            'unit' => $ql->unit,
+                            'unit_price' => $ql->unit_price,
+                        ]);
+                    }
+                }
 
-            $projectId = (string) $project->id;
-        }
-
-        $this->authorize('create', Contract::class);
-
-        $account = $opportunity->account;
-        $clientName = $account?->display_name ?? '';
-
-        $contract = DB::transaction(function () use (
-            $tenantId, $projectId, $opportunity, $user, $clientName,
-            $hasNativeAccepted, $nativeQuote, $snapshot
-        ): Contract {
-            $contract = Contract::query()->create([
-                'tenant_id' => $tenantId,
-                'project_id' => $projectId,
-                'source_opportunity_id' => (string) $opportunity->id,
-                'source_quote_id' => $hasNativeAccepted ? (string) $nativeQuote->id : ($opportunity->external_quote_id ?? null),
-                'source_quote_revision' => $hasNativeAccepted ? $nativeQuote->revision_no : ($snapshot['revision'] ?? null),
-                'code' => $this->generateContractCode(),
-                'title' => 'Hợp đồng dịch vụ - '.$clientName,
-                'client_name' => $clientName,
-                'total_value' => $hasNativeAccepted ? (float) ($nativeQuote->total ?: $nativeQuote->subtotal) : (float) ($snapshot['total'] ?? 0),
-                'currency' => 'VND',
-                'created_by' => (string) $user->id,
-            ]);
-
-            // When native quote: create BOQ + copy lines
-            if ($hasNativeAccepted) {
-                $boq = Boq::query()->create([
-                    'tenant_id' => $tenantId,
-                    'project_id' => $projectId,
+                $this->recordEvent($locked, 'crm.opportunity.contract_created', [
                     'contract_id' => (string) $contract->id,
-                    'code' => 'BOQ-'.$contract->code,
-                    'name' => $clientName,
+                    'project_id' => $projectId,
+                    'total_value' => (float) $contract->total_value,
                 ]);
 
-                $quoteLines = QuoteLineItem::query()
-                    ->where('quote_id', (string) $nativeQuote->id)
-                    ->where('tenant_id', $tenantId)
-                    ->orderBy('sort_order')
-                    ->get();
+                return $contract;
+            });
+        } catch (ValidationException $exception) {
+            return $this->validationError($exception->errors());
+        }
 
-                foreach ($quoteLines as $ql) {
-                    BoqLineItem::query()->create([
-                        'tenant_id' => $tenantId,
-                        'boq_id' => (string) $boq->id,
-                        'code' => $ql->code,
-                        'name' => $ql->name,
-                        'quantity' => $ql->quantity,
-                        'unit' => $ql->unit,
-                        'unit_price' => $ql->unit_price,
-                    ]);
-                }
-            }
-
-            return $contract;
-        });
-
-        $this->recordEvent($opportunity, 'crm.opportunity.contract_created', [
-            'contract_id' => (string) $contract->id,
-            'project_id' => $projectId,
-            'total_value' => (float) $contract->total_value,
-        ]);
+        $projectId = (string) $contract->project_id;
 
         return $this->zenaSuccessResponse(
             [

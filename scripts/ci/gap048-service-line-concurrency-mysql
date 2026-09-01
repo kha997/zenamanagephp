@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Runs tests/Feature/Concurrency/OpportunityServiceLineConcurrencyTest.php
+# (GAP-048 CONCURRENCY-1/2/3/4) against a real MySQL connection in CI,
+# mirroring the established scripts/ci/rfi-escalation-concurrency-mysql
+# pattern. This test proves the Opportunity-row lock/serialization
+# discipline (design §19) with genuinely separate OS subprocesses/DB
+# connections when MySQL is reachable, and skips cleanly (never a false
+# pass) when it isn't. This script's only job is to make sure MySQL IS
+# reachable whenever this runs in CI, so the tests actually execute for
+# real instead of perpetually skipping — this suite had no CI job at all
+# before the GAP-048 Gate-3 correction that added this file (disclosed as
+# a known limitation in docs/owner-decisions/GAP-048/03-release.md).
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
+cd "$ROOT_DIR"
+
+export APP_ENV=testing
+export PCOV_ENABLED=0
+
+# shellcheck disable=SC1091
+source scripts/ci/lib/mysql-fail-closed.sh
+
+zena_mysql_resolve_env
+zena_mysql_preflight_connection
+
+mkdir -p resources/views storage/framework/views storage/framework/cache bootstrap/cache
+
+php artisan optimize:clear
+php artisan migrate:fresh --force
+
+zena_mysql_ensure_connection
+
+JUNIT_OUT="${RUNNER_TEMP:-/tmp}/gap048-service-line-concurrency-junit.xml"
+./vendor/bin/phpunit tests/Feature/Concurrency/OpportunityServiceLineConcurrencyTest.php --log-junit "$JUNIT_OUT"
+
+# The four tests in that file call $this->markTestSkipped(...) whenever the
+# named 'mysql' Laravel connection isn't reachable — which would make this
+# whole job pass vacuously and silently stop proving anything. Since this
+# script guarantees MySQL IS reachable (zena_mysql_preflight_connection
+# above would already have failed otherwise), a SKIPPED result here means
+# the test's own connection check disagrees with our preflight — fail
+# loudly instead of reporting a false green.
+if grep -q 'skipped="[1-9]' "$JUNIT_OUT" 2>/dev/null; then
+    echo "ERROR: OpportunityServiceLineConcurrencyTest reported a SKIP despite MySQL being reachable per preflight — this must never be a silent pass." >&2
+    echo "Skip reason(s) from the junit report:" >&2
+    grep -A2 '<skipped' "$JUNIT_OUT" >&2 || true
+    exit 1
+fi

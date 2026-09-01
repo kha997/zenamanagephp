@@ -1,14 +1,14 @@
 ---
 work_id: GAP-048
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-30-gap-048-crm-classification-ux-gates-design.md
   plan: docs/superpowers/plans/2026-08-30-gap-048-crm-classification-ux-gates-implementation.md
@@ -18,34 +18,41 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-09-01T00:00:00Z"
-  owner_response_reference: "GAP-048 Gate 3 Round 1 (relayed via coordinator session, reviewed exact prior head ee600951 — the head this correction directive was issued against): 'DECISION: CORRECTION REQUESTED. Re-inspect createContract() yourself now — do not trust the prior session's self-report; find the actual gap. Fix createContract() §19 atomicity: one transaction must hold the authoritative Opportunity lockForUpdate() across re-read, CONFIRMED gate evaluation, Project/Contract mutation and relevant audit/event mutation through commit; Opportunity must be locked FIRST; do not make authoritative decisions or mutations from the stale pre-lock model; preserve native/external Quote semantics and no Opportunity->Project Service-Line propagation. Add a discriminating real-MySQL concurrency regression for reconcile -> {} racing createContract(): RED first, GREEN only after the production fix, genuinely separate connections/processes and controlled interleaving, not sequential simulation; determine the smallest appropriate way to make this regression execute automatically in an existing real-MySQL CI surface. Do NOT perform optional cleanup of GAP048_SIMULATE_MAPPER_FAILURE unless technically necessary for the mandatory fix. After correction: run focused tests + affected regression, run real-MySQL concurrency evidence, run required broader quality/governance checks, recompute implementation subject SHA/digest using canonical repo tooling, refresh Gate-3 technical evidence, push to the existing PR #295, keep it Draft, STOP at awaiting_owner. Do not approve Gate 3, mark Ready, merge, release, deploy, or start another Work ID.' Independent re-inspection at the reviewed head confirmed the finding: createContract() split its classification gate re-check into its own short DB::transaction() (Opportunity::lockForUpdate(), hasConfirmedServiceLine() check, commit — releasing the row lock immediately), then performed Project creation in a second, separate DB::transaction(), then Contract+BOQ+BOQ-line creation and both audit EventRecord writes in a third, separate DB::transaction() — none of which re-acquired or held the Opportunity row lock, and the Project-creation step mutated the STALE, pre-lock $opportunity model instance loaded before any transaction began, not the freshly-locked model. This exactly matches the Owner-identified defect: the authoritative gate decision was made under lock, but the mutation was not — a genuine check-then-act race distinct from what CONCURRENCY-1/2/3 (transition()/sendQuote()/update()) already covered."
+  recorded_at: "2026-09-01T05:35:00Z"
+  owner_response_reference: "GAP-048 Gate 3 Round 1 (relayed via coordinator session, reviewed exact prior head ee600951 — the head this correction directive was issued against): 'DECISION: CORRECTION REQUESTED. Re-inspect createContract() yourself now — do not trust the prior session's self-report; find the actual gap. Fix createContract() §19 atomicity: one transaction must hold the authoritative Opportunity lockForUpdate() across re-read, CONFIRMED gate evaluation, Project/Contract mutation and relevant audit/event mutation through commit; Opportunity must be locked FIRST; do not make authoritative decisions or mutations from the stale pre-lock model; preserve native/external Quote semantics and no Opportunity->Project Service-Line propagation. Add a discriminating real-MySQL concurrency regression for reconcile -> {} racing createContract(): RED first, GREEN only after the production fix, genuinely separate connections/processes and controlled interleaving, not sequential simulation; determine the smallest appropriate way to make this regression execute automatically in an existing real-MySQL CI surface. Do NOT perform optional cleanup of GAP048_SIMULATE_MAPPER_FAILURE unless technically necessary for the mandatory fix. After correction: run focused tests + affected regression, run real-MySQL concurrency evidence, run required broader quality/governance checks, recompute implementation subject SHA/digest using canonical repo tooling, refresh Gate-3 technical evidence, push to the existing PR #295, keep it Draft, STOP at awaiting_owner. Do not approve Gate 3, mark Ready, merge, release, deploy, or start another Work ID.' Independent re-inspection at the reviewed head confirmed the finding: createContract() split its classification gate re-check into its own short DB::transaction() (Opportunity::lockForUpdate(), hasConfirmedServiceLine() check, commit — releasing the row lock immediately), then performed Project creation in a second, separate DB::transaction(), then Contract+BOQ+BOQ-line creation and both audit EventRecord writes in a third, separate DB::transaction() — none of which re-acquired or held the Opportunity row lock, and the Project-creation step mutated the STALE, pre-lock $opportunity model instance loaded before any transaction began, not the freshly-locked model. This exactly matches the Owner-identified defect: the authoritative gate decision was made under lock, but the mutation was not — a genuine check-then-act race distinct from what CONCURRENCY-1/2/3 (transition()/sendQuote()/update()) already covered.' | GAP-048 Gate 3 Round 2 (relayed via coordinator session, reviewed exact PR head 87d83ea45f60bd62a1f43095ad52b38728b583c2, canonical main at review time dd7ed7c9bf58bbe05cc2df4f1f6cf10dc5a5e2f3, bound implementation_tree_digest 0bfd5dfc8d321c763acf5d4099bcc83afac174a95444df2a32157ee57df723c5): 'DECISION: APPROVED. GAP-048 Gate 3 Owner decision: APPROVED. Proceed in this same session with the repository-defined Gate-3 approval and release sequence.' Owner independently verified PR #295 head 87d83ea4, digest 0bfd5dfc8d321c763acf5d4099bcc83afac174a95444df2a32157ee57df723c5, and live CI 32/32 applicable checks green (including the Owner Governance Lint 300s-race rerun) before issuing this decision. Agent-side re-verification before recording: no stray background process could mutate the worktree; origin/main re-fetched and confirmed unchanged at dd7ed7c9 (the same Gate-2 baseline throughout); docs/owner-governance/packet-schema.yml re-read fresh; implementation_tree_digest recomputed via owner_governance_compute_implementation_tree_digest() directly against subject_sha 141024d79935d691e3bd205726f0e5ff562d8aac and confirmed byte-for-byte equal to 0bfd5dfc8d321c763acf5d4099bcc83afac174a95444df2a32157ee57df723c5; ancestry from subject_sha to the current PR head (87d83ea4) confirmed to contain exactly two commits (cd0f8bd1, 87d83ea4), each touching ONLY docs/owner-decisions/GAP-048/03-release.md (verified via git show --name-only on each), i.e. Gate-3-record-only, consistent with digest exclusion by construction. This approval authorizes: mark PR #295 Ready for Review, merge per repository policy guarded against head drift, record the exact merge SHA, verify origin/main equals the release result, inspect post-merge CI to completion, and inspect the actual deployment job/log (never inferring deployment from workflow success) — all in this same session, immediately following this decision record. Not authorized: starting another Work ID, opportunistic cleanup beyond this release sequence.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-08-31T00:10:00+07:00"
-  updated_at: "2026-09-01T00:00:00Z"
+  updated_at: "2026-09-01T05:35:00Z"
 generated_by: agent
 residual_risk_rating: medium
-mandatory_technical_gate_summary: "GAP-048 implementation (canonical multi-valued Service-Line classification UX with explicit CONFIRMED confirmation; shared legacy->canonical mapper reused by store()/Lead-convert()/update(); nullable service_category migration verified on SQLite and real MySQL 8.0 including safe down()-rollback with pre-existing NULL data; pipeline/sendQuote()/convert()/createContract() gates backed by one shared CONFIRMED predicate; Opportunity-row locking with canonical lock order closing the Owner-identified concurrency race, INCLUDING the Gate-3 Round 1 correction to createContract() itself) is technically complete and verified. Gate-3 Round 1 correction: createContract() previously split its classification gate re-check from its Project/Contract/BOQ mutation and audit EventRecord writes across three separate DB transactions, releasing the Opportunity row lock between the gate re-check and the mutation, and mutating a stale pre-lock $opportunity model instance for Project creation. Fixed to one continuous DB::transaction() holding Opportunity::lockForUpdate() (locked first) from the re-read and gate re-check through contract.create authorization, conditional Project creation, Contract+BOQ+BOQ-line mutation, and both audit EventRecord writes, to commit — matching the same discipline already used by sendQuote()/convert()/reconcile(). New CONCURRENCY-4 real-MySQL regression (tests/Feature/Concurrency/OpportunityServiceLineConcurrencyTest.php) proves this directly with a genuinely separate OS process (createContract() subprocess) racing a genuinely separate DB connection (an in-PHPUnit-process reconcile({}) probe, synchronized via a test-only start-marker file so it races createContract()'s own critical section rather than PHP/Laravel bootstrap time): RED on the prior 3-transaction implementation (140/140 concurrent probe attempts completed near-instantly while no Contract row existed yet); GREEN after the fix (0 fast completions, repeated 3x); sabotage-verified by reverting the fix and reproducing the exact RED failure again, then restoring it. A pre-existing test (CrmApiTest::test_create_contract_requires_contract_create_permission) asserted the OLD non-atomic behavior (a denied contract.create authorization left a converted Project behind) as though it were intentional; updated to assert the corrected atomic behavior (the whole attempt, including Project auto-convert, rolls back together) with an explanatory comment — the old behavior was itself a symptom of the bug being fixed, not a documented product requirement. Added a dedicated 'GAP-048 Service-Line Concurrency (real MySQL)' CI job (scripts/ci/gap048-service-line-concurrency-mysql + .github/workflows/automated-testing.yml), mirroring the existing RFI Escalation/Document Workflow/Treasury Native CHECK Constraints real-MySQL job pattern exactly, so CONCURRENCY-1/2/3/4 now run automatically in CI (previously a disclosed known limitation: local-only). Full SQLite regression: 2416 tests, 8 pre-existing/unrelated failures (verified zero-diff against baseline dd7ed7c9 for every affected file: 7 Dashboard widget tests failing on a pre-existing broken Redis cache-store method, 1 flaky SecureUploadServiceTest), 0 GAP-048 regressions. CONCURRENCY-1/2/3 real-MySQL subprocess-race evidence re-verified unaffected by this correction, still sabotage-verified discriminating. Nullable migration verified on SQLite and real MySQL 8.0 (unaffected by this correction). Targeted focused regression re-run after the fix: tests/Feature/Crm, tests/Feature/QuoteToContractTest.php, tests/Feature/Api/CrmApiTest.php, tests/Feature/QuoteLifecycleTest.php, tests/Feature/QuoteCommercialEndpointTest.php, tests/Feature/Zena/OperatorCrmUiTest.php, tests/Feature/OpportunityAppointmentLifecycleTest.php, tests/Feature/Console/BackfillOpportunityServiceLinesTest.php, tests/Feature/Zena/AiDesignItemSuggestionTest.php: 141 tests, 526 assertions, 0 failures. GAP048_SIMULATE_MAPPER_FAILURE left untouched (not technically necessary for this mandatory fix, per Owner directive). This packet records technical readiness for Owner Gate-3 review only; it does not authorize Ready-for-review, merge, release, or production deployment."
+mandatory_technical_gate_summary: "GAP-048 implementation (canonical multi-valued Service-Line classification UX with explicit CONFIRMED confirmation; shared legacy->canonical mapper reused by store()/Lead-convert()/update(); nullable service_category migration verified on SQLite and real MySQL 8.0 including safe down()-rollback with pre-existing NULL data; pipeline/sendQuote()/convert()/createContract() gates backed by one shared CONFIRMED predicate; Opportunity-row locking with canonical lock order closing the Owner-identified concurrency race, INCLUDING the Gate-3 Round 1 correction to createContract() itself) is technically complete and verified. Gate-3 Round 1 correction: createContract() previously split its classification gate re-check from its Project/Contract/BOQ mutation and audit EventRecord writes across three separate DB transactions, releasing the Opportunity row lock between the gate re-check and the mutation, and mutating a stale pre-lock $opportunity model instance for Project creation. Fixed to one continuous DB::transaction() holding Opportunity::lockForUpdate() (locked first) from the re-read and gate re-check through contract.create authorization, conditional Project creation, Contract+BOQ+BOQ-line mutation, and both audit EventRecord writes, to commit — matching the same discipline already used by sendQuote()/convert()/reconcile(). New CONCURRENCY-4 real-MySQL regression (tests/Feature/Concurrency/OpportunityServiceLineConcurrencyTest.php) proves this directly with a genuinely separate OS process (createContract() subprocess) racing a genuinely separate DB connection (an in-PHPUnit-process reconcile({}) probe, synchronized via a test-only start-marker file so it races createContract()'s own critical section rather than PHP/Laravel bootstrap time): RED on the prior 3-transaction implementation (140/140 concurrent probe attempts completed near-instantly while no Contract row existed yet); GREEN after the fix (0 fast completions, repeated 3x); sabotage-verified by reverting the fix and reproducing the exact RED failure again, then restoring it. A pre-existing test (CrmApiTest::test_create_contract_requires_contract_create_permission) asserted the OLD non-atomic behavior (a denied contract.create authorization left a converted Project behind) as though it were intentional; updated to assert the corrected atomic behavior (the whole attempt, including Project auto-convert, rolls back together) with an explanatory comment — the old behavior was itself a symptom of the bug being fixed, not a documented product requirement. Added a dedicated 'GAP-048 Service-Line Concurrency (real MySQL)' CI job (scripts/ci/gap048-service-line-concurrency-mysql + .github/workflows/automated-testing.yml), mirroring the existing RFI Escalation/Document Workflow/Treasury Native CHECK Constraints real-MySQL job pattern exactly, so CONCURRENCY-1/2/3/4 now run automatically in CI (previously a disclosed known limitation: local-only). Full SQLite regression: 2416 tests, 8 pre-existing/unrelated failures (verified zero-diff against baseline dd7ed7c9 for every affected file: 7 Dashboard widget tests failing on a pre-existing broken Redis cache-store method, 1 flaky SecureUploadServiceTest), 0 GAP-048 regressions. CONCURRENCY-1/2/3 real-MySQL subprocess-race evidence re-verified unaffected by this correction, still sabotage-verified discriminating. Nullable migration verified on SQLite and real MySQL 8.0 (unaffected by this correction). Targeted focused regression re-run after the fix: tests/Feature/Crm, tests/Feature/QuoteToContractTest.php, tests/Feature/Api/CrmApiTest.php, tests/Feature/QuoteLifecycleTest.php, tests/Feature/QuoteCommercialEndpointTest.php, tests/Feature/Zena/OperatorCrmUiTest.php, tests/Feature/OpportunityAppointmentLifecycleTest.php, tests/Feature/Console/BackfillOpportunityServiceLinesTest.php, tests/Feature/Zena/AiDesignItemSuggestionTest.php: 141 tests, 526 assertions, 0 failures. GAP048_SIMULATE_MAPPER_FAILURE left untouched (not technically necessary for this mandatory fix, per Owner directive). Owner Gate-3 decision: APPROVED 2026-09-01, bound to implementation-tree digest 0bfd5dfc8d321c763acf5d4099bcc83afac174a95444df2a32157ee57df723c5 at subject_sha 141024d79935d691e3bd205726f0e5ff562d8aac (decision-record head 87d83ea4). Release (mark-ready, merge, post-merge CI/deployment observation) proceeds under this approval, per the Owner's explicit release-sequence authorization."
 technical_evidence:
   subject_sha: "141024d79935d691e3bd205726f0e5ff562d8aac"
   implementation_tree_digest: "0bfd5dfc8d321c763acf5d4099bcc83afac174a95444df2a32157ee57df723c5"
   verified_pr_head_sha: "cd0f8bd17d36e7f85853e4cbe6b019f3189af4b7"
   verified_at: "2026-09-01T05:10:00Z"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "0bfd5dfc8d321c763acf5d4099bcc83afac174a95444df2a32157ee57df723c5"
+  decision_recorded_at: "2026-09-01T05:35:00Z"
 ---
 
 # GAP-048 — CRM Classification UX & Gates: Gate 3 Release Request
 
-**Status: `awaiting_owner`.** This packet requests Owner Gate-3 review of a
-technically-complete, freshly-verified implementation. It does **not**
-itself authorize Ready-for-review, merge, release, or production
-deployment — those require a separate, explicit Owner instruction issued
-after this Gate-3 decision.
+## OWNER GATE 3: APPROVED
+
+**Status: `approved`.** Owner Gate-3 decision: **APPROVED** on 2026-09-01,
+bound to implementation-tree digest
+`0bfd5dfc8d321c763acf5d4099bcc83afac174a95444df2a32157ee57df723c5` at
+subject_sha `141024d79935d691e3bd205726f0e5ff562d8aac` (decision-record
+head `87d83ea4`). This approval authorizes the release sequence (mark PR
+#295 Ready, merge, post-merge CI/deployment verification) per the Owner's
+explicit release-sequence authorization recorded in this file's
+frontmatter `decision_provenance.owner_response_reference` (Round 2)
+above. See "Owner Decision History — Round 2 — APPROVED" below for the
+full record.
 
 ## Owner Decision History — Round 1 — CORRECTION REQUESTED (permanent record, never erased)
 
@@ -87,6 +94,37 @@ Gate-3 decision (approve/defer) had yet been rendered against `ee600951`
 — the packet remains `awaiting_owner` for a fresh Gate-3 decision against
 the corrected head below. This Round 1 record is preserved permanently
 and must not be removed by any future revision.
+
+## Owner Decision History — Round 2 — APPROVED (permanent record, never erased)
+
+**Owner Gate-3 Round 2 decision: APPROVED.** Full verbatim directive
+preserved in this file's frontmatter `decision_provenance.owner_response_reference`
+above (Round 2 segment, after the ` | `). Owner independently verified PR
+#295 head `87d83ea45f60bd62a1f43095ad52b38728b583c2`, implementation-tree
+digest `0bfd5dfc8d321c763acf5d4099bcc83afac174a95444df2a32157ee57df723c5`,
+and live CI 32/32 applicable checks green (including the Owner Governance
+Lint 300s-race rerun) before issuing this decision. Before recording this
+decision, agent-side re-verification confirmed: no stray background
+process could mutate the worktree; `origin/main` re-fetched and unchanged
+at `dd7ed7c9` (the same Gate-2 baseline throughout GAP-048); the current
+`docs/owner-governance/packet-schema.yml` re-read fresh; the
+implementation-tree digest recomputed via this repository's own
+`owner_governance_compute_implementation_tree_digest()` directly against
+subject_sha `141024d79935d691e3bd205726f0e5ff562d8aac`, confirmed
+byte-for-byte equal to the Owner-approved digest; and the commit ancestry
+from subject_sha to the then-current PR head (`87d83ea4`) confirmed to
+contain exactly two commits (`cd0f8bd1`, `87d83ea4`), each touching ONLY
+`docs/owner-decisions/GAP-048/03-release.md` (verified via `git show
+--name-only` on each) — i.e. Gate-3-record-only, consistent with the
+digest's exclusion of exactly this file by construction. This approval
+authorizes the release sequence: mark PR #295 Ready for Review, merge per
+repository policy guarded against head drift, record the exact merge SHA,
+verify `origin/main` equals the release result, inspect post-merge CI to
+completion, and inspect the actual deployment job/log (never inferring
+deployment from workflow success alone) — all performed in this same
+session immediately following this decision record, documented in the
+"Release execution record" section below. This Round 2 record is
+preserved permanently and must not be removed by any future revision.
 
 ## Implementation baseline and PR
 

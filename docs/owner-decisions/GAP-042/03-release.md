@@ -1,14 +1,14 @@
 ---
 work_id: GAP-042
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-09-01-gap-042-rbac-model-consolidation-design.md
   plan: docs/superpowers/plans/2026-09-02-gap-042-rbac-production-fidelity-implementation.md
@@ -18,32 +18,70 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-09-02T09:40:00Z"
-  owner_response_reference: "GAP-042 Gate 3 Owner Round 2 (relayed via coordinator session, reviewed exact corrected implementation subject feaa320b98b31380c2cac7e74ce872616b63eca5 / implementation-tree digest 8512e0a5e22f0712d56bac6bf3e1a94f0c02ba8e2aa5356c0041638b62733295 and Gate-3 record/PR head 6b4ef1535456925748928b38e47af6b470c4eeef against canonical main 673855f69a3633b64c378e965ae409ed3a098c50): 'DECISION: CHANGES REQUESTED. Continue in the SAME GAP-042 implementation/Gate-3 session, SAME branch/worktree, and SAME Draft PR #299. Do not open a new session, create another implementation branch, use the abandoned duplicate local implementation attempt, mark Ready, merge, deploy, or start another Work ID. The major Round-1 corrections are accepted as directionally correct — do not reopen them. Round 2 is narrowly limited to: Correction 10 — Permission Matrix EventBus projectId semantics are still wrong. Round-1 Correction 6 explicitly required actorId = actual acting user or repository-established system fallback; projectId = actual project id for a genuine project event; for NON-PROJECT RBAC events, use the repository-established system convention; never label tenant id as project id. The corrected subject still violates that rule in the Permission Matrix execution path: PermissionMatrixController::export(), PermissionMatrixController::import(), PermissionMatrixService::importFromCSV() per-role event all use `projectId => (string) ($tenantId ?? system)`. These are NOT project-domain events — fix to the literal `projectId => system` convention. Keep actorId truthful, entityId truthful, no EventBus refactor, no changes outside the GAP-042-touched RBAC event surface. RED first: add a discriminating test proving no remaining Permission-Matrix pattern equivalent to `projectId => $tenantId` or `projectId => ($tenantId ?? ...)` for these non-project events — prefer capturing the actual emitted/audit payload if practical. Correction 11 — rejected Permission Matrix imports must not create global permission rows before authorization/role validation. PermissionMatrixService::importFromCSV() performs `Permission::firstOrCreate(...)` while parsing CSV rows, BEFORE resolving whether the target role is visible to the caller tenant, belongs to the caller tenant, or is global/system and therefore read-only — leaving an unauthorized side effect (the import route only requires rbac:permission.import; direct permission creation is separately protected by rbac:permission.create). RED tests first using a permission code that does NOT exist before the request: (A) cross-tenant target role — as tenant A, import CSV targeting a tenant-B-owned role using a brand-new permission code; after the request, tenant-B role permissions unchanged, no role_permissions row written, permissions table does NOT contain the new code. (B) global/system read-only target role — same proof for a genuine global/system role. Control: an own-tenant mutable role importing a genuinely new valid permission may continue to create the permission and sync it. Implementation requirement: do not perform permission-creation side effects until the relevant target role has passed visibility/ownership/global-read-only validation — prefer a parse/validate/resolve-before-write structure; do not redesign the whole CSV importer; if partial success across multiple valid/invalid roles is intentionally supported, preserve that behavior, but an invalid/global/cross-tenant ROLE row must produce ZERO permission-definition or role-permission writes. Correction 12 — make Gate-3 evidence exactly match the tests. The current packet claims BOTH effective-permissions and check-permission are proven fail-closed for both another tenant's user and another tenant's project, but the Round-1 correction test suite only explicitly exercises effective-permissions x cross-tenant user, check-permission x cross-tenant user, effective-permissions x cross-tenant project, and valid own-tenant controls — add the missing check-permission x cross-tenant project discriminator with the same non-disclosing failure behavior; this is preferable to weakening the packet wording. Also refresh the PR body before final Gate-3 re-presentation to remove stale pre-Round-1 evidence language. Do not rewrite historical Gate-3 decision records. Verification: strict RED->GREEN for Corrections 10-12; run the new Round-2 focused tests, both prior GAP-042 suites, RbacApiTest, genuine disposable MySQL 8.0 (clean migrate:fresh, canonical RBAC tables present, zena_roles/zena_permissions absent, all GAP-042 RBAC tests green), broader SQLite regression, PHPStan/Deptrac and applicable code-quality checks, route inventory (still exactly the authorized 29 RBAC routes, no new public API), and inspect the full diff from canonical main for scope creep. Then freeze a NEW implementation subject SHA, recompute the implementation-tree digest via the repository canonical Owner-Governance implementation-tree function, update this Gate-3 packet (preserve Round 1 CHANGES REQUESTED permanently, append/preserve this Round 2 CHANGES REQUESTED decision, update subject SHA and tree digest, refresh correction evidence truthfully, do not overwrite history, return to awaiting_owner/technical_readiness:ready only when repository governance permits it), push to the SAME Draft PR #299, wait for ALL mandatory CI checks on the FINAL exact head (Owner Governance Lint MUST be SUCCESS on that final exact head), then STOP for Owner Round-3 review. Do not reopen: Option A canonical schema convergence; custom_user_roles 3-layer decision/migration shape; tenant role visibility semantics; global-role read-only policy; assignment tenant checks already corrected; scope=system escalation protection; genuine-global assignSystemRole check; revoke identity validation; effective/check-permission tenant-target helper; restored project routes; route identity decision; unwired methods decision; RolePermission decision; roles.name uniqueness; getUserRoles exclusion; Compensation/RBACMiddleware exclusion; production deployment; GAP-041/GAP-045. No new public API. No Ready flip. No merge. No release. No deploy. No self-approval.'"
+  recorded_at: "2026-09-02T12:42:08Z"
+  owner_response_reference: "GAP-042 Gate 3 Owner Round 3 FINAL decision (relayed via coordinator session): 'OWNER GATE-3 ROUND 3 DECISION IS APPROVED and has been independently re-verified with zero drift. Binding: PR #299; canonical main 673855f69a3633b64c378e965ae409ed3a098c50; reviewed pre-approval PR head 93cf720a0412b77f5629fdf104d9c76bc84d5831; approved implementation subject 13e9e64df3c9ceba29dd191494df8a4ee757b1f5; approved implementation-tree digest 6192e9e48ffba5d04b875baf16b8848ee2d9e069645f3284367a2a7de2e22917. Live re-verification immediately before this directive confirmed: PR #299 still Open/Draft/unmerged/mergeable; PR head still exactly 93cf720a...; main still exactly 673855f6...; all pull-request workflows on 93cf720a... completed/success, including Owner Governance Lint (after the documented 300s sibling-timing race rerun, zero code change). Proceed with administrative release closeout only: recompute the digest one final time and require exact equality with the approved digest; record this approval in docs/owner-decisions/GAP-042/03-release.md (gate_status: approved, technical_readiness.value: ready, owner_decision.value: approved, owner_decision.authority: human_owner, decision_requested cleared, owner_decision_binding.implementation_tree_digest bound to the approved digest), preserving Round 1 and Round 2 CHANGES REQUESTED history permanently; the approval-record commit must be governance/docs-only (no implementation code/tests/migrations/workflows changed); push to the same PR #299 and wait for mandatory CI on the new approval-record head (Owner Governance Lint must be SUCCESS; if the sibling-timing race recurs, wait for siblings and rerun without code changes); verify implementation subject and approved digest unchanged, Gate 3 approved, human_owner authority preserved, Round 1/2 histories preserved, main not materially drifted; mark PR #299 Ready only after the approval-record head is fully green; re-fetch main immediately before merge, STOP if material RBAC/governance drift occurred, otherwise merge using the repository demonstrated implementation-PR convention (squash unless evidence proves otherwise); after merge verify live PR merged/closed, exact merge SHA, main pointing to expected merge result, Gate-3 approved packet on main, implementation-tree provenance intact, relevant post-merge workflows and their actual conclusions — do NOT claim production deployment merely because CI/CD or staging workflows are green, GAP-042 does not authorize deployment and production secrets/configuration remain outside this Work ID; clean the abandoned duplicate local GAP-042 worktree/branch only after verifying it has no remote trace or unique authorized work, then clean the completed implementation worktree per repo conventions. Do not start the next Work ID in this session.'\" | \"GAP-042 Gate 3 Owner Round 2 (relayed via coordinator session, reviewed exact corrected implementation subject feaa320b98b31380c2cac7e74ce872616b63eca5 / implementation-tree digest 8512e0a5e22f0712d56bac6bf3e1a94f0c02ba8e2aa5356c0041638b62733295 and Gate-3 record/PR head 6b4ef1535456925748928b38e47af6b470c4eeef against canonical main 673855f69a3633b64c378e965ae409ed3a098c50): 'DECISION: CHANGES REQUESTED. Continue in the SAME GAP-042 implementation/Gate-3 session, SAME branch/worktree, and SAME Draft PR #299. Do not open a new session, create another implementation branch, use the abandoned duplicate local implementation attempt, mark Ready, merge, deploy, or start another Work ID. The major Round-1 corrections are accepted as directionally correct — do not reopen them. Round 2 is narrowly limited to: Correction 10 — Permission Matrix EventBus projectId semantics are still wrong. Round-1 Correction 6 explicitly required actorId = actual acting user or repository-established system fallback; projectId = actual project id for a genuine project event; for NON-PROJECT RBAC events, use the repository-established system convention; never label tenant id as project id. The corrected subject still violates that rule in the Permission Matrix execution path: PermissionMatrixController::export(), PermissionMatrixController::import(), PermissionMatrixService::importFromCSV() per-role event all use `projectId => (string) ($tenantId ?? system)`. These are NOT project-domain events — fix to the literal `projectId => system` convention. Keep actorId truthful, entityId truthful, no EventBus refactor, no changes outside the GAP-042-touched RBAC event surface. RED first: add a discriminating test proving no remaining Permission-Matrix pattern equivalent to `projectId => $tenantId` or `projectId => ($tenantId ?? ...)` for these non-project events — prefer capturing the actual emitted/audit payload if practical. Correction 11 — rejected Permission Matrix imports must not create global permission rows before authorization/role validation. PermissionMatrixService::importFromCSV() performs `Permission::firstOrCreate(...)` while parsing CSV rows, BEFORE resolving whether the target role is visible to the caller tenant, belongs to the caller tenant, or is global/system and therefore read-only — leaving an unauthorized side effect (the import route only requires rbac:permission.import; direct permission creation is separately protected by rbac:permission.create). RED tests first using a permission code that does NOT exist before the request: (A) cross-tenant target role — as tenant A, import CSV targeting a tenant-B-owned role using a brand-new permission code; after the request, tenant-B role permissions unchanged, no role_permissions row written, permissions table does NOT contain the new code. (B) global/system read-only target role — same proof for a genuine global/system role. Control: an own-tenant mutable role importing a genuinely new valid permission may continue to create the permission and sync it. Implementation requirement: do not perform permission-creation side effects until the relevant target role has passed visibility/ownership/global-read-only validation — prefer a parse/validate/resolve-before-write structure; do not redesign the whole CSV importer; if partial success across multiple valid/invalid roles is intentionally supported, preserve that behavior, but an invalid/global/cross-tenant ROLE row must produce ZERO permission-definition or role-permission writes. Correction 12 — make Gate-3 evidence exactly match the tests. The current packet claims BOTH effective-permissions and check-permission are proven fail-closed for both another tenant's user and another tenant's project, but the Round-1 correction test suite only explicitly exercises effective-permissions x cross-tenant user, check-permission x cross-tenant user, effective-permissions x cross-tenant project, and valid own-tenant controls — add the missing check-permission x cross-tenant project discriminator with the same non-disclosing failure behavior; this is preferable to weakening the packet wording. Also refresh the PR body before final Gate-3 re-presentation to remove stale pre-Round-1 evidence language. Do not rewrite historical Gate-3 decision records. Verification: strict RED->GREEN for Corrections 10-12; run the new Round-2 focused tests, both prior GAP-042 suites, RbacApiTest, genuine disposable MySQL 8.0 (clean migrate:fresh, canonical RBAC tables present, zena_roles/zena_permissions absent, all GAP-042 RBAC tests green), broader SQLite regression, PHPStan/Deptrac and applicable code-quality checks, route inventory (still exactly the authorized 29 RBAC routes, no new public API), and inspect the full diff from canonical main for scope creep. Then freeze a NEW implementation subject SHA, recompute the implementation-tree digest via the repository canonical Owner-Governance implementation-tree function, update this Gate-3 packet (preserve Round 1 CHANGES REQUESTED permanently, append/preserve this Round 2 CHANGES REQUESTED decision, update subject SHA and tree digest, refresh correction evidence truthfully, do not overwrite history, return to awaiting_owner/technical_readiness:ready only when repository governance permits it), push to the SAME Draft PR #299, wait for ALL mandatory CI checks on the FINAL exact head (Owner Governance Lint MUST be SUCCESS on that final exact head), then STOP for Owner Round-3 review. Do not reopen: Option A canonical schema convergence; custom_user_roles 3-layer decision/migration shape; tenant role visibility semantics; global-role read-only policy; assignment tenant checks already corrected; scope=system escalation protection; genuine-global assignSystemRole check; revoke identity validation; effective/check-permission tenant-target helper; restored project routes; route identity decision; unwired methods decision; RolePermission decision; roles.name uniqueness; getUserRoles exclusion; Compensation/RBACMiddleware exclusion; production deployment; GAP-041/GAP-045. No new public API. No Ready flip. No merge. No release. No deploy. No self-approval.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-02T06:20:00Z"
-  updated_at: "2026-09-02T09:40:00Z"
+  updated_at: "2026-09-02T12:42:08Z"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "GAP-042 implements Option A exactly as approved through Gate 2 Round 5, corrected per Owner Gate-3 Round 1 (CHANGES REQUESTED) and Round 2 (CHANGES REQUESTED), full text of both in decision_provenance.owner_response_reference history (Round 1 text preserved verbatim in the Round-1 section below; Round 2 text in this frontmatter's current owner_response_reference). Round-1 corrections 1-7 (see 'Owner Decision History — Round 1' and 'Round-1 correction evidence' below) remain implemented and verified, unchanged this round per the Owner's explicit 'do not reopen' instruction. Round-2 corrections 10-12 (see 'Owner Decision History — Round 2' and 'Round-2 correction evidence' below for the complete, itemized RED->GREEN record) are all implemented and verified: (10) Permission Matrix EventBus non-project events (PermissionMatrixController::export()/import(), PermissionMatrixService::importFromCSV()'s per-role event) now publish the literal `'projectId' => 'system'` convention instead of `(string) ($tenantId ?? 'system')`, proven both by a captured-payload EventBus test (wildcard-listener subscription) and a static source-pattern assertion; (11) PermissionMatrixService::importFromCSV() restructured to a parse-then-validate-then-write flow — CSV rows are only parsed/queued per role name in a first pass, and Permission::firstOrCreate() only runs in a second pass after the target role has passed the pre-existing visibility/ownership/global-read-only checks, so an import aimed at a cross-tenant or global/read-only role now produces zero `permissions` or `role_permissions` writes (proven with brand-new permission codes that do not exist before the request, per the Owner's explicit RED-test requirement); (12) the missing check-permission x cross-tenant project discriminator added, completing the tenant-fail-closed security matrix (the existing shared targetsAreTenantScoped() helper already covered this path — this closes a test-coverage gap, not an implementation gap). Correction 9/Round-1's exact-head CI-before-awaiting_owner sequence is being followed again for this round: this packet's gate_status remains awaiting_owner only after this same session pushes this content and independently confirms Owner Governance Lint SUCCESS plus all other mandatory checks green on this exact new subject_sha, per the final CI-status section below."
+mandatory_technical_gate_summary: "GAP-042 implements Option A exactly as approved through Gate 2 Round 5, corrected per Owner Gate-3 Round 1 (CHANGES REQUESTED) and Round 2 (CHANGES REQUESTED), and now FINAL-APPROVED at Round 3 — full text of all three rounds in decision_provenance.owner_response_reference history (Round 1 text preserved verbatim in the Round-1 section below; Round 2 text preserved verbatim in the Round-2 section below; Round 3 FINAL APPROVED text in this frontmatter's current owner_response_reference). Round-1 corrections 1-7 and Round-2 corrections 10-12 (see the corresponding 'Owner Decision History' and 'correction evidence' sections below for the complete, itemized RED->GREEN record) remain implemented and verified, unchanged at Round 3 per the Owner's explicit 'do not reopen' instruction — Round 3 was a pure approval decision with zero technical corrections. GAP-042 IS NOW OWNER-APPROVED FOR RELEASE, bound strictly to subject_sha 13e9e64df3c9ceba29dd191494df8a4ee757b1f5 / implementation_tree_digest 6192e9e48ffba5d04b875baf16b8848ee2d9e069645f3284367a2a7de2e22917, independently re-verified by the Owner immediately before the Round 3 decision with zero drift against canonical main 673855f69a3633b64c378e965ae409ed3a098c50 and pre-approval PR head 93cf720a0412b77f5629fdf104d9c76bc84d5831 (all pull-request workflows completed/success including Owner Governance Lint, after the documented 300s sibling-timing race rerun with zero code change). This approval-record commit changes only this file; the implementation-tree digest is unaffected by construction (the active Gate-3 packet is excluded from the digest calculation). Post-approval-record CI and a pre-merge drift check against canonical main remain required before Ready-for-review/merge."
 technical_evidence:
   subject_sha: "13e9e64df3c9ceba29dd191494df8a4ee757b1f5"
   implementation_tree_digest: "6192e9e48ffba5d04b875baf16b8848ee2d9e069645f3284367a2a7de2e22917"
-  verified_pr_head_sha: "13e9e64df3c9ceba29dd191494df8a4ee757b1f5"
-  verified_at: "2026-09-02T08:50:00Z"
+  verified_pr_head_sha: "93cf720a0412b77f5629fdf104d9c76bc84d5831"
+  verified_at: "2026-09-02T12:42:08Z"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "6192e9e48ffba5d04b875baf16b8848ee2d9e069645f3284367a2a7de2e22917"
+  decision_recorded_at: "2026-09-02T12:42:08Z"
 ---
 
 # GAP-042 — RBAC Production-Fidelity Restoration: Gate 3 Release Request
 
-**Gate 3 packet status: `awaiting_owner`.** This is evidence/request only —
-it is NOT Owner approval. No merge, no Ready-for-review flip, no release,
-no deployment has occurred or is authorized by this packet.
+**Gate 3 packet status: `approved`.** Owner Gate-3 Round 3 FINAL APPROVED
+this implementation, bound strictly to subject_sha `13e9e64df3c9ceba29dd191494df8a4ee757b1f5` /
+implementation_tree_digest `6192e9e48ffba5d04b875baf16b8848ee2d9e069645f3284367a2a7de2e22917`.
+Administrative release closeout (Ready-flip, pre-merge drift check, merge)
+proceeds per the Owner's explicit Round-3 directive — see "Owner Decision
+History — Round 3" immediately below. Production deployment remains
+**not** authorized by this Work ID regardless of merge outcome.
+
+## Owner Decision History — Round 3 — APPROVED (FINAL, permanent record, never erased)
+
+**Owner Gate-3 Round 3 decision: APPROVED.** Independently re-verified
+with zero drift immediately before the decision: PR #299 still
+Open/Draft/unmerged/mergeable; PR head still exactly
+`93cf720a0412b77f5629fdf104d9c76bc84d5831`; canonical main still exactly
+`673855f69a3633b64c378e965ae409ed3a098c50`; all pull-request workflows on
+`93cf720a...` completed/success, including `Owner Governance Lint` (after
+the documented 300s sibling-timing race rerun, zero code change — see
+"CI status" below for the full exact-head snapshot). Binding: approved
+implementation subject `13e9e64df3c9ceba29dd191494df8a4ee757b1f5`,
+approved implementation-tree digest
+`6192e9e48ffba5d04b875baf16b8848ee2d9e069645f3284367a2a7de2e22917` —
+independently recomputed by the agent via the repository-canonical
+`owner_governance_compute_implementation_tree_digest()` function
+immediately before recording this decision and confirmed to match
+exactly. Full verbatim Round-3 directive preserved in this file's
+frontmatter `decision_provenance.owner_response_reference` above. This
+approval authorizes administrative release closeout only: this
+approval-record commit (governance/docs-only, no implementation code,
+tests, migrations, or workflow files touched), post-approval-record-
+commit CI verification on the new exact PR head (Owner Governance Lint
+must reprove SUCCESS), a pre-merge drift check against canonical main,
+and — if and only if every condition holds — marking PR #299 Ready for
+Review and merging into main per the repository's demonstrated
+implementation-PR convention. No manual production-deployment trigger is
+authorized by this decision; GAP-042 does not authorize deployment and
+production secrets/configuration remain outside this Work ID. Post-
+merge, the agent must independently verify PR merged state, the exact
+merge SHA, canonical main advancing to that SHA, the Gate-3 approved
+packet present on main, implementation-tree provenance intact, and
+post-merge required workflows' actual conclusions. This record is
+preserved permanently and must not be removed by any future revision.
 
 ## Owner Decision History — Round 1 — CHANGES REQUESTED (permanent record, never erased)
 
@@ -460,17 +498,26 @@ untouched); `AssignmentController::getUserRoles()` and the
 (both explicitly excluded, untouched); `Src\RBAC\Models\RolePermission`
 (not reactivated, standard `belongsToMany()` used throughout).
 
-## What this packet does NOT authorize
+## What this packet authorizes now that Gate 3 is APPROVED
 
-This Gate-3 packet does not authorize Ready-for-review, merge, release, or
-production deployment. Those remain separate, explicit Owner decisions to
-be issued after Owner reviews this packet. The implementation PR (#299)
-remains Draft and unmerged.
+Owner Gate-3 Round 3 APPROVED this implementation, bound to subject_sha
+`13e9e64df3c9ceba29dd191494df8a4ee757b1f5` / implementation_tree_digest
+`6192e9e48ffba5d04b875baf16b8848ee2d9e069645f3284367a2a7de2e22917`. This
+approval authorizes the administrative release closeout the Owner's
+Round-3 directive explicitly describes: this approval-record commit,
+post-approval-record-commit CI verification (Owner Governance Lint must
+reprove SUCCESS on the new exact head), a pre-merge drift check against
+canonical main, and — only if every condition holds — marking PR #299
+Ready for Review and merging into main. **Production deployment is NOT
+authorized by this approval or by this Work ID** — GAP-042 does not
+touch production secrets/configuration, and no deployment claim is valid
+unless a real deploy job's log independently proves it.
 
-## What the owner is NOT being asked to decide
+## What the owner is NOT being asked to decide (historical, prior to Round 3 approval)
 
-Owner is not being asked to inspect CI logs, source diffs, or review
-comments line-by-line — only whether the demonstrated behavior (the
-completed 20-item acceptance matrix, the 9 Round-1 corrections' RED→GREEN
-evidence, real-MySQL proof, and residual risk) is acceptable to move
-toward release.
+Prior to the Round-3 APPROVED decision recorded above, the Owner was
+asked only whether the demonstrated behavior (the completed 20-item
+acceptance matrix, the Round-1/Round-2 corrections' RED→GREEN evidence,
+real-MySQL proof, and residual risk) was acceptable to move toward
+release — not to inspect CI logs, source diffs, or review comments
+line-by-line. That question has now been answered: APPROVED.

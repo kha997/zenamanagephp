@@ -31,21 +31,27 @@ Route::prefix('v1/auth')->group(function () {
 // RBAC management routes (chỉ cần rbac middleware)
 Route::prefix('v1/rbac')->middleware(['auth:sanctum', 'tenant.isolation'])->group(function () {
     // Role management
+    // NOTE (GAP-042): 'roles/by-scope' MUST be registered before 'roles/{role}' —
+    // Laravel matches routes in registration order, and the {role} wildcard was
+    // previously swallowing GET /roles/by-scope (matching {role}="by-scope"),
+    // an already-live-route defect of the same shape as §2a's other findings.
     Route::get('roles', [RoleController::class, 'index'])->middleware('rbac:role.view');
     Route::post('roles', [RoleController::class, 'store'])->middleware('rbac:role.create');
+    Route::get('roles/by-scope', [RBACController::class, 'getRolesByScope'])->middleware('rbac:role.view');
     Route::get('roles/{role}', [RoleController::class, 'show'])->middleware('rbac:role.view');
     Route::put('roles/{role}', [RoleController::class, 'update'])->middleware('rbac:role.edit');
     Route::delete('roles/{role}', [RoleController::class, 'destroy'])->middleware('rbac:role.delete');
     Route::post('roles/{role}/permissions', [RoleController::class, 'syncPermissions'])->middleware('rbac:role.edit');
-    Route::get('roles/by-scope', [RBACController::class, 'getRolesByScope'])->middleware('rbac:role.view');
-    
+
     // Permission management
+    // NOTE (GAP-042): same route-ordering fix applied to 'permissions/hierarchy'
+    // vs 'permissions/{permission}'.
     Route::get('permissions', [PermissionController::class, 'index'])->middleware('rbac:permission.view');
     Route::post('permissions', [PermissionController::class, 'store'])->middleware('rbac:permission.create');
+    Route::get('permissions/hierarchy', [RBACController::class, 'getPermissionHierarchy'])->middleware('rbac:permission.view');
     Route::get('permissions/{permission}', [PermissionController::class, 'show'])->middleware('rbac:permission.view');
     Route::put('permissions/{permission}', [PermissionController::class, 'update'])->middleware('rbac:permission.edit');
     Route::delete('permissions/{permission}', [PermissionController::class, 'destroy'])->middleware('rbac:permission.delete');
-    Route::get('permissions/hierarchy', [RBACController::class, 'getPermissionHierarchy'])->middleware('rbac:permission.view');
     
     // Permission Matrix CSV import/export
     Route::prefix('permission-matrix')->group(function () {

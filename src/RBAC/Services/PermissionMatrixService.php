@@ -25,9 +25,9 @@ class PermissionMatrixService
      * 
      * @return string CSV content
      */
-    public function exportToCSV(): string
+    public function exportToCSV(?string $tenantId = null): string
     {
-        $roles = Role::with('permissions')->get();
+        $roles = Role::query()->tenantVisible($tenantId)->with('permissions')->get();
         
         $csvData = [];
         $csvData[] = ['role_name', 'module', 'action', 'permission_code', 'allow'];
@@ -58,12 +58,19 @@ class PermissionMatrixService
 
     /**
      * Import permission matrix từ CSV
-     * 
+     *
      * @param string $csvContent Nội dung CSV
-     * @param int $actorId ID của user thực hiện import
+     * @param string $actorId ID của user thực hiện import (real authenticated
+     *        user id, or the established 'system' fallback — GAP-042
+     *        Gate-3 Round-1 Correction 6; was previously (int), silently
+     *        truncating any real ULID actor id to 0).
+     * @param string|null $tenantId GAP-042 §6: caller's tenant context. When
+     *        provided, role lookup uses the grouped tenant-visibility
+     *        predicate and a resolved global role is skipped (§6 global-role
+     *        read/write policy) instead of being silently mutated.
      * @return array Kết quả import
      */
-    public function importFromCSV(string $csvContent, int $actorId): array
+    public function importFromCSV(string $csvContent, string $actorId, ?string $tenantId = null): array
     {
         $lines = str_getcsv($csvContent, "\n");
         
@@ -91,26 +98,34 @@ class PermissionMatrixService
         $errors = [];
         $processed = 0;
         $skipped = 0;
-        $rolePermissions = []; // role_name => [permission_codes]
-        
+        // role_name => [ ['code' => ..., 'module' => ..., 'action' => ...], ... ]
+        // GAP-042 Gate-3 Round-2 Correction 11: rows are only PARSED here —
+        // no Permission row is created yet. A caller only needs
+        // rbac:permission.import for this route; Permission::firstOrCreate()
+        // must not run before the target role has passed visibility/
+        // ownership/global-read-only validation below, or an import aimed
+        // at an inaccessible/read-only role gains an incidental ability to
+        // manufacture a new global `permissions` row.
+        $rolePermissionRows = [];
+
         foreach ($lines as $lineNumber => $line) {
             $data = str_getcsv($line);
-            
+
             if (count($data) !== 5) {
                 $errors[] = "Dòng " . ($lineNumber + 2) . ": Không đủ cột dữ liệu";
                 $skipped++;
                 continue;
             }
-            
+
             [$roleName, $module, $action, $permissionCode, $allow] = $data;
-            
+
             // Validate dữ liệu
             if (empty($roleName) || empty($module) || empty($action) || empty($permissionCode)) {
                 $errors[] = "Dòng " . ($lineNumber + 2) . ": Thiếu dữ liệu bắt buộc";
                 $skipped++;
                 continue;
             }
-            
+
             // Validate allow boolean
             $allowBool = strtolower($allow) === 'true';
             if (!$allowBool) {
@@ -118,7 +133,7 @@ class PermissionMatrixService
                 $skipped++;
                 continue;
             }
-            
+
             // Validate permission code format
             $expectedCode = Permission::generateCode($module, $action);
             if ($permissionCode !== $expectedCode) {
@@ -126,47 +141,98 @@ class PermissionMatrixService
                 $skipped++;
                 continue;
             }
-            
-            // Tạo permission nếu chưa tồn tại
-            $permission = Permission::firstOrCreate(
-                ['code' => $permissionCode],
-                [
+
+            // Thêm vào danh sách role permission rows — permission creation
+            // is deferred to the per-role sync phase below, after role
+            // resolution/validation (Correction 11).
+            if (!isset($rolePermissionRows[$roleName])) {
+                $rolePermissionRows[$roleName] = [];
+            }
+
+            $alreadyQueued = collect($rolePermissionRows[$roleName])
+                ->contains(fn (array $row) => $row['code'] === $permissionCode);
+
+            if (!$alreadyQueued) {
+                $rolePermissionRows[$roleName][] = [
+                    'code' => $permissionCode,
                     'module' => $module,
                     'action' => $action,
-                    'description' => "Auto-created from CSV import"
-                ]
-            );
-            
-            // Thêm vào danh sách role permissions
-            if (!isset($rolePermissions[$roleName])) {
-                $rolePermissions[$roleName] = [];
-            }
-            
-            if (!in_array($permissionCode, $rolePermissions[$roleName], true)) {
-                $rolePermissions[$roleName][] = $permissionCode;
+                ];
                 $processed++;
             }
         }
-        
+
         // Sync permissions cho từng role
         $rolesUpdated = 0;
-        foreach ($rolePermissions as $roleName => $permissionCodes) {
-            // Tìm role (ưu tiên system scope)
-            $role = Role::where('name', $roleName)
-                       ->orderByRaw("FIELD(scope, 'system', 'custom', 'project')")
-                       ->first();
-            
+        foreach ($rolePermissionRows as $roleName => $permissionRows) {
+            // Tìm role (ưu tiên system scope) — GAP-042 §6 grouped tenant-visibility
+            // predicate: never chain a bare orWhere before the name/orderBy filters.
+            // Portable "prefer system scope" tie-break: FIELD() is MySQL-only
+            // (breaks on SQLite, where this whole path is also exercised by
+            // tests) — sort candidates in PHP instead of at the DB layer.
+            $scopeOrder = [Role::SCOPE_SYSTEM => 0, Role::SCOPE_CUSTOM => 1, Role::SCOPE_PROJECT => 2];
+            $role = Role::where(function ($q) use ($tenantId) {
+                    $q->whereNull('tenant_id');
+                    if ($tenantId !== null) {
+                        $q->orWhere('tenant_id', $tenantId);
+                    }
+                })
+                ->where('name', $roleName)
+                ->get()
+                ->sortBy(fn ($r) => $scopeOrder[$r->scope] ?? 99)
+                ->first();
+
             if (!$role) {
                 $errors[] = "Role '{$roleName}' không tồn tại";
                 continue;
             }
-            
-            // Sync permissions
-            $role->permissions()->sync($permissionCodes);
+
+            // GAP-042 §6 global-role read/write policy: a CSV import must not
+            // silently write to a global (tenant_id IS NULL) role. Correction
+            // 11: the role has now passed visibility/ownership/global-
+            // read-only validation — only now is it safe to create any
+            // missing Permission rows for this role's queued codes.
+            if ($role->tenant_id === null) {
+                $errors[] = "Role '{$roleName}' là role hệ thống, không thể import permissions qua CSV";
+                continue;
+            }
+
+            // Tạo permission nếu chưa tồn tại — deferred until after role
+            // validation above (Correction 11).
+            $permissionCodes = [];
+            foreach ($permissionRows as $row) {
+                Permission::firstOrCreate(
+                    ['code' => $row['code']],
+                    [
+                        'module' => $row['module'],
+                        'action' => $row['action'],
+                        'description' => "Auto-created from CSV import"
+                    ]
+                );
+                $permissionCodes[] = $row['code'];
+            }
+
+            // Sync permissions — resolve code -> id, sync() requires primary keys.
+            $permissionIds = Permission::whereIn('code', $permissionCodes)->pluck('id')->toArray();
+            $role->permissions()->sync($permissionIds);
             $rolesUpdated++;
-            
-            // Phát sự kiện
-            $this->eventBus->publish('rbac.role.permissions.imported', [
+
+            // Phát sự kiện — GAP-042 Gate-3 Round-1 Correction 2: the prior
+            // event name ('rbac.role.permissions.imported', 4 segments) is
+            // rejected by EventBus::validateEventName(); the payload also
+            // omitted validator-required entityId/projectId. This call runs
+            // AFTER the sync() mutation above, inside the per-role loop — a
+            // thrown exception here previously would have left prior
+            // iterations' syncs committed while aborting the rest of the
+            // request with an uncaught 500 (mutation-then-500). Fixed to a
+            // valid, complete payload so it cannot throw for a reachable
+            // input.
+            // Round-2 Correction 10: non-project RBAC event (permission-
+            // matrix per-role sync has no project concept) — projectId must
+            // use the literal 'system' convention, never the tenant id.
+            $this->eventBus->publish('rbac.role.permissionsImported', [
+                'entityId' => $role->id,
+                'projectId' => 'system',
                 'roleId' => $role->id,
                 'roleName' => $roleName,
                 'permissionCodes' => $permissionCodes,

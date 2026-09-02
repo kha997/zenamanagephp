@@ -22,8 +22,8 @@ class Role extends Model
 {
     use HasFactory, HasUlids, HasTimestamps;
 
-    protected $table = 'zena_roles';
-    
+    protected $table = 'roles';
+
     /**
      * Kiểu dữ liệu của khóa chính
      */
@@ -33,12 +33,14 @@ class Role extends Model
      * Tắt auto increment cho khóa chính
      */
     public $incrementing = false;
-    
+
     protected $fillable = [
         'name',
-        'scope', 
+        'scope',
         'allow_override',
-        'description'
+        'description',
+        'tenant_id',
+        'is_active',
     ];
 
     protected $casts = [
@@ -65,7 +67,7 @@ class Role extends Model
     {
         return $this->belongsToMany(
             Permission::class,
-            'zena_role_permissions',
+            'role_permissions',
             'role_id',
             'permission_id',
             'id',
@@ -81,7 +83,7 @@ class Role extends Model
     {
         return $this->belongsToMany(
             \App\Models\User::class,
-            'zena_user_roles',
+            'user_roles',
             'role_id',
             'user_id'
         )->withTimestamps();
@@ -137,5 +139,34 @@ class Role extends Model
     public function scopeProjectRoles($query)
     {
         return $query->where('scope', self::SCOPE_PROJECT);
+    }
+
+    /**
+     * Scope: Grouped tenant-visibility predicate — GAP-042 §6.
+     *
+     * Produces the safely-composable SQL
+     * `(tenant_id IS NULL OR tenant_id = ?) AND <any further chained filter>`.
+     * Never chain a bare `whereNull('tenant_id')->orWhere('tenant_id', $tenantId)`
+     * directly against this model — that ungrouped form silently leaks past any
+     * filter chained after it (GAP-042 Gate 2 §6, Round 3 correction).
+     */
+    public function scopeTenantVisible($query, ?string $tenantId)
+    {
+        return $query->where(function ($q) use ($tenantId) {
+            $q->whereNull('tenant_id');
+            if ($tenantId !== null) {
+                $q->orWhere('tenant_id', $tenantId);
+            }
+        });
+    }
+
+    /**
+     * True when this role is global/system-owned (tenant_id IS NULL) — GAP-042 §6's
+     * global-role read-only policy: global roles are readable everywhere but may only
+     * be mutated (update/destroy/syncPermissions/CSV import) when this returns false.
+     */
+    public function isGlobal(): bool
+    {
+        return $this->tenant_id === null;
     }
 }

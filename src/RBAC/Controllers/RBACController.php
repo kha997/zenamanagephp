@@ -4,11 +4,14 @@ namespace Src\RBAC\Controllers;
 
 use Illuminate\Http\Request;
 use App\Services\TenantContext;
+use App\Models\User;
+use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Src\RBAC\Services\RBACManager;
 use Src\RBAC\Models\Role;
 use Src\RBAC\Models\Permission;
 use Src\Foundation\EventBus;
+use Src\Foundation\Helpers\AuthHelper;
 
 /**
  * Controller tổng hợp cho các tính năng RBAC nâng cao
@@ -25,21 +28,61 @@ class RBACController
     }
 
     /**
+     * GAP-042 Gate-3 Round-1 Correction 5: fail-closed tenant-ownership
+     * check for the target {user} and (when supplied) {project_id} on the
+     * effective-permissions/check-permission routes. Restoring the table
+     * that backs these routes (Option A) made them newly, actually
+     * reachable — without this check, an authenticated caller from tenant A
+     * could query another tenant's user's effective permissions or
+     * check-permission result, a cross-tenant information-disclosure path
+     * that traded the old availability failure for a new confidentiality
+     * one. Non-disclosing: returns a generic not-found response, never
+     * revealing whether the other tenant's user/project exists.
+     */
+    private function targetsAreTenantScoped(?string $tenantId, string $userId, ?string $projectId): bool
+    {
+        if ($tenantId === null) {
+            return false;
+        }
+
+        if (!User::where('id', $userId)->where('tenant_id', $tenantId)->exists()) {
+            return false;
+        }
+
+        if ($projectId !== null && !Project::where('id', $projectId)->where('tenant_id', $tenantId)->exists()) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function notFoundResponse(): JsonResponse
+    {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Không tìm thấy'
+        ], 404);
+    }
+
+    /**
      * Lấy effective permissions của user trong context cụ thể
      * GET /api/v1/rbac/users/{user}/effective-permissions
      */
-    public function getUserEffectivePermissions(Request $request, int $userId): JsonResponse
+    public function getUserEffectivePermissions(Request $request, string $userId): JsonResponse
     {
         try {
             $projectId = $request->get('project_id');
             $tenantId = TenantContext::id($request);
-            
-            $effectivePermissions = $this->rbacManager->getUserEffectivePermissions(
+
+            if (!$this->targetsAreTenantScoped($tenantId, $userId, $projectId)) {
+                return $this->notFoundResponse();
+            }
+
+            $effectivePermissions = $this->rbacManager->calculateEffectivePermissions(
                 $userId,
-                $projectId,
-                $tenantId
+                $projectId
             );
-            
+
             return response()->json([
                 'status' => 'success',
                 'data' => [
@@ -63,27 +106,30 @@ class RBACController
      * Kiểm tra permission cụ thể của user
      * POST /api/v1/rbac/users/{user}/check-permission
      */
-    public function checkUserPermission(Request $request, int $userId): JsonResponse
+    public function checkUserPermission(Request $request, string $userId): JsonResponse
     {
         $permissionCode = $request->get('permission_code');
         $projectId = $request->get('project_id');
         $tenantId = TenantContext::id($request);
-        
+
         if (empty($permissionCode)) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Permission code không được để trống'
             ], 400);
         }
-        
+
+        if (!$this->targetsAreTenantScoped($tenantId, $userId, $projectId)) {
+            return $this->notFoundResponse();
+        }
+
         try {
-            $hasPermission = $this->rbacManager->userHasPermission(
+            $hasPermission = $this->rbacManager->hasPermission(
                 $userId,
                 $permissionCode,
-                $projectId,
-                $tenantId
+                $projectId
             );
-            
+
             return response()->json([
                 'status' => 'success',
                 'data' => [
@@ -113,8 +159,8 @@ class RBACController
         $scope = $request->get('scope', 'all');
         $tenantId = TenantContext::id($request);
         
-        $query = Role::query();
-        
+        $query = Role::query()->tenantVisible($tenantId);
+
         if ($scope !== 'all') {
             $validScopes = ['system', 'custom', 'project'];
             if (!in_array($scope, $validScopes, true)) {
@@ -123,14 +169,10 @@ class RBACController
                     'message' => 'Scope không hợp lệ. Chỉ chấp nhận: ' . implode(', ', $validScopes)
                 ], 400);
             }
-            
+
             $query->where('scope', $scope);
         }
-        
-        if ($tenantId) {
-            $query->where('tenant_id', $tenantId);
-        }
-        
+
         $roles = $query->with('permissions')->orderBy('scope')->orderBy('name')->get();
         
         return response()->json([
@@ -206,33 +248,46 @@ class RBACController
             ], 400);
         }
         
+        $tenantId = TenantContext::id($request);
+
+        if ($tenantId === null) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Tenant context không hợp lệ'
+            ], 400);
+        }
+
         try {
             $results = [];
-            $actorId = $request->get('user_id');
-            
+            // GAP-042 Gate-3 Round-1 Correction 6: actorId is the real
+            // authenticated acting user, never a client-suppliable request
+            // field and never the tenant id.
+            $actorId = (string) ($request->user()?->id ?? 'system');
+
             foreach ($userIds as $userId) {
                 foreach ($roleIds as $roleId) {
                     if ($scope === 'system') {
-                        $this->rbacManager->assignSystemRole($userId, $roleId, $actorId);
+                        $assigned = $this->rbacManager->assignSystemRole($userId, $roleId, $tenantId);
                     } else {
-                        $this->rbacManager->assignProjectRole($userId, $projectId, $roleId, $actorId);
+                        $assigned = $this->rbacManager->assignProjectRole($userId, $roleId, $projectId, $tenantId);
                     }
-                    
+
                     $results[] = [
                         'user_id' => $userId,
                         'role_id' => $roleId,
                         'project_id' => $projectId,
                         'scope' => $scope,
-                        'assigned' => true
+                        'assigned' => $assigned
                     ];
                 }
             }
             
-            // Phát sự kiện
-            $this->eventBus->publish('rbac.roles.bulk.assigned', [
+            // Phát sự kiện (Correction 6: truthful actor/project identities)
+            $this->eventBus->publish('rbac.role.bulkAssigned', [
+                'entityId' => $actorId,
                 'userIds' => $userIds,
                 'roleIds' => $roleIds,
-                'projectId' => $projectId,
+                'projectId' => (string) ($projectId ?? 'system'),
                 'scope' => $scope,
                 'actorId' => $actorId,
                 'timestamp' => now()->toISOString()

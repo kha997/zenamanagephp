@@ -7,6 +7,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Src\RBAC\Services\PermissionMatrixService;
 use Src\Foundation\EventBus;
+use App\Services\TenantContext;
 
 /**
  * Controller quản lý Permission Matrix CSV import/export
@@ -31,11 +32,23 @@ class PermissionMatrixController
     public function export(Request $request): Response
     {
         try {
-            $csvContent = $this->permissionMatrixService->exportToCSV();
-            
-            // Phát sự kiện
-            $this->eventBus->publish('rbac.permission.matrix.exported', [
-                'actorId' => $request->get('user_id'),
+            $tenantId = TenantContext::id($request);
+            $csvContent = $this->permissionMatrixService->exportToCSV($tenantId);
+
+            // Phát sự kiện — GAP-042 Gate-3 Round-1 Correction 2: the prior
+            // event name ('rbac.permission.matrix.exported', 4 segments)
+            // is rejected by EventBus::validateEventName() (only
+            // Domain.Entity.Action or single-segment legacy is accepted),
+            // and the payload omitted validator-required entityId/
+            // projectId — this now-live route would throw on every call.
+            // Correction 6: actorId is the real authenticated user.
+            // Round-2 Correction 10: this is a non-project RBAC event
+            // (Permission Matrix export has no project concept) — projectId
+            // must use the literal 'system' convention, never the tenant id.
+            $this->eventBus->publish('rbac.permissionMatrix.exported', [
+                'entityId' => (string) ($request->user()?->id ?? 'system'),
+                'projectId' => 'system',
+                'actorId' => (string) ($request->user()?->id ?? 'system'),
                 'timestamp' => now()->toISOString()
             ]);
             
@@ -111,11 +124,13 @@ class PermissionMatrixController
             }
             
             // Thực hiện import
+            $tenantId = TenantContext::id($request);
             $result = $this->permissionMatrixService->importFromCSV(
                 $csvContent,
-                (int) $request->get('user_id')
+                (string) ($request->user()?->id ?? 'system'),
+                $tenantId
             );
-            
+
             if (!$result['success']) {
                 return response()->json([
                     'status' => 'error',
@@ -123,10 +138,17 @@ class PermissionMatrixController
                     'errors' => $result['errors'] ?? []
                 ], 400);
             }
-            
-            // Phát sự kiện
-            $this->eventBus->publish('rbac.permission.matrix.imported', [
-                'actorId' => $request->get('user_id'),
+
+            // Phát sự kiện — GAP-042 Gate-3 Round-1 Correction 2/6: valid
+            // 3-segment event name, validator-required fields, truthful
+            // actor identity (see PermissionMatrixService::importFromCSV()
+            // for the per-role event fix, which runs DURING the loop).
+            // Round-2 Correction 10: non-project RBAC event — projectId must
+            // use the literal 'system' convention, never the tenant id.
+            $this->eventBus->publish('rbac.permissionMatrix.imported', [
+                'entityId' => (string) ($request->user()?->id ?? 'system'),
+                'projectId' => 'system',
+                'actorId' => (string) ($request->user()?->id ?? 'system'),
                 'stats' => $result['stats'],
                 'timestamp' => now()->toISOString()
             ]);

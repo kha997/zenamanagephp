@@ -11,6 +11,7 @@ use Src\RBAC\Resources\RoleCollection;
 use Src\RBAC\Services\RBACManager;
 use Src\Foundation\EventBus;
 use Src\Foundation\Helpers\ValidationHelper;
+use App\Services\TenantContext;
 
 /**
  * Controller quản lý roles trong hệ thống RBAC
@@ -33,7 +34,8 @@ class RoleController
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Role::query();
+        $tenantId = TenantContext::id($request);
+        $query = Role::query()->tenantVisible($tenantId);
 
         // Filter theo scope nếu có
         if ($request->has('scope')) {
@@ -69,23 +71,29 @@ class RoleController
     {
         // Validation
         $errors = [];
-        
+
         if (empty($request->get('name'))) {
             $errors['name'] = 'Tên role không được để trống';
         }
-        
+
         $scope = $request->get('scope');
         if (!in_array($scope, Role::VALID_SCOPES, true)) {
             $errors['scope'] = 'Scope không hợp lệ. Chỉ chấp nhận: ' . implode(', ', Role::VALID_SCOPES);
         }
-        
+
+        // GAP-042 §6 global-role read/write policy: a tenant-scoped POST /roles
+        // request may never create a scope=system (global) role.
+        if ($scope === Role::SCOPE_SYSTEM) {
+            $errors['scope'] = 'Không thể tạo role scope=system qua endpoint này';
+        }
+
         // Kiểm tra trùng lặp name + scope
         if (Role::where('name', $request->get('name'))
                ->where('scope', $scope)
                ->exists()) {
             $errors['name'] = 'Role với tên này đã tồn tại trong scope ' . $scope;
         }
-        
+
         if (!empty($errors)) {
             return response()->json([
                 'status' => 'error',
@@ -94,18 +102,23 @@ class RoleController
             ], 400);
         }
 
+        // GAP-042 §6: tenant_id is always server-derived from the authenticated
+        // request's own tenant context — never accepted from the client body.
+        $tenantId = TenantContext::id($request);
+
         // Tạo role
         $role = Role::create([
             'name' => $request->get('name'),
             'scope' => $scope,
             'allow_override' => (bool) $request->get('allow_override', false),
-            'description' => $request->get('description')
+            'description' => $request->get('description'),
+            'tenant_id' => $tenantId,
         ]);
 
         // Phát sự kiện
         $this->eventBus->publish('rbac.role.created', [
             'entityId' => $role->id,
-            'projectId' => (string) ($request->attributes->get('tenant_id') ?? 'system'),
+            'projectId' => 'system', // GAP-042 Correction 6: roles have no real project; never mislabel tenant_id as projectId
             'actorId' => (string) ($request->user()?->id ?? 'system'),
             'roleId' => $role->id,
             'name' => $role->name,
@@ -123,10 +136,11 @@ class RoleController
      * Lấy thông tin role cụ thể
      * GET /api/v1/rbac/roles/{id}
      */
-    public function show(string $id): JsonResponse
+    public function show(Request $request, string $id): JsonResponse
     {
-        $role = Role::with('permissions')->find($id);
-        
+        $tenantId = TenantContext::id($request);
+        $role = Role::tenantVisible($tenantId)->with('permissions')->whereKey($id)->first();
+
         if (!$role) {
             return response()->json([
                 'status' => 'error',
@@ -146,9 +160,14 @@ class RoleController
      */
     public function update(Request $request, string $id): JsonResponse
     {
-        $role = Role::find($id);
-        
-        if (!$role) {
+        $tenantId = TenantContext::id($request);
+        $role = Role::tenantVisible($tenantId)->whereKey($id)->first();
+
+        // GAP-042 §6 global-role read/write policy: a role that is visible
+        // (global, or another tenant filtered out already by the predicate
+        // above) but globally-owned may not be mutated through this surface —
+        // treated identically to "not found for write purposes".
+        if (!$role || $role->isGlobal()) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Role không tồn tại'
@@ -167,8 +186,21 @@ class RoleController
             if (!in_array($scope, Role::VALID_SCOPES, true)) {
                 $errors['scope'] = 'Scope không hợp lệ';
             }
+
+            // GAP-042 Gate-3 Round-1 Correction 3: the tenant-scoped role
+            // surface must not be usable to escalate an owned tenant role
+            // into a system/global role via PUT — store() already forbids
+            // *creating* scope=system directly; this closes the equivalent
+            // indirect path (create as custom, then PUT scope=system).
+            // tenant_id IS NULL is what actually makes a role global (§6);
+            // a role updated to scope=system while retaining its own
+            // tenant_id would violate that invariant, so this is rejected
+            // regardless of how the invariant would end up being violated.
+            if ($scope === Role::SCOPE_SYSTEM) {
+                $errors['scope'] = 'Không thể chuyển role sang scope=system qua endpoint này';
+            }
         }
-        
+
         if (!empty($errors)) {
             return response()->json([
                 'status' => 'error',
@@ -187,7 +219,7 @@ class RoleController
         // Phát sự kiện
         $this->eventBus->publish('rbac.role.updated', [
             'entityId' => $role->id,
-            'projectId' => (string) ($request->attributes->get('tenant_id') ?? 'system'),
+            'projectId' => 'system', // GAP-042 Correction 6: roles have no real project; never mislabel tenant_id as projectId
             'actorId' => (string) ($request->user()?->id ?? 'system'),
             'roleId' => $role->id,
             'oldData' => $oldData,
@@ -207,9 +239,10 @@ class RoleController
      */
     public function destroy(Request $request, string $id): JsonResponse
     {
-        $role = Role::find($id);
-        
-        if (!$role) {
+        $tenantId = TenantContext::id($request);
+        $role = Role::tenantVisible($tenantId)->whereKey($id)->first();
+
+        if (!$role || $role->isGlobal()) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Role không tồn tại'
@@ -240,7 +273,7 @@ class RoleController
         // Phát sự kiện
         $this->eventBus->publish('rbac.role.deleted', [
             'entityId' => $id,
-            'projectId' => (string) ($request->attributes->get('tenant_id') ?? 'system'),
+            'projectId' => 'system', // GAP-042 Correction 6: roles have no real project; never mislabel tenant_id as projectId
             'actorId' => (string) ($request->user()?->id ?? 'system'),
             'roleId' => $id,
             'roleData' => $roleData,
@@ -261,9 +294,10 @@ class RoleController
      */
     public function syncPermissions(Request $request, string $id): JsonResponse
     {
-        $role = Role::find($id);
-        
-        if (!$role) {
+        $tenantId = TenantContext::id($request);
+        $role = Role::tenantVisible($tenantId)->whereKey($id)->first();
+
+        if (!$role || $role->isGlobal()) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Role không tồn tại'
@@ -271,7 +305,7 @@ class RoleController
         }
 
         $permissionCodes = $request->get('permission_codes', []);
-        
+
         if (!is_array($permissionCodes)) {
             return response()->json([
                 'status' => 'error',
@@ -279,10 +313,14 @@ class RoleController
             ], 400);
         }
 
-        // Validate permission codes tồn tại
-        $validCodes = Permission::whereIn('code', $permissionCodes)->pluck('code')->toArray();
+        // Validate permission codes tồn tại, resolve code -> id (BelongsToMany::sync()
+        // requires the related model's primary key, not its code — GAP-042 fix, this
+        // previously passed codes directly into sync() and silently failed).
+        $validPermissions = Permission::whereIn('code', $permissionCodes)->get(['id', 'code']);
+        $validCodes = $validPermissions->pluck('code')->toArray();
+        $validIds = $validPermissions->pluck('id')->toArray();
         $invalidCodes = array_diff($permissionCodes, $validCodes);
-        
+
         if (!empty($invalidCodes)) {
             return response()->json([
                 'status' => 'error',
@@ -292,15 +330,19 @@ class RoleController
 
         // Sync permissions
         $oldPermissions = $role->permissions->pluck('code')->toArray();
-        $role->permissions()->sync($validCodes);
+        $role->permissions()->sync($validIds);
         $newPermissions = $role->fresh()->permissions->pluck('code')->toArray();
 
         // Phát sự kiện
-        $this->eventBus->publish('rbac.role.permissions.synced', [
+        $this->eventBus->publish('rbac.role.permissionsSynced', [
+            'entityId' => $role->id,
+            'projectId' => 'system', // GAP-042 Correction 6: no real project for this event; never mislabel tenant_id as projectId
             'roleId' => $role->id,
             'oldPermissions' => $oldPermissions,
             'newPermissions' => $newPermissions,
-            'actorId' => $request->get('user_id'),
+            // GAP-042 Gate-3 Round-1 Correction 6: actorId must be the real
+            // authenticated user, never a client-suppliable request field.
+            'actorId' => (string) ($request->user()?->id ?? 'system'),
             'timestamp' => now()->toISOString()
         ]);
 

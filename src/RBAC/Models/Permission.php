@@ -21,7 +21,7 @@ class Permission extends Model
 {
     use HasFactory, HasUlids, HasTimestamps;
 
-    protected $table = 'zena_permissions';
+    protected $table = 'permissions';
     protected $primaryKey = 'id';
     
     /**
@@ -48,7 +48,7 @@ class Permission extends Model
     {
         return $this->belongsToMany(
             Role::class,
-            'zena_role_permissions',
+            'role_permissions',
             'permission_id',
             'role_id',
             'id',

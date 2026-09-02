@@ -6,6 +6,9 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Src\RBAC\Services\RBACManager;
 use Src\RBAC\Models\Role;
+use App\Models\User;
+use App\Models\Project;
+use App\Services\TenantContext;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -200,16 +203,41 @@ class AssignmentController
     }
 
     /**
-     * Backward-compatible endpoint for assigning a system role to user.
-     * POST /api/v1/rbac/user-roles
+     * Assign a system role to a user.
+     * Mounted at both:
+     *   POST /api/v1/rbac/assignments/users/{user}/roles  (route {user} authoritative, GAP-042 §2e)
+     *   POST /api/v1/rbac/user-roles                      (no route param — body user_id only, unchanged contract)
+     *
+     * @param string|null $user Route-bound target user id, present only on the
+     *                          {user}-parameterized mount. When present, it is
+     *                          authoritative (§2e) — a conflicting body user_id
+     *                          is rejected with HTTP 400 and nothing is written.
      */
-    public function assignUserRoles(Request $request): JsonResponse
+    public function assignUserRoles(Request $request, ?string $user = null): JsonResponse
     {
         $validated = $request->validate([
-            'user_id' => 'required|string',
+            'user_id' => $user !== null ? 'nullable|string' : 'required|string',
             'role_id' => 'required|string',
             'scope' => 'nullable|string',
         ]);
+
+        $bodyUserId = $validated['user_id'] ?? null;
+
+        if ($user !== null && $bodyUserId !== null && $bodyUserId !== $user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'user_id trong body không khớp với {user} trên route',
+            ], 400);
+        }
+
+        $targetUserId = $user ?? $bodyUserId;
+
+        if (empty($targetUserId)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'user_id không được để trống',
+            ], 400);
+        }
 
         if (($validated['scope'] ?? 'system') !== 'system') {
             return response()->json([
@@ -218,16 +246,23 @@ class AssignmentController
             ], 400);
         }
 
-        DB::table('system_user_roles')->updateOrInsert(
-            [
-                'user_id' => $validated['user_id'],
-                'role_id' => $validated['role_id'],
-            ],
-            [
-                'updated_at' => now(),
-                'created_at' => now(),
-            ]
-        );
+        $tenantId = TenantContext::id($request);
+
+        if ($tenantId === null) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Tenant context không hợp lệ',
+            ], 400);
+        }
+
+        $success = $this->rbacManager->assignSystemRole($targetUserId, $validated['role_id'], $tenantId);
+
+        if (!$success) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Không thể gán role',
+            ], 422);
+        }
 
         return response()->json([
             'status' => 'success',
@@ -240,18 +275,112 @@ class AssignmentController
     /**
      * Backward-compatible endpoint for removing a system role from user.
      * DELETE /api/v1/rbac/user-roles/{user}/{role}
+     * DELETE /api/v1/rbac/assignments/users/{user}/roles/{role}
      */
-    public function removeUserRole(string $userId, string $roleId): JsonResponse
+    public function removeUserRole(Request $request, string $userId, string $roleId): JsonResponse
     {
-        DB::table('system_user_roles')
-            ->where('user_id', $userId)
-            ->where('role_id', $roleId)
-            ->delete();
+        $tenantId = TenantContext::id($request);
+
+        if ($tenantId !== null && !$this->rbacManager->revokeRole($userId, $roleId, 'system', null, $tenantId)) {
+            // revokeRole is fail-closed and idempotent for "not found" / cross-tenant;
+            // still returns success shape for backward compatibility with the
+            // already-live contract (DELETE is idempotent — absence is not an error).
+        }
 
         return response()->json([
             'status' => 'success',
             'data' => [
                 'message' => 'Vai trò đã được gỡ bỏ thành công',
+            ],
+        ]);
+    }
+
+    /**
+     * GAP-042 §2a #4 / §2c category C — restores the already-live, already-wired
+     * route `GET /api/v1/rbac/assignments/projects/{project}/users` (previously
+     * targeted a nonexistent method, unconditional HTTP 500).
+     */
+    public function getProjectUsers(Request $request, string $project): JsonResponse
+    {
+        $tenantId = TenantContext::id($request);
+
+        if ($tenantId === null || !Project::where('id', $project)->where('tenant_id', $tenantId)->exists()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Dự án không tồn tại',
+            ], 404);
+        }
+
+        $rows = DB::table('project_user_roles')
+            ->where('project_id', $project)
+            ->whereNull('deleted_at')
+            ->get(['id', 'user_id', 'role_id', 'created_at']);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'project_id' => $project,
+                'assignments' => $rows,
+            ],
+        ]);
+    }
+
+    /**
+     * GAP-042 §2a #5 / §2c category C — restores the already-live, already-wired
+     * route `POST /api/v1/rbac/assignments/projects/{project}/users/{user}/roles`
+     * (previously targeted a nonexistent method, unconditional HTTP 500).
+     * {project}, {user}, {role_id-in-body} route/body identities are authoritative
+     * per §2e's decision applied to this restored route.
+     */
+    public function assignProjectRole(Request $request, string $project, string $user): JsonResponse
+    {
+        $validated = $request->validate([
+            'role_id' => 'required|string',
+        ]);
+
+        $tenantId = TenantContext::id($request);
+
+        if ($tenantId === null) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Tenant context không hợp lệ',
+            ], 400);
+        }
+
+        $success = $this->rbacManager->assignProjectRole($user, $validated['role_id'], $project, $tenantId);
+
+        if (!$success) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Không thể gán role dự án',
+            ], 422);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'message' => 'Đã gán role dự án thành công',
+            ],
+        ], 201);
+    }
+
+    /**
+     * GAP-042 §2a #6 / §2c category C — restores the already-live, already-wired
+     * route `DELETE /api/v1/rbac/assignments/projects/{project}/users/{user}/roles/{role}`
+     * (previously targeted a nonexistent method, unconditional HTTP 500).
+     */
+    public function removeProjectRole(Request $request, string $project, string $user, string $role): JsonResponse
+    {
+        $tenantId = TenantContext::id($request);
+
+        if ($tenantId !== null) {
+            $this->rbacManager->revokeRole($user, $role, 'project', $project, $tenantId);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'message' => 'Đã gỡ role dự án thành công',
             ],
         ]);
     }

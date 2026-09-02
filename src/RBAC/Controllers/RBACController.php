@@ -4,11 +4,14 @@ namespace Src\RBAC\Controllers;
 
 use Illuminate\Http\Request;
 use App\Services\TenantContext;
+use App\Models\User;
+use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Src\RBAC\Services\RBACManager;
 use Src\RBAC\Models\Role;
 use Src\RBAC\Models\Permission;
 use Src\Foundation\EventBus;
+use Src\Foundation\Helpers\AuthHelper;
 
 /**
  * Controller tổng hợp cho các tính năng RBAC nâng cao
@@ -25,6 +28,43 @@ class RBACController
     }
 
     /**
+     * GAP-042 Gate-3 Round-1 Correction 5: fail-closed tenant-ownership
+     * check for the target {user} and (when supplied) {project_id} on the
+     * effective-permissions/check-permission routes. Restoring the table
+     * that backs these routes (Option A) made them newly, actually
+     * reachable — without this check, an authenticated caller from tenant A
+     * could query another tenant's user's effective permissions or
+     * check-permission result, a cross-tenant information-disclosure path
+     * that traded the old availability failure for a new confidentiality
+     * one. Non-disclosing: returns a generic not-found response, never
+     * revealing whether the other tenant's user/project exists.
+     */
+    private function targetsAreTenantScoped(?string $tenantId, string $userId, ?string $projectId): bool
+    {
+        if ($tenantId === null) {
+            return false;
+        }
+
+        if (!User::where('id', $userId)->where('tenant_id', $tenantId)->exists()) {
+            return false;
+        }
+
+        if ($projectId !== null && !Project::where('id', $projectId)->where('tenant_id', $tenantId)->exists()) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function notFoundResponse(): JsonResponse
+    {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Không tìm thấy'
+        ], 404);
+    }
+
+    /**
      * Lấy effective permissions của user trong context cụ thể
      * GET /api/v1/rbac/users/{user}/effective-permissions
      */
@@ -33,6 +73,10 @@ class RBACController
         try {
             $projectId = $request->get('project_id');
             $tenantId = TenantContext::id($request);
+
+            if (!$this->targetsAreTenantScoped($tenantId, $userId, $projectId)) {
+                return $this->notFoundResponse();
+            }
 
             $effectivePermissions = $this->rbacManager->calculateEffectivePermissions(
                 $userId,
@@ -73,6 +117,10 @@ class RBACController
                 'status' => 'error',
                 'message' => 'Permission code không được để trống'
             ], 400);
+        }
+
+        if (!$this->targetsAreTenantScoped($tenantId, $userId, $projectId)) {
+            return $this->notFoundResponse();
         }
 
         try {
@@ -211,7 +259,10 @@ class RBACController
 
         try {
             $results = [];
-            $actorId = $request->get('user_id');
+            // GAP-042 Gate-3 Round-1 Correction 6: actorId is the real
+            // authenticated acting user, never a client-suppliable request
+            // field and never the tenant id.
+            $actorId = (string) ($request->user()?->id ?? 'system');
 
             foreach ($userIds as $userId) {
                 foreach ($roleIds as $roleId) {
@@ -231,14 +282,14 @@ class RBACController
                 }
             }
             
-            // Phát sự kiện
+            // Phát sự kiện (Correction 6: truthful actor/project identities)
             $this->eventBus->publish('rbac.role.bulkAssigned', [
-                'entityId' => (string) ($actorId ?? $tenantId),
+                'entityId' => $actorId,
                 'userIds' => $userIds,
                 'roleIds' => $roleIds,
-                'projectId' => (string) ($projectId ?? $tenantId),
+                'projectId' => (string) ($projectId ?? 'system'),
                 'scope' => $scope,
-                'actorId' => (string) ($actorId ?? $tenantId),
+                'actorId' => $actorId,
                 'timestamp' => now()->toISOString()
             ]);
             

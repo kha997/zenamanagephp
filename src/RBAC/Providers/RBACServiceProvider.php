@@ -28,7 +28,14 @@ class RBACServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(PermissionMatrixService::class, function ($app) {
-            return new PermissionMatrixService();
+            // GAP-042 Gate-3 Round-1 Correction 2: PermissionMatrixService's
+            // constructor requires EventBus $eventBus — this binding called
+            // it with zero args, so ANY resolution of PermissionMatrixService
+            // (i.e. every permission-matrix/* route) threw an
+            // ArgumentCountError before Correction 2's own EventBus-payload
+            // fixes could ever be reached. Pre-existing container-wiring
+            // defect in this exact approved-boundary provider, fixed here.
+            return new PermissionMatrixService(new EventBus());
         });
     }
 

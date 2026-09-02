@@ -118,7 +118,7 @@ class RoleController
         // Phát sự kiện
         $this->eventBus->publish('rbac.role.created', [
             'entityId' => $role->id,
-            'projectId' => (string) ($request->attributes->get('tenant_id') ?? 'system'),
+            'projectId' => 'system', // GAP-042 Correction 6: roles have no real project; never mislabel tenant_id as projectId
             'actorId' => (string) ($request->user()?->id ?? 'system'),
             'roleId' => $role->id,
             'name' => $role->name,
@@ -186,8 +186,21 @@ class RoleController
             if (!in_array($scope, Role::VALID_SCOPES, true)) {
                 $errors['scope'] = 'Scope không hợp lệ';
             }
+
+            // GAP-042 Gate-3 Round-1 Correction 3: the tenant-scoped role
+            // surface must not be usable to escalate an owned tenant role
+            // into a system/global role via PUT — store() already forbids
+            // *creating* scope=system directly; this closes the equivalent
+            // indirect path (create as custom, then PUT scope=system).
+            // tenant_id IS NULL is what actually makes a role global (§6);
+            // a role updated to scope=system while retaining its own
+            // tenant_id would violate that invariant, so this is rejected
+            // regardless of how the invariant would end up being violated.
+            if ($scope === Role::SCOPE_SYSTEM) {
+                $errors['scope'] = 'Không thể chuyển role sang scope=system qua endpoint này';
+            }
         }
-        
+
         if (!empty($errors)) {
             return response()->json([
                 'status' => 'error',
@@ -206,7 +219,7 @@ class RoleController
         // Phát sự kiện
         $this->eventBus->publish('rbac.role.updated', [
             'entityId' => $role->id,
-            'projectId' => (string) ($request->attributes->get('tenant_id') ?? 'system'),
+            'projectId' => 'system', // GAP-042 Correction 6: roles have no real project; never mislabel tenant_id as projectId
             'actorId' => (string) ($request->user()?->id ?? 'system'),
             'roleId' => $role->id,
             'oldData' => $oldData,
@@ -260,7 +273,7 @@ class RoleController
         // Phát sự kiện
         $this->eventBus->publish('rbac.role.deleted', [
             'entityId' => $id,
-            'projectId' => (string) ($request->attributes->get('tenant_id') ?? 'system'),
+            'projectId' => 'system', // GAP-042 Correction 6: roles have no real project; never mislabel tenant_id as projectId
             'actorId' => (string) ($request->user()?->id ?? 'system'),
             'roleId' => $id,
             'roleData' => $roleData,
@@ -323,11 +336,13 @@ class RoleController
         // Phát sự kiện
         $this->eventBus->publish('rbac.role.permissionsSynced', [
             'entityId' => $role->id,
-            'projectId' => (string) ($tenantId ?? 'system'),
+            'projectId' => 'system', // GAP-042 Correction 6: no real project for this event; never mislabel tenant_id as projectId
             'roleId' => $role->id,
             'oldPermissions' => $oldPermissions,
             'newPermissions' => $newPermissions,
-            'actorId' => (string) ($request->get('user_id') ?? $request->user()?->id ?? 'system'),
+            // GAP-042 Gate-3 Round-1 Correction 6: actorId must be the real
+            // authenticated user, never a client-suppliable request field.
+            'actorId' => (string) ($request->user()?->id ?? 'system'),
             'timestamp' => now()->toISOString()
         ]);
 

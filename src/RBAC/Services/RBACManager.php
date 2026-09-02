@@ -8,6 +8,7 @@ use Src\RBAC\Models\UserRoleSystem;
 use Src\RBAC\Models\UserRoleCustom;
 use Src\RBAC\Models\UserRoleProject;
 use Src\Foundation\EventBus;
+use Src\Foundation\Helpers\AuthHelper;
 use App\Models\User;
 use App\Models\Project;
 use Illuminate\Support\Collection;
@@ -276,6 +277,55 @@ class RBACManager
     }
 
     /**
+     * GAP-042 Gate-3 Round-1 Correction 3 (defense-in-depth): a role passed
+     * to assignSystemRole() must be a GENUINE global/system role — scope
+     * `system` AND `tenant_id IS NULL` — not merely a row whose scope column
+     * happens to say `system` while carrying a tenant_id (a malformed/
+     * tenant-owned row must never be usable to grant a system-wide role).
+     */
+    private function isGenuineSystemRole(?Role $role): bool
+    {
+        return $role !== null && $role->scope === Role::SCOPE_SYSTEM && $role->tenant_id === null;
+    }
+
+    /**
+     * GAP-042 Gate-3 Round-1 Correction 4: revokeRole()'s per-scope role/
+     * project ownership checks, mirroring the assign*Role() methods' own
+     * fail-closed identity validation exactly, so a DELETE cannot succeed
+     * against a role/project it was never authorized to touch merely
+     * because the target USER happens to belong to the caller's tenant.
+     * Returns false (nothing deleted) for any check that fails; all checks
+     * run BEFORE the delete.
+     */
+    private function revokeRoleIdentitiesValid(string $roleId, string $scope, ?string $projectId, string $tenantId): bool
+    {
+        switch ($scope) {
+            case 'system':
+                $role = Role::find($roleId);
+                return $this->isGenuineSystemRole($role);
+
+            case 'custom':
+                return Role::where('id', $roleId)
+                    ->where('scope', Role::SCOPE_CUSTOM)
+                    ->where('tenant_id', $tenantId)
+                    ->exists();
+
+            case 'project':
+                if ($projectId === null || !$this->projectBelongsToTenant($projectId, $tenantId)) {
+                    return false;
+                }
+
+                return Role::where('id', $roleId)
+                    ->where('scope', Role::SCOPE_PROJECT)
+                    ->where('tenant_id', $tenantId)
+                    ->exists();
+
+            default:
+                return false;
+        }
+    }
+
+    /**
      * Gán role cho user ở lớp system — GAP-042 §6a fail-closed tenant checks.
      *
      * System-scope roles are global (tenant_id IS NULL) by definition (§6), so
@@ -288,11 +338,17 @@ class RBACManager
             return false;
         }
 
+        // GAP-042 Gate-3 Round-1 Correction 3 (defense-in-depth): the role
+        // must be a GENUINE global/system role (scope=system AND
+        // tenant_id IS NULL) — a malformed row that merely has
+        // scope='system' while carrying a non-null tenant_id must never be
+        // usable to grant a system-wide role.
         $role = Role::where('id', $roleId)
             ->where('scope', Role::SCOPE_SYSTEM)
+            ->whereNull('tenant_id')
             ->first();
 
-        if (!$role) {
+        if (!$this->isGenuineSystemRole($role)) {
             return false;
         }
 
@@ -311,11 +367,15 @@ class RBACManager
         // Xóa cache
         $this->clearUserPermissionsCache($userId);
 
-        // Phát sự kiện
+        // Phát sự kiện — GAP-042 Gate-3 Round-1 Correction 6: actorId is the
+        // real authenticated acting user (or the established 'system'
+        // fallback), never the tenant id; projectId uses the established
+        // 'system' convention for a non-project RBAC event, never the
+        // tenant id either.
         $this->eventBus->publish('rbac.assignment.changed', [
             'entityId' => $userId,
-            'projectId' => $tenantId,
-            'actorId' => $tenantId,
+            'projectId' => 'system',
+            'actorId' => AuthHelper::idOrSystem(),
             'userId' => $userId,
             'roleId' => $roleId,
             'scope' => 'system',
@@ -355,11 +415,11 @@ class RBACManager
         // Xóa cache
         $this->clearUserPermissionsCache($userId);
 
-        // Phát sự kiện
+        // Phát sự kiện (Correction 6: truthful actor/project identities)
         $this->eventBus->publish('rbac.assignment.changed', [
             'entityId' => $userId,
-            'projectId' => $tenantId,
-            'actorId' => $tenantId,
+            'projectId' => 'system',
+            'actorId' => AuthHelper::idOrSystem(),
             'userId' => $userId,
             'roleId' => $roleId,
             'scope' => 'custom',
@@ -405,10 +465,11 @@ class RBACManager
         // Xóa cache
         $this->clearUserPermissionsCache($userId);
 
-        // Phát sự kiện
+        // Phát sự kiện (Correction 6: truthful actor identity; projectId here
+        // IS the real project id — a genuine project-scope event).
         $this->eventBus->publish('rbac.assignment.changed', [
             'entityId' => $userId,
-            'actorId' => $tenantId,
+            'actorId' => AuthHelper::idOrSystem(),
             'userId' => $userId,
             'roleId' => $roleId,
             'projectId' => $projectId,
@@ -429,6 +490,15 @@ class RBACManager
     public function revokeRole(string $userId, string $roleId, string $scope, ?string $projectId, string $tenantId): bool
     {
         if (!$this->userBelongsToTenant($userId, $tenantId)) {
+            return false;
+        }
+
+        // GAP-042 Gate-3 Round-1 Correction 4: the target ROLE (and, for
+        // project scope, the target PROJECT) must also belong to the
+        // caller's tenant / be a genuine system role — verifying only the
+        // target user is not sufficient. All checks complete before any
+        // DELETE; a failure here leaves every assignment table untouched.
+        if (!$this->revokeRoleIdentitiesValid($roleId, $scope, $projectId, $tenantId)) {
             return false;
         }
 
@@ -461,11 +531,13 @@ class RBACManager
             // Xóa cache
             $this->clearUserPermissionsCache($userId);
 
-            // Phát sự kiện
+            // Phát sự kiện (Correction 6: truthful actor identity; projectId
+            // is the real project id for project-scope revokes, else the
+            // established 'system' convention).
             $this->eventBus->publish('rbac.assignment.changed', [
                 'entityId' => $userId,
-                'actorId' => $tenantId,
-                'projectId' => $projectId ?? $tenantId,
+                'actorId' => AuthHelper::idOrSystem(),
+                'projectId' => $projectId ?? 'system',
                 'userId' => $userId,
                 'roleId' => $roleId,
                 'scope' => $scope,

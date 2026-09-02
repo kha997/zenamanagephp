@@ -15,13 +15,18 @@ return new class extends Migration
      * project_user_roles sibling convention (plain nullable deleted_at column,
      * single ulid primary key — not the composite [user_id, role_id] key
      * system_user_roles uses).
+     *
+     * GAP-042 Gate-3 Round-1 Correction 7: no approved legacy
+     * `custom_user_roles` production schema was ever found (§2b's finding
+     * was precisely that no migration had ever created this table on any
+     * environment) — there is nothing to silently preserve. Fail closed
+     * instead: if a table with this name unexpectedly already exists
+     * (e.g. a conflicting/unknown shape from some other source), let
+     * Schema::create() throw rather than silently marking this migration
+     * "applied" while leaving an unverified schema behind.
      */
     public function up(): void
     {
-        if (Schema::hasTable('custom_user_roles')) {
-            return;
-        }
-
         Schema::create('custom_user_roles', function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->ulid('user_id');

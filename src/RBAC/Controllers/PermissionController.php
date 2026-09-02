@@ -125,13 +125,21 @@ class PermissionController
             'description' => $request->get('description')
         ]);
 
-        // Phát sự kiện
+        // Phát sự kiện — GAP-042 Gate-3 Round-1 Correction 1: entityId/
+        // projectId are validator-required fields the prior code omitted
+        // (causing this now-live route to mutate the row THEN throw via
+        // EventBus::validatePayload()); actorId is the real authenticated
+        // user (Correction 6), never a client-suppliable request field.
+        // Permissions carry no tenant_id/project concept (§2e/§3), so the
+        // established 'system' convention is used for projectId.
         $this->eventBus->publish('rbac.permission.created', [
+            'entityId' => $permission->id,
+            'projectId' => 'system',
             'permissionId' => $permission->id,
             'code' => $permission->code,
             'module' => $permission->module,
             'action' => $permission->action,
-            'actorId' => $request->get('user_id'),
+            'actorId' => (string) ($request->user()?->id ?? 'system'),
             'timestamp' => now()->toISOString()
         ]);
 
@@ -190,7 +198,7 @@ class PermissionController
             'projectId' => 'system',
             'permissionId' => $permission->id,
             'code' => $permission->code,
-            'actorId' => (string) ($request->get('user_id') ?? 'system'),
+            'actorId' => (string) ($request->user()?->id ?? 'system'),
             'timestamp' => now()->toISOString()
         ]);
 
@@ -231,7 +239,7 @@ class PermissionController
             'entityId' => $permissionId,
             'projectId' => 'system',
             'permissionId' => $permissionId,
-            'actorId' => (string) ($request->get('user_id') ?? 'system'),
+            'actorId' => (string) ($request->user()?->id ?? 'system'),
             'timestamp' => now()->toISOString()
         ]);
 

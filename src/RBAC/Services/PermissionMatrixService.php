@@ -60,14 +60,17 @@ class PermissionMatrixService
      * Import permission matrix từ CSV
      *
      * @param string $csvContent Nội dung CSV
-     * @param int $actorId ID của user thực hiện import
+     * @param string $actorId ID của user thực hiện import (real authenticated
+     *        user id, or the established 'system' fallback — GAP-042
+     *        Gate-3 Round-1 Correction 6; was previously (int), silently
+     *        truncating any real ULID actor id to 0).
      * @param string|null $tenantId GAP-042 §6: caller's tenant context. When
      *        provided, role lookup uses the grouped tenant-visibility
      *        predicate and a resolved global role is skipped (§6 global-role
      *        read/write policy) instead of being silently mutated.
      * @return array Kết quả import
      */
-    public function importFromCSV(string $csvContent, int $actorId, ?string $tenantId = null): array
+    public function importFromCSV(string $csvContent, string $actorId, ?string $tenantId = null): array
     {
         $lines = str_getcsv($csvContent, "\n");
         
@@ -157,6 +160,10 @@ class PermissionMatrixService
         foreach ($rolePermissions as $roleName => $permissionCodes) {
             // Tìm role (ưu tiên system scope) — GAP-042 §6 grouped tenant-visibility
             // predicate: never chain a bare orWhere before the name/orderBy filters.
+            // Portable "prefer system scope" tie-break: FIELD() is MySQL-only
+            // (breaks on SQLite, where this whole path is also exercised by
+            // tests) — sort candidates in PHP instead of at the DB layer.
+            $scopeOrder = [Role::SCOPE_SYSTEM => 0, Role::SCOPE_CUSTOM => 1, Role::SCOPE_PROJECT => 2];
             $role = Role::where(function ($q) use ($tenantId) {
                     $q->whereNull('tenant_id');
                     if ($tenantId !== null) {
@@ -164,7 +171,8 @@ class PermissionMatrixService
                     }
                 })
                 ->where('name', $roleName)
-                ->orderByRaw("FIELD(scope, 'system', 'custom', 'project')")
+                ->get()
+                ->sortBy(fn ($r) => $scopeOrder[$r->scope] ?? 99)
                 ->first();
 
             if (!$role) {
@@ -183,9 +191,20 @@ class PermissionMatrixService
             $permissionIds = Permission::whereIn('code', $permissionCodes)->pluck('id')->toArray();
             $role->permissions()->sync($permissionIds);
             $rolesUpdated++;
-            
-            // Phát sự kiện
-            $this->eventBus->publish('rbac.role.permissions.imported', [
+
+            // Phát sự kiện — GAP-042 Gate-3 Round-1 Correction 2: the prior
+            // event name ('rbac.role.permissions.imported', 4 segments) is
+            // rejected by EventBus::validateEventName(); the payload also
+            // omitted validator-required entityId/projectId. This call runs
+            // AFTER the sync() mutation above, inside the per-role loop — a
+            // thrown exception here previously would have left prior
+            // iterations' syncs committed while aborting the rest of the
+            // request with an uncaught 500 (mutation-then-500). Fixed to a
+            // valid, complete payload so it cannot throw for a reachable
+            // input.
+            $this->eventBus->publish('rbac.role.permissionsImported', [
+                'entityId' => $role->id,
+                'projectId' => (string) ($tenantId ?? 'system'),
                 'roleId' => $role->id,
                 'roleName' => $roleName,
                 'permissionCodes' => $permissionCodes,

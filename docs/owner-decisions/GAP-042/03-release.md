@@ -18,22 +18,22 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-09-02T07:10:00Z"
-  owner_response_reference: "GAP-042 Gate 3 Owner Round 1 (relayed via coordinator session, reviewed exact prior implementation subject b04089268bdfe725d8d51db2f628fbfd99c8bd49 and Gate-3 record head bd3c0910a8555ab30195c0b3a15447cea608ea6f against canonical main 673855f69a3633b64c378e965ae409ed3a098c50): 'DECISION: CHANGES REQUESTED. The implementation is NOT approved for release yet. There are load-bearing production/security defects that must be corrected under strict RED->GREEN TDD: (1) PermissionController::store still mutation-then-500s through EventBus (missing entityId/projectId, audit every live in-scope PermissionController EventBus call); (2) Permission Matrix live routes (export/import) are still broken (invalid four-segment EventBus names, missing required fields, mutation-then-500 risk — fix all EventBus calls on this live execution path together, do not fix unrelated EventBus surfaces elsewhere); (3) prevent tenant role scope escalation into system/global semantics (RoleController::update() permits scope=system via PUT; RBACManager::assignSystemRole() must only accept a genuine global/system role — scope=system AND tenant_id IS NULL — defense in depth); (4) revokeRole()/project DELETE must validate every applicable tenant identity (user + role + project as applicable) before any write, not only the target user; (5) effective-permissions and check-permission must fail closed across tenants (target user and optional project_id must be validated against current tenant — this is a security correction inside the already-approved RBACController boundary, not a new CRM/Project business-semantic decision); (6) repair EventBus audit identity semantics, not merely validator syntax — actorId must be the real acting user (or the established system/auth helper convention), never the tenant id; projectId must be the real project id or the established system convention, never mislabelled from tenant id; (7) migration must fail closed on unexpected pre-existing custom_user_roles schema — remove the silent-success `if (Schema::hasTable(...)) return;` guard, no approved legacy schema was ever found to justify it; (8) repair Gate-3 evidence truthfulness — do not claim all 20 acceptance items have a dedicated passing test in the new file (state the actual automated test count; MySQL/bootstrap/negative-space items rely on genuine MySQL procedural evidence where appropriate), and do not describe item 19 as sabotage/revert-verified if the sabotage actually still passed (the prior packet correctly disclosed that removing the explicit closure from the Eloquent local scope still passed due to auto-grouping, but characterized it as a completed sabotage-verification when it was not genuinely discriminating — for final re-submission, make item 19 genuinely discriminating by sabotaging an actual production call path with the literal raw ungrouped whereNull()->orWhere() form and proving the regression test fails for the expected leakage/precedence reason, then restore and prove GREEN); (9) exact-head governance/CI must be green BEFORE the packet is re-presented as awaiting_owner/technical_readiness:ready — do not merely rerun the old failed job, freeze a new implementation subject SHA, recompute the implementation-tree digest via the repository canonical governance function, refresh all Gate-3 evidence, push to the SAME Draft PR #299, wait until ALL mandatory exact-head checks actually complete and are green (including Owner Governance Lint SUCCESS on the final exact head), then re-present. Scope discipline: preserve everything already correct from the reviewed subject unless a correction directly requires modification — do not reopen Option A canonical-table convergence, custom_user_roles 3-layer decision, global-role read-only policy, route-parameter-authoritative identity, the three restored project routes, the unwired assignSystem/assignCustom/assignProject/getEffectivePermissions decision, exclusion of getUserRoles(), exclusion of CompensationController/RBACMiddleware, RolePermission-not-required decision, roles.name global uniqueness, GAP-041/GAP-045, or production deployment. Do not touch production deployment configuration. Do not create new public API routes. Do NOT self-approve Gate 3, do not mark PR Ready, do not merge, do not deploy, do not start another Work ID. Continue in the same session/branch/worktree — do not open a new session or another implementation branch.'"
+  recorded_at: "2026-09-02T09:40:00Z"
+  owner_response_reference: "GAP-042 Gate 3 Owner Round 2 (relayed via coordinator session, reviewed exact corrected implementation subject feaa320b98b31380c2cac7e74ce872616b63eca5 / implementation-tree digest 8512e0a5e22f0712d56bac6bf3e1a94f0c02ba8e2aa5356c0041638b62733295 and Gate-3 record/PR head 6b4ef1535456925748928b38e47af6b470c4eeef against canonical main 673855f69a3633b64c378e965ae409ed3a098c50): 'DECISION: CHANGES REQUESTED. Continue in the SAME GAP-042 implementation/Gate-3 session, SAME branch/worktree, and SAME Draft PR #299. Do not open a new session, create another implementation branch, use the abandoned duplicate local implementation attempt, mark Ready, merge, deploy, or start another Work ID. The major Round-1 corrections are accepted as directionally correct — do not reopen them. Round 2 is narrowly limited to: Correction 10 — Permission Matrix EventBus projectId semantics are still wrong. Round-1 Correction 6 explicitly required actorId = actual acting user or repository-established system fallback; projectId = actual project id for a genuine project event; for NON-PROJECT RBAC events, use the repository-established system convention; never label tenant id as project id. The corrected subject still violates that rule in the Permission Matrix execution path: PermissionMatrixController::export(), PermissionMatrixController::import(), PermissionMatrixService::importFromCSV() per-role event all use `projectId => (string) ($tenantId ?? system)`. These are NOT project-domain events — fix to the literal `projectId => system` convention. Keep actorId truthful, entityId truthful, no EventBus refactor, no changes outside the GAP-042-touched RBAC event surface. RED first: add a discriminating test proving no remaining Permission-Matrix pattern equivalent to `projectId => $tenantId` or `projectId => ($tenantId ?? ...)` for these non-project events — prefer capturing the actual emitted/audit payload if practical. Correction 11 — rejected Permission Matrix imports must not create global permission rows before authorization/role validation. PermissionMatrixService::importFromCSV() performs `Permission::firstOrCreate(...)` while parsing CSV rows, BEFORE resolving whether the target role is visible to the caller tenant, belongs to the caller tenant, or is global/system and therefore read-only — leaving an unauthorized side effect (the import route only requires rbac:permission.import; direct permission creation is separately protected by rbac:permission.create). RED tests first using a permission code that does NOT exist before the request: (A) cross-tenant target role — as tenant A, import CSV targeting a tenant-B-owned role using a brand-new permission code; after the request, tenant-B role permissions unchanged, no role_permissions row written, permissions table does NOT contain the new code. (B) global/system read-only target role — same proof for a genuine global/system role. Control: an own-tenant mutable role importing a genuinely new valid permission may continue to create the permission and sync it. Implementation requirement: do not perform permission-creation side effects until the relevant target role has passed visibility/ownership/global-read-only validation — prefer a parse/validate/resolve-before-write structure; do not redesign the whole CSV importer; if partial success across multiple valid/invalid roles is intentionally supported, preserve that behavior, but an invalid/global/cross-tenant ROLE row must produce ZERO permission-definition or role-permission writes. Correction 12 — make Gate-3 evidence exactly match the tests. The current packet claims BOTH effective-permissions and check-permission are proven fail-closed for both another tenant's user and another tenant's project, but the Round-1 correction test suite only explicitly exercises effective-permissions x cross-tenant user, check-permission x cross-tenant user, effective-permissions x cross-tenant project, and valid own-tenant controls — add the missing check-permission x cross-tenant project discriminator with the same non-disclosing failure behavior; this is preferable to weakening the packet wording. Also refresh the PR body before final Gate-3 re-presentation to remove stale pre-Round-1 evidence language. Do not rewrite historical Gate-3 decision records. Verification: strict RED->GREEN for Corrections 10-12; run the new Round-2 focused tests, both prior GAP-042 suites, RbacApiTest, genuine disposable MySQL 8.0 (clean migrate:fresh, canonical RBAC tables present, zena_roles/zena_permissions absent, all GAP-042 RBAC tests green), broader SQLite regression, PHPStan/Deptrac and applicable code-quality checks, route inventory (still exactly the authorized 29 RBAC routes, no new public API), and inspect the full diff from canonical main for scope creep. Then freeze a NEW implementation subject SHA, recompute the implementation-tree digest via the repository canonical Owner-Governance implementation-tree function, update this Gate-3 packet (preserve Round 1 CHANGES REQUESTED permanently, append/preserve this Round 2 CHANGES REQUESTED decision, update subject SHA and tree digest, refresh correction evidence truthfully, do not overwrite history, return to awaiting_owner/technical_readiness:ready only when repository governance permits it), push to the SAME Draft PR #299, wait for ALL mandatory CI checks on the FINAL exact head (Owner Governance Lint MUST be SUCCESS on that final exact head), then STOP for Owner Round-3 review. Do not reopen: Option A canonical schema convergence; custom_user_roles 3-layer decision/migration shape; tenant role visibility semantics; global-role read-only policy; assignment tenant checks already corrected; scope=system escalation protection; genuine-global assignSystemRole check; revoke identity validation; effective/check-permission tenant-target helper; restored project routes; route identity decision; unwired methods decision; RolePermission decision; roles.name uniqueness; getUserRoles exclusion; Compensation/RBACMiddleware exclusion; production deployment; GAP-041/GAP-045. No new public API. No Ready flip. No merge. No release. No deploy. No self-approval.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-02T06:20:00Z"
-  updated_at: "2026-09-02T07:10:00Z"
+  updated_at: "2026-09-02T09:40:00Z"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "GAP-042 implements Option A exactly as approved through Gate 2 Round 5, corrected per Owner Gate-3 Round 1 (CHANGES REQUESTED, full text in decision_provenance.owner_response_reference above). Corrections 1-7 (see 'Owner Decision History — Round 1' and 'Round-1 correction evidence' sections below for the complete, itemized RED->GREEN record) are all implemented and verified: (1) PermissionController::store/update/destroy EventBus payloads fixed (entityId/projectId present, actorId is the real authenticated user); (2) Permission Matrix export/import routes fixed — including a newly-discovered pre-existing container-binding defect (RBACServiceProvider resolved PermissionMatrixService with zero constructor args) that made these routes completely unreachable regardless of the EventBus fixes, plus 3 invalid 4-segment event names, missing required fields, and a SQLite-incompatible FIELD() ordering clause; (3) RoleController::update() rejects scope=system escalation, RBACManager::assignSystemRole() now requires genuine tenant_id IS NULL defense-in-depth; (4) RBACManager::revokeRole() validates target role (and target project, for project scope) tenant ownership before DELETE, not only the target user; (5) RBACController's effective-permissions/check-permission routes fail closed (non-disclosing 404) for a cross-tenant target user or project_id; (6) EventBus actorId is now AuthHelper::idOrSystem() (never the tenant id) across every RBACManager/RoleController/PermissionController/PermissionMatrix* call this Work ID touches, projectId uses the established 'system' convention for non-project events; (7) the custom_user_roles migration's silent-success guard removed, fails closed on Schema::create(). Correction 8's evidence-truthfulness requirements applied throughout this packet (see corrected claims below). Correction 9's exact-head CI-before-awaiting_owner sequence is being followed: this packet's gate_status is set to awaiting_owner only after this same session pushes this content and independently confirms Owner Governance Lint SUCCESS plus all other mandatory checks green on this exact subject_sha, per the final CI-status section below."
+mandatory_technical_gate_summary: "GAP-042 implements Option A exactly as approved through Gate 2 Round 5, corrected per Owner Gate-3 Round 1 (CHANGES REQUESTED) and Round 2 (CHANGES REQUESTED), full text of both in decision_provenance.owner_response_reference history (Round 1 text preserved verbatim in the Round-1 section below; Round 2 text in this frontmatter's current owner_response_reference). Round-1 corrections 1-7 (see 'Owner Decision History — Round 1' and 'Round-1 correction evidence' below) remain implemented and verified, unchanged this round per the Owner's explicit 'do not reopen' instruction. Round-2 corrections 10-12 (see 'Owner Decision History — Round 2' and 'Round-2 correction evidence' below for the complete, itemized RED->GREEN record) are all implemented and verified: (10) Permission Matrix EventBus non-project events (PermissionMatrixController::export()/import(), PermissionMatrixService::importFromCSV()'s per-role event) now publish the literal `'projectId' => 'system'` convention instead of `(string) ($tenantId ?? 'system')`, proven both by a captured-payload EventBus test (wildcard-listener subscription) and a static source-pattern assertion; (11) PermissionMatrixService::importFromCSV() restructured to a parse-then-validate-then-write flow — CSV rows are only parsed/queued per role name in a first pass, and Permission::firstOrCreate() only runs in a second pass after the target role has passed the pre-existing visibility/ownership/global-read-only checks, so an import aimed at a cross-tenant or global/read-only role now produces zero `permissions` or `role_permissions` writes (proven with brand-new permission codes that do not exist before the request, per the Owner's explicit RED-test requirement); (12) the missing check-permission x cross-tenant project discriminator added, completing the tenant-fail-closed security matrix (the existing shared targetsAreTenantScoped() helper already covered this path — this closes a test-coverage gap, not an implementation gap). Correction 9/Round-1's exact-head CI-before-awaiting_owner sequence is being followed again for this round: this packet's gate_status remains awaiting_owner only after this same session pushes this content and independently confirms Owner Governance Lint SUCCESS plus all other mandatory checks green on this exact new subject_sha, per the final CI-status section below."
 technical_evidence:
-  subject_sha: "feaa320b98b31380c2cac7e74ce872616b63eca5"
-  implementation_tree_digest: "8512e0a5e22f0712d56bac6bf3e1a94f0c02ba8e2aa5356c0041638b62733295"
-  verified_pr_head_sha: "feaa320b98b31380c2cac7e74ce872616b63eca5"
-  verified_at: "2026-09-02T07:10:00Z"
+  subject_sha: "13e9e64df3c9ceba29dd191494df8a4ee757b1f5"
+  implementation_tree_digest: "6192e9e48ffba5d04b875baf16b8848ee2d9e069645f3284367a2a7de2e22917"
+  verified_pr_head_sha: "13e9e64df3c9ceba29dd191494df8a4ee757b1f5"
+  verified_at: "2026-09-02T09:40:00Z"
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null
@@ -190,51 +190,140 @@ text in `decision_provenance.owner_response_reference`).
   test re-confirmed GREEN. This is now genuine, discriminating RED→GREEN
   evidence for item 19, not merely a structural observation.
 
+## Owner Decision History — Round 2 — CHANGES REQUESTED (permanent record, never erased)
+
+**Owner Gate-3 Round 2 decision: CHANGES REQUESTED.** Reviewed the
+Round-1-corrected implementation subject
+`feaa320b98b31380c2cac7e74ce872616b63eca5` (implementation-tree digest
+`8512e0a5e22f0712d56bac6bf3e1a94f0c02ba8e2aa5356c0041638b62733295`) and
+Gate-3 record/PR head `6b4ef1535456925748928b38e47af6b470c4eeef` against
+canonical main `673855f69a3633b64c378e965ae409ed3a098c50`. Full verbatim
+directive preserved in this file's frontmatter
+`decision_provenance.owner_response_reference` above (current value —
+the Round-1 verbatim directive remains preserved in git history at the
+`6b4ef153` packet revision and is summarized, unaltered, in the
+"Owner Decision History — Round 1" section above). The major Round-1
+corrections were explicitly accepted as directionally correct and not
+reopened. Three narrowly-scoped corrections were required (Corrections
+10-12) — summarized in "Round-2 correction evidence" below, full text in
+the frontmatter. This round's correction is recorded in this same Gate-3
+packet (not a new gate) for the same reason as Round 1: no Owner Gate-3
+approval/defer decision had yet been rendered against the reviewed head —
+the packet returns to `awaiting_owner` for a fresh Gate-3 decision against
+the corrected head below. This record is preserved permanently and must
+not be removed by any future revision.
+
+## Round-2 correction evidence
+
+Each item below maps directly to the Owner's numbered Round-2 corrections
+(full text in `decision_provenance.owner_response_reference`). New
+discriminating tests for all three live in
+`tests/Feature/GAP042Gate3Round2CorrectionsTest.php` (7 test methods).
+
+10. **Permission Matrix EventBus projectId semantics.** Round-1
+    Correction 6 fixed `actorId` truthfulness but left three Permission
+    Matrix event publishes using
+    `'projectId' => (string) ($tenantId ?? 'system')` — mislabelling the
+    caller's tenant id as a projectId for events that have no project
+    concept: `PermissionMatrixController::export()`,
+    `PermissionMatrixController::import()`, and
+    `PermissionMatrixService::importFromCSV()`'s per-role
+    `rbac.role.permissionsImported` event. Fixed all three to the literal
+    `'projectId' => 'system'` convention already established elsewhere in
+    this Work ID for non-project RBAC events. RED evidence: two tests
+    subscribe an `EventBus::subscribe('*', ...)` wildcard listener and
+    capture the actual emitted payload for a live `export`/`import` HTTP
+    call — before the fix, `payload['projectId']` equalled the caller's
+    tenant id; after the fix it equals the literal string `'system'` and
+    is asserted `assertNotSame($tenantId, ...)`. A third test statically
+    asserts neither the exact defect pattern
+    `'projectId' => (string) ($tenantId ?? 'system')` nor the bare
+    `'projectId' => $tenantId` pattern remains in either file. All three
+    tests failed on the pre-fix subject and pass after.
+11. **Permission Matrix import permission-creation ordering.**
+    `PermissionMatrixService::importFromCSV()` called
+    `Permission::firstOrCreate()` while parsing each CSV row, before the
+    per-role loop resolved whether the target role is visible/owned/
+    global-read-only — an import aimed at an inaccessible role could still
+    manufacture a new global `permissions` row via the
+    `rbac:permission.import`-only route, a privilege the route does not
+    grant (`rbac:permission.create` is the separate, dedicated gate for
+    that). Restructured to a two-pass parse-then-validate-then-write flow:
+    the first pass only parses/validates CSV rows and queues
+    `{code, module, action}` per role name — no database write. The
+    second pass resolves each role (existing visibility/ownership
+    lookup, unchanged) and only then, for a role that has passed the
+    existing global-read-only check, calls `Permission::firstOrCreate()`
+    for that role's queued codes before `sync()`. RED evidence, using
+    permission codes guaranteed not to pre-exist
+    (`gap042.round2crosstenantnew`, `gap042.round2globalreadonlynew`):
+    (A) a tenant-A caller importing against a genuine tenant-B-owned
+    role — after the request, `permissions` does NOT contain the new
+    code and zero `role_permissions` rows exist for that role (failed
+    pre-fix: the code was being created before role resolution ever ran).
+    (B) the same proof for a genuine global/system role. Control:
+    `test_correction11_control_own_tenant_role_new_permission_still_created_and_synced`
+    proves a genuinely-owned tenant role importing a new valid code still
+    creates the permission and syncs it — unaffected by the reordering.
+12. **check-permission × cross-tenant project test-coverage gap.** The
+    implementation already fails closed for this exact case — both
+    `getUserEffectivePermissions()` and `checkUserPermission()` share the
+    same `targetsAreTenantScoped()` helper, which already validates
+    `project_id` (added under Round-1 Correction 5) — but no test
+    exercised `checkUserPermission()` with a cross-tenant `project_id`
+    specifically (only cross-tenant user was exercised for that route).
+    Added `test_correction12_check_permission_cross_tenant_project_fails_closed`:
+    tenant A's own user, tenant B's project, `POST .../check-permission`
+    — asserts non-200 and specifically `404` with no `has_permission` key
+    in the response body. This is a coverage completion, not a code fix;
+    it passed immediately because the shared helper already covered it,
+    confirming the packet's prior claim was accurate for this exact case
+    once the discriminator is actually present.
+
 ## Implementation baseline and PR
 
 - **Implementation baseline (Gate-2 merge, confirmed zero drift at session
   start):** `origin/main @ 673855f69a3633b64c378e965ae409ed3a098c50`.
 - **Implementation branch:** `fix/GAP-042-rbac-production-fidelity`.
 - **Implementation PR (Draft, unmerged):** [#299](https://github.com/kha997/zenamanagephp/pull/299).
-- **subject_sha (Round-1 correction, current; supersedes
+- **subject_sha (Round-2 correction, current; supersedes
+  `feaa320b98b31380c2cac7e74ce872616b63eca5`, which itself superseded
   `b04089268bdfe725d8d51db2f628fbfd99c8bd49`):**
-  `feaa320b98b31380c2cac7e74ce872616b63eca5`.
+  `13e9e64df3c9ceba29dd191494df8a4ee757b1f5`.
 - **Implementation plan:** `docs/superpowers/plans/2026-09-02-gap-042-rbac-production-fidelity-implementation.md`.
 
-## What changed (`b0408926` → `feaa320b`, Round-1 corrections only)
+## What changed (`feaa320b` → `13e9e64d`, Round-2 corrections only)
 
 ```
- database/migrations/2026_09_02_000000_create_custom_user_roles_table.php |  10 +-  (Correction 7)
- src/RBAC/Controllers/PermissionController.php                           |  20 ++-  (Correction 1)
- src/RBAC/Controllers/PermissionMatrixController.php                     |  30 +++-  (Correction 2)
- src/RBAC/Controllers/RBACController.php                                 |  49 +++++-  (Corrections 5, 6)
- src/RBAC/Controllers/RoleController.php                                 |  30 +++-  (Corrections 3, 6)
- src/RBAC/Providers/RBACServiceProvider.php                              |   9 +-  (Correction 2, pre-existing container-binding defect)
- src/RBAC/Services/PermissionMatrixService.php                          |  30 +++-  (Correction 2)
- src/RBAC/Services/RBACManager.php                                      |  90 +++++++--  (Corrections 3, 4, 6)
- tests/Feature/GAP042Gate3Round1CorrectionsTest.php                      | 448 + (new, 20 tests)
- 9 files changed, 742 insertions(+), 50 deletions(-)
+ src/RBAC/Controllers/PermissionMatrixController.php |  9 ++--  (Correction 10)
+ src/RBAC/Services/PermissionMatrixService.php        | 82 ++++++++++++++-------  (Corrections 10, 11)
+ tests/Feature/GAP042Gate3Round2CorrectionsTest.php   | 246 + (new, 7 tests)
+ 3 files changed, 267 insertions(+), 29 deletions(-)
 ```
 
-Every changed file is inside the already-approved GAP-042 boundary
-(`Src\RBAC\Models\Role`/`Permission` and their direct consumers —
-`RBACManager` and the 5 controllers in `src/RBAC/Controllers/` — plus
-`RBACServiceProvider`, the DI wiring for one of those exact services, and
-one new test file). No `.github/workflows/**` file touched. No new public
-route added.
+Every changed file is inside the already-approved GAP-042 boundary and,
+more narrowly, inside the exact Permission Matrix execution path the
+Owner named this round. No `.github/workflows/**` file touched. No new
+public route added. No file outside `PermissionMatrixController.php`,
+`PermissionMatrixService.php`, and the one new test file was modified.
 
 ## Scope discipline confirmed
 
-Per the Owner's explicit list, none of the following was reopened or
-touched this round: Option A canonical-table convergence; the
-`custom_user_roles` 3-layer decision; the global-role read-only policy;
-route-parameter-authoritative identity (§2e); the three restored project-
-assignment routes; the unwired `assignSystem`/`assignCustom`/`assignProject`/
-`getEffectivePermissions` decision (§2d); the exclusion of
-`AssignmentController::getUserRoles()`; the exclusion of
-`CompensationController`/`Src\RBAC\Middleware\RBACMiddleware`; the
-`RolePermission`-not-required decision (§15); `roles.name` global
-uniqueness; GAP-041/GAP-045; production deployment configuration.
+Per the Owner's explicit Round-1 AND Round-2 "do not reopen" lists, none
+of the following was reopened or touched in either round: Option A
+canonical-table convergence; the `custom_user_roles` 3-layer decision;
+the global-role read-only policy; route-parameter-authoritative identity
+(§2e); the three restored project-assignment routes; the unwired
+`assignSystem`/`assignCustom`/`assignProject`/`getEffectivePermissions`
+decision (§2d); the exclusion of `AssignmentController::getUserRoles()`;
+the exclusion of `CompensationController`/`Src\RBAC\Middleware\RBACMiddleware`;
+the `RolePermission`-not-required decision (§15); `roles.name` global
+uniqueness; GAP-041/GAP-045; production deployment configuration;
+tenant role visibility semantics; assignment tenant checks; scope=system
+escalation protection; genuine-global `assignSystemRole` check; revoke
+identity validation; the effective/check-permission tenant-target helper
+itself (only its test coverage was completed, not its logic); the route
+identity decision; the unwired-methods decision.
 
 ## Completed behavior matrix vs approved Gate 2 (all 20 acceptance items, §10)
 
@@ -244,7 +333,7 @@ items' own tests (and the new Round-1 correction tests) now catch. See
 the prior packet's table (preserved in git history at `bd3c0910`) for the
 full 20-row mapping; item 19's evidence is corrected above (Correction 8B).
 
-## Real MySQL 8.0 evidence (Round-1 corrected head)
+## Real MySQL 8.0 evidence (Round-1 corrected head — unchanged, preserved)
 
 Fresh disposable `mysql:8.0` Docker container (port 33062),
 `migrate:fresh --force` against real migrations only (235 migrations,
@@ -261,45 +350,75 @@ conflicting table exists):
 - Container torn down after evidence capture (disposable, per repo
   convention).
 
-## Regression results (Round-1 corrected head)
+## Real MySQL 8.0 evidence (Round-2 corrected head)
+
+Fresh disposable `mysql:8.0` Docker container (port 33063, distinct from
+the Round-1 container to avoid any collision with a concurrently-running
+session), `migrate:fresh --force` against real migrations only — same
+migration set as Round-1 (Round-2 added no new migration; the last
+migration to run is still the Correction-7-fixed
+`2026_09_02_000000_create_custom_user_roles_table`), completed cleanly
+with zero errors:
+
+- Table inventory re-confirmed: `roles`, `permissions`,
+  `role_permissions`, `user_roles`, `system_user_roles`,
+  `project_user_roles`, `custom_user_roles` — all `PRESENT`;
+  `zena_roles` and `zena_permissions` — both `ABSENT`
+  (`SHOW TABLES LIKE 'zena_roles'` / `'zena_permissions'` both empty).
+- `GAP042RbacProductionFidelityTest` (18) + `GAP042Gate3Round1CorrectionsTest`
+  (20) + `GAP042Gate3Round2CorrectionsTest` (7) + `RbacApiTest` (9) =
+  **54/54 pass** against `phpunit.mysql.xml` with
+  `DB_CONNECTION=mysql`/`ZENA_INVARIANTS_DB=mysql` (env vars set inline,
+  `DB_HOST=127.0.0.1 DB_PORT=33063 DB_DATABASE=zenamanage_test
+  DB_USERNAME=root DB_PASSWORD=root`).
+- Container torn down after evidence capture (disposable, per repo
+  convention).
+
+## Regression results (Round-2 corrected head)
 
 - **Full SQLite regression** (`vendor/bin/phpunit --exclude-group=stress,performance,browser`):
-  **2439 tests** (2419 baseline + 20 new Round-1 correction tests), 17292
-  assertions, **7 failures — all pre-existing, unrelated, independently
-  documented** (`Tests\Feature\Dashboard\DashboardApiTest`'s 7 widget-
-  customization tests, `Call to undefined method
+  **2446 tests** (2439 Round-1 baseline + 7 new Round-2 correction tests),
+  17330 assertions, **7 failures — all pre-existing, unrelated,
+  independently documented** (`Tests\Feature\Dashboard\DashboardApiTest`'s
+  7 widget-customization tests, `Call to undefined method
   Illuminate\Cache\RedisStore::publish()`, zero RBAC/tenant files
   involved; this exact failure set is documented as pre-existing in
   `docs/owner-decisions/GAP-048/03-release.md`'s own regression section,
-  merged to `main` before this PR's baseline). **0 GAP-042 regressions**
-  introduced by the Round-1 corrections.
+  merged to `main` before this PR's baseline — identical failure count
+  and identical named tests as the Round-1 packet's own regression run,
+  confirming Round-2 introduced zero new regressions). **0 GAP-042
+  regressions** introduced by the Round-2 corrections.
 - **Targeted focused regression**
-  (`GAP042RbacProductionFidelityTest` + `RbacApiTest` +
-  `GAP042Gate3Round1CorrectionsTest` + `ServiceLineFoundationTest`): 69
-  tests, 301 assertions, 0 failures, deterministic across 3 repeat runs.
+  (`GAP042RbacProductionFidelityTest` + `GAP042Gate3Round1CorrectionsTest`
+  + `GAP042Gate3Round2CorrectionsTest` + `RbacApiTest`): 54 tests, 282
+  assertions, 0 failures, both on SQLite and on real MySQL 8.0 (see
+  above).
 
 ## Route inventory check (unchanged, no unauthorized new public surface)
 
-`php artisan route:list --path=rbac` at `feaa320b`: 29 routes, unchanged
-count/paths from the prior packet's inventory (Round-1 corrections fixed
-existing route handlers' internal logic and one DI binding — no route
-registration was added, removed, or renamed).
+`php artisan route:list --path=rbac` at `13e9e64d`: 29 routes, byte-
+identical count/paths to the Round-1 inventory (Round-2 corrections only
+changed internal EventBus payload construction and CSV-import write
+ordering — no route registration was added, removed, or renamed).
 
 ## Static analysis / PHPStan
 
 Same documented, pre-existing local environment limitation as the prior
-packet (this worktree's ad hoc vendor copy+symlink construction cannot
-run `phpstan`/Composer binaries locally). Relies on the live
-`Code Quality Analysis` CI check — see "CI status" below.
+packet (this worktree's ad hoc vendor copy+symlink construction produces
+a duplicate-autoloader-class fatal error when invoking `vendor/bin/phpstan`
+directly, and `composer dump-autoload` was needed just to make
+`vendor/bin/phpunit` resolve `Tests\TestCase` in this worktree — see the
+accompanying session report). Relies on the live `Code Quality Analysis`
+CI check — see "CI status" below.
 
-## CI status (exact head `feaa320b`)
+## CI status (exact head `13e9e64d`)
 
 To be finalized against this exact head before this packet is treated as
 truthfully `awaiting_owner`, per Correction 9's explicit sequencing
-requirement — see the accompanying session report for the live,
-exact-head CI snapshot, including explicit confirmation that
-`Owner Governance Lint` is `SUCCESS` on this exact head (not merely a
-prior head's rerun).
+requirement (still binding this round) — see the accompanying session
+report for the live, exact-head CI snapshot, including explicit
+confirmation that `Owner Governance Lint` is `SUCCESS` on this exact head
+(not merely a prior head's rerun).
 
 ## Known limitations, disclosed honestly
 

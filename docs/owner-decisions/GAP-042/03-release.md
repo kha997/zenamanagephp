@@ -33,7 +33,7 @@ technical_evidence:
   subject_sha: "13e9e64df3c9ceba29dd191494df8a4ee757b1f5"
   implementation_tree_digest: "6192e9e48ffba5d04b875baf16b8848ee2d9e069645f3284367a2a7de2e22917"
   verified_pr_head_sha: "13e9e64df3c9ceba29dd191494df8a4ee757b1f5"
-  verified_at: "2026-09-02T09:40:00Z"
+  verified_at: "2026-09-02T08:50:00Z"
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null
@@ -411,14 +411,45 @@ directly, and `composer dump-autoload` was needed just to make
 accompanying session report). Relies on the live `Code Quality Analysis`
 CI check — see "CI status" below.
 
-## CI status (exact head `13e9e64d`)
+## CI status (exact head `f9c45043d670987ca479bb3b44a5108fda1cbb21`)
 
-To be finalized against this exact head before this packet is treated as
-truthfully `awaiting_owner`, per Correction 9's explicit sequencing
-requirement (still binding this round) — see the accompanying session
-report for the live, exact-head CI snapshot, including explicit
-confirmation that `Owner Governance Lint` is `SUCCESS` on this exact head
-(not merely a prior head's rerun).
+Confirmed via `gh pr checks 299` on PR #299's actual current head
+(`f9c45043` — the doc-update commit on top of code subject `13e9e64d`,
+per this repository's established convention that the implementation-
+tree digest excludes the active Gate-3 packet file itself, so the
+"subject_sha" above is the code-only commit while the pushed branch head
+that CI actually ran against is one commit later). All mandatory checks
+green:
+
+- `Owner Governance Lint`: **SUCCESS**. First run on this exact head
+  (07:25:46 UTC, 5m49s) failed with
+  `gate_status is 'awaiting_owner' but 3 other check(s) on PR #299's
+  current head are not green (pending or failed) after waiting up to
+  300s` — this is the documented evidence-freshness 300s sibling-timing
+  race (the same class of race seen in prior gates, e.g. GAP-039): the
+  lint's own content checks (`owner-governance-lint PASS`,
+  `--enforce-gate-ordering PASS`) both passed within that same run; only
+  the sub-step that waits for sibling checks timed out because
+  `browser-tests` (a historically slow job — 1h14m36s this run) had not
+  yet resolved. Once every sibling check had actually gone green,
+  `gh run rerun 33603521371` was invoked with **no code change, no new
+  commit** — the rerun completed **SUCCESS** in 35s on the identical
+  head.
+- All other mandatory checks (Unit Tests, Feature Tests, Integration
+  Tests, API Tests Fast/Slow, Security Tests, Security Vulnerability
+  Scan, Docker Security Scan, Dependency Vulnerability Scan, License
+  Compliance Scan, Code Quality Analysis, `code-quality`, Repo Hygiene
+  Guards, Zena RBAC/Tenant Invariants (SQLite + MySQL parity), the four
+  real-MySQL concurrency jobs (Document Workflow, GAP-048 Service-Line,
+  RFI Escalation, Treasury Native CHECK Constraints), Performance Tests
+  ×2, `test`, `test-routes-guardrails`, `button-inventory-check`,
+  `staging-smoke`, `browser-tests`, `feature-tests`, `security-tests`,
+  `quality-gate`, `coverage-report`, Test Coverage Report, Trivy):
+  **all green**.
+- `deploy`: `skipping` — expected, secrets not configured in this
+  environment (documented pre-existing condition, unrelated to this
+  Work ID; see GAP-043/GAP-044 release notes for the same disclosed
+  limitation).
 
 ## Known limitations, disclosed honestly
 

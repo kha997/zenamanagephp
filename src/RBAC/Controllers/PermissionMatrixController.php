@@ -42,9 +42,12 @@ class PermissionMatrixController
             // and the payload omitted validator-required entityId/
             // projectId — this now-live route would throw on every call.
             // Correction 6: actorId is the real authenticated user.
+            // Round-2 Correction 10: this is a non-project RBAC event
+            // (Permission Matrix export has no project concept) — projectId
+            // must use the literal 'system' convention, never the tenant id.
             $this->eventBus->publish('rbac.permissionMatrix.exported', [
                 'entityId' => (string) ($request->user()?->id ?? 'system'),
-                'projectId' => (string) ($tenantId ?? 'system'),
+                'projectId' => 'system',
                 'actorId' => (string) ($request->user()?->id ?? 'system'),
                 'timestamp' => now()->toISOString()
             ]);
@@ -140,9 +143,11 @@ class PermissionMatrixController
             // 3-segment event name, validator-required fields, truthful
             // actor identity (see PermissionMatrixService::importFromCSV()
             // for the per-role event fix, which runs DURING the loop).
+            // Round-2 Correction 10: non-project RBAC event — projectId must
+            // use the literal 'system' convention, never the tenant id.
             $this->eventBus->publish('rbac.permissionMatrix.imported', [
                 'entityId' => (string) ($request->user()?->id ?? 'system'),
-                'projectId' => (string) ($tenantId ?? 'system'),
+                'projectId' => 'system',
                 'actorId' => (string) ($request->user()?->id ?? 'system'),
                 'stats' => $result['stats'],
                 'timestamp' => now()->toISOString()

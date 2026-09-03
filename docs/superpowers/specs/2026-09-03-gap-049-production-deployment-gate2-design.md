@@ -41,6 +41,12 @@ A merge to `main` must **not**, by itself, constitute production deployment duri
 - The production job uses GitHub `environment: production` (as `production.yml` already does), and **a human production-approval gate is required before any production host/database mutation** — implemented via GitHub Environment required reviewers where the plan/permissions support it. **Fallback if GitHub-plan/environment limitations prevent required-reviewer enforcement:** an explicit authorized-manual-dispatch model — only a named, access-controlled set of humans may trigger the `workflow_dispatch` at all (enforced via repository/environment permissions, not merely convention), and the act of manually dispatching *is* the approval, recorded in the Actions run's actor field. The design must never silently fall back to automatic deploy-on-main merely because required-reviewer enforcement is unavailable on the current GitHub plan.
 - **Future auto-deploy after the pilot phase is explicitly out of scope for this Gate-2 decision** and requires a separate, later, explicit Owner decision — this design only covers the first-controlled-deployment/pilot period.
 
+**Binding Owner clarification (Gate-2 Round 2): trusted exact-SHA source delivery.** Verifying the checked-out SHA matches the requested input (above) is necessary but not sufficient — it does not by itself specify *how* that exact source reaches the host, and the approved architecture must not reproduce a Gate-1-style implicit-host-git-credential problem (where the host's own git remote credentials, entirely outside this design's control, determine what gets deployed). Implementation planning (a future session) must choose exactly one of:
+- **(a) Preferred — CI-delivered exact release.** CI checks out the exact requested SHA, verifies it, builds/prepares the release artifact there, and transfers that exact, already-verified release to the host over the approved deployment channel (e.g. via the same SSH action already used for the deploy step, or an artifact-transfer mechanism decided at implementation time). The host never independently decides what to fetch.
+- **(b) Acceptable alternative — host-side fetch of the exact SHA.** The host fetches the exact requested SHA from GitHub using a dedicated, read-only repository/deploy credential (e.g. a deploy key or fine-grained PAT scoped to read-only access on this repository only) — never a broad, write-capable, or account-level GitHub credential sitting on the production host merely to perform a deploy.
+
+In either case, the following are fixed, non-negotiable properties of the chosen mechanism: no `git pull origin main` (or any other mutable-branch reference) anywhere in the production path; no deploying "whatever `main` currently points to" at host-fetch time; no implicit dependency on a mutable branch ref for what gets deployed; no broad write-capable GitHub credential provisioned on the production host merely to enable deployment; the exact requested SHA is verified before the release is activated (i.e. before the `current` symlink ever points at it), regardless of which of (a)/(b) is chosen. The implementation plan must state explicitly which of (a) or (b) was chosen and why — this design does not pre-select between them, only fixes the properties both must satisfy.
+
 #### A-2. Deployment state machine (Round-1 correction, "Additional")
 
 The truthful-status model is corrected to six states, replacing the five-state model from Round 1 (which risked conflating workflow "success" with "production is healthy"):
@@ -136,7 +142,7 @@ Out of this design's control — depends on the external host/domain decision (�
 
 #### A-12. First controlled-deployment acceptance evidence
 
-See §6 (updated in this round to reference the A-4 queue canary and the production-safe bootstrap contract, §4a).
+See §6 (updated in this round to reference the A-4 queue canary and the production-safe bootstrap contract, §3a).
 
 **Effort/complexity:** Low-to-moderate — evolves an existing, simpler mechanism. Does not require the team to adopt Docker/container operations if they haven't already. **Cost:** no new infrastructure spend beyond the already-assumed single host. **Maintainability:** straightforward for a team already comfortable with bare-metal Linux/SSH operations.
 
@@ -227,12 +233,17 @@ None of these block finishing Gate 2's architecture comparison and recommendatio
 
 Beyond the minimal production readiness endpoint (A-4), the smoke sequence remains the design target for Gate 3 to implement as an evidence-producing step, not merely describe:
 1. Login/auth succeeds for the real, non-demo operator account produced or resolved through the production-safe bootstrap contract (§3a) — never a `DatabaseSeeder`-created demo account.
-2. Tenant isolation holds, exercised against the real production tenant created per §3a.
+2. Tenant isolation — see the corrected, split evidence model immediately below (Gate-2 Round 2 clarification); production smoke does **not** attempt to re-prove cross-tenant isolation from scratch using manufactured data.
 3. RBAC enforces exactly the permitted actions for a given role.
 4. A DB write persists across a request cycle.
 5. The A-4 queue canary completes within its bounded wait — a unique probe job is enqueued, the real worker processes it, and completion is observed before the timeout; this is the evidence that `QUEUE_CONNECTION` and the worker process are real, not the `sync` default, replacing any claim the readiness HTTP endpoint itself could make about queue liveness.
 6. A file upload round-trips through `shared/storage` (A-3).
 7. A small set of critical pages/APIs return 200 under authentication.
+
+**Binding Owner clarification (Gate-2 Round 2): tenant-isolation evidence is split, not claimed from production smoke alone.** The production-safe bootstrap contract (§3a) intentionally creates only real production data and must **not** create a fake/demo second tenant merely to give a smoke test something to isolate against — doing so would violate §3a's own "no demo data in production" rule. Evidence is therefore split into two distinct, non-substitutable parts:
+- **(a) Pre-release security evidence (required before this architecture is considered acceptance-ready, executed in a disposable/non-production environment):** cross-tenant *negative* isolation is proven in a disposable test environment provisioned with at least two controlled test tenants, exercising the real, live authorization/tenant-boundary code paths (not a synthetic unit-test double), demonstrating concretely that Tenant A cannot read or write Tenant B's data. This is the evidence that actually proves the isolation *mechanism* works.
+- **(b) Production smoke (item 2 above, using only real data):** verifies the authenticated real operator is correctly scoped to their own real tenant, and that no unexpected data belonging to any other tenant appears in their session — this proves *configuration/wiring* in the real production environment, not the isolation mechanism itself (that was already proven in (a)). If production legitimately already contains two or more real tenants (e.g. a later, later-arriving second real customer), an additional non-destructive cross-tenant verification may be performed between those real tenants where safe and explicitly authorized — but demo/synthetic production tenants must never be manufactured merely to enable this check.
+- **This clarification is evidence-methodology only — it does not authorize any CRM/project/business-semantics change.** Both (a) and (b) exercise existing tenant-isolation behavior; neither modifies it.
 
 As before, the principal business flow (Lead → Opportunity → Service Line → Quote → Contract → Project) remains named only as a description of eventual real-user success, not a spec to implement here — any future need to touch that product code goes through a separate Work ID's Design Dependency Preflight.
 

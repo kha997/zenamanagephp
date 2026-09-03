@@ -240,7 +240,7 @@ jobs:
     name: Deploy Release
     runs-on: ubuntu-latest
     needs: [build-release, security-scan-release]
-    if: always() && needs.build-release.result == 'success' && needs.security-scan-release.result == 'success'
+    if: false  # GAP-049: retired production entry point; see docs/owner-decisions/GAP-049/02-design.md (was: always() && needs.build-release.result == 'success' && needs.security-scan-release.result == 'success')
     environment: production
     
     steps:
@@ -331,7 +331,7 @@ jobs:
   rollback-release:
     name: Rollback Release
     runs-on: ubuntu-latest
-    if: failure() && github.event_name == 'release'
+    if: false  # GAP-049: retired production entry point; see docs/owner-decisions/GAP-049/02-design.md (was: failure() && github.event_name == 'release')
     environment: production
     
     steps:
@@ -411,7 +411,7 @@ jobs:
     name: Cleanup Release
     runs-on: ubuntu-latest
     needs: [deploy-release, rollback-release]
-    if: always()
+    if: false  # GAP-049: retired production entry point; see docs/owner-decisions/GAP-049/02-design.md (was: always())
     
     steps:
     - name: Gate cleanup secrets

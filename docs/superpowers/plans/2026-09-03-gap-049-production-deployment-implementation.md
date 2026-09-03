@@ -316,11 +316,30 @@ class ProductionReadinessEndpointTest extends TestCase
 
     public function test_returns_503_when_storage_probe_fails(): void
     {
+        // Genuinely exercises the "read throws after a successful write" path
+        // (exists() must return true so get() is actually reached), and
+        // verifies delete() cleanup still runs via the probe's finally block
+        // even though get() threw.
         Storage::shouldReceive('disk')->andReturnSelf();
-        Storage::shouldReceive('put')->andReturn(false);
+        Storage::shouldReceive('put')->andReturn(true);
+        Storage::shouldReceive('exists')->andReturn(true);
         Storage::shouldReceive('get')->andThrow(new \RuntimeException('disk unwritable'));
-        Storage::shouldReceive('delete')->andReturn(true);
-        Storage::shouldReceive('exists')->andReturn(false);
+        Storage::shouldReceive('delete')->once()->andReturn(true);
+
+        $controller = new \App\Http\Controllers\Api\ProductionReadinessController();
+        $response = $controller->check();
+
+        $this->assertSame(503, $response->getStatusCode());
+        $this->assertContains('storage', $response->getData(true)['failed']);
+    }
+
+    public function test_storage_probe_cleanup_runs_even_when_put_fails(): void
+    {
+        // put() itself failing (not throwing) means $written stays false —
+        // delete() must NOT be called in that case (nothing to clean up).
+        Storage::shouldReceive('disk')->andReturnSelf();
+        Storage::shouldReceive('put')->andThrow(new \RuntimeException('disk full'));
+        Storage::shouldReceive('delete')->never();
 
         $controller = new \App\Http\Controllers\Api\ProductionReadinessController();
         $response = $controller->check();
@@ -413,34 +432,51 @@ class ProductionReadinessController extends Controller
 
     private function probeCache(): bool
     {
-        try {
-            $key = 'gap049-readiness-' . Str::random(12);
-            $value = Str::random(8);
+        $key = 'gap049-readiness-' . Str::random(12);
+        $value = Str::random(8);
 
+        try {
             Cache::put($key, $value, 10);
             $read = Cache::get($key);
-            Cache::forget($key);
-
             return $read === $value;
         } catch (\Throwable) {
             return false;
+        } finally {
+            // Cleanup runs even if a call above threw partway through, so a
+            // transient failure never leaves an orphaned probe key behind.
+            try {
+                Cache::forget($key);
+            } catch (\Throwable) {
+                // Best-effort cleanup only — the probe result above already stands.
+            }
         }
     }
 
     private function probeStorage(): bool
     {
+        $disk = Storage::disk(config('filesystems.default'));
+        $path = 'gap049-readiness-probes/' . Str::random(12) . '.probe';
+        $value = Str::random(8);
+        $written = false;
+
         try {
-            $disk = Storage::disk(config('filesystems.default'));
-            $path = 'gap049-readiness-probes/' . Str::random(12) . '.probe';
-            $value = Str::random(8);
-
             $disk->put($path, $value);
+            $written = true;
             $read = $disk->exists($path) ? $disk->get($path) : null;
-            $disk->delete($path);
-
             return $read === $value;
         } catch (\Throwable) {
             return false;
+        } finally {
+            // Cleanup runs even if exists()/get() throws after a successful put(),
+            // so a transient failure never leaves an orphaned probe file behind
+            // (unlike the cache probe, storage has no TTL to self-clean).
+            if ($written) {
+                try {
+                    $disk->delete($path);
+                } catch (\Throwable) {
+                    // Best-effort cleanup only — the probe result above already stands.
+                }
+            }
         }
     }
 }

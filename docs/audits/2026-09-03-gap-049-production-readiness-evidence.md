@@ -67,7 +67,11 @@ To stop switching between inconsistent path-counts, every deployment-related rep
 
 `docker-compose.prod.yml` and `docker-manage.sh` are **not** listed here — both are actively invoked by `automated-deployment.yml` and belong exclusively to Category C, not D. No artifact in this document is double-placed in both C and D.
 
-**Corrected surface count:** **3 executable workflows (A)**, **1 placeholder job (B)**, **2 underlying script/topology invocations actually read and audited (C)** (root `deploy.sh` for `deploy.yml`; `docker-compose.prod.yml`+`docker-manage.sh` for `automated-deployment.yml` — `production.yml` has no separate script file, its logic is inline), **2 genuinely-orphaned scripts (D)**. This document uses these counts consistently from here on; any earlier draft's inconsistent path-count language or the Round-1/Round-2 placement of `deploy.sh` under Category D is superseded by this table.
+**Corrected surface count — Category C count made explicit about what is being counted (Round 3 correction):** **3 executable workflows (A)**, **1 placeholder job (B)**, **2 genuinely-orphaned scripts (D)**. For Category C, two different, both-valid counts exist depending on what is being counted, and this document uses both explicitly rather than a bare, ambiguous number:
+- **Counting Category-C EXECUTION IMPLEMENTATIONS (one per Category-A workflow that has one) — the count is 3:** `production.yml`'s inline shell implementation; `deploy.yml`'s root-`deploy.sh` implementation; `automated-deployment.yml`'s `docker-compose.prod.yml` + `docker-manage.sh` implementation.
+- **Counting only SEPARATE REPOSITORY SCRIPT/TOPOLOGY ARTIFACTS on disk (excluding `production.yml`, which has no separate script file — its logic is inline in the workflow YAML itself, not a distinct repo artifact) — the count is 2, plus one inline implementation:** the root `deploy.sh` artifact, and the `docker-compose.prod.yml`+`docker-manage.sh` artifact pair.
+
+Both counts are correct for what they measure; this document does not use a bare "N Category-C" number anywhere without specifying which of the two it means. Any earlier draft's inconsistent path-count language or the Round-1/Round-2 placement of `deploy.sh` under Category D is superseded by this table.
 
 ### Root `deploy.sh` — full read, concrete hazards (Category C detail, corrected Round 3)
 

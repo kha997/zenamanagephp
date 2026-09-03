@@ -1113,7 +1113,28 @@ require_dir "$RELEASE_DIR" "release directory"
 
 TMP_LINK="${ROOT}/current.tmp.$$"
 ln -sfn "$RELEASE_DIR" "$TMP_LINK"
-mv -T "$TMP_LINK" "${ROOT}/current"
+
+# True atomic switch: rename() is a single, atomic syscall — there is never a
+# moment where `current` does not exist or points at a half-written state.
+# GNU mv's -T ("no target directory") disables mv's POSIX directory-following
+# special case (which would otherwise move TMP_LINK *into* the directory
+# `current` resolves to, rather than replacing `current` itself) and performs
+# a plain rename(). Production hosts are Linux/GNU coreutils (see
+# docs/runbooks/gap-049-host-provisioning.md), so this atomic path is what
+# actually runs in production.
+if mv --help 2>&1 | grep -q -- '-T'; then
+  mv -T "$TMP_LINK" "${ROOT}/current"
+else
+  # Non-GNU mv (e.g. BSD/macOS — local dev/test runs of this script only,
+  # never production): `ln -sfn` correctly replaces an existing
+  # symlink-to-directory rather than following it, matching GNU `mv -T`'s
+  # target-replacement semantics, but internally performs an unlink+symlink
+  # rather than a single atomic rename, so there is a brief window (absent
+  # on the production/GNU path above) where `current` does not exist.
+  # Acceptable only because this branch never executes on a real deploy host.
+  ln -sfn "$RELEASE_DIR" "${ROOT}/current"
+  rm -f "$TMP_LINK"
+fi
 
 log "current -> releases/${SHA}"
 ```

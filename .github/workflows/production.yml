@@ -1,128 +1,264 @@
 name: Production Deployment
 
 on:
-  push:
-    branches: [ main ]
-    tags: [ 'v*' ]
-    paths-ignore:
-      - 'docs/**'
-      - '**/*.md'
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: 'Exact commit SHA to deploy (must be reachable from main)'
+        required: true
+        type: string
+      allow_breaking_migrations:
+        description: 'Set true only if this SHA includes migrations classified "breaking" AND maintenance mode has been manually enabled on the host first (see docs/runbooks/gap-049-migration-safety.md)'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
 
 env:
   PHP_VERSION: '8.2'
 
-
 jobs:
-  security-scan:
+  verify-sha:
     runs-on: ubuntu-latest
+    outputs:
+      verified_sha: ${{ steps.verify.outputs.sha }}
     steps:
       - uses: actions/checkout@v5
-      - name: Security Scan
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.sha }}
+
+      - name: Verify checked-out SHA matches requested input exactly
+        id: verify
         run: |
-          composer audit || true
-          npm audit --audit-level=critical
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          REQUESTED_SHA="${{ github.event.inputs.sha }}"
+          if [ "$ACTUAL_SHA" != "$REQUESTED_SHA" ]; then
+            echo "::error::Checked-out SHA ($ACTUAL_SHA) does not match requested input ($REQUESTED_SHA)"
+            exit 1
+          fi
+          echo "sha=${ACTUAL_SHA}" >> "$GITHUB_OUTPUT"
 
-  test:
-    needs: security-scan
+      - name: Verify SHA is reachable from canonical main (fail closed on unmerged/arbitrary commits)
+        run: |
+          git fetch origin main --depth=1000
+          if ! git merge-base --is-ancestor "${{ steps.verify.outputs.sha }}" origin/main; then
+            echo "::error::${{ steps.verify.outputs.sha }} is not reachable from origin/main — refusing to deploy an unapproved/unmerged commit."
+            exit 1
+          fi
+
+  build:
+    needs: verify-sha
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        php-version: ['8.2']
-
+    outputs:
+      artifact_sha256: ${{ steps.checksum.outputs.sha256 }}
     steps:
       - uses: actions/checkout@v5
-      
-      - name: Setup PHP ${{ matrix.php-version }}
+        with:
+          ref: ${{ needs.verify-sha.outputs.verified_sha }}
+
+      - name: Setup PHP ${{ env.PHP_VERSION }}
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.php-version }}
+          php-version: ${{ env.PHP_VERSION }}
           extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, dom, filter, gd, json, redis
-          coverage: pcov
-          ini-values: |
-            pcov.enabled=1
-            pcov.directory=app
-            pcov.exclude="~vendor~"
 
-      - name: Verify PCOV loaded
-        run: php -r "if (!extension_loaded('pcov')) { fwrite(STDERR, 'PCOV missing\n'); exit(1);} echo 'PCOV loaded\n';"
+      - name: Install PHP dependencies (production, no dev)
+        run: composer install --no-dev --optimize-autoloader --prefer-dist --no-progress
 
-      - name: Install dependencies
+      - name: Install and build frontend assets
         run: |
-          composer install --prefer-dist --no-progress
           npm ci
+          npm run build
 
-      - name: Bootstrap application env
+      - name: Exclude secrets/runtime state from the release artifact
         run: |
-          cp .env.example .env.testing
-          php artisan key:generate --env=testing --force
+          rm -f .env .env.testing .env.example
+          rm -rf storage/framework/cache/* storage/framework/sessions/* storage/framework/views/* storage/logs/*
 
-      - name: Run tests
+      - name: Package immutable release artifact bound to exact SHA
+        id: package
         run: |
-          php artisan test
+          ARTIFACT="release-${{ needs.verify-sha.outputs.verified_sha }}.tar.gz"
+          tar -czf "$ARTIFACT" \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='tests' \
+            .
+          echo "artifact=${ARTIFACT}" >> "$GITHUB_OUTPUT"
+
+      - name: Compute and verify artifact checksum
+        id: checksum
+        run: |
+          sha256sum "${{ steps.package.outputs.artifact }}" > "${{ steps.package.outputs.artifact }}.sha256"
+          sha256sum -c "${{ steps.package.outputs.artifact }}.sha256"
+          echo "sha256=$(cut -d' ' -f1 "${{ steps.package.outputs.artifact }}.sha256")" >> "$GITHUB_OUTPUT"
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ needs.verify-sha.outputs.verified_sha }}
+          path: |
+            release-${{ needs.verify-sha.outputs.verified_sha }}.tar.gz
+            release-${{ needs.verify-sha.outputs.verified_sha }}.tar.gz.sha256
+          retention-days: 7
 
   deploy:
-    needs: test
+    needs: [verify-sha, build]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
     environment: production
-    
+    outputs:
+      deploy_state: ${{ steps.set-state.outputs.state }}
     steps:
-      - name: Gate production secrets
-        id: check-production-secrets
+      - name: Gate production secrets — report not_configured truthfully, never a bare skip
+        id: gate
         run: |
           missing=""
-          if [[ -z "${{ secrets.PRODUCTION_HOST }}" ]]; then
-            missing="${missing} PRODUCTION_HOST"
-          fi
-          if [[ -z "${{ secrets.PRODUCTION_USER }}" ]]; then
-            missing="${missing} PRODUCTION_USER"
-          fi
-          if [[ -z "${{ secrets.PRODUCTION_SSH_KEY }}" ]]; then
-            missing="${missing} PRODUCTION_SSH_KEY"
-          fi
-          if [[ -z "${{ secrets.PRODUCTION_URL }}" ]]; then
-            missing="${missing} PRODUCTION_URL"
-          fi
-          if [[ -n "$missing" ]]; then
-            echo "Skipping deploy because secrets missing:$missing"
+          for name in PRODUCTION_HOST PRODUCTION_USER PRODUCTION_SSH_KEY PRODUCTION_URL PRODUCTION_HOST_KEY_FINGERPRINT; do
+            val="${!name}"
+            if [ -z "$val" ]; then missing="${missing} ${name}"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::warning::Production deployment not_configured — missing secrets:${missing}. This run reports not_configured, never a false 'success'."
             echo "ready=false" >> "$GITHUB_OUTPUT"
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
+        env:
+          PRODUCTION_HOST: ${{ secrets.PRODUCTION_HOST }}
+          PRODUCTION_USER: ${{ secrets.PRODUCTION_USER }}
+          PRODUCTION_SSH_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
+          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
+          PRODUCTION_HOST_KEY_FINGERPRINT: ${{ secrets.PRODUCTION_HOST_KEY_FINGERPRINT }}
 
-      - name: Deploy to production
-        if: ${{ steps.check-production-secrets.outputs.ready == 'true' }}
+      - name: Report not_configured and stop
+        if: steps.gate.outputs.ready != 'true'
+        run: |
+          echo "::error::Production deployment state: not_configured (required secrets absent). No deployment was attempted."
+          echo "state=not_configured" >> "$GITHUB_OUTPUT"
+          exit 1
+        id: not-configured
+
+      - uses: actions/download-artifact@v4
+        if: steps.gate.outputs.ready == 'true'
+        with:
+          name: release-${{ needs.verify-sha.outputs.verified_sha }}
+
+      - name: Record attempted state
+        if: steps.gate.outputs.ready == 'true'
+        run: |
+          echo "Production deployment state: attempted (sha=${{ needs.verify-sha.outputs.verified_sha }})"
+
+      - name: Transfer verified release artifact to host over authenticated SSH channel
+        if: steps.gate.outputs.ready == 'true'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          fingerprint: ${{ secrets.PRODUCTION_HOST_KEY_FINGERPRINT }}
+          source: "release-${{ needs.verify-sha.outputs.verified_sha }}.tar.gz,release-${{ needs.verify-sha.outputs.verified_sha }}.tar.gz.sha256,scripts/deploy/*.sh"
+          target: "/tmp/zena-deploy-${{ needs.verify-sha.outputs.verified_sha }}"
+          strip_components: 0
+
+      - name: Activate release on host (checksum verify, extract, link shared, migrate, atomic switch, readiness, queue canary)
+        if: steps.gate.outputs.ready == 'true'
+        id: activate
         uses: appleboy/ssh-action@v1.2.4
         with:
           host: ${{ secrets.PRODUCTION_HOST }}
           username: ${{ secrets.PRODUCTION_USER }}
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          fingerprint: ${{ secrets.PRODUCTION_HOST_KEY_FINGERPRINT }}
           script: |
-            cd /var/www/zena
-            git pull origin main
-            composer install --no-dev --optimize-autoloader
-            npm ci
-            npm run build
-            php artisan migrate --force
+            set -euo pipefail
+            SHA="${{ needs.verify-sha.outputs.verified_sha }}"
+            STAGE="/tmp/zena-deploy-${SHA}"
+            ROOT="/var/www/zena"
+
+            cd "$STAGE"
+            sha256sum -c "release-${SHA}.tar.gz.sha256"
+
+            mkdir -p "${ROOT}/releases/${SHA}"
+            tar -xzf "release-${SHA}.tar.gz" -C "${ROOT}/releases/${SHA}"
+
+            chmod +x "${STAGE}/scripts/deploy/"*.sh
+            "${STAGE}/scripts/deploy/link-shared.sh" "$ROOT" "$SHA"
+
+            cd "${ROOT}/releases/${SHA}"
+            DEPLOY_MIGRATE_ARGS=""
+            if [ "${{ github.event.inputs.allow_breaking_migrations }}" = "true" ]; then
+              DEPLOY_MIGRATE_ARGS="--allow-breaking"
+            fi
+            php artisan deploy:migrate $DEPLOY_MIGRATE_ARGS
+
+            "${STAGE}/scripts/deploy/activate-release.sh" "$ROOT" "$SHA"
+
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
             php artisan queue:restart
             sudo systemctl reload nginx
-            sudo systemctl restart websocket
-            
-      - name: Health check
-        if: ${{ steps.check-production-secrets.outputs.ready == 'true' }}
+            sudo systemctl restart zena-queue-worker
+            sudo systemctl restart zena-websocket
+
+            echo "cutover complete — state: deployed_unverified"
+
+            "${STAGE}/scripts/deploy/cleanup-releases.sh" "$ROOT" 3
+            rm -rf "$STAGE"
+
+      - name: Set deployed_unverified state (cutover occurred, not yet health-checked)
+        if: steps.gate.outputs.ready == 'true' && steps.activate.outcome == 'success'
         run: |
-          sleep 30
-          curl -f ${{ secrets.PRODUCTION_URL }}/api/health || exit 1
+          echo "Production deployment state: deployed_unverified (sha=${{ needs.verify-sha.outputs.verified_sha }})"
+
+      - name: Post-cutover readiness check (only state that may be called a successful deployment)
+        if: steps.gate.outputs.ready == 'true' && steps.activate.outcome == 'success'
+        id: readiness
+        run: |
+          sleep 10
+          if curl -fsS "${{ secrets.PRODUCTION_URL }}/api/v1/public/production/ready"; then
+            echo "state=health_verified" >> "$GITHUB_OUTPUT"
+          else
+            echo "state=failed" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+      - name: Post-cutover queue canary (worker liveness, separate from HTTP readiness)
+        if: steps.gate.outputs.ready == 'true' && steps.readiness.outputs.state == 'health_verified'
+        uses: appleboy/ssh-action@v1.2.4
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          fingerprint: ${{ secrets.PRODUCTION_HOST_KEY_FINGERPRINT }}
+          script: |
+            cd /var/www/zena/current
+            php artisan deploy:queue-canary --timeout=30
+
+      - name: Set final deployment state output
+        id: set-state
+        if: always()
+        run: |
+          if [ "${{ steps.gate.outputs.ready }}" != "true" ]; then
+            echo "state=not_configured" >> "$GITHUB_OUTPUT"
+          elif [ "${{ steps.readiness.outputs.state }}" = "health_verified" ]; then
+            echo "state=health_verified" >> "$GITHUB_OUTPUT"
+          elif [ "${{ steps.activate.outcome }}" = "success" ]; then
+            echo "state=deployed_unverified" >> "$GITHUB_OUTPUT"
+          else
+            echo "state=failed" >> "$GITHUB_OUTPUT"
+          fi
 
   notify:
     needs: deploy
     runs-on: ubuntu-latest
     if: always()
     steps:
-      - name: Notify deployment status
+      - name: Notify truthful deployment state (never a generic "success" for a skipped/unverified deploy)
         if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
         continue-on-error: true
         uses: slackapi/slack-github-action@v2.1.1
@@ -132,23 +268,17 @@ jobs:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           webhook-type: incoming-webhook
           payload: |
-            text: ":information_source: Production deployment status: ${{ needs.deploy.result }}"
+            text: ":information_source: Production deployment state: ${{ needs.deploy.outputs.deploy_state }}"
             blocks:
               - type: section
                 text:
                   type: mrkdwn
-                  text: "*Production deployment status*: `${{ needs.deploy.result }}`"
+                  text: "*Production deployment state*: `${{ needs.deploy.outputs.deploy_state }}`\n(Only `health_verified` means a successful, usable deployment. `not_configured`/`attempted`/`failed`/`deployed_unverified` are never described as success.)"
               - type: section
                 fields:
                   - type: mrkdwn
                     text: "*Repository:*\n${{ github.repository }}"
                   - type: mrkdwn
-                    text: "*Workflow:*\n${{ github.workflow }}"
-                  - type: mrkdwn
-                    text: "*Job:*\nnotify"
-                  - type: mrkdwn
-                    text: "*Ref:*\n${{ github.ref_name }}"
+                    text: "*Requested SHA:*\n${{ github.event.inputs.sha }}"
                   - type: mrkdwn
                     text: "*Actor:*\n${{ github.actor }}"
-                  - type: mrkdwn
-                    text: "*SHA:*\n${{ github.sha }}"

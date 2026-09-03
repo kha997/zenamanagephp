@@ -91,4 +91,30 @@ class DeploymentGuardTest extends TestCase
             'Only production.yml may contain a live (non-disabled) SSH deploy step: ' . implode(', ', $offenders)
         );
     }
+
+    public function test_production_workflow_triggers_only_on_manual_dispatch_with_required_sha_input(): void
+    {
+        $yaml = Yaml::parseFile(base_path('.github/workflows/production.yml'));
+
+        $this->assertArrayHasKey('workflow_dispatch', $yaml['on']);
+        $this->assertArrayNotHasKey('push', $yaml['on'], 'production.yml must not auto-deploy on push to main during the pilot phase (GAP-049 A-1).');
+
+        $shaInput = $yaml['on']['workflow_dispatch']['inputs']['sha'] ?? null;
+        $this->assertNotNull($shaInput, 'production.yml workflow_dispatch must accept an exact sha input.');
+        $this->assertTrue($shaInput['required'] ?? false, 'The sha input must be required, not optional.');
+    }
+
+    public function test_production_workflow_never_uses_git_pull_origin_main(): void
+    {
+        $content = file_get_contents(base_path('.github/workflows/production.yml'));
+        $this->assertStringNotContainsString('git pull origin main', $content);
+        $this->assertStringNotContainsString('migrate:rollback', $content);
+    }
+
+    public function test_production_workflow_has_serialization_concurrency_guard(): void
+    {
+        $yaml = Yaml::parseFile(base_path('.github/workflows/production.yml'));
+        $this->assertSame('production-deploy', $yaml['concurrency']['group'] ?? null);
+        $this->assertFalse($yaml['concurrency']['cancel-in-progress'] ?? true);
+    }
 }

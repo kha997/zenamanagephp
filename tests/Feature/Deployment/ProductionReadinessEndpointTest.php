@@ -58,11 +58,30 @@ class ProductionReadinessEndpointTest extends TestCase
 
     public function test_returns_503_when_storage_probe_fails(): void
     {
+        // Genuinely exercises the "read throws after a successful write" path
+        // (exists() must return true so get() is actually reached), and
+        // verifies delete() cleanup still runs via the probe's finally block
+        // even though get() threw.
         Storage::shouldReceive('disk')->andReturnSelf();
-        Storage::shouldReceive('put')->andReturn(false);
+        Storage::shouldReceive('put')->andReturn(true);
+        Storage::shouldReceive('exists')->andReturn(true);
         Storage::shouldReceive('get')->andThrow(new \RuntimeException('disk unwritable'));
-        Storage::shouldReceive('delete')->andReturn(true);
-        Storage::shouldReceive('exists')->andReturn(false);
+        Storage::shouldReceive('delete')->once()->andReturn(true);
+
+        $controller = new \App\Http\Controllers\Api\ProductionReadinessController();
+        $response = $controller->check();
+
+        $this->assertSame(503, $response->getStatusCode());
+        $this->assertContains('storage', $response->getData(true)['failed']);
+    }
+
+    public function test_storage_probe_cleanup_runs_even_when_put_fails(): void
+    {
+        // put() itself failing (not throwing) means $written stays false —
+        // delete() must NOT be called in that case (nothing to clean up).
+        Storage::shouldReceive('disk')->andReturnSelf();
+        Storage::shouldReceive('put')->andThrow(new \RuntimeException('disk full'));
+        Storage::shouldReceive('delete')->never();
 
         $controller = new \App\Http\Controllers\Api\ProductionReadinessController();
         $response = $controller->check();

@@ -52,34 +52,51 @@ class ProductionReadinessController extends Controller
 
     private function probeCache(): bool
     {
-        try {
-            $key = 'gap049-readiness-' . Str::random(12);
-            $value = Str::random(8);
+        $key = 'gap049-readiness-' . Str::random(12);
+        $value = Str::random(8);
 
+        try {
             Cache::put($key, $value, 10);
             $read = Cache::get($key);
-            Cache::forget($key);
-
             return $read === $value;
         } catch (\Throwable) {
             return false;
+        } finally {
+            // Cleanup runs even if a call above threw partway through, so a
+            // transient failure never leaves an orphaned probe key behind.
+            try {
+                Cache::forget($key);
+            } catch (\Throwable) {
+                // Best-effort cleanup only — the probe result above already stands.
+            }
         }
     }
 
     private function probeStorage(): bool
     {
+        $disk = Storage::disk(config('filesystems.default'));
+        $path = 'gap049-readiness-probes/' . Str::random(12) . '.probe';
+        $value = Str::random(8);
+        $written = false;
+
         try {
-            $disk = Storage::disk(config('filesystems.default'));
-            $path = 'gap049-readiness-probes/' . Str::random(12) . '.probe';
-            $value = Str::random(8);
-
             $disk->put($path, $value);
+            $written = true;
             $read = $disk->exists($path) ? $disk->get($path) : null;
-            $disk->delete($path);
-
             return $read === $value;
         } catch (\Throwable) {
             return false;
+        } finally {
+            // Cleanup runs even if exists()/get() throws after a successful put(),
+            // so a transient failure never leaves an orphaned probe file behind
+            // (unlike the cache probe, storage has no TTL to self-clean).
+            if ($written) {
+                try {
+                    $disk->delete($path);
+                } catch (\Throwable) {
+                    // Best-effort cleanup only — the probe result above already stands.
+                }
+            }
         }
     }
 }

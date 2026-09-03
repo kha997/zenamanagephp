@@ -1,3 +1,9 @@
+---
+work_id: GAP-049
+owner_governance_version: 1
+owner_gate_2_record: docs/owner-decisions/GAP-049/02-design.md
+---
+
 # GAP-049 Gate 2 Design — Production Deployment Architecture
 
 **Date:** 2026-09-03

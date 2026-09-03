@@ -29,22 +29,114 @@ Per Owner Gate-1 Round-3 approval, Gate 2 compares exactly two hardening candida
 
 ### Candidate A — Hardened release-based SSH deploy (evolves `production.yml`)
 
-**What changes from today:**
-1. **Truthful status reporting.** Replace the binary "job succeeded/skipped" signal with an explicit, machine-readable deploy-status artifact (e.g. a workflow summary line and/or a status file written to the host) that distinguishes: `not_configured` (secrets absent — current state), `attempted`, `succeeded`, `failed`, `health_verified`. A skip due to missing secrets must never render as a plain green checkmark without this qualifier visible in the job summary.
-2. **Versioned releases + atomic switch.** Move from in-place `git pull` at `/var/www/zena` to a releases directory model: each deploy checks out into `/var/www/zena/releases/<timestamp-or-sha>/`, builds there, and only on full success atomically repoints a `current` symlink (`ln -sfn`) that nginx/PHP-FPM actually serve from. A failed build never touches `current`; there is never a window where partially-built code is live.
-3. **Deployment serialization.** Add a `concurrency: { group: production-deploy, cancel-in-progress: false }` block to the workflow so two deploy runs can never interleave on the same host.
-4. **Migration strategy.** Run `php artisan migrate --force --isolated` (Laravel's built-in cache-lock isolation, available in the pinned `^12.0` framework but never currently used) before the symlink switch, against the *new* release directory's code but the *shared* database — i.e. migrations run once, ahead of traffic cutover, so the window between "schema migrated" and "code live" is controlled and short, not an in-place race.
-5. **Schema-compatible rollback.** Rollback = re-point `current` back to the previous release directory (fast, code-only, safe on its own) **plus** an explicit written contract: a rollback is only declared "complete" after confirming whether the failed deploy's migrations were additive/backward-compatible (safe to leave applied) or breaking (requires a corresponding down-migration or a data-fix runbook) — this decision is deferred to implementation-time migration review per release, not automated blindly. This directly closes the Gate-1 finding that a code-only rollback against forward migrations is unsafe by default.
-6. **Maintenance window where required.** `php artisan down --secret=<token>` before migrations that are flagged non-backward-compatible; `up` after the symlink switch and a passing health check. Purely additive migrations may skip the window (a Gate-3 implementation decision, not fixed here).
-7. **Host provisioning contract.** A documented (not automated in this Gate) one-time host setup checklist: PHP 8.2-fpm (matching `composer.json`, correcting the stale 8.1 assumption found in Gate 1), Composer, Node matching `Dockerfile.prod`'s pinned version, nginx, a systemd unit for the queue worker (currently absent — Gate 1 finding), a systemd unit for the websocket service (currently assumed but never provisioned — Gate 1 finding), sudoers scoped to exactly the commands the deploy user needs (`systemctl reload nginx`, `systemctl restart <queue-worker-unit>`, `systemctl restart websocket` — nothing broader).
-8. **Production `.env`/secret contract.** Formalize that the 4 existing GitHub Secrets (`PRODUCTION_HOST`, `PRODUCTION_USER`, `PRODUCTION_SSH_KEY`, `PRODUCTION_URL`) are necessary but not sufficient — a host-side `.env` must be provisioned once, out-of-band, by whoever holds production credentials, and the workflow should assert its presence (fail loudly, not silently proceed) rather than assume it.
-9. **Backup + proven restore.** Adopt (or closely mirror) `docker-manage.sh`'s `mysqldump --all-databases` + `storage`/`public` tarball pattern as a pre-migration step in this candidate too, writing to a durable, off-host-replicated location (not the same disk as the app, per the Gate-1 finding about `deploy.sh`'s self-defeating in-checkout "backup"). **A restore drill must be executed and evidenced before this architecture is considered acceptance-ready** — this is a Gate-3/implementation deliverable, explicitly called out here so it is not silently dropped.
-10. **Real health checks.** Point the post-deploy check at a dependency-probing endpoint (the existing `SystemHealthController::detailed()`/`/api/health/detailed` logic, or an equivalent purpose-built check), not the current hardcoded `/api/health` literal.
-11. **Queue/cache/storage/websocket.** Explicitly set `QUEUE_CONNECTION` to a real backend (`redis` or `database`) in the production `.env` contract (item 8) and require a running, systemd-supervised worker (item 7) — closing the Gate-1 finding that the default `sync` driver silently runs jobs inline. `storage:link` added as an idempotent step in every deploy (currently missing).
-12. **Logs/observability.** Minimum viable: confirm `storage/logs/laravel.log` (or equivalent) is captured/rotated on the host and that the release-directory model doesn't orphan logs from old releases; defer full APM/Sentry adoption as a later enhancement, not a Gate-2 blocker.
-13. **SSH least privilege / host-key verification.** Pin `appleboy/ssh-action`'s host-key fingerprint explicitly rather than relying on default behavior; scope the deploy SSH user's sudo rights to the exact commands in item 7, nothing broader.
-14. **Domain/TLS.** Out of this design's control — depends on the external host/domain decision (see §5). The design assumes nginx terminates TLS via a certificate provisioning mechanism (e.g. Let's Encrypt/ACME) set up once during host provisioning (item 7), not per-deploy.
-15. **First controlled-deployment acceptance evidence.** See §6.
+**Architecture direction unchanged from Round 1 (not reopened). The following load-bearing contracts are corrected/strengthened per Owner Gate-2 Round-1 CHANGES REQUESTED — each contract below is named (`A-1`, `A-2`, ...) so later sections can reference it precisely instead of by a renumberable list position.**
+
+#### A-1. Merge/release vs. production-deployment separation, and the human-approval gate (Round-1 correction 1)
+
+A merge to `main` must **not**, by itself, constitute production deployment during the first-controlled-deployment/pilot phase. This is a hard design contract, not an implementation detail:
+
+- CI/main integration (tests, lint, `Owner Governance Lint`, `Routes Guardrails`, etc.) stays automatic on every push to `main`, as today — this is *integration*, not *deployment*, and nothing about it changes.
+- **Production deployment is a distinct, explicitly-invoked event** — via `workflow_dispatch` (a human clicks "Run workflow" with an exact input) or an equivalent explicit production-deploy trigger (e.g. a GitHub Release being published, if the team later prefers that model) — **never** `on: push: branches: [main]` during the pilot phase. This directly supersedes `production.yml`'s current `push`-to-`main` trigger.
+- **Deployment is bound to an exact, immutable Git commit SHA or release tag**, supplied as an explicit input to the trigger (e.g. `workflow_dispatch.inputs.sha` or a tag ref) — never an implicit "whatever `main` currently is at run time." The deploy job's first step verifies the checked-out commit's SHA matches the requested input exactly and fails closed on any mismatch (protects against a race where `main` moves between trigger and checkout).
+- The production job uses GitHub `environment: production` (as `production.yml` already does), and **a human production-approval gate is required before any production host/database mutation** — implemented via GitHub Environment required reviewers where the plan/permissions support it. **Fallback if GitHub-plan/environment limitations prevent required-reviewer enforcement:** an explicit authorized-manual-dispatch model — only a named, access-controlled set of humans may trigger the `workflow_dispatch` at all (enforced via repository/environment permissions, not merely convention), and the act of manually dispatching *is* the approval, recorded in the Actions run's actor field. The design must never silently fall back to automatic deploy-on-main merely because required-reviewer enforcement is unavailable on the current GitHub plan.
+- **Future auto-deploy after the pilot phase is explicitly out of scope for this Gate-2 decision** and requires a separate, later, explicit Owner decision — this design only covers the first-controlled-deployment/pilot period.
+
+#### A-2. Deployment state machine (Round-1 correction, "Additional")
+
+The truthful-status model is corrected to six states, replacing the five-state model from Round 1 (which risked conflating workflow "success" with "production is healthy"):
+
+| State | Meaning |
+|---|---|
+| `not_configured` | No deployment attempted (secrets/trigger absent) — must never be reported as, or confusable with, "production succeeded." |
+| `attempted` | A production deployment was explicitly triggered and started. |
+| `failed` | Deployment did not reach a usable state (build, migration, or cutover failure). |
+| `deployed_unverified` | Code cutover (`current` symlink switch) occurred, but the readiness gate (A-4) and smoke sequence (§6) have not yet proven the deployment usable. |
+| `health_verified` | The required readiness gate (A-4) passed post-cutover — this is the **only** state that may be described as a successful, usable production deployment. |
+| `rolled_back` | A prior deployment was reverted per the migration-classification-aware rollback contract (A-5). |
+
+**Binding rule:** the production workflow's overall "success"/green result must only ever mean one of: (a) the truthful `not_configured` state is accurately represented as such (not silently dressed up as a deploy), or (b) an actual deployment reached `health_verified`. A workflow reporting green while sitting at `attempted`, `failed`, or `deployed_unverified` is a defect, not an acceptable interim state. If post-cutover health fails: mark the deployment `failed` (not silently `deployed_unverified` forever); execute the code rollback (A-5) **only if** the migration-classification contract (A-5) says rollback is safe for the migrations that ran; otherwise the system enters/remains in maintenance (using A-3's shared, `current`-visible maintenance-mode mechanism) pending the migration-specific recovery runbook — automatic schema rollback is never invented or assumed.
+
+#### A-3. Release / shared-filesystem contract (Round-1 correction 2)
+
+Persistent mutable host state, with semantics fixed as follows (exact path names may vary at implementation time):
+
+```
+/var/www/zena/
+  current -> releases/<exact-sha>/          # atomic symlink, always resolves to the release actually serving traffic
+  releases/<exact-sha>/                     # one immutable directory per deployed commit: app code, vendor/, built frontend assets
+  shared/.env                               # production environment file — provisioned once, out-of-band, NEVER inside a release directory
+  shared/storage/                           # Laravel storage/ — uploads, documents, framework cache/session/view files, logs
+```
+
+- App code, `vendor/`, and built assets belong exclusively to an immutable `releases/<sha>/` directory — never mutated in place after being built.
+- `.env` is shared, lives outside any release directory, and is provisioned/rotated independently of any deploy.
+- Laravel's `storage/` directory is shared across all releases (symlinked from each `releases/<sha>/storage` to `shared/storage`) — uploads, generated documents, and logs survive every deployment and every rollback, because they are never release-scoped.
+- **Every new release links to `shared/.env` and `shared/storage` BEFORE any Artisan command that depends on them runs** (config loading, migrations, cache commands) — the link step is not an afterthought after `artisan` calls have already run against a release-local, empty state.
+- `public/storage` (and any other required storage symlink) resolves through to `shared/storage`, not a release-local copy.
+- Permissions/ownership are explicit: the deploy user owns `releases/*` and can write `shared/storage` and read (not necessarily write) `shared/.env`; the web server user (e.g. `www-data`) has read access to `current` and read/write access to `shared/storage` — exact UID/GID mapping is an implementation-time (Gate-3) detail, but the ownership *model* (deploy user builds, web server user serves and writes uploads) is fixed here.
+- **Release cleanup (pruning old releases to save disk) must never delete anything under `shared/`** — cleanup logic is scoped exclusively to old, no-longer-`current`, no-longer-rollback-target entries under `releases/`.
+- **Maintenance-mode visibility:** Laravel's maintenance-mode state (`artisan down`/`up`) must be visible to whichever release is currently `current` — i.e. maintenance state must live in `shared/` (e.g. `shared/storage/framework/down`, which is where Laravel's default maintenance-mode file already lives when `storage/` is shared per the contract above) or another mechanism that actually affects the currently-serving release. A maintenance flag written only into a new, not-yet-`current` release directory has no effect on real traffic and does not satisfy this contract.
+
+#### A-4. Minimal production readiness endpoint + queue canary (Round-1 correction 4, replaces the Gate-1 "point at `/api/health/detailed`" assumption)
+
+**Do not bind this design to the existing `/api/health/detailed` endpoint as-is.** Gate-1 evidence (and direct re-confirmation in this round) shows it returns PHP/Laravel version, `APP_ENV`, memory/load metrics, and other diagnostic internals in a publicly reachable response — inappropriate to expose and inappropriate to bind a go/no-go deploy gate to as specified.
+
+**Minimal production readiness contract (new, purpose-built for this design):**
+- Returns **HTTP 200** only when every *synchronous* dependency required to serve a request is ready; **HTTP 503** otherwise.
+- Performs a genuine database probe (a real, trivial query — not a hardcoded string).
+- Performs a genuine cache probe (a real write/read round-trip against the configured cache store — not a hardcoded string).
+- Performs a genuine shared-storage probe (a real write/read/delete against `shared/storage`) **if local storage participates in serving production requests** — if storage is fully offloaded to a remote object store instead, this probe targets that store instead.
+- **No** PHP/Laravel version, `APP_ENV`, memory/load/CPU metrics, credentials, internal topology, or other diagnostic internals appear in the response body — minimal body (e.g. `{"status":"ready"}` or `{"status":"not_ready","failed":["database"]}`, no more).
+- No hardcoded/default-success dependency status is ever returned for a dependency this endpoint claims to check.
+
+**Queue-worker liveness is explicitly NOT claimed by this HTTP endpoint** — an HTTP 200 from the readiness endpoint proves nothing about whether a queue worker process is actually running or processing jobs, and this design does not pretend otherwise. Instead, first-controlled-deployment evidence for the queue uses a **queue canary**: enqueue a unique probe job as part of the deploy/smoke sequence; the real worker process (provisioned per A-7) processes it; the deploy/smoke step polls (bounded wait, e.g. a fixed timeout) for the probe's completion marker; timeout is treated as a deployment/smoke failure (contributing to `failed`/`deployed_unverified`, never silently ignored). This is intentionally narrow — it proves "a worker is alive and processing," not a general observability project, which stays out of scope per YAGNI (§4).
+
+#### A-5. Migration classification, cutover, and rollback semantics (Round-1 correction 3)
+
+`migrate --force --isolated` alone is **not** sufficient as a safety contract — it only prevents two migration *commands* from racing each other (mutual exclusion via Laravel's cache lock); it says nothing about whether a given migration is safe to run ahead of a code cutover, or safe to leave in place after a rollback. Corrected contract:
+
+- **Deployment-level serialization** (no two `workflow_dispatch` production deploys running concurrently) is enforced by the workflow's `concurrency: { group: production-deploy, cancel-in-progress: false }` block (A-1/A-3 territory) — this is a distinct mechanism from `--isolated`'s migration-command-level mutual exclusion; the two are **not** interchangeable and both are used for what they actually guarantee, not conflated.
+- **Every migration bundled in a deploy must be classified before deployment**, into exactly one of:
+  - **(A) Expand / backward-compatible** — adding a nullable column, adding a new table, adding a compatible index, or any other change the *old, still-`current`* release's code can tolerate unchanged. These **may** run from the new release, against the shared database, before the `current` symlink switches — the old release keeps serving correctly against the now-expanded schema during that window, so there is no unsafe interval.
+  - **(B) Breaking / contract / destructive** — dropping or renaming a column the current code reads/writes, a destructive data conversion, or an incompatible constraint change. These **must not** run as an ordinary zero-downtime pre-switch migration. They require: explicit classification as breaking before the deploy is triggered; a fresh backup (A-6) taken immediately before running them; an actual maintenance window (A-3's shared maintenance-mode mechanism) that takes real traffic out of service for the duration; a migration-specific forward/rollback/data-fix runbook written before the migration runs, not improvised after a failure; and a passing readiness check (A-4) before maintenance mode is lifted.
+  - **Default policy for this first-deployment architecture: prefer expand/backward-compatible migrations.** A breaking migration is the exception requiring the full runbook above, not a routine occurrence.
+- **Rollback is never an unconditional `migrate:rollback`.** Code rollback (re-pointing `current` to the previous release) is fast and safe on its own *for the code*. Whether to also touch the schema depends entirely on the classification above:
+  - After an **expand** migration: a code rollback correctly **leaves the expanded schema in place** — the previous release's code already tolerates it (that was the definition of "expand"), so nothing further is needed.
+  - After a **breaking** migration: "rollback" is not simply switching `current` — it requires maintenance mode (already active per the breaking-migration runbook above) plus the migration-specific data/schema recovery procedure written as part of that runbook. The design does not invent or assume an automatic schema-rollback mechanism for this case.
+
+#### A-6. Least-privilege, evidence-based backup/restore contract (Round-1 correction 5)
+
+Preserves the Gate-1 goals (pre-migration backup, durable, off-host, restore proven) but **does not bind Candidate A to `mysqldump --all-databases`** as Gate 1's evidence review found `docker-manage.sh` using (a different workflow's mechanism, not adopted verbatim here):
+
+- **Scope of what is backed up:** (1) the actual ZENA production application database only — not unrelated system/other databases that might happen to share the same MySQL instance; (2) shared persistent application storage (`shared/storage` per A-3) — uploads/documents that would otherwise be unrecoverable; (3) any other explicitly identified mutable production state later found necessary for recovery (identified at Gate-3/implementation time, not invented here).
+- **Mechanism:** either a dedicated, least-privilege backup database credential (scoped to `SELECT`/`LOCK TABLES`/`SHOW VIEW` on the ZENA application database only — not broad MySQL administrative privileges), or a host/provider-native database snapshot/backup mechanism, depending on the eventual host choice (§5) — the exact mechanism is a Gate-3 decision informed by which host is actually chosen; this design fixes the *scope and privilege* contract, not the specific tool.
+- **Durability:** backup artifacts are written off the application host's own disk (correcting the Gate-1 finding about `deploy.sh`'s self-defeating in-checkout, same-disk, deleted-on-success "backup") — off-host storage, a separate volume, or a provider snapshot mechanism, any of which satisfy "does not share a single-disk failure domain with the running application."
+- **Restore-drill acceptance (required before this architecture is considered complete, not optional polish):** executed in a **disposable, non-production environment** — never against production data to "prove" restore works. The drill: restore the backed-up database into the disposable environment; restore representative shared storage; boot the application against the restored state; prove that representative database rows and at least one representative uploaded file are genuinely usable (readable, correct) from that restored state — not merely that the restore command exited zero. Capture evidence: which backup identifier/hash/timestamp was restored, and the result of the usability check. **Production data must never be destroyed or mutated merely to prove restore works.**
+- **Retention/encryption/access policy (minimal, stated explicitly rather than left implicit):** backups are retained for a Gate-3-specified minimum window (e.g. a rolling N most-recent daily backups — exact N is an implementation detail, not fixed here); backups containing production data are encrypted at rest wherever the chosen storage mechanism supports it; access to backup artifacts is restricted to the same credential-holder set as production access itself (§5), not broadened separately.
+
+#### A-7. Host provisioning contract (updated to reference A-3's shared-storage model and A-4's queue canary)
+
+A documented (not automated in this Gate) one-time host setup checklist: PHP 8.2-fpm (matching `composer.json`, correcting the stale 8.1 assumption found in Gate 1), Composer, Node matching `Dockerfile.prod`'s pinned version, nginx, a systemd unit for the queue worker (currently absent — Gate-1 finding; this is the same worker process A-4's queue canary proves is alive), a systemd unit for the websocket service (currently assumed but never provisioned — Gate-1 finding), and sudoers scoped to exactly the commands the deploy user needs (`systemctl reload nginx`, `systemctl restart <queue-worker-unit>`, `systemctl restart websocket` — nothing broader). Provisioning also establishes the `shared/.env` and `shared/storage` directories (A-3) once, before the first release is ever deployed.
+
+#### A-8. Production `.env`/secret contract
+
+The 4 existing GitHub Secrets (`PRODUCTION_HOST`, `PRODUCTION_USER`, `PRODUCTION_SSH_KEY`, `PRODUCTION_URL`) remain necessary but not sufficient: `shared/.env` (A-3) is provisioned once, out-of-band, by whoever holds production credentials (§5), and the deploy workflow asserts its presence (fails loudly if absent) rather than assuming it. `QUEUE_CONNECTION` in `shared/.env` is explicitly set to a real backend (`redis` or `database`), never left at the framework default `sync` — this is what makes the A-4 queue canary meaningful rather than vacuous.
+
+#### A-9. Logs/observability (unchanged from Round 1)
+
+Minimum viable: confirm `shared/storage/logs/laravel.log` (per A-3, shared and therefore not orphaned across releases) is captured/rotated on the host; defer full APM/Sentry adoption as a later enhancement, not a Gate-2 blocker.
+
+#### A-10. SSH least privilege / host-key verification (unchanged from Round 1)
+
+Pin `appleboy/ssh-action`'s host-key fingerprint explicitly rather than relying on default behavior; scope the deploy SSH user's sudo rights to the exact commands in A-7, nothing broader.
+
+#### A-11. Domain/TLS (unchanged from Round 1)
+
+Out of this design's control — depends on the external host/domain decision (§5). The design assumes nginx terminates TLS via a certificate provisioning mechanism (e.g. Let's Encrypt/ACME) set up once during host provisioning (A-7), not per-deploy.
+
+#### A-12. First controlled-deployment acceptance evidence
+
+See §6 (updated in this round to reference the A-4 queue canary and the production-safe bootstrap contract, §4a).
 
 **Effort/complexity:** Low-to-moderate — evolves an existing, simpler mechanism. Does not require the team to adopt Docker/container operations if they haven't already. **Cost:** no new infrastructure spend beyond the already-assumed single host. **Maintainability:** straightforward for a team already comfortable with bare-metal Linux/SSH operations.
 
@@ -57,7 +149,7 @@ Per Owner Gate-1 Round-3 approval, Gate 2 compares exactly two hardening candida
 4. **`docker-compose.prod.yml` production fitness.** The file defines 12 services including `elasticsearch`/`kibana`/`prometheus`/`grafana` — genuinely more than a *first* controlled deployment needs. Per YAGNI (see §3), a hardened Candidate B for GAP-049's purpose should stand up only the services actually required for correctness (`app`, `nginx`, `mysql`, `redis`, `queue`, `scheduler`, `websocket`, `backup`) and explicitly defer the observability stack (`prometheus`/`grafana`/`elasticsearch`/`kibana`) to a later phase — running them prematurely adds host resource requirements and operational surface with no first-deployment benefit.
 5. **DB/storage volume persistence.** `docker-compose.prod.yml`'s named volumes (`mysql_data`, `redis_data`, etc.) must be confirmed to survive `docker-compose down`/`up` cycles (they should, by Compose's volume semantics, but this must be verified in Gate 3, not assumed).
 6. **Backup/restore.** Already has a real implementation (`docker-manage.sh backup`/`restore`) — ahead of Candidate A on this axis today, though equally unproven end-to-end (no restore drill evidenced for either candidate).
-7. **Rollback after migrations.** The existing `rollback` job's `git reset --hard HEAD~1` is schema-unsafe by default (Gate-1 finding) — this must be redesigned in either candidate, not inherited as-is. A hardened Candidate B should tag/pin the *previous* GHCR image digest and redeploy that exact image, plus the same schema-compatibility decision framework as Candidate A item 5 (was the migration additive or breaking).
+7. **Rollback after migrations.** The existing `rollback` job's `git reset --hard HEAD~1` is schema-unsafe by default (Gate-1 finding) — this must be redesigned in either candidate, not inherited as-is. A hardened Candidate B should tag/pin the *previous* GHCR image digest and redeploy that exact image, plus the same migration-classification/rollback-safety framework as Candidate A's A-5 (was the migration additive/expand, or breaking/contract).
 8. **Blue-green/canary — explicitly NOT adopted for first deployment (YAGNI).** The existing `blue-green-deployment` and `canary-deployment` jobs are dormant code with unimplemented, `echo`-only traffic-cutover logic (Gate-1 finding). A hardened Candidate B for GAP-049 should **not** attempt to complete or use these jobs for the first controlled deployment — they represent meaningfully more operational complexity (load-balancer/DNS traffic-splitting infrastructure this repo does not have) than a first controlled deployment justifies. Recommendation: leave them disabled/unused, revisit only after the simple path is proven.
 9. **Health/smoke contract.** Already multi-endpoint and more thorough than Candidate A's current state, but references domains (`dashboard.zenamanage.com` etc.) not otherwise evidenced as real/owned — must be parameterized against whatever real domain the Owner eventually provides, not hardcoded.
 10. **Secret naming.** Must resolve the `PRODUCTION_USER`/`PRODUCTION_USERNAME` inconsistency (Gate-1 finding) as part of adopting either candidate — Gate 3 should standardize on one name across every workflow that survives, retiring the other.
@@ -83,15 +175,29 @@ Applying the Owner-specified priority order:
 
 1. **Getting ZENA into controlled real use soon** — Candidate A requires no new operational skill (Docker) the team doesn't already need for CI itself, and evolves a mechanism that is already 90% structurally present (secrets, SSH action, health-check hook) rather than requiring Docker Engine + Compose + GHCR to all be stood up and learned first. This wins decisively on time-to-first-deployment.
 2. **Truthfulness** — both candidates need the same truthful-status-reporting work; a tie, addressed identically in either.
-3. **Recoverability** — roughly comparable once hardened: Candidate A's releases-directory rollback and Candidate B's previous-image-tag rollback are structurally similar in safety once the schema-compatibility decision framework (§2, Candidate A item 5 / Candidate B item 7) is applied to both. Candidate B has a head start on backup/restore code existing already, but neither has a proven restore drill — this is a wash until Gate 3 evidence exists for either.
+3. **Recoverability** — roughly comparable once hardened: Candidate A's releases-directory rollback (A-5) and Candidate B's previous-image-tag rollback are structurally similar in safety once the same migration-classification/rollback-safety framework is applied to both. Candidate B has a head start on backup/restore code existing already, but neither has a proven restore drill — this is a wash until Gate 3 evidence exists for either (Candidate A's least-privilege backup/restore contract is A-6).
 4. **Security** — comparable; Candidate A's attack surface is SSH + sudo-scoped systemctl; Candidate B's is SSH + Docker socket/Compose access (arguably a *larger* privileged surface, since Docker access is commonly root-equivalent) — a mild edge to Candidate A here, not decisive on its own.
 5. **Operational simplicity** — decisive edge to Candidate A: no new toolchain (Docker/Compose/registry) for the team to operate day-to-day.
 6. **Maintainability** — mild edge to Candidate B long-term (immutable CI-built images avoid host-side build drift), but this matters more at scale/multi-host than for a first controlled deployment.
 7. **Cost** — mild edge to Candidate A (lower host resource floor without a container runtime and even a trimmed service set).
 
-**Why Candidate A wins overall:** criteria 1 and 5 (time-to-first-use and operational simplicity) are weighted highest by the Owner's own priority order, and Candidate A wins both clearly, while the criteria favoring Candidate B (4 is a wash-to-mild-edge-A, 6 is a real but lower-priority long-term advantage) do not outweigh that. **Candidate B's work is not wasted** — `docker-manage.sh`'s backup/restore pattern (§2, Candidate A item 9) should be borrowed into Candidate A's implementation rather than re-invented, and Candidate B remains the well-positioned upgrade path if/when the team's operational needs justify the container step-change later (e.g. multi-host scaling, need for the observability stack already modeled in `docker-compose.prod.yml`).
+**Why Candidate A wins overall:** criteria 1 and 5 (time-to-first-use and operational simplicity) are weighted highest by the Owner's own priority order, and Candidate A wins both clearly, while the criteria favoring Candidate B (4 is a wash-to-mild-edge-A, 6 is a real but lower-priority long-term advantage) do not outweigh that. **Candidate B's work is not wasted** — `docker-manage.sh`'s backup pattern informed A-6's least-privilege redesign rather than being re-invented from nothing, and Candidate B remains the well-positioned upgrade path if/when the team's operational needs justify the container step-change later (e.g. multi-host scaling, need for the observability stack already modeled in `docker-compose.prod.yml`).
 
 **This recommendation is a Gate-2 design output for Owner review — it is not self-approved and does not authorize implementation.**
+
+## 3a. Production-safe first-database bootstrap contract (Round-1 correction 6)
+
+This contract governs how the *first* real production database is ever populated — it applies regardless of which candidate is chosen, and is a hard rule, not a preference:
+
+- **`DatabaseSeeder` (and any seeder chain reachable from it) is NEVER run in production.** This is the same `DatabaseSeeder` Gate 1 found `deploy.yml`'s `deploy.sh` invoking via `db:seed --force`, which creates a fixed-email, hardcoded-password demo admin account — that hazard is closed permanently by this rule, for every deployment mechanism, not merely by retiring `deploy.yml`.
+- **No demo/sample tenants or users are ever created in production**, by any mechanism.
+- **No fixed or default password is ever used** for any account created as part of first-deployment bootstrap.
+- **Bootstrap creates only the canonical minimum data required for ZENA to operate:** the real initial production tenant (using the Owner's actual organization data, not a placeholder), and one real initial administrator/operator account for that tenant.
+- **Initial credential handling:** the first administrator's credential is either securely generated (e.g. a random password shown exactly once at creation time, or a signed one-time setup link) or directly supplied by the authorized Owner/operator — never a value checked into this repository or any seeder file. Where a generated credential is used, immediate secure handling (forced reset on first login, or equivalent) is required.
+- **RBAC/permission bootstrap** (roles, permissions, default role-permission mappings) may reuse existing targeted seeders (e.g. `RoleSeeder`, `PermissionSeeder`) **only after each specific seeder has been explicitly reviewed and proven production-safe** (no hardcoded credentials, no demo data, idempotent) — until that review happens for a given seeder, a dedicated production-bootstrap command/path is used instead rather than assuming an existing seeder is safe by association.
+- **Idempotency / fail-closed:** the bootstrap procedure must either be safely re-runnable without duplicating or corrupting state (idempotent), or must fail closed with a clear error if production has already been initialized — it must never silently re-create or overwrite an existing real tenant/admin.
+- **If the production database already contains data** (the "existing-data" case from §5's external-input table): bootstrap does **not** run at all — instead, the deployment/smoke sequence verifies the real tenant/admin/RBAC state already present, rather than attempting to seed anything.
+- **The first-controlled-deployment smoke sequence (§6) must authenticate as a real, non-demo operator identity produced or resolved through this contract** — never a `DatabaseSeeder`-created demo account, regardless of which candidate or which host is eventually used.
 
 ## 4. YAGNI discipline applied
 
@@ -108,24 +214,24 @@ Gate 2 specifies the architecture independently of these values — implementati
 
 | Input | Contract placeholder used in this design |
 |---|---|
-| Target host/provider | `PRODUCTION_HOST` (existing secret name) — architecture is host-agnostic (any Linux VPS/VM meeting the provisioning checklist in §2 Candidate A item 7). |
-| Domain name / DNS ownership | `PRODUCTION_URL` (existing secret name) — architecture does not hardcode any domain; the health-check and any user-facing URL must read from this contract, not a literal string (correcting the Gate-1 finding about `automated-deployment.yml`'s hardcoded `zenamanage.com` references). |
+| Target host/provider | `PRODUCTION_HOST` (existing secret name) — architecture is host-agnostic (any Linux VPS/VM meeting the provisioning checklist in A-7). |
+| Domain name / DNS ownership | `PRODUCTION_URL` (existing secret name) — architecture does not hardcode any domain; the readiness endpoint (A-4) and any user-facing URL must read from this contract, not a literal string (correcting the Gate-1 finding about `automated-deployment.yml`'s hardcoded `zenamanage.com` references). |
 | Budget/cost tolerance | Not required to start Gate 3 — Candidate A's cost floor is a single VPS sized to run PHP-FPM/nginx/MySQL/Redis; exact sizing (CPU/RAM/disk) is an Owner/host decision the design does not need to fix in advance. |
-| Production credential authority | Who holds `PRODUCTION_SSH_KEY` and the host-side `.env` secrets — an access-control decision, not an architectural one; the design only requires that *someone* holds them and the workflow can reach them via the existing 4-secret GitHub Secrets contract. |
-| GitHub Environment deployment approvers | Whether the `production` GitHub Environment requires manual reviewer approval before the deploy job runs — a governance/process decision layered on top of this architecture, not blocking its design. |
-| Empty vs. existing-data first production DB | Affects only the first-run migration/seed sequence (an empty DB needs the RBAC/role bootstrap seeders; an existing DB does not) — the design's migration step (§2 Candidate A item 4) works identically either way; this only affects a one-time Gate-3 runbook decision about whether to run any seeder at all on first deploy, and if so which one (never `DatabaseSeeder`'s hardcoded-admin path as-is — see the Gate-1 finding on `deploy.sh`'s seeding hazard, which applies to any mechanism that might reuse that seeder unmodified). |
+| Production credential authority | Who holds `PRODUCTION_SSH_KEY` and `shared/.env` (A-3/A-8) — an access-control decision, not an architectural one; the design only requires that *someone* holds them and the workflow can reach them via the existing 4-secret GitHub Secrets contract, plus the authorized-manual-dispatch set defined in A-1. |
+| GitHub Environment deployment approvers | Whether the `production` GitHub Environment requires manual reviewer approval before the deploy job runs (A-1) — a governance/process decision layered on top of this architecture, not blocking its design; A-1 specifies the fallback if this isn't enforceable on the current GitHub plan. |
+| Empty vs. existing-data first production DB | Governed by the production-safe bootstrap contract (§3a): an empty DB gets the canonical minimum bootstrap (real tenant + real admin, no seeders with demo data); an existing DB skips bootstrap and instead has its real tenant/admin/RBAC state verified. The migration step (A-5) works identically either way — this only affects the one-time Gate-3 runbook decision of which bootstrap path applies on first deploy. |
 
 None of these block finishing Gate 2's architecture comparison and recommendation; they gate Gate 3/implementation readiness, not this design.
 
-## 6. First controlled-deployment acceptance path (carried forward from Gate 1, unchanged in substance)
+## 6. First controlled-deployment acceptance path (corrected: real bootstrap identity + queue canary)
 
-Beyond a real dependency-probing health check (§2, Candidate A item 10 / Candidate B item 9), the smoke sequence from Gate 1 remains the design target for Gate 3 to implement as an evidence-producing step, not merely describe:
-1. Login/auth succeeds for a real (non-demo) operator account.
-2. Tenant isolation holds.
+Beyond the minimal production readiness endpoint (A-4), the smoke sequence remains the design target for Gate 3 to implement as an evidence-producing step, not merely describe:
+1. Login/auth succeeds for the real, non-demo operator account produced or resolved through the production-safe bootstrap contract (§3a) — never a `DatabaseSeeder`-created demo account.
+2. Tenant isolation holds, exercised against the real production tenant created per §3a.
 3. RBAC enforces exactly the permitted actions for a given role.
 4. A DB write persists across a request cycle.
-5. A queued job actually executes in the background (proves `QUEUE_CONNECTION` and the worker process are real, not the `sync` default).
-6. A file upload round-trips through storage.
+5. The A-4 queue canary completes within its bounded wait — a unique probe job is enqueued, the real worker processes it, and completion is observed before the timeout; this is the evidence that `QUEUE_CONNECTION` and the worker process are real, not the `sync` default, replacing any claim the readiness HTTP endpoint itself could make about queue liveness.
+6. A file upload round-trips through `shared/storage` (A-3).
 7. A small set of critical pages/APIs return 200 under authentication.
 
 As before, the principal business flow (Lead → Opportunity → Service Line → Quote → Contract → Project) remains named only as a description of eventual real-user success, not a spec to implement here — any future need to touch that product code goes through a separate Work ID's Design Dependency Preflight.

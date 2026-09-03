@@ -24,6 +24,7 @@ use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\HealthCheckController;
 use App\Http\Controllers\Api\Public\HealthController as PublicHealthController;
 use App\Http\Controllers\Api\Public\SystemHealthController;
+use App\Http\Controllers\Api\ProductionReadinessController;
 
 /*
 |--------------------------------------------------------------------------
@@ -92,6 +93,7 @@ Route::prefix('v1/public')
         Route::get('/health', [PublicHealthController::class, 'liveness']);
         Route::get('/health/liveness', [PublicHealthController::class, 'liveness']);
         Route::get('/health/readiness', [HealthCheckController::class, 'readiness']);
+        Route::get('/production/ready', [ProductionReadinessController::class, 'check']);
     });
 
 // API information endpoint

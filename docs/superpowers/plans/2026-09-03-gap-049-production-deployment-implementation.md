@@ -1,3 +1,9 @@
+---
+work_id: GAP-049
+owner_governance_version: 1
+owner_gate_2_record: docs/owner-decisions/GAP-049/02-design.md
+---
+
 # GAP-049 Production Deployment Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

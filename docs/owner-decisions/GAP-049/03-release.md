@@ -25,7 +25,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-04T02:00:00Z"
-  updated_at: "2026-09-05T00:00:00Z"
+  updated_at: "2026-09-05T05:00:00Z"
 generated_by: agent
 residual_risk_rating: medium
 mandatory_technical_gate_summary: "GAP-049 implements the Owner-approved Gate-2 architecture (Candidate A — hardened, exact-SHA release-based SSH deployment) across 12 tasks: retirement of every competing production-deployment entry point (deploy.yml/deploy.sh deleted; ci-cd.yml's placeholder deploy job removed; automated-deployment.yml and release-management.yml production-reaching jobs disabled via if:false), a minimal non-diagnostic-leaking production readiness endpoint, an expand-vs-breaking migration classification contract enforced in code, immutable-release filesystem tooling with a true atomic current-symlink switch on GNU/Linux, a queue-worker liveness canary, a production-safe first-database bootstrap command, least-privilege backup/restore scripts with a proven disposable-environment restore drill, pre-release two-tenant negative-isolation evidence, three operational runbooks, and the hardened production.yml workflow itself as the sole live production entry point. All GAP-049-scoped tests pass (58/58, tests/Feature/Deployment/**). A first final whole-branch review found 2 Critical and 10 Important findings; all were fixed and re-reviewed clean, EXCEPT the AuthController demo-login backdoor (C2), which was deliberately left unfixed pending Owner authorization since it is pre-existing authentication code outside GAP-049's default scope. Owner Gate-3 Round 1 (see permanent history below) REJECTED the resulting awaiting_owner/ready presentation as premature (exact-head CI had completed with real failures) and directed 6 correction items: (1) correct the packet truth immediately; (2) close the AuthController backdoor as a narrow, explicitly-authorized in-scope correction (done, commit 5593d287 — see C2 below, now resolved); (3) allowlist the readiness endpoint in the API security middleware gate rather than adding business auth (done, commit d017225f); (4) resolve all 7 branch-introduced PHPStan errors with proper types, zero suppressions, verified 0 errors full-repo (done, commit c96fe4bc); (5) prove the reported MySQL invariant CI failure's provenance before touching any tenant/RBAC code — proven pre-existing via two diagnostic investigations reproducing it identically on the canonical base commit using the exact CI invocation, with direct MySQL query-log evidence; no tenant/RBAC/product code touched, a genuinely unrelated latent DeployMigrateCommand --path-forwarding bug found during this investigation was also fixed (done, commit 73db452a); (6) implement the Gate-2 A-2/A-5 automatic post-cutover recovery contract (done, commit 456efd25 — see I2 below, now resolved). A SECOND final whole-branch review (run per item 7, checking the Round-1 corrections themselves) then caught a Critical defect in item 6's first implementation: the recovery step's if: condition omitted an explicit status-check function, so GitHub Actions' implicit success()-gating silently made the entire A-2/A-5 contract unreachable dead code despite all 7 of its own structural tests passing — fixed in commit c3ee1a27, with 2 new regression tests specifically guarding against this exact class of bug recurring; the packet body's own stale claims (that the AuthController backdoor and the recovery contract were still unfixed) were also corrected to match the actual code state, plus a genuinely unrelated latent DeployMigrateCommand --path-forwarding bug was fixed with real RED/GREEN evidence (commit dd6b0c86, b08795a7). ALL GAP-049-attributable technical gates pass. On exact head b08795a715396b953d766c305f1088f26def9f6f, CI ran to completion with exactly ONE red job: Zena RBAC/Tenant Invariants (MySQL parity), failing 4/4 times in this session (1 original run + 3 reruns) on the identical pre-existing test (ZenaApiContractPhase2InvariantTest::test_document_show_returns_not_found_for_scoped_cross_tenant_resource), already proven (before this CI run) to reproduce identically on canonical base dfd936dbbd88400013488e0bb2e3bb21e126e535 using the exact same CI invocation, with direct MySQL query-log evidence of a transaction-nesting/RefreshDatabase race — GAP-049's own Deployment test files never execute in that CI job at all. Every other GAP-049-relevant workflow/job passed: Owner Governance Lint, Routes Guardrails, Code Quality & Security, CI/CD Pipeline, Button Test Suite, Staging Smoke, and every other job within Automated Testing (Security Tests/PHPStan, Unit, Feature, Integration, API Tests Fast/Slow, Performance Tests, Document/RFI/GAP-048/Treasury real-MySQL concurrency jobs, Zena RBAC/Tenant Invariants (non-parity), browser-tests, Test Coverage Report, Repo Hygiene Guards, Trivy, Docker/Dependency/License/Security Vulnerability Scans). The Owner independently reviewed this exact live state and issued a narrow, GAP-049-Gate-3-only CI exception ruling authorizing re-presentation with this one documented, proven-pre-existing, unrelated exception — see 'Owner-authorized CI exception for Gate-3 Round 2' below for the complete record. This packet does NOT claim an all-green repository CI state. Zero actual production deployment, secret configuration, host provisioning, or production database mutation occurred anywhere in this branch's history."
@@ -347,6 +347,61 @@ parity)`; ensure test isolation truthfulness; do not change the intended
 `E404`/`TENANT_INVALID` semantics merely to satisfy the test. Per Owner
 instruction, GAP-050 is **not** started in this session — it requires a
 new session after GAP-049 is closed/released.
+
+### Addendum (2026-09-05): Owner Governance Lint itself now shows red on this exact head — expected consequence of this exception, not a new defect
+
+The `gate_status: awaiting_owner` transition made in this same commit
+activates `scripts/ci/check-evidence-freshness.sh`'s live check (it only
+runs once a packet is actively claiming readiness). That script counts
+**any** non-`pass`/`skipping` check on the current PR head as blocking,
+with **no exception carve-out** for the Owner-authorized MySQL-parity
+exception recorded above — the script was never updated to know about
+this ruling. Consequence: while `gate_status: awaiting_owner` and `Zena
+RBAC/Tenant Invariants (MySQL parity)` remains red (by Owner instruction,
+it must), the `Owner Governance Lint` job **will itself always report
+failure** on this PR, for as long as this packet is presented this way.
+This is a structural gap in the enforcement tooling, not a new
+GAP-049-attributable regression, and no fix to it is authorized in this
+session (would be an unreviewed change to shared CI governance tooling
+outside GAP-049's approved scope).
+
+Evidence distinguishing this from a mere timing artifact: at the moment
+this packet's `gate_status` first flipped to `awaiting_owner` (head
+`797d9319e4db1503c9a6d833d55528f6a853e3e3`, workflow run `33920489625`),
+the freshness check's own 300s poll reported **2** non-green checks
+(`::error::...2 other check(s)...not green...`) — at that instant,
+`browser-tests`/`coverage-report`/`quality-gate` (the `Button Test Suite`
+chain) had not yet completed (they finished at 21:56:xx–21:56:52Z, after
+the poll's 21:50:07Z timeout). A single confirmatory rerun of only the
+`Owner Governance Lint` job (same head, no code or evidence change,
+`gh run rerun 33920489625 --failed`, job `101186840478`,
+21:58:49Z–22:04:38Z) — **not** a rerun of the MySQL-parity job itself,
+which Owner instructed not to retry — now reports exactly **1** non-green
+check: `::error::...1 other check(s)...not green...`. `gh pr checks 302`
+at this point confirms exactly two red checks and no others: `Owner
+Governance Lint` (`fail`) and `Zena RBAC/Tenant Invariants (MySQL
+parity)` (`fail`); every other check is `pass`. This proves the original
+2-check failure was a real, transient scheduling race (now resolved to
+1), and that the remaining 1 is the permanent, expected, Owner-ruled
+exception surfacing through a check that has no logic to distinguish it
+from an ordinary failure — it is not a new independent defect and no
+further reruns of either job are planned in this session.
+
+**Practical implication for Owner Round-2 review:** the GitHub PR checks
+UI for #302 will show `Owner Governance Lint` as a second red check
+alongside the MySQL-parity exception, not the single-red-check state this
+packet's body above describes it as when the digest was last refreshed.
+The underlying technical evidence, implementation-tree digest, and code
+state are unchanged (this addendum and the PR-body correction below are
+the only changes since `subject_sha` `b08795a715396b953d766c305f1088f26def9f6f`,
+and both are excluded from the implementation-tree digest by the digest
+function's own design, which excludes only this file). If `Owner
+Governance Lint` is a required/blocking status check for merge on this
+repository, resolving that will require either an explicit Owner
+instruction on how to proceed (e.g., an administrative merge override,
+or authorizing a follow-up correction to
+`scripts/ci/check-evidence-freshness.sh` to implement a real exception
+carve-out) — neither of which this session takes unilaterally.
 
 ---
 

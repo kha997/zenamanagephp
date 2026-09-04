@@ -28,7 +28,7 @@ timestamps:
   updated_at: "2026-09-04T03:00:00Z"
 generated_by: agent
 residual_risk_rating: medium
-mandatory_technical_gate_summary: "GAP-049 implements the Owner-approved Gate-2 architecture (Candidate A — hardened, exact-SHA release-based SSH deployment) across 12 tasks: retirement of every competing production-deployment entry point (deploy.yml/deploy.sh deleted; ci-cd.yml's placeholder deploy job removed; automated-deployment.yml and release-management.yml production-reaching jobs disabled via if:false), a minimal non-diagnostic-leaking production readiness endpoint, an expand-vs-breaking migration classification contract enforced in code, immutable-release filesystem tooling with a true atomic current-symlink switch on GNU/Linux, a queue-worker liveness canary, a production-safe first-database bootstrap command, least-privilege backup/restore scripts with a proven disposable-environment restore drill, pre-release two-tenant negative-isolation evidence, three operational runbooks, and the hardened production.yml workflow itself as the sole live production entry point. All GAP-049-scoped tests pass (48/48, tests/Feature/Deployment/**). Task-level review found and fixed 6 genuine implementation bugs during the build (activate-release.sh atomicity regression, backup.sh checksum non-portability, queue-canary-drill.sh race condition, plus 3 self-consistency issues where generated docblocks literally contained their own forbidden guard-test substrings). A final whole-branch review (dispatched on the most capable available model specifically to catch cross-task integration issues no single-task review could see) found 2 Critical and 10 Important findings; all 10 Important findings plus 1 Critical (a deploy-job checkout gap that would have made the workflow fail on its first real invocation) were fixed and re-reviewed clean in one consolidated fix wave. The second Critical finding (a pre-existing, out-of-scope security defect in app/Http/Controllers/AuthController.php, unrelated to and untouched by this branch, but inadvertently made exploitable at the super_admin level once GAP-049's production:bootstrap command creates a super_admin role) is NOT fixed here — it is business/authentication code outside GAP-049's authorized scope, and is escalated below as a blocking pre-deployment risk requiring a separate Work ID. One architectural gap (no automated rollback/maintenance-mode branch on post-cutover health-check failure — one of the six designed deployment states, rolled_back, is consequently unreachable from this workflow) is documented below as an explicit Owner decision point rather than silently implemented or omitted. Zero actual production deployment, secret configuration, host provisioning, or production database mutation occurred anywhere in this branch's history."
+mandatory_technical_gate_summary: "GAP-049 implements the Owner-approved Gate-2 architecture (Candidate A — hardened, exact-SHA release-based SSH deployment) across 12 tasks: retirement of every competing production-deployment entry point (deploy.yml/deploy.sh deleted; ci-cd.yml's placeholder deploy job removed; automated-deployment.yml and release-management.yml production-reaching jobs disabled via if:false), a minimal non-diagnostic-leaking production readiness endpoint, an expand-vs-breaking migration classification contract enforced in code, immutable-release filesystem tooling with a true atomic current-symlink switch on GNU/Linux, a queue-worker liveness canary, a production-safe first-database bootstrap command, least-privilege backup/restore scripts with a proven disposable-environment restore drill, pre-release two-tenant negative-isolation evidence, three operational runbooks, and the hardened production.yml workflow itself as the sole live production entry point. All GAP-049-scoped tests pass (58/58, tests/Feature/Deployment/**). A first final whole-branch review found 2 Critical and 10 Important findings; all were fixed and re-reviewed clean, EXCEPT the AuthController demo-login backdoor (C2), which was deliberately left unfixed pending Owner authorization since it is pre-existing authentication code outside GAP-049's default scope. Owner Gate-3 Round 1 (see permanent history below) REJECTED the resulting awaiting_owner/ready presentation as premature (exact-head CI had completed with real failures) and directed 6 correction items: (1) correct the packet truth immediately; (2) close the AuthController backdoor as a narrow, explicitly-authorized in-scope correction (done, commit 5593d287 — see C2 below, now resolved); (3) allowlist the readiness endpoint in the API security middleware gate rather than adding business auth (done, commit d017225f); (4) resolve all 7 branch-introduced PHPStan errors with proper types, zero suppressions, verified 0 errors full-repo (done, commit c96fe4bc); (5) prove the reported MySQL invariant CI failure's provenance before touching any tenant/RBAC code — proven pre-existing via two diagnostic investigations reproducing it identically on the canonical base commit using the exact CI invocation, with direct MySQL query-log evidence; no tenant/RBAC/product code touched, a genuinely unrelated latent DeployMigrateCommand --path-forwarding bug found during this investigation was also fixed (done, commit 73db452a); (6) implement the Gate-2 A-2/A-5 automatic post-cutover recovery contract (done, commit 456efd25 — see I2 below, now resolved). A SECOND final whole-branch review (run per item 7, checking the Round-1 corrections themselves) then caught a Critical defect in item 6's first implementation: the recovery step's if: condition omitted an explicit status-check function, so GitHub Actions' implicit success()-gating silently made the entire A-2/A-5 contract unreachable dead code despite all 7 of its own structural tests passing — fixed in commit c3ee1a27, with 2 new regression tests specifically guarding against this exact class of bug recurring. Zero actual production deployment, secret configuration, host provisioning, or production database mutation occurred anywhere in this branch's history."
 technical_evidence:
   subject_sha: "29ba1a7f047cb442a4111d6fff5599e6a1cc9d7e"
   implementation_tree_digest: "659f54dc8256b697b1122b81a68477c4646c435c0e0dcc2e60b1f9277b4e3211"
@@ -141,26 +141,45 @@ any future revision.**
    `--migrations-path` was explicitly overridden (testing only) — real
    production invocations are completely unaffected. RED→GREEN evidence
    in commit `73db452a`.
-6. **Complete.** `production.yml` implements the Gate-2 A-2/A-5 automatic
-   post-cutover recovery contract: explicit pre-cutover capture of the
-   previous release, automatic explicit-target rollback for expand
-   deployments (reported `rolled_back` only if a post-recovery readiness
-   check also passes), maintenance-mode-only recovery for breaking
-   deployments (no automatic code/schema rollback, dedicated Slack
-   escalation), no invented rollback target for first-ever deployments,
-   and the final state-computation step no longer reduces an
-   explicitly-failed readiness check to `deployed_unverified`. 7 new
-   structural regression tests. Commit `456efd25`.
-7. **In progress.** Full correction verification (Deployment suite 56/56,
+6. **Complete (with one Critical fix along the way — see item 7).**
+   `production.yml` implements the Gate-2 A-2/A-5 automatic post-cutover
+   recovery contract: explicit pre-cutover capture of the previous
+   release, automatic explicit-target rollback for expand deployments
+   (reported `rolled_back` only if a post-recovery readiness check also
+   passes), maintenance-mode-only recovery for breaking deployments (no
+   automatic code/schema rollback, dedicated Slack escalation), no
+   invented rollback target for first-ever deployments, and the final
+   state-computation step no longer reduces an explicitly-failed
+   readiness check to `deployed_unverified`. Commit `456efd25` (first
+   implementation) + `c3ee1a27` (Critical fix — see item 7).
+7. **Complete.** Full correction verification: Deployment suite 58/58,
    AuthController regression 2/2, API security gate 1/1, PHPStan 0 errors
-   full-repo, workflow YAML valid, route guard OK, Owner Governance Lint
-   clean, frontend build OK) largely complete; a new final whole-branch
-   review against the approved Gate-2 design, the two binding
-   clarifications, and this Round-1 directive is running.
-8. **Pending.** Evidence refresh (subject SHA, implementation-tree digest)
-   happens only once item 7's new final review is clean and every
-   mandatory exact-head CI check on the pushed branch is green — not yet
-   reached.
+   full-repo (1155 files), workflow YAML valid (14/14 files), route guard
+   OK, Owner Governance Lint clean, frontend build OK. A new final
+   whole-branch review (dispatched specifically against the approved
+   Gate-2 design, the two binding clarifications, and this Round-1
+   directive) found item 6's first implementation had a **Critical**
+   defect: the `recovery` and `post-recovery-readiness` steps' `if:`
+   conditions omitted an explicit status-check function
+   (`always()`/`failure()`/`cancelled()`), so GitHub Actions' implicit
+   `success()`-gating silently skipped both steps in every scenario they
+   exist to handle — the entire A-2/A-5 contract was reachable in text
+   but dead at runtime, despite all 7 of its own structural regression
+   tests passing (they only ever parsed the committed YAML, never
+   executed the workflow). Fixed in commit `c3ee1a27`: `always()` added
+   to both conditions, the recovery trigger broadened to also cover an
+   `activate`-step failure after a successful atomic switch (a related
+   Important gap the same review found), and 2 new regression tests added
+   specifically to guard against this exact class of bug recurring
+   (asserting the presence of an explicit status-check function). The
+   same review also found the packet body (this file) still asserted the
+   AuthController backdoor was unfixed and the recovery contract
+   unreachable, after both had in fact been fixed — corrected in this
+   revision (see the C2/I2 sections above, now marked resolved, and the
+   `mandatory_technical_gate_summary` field above).
+8. **In progress.** Evidence refresh (subject SHA, implementation-tree
+   digest) happens only once every mandatory exact-head CI check on the
+   pushed branch is green — not yet reached.
 
 ---
 
@@ -366,79 +385,99 @@ taken.
 for the full list; none affect correctness or the binding design
 contracts).
 
-## C2 — Escalated security risk requiring Owner attention before any real deployment (NOT fixed in this branch)
+## C2 — Security risk originally escalated to the Owner: RESOLVED by Owner Round-1 correction item 2
 
-**This is not a GAP-049 defect — it is a pre-existing, untouched-by-this-branch
-issue in `app/Http/Controllers/AuthController.php` that this branch's
-`production:bootstrap` command inadvertently arms.**
+**Original finding (first final whole-branch review, before Owner Round 1):**
+`app/Http/Controllers/AuthController.php`'s `login()` method (pre-existing,
+untouched by GAP-049 until the fix below) contained a hardcoded demo-user
+fallback: if `Auth::attempt()` failed, it compared submitted credentials
+against a literal map including `superadmin@zena.com` / `password123`, and
+on a match created the user via `User::firstOrCreate`, attached the named
+role if a matching `Role` row existed, and logged the user in — with **no
+controller-level `app()->environment()` guard**. This branch's own
+`production:bootstrap` command (§ Task 6) creates a real `super_admin`
+role as part of legitimate first-tenant bootstrap, which meant the
+pre-existing demo fallback would grant full super-admin access to anyone
+who knew the hardcoded credential, the moment a real production database
+had been bootstrapped — directly against the spirit of Gate-2 design
+§3a's binding rule ("no fixed or default password is ever used for any
+account").
 
-`AuthController.php` (lines ~48-93, unchanged by any commit in this
-branch) contains a hardcoded fallback: if `Auth::attempt()` fails, it
-compares submitted credentials against a literal hardcoded map including
-`superadmin@zena.com` / `password123`, and on a match, **creates the user
-via `User::firstOrCreate`**, attaches the named role if a `Role` row with
-that name already exists, and logs the user in. There is no
-`app()->environment()` guard, and the route is mounted unconditionally in
-`routes/web.php`.
+**Owner Round-1 directive (item 2):** explicitly authorized this as a
+**narrow, in-scope GAP-049 security correction** — not a separate Work
+ID — because GAP-049's own bootstrap command is what turns the
+pre-existing defect into a live production risk.
 
-The cross-task interaction: `ProductionBootstrapCommand::handle()`
-(Task 6 of this plan) runs `Role::firstOrCreate(['name' => 'super_admin'],
-['scope' => 'system'])` as part of legitimate first-tenant bootstrap.
-Before bootstrap, the backdoor grants a role-less account. **After
-bootstrap, the `super_admin` row exists, so the same backdoor grants
-`super_admin`** — and `RoleBasedAccessControlMiddleware::checkAccess()`
-opens with `if ($user->isSuperAdmin()) { return true; }`, bypassing every
-permission check in the application.
+**Fix applied (commit `5593d287`):** the entire demo-user fallback block
+in `AuthController::login()` is now wrapped in
+`if (app()->environment(['local', 'testing']))` — the identical guard
+pattern already used in `routes/web.php` for the same purpose, not a new
+configurable toggle. When the guard is false (production, staging, or any
+other environment), execution falls straight through to the existing
+rate-limited generic-failure response, identical to any other
+wrong-credential attempt. RED→GREEN evidence:
+`tests/Feature/Security/AuthControllerDemoLoginProductionGuardTest.php` —
+with the environment forced to `production` at request time, a real
+`POST /login` with the known demo credentials no longer authenticates, no
+`users` row is created, and the `super_admin` role gains zero attached
+users; a paired test confirms the intentionally-preserved `testing`/`local`
+behavior still works.
 
-**Practical consequence: deploying this branch and running
-`production:bootstrap` (both of which this Work ID's Gate 3 evidence
-otherwise supports) would create a production system where anyone who
-knows this hardcoded credential obtains full super-admin access.** This
-directly contradicts Gate-2 design §3a's own binding rule ("no fixed or
-default password is ever used for any account") — the rule was written
-for this plan's OWN bootstrap flow, but the pre-existing backdoor violates
-its spirit for the system as a whole.
+**Correction to the original finding's own wording:** the original
+finding also stated "the route is mounted unconditionally in
+`routes/web.php`" — this was inaccurate. `routes/web.php` already
+registered `POST /login → AuthController::login` only inside the same
+`if (app()->environment(['local', 'testing']))` block (this was pre-existing,
+not something that changed), meaning production exposure via the web
+route was narrower than originally described. The controller-level fix
+above is still the correct, necessary defense-in-depth measure — it is
+what makes the vulnerability provable/testable at all under PHPUnit
+(routes are registered once at process boot under a fixed `APP_ENV`, so
+only a request-time environment override can exercise the guard in an
+automated test), and it protects any other current or future code path
+that might reach `AuthController::login()` directly.
 
-**Disposition:** per this Work ID's explicit scope boundary (no
-CRM/Lead/Opportunity/Quote/Contract/Project/Service-Line or other business
-code may be modified) and the Design Dependency Preflight convention for
-discoveries that require touching code outside a Work ID's authorized
-surface, this is **not fixed in this branch**. It is recorded here as a
-blocking pre-deployment risk. **Recommendation: file a separate Work ID
-to remove or environment-gate this backdoor before `production:bootstrap`
-is ever run against a real production database**, and treat that Work ID
-as a hard prerequisite for GAP-049's eventual first real deployment,
-independent of this Gate-3 packet's own disposition.
+**Status: resolved.** No further action needed on this item before
+re-presentation.
 
-## I2 — Owner decision point: no automated rollback/maintenance-mode branch on post-cutover health failure
+## I2 — Owner decision point on automated recovery: RESOLVED by Owner Round-1 correction item 6 (+ a critical fix caught in Round-1's own review)
 
-Gate-2 design A-2 specifies that on post-cutover health-check failure, the
-system should execute a classification-aware code rollback (if migrations
-were expand-only) or enter/remain in maintenance mode (if migrations were
-breaking) — never simply leave a failed release serving traffic with no
-recovery action. **`production.yml` does not implement this branch**: the
-readiness-check step exits 1 and the job stops; `scripts/deploy/rollback.sh`
-exists (Task 4) and is fully tested standalone, but is never invoked from
-anywhere in the production workflow itself. Consequently, of the six
-designed deployment states, `rolled_back` is currently unreachable from an
-automatic path — it can only be produced by a human operator manually
-running `rollback.sh` against an explicit prior release SHA after
-diagnosing a failure.
+**Original finding (first final whole-branch review, before Owner Round
+1):** `production.yml` implemented no automated rollback/maintenance-mode
+branch on post-cutover health-check failure — a failed release would keep
+serving traffic with no recovery action, and `rolled_back` was
+unreachable as an automatic state.
 
-This was surfaced by the final whole-branch review as a genuine gap
-between the approved binding design and the implementation. It is
-presented here as an explicit decision point rather than silently
-implemented (which would require a nontrivial design choice about exactly
-how maintenance-mode entry should be automated and is not itself specified
-at that level of detail in the approved Gate-2 design) or silently omitted
-(which would misrepresent this packet's completeness). **Owner options:**
-(a) authorize a follow-up task to implement the classification-aware
-automatic rollback/maintenance branch before first real deployment, or
-(b) ratify that recovery is manual-only for the pilot phase (a human
-operator runs `rollback.sh`/`artisan down` per
-`docs/runbooks/gap-049-migration-safety.md` after diagnosing a failure),
-which is a legitimate, if less automated, choice for a first controlled
-deployment.
+**Owner Round-1 directive (item 6):** implement the full Gate-2 A-2/A-5
+recovery contract — explicit-target automatic rollback for expand
+deployments, maintenance-mode-only recovery for breaking deployments
+(never automatic schema rollback), no invented rollback target for
+first-ever deployments, and a final state-computation step that never
+reduces an explicitly-failed readiness check to `deployed_unverified`.
+
+**Fix applied (commit `456efd25`):** implemented exactly this. A second,
+independent final whole-branch review (run per Owner Round-1 item 7, to
+check this correction itself) then caught a **Critical** defect in that
+first implementation: the recovery step's `if:` condition omitted an
+explicit status-check function, so GitHub Actions' implicit `success()`
+gating silently skipped the step in every scenario it was written to
+handle — the entire A-2/A-5 contract was reachable in text but dead at
+runtime, despite all 7 of its own structural regression tests passing
+(they only ever parsed the committed YAML, never executed the workflow).
+**Fixed in commit `c3ee1a27`**: prefixed `always()` to both the
+`recovery` and `post-recovery-readiness` steps' `if:` conditions, and
+broadened the recovery trigger to also cover the case where the
+`activate` step itself fails after a successful atomic switch (e.g. a
+post-switch service-restart failure) — previously excluded entirely. Two
+new regression tests were added specifically to prevent this exact class
+of bug from silently regressing again, including one asserting the
+presence of an explicit status-check function on both steps.
+
+**Status: resolved.** `rolled_back` is now a genuinely reachable
+automatic state; breaking-migration failures correctly retain maintenance
+mode with a dedicated Slack escalation rather than being silently
+absorbed into a generic `failed`; no automatic schema rollback exists
+anywhere in the workflow.
 
 ## What this packet authorizes now
 

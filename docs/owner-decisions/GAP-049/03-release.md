@@ -1,14 +1,14 @@
 ---
 work_id: GAP-049
 gate: 3
-gate_status: changes_requested
+gate_status: awaiting_owner
 technical_readiness:
-  value: blocked
+  value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: correction_requested
+  value: none
   authority: human_owner
-decision_requested: null
+decision_requested: "approve_or_correction_or_defer"
 references:
   spec: docs/superpowers/specs/2026-09-03-gap-049-production-deployment-gate2-design.md
   plan: docs/superpowers/plans/2026-09-03-gap-049-production-deployment-implementation.md
@@ -19,37 +19,42 @@ decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
   recorded_at: "2026-09-04T02:00:00Z"
-  owner_response_reference: "GAP-049 Gate 3 Owner Round 1 (relayed via coordinator session, reviewed head 52d66a095c053f0b41ce81983df0411e9b186b28 of PR #302, canonical base dfd936dbbd88400013488e0bb2e3bb21e126e535): 'GATE 3 ROUND 1 — CHANGES REQUESTED. TECHNICAL READINESS: BLOCKED. The implementation is substantially advanced, but it is NOT technically ready for Owner release review yet. CI is no longer pending. Exact-head CI has completed with failures.' Owner directed 8 correction items: (1) correct the Gate-3 packet truth immediately (this edit); (2) close the demo-login production backdoor in AuthController.php as a narrow GAP-049 security correction (explicitly authorized in-scope, no separate Work ID); (3) fix the new readiness route's security-contract failure via the repository's canonical infrastructure-health designation/allowlist mechanism, not by adding business auth; (4) fix all 7 branch-introduced PHPStan errors (ProductionBootstrapCommand.php static-call reporting, MigrationClassificationService.php array value types) with proper types, not suppression; (5) prove whether the MySQL invariant failure (ZenaApiContractPhase2InvariantTest::test_document_show_returns_not_found_for_scoped_cross_tenant_resource, expected E404.NOT_FOUND actual TENANT_INVALID) is pre-existing (test against canonical base dfd936db) or branch-induced before touching any tenant/RBAC/product behavior; (6) implement the approved Gate-2 A-2/A-5 post-cutover recovery contract (explicit-target automatic rollback on expand-migration readiness/queue-canary failure, maintenance-mode-only recovery on breaking-migration failure, no automatic migrate:rollback, first-deploy-with-no-prior-release handled without inventing a rollback target, failed readiness must never be reduced to deployed_unverified); (7) re-run full correction verification and a new final whole-branch review against the approved Gate-2 design, the two Owner binding clarifications, and this Round-1 directive; (8) refresh Gate-3 evidence only after code is frozen and every mandatory exact-head CI check is green, then re-present as awaiting_owner/ready and STOP for Round-2 review. Do not merge, deploy, configure production secrets, provision a production host, or mutate a production database.'"
+  owner_response_reference: "GAP-049 Gate 3 Owner Round 1 (relayed via coordinator session, reviewed head 52d66a095c053f0b41ce81983df0411e9b186b28 of PR #302, canonical base dfd936dbbd88400013488e0bb2e3bb21e126e535): 'GATE 3 ROUND 1 — CHANGES REQUESTED. TECHNICAL READINESS: BLOCKED. The implementation is substantially advanced, but it is NOT technically ready for Owner release review yet. CI is no longer pending. Exact-head CI has completed with failures.' Owner directed 8 correction items: (1) correct the Gate-3 packet truth immediately (this edit); (2) close the demo-login production backdoor in AuthController.php as a narrow GAP-049 security correction (explicitly authorized in-scope, no separate Work ID); (3) fix the new readiness route's security-contract failure via the repository's canonical infrastructure-health designation/allowlist mechanism, not by adding business auth; (4) fix all 7 branch-introduced PHPStan errors (ProductionBootstrapCommand.php static-call reporting, MigrationClassificationService.php array value types) with proper types, not suppression; (5) prove whether the MySQL invariant failure (ZenaApiContractPhase2InvariantTest::test_document_show_returns_not_found_for_scoped_cross_tenant_resource, expected E404.NOT_FOUND actual TENANT_INVALID) is pre-existing (test against canonical base dfd936db) or branch-induced before touching any tenant/RBAC/product behavior; (6) implement the approved Gate-2 A-2/A-5 post-cutover recovery contract (explicit-target automatic rollback on expand-migration readiness/queue-canary failure, maintenance-mode-only recovery on breaking-migration failure, no automatic migrate:rollback, first-deploy-with-no-prior-release handled without inventing a rollback target, failed readiness must never be reduced to deployed_unverified); (7) re-run full correction verification and a new final whole-branch review against the approved Gate-2 design, the two Owner binding clarifications, and this Round-1 directive; (8) refresh Gate-3 evidence only after code is frozen and every mandatory exact-head CI check is green, then re-present as awaiting_owner/ready and STOP for Round-2 review. Do not merge, deploy, configure production secrets, provision a production host, or mutate a production database.' | GAP-049 Gate 3 Owner CI Exception Ruling (relayed via coordinator session, Owner independently inspected the live PR state at head b08795a715396b953d766c305f1088f26def9f6f): 'Do NOT retry the MySQL parity job again merely to chase a green result. Do NOT fix the underlying pre-existing MySQL invariant defect under GAP-049. Do NOT open GAP-050 yet. Do NOT merge or deploy. At this head: PASS — Owner Governance Lint, Routes Guardrails, Code Quality & Security, CI/CD Pipeline, Button Test Suite, Staging Smoke. Automated Testing is FAILURE only because Zena RBAC/Tenant Invariants (MySQL parity) fails on ZenaApiContractPhase2InvariantTest::test_document_show_returns_not_found_for_scoped_cross_tenant_resource. All other jobs within Automated Testing pass, including Security Tests/PHPStan, Unit, Feature, Integration, API tests, performance jobs, real-MySQL concurrency jobs, and repo-hygiene guards. The MySQL parity failure has already been proven to reproduce identically on canonical base dfd936dbbd88400013488e0bb2e3bb21e126e535 using the same MySQL invariant invocation, with query-log evidence identifying the pre-existing transaction-nesting / RefreshDatabase race. GAP-049 Deployment tests do not participate in that job, and no tenant/RBAC/product correction is authorized under GAP-049 for this pre-existing defect. OWNER RULING: the previous requirement that every mandatory exact-head CI check must be green is hereby narrowed for this Gate-3 presentation. GAP-049 MAY be re-presented to Owner with exactly ONE documented CI exception (Zena RBAC/Tenant Invariants (MySQL parity)) provided: (1) the failure is identical in signature to the proven canonical-base failure; (2) no new GAP-049-attributable failure appears; (3) every other workflow/job relevant to GAP-049 remains green; (4) the exception evidence remains bound to the canonical-base reproduction; (5) the packet and PR do NOT describe the overall CI suite as all green; (6) no tenant/RBAC/product behavior is modified merely to force this legacy check green. This exception applies ONLY to GAP-049 Gate-3 evaluation, not a general waiver for future red CI. Re-present Gate 3 truthfully: gate_status: awaiting_owner, technical_readiness.value: ready, owner_decision.value: none, decision_requested: approve_or_correction_or_defer, preserving the complete permanent Round-1 CHANGES REQUESTED history, adding a clearly titled permanent section Owner-authorized CI exception for Gate-3 Round 2 recording canonical base SHA, exact implementation subject SHA, current/final PR head, exact failing workflow/job/test, expected vs actual error code, 4/4 failed reruns this session, exact base reproduction evidence, MySQL query-log root-cause evidence, proof GAP-049 deployment tests do not execute in this job, proof no tenant/RBAC/product code was changed for this exception, exact list of all other successful workflows/jobs, and a statement that this exception does NOT mean the red check passed. Refresh the stale PR body (AuthController backdoor and post-cutover rollback are no longer accurately described as unfixed). Do not rerun the MySQL parity job a fifth time unless implementation code changes for another legitimate reason or Owner explicitly requests an additional diagnostic experiment — four identical failures plus canonical-base reproduction are sufficient evidence. Record as a recommended immediate follow-up after GAP-049: GAP-050 — MySQL Invariant Transaction Isolation / CI Reliability, to be started in a NEW session after GAP-049 is closed/released, not in this session. Keep residual_risk_rating at least medium. Then STOP for Owner Gate-3 Round-2 decision. Do NOT merge, deploy, or self-approve.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-04T02:00:00Z"
-  updated_at: "2026-09-04T03:00:00Z"
+  updated_at: "2026-09-05T00:00:00Z"
 generated_by: agent
 residual_risk_rating: medium
-mandatory_technical_gate_summary: "GAP-049 implements the Owner-approved Gate-2 architecture (Candidate A — hardened, exact-SHA release-based SSH deployment) across 12 tasks: retirement of every competing production-deployment entry point (deploy.yml/deploy.sh deleted; ci-cd.yml's placeholder deploy job removed; automated-deployment.yml and release-management.yml production-reaching jobs disabled via if:false), a minimal non-diagnostic-leaking production readiness endpoint, an expand-vs-breaking migration classification contract enforced in code, immutable-release filesystem tooling with a true atomic current-symlink switch on GNU/Linux, a queue-worker liveness canary, a production-safe first-database bootstrap command, least-privilege backup/restore scripts with a proven disposable-environment restore drill, pre-release two-tenant negative-isolation evidence, three operational runbooks, and the hardened production.yml workflow itself as the sole live production entry point. All GAP-049-scoped tests pass (58/58, tests/Feature/Deployment/**). A first final whole-branch review found 2 Critical and 10 Important findings; all were fixed and re-reviewed clean, EXCEPT the AuthController demo-login backdoor (C2), which was deliberately left unfixed pending Owner authorization since it is pre-existing authentication code outside GAP-049's default scope. Owner Gate-3 Round 1 (see permanent history below) REJECTED the resulting awaiting_owner/ready presentation as premature (exact-head CI had completed with real failures) and directed 6 correction items: (1) correct the packet truth immediately; (2) close the AuthController backdoor as a narrow, explicitly-authorized in-scope correction (done, commit 5593d287 — see C2 below, now resolved); (3) allowlist the readiness endpoint in the API security middleware gate rather than adding business auth (done, commit d017225f); (4) resolve all 7 branch-introduced PHPStan errors with proper types, zero suppressions, verified 0 errors full-repo (done, commit c96fe4bc); (5) prove the reported MySQL invariant CI failure's provenance before touching any tenant/RBAC code — proven pre-existing via two diagnostic investigations reproducing it identically on the canonical base commit using the exact CI invocation, with direct MySQL query-log evidence; no tenant/RBAC/product code touched, a genuinely unrelated latent DeployMigrateCommand --path-forwarding bug found during this investigation was also fixed (done, commit 73db452a); (6) implement the Gate-2 A-2/A-5 automatic post-cutover recovery contract (done, commit 456efd25 — see I2 below, now resolved). A SECOND final whole-branch review (run per item 7, checking the Round-1 corrections themselves) then caught a Critical defect in item 6's first implementation: the recovery step's if: condition omitted an explicit status-check function, so GitHub Actions' implicit success()-gating silently made the entire A-2/A-5 contract unreachable dead code despite all 7 of its own structural tests passing — fixed in commit c3ee1a27, with 2 new regression tests specifically guarding against this exact class of bug recurring. Zero actual production deployment, secret configuration, host provisioning, or production database mutation occurred anywhere in this branch's history."
+mandatory_technical_gate_summary: "GAP-049 implements the Owner-approved Gate-2 architecture (Candidate A — hardened, exact-SHA release-based SSH deployment) across 12 tasks: retirement of every competing production-deployment entry point (deploy.yml/deploy.sh deleted; ci-cd.yml's placeholder deploy job removed; automated-deployment.yml and release-management.yml production-reaching jobs disabled via if:false), a minimal non-diagnostic-leaking production readiness endpoint, an expand-vs-breaking migration classification contract enforced in code, immutable-release filesystem tooling with a true atomic current-symlink switch on GNU/Linux, a queue-worker liveness canary, a production-safe first-database bootstrap command, least-privilege backup/restore scripts with a proven disposable-environment restore drill, pre-release two-tenant negative-isolation evidence, three operational runbooks, and the hardened production.yml workflow itself as the sole live production entry point. All GAP-049-scoped tests pass (58/58, tests/Feature/Deployment/**). A first final whole-branch review found 2 Critical and 10 Important findings; all were fixed and re-reviewed clean, EXCEPT the AuthController demo-login backdoor (C2), which was deliberately left unfixed pending Owner authorization since it is pre-existing authentication code outside GAP-049's default scope. Owner Gate-3 Round 1 (see permanent history below) REJECTED the resulting awaiting_owner/ready presentation as premature (exact-head CI had completed with real failures) and directed 6 correction items: (1) correct the packet truth immediately; (2) close the AuthController backdoor as a narrow, explicitly-authorized in-scope correction (done, commit 5593d287 — see C2 below, now resolved); (3) allowlist the readiness endpoint in the API security middleware gate rather than adding business auth (done, commit d017225f); (4) resolve all 7 branch-introduced PHPStan errors with proper types, zero suppressions, verified 0 errors full-repo (done, commit c96fe4bc); (5) prove the reported MySQL invariant CI failure's provenance before touching any tenant/RBAC code — proven pre-existing via two diagnostic investigations reproducing it identically on the canonical base commit using the exact CI invocation, with direct MySQL query-log evidence; no tenant/RBAC/product code touched, a genuinely unrelated latent DeployMigrateCommand --path-forwarding bug found during this investigation was also fixed (done, commit 73db452a); (6) implement the Gate-2 A-2/A-5 automatic post-cutover recovery contract (done, commit 456efd25 — see I2 below, now resolved). A SECOND final whole-branch review (run per item 7, checking the Round-1 corrections themselves) then caught a Critical defect in item 6's first implementation: the recovery step's if: condition omitted an explicit status-check function, so GitHub Actions' implicit success()-gating silently made the entire A-2/A-5 contract unreachable dead code despite all 7 of its own structural tests passing — fixed in commit c3ee1a27, with 2 new regression tests specifically guarding against this exact class of bug recurring; the packet body's own stale claims (that the AuthController backdoor and the recovery contract were still unfixed) were also corrected to match the actual code state, plus a genuinely unrelated latent DeployMigrateCommand --path-forwarding bug was fixed with real RED/GREEN evidence (commit dd6b0c86, b08795a7). ALL GAP-049-attributable technical gates pass. On exact head b08795a715396b953d766c305f1088f26def9f6f, CI ran to completion with exactly ONE red job: Zena RBAC/Tenant Invariants (MySQL parity), failing 4/4 times in this session (1 original run + 3 reruns) on the identical pre-existing test (ZenaApiContractPhase2InvariantTest::test_document_show_returns_not_found_for_scoped_cross_tenant_resource), already proven (before this CI run) to reproduce identically on canonical base dfd936dbbd88400013488e0bb2e3bb21e126e535 using the exact same CI invocation, with direct MySQL query-log evidence of a transaction-nesting/RefreshDatabase race — GAP-049's own Deployment test files never execute in that CI job at all. Every other GAP-049-relevant workflow/job passed: Owner Governance Lint, Routes Guardrails, Code Quality & Security, CI/CD Pipeline, Button Test Suite, Staging Smoke, and every other job within Automated Testing (Security Tests/PHPStan, Unit, Feature, Integration, API Tests Fast/Slow, Performance Tests, Document/RFI/GAP-048/Treasury real-MySQL concurrency jobs, Zena RBAC/Tenant Invariants (non-parity), browser-tests, Test Coverage Report, Repo Hygiene Guards, Trivy, Docker/Dependency/License/Security Vulnerability Scans). The Owner independently reviewed this exact live state and issued a narrow, GAP-049-Gate-3-only CI exception ruling authorizing re-presentation with this one documented, proven-pre-existing, unrelated exception — see 'Owner-authorized CI exception for Gate-3 Round 2' below for the complete record. This packet does NOT claim an all-green repository CI state. Zero actual production deployment, secret configuration, host provisioning, or production database mutation occurred anywhere in this branch's history."
 technical_evidence:
-  subject_sha: "29ba1a7f047cb442a4111d6fff5599e6a1cc9d7e"
-  implementation_tree_digest: "659f54dc8256b697b1122b81a68477c4646c435c0e0dcc2e60b1f9277b4e3211"
-  verified_pr_head_sha: "52d66a095c053f0b41ce81983df0411e9b186b28"
-  verified_at: "2026-09-04T03:00:00Z"
+  subject_sha: "b08795a715396b953d766c305f1088f26def9f6f"
+  implementation_tree_digest: "76af4ab59e988e602e7b9c12d829e0363d2bedc127c7fcb201a103e3b454e22d"
+  verified_pr_head_sha: "b08795a715396b953d766c305f1088f26def9f6f"
+  verified_at: "2026-09-05T00:00:00Z"
 owner_decision_binding:
-  implementation_tree_digest: "659f54dc8256b697b1122b81a68477c4646c435c0e0dcc2e60b1f9277b4e3211"
-  decision_recorded_at: "2026-09-04T03:00:00Z"
+  implementation_tree_digest: "76af4ab59e988e602e7b9c12d829e0363d2bedc127c7fcb201a103e3b454e22d"
+  decision_recorded_at: "2026-09-05T00:00:00Z"
 ---
 
 # GAP-049 — Production Deployment Hardening: Gate 3 Release Request
 
-**Gate 3 packet status: `changes_requested`.** Owner Gate-3 Round 1
-**REJECTED** this packet's prior `awaiting_owner`/`technical_readiness: ready`
+**Gate 3 packet status: `awaiting_owner` (Round 2).** Owner Gate-3 Round 1
+**REJECTED** this packet's first `awaiting_owner`/`technical_readiness: ready`
 presentation as **premature** — it was presented before exact-head CI had
 finished, and exact-head CI (head `52d66a095c053f0b41ce81983df0411e9b186b28`)
-subsequently completed with real failures. `verified_pr_head_sha` above
-records which head the Owner actually reviewed; it is **NOT** release-ready
-evidence — it is the red head this Round-1 rejection is bound to. See
-"Owner Decision History — Round 1" immediately below for the Owner's full
-verbatim directive and the 8 correction items now in progress.
+subsequently completed with real failures. All 6 Round-1 correction items
+are now complete (see "Owner Decision History — Round 1" and "Round-1
+correction status" below), re-verified by a second final whole-branch
+review that caught and fixed one further Critical defect. The packet is
+re-presented against exact head `b08795a715396b953d766c305f1088f26def9f6f`
+with every GAP-049-attributable CI check green and exactly one
+Owner-authorized, proven-pre-existing, unrelated CI exception — see "Owner
+Decision History — Round 1", "Round-1 correction status", and
+"Owner-authorized CI exception for Gate-3 Round 2" below for the complete
+record.
 
 ## Owner Decision History — Round 1 — CHANGES REQUESTED (permanent record, never erased)
 
@@ -209,9 +214,139 @@ any future revision.**
    unreachable, after both had in fact been fixed — corrected in this
    revision (see the C2/I2 sections above, now marked resolved, and the
    `mandatory_technical_gate_summary` field above).
-8. **In progress.** Evidence refresh (subject SHA, implementation-tree
-   digest) happens only once every mandatory exact-head CI check on the
-   pushed branch is green — not yet reached.
+8. **Complete, under an Owner-authorized narrow exception.** Evidence
+   refreshed against exact head `b08795a715396b953d766c305f1088f26def9f6f`
+   (subject SHA and implementation-tree digest below). Every
+   GAP-049-attributable check is green; exactly one repository-level,
+   proven-pre-existing, unrelated check remains red. The Owner
+   independently reviewed this live state and issued a narrow Gate-3-only
+   exception — see "Owner-authorized CI exception for Gate-3 Round 2"
+   immediately below — rather than requiring an indefinite rerun loop
+   against a check this branch cannot make deterministic. Re-presented as
+   `gate_status: awaiting_owner`, `technical_readiness.value: ready`,
+   `owner_decision.value: none`.
+
+---
+
+## Owner-authorized CI exception for Gate-3 Round 2 (permanent record, never erased)
+
+**This section documents a narrow, Owner-issued exception — it does not
+claim the exception check passed, and it does not waive future CI
+requirements for any other Work ID.**
+
+### The facts
+
+- **Canonical base SHA:** `dfd936dbbd88400013488e0bb2e3bb21e126e535`
+- **Exact implementation subject SHA (this packet's evidence basis):**
+  `b08795a715396b953d766c305f1088f26def9f6f`
+- **Current/final PR head (identical to subject SHA — no further code
+  commits since):** `b08795a715396b953d766c305f1088f26def9f6f`
+- **Exact failing workflow/job/test:**
+  - Workflow: `Automated Testing`
+  - Job: `Zena RBAC/Tenant Invariants (MySQL parity)`
+  - Test: `Tests\Feature\Zena\ZenaApiContractPhase2InvariantTest::test_document_show_returns_not_found_for_scoped_cross_tenant_resource`
+- **Expected vs actual:** expected error code `E404.NOT_FOUND`, actual
+  error code `TENANT_INVALID` (both HTTP status 404 — only the JSON error
+  code differs). `PHPUnit\Framework\ExpectationFailedException`, "Failed
+  asserting that two strings are identical."
+- **4/4 failed attempts this session, all the identical test/signature,
+  independently confirmed from job logs for each:**
+  1. Original CI run on push, job `101069287304` — failed.
+  2. Rerun 1, job `101075733442` — failed (identical test/exception,
+     confirmed via `gh api .../logs`).
+  3. Rerun 2, job `101076966454` — failed (identical test/exception,
+     confirmed via `gh api .../logs`).
+  4. Rerun 3, job `101078011232` — failed (identical test/exception,
+     confirmed via `gh api .../logs`).
+  No rerun beyond the fourth was performed, per Owner instruction — "four
+  identical failures plus canonical-base reproduction are sufficient
+  evidence, further retrying would not increase confidence."
+- **Exact base-commit reproduction evidence:** documented above under
+  Round-1 correction item 5 — two independent diagnostic investigations
+  (reports retained locally, key evidence embedded in this packet).
+  Investigation Round 2 ran the **exact CI invocation**
+  (`--group=zena-invariants -c phpunit.mysql.xml`, real MySQL 8.0) against
+  the canonical base commit `dfd936dbbd88400013488e0bb2e3bb21e126e535` in
+  an isolated worktree and reproduced the identical failure
+  (`test_document_show_returns_not_found_for_scoped_cross_tenant_resource`,
+  identical `E404.NOT_FOUND`/`TENANT_INVALID` mismatch) there too — proving
+  this is not branch-induced.
+- **MySQL query-log root-cause evidence:** embedded above under Round-1
+  correction item 5 — a bare `ROLLBACK` (not `ROLLBACK TO SAVEPOINT`) fires
+  mid-test on the same connection, immediately before
+  `TenantIsolationMiddleware::handle()`'s `Tenant::find($tenantId)` lookup
+  for the tenant that same test had just inserted — consistent with a
+  transaction-nesting bookkeeping desync between `RefreshDatabase`'s
+  in-PHP nesting counter and MySQL's real transaction depth, most likely
+  triggered by `SAVEPOINT trans2` reuse from nested `DB::transaction()`
+  calls in per-test `setUp()` seeding.
+- **Proof GAP-049 deployment tests do not execute in this job:**
+  `grep -rl "@group zena-invariants" tests/` shows the annotation exists
+  only on `tests/Feature/RouteHygieneTest.php` and `tests/Feature/Zena/*`
+  (15 files) — **none** of `tests/Feature/Deployment/*.php` (GAP-049's own
+  test files) carry `@group zena-invariants`, so none of them ever execute
+  in the `zena-invariants-mysql` / `Zena RBAC/Tenant Invariants (MySQL
+  parity)` job.
+- **Proof no tenant/RBAC/product code was changed for this exception:**
+  `git diff --name-status dfd936db..b08795a7` contains zero files under
+  `app/Models/`, `app/Http/Controllers/` (other than the narrowly
+  Owner-authorized `AuthController.php` login-fallback guard, item 2),
+  `app/Http/Middleware/` (tenant/RBAC middleware unchanged), or
+  `tests/Feature/Zena/`. `ZenaApiContractPhase2InvariantTest.php` itself
+  is byte-for-byte unchanged between base and this head.
+- **Exact list of all other successful workflows/jobs on this exact
+  head** (from `gh pr checks 302`, all with a `pass` conclusion):
+  Owner Governance Lint; Routes Guardrails (`test-routes-guardrails`);
+  Code Quality Analysis; `code-quality`; CI/CD Pipeline (`test`); Button
+  Test Suite (`button-inventory-check`, `feature-tests`); Staging Smoke
+  (`staging-smoke`); API Tests (Fast); API Tests (Slow); Dependency
+  Vulnerability Scan; Docker Security Scan; Document Workflow Concurrency
+  (real MySQL); Feature Tests; GAP-048 Service-Line Concurrency (real
+  MySQL); Integration Tests; License Compliance Scan; Performance Tests
+  (`DashboardPerformanceTest.php`, `PerformanceMonitoringTest.php`); RFI
+  Escalation Concurrency (real MySQL); Repo Hygiene Guards; Security
+  Tests; Security Vulnerability Scan; Test Coverage Report / `coverage-report`
+  / `quality-gate`; Treasury Native CHECK Constraints (real MySQL); Trivy;
+  Unit Tests; `Zena RBAC/Tenant Invariants` (the non-parity variant of
+  this same suite — passes); `browser-tests`; `security-tests`.
+- **Statement that this exception does NOT mean the red check passed:**
+  `Zena RBAC/Tenant Invariants (MySQL parity)` is, and remains, RED on
+  this exact head. It did not pass on any of the 4 attempts made in this
+  session. This packet does not claim otherwise, does not claim an
+  all-green repository CI state, and does not mark this specific check as
+  resolved.
+
+### The ruling
+
+**Owner independently inspected the live PR state at head
+`b08795a715396b953d766c305f1088f26def9f6f`** and issued the following
+narrow ruling (full verbatim text preserved in this file's frontmatter
+`decision_provenance.owner_response_reference` above): the prior
+requirement that every mandatory exact-head CI check must be green is
+narrowed, **for this Gate-3 presentation only**, to permit re-presentation
+with exactly the one documented exception above, conditioned on: (1) the
+failure signature matching the proven canonical-base reproduction
+(confirmed above); (2) no new GAP-049-attributable failure appearing
+(confirmed — the only red job is this pre-existing one); (3) every other
+GAP-049-relevant workflow/job remaining green (confirmed, listed above);
+(4) the exception evidence remaining bound to the canonical-base
+reproduction (this section); (5) this packet not describing the overall
+CI suite as "all green" (it does not — see the explicit statement above);
+(6) no tenant/RBAC/product behavior being modified merely to force this
+legacy check green (confirmed — zero such changes made).
+
+**This exception applies only to GAP-049 Gate-3 evaluation. It is not a
+general waiver for future red CI on this or any other Work ID.**
+
+### Recommended immediate follow-up (not started in this session)
+
+**GAP-050 — MySQL Invariant Transaction Isolation / CI Reliability.**
+Purpose: eliminate the `RefreshDatabase`/nested-transaction race under
+genuine MySQL; restore deterministic `Zena RBAC/Tenant Invariants (MySQL
+parity)`; ensure test isolation truthfulness; do not change the intended
+`E404`/`TENANT_INVALID` semantics merely to satisfy the test. Per Owner
+instruction, GAP-050 is **not** started in this session — it requires a
+new session after GAP-049 is closed/released.
 
 ---
 
@@ -368,7 +503,7 @@ Full report retained locally at
 | Check | Command | Result |
 |---|---|---|
 | Full default-suite test run | `php vendor/bin/phpunit` | 2508 tests, 15602 assertions, 526 errors, 13 failures. **100% pre-existing environment-provisioning debt**: this worktree has no `.env`/`APP_KEY` at all (`MissingAppKeyException` cascades across most HTTP tests) plus one already-documented pre-existing `RedisStore::publish()` bug. Grepped every failure/error for every GAP-049 class/file name — zero matches. Not fixed, per instructions (pre-existing, unrelated). |
-| GAP-049-scoped suite | `php vendor/bin/phpunit --filter=Deployment` | **48/48 PASS**, 120 assertions (re-confirmed 48/48 after the final-review fix wave, see below) |
+| GAP-049-scoped suite | `php vendor/bin/phpunit --filter=Deployment` | **48/48 PASS** at initial Task 11 verification, 120 assertions; **58/58 PASS**, 161 assertions after all Round-1 corrections and the second final-review fix wave (10 additional regression tests added across the DeployMigrateCommand secondary fix and the recovery-contract Critical-defect fix — see the corresponding correction items above for detail) |
 | Route guard | `php artisan route:list --json \| php scripts/ci/route-guard.php` | **PASS** (required a local `-n -d display_errors=stderr` workaround for an unrelated host PHP-extension stdout-pollution issue; the guard's actual logic against real route data passes cleanly) |
 | Owner Governance Lint | `php scripts/ssot/owner_governance_lint.php` + `php scripts/ci/lint-mysql-claim-truthfulness.php` | **PASS** for both locally-runnable structural checks (0 violations, 103 files scanned). 3 of 5 CI sub-checks require a real PR + `GH_TOKEN` (gate-ordering, gate-3-before-ready, evidence-freshness) and are NOT-RUNNABLE-HERE — expected, real CI is authoritative for these once this PR is open. |
 | PHPStan | `./vendor/bin/phpstan analyse --error-format=json` | **BLOCKED** — this specific worktree's `vendor/phpstan` is a symlink back to the original (non-worktree) repo, causing the same duplicate-autoload-class fatal documented for `php artisan test`. Environment limitation, not a GAP-049 code defect; real CI (a clean checkout, not a worktree copy) is authoritative. |
@@ -566,24 +701,28 @@ tests, or runbooks exist for them.
 - **NO PRODUCTION HOST WAS PROVISIONED.**
 - **NO PRODUCTION DATABASE WAS MUTATED.**
 
-## Decision Needed
+## Decision Needed — Round 2
 
-**Superseded by Round 1 CHANGES REQUESTED above.** No decision is being
-requested from this presentation (`decision_requested: null`) — the 8
-correction items are in progress. This section will be refreshed for
-Round 2 once every item is complete and every mandatory exact-head CI
-check is green. Original Round-0 framing preserved below for reference:
+All 6 Owner Round-1 correction items are complete (see "Round-1
+correction status" above), re-verified by a second final whole-branch
+review, and re-verification found and fixed one further Critical defect
+(the recovery-contract status-check gating bug — see item 7 above). The
+Gate-3 packet has been refreshed against exact head
+`b08795a715396b953d766c305f1088f26def9f6f`. CI on that exact head is green
+for every GAP-049-attributable check, with exactly one Owner-authorized,
+proven-pre-existing, unrelated exception (`Zena RBAC/Tenant Invariants
+(MySQL parity)` — see "Owner-authorized CI exception for Gate-3 Round 2"
+above).
 
 Owner chọn một trong: **Approve** (repository-side implementation
-technically acceptable; C2 escalation and I2 decision point both
-acknowledged and their disposition ratified as stated above) / **Request
-correction** (specific changes required before re-presentation) / **Defer**
-(hold pending further external input, e.g. resolution of C2's separate
-Work ID first).
+technically acceptable for release; the documented CI exception and the
+recommended GAP-050 follow-up both acknowledged and ratified as stated
+above) / **Request correction** (specific changes required before
+re-presentation) / **Defer** (hold pending further external input).
 
 This packet does **not** ask the Owner to approve any real secret value,
 real host, real domain, or an actual production deployment — only whether
 the repository-side implementation and disposable-environment evidence
-are technically acceptable, with C2 and I2 explicitly surfaced for
-Owner-level risk acknowledgment rather than resolved unilaterally by this
-session.
+are technically acceptable for release, with the one documented CI
+exception explicitly surfaced for Owner-level acknowledgment rather than
+silently absorbed into an "all green" claim.

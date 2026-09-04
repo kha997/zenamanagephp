@@ -95,12 +95,74 @@ each item's own evidence section below once implemented):**
 **This Round-1 record is preserved permanently and must not be removed by
 any future revision.**
 
+## Round-1 correction status (updated as each item completes)
+
+1. **Complete.** Packet truth corrected (this section and the frontmatter
+   fields above).
+2. **Complete.** `app/Http/Controllers/AuthController.php`'s demo-login
+   fallback wrapped in `if (app()->environment(['local', 'testing']))`,
+   reusing the identical existing pattern from `routes/web.php`. RED→GREEN
+   evidence: `tests/Feature/Security/AuthControllerDemoLoginProductionGuardTest.php`
+   (commit `5593d287`).
+3. **Complete.** `GET /api/v1/public/production/ready` added to
+   `tests/Feature/Api/ApiSecurityMiddlewareGateTest.php`'s existing
+   per-exact-URI allowlist (same mechanism as `/api/v1/public/health/*`).
+   RED→GREEN evidence in-commit (`d017225f`).
+4. **Complete.** `ProductionBootstrapCommand.php`/`MigrationClassificationService.php`
+   routed Eloquent static calls through `Model::query()->...` (no Larastan
+   in this repo's PHPStan config) and added array-shape PHPDoc annotations.
+   Verified 0 PHPStan errors, both per-file and full-repo
+   (`php -d memory_limit=2G vendor/bin/phpstan analyse`, 1155 files, `[OK] No errors`).
+   Commit `c96fe4bc`.
+5. **Complete — pre-existing, not branch-induced.** Two diagnostic
+   investigations (reports retained locally at
+   `.superpowers/sdd/2026-09-03-gap-049-production-deployment-implementation/mysql-invariant-{provenance,rootcause}-report.md`)
+   proved the CI failure
+   (`ZenaApiContractPhase2InvariantTest::test_document_show_returns_not_found_for_scoped_cross_tenant_resource`,
+   `TENANT_INVALID` vs `E404.NOT_FOUND`) is a pre-existing, intermittent
+   transaction-nesting race condition (`RefreshDatabase` + nested
+   `SAVEPOINT`-based `DB::transaction()` calls under real MySQL 8.0),
+   reproduced identically on the canonical base commit
+   `dfd936dbbd88400013488e0bb2e3bb21e126e535` using the **exact CI
+   invocation** (`--group=zena-invariants -c phpunit.mysql.xml`) — proven
+   via direct MySQL general-query-log evidence showing a bare `ROLLBACK`
+   firing mid-test immediately before a `TenantIsolationMiddleware::handle()`
+   `Tenant::find()` lookup for the tenant that same test had just inserted.
+   None of GAP-049's own `tests/Feature/Deployment/*` files carry
+   `@group zena-invariants`, so they never execute in this CI job at all —
+   confirmed by `grep -rl "@group zena-invariants" tests/`. **No
+   tenant/RBAC/product code was touched**, per the Owner's explicit ruling
+   for this outcome. This belongs to a new, separately governed Work ID
+   (likely descending from the same transaction-nesting family as
+   GAP-040/GAP-044). A genuinely unrelated secondary latent bug was found
+   during this investigation and fixed in-scope (small, safe, does not
+   touch tenant/RBAC/product code): `DeployMigrateCommand::handle()` now
+   forwards `--path` to its internal `migrate` call only when
+   `--migrations-path` was explicitly overridden (testing only) — real
+   production invocations are completely unaffected. RED→GREEN evidence
+   in commit `73db452a`.
+6. **Complete.** `production.yml` implements the Gate-2 A-2/A-5 automatic
+   post-cutover recovery contract: explicit pre-cutover capture of the
+   previous release, automatic explicit-target rollback for expand
+   deployments (reported `rolled_back` only if a post-recovery readiness
+   check also passes), maintenance-mode-only recovery for breaking
+   deployments (no automatic code/schema rollback, dedicated Slack
+   escalation), no invented rollback target for first-ever deployments,
+   and the final state-computation step no longer reduces an
+   explicitly-failed readiness check to `deployed_unverified`. 7 new
+   structural regression tests. Commit `456efd25`.
+7. **In progress.** Full correction verification (Deployment suite 56/56,
+   AuthController regression 2/2, API security gate 1/1, PHPStan 0 errors
+   full-repo, workflow YAML valid, route guard OK, Owner Governance Lint
+   clean, frontend build OK) largely complete; a new final whole-branch
+   review against the approved Gate-2 design, the two binding
+   clarifications, and this Round-1 directive is running.
+8. **Pending.** Evidence refresh (subject SHA, implementation-tree digest)
+   happens only once item 7's new final review is clean and every
+   mandatory exact-head CI check on the pushed branch is green — not yet
+   reached.
+
 ---
-and one consolidated fix round are complete. No Owner decision has been
-requested or recorded before this submission. Production deployment,
-secret configuration, host provisioning, and production database mutation
-remain **not authorized** by this Work ID at any point up to and including
-this submission.
 
 ## Canonical implementation baseline
 

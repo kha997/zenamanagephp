@@ -30,13 +30,13 @@ generated_by: agent
 residual_risk_rating: medium
 mandatory_technical_gate_summary: "GAP-049 implements the Owner-approved Gate-2 architecture (Candidate A — hardened, exact-SHA release-based SSH deployment) across 12 tasks: retirement of every competing production-deployment entry point (deploy.yml/deploy.sh deleted; ci-cd.yml's placeholder deploy job removed; automated-deployment.yml and release-management.yml production-reaching jobs disabled via if:false), a minimal non-diagnostic-leaking production readiness endpoint, an expand-vs-breaking migration classification contract enforced in code, immutable-release filesystem tooling with a true atomic current-symlink switch on GNU/Linux, a queue-worker liveness canary, a production-safe first-database bootstrap command, least-privilege backup/restore scripts with a proven disposable-environment restore drill, pre-release two-tenant negative-isolation evidence, three operational runbooks, and the hardened production.yml workflow itself as the sole live production entry point. All GAP-049-scoped tests pass (48/48, tests/Feature/Deployment/**). Task-level review found and fixed 6 genuine implementation bugs during the build (activate-release.sh atomicity regression, backup.sh checksum non-portability, queue-canary-drill.sh race condition, plus 3 self-consistency issues where generated docblocks literally contained their own forbidden guard-test substrings). A final whole-branch review (dispatched on the most capable available model specifically to catch cross-task integration issues no single-task review could see) found 2 Critical and 10 Important findings; all 10 Important findings plus 1 Critical (a deploy-job checkout gap that would have made the workflow fail on its first real invocation) were fixed and re-reviewed clean in one consolidated fix wave. The second Critical finding (a pre-existing, out-of-scope security defect in app/Http/Controllers/AuthController.php, unrelated to and untouched by this branch, but inadvertently made exploitable at the super_admin level once GAP-049's production:bootstrap command creates a super_admin role) is NOT fixed here — it is business/authentication code outside GAP-049's authorized scope, and is escalated below as a blocking pre-deployment risk requiring a separate Work ID. One architectural gap (no automated rollback/maintenance-mode branch on post-cutover health-check failure — one of the six designed deployment states, rolled_back, is consequently unreachable from this workflow) is documented below as an explicit Owner decision point rather than silently implemented or omitted. Zero actual production deployment, secret configuration, host provisioning, or production database mutation occurred anywhere in this branch's history."
 technical_evidence:
-  subject_sha: "62403f249f0ed708c3bf2f9d4d52754fc7eb4c3a"
-  implementation_tree_digest: "02c89feae007859df9197a42cfb10747acf0101ec150a3d2892a588739428ded"
-  verified_pr_head_sha: "e52fd79ca51e021ef6b832672740fe0de521c7b5"
-  verified_at: "2026-09-04T02:15:00Z"
+  subject_sha: "29ba1a7f047cb442a4111d6fff5599e6a1cc9d7e"
+  implementation_tree_digest: "659f54dc8256b697b1122b81a68477c4646c435c0e0dcc2e60b1f9277b4e3211"
+  verified_pr_head_sha: "PENDING_UPDATE_AFTER_PUSH"
+  verified_at: "2026-09-04T02:30:00Z"
 owner_decision_binding:
-  implementation_tree_digest: "02c89feae007859df9197a42cfb10747acf0101ec150a3d2892a588739428ded"
-  decision_recorded_at: "2026-09-04T02:00:00Z"
+  implementation_tree_digest: "659f54dc8256b697b1122b81a68477c4646c435c0e0dcc2e60b1f9277b4e3211"
+  decision_recorded_at: "2026-09-04T02:30:00Z"
 ---
 
 # GAP-049 — Production Deployment Hardening: Gate 3 Release Request

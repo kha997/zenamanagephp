@@ -1,14 +1,14 @@
 ---
 work_id: GAP-049
 gate: 3
-gate_status: awaiting_owner
+gate_status: changes_requested
 technical_readiness:
-  value: ready
+  value: blocked
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: correction_requested
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-09-03-gap-049-production-deployment-gate2-design.md
   plan: docs/superpowers/plans/2026-09-03-gap-049-production-deployment-implementation.md
@@ -19,30 +19,83 @@ decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
   recorded_at: "2026-09-04T02:00:00Z"
-  owner_response_reference: "No Owner decision has been requested or recorded yet. This is the initial Gate-3 packet presentation for GAP-049, submitted for Owner technical review following full implementation, task-level review, a final whole-branch review, and one consolidated fix round addressing that review's findings."
+  owner_response_reference: "GAP-049 Gate 3 Owner Round 1 (relayed via coordinator session, reviewed head 52d66a095c053f0b41ce81983df0411e9b186b28 of PR #302, canonical base dfd936dbbd88400013488e0bb2e3bb21e126e535): 'GATE 3 ROUND 1 — CHANGES REQUESTED. TECHNICAL READINESS: BLOCKED. The implementation is substantially advanced, but it is NOT technically ready for Owner release review yet. CI is no longer pending. Exact-head CI has completed with failures.' Owner directed 8 correction items: (1) correct the Gate-3 packet truth immediately (this edit); (2) close the demo-login production backdoor in AuthController.php as a narrow GAP-049 security correction (explicitly authorized in-scope, no separate Work ID); (3) fix the new readiness route's security-contract failure via the repository's canonical infrastructure-health designation/allowlist mechanism, not by adding business auth; (4) fix all 7 branch-introduced PHPStan errors (ProductionBootstrapCommand.php static-call reporting, MigrationClassificationService.php array value types) with proper types, not suppression; (5) prove whether the MySQL invariant failure (ZenaApiContractPhase2InvariantTest::test_document_show_returns_not_found_for_scoped_cross_tenant_resource, expected E404.NOT_FOUND actual TENANT_INVALID) is pre-existing (test against canonical base dfd936db) or branch-induced before touching any tenant/RBAC/product behavior; (6) implement the approved Gate-2 A-2/A-5 post-cutover recovery contract (explicit-target automatic rollback on expand-migration readiness/queue-canary failure, maintenance-mode-only recovery on breaking-migration failure, no automatic migrate:rollback, first-deploy-with-no-prior-release handled without inventing a rollback target, failed readiness must never be reduced to deployed_unverified); (7) re-run full correction verification and a new final whole-branch review against the approved Gate-2 design, the two Owner binding clarifications, and this Round-1 directive; (8) refresh Gate-3 evidence only after code is frozen and every mandatory exact-head CI check is green, then re-present as awaiting_owner/ready and STOP for Round-2 review. Do not merge, deploy, configure production secrets, provision a production host, or mutate a production database.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-04T02:00:00Z"
-  updated_at: "2026-09-04T02:00:00Z"
+  updated_at: "2026-09-04T03:00:00Z"
 generated_by: agent
 residual_risk_rating: medium
 mandatory_technical_gate_summary: "GAP-049 implements the Owner-approved Gate-2 architecture (Candidate A — hardened, exact-SHA release-based SSH deployment) across 12 tasks: retirement of every competing production-deployment entry point (deploy.yml/deploy.sh deleted; ci-cd.yml's placeholder deploy job removed; automated-deployment.yml and release-management.yml production-reaching jobs disabled via if:false), a minimal non-diagnostic-leaking production readiness endpoint, an expand-vs-breaking migration classification contract enforced in code, immutable-release filesystem tooling with a true atomic current-symlink switch on GNU/Linux, a queue-worker liveness canary, a production-safe first-database bootstrap command, least-privilege backup/restore scripts with a proven disposable-environment restore drill, pre-release two-tenant negative-isolation evidence, three operational runbooks, and the hardened production.yml workflow itself as the sole live production entry point. All GAP-049-scoped tests pass (48/48, tests/Feature/Deployment/**). Task-level review found and fixed 6 genuine implementation bugs during the build (activate-release.sh atomicity regression, backup.sh checksum non-portability, queue-canary-drill.sh race condition, plus 3 self-consistency issues where generated docblocks literally contained their own forbidden guard-test substrings). A final whole-branch review (dispatched on the most capable available model specifically to catch cross-task integration issues no single-task review could see) found 2 Critical and 10 Important findings; all 10 Important findings plus 1 Critical (a deploy-job checkout gap that would have made the workflow fail on its first real invocation) were fixed and re-reviewed clean in one consolidated fix wave. The second Critical finding (a pre-existing, out-of-scope security defect in app/Http/Controllers/AuthController.php, unrelated to and untouched by this branch, but inadvertently made exploitable at the super_admin level once GAP-049's production:bootstrap command creates a super_admin role) is NOT fixed here — it is business/authentication code outside GAP-049's authorized scope, and is escalated below as a blocking pre-deployment risk requiring a separate Work ID. One architectural gap (no automated rollback/maintenance-mode branch on post-cutover health-check failure — one of the six designed deployment states, rolled_back, is consequently unreachable from this workflow) is documented below as an explicit Owner decision point rather than silently implemented or omitted. Zero actual production deployment, secret configuration, host provisioning, or production database mutation occurred anywhere in this branch's history."
 technical_evidence:
   subject_sha: "29ba1a7f047cb442a4111d6fff5599e6a1cc9d7e"
   implementation_tree_digest: "659f54dc8256b697b1122b81a68477c4646c435c0e0dcc2e60b1f9277b4e3211"
-  verified_pr_head_sha: "PENDING_UPDATE_AFTER_PUSH"
-  verified_at: "2026-09-04T02:30:00Z"
+  verified_pr_head_sha: "52d66a095c053f0b41ce81983df0411e9b186b28"
+  verified_at: "2026-09-04T03:00:00Z"
 owner_decision_binding:
   implementation_tree_digest: "659f54dc8256b697b1122b81a68477c4646c435c0e0dcc2e60b1f9277b4e3211"
-  decision_recorded_at: "2026-09-04T02:30:00Z"
+  decision_recorded_at: "2026-09-04T03:00:00Z"
 ---
 
 # GAP-049 — Production Deployment Hardening: Gate 3 Release Request
 
-**Gate 3 packet status: `awaiting_owner`.** This is the first presentation of
-this packet. Implementation, task-level review, a final whole-branch review,
+**Gate 3 packet status: `changes_requested`.** Owner Gate-3 Round 1
+**REJECTED** this packet's prior `awaiting_owner`/`technical_readiness: ready`
+presentation as **premature** — it was presented before exact-head CI had
+finished, and exact-head CI (head `52d66a095c053f0b41ce81983df0411e9b186b28`)
+subsequently completed with real failures. `verified_pr_head_sha` above
+records which head the Owner actually reviewed; it is **NOT** release-ready
+evidence — it is the red head this Round-1 rejection is bound to. See
+"Owner Decision History — Round 1" immediately below for the Owner's full
+verbatim directive and the 8 correction items now in progress.
+
+## Owner Decision History — Round 1 — CHANGES REQUESTED (permanent record, never erased)
+
+**Owner Gate-3 Round 1 decision: CHANGES REQUESTED. TECHNICAL READINESS: BLOCKED.**
+Reviewed exact PR head `52d66a095c053f0b41ce81983df0411e9b186b28` of PR #302
+against canonical base `dfd936dbbd88400013488e0bb2e3bb21e126e535`. Full
+verbatim directive preserved in this file's frontmatter
+`decision_provenance.owner_response_reference` above. The Owner found the
+implementation "substantially advanced" but explicitly NOT technically
+ready: exact-head CI had completed with failures at the moment of the
+prior `awaiting_owner`/`ready` presentation, which was therefore premature.
+
+**8 correction items directed, all binding, addressed in this round (see
+each item's own evidence section below once implemented):**
+1. Correct the Gate-3 packet truth immediately (this edit) — `gate_status:
+   changes_requested`, `technical_readiness.value: blocked`,
+   `owner_decision.value: correction_requested`, `decision_requested: null`,
+   this permanent Round-1 history section, prior engineering evidence
+   preserved (not erased) below.
+2. Close the demo-login production backdoor in `AuthController.php` —
+   explicitly authorized as a **narrow GAP-049 security correction**, not a
+   separate Work ID, because GAP-049's own `production:bootstrap` command is
+   what turns the pre-existing demo-fallback defect into an exploitable
+   privileged production authentication path.
+3. Fix the new readiness route's security-contract failure via the
+   repository's canonical infrastructure-health designation/allowlist
+   mechanism — not by adding business authentication to the endpoint.
+4. Fix all 7 branch-introduced PHPStan errors with proper types, not
+   suppression.
+5. Prove whether the MySQL invariant failure is pre-existing (test against
+   canonical base first) or branch-induced, before touching any
+   tenant/RBAC/product behavior.
+6. Implement the approved Gate-2 A-2/A-5 post-cutover recovery contract
+   (automatic explicit-target rollback for expand deployments, maintenance-only
+   recovery for breaking deployments, no automatic `migrate:rollback`,
+   first-deploy-with-no-prior-release handled safely, failed readiness never
+   silently reduced to `deployed_unverified`).
+7. Re-run full correction verification and a new final whole-branch review.
+8. Refresh Gate-3 evidence only after code is frozen and every mandatory
+   exact-head CI check is green, then re-present as `awaiting_owner`/`ready`
+   and STOP for Round-2 review.
+
+**This Round-1 record is preserved permanently and must not be removed by
+any future revision.**
+
+---
 and one consolidated fix round are complete. No Owner decision has been
 requested or recorded before this submission. Production deployment,
 secret configuration, host provisioning, and production database mutation
@@ -381,6 +434,12 @@ tests, or runbooks exist for them.
 - **NO PRODUCTION DATABASE WAS MUTATED.**
 
 ## Decision Needed
+
+**Superseded by Round 1 CHANGES REQUESTED above.** No decision is being
+requested from this presentation (`decision_requested: null`) — the 8
+correction items are in progress. This section will be refreshed for
+Round 2 once every item is complete and every mandatory exact-head CI
+check is green. Original Round-0 framing preserved below for reference:
 
 Owner chọn một trong: **Approve** (repository-side implementation
 technically acceptable; C2 escalation and I2 decision point both

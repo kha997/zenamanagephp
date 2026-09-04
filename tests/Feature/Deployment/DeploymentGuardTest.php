@@ -117,4 +117,132 @@ class DeploymentGuardTest extends TestCase
         $this->assertSame('production-deploy', $yaml['concurrency']['group'] ?? null);
         $this->assertFalse($yaml['concurrency']['cancel-in-progress'] ?? true);
     }
+
+    /**
+     * Owner Gate-3 Round-1 correction item 6 (Gate-2 A-2/A-5 post-cutover
+     * recovery contract). These tests assert on the workflow's structural
+     * content (step ids, conditions, script text) rather than executing
+     * it — the workflow can only be genuinely exercised against a real
+     * host, which this repo does not provision in automated tests.
+     */
+    private function deployJobSteps(): array
+    {
+        $yaml = Yaml::parseFile(base_path('.github/workflows/production.yml'));
+        return $yaml['jobs']['deploy']['steps'] ?? [];
+    }
+
+    private function stepById(array $steps, string $id): ?array
+    {
+        foreach ($steps as $step) {
+            if (($step['id'] ?? null) === $id) {
+                return $step;
+            }
+        }
+        return null;
+    }
+
+    public function test_recovery_step_exists_and_is_gated_on_post_cutover_verification_failure(): void
+    {
+        $recovery = $this->stepById($this->deployJobSteps(), 'recovery');
+        $this->assertNotNull($recovery, 'production.yml must have a step with id: recovery implementing the Gate-2 A-2/A-5 recovery contract.');
+
+        $condition = (string) ($recovery['if'] ?? '');
+        $this->assertStringContainsString("steps.activate.outcome == 'success'", $condition);
+        $this->assertStringContainsString("steps.readiness.outcome == 'failure'", $condition);
+        $this->assertStringContainsString("steps.queue-canary.outcome == 'failure'", $condition);
+    }
+
+    public function test_recovery_captures_previous_release_before_cutover_and_never_infers_head_tilde(): void
+    {
+        $content = file_get_contents(base_path('.github/workflows/production.yml'));
+
+        // Previous-release capture happens in the activate step, before
+        // activate-release.sh (the atomic switch) ever runs.
+        $activatePos = strpos($content, '.previous-release');
+        $switchPos = strpos($content, 'activate-release.sh" "$ROOT" "$SHA"');
+        $this->assertNotFalse($activatePos, 'production.yml must capture the previous release to a .previous-release marker before switching.');
+        $this->assertNotFalse($switchPos);
+        $this->assertLessThan($switchPos, $activatePos, 'Previous-release capture must happen before the atomic current-symlink switch, not after.');
+
+        $this->assertStringNotContainsString('HEAD~1', $content);
+        $this->assertStringNotContainsString('HEAD^', $content);
+    }
+
+    public function test_recovery_rollback_target_is_read_from_explicit_pre_cutover_capture(): void
+    {
+        $content = file_get_contents(base_path('.github/workflows/production.yml'));
+        $this->assertStringContainsString('PREV_SHA="$(cat "${ROOT}/.previous-release")"', $content);
+        $this->assertStringContainsString('rollback.sh" "$ROOT" "$PREV_SHA"', $content);
+    }
+
+    public function test_breaking_migration_failure_never_triggers_automatic_rollback(): void
+    {
+        $content = file_get_contents(base_path('.github/workflows/production.yml'));
+
+        // Isolate the breaking-migration branch of the recovery step's
+        // script: from its ALLOW_BREAKING_MIGRATIONS check to its `exit 0`.
+        $branchStart = strpos($content, 'if [ "${ALLOW_BREAKING_MIGRATIONS:-false}" = "true" ]; then');
+        $this->assertNotFalse($branchStart, 'Recovery step must branch on the breaking-migration flag.');
+        $branchEnd = strpos($content, 'exit 0', $branchStart);
+        $this->assertNotFalse($branchEnd);
+        $breakingBranch = substr($content, $branchStart, $branchEnd - $branchStart);
+
+        $this->assertStringNotContainsString('rollback.sh', $breakingBranch, 'The breaking-migration recovery branch must never invoke rollback.sh — Gate-2 A-5 requires maintenance mode + operator action, never an automatic code/schema rollback.');
+        $this->assertStringContainsString('php artisan down', $breakingBranch, 'The breaking-migration recovery branch must ensure/retain maintenance mode.');
+    }
+
+    public function test_first_deploy_with_no_previous_release_never_invents_a_rollback_target(): void
+    {
+        $content = file_get_contents(base_path('.github/workflows/production.yml'));
+
+        $branchStart = strpos($content, 'if [ ! -s "${ROOT}/.previous-release" ]; then');
+        $this->assertNotFalse($branchStart, 'Recovery step must handle the no-previous-release (first deploy) case explicitly.');
+        $branchEnd = strpos($content, 'exit 0', $branchStart);
+        $this->assertNotFalse($branchEnd);
+        $firstDeployBranch = substr($content, $branchStart, $branchEnd - $branchStart);
+
+        $this->assertStringNotContainsString('rollback.sh', $firstDeployBranch, 'The first-deploy-with-no-prior-release case must never invent a rollback target.');
+        $this->assertStringContainsString('php artisan down', $firstDeployBranch);
+    }
+
+    public function test_final_state_never_reduces_an_explicit_readiness_failure_to_deployed_unverified(): void
+    {
+        $content = file_get_contents(base_path('.github/workflows/production.yml'));
+
+        $setStatePos = strpos($content, 'echo "Production deployment state: attempted');
+        $this->assertNotFalse($setStatePos);
+        $finalBlockStart = strpos($content, 'name: Set final deployment state output');
+        $this->assertNotFalse($finalBlockStart);
+        $finalBlock = substr($content, $finalBlockStart);
+
+        $deployedUnverifiedLinePos = strpos($finalBlock, 'state=deployed_unverified');
+        $this->assertNotFalse($deployedUnverifiedLinePos, 'production.yml must still have a deployed_unverified branch for genuine edge cases (e.g. readiness step never ran).');
+
+        // The condition guarding that branch (the "elif [...]; then" line
+        // immediately preceding it) must explicitly exclude an outcome of
+        // 'failure' for the readiness step — i.e. a readiness step that
+        // actually ran and failed must never fall into this branch.
+        $elifStart = strrpos(substr($finalBlock, 0, $deployedUnverifiedLinePos), 'elif [');
+        $this->assertNotFalse($elifStart);
+        $elifLine = substr($finalBlock, $elifStart, $deployedUnverifiedLinePos - $elifStart);
+        $this->assertStringContainsString("steps.readiness.outcome", $elifLine);
+        $this->assertStringContainsString('!= "failure"', $elifLine);
+    }
+
+    public function test_final_state_rolled_back_requires_non_breaking_and_successful_post_recovery_readiness(): void
+    {
+        $content = file_get_contents(base_path('.github/workflows/production.yml'));
+
+        $rolledBackLinePos = strpos($content, 'state=rolled_back');
+        $this->assertNotFalse($rolledBackLinePos, 'production.yml must be able to report the rolled_back state.');
+
+        $elifStart = strrpos(substr($content, 0, $rolledBackLinePos), 'elif [');
+        $this->assertNotFalse($elifStart);
+        $elifLine = substr($content, $elifStart, $rolledBackLinePos - $elifStart);
+
+        $this->assertStringContainsString('steps.recovery.outcome', $elifLine);
+        $this->assertStringContainsString("allow_breaking_migrations", $elifLine);
+        $this->assertStringContainsString('!= "true"', $elifLine, 'rolled_back must never be reported for a breaking-migration deployment (Gate-2 A-5: breaking failures are maintenance/recovery-required, never a claimed rollback).');
+        $this->assertStringContainsString('steps.post-recovery-readiness.outcome', $elifLine);
+    }
 }

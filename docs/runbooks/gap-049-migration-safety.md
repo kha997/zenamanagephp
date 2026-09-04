@@ -62,6 +62,42 @@ assumed.
   no matches in production code paths (verified by
   `tests/Feature/Deployment/DeployMigrateCommandTest::test_command_never_invokes_migrate_rollback`).
 
+## Automatic post-cutover recovery (`.github/workflows/production.yml`, Gate-2 A-2/A-5)
+
+`production.yml`'s `deploy` job captures the explicit previous `current`
+release target immediately before cutover (`shared/`-independent host
+state, `${ROOT}/.previous-release` — never inferred as a relative-commit
+guess or "most recent releases/ entry"). If post-cutover verification
+(the readiness endpoint and/or the queue canary) fails after a successful
+cutover, a dedicated recovery step runs automatically:
+
+- **Expand deployment, prior release exists**: automatically invokes
+  `scripts/deploy/rollback.sh` against the captured explicit previous SHA,
+  restarts the required services, and the workflow reports `rolled_back`
+  only if a post-recovery readiness check against the restored release
+  also passes. The overall attempted deployment is still reported as
+  failed to reach the new release — `rolled_back` is never conflated with
+  a successful new deployment.
+- **Breaking deployment** (`allow_breaking_migrations=true`): the recovery
+  step deliberately does **not** invoke `rollback.sh` — the new schema may
+  be incompatible with the previous release's code. It ensures/retains
+  maintenance mode (`php artisan down`) and reports `failed`; a Slack
+  escalation (if configured) explicitly flags that operator action is
+  required per this runbook's breaking-migration procedure above.
+- **First-ever deployment** (no prior release existed): there is no
+  rollback target to invent. The recovery step records the failure
+  truthfully and enters maintenance mode as the safe no-service state.
+- **Recorded previous release missing** (pruned by cleanup — should not
+  happen given `cleanup-releases.sh` always keeps the rollback target, but
+  handled defensively): same maintenance-mode fallback as the first-deploy
+  case, rather than attempting a rollback against a release that no longer
+  exists on disk.
+
+A readiness check that genuinely ran and failed is never subsequently
+reported as `deployed_unverified` — that state is reserved for the narrow
+case where the readiness step itself never reached a real pass/fail
+(e.g. the workflow run was cancelled mid-flight).
+
 ## Concurrency
 
 Deployment-level serialization (no two `workflow_dispatch` production

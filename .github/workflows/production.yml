@@ -198,6 +198,18 @@ jobs:
             STAGE="/tmp/zena-deploy-${SHA}"
             ROOT="/var/www/zena"
 
+            # Capture the explicit previous release BEFORE any mutation, so a
+            # post-cutover recovery step never has to infer a rollback target
+            # (never a relative-commit guess, never "most recent releases/
+            # entry" — only this exact, captured-before-this-deploy value).
+            # An empty/missing file truthfully means "no prior release"
+            # (first-ever deploy).
+            if [ -L "${ROOT}/current" ]; then
+              basename "$(readlink -f "${ROOT}/current")" > "${ROOT}/.previous-release"
+            else
+              rm -f "${ROOT}/.previous-release"
+            fi
+
             cd "$STAGE"
             sha256sum -c "release-${SHA}.tar.gz.sha256"
 
@@ -263,6 +275,105 @@ jobs:
             cd /var/www/zena/current
             php artisan deploy:queue-canary --timeout=30
 
+      # --- Post-cutover recovery contract (Gate-2 design A-2/A-5) ---
+      # Triggers only when cutover occurred but post-cutover verification
+      # (readiness and/or queue canary) failed. Never runs an automatic
+      # schema rollback of any kind. Rollback target is always the
+      # explicit SHA captured BEFORE this deploy's cutover (see the
+      # "activate" step above) — never a relative-commit guess, never
+      # "most recent releases/ entry".
+      - name: Automatic recovery on post-cutover verification failure
+        if: steps.gate.outputs.ready == 'true' && steps.activate.outcome == 'success' && (steps.readiness.outcome == 'failure' || steps.queue-canary.outcome == 'failure')
+        id: recovery
+        uses: appleboy/ssh-action@v1.2.4
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          fingerprint: ${{ secrets.PRODUCTION_HOST_KEY_FINGERPRINT }}
+          envs: ALLOW_BREAKING_MIGRATIONS
+          script: |
+            set -euo pipefail
+            SHA="${{ needs.verify-sha.outputs.verified_sha }}"
+            ROOT="/var/www/zena"
+
+            if [ "${ALLOW_BREAKING_MIGRATIONS:-false}" = "true" ]; then
+              # Breaking-migration deployment: the new schema may be
+              # incompatible with the previous release's code, so an
+              # automatic code-only rollback would leave old code running
+              # against a schema it cannot handle. No automatic
+              # code/schema rollback. Ensure/retain maintenance mode and
+              # require an operator to follow the migration-specific
+              # recovery runbook.
+              echo "Breaking-migration deployment failed post-cutover verification — NOT performing an automatic rollback (schema may be incompatible with the previous release's code)."
+              cd "${ROOT}/releases/${SHA}"
+              php artisan down --render="errors::503" || true
+              echo "RECOVERY_MODE=breaking_maintenance_required — see docs/runbooks/gap-049-migration-safety.md"
+              exit 0
+            fi
+
+            if [ ! -s "${ROOT}/.previous-release" ]; then
+              # First-ever deployment: no prior release exists, so there is
+              # no explicit rollback target to invent. Record failure
+              # truthfully and enter maintenance mode as the safe
+              # no-service state rather than leaving a failed, unverified
+              # release serving traffic.
+              echo "No prior release existed before this deploy (first-ever deployment) — no rollback target available."
+              cd "${ROOT}/releases/${SHA}"
+              php artisan down --render="errors::503" || true
+              echo "RECOVERY_MODE=first_deploy_maintenance_required"
+              exit 0
+            fi
+
+            PREV_SHA="$(cat "${ROOT}/.previous-release")"
+            if [ ! -d "${ROOT}/releases/${PREV_SHA}" ]; then
+              echo "Recorded previous release ${PREV_SHA} no longer exists on disk (pruned by cleanup) — cannot safely auto-rollback."
+              cd "${ROOT}/releases/${SHA}"
+              php artisan down --render="errors::503" || true
+              echo "RECOVERY_MODE=previous_release_missing_maintenance_required"
+              exit 0
+            fi
+
+            echo "Expand-migration deployment failed post-cutover verification — automatically rolling back to the explicit previous release ${PREV_SHA} (captured before this deploy's cutover, never inferred)."
+            "${ROOT}/releases/${PREV_SHA}/scripts/deploy/rollback.sh" "$ROOT" "$PREV_SHA"
+
+            cd "${ROOT}/current"
+            php artisan queue:restart
+            sudo systemctl reload nginx
+            sudo systemctl restart zena-queue-worker
+            sudo systemctl restart zena-websocket
+
+            echo "RECOVERY_MODE=rolled_back_to_${PREV_SHA}"
+
+      # Best-effort evidence step, not a hard gate: after a non-breaking
+      # rollback, the restored previous release should be healthy again —
+      # confirm via the same public readiness endpoint used for the new
+      # release. This step's pass/fail is read by the final state step
+      # below to distinguish a genuinely-recovered rollback (rolled_back)
+      # from a maintenance-mode-only recovery (still failed) — both the
+      # first-deploy and previous-release-missing cases above leave the
+      # application in maintenance mode, where this same probe correctly
+      # reports unhealthy (503), so no separate signal needs to be threaded
+      # back from the remote script to distinguish them.
+      - name: Post-recovery readiness check (evidence only — does not gate anything downstream)
+        if: steps.recovery.outcome == 'success'
+        id: post-recovery-readiness
+        run: |
+          sleep 5
+          curl -fsS "${{ secrets.PRODUCTION_URL }}/api/v1/public/production/ready"
+
+      - name: Escalate breaking-migration recovery requirement
+        if: ${{ always() && steps.recovery.outcome == 'success' && github.event.inputs.allow_breaking_migrations == 'true' && env.SLACK_WEBHOOK_URL != '' }}
+        continue-on-error: true
+        uses: slackapi/slack-github-action@v2.1.1
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            text: ":rotating_light: BREAKING MIGRATION RECOVERY REQUIRED for production deployment sha=${{ github.event.inputs.sha }} — no automatic rollback was performed (schema may be incompatible with the previous release's code). See docs/runbooks/gap-049-migration-safety.md for the manual recovery procedure. The application may still be in maintenance mode."
+
       - name: Set final deployment state output
         id: set-state
         if: always()
@@ -271,7 +382,9 @@ jobs:
             echo "state=not_configured" >> "$GITHUB_OUTPUT"
           elif [ "${{ steps.readiness.outputs.state }}" = "health_verified" ] && [ "${{ steps.queue-canary.outcome }}" = "success" ]; then
             echo "state=health_verified" >> "$GITHUB_OUTPUT"
-          elif [ "${{ steps.activate.outcome }}" = "success" ]; then
+          elif [ "${{ steps.recovery.outcome }}" = "success" ] && [ "${{ github.event.inputs.allow_breaking_migrations }}" != "true" ] && [ "${{ steps.post-recovery-readiness.outcome }}" = "success" ]; then
+            echo "state=rolled_back" >> "$GITHUB_OUTPUT"
+          elif [ "${{ steps.activate.outcome }}" = "success" ] && [ "${{ steps.readiness.outcome }}" != "failure" ] && [ "${{ steps.readiness.outcome }}" != "success" ]; then
             echo "state=deployed_unverified" >> "$GITHUB_OUTPUT"
           else
             echo "state=failed" >> "$GITHUB_OUTPUT"

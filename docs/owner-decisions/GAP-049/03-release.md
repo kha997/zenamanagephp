@@ -13,7 +13,7 @@ references:
   spec: docs/superpowers/specs/2026-09-03-gap-049-production-deployment-gate2-design.md
   plan: docs/superpowers/plans/2026-09-03-gap-049-production-deployment-implementation.md
   branch: impl/GAP-049-production-deployment
-  pr: null
+  pr: "https://github.com/kha997/zenamanagephp/pull/302"
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
@@ -32,8 +32,8 @@ mandatory_technical_gate_summary: "GAP-049 implements the Owner-approved Gate-2 
 technical_evidence:
   subject_sha: "62403f249f0ed708c3bf2f9d4d52754fc7eb4c3a"
   implementation_tree_digest: "02c89feae007859df9197a42cfb10747acf0101ec150a3d2892a588739428ded"
-  verified_pr_head_sha: "PENDING_UPDATE_AFTER_PUSH"
-  verified_at: "2026-09-04T02:00:00Z"
+  verified_pr_head_sha: "e52fd79ca51e021ef6b832672740fe0de521c7b5"
+  verified_at: "2026-09-04T02:15:00Z"
 owner_decision_binding:
   implementation_tree_digest: "02c89feae007859df9197a42cfb10747acf0101ec150a3d2892a588739428ded"
   decision_recorded_at: "2026-09-04T02:00:00Z"

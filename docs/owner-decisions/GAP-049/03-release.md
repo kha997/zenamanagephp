@@ -141,6 +141,38 @@ any future revision.**
    `--migrations-path` was explicitly overridden (testing only) — real
    production invocations are completely unaffected. RED→GREEN evidence
    in commit `73db452a`.
+
+   **Raw evidence excerpt** (MySQL general query log, captured during a
+   reproducing run on the impl branch, `RouteHygieneTest.php` +
+   `tests/Feature/Zena` together under `--group=zena-invariants`):
+   ```
+   insert into `tenants` (...) values (..., '01M1P9S0SD99YC18C08PWY0E6X', 'Kozey, Larson and Mosciski', ...)
+   insert into `users` (...) values (..., tenant_id = '01M1P9S0SD99YC18C08PWY0E6X', ...)
+   select * from `users` where `email` = ? ...
+   ...
+   ROLLBACK                                                    <-- unexpected here
+   select * from `tenants` where `tenants`.`id` = ? limit 1
+   select * from `tenants` where `tenants`.`id` = '01M1P9S0SD99YC18C08PWY0E6X' limit 1
+   ```
+   The `SELECT ... FROM tenants WHERE id = '01M1P9S0SD99YC18C08PWY0E6X'`
+   runs immediately after a bare `ROLLBACK` (not `ROLLBACK TO SAVEPOINT`)
+   on the same connection, for the exact tenant ID that `ROLLBACK` had
+   just undone. This query shape is an exact textual match for
+   `TenantIsolationMiddleware::handle()`'s `Tenant::find($tenantId)` call,
+   whose failure branch returns exactly the observed `404` +
+   `TENANT_INVALID`. Consistent with a transaction-nesting bookkeeping
+   desync between `RefreshDatabase`'s in-PHP nesting counter and MySQL's
+   real transaction depth, most likely triggered by `SAVEPOINT trans2`
+   reuse from nested `DB::transaction()` calls
+   (`firstOrCreate`/`updateOrCreate`) inside per-test `setUp()` seeding —
+   not traced to an exact PHP call site (would require `DB::listen()`
+   instrumentation, out of scope for this diagnostic-only investigation).
+   The complete investigation methodology, all command output, and the
+   ruled-out alternative hypotheses remain in the two report files named
+   above (retained in this worktree's gitignored SDD workspace, not
+   committed to keep this Gate-3 packet focused and to avoid interacting
+   with the OWN-2026-005 gate-ordering exemption's `docs/audits/**`
+   boundary).
 6. **Complete (with one Critical fix along the way — see item 7).**
    `production.yml` implements the Gate-2 A-2/A-5 automatic post-cutover
    recovery contract: explicit pre-cutover capture of the previous

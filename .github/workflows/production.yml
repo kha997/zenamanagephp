@@ -12,6 +12,11 @@ on:
         required: false
         type: boolean
         default: false
+      breaking_migration_backup_confirmed:
+        description: 'Required true when allow_breaking_migrations is also true — confirms a fresh backup (scripts/deploy/backup.sh) was taken immediately before this deploy per docs/runbooks/gap-049-migration-safety.md'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: production-deploy
@@ -33,9 +38,11 @@ jobs:
 
       - name: Verify checked-out SHA matches requested input exactly
         id: verify
+        env:
+          REQUESTED_SHA_INPUT: ${{ github.event.inputs.sha }}
         run: |
           ACTUAL_SHA="$(git rev-parse HEAD)"
-          REQUESTED_SHA="${{ github.event.inputs.sha }}"
+          REQUESTED_SHA="$REQUESTED_SHA_INPUT"
           if [ "$ACTUAL_SHA" != "$REQUESTED_SHA" ]; then
             echo "::error::Checked-out SHA ($ACTUAL_SHA) does not match requested input ($REQUESTED_SHA)"
             exit 1
@@ -44,7 +51,7 @@ jobs:
 
       - name: Verify SHA is reachable from canonical main (fail closed on unmerged/arbitrary commits)
         run: |
-          git fetch origin main --depth=1000
+          git fetch origin main
           if ! git merge-base --is-ancestor "${{ steps.verify.outputs.sha }}" origin/main; then
             echo "::error::${{ steps.verify.outputs.sha }} is not reachable from origin/main — refusing to deploy an unapproved/unmerged commit."
             exit 1
@@ -142,6 +149,12 @@ jobs:
           exit 1
         id: not-configured
 
+      - name: Fail closed if a breaking migration is not accompanied by a confirmed fresh backup
+        if: steps.gate.outputs.ready == 'true' && github.event.inputs.allow_breaking_migrations == 'true' && github.event.inputs.breaking_migration_backup_confirmed != 'true'
+        run: |
+          echo "::error::allow_breaking_migrations=true requires breaking_migration_backup_confirmed=true. Take a fresh backup via scripts/deploy/backup.sh per docs/runbooks/gap-049-migration-safety.md, then re-run with confirmation set."
+          exit 1
+
       - uses: actions/download-artifact@v4
         if: steps.gate.outputs.ready == 'true'
         with:
@@ -152,6 +165,11 @@ jobs:
         run: |
           echo "Production deployment state: attempted (sha=${{ needs.verify-sha.outputs.verified_sha }})"
 
+      - name: Capture breaking-migration flag for the remote SSH session (avoid direct expression interpolation into shell)
+        if: steps.gate.outputs.ready == 'true'
+        run: |
+          echo "ALLOW_BREAKING_MIGRATIONS=${{ github.event.inputs.allow_breaking_migrations }}" >> "$GITHUB_ENV"
+
       - name: Transfer verified release artifact to host over authenticated SSH channel
         if: steps.gate.outputs.ready == 'true'
         uses: appleboy/scp-action@v0.1.7
@@ -160,7 +178,7 @@ jobs:
           username: ${{ secrets.PRODUCTION_USER }}
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
           fingerprint: ${{ secrets.PRODUCTION_HOST_KEY_FINGERPRINT }}
-          source: "release-${{ needs.verify-sha.outputs.verified_sha }}.tar.gz,release-${{ needs.verify-sha.outputs.verified_sha }}.tar.gz.sha256,scripts/deploy/*.sh"
+          source: "release-${{ needs.verify-sha.outputs.verified_sha }}.tar.gz,release-${{ needs.verify-sha.outputs.verified_sha }}.tar.gz.sha256"
           target: "/tmp/zena-deploy-${{ needs.verify-sha.outputs.verified_sha }}"
           strip_components: 0
 
@@ -173,6 +191,7 @@ jobs:
           username: ${{ secrets.PRODUCTION_USER }}
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
           fingerprint: ${{ secrets.PRODUCTION_HOST_KEY_FINGERPRINT }}
+          envs: ALLOW_BREAKING_MIGRATIONS
           script: |
             set -euo pipefail
             SHA="${{ needs.verify-sha.outputs.verified_sha }}"
@@ -185,21 +204,25 @@ jobs:
             mkdir -p "${ROOT}/releases/${SHA}"
             tar -xzf "release-${SHA}.tar.gz" -C "${ROOT}/releases/${SHA}"
 
-            chmod +x "${STAGE}/scripts/deploy/"*.sh
-            "${STAGE}/scripts/deploy/link-shared.sh" "$ROOT" "$SHA"
+            chmod +x "${ROOT}/releases/${SHA}/scripts/deploy/"*.sh
+            "${ROOT}/releases/${SHA}/scripts/deploy/link-shared.sh" "$ROOT" "$SHA"
 
             cd "${ROOT}/releases/${SHA}"
+
+            php artisan storage:link
+
             DEPLOY_MIGRATE_ARGS=""
-            if [ "${{ github.event.inputs.allow_breaking_migrations }}" = "true" ]; then
+            if [ "${ALLOW_BREAKING_MIGRATIONS:-false}" = "true" ]; then
               DEPLOY_MIGRATE_ARGS="--allow-breaking"
             fi
             php artisan deploy:migrate $DEPLOY_MIGRATE_ARGS
 
-            "${STAGE}/scripts/deploy/activate-release.sh" "$ROOT" "$SHA"
-
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
+
+            "${ROOT}/releases/${SHA}/scripts/deploy/activate-release.sh" "$ROOT" "$SHA"
+
             php artisan queue:restart
             sudo systemctl reload nginx
             sudo systemctl restart zena-queue-worker
@@ -207,7 +230,7 @@ jobs:
 
             echo "cutover complete — state: deployed_unverified"
 
-            "${STAGE}/scripts/deploy/cleanup-releases.sh" "$ROOT" 3
+            "${ROOT}/releases/${SHA}/scripts/deploy/cleanup-releases.sh" "$ROOT" 3
             rm -rf "$STAGE"
 
       - name: Set deployed_unverified state (cutover occurred, not yet health-checked)
@@ -229,6 +252,7 @@ jobs:
 
       - name: Post-cutover queue canary (worker liveness, separate from HTTP readiness)
         if: steps.gate.outputs.ready == 'true' && steps.readiness.outputs.state == 'health_verified'
+        id: queue-canary
         uses: appleboy/ssh-action@v1.2.4
         with:
           host: ${{ secrets.PRODUCTION_HOST }}
@@ -245,7 +269,7 @@ jobs:
         run: |
           if [ "${{ steps.gate.outputs.ready }}" != "true" ]; then
             echo "state=not_configured" >> "$GITHUB_OUTPUT"
-          elif [ "${{ steps.readiness.outputs.state }}" = "health_verified" ]; then
+          elif [ "${{ steps.readiness.outputs.state }}" = "health_verified" ] && [ "${{ steps.queue-canary.outcome }}" = "success" ]; then
             echo "state=health_verified" >> "$GITHUB_OUTPUT"
           elif [ "${{ steps.activate.outcome }}" = "success" ]; then
             echo "state=deployed_unverified" >> "$GITHUB_OUTPUT"

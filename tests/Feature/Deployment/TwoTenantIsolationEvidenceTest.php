@@ -12,11 +12,23 @@ use Tests\Traits\TenantUserFactoryTrait;
 /**
  * GAP-049 Gate-2 Round-2 Clarification 2, pre-release evidence half:
  * proves real negative cross-tenant isolation using at least two controlled
- * tenants exercising the real, live authorization/tenant-boundary code paths
- * (TenantIsolationMiddleware + RoleBasedAccessControlMiddleware +
- * App\Http\Controllers\Api\ProjectController's own tenant_id checks) —
- * executed in this disposable test-database environment only, never against
- * production, and never by manufacturing a fake production tenant.
+ * tenants exercising the real, live tenant-boundary code paths
+ * (TenantIsolationMiddleware + App\Http\Controllers\Api\ProjectController's
+ * own tenant_id checks) — executed in this disposable test-database
+ * environment only, never against production, and never by manufacturing a
+ * fake production tenant.
+ *
+ * NOTE on RBAC: the actor created via
+ * Tests\Traits\TenantUserFactoryTrait::createTenantUser() defaults to a
+ * `super_admin` role, which RoleBasedAccessControlMiddleware::checkAccess()
+ * short-circuits past all permission checks (isSuperAdmin() returns true
+ * immediately). So while the route is registered under the `auth:sanctum`,
+ * `tenant.isolation`, `rbac` middleware group, this test does NOT exercise
+ * RBAC/role-based permission differentiation — the 403/404s asserted below
+ * come entirely from tenant-scoping logic (`tenant.isolation` middleware +
+ * ProjectController's own tenant_id comparisons). If anything this is a
+ * stronger isolation proof (even a tenant's own super-admin cannot cross
+ * the tenant boundary), but it is not evidence of RBAC enforcement.
  *
  * Route/model chosen: `App\Models\Project` over `/api/projects` (index/show/
  * update, registered as Route::apiResource('projects', ProjectController)

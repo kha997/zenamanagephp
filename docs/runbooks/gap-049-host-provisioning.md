@@ -125,6 +125,17 @@ rollback: `scripts/deploy/rollback.sh /var/www/zena <explicit-target-sha>`
 
 ## Production smoke
 
-See Gate-2 design §6 for the acceptance sequence (auth, tenant scoping,
-RBAC, DB write persistence, queue canary, storage round-trip, critical-page
-200s) — implemented as the production workflow's post-cutover smoke step.
+See Gate-2 design §6 for the full acceptance sequence (auth, tenant
+scoping, RBAC, DB write persistence, queue canary, storage round-trip,
+critical-page 200s) — a 7-item checklist. Only item 5 (queue canary, via
+`php artisan deploy:queue-canary`) is actually implemented as an automated
+post-cutover step in `production.yml`, together with the minimal
+readiness endpoint's own DB/cache/storage probes (`GET
+/api/v1/public/production/ready`). Items 1-4, 6, and 7 — authenticated
+login as the real bootstrap operator, tenant-scoping verification, RBAC
+enforcement check, a DB write persisting across a request cycle, a file
+upload round-tripping through shared storage, and critical-page 200
+checks — are **not** currently automated in `production.yml` and remain a
+manual post-deploy checklist item for the human operator until a future
+task automates them. This is a known, explicit gap, not an implemented
+feature.

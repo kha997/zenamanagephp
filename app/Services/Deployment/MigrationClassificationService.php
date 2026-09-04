@@ -4,6 +4,7 @@ namespace App\Services\Deployment;
 
 class MigrationClassificationService
 {
+    /** @var array<string, string|null> migration basename => "expand"|"breaking"|null classification. */
     private array $manifest;
 
     public function __construct(
@@ -42,11 +43,17 @@ class MigrationClassificationService
         return $result;
     }
 
+    /**
+     * @param array<int, string> $files
+     */
     public function hasUnclassified(array $files): bool
     {
         return in_array(null, $this->classificationsFor($files), true);
     }
 
+    /**
+     * @param array<int, string> $files
+     */
     public function hasBreaking(array $files): bool
     {
         return in_array('breaking', $this->classificationsFor($files), true);

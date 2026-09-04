@@ -33,7 +33,7 @@ class ProductionBootstrapCommand extends Command
     {
         $alreadyBootstrapped = (bool) Cache::get(self::BOOTSTRAP_MARKER_KEY, false);
 
-        if (Tenant::count() > 0) {
+        if (Tenant::query()->count() > 0) {
             if ($alreadyBootstrapped) {
                 $this->warn('Bootstrap already completed previously — refusing to run again (idempotent fail-closed).');
                 return 2;
@@ -56,14 +56,14 @@ class ProductionBootstrapCommand extends Command
         $password = Str::password(20, symbols: true);
 
         DB::transaction(function () use ($tenantName, $tenantSlug, $adminEmail, $password) {
-            $tenant = Tenant::create([
+            $tenant = Tenant::query()->create([
                 'name' => $tenantName,
                 'slug' => $tenantSlug,
                 'status' => 'active',
                 'is_active' => true,
             ]);
 
-            $admin = User::create([
+            $admin = User::query()->create([
                 'tenant_id' => $tenant->id,
                 'name' => $tenantName . ' Administrator',
                 'email' => $adminEmail,
@@ -71,7 +71,7 @@ class ProductionBootstrapCommand extends Command
                 'is_active' => true,
             ]);
 
-            $role = Role::firstOrCreate(
+            $role = Role::query()->firstOrCreate(
                 ['name' => 'super_admin'],
                 ['scope' => 'system']
             );

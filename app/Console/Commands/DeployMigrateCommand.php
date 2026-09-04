@@ -56,8 +56,34 @@ class DeployMigrateCommand extends Command
             return 3;
         }
 
-        $this->call('migrate', ['--force' => true, '--isolated' => true]);
+        $migrateArgs = ['--force' => true, '--isolated' => true];
+
+        // Only forward --path when a migrations directory was explicitly
+        // overridden (testing only, via --migrations-path) — this makes
+        // the fixture-classified migrations the ones actually executed,
+        // closing a latent gap where a test could classify one directory
+        // but drive `migrate` against the real database/migrations
+        // directory instead. In real production use (no override), never
+        // pass --path: omitting it preserves Laravel's default behavior of
+        // scanning every registered migration path (including any a
+        // package/service-provider registers beyond database/migrations),
+        // which an unconditional --path would silently narrow away from.
+        if ($this->option('migrations-path')) {
+            $migrateArgs['--path'] = $this->relativeMigrationsPath($migrationsPath);
+        }
+
+        $this->call('migrate', $migrateArgs);
 
         return 0;
+    }
+
+    private function relativeMigrationsPath(string $absolutePath): string
+    {
+        $base = rtrim(base_path(), '/');
+        if (str_starts_with($absolutePath, $base . '/')) {
+            return substr($absolutePath, strlen($base) + 1);
+        }
+
+        return $absolutePath;
     }
 }

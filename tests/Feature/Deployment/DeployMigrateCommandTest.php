@@ -30,6 +30,36 @@ class DeployMigrateCommandTest extends TestCase
         File::put($this->fixtureDir . "/{$name}.php", "<?php\nreturn new class extends \\Illuminate\\Database\\Migrations\\Migration {\n public function up(): void {}\n public function down(): void {}\n};\n");
     }
 
+    /**
+     * Unlike writeMigrationFixture()'s no-op up()/down(), this fixture
+     * performs a real, observable schema change — so a test using it can
+     * prove `deploy:migrate` actually executed THIS fixture migration
+     * (via the --path forwarding fix), not silently no-op'd against the
+     * real database/migrations directory (which RefreshDatabase has
+     * already fully applied, so an unpathed `migrate` call would find 0
+     * pending migrations and exit successfully without running anything).
+     */
+    private function writeObservableMigrationFixture(string $name, string $tableName): void
+    {
+        File::put($this->fixtureDir . "/{$name}.php", <<<PHP
+<?php
+return new class extends \\Illuminate\\Database\\Migrations\\Migration {
+    public function up(): void
+    {
+        \\Illuminate\\Support\\Facades\\Schema::create('{$tableName}', function (\\Illuminate\\Database\\Schema\\Blueprint \$table) {
+            \$table->id();
+        });
+    }
+
+    public function down(): void
+    {
+        \\Illuminate\\Support\\Facades\\Schema::dropIfExists('{$tableName}');
+    }
+};
+PHP
+        );
+    }
+
     public function test_service_reports_unclassified_migration(): void
     {
         $this->writeMigrationFixture('2026_09_03_000001_add_expand_column');
@@ -89,6 +119,27 @@ class DeployMigrateCommandTest extends TestCase
         ])->run();
 
         $this->assertSame(0, $exitCode);
+    }
+
+    public function test_command_actually_executes_the_classified_fixture_migration_not_the_real_directory(): void
+    {
+        $tableName = 'gap049_deploy_migrate_proof_' . str_replace('.', '', uniqid('', true));
+        $this->writeObservableMigrationFixture('2026_09_03_000009_create_proof_table', $tableName);
+        File::put($this->manifestPath, json_encode(['2026_09_03_000009_create_proof_table' => 'expand']));
+
+        $this->assertFalse(\Illuminate\Support\Facades\Schema::hasTable($tableName), 'Precondition: proof table must not exist before the command runs.');
+
+        $exitCode = $this->artisan('deploy:migrate', [
+            '--manifest' => $this->manifestPath,
+            '--migrations-path' => $this->fixtureDir,
+        ])->run();
+
+        $this->assertSame(0, $exitCode);
+        $this->assertTrue(
+            \Illuminate\Support\Facades\Schema::hasTable($tableName),
+            'deploy:migrate must actually execute the fixture migration it classified (via --path forwarding) — not silently no-op against the real database/migrations directory, which RefreshDatabase has already fully applied.'
+        );
+        $this->assertDatabaseHas('migrations', ['migration' => '2026_09_03_000009_create_proof_table']);
     }
 
     public function test_command_rejects_breaking_migration_without_allow_breaking_flag(): void

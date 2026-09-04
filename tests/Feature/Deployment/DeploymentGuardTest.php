@@ -152,6 +152,53 @@ class DeploymentGuardTest extends TestCase
         $this->assertStringContainsString("steps.queue-canary.outcome == 'failure'", $condition);
     }
 
+    /**
+     * Regression guard for a real Critical bug caught by the second final
+     * whole-branch review: `if:` conditions on `recovery` and
+     * `post-recovery-readiness` originally had NO explicit status-check
+     * function (always()/failure()/etc). GitHub Actions implicitly ANDs an
+     * unqualified `if:` with success() — which is false whenever an
+     * earlier step in the job failed, i.e. false in EVERY scenario these
+     * two steps exist to handle. The recovery contract was therefore
+     * unreachable dead code despite 100% of its content-level tests
+     * passing (they only ever parsed the committed YAML, never executed
+     * it). This test would have caught that.
+     */
+    public function test_recovery_and_post_recovery_readiness_steps_use_an_explicit_status_check_function(): void
+    {
+        $steps = $this->deployJobSteps();
+
+        $recovery = $this->stepById($steps, 'recovery');
+        $this->assertNotNull($recovery);
+        $recoveryCondition = (string) ($recovery['if'] ?? '');
+        $this->assertMatchesRegularExpression(
+            '/\b(always|failure|cancelled)\s*\(\s*\)/',
+            $recoveryCondition,
+            'The recovery step\'s `if:` must contain an explicit status-check function (always()/failure()/cancelled()) — otherwise GitHub Actions\' implicit success() makes it unreachable in every failure scenario it exists to handle.'
+        );
+
+        $postRecoveryReadiness = $this->stepById($steps, 'post-recovery-readiness');
+        $this->assertNotNull($postRecoveryReadiness);
+        $postRecoveryCondition = (string) ($postRecoveryReadiness['if'] ?? '');
+        $this->assertMatchesRegularExpression(
+            '/\b(always|failure|cancelled)\s*\(\s*\)/',
+            $postRecoveryCondition,
+            'The post-recovery-readiness step\'s `if:` must contain an explicit status-check function for the same reason.'
+        );
+    }
+
+    public function test_recovery_also_triggers_when_activate_itself_fails_after_a_successful_cutover(): void
+    {
+        // e.g. a post-switch service-restart failure inside the activate
+        // step — the atomic switch already happened, so this must still
+        // be recoverable, not silently excluded because the step that
+        // performed the switch reported an overall failure outcome.
+        $recovery = $this->stepById($this->deployJobSteps(), 'recovery');
+        $this->assertNotNull($recovery);
+        $condition = (string) ($recovery['if'] ?? '');
+        $this->assertStringContainsString("steps.activate.outcome == 'failure'", $condition);
+    }
+
     public function test_recovery_captures_previous_release_before_cutover_and_never_infers_head_tilde(): void
     {
         $content = file_get_contents(base_path('.github/workflows/production.yml'));

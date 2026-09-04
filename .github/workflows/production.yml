@@ -276,14 +276,24 @@ jobs:
             php artisan deploy:queue-canary --timeout=30
 
       # --- Post-cutover recovery contract (Gate-2 design A-2/A-5) ---
-      # Triggers only when cutover occurred but post-cutover verification
-      # (readiness and/or queue canary) failed. Never runs an automatic
-      # schema rollback of any kind. Rollback target is always the
-      # explicit SHA captured BEFORE this deploy's cutover (see the
-      # "activate" step above) — never a relative-commit guess, never
-      # "most recent releases/ entry".
+      # Triggers when cutover verification failed (readiness and/or queue
+      # canary), OR when the activate step itself failed AFTER a
+      # successful atomic switch (e.g. a post-switch service-restart
+      # failure) — both leave a release live that this contract must
+      # react to. MUST use `always()` (or an equivalent explicit
+      # status-check function): without one, GitHub Actions implicitly
+      # ANDs the whole condition with success(), which is false whenever
+      # an earlier step in this job failed — i.e. false in EVERY scenario
+      # this step exists to handle, silently making the entire recovery
+      # contract dead code. (Caught by the second final whole-branch
+      # review — the first implementation omitted this and the step could
+      # never actually run.) Never runs an automatic schema rollback of
+      # any kind. Rollback target is always the explicit SHA captured
+      # BEFORE this deploy's cutover (see the "activate" step above) —
+      # never a relative-commit guess, never "most recent releases/
+      # entry".
       - name: Automatic recovery on post-cutover verification failure
-        if: steps.gate.outputs.ready == 'true' && steps.activate.outcome == 'success' && (steps.readiness.outcome == 'failure' || steps.queue-canary.outcome == 'failure')
+        if: always() && steps.gate.outputs.ready == 'true' && (steps.activate.outcome == 'failure' || (steps.activate.outcome == 'success' && (steps.readiness.outcome == 'failure' || steps.queue-canary.outcome == 'failure')))
         id: recovery
         uses: appleboy/ssh-action@v1.2.4
         with:
@@ -356,7 +366,7 @@ jobs:
       # reports unhealthy (503), so no separate signal needs to be threaded
       # back from the remote script to distinguish them.
       - name: Post-recovery readiness check (evidence only — does not gate anything downstream)
-        if: steps.recovery.outcome == 'success'
+        if: always() && steps.recovery.outcome == 'success'
         id: post-recovery-readiness
         run: |
           sleep 5

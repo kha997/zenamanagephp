@@ -67,9 +67,20 @@ assumed.
 `production.yml`'s `deploy` job captures the explicit previous `current`
 release target immediately before cutover (`shared/`-independent host
 state, `${ROOT}/.previous-release` — never inferred as a relative-commit
-guess or "most recent releases/ entry"). If post-cutover verification
-(the readiness endpoint and/or the queue canary) fails after a successful
-cutover, a dedicated recovery step runs automatically:
+guess or "most recent releases/ entry"). A dedicated recovery step runs
+automatically whenever either of two failure conditions is observed: (a)
+post-cutover verification (the readiness endpoint and/or the queue
+canary) fails after a successful cutover, or (b) the activation step
+itself reports failure even though the atomic switch already happened
+(e.g. a post-switch service-restart failure) — both leave a release live
+that this contract must react to. The step's own `if:` condition uses an
+explicit `always()` status-check function specifically so it still runs
+when an earlier step in the job failed — without one, GitHub Actions'
+implicit success()-gating would silently skip it in exactly the scenarios
+it exists to handle (a real bug caught and fixed during this Work ID's own
+review process; see `tests/Feature/Deployment/DeploymentGuardTest.php`'s
+`test_recovery_and_post_recovery_readiness_steps_use_an_explicit_status_check_function`
+regression guard).
 
 - **Expand deployment, prior release exists**: automatically invokes
   `scripts/deploy/rollback.sh` against the captured explicit previous SHA,

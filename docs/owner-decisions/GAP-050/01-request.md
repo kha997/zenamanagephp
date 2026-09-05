@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-09-05-gap-050-mysql-transaction-isolation-gate1-evidence.md
   plan: null
   branch: docs/GAP-050-gate1-mysql-transaction-isolation
-  pr: null
+  pr: "https://github.com/kha997/zenamanagephp/pull/303"
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-05T16:20:00Z"
-  updated_at: "2026-09-05T16:20:00Z"
+  updated_at: "2026-09-05T16:29:26Z"
 generated_by: agent
 ---
 

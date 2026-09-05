@@ -1,11 +1,11 @@
 ---
 work_id: GAP-050
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-09-05-gap-050-mysql-transaction-isolation-gate1-evidence.md
   plan: null
@@ -15,15 +15,38 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-09-05T16:20:00Z"
-  owner_response_reference: null
+  recorded_at: "2026-09-05T16:44:00Z"
+  owner_response_reference: "GAP-050 Gate 1 Owner Decision (relayed via coordinator session, reviewed exact PR head c3d45b62ac7126a718f0093f7f9bebd5714b0742 of PR #303): 'GAP-050 GATE 1 — OWNER APPROVED. Approval is bound to Gate-1 head: c3d45b62ac7126a718f0093f7f9bebd5714b0742. Owner accepts the forensic evidence as sufficient to establish the failure mechanism and authorize Gate 2.' Owner directed a Gate-2 design-only investigation with the following binding direction: pin the exact trigger that first causes PDO::inTransaction() to become false, if reasonably achievable; do not assume firstOrCreate()/updateOrCreate() is the cause until proven; treat suite-splitting and fail-loud detection as containment/defense-in-depth, not automatically as the final root-cause fix; prefer a framework-supported or test-infrastructure correction over local hacks; preserve intended tenant/RBAC/product semantics exactly; do not weaken, skip, retry-until-green, or otherwise mask MySQL parity. Procedure directed: (1) record this Gate-1 approval truthfully in 01-request.md; (2) push only that Owner-decision record; (3) verify exact-head docs-only CI; (4) mark PR #303 ready and merge it using the established repository convention if the expected checks are green; (5) confirm the new canonical main SHA; then, from that clean updated main, create a NEW Gate-2 branch/PR for GAP-050. Gate 2 is design/research only — no remediation implementation yet. The Gate-2 design must: identify the earliest proven transaction-state transition; distinguish proven trigger from remaining hypotheses; compare root-cause correction vs containment options; define regression tests that would fail on the current defect and pass only on the intended fix; quantify whether other MySQL jobs/tests share the hazardous pattern; define explicit acceptance criteria, including that the full real-MySQL parity invocation passes repeatedly without unscheduled migrate:fresh; reject test-order changes, sleeps, retries, assertion weakening, or simply removing RefreshDatabase; state clearly what evidence would justify falling back to process isolation/suite splitting if the exact framework/user-land trigger cannot be safely corrected. Stop at Gate 2 with gate_status: awaiting_owner. Do not implement.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-05T16:20:00Z"
-  updated_at: "2026-09-05T16:29:26Z"
+  updated_at: "2026-09-05T16:44:00Z"
 generated_by: agent
+---
+
+## Owner Decision History — Gate 1 — APPROVED (permanent record, never erased)
+
+**Owner Gate 1 decision: APPROVED**, bound to Gate-1 head
+`c3d45b62ac7126a718f0093f7f9bebd5714b0742` (PR #303). The Owner accepted
+the forensic evidence in
+`docs/audits/2026-09-05-gap-050-mysql-transaction-isolation-gate1-evidence.md`
+as sufficient to establish the failure mechanism and authorize Gate 2. Full
+verbatim directive preserved in this file's frontmatter
+`decision_provenance.owner_response_reference` above. **This approval
+authorizes a Gate-2 design/research investigation only — no remediation
+implementation.** Binding Gate-2 direction from the Owner: pin the exact
+PHP-level trigger that first causes `PDO::inTransaction()` to become false
+if reasonably achievable, without assuming `firstOrCreate()`/
+`updateOrCreate()` is the cause until proven; treat suite-splitting and
+fail-loud detection as containment/defense-in-depth rather than the
+presumed final fix; prefer a framework-supported or test-infrastructure
+correction over local hacks; preserve intended tenant/RBAC/product
+semantics exactly; never weaken, skip, retry-until-green, or otherwise
+mask MySQL parity. This Gate-1 approval record is preserved permanently
+and must not be removed by any future revision.
+
 ---
 
 ## Owner Summary
@@ -122,15 +145,19 @@ Hướng (2) — truy tìm chính xác điểm gọi PHP gây lệch `PDO::inTra
 — là hướng triệt để nhất nhưng cần thêm công cụ chẩn đoán chưa hoàn thành
 trong Gate 1 này.
 
-## Quyết định Gate 1 cần Owner
+## Quyết định Gate 1 — ĐÃ CÓ Owner APPROVED (xem lịch sử phía trên)
 
-`decision_requested: approve_or_correction_or_defer` — đề nghị Owner xác
-nhận: (a) chẩn đoán ở Gate 1 này đã đủ vững để mở Gate 2 thiết kế khắc phục
-theo hướng khuyến nghị (1+3), hay cần điều chỉnh/đào sâu thêm điểm nào;
-(b) có nên đầu tư thêm công cụ chẩn đoán để truy tìm chính xác điểm gọi
-PHP (hướng 2) trước khi quyết định Gate 2, hay để đó cho một vòng sau;
-(c) mức độ ưu tiên xử lý GAP-050 so với các Work ID khác đang mở.
+Owner đã APPROVED Gate 1 tại head `c3d45b62ac7126a718f0093f7f9bebd5714b0742`
+(PR #303), xác nhận bằng chứng đủ vững để mở Gate 2. Owner **không** chọn
+sẵn hướng khắc phục (1+3) đề xuất trong Gate 1 làm kết luận cuối — Gate 2
+phải điều tra tiếp điểm gọi PHP chính xác gây lệch `PDO::inTransaction()`
+nếu khả thi, không được mặc định `firstOrCreate()`/`updateOrCreate()` là
+nguyên nhân khi chưa chứng minh, và phải ưu tiên sửa đúng gốc/khắc phục
+theo hướng framework-hỗ trợ hơn là các giải pháp containment cục bộ. Chi
+tiết đầy đủ trong `decision_provenance.owner_response_reference` ở
+frontmatter.
 
-Không có thay đổi code nào được thực hiện. Không có thay đổi hành vi
-tenant/RBAC/product nào. Không mở PR triển khai. Dừng tại Gate 1 chờ Owner
-xem xét.
+Không có thay đổi code nào được thực hiện trong Gate 1. Không có thay đổi
+hành vi tenant/RBAC/product nào. Không mở PR triển khai. Gate 2 (thiết
+kế/nghiên cứu, KHÔNG triển khai) sẽ mở trong một branch/PR mới, từ `main`
+sau khi PR #303 được merge.

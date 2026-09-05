@@ -12,7 +12,6 @@ on:
         type: choice
         options:
         - staging
-        - production
       version:
         description: 'Version to deploy'
         required: false
@@ -152,7 +151,7 @@ jobs:
   deploy-production:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
+    if: false  # GAP-049: Candidate B production path deferred; see docs/owner-decisions/GAP-049/02-design.md (was: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production'))
     environment: production
     
     steps:
@@ -297,7 +296,7 @@ jobs:
   rollback:
     name: Rollback Deployment
     runs-on: ubuntu-latest
-    if: failure() && (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch')
+    if: false  # GAP-049: Candidate B production path deferred; see docs/owner-decisions/GAP-049/02-design.md (was: failure() && (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'))
     environment: production
     
     steps:
@@ -376,7 +375,7 @@ jobs:
   blue-green-deployment:
     name: Blue-Green Deployment
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production'
+    if: false  # GAP-049: Candidate B production path deferred; see docs/owner-decisions/GAP-049/02-design.md (was: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
     environment: production
     
     steps:
@@ -531,7 +530,7 @@ jobs:
   canary-deployment:
     name: Canary Deployment
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production'
+    if: false  # GAP-049: Candidate B production path deferred; see docs/owner-decisions/GAP-049/02-design.md (was: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
     environment: production
     
     steps:

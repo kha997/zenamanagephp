@@ -1,128 +1,411 @@
 name: Production Deployment
 
 on:
-  push:
-    branches: [ main ]
-    tags: [ 'v*' ]
-    paths-ignore:
-      - 'docs/**'
-      - '**/*.md'
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: 'Exact commit SHA to deploy (must be reachable from main)'
+        required: true
+        type: string
+      allow_breaking_migrations:
+        description: 'Set true only if this SHA includes migrations classified "breaking" AND maintenance mode has been manually enabled on the host first (see docs/runbooks/gap-049-migration-safety.md)'
+        required: false
+        type: boolean
+        default: false
+      breaking_migration_backup_confirmed:
+        description: 'Required true when allow_breaking_migrations is also true — confirms a fresh backup (scripts/deploy/backup.sh) was taken immediately before this deploy per docs/runbooks/gap-049-migration-safety.md'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
 
 env:
   PHP_VERSION: '8.2'
 
-
 jobs:
-  security-scan:
+  verify-sha:
     runs-on: ubuntu-latest
+    outputs:
+      verified_sha: ${{ steps.verify.outputs.sha }}
     steps:
       - uses: actions/checkout@v5
-      - name: Security Scan
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.sha }}
+
+      - name: Verify checked-out SHA matches requested input exactly
+        id: verify
+        env:
+          REQUESTED_SHA_INPUT: ${{ github.event.inputs.sha }}
         run: |
-          composer audit || true
-          npm audit --audit-level=critical
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          REQUESTED_SHA="$REQUESTED_SHA_INPUT"
+          if [ "$ACTUAL_SHA" != "$REQUESTED_SHA" ]; then
+            echo "::error::Checked-out SHA ($ACTUAL_SHA) does not match requested input ($REQUESTED_SHA)"
+            exit 1
+          fi
+          echo "sha=${ACTUAL_SHA}" >> "$GITHUB_OUTPUT"
 
-  test:
-    needs: security-scan
+      - name: Verify SHA is reachable from canonical main (fail closed on unmerged/arbitrary commits)
+        run: |
+          git fetch origin main
+          if ! git merge-base --is-ancestor "${{ steps.verify.outputs.sha }}" origin/main; then
+            echo "::error::${{ steps.verify.outputs.sha }} is not reachable from origin/main — refusing to deploy an unapproved/unmerged commit."
+            exit 1
+          fi
+
+  build:
+    needs: verify-sha
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        php-version: ['8.2']
-
+    outputs:
+      artifact_sha256: ${{ steps.checksum.outputs.sha256 }}
     steps:
       - uses: actions/checkout@v5
-      
-      - name: Setup PHP ${{ matrix.php-version }}
+        with:
+          ref: ${{ needs.verify-sha.outputs.verified_sha }}
+
+      - name: Setup PHP ${{ env.PHP_VERSION }}
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.php-version }}
+          php-version: ${{ env.PHP_VERSION }}
           extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, dom, filter, gd, json, redis
-          coverage: pcov
-          ini-values: |
-            pcov.enabled=1
-            pcov.directory=app
-            pcov.exclude="~vendor~"
 
-      - name: Verify PCOV loaded
-        run: php -r "if (!extension_loaded('pcov')) { fwrite(STDERR, 'PCOV missing\n'); exit(1);} echo 'PCOV loaded\n';"
+      - name: Install PHP dependencies (production, no dev)
+        run: composer install --no-dev --optimize-autoloader --prefer-dist --no-progress
 
-      - name: Install dependencies
+      - name: Install and build frontend assets
         run: |
-          composer install --prefer-dist --no-progress
           npm ci
+          npm run build
 
-      - name: Bootstrap application env
+      - name: Exclude secrets/runtime state from the release artifact
         run: |
-          cp .env.example .env.testing
-          php artisan key:generate --env=testing --force
+          rm -f .env .env.testing .env.example
+          rm -rf storage/framework/cache/* storage/framework/sessions/* storage/framework/views/* storage/logs/*
 
-      - name: Run tests
+      - name: Package immutable release artifact bound to exact SHA
+        id: package
         run: |
-          php artisan test
+          ARTIFACT="release-${{ needs.verify-sha.outputs.verified_sha }}.tar.gz"
+          tar -czf "$ARTIFACT" \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='tests' \
+            .
+          echo "artifact=${ARTIFACT}" >> "$GITHUB_OUTPUT"
+
+      - name: Compute and verify artifact checksum
+        id: checksum
+        run: |
+          sha256sum "${{ steps.package.outputs.artifact }}" > "${{ steps.package.outputs.artifact }}.sha256"
+          sha256sum -c "${{ steps.package.outputs.artifact }}.sha256"
+          echo "sha256=$(cut -d' ' -f1 "${{ steps.package.outputs.artifact }}.sha256")" >> "$GITHUB_OUTPUT"
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ needs.verify-sha.outputs.verified_sha }}
+          path: |
+            release-${{ needs.verify-sha.outputs.verified_sha }}.tar.gz
+            release-${{ needs.verify-sha.outputs.verified_sha }}.tar.gz.sha256
+          retention-days: 7
 
   deploy:
-    needs: test
+    needs: [verify-sha, build]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
     environment: production
-    
+    outputs:
+      deploy_state: ${{ steps.set-state.outputs.state }}
     steps:
-      - name: Gate production secrets
-        id: check-production-secrets
+      - name: Gate production secrets — report not_configured truthfully, never a bare skip
+        id: gate
         run: |
           missing=""
-          if [[ -z "${{ secrets.PRODUCTION_HOST }}" ]]; then
-            missing="${missing} PRODUCTION_HOST"
-          fi
-          if [[ -z "${{ secrets.PRODUCTION_USER }}" ]]; then
-            missing="${missing} PRODUCTION_USER"
-          fi
-          if [[ -z "${{ secrets.PRODUCTION_SSH_KEY }}" ]]; then
-            missing="${missing} PRODUCTION_SSH_KEY"
-          fi
-          if [[ -z "${{ secrets.PRODUCTION_URL }}" ]]; then
-            missing="${missing} PRODUCTION_URL"
-          fi
-          if [[ -n "$missing" ]]; then
-            echo "Skipping deploy because secrets missing:$missing"
+          for name in PRODUCTION_HOST PRODUCTION_USER PRODUCTION_SSH_KEY PRODUCTION_URL PRODUCTION_HOST_KEY_FINGERPRINT; do
+            val="${!name}"
+            if [ -z "$val" ]; then missing="${missing} ${name}"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::warning::Production deployment not_configured — missing secrets:${missing}. This run reports not_configured, never a false 'success'."
             echo "ready=false" >> "$GITHUB_OUTPUT"
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
+        env:
+          PRODUCTION_HOST: ${{ secrets.PRODUCTION_HOST }}
+          PRODUCTION_USER: ${{ secrets.PRODUCTION_USER }}
+          PRODUCTION_SSH_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
+          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
+          PRODUCTION_HOST_KEY_FINGERPRINT: ${{ secrets.PRODUCTION_HOST_KEY_FINGERPRINT }}
 
-      - name: Deploy to production
-        if: ${{ steps.check-production-secrets.outputs.ready == 'true' }}
+      - name: Report not_configured and stop
+        if: steps.gate.outputs.ready != 'true'
+        run: |
+          echo "::error::Production deployment state: not_configured (required secrets absent). No deployment was attempted."
+          echo "state=not_configured" >> "$GITHUB_OUTPUT"
+          exit 1
+        id: not-configured
+
+      - name: Fail closed if a breaking migration is not accompanied by a confirmed fresh backup
+        if: steps.gate.outputs.ready == 'true' && github.event.inputs.allow_breaking_migrations == 'true' && github.event.inputs.breaking_migration_backup_confirmed != 'true'
+        run: |
+          echo "::error::allow_breaking_migrations=true requires breaking_migration_backup_confirmed=true. Take a fresh backup via scripts/deploy/backup.sh per docs/runbooks/gap-049-migration-safety.md, then re-run with confirmation set."
+          exit 1
+
+      - uses: actions/download-artifact@v4
+        if: steps.gate.outputs.ready == 'true'
+        with:
+          name: release-${{ needs.verify-sha.outputs.verified_sha }}
+
+      - name: Record attempted state
+        if: steps.gate.outputs.ready == 'true'
+        run: |
+          echo "Production deployment state: attempted (sha=${{ needs.verify-sha.outputs.verified_sha }})"
+
+      - name: Capture breaking-migration flag for the remote SSH session (avoid direct expression interpolation into shell)
+        if: steps.gate.outputs.ready == 'true'
+        run: |
+          echo "ALLOW_BREAKING_MIGRATIONS=${{ github.event.inputs.allow_breaking_migrations }}" >> "$GITHUB_ENV"
+
+      - name: Transfer verified release artifact to host over authenticated SSH channel
+        if: steps.gate.outputs.ready == 'true'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          fingerprint: ${{ secrets.PRODUCTION_HOST_KEY_FINGERPRINT }}
+          source: "release-${{ needs.verify-sha.outputs.verified_sha }}.tar.gz,release-${{ needs.verify-sha.outputs.verified_sha }}.tar.gz.sha256"
+          target: "/tmp/zena-deploy-${{ needs.verify-sha.outputs.verified_sha }}"
+          strip_components: 0
+
+      - name: Activate release on host (checksum verify, extract, link shared, migrate, atomic switch, readiness, queue canary)
+        if: steps.gate.outputs.ready == 'true'
+        id: activate
         uses: appleboy/ssh-action@v1.2.4
         with:
           host: ${{ secrets.PRODUCTION_HOST }}
           username: ${{ secrets.PRODUCTION_USER }}
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          fingerprint: ${{ secrets.PRODUCTION_HOST_KEY_FINGERPRINT }}
+          envs: ALLOW_BREAKING_MIGRATIONS
           script: |
-            cd /var/www/zena
-            git pull origin main
-            composer install --no-dev --optimize-autoloader
-            npm ci
-            npm run build
-            php artisan migrate --force
+            set -euo pipefail
+            SHA="${{ needs.verify-sha.outputs.verified_sha }}"
+            STAGE="/tmp/zena-deploy-${SHA}"
+            ROOT="/var/www/zena"
+
+            # Capture the explicit previous release BEFORE any mutation, so a
+            # post-cutover recovery step never has to infer a rollback target
+            # (never a relative-commit guess, never "most recent releases/
+            # entry" — only this exact, captured-before-this-deploy value).
+            # An empty/missing file truthfully means "no prior release"
+            # (first-ever deploy).
+            if [ -L "${ROOT}/current" ]; then
+              basename "$(readlink -f "${ROOT}/current")" > "${ROOT}/.previous-release"
+            else
+              rm -f "${ROOT}/.previous-release"
+            fi
+
+            cd "$STAGE"
+            sha256sum -c "release-${SHA}.tar.gz.sha256"
+
+            mkdir -p "${ROOT}/releases/${SHA}"
+            tar -xzf "release-${SHA}.tar.gz" -C "${ROOT}/releases/${SHA}"
+
+            chmod +x "${ROOT}/releases/${SHA}/scripts/deploy/"*.sh
+            "${ROOT}/releases/${SHA}/scripts/deploy/link-shared.sh" "$ROOT" "$SHA"
+
+            cd "${ROOT}/releases/${SHA}"
+
+            php artisan storage:link
+
+            DEPLOY_MIGRATE_ARGS=""
+            if [ "${ALLOW_BREAKING_MIGRATIONS:-false}" = "true" ]; then
+              DEPLOY_MIGRATE_ARGS="--allow-breaking"
+            fi
+            php artisan deploy:migrate $DEPLOY_MIGRATE_ARGS
+
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
+
+            "${ROOT}/releases/${SHA}/scripts/deploy/activate-release.sh" "$ROOT" "$SHA"
+
             php artisan queue:restart
             sudo systemctl reload nginx
-            sudo systemctl restart websocket
-            
-      - name: Health check
-        if: ${{ steps.check-production-secrets.outputs.ready == 'true' }}
+            sudo systemctl restart zena-queue-worker
+            sudo systemctl restart zena-websocket
+
+            echo "cutover complete — state: deployed_unverified"
+
+            "${ROOT}/releases/${SHA}/scripts/deploy/cleanup-releases.sh" "$ROOT" 3
+            rm -rf "$STAGE"
+
+      - name: Set deployed_unverified state (cutover occurred, not yet health-checked)
+        if: steps.gate.outputs.ready == 'true' && steps.activate.outcome == 'success'
         run: |
-          sleep 30
-          curl -f ${{ secrets.PRODUCTION_URL }}/api/health || exit 1
+          echo "Production deployment state: deployed_unverified (sha=${{ needs.verify-sha.outputs.verified_sha }})"
+
+      - name: Post-cutover readiness check (only state that may be called a successful deployment)
+        if: steps.gate.outputs.ready == 'true' && steps.activate.outcome == 'success'
+        id: readiness
+        run: |
+          sleep 10
+          if curl -fsS "${{ secrets.PRODUCTION_URL }}/api/v1/public/production/ready"; then
+            echo "state=health_verified" >> "$GITHUB_OUTPUT"
+          else
+            echo "state=failed" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+      - name: Post-cutover queue canary (worker liveness, separate from HTTP readiness)
+        if: steps.gate.outputs.ready == 'true' && steps.readiness.outputs.state == 'health_verified'
+        id: queue-canary
+        uses: appleboy/ssh-action@v1.2.4
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          fingerprint: ${{ secrets.PRODUCTION_HOST_KEY_FINGERPRINT }}
+          script: |
+            cd /var/www/zena/current
+            php artisan deploy:queue-canary --timeout=30
+
+      # --- Post-cutover recovery contract (Gate-2 design A-2/A-5) ---
+      # Triggers when cutover verification failed (readiness and/or queue
+      # canary), OR when the activate step itself failed AFTER a
+      # successful atomic switch (e.g. a post-switch service-restart
+      # failure) — both leave a release live that this contract must
+      # react to. MUST use `always()` (or an equivalent explicit
+      # status-check function): without one, GitHub Actions implicitly
+      # ANDs the whole condition with success(), which is false whenever
+      # an earlier step in this job failed — i.e. false in EVERY scenario
+      # this step exists to handle, silently making the entire recovery
+      # contract dead code. (Caught by the second final whole-branch
+      # review — the first implementation omitted this and the step could
+      # never actually run.) Never runs an automatic schema rollback of
+      # any kind. Rollback target is always the explicit SHA captured
+      # BEFORE this deploy's cutover (see the "activate" step above) —
+      # never a relative-commit guess, never "most recent releases/
+      # entry".
+      - name: Automatic recovery on post-cutover verification failure
+        if: always() && steps.gate.outputs.ready == 'true' && (steps.activate.outcome == 'failure' || (steps.activate.outcome == 'success' && (steps.readiness.outcome == 'failure' || steps.queue-canary.outcome == 'failure')))
+        id: recovery
+        uses: appleboy/ssh-action@v1.2.4
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          fingerprint: ${{ secrets.PRODUCTION_HOST_KEY_FINGERPRINT }}
+          envs: ALLOW_BREAKING_MIGRATIONS
+          script: |
+            set -euo pipefail
+            SHA="${{ needs.verify-sha.outputs.verified_sha }}"
+            ROOT="/var/www/zena"
+
+            if [ "${ALLOW_BREAKING_MIGRATIONS:-false}" = "true" ]; then
+              # Breaking-migration deployment: the new schema may be
+              # incompatible with the previous release's code, so an
+              # automatic code-only rollback would leave old code running
+              # against a schema it cannot handle. No automatic
+              # code/schema rollback. Ensure/retain maintenance mode and
+              # require an operator to follow the migration-specific
+              # recovery runbook.
+              echo "Breaking-migration deployment failed post-cutover verification — NOT performing an automatic rollback (schema may be incompatible with the previous release's code)."
+              cd "${ROOT}/releases/${SHA}"
+              php artisan down --render="errors::503" || true
+              echo "RECOVERY_MODE=breaking_maintenance_required — see docs/runbooks/gap-049-migration-safety.md"
+              exit 0
+            fi
+
+            if [ ! -s "${ROOT}/.previous-release" ]; then
+              # First-ever deployment: no prior release exists, so there is
+              # no explicit rollback target to invent. Record failure
+              # truthfully and enter maintenance mode as the safe
+              # no-service state rather than leaving a failed, unverified
+              # release serving traffic.
+              echo "No prior release existed before this deploy (first-ever deployment) — no rollback target available."
+              cd "${ROOT}/releases/${SHA}"
+              php artisan down --render="errors::503" || true
+              echo "RECOVERY_MODE=first_deploy_maintenance_required"
+              exit 0
+            fi
+
+            PREV_SHA="$(cat "${ROOT}/.previous-release")"
+            if [ ! -d "${ROOT}/releases/${PREV_SHA}" ]; then
+              echo "Recorded previous release ${PREV_SHA} no longer exists on disk (pruned by cleanup) — cannot safely auto-rollback."
+              cd "${ROOT}/releases/${SHA}"
+              php artisan down --render="errors::503" || true
+              echo "RECOVERY_MODE=previous_release_missing_maintenance_required"
+              exit 0
+            fi
+
+            echo "Expand-migration deployment failed post-cutover verification — automatically rolling back to the explicit previous release ${PREV_SHA} (captured before this deploy's cutover, never inferred)."
+            "${ROOT}/releases/${PREV_SHA}/scripts/deploy/rollback.sh" "$ROOT" "$PREV_SHA"
+
+            cd "${ROOT}/current"
+            php artisan queue:restart
+            sudo systemctl reload nginx
+            sudo systemctl restart zena-queue-worker
+            sudo systemctl restart zena-websocket
+
+            echo "RECOVERY_MODE=rolled_back_to_${PREV_SHA}"
+
+      # Best-effort evidence step, not a hard gate: after a non-breaking
+      # rollback, the restored previous release should be healthy again —
+      # confirm via the same public readiness endpoint used for the new
+      # release. This step's pass/fail is read by the final state step
+      # below to distinguish a genuinely-recovered rollback (rolled_back)
+      # from a maintenance-mode-only recovery (still failed) — both the
+      # first-deploy and previous-release-missing cases above leave the
+      # application in maintenance mode, where this same probe correctly
+      # reports unhealthy (503), so no separate signal needs to be threaded
+      # back from the remote script to distinguish them.
+      - name: Post-recovery readiness check (evidence only — does not gate anything downstream)
+        if: always() && steps.recovery.outcome == 'success'
+        id: post-recovery-readiness
+        run: |
+          sleep 5
+          curl -fsS "${{ secrets.PRODUCTION_URL }}/api/v1/public/production/ready"
+
+      - name: Escalate breaking-migration recovery requirement
+        if: ${{ always() && steps.recovery.outcome == 'success' && github.event.inputs.allow_breaking_migrations == 'true' && env.SLACK_WEBHOOK_URL != '' }}
+        continue-on-error: true
+        uses: slackapi/slack-github-action@v2.1.1
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            text: ":rotating_light: BREAKING MIGRATION RECOVERY REQUIRED for production deployment sha=${{ github.event.inputs.sha }} — no automatic rollback was performed (schema may be incompatible with the previous release's code). See docs/runbooks/gap-049-migration-safety.md for the manual recovery procedure. The application may still be in maintenance mode."
+
+      - name: Set final deployment state output
+        id: set-state
+        if: always()
+        run: |
+          if [ "${{ steps.gate.outputs.ready }}" != "true" ]; then
+            echo "state=not_configured" >> "$GITHUB_OUTPUT"
+          elif [ "${{ steps.readiness.outputs.state }}" = "health_verified" ] && [ "${{ steps.queue-canary.outcome }}" = "success" ]; then
+            echo "state=health_verified" >> "$GITHUB_OUTPUT"
+          elif [ "${{ steps.recovery.outcome }}" = "success" ] && [ "${{ github.event.inputs.allow_breaking_migrations }}" != "true" ] && [ "${{ steps.post-recovery-readiness.outcome }}" = "success" ]; then
+            echo "state=rolled_back" >> "$GITHUB_OUTPUT"
+          elif [ "${{ steps.activate.outcome }}" = "success" ] && [ "${{ steps.readiness.outcome }}" != "failure" ] && [ "${{ steps.readiness.outcome }}" != "success" ]; then
+            echo "state=deployed_unverified" >> "$GITHUB_OUTPUT"
+          else
+            echo "state=failed" >> "$GITHUB_OUTPUT"
+          fi
 
   notify:
     needs: deploy
     runs-on: ubuntu-latest
     if: always()
     steps:
-      - name: Notify deployment status
+      - name: Notify truthful deployment state (never a generic "success" for a skipped/unverified deploy)
         if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
         continue-on-error: true
         uses: slackapi/slack-github-action@v2.1.1
@@ -132,23 +415,17 @@ jobs:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           webhook-type: incoming-webhook
           payload: |
-            text: ":information_source: Production deployment status: ${{ needs.deploy.result }}"
+            text: ":information_source: Production deployment state: ${{ needs.deploy.outputs.deploy_state }}"
             blocks:
               - type: section
                 text:
                   type: mrkdwn
-                  text: "*Production deployment status*: `${{ needs.deploy.result }}`"
+                  text: "*Production deployment state*: `${{ needs.deploy.outputs.deploy_state }}`\n(Only `health_verified` means a successful, usable deployment. `not_configured`/`attempted`/`failed`/`deployed_unverified` are never described as success.)"
               - type: section
                 fields:
                   - type: mrkdwn
                     text: "*Repository:*\n${{ github.repository }}"
                   - type: mrkdwn
-                    text: "*Workflow:*\n${{ github.workflow }}"
-                  - type: mrkdwn
-                    text: "*Job:*\nnotify"
-                  - type: mrkdwn
-                    text: "*Ref:*\n${{ github.ref_name }}"
+                    text: "*Requested SHA:*\n${{ github.event.inputs.sha }}"
                   - type: mrkdwn
                     text: "*Actor:*\n${{ github.actor }}"
-                  - type: mrkdwn
-                    text: "*SHA:*\n${{ github.sha }}"

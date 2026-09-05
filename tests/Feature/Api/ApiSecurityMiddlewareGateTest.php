@@ -32,6 +32,7 @@ class ApiSecurityMiddlewareGateTest extends TestCase
             'api/v1/public/health' => 'Public health endpoint by design.',
             'api/v1/public/health/liveness' => 'Public liveness probe endpoint by design.',
             'api/v1/public/health/readiness' => 'Public readiness probe endpoint by design.',
+            'api/v1/public/production/ready' => 'Public production deployment readiness probe endpoint by design (GAP-049) — minimal infrastructure probe (DB/cache/storage), no business data, no user/tenant-specific data, intentionally unauthenticated so deployment tooling can query it.',
         ];
 
         $strictOffenders = [];

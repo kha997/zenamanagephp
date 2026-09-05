@@ -46,51 +46,60 @@ class AuthController extends Controller
             return redirect()->intended('/app/today');
         }
 
-        // If authentication fails, try demo users
-        $demoUsers = [
-            'superadmin@zena.com' => [
-                'name' => 'Super Admin',
-                'password' => 'password123',
-                'role' => 'super_admin'
-            ],
-            'pm@zena.com' => [
-                'name' => 'Project Manager', 
-                'password' => 'password123',
-                'role' => 'project_manager'
-            ],
-            'user@zena.com' => [
-                'name' => 'Regular User',
-                'password' => 'password123', 
-                'role' => 'user'
-            ],
-        ];
+        // Demo-user fallback: local/testing convenience only. GAP-049 Gate-3
+        // Round-1 Owner correction — a real super_admin role now exists in
+        // production (created by production:bootstrap), which turned this
+        // pre-existing hardcoded demo-credential shortcut into an exploitable
+        // privileged production authentication path. Reuses the same
+        // hardcoded app()->environment(['local', 'testing']) guard already
+        // used for the same purpose in routes/web.php (Simple Authentication
+        // Routes) — not a new configurable toggle.
+        if (app()->environment(['local', 'testing'])) {
+            $demoUsers = [
+                'superadmin@zena.com' => [
+                    'name' => 'Super Admin',
+                    'password' => 'password123',
+                    'role' => 'super_admin'
+                ],
+                'pm@zena.com' => [
+                    'name' => 'Project Manager',
+                    'password' => 'password123',
+                    'role' => 'project_manager'
+                ],
+                'user@zena.com' => [
+                    'name' => 'Regular User',
+                    'password' => 'password123',
+                    'role' => 'user'
+                ],
+            ];
 
-        if (isset($demoUsers[$credentials['email']]) && 
-            $demoUsers[$credentials['email']]['password'] === $credentials['password']) {
-            
-            // Create or get user from database
-            $user = User::firstOrCreate(
-                ['email' => $credentials['email']],
-                [
-                    'name' => $demoUsers[$credentials['email']]['name'],
-                    'password' => Hash::make($credentials['password']),
-                    'is_active' => true,
-                ]
-            );
+            if (isset($demoUsers[$credentials['email']]) &&
+                $demoUsers[$credentials['email']]['password'] === $credentials['password']) {
 
-            // Assign role if not exists
-            if (!$user->hasRole($demoUsers[$credentials['email']]['role'])) {
-                $role = \App\Models\Role::where('name', $demoUsers[$credentials['email']]['role'])->first();
-                if ($role) {
-                    $user->roles()->attach($role->id);
+                // Create or get user from database
+                $user = User::firstOrCreate(
+                    ['email' => $credentials['email']],
+                    [
+                        'name' => $demoUsers[$credentials['email']]['name'],
+                        'password' => Hash::make($credentials['password']),
+                        'is_active' => true,
+                    ]
+                );
+
+                // Assign role if not exists
+                if (!$user->hasRole($demoUsers[$credentials['email']]['role'])) {
+                    $role = \App\Models\Role::where('name', $demoUsers[$credentials['email']]['role'])->first();
+                    if ($role) {
+                        $user->roles()->attach($role->id);
+                    }
                 }
+
+                // Login the user
+                Auth::login($user);
+                $request->session()->regenerate();
+
+                return redirect()->intended('/app/dashboard');
             }
-
-            // Login the user
-            Auth::login($user);
-            $request->session()->regenerate();
-
-            return redirect()->intended('/app/dashboard');
         }
 
         RateLimiter::hit($throttleKey, 60);

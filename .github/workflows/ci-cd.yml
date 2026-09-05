@@ -140,16 +140,3 @@ jobs:
 
     - name: Run SSOT Lint
       run: composer ssot:lint
-
-  deploy:
-    needs: [test, code-quality]
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
-    steps:
-    - uses: actions/checkout@v5
-    
-    - name: Deploy to production
-      run: |
-        echo "Deploying to production..."
-        # Add your deployment commands here

@@ -60,6 +60,23 @@ would require instrumentation below the reach of PHP-level tooling. This
 is reported as a genuine, effort-bounded limit, not a stopping point
 chosen for convenience.
 
+**Bounded correction (2026-09-06, §L):** per Owner CHANGES REQUESTED
+direction, a deterministic order-preserving delta-minimization pass was
+then performed on the real 41-test sequence. Four materially different
+reduced subsets (7, 39, 10, and 36 of the 41 tests, covering the
+theoretically-relevant precursor set alone, every fast file with the two
+slow files removed, the two slow files alone, and a near-complete 36-test
+set missing only 6 small unrelated files) **all failed to reproduce** the
+defect; only the full 41-test set does. This is a genuine negative
+result, not an artifact of insufficient trials — it shows the failure
+depends on volume/composition close to the *entire* suite's, not on a
+small precursor or a specific pair of "heavy" tests, which **materially
+strengthens the case for process isolation/suite-splitting as the primary
+Gate-3 containment recommendation** (revised from §G's original "correct
+immediate candidate, with root-cause kept equally open" framing) while
+still not closing off root-cause investigation entirely. See §L for full
+trial evidence and the revised recommendation.
+
 ## A. Method (per-run reproduction discipline)
 
 Every run in this investigation used the exact CI invocation
@@ -311,6 +328,14 @@ files at, arguably, similar risk to the original 15-file zena-invariants
 group shows N alone doesn't have an obviously safe threshold established
 yet).
 
+**Superseded, 2026-09-06 (§L):** the order-preserving delta-minimization
+correction found no reduced subset (up to 88% of the full suite) that
+reproduces the failure, strengthening B+C from "correct immediate
+candidate, A kept equally open" to **the primary Gate-3 recommendation**
+— see §L.5 for the full revision and the remaining caveat (N-sensitivity
+is now proven real, but no specific safe N has been validated for any
+real job boundary).
+
 ## H. Regression tests that would fail on the current defect and pass only on the intended fix
 
 None of these exist yet — this is a design specification for Gate 3
@@ -449,6 +474,148 @@ without a documented further attempt at root cause) would not meet this
 bar and should not be presented to the Owner as anything other than a
 deferred root-cause investigation.
 
+## L. Order-preserving delta minimization (bounded correction, 2026-09-06)
+
+Per Owner Gate-2 CHANGES REQUESTED direction: this section performs the
+one still-missing high-leverage diagnostic — deterministic, order-aware
+delta minimization of the 41-test `--group=zena-invariants` sequence —
+without restarting the broad framework/PDO investigation from §B-§D and
+without implementing any remediation. All runs used real MySQL 8.0 in a
+disposable worktree at the same canonical SHA as §A
+(`c5516c582d40e5c94b24c4de98121f64d539dfd1`), discarded afterward.
+
+### L.1 Captured execution order
+
+The baseline `--group=zena-invariants` run (yet another independent
+full-suite reproduction, on top of the ≥11 already recorded in §A/§B —
+still 100%) confirms the exact file-level execution order is stable
+across runs and matches what §A/§B already assumed:
+
+```
+ 1. RouteHygieneTest.php                              (2 @group tests)
+ 2. Zena/ZenaApiContractPhase2InvariantTest.php        (4 tests — victim is test 2 of 4)
+ 3. Zena/ZenaAuditInvariantTest.php                    (4 tests)
+ 4. Zena/ZenaAuditPiiInvariantTest.php                 (1 test)
+ 5. Zena/ZenaAuditSchemaInvariantTest.php               (1 test)
+ 6. Zena/ZenaAuthFlowInvariantTest.php                  (6 tests)
+ 7. Zena/ZenaErrorEnvelopeInvariantTest.php              (3 tests)
+ 8. Zena/ZenaInvariantsTransactionIsolationColdStartTest.php (2 tests, ~135-140s — slow)
+ 9. Zena/ZenaListContractInvariantTest.php               (1 test)
+10. Zena/ZenaMySqlMigrationRiskInvariantTest.php          (1 test)
+11. Zena/ZenaRbacPermissionStoreInvariantTest.php          (1 test)
+12. Zena/ZenaRbacTenantSmokeTest.php                       (6 tests)
+13. Zena/ZenaRouteMiddlewareInvariantTest.php               (2 tests)
+14. Zena/ZenaRouteStackHygieneInvariantTest.php              (3 tests)
+15. Zena/ZenaRouteSurfaceInvariantTest.php                    (1 test)
+16. Zena/ZenaSeedParityInvariantTest.php                       (1 test, ~9s)
+17. Zena/ZenaSeederWiringInvariantTest.php                      (1 test, ~120s — slow)
+18. Zena/ZenaTestingDatabaseInvariantTest.php                    (1 test)
+```
+
+The victim (`test_document_show_returns_not_found_for_scoped_cross_tenant_resource`)
+is the 2nd test of file 2 of 18 — i.e., it runs 4th overall out of 41, very
+early in the sequence. Its only true "precursors" in the strict
+before-the-victim sense are RouteHygieneTest's 2 tests and its own file's
+1st test (`test_document_show_mismatch_header_returns_tenant_invalid`).
+
+### L.2 Minimization trials (order preserved, explicit file lists passed to `phpunit` in the order above)
+
+| # | Files included (in original relative order) | Tests | Result | Duration |
+|---|---|---|---|---|
+| 1 | 1, 2 (RouteHygieneTest + the victim's own file, all 4 of its tests) | 7 | **PASS** — did not reproduce | ~6s |
+| 2 | 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 18 (all 16 "fast" files — every file **except** the 2 slow ones, 8 and 17) | 39 | **PASS** — did not reproduce | ~40s |
+| 3 | 1, 2, 8, 17 (RouteHygieneTest + victim's file + **only** the 2 slow files, all 14 other fast files dropped) | 10 | **PASS** — did not reproduce | ~126s |
+| 4 | 1, 2, 3, 6, 7, 8, 12, 13, 14, 16, 17, 18 (12 of 18 files — drops only 6 single-test files: `AuditPii`, `AuditSchema`, `ListContract`, `MigrationRisk`, `RbacPermissionStore`, `RouteSurface`) | 36 | **PASS** — did not reproduce | ~280s (both slow files included) |
+| — | All 18 files (baseline, `--group=zena-invariants`) | 41 | **FAIL** — reproduces (yet another confirmation, consistent with every prior full-suite run this investigation) | ~400s |
+
+### L.3 What this establishes
+
+**No subset smaller than the full 41-test set was found to reproduce the
+failure**, despite testing four materially different reductions spanning
+7 to 36 tests (17%-88% of the full size), including:
+- the theoretically most-relevant precursor set alone (trial 1: exactly
+  what runs before the victim in the real sequence, nothing more);
+- every "fast" file with both known-heavy files removed (trial 2: 95% of
+  the file count, only missing the 2 slowest files);
+- only the 2 heaviest files plus the victim's own file (trial 3: testing
+  whether the 2 slow, DB-intensive tests are sufficient on their own —
+  they are not);
+- a near-complete 36/41 set missing only 6 small, thematically unrelated
+  single-test files (PII masking, audit-schema columns, migration-risk
+  gating, RBAC permission-store shape, route-surface enumeration — none
+  touch tenants, documents, or the request path the victim exercises)
+  (trial 4: testing whether the boundary is close to full size — it
+  appears to be, within single-digit-test granularity).
+
+**Trial 4 is the most informative negative result**: removing only 6 of
+41 tests (≈15%), none of them thematically connected to the failing
+request path, was sufficient to prevent reproduction. Combined with
+trial 3 showing the 2 heaviest, most DB-active files are *not* sufficient
+on their own, and trial 1 showing the theoretically-relevant precursor
+set alone is *not* sufficient either, **this is not explained by any
+single file, any small file combination, or "the 2 slow tests are the
+real cause with the rest as padding."** The evidence points to a
+genuinely volume/composition-sensitive threshold close to the full suite
+size, where a small perturbation in either direction (which specific
+tests run, not merely how many) can flip the outcome — the same signature
+GAP-049's own investigation reported independently (a *different* test
+in the same class sometimes fails instead, depending on invocation
+shape), now corroborated by direct trial evidence rather than inference.
+
+### L.4 Answering the Owner's specific questions (§3 of the correction directive)
+
+- **Immediate precursor to the first observed transaction loss**: not
+  meaningfully answerable at file/test granularity — §B already
+  established (unchanged by this correction) that the transition happens
+  strictly between the end of the victim's own `grantPermissionToUser()`
+  call and the first line of the next request's middleware, i.e. *within
+  the victim's own test execution*, not caused by a specific earlier
+  test's teardown leaking state forward. The "precursor" that matters is
+  cumulative process-level volume/composition (§L.3), not one identifiable
+  prior test.
+- **PDO/Laravel transaction state at precursor teardown and victim
+  setup/request boundaries**: unchanged from §B — every trial in this
+  section that reproduced (only the full 41-test baseline) matches the
+  identical `phpTx=1, pdoInTx=true → phpTx=1, pdoInTx=false` transition
+  already documented there; no trial run in §L.2 added new instrumentation
+  (per the Owner's directive not to descend into further instrumentation
+  unless a smaller reproducer justified it — none did).
+- **One specific precursor vs. a small interaction set vs. only larger
+  suite volume**: **only larger suite volume**, and more precisely,
+  volume close to the *full* suite's — not a small interaction set. This
+  is the direct, evidenced answer to the Owner's question 3.
+
+### L.5 Revised recommendation
+
+**This negative result is exactly the evidence class §K anticipated as
+justifying process isolation/suite-splitting as the accepted containment
+answer**, with one caveat made explicit: §K's condition 1 (a documented
+further attempt at root cause) is **now satisfied** by §B-§D's
+statement-level tracing *and* this section's volume-sensitivity finding
+together — both point away from a fixable single-call-site defect and
+toward either a resource-threshold effect (memory/GC/statement-object
+accumulation) or a driver-level event, neither of which "reduce the
+precursor set" was ever going to expose, because the mechanism does not
+appear to depend on *which* tests run so much as *how much* has run and
+in *what exact combination* — a signature more consistent with a
+resource/timing threshold than with a discoverable logic bug in a
+specific call site.
+
+**Revised recommendation**: escalate confidence in candidates B
+(suite-splitting) + C (fail-loud detection) from §G's "correct immediate
+Gate-3 candidate, with A kept open" to **the primary Gate-3
+recommendation**, while still not closing candidate A outright — §K's
+own condition 3 (10 consecutive clean runs at the new, smaller invocation
+boundaries, across every job in §E's blast-radius table) remains the
+right empirical bar before calling containment sufficient, precisely
+because this section proved N-sensitivity is real but did not establish
+a safe N. Gate 3 should not assume any specific smaller N (e.g. "split
+into groups of 20") is safe without validating it per §I/§K — this
+section's own trial 4 shows a 36-test subset (well above what a typical
+job split might land on) still failed to reproduce, which is encouraging
+for suite-splitting's viability but is not itself a validated safe
+threshold for any real job boundary.
+
 ## Evidence sources
 
 | # | Source | Method | Notes |
@@ -463,12 +630,32 @@ deferred root-cause investigation.
     `RoleBasedAccessControlMiddleware.php` (this repo's actual code, read + temporarily instrumented, never committed) | **STATIC read + LIVE probe** | Confirms actual runtime middleware ordering empirically, not assumed from `$middlewarePriority` config alone |
 | 8 | `.github/workflows/automated-testing.yml`, `routes-guardrails.yml`, `scripts/ci/*-mysql` entrypoints | **STATIC** | Blast-radius file/test counts (§E) |
 | 9 | GAP-049's and GAP-050 Gate-1's own retained/committed evidence | **STATIC** | Cross-referenced, not re-derived |
+| 10 | §L (2026-09-06 correction): 4 order-preserving reduced-subset runs (7, 39, 10, 36 tests) + 1 further full-suite baseline confirmation, all against real MySQL 8.0, disposable worktree, same canonical SHA | **LIVE** | All 4 reduced subsets passed (did not reproduce); full 41-test set reproduced again |
 
 ## Explicit exclusions
 
 Out of scope for this Gate 2, per its own instructions: any remediation
 code change; a final decision between candidates A/B/C; MySQL
 `general_log`/`performance_schema`-level tracing below the PHP layer
-(flagged in §D as a possible next step, not attempted); reproduction of
-the `mysql-parity` (5-file) and Treasury (18-file) jobs identified in §E
-as sharing the structural risk pattern (flagged, not reproduced).
+(flagged in §D as a possible next step, not attempted — and, per §L's
+negative minimization result, not pursued in the 2026-09-06 correction
+either, since no smaller reproducer emerged to justify further
+instrumentation, per the Owner's own "do not descend into driver-level
+tooling unless this smaller reproduction proves it necessary" directive).
+
+**Also explicitly out of scope for this Gate 2 and its 2026-09-06
+correction, per direct Owner instruction**: independent reproduction of
+the `mysql-parity` (5-file) and Treasury (18-file) real-MySQL jobs
+identified in §E as sharing the same structural risk pattern — the
+existing static blast-radius evidence (§E) is treated as sufficient for
+GAP-050's own scope; both remain flagged for separate tracking, Treasury
+in particular given it is currently non-gating for an unrelated reason
+and may already be silently absorbing this same defect class. **The §F
+Sanctum Bearer-token fidelity finding is confirmed out of GAP-050's
+implementation scope** — no action was taken on it in this correction;
+it is recorded here as a recommendation that a separate, new Work ID be
+opened to investigate and (if warranted) fix
+`ZenaApiContractPhase2InvariantTest` and any sibling `@group
+zena-invariants` tests whose Bearer-token requests may be silently
+authenticating via a stale 'web' session guard instead of the token they
+carry, rather than folding that fix into GAP-050.

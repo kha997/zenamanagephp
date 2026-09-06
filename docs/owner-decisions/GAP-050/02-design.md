@@ -10,20 +10,36 @@ references:
   spec: docs/superpowers/specs/2026-09-06-gap-050-gate2-mysql-transaction-isolation-design.md
   plan: null
   branch: docs/GAP-050-gate2-mysql-transaction-isolation-design
-  pr: null
+  pr: "https://github.com/kha997/zenamanagephp/pull/304"
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
   recorded_at: "2026-09-06T12:59:20Z"
-  owner_response_reference: null
+  owner_response_reference: "GAP-050 Gate 2 Owner Decision Round 1 (relayed via coordinator session): 'GAP-050 Gate 2 — CHANGES REQUESTED, bounded correction only. The existing Gate-2 investigation is accepted as strong, but one high-leverage order-dependent diagnostic is still missing before Owner approval. Do NOT restart broad framework/PDO investigation and do NOT implement remediation.' Owner directed: (1) fix references.pr in the Gate-2 packet to point to PR #304; (2) perform deterministic order-aware delta minimization on canonical main / real MySQL 8.0 — capture the actual execution order of the 41 zena-invariants tests, preserve that order, systematically reduce the tests preceding the known victim using prefix bisection/ddmin, find the smallest practical ordered reproducing sequence; (3) for the minimized reproducer, determine which test is the immediate precursor to the first observed transaction loss, PDO/Laravel transaction state at precursor teardown and victim setup/request boundaries, and whether the failure requires one specific precursor, a small interaction set, or only larger suite volume; (4) if a small reproducer is found, instrument only that reproducer to locate the earliest state transition, without descending into driver-level tooling unless proven necessary; (5) if systematic minimization cannot reduce below a materially large sequence, record that negative result precisely as evidence supporting process isolation as the justified final containment; (6) do not independently reproduce Treasury or the other MySQL job in this correction — static blast-radius evidence is sufficient for GAP-050, track Treasury separately later; (7) keep the Sanctum Bearer-token fidelity finding separate from GAP-050 implementation scope, record a follow-up Work ID recommendation only. Update the Gate-2 spec/packet with the minimization evidence and revise the final recommendation if warranted. No production/test/CI implementation changes. Keep gate_status: awaiting_owner. Push docs only, verify exact-head governance checks once, then stop for Owner review.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-06T12:59:20Z"
-  updated_at: "2026-09-06T12:59:20Z"
+  updated_at: "2026-09-06T14:30:00Z"
 generated_by: agent
+---
+
+## Owner Decision History — Round 1 — CHANGES REQUESTED, bounded correction (permanent record, never erased)
+
+**Owner Gate 2 Round 1 decision: CHANGES REQUESTED** (not a rejection —
+the existing investigation was accepted as strong; one specific,
+high-leverage diagnostic was directed as a bounded correction, with an
+explicit instruction not to restart the broad framework/PDO investigation
+and not to implement remediation). Full verbatim directive preserved in
+this file's frontmatter `decision_provenance.owner_response_reference`
+above. The correction — deterministic order-preserving delta minimization
+of the real 41-test sequence, four reduced-subset trials (7, 39, 10, 36
+tests), all failing to reproduce — is recorded in §L of the spec document
+and summarized in the Round-2 Owner Summary below. This Round 1 record is
+preserved permanently and must not be removed by any future revision.
+
 ---
 
 ## Owner Summary
@@ -58,6 +74,21 @@ same structural risk and was not independently reproduced), a
 root-cause-vs-containment comparison, regression-test specifications,
 explicit acceptance criteria, rejected approaches, and fallback criteria
 for suite-splitting: `docs/superpowers/specs/2026-09-06-gap-050-gate2-mysql-transaction-isolation-design.md`.
+
+**Round 1 correction (§L of the spec):** per the Owner's directive above,
+deterministic order-preserving delta minimization was then performed on
+the real 41-test sequence. Four materially different reduced subsets (7,
+39, 10, and 36 of the 41 tests — the theoretical precursor set alone,
+every fast file with the two slow files removed, the two slow files
+alone, and a near-complete 36-test set missing only 6 small unrelated
+files) **all failed to reproduce**; only the full 41-test set does. This
+is the negative result §K anticipated: it shows the failure depends on
+volume/composition close to the *entire* suite's, not a small precursor
+or interaction set, and **revises the recommendation from §G's "B+C
+correct immediate candidate, A kept equally open" to "B+C as the primary
+Gate-3 recommendation"** (§L.5) — while still not closing off root-cause
+investigation, since §K's own condition 3 (validated safe N, not merely
+"smaller N") remains the right bar before calling containment sufficient.
 
 ## Vấn đề vận hành
 
@@ -94,31 +125,37 @@ Xem đầy đủ trong tài liệu spec đã dẫn. Tóm tắt cốt lõi:
    `--group=mysql-parity` (5 file) và đặc biệt `treasury-check-constraints-mysql`
    step 3 (18 file, HIỆN TẠI không gate build vì lý do khác) có cùng mẫu
    cấu trúc rủi ro (nhiều test RefreshDatabase chung 1 tiến trình PHPUnit)
-   — chưa được tái hiện độc lập trong Gate 2 này.
+   — theo chỉ đạo Owner, KHÔNG tái hiện độc lập trong đợt sửa này (tracked
+   riêng cho Treasury sau).
+5. **Delta minimization (§L, đợt sửa 2026-09-06):** giữ nguyên đúng thứ
+   tự thực thi thật của 41 test, thử 4 tập con nhỏ hơn khác nhau (7, 39,
+   10, 36 test trong tổng 41) — TẤT CẢ đều PASS, không tái hiện được lỗi.
+   Chỉ tập đầy đủ 41 test mới tái hiện. Đây là bằng chứng phủ định mạnh:
+   lỗi phụ thuộc khối lượng/thành phần gần với TOÀN BỘ suite, không phải
+   một tập nhỏ test tiền đề hay một cặp test "nặng" cụ thể nào.
 
-## Đề xuất Gate 3 (chưa được uỷ quyền triển khai)
+## Đề xuất Gate 3 (chưa được uỷ quyền triển khai) — ĐÃ CẬP NHẬT sau đợt sửa
 
-Khuyến nghị: containment (tách nhỏ lệnh CI + phát hiện lỗi rõ ràng khi
-self-healing kích hoạt) là bước Gate-3 phù hợp NGAY BÂY GIỜ vì lý do gốc
-chưa xác định chắc chắn được — nhưng phải giữ hướng sửa-tận-gốc mở, không
-đóng lại, và phải đáp ứng tiêu chí fallback tường minh (§K tài liệu spec)
-trước khi coi containment là câu trả lời CUỐI CÙNG thay vì tạm thời. 6 tiêu
-chí chấp nhận tường minh (§I) và 3 đặc tả regression test (§H) đã được định
-nghĩa cho Gate 3 sử dụng.
+Khuyến nghị ban đầu (trước đợt sửa): containment (B+C) là ứng viên đúng
+NGAY BÂY GIỜ nhưng giữ hướng sửa-tận-gốc (A) mở ngang hàng. **Sau bằng
+chứng minimization (§L.5): nâng B+C thành khuyến nghị CHÍNH cho Gate 3**
+— việc không thể thu nhỏ dưới ~88% kích thước suite củng cố containment,
+nhưng vẫn KHÔNG đóng hẳn hướng A, vì §K điều kiện 3 (N an toàn đã được
+XÁC THỰC, không chỉ "N nhỏ hơn") vẫn là ngưỡng đúng trước khi coi
+containment là câu trả lời cuối cùng. 6 tiêu chí chấp nhận tường minh (§I)
+và 3 đặc tả regression test (§H) vẫn áp dụng cho Gate 3.
 
-## Quyết định Gate 2 cần Owner
+## Quyết định Gate 2 cần Owner (Round 2 — sau đợt sửa)
 
 `decision_requested: approve_or_correction_or_defer` — đề nghị Owner xác
-nhận: (a) mức độ thu hẹp và bằng chứng phủ định giả thuyết
-firstOrCreate/updateOrCreate đã đủ nghiêm ngặt để chuyển sang Gate 3
-containment theo khuyến nghị B+C, hay cần đầu tư thêm một vòng chẩn đoán
-sâu hơn (MySQL general_log/performance_schema mức dưới PHP) trước khi
-quyết định; (b) có cần tái hiện độc lập 2 job MySQL còn lại (mysql-parity
-5 file, Treasury 18 file) trước khi coi blast radius đã đủ rõ; (c) có chấp
-nhận việc job Treasury hiện không gate build (vì lý do khác) có thể đang
-âm thầm hấp thụ chính lỗi này mà không ai biết, và có cần một Work ID
-riêng để xử lý việc đó.
+nhận: (a) bằng chứng minimization (§L) đã đủ để coi correction này hoàn
+tất và chuyển sang Gate 3 theo khuyến nghị B+C đã cập nhật; (b) có đồng ý
+việc KHÔNG tái hiện Treasury/mysql-parity trong đợt sửa này (theo đúng chỉ
+đạo) và sẽ theo dõi Treasury như một Work ID/track riêng sau; (c) có đồng
+ý khuyến nghị mở một Work ID riêng (ngoài GAP-050) cho phát hiện phụ về
+Sanctum Bearer-token fidelity (§F), không gộp vào phạm vi triển khai của
+GAP-050.
 
-Không có thay đổi code nào được thực hiện trong Gate 2. Không có thay đổi
-hành vi tenant/RBAC/product nào. Không mở PR triển khai. Dừng tại Gate 2
-chờ Owner xem xét.
+Không có thay đổi code nào được thực hiện trong Gate 2 hay đợt sửa này.
+Không có thay đổi hành vi tenant/RBAC/product nào. Không mở PR triển khai.
+Dừng tại Gate 2 chờ Owner xem xét.

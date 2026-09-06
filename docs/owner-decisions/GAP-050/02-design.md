@@ -1,11 +1,11 @@
 ---
 work_id: GAP-050
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-09-06-gap-050-gate2-mysql-transaction-isolation-design.md
   plan: null
@@ -15,15 +15,42 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-09-06T12:59:20Z"
-  owner_response_reference: "GAP-050 Gate 2 Owner Decision Round 1 (relayed via coordinator session): 'GAP-050 Gate 2 — CHANGES REQUESTED, bounded correction only. The existing Gate-2 investigation is accepted as strong, but one high-leverage order-dependent diagnostic is still missing before Owner approval. Do NOT restart broad framework/PDO investigation and do NOT implement remediation.' Owner directed: (1) fix references.pr in the Gate-2 packet to point to PR #304; (2) perform deterministic order-aware delta minimization on canonical main / real MySQL 8.0 — capture the actual execution order of the 41 zena-invariants tests, preserve that order, systematically reduce the tests preceding the known victim using prefix bisection/ddmin, find the smallest practical ordered reproducing sequence; (3) for the minimized reproducer, determine which test is the immediate precursor to the first observed transaction loss, PDO/Laravel transaction state at precursor teardown and victim setup/request boundaries, and whether the failure requires one specific precursor, a small interaction set, or only larger suite volume; (4) if a small reproducer is found, instrument only that reproducer to locate the earliest state transition, without descending into driver-level tooling unless proven necessary; (5) if systematic minimization cannot reduce below a materially large sequence, record that negative result precisely as evidence supporting process isolation as the justified final containment; (6) do not independently reproduce Treasury or the other MySQL job in this correction — static blast-radius evidence is sufficient for GAP-050, track Treasury separately later; (7) keep the Sanctum Bearer-token fidelity finding separate from GAP-050 implementation scope, record a follow-up Work ID recommendation only. Update the Gate-2 spec/packet with the minimization evidence and revise the final recommendation if warranted. No production/test/CI implementation changes. Keep gate_status: awaiting_owner. Push docs only, verify exact-head governance checks once, then stop for Owner review.'"
+  recorded_at: "2026-09-06T15:10:00Z"
+  owner_response_reference: "GAP-050 Gate 2 Owner Decision Round 1 (relayed via coordinator session): 'GAP-050 Gate 2 — CHANGES REQUESTED, bounded correction only. The existing Gate-2 investigation is accepted as strong, but one high-leverage order-dependent diagnostic is still missing before Owner approval. Do NOT restart broad framework/PDO investigation and do NOT implement remediation.' Owner directed: (1) fix references.pr in the Gate-2 packet to point to PR #304; (2) perform deterministic order-aware delta minimization on canonical main / real MySQL 8.0 — capture the actual execution order of the 41 zena-invariants tests, preserve that order, systematically reduce the tests preceding the known victim using prefix bisection/ddmin, find the smallest practical ordered reproducing sequence; (3) for the minimized reproducer, determine which test is the immediate precursor to the first observed transaction loss, PDO/Laravel transaction state at precursor teardown and victim setup/request boundaries, and whether the failure requires one specific precursor, a small interaction set, or only larger suite volume; (4) if a small reproducer is found, instrument only that reproducer to locate the earliest state transition, without descending into driver-level tooling unless proven necessary; (5) if systematic minimization cannot reduce below a materially large sequence, record that negative result precisely as evidence supporting process isolation as the justified final containment; (6) do not independently reproduce Treasury or the other MySQL job in this correction — static blast-radius evidence is sufficient for GAP-050, track Treasury separately later; (7) keep the Sanctum Bearer-token fidelity finding separate from GAP-050 implementation scope, record a follow-up Work ID recommendation only. Update the Gate-2 spec/packet with the minimization evidence and revise the final recommendation if warranted. No production/test/CI implementation changes. Keep gate_status: awaiting_owner. Push docs only, verify exact-head governance checks once, then stop for Owner review.' | GAP-050 Gate 2 Owner Decision Round 2 (relayed via coordinator session, reviewed exact PR head 214646b5ea275d40156105d7b525a846b3dfd62b of PR #304): 'GAP-050 GATE 2 ROUND 2 — OWNER APPROVED. Approval is bound to: PR #304 head 214646b5ea275d40156105d7b525a846b3dfd62b.' Supplemental epistemic ruling, binding on how §L's evidence is characterized going forward: the minimization evidence proves that no reduced reproducer was FOUND among the tested 7/10/36/39-test subsets — it does not prove that every possible subset smaller than 41 has been disproven as a reproducer. The causal finding must be treated as full-invocation / process-composition-state dependence, not as a proven numeric test-count threshold. Owner directed: record this approval in 02-design.md, preserving all prior decision history; push only the Owner decision record; verify exact-head docs CI once; mark PR #304 ready and squash-merge using the repository's established convention if expected checks are green; report the resulting canonical main SHA. Do NOT begin Gate-3 implementation in this session. Close the session after Gate-2 merge truth is verified.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-06T12:59:20Z"
-  updated_at: "2026-09-06T14:30:00Z"
+  updated_at: "2026-09-06T15:10:00Z"
 generated_by: agent
+---
+
+## Owner Decision History — Round 2 — APPROVED (permanent record, never erased)
+
+**Owner Gate 2 Round 2 decision: APPROVED**, bound to PR #304 head
+`214646b5ea275d40156105d7b525a846b3dfd62b`. Full verbatim directive
+preserved in this file's frontmatter `decision_provenance.owner_response_reference`
+above. **Binding supplemental epistemic ruling, governing how this Gate's
+§L minimization evidence must be characterized in all future reference
+to it**: the four reduced-subset trials (7, 39, 10, 36 of 41 tests) prove
+only that **no reduced reproducer was found** among those specific
+subsets — they do **not** prove that every possible subset smaller than
+41 has been disproven as a reproducer (an exhaustive claim this Gate
+never made and could not make from 4 trials out of an astronomically
+larger subset space). The causal finding is to be understood as
+**full-invocation / process-composition-state dependence**, not as a
+**proven numeric test-count threshold** — no specific N (41, 36, or any
+other) is established as a hard boundary; Gate 3 must not treat any
+count-based framing from §L as license to assume a specific smaller
+invocation size is safe without the empirical validation §K's own
+condition 3 already requires. This ruling does not reopen or invalidate
+§L's factual trial results (which stand as recorded); it governs their
+*interpretation*. This Gate 2 approval authorizes proceeding to Gate 3 —
+implementation is explicitly **not** authorized in the session that
+recorded this approval. This Round 2 record is preserved permanently and
+must not be removed by any future revision.
+
 ---
 
 ## Owner Decision History — Round 1 — CHANGES REQUESTED, bounded correction (permanent record, never erased)

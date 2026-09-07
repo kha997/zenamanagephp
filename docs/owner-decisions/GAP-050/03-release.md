@@ -25,19 +25,55 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-07T00:44:53Z"
-  updated_at: "2026-09-07T00:44:53Z"
+  updated_at: "2026-09-07T01:15:00Z"
 generated_by: agent
 residual_risk_rating: low_to_medium
 mandatory_technical_gate_summary: "GAP-050 Gate 3 implementation (per Owner Gate-2 approval, docs/owner-decisions/GAP-050/02-design.md, PR #304 head 214646b5ea275d40156105d7b525a846b3dfd62b) is technically complete and verified against real MySQL 8.0. Candidate B (process isolation): scripts/ci/zena-invariants-mysql replaces the single 18-file/41-test PHPUnit process with one isolated PHPUnit process per file, discovered dynamically via grep -rl '@group zena-invariants' tests/ (no hardcoded list, no batch-size tuning), failing closed on zero-selection, a vanished file, or a lost exit status, and running every file even after a failure so partial coverage is never reported as success. Candidate C (fail-loud detection): tests/Support/RefreshDatabaseSelfHealingGuard.php, wired into tests/TestCase.php around parent::setUp(), throws immediately if Illuminate\\Foundation\\Testing\\RefreshDatabaseState::$migrated is observed flipping true->false mid-process (Gate 1/2's proven self-healing signature); gated on DB_CONNECTION=mysql, inert elsewhere; verified in isolation (no DB) via tests/Unit/RefreshDatabaseSelfHealingGuardTest.php with RED/GREEN discipline on the guard's own logic. Evidence at subject_sha d6bebe72df720056d08634727033705e03f8b942 from canonical main c4ccf0eed83065d453271a4defd3805131161c3a: RED — the unmodified script reproduces the exact Gate-1/Gate-2 symptom (TENANT_INVALID instead of E404.NOT_FOUND on ZenaApiContractPhase2InvariantTest::test_document_show_returns_not_found_for_scoped_cross_tenant_resource, 1 failed/40 passed). GREEN — 5 consecutive independent runs of the new per-file topology against a real mysql:8.0 Docker container, each 18/18 files and 41/41 tests passing, zero RefreshDatabaseSelfHealingGuard trips; general-query-log capture on every run shows exactly 2 (not 1) create table `tenants` occurrences, both independently accounted for as expected (the script's own pre-loop migrate:fresh, and ZenaInvariantsTransactionIsolationColdStartTest's own pre-existing, deliberate forced-cold-start mechanism unrelated to GAP-050) — acceptance criterion I.2 is explicitly reinterpreted for the new topology per Gate 2 §I.5's own instruction, not silently redefined. ZenaApiContractPhase2InvariantTest's original, unweakened assertSame('E404.NOT_FOUND', ...) assertion passed in all 5 runs (criterion I.3). Guardrails remain green: SQLite scripts/ci/zena-invariants (39 passed, 2 skipped), full Unit testsuite (924 tests, 0 failures/errors, 27 pre-existing unrelated skips), and scripts/ci/lint-mysql-claim-truthfulness.php (14 files scanned, PASS). One local-environment non-determinism was observed and reported honestly (§D of the packet body): a separate ad hoc run of the OLD unmodified script did not reproduce the defect once in this session's differently-provisioned Docker environment, consistent with (not contradicting) Gate 2's own full-invocation/process-composition-state-dependence characterization rather than a hard threshold; this does not weaken the RED evidence, which stands on its own successful reproduction, nor the 5/5 GREEN acceptance evidence on the new topology. Root cause at the exact-line level remains unresolved per Gate 2 §D; this is documented containment, not a claimed fix. Tenant/RBAC/document/product semantics, the Sanctum Bearer-token fidelity defect, Treasury, and the mysql-parity job are untouched, per Owner's explicit Gate-2 scope instruction. This packet requests Owner Gate 3 decision only; it does not request or imply Ready-for-review, merge, release, or deployment authorization."
 technical_evidence:
-  subject_sha: "d6bebe72df720056d08634727033705e03f8b942"
-  implementation_tree_digest: "fa2b638320873a5de0b53aa6e3e7117a8963dea16aee8d40fb5f17cc76d540ea"
-  verified_pr_head_sha: "d6bebe72df720056d08634727033705e03f8b942"
-  verified_at: "2026-09-07T00:44:53Z"
+  subject_sha: "0db80dbcbc66c936d6e461b62dd9245b1a21daca"
+  implementation_tree_digest: "5faad506b03613a61206d643ee416bf4ed169e719c69c24f2d2a4f4ba2c84745"
+  verified_pr_head_sha: "0db80dbcbc66c936d6e461b62dd9245b1a21daca"
+  verified_at: "2026-09-07T01:15:00Z"
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null
 ---
+
+## Live-CI correction (2026-09-07, self-caught before Owner review)
+
+The first pushed version of this implementation (subject_sha `d6bebe72`)
+gated `RefreshDatabaseSelfHealingGuard::enabled()` on the broad
+`DB_CONNECTION === 'mysql'` condition. Live CI on PR #305 caught what local
+verification — which only ever ran GAP-050's own job in isolation — could
+not: two **other** real-MySQL jobs (`test-routes-guardrails`'s
+`--group=mysql-parity` step, and `ci-cd.yml`'s "Prove GAP-032 migrations on
+MySQL 8.0") also run under `DB_CONNECTION=mysql`, run several files in
+**one shared PHPUnit process** (unlike this job's new per-file topology),
+and independently include a `ColdStart`-family test using the
+pre-existing `GAP040ColdStartTransactionIsolationAssertions::forceGenuineColdStartForNextSetUp()`
+mechanism, which *deliberately* resets `RefreshDatabaseState::$migrated`.
+The guard correctly detected a `true→false` transition in both jobs — it
+just couldn't distinguish "this job's own known-legitimate reset" from a
+genuine self-healing bug, because in a *shared*-process job that
+distinction requires knowing which job is running, not just which
+connection driver.
+
+**Fix** (subject_sha `0db80dbc`, superseding `d6bebe72`): the guard is now
+gated on a new `GAP050_SELF_HEALING_GUARD=1` environment variable that
+**only** `scripts/ci/zena-invariants-mysql` exports, instead of the broad
+connection check. This keeps the guard's blast radius exactly at GAP-050's
+own job. Re-verified: a 6th consecutive real-MySQL run of the target job
+(18/18 files, 0 failed) and the guard's own isolated unit test remain
+green after the fix. `mysql-parity`, Treasury, and every other real-MySQL
+job are left byte-for-byte unaffected by this correction — no file outside
+`scripts/ci/zena-invariants-mysql` and
+`tests/Support/RefreshDatabaseSelfHealingGuard.php` changed. All 26 live CI
+checks subsequently ran; see §H below for the final green state, recorded
+after this correction landed.
+
+This is recorded here, not silently squashed away, per this repository's
+established convention of preserving correction history rather than
+erasing it.
 
 ## Owner Summary
 

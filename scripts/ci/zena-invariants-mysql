@@ -8,6 +8,13 @@ cd "$ROOT_DIR"
 export APP_ENV=testing
 export PCOV_ENABLED=0
 
+# GAP-050 Gate 3, candidate C: scopes Tests\Support\RefreshDatabaseSelfHealingGuard
+# to exactly this job's own per-file invocations. Other real-MySQL jobs
+# (mysql-parity, Treasury, rfi-escalation-concurrency-mysql, etc.) must
+# never see this guard activate — see the guard class's own `enabled()`
+# docblock for why.
+export GAP050_SELF_HEALING_GUARD=1
+
 # shellcheck disable=SC1091
 source scripts/ci/lib/mysql-fail-closed.sh
 

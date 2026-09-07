@@ -86,13 +86,22 @@ final class RefreshDatabaseSelfHealingGuard
     }
 
     /**
-     * Only active for the real-MySQL invocation shape this defect is
-     * specific to (RefreshDatabase's self-healing check reads
-     * `PDO::inTransaction()`, a MySQL/InnoDB-transactional-connection
-     * concept; SQLite runs never exhibited it in GAP-050's own evidence).
+     * Only active inside GAP-050's own per-file `zena-invariants-mysql`
+     * invocation (which exports `GAP050_SELF_HEALING_GUARD=1`), never for
+     * any other real-MySQL job (`mysql-parity`, Treasury,
+     * `rfi-escalation-concurrency-mysql`, etc.). Those other jobs run
+     * multiple files sharing ONE PHPUnit process and independently include
+     * `ZenaTransactionIsolationColdStartTest`, whose
+     * `GAP040ColdStartTransactionIsolationAssertions::forceGenuineColdStartForNextSetUp()`
+     * *deliberately* resets `RefreshDatabaseState::$migrated` mid-process —
+     * a legitimate, pre-existing test mechanism this guard must not
+     * mistake for the self-healing bug. Scoping to this one explicit env
+     * var (rather than the broader `DB_CONNECTION=mysql`) keeps the guard's
+     * blast radius exactly at GAP-050's own job, per this Gate's explicit
+     * instruction not to touch `mysql-parity` or Treasury.
      */
     public static function enabled(): bool
     {
-        return getenv('DB_CONNECTION') === 'mysql';
+        return getenv('GAP050_SELF_HEALING_GUARD') === '1';
     }
 }

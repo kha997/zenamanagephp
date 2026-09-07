@@ -25,7 +25,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-07T00:44:53Z"
-  updated_at: "2026-09-07T01:15:00Z"
+  updated_at: "2026-09-07T15:35:00Z"
 generated_by: agent
 residual_risk_rating: low_to_medium
 mandatory_technical_gate_summary: "GAP-050 Gate 3 implementation (per Owner Gate-2 approval, docs/owner-decisions/GAP-050/02-design.md, PR #304 head 214646b5ea275d40156105d7b525a846b3dfd62b) is technically complete and verified against real MySQL 8.0. Candidate B (process isolation): scripts/ci/zena-invariants-mysql replaces the single 18-file/41-test PHPUnit process with one isolated PHPUnit process per file, discovered dynamically via grep -rl '@group zena-invariants' tests/ (no hardcoded list, no batch-size tuning), failing closed on zero-selection, a vanished file, or a lost exit status, and running every file even after a failure so partial coverage is never reported as success. Candidate C (fail-loud detection): tests/Support/RefreshDatabaseSelfHealingGuard.php, wired into tests/TestCase.php around parent::setUp(), throws immediately if Illuminate\\Foundation\\Testing\\RefreshDatabaseState::$migrated is observed flipping true->false mid-process (Gate 1/2's proven self-healing signature); gated on DB_CONNECTION=mysql, inert elsewhere; verified in isolation (no DB) via tests/Unit/RefreshDatabaseSelfHealingGuardTest.php with RED/GREEN discipline on the guard's own logic. Evidence at subject_sha d6bebe72df720056d08634727033705e03f8b942 from canonical main c4ccf0eed83065d453271a4defd3805131161c3a: RED — the unmodified script reproduces the exact Gate-1/Gate-2 symptom (TENANT_INVALID instead of E404.NOT_FOUND on ZenaApiContractPhase2InvariantTest::test_document_show_returns_not_found_for_scoped_cross_tenant_resource, 1 failed/40 passed). GREEN — 5 consecutive independent runs of the new per-file topology against a real mysql:8.0 Docker container, each 18/18 files and 41/41 tests passing, zero RefreshDatabaseSelfHealingGuard trips; general-query-log capture on every run shows exactly 2 (not 1) create table `tenants` occurrences, both independently accounted for as expected (the script's own pre-loop migrate:fresh, and ZenaInvariantsTransactionIsolationColdStartTest's own pre-existing, deliberate forced-cold-start mechanism unrelated to GAP-050) — acceptance criterion I.2 is explicitly reinterpreted for the new topology per Gate 2 §I.5's own instruction, not silently redefined. ZenaApiContractPhase2InvariantTest's original, unweakened assertSame('E404.NOT_FOUND', ...) assertion passed in all 5 runs (criterion I.3). Guardrails remain green: SQLite scripts/ci/zena-invariants (39 passed, 2 skipped), full Unit testsuite (924 tests, 0 failures/errors, 27 pre-existing unrelated skips), and scripts/ci/lint-mysql-claim-truthfulness.php (14 files scanned, PASS). One local-environment non-determinism was observed and reported honestly (§D of the packet body): a separate ad hoc run of the OLD unmodified script did not reproduce the defect once in this session's differently-provisioned Docker environment, consistent with (not contradicting) Gate 2's own full-invocation/process-composition-state-dependence characterization rather than a hard threshold; this does not weaken the RED evidence, which stands on its own successful reproduction, nor the 5/5 GREEN acceptance evidence on the new topology. Root cause at the exact-line level remains unresolved per Gate 2 §D; this is documented containment, not a claimed fix. Tenant/RBAC/document/product semantics, the Sanctum Bearer-token fidelity defect, Treasury, and the mysql-parity job are untouched, per Owner's explicit Gate-2 scope instruction. This packet requests Owner Gate 3 decision only; it does not request or imply Ready-for-review, merge, release, or deployment authorization."
@@ -289,6 +289,46 @@ or retries (all explicitly rejected per Gate 2 §J, none used here either).
   self-reviewed against the criteria above. The Owner may wish to
   request an independent focused review before approving, given this task
   explicitly permitted "if useful."
+
+### H. Live CI on PR #305 (final state after the correction in the "Live-CI correction" section above)
+
+At PR head `202dafb4cff986ca5f1631b1be548bcfa6fbff76`, **all 33 required
+checks are green**, including — critically, since these are the ones the
+live-CI correction directly fixed:
+
+- `Zena RBAC/Tenant Invariants (MySQL parity)` — GAP-050's own target job,
+  now running the new per-file topology: **pass**.
+- `test-routes-guardrails` (`--group=mysql-parity`, 5-file shared-process
+  job) — the first job the guard's original, too-broad
+  `DB_CONNECTION=mysql` gate incorrectly broke: **pass** after the
+  `GAP050_SELF_HEALING_GUARD=1` scoping fix.
+- `test` (`ci-cd.yml`'s "Prove GAP-032 migrations on MySQL 8.0") — the
+  second job the same over-broad gate incorrectly broke: **pass** after
+  the fix.
+- `Treasury Native CHECK Constraints (real MySQL)`,
+  `RFI Escalation Concurrency (real MySQL)`,
+  `Document Workflow Concurrency (real MySQL)`,
+  `GAP-048 Service-Line Concurrency (real MySQL)` — every other real-MySQL
+  job in the repository, confirming the scoping fix left them genuinely
+  unaffected, not merely assumed unaffected: **pass**.
+- `Zena RBAC/Tenant Invariants` (SQLite), `Owner Governance Lint`
+  (`--enforce-gate-ordering` included), `Unit Tests`, `Feature Tests`,
+  `Integration Tests`, `API Tests (Fast/Slow)`, `Security Tests`,
+  `Security Vulnerability Scan`, `Dependency Vulnerability Scan`,
+  `Docker Security Scan`, `License Compliance Scan`, `Code Quality
+  Analysis`, `code-quality`, `Repo Hygiene Guards`, `button-inventory-check`,
+  `Performance Tests` (both files), `Test Coverage Report`,
+  `coverage-report`, `browser-tests`, `staging-smoke`, `quality-gate`,
+  `security-tests`, `Trivy` — all **pass**.
+
+`Owner Governance Lint`'s evidence-freshness check failed twice during this
+session purely on its own documented timing race (it independently polls
+up to 300s for every *other* check on the head to reach a terminal state
+before evaluating; it ran while `browser-tests`/`test` were still mid-run)
+— both were resolved by re-running the same job once the other checks had
+actually finished, with no code or packet change required either time.
+This is the same gotcha documented in prior GAP release packets in this
+repository (evidence-freshness 300s timing race).
 
 ### G. Follow-ups (explicitly out of this Gate's scope, recorded per Owner Gate-2 direction)
 

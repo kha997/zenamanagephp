@@ -533,8 +533,17 @@ polled in a background loop; if any check was still running at that
 single check, this section records exactly what was observed and stops
 rather than waiting further.
 
-<!-- GAP050-H2-LIVE-CI-PLACEHOLDER: filled in immediately after pushing
-     Correction 2 and checking `gh pr checks 305` exactly once. -->
+Pushed to PR head `f414fad281c66b97997693f24c037c3bddafe62d`. `gh pr checks
+305` was checked exactly once, immediately after the push: all 26 checks
+were reported `pending` (the push had only just triggered them; none had
+reached a terminal state yet). Per this task's explicit instruction not to
+background-poll CI, this session stops here rather than waiting further —
+live CI on this exact head has not yet been confirmed green and is not
+claimed to be. The Owner (or a follow-up session) should re-check
+`gh pr checks 305` — or the PR's Checks tab — once these have had time to
+complete before treating H.2 as resolved; `technical_evidence` above
+remains bound to the implementation subject_sha (`040c025a`), not to any
+claim about this live-CI run's outcome.
 
 ### G. Follow-ups (explicitly out of this Gate's scope, recorded per Owner Gate-2 direction)
 

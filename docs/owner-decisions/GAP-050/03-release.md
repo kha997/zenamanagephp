@@ -1,14 +1,14 @@
 ---
 work_id: GAP-050
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-09-06-gap-050-gate2-mysql-transaction-isolation-design.md
   plan: null
@@ -18,8 +18,8 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-09-07T00:44:53Z"
-  owner_response_reference: null
+  recorded_at: "2026-09-08T00:00:00Z"
+  owner_response_reference: "Owner Gate-3 approval, bound to PR #305 head f4acb0ad222037a63b57128c681246d48a6caa1f and implementation-tree digest 6584d237651c202cab9061c95f9e65f11a59b322404f12b64560396e5e5bc402; residual risk accepted low-to-medium; containment (not root-cause fix) approved per Gate 2 §G/§L primary recommendation."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
@@ -35,8 +35,8 @@ technical_evidence:
   verified_pr_head_sha: "040c025a921b008826072499881ed45e1894869b"
   verified_at: "2026-09-08T00:00:00Z"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "6584d237651c202cab9061c95f9e65f11a59b322404f12b64560396e5e5bc402"
+  decision_recorded_at: "2026-09-08T00:00:00Z"
 ---
 
 ## Live-CI correction (2026-09-07, self-caught before Owner review)
@@ -545,6 +545,31 @@ complete before treating H.2 as resolved; `technical_evidence` above
 remains bound to the implementation subject_sha (`040c025a`), not to any
 claim about this live-CI run's outcome.
 
+#### H.3 — Owner Gate-3 approval, pre-mutation verification (2026-09-08)
+
+Before recording the Owner's approval below, this session re-verified live
+CI at the exact head the Owner's decision is bound to: PR #305 head
+`f4acb0ad222037a63b57128c681246d48a6caa1f` (one packet-only commit past
+`f414fad2`, recording the single live-CI checkpoint itself — does not
+change the implementation-tree digest, per "Correction 2" §3 above).
+`gh pr checks 305`, checked once: **all 33 required checks pass**,
+including `Owner Governance Lint`, `Routes Guardrails`
+(`test-routes-guardrails`), `Automated Testing` (`Unit Tests`/`Feature
+Tests`/`Integration Tests`/API Tests), `Zena RBAC/Tenant Invariants (MySQL
+parity)`, `CI/CD Pipeline` (`test`, `code-quality`), `Code Quality &
+Security` (`Code Quality Analysis`, `Security Tests`, `Security
+Vulnerability Scan`, `Dependency Vulnerability Scan`, `Docker Security
+Scan`, `License Compliance Scan`, `Trivy`), `button-inventory-check`,
+`browser-tests`, and `staging-smoke`. `git merge-base --is-ancestor
+origin/main HEAD` confirmed canonical `main` (`c4ccf0eed83065d453271a4defd3805131161c3a`,
+unchanged since this Gate 3's own base) has not drifted incompatibly
+against the reviewed head. `owner_decision_binding.implementation_tree_digest`
+below is bound to this exact head's implementation-tree digest,
+recomputed locally via `scripts/ssot/owner_governance_lint.php`'s own
+self-consistency check (`✅ owner-governance-lint PASS`), matching
+`technical_evidence.implementation_tree_digest` unchanged since
+Correction 2.
+
 ### G. Follow-ups (explicitly out of this Gate's scope, recorded per Owner Gate-2 direction)
 
 1. **Sanctum Bearer-token fidelity** (Gate 2 §F): a new Work ID should be
@@ -560,6 +585,34 @@ claim about this live-CI run's outcome.
    pattern applies there.
 3. **Root cause (candidate A)** remains open per Gate 2 §K/§G — this Gate
    3 does not close it, only contains the symptom.
+
+## Owner Gate 3 — APPROVED (2026-09-08)
+
+**Owner decision: approved.** Bound to PR #305 reviewed head
+`f4acb0ad222037a63b57128c681246d48a6caa1f`, implementation subject
+`040c025a921b008826072499881ed45e1894869b`, implementation-tree digest
+`6584d237651c202cab9061c95f9e65f11a59b322404f12b64560396e5e5bc402`
+(unchanged from Correction 2, confirmed by pre-mutation re-verification in
+§H.3 above). Exact-head GitHub CI settled green across all 33 required
+checks. Owner accepts residual risk low-to-medium.
+
+**Binding interpretation**: this is approved *containment* — deterministic
+per-file PHPUnit process isolation (candidate B) plus the job-scoped
+fail-loud self-healing guard (candidate C), per Gate 2 §G/§L's primary
+recommendation. PHPUnit-native group discovery hardening (Correction 2) is
+part of the approved implementation. **The exact PDO/framework root cause
+remains unresolved below the containment layer** (Gate 2 §D) — this
+approval does not claim otherwise.
+
+All prior CHANGES REQUESTED / correction history above (the "Live-CI
+correction (2026-09-07)" section and "Owner Gate 3 — Correction 2
+(2026-09-08)" section) is preserved permanently and must not be removed by
+any future revision.
+
+Proceeds to release integration: PR #305 marked ready, squash-merged. No
+further GAP-050 implementation changes. Root-cause investigation not
+reopened. Sanctum/Treasury follow-ups (§G above) not started in this
+session.
 
 ## Quyết định Gate 3 cần Owner
 

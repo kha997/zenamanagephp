@@ -8,6 +8,13 @@ cd "$ROOT_DIR"
 export APP_ENV=testing
 export PCOV_ENABLED=0
 
+# GAP-050 Gate 3, candidate C: scopes Tests\Support\RefreshDatabaseSelfHealingGuard
+# to exactly this job's own per-file invocations. Other real-MySQL jobs
+# (mysql-parity, Treasury, rfi-escalation-concurrency-mysql, etc.) must
+# never see this guard activate — see the guard class's own `enabled()`
+# docblock for why.
+export GAP050_SELF_HEALING_GUARD=1
+
 # shellcheck disable=SC1091
 source scripts/ci/lib/mysql-fail-closed.sh
 
@@ -30,4 +37,105 @@ php artisan migrate:status
 # accident of process boundaries, not asserted. Assert it here explicitly.
 zena_mysql_ensure_connection
 
-php artisan test --group=zena-invariants
+# --- GAP-050 Gate 3: deterministic per-file process isolation ---------------
+#
+# Root cause (docs/owner-decisions/GAP-050/01-request.md,
+# docs/superpowers/specs/2026-09-06-gap-050-gate2-mysql-transaction-isolation-design.md):
+# running the entire `--group=zena-invariants` suite (18 files / 41 tests) as
+# ONE long-lived PHPUnit process against real MySQL lets Laravel's own
+# RefreshDatabase "self-healing" re-migration
+# (RefreshDatabaseState::$migrated flipping true->false whenever
+# PDO::inTransaction() unexpectedly reads false at some earlier test's
+# teardown) fire mid-process on the shared live connection, silently
+# re-running migrate:fresh and corrupting a later test's transactional
+# isolation. Gate 2 §L's order-preserving delta-minimization proved the
+# defect requires volume/composition close to the FULL 41-test suite — no
+# reduced subset up to 88% of the suite reproduced it, and no specific safe
+# smaller N was validated. Per-file isolation (each file its own OS process,
+# its own PHPUnit invocation, its own fresh RefreshDatabaseState) is the most
+# conservative topology available without inventing an untested batch size:
+# it removes the shared-process precondition entirely instead of merely
+# shrinking it. This is containment (Gate-2 §G candidate B), not a proven
+# root-cause fix — the exact PDO/driver-level trigger remains unresolved at
+# the exact-line level per §D, and no specific safe N is claimed anywhere in
+# this comment or the script below.
+#
+# File discovery is delegated to scripts/ci/zena-invariants-discover-files.php,
+# which resolves group membership via PHPUnit's OWN `--list-tests-xml`
+# metadata API rather than a source-text `grep` — see that script's own
+# docblock for why: PHPUnit's doc-comment `@group` annotation is deprecated
+# and slated for removal in PHPUnit 12, and a file migrated to the
+# `#[Group]` attribute form would silently stop matching a literal
+# `grep -rl '@group ...'` scan while this job kept reporting green. PHPUnit's
+# metadata resolver reads both forms into the same concept, so this
+# discovery step cannot be fooled by which form a given file happens to use.
+#
+# Fails closed rather than silently narrowing coverage: if the discovery
+# script itself fails, if zero files match the group, if a discovered file
+# vanishes before its turn, or if any per-file invocation's exit status
+# can't be captured, the whole job fails.
+
+set +e
+zena_invariant_discovery_output="$(php scripts/ci/zena-invariants-discover-files.php --group=zena-invariants --config=phpunit.xml)"
+zena_invariant_discovery_exit=$?
+set -e
+
+if [[ "$zena_invariant_discovery_exit" -ne 0 ]]; then
+    echo "ERROR: zena-invariants-discover-files.php failed (exit $zena_invariant_discovery_exit) — refusing to guess a test-file inventory." >&2
+    exit 1
+fi
+
+zena_invariant_files=()
+while IFS= read -r zena_invariant_file_line; do
+    [[ -n "$zena_invariant_file_line" ]] && zena_invariant_files+=("$zena_invariant_file_line")
+done <<< "$zena_invariant_discovery_output"
+
+if [[ "${#zena_invariant_files[@]}" -eq 0 ]]; then
+    echo "ERROR: zero test files matched '@group zena-invariants' — refusing to report a false-green empty run." >&2
+    exit 1
+fi
+
+echo "GAP-050: isolating ${#zena_invariant_files[@]} zena-invariants test files into separate PHPUnit processes:"
+printf '  - %s\n' "${zena_invariant_files[@]}"
+
+zena_invariants_ran=0
+zena_invariants_failed=0
+
+for zena_invariant_file in "${zena_invariant_files[@]}"; do
+    if [[ ! -f "$zena_invariant_file" ]]; then
+        echo "ERROR: '$zena_invariant_file' was discovered but no longer exists on disk — refusing to silently skip it." >&2
+        exit 1
+    fi
+
+    echo "::group::zena-invariants (isolated process): $zena_invariant_file"
+
+    set +e
+    php artisan test --group=zena-invariants "$zena_invariant_file"
+    zena_invariant_exit=$?
+    set -e
+
+    echo "::endgroup::"
+
+    if [[ -z "${zena_invariant_exit+x}" ]]; then
+        echo "ERROR: lost the exit status for '$zena_invariant_file' — treating as a hard failure." >&2
+        exit 1
+    fi
+
+    zena_invariants_ran=$((zena_invariants_ran + 1))
+
+    if [[ "$zena_invariant_exit" -ne 0 ]]; then
+        echo "FAILED (exit $zena_invariant_exit): $zena_invariant_file"
+        zena_invariants_failed=$((zena_invariants_failed + 1))
+    fi
+done
+
+echo "GAP-050: ran $zena_invariants_ran/${#zena_invariant_files[@]} isolated files, $zena_invariants_failed failed."
+
+if [[ "$zena_invariants_ran" -ne "${#zena_invariant_files[@]}" ]]; then
+    echo "ERROR: only ran $zena_invariants_ran of ${#zena_invariant_files[@]} discovered files — refusing to report success on partial coverage." >&2
+    exit 1
+fi
+
+if [[ "$zena_invariants_failed" -gt 0 ]]; then
+    exit 1
+fi

@@ -5,11 +5,13 @@ namespace Tests;
 use App\Models\User;
 use Illuminate\Testing\TestResponse;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Tests\Support\RefreshDatabaseSelfHealingGuard;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -81,7 +83,9 @@ abstract class TestCase extends BaseTestCase
     protected function setUp(): void
     {
         $this->prepareSqliteDatabaseFile();
+        $this->gap050GuardBeforeRefresh();
         parent::setUp();
+        $this->gap050GuardAfterRefresh();
         $this->withoutVite();
         $this->ensureTestingSchema();
         $this->registerArrayBindingWatch();
@@ -90,6 +94,32 @@ abstract class TestCase extends BaseTestCase
         $this->ensureInteractionLogsTable();
         $this->ensureProjectPhasesTable();
         $this->ensureProjectTasksTable();
+    }
+
+    /**
+     * GAP-050 Gate 3, candidate C (fail-loud protection). See
+     * Tests\Support\RefreshDatabaseSelfHealingGuard for the mechanism this
+     * detects and why it lives here (before/after `parent::setUp()`, which
+     * is where Laravel's own `refreshDatabase()` runs).
+     */
+    private function gap050GuardBeforeRefresh(): void
+    {
+        if ($this->gap050GuardApplies()) {
+            RefreshDatabaseSelfHealingGuard::beforeRefresh(static::class . '::' . $this->name());
+        }
+    }
+
+    private function gap050GuardAfterRefresh(): void
+    {
+        if ($this->gap050GuardApplies()) {
+            RefreshDatabaseSelfHealingGuard::afterRefresh();
+        }
+    }
+
+    private function gap050GuardApplies(): bool
+    {
+        return RefreshDatabaseSelfHealingGuard::enabled()
+            && in_array(RefreshDatabase::class, class_uses_recursive(static::class), true);
     }
 
     private function ensureTestingSchema(): void

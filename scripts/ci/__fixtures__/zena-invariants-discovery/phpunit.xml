@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+GAP-050 Gate 3 correction (§1): standalone, isolated PHPUnit configuration
+used ONLY by tests/Unit/ZenaInvariantsDiscoveryTest.php to prove
+scripts/ci/zena-invariants-discover-files.php discovers tests regardless of
+whether the group is declared via the legacy doc-comment `@group` form or
+the PHPUnit `#[Group]` attribute form. Deliberately does not use the
+project's real tests/bootstrap.php (no DB/app boot needed just to resolve
+group metadata) and is never referenced by any real CI job.
+-->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd" bootstrap="../../../../vendor/autoload.php" colors="false">
+  <testsuites>
+    <testsuite name="Fixture">
+      <directory>.</directory>
+    </testsuite>
+  </testsuites>
+</phpunit>

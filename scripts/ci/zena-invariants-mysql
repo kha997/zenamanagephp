@@ -60,14 +60,35 @@ zena_mysql_ensure_connection
 # the exact-line level per §D, and no specific safe N is claimed anywhere in
 # this comment or the script below.
 #
-# Fails closed rather than silently narrowing coverage: if zero files match
-# the group tag, if a discovered file vanishes before its turn, or if any
-# per-file invocation's exit status can't be captured, the whole job fails.
+# File discovery is delegated to scripts/ci/zena-invariants-discover-files.php,
+# which resolves group membership via PHPUnit's OWN `--list-tests-xml`
+# metadata API rather than a source-text `grep` — see that script's own
+# docblock for why: PHPUnit's doc-comment `@group` annotation is deprecated
+# and slated for removal in PHPUnit 12, and a file migrated to the
+# `#[Group]` attribute form would silently stop matching a literal
+# `grep -rl '@group ...'` scan while this job kept reporting green. PHPUnit's
+# metadata resolver reads both forms into the same concept, so this
+# discovery step cannot be fooled by which form a given file happens to use.
+#
+# Fails closed rather than silently narrowing coverage: if the discovery
+# script itself fails, if zero files match the group, if a discovered file
+# vanishes before its turn, or if any per-file invocation's exit status
+# can't be captured, the whole job fails.
+
+set +e
+zena_invariant_discovery_output="$(php scripts/ci/zena-invariants-discover-files.php --group=zena-invariants --config=phpunit.xml)"
+zena_invariant_discovery_exit=$?
+set -e
+
+if [[ "$zena_invariant_discovery_exit" -ne 0 ]]; then
+    echo "ERROR: zena-invariants-discover-files.php failed (exit $zena_invariant_discovery_exit) — refusing to guess a test-file inventory." >&2
+    exit 1
+fi
 
 zena_invariant_files=()
 while IFS= read -r zena_invariant_file_line; do
     [[ -n "$zena_invariant_file_line" ]] && zena_invariant_files+=("$zena_invariant_file_line")
-done < <(grep -rl '@group zena-invariants' tests/ | LC_ALL=C sort)
+done <<< "$zena_invariant_discovery_output"
 
 if [[ "${#zena_invariant_files[@]}" -eq 0 ]]; then
     echo "ERROR: zero test files matched '@group zena-invariants' — refusing to report a false-green empty run." >&2

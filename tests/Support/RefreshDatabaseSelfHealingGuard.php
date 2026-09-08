@@ -27,8 +27,13 @@ use RuntimeException;
  * not a confusing downstream symptom in an unrelated-looking test.
  *
  * Test-infrastructure only: lives under tests/, never referenced from app
- * code, and `enabled()` is gated on `DB_CONNECTION=mysql`, which only the
- * real-MySQL CI jobs export.
+ * code, and `enabled()` is gated on `GAP050_SELF_HEALING_GUARD=1`, which
+ * only `scripts/ci/zena-invariants-mysql` exports — see `enabled()`'s own
+ * docblock below for why this is narrower than `DB_CONNECTION=mysql`
+ * (the original, too-broad gate this correction replaced after it broke
+ * two unrelated real-MySQL jobs on live CI; see
+ * docs/owner-decisions/GAP-050/03-release.md's "Live-CI correction"
+ * section for that history, preserved there rather than erased).
  */
 final class RefreshDatabaseSelfHealingGuard
 {

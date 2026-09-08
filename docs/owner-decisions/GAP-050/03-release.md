@@ -25,15 +25,15 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-07T00:44:53Z"
-  updated_at: "2026-09-07T15:35:00Z"
+  updated_at: "2026-09-08T00:00:00Z"
 generated_by: agent
 residual_risk_rating: low_to_medium
-mandatory_technical_gate_summary: "GAP-050 Gate 3 implementation (per Owner Gate-2 approval, docs/owner-decisions/GAP-050/02-design.md, PR #304 head 214646b5ea275d40156105d7b525a846b3dfd62b) is technically complete and verified against real MySQL 8.0. Candidate B (process isolation): scripts/ci/zena-invariants-mysql replaces the single 18-file/41-test PHPUnit process with one isolated PHPUnit process per file, discovered dynamically via grep -rl '@group zena-invariants' tests/ (no hardcoded list, no batch-size tuning), failing closed on zero-selection, a vanished file, or a lost exit status, and running every file even after a failure so partial coverage is never reported as success. Candidate C (fail-loud detection): tests/Support/RefreshDatabaseSelfHealingGuard.php, wired into tests/TestCase.php around parent::setUp(), throws immediately if Illuminate\\Foundation\\Testing\\RefreshDatabaseState::$migrated is observed flipping true->false mid-process (Gate 1/2's proven self-healing signature); gated on DB_CONNECTION=mysql, inert elsewhere; verified in isolation (no DB) via tests/Unit/RefreshDatabaseSelfHealingGuardTest.php with RED/GREEN discipline on the guard's own logic. Evidence at subject_sha d6bebe72df720056d08634727033705e03f8b942 from canonical main c4ccf0eed83065d453271a4defd3805131161c3a: RED — the unmodified script reproduces the exact Gate-1/Gate-2 symptom (TENANT_INVALID instead of E404.NOT_FOUND on ZenaApiContractPhase2InvariantTest::test_document_show_returns_not_found_for_scoped_cross_tenant_resource, 1 failed/40 passed). GREEN — 5 consecutive independent runs of the new per-file topology against a real mysql:8.0 Docker container, each 18/18 files and 41/41 tests passing, zero RefreshDatabaseSelfHealingGuard trips; general-query-log capture on every run shows exactly 2 (not 1) create table `tenants` occurrences, both independently accounted for as expected (the script's own pre-loop migrate:fresh, and ZenaInvariantsTransactionIsolationColdStartTest's own pre-existing, deliberate forced-cold-start mechanism unrelated to GAP-050) — acceptance criterion I.2 is explicitly reinterpreted for the new topology per Gate 2 §I.5's own instruction, not silently redefined. ZenaApiContractPhase2InvariantTest's original, unweakened assertSame('E404.NOT_FOUND', ...) assertion passed in all 5 runs (criterion I.3). Guardrails remain green: SQLite scripts/ci/zena-invariants (39 passed, 2 skipped), full Unit testsuite (924 tests, 0 failures/errors, 27 pre-existing unrelated skips), and scripts/ci/lint-mysql-claim-truthfulness.php (14 files scanned, PASS). One local-environment non-determinism was observed and reported honestly (§D of the packet body): a separate ad hoc run of the OLD unmodified script did not reproduce the defect once in this session's differently-provisioned Docker environment, consistent with (not contradicting) Gate 2's own full-invocation/process-composition-state-dependence characterization rather than a hard threshold; this does not weaken the RED evidence, which stands on its own successful reproduction, nor the 5/5 GREEN acceptance evidence on the new topology. Root cause at the exact-line level remains unresolved per Gate 2 §D; this is documented containment, not a claimed fix. Tenant/RBAC/document/product semantics, the Sanctum Bearer-token fidelity defect, Treasury, and the mysql-parity job are untouched, per Owner's explicit Gate-2 scope instruction. This packet requests Owner Gate 3 decision only; it does not request or imply Ready-for-review, merge, release, or deployment authorization."
+mandatory_technical_gate_summary: "GAP-050 Gate 3 implementation (per Owner Gate-2 approval, docs/owner-decisions/GAP-050/02-design.md, PR #304 head 214646b5ea275d40156105d7b525a846b3dfd62b), CORRECTED per Owner Gate-3 CHANGES REQUESTED (2026-09-08, see 'Owner Gate 3 — Correction 2' section below), is technically complete and verified against real MySQL 8.0. Candidate B (process isolation): scripts/ci/zena-invariants-mysql replaces the single 18-file/41-test PHPUnit process with one isolated PHPUnit process per file. File discovery was hardened in Correction 2: scripts/ci/zena-invariants-discover-files.php resolves group membership via PHPUnit's own --list-tests-xml metadata API (the same resolver PHPUnit itself uses, which reads both the doc-comment @group annotation and the #[Group] attribute into one concept) instead of a source-text grep, which could have silently dropped a file migrated to the attribute form (doc-comment metadata is deprecated, removal slated for PHPUnit 12) while the job kept reporting green. No hardcoded list, no batch-size tuning; fails closed on zero-selection, a vanished file, a lost exit status, a failed PHPUnit list-tests invocation, a missing --list-tests-xml artifact, or a testClass with no file attribute; running every file even after a failure so partial coverage is never reported as success. New regression test tests/Unit/ZenaInvariantsDiscoveryTest.php proves, against isolated fixtures, that both a doc-comment-declared group and an attribute-declared group are discovered (RED confirmed first: a plain grep only found the doc-comment fixture, missing the attribute one). Reconciled: still exactly the canonical 18 files / 41 tests, byte-identical to the prior grep-based inventory. Candidate C (fail-loud detection): tests/Support/RefreshDatabaseSelfHealingGuard.php, wired into tests/TestCase.php around parent::setUp(), throws immediately if Illuminate\\Foundation\\Testing\\RefreshDatabaseState::$migrated is observed flipping true->false mid-process (Gate 1/2's proven self-healing signature); gated on GAP050_SELF_HEALING_GUARD=1 (exported only by scripts/ci/zena-invariants-mysql), inert elsewhere — narrowed from the original, too-broad DB_CONNECTION=mysql gate after live CI caught it breaking two unrelated real-MySQL jobs (mysql-parity, ci-cd.yml's GAP-032 job), documented in the 'Live-CI correction' section below and, in Correction 2, also fixed in the guard class's own stale doc-comment which still described the old DB_CONNECTION=mysql scope after the code fix; verified in isolation (no DB) via tests/Unit/RefreshDatabaseSelfHealingGuardTest.php with RED/GREEN discipline. Evidence at subject_sha 040c025a921b008826072499881ed45e1894869b (Correction 2's head) from canonical main c4ccf0eed83065d453271a4defd3805131161c3a: RED — the unmodified script reproduces the exact Gate-1/Gate-2 symptom (TENANT_INVALID instead of E404.NOT_FOUND on ZenaApiContractPhase2InvariantTest::test_document_show_returns_not_found_for_scoped_cross_tenant_resource, 1 failed/40 passed). GREEN, pre-Correction-2 topology — 5 consecutive independent runs, each 18/18 files and 41/41 tests passing, zero guard trips; general-query-log capture on every run showed exactly 2 (not 1) create table `tenants` occurrences, both independently accounted for (the script's own pre-loop migrate:fresh, and ZenaInvariantsTransactionIsolationColdStartTest's own pre-existing, deliberate forced-cold-start mechanism unrelated to GAP-050) — acceptance criterion I.2 explicitly reinterpreted for the new topology per Gate 2 §I.5's own instruction. GREEN, post-Correction-2 (hardened discovery): one full real-MySQL 8.0 run at subject_sha 040c025a — 18/18 files, 41/41 tests, exit 0 — confirming the hardened discovery mechanism produces an identical, correctly-functioning per-file topology. ZenaApiContractPhase2InvariantTest's original, unweakened assertSame('E404.NOT_FOUND', ...) assertion passed in every real-MySQL run (criterion I.3). Guardrails remain green post-Correction-2: SQLite scripts/ci/zena-invariants (39 passed, 2 skipped), full Unit testsuite (926 tests — 2 more than pre-correction, the new discovery regression test's two cases — 0 failures/errors, 27 pre-existing unrelated skips), and scripts/ci/lint-mysql-claim-truthfulness.php (14 files scanned, PASS). One local-environment non-determinism was observed pre-Correction-2 and reported honestly (§D of the packet body): a separate ad hoc run of the OLD unmodified script did not reproduce the defect once in this session's differently-provisioned Docker environment, consistent with (not contradicting) Gate 2's own full-invocation/process-composition-state-dependence characterization; this does not weaken the RED evidence, which stands on its own successful reproduction. Root cause at the exact-line level remains unresolved per Gate 2 §D; this is documented containment, not a claimed fix. Tenant/RBAC/document/product semantics, the Sanctum Bearer-token fidelity defect, Treasury, and the mysql-parity job are untouched, per Owner's explicit Gate-2 scope instruction, unchanged by Correction 2. This packet requests Owner Gate 3 decision only; it does not request or imply Ready-for-review, merge, release, or deployment authorization."
 technical_evidence:
-  subject_sha: "0db80dbcbc66c936d6e461b62dd9245b1a21daca"
-  implementation_tree_digest: "5faad506b03613a61206d643ee416bf4ed169e719c69c24f2d2a4f4ba2c84745"
-  verified_pr_head_sha: "0db80dbcbc66c936d6e461b62dd9245b1a21daca"
-  verified_at: "2026-09-07T01:15:00Z"
+  subject_sha: "040c025a921b008826072499881ed45e1894869b"
+  implementation_tree_digest: "6584d237651c202cab9061c95f9e65f11a59b322404f12b64560396e5e5bc402"
+  verified_pr_head_sha: "040c025a921b008826072499881ed45e1894869b"
+  verified_at: "2026-09-08T00:00:00Z"
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null
@@ -75,6 +75,112 @@ This is recorded here, not silently squashed away, per this repository's
 established convention of preserving correction history rather than
 erasing it.
 
+## Owner Gate 3 — Correction 2 (2026-09-08): hardened discovery + stale-claim fixes
+
+**Owner decision: CHANGES REQUESTED, focused correction only** — the
+prior packet's implementation was "accepted provisionally," with an
+explicit instruction not to reopen root-cause investigation or change
+tenant/RBAC/product semantics. Four corrections were required:
+
+1. **Test-discovery false-green risk.** The prior discovery mechanism
+   (`grep -rl '@group zena-invariants' tests/`) matches only the literal
+   doc-comment annotation string. PHPUnit's doc-comment metadata is
+   deprecated and will be removed in PHPUnit 12 (this repo's own live CI
+   already warns about it on several files); a file gradually migrated to
+   the `#[Group('zena-invariants')]` attribute form would silently stop
+   matching that grep, removing it from this job's coverage while the job
+   kept reporting green — the exact class of risk this Gate exists to
+   close, now present in its own tooling.
+
+   **Fix**: `scripts/ci/zena-invariants-discover-files.php`, a small PHP
+   script that shells out to `vendor/bin/phpunit --list-tests-xml`, the
+   same mechanism PHPUnit itself uses to resolve `--group` membership.
+   PHPUnit's metadata resolver reads doc-comment annotations and
+   attributes into one unified concept, so this discovery can never be
+   fooled by which form a given file uses. Fails closed on: missing
+   `--group`, a missing `--config`/binary, a non-zero PHPUnit exit, a
+   missing or empty `--list-tests-xml` output file (never trust an
+   artifact's mere existence-claim without checking it), unparseable XML,
+   or a `<testClass>` entry with no `file` attribute. Zero-selection is
+   still the *caller's* decision (unchanged fail-closed check in
+   `scripts/ci/zena-invariants-mysql`), keeping this script a
+   single-purpose primitive.
+
+   **Proof, RED then GREEN**: a fixture pair —
+   `scripts/ci/__fixtures__/zena-invariants-discovery/DocCommentGroupTest.php`
+   (doc-comment `@group`) and `.../AttributeGroupTest.php` (`#[Group]`
+   attribute), both tagged `zena-invariants-fixture` — plus an isolated
+   fixture `phpunit.xml` (bootstraps only `vendor/autoload.php`, no
+   Laravel app boot, never referenced by any real job). RED: a plain
+   `grep -rl '@group zena-invariants-fixture' scripts/ci/__fixtures__/...`
+   finds only `DocCommentGroupTest.php` — confirmed by direct command
+   before writing the fix. GREEN:
+   `tests/Unit/ZenaInvariantsDiscoveryTest.php` proves the new script
+   finds both files, and separately proves a non-matching group returns
+   an empty (not erroring) result.
+
+   **Reconciliation**: `php scripts/ci/zena-invariants-discover-files.php --group=zena-invariants --config=phpunit.xml`
+   against the real repository returns exactly the same 18 files the old
+   `grep` did (`diff` against the grep-derived list: zero differences),
+   totaling the same 41 tests — the hardening changes *how* the inventory
+   is computed, not *what* it currently contains.
+
+2. **Stale truth claims, corrected**:
+   - `tests/Support/RefreshDatabaseSelfHealingGuard.php`'s class-level
+     docblock still said `enabled()` was "gated on `DB_CONNECTION=mysql`"
+     — a description of the *original*, too-broad gate from before the
+     prior session's own live-CI-caught correction, which had already
+     fixed the `enabled()` method itself to check
+     `GAP050_SELF_HEALING_GUARD=1` but left the class comment describing
+     the old behavior. Corrected to describe the actual current scope.
+   - This packet's `mandatory_technical_gate_summary` and §B below both
+     repeated the same stale `DB_CONNECTION=mysql` description; corrected.
+   - The PR #305 body repeated both stale claims (the old grep-based
+     discovery description and the old guard scope); corrected in the
+     same push as this correction.
+   - **The original broad-`DB_CONNECTION` implementation and its live-CI
+     failure are preserved below in the "Live-CI correction (2026-09-07)"
+     section, unmodified** — this Correction 2 fixes the *documentation*
+     that had fallen out of sync with that already-corrected code, not
+     the historical record of what happened.
+
+3. **Evidence rebinding**: `technical_evidence.subject_sha` and
+   `.implementation_tree_digest` above are recomputed at the correction's
+   own commit, `040c025a921b008826072499881ed45e1894869b` (digest
+   `6584d237651c202cab9061c95f9e65f11a59b322404f12b64560396e5e5bc402`,
+   distinct from the prior packet's `0db80dbc.../5faad506...`). **SHA
+   distinction, made explicit**: `040c025a` is the *implementation*
+   subject SHA (code + fixtures + regression test — everything the digest
+   covers). Any subsequent commit that only edits this
+   `03-release.md` file itself (a "packet-only" commit, e.g. to link the
+   final live-CI-verified PR head below) does **not** change the
+   implementation-tree digest by construction — the digest computation
+   excludes exactly this active Gate-3 packet file — so such a commit is
+   *not* a new implementation subject SHA even though it does move the PR
+   head. §H below states the PR head actually verified live, which may be
+   later than `040c025a` for this reason; both are recorded, not
+   conflated.
+
+4. **Focused self-review, re-run for this correction** (§F below is the
+   full, updated self-review; summarized here): coverage omission (now
+   addressed by PHPUnit's own group resolution, not text matching);
+   mixed doc-comment/attribute metadata (the entire point of the fixture
+   proof above); shell exit propagation (the discovery script's exit
+   code is captured under an explicit `set +e`/`set -e` bracket, the same
+   pattern already used for the per-file test loop, before being checked);
+   real per-file process isolation (unchanged — still one `php artisan
+   test <file>` OS process per file; confirmed by a full real-MySQL rerun
+   at `040c025a`); guard scope leakage into unrelated MySQL jobs (not
+   reintroduced — this correction touches only the discovery mechanism
+   and a docblock, not `enabled()`'s actual gating condition, which stays
+   `GAP050_SELF_HEALING_GUARD=1`).
+
+**Root-cause investigation was not reopened. No tenant/RBAC/product
+semantics were changed.** This section is preserved permanently and must
+not be removed by any future revision.
+
+---
+
 ## Owner Summary
 
 Per Owner Gate-2 Round-2 approval (`docs/owner-decisions/GAP-050/02-design.md`,
@@ -103,11 +209,25 @@ the most conservative topology available without inventing an untested
 batch size, per Gate 2 §L's finding that no reduced subset up to 88% of the
 suite reproduced the defect and no specific safe smaller N was validated.
 
-- File discovery is **dynamic**: `grep -rl '@group zena-invariants' tests/`,
-  sorted deterministically (`LC_ALL=C sort`) — no hardcoded list, so a
-  future test addition/removal is picked up automatically and cannot
-  silently drift out of coverage.
+- File discovery is **dynamic and grounded in PHPUnit's own group
+  semantics** (Correction 2, 2026-09-08 — see that section above for the
+  full RED/GREEN proof): `scripts/ci/zena-invariants-discover-files.php`
+  shells out to `vendor/bin/phpunit --group=zena-invariants
+  --list-tests-xml=<tmp>`, the same metadata resolver PHPUnit itself uses
+  to decide `--group` membership, then parses the resulting `<testClass
+  file="...">` entries. This replaced an earlier `grep -rl '@group
+  zena-invariants' tests/` (sorted via `LC_ALL=C sort`), which relied on
+  matching the literal doc-comment annotation string — a risk given
+  PHPUnit's doc-comment metadata is deprecated and slated for removal in
+  PHPUnit 12, and a file migrated to the `#[Group]` attribute form would
+  have silently stopped matching that grep while this job kept reporting
+  green. No hardcoded list either way, so a future test addition/removal
+  is still picked up automatically.
 - **Fails closed**, not merely "select some subset and hope":
+  - the discovery script itself fails (missing PHPUnit binary/config, a
+    non-zero PHPUnit exit, a missing/empty `--list-tests-xml` artifact,
+    unparseable XML, or a `<testClass>` with no `file` attribute) → hard
+    error, script exits 1;
   - zero files discovered → hard error, script exits 1 (refuses to report
     a false-green empty run);
   - a discovered file no longer exists on disk when its turn comes → hard
@@ -141,9 +261,16 @@ across tests within one PHPUnit process:
   unrelated-looking test.
 - `afterRefresh()` records that a genuine migration was observed, so a
   later unexpected reset can be detected by the next test.
-- `enabled()` gates on `getenv('DB_CONNECTION') === 'mysql'` — inert for
-  every SQLite-based test run, and inherently inert in production since it
-  lives under `tests/` and is never referenced from application code.
+- `enabled()` gates on `getenv('GAP050_SELF_HEALING_GUARD') === '1'`, an
+  env var only `scripts/ci/zena-invariants-mysql` exports — inert for
+  every other job (SQLite runs, and every other real-MySQL job:
+  `mysql-parity`, Treasury, `rfi-escalation-concurrency-mysql`, etc.), and
+  inherently inert in production since it lives under `tests/` and is
+  never referenced from application code. (Narrowed from the original
+  `getenv('DB_CONNECTION') === 'mysql'` gate after live CI caught it
+  breaking two unrelated real-MySQL jobs — see "Live-CI correction
+  (2026-09-07)" above; the class's own docblock had fallen out of sync
+  with this already-corrected code until Correction 2 fixed it too.)
 - Does **not** touch `vendor/`, does **not** introduce a second
   migration/reset mechanism, and does **not** weaken any assertion — it
   only observes a public static property Laravel's own framework already
@@ -232,6 +359,36 @@ entrypoint, discarded/truncated (`mysql.general_log`) between runs.
    - `php scripts/ci/lint-mysql-claim-truthfulness.php`: PASS (14 files
      scanned) — the rewritten script still makes no "success" claim it
      doesn't fail closed on.
+7. **Correction 2 (2026-09-08), discovery hardening — evidence at
+   subject_sha `040c025a921b008826072499881ed45e1894869b`**:
+   - RED: `grep -rl '@group zena-invariants-fixture'
+     scripts/ci/__fixtures__/zena-invariants-discovery/` finds only
+     `DocCommentGroupTest.php`, missing `AttributeGroupTest.php` —
+     confirmed by direct command before the fix existed.
+   - GREEN: `tests/Unit/ZenaInvariantsDiscoveryTest.php` (2 tests) proves
+     `scripts/ci/zena-invariants-discover-files.php` finds both fixture
+     files, and separately that a non-matching group returns an empty
+     result rather than erroring.
+   - Reconciliation: `php scripts/ci/zena-invariants-discover-files.php
+     --group=zena-invariants --config=phpunit.xml` against the real
+     repository, `diff`'d against the prior `grep`-derived file list —
+     zero differences; still exactly 18 files / 41 tests.
+   - One additional full real-MySQL 8.0 run of the corrected
+     `scripts/ci/zena-invariants-mysql` at subject_sha `040c025a`: 18/18
+     files, 41/41 tests, exit 0 — confirms the hardened discovery
+     produces an identical, correctly-functioning per-file topology (not
+     re-run 5x at this step, since the underlying per-file execution
+     mechanism (§A) is unchanged by Correction 2 — only *how the file
+     list is computed* changed, and that is what items 1-3 above prove;
+     §H below records the live-CI confirmation on top of this).
+   - Full `Unit` testsuite re-run: 926 tests (2 more than pre-correction —
+     the new discovery regression test's two cases), 0 failures/errors, 27
+     pre-existing unrelated skips.
+   - SQLite `scripts/ci/zena-invariants` re-run: 39 passed, 2 skipped,
+     exit 0 (unchanged, confirming no regression from files this
+     correction did not touch).
+   - `php scripts/ci/lint-mysql-claim-truthfulness.php` and
+     `bash scripts/ci/docs-lint.sh`: both PASS.
 
 ### D. Non-determinism observed, reported honestly
 
@@ -262,24 +419,58 @@ or retries (all explicitly rejected per Gate 2 §J, none used here either).
 
 ### F. Self-review
 
+**Re-run for Correction 2 (2026-09-08)**, focused on exactly what the
+Owner asked to be re-checked:
+
+- **Current and future coverage omission**: closed by grounding discovery
+  in PHPUnit's own `--list-tests-xml` group resolution instead of a
+  source-text `grep` — a future file cannot fall out of coverage merely by
+  changing which metadata form (`@group` doc-comment vs. `#[Group]`
+  attribute) it uses, because PHPUnit resolves both into the same concept.
+  Proved, not just asserted: the fixture RED/GREEN pair in "Correction 2"
+  above, plus the reconciliation `diff` against the real repository's
+  actual 18-file inventory (zero differences).
+- **Mixed PHPUnit group metadata**: the entire point of the two-fixture
+  proof (`DocCommentGroupTest.php` + `AttributeGroupTest.php`, one of
+  each form, discovered together in one run) — this is what "mixed" means
+  here and it is exactly what
+  `tests/Unit/ZenaInvariantsDiscoveryTest.php::test_discovers_both_doc_comment_and_attribute_declared_groups`
+  asserts.
+- **Shell exit propagation**: the new discovery-script invocation is
+  wrapped in its own explicit `set +e` / capture `$?` / `set -e` bracket
+  (`scripts/ci/zena-invariants-mysql`), the same pattern already used for
+  the per-file test loop, and its exit code is checked for non-zero
+  before the returned file list is trusted at all — a discovery failure
+  can never silently fall through to "zero files, therefore fail-closed
+  on empty selection" (a different, less informative failure mode); it is
+  its own explicit, named error.
+- **Real per-file process isolation**: unchanged by this correction — the
+  execution loop (§A) still spawns one `php artisan test <file>` OS
+  process per discovered file; only *how the file list is computed*
+  changed. Confirmed unchanged by re-running the full corrected script
+  against real MySQL 8.0 at subject_sha `040c025a` (§C.7): 18/18 files,
+  41/41 tests, exit 0.
+- **Guard scope leakage into unrelated MySQL jobs**: not reintroduced —
+  this correction touches `RefreshDatabaseSelfHealingGuard.php`'s
+  class-level *docblock* only, not its `enabled()` method's actual gating
+  condition, which remains `GAP050_SELF_HEALING_GUARD=1` (unchanged from
+  the prior session's live-CI-caught fix). §H below's live-CI confirmation
+  on the corrected head re-verifies `mysql-parity` and the `ci-cd.yml`
+  GAP-032 job both still pass, i.e. still unaffected.
+
+**Preserved from the prior review round** (still true, unchanged by
+Correction 2):
+
 - **False-green risk**: addressed by the fail-closed script design (§A) and
   by treating "all 18 files ran and none failed" as the only success
   condition, rather than trusting PHPUnit's own aggregate exit code from a
   single invocation (which no longer exists in this topology).
-- **Test-selection loss**: addressed by dynamic discovery (`grep`) rather
-  than a hardcoded list, and the zero-selection / missing-file fail-closed
-  checks; all 5 runs confirmed 18/18 files and 41/41 tests, matching Gate
-  2 §L.1's own file/test inventory exactly.
 - **Shell quoting/path handling**: file paths are read via `IFS= read -r`
   (not `mapfile`, for bash 3.2 compatibility — macOS ships bash 3.2 without
   `mapfile`; GitHub Actions' `ubuntu-latest` ships bash 5.x where this
   would also have worked, but the portable form was adopted so local
   reproduction is possible on both) and always double-quoted in the loop
   and existence check.
-- **Exit-code propagation**: `set +e`/`set -e` bracket exactly the one
-  `php artisan test` invocation per iteration so a per-file test failure
-  does not abort the loop under `set -euo pipefail`, and the captured exit
-  code is explicitly checked for "unset" (lost) before being trusted.
 - **Isolation is real, not cosmetic**: each file runs as a distinct OS
   process (`php artisan test <file>`, a genuinely new PHP process per Gate
   2 §B's own process-boundary reasoning), with its own fresh
@@ -287,10 +478,11 @@ or retries (all explicitly rejected per Gate 2 §J, none used here either).
   timestamp correlation in §C.4, not merely asserted.
 - Independent review: not obtained in this session; the packet is
   self-reviewed against the criteria above. The Owner may wish to
-  request an independent focused review before approving, given this task
-  explicitly permitted "if useful."
+  request an independent focused review before approving.
 
-### H. Live CI on PR #305 (final state after the correction in the "Live-CI correction" section above)
+### H. Live CI on PR #305
+
+#### H.1 — Final state after the "Live-CI correction" (2026-09-07) above, superseded by H.2 below
 
 At PR head `202dafb4cff986ca5f1631b1be548bcfa6fbff76`, **all 33 required
 checks are green**, including — critically, since these are the ones the
@@ -329,6 +521,20 @@ before evaluating; it ran while `browser-tests`/`test` were still mid-run)
 actually finished, with no code or packet change required either time.
 This is the same gotcha documented in prior GAP release packets in this
 repository (evidence-freshness 300s timing race).
+
+#### H.2 — After Correction 2 (2026-09-08): discovery hardening + stale-claim fixes
+
+Pushed at implementation subject_sha `040c025a921b008826072499881ed45e1894869b`
+(a packet-only commit updating this file to record H.2 itself may move the
+PR head past this SHA without changing the implementation-tree digest —
+see "Correction 2" §3 above for why those are tracked separately). Per
+this task's explicit instruction, live CI was checked **once**, not
+polled in a background loop; if any check was still running at that
+single check, this section records exactly what was observed and stops
+rather than waiting further.
+
+<!-- GAP050-H2-LIVE-CI-PLACEHOLDER: filled in immediately after pushing
+     Correction 2 and checking `gh pr checks 305` exactly once. -->
 
 ### G. Follow-ups (explicitly out of this Gate's scope, recorded per Owner Gate-2 direction)
 

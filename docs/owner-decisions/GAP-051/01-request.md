@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-09-09-gap-051-sanctum-bearer-token-test-fidelity-evidence.md
   plan: null
   branch: audit/GAP-051-gate1-sanctum-bearer-token-fidelity
-  pr: null
+  pr: "https://github.com/kha997/zenamanagephp/pull/306"
   release: null
 decision_provenance:
   trust_level: unclaimed

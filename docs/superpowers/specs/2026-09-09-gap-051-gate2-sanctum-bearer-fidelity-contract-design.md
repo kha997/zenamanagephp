@@ -1,3 +1,9 @@
+---
+work_id: GAP-051
+owner_governance_version: 1
+owner_gate_2_record: docs/owner-decisions/GAP-051/02-design.md
+---
+
 # GAP-051 Gate 2 — Sanctum Bearer-Token Test-Fidelity Regression-Prevention Design
 
 Status: Gate 2 design/decision packet. No implementation in this document
@@ -251,6 +257,20 @@ concrete anti-pattern Option 2's helper doesn't structurally prevent
 (calling `actingAs()` in the same method, in either order, without ever
 routing through the helper).
 
+**Correction (this revision): a third layer is added.** §2/§4's original
+combination (helper + static tripwire) left an acknowledged residual
+false-negative — a test author who never references the helper's name at
+all (raw `withHeaders(['Authorization' => ...])` alongside `actingAs()`)
+is invisible to both the structural helper (never invoked) and the static
+tripwire (nothing to match on). §4.2 below evaluates a low-complexity
+runtime guard-state check in `Tests\TestCase`'s request-dispatch path as
+a closer for exactly this gap, and recommends adding it as a **third**
+defense-in-depth layer: the helper structurally prevents the common case,
+the static tripwire catches the specific two-call anti-pattern, and the
+new runtime check catches the raw hand-rolled case regardless of which
+helper (if any) a test used to get there. See §4.2 for the full
+comparison and verdict.
+
 Rejected as primary: Option 1 alone (heuristic, no runtime proof, new
 tooling surface), Option 3 alone (higher fragility/cost for coverage this
 repo's traced test population doesn't currently need), Option 4 alone
@@ -269,7 +289,7 @@ repo's traced test population doesn't currently need), Option 4 alone
   testing is exactly what the new helper produces. Plain `actingAs()`
   remains fully legal for `web`-guard tests; it only becomes a build
   failure when it appears alongside the new helper's call in the same test
-  method (the §4 tripwire), i.e., when a test is trying to claim both
+  method (the §4.1 tripwire), i.e., when a test is trying to claim both
   things at once.
 - **D**: no change to `config/sanctum.php`, `config/auth.php`,
   `app/Http/Kernel.php`, any middleware, or any guard registration.
@@ -279,7 +299,9 @@ repo's traced test population doesn't currently need), Option 4 alone
 - **G**: JWT-naming debt explicitly excluded from this Gate-2 scope in
   §8.
 
-## 4. Defense-in-depth tripwire (secondary, narrow-scope Option-1 usage)
+## 4. Defense-in-depth layers (secondary and tertiary)
+
+### 4.1 Static tripwire (secondary, narrow-scope Option-1 usage)
 
 A PHPUnit test (not a PHPStan rule — matching this repo's existing
 static-invariant-test convention rather than introducing new PHPStan
@@ -293,103 +315,302 @@ job is to make it loud and immediate if someone hand-writes the exact
 anti-pattern Gate 1 found, whether or not they also happen to use the new
 helper incorrectly.
 
+As acknowledged honestly in §7 (and by the original version of this
+packet), this static tripwire has a real false-negative: a test that
+never references the helper's name at all is invisible to it. §4.2
+evaluates a mechanism that closes that specific gap.
+
+### 4.2 Runtime guard-state check (tertiary — new in this correction)
+
+**The gap being closed.** Neither Option 2's helper (never invoked) nor
+§4.1's tripwire (nothing to pattern-match — the helper's name never
+appears) catches a test author who ignores the new helper entirely and
+hand-writes:
+
+```php
+$this->actingAs($user);
+// ... later in the same method, no reference to the helper anywhere ...
+$this->withHeaders(['Authorization' => 'Bearer ' . $token])->getJson('/api/v1/...');
+```
+
+This is not a hypothetical — it is the literal shape of Gate 1's
+Scenario-1 hazard, just hand-written instead of routed through any
+helper. The original version of this Gate-2 packet named this gap in §7
+and accepted it as residual without seriously evaluating a concrete
+automatic alternative. That is the defect this correction fixes.
+
+**Evaluated mechanism.** In `Tests\TestCase` (which every feature test
+already extends), check — immediately before dispatching any request that
+carries a Bearer `Authorization` header — whether the `web` guard (the
+confirmed leak vector; more generally, any guard in `config('sanctum.guard')`'s
+fallback chain other than `sanctum` itself) is already authenticated from
+cached test state at the moment of dispatch:
+
+```php
+// Illustrative sketch only — not final Gate-3 code.
+public function call($method, $uri, $parameters = [], $cookies = [], $files = [], $server = [], $content = null)
+{
+    $this->guardAgainstGap051BearerContamination($server);
+
+    if ($this->shouldAutoAppendCsrfToken() && $this->shouldAppendCsrfToken($method, $server)) {
+        $parameters = $this->ensureCsrfToken($parameters);
+    }
+
+    return parent::call($method, $uri, $parameters, $cookies, $files, $server, $content);
+}
+
+private function guardAgainstGap051BearerContamination(array $server): void
+{
+    $authHeader = $server['HTTP_AUTHORIZATION'] ?? '';
+
+    if (!str_starts_with($authHeader, 'Bearer ')) {
+        return;
+    }
+
+    foreach (array_merge(['web'], (array) config('sanctum.guard', [])) as $guardName) {
+        if ($guardName === 'sanctum') {
+            continue;
+        }
+
+        if (Auth::guard($guardName)->check()) {
+            throw new \RuntimeException(sprintf(
+                'GAP-051: request carries a Bearer Authorization header while '
+                . 'guard [%s] is already authenticated from cached test state. '
+                . 'This is the confirmed GAP-051 web-guard/Bearer-transport '
+                . 'contamination hazard. Use actingAsSanctumBearerToken() (which '
+                . 'calls forgetGuards() before issuing its request) instead of '
+                . 'mixing actingAs() with a hand-written Bearer header, or call '
+                . 'app(\'auth\')->forgetGuards() yourself if this is a deliberate '
+                . 'mixed-auth test.',
+                $guardName
+            ));
+        }
+    }
+}
+```
+
+This lives entirely in the existing request-dispatch override point —
+`Tests\TestCase::call()` is **already overridden today** (for CSRF-token
+auto-injection, see the top of `tests/TestCase.php`), so adding a second,
+independent check to the same override point is not a new pattern for
+this codebase; it extends a convention already in production use here,
+not an invasive new one.
+
+**Comparison against Option 2 + §4.1:**
+
+| Dimension | Helper + static tripwire (§2/§4.1) | Runtime guard-state check (§4.2) |
+|---|---|---|
+| Fidelity vs. raw hand-rolled hazard | Misses it entirely (no helper call, no tripwire match) | Catches it — the check runs at request-dispatch time based on actual cached guard state, independent of which helper (if any) was used to get there |
+| Mechanism type | Structural prevention (helper) + source-text pattern match (tripwire) | Runtime state assertion at the exact moment of risk |
+| Public API relied on | `AuthManager::forgetGuards()` | `Auth::guard($name)->check()` (core Auth facade, arguably even more stable/central than `forgetGuards()`) plus overriding `TestCase::call()` (already done in this repo for CSRF) |
+| New tooling surface | One trait, one PHPUnit static-scan test | One additional private method in an already-overridden `TestCase::call()` — no new file, no new CI job |
+| False-positive risk | §7's existing analysis (helper + `actingAs()` in the same method) | A test that *deliberately* keeps a cached `web`-session **and** intentionally sends a Bearer header in the same request (a genuine mixed-auth scenario) would trip this check. See below. |
+
+**False positives.** Could a legitimate test intentionally have both a
+Bearer header and a still-cached `web` session in the same request? A
+test using the new helper is unaffected — `actingAsSanctumBearerToken()`
+calls `forgetGuards()` before sending its request, so by the time the
+runtime check runs, no guard has cached state, and there is no false
+positive for any helper-based usage. The remaining exposure is a
+hand-written test that *deliberately* wants a real Bearer header sent
+alongside an already-authenticated `web` guard, to assert some specific
+"stateful cookie present but Bearer takes precedence" behavior. This
+repo's traced test population (Gate 1: 117 `actingAs(` files, 12
+`Sanctum::actingAs()` files, 51+ real `createToken()` files) contains no
+such case today — the one file that mixes patterns
+(`tests/Feature/Crm/ServiceLineGateTest.php`) already keeps them in
+separate test methods. Judged the same way §7 already judges the
+static tripwire's analogous false positive: forcing that scenario to be
+made explicit (call `forgetGuards()` deliberately, or split into two test
+methods) is the correct outcome, not a defect — it is exactly the kind
+of ambiguity Gate 1 showed is dangerous to leave implicit.
+
+**Framework-version stability.** `Auth::guard($name)->check()` is core,
+long-stable Laravel Auth facade surface — no less stable than
+`forgetGuards()`, arguably more central and therefore less likely to
+change. Overriding `TestCase::call()` a second time is not a new risk
+category: this repo's `Tests\TestCase` already overrides `call()` for an
+unrelated cross-cutting concern (CSRF token injection), so a Laravel
+upgrade that broke this pattern would already be breaking an existing,
+in-production convention here, not a new one this design introduces.
+
+**Verdict: RECOMMENDED as a third defense-in-depth layer**, added
+alongside (not replacing) the helper and the §4.1 static tripwire:
+
+1. The helper (§2) structurally prevents the common case for any author
+   who adopts it.
+2. The §4.1 static tripwire catches the specific two-call anti-pattern
+   (helper referenced, but `actingAs()` also present) for authors who
+   partially adopt the helper incorrectly.
+3. The §4.2 runtime guard-state check catches the raw hand-rolled case —
+   the exact residual gap the original version of this packet admitted
+   and did not seriously evaluate closing — regardless of which path (if
+   any) got there, at negligible implementation cost (one private method
+   in an already-overridden test-infrastructure hook) and no meaningful
+   new false-positive exposure given this repo's actual traced test
+   population.
+
+No disqualifying flaw was found: the mechanism is cheap, uses stable
+public API, extends an existing override point rather than introducing a
+new one, and its only false-positive class (deliberate mixed-auth tests)
+does not exist in this repo today and is the same kind of "flag and force
+explicitness" trade-off already accepted for the static tripwire in §7.
+
 ## 5. Evidence-harness lifecycle decision (Constraint E)
 
-**Decision: convert into a permanent regression test, not remove, not
-merely replace.**
+**Decision (corrected this revision): keep all five scenarios permanently
+(nothing removed), but stop calling the whole file one undifferentiated
+"permanent regression test" — split it by what each scenario actually
+proves, because two fundamentally different kinds of claims were being
+conflated.**
 
-`tests/Feature/Gap051SanctumWebGuardLeakEvidenceTest.php`'s five scenarios
-map directly onto the three categories in §1 and are worth keeping exactly
-because they are the only place in the repo that pins Sanctum's
-guard-check-order behavior with a real executed assertion:
+The original version of this packet called the entire renamed file a
+single "permanent regression test." That blurred a real distinction:
 
-- Scenario 1 (`actingAs()` + no header → currently 200) is **kept
-  unchanged as a documented, permanently-red-if-ever-"fixed"-elsewhere
-  canary**: it is not something Gate 3 patches away (Constraint D forbids
-  touching Sanctum guard config), so this assertion should keep passing
-  forever, proving the underlying framework behavior — that Sanctum
-  authenticates via `web` when it's cached — hasn't silently changed
-  upstream. Its docblock will be updated to point at the new helper and
-  clarify it is now a permanent regression/canary test, not merely
-  Gate-1-disposable evidence.
-- Scenarios 2 and 3 (negative controls) are kept as-is.
-- Scenario 4 (real Bearer token, isolated) is **rewritten to use the new
-  `actingAsSanctumBearerToken()` helper**, turning it into the first real
-  consumer/regression test of the Gate-3 helper itself.
-- Scenario 5 (`Sanctum::actingAs()`) is kept as-is — it documents the
-  Category-1 (non-hazard) behavior from §1 and guards against a future
-  Sanctum upgrade silently changing that helper's semantics.
+- **Scenario 1** (`actingAs()` + no header → currently 200) is a
+  **framework-characterization/canary test**, not a security regression
+  contract. It intentionally asserts the *hazardous* framework behavior
+  keeps happening — it must keep returning 200 forever, specifically
+  because Constraint D forbids ever "fixing" Sanctum's web-first
+  guard-check order at the config/guard level. Calling this a "regression
+  test" is misleading: nothing has "regressed" if it keeps passing, and a
+  reviewer skimming CI green for this file could easily mistake its
+  permanent-pass state for "GAP-051 is fixed" when the opposite is true —
+  it is documenting that the underlying hazardous mechanism is still
+  exactly as Gate 1 found it, unpatched by design.
+- **Scenarios 2, 3, and 5** are controls/documentation of the non-hazard
+  categories from §1 (kept as-is).
+- **Scenario 4** (rewritten to use `actingAsSanctumBearerToken()`) and the
+  **new tests from §4.2 and §9** (the `forgetGuards()` structural proof,
+  the §4.1 tripwire-fires-on-reintroduction proof, the §4.2 runtime-check
+  proof, the §6 topology/behavioral proof) **are** genuine GAP-051
+  security/test-fidelity regression contracts — they must FAIL if unsafe
+  test contamination, or a missing defense-in-depth layer, is ever
+  reintroduced.
 
-The file is renamed from `Gap051SanctumWebGuardLeakEvidenceTest` to
-`SanctumBearerTransportGuardContractTest` (or similar) in Gate 3 to reflect
-its new permanent role, with its docblock rewritten to drop the "disposable
-evidence, not a regression test" framing. No scenario is deleted.
+**Structural decision: split into two files**, since the two kinds of
+tests have opposite pass/fail meanings and mixing them in one file under
+one generic "regression test" label is worse for maintenance than keeping
+that distinction explicit in the filesystem:
+
+- `tests/Feature/SanctumWebGuardCharacterizationTest.php` — Scenario 1
+  only, docblock explicit that this is an intentional, permanent
+  framework-behavior canary that must keep passing, and a change to red
+  here signals an *upstream Sanctum/Laravel behavior change* to
+  investigate, not a GAP-051 regression to "fix" in this repo.
+- `tests/Feature/SanctumBearerTransportGuardContractTest.php` — Scenarios
+  2, 3, 4 (rewritten), 5, plus the new structural/runtime/topology
+  regression tests from §4.2/§6/§9, docblock explicit that failures here
+  ARE GAP-051 regressions requiring investigation.
+
+No scenario is deleted or weakened; this is a file-level reorganization
+plus a docblock/naming correction so "permanently green" and "must never
+regress" are never conflated under a single ambiguous label again.
 
 ## 6. Future-topology regression safeguard (Constraint F)
 
-A dedicated, small assertion test (extending the existing static-invariant
-convention, e.g. alongside `ZenaRouteSurfaceInvariantTest`) that asserts
-the **current** composition of `App\Http\Kernel::$middlewareGroups['api']`
-is exactly:
+**Correction (this revision):** the original version of this section
+pinned the *exact* full `App\Http\Kernel::$middlewareGroups['api']` array
+(`SubstituteBindings`, `SecurityHeadersMiddleware`, `ErrorEnvelopeMiddleware`,
+in that literal order). Re-reading `app/Http/Kernel.php` and
+`app/Providers/RouteServiceProvider.php` confirms that reality as of this
+correction, but exact-array pinning is unnecessarily brittle for the risk
+this safeguard actually exists to guard against: it would fail loudly for
+a harmless, unrelated addition to the `api` group (e.g. a new stateless
+rate-limiting or observability middleware with zero session/auth
+implications), forcing an unrelated future PR to "reassess GAP-051" when
+nothing about GAP-051's risk has actually changed. No compelling reason
+was found to keep exact-array pinning — the real risk this safeguard must
+catch is narrower and better expressed directly.
 
-```php
-[
-    \Illuminate\Routing\Middleware\SubstituteBindings::class,
-    \App\Http\Middleware\SecurityHeadersMiddleware::class,
-    \App\Http\Middleware\ErrorEnvelopeMiddleware::class,
-]
-```
+**Revised safeguard — a risk-focused invariant, not a full-array pin:**
 
-with an explicit failure message pointing back at this GAP: *"The `api`
-middleware group has changed. GAP-051 Gate 1's 'no production exposure'
-finding was conditioned on `/api/*` carrying no session/stateful
-middleware (see docs/audits/2026-09-09-gap-051-...). If this change adds
-`StartSession`, `EncryptCookies`, or any other stateful/session middleware
-to `/api/*`, GAP-051's production-exposure conclusion must be reassessed —
-do not simply update this assertion without opening a follow-up Work ID."*
+1. **Absence assertion.** Assert that no session/stateful-authentication
+   middleware (`Illuminate\Session\Middleware\StartSession`,
+   `Illuminate\Cookie\Middleware\EncryptCookies`, or any other
+   session-cookie middleware) is present in
+   `App\Http\Kernel::$middlewareGroups['api']`, rather than asserting the
+   full exact composition. A harmless addition to the group (anything that
+   is not session/stateful-auth middleware) no longer breaks this
+   tripwire; only the one condition that actually reopens GAP-051's
+   production-exposure question does. Failure message unchanged in spirit
+   — cites GAP-051 by name and directs reassessment, not a silent
+   assertion update:
 
-This makes the "bound to current topology, not eternal" caveat in the
-Gate-1 packet an enforced tripwire instead of a sentence that can go stale
-silently. It fails loudly and immediately (not "eventually, if someone
-remembers") the moment the topology assumption breaks.
+   *"Session/stateful middleware (`StartSession`/`EncryptCookies`/...) was
+   added to the `api` middleware group. GAP-051 Gate 1's 'no production
+   exposure' finding was conditioned on `/api/*` carrying no such
+   middleware (see docs/audits/2026-09-09-gap-051-...). This changes that
+   finding's premise — do not silently update this assertion; open a
+   follow-up Work ID to reassess GAP-051's production-exposure conclusion
+   first."*
+
+2. **Behavioral contract test (new, in addition to the static absence
+   assertion).** Where feasible, test the actual risk directly rather than
+   only an implementation detail: a session-authenticated / `web`-guard
+   user, with **no** Bearer token, still receives `401` from a
+   representative `auth:sanctum` API route, dispatched through the real,
+   production-like `api` middleware stack (not a bespoke test-only route,
+   and not with guard state forced/mocked). This tests whether `web`-guard
+   state can leak into a real HTTP request cycle under the `api` group as
+   it is actually wired today — the concrete question GAP-051 is about —
+   rather than pinning an implementation detail that could change for
+   unrelated reasons.
+
+Together, (1) fails loudly and immediately if the topology assumption
+itself is broken (a stateful middleware is added to `/api/*`), and (2)
+independently proves the behavioral guarantee that assumption protects
+(no session leak into a real `auth:sanctum` request) under the actual
+current stack — so the tripwire is anchored to risk, not to an incidental
+array literal that unrelated future changes could trip for no reason.
 
 ## 7. False-positive / false-negative analysis of the recommended mechanism
 
 **False positives (wrongly flags a valid test):**
 - A test that uses `actingAsSanctumBearerToken()` and, *later in the same
   method*, calls `actingAs()` deliberately for an unrelated reason (e.g.,
-  testing a mixed-auth edge case) would trip the §4 tripwire. This is
+  testing a mixed-auth edge case) would trip the §4.1 tripwire. This is
   judged an acceptable false positive: such a test should be split into
   two methods or the ordering made explicit and reviewed — the pattern
   itself is exactly what Gate 1 showed is dangerous to leave ambiguous, so
   erring toward "flag and force explicitness" here is intentional.
-- `Sanctum::actingAs()` is never matched by the §4 regex (it specifically
+- `Sanctum::actingAs()` is never matched by the §4.1 regex (it specifically
   excludes `Sanctum::actingAs(`), so no false positive there.
 
 **False negatives (wrongly misses a real hazard):**
-- A test author who never adopts the new helper at all, and instead
-  hand-rolls a raw `withHeaders(['Authorization' => ...])->getJson(...)`
-  call alongside `actingAs()`, is **not** caught by Option 2 (no helper
-  used, `forgetGuards()` never runs) and **is** caught by the §4 tripwire
-  only if they also happen to reference the helper's name in the same
-  method (they won't, if they didn't use it) — so this specific
-  hand-rolled case is a genuine residual gap. Mitigation: code-review
-  guidance recorded alongside the helper's docblock ("always use this
-  helper for Bearer-transport tests; a raw `withHeaders(Authorization)`
-  call alongside `actingAs()` is exactly the GAP-051 hazard and is not
-  covered by automated tooling") plus the permanent canary in §5
-  (Scenario 1) keeping the underlying risk visible in the test suite so
-  it isn't forgotten. This residual gap is judged acceptable because it
-  requires actively avoiding the provided, easier-to-use helper — the
-  same category of gap Option 1's broader static scanning was meant to
-  close but at a much higher tooling-investment cost and its own
-  false-negative exposure (§2, Option 1 cons).
+- **Corrected in this revision.** The original version of this section
+  admitted that a test author who never adopts the new helper at all, and
+  instead hand-rolls a raw `withHeaders(['Authorization' => ...])->getJson(...)`
+  call alongside `actingAs()`, is caught by neither Option 2 (no helper
+  used, `forgetGuards()` never runs) nor the §4.1 tripwire (nothing to
+  pattern-match, since the helper's name never appears) — and accepted
+  this as residual without seriously evaluating a concrete automatic
+  alternative. That gap is now closed: §4.2's runtime guard-state check,
+  added as a third defense-in-depth layer, catches this exact case,
+  because it inspects actual cached guard state at request-dispatch time
+  regardless of which helper (if any) a test used to get there. This is
+  no longer treated as an accepted residual gap; the runtime check exists
+  specifically to close it.
+- The one narrower residual false negative that remains even with all
+  three layers: a *deliberate* mixed-auth test that calls
+  `app('auth')->forgetGuards()` itself (or otherwise clears guard state)
+  before sending a hand-rolled Bearer request alongside a since-cleared
+  `actingAs()` call would not trip §4.2 (no guard is authenticated at
+  dispatch time) and would not trip §4.1 (no helper name referenced). This
+  is judged acceptable: it requires actively reproducing the helper's own
+  safety mechanism (`forgetGuards()`) by hand while still not using the
+  helper, which is a vanishingly narrow and self-defeating case — a test
+  author who already knows to call `forgetGuards()` has, in effect,
+  reimplemented the fix.
 - A future contamination vector that is *not* `actingAs()` (e.g. some
   other test helper that also caches a user on a `web`-family guard)
-  would still be closed by `forgetGuards()` in the helper itself (it
-  purges *all* cached guards, not just ones set by `actingAs()`
-  specifically) — so Option 2's structural protection is broader than the
-  §4 tripwire's pattern-specific scope, which is intentional per §3.
+  would be closed by all three layers independently: `forgetGuards()` in
+  the helper itself purges *all* cached guards (not just ones set by
+  `actingAs()` specifically), and §4.2's runtime check inspects guard
+  state generically (any guard in `config('sanctum.guard')`'s fallback
+  chain, not specifically `actingAs()`-shaped state) — so both are broader
+  than the §4.1 tripwire's pattern-specific scope, which remains
+  intentional per §3.
 
 ## 8. JWT-naming debt (Constraint G)
 
@@ -409,7 +630,7 @@ acceptance criteria below.
 **RED (fails today, under the old/no-helper approach):** Write a test that
 calls `$this->actingAs($user)` then makes a raw `withHeaders(['Authorization'
 => 'Bearer <valid-token>'])->getJson('/__gap051_probe')` (or an equivalent
-real `auth:sanctum` route) and asserts, using the §4 introspection test's
+real `auth:sanctum` route) and asserts, using the §4.1 introspection test's
 underlying logic applied manually, that this pattern is undetectable today
 — i.e., today there is no helper, no tripwire, and Scenario 1 already
 proves the response is 200 regardless of whether a real token was even
@@ -418,24 +639,51 @@ proof — it demonstrates the false-green condition passes silently with
 zero automated signal in the current (pre-Gate-3) repo state.
 
 **GREEN (passes under the new approach):**
-1. `actingAsSanctumBearerToken()` helper exists and Scenario 4 (rewritten)
-   passes, proving real Bearer transport works end-to-end through the
-   helper.
+1. `actingAsSanctumBearerToken()` helper exists and Scenario 4 (rewritten,
+   now in `SanctumBearerTransportGuardContractTest`) passes, proving real
+   Bearer transport works end-to-end through the helper. **Strengthened
+   positive proof (corrected this revision):** the rewritten Scenario 4
+   must assert the authenticated context carries genuine Sanctum state —
+   e.g. `$user->currentAccessToken()` returns a
+   `Laravel\Sanctum\PersonalAccessToken` instance whose `id` matches the
+   token issued by `createToken()` in the helper, and whose `abilities`
+   match what was requested — not merely that the response's returned
+   user ID matches the token owner. Matching user IDs alone is a weaker
+   proof: it is also what the hazardous web-guard fallback would produce
+   if it silently backstopped the request (Scenario 1 shows exactly this
+   — a 200 with a resolved user despite no real token check). Asserting a
+   genuine `PersonalAccessToken` instance with the expected token id and
+   abilities proves the `sanctum` guard specifically — not any fallback
+   guard — actually resolved the request.
 2. A new test constructed as: call `$this->actingAs($user)` **then**
    `$this->actingAsSanctumBearerToken($otherUser)->getJson(...)` in the
    same method — asserting the response reflects `$otherUser` (the token
-   owner), not the `actingAs()` user, proving `forgetGuards()` actually
-   purged the leaked state. This is the direct structural proof the fix
-   works, independent of the §4 tripwire.
-3. The §4 tripwire test itself, run against a **deliberately reintroduced**
+   owner) with `$otherUser->currentAccessToken()` resolvable as a real
+   `PersonalAccessToken` matching the issued token id, not the
+   `actingAs()` user, proving `forgetGuards()` actually purged the leaked
+   state. This is the direct structural proof the fix works, independent
+   of the §4.1 tripwire.
+3. The §4.1 tripwire test itself, run against a **deliberately reintroduced**
    copy of the vulnerable pattern (a temporary fixture file, deleted after
    the assertion, or an inline string fixture rather than a committed
    file) fails loudly, proving the tripwire fires on the exact
    Gate-1-confirmed anti-pattern.
-4. The §6 topology-tripwire test passes against the current `api` group
+4. The §4.2 runtime guard-state check, exercised by a test that calls
+   `$this->actingAs($user)` then issues a raw
+   `$this->withHeaders(['Authorization' => 'Bearer ' . $rawToken])->getJson(...)`
+   with **no** helper involved, is shown to throw the GAP-051
+   contamination exception — proving it catches the exact hand-rolled
+   case the original design left uncovered. A companion test confirms it
+   stays silent for the same request issued via
+   `actingAsSanctumBearerToken()` (no false positive on the helper path).
+5. The §6 absence-assertion test passes against the current `api` group
    composition and is shown (by temporarily mutating the array value in
    the test, not the Kernel) to fail if `StartSession`/`EncryptCookies` is
-   added — proving it isn't a no-op assertion.
+   added — proving it isn't a no-op assertion. The §6 behavioral contract
+   test independently passes today (a `web`-guard-authenticated user with
+   no Bearer token gets `401` from a representative `auth:sanctum` route
+   under the real `api` middleware stack), proving the actual risk is
+   closed under the current topology, not just the array literal.
 
 ## 10. Gate-3 acceptance criteria
 
@@ -443,57 +691,90 @@ zero automated signal in the current (pre-Gate-3) repo state.
    under `tests/`, with `actingAsSanctumBearerToken()` implemented exactly
    as sketched in §2 Option 2 (or a reviewed equivalent using
    `forgetGuards()` for the structural purge) — no production code touched.
-2. `tests/Feature/Gap051SanctumWebGuardLeakEvidenceTest.php` renamed and
-   updated per §5 (permanent regression test, Scenario 1 kept as
-   documented canary, Scenario 4 rewritten to use the new helper, no
-   scenario deleted).
-3. §4 tripwire test added, proven to fire against the Gate-1-confirmed
+2. Evidence-harness split per §5: `tests/Feature/Gap051SanctumWebGuardLeakEvidenceTest.php`
+   replaced by two files — a characterization/canary test containing only
+   Scenario 1 (docblock explicit it is a permanent, intentional
+   framework-behavior canary, not a regression contract), and a
+   regression-contract test containing Scenarios 2/3/4(rewritten)/5 plus
+   the new tests from items 3-4 below. No scenario deleted.
+3. §4.1 tripwire test added, proven to fire against the Gate-1-confirmed
    anti-pattern (via a disposable fixture per §9.3) and to stay silent
    against the current committed test suite.
-4. §6 topology-tripwire test added, asserting the exact current `api`
-   middleware group composition, with a failure message citing GAP-051 and
-   directing reassessment rather than a silent assertion update.
-5. All new/modified tests pass on real MySQL parity per this repo's
+4. §4.2 runtime guard-state check added to `Tests\TestCase`'s
+   request-dispatch path (or equivalent, reviewed override point),
+   proven per §9.4 to throw on the raw hand-rolled anti-pattern with no
+   helper involved, and proven to stay silent for the helper-based path
+   and for the rest of the current committed test suite (no false
+   positives introduced against existing tests).
+5. §6 safeguard added per the corrected design: (a) an absence assertion
+   that no session/stateful-authentication middleware is present in the
+   `api` middleware group, with a failure message citing GAP-051 and
+   directing reassessment rather than a silent assertion update; and (b) a
+   behavioral contract test proving a `web`-guard-authenticated user with
+   no Bearer token receives `401` from a representative `auth:sanctum`
+   route under the real `api` middleware stack.
+6. Rewritten Scenario 4 (and the new forgetGuards()-purge proof, §9.2)
+   assert genuine Sanctum state — `currentAccessToken()` resolves to a
+   `Laravel\Sanctum\PersonalAccessToken` matching the issued token's id
+   and abilities — not merely a matching response user ID.
+7. All new/modified tests pass on real MySQL parity per this repo's
    standard CI invocation; no existing test file's behavior changes except
-   the evidence-harness rewrite in item 2.
-6. No changes anywhere under `config/`, `app/Http/Kernel.php`,
+   the evidence-harness split in item 2.
+8. No changes anywhere under `config/`, `app/Http/Kernel.php`,
    `app/Http/Middleware/`, `app/Providers/RouteServiceProvider.php`, or any
    Sanctum/guard/auth registration.
-7. JWT-naming debt (§8) is not touched; optionally, a one-line
+9. JWT-naming debt (§8) is not touched; optionally, a one-line
    `OPERATIONAL_GAP_REGISTER.md`-style note recommending a future Work ID
    is acceptable but not required for Gate-3 closure.
-8. PR body/commit messages cite this Gate-2 packet and record that Gate 3
-   is test-fidelity-only, no production auth semantics changed (mirroring
-   §11 below).
+10. PR body/commit messages cite this Gate-2 packet and record that Gate 3
+    is test-fidelity-only, no production auth semantics changed (mirroring
+    §11 below).
 
 ## 11. Production-semantics non-impact statement
 
 This design makes **no** change to: `config/sanctum.php`,
 `config/auth.php`, `app/Http/Kernel.php`'s middleware groups or aliases,
 any controller, any route definition, `app/Providers/RouteServiceProvider.php`,
-or any Sanctum/Illuminate guard/auth class. Every artifact proposed
-(the transport-testing trait, the renamed evidence test, both tripwire
-tests) lives entirely under `tests/`. Real production requests continue to
-authenticate exactly as they do today; the `forgetGuards()` call used in
-the proposed helper is invoked only from test code, inside PHPUnit's
-in-process container, and has no effect on any real HTTP request cycle
-(each real request already gets a fresh application/container instance in
-production — `forgetGuards()` is meaningful specifically because PHPUnit
-reuses one container across assertions within a test method, which
-production never does).
+or any Sanctum/Illuminate guard/auth class. Every artifact proposed (the
+transport-testing trait, the split evidence-harness files, the §4.1
+static tripwire, the §4.2 runtime guard-state check added to
+`Tests\TestCase`, and the §6 topology safeguard) lives entirely under
+`tests/`. Real production requests continue to authenticate exactly as
+they do today; the `forgetGuards()` call used in the proposed helper and
+the `Auth::guard(...)->check()` call used in the §4.2 runtime check are
+invoked only from test code, inside PHPUnit's in-process container, and
+have no effect on any real HTTP request cycle (each real request already
+gets a fresh application/container instance in production —
+`forgetGuards()` is meaningful specifically because PHPUnit reuses one
+container across assertions within a test method, which production never
+does; the §4.2 check similarly only ever runs inside
+`Tests\TestCase::call()`, which no production request path invokes).
 
 ## 12. Scope/files likely affected in Gate-3 implementation
 
 - New: `tests/Support/AssertsSanctumBearerTransport.php` (or similar path
   matching this repo's existing `tests/` trait conventions) — the helper
   trait.
-- Modified/renamed:
-  `tests/Feature/Gap051SanctumWebGuardLeakEvidenceTest.php` →
-  `tests/Feature/SanctumBearerTransportGuardContractTest.php` (exact name
-  to be finalized in Gate 3).
-- New: a §4 tripwire test, e.g.
+- Removed/split (per §5's corrected lifecycle decision):
+  `tests/Feature/Gap051SanctumWebGuardLeakEvidenceTest.php` replaced by:
+  - New: `tests/Feature/SanctumWebGuardCharacterizationTest.php` —
+    Scenario 1 only, docblock explicit this is a permanent, intentional
+    framework-behavior canary, not a regression contract.
+  - New: `tests/Feature/SanctumBearerTransportGuardContractTest.php` —
+    Scenarios 2, 3, 4 (rewritten to use the helper and assert genuine
+    `PersonalAccessToken` state per §9/§10 item 6), 5, plus the
+    `forgetGuards()`-purge structural proof from §9.2.
+  (Exact file names to be finalized in Gate 3.)
+- New: a §4.1 tripwire test, e.g.
   `tests/Feature/SanctumBearerTransportAntiPatternTest.php`.
-- New: a §6 topology tripwire test, e.g. added to or alongside
-  `tests/Feature/Zena/ZenaRouteSurfaceInvariantTest.php` or as its own
-  `tests/Feature/ApiMiddlewareGroupTopologyInvariantTest.php`.
+- Modified: `tests/TestCase.php` — add the §4.2 runtime guard-state check
+  to the existing `call()` override (alongside the existing CSRF-injection
+  logic), plus a dedicated test proving it fires on the raw hand-rolled
+  anti-pattern and stays silent on the helper path and the rest of the
+  current suite (e.g. `tests/Feature/SanctumBearerRuntimeGuardCheckTest.php`).
+- New: §6 safeguard tests, e.g. added to or alongside
+  `tests/Feature/Zena/ZenaRouteSurfaceInvariantTest.php` or as their own
+  `tests/Feature/ApiMiddlewareGroupTopologyInvariantTest.php` (absence
+  assertion) and `tests/Feature/ApiSanctumWebGuardNoLeakContractTest.php`
+  (behavioral 401 contract test), exact names to be finalized in Gate 3.
 - No other files. No production code, config, or route files.

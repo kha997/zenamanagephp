@@ -1,11 +1,11 @@
 ---
 work_id: GAP-051
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_changes_or_decline"
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-09-09-gap-051-gate2-sanctum-bearer-fidelity-contract-design.md
   plan: null
@@ -15,14 +15,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-09-09T04:14:00Z"
-  owner_response_reference: null
+  recorded_at: "2026-09-09T11:22:41Z"
+  owner_response_reference: "GAP-051 Gate 2 APPROVED — reviewed exact PR #307 head 551479a51aa0b6fdd575cd1a9706db00d04a3be3, canonical main at review time e2013751f41a3bb367168705e773f01bb434a641. Owner Governance Lint and Routes Guardrails both passed on this exact head in the prior review round. Owner's binding interpretation for the (not-yet-started) future Gate 3, recorded verbatim: final architecture is exactly TWO layers: (A) real-Bearer helper using createToken() + AuthManager::forgetGuards(); (B) universal pre-dispatch runtime contamination guard in Tests\\TestCase::call(). Runtime guard set = unique(config('sanctum.guard', []) + ['sanctum']). Detect pre-existing state with public hasUser(), NOT check(). Must cover both: plain actingAs() + raw Bearer request; Sanctum::actingAs() + raw Bearer request. Clean helper path must prove a genuine PersonalAccessToken/currentAccessToken() context. Static source-text tripwire is evaluated/rejected history only — NOT a Gate-3 implementation requirement. Behavioral 401 production-topology contract is authoritative; the static middleware-absence check is defense-in-depth only. No production auth/config/guard/middleware semantic changes. JWT-naming debt remains excluded from Gate-3 scope. Gate 3 implementation has NOT begun in this session and remains future work, to start in a NEW session after this approval-record merge."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-09T04:14:00Z"
-  updated_at: "2026-09-09T08:25:35Z"
+  updated_at: "2026-09-09T11:22:41Z"
 generated_by: agent
 ---
 
@@ -265,3 +265,41 @@ lại sau khi Gate 2 được duyệt.
 Không có thay đổi code nào được thực hiện ở Gate 2 này ngoài tài liệu
 thiết kế. Không có thay đổi hành vi tenant/RBAC/product/auth nào. Không mở
 PR triển khai. Dừng tại Gate 2 chờ Owner xem xét.
+
+## Owner Gate 2 Approval (permanent record, never erased)
+
+**Owner Gate 2 decision: APPROVED.** This approval is bound to the exact
+PR #307 head `551479a51aa0b6fdd575cd1a9706db00d04a3be3` and canonical
+`main` at review time `e2013751f41a3bb367168705e773f01bb434a641`. Owner
+Governance Lint and Routes Guardrails both passed on this exact head in
+the prior review round.
+
+All prior content above (original design, first correction, and the
+final/second correction) is preserved verbatim and unmodified by this
+approval record. Nothing above is rewritten or deleted.
+
+The Owner's binding interpretation for the future Gate 3 — recorded here
+verbatim, per the Owner's explicit direction — is:
+
+- Final architecture is exactly TWO layers: (A) real-Bearer helper using
+  `createToken()` + `AuthManager::forgetGuards()`; (B) universal
+  pre-dispatch runtime contamination guard in `Tests\TestCase::call()`.
+- Runtime guard set = `unique(config('sanctum.guard', []) + ['sanctum'])`.
+- Detect pre-existing state with public `hasUser()`, NOT `check()`.
+- Must cover both: plain `actingAs()` + raw Bearer request;
+  `Sanctum::actingAs()` + raw Bearer request.
+- Clean helper path must prove a genuine `PersonalAccessToken`/
+  `currentAccessToken()` context.
+- Static source-text tripwire is evaluated/rejected history only — NOT a
+  Gate-3 implementation requirement.
+- Behavioral 401 production-topology contract is authoritative; the
+  static middleware-absence check is defense-in-depth only.
+- No production auth/config/guard/middleware semantic changes.
+- JWT-naming debt remains excluded from Gate-3 scope.
+
+**Gate 3 implementation has NOT begun in this session and remains future
+work.** This approval authorizes Gate 3 to start, but Gate 3 execution
+(new trait, new test files, app code) must occur in a separate,
+subsequent session — this session's scope ends at recording this
+approval and verifying the resulting merge. JWT-naming debt remains
+excluded from Gate-3 scope, confirmed again here.

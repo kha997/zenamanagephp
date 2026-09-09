@@ -12,7 +12,7 @@ use Tests\TestCase;
  * GAP-051 Gate 1 — disposable evidence harness (NOT a regression test, NOT
  * remediation). Proves, with real execution against this repo's actual
  * config/auth.php + config/sanctum.php + app/Http/Kernel.php, exactly which
- * guard authenticates a request to an `auth:sanctum` route under three
+ * guard authenticates a request to an `auth:sanctum` route under five
  * scenarios. See docs/audits/2026-09-09-gap-051-sanctum-bearer-token-test-fidelity-evidence.md
  * for the full write-up. This file registers its own ad-hoc probe route so
  * it does not depend on (or risk mutating) any production route/controller.

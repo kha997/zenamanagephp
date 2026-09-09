@@ -3,9 +3,9 @@ work_id: GAP-051
 gate: 1
 gate_status: awaiting_owner
 owner_decision:
-  value: null
-  authority: null
-decision_requested: gate1_approval
+  value: none
+  authority: human_owner
+decision_requested: approve_or_changes_or_decline
 references:
   spec: docs/audits/2026-09-09-gap-051-sanctum-bearer-token-test-fidelity-evidence.md
   plan: null
@@ -13,7 +13,7 @@ references:
   pr: "https://github.com/kha997/zenamanagephp/pull/306"
   release: null
 decision_provenance:
-  trust_level: unclaimed
+  trust_level: claimed_repo_record
   recorded_by: agent
   recorded_at: "2026-09-09T00:00:00Z"
   owner_response_reference: null
@@ -28,7 +28,7 @@ generated_by: agent
 
 ## Owner Summary
 
-A prior, unrelated Work ID (GAP-050, MySQL transaction isolation / process isolation — already closed and released) surfaced a lead, not a fact: some tests that claim to exercise Bearer-token/Sanctum authentication might actually be authenticating through a leftover `web` session guard rather than the presented token. This Gate-1 audit independently investigated that lead from a fresh canonical `main` checkout (`9585eed9b701cd37a7188789d1754206545ad274`). **Finding: the mechanism is real and was reproduced with a real, executed test** — Laravel Sanctum's own shipped default config (`config/sanctum.php:36`, `'guard' => ['web']`, unmodified by this repo) makes `Laravel\Sanctum\Guard::__invoke()` check the `web` session guard before ever reading a Bearer token. In a PHPUnit test, calling `$this->actingAs($user)` (Laravel's own web-guard test helper) caches a user on that guard for the rest of the test method, so a `auth:sanctum` route hit afterward authenticates via that leftover web-guard state even with **zero** Authorization header. This was proven executable with a disposable evidence test (5/5 passing, output captured in the audit doc). **However, tracing every one of this repo's actual Bearer/Sanctum-claiming test files (117 files using plain `actingAs`, 12 using `Sanctum::actingAs()`, 51+ using real `createToken()`-issued Bearer headers) found zero currently-committed tests that are actually exploiting this — the hazard is a live landmine in the test harness, not a currently-active false-green.** Separately, this audit confirms the hazard has **no production exposure**: `/api/*` routes carry no session middleware in this repo (`app/Providers/RouteServiceProvider.php:34-36`, `app/Http/Kernel.php:40-45`), so the web-guard fallback is inert against any real external request.
+A prior, unrelated Work ID (GAP-050, MySQL transaction isolation / process isolation — already closed and released) surfaced a lead, not a fact: some tests that claim to exercise Bearer-token/Sanctum authentication might actually be authenticating through a leftover `web` session guard rather than the presented token. This Gate-1 audit independently investigated that lead from a fresh canonical `main` checkout (`9585eed9b701cd37a7188789d1754206545ad274`). **Finding: the mechanism is real and was reproduced with a real, executed test** — Laravel Sanctum's own shipped default config (`config/sanctum.php:36`, `'guard' => ['web']`, unmodified by this repo) makes `Laravel\Sanctum\Guard::__invoke()` check the `web` session guard before ever reading a Bearer token. In a PHPUnit test, calling `$this->actingAs($user)` (Laravel's own web-guard test helper) caches a user on that guard for the rest of the test method, so a `auth:sanctum` route hit afterward authenticates via that leftover web-guard state even with **zero** Authorization header. This was proven executable with a disposable evidence test (5/5 passing, output captured in the audit doc). **However, tracing every one of this repo's actual Bearer/Sanctum-claiming test files (117 files using plain `actingAs`, 12 using `Sanctum::actingAs()`, 51+ using real `createToken()`-issued Bearer headers) found zero currently-committed tests that are actually exploiting this — the hazard is a live landmine in the test harness, not a currently-active false-green.** Separately, this audit confirms **no production exposure found under the current API middleware topology**: `/api/*` routes carry no session middleware in this repo (`app/Providers/RouteServiceProvider.php:34-36`, `app/Http/Kernel.php:40-45`), so the web-guard fallback is inert against any real external request today. This is bound to the current topology, not an eternal guarantee — adding session/stateful middleware to these routes in the future would require reassessing this finding (see audit §3).
 
 ## Vấn đề vận hành
 
@@ -38,7 +38,7 @@ Nếu không có bất kỳ cơ chế phòng ngừa hồi quy nào, một ngư�
 
 - Bất kỳ agent/dev nào tương lai viết test mới cho endpoint `auth:sanctum` và tình cờ tái sử dụng một fixture/setUp có gọi `actingAs()` — test sẽ pass sai mà không ai biết.
 - Owner/đội vận hành: có thể tin nhầm rằng suite test Bearer/Sanctum đang chứng minh token thật sự được kiểm tra, trong khi cơ chế nền tảng (Sanctum + PHPUnit container) có một lối tắt hợp lệ-nhưng-nguy-hiểm nếu bị lạm dụng.
-- KHÔNG ảnh hưởng người dùng cuối/production — xem §3/§6 tài liệu audit: không có đường khai thác thật trên request production.
+- Không có đường khai thác thật trên request production tìm thấy dưới cấu trúc middleware API hiện tại — xem §3/§6 tài liệu audit. Đây không phải là bảo đảm vĩnh viễn: nếu sau này thêm session/stateful middleware vào các route `/api/*`, phát hiện này cần được đánh giá lại.
 
 ## Bằng chứng
 

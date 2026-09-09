@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-09T04:14:00Z"
-  updated_at: "2026-09-09T04:28:06Z"
+  updated_at: "2026-09-09T08:25:35Z"
 generated_by: agent
 ---
 
@@ -38,44 +38,45 @@ claiming real Bearer-token/Sanctum transport actually passing via
 Owner's binding constraints A-G recorded in `01-request.md`'s
 `decision_provenance.owner_response_reference`.
 
-**Recommended architecture (corrected this revision — three layers, not
-two):** a dedicated real-Bearer transport testing contract
+**Recommended architecture (corrected this revision — finalized at
+exactly two layers):** a dedicated real-Bearer transport testing contract
 (`actingAsSanctumBearerToken()` helper trait) as the primary, structural
 mechanism — it purges cached guard state via Laravel's own public
 `AuthManager::forgetGuards()` immediately before issuing a request with a
 real Sanctum token, making it structurally impossible for a prior
-`actingAs()` call in the same test method to leak into that request —
-combined with a narrow, existing-pattern-consistent PHPUnit static
-tripwire test (in the same family as this repo's existing
-`RouteMiddlewareSecurityContractTest`/`ZenaRouteSurfaceInvariantTest`) that
-catches the specific anti-pattern of hand-rolling the vulnerable pattern
-*while also referencing* the new helper's name. The first version of this
-packet stopped there and merely acknowledged, without seriously
-evaluating a fix, that a test author who ignores the helper entirely
-(raw `withHeaders(Authorization)` alongside `actingAs()`, no reference to
-the helper anywhere) is invisible to both layers. This correction adds a
-**third layer**: a runtime guard-state check added to `Tests\TestCase`'s
-existing request-dispatch override (it already overrides `call()` for
-CSRF-token injection, so this extends an established pattern rather than
-introducing a new one) that fails loudly, at the moment any request
-carrying a Bearer header is dispatched, if the `web` guard (or any other
-non-`sanctum` guard in Sanctum's configured fallback chain) is already
-authenticated from cached test state — this closes the exact
-hand-rolled-hazard gap the original design left open, using only the
-core, stable `Auth::guard()->check()` API. A custom PHPStan/AST rule
-(Option 1 alone) and this same runtime-check idea considered as the
-*sole* replacement mechanism (rather than a third layer) were both
-seriously evaluated: the PHPStan rule was rejected as the primary
-mechanism for being purely heuristic with real false-negative exposure
-and zero existing precedent in this repo's PHPStan setup; the runtime
-check was judged strong enough on its own to close the specific
-false-negative it targets, but is added as a third layer rather than a
-replacement, since the helper's structural prevention and the static
-tripwire's early, source-visible signal remain independently valuable. A
-documentation-only baseline (Option 4) was evaluated and rejected for
-providing no regression signal — exactly the condition that let this
-hazard go undetected until an unrelated investigation (GAP-050) stumbled
-on it.
+`actingAs()`/`Sanctum::actingAs()` call in the same test method to leak
+into that request — combined with a universal, test-only runtime guard
+registered in `Tests\TestCase`'s existing request-dispatch override (it
+already overrides `call()` for CSRF-token injection, so this extends an
+established pattern rather than introducing a new one) that fails
+loudly, at the moment any request carrying a Bearer `Authorization`
+header is dispatched, if **any** guard in
+`unique(config('sanctum.guard', []) + ['sanctum'])` already has a cached
+user, checked via each guard's public `hasUser()` (not `check()`, which
+can itself trigger new guard resolution as a side effect — the check
+must observe pre-existing state without causing any).
+
+A prior version of this correction also proposed a third mechanism — a
+narrow PHPUnit static-source-text tripwire scanning for the specific
+two-call anti-pattern (helper name co-occurring with `->actingAs(` in one
+method) — as an additional secondary layer. **This final correction
+removes that tripwire from Gate-3's required scope.** Once the helper
+(Layer A) and a correctly-scoped runtime guard (Layer B, fixed by this
+correction to check every guard actually configured for Sanctum plus
+`sanctum` itself, not a hard-coded `web`-only list that excluded
+`sanctum`) are in place, the source-text scan adds no unique safety
+property — the runtime check already structurally catches both
+contamination vectors (plain `actingAs()` on `web`, and
+`Sanctum::actingAs()` on `sanctum` itself, which this correction newly
+identified as a second hazard vector the earlier `web`-only check would
+have missed) at the moment of actual request dispatch, regardless of
+source-code shape. The static-tripwire approach (and Option 1, the
+custom-PHPStan-rule idea it built on) remain documented in the spec as
+evaluated and rejected — kept for history, not implemented, not part of
+Gate-3 acceptance criteria. A documentation-only baseline (Option 4) was
+separately evaluated and rejected for providing no regression signal —
+exactly the condition that let this hazard go undetected until an
+unrelated investigation (GAP-050) stumbled on it.
 
 **Evidence-harness lifecycle decision (corrected this revision):**
 `tests/Feature/Gap051SanctumWebGuardLeakEvidenceTest.php`'s five scenarios
@@ -97,20 +98,32 @@ Sanctum state (`currentAccessToken()` resolves to a real
 merely a matching response user ID, since a matching user ID alone is
 also what the hazardous web-guard fallback would produce.
 
-**Future-topology safeguard (softened this revision):** the original
-design asserted the exact full `App\Http\Kernel::$middlewareGroups['api']`
-array composition, which would fail loudly for any unrelated, harmless
-addition to that group. This is replaced with a risk-focused invariant:
-an absence assertion (no session/stateful-authentication middleware —
-`StartSession`, `EncryptCookies`, or similar — may be present in the
-`api` group), which only fires on the condition that actually reopens
-GAP-051's production-exposure question, plus a new behavioral contract
-test proving directly that a `web`-guard-authenticated user with no
-Bearer token still receives `401` from a representative `auth:sanctum`
-route under the real, current `api` middleware stack. Together these
-still turn the Gate-1 packet's "bound to current topology, not eternal"
-caveat into an enforced tripwire, without pinning an implementation
-detail unrelated future changes could trip for no reason.
+**Future-topology safeguard (softened previously, target class list
+corrected this revision):** the original design asserted the exact full
+`App\Http\Kernel::$middlewareGroups['api']` array composition, which
+would fail loudly for any unrelated, harmless addition to that group.
+This is replaced with a risk-focused invariant: an absence assertion
+that no middleware which actually *enables* session/stateful
+authentication — specifically `Illuminate\Session\Middleware\StartSession`
+and Sanctum's own `EnsureFrontendRequestsAreStateful`, or a documented
+equivalent that materially establishes session-auth state — is present
+in the `api` group. **This correction removes `EncryptCookies` as a
+target**: an earlier draft named it as (part of) what the absence
+assertion checks for, but `EncryptCookies` only decrypts/encrypts
+whatever cookies happen to be present — it does not itself start a
+session or make `Auth::guard('web')` resolvable, so it is a
+weakly-correlated proxy for the actual risk (the same over-brittle-proxy
+problem the original exact-array-pin design had). The static absence
+assertion fires only on the condition that actually reopens GAP-051's
+production-exposure question; the **authoritative** protection remains
+the behavioral contract test, kept as-is, proving directly that a
+`web`-guard-authenticated user with no Bearer token still receives `401`
+from a representative `auth:sanctum` route under the real, current `api`
+middleware stack. Together these still turn the Gate-1 packet's "bound to
+current topology, not eternal" caveat into an enforced tripwire, without
+pinning an implementation detail unrelated future changes could trip for
+no reason, and without relying on a weak proxy class for the static
+signal.
 
 **JWT-naming debt:** excluded from this Gate-2's scope per Constraint G;
 recorded as separately-trackable debt, not carried into Gate-3 acceptance
@@ -144,12 +157,26 @@ Xem đầy đủ trong tài liệu spec đã dẫn. Tóm tắt cốt lõi:
    (`AuthManager::forgetGuards()`, xác nhận tồn tại trong
    `laravel/framework: v12.63.0` đang dùng ở repo này).
 3. Phân tích false-positive/false-negative trung thực (§7 tài liệu spec,
-   sửa lại ở bản này): bản gốc thừa nhận một lỗ hổng còn sót (ai đó viết
-   tay pattern nguy hiểm mà không dùng helper mới sẽ không bị bắt tự
-   động) nhưng chưa đánh giá nghiêm túc một giải pháp tự động cụ thể. Bản
-   sửa này bổ sung lớp thứ ba (§4.2): một kiểm tra runtime trong
-   `Tests\TestCase` (mở rộng điểm ghi đè `call()` đã có sẵn cho CSRF) bắt
-   đúng trường hợp viết tay đó, dùng API ổn định `Auth::guard()->check()`.
+   sửa lại ở bản này): kiến trúc cuối cùng chỉ còn **đúng 2 lớp** — helper
+   (§2) + một kiểm tra runtime phổ quát trong `Tests\TestCase` (§4, mở
+   rộng điểm ghi đè `call()` đã có sẵn cho CSRF). Bản sửa lần này (final
+   correction) sửa 2 lỗi trong chính kiểm tra runtime đó: (a) danh sách
+   guard cần kiểm tra không còn hard-code `web` mà lấy động từ
+   `unique(config('sanctum.guard', []) + ['sanctum'])` — vì
+   `Sanctum::actingAs()` set user thẳng lên guard `sanctum`, một bản nháp
+   trước loại trừ `sanctum` khỏi danh sách nên bỏ sót đúng vector này; (b)
+   dùng API `hasUser()` công khai thay vì `check()`, vì `check()` gọi nội
+   bộ `user()` có thể tự kích hoạt resolution — kiểm tra GAP-051 cần quan
+   sát state đã tồn tại từ trước mà không tự gây ra resolution mới. Lớp
+   tripwire tĩnh (quét văn bản nguồn) mà bản sửa trước đề xuất làm lớp
+   thứ ba **bị loại khỏi phạm vi Gate 3 bắt buộc** ở bản sửa này: một khi
+   helper + kiểm tra runtime (đã sửa đúng cả 2 vector) đã có, tripwire
+   tĩnh không thêm giá trị an toàn nào — kiểm tra runtime đã bắt cả 2
+   hazard pattern ngay tại thời điểm dispatch request thật, bất kể hình
+   dạng mã nguồn — trong khi vẫn mang rủi ro false-positive/chi phí bảo
+   trì của một cơ chế heuristic thuần tuý. Phân tích AST/tripwire tĩnh vẫn
+   được giữ lại trong tài liệu spec (§4.1) như lịch sử đã đánh giá và bị
+   từ chối, không triển khai.
 4. Quyết định vòng đời evidence-harness rõ ràng, không mơ hồ (§5, sửa lại
    ở bản này): tách thành 2 file thay vì gộp chung một "regression test"
    — Scenario 1 trở thành file canary đặc trưng hành vi framework (phải
@@ -159,21 +186,31 @@ Xem đầy đủ trong tài liệu spec đã dẫn. Tóm tắt cốt lõi:
 5. Rào chắn topology tương lai cụ thể, có thể chạy được (§6, sửa lại ở
    bản này): thay vì pin đúng mảng `api` middleware group hiện tại (dễ vỡ
    với thay đổi không liên quan), chuyển sang assert sự VẮNG MẶT của
-   session/stateful middleware, cộng thêm một test hành vi thật (401 cho
-   user web-guard không có Bearer token, qua đúng stack `api` middleware
-   hiện tại).
+   middleware thực sự kích hoạt session/stateful auth — cụ thể
+   `Illuminate\Session\Middleware\StartSession` và
+   `EnsureFrontendRequestsAreStateful` của Sanctum (không còn dùng
+   `EncryptCookies` làm mục tiêu kiểm tra như bản nháp trước — Owner chỉ
+   ra `EncryptCookies` là proxy yếu, không tự nó bật session auth), cộng
+   thêm một test hành vi thật (401 cho user web-guard không có Bearer
+   token, qua đúng stack `api` middleware hiện tại) — test hành vi này là
+   bằng chứng có thẩm quyền (authoritative), test assert vắng mặt chỉ là
+   lớp cảnh báo sớm bổ sung.
 6. Nợ đặt tên "JWT" bị loại khỏi phạm vi có chủ đích, ghi nhận riêng (§8) —
    không đổi ở bản sửa này.
 
 ## Đề xuất Gate 3 (chưa được uỷ quyền triển khai)
 
 Triển khai đúng theo các hạng mục Gate-3 scope/files ở §12 tài liệu spec
-(bản sửa): helper trait mới; tách evidence-harness thành file canary
-(Scenario 1) + file regression-contract (Scenario 2/3/4-viết-lại/5); test
-runtime guard-state check thêm vào `Tests\TestCase::call()`; tripwire test
-cho anti-pattern cụ thể (§4.1); rào chắn topology gồm assert vắng mặt
-session middleware + test hành vi 401 (§6). Không đụng bất kỳ file
-`config/`, `app/Http/Kernel.php`, `app/Http/Middleware/`,
+(bản sửa cuối): helper trait mới; tách evidence-harness thành file canary
+(Scenario 1) + file regression-contract (Scenario 2/3/4-viết-lại/5); kiểm
+tra runtime guard-state (§4) thêm vào `Tests\TestCase::call()` — danh
+sách guard lấy động từ `unique(config('sanctum.guard', []) + ['sanctum'])`,
+dùng `hasUser()`, chứng minh bắt được cả 2 vector (`actingAs()` và
+`Sanctum::actingAs()`); rào chắn topology gồm assert vắng mặt
+`StartSession`/`EnsureFrontendRequestsAreStateful` + test hành vi 401
+(§6). **Không** bao gồm tripwire tĩnh quét văn bản nguồn (§4.1 — đã đánh
+giá và bị từ chối, không nằm trong phạm vi Gate 3 bắt buộc). Không đụng
+bất kỳ file `config/`, `app/Http/Kernel.php`, `app/Http/Middleware/`,
 `app/Providers/RouteServiceProvider.php`, hay bất kỳ class guard/auth nào.
 
 ## Loại trừ rõ ràng
@@ -186,20 +223,44 @@ session middleware + test hành vi 401 (§6). Không đụng bất kỳ file
 - Không viết code triển khai thật ở Gate này — chỉ snippet minh hoạ cho
   mục đích thiết kế.
 
+## Ghi chú quản trị: OPERATIONAL_GAP_REGISTER.md tạm thời chưa cập nhật
+
+`OPERATIONAL_GAP_REGISTER.md` canonical **cố ý** giữ nguyên trạng thái cũ
+(hiển thị Gate 1 với từ ngữ cũ hơn) trên nhánh này — đây là điều kiện đã
+biết trước, không phải sai sót. Lý do: `OPERATIONAL_GAP_REGISTER.md` nằm
+ngoài allowlist của OWN-2026-005 (`owner_governance_lint.php`'s
+design-only exemption chỉ cho phép `docs/owner-decisions/**`,
+`docs/superpowers/specs/**`, `docs/superpowers/plans/**`); nếu PR này bao
+gồm cả thay đổi file đó, bộ thay đổi không còn "design-only" thuần tuý và
+`--enforce-gate-ordering` sẽ fail dù thiết kế đúng là chưa được duyệt.
+File register sẽ được đồng bộ lại (cập nhật đúng trạng thái Gate 1
+merged / Gate 2) trong một commit riêng, SAU KHI Gate 2 này được Owner
+duyệt và merge — lúc đó PR mang thay đổi register không còn cần đến
+design-only exemption nữa. Không có thay đổi công cụ/lint nào
+(`owner_governance_lint.php`'s allowlist) nằm trong phạm vi GAP-051 —
+đó là nợ kỹ thuật riêng, cần Work ID quản trị riêng, không gộp vào đây.
+
 ## Quyết định Gate 2 cần Owner
 
 `decision_requested: approve_or_changes_or_decline` — đề nghị Owner xác
-nhận: (a) kiến trúc 3 lớp được chọn (helper contract + tripwire tĩnh hẹp
-+ runtime guard-state check mới trong `Tests\TestCase`, không phải PHPStan
-rule mới) có đáp ứng đúng 7 ràng buộc A-G Owner đã đặt ra, và cụ thể là
-đồng ý với việc thêm lớp runtime thứ ba làm defense-in-depth (không thay
-thế 2 lớp kia); (b) quyết định vòng đời evidence-harness đã sửa (tách
-thành file canary + file regression-contract, không xoá scenario nào) có
-được chấp nhận; (c) rào chắn topology tương lai đã làm mềm ở §6 (assert
-vắng mặt session middleware + test hành vi 401, thay vì pin nguyên mảng
-`api` middleware group) có đủ cụ thể để coi là "concrete tripwire" theo
-yêu cầu Constraint F; (d) có đồng ý loại trừ nợ JWT-naming khỏi phạm vi
-Gate 3 này.
+nhận: (a) kiến trúc cuối cùng đúng 2 lớp (helper contract + kiểm tra
+runtime guard-state phổ quát trong `Tests\TestCase`, không phải PHPStan
+rule mới, không còn tripwire tĩnh) có đáp ứng đúng 7 ràng buộc A-G Owner
+đã đặt ra, và cụ thể là đồng ý loại tripwire tĩnh khỏi phạm vi Gate 3 bắt
+buộc (chỉ giữ làm lịch sử đã đánh giá/từ chối trong spec §4.1), đồng thời
+đồng ý kiểm tra runtime đã sửa để bắt cả 2 vector nhiễm guard
+(`actingAs()` trên `web` và `Sanctum::actingAs()` trên `sanctum`) dùng
+`hasUser()`; (b) quyết định vòng đời evidence-harness đã sửa (tách thành
+file canary + file regression-contract, không xoá scenario nào) có được
+chấp nhận; (c) rào chắn topology tương lai ở §6 (assert vắng mặt
+`StartSession`/`EnsureFrontendRequestsAreStateful` — không còn
+`EncryptCookies` — + test hành vi 401 làm bằng chứng có thẩm quyền, thay
+vì pin nguyên mảng `api` middleware group) có đủ cụ thể để coi là
+"concrete tripwire" theo yêu cầu Constraint F; (d) có đồng ý loại trừ nợ
+JWT-naming khỏi phạm vi Gate 3 này; (e) có chấp nhận điều kiện tạm thời
+`OPERATIONAL_GAP_REGISTER.md` chưa đồng bộ (ghi chú ở mục trên) như một
+hệ quả có chủ đích của quy tắc gate-ordering hiện tại, sẽ được đồng bộ
+lại sau khi Gate 2 được duyệt.
 
 Không có thay đổi code nào được thực hiện ở Gate 2 này ngoài tài liệu
 thiết kế. Không có thay đổi hành vi tenant/RBAC/product/auth nào. Không mở

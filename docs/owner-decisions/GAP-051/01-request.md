@@ -1,11 +1,11 @@
 ---
 work_id: GAP-051
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-09-09-gap-051-sanctum-bearer-token-test-fidelity-evidence.md
   plan: null
@@ -15,15 +15,45 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-09-09T00:00:00Z"
-  owner_response_reference: null
+  recorded_at: "2026-09-09T04:03:00Z"
+  owner_response_reference: "GAP-051 Gate 1 Owner Decision (relayed via coordinator session, bound to exact PR head 8b5174821df7ccdc53a202f54a4e80c1aa0ba6a5 of PR #306): 'GAP-051 GATE 1 — OWNER APPROVED. Approval is bound to Gate-1 head: 8b5174821df7ccdc53a202f54a4e80c1aa0ba6a5.' Owner directed proceeding through merge and into a Gate-2 design (not implementation) with binding constraints: compare at least 4 approaches (AST/static invariant detection; a dedicated real-Bearer transport testing contract/helper; a test-only runtime/guard-resolution assertion mechanism; documentation-only/no-code baseline) rather than defaulting to grep/lint; prefer a positive contract over heuristic source scanning; clearly separate Sanctum::actingAs() (valid, not a hazard) from real Bearer-token transport testing from plain actingAs() (must not backstop a Bearer-transport claim); do NOT propose changing production Sanctum config/guards/middleware/auth semantics; explicitly decide the lifecycle of the Gate-1 evidence harness tests/Feature/Gap051SanctumWebGuardLeakEvidenceTest.php (convert to permanent regression test, replace with a stronger Gate-2 contract test, or remove — must not leave ambiguous); design a concrete future-topology regression safeguard so that if /api/* routes ever gain session/stateful middleware, the Gate-1 'no production exposure under current topology' finding is actively resurfaced rather than silently stale; keep the 'JWT'-naming debt out of primary remediation scope unless a strong, genuinely low-risk reason to bundle it is found (default: exclude, note as separately-trackable debt). Procedure directed: (1) record this Gate-1 approval truthfully in 01-request.md; (2) push only that Owner-decision record; (3) verify exact-head docs/governance-relevant CI once; (4) mark PR #306 ready for review and squash-merge using the established repository convention if the required checks are green; (5) confirm the new canonical main SHA; (6) from that clean updated main, open a new Gate-2 design branch/PR containing alternatives+tradeoffs, recommended architecture, exact Gate-3 scope/files, RED/GREEN regression strategy, false-positive/false-negative analysis, evidence-harness lifecycle decision, Gate-3 acceptance criteria, explicit rejected approaches, and a production-semantics non-impact statement. Gate 2 is design-only — no implementation. Stop at Gate 2 with gate_status: awaiting_owner.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-09T00:00:00Z"
-  updated_at: "2026-09-09T00:00:00Z"
+  updated_at: "2026-09-09T04:03:00Z"
 generated_by: agent
+---
+
+## Owner Decision History — Gate 1 — APPROVED (permanent record, never erased)
+
+**Owner Gate 1 decision: APPROVED**, bound to Gate-1 head
+`8b5174821df7ccdc53a202f54a4e80c1aa0ba6a5` (PR #306). The Owner accepted
+the Gate-1 forensic evidence in
+`docs/audits/2026-09-09-gap-051-sanctum-bearer-token-test-fidelity-evidence.md`
+as sufficient to establish the failure mechanism (Laravel Sanctum's shipped
+default `'guard' => ['web']` causing `Guard::__invoke()` to authenticate via
+a leftover `actingAs()` web-guard session before ever reading a Bearer
+token) and to authorize proceeding through merge into a Gate-2 design
+investigation. Full verbatim directive preserved in this file's frontmatter
+`decision_provenance.owner_response_reference` above. **This approval
+authorizes merging Gate-1 evidence (PR #306) and opening a Gate-2
+design/decision packet only — no remediation implementation.** Binding
+Gate-2 constraints from the Owner: compare 4+ approaches (AST/static
+invariant detection; dedicated real-Bearer transport testing contract;
+test-only runtime guard-resolution assertion; documentation-only baseline);
+prefer a positive contract over heuristic source scanning; keep
+`Sanctum::actingAs()`, real Bearer-token transport testing, and plain
+`actingAs()` clearly separated and never conflated; do not touch production
+Sanctum config/guards/middleware/auth semantics; explicitly decide the
+lifecycle of `tests/Feature/Gap051SanctumWebGuardLeakEvidenceTest.php`;
+design a concrete safeguard against the Gate-1 "no production exposure"
+finding silently going stale if `/api/*` gains session/stateful middleware
+in the future; keep the "JWT"-naming debt out of scope by default. This
+Gate-1 approval record is preserved permanently and must not be removed by
+any future revision.
+
 ---
 
 ## Owner Summary
@@ -69,9 +99,16 @@ GAP-051 sẽ (qua Gate 2, không phải Gate này) thiết kế MỘT cơ chế 
 
 Đội đề xuất: tiến hành Gate 2 để thiết kế cơ chế phòng ngừa hồi quy (Remediation Option 1 trong tài liệu audit), vì đây là rào chắn rẻ, không xâm lấn, và đóng hẳn khả năng một hazard đã được chứng minh reproducible biến thành false-green thật trong tương lai — dù hiện tại chưa có test nào đang bị ảnh hưởng.
 
-## Decision Needed
+## Decision Needed — ĐÃ CÓ Owner APPROVED (xem lịch sử phía trên)
 
-Owner chọn một: Approve để tiến sang Gate 2 (thiết kế cơ chế phòng ngừa hồi quy) / Yêu cầu thay đổi phạm vi bằng chứng / Từ chối (chấp nhận rủi ro ở mức tài liệu hoá, không làm gì thêm).
+Owner đã APPROVED Gate 1 tại head `8b5174821df7ccdc53a202f54a4e80c1aa0ba6a5`
+(PR #306), xác nhận bằng chứng đủ vững để merge và tiến sang Gate 2. Chi
+tiết ràng buộc đầy đủ cho Gate 2 nằm trong
+`decision_provenance.owner_response_reference` ở frontmatter và trong mục
+"Owner Decision History" phía trên. Không có thay đổi code/test/CI nào
+được thực hiện ở Gate 1 ngoài audit doc + evidence-harness disposable đã
+có sẵn trên PR #306. Gate 2 (thiết kế/nghiên cứu, KHÔNG triển khai) sẽ mở
+trong một branch/PR mới, từ `main` sau khi PR #306 được squash-merge.
 
 ## What the owner is NOT being asked to decide
 

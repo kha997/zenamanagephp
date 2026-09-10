@@ -69,6 +69,8 @@ class SubmittalShowApiTest extends TestCase
 
     private function withZenaAuth()
     {
+        $this->app->make(\Illuminate\Auth\AuthManager::class)->forgetGuards();
+
         return $this->withHeaders($this->zenaAuthHeaders);
     }
 

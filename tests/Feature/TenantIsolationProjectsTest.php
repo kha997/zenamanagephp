@@ -46,7 +46,6 @@ class TenantIsolationProjectsTest extends TestCase
             'pm_id' => $userB->id,
         ]);
 
-        $this->actingAs($userB);
         $this->apiAs($userB, $tenantB);
 
         $response = $this
@@ -68,6 +67,7 @@ class TenantIsolationProjectsTest extends TestCase
 
         $missingTenantResponse = $this
             ->flushHeaders()
+            ->actingAsSanctumBearerToken($userB)
             ->getJson('/api/projects');
 
         $missingTenantResponse->assertOk();

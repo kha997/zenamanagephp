@@ -6,12 +6,12 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
+use Illuminate\Auth\AuthManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 use Tests\Traits\AuthenticationTrait;
-use Laravel\Sanctum\Sanctum;
 
 class ComprehensiveApiIntegrationTest extends TestCase
 {
@@ -100,6 +100,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
         }
 
         // Test user info endpoint
+        $this->app->make(AuthManager::class)->forgetGuards();
         $response = $this->getJson('/api/auth/me', $headers);
         $response->assertStatus(200);
         $response->assertJsonStructure([
@@ -113,6 +114,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
         ]);
 
         // Test permissions endpoint
+        $this->app->make(AuthManager::class)->forgetGuards();
         $response = $this->getJson('/api/auth/permissions', $headers);
         $response->assertStatus(200);
         $response->assertJsonStructure([
@@ -124,6 +126,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
         ]);
 
         // Test logout
+        $this->app->make(AuthManager::class)->forgetGuards();
         $response = $this->postJson('/api/auth/logout', [], $headers);
         $response->assertStatus(200);
         $response->assertJsonStructure([
@@ -140,10 +143,10 @@ class ComprehensiveApiIntegrationTest extends TestCase
         $tenant = Tenant::factory()->create();
         $user = $this->createRbacAdminUser($tenant);
         $this->grantAuthPermissions($user);
-        $token = $user->createToken('test-token')->plainTextToken;
-        $headers = $this->authHeadersForUser($user, $token);
+        $headers = $this->apiHeadersForTenant((string) $user->tenant_id);
 
         // Test dashboard data endpoint (should be cached)
+        $this->actingAsSanctumBearerToken($user);
         $response1 = $this->getJson('/api/dashboard/data', $headers);
         $response1->assertStatus(200);
         $response1->assertJsonStructure([
@@ -157,11 +160,13 @@ class ComprehensiveApiIntegrationTest extends TestCase
         ]);
 
         // Second request should be faster (cached)
+        $this->actingAsSanctumBearerToken($user);
         $response2 = $this->getJson('/api/dashboard/data', $headers);
         $response2->assertStatus(200);
         $this->assertEquals($response1->getContent(), $response2->getContent());
 
         // Test dashboard analytics
+        $this->actingAsSanctumBearerToken($user);
         $response = $this->getJson('/api/dashboard/analytics', $headers);
         $response->assertStatus(200);
         $response->assertJsonStructure([
@@ -174,6 +179,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
         ]);
 
         // Test dashboard notifications
+        $this->actingAsSanctumBearerToken($user);
         $response = $this->getJson('/api/dashboard/notifications', $headers);
         $response->assertStatus(200);
         $response->assertJsonStructure([
@@ -185,6 +191,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
         ]);
 
         // Test dashboard preferences
+        $this->actingAsSanctumBearerToken($user);
         $response = $this->getJson('/api/dashboard/preferences', $headers);
         $response->assertStatus(200);
         $response->assertJsonStructure([
@@ -205,20 +212,22 @@ class ComprehensiveApiIntegrationTest extends TestCase
         $tenant = Tenant::factory()->create();
         $user = $this->createRbacAdminUser($tenant);
         $this->grantAuthPermissions($user);
-        $token = $user->createToken('test-token')->plainTextToken;
-        $headers = $this->authHeadersForUser($user, $token);
+        $headers = $this->apiHeadersForTenant((string) $user->tenant_id);
 
         // Test cache stats
+        $this->actingAsSanctumBearerToken($user);
         $response = $this->getJson('/api/cache/stats', $headers);
         $response->assertStatus(200);
         $stats = $response->json('data');
 
         // Test cache config
+        $this->actingAsSanctumBearerToken($user);
         $response = $this->getJson('/api/cache/config', $headers);
         $response->assertStatus(200);
         $config = $response->json('data');
 
         // Test cache warmup
+        $this->actingAsSanctumBearerToken($user);
         $response = $this->postJson('/api/cache/warmup', [
             'keys' => ['dashboard_data', 'user_preferences'],
             'data_provider' => 'dashboard'
@@ -230,6 +239,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
         $prefixedKey = "tenant:{$tenant->id}:{$testKey}";
         Cache::put($prefixedKey, 'test_value', 300);
 
+        $this->actingAsSanctumBearerToken($user);
         $response = $this->postJson('/api/cache/invalidate/key', [
             'key' => $testKey
         ], $headers);
@@ -245,25 +255,28 @@ class ComprehensiveApiIntegrationTest extends TestCase
     {
         $user = $this->createRbacAdminUser();
         $this->grantAuthPermissions($user);
-        $token = $user->createToken('test-token')->plainTextToken;
-        $headers = $this->authHeadersForUser($user, $token);
+        $headers = $this->apiHeadersForTenant((string) $user->tenant_id);
 
         // Test WebSocket info
+        $this->actingAsSanctumBearerToken($user);
         $response = $this->getJson('/api/websocket/info', $headers);
         $response->assertStatus(200);
         $info = $response->json('data');
 
         // Test WebSocket stats
+        $this->actingAsSanctumBearerToken($user);
         $response = $this->getJson('/api/websocket/stats', $headers);
         $response->assertStatus(200);
         $stats = $response->json('data');
 
         // Test connection test
+        $this->actingAsSanctumBearerToken($user);
         $response = $this->getJson('/api/websocket/test', $headers);
         $response->assertStatus(200);
 
         // Test marking user online
         $connectionId = 'test_connection_' . uniqid();
+        $this->actingAsSanctumBearerToken($user);
         $response = $this->postJson('/api/websocket/online', [
             'user_id' => $user->id,
             'connection_id' => $connectionId,
@@ -275,6 +288,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
         $response->assertStatus(200);
 
         // Test updating activity
+        $this->actingAsSanctumBearerToken($user);
         $response = $this->postJson('/api/websocket/activity', [
             'user_id' => $user->id,
             'activity_type' => 'page_view',
@@ -286,6 +300,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
         $response->assertStatus(200);
 
         // Test sending notification
+        $this->actingAsSanctumBearerToken($user);
         $response = $this->postJson('/api/websocket/notification', [
             'user_id' => $user->id,
             'type' => 'system_message',
@@ -296,6 +311,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
         $response->assertStatus(200);
 
         // Test broadcasting
+        $this->actingAsSanctumBearerToken($user);
         $response = $this->postJson('/api/websocket/broadcast', [
             'channel' => 'notifications',
             'event' => 'system_notification',
@@ -308,6 +324,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
         $response->assertStatus(200);
 
         // Test marking user offline
+        $this->actingAsSanctumBearerToken($user);
         $response = $this->postJson('/api/websocket/offline', [
             'user_id' => $user->id,
             'connection_id' => $connectionId,
@@ -336,38 +353,33 @@ class ComprehensiveApiIntegrationTest extends TestCase
         $this->grantAuthPermissions($user1);
         $this->grantAuthPermissions($user2);
 
-        $token1 = $user1->createToken('test-token')->plainTextToken;
-        $token2 = $user2->createToken('test-token')->plainTextToken;
-
         $headers1 = [
-            'Authorization' => 'Bearer ' . $token1,
             'Accept' => 'application/json',
             'X-Tenant-ID' => (string) $tenant1->id
         ];
 
         $headers2 = [
-            'Authorization' => 'Bearer ' . $token2,
             'Accept' => 'application/json',
             'X-Tenant-ID' => (string) $tenant2->id
         ];
 
         // Test that users can only access their own data
-        Sanctum::actingAs($user1);
+        $this->actingAsSanctumBearerToken($user1);
         $response1 = $this->withHeaders($headers1)->getJson('/api/auth/me');
         $response1->assertStatus(200);
         $this->assertEquals($user1->id, $response1->json('data.id'));
 
-        Sanctum::actingAs($user2);
+        $this->actingAsSanctumBearerToken($user2);
         $response2 = $this->withHeaders($headers2)->getJson('/api/auth/me');
         $response2->assertStatus(200);
         $this->assertEquals($user2->id, $response2->json('data.id'));
 
         // Test tenant isolation in dashboard
-        Sanctum::actingAs($user1);
+        $this->actingAsSanctumBearerToken($user1);
         $response1 = $this->withHeaders($headers1)->getJson('/api/dashboard/data');
         $response1->assertStatus(200);
 
-        Sanctum::actingAs($user2);
+        $this->actingAsSanctumBearerToken($user2);
         $response2 = $this->withHeaders($headers2)->getJson('/api/dashboard/data');
         $response2->assertStatus(200);
 
@@ -413,16 +425,17 @@ class ComprehensiveApiIntegrationTest extends TestCase
 
         // Test validation errors
         $user = $this->createRbacAdminUser();
-        $token = $user->createToken('test-token')->plainTextToken;
-        $headers = $this->authHeadersForUser($user, $token);
+        $headers = $this->apiHeadersForTenant((string) $user->tenant_id);
 
         // Test invalid cache key
+        $this->actingAsSanctumBearerToken($user);
         $response = $this->postJson('/api/cache/invalidate/key', [
             'key' => ''
         ], $headers);
         $response->assertStatus(422);
 
         // Test invalid WebSocket data
+        $this->actingAsSanctumBearerToken($user);
         $response = $this->postJson('/api/websocket/online', [
             'user_id' => 'invalid_id',
             'connection_id' => ''
@@ -438,8 +451,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
     {
         $user = $this->createRbacAdminUser();
         $this->grantAuthPermissions($user);
-        $token = $user->createToken('test-token')->plainTextToken;
-        $headers = $this->authHeadersForUser($user, $token);
+        $headers = $this->apiHeadersForTenant((string) $user->tenant_id);
 
         $endpoints = [
             '/api/auth/me',
@@ -456,6 +468,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
 
         foreach ($endpoints as $endpoint) {
             $startTime = microtime(true);
+            $this->actingAsSanctumBearerToken($user);
             $response = $this->getJson($endpoint, $headers);
             $endTime = microtime(true);
 
@@ -475,8 +488,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
     {
         $user = $this->createRbacAdminUser();
         $this->grantAuthPermissions($user);
-        $token = $user->createToken('test-token')->plainTextToken;
-        $headers = $this->authHeadersForUser($user, $token);
+        $headers = $this->apiHeadersForTenant((string) $user->tenant_id);
 
         $endpoints = [
             '/api/auth/me',
@@ -486,6 +498,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
         ];
 
         foreach ($endpoints as $endpoint) {
+            $this->actingAsSanctumBearerToken($user);
             $response = $this->getJson($endpoint, $headers);
             $response->assertStatus(200);
 

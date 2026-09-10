@@ -873,7 +873,8 @@ class DocumentManagementTest extends TestCase
             'approval_status' => DocumentApprovalStatus::NOT_SUBMITTED->value,
         ]);
 
-        $webResponse = $this->actingAs($this->user)
+        $webResponse = $this->flushHeaders()
+            ->actingAs($this->user)
             ->withoutMiddleware(\App\Http\Middleware\VerifyCsrfToken::class)
             ->withHeaders(['X-Tenant-ID' => (string) $this->tenant->id])
             ->post('/app/documents', [

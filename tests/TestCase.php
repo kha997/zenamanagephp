@@ -3,7 +3,7 @@
 namespace Tests;
 
 use App\Models\User;
-use Illuminate\Testing\TestResponse;
+use Illuminate\Auth\AuthManager;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\RefreshDatabaseState;
@@ -11,11 +11,14 @@ use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Testing\TestResponse;
+use Tests\Concerns\InteractsWithSanctumBearerTokens;
 use Tests\Support\RefreshDatabaseSelfHealingGuard;
 
 abstract class TestCase extends BaseTestCase
 {
     use CreatesApplication;
+    use InteractsWithSanctumBearerTokens;
 
     /**
      * Automatically append CSRF tokens to HTTP form requests unless disabled.
@@ -31,11 +34,56 @@ abstract class TestCase extends BaseTestCase
      */
     public function call($method, $uri, $parameters = [], $cookies = [], $files = [], $server = [], $content = null)
     {
+        $carriesBearerToken = $this->guardAgainstGap051BearerContamination($server);
+
         if ($this->shouldAutoAppendCsrfToken() && $this->shouldAppendCsrfToken($method, $server)) {
             $parameters = $this->ensureCsrfToken($parameters);
         }
 
-        return parent::call($method, $uri, $parameters, $cookies, $files, $server, $content);
+        try {
+            return parent::call($method, $uri, $parameters, $cookies, $files, $server, $content);
+        } finally {
+            if ($carriesBearerToken) {
+                $this->app->make(AuthManager::class)->forgetGuards();
+            }
+        }
+    }
+
+    /**
+     * Reject Bearer requests that could be satisfied by pre-existing cached
+     * guard state instead of exercising Sanctum's real token lookup.
+     */
+    private function guardAgainstGap051BearerContamination(array $server): bool
+    {
+        $outgoingServer = array_replace($this->serverVariables, $server);
+        $authorization = $outgoingServer['HTTP_AUTHORIZATION']
+            ?? $outgoingServer['REDIRECT_HTTP_AUTHORIZATION']
+            ?? null;
+
+        if (! is_string($authorization)
+            || preg_match('/^Bearer\s+(.+)$/i', trim($authorization)) !== 1) {
+            return false;
+        }
+
+        /** @var AuthManager $auth */
+        $auth = $this->app->make(AuthManager::class);
+        $guards = array_unique(array_merge(
+            (array) config('sanctum.guard', []),
+            ['sanctum']
+        ));
+
+        foreach ($guards as $guard) {
+            if ($auth->guard($guard)->hasUser()) {
+                throw new \RuntimeException(sprintf(
+                    'GAP-051: Bearer request blocked before dispatch because guard [%s] already has a cached user. '
+                    .'Use actingAsSanctumBearerToken(), which clears cached guards immediately before dispatch, '
+                    .'instead of combining actingAs()/Sanctum::actingAs() state with a hand-written Bearer header.',
+                    $guard
+                ));
+            }
+        }
+
+        return true;
     }
 
     protected function shouldAutoAppendCsrfToken(): bool

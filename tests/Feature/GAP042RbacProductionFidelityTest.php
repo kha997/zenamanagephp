@@ -7,6 +7,7 @@ use App\Models\Project;
 use App\Models\Role as AppRole;
 use App\Models\Tenant;
 use App\Models\User;
+use Illuminate\Auth\AuthManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
@@ -89,6 +90,8 @@ class GAP042RbacProductionFidelityTest extends TestCase
 
     private function headers(string $token, string $tenantId): array
     {
+        $this->app->make(AuthManager::class)->forgetGuards();
+
         return [
             'Authorization' => 'Bearer ' . $token,
             'X-Tenant-ID' => $tenantId,
@@ -152,18 +155,22 @@ class GAP042RbacProductionFidelityTest extends TestCase
         $this->assertNotContains($roleB->id, $ids);
 
         // show
+        $this->app->make(AuthManager::class)->forgetGuards();
         $this->withHeaders($h)->getJson("/api/v1/rbac/roles/{$roleB->id}")->assertStatus(404);
 
         // update
+        $this->app->make(AuthManager::class)->forgetGuards();
         $this->withHeaders($h)->putJson("/api/v1/rbac/roles/{$roleB->id}", ['name' => 'Hacked'])
             ->assertStatus(404);
         $this->assertDatabaseHas('roles', ['id' => $roleB->id, 'name' => $roleB->name]);
 
         // delete
+        $this->app->make(AuthManager::class)->forgetGuards();
         $this->withHeaders($h)->deleteJson("/api/v1/rbac/roles/{$roleB->id}")->assertStatus(404);
         $this->assertDatabaseHas('roles', ['id' => $roleB->id]);
 
         // sync permissions
+        $this->app->make(AuthManager::class)->forgetGuards();
         $this->withHeaders($h)->postJson("/api/v1/rbac/roles/{$roleB->id}/permissions", ['permission_codes' => []])
             ->assertStatus(404);
     }
@@ -203,6 +210,7 @@ class GAP042RbacProductionFidelityTest extends TestCase
             ->getJson("/api/v1/rbac/users/{$this->userA->id}/effective-permissions");
         $response->assertStatus(200);
 
+        $this->app->make(AuthManager::class)->forgetGuards();
         $response = $this->withHeaders($h)
             ->postJson("/api/v1/rbac/users/{$this->userA->id}/check-permission", [
                 'permission_code' => 'role.view',
@@ -462,11 +470,13 @@ class GAP042RbacProductionFidelityTest extends TestCase
         ]);
 
         // GET list
+        $this->app->make(AuthManager::class)->forgetGuards();
         $listResponse = $this->withHeaders($h)
             ->getJson("/api/v1/rbac/assignments/projects/{$project->id}/users");
         $listResponse->assertStatus(200);
 
         // DELETE
+        $this->app->make(AuthManager::class)->forgetGuards();
         $deleteResponse = $this->withHeaders($h)
             ->deleteJson("/api/v1/rbac/assignments/projects/{$project->id}/users/{$targetUser->id}/roles/{$projectRole->id}");
         $this->assertContains($deleteResponse->status(), [200, 204]);
@@ -534,16 +544,20 @@ class GAP042RbacProductionFidelityTest extends TestCase
 
         // GET /roles/{id} for each of the three ids, as tenant A
         $this->withHeaders($h)->getJson("/api/v1/rbac/roles/{$global->id}")->assertStatus(200);
+        $this->app->make(AuthManager::class)->forgetGuards();
         $this->withHeaders($h)->getJson("/api/v1/rbac/roles/{$roleA->id}")->assertStatus(200);
+        $this->app->make(AuthManager::class)->forgetGuards();
         $this->withHeaders($h)->getJson("/api/v1/rbac/roles/{$roleB->id}")->assertStatus(404);
 
         // GET /roles?scope=custom must contain roleA + not roleB (global is scope=system, excluded by filter)
+        $this->app->make(AuthManager::class)->forgetGuards();
         $listResponse = $this->withHeaders($h)->getJson('/api/v1/rbac/roles?scope=custom&per_page=100');
         $ids = collect($listResponse->json('data.roles.data'))->pluck('id')->all();
         $this->assertContains($roleA->id, $ids);
         $this->assertNotContains($roleB->id, $ids);
 
         // RBACController::getRolesByScope must return exactly the intended rows
+        $this->app->make(AuthManager::class)->forgetGuards();
         $byScopeResponse = $this->withHeaders($h)->getJson('/api/v1/rbac/roles/by-scope?scope=custom');
         $byScopeResponse->assertStatus(200);
         $byScopeIds = collect($byScopeResponse->json('data.roles'))->pluck('id')->all();
@@ -565,10 +579,12 @@ class GAP042RbacProductionFidelityTest extends TestCase
 
         // (a) readable
         $this->withHeaders($h)->getJson('/api/v1/rbac/roles')->assertStatus(200);
+        $this->app->make(AuthManager::class)->forgetGuards();
         $this->withHeaders($h)->getJson("/api/v1/rbac/roles/{$global->id}")->assertStatus(200);
 
         // (b) POST scope=system rejected, no new row
         $countBefore = Role::count();
+        $this->app->make(AuthManager::class)->forgetGuards();
         $createResponse = $this->withHeaders($h)->postJson('/api/v1/rbac/roles', [
             'name' => 'AttemptGlobalCreate-' . uniqid(),
             'scope' => 'system',
@@ -577,19 +593,23 @@ class GAP042RbacProductionFidelityTest extends TestCase
         $this->assertSame($countBefore, Role::count());
 
         // (c) update/delete/sync rejected, row + role_permissions unchanged
+        $this->app->make(AuthManager::class)->forgetGuards();
         $this->withHeaders($h)->putJson("/api/v1/rbac/roles/{$global->id}", ['name' => 'Hacked'])
             ->assertStatus(404);
         $this->assertDatabaseHas('roles', ['id' => $global->id, 'name' => $global->name]);
 
+        $this->app->make(AuthManager::class)->forgetGuards();
         $this->withHeaders($h)->postJson("/api/v1/rbac/roles/{$global->id}/permissions", ['permission_codes' => []])
             ->assertStatus(404);
         $this->assertDatabaseHas('role_permissions', ['role_id' => $global->id, 'permission_id' => $permission->id]);
 
+        $this->app->make(AuthManager::class)->forgetGuards();
         $this->withHeaders($h)->deleteJson("/api/v1/rbac/roles/{$global->id}")->assertStatus(404);
         $this->assertDatabaseHas('roles', ['id' => $global->id]);
 
         // (d) control: own-tenant role mutation still succeeds
         $ownRole = Role::create(['name' => 'OwnMutable-' . uniqid(), 'scope' => 'custom', 'tenant_id' => $this->tenantA->id]);
+        $this->app->make(AuthManager::class)->forgetGuards();
         $this->withHeaders($h)->putJson("/api/v1/rbac/roles/{$ownRole->id}", ['name' => 'Renamed'])
             ->assertStatus(200);
 

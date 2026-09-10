@@ -7,6 +7,7 @@ use App\Models\Project;
 use App\Models\Role as AppRole;
 use App\Models\Tenant;
 use App\Models\User;
+use Illuminate\Auth\AuthManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
@@ -98,6 +99,8 @@ class GAP042Gate3Round2CorrectionsTest extends TestCase
 
     private function headers(string $token, string $tenantId): array
     {
+        $this->app->make(AuthManager::class)->forgetGuards();
+
         return [
             'Authorization' => 'Bearer ' . $token,
             'X-Tenant-ID' => $tenantId,

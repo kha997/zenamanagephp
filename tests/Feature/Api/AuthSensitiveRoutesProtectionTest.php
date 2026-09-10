@@ -15,7 +15,6 @@ use App\Services\SecurityMonitoringService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
-use Laravel\Sanctum\Sanctum;
 use Src\RBAC\Services\AuthService as RbacAuthService;
 use Tests\TestCase;
 
@@ -321,11 +320,12 @@ class AuthSensitiveRoutesProtectionTest extends TestCase
         $headers = [
             'Accept' => 'application/json',
             'X-Tenant-ID' => $tenantHeader,
-            'Authorization' => 'Bearer test-token',
         ];
 
         if ($user !== null) {
-            Sanctum::actingAs($user);
+            $this->actingAsSanctumBearerToken($user);
+        } else {
+            $headers['Authorization'] = 'Bearer test-token';
         }
 
         $request = $this->withHeaders($headers);

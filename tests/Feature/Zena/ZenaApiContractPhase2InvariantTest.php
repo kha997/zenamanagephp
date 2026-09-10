@@ -184,6 +184,8 @@ class ZenaApiContractPhase2InvariantTest extends TestCase
 
     private function zenaHeaders(string $tenantId, string $bearerToken): array
     {
+        $this->app->make(\Illuminate\Auth\AuthManager::class)->forgetGuards();
+
         return [
             'Accept' => 'application/json',
             'X-Tenant-ID' => $tenantId,
@@ -285,6 +287,10 @@ class ZenaApiContractPhase2InvariantTest extends TestCase
 
     private function zenaPost(string $uri, Tenant $tenant, array $payload = [], ?string $token = null): \Illuminate\Testing\TestResponse
     {
+        if ($token !== null && $token !== '') {
+            $this->app->make(\Illuminate\Auth\AuthManager::class)->forgetGuards();
+        }
+
         return $this->withHeaders($this->buildHeaders((string) $tenant->id, $token ?? '', false))
             ->postJson($uri, $payload);
     }

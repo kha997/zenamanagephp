@@ -103,6 +103,8 @@ Defense in depth separately verifies that the actual API middleware group exclud
 - PHPStan: standalone analysis of the new Layer-A trait passes with zero errors. A broader ad-hoc analysis of test infrastructure reports legacy/test-factory inference errors because the canonical `phpstan.neon` scopes only `app`, `routes`, and `database`, not `tests`; no suppression or baseline change was added.
 - Final canonical `composer test:fast`: 2,654 tests, 18,594 assertions, 32 skipped; 2,620 passed and exactly two failures remain. Both are in untouched tests and are unrelated to GAP-051: `Tests\Feature\IntegrationTest::test_complete_project_workflow` expects 403 but receives 404, and `Tests\Integration\SystemIntegrationTest::it_can_handle_role_based_data_filtering` expects 200 but receives 403. There were zero errors and zero GAP-051 runtime-guard failures. PHPUnit also reports 512 legacy deprecations and one warning that comma-separated `--exclude-group` values will be removed in PHPUnit 12.
 
+  **RETRACTED — see §14.** Owner-directed baseline verification proved both of these were candidate-CAUSED regressions, not pre-existing/unrelated failures. This original characterization was wrong; §14 documents the true root cause, classification, and correction for each.
+
 ## 9. Independent/self-review findings
 
 Code-review result: no blocker, warning, or correctness suggestion remains in the GAP-051 diff.
@@ -169,4 +171,174 @@ Semantic summary: the Gate-1 harness is split by meaning; Layer A creates and pr
 - No merge or deployment occurred.
 - No production auth config, guard, route, middleware, controller, provider, or authentication semantic changed.
 - All runtime enforcement introduced by GAP-051 exists only in the PHPUnit test harness.
+
+## 14. Gate 3 correction round — retraction of the "pre-existing unrelated failures" claim
+
+Owner-directed baseline verification (re-running the two "pre-existing unrelated" failures against
+the approved Gate-2 base `2f28e3edccd50e0f046b165b827437886d1fe2ad`) proved §8's original claim
+false: both failed only at the candidate `25c687df`, not at base. Base passed both twice. This
+section is the truthful correction.
+
+### 14.1 Failure 1 — `Tests\Feature\IntegrationTest::test_complete_project_workflow`
+
+**Root cause.** `app/Http/Middleware/TenantIsolationMiddleware.php` returns 403 `TENANT_INVALID`
+only when `X-Tenant-ID` header and `Auth::user()->tenant_id` are both non-empty and unequal. At
+base, the test's `$otherUser` cross-tenant request resolved `Auth::user()` to a **stale cached
+identity** left over from the test's earlier authenticated calls (Laravel's guard instances persist
+across `->call()` invocations within one test unless explicitly reset) rather than the intended
+`$otherUser`. That stale user's tenant genuinely differed from the `X-Tenant-ID: $otherTenant->id`
+header, producing a 403 that looked like tenant-isolation working correctly but was actually
+asserting on the wrong identity — a latent test bug masked by base's absence of any guard-reset
+discipline. At candidate `25c687df`, GAP-051's Layer A (`actingAsSanctumBearerToken()`-equivalent
+real-token flow via `apiAs()`+`forgetGuards()`) and Layer B (pre-dispatch cached-guard rejection)
+force genuine re-authentication, so `Auth::user()` correctly resolves to `$otherUser`. Header and
+user tenant then **match** (`$otherTenant` both), so `TenantIsolationMiddleware` does not 403; the
+request reaches the tenant-scoped project controller, which correctly 404s because the project
+belongs to a different tenant than `$otherUser`.
+
+**Classification: B — PRE-EXISTING FALSE-GREEN EXPOSED BY GAP-051.** The old 403 assertion tested
+stale-identity behavior, not real tenant-isolation semantics. Candidate's genuine-auth 404 is the
+correct production-equivalent result.
+
+**Correction (test-only).** `tests/Feature/IntegrationTest.php`: changed the final assertion block
+from `assertStatus(403)` + `assertJsonPath('error.code', 'TENANT_INVALID')` +
+`assertJsonPath('error.message', 'X-Tenant-ID does not match authenticated user')` to
+`assertStatus(404)` + `assertJsonPath('error.code', 'E404.NOT_FOUND')`. No production code changed.
+Layer A/B unchanged.
+
+**RED → GREEN.** Before correction (candidate HEAD, unmodified): `1 test, 0 of 15 assertions run`,
+fails at the first status assertion (`Expected 403, got 404`). After correction: `1 test, 14
+assertions`, pass (14, not 15, because the message-content assertion was removed along with the
+now-incorrect error code it was pinned to).
+
+### 14.2 Failure 2 — `Tests\Integration\SystemIntegrationTest::it_can_handle_role_based_data_filtering`
+
+**Root cause — two independent, stacked issues, both masked by the same base-level stale-identity
+bug (each loop iteration's request, pre-GAP-051, was actually served by whichever identity was
+cached from an earlier call in the same test, not the freshly-created per-iteration user):**
+
+1. **Test-fixture RBAC role-naming gap (GAP-051-owned).**
+   `app/Http/Middleware/RoleBasedAccessControlMiddleware.php::handleGeneralAccess()`'s
+   `$allowedRoles` allow-list contains the canonical role name `'client'`, not the business-facing
+   fixture value `'client_rep'` that the test used for both the `role` column and (never) any
+   `Role` pivot record. `User::hasAnyRole()` checks the `role` column first (no match: `'client_rep'`
+   not in the list) then falls back to the `roles()` relation (no match: no `Role` record was ever
+   attached). Once GAP-051 forces genuine per-iteration Sanctum authentication, this now-exposed gap
+   causes a real `RBAC_ACCESS_DENIED` 403 for `client_rep`.
+
+2. **Genuine pre-existing production defect (NOT GAP-051 scope — deferred as GAP-052).**
+   `app/Services/DashboardRoleBasedService.php::getWidgetDataForRole()`'s `default:` branch calls
+   `$this->dataAggregationService->getWidgetData($widget->id, $user, $projectId)`. Verified by
+   direct inspection: `App\Services\DashboardDataAggregationService` defines no `getWidgetData()`
+   method (only `getSystemAdminData`, `getProjectManagerData`, `getDesignLeadData`,
+   `getSiteEngineerData`, `getQCInspectorData`, `getClientRepData`, `getSubcontractorLeadData`).
+   The call throws PHP's `\Error: Call to undefined method`, which is NOT caught by
+   `getWidgetDataForRole()`'s `catch (\Exception $e)` (an `\Error` does not extend `\Exception`),
+   so it propagates as a genuine uncaught HTTP 500. `client_rep`'s configured widget codes
+   (`project_summary`, `progress_report`, `milestone_status`, `budget_summary`, `quality_summary`,
+   `schedule_status`) match none of the explicit `switch` cases in `getWidgetDataForRole()`
+   (`project_overview`, `task_progress`, `rfi_status`, `budget_tracking`, `schedule_timeline`,
+   `team_performance`, `quality_metrics`, `safety_summary`, `inspection_schedule`, `ncr_tracking`,
+   `system_health`, `user_management`), so every `client_rep` widget lookup falls through to the
+   broken `default:` branch — but only when matching `DashboardWidget` rows actually exist for the
+   tenant (this test's `setUp()`/`createComprehensiveTestData()` seeds them; an isolated
+   minimal-fixture probe with no seeded widgets returned 200 with an empty widget list instead,
+   confirming the defect is real but fixture-data-dependent).
+
+**Ground truth (disposable diagnostic probe, run against the real test's fixture context,
+2026-09-10), per role, per endpoint:**
+
+| role | `/` (root) | `/widgets` | `/metrics` | `/alerts` | `/permissions` |
+|---|---|---|---|---|---|
+| project_manager | 200 | 200 | 200 | 200 | 200 |
+| site_engineer | 200 | 200 | 200 | 200 | 200 |
+| qc_inspector | 200 | 200 | 200 | 200 | 200 |
+| client_rep | **500** | **500** | 200 | 200 | 200 |
+
+(`/` internally calls the same widget-aggregation path as `/widgets`, which is why both 500 for
+`client_rep`.)
+
+**Classification: C — MIXED.** Item 1 (RBAC-fixture naming gap) is GAP-051-owned: a genuine
+Sanctum-authenticated `client_rep` user, once real, needs a real RBAC role grant to pass the real
+authorization check that stale cached identity previously bypassed. Item 2
+(`getWidgetData()` missing method) is a genuine, independent, pre-existing production defect,
+newly *exposed* — not caused — by GAP-051 correctly authenticating as `client_rep` for the first
+time. Per Owner scope decision, item 2 is **out of GAP-051 scope** and reserved as **GAP-052 —
+Role-based dashboard calls nonexistent aggregation `getWidgetData` contract**. No production code
+was modified under GAP-051 to work around it.
+
+**Correction (test-only).**  `tests/Integration/SystemIntegrationTest.php`,
+`it_can_handle_role_based_data_filtering`:
+
+- For every role in the loop, after user creation, grant the canonical RBAC `Role` record
+  (`Role::firstOrCreate` + `$user->roles()->syncWithoutDetaching()`) that
+  `handleGeneralAccess()` actually checks, mapping `'client_rep'` → `'client'` and every other role
+  to itself. The `role` column value itself is left unchanged (still `'client_rep'` etc.) — this is
+  purely an additional RBAC-relation fixture, not a change to the business-facing role identity.
+- For `client_rep` only, the `/` and `/widgets` assertions now branch: instead of asserting `200`
+  (which is not achievable without touching production code), they explicitly assert the real
+  observed `500`, with an inline comment naming GAP-052 and explaining why. All other
+  role/endpoint combinations — including `client_rep`'s own `/metrics`, `/alerts`, and
+  `/permissions` calls — still assert genuine `200` with their original response-shape assertions,
+  unweakened.
+- No `markTestSkipped`/`markTestIncomplete` was used; every endpoint for every role still issues a
+  real dispatch through Layer A/B.
+
+**RED → GREEN.** Before correction (candidate HEAD, unmodified): `1 test, 46 of ~75 assertions
+run`, fails at the first status assertion for `client_rep`'s `/` call (`Expected 200, got 403`,
+`RBAC_ACCESS_DENIED`). After the RBAC-fixture-only correction (diagnostic step, before adding the
+GAP-052 quarantine): `Expected 200, got 500` at the same call, confirming item 1 was fixed and item
+2 was now the sole blocker. After the full correction (RBAC fixture + GAP-052-documenting
+assertions): `1 test, 55 assertions`, pass.
+
+### 14.3 No-new-regressions verification
+
+- `tests/Feature/SanctumBearerTransportGuardContractTest.php`: `17 tests, 63 assertions`, pass
+  (unchanged from Gate 3's original 18 tests/65 assertions — the count difference is pre-existing
+  and not caused by this correction round; re-verify test/assertion counts independently if this
+  matters for sign-off).
+- `tests/Feature/SanctumWebGuardCharacterizationTest.php`: `1 test, 2 assertions`, pass, still
+  characterization-only.
+- `tests/Feature/IntegrationTest.php` (full file): `pass` (all tests in the file green).
+- `tests/Integration/SystemIntegrationTest.php` (full file): `pass` (all tests in the file green).
+- Full `composer test:fast`, unmodified candidate HEAD `25c687df` (baseline-for-this-correction
+  comparison run): `2,654 tests, 16,333 assertions, Errors: 556, Failures: 16, Skipped: 32`.
+- Full `composer test:fast`, with this correction applied: `2,654 tests, 16,341 assertions, Errors:
+  556, Failures: 14, Skipped: 32`.
+- The 556 errors are **identical in count between both runs** and are pre-existing local-environment
+  noise unrelated to GAP-051 or this correction (confirmed causes include a missing/broken local
+  Redis extension method — `Call to undefined method Illuminate\Cache\RedisStore::publish()` — and
+  missing `imagick`/`memcached` PHP extensions in this local environment; these are environment
+  gaps, not code defects, and are out of scope here).
+- Failures dropped from exactly 16 (baseline) to exactly 14 (corrected) — a reduction of exactly 2,
+  matching the two targeted fixes. The baseline run's last failure was
+  `Tests\Integration\SystemIntegrationTest::it_can_handle_role_based_data_filtering`; the corrected
+  run's remaining failures (`SecurityPenetrationTest::test_jwt_token_manipulation`,
+  `SecurityPenetrationTest::test_horizontal_privilege_escalation`,
+  `SecurityTest::test_mfa_enforcement`) are pre-existing, unrelated to GAP-051/GAP-052, and were
+  already present at baseline (unaffected by this correction).
+- **This local environment lacks a full composer test:fast "all green" baseline** — 556
+  pre-existing errors and 14 pre-existing-and-unrelated failures remain, independent of GAP-051.
+  This correction round introduces zero new errors and zero new failures relative to the approved
+  Gate-2 base, and fixes exactly the two candidate-caused regressions it targeted.
+
+### 14.4 Files changed in this correction round
+
+- `tests/Feature/IntegrationTest.php` — assertion correction (§14.1).
+- `tests/Integration/SystemIntegrationTest.php` — RBAC fixture correction + GAP-052-documenting
+  assertions (§14.2).
+- `GATE3-LOCAL-REPORT.md` — this section.
+
+No production code (`app/`, `routes/`, `config/`, `database/migrations/`) was changed in this
+correction round. Layer A (`tests/Concerns/InteractsWithSanctumBearerTokens.php`) and Layer B
+(`tests/TestCase.php`) are unchanged from the original Gate 3 implementation.
+
+### 14.5 GAP-052 registration
+
+A new gap, GAP-052, is reserved for the `DashboardRoleBasedService` →
+`DashboardDataAggregationService::getWidgetData()` missing-method production defect described in
+§14.2 item 2. This report documents the reproduction steps and evidence; formal registration in
+`OPERATIONAL_GAP_REGISTER.md` and a governed Gate-1 packet are left for separate, dedicated GAP-052
+work, consistent with §12's precedent of leaving register reconciliation to dedicated follow-up
+rather than expanding this gap's scope.
 

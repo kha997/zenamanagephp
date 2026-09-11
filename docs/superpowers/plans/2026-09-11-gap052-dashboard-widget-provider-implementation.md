@@ -1,3 +1,11 @@
+---
+work_id: GAP-052
+owner_governance_version: 1
+# The governance linter derives the canonical Gate-2 path as 02-design.md;
+# 02-design-v2.md is the superseding clarification record referenced below.
+owner_gate_2_record: docs/owner-decisions/GAP-052/02-design.md
+---
+
 # GAP-052 Dashboard Widget Provider/Resolver Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -8,7 +16,7 @@
 
 **Tech Stack:** Laravel 12, PHP 8.2, Eloquent, Sanctum Bearer authentication, PHPUnit 11, Mockery only at the explicit provider boundary, SQLite local test database, existing MySQL CI/parity lane where configured.
 
-**Spec:** `docs/superpowers/specs/2026-09-11-gap052-dashboard-widget-contract-design.md`; owner approval: `docs/owner-decisions/GAP-052/02-design.md`; Gate-1 evidence: `docs/audits/2026-09-11-gap-052-role-dashboard-widget-contract-evidence.md`; Gate-3 preparation packet: `docs/owner-decisions/GAP-052/03-release.md`.
+**Spec:** `docs/superpowers/specs/2026-09-11-gap052-dashboard-widget-contract-design.md`; owner approval and clarification: `docs/owner-decisions/GAP-052/02-design-v2.md` (supersedes `02-design.md` only for the explicit unknown-role rule); Gate-1 evidence: `docs/audits/2026-09-11-gap-052-role-dashboard-widget-contract-evidence.md`; Gate-3 preparation packet: `docs/owner-decisions/GAP-052/03-release.md`.
 
 ## Global Constraints
 
@@ -23,7 +31,7 @@
 - Fix only GAP-052’s undefined-method/internal-detail disclosure on the two affected dashboard paths; do not refactor the global error-envelope system.
 - Do not promote `DashboardService`’s generic SQL/query path without proving tenant, query, authorization, and cache safety.
 - Do not change schema, migrations, production data, route paths, or unrelated dashboard/error behavior.
-- Unknown roles must not silently inherit `client_rep`; the implementation must use the repository’s explicitly selected normalization/default policy. This policy is the one remaining design ambiguity identified below and must be resolved before implementation code is written.
+- Unknown or invalid dashboard roles fail closed before catalog/provider execution with HTTP 403, safe code `DASHBOARD.ROLE_UNSUPPORTED`, and no implicit aliases or fallback to `client_rep`.
 
 ## Verified Inventory and Current Wiring
 
@@ -32,15 +40,29 @@ The implementation worker must preserve this inventory as the baseline and updat
 | Surface | Verified current contents | Consequence for implementation |
 |---|---|---|
 | Role catalog | `DashboardRoleBasedService::getRoleConfiguration()` contains exactly `system_admin`, `project_manager`, `design_lead`, `site_engineer`, `qc_inspector`, `client_rep`, `subcontractor_lead`; 53 configured role-widget entries in total | Extract into one catalog authority without changing the seven role names or ordering. |
-| Current local handlers | `getWidgetDataForRole()` has 13 explicit codes: `project_overview`, `task_progress`, `rfi_status`, `budget_tracking`, `schedule_timeline`, `team_performance`, `quality_metrics`, `safety_summary`, `inspection_schedule`, `ncr_tracking`, `system_health`, `user_management`; source has 13 cases even though Gate-1 prose calls them 12 | Treat source as authoritative; add a regression assertion for all 13 and do not invent handlers for the remaining codes. |
+| Current local handlers | `getWidgetDataForRole()` has exactly 12 explicit codes: `project_overview`, `task_progress`, `rfi_status`, `budget_tracking`, `schedule_timeline`, `team_performance`, `quality_metrics`, `safety_summary`, `inspection_schedule`, `ncr_tracking`, `system_health`, `user_management` | Treat these 12 source cases as authoritative; add a regression assertion for exactly these 12 and do not invent another provider. |
 | Configured-but-unhandled role entries | The remaining role-catalog entries include `tenant_overview`, `system_metrics`, `audit_logs`, `backup_status`, `change_requests`, all six design codes, all eight site codes, five additional QC codes, all eight client codes, and all eight subcontractor codes | These are deliberate unsupported/degraded test inputs unless a provider is proven and explicitly admitted. |
 | Integration fixture catalog | `tests/Integration/SystemIntegrationTest.php` creates 19 test-only codes, including `project_overview`, `budget_summary`, `task_progress_chart`, `budget_utilization_chart`, `rfi_status_table`, `task_list_table`, `system_alerts`, `project_alerts`, `project_timeline`, `milestone_timeline`, `overall_progress`, `task_completion_progress`, `project_progress`, `budget_utilization`, `total_tasks`, `open_rfis`, `task_duration_distribution`, `budget_variance_distribution`, and `project_summary` | Do not treat these fixture codes as production providers; use them to prove supported sibling plus unsupported behavior. |
 | Seeder/catalog reality | `DashboardSeeder` contains legacy widget definitions without `code`; `DatabaseSeeder` does not call it; `DashboardWidget` is tenant-owned and `code` is nullable | No migration/backfill is authorized in this plan. Empty/missing rows remain normal catalog behavior. |
-| Generic dashboard path | `DashboardService::getWidgetData(string $widgetId, User $user, ?string $projectId, array $params)` loads by ID, uses `data_source` types `static`, `query`, `metric`, and `api`, and performs raw placeholder substitution for query data | Audit only. Adapt only a proven safe subset behind the new boundary; do not expose arbitrary SQL as a provider. |
+| Generic dashboard path | `DashboardService::getWidgetData(string $widgetId, App\Models\User $user, ?string $projectId, array $params)` loads by ID, uses `data_source` types `static`, `query`, `metric`, and `api`, and performs raw placeholder substitution for query data | Audit only. Adapt only a proven safe subset behind the new boundary; do not expose arbitrary SQL as a provider. |
 | Real-time paths | `RealTimeDashboardService` has an unrelated `(string $widgetType, string $userId)` method and an eight-code in-memory config; `DashboardRealTimeService` is injected by customization | Neither is a role-based widget provider. |
 | Current dependency wiring | No dashboard provider/resolver interface or binding exists. Laravel auto-resolves `DashboardRoleBasedService(DashboardDataAggregationService, DashboardCustomizationService)`; `AppServiceProvider` has no dashboard binding | Add explicit container bindings in `AppServiceProvider` only after RED tests define the contract. |
 | Current false contract | `tests/Unit/Dashboard/DashboardRoleBasedServiceTest.php` mocks `DashboardDataAggregationService` and expects `getWidgetData()` | Delete that expectation and replace the unit dependency with a narrow explicit provider/resolver boundary. |
 | Current `include_data` behavior | `/widgets` always calls `getRoleBasedWidgets()` with data, then unsets `data`; root always loads data | Thread `includeData` into the role service so provider resolution is skipped before the loop for metadata-only requests. |
+
+### Seven-role capability matrix
+
+This matrix is binding for the implementation and acceptance tests. “Supported” means one of the exact 12 existing source switch codes is configured for that role; “unsupported” means the configured code remains eligible metadata but degrades only when data is requested. No provider is added solely to make a role have a supported result.
+
+| Approved role | Supported configured codes | Configured codes that must remain unsupported/degraded |
+|---|---|---|
+| `system_admin` | `system_health`, `user_management` | `tenant_overview`, `system_metrics`, `audit_logs`, `backup_status` |
+| `project_manager` | `project_overview`, `task_progress`, `rfi_status`, `budget_tracking`, `schedule_timeline`, `team_performance`, `quality_metrics`, `safety_summary` | `change_requests` |
+| `design_lead` | none | `design_progress`, `drawing_status`, `submittal_tracking`, `design_reviews`, `technical_issues`, `coordination_log` |
+| `site_engineer` | none | `daily_tasks`, `site_diary`, `inspection_checklist`, `weather_forecast`, `equipment_status`, `safety_alerts`, `progress_photos`, `manpower_tracking` |
+| `qc_inspector` | `inspection_schedule`, `ncr_tracking`, `quality_metrics` | `defect_analysis`, `corrective_actions`, `compliance_status`, `inspection_reports`, `quality_trends` |
+| `client_rep` | none | `project_summary`, `progress_report`, `milestone_status`, `budget_summary`, `quality_summary`, `schedule_status`, `client_communications`, `approval_queue` |
+| `subcontractor_lead` | none | `subcontractor_progress`, `payment_status`, `work_orders`, `quality_issues`, `safety_compliance`, `resource_allocation`, `performance_metrics`, `contract_status` |
 
 ## Proposed File and Interface Structure
 
@@ -56,7 +78,7 @@ These are the exact files the implementation plan expects. No production file is
   - `public function resolve(DashboardWidget $widget, WidgetDataContext $context): WidgetDataResult`.
   - `public function canResolve(DashboardWidget $widget): bool` for capability inspection without executing data retrieval.
 - `app/Services/Dashboard/WidgetDataContext.php`
-  - Immutable context containing `AppModelsUser $user`, `string $tenantId`, `?string $projectId`, and `array $parameters`.
+  - Immutable context containing `App\Models\User $user`, `string $tenantId`, `?string $projectId`, and `array $parameters`.
   - Construction validates that tenant identity comes from the authenticated user and that an optional project context has already passed tenant/project-access authorization.
 - `app/Services/Dashboard/WidgetDataResult.php`
   - Immutable result with `state` (`ready` or `degraded`), nullable `data`, nullable safe error `{code,message,retryable?}`, and provider/capability metadata needed by the response composer.
@@ -68,10 +90,13 @@ These are the exact files the implementation plan expects. No production file is
 - `app/Services/Dashboard/DashboardWidgetCatalog.php`
   - Single seven-role catalog authority and capability metadata source.
   - Exposes `roles(): array`, `forRole(string $role): array`, and `configurationForRole(string $role): array`.
-  - Unknown-role behavior is explicit and must not silently return the `client_rep` catalog.
+- `app/Services/Dashboard/DashboardRoleValidator.php`
+  - Fail-closed role gate exposing `assertSupported(string $role): void`; it runs before catalog lookup and provider resolution.
 - `app/Services/Dashboard/RoleBasedWidgetProvider.php`
-  - First-party provider for the 13 currently handled role-based codes, moving/adapting the existing role-service calculation methods without changing their data semantics.
+  - First-party provider for exactly the 12 currently handled role-based codes, moving/adapting the existing role-service calculation methods without changing their data semantics.
   - It must enforce the typed context and use tenant/project-safe queries before returning data.
+- `app/Exceptions/Dashboard/UnsupportedDashboardRole.php`
+  - Named fail-closed dashboard-role failure mapped to HTTP 403 and `DASHBOARD.ROLE_UNSUPPORTED`.
 - `app/Exceptions/Dashboard/WidgetDataUnavailable.php` and `app/Exceptions/Dashboard/UnsupportedWidget.php`
   - Named internal domain failures used only to classify resolver outcomes; messages never cross the API boundary.
 
@@ -94,13 +119,16 @@ These are the exact files the implementation plan expects. No production file is
 **Files:**
 - Create: `tests/Unit/Dashboard/DashboardWidgetCatalogTest.php`
 - Create: `app/Services/Dashboard/DashboardWidgetCatalog.php`
+- Create: `app/Services/Dashboard/DashboardRoleValidator.php`
+- Create: `app/Exceptions/Dashboard/UnsupportedDashboardRole.php`
 - Modify: `app/Services/DashboardRoleBasedService.php`
 - Modify: `app/Services/DashboardCustomizationService.php`
 
 **Interfaces:**
 - Produces `DashboardWidgetCatalog::roles(): array`, `forRole(string $role): array`, and `configurationForRole(string $role): array`.
+- Produces `DashboardRoleValidator::assertSupported(string $role): void`; it throws `UnsupportedDashboardRole` for any value outside the exact seven-role set before catalog/provider execution.
 
-- [ ] **Step 1: Write RED catalog tests.** Assert the exact seven roles, exact per-role order, no role silently maps to `client_rep`, and that the catalog exposes capability classification for every configured code (`supported`, `unsupported`, or `configuration_error`). Assert the 13 currently handled codes are classified as supported only where their existing calculations are moved into a provider; all other source role entries are not silently mapped to fake data.
+- [ ] **Step 1: Write RED catalog tests.** Assert the exact seven roles, exact per-role order, no role silently maps to `client_rep`, and that the catalog exposes capability classification for every configured code (`supported`, `unsupported`, or `configuration_error`). Assert exactly the 12 currently handled codes are classified as supported only where their existing calculations are moved into a provider; all other source role entries are not silently mapped to fake data. Keep the catalog test unit-scoped; the real-route unknown-role test belongs to Task 5’s concrete integration suite.
 
 ```php
 public function test_catalog_has_exactly_the_seven_approved_roles(): void
@@ -111,12 +139,10 @@ public function test_catalog_has_exactly_the_seven_approved_roles(): void
     ], $this->catalog->roles());
 }
 
-public function test_unknown_role_does_not_inherit_client_rep_catalog(): void
+public function test_unknown_role_fails_closed_instead_of_inheriting_client_rep_catalog(): void
 {
-    self::assertNotSame(
-        $this->catalog->forRole('client_rep'),
-        $this->catalog->forRole('unknown_role')
-    );
+    $this->expectException(UnsupportedDashboardRole::class);
+    $this->validator->assertSupported('unknown_role');
 }
 ```
 
@@ -126,7 +152,7 @@ Run: `./vendor/bin/phpunit tests/Unit/Dashboard/DashboardWidgetCatalogTest.php -
 
 Expected: FAIL because the catalog class and explicit unknown-role policy do not exist.
 
-- [ ] **Step 3: Implement the catalog.** Move the seven role configuration arrays out of `DashboardRoleBasedService` into the catalog, preserve their order and non-widget metadata, and make unknown roles raise the repository-approved named role/configuration failure or return an explicit unavailable configuration. Do not use `client_rep` as the default. Update `getRoleConfiguration()` to delegate to the catalog and update customization’s available-widget metadata to consume the same catalog/capability source.
+- [ ] **Step 3: Implement the role gate and catalog.** Move the seven role configuration arrays out of `DashboardRoleBasedService` into the catalog, preserve their order and non-widget metadata, and make `DashboardRoleValidator::assertSupported()` throw `UnsupportedDashboardRole` for unknown values. Invoke the validator before any catalog lookup in both controller entry points and before provider resolution in the role service. Map that named failure to HTTP 403, safe code `DASHBOARD.ROLE_UNSUPPORTED`; do not define aliases such as `admin`, `client`, or `designer`. Update `getRoleConfiguration()` to delegate to the catalog and update customization’s available-widget metadata to consume the same catalog/capability source.
 
 - [ ] **Step 4: Run the focused GREEN command.**
 
@@ -213,10 +239,10 @@ git commit -m "feat: add dashboard widget provider resolver contract"
 - Modify: `tests/Unit/Dashboard/WidgetDataResolverTest.php`
 
 **Interfaces:**
-- `RoleBasedWidgetProvider` implements `WidgetDataProvider` and supports exactly the 13 source switch codes until a later evidence-backed catalog change.
+- `RoleBasedWidgetProvider` implements `WidgetDataProvider` and supports exactly the 12 source switch codes; no additional provider code is admitted by this plan.
 - It consumes `WidgetDataContext` and produces `WidgetDataResult::ready(array)`.
 
-- [ ] **Step 1: Write RED provider tests for each existing handled code family.** Use the existing dashboard fixtures and assert the current keys/values for `project_overview`, `task_progress`, `rfi_status`, `budget_tracking`, `schedule_timeline`, `team_performance`, `quality_metrics`, `safety_summary`, `inspection_schedule`, `ncr_tracking`, `system_health`, and `user_management`. Add a data-provider assertion that the provider supports exactly the 13 codes and no role-catalog-only unsupported code.
+- [ ] **Step 1: Write RED provider tests for each existing handled code family.** Use the existing dashboard fixtures and assert the current keys/values for `project_overview`, `task_progress`, `rfi_status`, `budget_tracking`, `schedule_timeline`, `team_performance`, `quality_metrics`, `safety_summary`, `inspection_schedule`, `ncr_tracking`, `system_health`, and `user_management`. Add a data-provider assertion that the provider supports exactly these 12 codes and no role-catalog-only unsupported code.
 
 - [ ] **Step 2: Run the provider RED command.**
 
@@ -252,7 +278,7 @@ git commit -m "refactor: move role dashboard widget data behind provider"
 
 **Interfaces:**
 - Container resolves `WidgetDataResolver` to `DashboardWidgetDataResolver` with `RoleBasedWidgetProvider` registered.
-- `DashboardRoleBasedService::getRoleBasedWidgets(User $user, array $roleConfig, ?string $projectId = null, bool $includeData = true): array`.
+- `DashboardRoleBasedService::getRoleBasedWidgets(App\Models\User $user, array $roleConfig, ?string $projectId = null, bool $includeData = true): array`.
 - The root endpoint passes `includeData=true`; `/widgets` passes the request’s boolean, defaulting to `false`.
 
 - [ ] **Step 1: Write RED composition tests.** Cover supported sibling plus unsupported widget, all-unsupported catalog, metadata-only unsupported catalog, empty catalog, inactive row, and role-ineligible row. Assert ordering and the outer item shape. For data requests, assert unsupported entries contain `state=degraded`, `error.code=DASHBOARD.WIDGET_UNSUPPORTED`, and `data=null`; supported siblings retain real data. For metadata-only requests, assert no provider fake records a call.
@@ -265,7 +291,7 @@ Expected: FAIL because the resolver is not wired and the controller currently re
 
 - [ ] **Step 3: Wire the concrete graph.** Register the resolver and provider in `AppServiceProvider`; make `DashboardRoleBasedService` depend on `WidgetDataResolver`, not on the invented aggregation method. Compose provider results into the existing `widget`, `data`, `permissions` structure while adding only the approved per-widget `state` and `error` fields. Do not invoke the resolver at all when `includeData=false`.
 
-- [ ] **Step 4: Update both controllers’ narrow request behavior.** Preserve route names, validation, and outer success keys. Root remains data-bearing. `/widgets?include_data=false` is provider-independent; `/widgets?include_data=true` includes typed result state. Keep category filtering after composition. If a named resolver failure prevents safe composition, return the existing stable safe 5xx envelope with request ID; never expose exception text.
+- [ ] **Step 4: Update both controllers’ narrow request behavior.** Preserve route names, validation, and outer success keys. Call `DashboardRoleValidator::assertSupported($user->role)` before retrieving role configuration; map `UnsupportedDashboardRole` to HTTP 403 with `DASHBOARD.ROLE_UNSUPPORTED` and do not instantiate or invoke the catalog/provider for that request. Root remains data-bearing. `/widgets?include_data=false` is provider-independent; `/widgets?include_data=true` includes typed result state. Keep category filtering after composition. If a named resolver failure prevents safe composition, return the existing stable safe 5xx envelope with request ID; never expose exception text.
 
 - [ ] **Step 5: Run the focused GREEN command.**
 
@@ -309,7 +335,27 @@ public function test_metadata_only_request_does_not_resolve_a_provider(): void
 }
 ```
 
-Also cover all seven roles with an active eligible handled code and an active eligible unsupported code; canonical `client_rep` → middleware `client` mapping; insufficient role 403 before provider invocation; inaccessible project; same code in tenant A/B; empty tenant catalog; inactive row; and role-ineligible row.
+Also cover all seven roles with explicit capability expectations: `system_admin` supports `system_health` and `user_management`; `project_manager` supports `project_overview`, `task_progress`, `rfi_status`, `budget_tracking`, `schedule_timeline`, `team_performance`, `quality_metrics`, and `safety_summary`; `qc_inspector` supports `inspection_schedule`, `ncr_tracking`, and `quality_metrics`; `design_lead`, `site_engineer`, `client_rep`, and `subcontractor_lead` have no locally handled configured code and must be tested with explicit unsupported/degraded outcomes plus metadata-only success. Also cover canonical `client_rep` → middleware `client` mapping; insufficient role 403 before provider invocation; an unsupported dashboard role returning HTTP 403 with `DASHBOARD.ROLE_UNSUPPORTED` before catalog/provider execution; inaccessible project; same code in tenant A/B; empty tenant catalog; inactive row; and role-ineligible row.
+
+The unknown-role integration test must use a genuine login-issued Bearer token and the real service container. Give the user `role = 'unknown_role'`, grant only the route-level authentication/RBAC prerequisites needed to reach the dashboard controller, and assert the resolver/provider recorder has zero calls:
+
+```php
+public function test_unknown_dashboard_role_fails_closed_before_catalog_or_provider_execution(): void
+{
+    $user = $this->createTenantUser($this->tenant, ['role' => 'unknown_role'], ['dashboard.view']);
+    $token = $this->loginAndGetToken($user);
+
+    $this->app->instance(DashboardWidgetCatalog::class, new RecordingCatalogThatFailsIfCalled());
+    $this->app->instance(WidgetDataResolver::class, new RecordingResolverThatFailsIfCalled());
+
+    $response = $this->withHeader('Authorization', "Bearer {$token}")
+        ->withHeader('X-Tenant-ID', $this->tenant->id)
+        ->getJson('/api/v1/dashboard/role-based/widgets?include_data=true');
+
+    $response->assertStatus(403)
+        ->assertJsonPath('error.code', 'DASHBOARD.ROLE_UNSUPPORTED');
+}
+```
 
 - [ ] **Step 2: Run the RED integration command.**
 
@@ -369,7 +415,7 @@ git commit -m "fix: hide dashboard widget provider internals"
 - Modify or create: `tests/Integration/GAP052DashboardWidgetContractTest.php`
 - Modify: `tests/Unit/Dashboard/DashboardRoleBasedServiceTest.php`
 
-- [ ] **Step 1: Write/replace RED acceptance assertions.** Remove the two `assertStatus(500)` expectations that preserve the defect. Assert both root and `/widgets` under genuine Bearer authentication for all seven roles. For each role, include one provider-supported code and one configured-but-unregistered code; assert exact role-specific catalog, supported data, degraded unsupported entry, and no cross-role fallback. Assert `include_data=false` for both an unsupported and supported code path never calls a provider.
+- [ ] **Step 1: Write/replace RED acceptance assertions.** Remove the two `assertStatus(500)` expectations that preserve the defect. Assert both root and `/widgets` under genuine Bearer authentication for all seven roles. For `system_admin`, `project_manager`, and `qc_inspector`, assert their listed provider-backed codes return real data alongside an unsupported configured code. For `design_lead`, `site_engineer`, `client_rep`, and `subcontractor_lead`, assert their configured codes are explicitly degraded with `DASHBOARD.WIDGET_UNSUPPORTED` when data is requested and that metadata-only requests succeed without provider resolution; do not invent a supported provider for these roles. Assert exact role-specific catalog, no cross-role fallback, and `include_data=false` provider independence.
 
 - [ ] **Step 2: Run the concrete RED-to-GREEN command against the old base as an evidence checkpoint.**
 
@@ -432,11 +478,12 @@ Gate 3 is not requested by this plan. Once implementation is complete, prepare e
 1. Create/update `docs/owner-decisions/GAP-052/03-release.md` from `gate_status: preparing`; never change it to `awaiting_owner` in this plan or claim readiness here.
 2. Record the exact implementation branch HEAD SHA and implementation-tree digest according to `docs/owner-governance/packet-schema.yml`; the digest must cover production/test/config/script changes and exclude only the active Gate-3 record as governance requires.
 3. Bind evidence to the exact approved Gate-2 design and this plan path.
-4. Include the inventory table’s source findings, then the post-change provider capability table for all 53 configured role-widget entries and all seven roles.
+4. Include the inventory table’s source findings, then the post-change provider capability matrix for all 53 configured role-widget entries and all seven roles, including the fact that only three roles currently have supported configured codes.
 5. Include focused command output for:
    - unit catalog/resolver/provider tests;
    - both retained routes under genuine login-issued Bearer tokens;
    - all seven roles;
+   - unsupported dashboard role returning HTTP 403 with `DASHBOARD.ROLE_UNSUPPORTED` before catalog/provider execution;
    - supported sibling plus unsupported degraded widget;
    - all-unsupported safe response;
    - `include_data=false` with a resolver-call sentinel proving no provider resolution;
@@ -467,7 +514,8 @@ Gate 3 is not requested by this plan. Once implementation is complete, prepare e
 - `include_data=false` does not resolve providers: Tasks 4, 5, and 7.
 - Request-level 5xx only when safe composition is impossible: Tasks 2, 4, 6, and Gate-3 evidence item 5.
 - Genuine Bearer auth and real container wiring: Tasks 5 and 7.
-- Exactly seven roles and role-specific capability outcomes: Tasks 1 and 7.
+- Exactly seven roles and role-specific capability outcomes, without inventing providers for four roles: Tasks 1, 5, and 7.
+- Unknown dashboard roles fail closed with HTTP 403 and `DASHBOARD.ROLE_UNSUPPORTED` before catalog/provider execution: Tasks 1, 4, 5, and the Gate-3 evidence checklist.
 - Tenant/RBAC/project/cache isolation: Task 5.
 - False Mockery contract removed: Tasks 3 and 8.
 - Narrow GAP-052 internal-error disclosure fix only: Task 6 and scope checks in Task 8.
@@ -475,6 +523,6 @@ Gate 3 is not requested by this plan. Once implementation is complete, prepare e
 - No blind generic SQL/query promotion: Task 5 and migration/security risks.
 - Gate-3 evidence strategy present without claiming readiness: dedicated section and explicit stop boundary.
 
-## Remaining Approved-Design Ambiguity
+## Owner-Clarified Unknown-Role Contract
 
-One requirement remains genuinely ambiguous in the approved design: the repository’s authoritative policy for an unknown/invalid user-role value. Current `DashboardRoleBasedService` falls back to `client_rep`, while the approved design explicitly forbids silently inheriting `client_rep` and requires the normalization/default policy to be made explicit. The plan therefore makes this a pre-implementation decision in Task 1. No other Gate-2 requirement is left unspecified for the provider/resolver implementation.
+The owner clarification resolves the prior ambiguity. Any authenticated user whose dashboard role is outside the exact seven approved values fails closed before catalog/provider execution with HTTP 403 and safe stable code `DASHBOARD.ROLE_UNSUPPORTED`. GAP-052 introduces no aliases or implicit normalization (`admin`, `client`, `designer`, or any other alias remain unsupported); future aliases require separate evidence and governance. No approved design requirement remains ambiguous, and the task sequence contains no contradictory supported-provider requirement for the four roles without locally handled configured codes.

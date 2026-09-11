@@ -6,9 +6,9 @@ owner_gate_2_record: docs/owner-decisions/GAP-052/02-design.md
 
 # GAP-052 Gate 2 Design — Role-Based Dashboard Root/Widgets Contract
 
-**Status:** Gate 2 awaiting owner decision  
-**Work ID:** GAP-052  
-**Canonical design base:** `26f8579de4782474bb99325f9d2ec23b7c4b3066`  
+**Status:** Gate 2 awaiting owner decision
+**Work ID:** GAP-052
+**Canonical design base:** `26f8579de4782474bb99325f9d2ec23b7c4b3066`
 **Scope:** architecture/design only; no production code, test code, or implementation plan
 
 ## 1. Decision boundary and evidence

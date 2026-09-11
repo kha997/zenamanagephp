@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\DashboardWidget;
 use App\Models\User;
 use App\Models\UserDashboard;
+use App\Services\Dashboard\DashboardWidgetCatalog;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -13,13 +14,16 @@ class DashboardCustomizationService
 {
     protected $dashboardService;
     protected $realTimeService;
+    protected DashboardWidgetCatalog $widgetCatalog;
 
     public function __construct(
         DashboardService $dashboardService,
-        DashboardRealTimeService $realTimeService
+        DashboardRealTimeService $realTimeService,
+        DashboardWidgetCatalog $widgetCatalog
     ) {
         $this->dashboardService = $dashboardService;
         $this->realTimeService = $realTimeService;
+        $this->widgetCatalog = $widgetCatalog;
     }
 
     /**
@@ -484,13 +488,14 @@ class DashboardCustomizationService
      */
     public function getAvailableWidgetsForUser(User $user): array
     {
+        $capabilities = $this->widgetCatalog->capabilitiesForRole($user->role);
         $widgets = DashboardWidget::where('is_active', true)
             ->where('tenant_id', $user->tenant_id)
             ->get();
 
         return $widgets->filter(function ($widget) {
             return true;
-        })->map(function ($widget) {
+        })->map(function ($widget) use ($capabilities) {
             return [
                 'id' => $widget->id,
                 'name' => $widget->name,
@@ -500,7 +505,8 @@ class DashboardCustomizationService
                 'icon' => $widget->config['icon'] ?? 'widget',
                 'default_size' => $widget->config['default_size'] ?? 'medium',
                 'is_customizable' => $widget->config['is_customizable'] ?? true,
-                'permissions' => $widget->permissions
+                'permissions' => $widget->permissions,
+                'capability' => $capabilities[$widget->code] ?? 'unsupported',
             ];
         })->values()->toArray();
     }

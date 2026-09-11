@@ -125,7 +125,7 @@ These are the exact files the implementation plan expects. No production file is
 - Modify: `app/Services/DashboardCustomizationService.php`
 
 **Interfaces:**
-- Produces `DashboardWidgetCatalog::roles(): array`, `forRole(string $role): array`, and `configurationForRole(string $role): array`.
+- Produces `DashboardWidgetCatalog::roles(): array`, `forRole(string $role): array`, `configurationForRole(string $role): array`, and `capabilitiesForRole(string $role): array<string, 'supported'|'unsupported'|'configuration_error'>`.
 - Produces `DashboardRoleValidator::assertSupported(string $role): void`; it throws `UnsupportedDashboardRole` for any value outside the exact seven-role set before catalog/provider execution.
 
 - [ ] **Step 1: Write RED catalog tests.** Assert the exact seven roles, exact per-role order, no role silently maps to `client_rep`, and that the catalog exposes capability classification for every configured code (`supported`, `unsupported`, or `configuration_error`). Assert exactly the 12 currently handled codes are classified as supported only where their existing calculations are moved into a provider; all other source role entries are not silently mapped to fake data. Keep the catalog test unit-scoped; the real-route unknown-role test belongs to Task 5’s concrete integration suite.

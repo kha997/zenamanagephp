@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Dashboard;
 
+use App\Exceptions\Dashboard\UnsupportedDashboardRole;
 use Tests\TestCase;
 use App\Services\DashboardRoleBasedService;
 use App\Services\DashboardDataAggregationService;
@@ -209,12 +210,11 @@ class DashboardRoleBasedServiceTest extends TestCase
     }
 
     /** @test */
-    public function it_returns_default_configuration_for_unknown_role()
+    public function it_rejects_unknown_role_configuration()
     {
-        $roleConfig = $this->roleBasedService->getRoleConfiguration('unknown_role');
+        $this->expectException(UnsupportedDashboardRole::class);
 
-        $this->assertEquals('Client Representative', $roleConfig['name']);
-        $this->assertEquals('Client communication and project oversight', $roleConfig['description']);
+        $this->roleBasedService->getRoleConfiguration('unknown_role');
     }
 
     /** @test */

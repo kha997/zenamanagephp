@@ -163,7 +163,7 @@ Expected: PASS, with no changed production behavior outside catalog ownership an
 - [ ] **Step 5: Commit the catalog slice.**
 
 ```bash
-git add app/Services/Dashboard/DashboardWidgetCatalog.php app/Services/DashboardRoleBasedService.php app/Services/DashboardCustomizationService.php tests/Unit/Dashboard/DashboardWidgetCatalogTest.php
+git add app/Services/Dashboard/DashboardWidgetCatalog.php app/Services/Dashboard/DashboardRoleValidator.php app/Exceptions/Dashboard/UnsupportedDashboardRole.php app/Services/DashboardRoleBasedService.php app/Services/DashboardCustomizationService.php tests/Unit/Dashboard/DashboardWidgetCatalogTest.php
 git commit -m "refactor: centralize dashboard widget catalog"
 ```
 

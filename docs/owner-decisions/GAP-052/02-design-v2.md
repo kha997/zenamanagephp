@@ -15,14 +15,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-09-11"
-  owner_response_reference: "Owner clarification for the post-Gate-2 GAP-052 implementation plan: the provider inventory is exactly 12 locally handled widget codes; only system_admin, project_manager, and qc_inspector have supported configured codes; design_lead, site_engineer, client_rep, and subcontractor_lead must be covered by explicit unsupported/degraded and metadata-only behavior without invented providers; and any authenticated user whose dashboard role is outside the exact seven approved roles must fail closed with HTTP 403 and safe code DASHBOARD.ROLE_UNSUPPORTED before catalog/provider execution. No implicit aliases or fallback to client_rep are allowed under GAP-052; future aliases require separate evidence and governance."
+  recorded_at: "2026-09-11T21:55:15+07:00"
+  owner_response_reference: "Owner decision: APPROVE GAP-052 Gate 2 Revision v2. Reviewed exact revision-v2 subject/head: 69ae4805eb09c13499dcc67f5394f10ec66bcae2."
   reconciliation_required: false
 supersedes: docs/owner-decisions/GAP-052/02-design.md
 superseded_by: null
 timestamps:
   created_at: "2026-09-11"
-  updated_at: "2026-09-11"
+  updated_at: "2026-09-11T21:55:15+07:00"
 generated_by: agent
 ---
 

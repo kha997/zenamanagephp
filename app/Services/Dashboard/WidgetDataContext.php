@@ -7,6 +7,7 @@ use InvalidArgumentException;
 
 final readonly class WidgetDataContext
 {
+    /** @param array<string, mixed> $parameters */
     public function __construct(
         public User $user,
         public string $tenantId,

@@ -4,6 +4,10 @@ namespace App\Services\Dashboard;
 
 final readonly class WidgetDataResult
 {
+    /**
+     * @param array<string, mixed>|null $data
+     * @param array{code: string, message: string, retryable: bool}|null $error
+     */
     private function __construct(
         public string $state,
         public ?array $data,
@@ -11,6 +15,7 @@ final readonly class WidgetDataResult
     ) {
     }
 
+    /** @param array<string, mixed> $data */
     public static function ready(array $data): self
     {
         return new self('ready', $data, null);

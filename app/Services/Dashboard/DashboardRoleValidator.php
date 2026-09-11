@@ -6,6 +6,7 @@ use App\Exceptions\Dashboard\UnsupportedDashboardRole;
 
 class DashboardRoleValidator
 {
+    /** @var list<string> */
     public const ROLES = [
         'system_admin',
         'project_manager',

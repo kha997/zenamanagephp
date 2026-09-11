@@ -2,8 +2,23 @@
 
 namespace App\Services\Dashboard;
 
+/**
+ * @phpstan-type RoleConfiguration array{
+ *     name: string,
+ *     description: string,
+ *     default_widgets: list<string>,
+ *     widget_categories: list<string>,
+ *     data_access: string,
+ *     project_access: string,
+ *     customization_level: string,
+ *     priority_metrics: list<string>,
+ *     alert_types: list<string>,
+ *     dashboard_layout: string
+ * }
+ */
 class DashboardWidgetCatalog
 {
+    /** @var list<string> */
     private const PROVIDER_CODES = [
         'project_overview', 'task_progress', 'rfi_status', 'budget_tracking',
         'schedule_timeline', 'team_performance', 'quality_metrics', 'safety_summary',
@@ -14,16 +29,19 @@ class DashboardWidgetCatalog
     {
     }
 
+    /** @return list<string> */
     public function roles(): array
     {
         return DashboardRoleValidator::ROLES;
     }
 
+    /** @return list<string> */
     public function forRole(string $role): array
     {
         return $this->configurationForRole($role)['default_widgets'];
     }
 
+    /** @return RoleConfiguration */
     public function configurationForRole(string $role): array
     {
         $this->roleValidator->assertSupported($role);
@@ -31,6 +49,7 @@ class DashboardWidgetCatalog
         return self::configurations()[$role];
     }
 
+    /** @return array<string, 'supported'|'unsupported'> */
     public function capabilitiesForRole(string $role): array
     {
         $widgets = $this->forRole($role);
@@ -45,11 +64,13 @@ class DashboardWidgetCatalog
         return $capabilities;
     }
 
+    /** @return list<string> */
     public function providerCodes(): array
     {
         return self::PROVIDER_CODES;
     }
 
+    /** @return array<string, RoleConfiguration> */
     private static function configurations(): array
     {
         return [

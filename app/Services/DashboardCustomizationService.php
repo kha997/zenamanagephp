@@ -450,7 +450,7 @@ class DashboardCustomizationService
             }
 
             // Get default layout for user role
-            $defaultLayout = $this->getDefaultLayoutForRole($user->role);
+            $defaultLayout = $this->getDefaultLayoutForRole((string) $user->getAttribute('role'));
 
             $dashboard->update([
                 'layout' => json_encode($defaultLayout),
@@ -881,7 +881,7 @@ class DashboardCustomizationService
      */
     protected function validateTemplatePermission(User $user, array $template): void
     {
-        if (isset($template['role']) && $template['role'] !== $user->role) {
+        if (isset($template['role']) && $template['role'] !== (string) $user->getAttribute('role')) {
             throw new \Exception('User does not have permission to use this template');
         }
     }

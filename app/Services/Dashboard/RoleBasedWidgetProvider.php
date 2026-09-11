@@ -7,6 +7,7 @@ use App\Models\DashboardWidget;
 
 final class RoleBasedWidgetProvider implements WidgetDataProvider
 {
+    /** @var list<string> */
     private const SUPPORTED_CODES = [
         'project_overview', 'task_progress', 'rfi_status', 'budget_tracking',
         'schedule_timeline', 'team_performance', 'quality_metrics', 'safety_summary',
@@ -24,11 +25,13 @@ final class RoleBasedWidgetProvider implements WidgetDataProvider
 
     public function provide(DashboardWidget $widget, WidgetDataContext $context): WidgetDataResult
     {
-        if (! $this->supports((string) $widget->code)) {
+        $widgetCode = (string) $widget->getAttribute('code');
+
+        if (! $this->supports($widgetCode)) {
             return WidgetDataResult::unsupported();
         }
 
-        $data = match ((string) $widget->code) {
+        $data = match ($widgetCode) {
             'project_overview' => $this->calculator->projectOverview($context->user, $context->projectId),
             'task_progress' => $this->calculator->taskProgress($context->user, $context->projectId),
             'rfi_status' => $this->calculator->rfiStatus($context->user, $context->projectId),
@@ -41,11 +44,17 @@ final class RoleBasedWidgetProvider implements WidgetDataProvider
             'ncr_tracking' => $this->calculator->ncrTracking($context->user, $context->projectId),
             'system_health' => $this->calculator->systemHealth($context->user),
             'user_management' => $this->calculator->userManagement($context->user),
+            default => null,
         };
+
+        if ($data === null) {
+            return WidgetDataResult::unsupported();
+        }
 
         return WidgetDataResult::ready($data);
     }
 
+    /** @return list<string> */
     public static function supportedCodes(): array
     {
         return self::SUPPORTED_CODES;

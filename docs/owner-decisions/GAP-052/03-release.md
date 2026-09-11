@@ -30,7 +30,7 @@ timestamps:
   updated_at: "2026-09-11T00:00:00Z"
 generated_by: agent
 residual_risk_rating: medium
-mandatory_technical_gate_summary: "Gate-3 evidence is being prepared against the exact implementation tree. Owner release approval has not been given."
+mandatory_technical_gate_summary: "Gate-3 remains preparing: exact-head remote Owner Governance Lint and Routes Guardrails pass, but Security Tests and Code Quality Analysis fail in PHPStan and browser-tests remains pending. Owner release approval has not been given."
 technical_evidence:
   base_sha: "c6a207906044bfe691c6a1815f89c8df61b197cb"
   subject_sha: "587ede934fc86b28cd31073ab0ba1ec4d7ccf063"
@@ -87,7 +87,7 @@ The seven-role integration coverage uses real route dispatch, the application co
 
 The focused GAP-052 suite passes at 83 tests and 635 assertions. The explicit GAP-052 integration suite passes at 6 tests and 153 assertions. The relevant `SystemIntegrationTest` performance regression passes at 1 test and 60 assertions. Governance owner-packet lint, Gate-3 ordering lint, route/static false-contract checks, and `git diff --check` pass on the implementation state. PHPUnit reports existing environment extension warnings and deprecations; no test failures remain.
 
-The implementation-tree digest above was computed with the canonical governance algorithm at subject `587ede934fc86b28cd31073ab0ba1ec4d7ccf063`, excluding the active GAP-052 Gate-3 packet as required by repository convention. Remote exact-head checks and final freshness verification remain to be recorded before this packet can move from `preparing`.
+The implementation-tree digest above was computed with the canonical governance algorithm at subject `587ede934fc86b28cd31073ab0ba1ec4d7ccf063`, excluding the active GAP-052 Gate-3 packet as required by repository convention. On PR #312 exact head `84840f9e3bb50f0afdd9c4b7372d7f0bd516ceb6`, Owner Governance Lint and Routes Guardrails passed; Security Tests and Code Quality Analysis failed in PHPStan, and browser-tests was still pending. The packet therefore remains `preparing`; `verified_pr_head_sha` is intentionally unset.
 
 Duplicate legacy public calculation methods retained in `DashboardRoleBasedService` are recorded as non-blocking cleanup debt; they are not part of this Gate-3 scope.
 

@@ -513,6 +513,22 @@ class MaterialRequestApiTest extends TestCase
 
     public function test_material_request_store_rejects_foreign_project_created_via_canonical_zena_projects_owner(): void
     {
+        // GAP-051 (classification B — pre-existing false-green exposed by GAP-051):
+        // this test issues two sequential real Bearer requests (foreignCreator via
+        // createCanonicalProjectViaApi, then userA for the material-request store call) using
+        // hand-rolled per-call tokens via headersFor(), with no guard reset between them. At
+        // Gate-2 base, the sanctum guard cached foreignCreator from the project-creation call
+        // and was never reset before the userA-headed request, so the "userA" request actually
+        // executed as foreignCreator (proven via disposable diagnostic: Auth::guard('sanctum')
+        // ->id() was foreignCreator's id both before AND after the material-request dispatch,
+        // despite carrying a userA Bearer token/header). The resulting 403 TENANT_INVALID
+        // ("X-Tenant-ID does not match authenticated user") was therefore a false-green
+        // artifact of stale cached identity, not real cross-tenant project rejection. GAP-051's
+        // Layer A/B force genuine per-request authentication, so this request now genuinely
+        // executes as userA (confirmed: Auth::guard('sanctum')->id() after dispatch equals
+        // userA's id). The real production contract for a foreign-tenant project_id is a 422
+        // validation rejection (the tenant-scoped `exists` rule on project_id does not find a
+        // project belonging to a different tenant), not a 403 — proven below.
         $foreignCreator = $this->createTenantUser($this->tenantB, [], ['admin'], [
             'project.create',
             'material.read',
@@ -523,7 +539,7 @@ class MaterialRequestApiTest extends TestCase
 
         $foreignProjectId = $this->createCanonicalProjectViaApi($foreignCreator, 'Foreign Canonical Owner Project');
 
-        $this->postJson(
+        $response = $this->postJson(
             $this->route('store'),
             [
                 'project_id' => $foreignProjectId,
@@ -532,7 +548,14 @@ class MaterialRequestApiTest extends TestCase
                 'required_date' => '2026-05-02',
             ],
             $this->headersFor($this->userA)
-        )->assertStatus(403);
+        );
+
+        // Real production contract: genuine userA authentication reaches the tenant-scoped
+        // `exists` validation rule on project_id, which rejects the foreign-tenant project as
+        // invalid input rather than a 403 tenant-identity mismatch.
+        $response->assertStatus(422);
+        $response->assertJsonPath('error.code', 'E422.VALIDATION');
+        $response->assertJsonPath('error.details.data.project_id.0', 'The selected project id is invalid.');
 
         $this->assertDatabaseMissing('zena_material_requests', [
             'project_id' => $foreignProjectId,

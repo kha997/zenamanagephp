@@ -167,6 +167,8 @@ class SubmittalContentRulesRegressionTest extends TestCase
 
         $response->assertStatus(200);
 
+        $this->app->make(\Illuminate\Auth\AuthManager::class)->forgetGuards();
+
         return (string) $response->json('data.token');
     }
 }

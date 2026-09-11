@@ -115,12 +115,11 @@ class IntegrationTest extends TestCase
             ->getJson("/api/v1/projects/{$projectId}");
 
 
-        $unauthorizedResponse->assertStatus(403);
+        $unauthorizedResponse->assertStatus(404);
         $unauthorizedResponse->assertJsonStructure([
             'error' => ['id', 'code', 'message', 'details'],
         ]);
-        $unauthorizedResponse->assertJsonPath('error.code', 'TENANT_INVALID');
-        $unauthorizedResponse->assertJsonPath('error.message', 'X-Tenant-ID does not match authenticated user');
+        $unauthorizedResponse->assertJsonPath('error.code', 'E404.NOT_FOUND');
     }
 
     protected function ensureRoleHasTenantPermissions(string $roleName): void

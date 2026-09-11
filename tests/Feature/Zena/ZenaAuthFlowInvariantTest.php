@@ -139,6 +139,7 @@ class ZenaAuthFlowInvariantTest extends TestCase
 
         $token = $this->loginAndReturnToken($tenant, $user->email, $password);
 
+        $this->app->make(\Illuminate\Auth\AuthManager::class)->forgetGuards();
         $missingTenantResponse = $this
             ->flushHeaders()
             ->withHeaders([
@@ -244,6 +245,7 @@ class ZenaAuthFlowInvariantTest extends TestCase
         ];
 
         if ($token) {
+            $this->app->make(\Illuminate\Auth\AuthManager::class)->forgetGuards();
             $headers['Authorization'] = 'Bearer ' . $token;
         }
 

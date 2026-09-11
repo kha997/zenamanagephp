@@ -67,6 +67,7 @@ class LegacyTenantIsolationTest extends TestCase
             'message' => 'RFI not found',
         ]);
 
+        $this->actingAs($userB);
         $missingTenantResponse = $this
             ->flushHeaders()
             ->withHeaders([

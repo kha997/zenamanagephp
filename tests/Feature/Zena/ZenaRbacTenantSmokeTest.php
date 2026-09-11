@@ -204,6 +204,7 @@ class ZenaRbacTenantSmokeTest extends TestCase
         ];
 
         if ($token) {
+            $this->app->make(\Illuminate\Auth\AuthManager::class)->forgetGuards();
             $headers['Authorization'] = 'Bearer ' . $token;
         }
 

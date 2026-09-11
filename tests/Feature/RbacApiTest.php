@@ -132,8 +132,6 @@ class RbacApiTest extends TestCase
      */
     public function test_can_get_all_roles()
     {
-        Sanctum::actingAs($this->user);
-
         Role::factory()->count(3)->create();
 
         $response = $this->withHeaders([
@@ -167,8 +165,6 @@ class RbacApiTest extends TestCase
      */
     public function test_can_create_role()
     {
-        Sanctum::actingAs($this->user);
-
         $roleData = [
             'name' => 'Project Manager',
             'scope' => 'custom',
@@ -206,8 +202,6 @@ class RbacApiTest extends TestCase
      */
     public function test_can_update_role()
     {
-        Sanctum::actingAs($this->user);
-
         // GAP-042 §6: a custom-scope role with no tenant_id is a global role,
         // read-only through this tenant-scoped surface — must be bound to
         // this test's own tenant to exercise a genuinely mutable role.
@@ -247,8 +241,6 @@ class RbacApiTest extends TestCase
      */
     public function test_can_delete_role()
     {
-        Sanctum::actingAs($this->user);
-
         // GAP-042 §6: bind to this test's own tenant — see test_can_update_role.
         $role = Role::factory()->create([
             'scope' => 'custom',
@@ -277,8 +269,6 @@ class RbacApiTest extends TestCase
      */
     public function test_can_get_all_permissions()
     {
-        Sanctum::actingAs($this->user);
-
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->token,
         ])->getJson('/api/v1/rbac/permissions');
@@ -307,8 +297,6 @@ class RbacApiTest extends TestCase
      */
     public function test_can_assign_role_to_user()
     {
-        Sanctum::actingAs($this->user);
-
         $targetUser = User::factory()->create([
             'tenant_id' => $this->tenant->id
         ]);
@@ -346,8 +334,6 @@ class RbacApiTest extends TestCase
      */
     public function test_can_remove_role_from_user()
     {
-        Sanctum::actingAs($this->user);
-
         $targetUser = User::factory()->create([
             'tenant_id' => $this->tenant->id
         ]);

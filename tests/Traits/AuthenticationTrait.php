@@ -107,6 +107,7 @@ trait AuthenticationTrait
         );
 
         $this->apiHeaders = $headers;
+        $this->app->make(\Illuminate\Auth\AuthManager::class)->forgetGuards();
 
         return $this->withHeaders($headers);
     }

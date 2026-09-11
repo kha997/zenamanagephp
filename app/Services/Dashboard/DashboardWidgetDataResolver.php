@@ -5,6 +5,7 @@ namespace App\Services\Dashboard;
 use App\Contracts\Dashboard\WidgetDataProvider;
 use App\Contracts\Dashboard\WidgetDataResolver;
 use App\Models\DashboardWidget;
+use App\Services\ErrorEnvelopeService;
 use Illuminate\Support\Facades\Log;
 
 final class DashboardWidgetDataResolver implements WidgetDataResolver
@@ -39,8 +40,10 @@ final class DashboardWidgetDataResolver implements WidgetDataResolver
                     'widget_code' => $widget->code,
                     'user_id' => $context->user->id,
                     'tenant_id' => $context->tenantId,
+                    'role' => $context->user->role,
                     'project_id' => $context->projectId,
-                    'exception' => $exception::class,
+                    'request_id' => ErrorEnvelopeService::getCurrentRequestId(),
+                    'failure_reason' => 'provider_failure',
                 ]);
 
                 return WidgetDataResult::degraded(

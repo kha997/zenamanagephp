@@ -81,11 +81,13 @@ class DashboardRoleBasedController extends Controller
                 'error' => $e->getMessage()
             ]);
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to load role-based dashboard',
-                'error' => ['code' => 'DASHBOARD.INTERNAL_ERROR', 'message' => 'Internal server error']
-            ], 500);
+            return ErrorEnvelopeService::error(
+                'DASHBOARD.INTERNAL_ERROR',
+                'Dashboard data is temporarily unavailable.',
+                [],
+                500,
+                ErrorEnvelopeService::getCurrentRequestId(),
+            );
         }
     }
 
@@ -157,11 +159,13 @@ class DashboardRoleBasedController extends Controller
                 'error' => $e->getMessage()
             ]);
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to load role widgets',
-                'error' => ['code' => 'DASHBOARD.INTERNAL_ERROR', 'message' => 'Internal server error']
-            ], 500);
+            return ErrorEnvelopeService::error(
+                'DASHBOARD.INTERNAL_ERROR',
+                'Dashboard data is temporarily unavailable.',
+                [],
+                500,
+                ErrorEnvelopeService::getCurrentRequestId(),
+            );
         }
     }
 

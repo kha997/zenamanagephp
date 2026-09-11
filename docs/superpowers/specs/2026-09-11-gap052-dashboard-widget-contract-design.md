@@ -60,7 +60,7 @@ Deprecate the root/widgets routes and move callers to the generic dashboard/cust
 
 Choose **B**.
 
-The authoritative owner of generic widget-data retrieval should be an explicit dashboard widget-data provider/resolver boundary. The role-based service owns orchestration: role configuration selection, widget eligibility, ordering, response composition, and project-context handoff. It must not own every widget query and must not call a role-summary service for generic data.
+The authoritative owner of generic widget-data retrieval should be an explicit dashboard widget-data provider/resolver boundary. The role-based service owns orchestration: role configuration selection, widget eligibility, ordering, response composition, partial/degraded widget outcomes, and project-context handoff. It must not own every widget query and must not call a role-summary service for generic data. A provider failure is a per-widget outcome whenever the outer response can be safely composed; request-level 5xx is reserved for cases where safe composition itself is impossible.
 
 Responsibilities:
 
@@ -68,7 +68,7 @@ Responsibilities:
 |---|---|
 | `DashboardRoleBasedService` | Resolve the user’s canonical role, select the authoritative catalog, enforce widget eligibility, pass an already-authorized context to the provider, and compose root/widgets responses. |
 | `DashboardDataAggregationService` | Produce role-wide aggregates for the seven role summaries. It does not own `getWidgetData()` and must not be made the generic fallback merely because the missing method caused the incident. |
-| Widget-data provider/resolver | Authoritatively resolve supported widget codes/data-source kinds and return the stable widget result or a named unsupported/data failure. It owns provider dispatch, not HTTP response formatting. |
+| Widget-data provider/resolver | Authoritatively resolve supported widget codes/data-source kinds and return a stable widget result or named per-widget unsupported/data failure. It owns provider dispatch, not HTTP response formatting or the decision to discard safe partial results. |
 | `DashboardService` | Preserve existing generic dashboard/customization compatibility. Its current per-widget retrieval logic is the initial compatibility implementation to extract/adapt behind the explicit provider boundary, after tenant/query/cache review. |
 | `RealTimeDashboardService` | Keep real-time cache/analytics semantics separate. Its `(widgetType, userId)` API is incompatible with the role-based provider context and is not a fallback. |
 | `DashboardCustomizationService` | Own layout/configuration mutations and available-widget presentation. It must consume the same authoritative catalog/provider capability metadata, not define a second data contract. |
@@ -79,11 +79,14 @@ The explicit contract must carry `User` as `App\Models\User`, tenant identity, o
 
 ## 5. Unsupported widget behavior
 
-There are three distinct cases:
+The contract distinguishes catalog availability from data retrieval and uses per-widget outcomes whenever the dashboard can still be represented safely:
 
 1. No active widget row for a configured code, or the row is not eligible for the authenticated role: omit it from the returned widget list. This is normal catalog availability behavior.
-2. An active, eligible row has a code with no registered provider: treat the server-side catalog as invalid. Fail the root/widgets operation with stable domain code `DASHBOARD.WIDGET_UNSUPPORTED`, HTTP 500, and a generic user-safe message. Log the widget code, tenant, role, request ID, and provider-resolution reason in structured logs; do not place class names, method names, stack traces, or raw exception text in the response.
-3. A provider exists but its data source is temporarily unavailable: use a separately named stable data-source failure mapped according to the provider’s declared retryability (500 for an application failure, 503 with `Retry-After` only for a genuinely retryable dependency). Do not convert an unsupported code into an empty success payload.
+2. An active, eligible row has a code with no registered provider: when `include_data=true`, retain that widget’s position and return a safe per-widget degraded/error result with `state: degraded`, `error.code: DASHBOARD.WIDGET_UNSUPPORTED`, a generic user-safe message, and no `data` (or an explicit `data: null`). Do not fail the whole root/widgets request merely because one widget is unsupported; return the supported widgets and their real data in the same safe response. If all configured widgets are unsupported, a safe response containing only degraded widget entries is still preferable to a request-level 5xx.
+3. When `include_data=false`, do not invoke or require a provider. Return the eligible catalog/metadata successfully even if a configured code has no provider; provider absence must not fail this metadata-only request and must not manufacture data.
+4. A provider exists but its data source is temporarily unavailable: return a per-widget degraded/error result when the rest of the response can be safely composed, using the named stable data-source error and retryability metadata without leaking internals. Use a request-level 5xx/503 only when the request cannot be safely completed or represented at all; never convert an unsupported code into fake data or silently into an empty success item.
+
+For every degraded widget, log the widget code, tenant, role, request ID, and provider-resolution/data-source reason in structured logs. Do not place class names, method names, stack traces, or raw exception text in the response. The outer response retains the existing successful shape (`success`, `data`, `meta`) for safe partial results; the per-widget result separates `state`, `data`, and `error` so clients can distinguish real data from degradation.
 
 This policy makes bad configuration observable and deterministic while preserving empty-catalog success for tenants with no matching active widgets.
 
@@ -107,10 +110,10 @@ The implementation must replace the current false contract, not merely make its 
 Required concrete-dependency integration coverage:
 
 - Use the real route, controller, service container wiring, database, `auth:sanctum`, and a genuine `Authorization: Bearer` token issued through the login/token path. Do not use `actingAs()` or a mock of `DashboardDataAggregationService` for the end-to-end contract.
-- Exercise both root and widgets endpoints with the same qualifying active widget rows and `include_data=true/false`; `include_data=false` must not execute an invalid provider path before stripping data.
+- Exercise both root and widgets endpoints with the same qualifying active widget rows and `include_data=true/false`; `include_data=false` must not execute or require an absent provider and must still return the eligible catalog/metadata successfully.
 - Exercise all seven roles with at least one handled/supported widget and one unhandled/unsupported configured code. Assert the role-specific catalog and provider result, not just HTTP 200.
 - Assert the concrete dependency graph: no test may declare `getWidgetData()` on `DashboardDataAggregationService`; the real resolver/provider must be bound and invoked.
-- Assert unsupported-code behavior, empty catalog, inactive widget, role-ineligible widget, provider failure, and stable safe error envelopes.
+- Assert unsupported-code behavior as a safe partial response: one unsupported widget does not fail supported siblings, each unsupported entry is explicitly degraded with `DASHBOARD.WIDGET_UNSUPPORTED`, has no fake data/internal details, and an all-unsupported catalog remains safely representable. Assert `include_data=false` succeeds without provider resolution. Also cover empty catalog, inactive widget, role-ineligible widget, provider failure, the request-level 5xx boundary when safe composition is impossible, and stable safe error envelopes.
 - Assert tenant A cannot read tenant B’s widget definition, data, project, or cache; assert foreign/inaccessible project context is not executed.
 - Assert RBAC denial with a genuine token and canonical role pivot, including the `client_rep` → `client` middleware mapping where applicable.
 - Keep focused unit tests for the resolver/provider registry, but use narrow fakes only at the explicit provider boundary and verify the concrete integration separately.
@@ -134,6 +137,6 @@ Do not undertake broad error-envelope refactoring in GAP-052. A separate gap sho
 
 ## 10. Gate-3 acceptance boundary
 
-Gate 2 approval would authorize a separate implementation plan. Gate 3 must not be requested until the planned change demonstrates: both retained routes work for all seven roles under genuine Bearer authentication; supported providers return tenant/RBAC-safe data; unsupported codes produce the stable safe failure; the false mock contract is removed; concrete-dependency integration coverage is green; and only the narrow GAP-052 error-disclosure fix is included.
+Gate 2 approval would authorize a separate implementation plan. Gate 3 must not be requested until the planned change demonstrates: both retained routes work for all seven roles under genuine Bearer authentication; supported providers return tenant/RBAC-safe data; one unsupported widget degrades without failing safe siblings; every degraded entry carries `DASHBOARD.WIDGET_UNSUPPORTED` with no fake data or internal details; `include_data=false` succeeds without provider resolution; request-level 5xx occurs only when safe composition is impossible; the false mock contract is removed; concrete-dependency integration coverage is green; and only the narrow GAP-052 error-disclosure fix is included.
 
 No implementation plan is included in this document.

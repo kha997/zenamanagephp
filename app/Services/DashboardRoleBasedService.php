@@ -176,10 +176,21 @@ class DashboardRoleBasedService
      */
     protected function getWidgetDataForRole(User $user, DashboardWidget $widget, ?string $projectId = null): array
     {
-        $result = $this->widgetDataResolver->resolve(
-            $widget,
-            new WidgetDataContext($user, (string) $user->tenant_id, $projectId),
-        );
+        try {
+            $result = $this->widgetDataResolver->resolve(
+                $widget,
+                new WidgetDataContext($user, (string) $user->tenant_id, $projectId),
+            );
+        } catch (\InvalidArgumentException $exception) {
+            return [
+                'state' => 'degraded',
+                'error' => [
+                    'code' => 'DASHBOARD.PROJECT_FORBIDDEN',
+                    'message' => 'Widget data is not available for this project.',
+                    'retryable' => false,
+                ],
+            ];
+        }
 
         if ($result->state === 'ready') {
             return $result->data ?? [];

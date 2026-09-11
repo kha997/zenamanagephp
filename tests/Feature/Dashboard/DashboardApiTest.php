@@ -12,6 +12,9 @@ use App\Models\DashboardMetric;
 use App\Models\DashboardAlert;
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\Role;
+use App\Contracts\Dashboard\WidgetDataResolver;
+use Mockery;
 use App\Models\Rfi;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -494,6 +497,144 @@ class DashboardApiTest extends TestCase
                         'total_count'
                     ]
                 ]);
+    }
+
+    /** @test */
+    public function metadata_only_widgets_do_not_resolve_a_provider(): void
+    {
+        $widget = DashboardWidget::create([
+            'name' => 'Change Requests',
+            'code' => 'change_requests',
+            'type' => 'table',
+            'category' => 'communication',
+            'description' => 'Unsupported GAP-052 catalog entry',
+            'config' => json_encode([]),
+            'permissions' => json_encode([]),
+            'is_active' => true,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        $resolver = Mockery::mock(WidgetDataResolver::class);
+        $resolver->shouldReceive('resolve')->never();
+        $this->app->instance(WidgetDataResolver::class, $resolver);
+
+        $response = $this->getJson('/api/v1/dashboard/role-based/widgets?include_data=0');
+
+        $response->assertOk();
+        $entry = collect($response->json('data.widgets'))->firstWhere('widget.id', $widget->id);
+        self::assertNotNull($entry);
+        self::assertArrayNotHasKey('data', $entry);
+    }
+
+    /** @test */
+    public function unsupported_widget_degrades_without_failing_the_widgets_request(): void
+    {
+        $widget = DashboardWidget::create([
+            'name' => 'Change Requests',
+            'code' => 'change_requests',
+            'type' => 'table',
+            'category' => 'communication',
+            'description' => 'Unsupported GAP-052 catalog entry',
+            'config' => json_encode([]),
+            'permissions' => json_encode([]),
+            'is_active' => true,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        $response = $this->getJson('/api/v1/dashboard/role-based/widgets?include_data=1');
+
+        $response->assertOk();
+        $entry = collect($response->json('data.widgets'))->firstWhere('widget.id', $widget->id);
+        self::assertSame('degraded', $entry['state']);
+        self::assertNull($entry['data']);
+        self::assertSame('DASHBOARD.WIDGET_UNSUPPORTED', $entry['error']['code']);
+    }
+
+    /** @test */
+    public function unsupported_dashboard_role_is_rejected_before_catalog_execution(): void
+    {
+        $projectManagerRole = Role::firstOrCreate(['name' => 'admin'], [
+            'scope' => Role::SCOPE_SYSTEM,
+            'allow_override' => true,
+            'is_active' => true,
+        ]);
+        $this->user->roles()->syncWithoutDetaching([$projectManagerRole->id]);
+        $this->user->systemRoles()->syncWithoutDetaching([$projectManagerRole->id]);
+        $this->user->forceFill(['role' => 'unknown_role'])->save();
+        $this->apiAs($this->user->fresh(), $this->tenant);
+
+        $response = $this->getJson('/api/v1/dashboard/role-based/widgets');
+
+        $response->assertStatus(403)
+            ->assertJsonPath('error.code', 'DASHBOARD.ROLE_UNSUPPORTED');
+    }
+
+    /** @test */
+    public function all_seven_approved_roles_have_explicit_provider_or_degraded_results(): void
+    {
+        $adminRole = Role::firstOrCreate(['name' => 'admin'], [
+            'scope' => Role::SCOPE_SYSTEM,
+            'allow_override' => true,
+            'is_active' => true,
+        ]);
+        $this->user->roles()->syncWithoutDetaching([$adminRole->id]);
+        $this->user->systemRoles()->syncWithoutDetaching([$adminRole->id]);
+
+        $roleCodes = [
+            'system_admin' => 'system_health',
+            'project_manager' => 'project_overview',
+            'design_lead' => 'design_progress',
+            'site_engineer' => 'daily_tasks',
+            'qc_inspector' => 'inspection_schedule',
+            'client_rep' => 'project_summary',
+            'subcontractor_lead' => 'subcontractor_progress',
+        ];
+        $supported = ['system_health', 'project_overview', 'inspection_schedule'];
+
+        foreach ($roleCodes as $role => $code) {
+            DashboardWidget::firstOrCreate([
+                'tenant_id' => $this->tenant->id,
+                'code' => $code,
+            ], [
+                'name' => $code,
+                'type' => 'card',
+                'category' => 'gap052',
+                'description' => 'GAP-052 role capability fixture',
+                'config' => json_encode([]),
+                'permissions' => json_encode([]),
+                'is_active' => true,
+            ]);
+
+            $this->user->forceFill(['role' => $role])->save();
+            $this->apiAs($this->user->fresh(), $this->tenant);
+            $response = $this->getJson('/api/v1/dashboard/role-based/widgets?include_data=1');
+            $response->assertOk();
+
+            $entry = collect($response->json('data.widgets'))->firstWhere('widget.code', $code);
+            self::assertNotNull($entry, $role);
+            self::assertSame(in_array($code, $supported, true) ? 'ready' : 'degraded', $entry['state'], $role);
+            if (! in_array($code, $supported, true)) {
+                self::assertSame('DASHBOARD.WIDGET_UNSUPPORTED', $entry['error']['code'], $role);
+            }
+        }
+    }
+
+    /** @test */
+    public function provider_data_cannot_be_read_for_an_unassigned_project(): void
+    {
+        $foreignProject = Project::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'Unassigned Project',
+            'status' => 'active',
+        ]);
+
+        $response = $this->getJson('/api/v1/dashboard/role-based/widgets?include_data=1&project_id='.$foreignProject->id);
+
+        $response->assertOk();
+        $entry = collect($response->json('data.widgets'))->firstWhere('widget.code', 'project_overview');
+        self::assertSame('degraded', $entry['state']);
+        self::assertNull($entry['data']);
+        self::assertSame('DASHBOARD.PROJECT_FORBIDDEN', $entry['error']['code']);
     }
 
     /** @test */

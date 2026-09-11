@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Exceptions\Dashboard\UnsupportedDashboardRole;
 use App\Services\DashboardRoleBasedService;
+use App\Services\ErrorEnvelopeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -57,11 +58,13 @@ class DashboardRoleBasedController extends Controller
             ]);
 
         } catch (UnsupportedDashboardRole $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Dashboard role is not supported.',
-                'error' => ['code' => 'DASHBOARD.ROLE_UNSUPPORTED', 'message' => 'Dashboard role is not supported.'],
-            ], 403);
+            return ErrorEnvelopeService::error(
+                'DASHBOARD.ROLE_UNSUPPORTED',
+                'Dashboard role is not supported.',
+                [],
+                403,
+                ErrorEnvelopeService::getCurrentRequestId(),
+            );
         } catch (\Exception $e) {
             Log::error('Failed to get role-based dashboard', [
                 'user_id' => Auth::id(),
@@ -123,11 +126,13 @@ class DashboardRoleBasedController extends Controller
             ]);
 
         } catch (UnsupportedDashboardRole $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Dashboard role is not supported.',
-                'error' => ['code' => 'DASHBOARD.ROLE_UNSUPPORTED', 'message' => 'Dashboard role is not supported.'],
-            ], 403);
+            return ErrorEnvelopeService::error(
+                'DASHBOARD.ROLE_UNSUPPORTED',
+                'Dashboard role is not supported.',
+                [],
+                403,
+                ErrorEnvelopeService::getCurrentRequestId(),
+            );
         } catch (\Exception $e) {
             Log::error('Failed to get role widgets', [
                 'user_id' => Auth::id(),

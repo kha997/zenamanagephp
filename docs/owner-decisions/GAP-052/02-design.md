@@ -1,11 +1,11 @@
 ---
 work_id: GAP-052
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-09-11-gap052-dashboard-widget-contract-design.md
   plan: null
@@ -15,14 +15,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-09-11T13:41:28Z"
+  owner_response_reference: "Owner Gate 2 APPROVED — reviewed exact PR #311 head 7d7f5d0687cf12e16b0921989d4275553109a711. Approval covers the retained role-based root/widgets surfaces, explicit widget-data provider/resolver architecture, seven-role catalog/RBAC/tenant invariants, corrected safe partial/degraded unsupported-widget semantics, include_data=false provider independence, request-level 5xx boundary, and Gate-3 acceptance/test requirements. No production or test code changes are authorized in this Gate-2 merge session; implementation requires a separate post-approval session and plan."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-11T00:00:00+07:00"
-  updated_at: "2026-09-11T00:00:00+07:00"
+  updated_at: "2026-09-11T13:41:28Z"
 generated_by: agent
 ---
 
@@ -82,7 +82,7 @@ Không triển khai code, không sửa test ở Gate 2, không retire route, kh�
 
 ## Decision Needed
 
-Owner chọn một: Approve to proceed to implementation / Request changes to the design / Decline.
+Owner decision recorded: **APPROVED** for the exact design head `7d7f5d0687cf12e16b0921989d4275553109a711`. This authorizes a separate implementation plan/session within the approved scope; it does not authorize implementation in this Gate-2 merge session.
 
 ## What the owner is NOT being asked to decide
 

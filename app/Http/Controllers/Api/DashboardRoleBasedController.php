@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Exceptions\Dashboard\UnsupportedDashboardRole;
+use App\Exceptions\Dashboard\ForbiddenDashboardProject;
 use App\Services\DashboardRoleBasedService;
 use App\Services\ErrorEnvelopeService;
 use Illuminate\Http\JsonResponse;
@@ -61,6 +62,14 @@ class DashboardRoleBasedController extends Controller
             return ErrorEnvelopeService::error(
                 'DASHBOARD.ROLE_UNSUPPORTED',
                 'Dashboard role is not supported.',
+                [],
+                403,
+                ErrorEnvelopeService::getCurrentRequestId(),
+            );
+        } catch (ForbiddenDashboardProject $e) {
+            return ErrorEnvelopeService::error(
+                'DASHBOARD.PROJECT_FORBIDDEN',
+                'Dashboard project is not accessible.',
                 [],
                 403,
                 ErrorEnvelopeService::getCurrentRequestId(),
@@ -129,6 +138,14 @@ class DashboardRoleBasedController extends Controller
             return ErrorEnvelopeService::error(
                 'DASHBOARD.ROLE_UNSUPPORTED',
                 'Dashboard role is not supported.',
+                [],
+                403,
+                ErrorEnvelopeService::getCurrentRequestId(),
+            );
+        } catch (ForbiddenDashboardProject $e) {
+            return ErrorEnvelopeService::error(
+                'DASHBOARD.PROJECT_FORBIDDEN',
+                'Dashboard project is not accessible.',
                 [],
                 403,
                 ErrorEnvelopeService::getCurrentRequestId(),

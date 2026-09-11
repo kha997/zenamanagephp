@@ -52,7 +52,8 @@ class DashboardApiTest extends TestCase
             'budget' => 100000,
             'start_date' => now(),
             'end_date' => now()->addMonths(6),
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
+            'pm_id' => $this->user->id,
         ]);
         
         // Create test widgets
@@ -630,13 +631,14 @@ class DashboardApiTest extends TestCase
             'status' => 'active',
         ]);
 
+        $resolver = Mockery::mock(WidgetDataResolver::class);
+        $resolver->shouldReceive('resolve')->never();
+        $this->app->instance(WidgetDataResolver::class, $resolver);
+
         $response = $this->getJson('/api/v1/dashboard/role-based/widgets?include_data=1&project_id='.$foreignProject->id);
 
-        $response->assertOk();
-        $entry = collect($response->json('data.widgets'))->firstWhere('widget.code', 'project_overview');
-        self::assertSame('degraded', $entry['state']);
-        self::assertNull($entry['data']);
-        self::assertSame('DASHBOARD.PROJECT_FORBIDDEN', $entry['error']['code']);
+        $response->assertStatus(403)
+            ->assertJsonPath('error.code', 'DASHBOARD.PROJECT_FORBIDDEN');
     }
 
     /** @test */

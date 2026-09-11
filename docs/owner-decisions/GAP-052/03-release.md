@@ -27,14 +27,14 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-11T13:41:28Z"
-  updated_at: "2026-09-11T00:00:00Z"
+  updated_at: "2026-09-11T16:42:13Z"
 generated_by: agent
 residual_risk_rating: medium
-mandatory_technical_gate_summary: "Gate-3 remains preparing: exact-head remote Owner Governance Lint and Routes Guardrails pass, but Security Tests and Code Quality Analysis fail in PHPStan and browser-tests remains pending. Owner release approval has not been given."
+mandatory_technical_gate_summary: "Gate-3 remains preparing: the 51 GAP-052 PHPStan file-errors are corrected locally with zero unbaselined file errors, and behavioral regressions pass; mandatory remote CI has not yet been verified on the new exact PR head. Owner release approval has not been given."
 technical_evidence:
   base_sha: "c6a207906044bfe691c6a1815f89c8df61b197cb"
-  subject_sha: "587ede934fc86b28cd31073ab0ba1ec4d7ccf063"
-  implementation_tree_digest: "6571d6acb2b7324f33d7204ce72d12cee8bcb34f2356d320d667df8e705f04a3"
+  subject_sha: "61e91636f8d5c6f97fc786526ab01c89e74ec49b"
+  implementation_tree_digest: "c1f595faf4acadd5fcf457ce1c9e1ff02094fb4ce368494c3b8d4182caf3be02"
   verified_pr_head_sha: null
   verified_at: null
 owner_decision_binding:
@@ -85,9 +85,13 @@ The seven-role integration coverage uses real route dispatch, the application co
 
 ## Verification record
 
-The focused GAP-052 suite passes at 83 tests and 635 assertions. The explicit GAP-052 integration suite passes at 6 tests and 153 assertions. The relevant `SystemIntegrationTest` performance regression passes at 1 test and 60 assertions. Governance owner-packet lint, Gate-3 ordering lint, route/static false-contract checks, and `git diff --check` pass on the implementation state. PHPUnit reports existing environment extension warnings and deprecations; no test failures remain.
+The focused GAP-052 suite, including the explicit integration suite, passes at 83 tests and 635 assertions; the integration suite itself passes at 6 tests and 153 assertions. The complete `SystemIntegrationTest` performance group passes at 10 tests and 239 assertions, including its large-dataset dashboard timing assertions. Governance owner-packet lint, Gate-3 ordering lint, route/static false-contract checks, and `git diff --check` pass on the implementation state. PHPUnit reports existing environment extension warnings and deprecations; no test failures remain.
 
-The implementation-tree digest above was computed with the canonical governance algorithm at subject `587ede934fc86b28cd31073ab0ba1ec4d7ccf063`, excluding the active GAP-052 Gate-3 packet as required by repository convention. On PR #312 exact head `84840f9e3bb50f0afdd9c4b7372d7f0bd516ceb6`, Owner Governance Lint and Routes Guardrails passed; Security Tests and Code Quality Analysis failed in PHPStan, and browser-tests was still pending. The packet therefore remains `preparing`; `verified_pr_head_sha` is intentionally unset.
+The exact CI PHPStan command, `./vendor/bin/phpstan analyse --error-format=json`, reports `errors: 0` and `file_errors: 0`. The correction adds precise catalog/result/context types, uses explicit Eloquent query builders, reads dashboard `role` and widget `code` through locally typed attributes, dispatches providers with a safe exhaustive guard, and binds inspection/NCR calculations to the verified `QcInspection` and `Ncr` models. No PHPStan baseline entry or suppression was added, and the `DashboardCustomizationService::$user->role` baseline-count regression was removed without increasing baseline debt.
+
+The implementation-tree digest above was computed with the canonical governance function at subject `61e91636f8d5c6f97fc786526ab01c89e74ec49b`, excluding the active GAP-052 Gate-3 packet as required by repository convention. Prior CI results are stale after this implementation change. The packet therefore remains `preparing`; `verified_pr_head_sha` is intentionally unset until mandatory checks, including both PHPStan jobs and browser-tests, finish on the new exact PR head.
+
+The local macOS invocation of `scripts/ci/check-evidence-freshness.sh` has a pre-existing BSD/GNU `basename` portability defect in its packet-discovery pipeline. GAP-052 does not modify that governance script; the canonical digest function above and the authoritative Linux CI freshness run remain the required evidence. This is recorded as separate governance-tooling debt.
 
 Duplicate legacy public calculation methods retained in `DashboardRoleBasedService` are recorded as non-blocking cleanup debt; they are not part of this Gate-3 scope.
 

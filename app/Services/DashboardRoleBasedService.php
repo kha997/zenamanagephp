@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Contracts\Dashboard\WidgetDataResolver;
+use App\Exceptions\Dashboard\ForbiddenDashboardProject;
 use App\Models\DashboardAlert;
 use App\Models\DashboardMetric;
 use App\Models\DashboardWidget;
@@ -20,19 +21,13 @@ use Illuminate\Support\Collection;
 
 class DashboardRoleBasedService
 {
-    protected $dataAggregationService;
-    protected $customizationService;
     protected DashboardWidgetCatalog $widgetCatalog;
     protected WidgetDataResolver $widgetDataResolver;
 
     public function __construct(
-        DashboardDataAggregationService $dataAggregationService,
-        DashboardCustomizationService $customizationService,
         DashboardWidgetCatalog $widgetCatalog,
         WidgetDataResolver $widgetDataResolver
     ) {
-        $this->dataAggregationService = $dataAggregationService;
-        $this->customizationService = $customizationService;
         $this->widgetCatalog = $widgetCatalog;
         $this->widgetDataResolver = $widgetDataResolver;
     }
@@ -48,6 +43,7 @@ class DashboardRoleBasedService
 
             // Get role-specific configuration
             $roleConfig = $this->getRoleConfiguration($role);
+            $this->assertProjectContext($user, $projectId);
             
             // Get user's current dashboard or create default
             $dashboard = $this->getOrCreateUserDashboard($user, $roleConfig);
@@ -142,6 +138,7 @@ class DashboardRoleBasedService
      */
     public function getRoleBasedWidgets(User $user, array $roleConfig, ?string $projectId = null, bool $includeData = true): array
     {
+        $this->assertProjectContext($user, $projectId);
         $widgets = [];
         $availableWidgets = DashboardWidget::where('is_active', true)
             ->where('tenant_id', $user->tenant_id)
@@ -176,21 +173,10 @@ class DashboardRoleBasedService
      */
     protected function getWidgetDataForRole(User $user, DashboardWidget $widget, ?string $projectId = null): array
     {
-        try {
-            $result = $this->widgetDataResolver->resolve(
-                $widget,
-                new WidgetDataContext($user, (string) $user->tenant_id, $projectId),
-            );
-        } catch (\InvalidArgumentException $exception) {
-            return [
-                'state' => 'degraded',
-                'error' => [
-                    'code' => 'DASHBOARD.PROJECT_FORBIDDEN',
-                    'message' => 'Widget data is not available for this project.',
-                    'retryable' => false,
-                ],
-            ];
-        }
+        $result = $this->widgetDataResolver->resolve(
+            $widget,
+            new WidgetDataContext($user, (string) $user->tenant_id, $projectId),
+        );
 
         if ($result->state === 'ready') {
             return $result->data ?? [];
@@ -199,24 +185,28 @@ class DashboardRoleBasedService
         return ['state' => $result->state, 'error' => $result->error];
     }
 
-    public function getWidgetDataForProvider(User $user, string $widgetCode, ?string $projectId = null): array
+    public function assertProjectContext(User $user, ?string $projectId): void
     {
-        return match ($widgetCode) {
-            'project_overview' => $this->getProjectOverviewData($user, $projectId),
-            'task_progress' => $this->getTaskProgressData($user, $projectId),
-            'rfi_status' => $this->getRFIStatusData($user, $projectId),
-            'budget_tracking' => $this->getBudgetTrackingData($user, $projectId),
-            'schedule_timeline' => $this->getScheduleTimelineData($user, $projectId),
-            'team_performance' => $this->getTeamPerformanceData($user, $projectId),
-            'quality_metrics' => $this->getQualityMetricsData($user, $projectId),
-            'safety_summary' => $this->getSafetySummaryData($user, $projectId),
-            'inspection_schedule' => $this->getInspectionScheduleData($user, $projectId),
-            'ncr_tracking' => $this->getNCRTrackingData($user, $projectId),
-            'system_health' => $this->getSystemHealthData($user),
-            'user_management' => $this->getUserManagementData($user),
-            default => throw new \InvalidArgumentException('Unsupported role-based widget code.'),
-        };
+        if ($projectId === null) {
+            return;
+        }
+
+        $query = Project::query()
+            ->whereKey($projectId)
+            ->where('tenant_id', $user->tenant_id);
+
+        if ($user->role !== 'system_admin') {
+            $query->where(function ($projectQuery) use ($user) {
+                $projectQuery->where('pm_id', $user->id)
+                    ->orWhereHas('projectUsers', fn ($projectUsers) => $projectUsers->where('user_id', $user->id));
+            });
+        }
+
+        if (! $query->exists()) {
+            throw new ForbiddenDashboardProject((string) $projectId);
+        }
     }
+
 
     /**
      * Get project overview data based on role

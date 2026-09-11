@@ -14,6 +14,7 @@ use App\Services\DocumentContext\QuoteContextProvider;
 use App\Services\PaymentCertificateSummaryService;
 use App\Services\Dashboard\DashboardWidgetDataResolver;
 use App\Services\Dashboard\RoleBasedWidgetProvider;
+use App\Services\Dashboard\RoleBasedWidgetDataCalculator;
 use Illuminate\Auth\RequestGuard;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -40,10 +41,7 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->singleton(WidgetDataResolver::class, function ($app) {
             return new DashboardWidgetDataResolver([
-                new RoleBasedWidgetProvider(function ($widget, $context) use ($app) {
-                    return $app->make(\App\Services\DashboardRoleBasedService::class)
-                        ->getWidgetDataForProvider($context->user, (string) $widget->code, $context->projectId);
-                }),
+                new RoleBasedWidgetProvider($app->make(RoleBasedWidgetDataCalculator::class)),
             ]);
         });
     }

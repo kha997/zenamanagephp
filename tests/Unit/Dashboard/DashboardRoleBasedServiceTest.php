@@ -5,8 +5,6 @@ namespace Tests\Unit\Dashboard;
 use App\Exceptions\Dashboard\UnsupportedDashboardRole;
 use Tests\TestCase;
 use App\Services\DashboardRoleBasedService;
-use App\Services\DashboardDataAggregationService;
-use App\Services\DashboardCustomizationService;
 use App\Models\User;
 use App\Models\UserDashboard;
 use App\Models\DashboardWidget;
@@ -29,8 +27,6 @@ class DashboardRoleBasedServiceTest extends TestCase
     use RefreshDatabase, FixtureFactory;
 
     protected $roleBasedService;
-    protected $aggregationService;
-    protected $customizationService;
     protected $user;
     protected $project;
     protected $tenant;
@@ -67,15 +63,6 @@ class DashboardRoleBasedServiceTest extends TestCase
         ]);
         $this->assignProjectRole();
         
-        // Mock constructor dependencies
-        $this->aggregationService = Mockery::mock(DashboardDataAggregationService::class);
-
-        $this->customizationService = Mockery::mock(DashboardCustomizationService::class);
-        $this->customizationService->shouldIgnoreMissing();
-
-        $this->app->instance(DashboardDataAggregationService::class, $this->aggregationService);
-        $this->app->instance(DashboardCustomizationService::class, $this->customizationService);
-
         $this->roleBasedService = $this->app->make(DashboardRoleBasedService::class);
         
         $this->createTestData();
@@ -247,6 +234,7 @@ class DashboardRoleBasedServiceTest extends TestCase
             'role' => 'qc_inspector',
             'tenant_id' => $this->tenant->id
         ]);
+        $this->project->update(['pm_id' => $qcUser->id]);
 
         $roleConfig = $this->roleBasedService->getRoleConfiguration('qc_inspector');
         $widgets = $this->roleBasedService->getRoleBasedWidgets($qcUser, $roleConfig, $this->project->id);

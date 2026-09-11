@@ -5,6 +5,8 @@ namespace Tests\Unit\Dashboard;
 use App\Contracts\Dashboard\WidgetDataProvider;
 use App\Models\DashboardWidget;
 use App\Services\Dashboard\DashboardWidgetDataResolver;
+use App\Services\Dashboard\RoleBasedWidgetDataCalculator;
+use App\Services\Dashboard\RoleBasedWidgetProvider;
 use App\Services\Dashboard\WidgetDataContext;
 use App\Services\Dashboard\WidgetDataResult;
 use App\Models\User;
@@ -55,5 +57,17 @@ class WidgetDataResolverTest extends TestCase
         self::assertSame('degraded', $result->state);
         self::assertSame('DASHBOARD.WIDGET_DATA_UNAVAILABLE', $result->error['code']);
         self::assertStringNotContainsString('sensitive', json_encode($result->error));
+    }
+
+    public function test_role_based_provider_uses_provider_internal_calculator(): void
+    {
+        $provider = new RoleBasedWidgetProvider(new RoleBasedWidgetDataCalculator());
+        $widget = new DashboardWidget(['code' => 'system_health']);
+        $context = new WidgetDataContext(
+            new User(['tenant_id' => 'tenant-1', 'id' => 'user-1']),
+            'tenant-1',
+        );
+
+        self::assertSame('ready', $provider->provide($widget, $context)->state);
     }
 }

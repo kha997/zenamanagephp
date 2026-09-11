@@ -1,11 +1,11 @@
 ---
 work_id: GAP-052
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-09-11-gap-052-role-dashboard-widget-contract-evidence.md
   plan: null
@@ -14,17 +14,28 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-09-11T17:54:50+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-09-11: 'Owner decision: APPROVE GAP-052 Gate 1.' Approval is bound to the exact Gate-1 PR head fa66b724c8899123c36c13f7eaf244b402c0b222 of PR #310, based on canonical main 97e87d216cc2abc45352e3b232c3895c86d0fe37. Owner directed: record approval, update register only if convention requires, keep production/test code untouched, push normally, verify exact-head governance/route CI, mark PR ready and merge if green, report merge and canonical main SHAs, do not start Gate 2 design, and stop after Gate-1 merge.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-11T17:12:27+07:00"
-  updated_at: "2026-09-11T17:45:04+07:00"
+  updated_at: "2026-09-11T17:54:50+07:00"
 generated_by: agent
 ---
+
+## Owner Decision History — Gate 1 — APPROVED
+
+**Owner Gate 1 decision: APPROVED**, recorded in-session on 2026-09-11 and
+bound to exact reviewed head
+`fa66b724c8899123c36c13f7eaf244b402c0b222` of PR #310. The Owner accepted
+the Gate-1 evidence and authorized merging the evidence-only PR after exact-
+head governance and route CI passed. This approval authorizes Gate-1 merge
+only; it does not authorize Gate-2 design, implementation, or any production
+or test-code change. The full directive is preserved in
+`decision_provenance.owner_response_reference` above.
 
 ## Owner Summary
 

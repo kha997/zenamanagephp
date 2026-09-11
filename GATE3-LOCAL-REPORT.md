@@ -342,3 +342,167 @@ A new gap, GAP-052, is reserved for the `DashboardRoleBasedService` →
 work, consistent with §12's precedent of leaving register reconciliation to dedicated follow-up
 rather than expanding this gap's scope.
 
+## 15. Second correction round — `tests/Feature/Api` false-green sweep
+
+CI's "API Tests (Fast)" job runs `php artisan test tests/Feature/Api --stop-on-failure
+--exclude-group=slow`. This directory is explicitly excluded from the local `composer test:fast`
+script (`phpunit.xml` line 10: `<exclude>tests/Feature/Api</exclude>`), so none of §1-§14's
+verification ever exercised it, and CI's own `--stop-on-failure` topology meant only the first
+failure in file-iteration order was ever visible in a single CI run — masking any others behind
+it. This section documents an exhaustive no-stop attribution sweep of that directory and the
+resulting corrections.
+
+### 15.1 Sweep methodology
+
+Ran `php artisan test tests/Feature/Api --exclude-group=slow` (no `--stop-on-failure`) against
+both the approved Gate-2 base `2f28e3edccd50e0f046b165b827437886d1fe2ad` and the GAP-051 candidate,
+in this same worktree (via full commit checkout, never leaving working-tree changes stranded on a
+non-branch commit), and diffed the failure sets.
+
+**Base** (`2f28e3ed`): `2 failed, 789 warnings (5101 assertions)`. Both failures are
+`ContractPdfExportTest` and `DocumentManagementTest`, both `MissingAppKeyException` — a local
+environment artifact (this worktree's `.env`/app-key state), reproduced identically on both base
+and candidate throughout this entire Gate-3 correction effort, unrelated to GAP-051.
+
+**Candidate** (pre-sweep-correction, i.e. `25c687df` plus §14's two corrections):
+`4 failed, 787 warnings (5102 assertions)`. The two `MissingAppKeyException` failures plus:
+
+- `Tests\Feature\Api\MaterialRequestApiTest::test_material_request_store_rejects_foreign_project_created_via_canonical_zena_projects_owner`
+  — expected 403, received 422 (`MaterialRequestApiTest.php:535`).
+- `Tests\Feature\Api\WorkTemplateMvpApiTest::test_work_instance_step_attachments_upload_list_delete_are_tenant_scoped_and_audited`
+  — expected 403, received 404 (`WorkTemplateMvpApiTest.php:1090`).
+
+(`InspectionTemplateRuntimeTest::test_inspection_create_rejects_foreign_tenant_generated_checklist_step`,
+covered under §14 in a prior round of this same correction effort, was already fixed before this
+sweep began and is included here only for completeness of the attribution matrix.)
+
+### 15.2 Attribution matrix
+
+| Test | Base | Pre-sweep candidate | Classification |
+|---|---|---|---|
+| `ContractPdfExportTest` (`MissingAppKeyException`) | FAIL | FAIL | PRE_EXISTING — identical local-env artifact, not fixed here |
+| `DocumentManagementTest` (`MissingAppKeyException`) | FAIL | FAIL | PRE_EXISTING — identical local-env artifact, not fixed here |
+| `InspectionTemplateRuntimeTest::test_inspection_create_rejects_foreign_tenant_generated_checklist_step` | PASS | FAIL (403→422) | GAP051_ATTRIBUTION_REQUIRED → proven B, corrected (see §14.2-equivalent root cause below, §15.3.1) |
+| `MaterialRequestApiTest::test_material_request_store_rejects_foreign_project_created_via_canonical_zena_projects_owner` | PASS | FAIL (403→422) | GAP051_ATTRIBUTION_REQUIRED → proven B, corrected (§15.3.2) |
+| `WorkTemplateMvpApiTest::test_work_instance_step_attachments_upload_list_delete_are_tenant_scoped_and_audited` | PASS | FAIL (403→404) | GAP051_ATTRIBUTION_REQUIRED → proven B, corrected (§15.3.3) |
+
+No test fell into `INVESTIGATE` (materially different/ambiguous failure) or was left as a genuinely
+new candidate-only defect requiring a separate Work ID. All three GAP-051-attributed failures share
+the identical root-cause mechanism already established in §14.1: a test helper (`authHeaders()` /
+`headersFor()`) that issues a genuine per-call Bearer token via `$user->createToken()` but never
+calls `AuthManager::forgetGuards()`, combined with base's total absence of any guard-reset
+discipline in `Tests\TestCase::call()`. Each of these three tests makes two-or-more sequential real
+Bearer requests as different users within one test method; at base, Laravel's sanctum guard
+instance persists and caches whichever user's token was resolved by the FIRST such request, and
+every subsequent request in the same test silently executes as that same cached user regardless of
+which user's token is actually attached to it.
+
+### 15.3 Per-test root cause, evidence, and correction
+
+All three followed the identical proof pattern: a disposable diagnostic (added temporarily to a
+full commit checkout of base, never committed, reverted via `git checkout HEAD -- <file>` before
+returning to the candidate branch) dumped `Auth::guard('web')->hasUser()` /
+`Auth::guard('sanctum')->hasUser()` and, when true, the cached user id, immediately before and
+after the final (misattributed) request.
+
+#### 15.3.1 `InspectionTemplateRuntimeTest::test_inspection_create_rejects_foreign_tenant_generated_checklist_step`
+
+- Sequence: `applyB` (real token for `$actorB`, tenant B) → inspection-store (real token for
+  `$actorA`, tenant A, intended).
+- Base guard trace: sanctum guard empty before `applyB`; caches **actorB** after `applyB`; still
+  **actorB** immediately before AND after the inspection-store dispatch, despite that request
+  carrying a genuine `$actorA` Bearer token and `X-Tenant-ID: tenantA` header. actorA was never
+  actually authenticated at base.
+- Base 403 (`TENANT_INVALID`, "X-Tenant-ID does not match authenticated user") = header tenant A
+  vs. cached-user (actorB) tenant B mismatch — a false-green artifact of stale identity, not real
+  cross-tenant checklist-step rejection.
+- Candidate: `Auth::guard('sanctum')->id()` after dispatch = actorA's exact id (genuine auth
+  confirmed). Real response: `422 E422.VALIDATION`, `"Inspection checklist instance not available
+  for this QC plan"` — the QC-plan/step compatibility boundary genuinely rejecting a foreign-tenant
+  `work_instance_step_id` as invalid input, not a 403.
+- Correction (test-only, `tests/Feature/Api/InspectionTemplateRuntimeTest.php`): assertion changed
+  from `403` to `422` + exact `error.code`/`error.message` assertions; `assertDatabaseMissing`
+  retained; root-cause comment added.
+
+#### 15.3.2 `MaterialRequestApiTest::test_material_request_store_rejects_foreign_project_created_via_canonical_zena_projects_owner`
+
+- Sequence: `createCanonicalProjectViaApi($foreignCreator, ...)` (real token, tenant B) →
+  material-request store (real token for `$this->userA`, tenant A, intended).
+- Base guard trace: sanctum guard empty before project creation; caches **foreignCreator** after;
+  still **foreignCreator** immediately before AND after the material-request-store dispatch, despite
+  a genuine `userA` Bearer token/header. userA was never actually authenticated at base.
+- Base 403 (`TENANT_INVALID`) = same stale-identity mismatch pattern as §15.3.1.
+- Candidate: genuine `userA` authentication confirmed (`Auth::guard('sanctum')->id()` after
+  dispatch = userA's id). Real response: `422 E422.VALIDATION`, `"Validation failed"`, with
+  `error.details.data.project_id: ["The selected project id is invalid."]` — the tenant-scoped
+  `exists` validation rule on `project_id` correctly finds no matching row for a foreign-tenant
+  project, rejecting it as invalid input rather than a 403.
+- Correction (test-only, `tests/Feature/Api/MaterialRequestApiTest.php`): assertion changed from
+  `403` to `422` + exact `error.code` and `error.details.data.project_id.0` assertions;
+  `assertDatabaseMissing` retained; root-cause comment added.
+
+#### 15.3.3 `WorkTemplateMvpApiTest::test_work_instance_step_attachments_upload_list_delete_are_tenant_scoped_and_audited`
+
+- Sequence: several real-token requests as `$actorA` (tenant A: publish, apply, upload, list,
+  delete) → final attachments-index request with a real token for `$actorB` (tenant B, intended,
+  to prove tenant isolation).
+- Base guard trace: sanctum guard cached **actorA** after the preceding delete-attachment call;
+  still **actorA** immediately before AND after the final actorB-headed dispatch, despite a genuine
+  `actorB` Bearer token/header. actorB was never actually authenticated at base.
+- Base 403 (`TENANT_INVALID`) = header tenant B vs. cached-user (actorA) tenant A mismatch — the
+  same stale-identity pattern, not a genuine actorB-vs-tenantA authorization check.
+- Candidate: genuine `actorB` authentication (tenant-scoped lookup of tenant A's work
+  instance/step correctly finds nothing for tenant B). Real response: `404 E404.NOT_FOUND`,
+  `"Work instance or step not found"`.
+- Correction (test-only, `tests/Feature/Api/WorkTemplateMvpApiTest.php`): assertion changed from
+  `403` to `404` + exact `error.code`/`error.message` assertions; root-cause comment added. No
+  other assertion in this test (upload/list/delete/audit-log checks for actorA) was touched.
+
+### 15.4 Post-correction verification
+
+- `php artisan test tests/Feature/Api --exclude-group=slow` (no stop): `2 failed, 789 warnings
+  (5107 assertions)` — identical to base's 2 pre-existing `MissingAppKeyException` failures, zero
+  GAP-051-attributable failures remain.
+- `php artisan test tests/Feature/Api --stop-on-failure --exclude-group=slow` (CI-exact
+  invocation): same `2 failed, 789 warnings (5107 assertions)`.
+- `InspectionTemplateRuntimeTest.php` (full file): 3 tests, 32 assertions, pass.
+- `MaterialRequestApiTest.php` (full file): 32 tests, 277 assertions, pass.
+- `WorkTemplateMvpApiTest.php` (full file): 23 tests, 230 assertions, pass.
+- `tests/Feature/IntegrationTest.php` + `tests/Integration/SystemIntegrationTest.php` (§14's
+  corrections): 11 tests, 248 assertions, pass — unaffected by this round.
+- `SanctumBearerTransportGuardContractTest.php`: 17 tests, 63 assertions, pass, unchanged.
+- `SanctumWebGuardCharacterizationTest.php`: 1 test, 2 assertions, pass, still
+  characterization-only, unchanged.
+- Full `composer test:fast`: `2654 tests, 16362 assertions, 556 errors, 14 failures, 32 skipped` —
+  identical error/failure counts to §14's post-correction run (this round's three fixed files live
+  in `tests/Feature/Api`, which `composer test:fast` excludes, so this script's result is
+  unaffected by design; it is reported here only to confirm no unrelated regression was
+  introduced).
+- Route guard (`php artisan route:list --json | scripts/ci/route-guard.php`): `ROUTE_GUARD_OK`.
+- `scripts/ci/lint-mysql-claim-truthfulness.php`: PASS, 14 files scanned.
+- `scripts/ssot/owner_governance_lint.php`: PASS, 109 files scanned, 0 violations.
+
+### 15.5 Files changed in this round
+
+- `tests/Feature/Api/InspectionTemplateRuntimeTest.php`
+- `tests/Feature/Api/MaterialRequestApiTest.php`
+- `tests/Feature/Api/WorkTemplateMvpApiTest.php`
+- `GATE3-LOCAL-REPORT.md` (this section)
+
+No production code (`app/`, `routes/`, `config/`, `database/migrations/`) was changed. Layer A
+(`tests/Concerns/InteractsWithSanctumBearerTokens.php`) and Layer B (`tests/TestCase.php`) are
+unchanged from the original Gate 3 implementation and from §14's correction round.
+
+### 15.6 Scope discipline notes
+
+- The two `MissingAppKeyException` failures (`ContractPdfExportTest`, `DocumentManagementTest`)
+  are reproduced identically on base and candidate throughout every run in this report and are
+  explicitly NOT fixed here — they are a local worktree environment condition (missing/invalid app
+  key at test-run time in this specific local setup), not a GAP-051-attributable regression, and
+  real CI generates a fresh app key per job run so this class of failure would not occur there. No
+  new Work ID was opened for this; it is noted for completeness only, per the instruction not to
+  create new Work IDs during this sweep without Owner authorization.
+- No test in this sweep exposed a genuine, separate production defect requiring its own Work ID
+  (unlike §14.2's `SystemIntegrationTest`/GAP-052 finding) — all three corrections in this round
+  are pure test-fixture corrections restoring the real, already-correct production contract.
+

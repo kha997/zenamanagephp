@@ -1086,8 +1086,25 @@ class WorkTemplateMvpApiTest extends TestCase
             'action' => 'zena.work-instance.step.attachment.delete',
         ]);
 
-        $this->getJson($this->workInstanceStepRoute('attachments.index', ['id' => $instanceId, 'stepId' => $stepId]), $this->authHeaders($actorB))
-            ->assertStatus(403);
+        // GAP-051 (classification B — pre-existing false-green exposed by GAP-051):
+        // this test issues several sequential real Bearer requests as actorA (via
+        // authHeaders(), no forgetGuards() between calls) followed by a final request as
+        // actorB. At Gate-2 base, the sanctum guard was still cached with actorA from the
+        // preceding delete-attachment call and was never reset before the actorB-headed
+        // request, so it actually executed as actorA (proven via disposable diagnostic:
+        // Auth::guard('sanctum')->id() was actorA's id both before AND after this dispatch,
+        // despite carrying an actorB Bearer token/header). The resulting 403 TENANT_INVALID
+        // ("X-Tenant-ID does not match authenticated user") was therefore a false-green
+        // artifact of stale cached identity (actorA's own tenant vs actorB's X-Tenant-ID
+        // header), not a genuine actorB-vs-tenantA authorization check. GAP-051's Layer A/B
+        // force genuine per-request authentication, so this request now genuinely executes as
+        // actorB, whose tenant-scoped lookup of tenantA's work instance/step correctly finds
+        // nothing, producing a real 404 — not a 403.
+        $finalResponse = $this->getJson($this->workInstanceStepRoute('attachments.index', ['id' => $instanceId, 'stepId' => $stepId]), $this->authHeaders($actorB));
+
+        $finalResponse->assertStatus(404);
+        $finalResponse->assertJsonPath('error.code', 'E404.NOT_FOUND');
+        $finalResponse->assertJsonPath('error.message', 'Work instance or step not found');
     }
 
     public function test_export_import_template_package_round_trip_preserves_equivalent_structure(): void

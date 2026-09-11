@@ -168,6 +168,23 @@ class InspectionTemplateRuntimeTest extends TestCase
 
     public function test_inspection_create_rejects_foreign_tenant_generated_checklist_step(): void
     {
+        // GAP-051 (classification B — pre-existing false-green exposed by GAP-051):
+        // this test issues two sequential real Bearer requests (actorB via applyB, then
+        // actorA for the inspection-store call) using hand-rolled per-call tokens, with no
+        // guard reset between them. At Gate-2 base, Laravel's sanctum guard instance cached
+        // actorB from the applyB call and was never reset before the actorA-headed request,
+        // so the "actorA" request actually executed as actorB (proven via disposable
+        // diagnostic: Auth::guard('sanctum')->id() was actorB's id both before AND after the
+        // inspection-store dispatch, despite carrying an actorA Bearer token/header). The
+        // resulting 403 TENANT_INVALID ("X-Tenant-ID does not match authenticated user") was
+        // therefore a false-green artifact of stale cached identity, not real cross-tenant
+        // checklist-step rejection. GAP-051's Layer A/B force genuine per-request
+        // authentication, so this request now genuinely executes as actorA (confirmed:
+        // candidate reaches tenant-scoped QC-plan/step validation instead of bouncing off
+        // TenantIsolationMiddleware, which would only 403 on a real tenant mismatch — actorA's
+        // own tenant matches the X-Tenant-ID header here). The real production contract for a
+        // foreign-tenant work_instance_step_id is a 422 validation rejection at the QC-plan/
+        // step compatibility boundary, not a 403 — proven below.
         $this->seed(DatabaseSeeder::class);
 
         $tenantA = Tenant::query()->orderBy('created_at')->firstOrFail();
@@ -215,14 +232,21 @@ class InspectionTemplateRuntimeTest extends TestCase
             ->where('step_key', 'perform-inspection')
             ->firstOrFail();
 
-        $this->postJson($this->inspectionRoute('store'), [
+        $response = $this->postJson($this->inspectionRoute('store'), [
             'qc_plan_id' => (string) $planA->id,
             'title' => 'Foreign linked inspection',
             'inspection_date' => now()->addDay()->toDateString(),
             'inspector_id' => (string) $actorA->id,
             'work_instance_step_id' => (string) $foreignStep->id,
-        ], $this->authHeaders($actorA))
-            ->assertStatus(403);
+        ], $this->authHeaders($actorA));
+
+        // Real production contract: genuine actorA authentication reaches the QC-plan/step
+        // compatibility boundary, which rejects the foreign-tenant checklist step as a
+        // validation error (the step belongs to tenant B's work instance, not tenant A's QC
+        // plan) rather than a 403 tenant-identity mismatch.
+        $response->assertStatus(422);
+        $response->assertJsonPath('error.code', 'E422.VALIDATION');
+        $response->assertJsonPath('error.message', 'Inspection checklist instance not available for this QC plan');
 
         $this->assertDatabaseMissing('qc_inspections', [
             'tenant_id' => (string) $tenantA->id,

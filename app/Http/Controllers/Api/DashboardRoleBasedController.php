@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Exceptions\Dashboard\UnsupportedDashboardRole;
 use App\Services\DashboardRoleBasedService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -55,6 +56,12 @@ class DashboardRoleBasedController extends Controller
                 ]
             ]);
 
+        } catch (UnsupportedDashboardRole $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Dashboard role is not supported.',
+                'error' => ['code' => 'DASHBOARD.ROLE_UNSUPPORTED', 'message' => 'Dashboard role is not supported.'],
+            ], 403);
         } catch (\Exception $e) {
             Log::error('Failed to get role-based dashboard', [
                 'user_id' => Auth::id(),
@@ -65,7 +72,7 @@ class DashboardRoleBasedController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to load role-based dashboard',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+                'error' => ['code' => 'DASHBOARD.INTERNAL_ERROR', 'message' => 'Internal server error']
             ], 500);
         }
     }
@@ -96,23 +103,16 @@ class DashboardRoleBasedController extends Controller
             $includeData = $request->get('include_data', false);
 
             $roleConfig = $this->roleBasedService->getRoleConfiguration($user->role);
-            $widgets = $this->roleBasedService->getRoleBasedWidgets($user, $roleConfig, $projectId);
+            $widgets = $this->roleBasedService->getRoleBasedWidgets($user, $roleConfig, $projectId, $includeData);
 
             // Filter by category if specified
             if ($category) {
                 $widgets = array_filter($widgets, function ($widget) use ($category) {
-                    return $widget['category'] === $category;
+                    return ($widget['widget']['category'] ?? null) === $category;
                 });
             }
 
             // Remove data if not requested
-            if (!$includeData) {
-                $widgets = array_map(function ($widget) {
-                    unset($widget['data']);
-                    return $widget;
-                }, $widgets);
-            }
-
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -122,6 +122,12 @@ class DashboardRoleBasedController extends Controller
                 ]
             ]);
 
+        } catch (UnsupportedDashboardRole $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Dashboard role is not supported.',
+                'error' => ['code' => 'DASHBOARD.ROLE_UNSUPPORTED', 'message' => 'Dashboard role is not supported.'],
+            ], 403);
         } catch (\Exception $e) {
             Log::error('Failed to get role widgets', [
                 'user_id' => Auth::id(),
@@ -132,7 +138,7 @@ class DashboardRoleBasedController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to load role widgets',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+                'error' => ['code' => 'DASHBOARD.INTERNAL_ERROR', 'message' => 'Internal server error']
             ], 500);
         }
     }

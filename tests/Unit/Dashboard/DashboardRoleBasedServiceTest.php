@@ -69,7 +69,6 @@ class DashboardRoleBasedServiceTest extends TestCase
         
         // Mock constructor dependencies
         $this->aggregationService = Mockery::mock(DashboardDataAggregationService::class);
-        $this->aggregationService->shouldReceive('getWidgetData')->andReturn([]);
 
         $this->customizationService = Mockery::mock(DashboardCustomizationService::class);
         $this->customizationService->shouldIgnoreMissing();

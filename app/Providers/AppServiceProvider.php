@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Auth\CustomSanctumGuard;
+use App\Contracts\Dashboard\WidgetDataResolver;
 use App\Models\EventRecord;
 use App\Observers\EventRecordObserver;
 use App\Services\DocumentContext\ContractContextProvider;
@@ -11,6 +12,8 @@ use App\Services\DocumentContext\DocumentContextRegistry;
 use App\Services\DocumentContext\ProjectContextProvider;
 use App\Services\DocumentContext\QuoteContextProvider;
 use App\Services\PaymentCertificateSummaryService;
+use App\Services\Dashboard\DashboardWidgetDataResolver;
+use App\Services\Dashboard\RoleBasedWidgetProvider;
 use Illuminate\Auth\RequestGuard;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -34,6 +37,15 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(PaymentCertificateSummaryService::class);
+
+        $this->app->singleton(WidgetDataResolver::class, function ($app) {
+            return new DashboardWidgetDataResolver([
+                new RoleBasedWidgetProvider(function ($widget, $context) use ($app) {
+                    return $app->make(\App\Services\DashboardRoleBasedService::class)
+                        ->getWidgetDataForProvider($context->user, (string) $widget->code, $context->projectId);
+                }),
+            ]);
+        });
     }
 
     /**

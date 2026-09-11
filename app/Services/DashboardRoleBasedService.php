@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Contracts\Dashboard\WidgetDataResolver;
 use App\Models\DashboardAlert;
 use App\Models\DashboardMetric;
 use App\Models\DashboardWidget;
@@ -13,6 +14,7 @@ use App\Models\Task;
 use App\Models\User;
 use App\Models\UserDashboard;
 use App\Services\Dashboard\DashboardWidgetCatalog;
+use App\Services\Dashboard\WidgetDataContext;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Collection;
 
@@ -21,15 +23,18 @@ class DashboardRoleBasedService
     protected $dataAggregationService;
     protected $customizationService;
     protected DashboardWidgetCatalog $widgetCatalog;
+    protected WidgetDataResolver $widgetDataResolver;
 
     public function __construct(
         DashboardDataAggregationService $dataAggregationService,
         DashboardCustomizationService $customizationService,
-        DashboardWidgetCatalog $widgetCatalog
+        DashboardWidgetCatalog $widgetCatalog,
+        WidgetDataResolver $widgetDataResolver
     ) {
         $this->dataAggregationService = $dataAggregationService;
         $this->customizationService = $customizationService;
         $this->widgetCatalog = $widgetCatalog;
+        $this->widgetDataResolver = $widgetDataResolver;
     }
 
     /**
@@ -135,7 +140,7 @@ class DashboardRoleBasedService
     /**
      * Get role-based widgets with data
      */
-    public function getRoleBasedWidgets(User $user, array $roleConfig, ?string $projectId = null): array
+    public function getRoleBasedWidgets(User $user, array $roleConfig, ?string $projectId = null, bool $includeData = true): array
     {
         $widgets = [];
         $availableWidgets = DashboardWidget::where('is_active', true)
@@ -145,12 +150,21 @@ class DashboardRoleBasedService
         foreach ($roleConfig['default_widgets'] as $widgetCode) {
             $widget = $availableWidgets->firstWhere('code', $widgetCode);
             if ($widget && $this->userCanAccessWidget($user, $widget)) {
-                $widgetData = $this->getWidgetDataForRole($user, $widget, $projectId);
-                $widgets[] = [
+                $entry = [
                     'widget' => $widget->toArray(),
-                    'data' => $widgetData,
                     'permissions' => $this->getWidgetPermissions($user, $widget)
                 ];
+
+                if ($includeData) {
+                    $widgetData = $this->getWidgetDataForRole($user, $widget, $projectId);
+                    $entry['state'] = $widgetData['state'] ?? 'ready';
+                    $entry['data'] = ($widgetData['state'] ?? null) === 'degraded' ? null : $widgetData;
+                    if (isset($widgetData['error'])) {
+                        $entry['error'] = $widgetData['error'];
+                    }
+                }
+
+                $widgets[] = $entry;
             }
         }
 
@@ -162,58 +176,35 @@ class DashboardRoleBasedService
      */
     protected function getWidgetDataForRole(User $user, DashboardWidget $widget, ?string $projectId = null): array
     {
-        $role = $user->role;
-        $tenantId = $user->tenant_id;
+        $result = $this->widgetDataResolver->resolve(
+            $widget,
+            new WidgetDataContext($user, (string) $user->tenant_id, $projectId),
+        );
 
-        try {
-            switch ($widget->code) {
-                case 'project_overview':
-                    return $this->getProjectOverviewData($user, $projectId);
-                
-                case 'task_progress':
-                    return $this->getTaskProgressData($user, $projectId);
-                
-                case 'rfi_status':
-                    return $this->getRFIStatusData($user, $projectId);
-                
-                case 'budget_tracking':
-                    return $this->getBudgetTrackingData($user, $projectId);
-                
-                case 'schedule_timeline':
-                    return $this->getScheduleTimelineData($user, $projectId);
-                
-                case 'team_performance':
-                    return $this->getTeamPerformanceData($user, $projectId);
-                
-                case 'quality_metrics':
-                    return $this->getQualityMetricsData($user, $projectId);
-                
-                case 'safety_summary':
-                    return $this->getSafetySummaryData($user, $projectId);
-                
-                case 'inspection_schedule':
-                    return $this->getInspectionScheduleData($user, $projectId);
-                
-                case 'ncr_tracking':
-                    return $this->getNCRTrackingData($user, $projectId);
-                
-                case 'system_health':
-                    return $this->getSystemHealthData($user);
-                
-                case 'user_management':
-                    return $this->getUserManagementData($user);
-                
-                default:
-                    return $this->dataAggregationService->getWidgetData($widget->id, $user, $projectId);
-            }
-        } catch (\Exception $e) {
-            Log::error('Failed to get widget data for role', [
-                'user_id' => $user->id,
-                'widget_code' => $widget->code,
-                'error' => $e->getMessage()
-            ]);
-            return ['error' => 'Failed to load widget data'];
+        if ($result->state === 'ready') {
+            return $result->data ?? [];
         }
+
+        return ['state' => $result->state, 'error' => $result->error];
+    }
+
+    public function getWidgetDataForProvider(User $user, string $widgetCode, ?string $projectId = null): array
+    {
+        return match ($widgetCode) {
+            'project_overview' => $this->getProjectOverviewData($user, $projectId),
+            'task_progress' => $this->getTaskProgressData($user, $projectId),
+            'rfi_status' => $this->getRFIStatusData($user, $projectId),
+            'budget_tracking' => $this->getBudgetTrackingData($user, $projectId),
+            'schedule_timeline' => $this->getScheduleTimelineData($user, $projectId),
+            'team_performance' => $this->getTeamPerformanceData($user, $projectId),
+            'quality_metrics' => $this->getQualityMetricsData($user, $projectId),
+            'safety_summary' => $this->getSafetySummaryData($user, $projectId),
+            'inspection_schedule' => $this->getInspectionScheduleData($user, $projectId),
+            'ncr_tracking' => $this->getNCRTrackingData($user, $projectId),
+            'system_health' => $this->getSystemHealthData($user),
+            'user_management' => $this->getUserManagementData($user),
+            default => throw new \InvalidArgumentException('Unsupported role-based widget code.'),
+        };
     }
 
     /**

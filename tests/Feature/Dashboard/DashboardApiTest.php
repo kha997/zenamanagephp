@@ -563,10 +563,12 @@ class DashboardApiTest extends TestCase
         $this->user->forceFill(['role' => 'unknown_role'])->save();
         $this->apiAs($this->user->fresh(), $this->tenant);
 
-        $response = $this->getJson('/api/v1/dashboard/role-based/widgets');
+        foreach (['/api/v1/dashboard/role-based', '/api/v1/dashboard/role-based/widgets'] as $endpoint) {
+            $response = $this->getJson($endpoint);
 
-        $response->assertStatus(403)
-            ->assertJsonPath('error.code', 'DASHBOARD.ROLE_UNSUPPORTED');
+            $response->assertStatus(403)
+                ->assertJsonPath('error.code', 'DASHBOARD.ROLE_UNSUPPORTED');
+        }
     }
 
     /** @test */
@@ -635,6 +637,32 @@ class DashboardApiTest extends TestCase
         self::assertSame('degraded', $entry['state']);
         self::assertNull($entry['data']);
         self::assertSame('DASHBOARD.PROJECT_FORBIDDEN', $entry['error']['code']);
+    }
+
+    /** @test */
+    public function widget_catalog_does_not_cross_tenant_boundaries(): void
+    {
+        $foreignTenant = \App\Models\Tenant::factory()->create([
+            'name' => 'Foreign Tenant',
+            'domain' => 'foreign.example.test',
+            'is_active' => true,
+        ]);
+        $foreignWidget = DashboardWidget::create([
+            'name' => 'Foreign Project Overview',
+            'code' => 'project_overview',
+            'type' => 'card',
+            'category' => 'overview',
+            'description' => 'Foreign tenant fixture',
+            'config' => json_encode([]),
+            'permissions' => json_encode([]),
+            'is_active' => true,
+            'tenant_id' => $foreignTenant->id,
+        ]);
+
+        $response = $this->getJson('/api/v1/dashboard/role-based/widgets');
+
+        $response->assertOk();
+        self::assertNotContains($foreignWidget->id, collect($response->json('data.widgets'))->pluck('widget.id')->all());
     }
 
     /** @test */

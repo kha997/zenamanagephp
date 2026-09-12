@@ -98,39 +98,3 @@ The local macOS invocation of `scripts/ci/check-evidence-freshness.sh` has a pre
 Duplicate legacy public calculation methods retained in `DashboardRoleBasedService` are recorded as non-blocking cleanup debt; they are not part of this Gate-3 scope.
 
 **Gate 3 decision:** approved by Owner, bound to the recorded subject and digest. **Merge/deployment:** not authorized by this record.
-
-## Post-decision merge authorization and execution
-
-This append-only administrative note records events after the Gate-3 decision
-above. It does not alter or reapprove that decision, and it does not change the
-frontmatter, approved implementation subject, historical implementation-tree
-digest, or Owner binding.
-
-After the Gate-3 approval was recorded, the Owner separately authorized the
-approved implementation to be merged. That merge authorization was distinct
-from the Gate-3 record, which truthfully remains narrower above. Repository
-execution evidence records Owner account `kha997` as the actor who squash-merged
-PR #312 and the resulting commit message as `Merge approved GAP-052
-implementation.`
-
-**Merge and release facts:**
-
-- Merged PR: **#312**.
-- Squash/merge SHA: `cf70123669573ba9aecad1817804365b9193951a`.
-- Merge timestamp: `2026-09-12T07:09:43Z` (`2026-09-12T14:09:43+07:00`).
-- Approved implementation subject: `61e91636f8d5c6f97fc786526ab01c89e74ec49b` — unchanged.
-- Historical approved implementation-tree digest: `c1f595faf4acadd5fcf457ce1c9e1ff02094fb4ce368494c3b8d4182caf3be02` — unchanged and not regenerated or rebound.
-- PR #313 was subsequently closed as superseded/not merged and preserved as audit evidence; its reused post-squash implementation branch created a non-minimal 29-file PR and declared the already-released GAP-052 Work ID, producing the expected freshness conflict.
-
-### Production deployment provenance
-
-The repository's `Production Deployment` workflow is manual-only
-(`workflow_dispatch`). The complete GitHub Actions run list for exact merge SHA
-`cf70123669573ba9aecad1817804365b9193951a` contains no `Production Deployment`
-run. No production deployment was dispatched or performed. Post-merge CI and
-the `Staging Smoke` workflow ran, but neither constitutes a production
-deployment.
-
-This reconciliation is bookkeeping under separate administrative Work ID
-`OWN-2026-011`. It does not reopen GAP-052, create a new GAP-052 approval, or
-authorize any implementation or deployment change.

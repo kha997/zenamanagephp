@@ -1,11 +1,11 @@
 ---
 work_id: OWN-2026-011
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: null
   plan: null
@@ -14,19 +14,23 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-09-12T22:43:38+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-09-12: 'ok Phương án 3'. This approves Gate 2 Option 3 and its exact contracts/allowlist; it authorizes only the bounded documentation implementation, not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-12T16:26:54+07:00"
-  updated_at: "2026-09-12T16:26:54+07:00"
+  updated_at: "2026-09-12T22:43:38+07:00"
 generated_by: agent
 ---
 
-## OWNER GATE 2: AWAITING OWNER DECISION
+## OWNER GATE 2: APPROVED — OPTION 3
+
+Owner approved Option 3 in-session on 2026-09-12. This decision authorizes only
+the bounded documentation implementation defined by this packet. It does not
+authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 
@@ -235,14 +239,12 @@ sử nào của GAP-052 hay OWN-2026-011.
   production configuration, data, deployment hoặc lịch sử Git đã publish.
 - Không reopen GAP-052 và không tạo approval/digest mới cho GAP-052.
 
-## Decision Needed
+## Owner Decision
 
-Owner chọn một trong ba quyết định cho Gate 2:
-
-- **Approve** phương án 3 và exact contracts/allowlist trên để cho phép bước
-  implementation tài liệu bị giới hạn;
-- **Request changes** cho thiết kế; hoặc
-- **Decline** và dừng OWN-2026-011.
+Owner đã chọn và phê duyệt **Phương án 3** cùng exact contracts/allowlist trong
+packet này. Bước tiếp theo được phép là implementation tài liệu bị giới hạn;
+không có quyền Gate 3, merge, release hoặc deployment được suy ra từ quyết định
+này.
 
 ## What the owner is NOT being asked to decide
 

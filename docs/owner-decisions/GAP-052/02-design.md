@@ -19,7 +19,7 @@ decision_provenance:
   owner_response_reference: "Owner Gate 2 APPROVED — reviewed exact PR #311 head 7d7f5d0687cf12e16b0921989d4275553109a711. Approval covers the retained role-based root/widgets surfaces, explicit widget-data provider/resolver architecture, seven-role catalog/RBAC/tenant invariants, corrected safe partial/degraded unsupported-widget semantics, include_data=false provider independence, request-level 5xx boundary, and Gate-3 acceptance/test requirements. No production or test code changes are authorized in this Gate-2 merge session; implementation requires a separate post-approval session and plan."
   reconciliation_required: false
 supersedes: null
-superseded_by: null
+superseded_by: docs/owner-decisions/GAP-052/02-design-v2.md
 timestamps:
   created_at: "2026-09-11T00:00:00+07:00"
   updated_at: "2026-09-11T13:41:28Z"

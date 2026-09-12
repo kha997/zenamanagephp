@@ -690,23 +690,6 @@ class SystemIntegrationTest extends TestCase
     {
         $roles = ['project_manager', 'site_engineer', 'qc_inspector', 'client_rep'];
 
-        // GAP-052 (deferred, out of GAP-051 scope): DashboardRoleBasedService::getWidgetDataForRole()
-        // falls through to DashboardDataAggregationService::getWidgetData(), which does not exist on
-        // that class (verified: no such method is defined). Any role whose configured widget codes
-        // don't match one of the explicit switch cases in getWidgetDataForRole() hits this and the
-        // controller throws an uncaught \Error (not \Exception, so the method's own try/catch does
-        // not save it), surfacing as a genuine HTTP 500. With this test's fixture data, only
-        // `client_rep`'s widgets (project_summary, progress_report, ...) trigger it, on both
-        // `/api/v1/dashboard/role-based` (which internally aggregates widgets too) and
-        // `/api/v1/dashboard/role-based/widgets`. This was masked pre-GAP-051 because stale cached
-        // identity meant every loop iteration actually ran as the first authenticated user, never
-        // genuinely reaching the client_rep code path. Confirmed via disposable diagnostic probe
-        // (2026-09-10): project_manager/site_engineer/qc_inspector all 200 on all 5 endpoints;
-        // client_rep is 500 on root+widgets and genuinely 200 on metrics/alerts/permissions.
-        $knownGap052BrokenEndpoints = [
-            'client_rep' => ['root', 'widgets'],
-        ];
-
         foreach ($roles as $role) {
             // Create user with specific role
             $user = User::factory()->create([
@@ -732,36 +715,24 @@ class SystemIntegrationTest extends TestCase
 
             $this->apiAs($user, $this->tenant);
 
-            $brokenEndpoints = $knownGap052BrokenEndpoints[$role] ?? [];
-
             // Test role-based dashboard
             $roleBasedResponse = $this->getJson('/api/v1/dashboard/role-based');
-            if (in_array('root', $brokenEndpoints, true)) {
-                // GAP-052: genuine pre-existing production defect, not GAP-051 scope. See comment above.
-                $roleBasedResponse->assertStatus(500);
-            } else {
-                $roleBasedResponse->assertStatus(200);
+            $roleBasedResponse->assertStatus(200);
 
-                $roleBasedData = $roleBasedResponse->json('data');
-                $this->assertArrayHasKey('role_config', $roleBasedData);
+            $roleBasedData = $roleBasedResponse->json('data');
+            $this->assertArrayHasKey('role_config', $roleBasedData);
 
-                $roleConfig = $roleBasedData['role_config'];
-                $this->assertArrayHasKey('name', $roleConfig);
-                $this->assertArrayHasKey('customization_level', $roleConfig);
-                $this->assertArrayHasKey('data_access', $roleConfig);
-            }
+            $roleConfig = $roleBasedData['role_config'];
+            $this->assertArrayHasKey('name', $roleConfig);
+            $this->assertArrayHasKey('customization_level', $roleConfig);
+            $this->assertArrayHasKey('data_access', $roleConfig);
 
             // Test role-based widgets
             $widgetsResponse = $this->getJson('/api/v1/dashboard/role-based/widgets');
-            if (in_array('widgets', $brokenEndpoints, true)) {
-                // GAP-052: genuine pre-existing production defect, not GAP-051 scope. See comment above.
-                $widgetsResponse->assertStatus(500);
-            } else {
-                $widgetsResponse->assertStatus(200);
+            $widgetsResponse->assertStatus(200);
 
-                $widgets = $widgetsResponse->json('data.widgets');
-                $this->assertIsArray($widgets);
-            }
+            $widgets = $widgetsResponse->json('data.widgets');
+            $this->assertIsArray($widgets);
 
             // Test role-based metrics
             $metricsResponse = $this->getJson('/api/v1/dashboard/role-based/metrics');

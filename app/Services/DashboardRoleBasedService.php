@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Contracts\Dashboard\WidgetDataResolver;
+use App\Exceptions\Dashboard\ForbiddenDashboardProject;
 use App\Models\DashboardAlert;
 use App\Models\DashboardMetric;
 use App\Models\DashboardWidget;
@@ -12,20 +14,22 @@ use App\Models\Rfi;
 use App\Models\Task;
 use App\Models\User;
 use App\Models\UserDashboard;
+use App\Services\Dashboard\DashboardWidgetCatalog;
+use App\Services\Dashboard\WidgetDataContext;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Collection;
 
 class DashboardRoleBasedService
 {
-    protected $dataAggregationService;
-    protected $customizationService;
+    protected DashboardWidgetCatalog $widgetCatalog;
+    protected WidgetDataResolver $widgetDataResolver;
 
     public function __construct(
-        DashboardDataAggregationService $dataAggregationService,
-        DashboardCustomizationService $customizationService
+        DashboardWidgetCatalog $widgetCatalog,
+        WidgetDataResolver $widgetDataResolver
     ) {
-        $this->dataAggregationService = $dataAggregationService;
-        $this->customizationService = $customizationService;
+        $this->widgetCatalog = $widgetCatalog;
+        $this->widgetDataResolver = $widgetDataResolver;
     }
 
     /**
@@ -39,6 +43,7 @@ class DashboardRoleBasedService
 
             // Get role-specific configuration
             $roleConfig = $this->getRoleConfiguration($role);
+            $this->assertProjectContext($user, $projectId);
             
             // Get user's current dashboard or create default
             $dashboard = $this->getOrCreateUserDashboard($user, $roleConfig);
@@ -81,120 +86,7 @@ class DashboardRoleBasedService
      */
     public function getRoleConfiguration(string $role): array
     {
-        $configurations = [
-            'system_admin' => [
-                'name' => 'System Administrator',
-                'description' => 'Full system access and management',
-                'default_widgets' => [
-                    'system_health', 'user_management', 'tenant_overview',
-                    'system_metrics', 'audit_logs', 'backup_status'
-                ],
-                'widget_categories' => ['system', 'management', 'monitoring'],
-                'data_access' => 'all',
-                'project_access' => 'all',
-                'customization_level' => 'full',
-                'priority_metrics' => ['system_uptime', 'user_count', 'storage_usage'],
-                'alert_types' => ['system', 'security', 'performance'],
-                'dashboard_layout' => 'admin_grid'
-            ],
-            'project_manager' => [
-                'name' => 'Project Manager',
-                'description' => 'Comprehensive project management and oversight',
-                'default_widgets' => [
-                    'project_overview', 'task_progress', 'rfi_status',
-                    'budget_tracking', 'schedule_timeline', 'team_performance',
-                    'quality_metrics', 'safety_summary', 'change_requests'
-                ],
-                'widget_categories' => ['overview', 'tasks', 'communication', 'quality', 'financial'],
-                'data_access' => 'project_wide',
-                'project_access' => 'assigned',
-                'customization_level' => 'full',
-                'priority_metrics' => ['project_progress', 'budget_variance', 'schedule_adherence'],
-                'alert_types' => ['project', 'budget', 'schedule', 'quality'],
-                'dashboard_layout' => 'manager_grid'
-            ],
-            'design_lead' => [
-                'name' => 'Design Lead',
-                'description' => 'Design coordination and technical oversight',
-                'default_widgets' => [
-                    'design_progress', 'drawing_status', 'submittal_tracking',
-                    'design_reviews', 'technical_issues', 'coordination_log'
-                ],
-                'widget_categories' => ['design', 'communication', 'quality'],
-                'data_access' => 'design_related',
-                'project_access' => 'assigned',
-                'customization_level' => 'limited',
-                'priority_metrics' => ['design_completion', 'review_cycle_time', 'issue_resolution'],
-                'alert_types' => ['design', 'review', 'coordination'],
-                'dashboard_layout' => 'designer_grid'
-            ],
-            'site_engineer' => [
-                'name' => 'Site Engineer',
-                'description' => 'Field operations and site management',
-                'default_widgets' => [
-                    'daily_tasks', 'site_diary', 'inspection_checklist',
-                    'weather_forecast', 'equipment_status', 'safety_alerts',
-                    'progress_photos', 'manpower_tracking'
-                ],
-                'widget_categories' => ['tasks', 'quality', 'safety', 'field'],
-                'data_access' => 'site_related',
-                'project_access' => 'assigned',
-                'customization_level' => 'limited',
-                'priority_metrics' => ['daily_progress', 'safety_incidents', 'quality_issues'],
-                'alert_types' => ['safety', 'quality', 'weather', 'equipment'],
-                'dashboard_layout' => 'field_grid'
-            ],
-            'qc_inspector' => [
-                'name' => 'QC Inspector',
-                'description' => 'Quality control and inspection management',
-                'default_widgets' => [
-                    'inspection_schedule', 'ncr_tracking', 'quality_metrics',
-                    'defect_analysis', 'corrective_actions', 'compliance_status',
-                    'inspection_reports', 'quality_trends'
-                ],
-                'widget_categories' => ['quality', 'inspection', 'compliance'],
-                'data_access' => 'quality_related',
-                'project_access' => 'assigned',
-                'customization_level' => 'read_only',
-                'priority_metrics' => ['inspection_completion', 'defect_rate', 'ncr_resolution'],
-                'alert_types' => ['quality', 'inspection', 'compliance'],
-                'dashboard_layout' => 'qc_grid'
-            ],
-            'client_rep' => [
-                'name' => 'Client Representative',
-                'description' => 'Client communication and project oversight',
-                'default_widgets' => [
-                    'project_summary', 'progress_report', 'milestone_status',
-                    'budget_summary', 'quality_summary', 'schedule_status',
-                    'client_communications', 'approval_queue'
-                ],
-                'widget_categories' => ['overview', 'communication', 'reporting'],
-                'data_access' => 'client_view',
-                'project_access' => 'assigned',
-                'customization_level' => 'read_only',
-                'priority_metrics' => ['project_progress', 'budget_status', 'quality_score'],
-                'alert_types' => ['milestone', 'budget', 'quality'],
-                'dashboard_layout' => 'client_grid'
-            ],
-            'subcontractor_lead' => [
-                'name' => 'Subcontractor Lead',
-                'description' => 'Subcontractor coordination and management',
-                'default_widgets' => [
-                    'subcontractor_progress', 'payment_status', 'work_orders',
-                    'quality_issues', 'safety_compliance', 'resource_allocation',
-                    'performance_metrics', 'contract_status'
-                ],
-                'widget_categories' => ['subcontractor', 'financial', 'quality'],
-                'data_access' => 'subcontractor_related',
-                'project_access' => 'assigned',
-                'customization_level' => 'limited',
-                'priority_metrics' => ['work_completion', 'payment_status', 'quality_score'],
-                'alert_types' => ['payment', 'quality', 'safety'],
-                'dashboard_layout' => 'subcontractor_grid'
-            ]
-        ];
-
-        return $configurations[$role] ?? $configurations['client_rep'];
+        return $this->widgetCatalog->configurationForRole($role);
     }
 
     /**
@@ -244,8 +136,9 @@ class DashboardRoleBasedService
     /**
      * Get role-based widgets with data
      */
-    public function getRoleBasedWidgets(User $user, array $roleConfig, ?string $projectId = null): array
+    public function getRoleBasedWidgets(User $user, array $roleConfig, ?string $projectId = null, bool $includeData = true): array
     {
+        $this->assertProjectContext($user, $projectId);
         $widgets = [];
         $availableWidgets = DashboardWidget::where('is_active', true)
             ->where('tenant_id', $user->tenant_id)
@@ -254,12 +147,21 @@ class DashboardRoleBasedService
         foreach ($roleConfig['default_widgets'] as $widgetCode) {
             $widget = $availableWidgets->firstWhere('code', $widgetCode);
             if ($widget && $this->userCanAccessWidget($user, $widget)) {
-                $widgetData = $this->getWidgetDataForRole($user, $widget, $projectId);
-                $widgets[] = [
+                $entry = [
                     'widget' => $widget->toArray(),
-                    'data' => $widgetData,
                     'permissions' => $this->getWidgetPermissions($user, $widget)
                 ];
+
+                if ($includeData) {
+                    $widgetData = $this->getWidgetDataForRole($user, $widget, $projectId);
+                    $entry['state'] = $widgetData['state'] ?? 'ready';
+                    $entry['data'] = ($widgetData['state'] ?? null) === 'degraded' ? null : $widgetData;
+                    if (isset($widgetData['error'])) {
+                        $entry['error'] = $widgetData['error'];
+                    }
+                }
+
+                $widgets[] = $entry;
             }
         }
 
@@ -271,59 +173,40 @@ class DashboardRoleBasedService
      */
     protected function getWidgetDataForRole(User $user, DashboardWidget $widget, ?string $projectId = null): array
     {
-        $role = $user->role;
-        $tenantId = $user->tenant_id;
+        $result = $this->widgetDataResolver->resolve(
+            $widget,
+            new WidgetDataContext($user, (string) $user->tenant_id, $projectId),
+        );
 
-        try {
-            switch ($widget->code) {
-                case 'project_overview':
-                    return $this->getProjectOverviewData($user, $projectId);
-                
-                case 'task_progress':
-                    return $this->getTaskProgressData($user, $projectId);
-                
-                case 'rfi_status':
-                    return $this->getRFIStatusData($user, $projectId);
-                
-                case 'budget_tracking':
-                    return $this->getBudgetTrackingData($user, $projectId);
-                
-                case 'schedule_timeline':
-                    return $this->getScheduleTimelineData($user, $projectId);
-                
-                case 'team_performance':
-                    return $this->getTeamPerformanceData($user, $projectId);
-                
-                case 'quality_metrics':
-                    return $this->getQualityMetricsData($user, $projectId);
-                
-                case 'safety_summary':
-                    return $this->getSafetySummaryData($user, $projectId);
-                
-                case 'inspection_schedule':
-                    return $this->getInspectionScheduleData($user, $projectId);
-                
-                case 'ncr_tracking':
-                    return $this->getNCRTrackingData($user, $projectId);
-                
-                case 'system_health':
-                    return $this->getSystemHealthData($user);
-                
-                case 'user_management':
-                    return $this->getUserManagementData($user);
-                
-                default:
-                    return $this->dataAggregationService->getWidgetData($widget->id, $user, $projectId);
-            }
-        } catch (\Exception $e) {
-            Log::error('Failed to get widget data for role', [
-                'user_id' => $user->id,
-                'widget_code' => $widget->code,
-                'error' => $e->getMessage()
-            ]);
-            return ['error' => 'Failed to load widget data'];
+        if ($result->state === 'ready') {
+            return $result->data ?? [];
+        }
+
+        return ['state' => $result->state, 'error' => $result->error];
+    }
+
+    public function assertProjectContext(User $user, ?string $projectId): void
+    {
+        if ($projectId === null) {
+            return;
+        }
+
+        $query = Project::query()
+            ->whereKey($projectId)
+            ->where('tenant_id', $user->tenant_id);
+
+        if ($user->role !== 'system_admin') {
+            $query->where(function ($projectQuery) use ($user) {
+                $projectQuery->where('pm_id', $user->id)
+                    ->orWhereHas('projectUsers', fn ($projectUsers) => $projectUsers->where('user_id', $user->id));
+            });
+        }
+
+        if (! $query->exists()) {
+            throw new ForbiddenDashboardProject((string) $projectId);
         }
     }
+
 
     /**
      * Get project overview data based on role

@@ -2,10 +2,9 @@
 
 namespace Tests\Unit\Dashboard;
 
+use App\Exceptions\Dashboard\UnsupportedDashboardRole;
 use Tests\TestCase;
 use App\Services\DashboardRoleBasedService;
-use App\Services\DashboardDataAggregationService;
-use App\Services\DashboardCustomizationService;
 use App\Models\User;
 use App\Models\UserDashboard;
 use App\Models\DashboardWidget;
@@ -28,8 +27,6 @@ class DashboardRoleBasedServiceTest extends TestCase
     use RefreshDatabase, FixtureFactory;
 
     protected $roleBasedService;
-    protected $aggregationService;
-    protected $customizationService;
     protected $user;
     protected $project;
     protected $tenant;
@@ -66,16 +63,6 @@ class DashboardRoleBasedServiceTest extends TestCase
         ]);
         $this->assignProjectRole();
         
-        // Mock constructor dependencies
-        $this->aggregationService = Mockery::mock(DashboardDataAggregationService::class);
-        $this->aggregationService->shouldReceive('getWidgetData')->andReturn([]);
-
-        $this->customizationService = Mockery::mock(DashboardCustomizationService::class);
-        $this->customizationService->shouldIgnoreMissing();
-
-        $this->app->instance(DashboardDataAggregationService::class, $this->aggregationService);
-        $this->app->instance(DashboardCustomizationService::class, $this->customizationService);
-
         $this->roleBasedService = $this->app->make(DashboardRoleBasedService::class);
         
         $this->createTestData();
@@ -209,12 +196,11 @@ class DashboardRoleBasedServiceTest extends TestCase
     }
 
     /** @test */
-    public function it_returns_default_configuration_for_unknown_role()
+    public function it_rejects_unknown_role_configuration()
     {
-        $roleConfig = $this->roleBasedService->getRoleConfiguration('unknown_role');
+        $this->expectException(UnsupportedDashboardRole::class);
 
-        $this->assertEquals('Client Representative', $roleConfig['name']);
-        $this->assertEquals('Client communication and project oversight', $roleConfig['description']);
+        $this->roleBasedService->getRoleConfiguration('unknown_role');
     }
 
     /** @test */
@@ -248,6 +234,7 @@ class DashboardRoleBasedServiceTest extends TestCase
             'role' => 'qc_inspector',
             'tenant_id' => $this->tenant->id
         ]);
+        $this->project->update(['pm_id' => $qcUser->id]);
 
         $roleConfig = $this->roleBasedService->getRoleConfiguration('qc_inspector');
         $widgets = $this->roleBasedService->getRoleBasedWidgets($qcUser, $roleConfig, $this->project->id);

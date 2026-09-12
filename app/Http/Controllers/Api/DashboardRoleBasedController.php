@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Exceptions\Dashboard\UnsupportedDashboardRole;
+use App\Exceptions\Dashboard\ForbiddenDashboardProject;
 use App\Services\DashboardRoleBasedService;
+use App\Services\ErrorEnvelopeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -55,6 +58,22 @@ class DashboardRoleBasedController extends Controller
                 ]
             ]);
 
+        } catch (UnsupportedDashboardRole $e) {
+            return ErrorEnvelopeService::error(
+                'DASHBOARD.ROLE_UNSUPPORTED',
+                'Dashboard role is not supported.',
+                [],
+                403,
+                ErrorEnvelopeService::getCurrentRequestId(),
+            );
+        } catch (ForbiddenDashboardProject $e) {
+            return ErrorEnvelopeService::error(
+                'DASHBOARD.PROJECT_FORBIDDEN',
+                'Dashboard project is not accessible.',
+                [],
+                403,
+                ErrorEnvelopeService::getCurrentRequestId(),
+            );
         } catch (\Exception $e) {
             Log::error('Failed to get role-based dashboard', [
                 'user_id' => Auth::id(),
@@ -62,11 +81,13 @@ class DashboardRoleBasedController extends Controller
                 'error' => $e->getMessage()
             ]);
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to load role-based dashboard',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
-            ], 500);
+            return ErrorEnvelopeService::error(
+                'DASHBOARD.INTERNAL_ERROR',
+                'Dashboard data is temporarily unavailable.',
+                [],
+                500,
+                ErrorEnvelopeService::getCurrentRequestId(),
+            );
         }
     }
 
@@ -96,23 +117,16 @@ class DashboardRoleBasedController extends Controller
             $includeData = $request->get('include_data', false);
 
             $roleConfig = $this->roleBasedService->getRoleConfiguration($user->role);
-            $widgets = $this->roleBasedService->getRoleBasedWidgets($user, $roleConfig, $projectId);
+            $widgets = $this->roleBasedService->getRoleBasedWidgets($user, $roleConfig, $projectId, $includeData);
 
             // Filter by category if specified
             if ($category) {
                 $widgets = array_filter($widgets, function ($widget) use ($category) {
-                    return $widget['category'] === $category;
+                    return ($widget['widget']['category'] ?? null) === $category;
                 });
             }
 
             // Remove data if not requested
-            if (!$includeData) {
-                $widgets = array_map(function ($widget) {
-                    unset($widget['data']);
-                    return $widget;
-                }, $widgets);
-            }
-
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -122,6 +136,22 @@ class DashboardRoleBasedController extends Controller
                 ]
             ]);
 
+        } catch (UnsupportedDashboardRole $e) {
+            return ErrorEnvelopeService::error(
+                'DASHBOARD.ROLE_UNSUPPORTED',
+                'Dashboard role is not supported.',
+                [],
+                403,
+                ErrorEnvelopeService::getCurrentRequestId(),
+            );
+        } catch (ForbiddenDashboardProject $e) {
+            return ErrorEnvelopeService::error(
+                'DASHBOARD.PROJECT_FORBIDDEN',
+                'Dashboard project is not accessible.',
+                [],
+                403,
+                ErrorEnvelopeService::getCurrentRequestId(),
+            );
         } catch (\Exception $e) {
             Log::error('Failed to get role widgets', [
                 'user_id' => Auth::id(),
@@ -129,11 +159,13 @@ class DashboardRoleBasedController extends Controller
                 'error' => $e->getMessage()
             ]);
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to load role widgets',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
-            ], 500);
+            return ErrorEnvelopeService::error(
+                'DASHBOARD.INTERNAL_ERROR',
+                'Dashboard data is temporarily unavailable.',
+                [],
+                500,
+                ErrorEnvelopeService::getCurrentRequestId(),
+            );
         }
     }
 

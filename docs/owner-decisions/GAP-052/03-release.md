@@ -3,14 +3,14 @@ work_id: GAP-052
 owner_governance_version: 1
 owner_gate_2_record: docs/owner-decisions/GAP-052/02-design.md
 gate: 3
-gate_status: preparing
+gate_status: awaiting_owner
 technical_readiness:
-  value: not_checked
+  value: ready
   generated_by: engineering_evidence
 owner_decision:
   value: none
   authority: human_owner
-decision_requested: null
+decision_requested: "approve_or_correction_or_defer"
 references:
   spec: docs/superpowers/specs/2026-09-11-gap052-dashboard-widget-contract-design.md
   plan: docs/superpowers/plans/2026-09-11-gap052-dashboard-widget-provider-implementation.md
@@ -27,16 +27,16 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-11T13:41:28Z"
-  updated_at: "2026-09-11T16:42:13Z"
+  updated_at: "2026-09-12T01:17:24Z"
 generated_by: agent
 residual_risk_rating: medium
-mandatory_technical_gate_summary: "Gate-3 remains preparing: the 51 GAP-052 PHPStan file-errors are corrected locally with zero unbaselined file errors, and behavioral regressions pass; mandatory remote CI has not yet been verified on the new exact PR head. Owner release approval has not been given."
+mandatory_technical_gate_summary: "All mandatory remote checks passed on exact preparing PR head 40962bb93b5bc559f223430d516ff73f0f8578fd, including both PHPStan-bearing jobs, browser-tests, Owner Governance Lint, Routes Guardrails, security, integration, and performance lanes. Technical readiness is established; Owner release approval has not been given."
 technical_evidence:
   base_sha: "c6a207906044bfe691c6a1815f89c8df61b197cb"
   subject_sha: "61e91636f8d5c6f97fc786526ab01c89e74ec49b"
   implementation_tree_digest: "c1f595faf4acadd5fcf457ce1c9e1ff02094fb4ce368494c3b8d4182caf3be02"
-  verified_pr_head_sha: null
-  verified_at: null
+  verified_pr_head_sha: "40962bb93b5bc559f223430d516ff73f0f8578fd"
+  verified_at: "2026-09-12T01:17:24Z"
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null
@@ -89,10 +89,10 @@ The focused GAP-052 suite, including the explicit integration suite, passes at 8
 
 The exact CI PHPStan command, `./vendor/bin/phpstan analyse --error-format=json`, reports `errors: 0` and `file_errors: 0`. The correction adds precise catalog/result/context types, uses explicit Eloquent query builders, reads dashboard `role` and widget `code` through locally typed attributes, dispatches providers with a safe exhaustive guard, and binds inspection/NCR calculations to the verified `QcInspection` and `Ncr` models. No PHPStan baseline entry or suppression was added, and the `DashboardCustomizationService::$user->role` baseline-count regression was removed without increasing baseline debt.
 
-The implementation-tree digest above was computed with the canonical governance function at subject `61e91636f8d5c6f97fc786526ab01c89e74ec49b`, excluding the active GAP-052 Gate-3 packet as required by repository convention. Prior CI results are stale after this implementation change. The packet therefore remains `preparing`; `verified_pr_head_sha` is intentionally unset until mandatory checks, including both PHPStan jobs and browser-tests, finish on the new exact PR head.
+The implementation-tree digest above was computed with the canonical governance function at subject `61e91636f8d5c6f97fc786526ab01c89e74ec49b`, excluding the active GAP-052 Gate-3 packet as required by repository convention. All mandatory checks passed on exact preparing PR head `40962bb93b5bc559f223430d516ff73f0f8578fd`, including `Code Quality Analysis`, `Security Tests`, `browser-tests`, `Owner Governance Lint`, and `test-routes-guardrails`. The evidence-only transition to `awaiting_owner` does not change the bound implementation tree or digest.
 
 The local macOS invocation of `scripts/ci/check-evidence-freshness.sh` has a pre-existing BSD/GNU `basename` portability defect in its packet-discovery pipeline. GAP-052 does not modify that governance script; the canonical digest function above and the authoritative Linux CI freshness run remain the required evidence. This is recorded as separate governance-tooling debt.
 
 Duplicate legacy public calculation methods retained in `DashboardRoleBasedService` are recorded as non-blocking cleanup debt; they are not part of this Gate-3 scope.
 
-**Gate 3 decision:** not requested. **Release:** not authorized.
+**Gate 3 decision:** awaiting Owner approval, correction, or deferral. **Release:** not authorized.

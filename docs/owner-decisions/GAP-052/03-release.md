@@ -1,7 +1,7 @@
 ---
 work_id: GAP-052
 owner_governance_version: 1
-owner_gate_2_record: docs/owner-decisions/GAP-052/02-design.md
+owner_gate_2_record: docs/owner-decisions/GAP-052/02-design-v2.md
 gate: 3
 gate_status: awaiting_owner
 technical_readiness:

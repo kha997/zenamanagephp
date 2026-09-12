@@ -1,14 +1,14 @@
 ---
 work_id: OWN-2026-011
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-09-12-own-2026-011-gap052-post-release-reconciliation.md
   plan: null
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-09-12T23:18:47+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-09-12: 'APPROVE OWN-2026-011 Gate 3. Approved implementation subject: 4bb382ef1264a049bb3cc5e76cbe85157bc03ba6. Approved implementation-tree digest: 4cf16c8c087989e7475c64f5525c13cdd17ea3d5b57e613cf8dead2f801873fb'. This approval is bound to that exact implementation subject and digest; it does not itself authorize marking PR #314 Ready, merge, release execution, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-12T23:10:23+07:00"
-  updated_at: "2026-09-12T23:10:23+07:00"
+  updated_at: "2026-09-12T23:18:47+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "The exact bounded implementation subject passed Owner Governance Lint and Routes Guardrails; canonical digest recomputation matches the recorded value, the two approved reconciliation files are digest-covered, and GAP-052's historical Gate-3 packet remains byte-identical to the canonical base."
@@ -36,17 +36,19 @@ technical_evidence:
   verified_pr_head_sha: "4bb382ef1264a049bb3cc5e76cbe85157bc03ba6"
   verified_at: "2026-09-12T23:10:23+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "4cf16c8c087989e7475c64f5525c13cdd17ea3d5b57e613cf8dead2f801873fb"
+  decision_recorded_at: "2026-09-12T23:18:47+07:00"
 ---
 
 # OWN-2026-011 — Gate 3 release decision
 
-## OWNER GATE 3: AWAITING OWNER DECISION
+## OWNER GATE 3: APPROVED
 
-Technical readiness is established for the exact implementation subject and
-digest recorded above. No Owner Gate-3 decision or Owner binding has been
-recorded. This packet does not itself authorize merge or deployment.
+Owner approved Gate 3 in-session on 2026-09-12, bound to implementation subject
+`4bb382ef1264a049bb3cc5e76cbe85157bc03ba6` and implementation-tree digest
+`4cf16c8c087989e7475c64f5525c13cdd17ea3d5b57e613cf8dead2f801873fb`.
+This approval does not itself authorize marking PR #314 Ready, merge, release
+execution, or deployment.
 
 ## Gói quyết định phát hành
 
@@ -140,7 +142,11 @@ Approve documentation-only release candidate của OWN-2026-011 tại exact
 subject/digest đã ghi. Gate-3 approval không tự cấp merge authorization; PR phải
 giữ Draft/Open/unmerged cho tới khi Owner đưa chỉ thị lifecycle riêng.
 
-**Quyết định của chủ doanh nghiệp:** ☐ Phát hành  ☐ Yêu cầu chỉnh sửa nghiệp vụ  ☐ Hoãn phát hành
+**Quyết định của chủ doanh nghiệp:** ☑ Phát hành  ☐ Yêu cầu chỉnh sửa nghiệp vụ  ☐ Hoãn phát hành
+
+**APPROVED (2026-09-12)** — Owner approval is bound to the exact implementation
+subject and implementation-tree digest recorded above. PR readiness, merge,
+release execution and deployment remain separately unauthorized.
 
 ## What the owner is NOT being asked to decide
 

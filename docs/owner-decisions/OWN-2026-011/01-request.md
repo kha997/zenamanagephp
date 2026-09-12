@@ -1,11 +1,11 @@
 ---
 work_id: OWN-2026-011
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: null
   plan: null
@@ -14,17 +14,23 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-09-12T16:15:02+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-09-12: 'APPROVE OWN-2026-011 Gate 1.' This approval authorizes preparation of Gate 2 only, within the scope and exclusions of this packet; it does not authorize reconciliation edits, implementation, Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-12T16:03:42+07:00"
-  updated_at: "2026-09-12T16:03:42+07:00"
+  updated_at: "2026-09-12T16:15:02+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved OWN-2026-011 Gate 1 in-session on 2026-09-12. This decision
+authorizes preparation of the Gate-2 business design only. It does not
+authorize the reconciliation edits, Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 
@@ -117,8 +123,7 @@ tài liệu bị giới hạn chặt này; việc sửa register chưa được 
 
 ## Decision Needed
 
-Owner chọn một: Approve to proceed to design (Gate 2) / Request more
-information / Decline / Defer.
+Owner đã chọn: **Approve to proceed to design (Gate 2).**
 
 ## What the owner is NOT being asked to decide
 

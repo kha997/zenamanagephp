@@ -3,14 +3,14 @@ work_id: GAP-052
 owner_governance_version: 1
 owner_gate_2_record: docs/owner-decisions/GAP-052/02-design-v2.md
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-09-11-gap052-dashboard-widget-contract-design.md
   plan: docs/superpowers/plans/2026-09-11-gap052-dashboard-widget-provider-implementation.md
@@ -20,17 +20,17 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-09-11T00:00:00Z"
-  owner_response_reference: "Owner implementation review accepted for Gate-3 preparation on implementation HEAD 587ede934fc86b28cd31073ab0ba1ec4d7ccf063."
+  recorded_at: "2026-09-12T06:26:26Z"
+  owner_response_reference: "Owner implementation review accepted for Gate-3 preparation on implementation HEAD 587ede934fc86b28cd31073ab0ba1ec4d7ccf063. | Owner Gate-3 decision (verbatim): 'APPROVE GAP-052 Gate 3. Approved implementation subject: 61e91636f8d5c6f97fc786526ab01c89e74ec49b. Approved implementation-tree digest: c1f595faf4acadd5fcf457ce1c9e1ff02094fb4ce368494c3b8d4182caf3be02.'"
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-11T13:41:28Z"
-  updated_at: "2026-09-12T01:17:24Z"
+  updated_at: "2026-09-12T06:26:26Z"
 generated_by: agent
 residual_risk_rating: medium
-mandatory_technical_gate_summary: "All mandatory remote checks passed on exact preparing PR head 40962bb93b5bc559f223430d516ff73f0f8578fd, including both PHPStan-bearing jobs, browser-tests, Owner Governance Lint, Routes Guardrails, security, integration, and performance lanes. Technical readiness is established; Owner release approval has not been given."
+mandatory_technical_gate_summary: "All mandatory remote checks passed on exact preparing PR head 40962bb93b5bc559f223430d516ff73f0f8578fd, including both PHPStan-bearing jobs, browser-tests, Owner Governance Lint, Routes Guardrails, security, integration, and performance lanes. Technical readiness is established. Owner Gate 3 approval is recorded below and is bound to the approved implementation subject and digest."
 technical_evidence:
   base_sha: "c6a207906044bfe691c6a1815f89c8df61b197cb"
   subject_sha: "61e91636f8d5c6f97fc786526ab01c89e74ec49b"
@@ -38,13 +38,15 @@ technical_evidence:
   verified_pr_head_sha: "40962bb93b5bc559f223430d516ff73f0f8578fd"
   verified_at: "2026-09-12T01:17:24Z"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "c1f595faf4acadd5fcf457ce1c9e1ff02094fb4ce368494c3b8d4182caf3be02"
+  decision_recorded_at: "2026-09-12T06:26:26Z"
 ---
 
 # GAP-052 — Gate 3 implementation evidence
 
-This packet records implementation evidence only. It does not approve release, merge, deployment, or readiness for merge.
+This packet records implementation evidence and the explicit Owner Gate-3 approval bound to the recorded implementation subject and digest. It does not by itself authorize merge or deployment.
+
+**Gate 3 decision: APPROVED.** Owner approval is bound to implementation subject `61e91636f8d5c6f97fc786526ab01c89e74ec49b` and implementation-tree digest `c1f595faf4acadd5fcf457ce1c9e1ff02094fb4ce368494c3b8d4182caf3be02`. This approval record does not itself authorize merge or deployment.
 
 ## Approved architecture implemented
 
@@ -89,10 +91,10 @@ The focused GAP-052 suite, including the explicit integration suite, passes at 8
 
 The exact CI PHPStan command, `./vendor/bin/phpstan analyse --error-format=json`, reports `errors: 0` and `file_errors: 0`. The correction adds precise catalog/result/context types, uses explicit Eloquent query builders, reads dashboard `role` and widget `code` through locally typed attributes, dispatches providers with a safe exhaustive guard, and binds inspection/NCR calculations to the verified `QcInspection` and `Ncr` models. No PHPStan baseline entry or suppression was added, and the `DashboardCustomizationService::$user->role` baseline-count regression was removed without increasing baseline debt.
 
-The implementation-tree digest above was computed with the canonical governance function at subject `61e91636f8d5c6f97fc786526ab01c89e74ec49b`, excluding the active GAP-052 Gate-3 packet as required by repository convention. All mandatory checks passed on exact preparing PR head `40962bb93b5bc559f223430d516ff73f0f8578fd`, including `Code Quality Analysis`, `Security Tests`, `browser-tests`, `Owner Governance Lint`, and `test-routes-guardrails`. The evidence-only transition to `awaiting_owner` does not change the bound implementation tree or digest.
+The implementation-tree digest above was computed with the canonical governance function at subject `61e91636f8d5c6f97fc786526ab01c89e74ec49b`, excluding the active GAP-052 Gate-3 packet as required by repository convention. All mandatory checks passed on exact preparing PR head `40962bb93b5bc559f223430d516ff73f0f8578fd`, including `Code Quality Analysis`, `Security Tests`, `browser-tests`, `Owner Governance Lint`, and `test-routes-guardrails`. The packet-only approval record does not change the bound implementation tree or digest.
 
 The local macOS invocation of `scripts/ci/check-evidence-freshness.sh` has a pre-existing BSD/GNU `basename` portability defect in its packet-discovery pipeline. GAP-052 does not modify that governance script; the canonical digest function above and the authoritative Linux CI freshness run remain the required evidence. This is recorded as separate governance-tooling debt.
 
 Duplicate legacy public calculation methods retained in `DashboardRoleBasedService` are recorded as non-blocking cleanup debt; they are not part of this Gate-3 scope.
 
-**Gate 3 decision:** awaiting Owner approval, correction, or deferral. **Release:** not authorized.
+**Gate 3 decision:** approved by Owner, bound to the recorded subject and digest. **Merge/deployment:** not authorized by this record.

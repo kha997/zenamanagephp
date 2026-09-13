@@ -1,11 +1,11 @@
 ---
 work_id: OWN-2026-012
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: null
   plan: null
@@ -14,17 +14,24 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-09-13T20:25:43+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-09-13: 'APPROVE OWN-2026-012 Gate 1.' This approval authorizes preparation of Gate 2 only within the request's scope and exclusions; it does not authorize Gate-2 approval, reconciliation mutations, PR closures, implementation, Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-13T20:08:26+07:00"
-  updated_at: "2026-09-13T20:08:26+07:00"
+  updated_at: "2026-09-13T20:25:43+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved OWN-2026-012 Gate 1 in-session on 2026-09-13. This decision
+authorizes preparation of the bounded Gate-2 administrative design only. It
+does not authorize Gate-2 approval, register edits, PR closures, feature work,
+Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 
@@ -103,8 +110,7 @@ trước khi có đủ authorization tiếp theo.
 
 ## Decision Needed
 
-Owner chooses one: Approve to proceed to design (Gate 2) / Request more
-information / Decline / Defer.
+Owner chose: **Approve to proceed to design (Gate 2).**
 
 ## What the owner is NOT being asked to decide
 

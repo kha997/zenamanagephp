@@ -1,11 +1,11 @@
 ---
 work_id: OWN-2026-012
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: null
   plan: null
@@ -14,19 +14,27 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-09-13T21:25:25+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-09-13: 'APPROVE OWN-2026-012 Gate 2. APPROVED OPTION: Option B.' Reviewed design head: c8b13ec4b50c9b54c2dbb3ea0428f5cd50025f45. This approves Option B and the exact design contracts/allowlist at that reviewed head, authorizing only the bounded later reconciliation implementation; it does not approve Gate 3, merge, release, deployment, feature work, Issue closure, stale-PR merge, or historical Gate mutation."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-13T21:08:07+07:00"
-  updated_at: "2026-09-13T21:08:07+07:00"
+  updated_at: "2026-09-13T21:25:25+07:00"
 generated_by: agent
 ---
 
 # OWN-2026-012 — Backlog governance reconciliation: Gate 2 design
+
+## OWNER GATE 2: APPROVED — OPTION B
+
+Owner approved Option B in-session on 2026-09-13 against reviewed design head
+`c8b13ec4b50c9b54c2dbb3ea0428f5cd50025f45`. This authorizes only the bounded
+later reconciliation implementation defined by this packet. It does not
+authorize Gate 3, merge, release, deployment, feature work, Issue closure,
+stale-PR merge, or historical Gate mutation.
 
 ## Owner Summary
 
@@ -35,8 +43,9 @@ chứng minh stale, chỉ đóng bốn PR lịch sử theo comment provenance đ
 sẵn, giữ Issues #244/#248 mở, và tạo một execution record riêng để Gate 3 của
 OWN-2026-012 ràng buộc toàn bộ bằng chứng repository-side của reconciliation.
 
-Gate 2 này là thiết kế chờ Owner. Nó không tự cho phép sửa register, đóng PR,
-tạo execution record, tạo Gate 3, merge hoặc deploy.
+Gate 2 này đã được Owner duyệt theo Option B. Implementation sau quyết định này
+vẫn phải tuân thủ exact allowlist, precondition và rollback contract; Gate 3,
+merge và deployment tiếp tục chưa được phép.
 
 ## Sự thật và ràng buộc bất biến
 
@@ -465,8 +474,8 @@ Issues, and one canonical queue—only after later authorized implementation.
 
 ## Decision Needed
 
-Owner chooses one: Approve **Option B** and the exact contracts above to proceed
-to bounded implementation / Request changes to the design / Decline.
+Owner chose: **Approve Option B and the exact contracts above to proceed to
+bounded implementation.**
 
 ## What the owner is NOT being asked to decide
 

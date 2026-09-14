@@ -1,14 +1,14 @@
 ---
 work_id: OWN-2026-012
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-09-13-own-2026-012-backlog-governance-reconciliation.md
   plan: null
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-09-14T20:20:00+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-09-14: 'APPROVE OWN-2026-012 Gate 3.' Approval is bound to implementation subject b0fe547109a6dcebbc6c25e8ad87cd5209765f81 and implementation-tree digest eb67758a139921f23c2d8fe01c0e182f8e6a228fff1a67ccadb278f0b7aed061; it does not authorize marking PR #315 Ready, merge, release execution, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-14T20:12:44+07:00"
-  updated_at: "2026-09-14T20:12:44+07:00"
+  updated_at: "2026-09-14T20:20:00+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "The exact documentation/governance-only implementation subject passed focused and full Owner Governance Lint, gate ordering, diff scope, local route guardrails and exact-head GitHub Owner Governance Lint/Routes Guardrails; canonical digest recomputation binds the register, immutable execution record and OWN Gate-1/Gate-2 evidence while historical cross-work Gate-3 packets remain byte-identical."
@@ -36,18 +36,18 @@ technical_evidence:
   verified_pr_head_sha: "b0fe547109a6dcebbc6c25e8ad87cd5209765f81"
   verified_at: "2026-09-14T20:12:44+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "eb67758a139921f23c2d8fe01c0e182f8e6a228fff1a67ccadb278f0b7aed061"
+  decision_recorded_at: "2026-09-14T20:20:00+07:00"
 ---
 
 # OWN-2026-012 — Gate 3 backlog governance reconciliation decision
 
-## OWNER GATE 3: AWAITING OWNER
+## OWNER GATE 3: APPROVED
 
-Technical readiness is `ready`. Owner decision remains `none`; only the human
-Owner may approve, request correction, or defer this Gate. This packet does not
-authorize marking PR #315 Ready, merging, releasing, deploying, or starting the
-next backlog item.
+Technical readiness is `ready`. Owner approved this packet in-session on
+2026-09-14, bound to the exact implementation subject and digest in the
+frontmatter. This approval does not authorize marking PR #315 Ready, merging,
+releasing, deploying, or starting the next backlog item.
 
 ## Gói quyết định
 
@@ -154,17 +154,16 @@ workflow trên exact subject, không suy luận về hệ thống deployment ngo
 
 **9. Đề xuất kỹ thuật:**
 
-Owner xem xét approve exact docs/governance reconciliation candidate được ràng
-buộc bởi subject/digest trên. Approval, nếu có, phải ghi đúng hai giá trị này;
-nó vẫn không tự cấp quyền mark Ready, merge, release hoặc deploy.
+Exact docs/governance reconciliation candidate được ràng buộc bởi subject/digest
+trên đã được Owner phê duyệt. Approval này vẫn không tự cấp quyền mark Ready,
+merge, release hoặc deploy.
 
-**Quyết định của chủ doanh nghiệp:** ☐ Phê duyệt  ☐ Yêu cầu chỉnh sửa  ☐ Hoãn
+**Quyết định của chủ doanh nghiệp:** ☑ Phê duyệt  ☐ Yêu cầu chỉnh sửa  ☐ Hoãn
 
 ## What the owner is NOT being asked to decide
 
 Owner không được yêu cầu duyệt lại historical GAP releases, đóng Issues
 #244/#248, chấp nhận feature implementation, merge PR, release hay deployment.
-Owner chỉ quyết định có chấp nhận exact reconciliation evidence bound to subject
+Owner đã phê duyệt exact reconciliation evidence bound to subject
 `b0fe547109a6dcebbc6c25e8ad87cd5209765f81` và digest
-`eb67758a139921f23c2d8fe01c0e182f8e6a228fff1a67ccadb278f0b7aed061`
-hay không.
+`eb67758a139921f23c2d8fe01c0e182f8e6a228fff1a67ccadb278f0b7aed061`.

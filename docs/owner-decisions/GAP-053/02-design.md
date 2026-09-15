@@ -1,11 +1,11 @@
 ---
 work_id: GAP-053
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-09-15-gap-053-dashboard-rbac-performance-fixture-evidence.md
   plan: null
@@ -14,19 +14,28 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-09-15T17:34:53+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-09-15: 'APPROVE GAP-053 Gate 2. AUTHORIZE GAP-053 IMPLEMENTATION UNDER THE APPROVED GATE-2 DESIGN AT `9ccf2f2d9c0718c7c6c67e52e77821e2a2383059`.' Approval is bound to exact reviewed Draft PR #317 head 9ccf2f2d9c0718c7c6c67e52e77821e2a2383059 and authorizes implementation only within this packet's test-only design. It does not authorize Ready state, Gate-3 approval, merge, release, deployment, any change to PR #316, application/RBAC semantics, GAP-045 thresholds, evidence-freshness policy, or adjacent E2E/FinalSystem fixtures."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-15T17:06:20+07:00"
-  updated_at: "2026-09-15T17:06:20+07:00"
+  updated_at: "2026-09-15T17:34:53+07:00"
 generated_by: agent
 ---
 
 # GAP-053 — Gate 2 canonical RBAC performance-fixture design
+
+## Owner decision — APPROVED
+
+Owner approved this exact Gate-2 design in-session on 2026-09-15, bound to
+reviewed Draft PR #317 head
+`9ccf2f2d9c0718c7c6c67e52e77821e2a2383059`. Implementation is authorized
+only within the exact test-only scope and verification contract below. Ready
+state, Gate-3 approval, merge, release, deployment, and PR #316 changes remain
+unauthorized.
 
 ## Decision boundary and evidence binding
 
@@ -38,8 +47,9 @@ Gate 1 classified the failure as **A — stale test fixture**: a canonically
 assigned `client_rep`/`client` identity returns 200, so application and security
 behavior are correct.
 
-No implementation, implementation plan, Gate 3, Ready transition, merge,
-release, or deployment is authorized by this packet.
+This approved packet authorizes a separate implementation plan and test-only
+implementation within its exact boundary. It does not authorize Gate-3
+approval, Ready transition, merge, release, or deployment.
 
 ## Recommended design
 
@@ -205,8 +215,8 @@ approved, implemented, and released to canonical main, PR #316 may integrate
 updated main and rerun its existing LIVE acceptance unchanged. No GAP-041
 redesign, workflow change, threshold change, or application change is required.
 
-## Owner decision requested
+## Decision result
 
-Approve this exact test-only design, request changes, or decline it. Approval
-would authorize preparation of a separate implementation plan/Gate 3 later; it
-would not itself authorize implementation, merge, release, or deployment.
+Approved for implementation under this exact design. A future Gate-3 packet
+must still present the completed evidence and receive a separate Owner release
+decision before Ready state, merge, release, or deployment.

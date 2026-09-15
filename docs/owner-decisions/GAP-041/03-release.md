@@ -1,14 +1,14 @@
 ---
 work_id: GAP-041
 gate: 3
-gate_status: awaiting_owner
+gate_status: blocked_technical
 technical_readiness:
-  value: ready
+  value: blocked
   generated_by: engineering_evidence
 owner_decision:
   value: none
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-21-gap-041-ci-test-selection-truthfulness-design.md
   plan: docs/superpowers/plans/2026-09-15-gap-041-ci-test-selection-truthfulness-implementation.md
@@ -25,15 +25,15 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-15T08:13:59+07:00"
-  updated_at: "2026-09-15T08:13:59+07:00"
+  updated_at: "2026-09-15T08:24:32+07:00"
 generated_by: agent
 residual_risk_rating: medium
-mandatory_technical_gate_summary: "Option D is implemented and the full approved GAP-041 acceptance contract is satisfied on implementation subject 4f549bd0acf25f1de20c8dbfd8362bd7725ac54f: both intended performance matrix legs passed genuine-MySQL preflight before PHPUnit and executed non-zero intended populations (PerformanceMonitoringTest: 10 passed/45 assertions; DashboardPerformanceTest: 19 executed/154 assertions, truthfully reporting 3 unrelated real assertion failures); an isolated disposable LIVE proof made both files select zero tests and each job exited 1 after successful MySQL preflight, after which the proof branch was deleted locally and remotely and the implementation worktree was restored cleanly to the frozen subject; performance-budget and performance-heavy definitions, dependencies, summary claims, needs expressions, and tier-specific producer/consumer references are absent; the resulting workflow parses structurally and a LIVE dispatch instantiated only the three surviving producers plus a successful Test Summary. GAP-045's 450ms threshold, all performance tests, phpunit.xml, application behavior, schema, migrations, RBAC, and domain semantics are unchanged. This packet records technical readiness only and does not authorize Ready-for-review, merge, release, or deployment."
+mandatory_technical_gate_summary: "Option D and its full behavioral LIVE acceptance contract are implemented and proven, but the release-governance requirement that every current-head check be green has not passed: truthful execution exposes three existing DashboardPerformanceTest assertions, and the evidence-freshness policy therefore rejects awaiting_owner/ready. Resolving that contradiction would require out-of-scope performance/application work, GAP-045 threshold work, or a separately authorized governance/design decision."
 technical_evidence:
   subject_sha: "4f549bd0acf25f1de20c8dbfd8362bd7725ac54f"
-  implementation_tree_digest: "f8146dd94046233a13401bb8cf57d0e824f5b1dbafdbc062f45101ef51c09f82"
-  verified_pr_head_sha: "4f549bd0acf25f1de20c8dbfd8362bd7725ac54f"
-  verified_at: "2026-09-15T08:13:59+07:00"
+  implementation_tree_digest: "not_computed_while_blocked"
+  verified_pr_head_sha: null
+  verified_at: null
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null
@@ -41,11 +41,15 @@ owner_decision_binding:
 
 # GAP-041 — Gate 3 release decision packet
 
-## Status: awaiting Owner review
+## BLOCKED — Owner/design reconciliation required before Gate 3 can be presented
 
-The approved Gate-2 Option D is implemented and technically ready for Owner
-Gate-3 review. PR #316 remains Draft. No Owner decision is recorded or implied,
-and merge, release, and deployment remain unauthorized.
+The approved Gate-2 Option D and its behavioral LIVE acceptance contract are
+implemented and proven. However, exact-head CI exposed a conflict between that
+truthful behavior and the repository's Gate-3 evidence-freshness policy: the
+Dashboard performance leg now runs 19 tests and truthfully fails three existing
+assertions, while the policy forbids `awaiting_owner/ready` until every
+current-head check is green. PR #316 remains Draft. No Owner decision is
+recorded or implied, and merge, release, and deployment remain unauthorized.
 
 ## Current-main reconciliation
 
@@ -197,17 +201,41 @@ The digest was computed with
 exact Gate-3 record, as defined by repository governance. Any change to another
 file invalidates this Gate-3 presentation and requires fresh verification.
 
-## Owner decision requested
+The frontmatter uses the repository-required
+`not_computed_while_blocked` placeholder while this active packet is
+`blocked_technical`; the verified digest above is retained as engineering
+evidence and remains reproducible from the frozen subject.
 
-Technical recommendation: approve the exact implementation tree above for a
-later, separately authorized release sequence. This packet itself does not
-authorize changing PR #316 from Draft, merging, releasing, or deploying.
+## Exact-head CI blocker
 
-**Owner decision:** ☐ Approve ☐ Request correction ☐ Defer
+At PR head `6ec937232d434eecafae35975548381cabba385f`, 27 checks had passed and
+the truthful Dashboard performance leg had failed with the same 19-test,
+3-failure result. The Owner Governance job's structural lint and digest checks
+passed far enough to enter its bounded live-check polling, then exited non-zero
+with the explicit finding that `awaiting_owner/ready` is invalid while other
+current-head checks are not green. This is not implementation-tree drift; it is
+the exact policy consequence of making the previously false-green test surface
+truthful.
+
+No in-scope correction can make both requirements true. Changing the existing
+assertions, changing GAP-045's threshold, optimizing application behavior, or
+weakening/exempting the evidence-freshness policy would all exceed the approved
+GAP-041 contract. Owner/design reconciliation is therefore required before this
+packet may return to `awaiting_owner`.
+
+## Next decision needed before Gate 3
+
+Choose a separately authorized disposition for the pre-existing Dashboard
+assertion failures or reconcile the Gate-3 all-checks-green rule with the
+approved truthfulness contract. GAP-041 itself should not silently absorb either
+change.
+
+This blocked packet requests no Gate-3 approval. It must remain blocked until a
+new authorized design basis makes exact-head evidence freshness pass.
 
 ## What the Owner is not being asked to decide
 
-The Owner is not being asked to inspect raw CI logs or accept the unrelated
-performance/a11y failures as fixed. The decision is only whether the demonstrated
-Option-D CI truthfulness behavior and explicitly bounded residual risk are
-acceptable for this exact implementation digest.
+The Owner is not being asked to approve release, inspect raw CI logs, or accept
+the unrelated performance/a11y failures as fixed. Any next instruction must be
+a scope/design reconciliation, not a Gate-3 approval of the currently blocked
+packet.

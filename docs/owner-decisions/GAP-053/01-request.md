@@ -1,11 +1,11 @@
 ---
 work_id: GAP-053
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-09-15-gap-053-dashboard-rbac-performance-fixture-evidence.md
   plan: null
@@ -15,16 +15,27 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-09-15T16:55:36+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-09-15: 'APPROVE GAP-053 Gate 1.' Approval is bound to exact reviewed Draft PR #317 head 2d30bb6c7cbcb887ee144e37041239faca2878da, based on canonical main adacc5cc5fb8a08353cc90576076724e45e6e8bc. This approves the Gate-1 problem/evidence and authorizes proceeding to a separately prepared Gate 2; it does not approve an implementation, merge, release, deployment, modification of GAP-041 PR #316, GAP-045 thresholds, application/RBAC semantics, or evidence-freshness policy."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-15T16:39:38+07:00"
-  updated_at: "2026-09-15T16:43:07+07:00"
+  updated_at: "2026-09-15T16:55:36+07:00"
 generated_by: agent
 ---
+
+## Owner Decision History — Gate 1 — APPROVED
+
+Owner approved GAP-053 Gate 1 in-session on 2026-09-15, bound to exact
+reviewed Draft PR #317 head
+`2d30bb6c7cbcb887ee144e37041239faca2878da` and canonical base
+`adacc5cc5fb8a08353cc90576076724e45e6e8bc`. The approved finding is
+classification A — stale test fixture — with application/security behavior
+unchanged. This decision authorizes a separately prepared Gate 2 only. It does
+not authorize implementation, Ready state, merge, release, deployment, or any
+change to GAP-041 PR #316.
 
 ## Owner Summary
 

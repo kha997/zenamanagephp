@@ -25,12 +25,12 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-15T08:13:59+07:00"
-  updated_at: "2026-09-15T08:24:32+07:00"
+  updated_at: "2026-09-15T11:31:43+07:00"
 generated_by: agent
 residual_risk_rating: medium
-mandatory_technical_gate_summary: "Option D and its full behavioral LIVE acceptance contract are implemented and proven, but the release-governance requirement that every current-head check be green has not passed: truthful execution exposes three existing DashboardPerformanceTest assertions, and the evidence-freshness policy therefore rejects awaiting_owner/ready. Resolving that contradiction would require out-of-scope performance/application work, GAP-045 threshold work, or a separately authorized governance/design decision."
+mandatory_technical_gate_summary: "Option D and its full behavioral LIVE acceptance contract are implemented and proven, but the release-governance requirement that every current-head check be green has not passed: truthful execution of all 19 DashboardPerformanceTest tests exposes an existing role-based-filtering assertion (HTTP 403 versus expected 200), and the evidence-freshness policy therefore rejects awaiting_owner/ready. Resolving that contradiction would require out-of-scope application/test work or a separately authorized governance/design decision."
 technical_evidence:
-  subject_sha: "4f549bd0acf25f1de20c8dbfd8362bd7725ac54f"
+  subject_sha: "477ea563292d3b962a371f684b606133187870b3"
   implementation_tree_digest: "not_computed_while_blocked"
   verified_pr_head_sha: null
   verified_at: null
@@ -46,8 +46,8 @@ owner_decision_binding:
 The approved Gate-2 Option D and its behavioral LIVE acceptance contract are
 implemented and proven. However, exact-head CI exposed a conflict between that
 truthful behavior and the repository's Gate-3 evidence-freshness policy: the
-Dashboard performance leg now runs 19 tests and truthfully fails three existing
-assertions, while the policy forbids `awaiting_owner/ready` until every
+Dashboard performance leg now runs 19 tests and truthfully fails one existing
+role-based-filtering assertion, while the policy forbids `awaiting_owner/ready` until every
 current-head check is green. PR #316 remains Draft. No Owner decision is
 recorded or implied, and merge, release, and deployment remain unauthorized.
 
@@ -126,41 +126,42 @@ LIVE evidence.
 
 ## Mandatory LIVE evidence
 
-### Positive performance execution — run 34875648924
+### Positive performance execution — run 34928640298
 
 GitHub Actions run
-`https://github.com/kha997/zenamanagephp/actions/runs/34875648924` checked out
-the exact frozen subject `4f549bd0acf25f1de20c8dbfd8362bd7725ac54f`.
+`https://github.com/kha997/zenamanagephp/actions/runs/34928640298` checked out
+the exact frozen subject `477ea563292d3b962a371f684b606133187870b3`.
 
-- Dashboard leg, job `104082059649`: genuine MySQL preflight succeeded at
+- Dashboard leg, job `104252004389`: genuine MySQL preflight succeeded at
   `127.0.0.1:3306/zenamanage_test` before the exact corrected Artisan command;
-  19 tests executed with 154 assertions. The leg truthfully failed on three
-  real assertions instead of reporting success from zero selection.
-- Monitoring leg, job `104082059815`: the same genuine MySQL preflight
+  all 19 tests executed with 156 assertions (18 passed, 1 failed). The leg
+  truthfully failed on the existing role-based-filtering HTTP 403-versus-200
+  assertion instead of reporting success from zero selection.
+- Monitoring leg, job `104252004274`: the same genuine MySQL preflight
   succeeded before the corrected command; 10 tests executed with 45 assertions
   and passed.
 
 The workflow's overall `failure` is therefore truthful, not a GAP-041 failure:
 all intended matrix populations executed after fail-closed MySQL preflight.
 
-### Disposable zero-selection proof — run 34915725855
+### Disposable zero-selection proof — run 34928883638
 
-An isolated child commit `1ff8cc7a09eb0a0af4d873699b51c774dc630470`
+An isolated child commit `213439697a1902cdcaab399bf59a58c7ef97de35`
 changed only the group to guaranteed-nonexistent
-`gap041-zero-selection-live-proof`, retaining the native fail-on-empty flag.
+`gap041-zero-selection-live-proof-v2`, retaining the native fail-on-empty flag.
 GitHub Actions run
-`https://github.com/kha997/zenamanagephp/actions/runs/34915725855` proved:
+`https://github.com/kha997/zenamanagephp/actions/runs/34928883638` proved:
 
-- Dashboard job `104212799009`: MySQL preflight succeeded; PHPUnit reported
+- Dashboard job `104252724171`: MySQL preflight succeeded; PHPUnit reported
   `No tests found`; the process exited 1.
-- Monitoring job `104212799206`: MySQL preflight succeeded; PHPUnit reported
+- Monitoring job `104252724434`: MySQL preflight succeeded; PHPUnit reported
   `No tests found`; the process exited 1.
 
 After capture, the disposable branch was deleted locally and remotely. The
 implementation worktree was restored cleanly to the frozen subject. The proof
 commit is not an ancestor of PR #316 and is not part of its tree.
 
-### Phantom-tier retirement — run 34875662364
+### Phantom-tier retirement — run 34928640325
 
 Static exhaustive search found no live-source occurrence of the retired job
 names, group names, tier environment controls, missing helper caller, dangling
@@ -168,20 +169,24 @@ names, group names, tier environment controls, missing helper caller, dangling
 found exactly four jobs: Accessibility, Lighthouse, E2E, and Test Summary.
 
 GitHub Actions run
-`https://github.com/kha997/zenamanagephp/actions/runs/34875662364`, on the exact
+`https://github.com/kha997/zenamanagephp/actions/runs/34928640325`, on the exact
 frozen subject, instantiated only those four jobs. Test Summary job
-`104082793889` ran successfully under `always()` and resolved only the three
+`104252406474` ran successfully under `always()` and resolved only the three
 surviving producers. No phantom job was instantiated and no dependency
 resolution error occurred.
 
 ## Unrelated failures exposed or observed
 
-GAP-041 deliberately does not repair truthful performance failures:
+GAP-041 deliberately does not repair truthful performance failures. On the
+final exact implementation subject, the remaining failure is:
 
-- Dashboard alerts median: 514.10ms versus the protected 450ms GAP-045
-  threshold.
-- Mark-alerts-as-read: 1023.63ms versus its existing 1000ms assertion.
 - Role-based filtering: HTTP 403 versus the existing expected 200.
+
+Earlier exact-tree iterations also exposed timing variability: alerts median
+514.10ms versus the protected 450ms GAP-045 threshold, and mark-alerts-as-read
+1023.63ms versus its existing 1000ms assertion. Both timing assertions passed
+on the final subject run; they remain recorded as unrelated surfaced evidence,
+not fixed or reclassified under GAP-041.
 
 The retained a11y workflow also reported pre-existing/out-of-scope failures in
 Accessibility report generation, Lighthouse migration setup, and E2E tests.
@@ -192,9 +197,9 @@ A11y/Lighthouse/E2E cleanup.
 ## Frozen subject and digest
 
 - canonical starting main: `adacc5cc5fb8a08353cc90576076724e45e6e8bc`
-- implementation subject: `4f549bd0acf25f1de20c8dbfd8362bd7725ac54f`
+- implementation subject: `477ea563292d3b962a371f684b606133187870b3`
 - repository-canonical implementation-tree digest:
-  `f8146dd94046233a13401bb8cf57d0e824f5b1dbafdbc062f45101ef51c09f82`
+  `31ec3c27843c7c164e1b5c5e2207156677a03d1e22d140acd6788d7c499e9942`
 
 The digest was computed with
 `owner_governance_compute_implementation_tree_digest()` and excludes only this
@@ -208,9 +213,9 @@ evidence and remains reproducible from the frozen subject.
 
 ## Exact-head CI blocker
 
-At PR head `6ec937232d434eecafae35975548381cabba385f`, 27 checks had passed and
-the truthful Dashboard performance leg had failed with the same 19-test,
-3-failure result. The Owner Governance job's structural lint and digest checks
+At PR head `6ec937232d434eecafae35975548381cabba385f`, the truthful Dashboard
+performance leg had executed all 19 tests and failed real assertions. The Owner
+Governance job's structural lint and digest checks
 passed far enough to enter its bounded live-check polling, then exited non-zero
 with the explicit finding that `awaiting_owner/ready` is invalid while other
 current-head checks are not green. This is not implementation-tree drift; it is

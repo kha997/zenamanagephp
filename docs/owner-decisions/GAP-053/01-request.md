@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-09-15-gap-053-dashboard-rbac-performance-fixture-evidence.md
   plan: null
   branch: docs/GAP-053-dashboard-rbac-performance-fixture-gate1
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/317
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-15T16:39:38+07:00"
-  updated_at: "2026-09-15T16:39:38+07:00"
+  updated_at: "2026-09-15T16:43:07+07:00"
 generated_by: agent
 ---
 

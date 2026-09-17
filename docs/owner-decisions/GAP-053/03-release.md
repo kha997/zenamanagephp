@@ -3,14 +3,14 @@ work_id: GAP-053
 owner_governance_version: 1
 owner_gate_2_record: docs/owner-decisions/GAP-053/02-design.md
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-09-15-gap-053-dashboard-rbac-performance-fixture-evidence.md
   plan: docs/superpowers/plans/2026-09-15-gap-053-dashboard-rbac-performance-fixture-implementation.md
@@ -19,15 +19,15 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-09-17T09:12:09+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-09-17: 'APPROVE GAP-053 Gate 3.' Approval is bound to reviewed Draft PR #317 head 4fa4b8c0e9decfb95f75349fdaa7f99b85dfbfa1, implementation subject ff825fb9eb41a0ca927da2446dec999c25c964be, and implementation-tree digest 8b25a50d7ea7e5fca0cd9cf7f7b0fe2282913620acd5309a45405c633bc6e73e. This records the Gate-3 decision only; no Ready transition, merge, release, deployment, or change to GAP-041 PR #316 is authorized by this message."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-15T17:37:01+07:00"
-  updated_at: "2026-09-15T18:11:09+07:00"
+  updated_at: "2026-09-17T09:12:09+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "The approved test-only correction is implemented; RED/GREEN, canonical identity, released-contract, exact-method genuine-MySQL, scope, governance, route, and all 33 exact-head PR checks passed."
@@ -38,19 +38,24 @@ technical_evidence:
   verified_pr_head_sha: "ff825fb9eb41a0ca927da2446dec999c25c964be"
   verified_at: "2026-09-15T18:11:09+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "8b25a50d7ea7e5fca0cd9cf7f7b0fe2282913620acd5309a45405c633bc6e73e"
+  decision_recorded_at: "2026-09-17T09:12:09+07:00"
 ---
 
 # GAP-053 — Gate 3 implementation evidence
 
-## Release decision requested
+## Owner Gate-3 decision — approved
 
-GAP-053 is technically ready for Owner Gate-3 review. The confirmed stale
-performance fixture now constructs canonical, least-privilege RBAC identities.
+Owner approved GAP-053 Gate 3 in-session on 2026-09-17, bound to the reviewed
+Draft PR #317 head `4fa4b8c0e9decfb95f75349fdaa7f99b85dfbfa1`,
+implementation subject `ff825fb9eb41a0ca927da2446dec999c25c964be`, and
+implementation-tree digest
+`8b25a50d7ea7e5fca0cd9cf7f7b0fe2282913620acd5309a45405c633bc6e73e`.
+The confirmed stale performance fixture now constructs canonical,
+least-privilege RBAC identities.
 No production behavior, authorization policy, endpoint, expected status, or
-performance threshold changed. PR #317 remains Draft; this packet does not
-authorize Ready state, merge, release, or deployment.
+performance threshold changed. This decision record does not itself authorize
+Ready state, merge, release, or deployment.
 
 ## Implemented change
 

@@ -27,7 +27,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-26T14:23:01+07:00"
-  updated_at: "2026-09-26T19:07:12+07:00"
+  updated_at: "2026-09-26T20:10:28+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "The approved scheduler/backup safety design is implemented proof-first; every behavior test was observed failing on the unchanged code and passing after; per-task and whole-branch reviews closed with no open Critical/Important finding; all 33 exact-head PR checks passed, including PHPStan and every real-MySQL job."
@@ -55,6 +55,33 @@ implementation-tree digest `7108b2925e8c8300207afecb7994e2c300cd9d9778746670112c
 (`production.yml` is manual `workflow_dispatch`). This decision authorizes the
 Ready transition and squash merge only; production deployment and enabling the
 scheduler remain separate operator decisions.
+
+## Release execution record (GAP-054 CLOSED — RELEASED)
+
+Executed in the same session immediately after the Owner's Gate-3 decision.
+
+1. **Approval-record commit:** `be72d6e5d183f3e30ce94b56c0a7d8cdd3a6f7d7`
+   (this file only).
+2. **Pre-merge safety verification:** `origin/main` re-fetched and still
+   `adacc5cc5fb8a08353cc90576076724e45e6e8bc` (no drift); PR #318
+   `MERGEABLE` / `CLEAN`; 33/33 checks green at `be72d6e5`;
+   implementation-tree digest recomputed unchanged
+   (`7108b2925e8c8300207afecb7994e2c300cd9d9778746670112c8a5c6c29cce7`); no
+   workflow deploys on a push to `main` (`production.yml` is manual
+   `workflow_dispatch`; `release-management.yml` runs only on `v*` tags).
+3. **Marked Ready**, then merged with
+   `gh pr merge 318 --squash --match-head-commit be72d6e5d183f3e30ce94b56c0a7d8cdd3a6f7d7`.
+4. **Merge SHA:** `a473298e2fc6aabada1b41291ec5478fee7b73c3`
+   (2026-09-26T12:46:22Z). `origin/main` verified equal to it; its tree is
+   identical to the approved head `be72d6e5`, and the implementation-tree
+   digest computed at the merge commit equals the Owner-bound digest.
+5. **Post-merge CI on `a473298e`:** Auth Guard Lint, Automated Testing,
+   Button Test Suite, CI/CD Pipeline, Code Quality & Security, Owner
+   Governance Lint, Routes Guardrails, Staging Smoke — all terminal
+   `success`.
+6. **Deployment truth:** NOT deployed to production; the scheduler was NOT
+   enabled on any host. Both remain separate operator decisions (runbook
+   `docs/runbooks/gap-049-host-provisioning.md` → "Enable the scheduler").
 
 ## Gói quyết định phát hành
 

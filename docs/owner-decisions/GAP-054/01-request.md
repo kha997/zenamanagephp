@@ -1,11 +1,11 @@
 ---
 work_id: GAP-054
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-09-26-gap-054-scheduler-production-safety-evidence.md
   plan: null
@@ -15,16 +15,27 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-09-26T08:50:17+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-09-26: 'duyệt và sang Gate 2' (approve and proceed to Gate 2). Approval is bound to exact reviewed Draft PR #318 head fb354b666b33cd5fe63fd699f623c1b54a7f9263, based on canonical main adacc5cc5fb8a08353cc90576076724e45e6e8bc. This approves the Gate-1 problem/evidence and authorizes proceeding to a separately prepared Gate 2; it does not approve an implementation, Ready state, merge, release, deployment, environment change, or credential rotation."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-26T08:27:38+07:00"
-  updated_at: "2026-09-26T08:31:18+07:00"
+  updated_at: "2026-09-26T08:50:17+07:00"
 generated_by: agent
 ---
+
+## Owner Decision History — Gate 1 — APPROVED
+
+Owner approved GAP-054 Gate 1 in-session on 2026-09-26 ("duyệt và sang Gate
+2"), bound to exact reviewed Draft PR #318 head
+`fb354b666b33cd5fe63fd699f623c1b54a7f9263` and canonical base
+`adacc5cc5fb8a08353cc90576076724e45e6e8bc`. The approved finding is the five
+verified scheduler/backup production-safety defects recorded in the linked
+evidence audit. This decision authorizes a separately prepared Gate 2 only. It
+does not authorize implementation, an implementation plan, Ready state, merge,
+release, deployment, any scheduler/environment change, or credential rotation.
 
 ## Owner Summary
 

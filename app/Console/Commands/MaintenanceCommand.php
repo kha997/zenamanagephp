@@ -37,8 +37,10 @@ class MaintenanceCommand extends Command
                 $this->runAllTasks();
                 break;
             case 'cache':
-                $this->clearCache();
-                break;
+                $this->error('Refusing cache maintenance: there is no maintenance-owned cache namespace. '
+                    . 'The application cache holds rate-limit counters, OIDC login state and scheduler locks, '
+                    . 'so it is never flushed by maintenance (GAP-054).');
+                return 1;
             case 'database':
                 $this->optimizeDatabase();
                 break;
@@ -67,38 +69,12 @@ class MaintenanceCommand extends Command
     {
         $this->info('Running all maintenance tasks...');
 
-        $this->clearCache();
         $this->optimizeDatabase();
         $this->cleanupLogs();
         $this->collectMetrics();
         $this->createBackup();
 
         $this->info('All maintenance tasks completed!');
-    }
-
-    /**
-     * Clear application cache
-     */
-    private function clearCache()
-    {
-        $this->info('Clearing application cache...');
-
-        $task = $this->createMaintenanceTask('Clear application cache', 'info', 'medium');
-
-        try {
-            $this->call('cache:clear');
-            $this->call('config:clear');
-            $this->call('route:clear');
-            $this->call('view:clear');
-
-            Cache::flush();
-
-            $this->completeMaintenanceTask($task, ['caches_cleared' => ['laravel', 'redis']]);
-            $this->info('✓ Cache cleared successfully');
-        } catch (\Exception $e) {
-            $this->failMaintenanceTask($task, $e->getMessage());
-            $this->error('✗ Failed to clear cache: ' . $e->getMessage());
-        }
     }
 
     /**

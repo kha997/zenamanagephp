@@ -58,11 +58,19 @@ final class BackupArchiveStore
         return $this->disk . ':' . $target;
     }
 
-    public function prune(string $type): int
+    /**
+     * Delete archives of $type beyond the configured per-type retention.
+     * Both limits are floored at 1 so a misconfigured/empty env value (0)
+     * can never prune every archive of a type. $keepName (the basename
+     * store() just wrote) is never deleted regardless of the limits.
+     */
+    public function prune(string $type, ?string $keepName = null): int
     {
         $limits = config("backup.retention.{$type}") ?? config('backup.retention.full');
-        $maxBackups = (int) ($limits['max_backups'] ?? 30);
-        $cutoff = time() - ((int) ($limits['max_age_days'] ?? 30) * 86400);
+        // Floor both limits at 1: an empty/zero env value must never be able to
+        // prune every archive of a type, including the one a run just wrote.
+        $maxBackups = max(1, (int) ($limits['max_backups'] ?? 30));
+        $cutoff = time() - (max(1, (int) ($limits['max_age_days'] ?? 30)) * 86400);
 
         $archives = array_values(array_filter(
             $this->typedArchives(),
@@ -72,6 +80,10 @@ final class BackupArchiveStore
 
         $deleted = 0;
         foreach ($archives as $index => $archive) {
+            if ($archive['name'] === $keepName) {
+                continue;
+            }
+
             if ($index >= $maxBackups || $archive['mtime'] < $cutoff) {
                 $this->delete($archive['name']);
                 $deleted++;

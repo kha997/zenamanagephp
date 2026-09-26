@@ -62,8 +62,9 @@ class BackupCommand extends Command
             $this->createBackupManifest($backupDir);
             $archive = $this->compressBackup($backupDir);
             $store = BackupArchiveStore::fromConfig();
+            $keepName = basename($archive);
             $location = $store->store($archive);
-            $pruned = $store->prune($archiveType);
+            $pruned = $store->prune($archiveType, $keepName);
             $this->info("✓ Backup stored: {$location}" . ($pruned > 0 ? " ({$pruned} old {$archiveType} backups removed)" : ''));
 
             $task->markAsCompleted(['backup_type' => $type]);

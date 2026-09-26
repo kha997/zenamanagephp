@@ -97,4 +97,22 @@ class BackupRetentionTest extends TestCase
 
         $this->assertCount(1, glob($this->dir . '/backup_full_*.tar.gz') ?: []);
     }
+
+    public function test_zero_max_backups_does_not_delete_the_archive_just_stored(): void
+    {
+        config(['backup.retention.database.max_backups' => 0]);
+
+        $this->artisan('backup:run', ['--type' => 'database'])->assertExitCode(0);
+
+        $this->assertCount(1, glob($this->dir . '/backup_database_*.tar.gz') ?: [], 'a max_backups of 0 must not wipe out the archive the run just produced');
+    }
+
+    public function test_zero_max_age_days_does_not_delete_the_archive_just_stored(): void
+    {
+        config(['backup.retention.database.max_age_days' => 0]);
+
+        $this->artisan('backup:run', ['--type' => 'database'])->assertExitCode(0);
+
+        $this->assertCount(1, glob($this->dir . '/backup_database_*.tar.gz') ?: [], 'a max_age_days of 0 must not wipe out the archive the run just produced');
+    }
 }

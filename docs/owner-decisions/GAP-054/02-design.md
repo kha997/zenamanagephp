@@ -1,11 +1,11 @@
 ---
 work_id: GAP-054
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-09-26-gap-054-scheduler-production-safety-evidence.md
   plan: null
@@ -14,19 +14,37 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-09-26T08:57:40+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-09-26: 'duyệt theo khuyến nghị' (approve per the recommendations). Approval is bound to exact reviewed Draft PR #318 head 6933cb0a2b4e84a96e6070c12390f909a7ad3157, with every Owner choice point resolved to its recommended option: Q1 include (remove argument-less queue:monitor), Q2 never back up secrets, Q3 full 30 days / database 7 days per-type retention, Q4 honor configured disk, off-host not mandatory. Authorizes a separate implementation plan and implementation within this design only; does not authorize Gate-3 approval, Ready state, merge, release, deployment, scheduler enablement, environment change, or credential rotation."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-26T08:54:10+07:00"
-  updated_at: "2026-09-26T08:54:10+07:00"
+  updated_at: "2026-09-26T08:57:40+07:00"
 generated_by: agent
 ---
 
 # GAP-054 — Gate 2 scheduler & backup production-safety design
+
+## Owner decision — APPROVED
+
+Owner approved this exact Gate-2 design in-session on 2026-09-26 ("duyệt theo
+khuyến nghị"), bound to reviewed Draft PR #318 head
+`6933cb0a2b4e84a96e6070c12390f909a7ad3157`. Every Owner choice point is resolved to its recommended option:
+
+- **Q1 — included:** the argument-less `queue:monitor` entry is removed from the
+  schedule; no replacement monitor.
+- **Q2 — never:** backups never contain `.env` / `.env.*`, encrypted or not.
+- **Q3 — per-type retention:** full archives 30 days / 30 archives; database
+  archives 7 days / 28 archives.
+- **Q4 — configured disk honored, off-host not mandatory:** `BACKUP_DISK` unset
+  keeps today's `storage/backups` location.
+
+Implementation is authorized only within the design and proof-first contract
+below. Gate-3 approval, Ready state, merge, release, deployment, scheduler
+enablement, environment change, and credential rotation remain unauthorized.
 
 ## Owner Summary
 
@@ -42,10 +60,10 @@ Design-only packet. Bound to the approved Gate-1 record
 (`docs/owner-decisions/GAP-054/01-request.md`, Owner-approved 2026-09-26 at
 PR #318 head `fb354b666b33cd5fe63fd699f623c1b54a7f9263`, recorded at
 `87a897b2a`), the linked evidence audit, and canonical base
-`adacc5cc5fb8a08353cc90576076724e45e6e8bc`. Nothing here authorizes an
-implementation plan, code, Ready state, merge, release, deployment,
-environment change, or credential rotation until the Owner approves this
-Gate 2.
+`adacc5cc5fb8a08353cc90576076724e45e6e8bc`. This approved packet
+authorizes a separate implementation plan and implementation within its exact
+boundary; it does not authorize Gate-3 approval, Ready state, merge, release,
+deployment, environment change, or credential rotation.
 
 ## Owner choices embedded in this design
 
@@ -295,10 +313,12 @@ Existing callers to update in the same change: `tests/Feature/BackupCommandTest.
 - Không thêm nhà cung cấp lưu trữ ngoài hay thông tin truy cập nào.
 - Không đưa nhánh làm dở tháng 7 vào main.
 
-## Decision Needed
+## Decision result
 
-Owner chooses one: Approve to proceed to implementation / Request changes to
-the design / Decline. Approval may name a different choice for any of Q1–Q4.
+Approved for implementation under this exact design with Q1–Q4 resolved as
+recommended. A future Gate-3 packet must present the completed evidence and
+receive a separate Owner release decision before Ready state, merge, release,
+or deployment.
 
 ## What the owner is NOT being asked to decide
 

@@ -14,6 +14,7 @@ class LaunchChecklistServiceBackupTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config(['backup.disk' => null]);
         $this->backupDir = storage_path('backups');
         if (!is_dir($this->backupDir)) {
             mkdir($this->backupDir, 0755, true);

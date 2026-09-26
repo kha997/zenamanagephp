@@ -3,9 +3,11 @@
 namespace App\Console\Commands;
 
 use App\Models\MaintenanceTask;
+use App\Services\Backup\BackupArchiveStore;
 use App\Services\Backup\MysqlClient;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Process;
 
 class BackupCommand extends Command
 {
@@ -24,7 +26,7 @@ class BackupCommand extends Command
      */
     public function handle()
     {
-        $type = $this->option('type');
+        $type = (string) $this->option('type');
 
         $this->info('Starting backup process...');
 
@@ -36,33 +38,33 @@ class BackupCommand extends Command
             'started_at' => now()
         ]);
 
-        try {
-            $backupDir = $this->createBackupDirectory();
+        if (!in_array($type, ['all', 'database', 'files', 'config'], true)) {
+            $this->error('Invalid backup type. Available types: all, database, files, config');
+            $task->markAsFailed('Invalid backup type');
+            return 1;
+        }
 
-            switch ($type) {
-                case 'all':
-                    $this->backupDatabase($backupDir);
-                    $this->backupFiles($backupDir);
-                    $this->backupConfig($backupDir);
-                    break;
-                case 'database':
-                    $this->backupDatabase($backupDir);
-                    break;
-                case 'files':
-                    $this->backupFiles($backupDir);
-                    break;
-                case 'config':
-                    $this->backupConfig($backupDir);
-                    break;
-                default:
-                    $this->error('Invalid backup type. Available types: all, database, files, config');
-                    $task->markAsFailed('Invalid backup type');
-                    return 1;
+        $archiveType = $type === 'all' ? 'full' : $type;
+
+        try {
+            $backupDir = $this->createBackupDirectory($archiveType);
+
+            if ($type === 'all' || $type === 'database') {
+                $this->backupDatabase($backupDir);
+            }
+            if ($type === 'all' || $type === 'files') {
+                $this->backupFiles($backupDir);
+            }
+            if ($type === 'all' || $type === 'config') {
+                $this->backupConfig($backupDir);
             }
 
             $this->createBackupManifest($backupDir);
-            $this->compressBackup($backupDir);
-            $this->cleanupOldBackups();
+            $archive = $this->compressBackup($backupDir);
+            $store = BackupArchiveStore::fromConfig();
+            $location = $store->store($archive);
+            $pruned = $store->prune($archiveType);
+            $this->info("✓ Backup stored: {$location}" . ($pruned > 0 ? " ({$pruned} old {$archiveType} backups removed)" : ''));
 
             $task->markAsCompleted(['backup_type' => $type]);
             $this->info('Backup completed successfully!');
@@ -191,14 +193,14 @@ class BackupCommand extends Command
     /**
      * Create backup directory
      */
-    private function createBackupDirectory()
+    private function createBackupDirectory(string $type): string
     {
         $backupBaseDir = storage_path('backups');
         if (!is_dir($backupBaseDir)) {
             mkdir($backupBaseDir, 0755, true);
         }
 
-        $backupDir = $backupBaseDir . '/backup_' . date('Y-m-d_H-i-s');
+        $backupDir = $backupBaseDir . '/backup_' . $type . '_' . date('Y-m-d_H-i-s');
         mkdir($backupDir, 0755, true);
 
         return $backupDir;
@@ -288,16 +290,17 @@ class BackupCommand extends Command
     /**
      * Compress backup directory
      */
-    private function compressBackup($backupDir)
+    private function compressBackup(string $backupDir): string
     {
         $this->info('Compressing backup...');
 
         $archivePath = $backupDir . '.tar.gz';
-        $command = "tar -czf {$archivePath} -C " . dirname($backupDir) . " " . basename($backupDir);
 
-        exec($command, $output, $returnCode);
+        $result = Process::run([
+            'tar', '-czf', $archivePath, '-C', dirname($backupDir), basename($backupDir),
+        ]);
 
-        if ($returnCode !== 0) {
+        if (!$result->successful()) {
             throw new \Exception('Backup compression failed');
         }
 
@@ -305,52 +308,8 @@ class BackupCommand extends Command
         $this->removeDirectory($backupDir);
 
         $this->info('✓ Backup compressed: ' . $this->formatBytes(filesize($archivePath)));
-    }
 
-    /**
-     * Cleanup old backups
-     */
-    private function cleanupOldBackups()
-    {
-        $this->info('Cleaning up old backups...');
-
-        $backupDir = storage_path('backups');
-        $maxBackups = config('backup.max_backups', 10);
-        $maxAge = config('backup.max_age_days', 30);
-
-        $backups = glob($backupDir . '/backup_*.tar.gz');
-        
-        // Sort by modification time (newest first)
-        usort($backups, function($a, $b) {
-            return filemtime($b) - filemtime($a);
-        });
-
-        $deletedCount = 0;
-
-        // Remove backups exceeding max count
-        if (count($backups) > $maxBackups) {
-            $toDelete = array_slice($backups, $maxBackups);
-            foreach ($toDelete as $backup) {
-                unlink($backup);
-                $deletedCount++;
-            }
-            // Keep the survivors list in sync so the age-based pass below
-            // doesn't filemtime() a path this pass already unlinked.
-            $backups = array_slice($backups, 0, $maxBackups);
-        }
-
-        // Remove backups older than max age
-        $cutoffTime = time() - ($maxAge * 24 * 60 * 60);
-        foreach ($backups as $backup) {
-            if (file_exists($backup) && filemtime($backup) < $cutoffTime) {
-                unlink($backup);
-                $deletedCount++;
-            }
-        }
-
-        if ($deletedCount > 0) {
-            $this->info("✓ Cleaned up {$deletedCount} old backups");
-        }
+        return $archivePath;
     }
 
     /**

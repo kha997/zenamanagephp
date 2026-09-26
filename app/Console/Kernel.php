@@ -29,11 +29,6 @@ class Kernel extends ConsoleKernel
             ->everyFiveMinutes()
             ->withoutOverlapping();
 
-        // Cache Maintenance
-        $schedule->command('maintenance:run --task=cache')
-            ->dailyAt('02:00')
-            ->withoutOverlapping();
-
         // Database Optimization
         $schedule->command('maintenance:run --task=database')
             ->weekly()
@@ -58,40 +53,15 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping()
             ->runInBackground();
 
-        // Queue Health Check
-        $schedule->command('queue:monitor')
-            ->everyFiveMinutes()
-            ->withoutOverlapping();
-
         // Queue Restart
         $schedule->command('queue:restart')
             ->hourly()
             ->withoutOverlapping();
 
-        // Session Cleanup
-        $schedule->command('session:gc')
-            ->dailyAt('08:00')
-            ->withoutOverlapping();
-
-        // Cache Optimization
-        $schedule->command('cache:optimize')
-            ->dailyAt('09:00')
-            ->withoutOverlapping();
-
-        // Route Cache
-        $schedule->command('route:cache')
-            ->dailyAt('10:00')
-            ->withoutOverlapping();
-
-        // View Cache
-        $schedule->command('view:cache')
-            ->dailyAt('11:00')
-            ->withoutOverlapping();
-
-        // Config Cache
-        $schedule->command('config:cache')
-            ->dailyAt('12:00')
-            ->withoutOverlapping();
+        // Compiled config/route/view caches are built by the deploy step
+        // (.github/workflows/production.yml), never on a schedule. The
+        // application cache store is never flushed on a schedule: it holds
+        // rate-limit counters, OIDC state and these overlap locks (GAP-054).
     }
 
     /**

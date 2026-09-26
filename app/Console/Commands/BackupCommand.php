@@ -80,13 +80,9 @@ class BackupCommand extends Command
     /**
      * Backup database
      */
-    private function backupDatabase($backupDir = null)
+    private function backupDatabase(string $backupDir)
     {
         $this->info('Backing up database...');
-
-        if (!$backupDir) {
-            $backupDir = $this->createBackupDirectory();
-        }
 
         $filename = 'database_' . date('Y-m-d_H-i-s') . '.sql';
         $filepath = $backupDir . '/' . $filename;
@@ -118,27 +114,25 @@ class BackupCommand extends Command
     /**
      * Backup application files
      */
-    private function backupFiles($backupDir = null)
+    private function backupFiles(string $backupDir)
     {
         $this->info('Backing up application files...');
-
-        if (!$backupDir) {
-            $backupDir = $this->createBackupDirectory();
-        }
 
         $filesDir = $backupDir . '/files';
         mkdir($filesDir, 0755, true);
 
+        $excluded = BackupArchiveStore::fromConfig()->localPathsExcludedFromFileBackups();
+
         // Backup storage directory
-        $this->backupDirectory(storage_path('app'), $filesDir . '/storage_app');
-        
+        $this->backupDirectory(storage_path('app'), $filesDir . '/storage_app', $excluded);
+
         // Backup public uploads
         if (is_dir(public_path('uploads'))) {
-            $this->backupDirectory(public_path('uploads'), $filesDir . '/public_uploads');
+            $this->backupDirectory(public_path('uploads'), $filesDir . '/public_uploads', $excluded);
         }
 
         // Backup logs
-        $this->backupDirectory(storage_path('logs'), $filesDir . '/logs');
+        $this->backupDirectory(storage_path('logs'), $filesDir . '/logs', $excluded);
 
         $this->info('✓ Application files backup completed');
     }
@@ -146,21 +140,15 @@ class BackupCommand extends Command
     /**
      * Backup configuration files
      */
-    private function backupConfig($backupDir = null)
+    private function backupConfig(string $backupDir)
     {
         $this->info('Backing up configuration files...');
-
-        if (!$backupDir) {
-            $backupDir = $this->createBackupDirectory();
-        }
 
         $configDir = $backupDir . '/config';
         mkdir($configDir, 0755, true);
 
-        // Backup environment file
-        if (file_exists(base_path('.env'))) {
-            copy(base_path('.env'), $configDir . '/.env');
-        }
+        // Never collect .env / .env.*: secrets are kept out-of-band
+        // (docs/runbooks/gap-049-host-provisioning.md) — GAP-054.
 
         // Backup configuration files
         $configFiles = [
@@ -209,8 +197,10 @@ class BackupCommand extends Command
 
     /**
      * Backup directory recursively
+     *
+     * @param list<string> $excluded absolute local paths (files or directories) that must never be copied
      */
-    private function backupDirectory($source, $destination)
+    private function backupDirectory(string $source, string $destination, array $excluded = []): void
     {
         if (!is_dir($source)) {
             return;
@@ -218,14 +208,33 @@ class BackupCommand extends Command
 
         mkdir($destination, 0755, true);
 
+        $excludedRealPaths = array_values(array_filter(array_map(
+            static fn (string $path): string|false => realpath($path),
+            $excluded,
+        ), static fn ($path): bool => $path !== false));
+
         $iterator = new \RecursiveIteratorIterator(
             new \RecursiveDirectoryIterator($source, \RecursiveDirectoryIterator::SKIP_DOTS),
             \RecursiveIteratorIterator::SELF_FIRST
         );
 
         foreach ($iterator as $item) {
+            $itemRealPath = realpath($item->getPathname());
+
+            if ($itemRealPath !== false) {
+                foreach ($excludedRealPaths as $excludedRealPath) {
+                    if ($itemRealPath === $excludedRealPath || str_starts_with($itemRealPath, $excludedRealPath . '/')) {
+                        continue 2;
+                    }
+                }
+            }
+
+            if (preg_match('/^\.env(\..*)?$/', $item->getFilename()) === 1) {
+                continue;
+            }
+
             $targetPath = $destination . DIRECTORY_SEPARATOR . $iterator->getSubPathName();
-            
+
             if ($item->isDir()) {
                 mkdir($targetPath, 0755, true);
             } else {

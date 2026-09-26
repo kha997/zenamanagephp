@@ -28,6 +28,8 @@ class BackupContentsSafetyTest extends TestCase
         }
         $this->clean();
         exec('rm -rf ' . escapeshellarg(storage_path('app/backups/gap054-probe')));
+        @unlink(storage_path('app/gap054-link.txt'));
+        @unlink(storage_path('framework/testing/gap054-secret.env'));
         parent::tearDown();
     }
 
@@ -89,6 +91,33 @@ class BackupContentsSafetyTest extends TestCase
         $this->assertNotEmpty($entries);
         foreach ($entries as $entry) {
             $this->assertStringNotContainsString('gap054-probe', $entry, "archive must not contain {$entry}");
+        }
+    }
+
+    public function test_symlink_to_a_secret_inside_storage_is_not_followed(): void
+    {
+        $secretPath = storage_path('framework/testing/gap054-secret.env');
+        @mkdir(dirname($secretPath), 0755, true);
+        file_put_contents($secretPath, 'APP_KEY=' . self::SENTINEL . "\n");
+
+        $linkPath = storage_path('app/gap054-link.txt');
+        @unlink($linkPath);
+        symlink($secretPath, $linkPath);
+
+        try {
+            $this->artisan('backup:run', ['--type' => 'files'])->assertExitCode(0);
+
+            $archive = (glob(storage_path('backups') . '/backup_*.tar.gz') ?: [])[0];
+            exec('tar -tzf ' . escapeshellarg($archive), $entries);
+            foreach ($entries as $entry) {
+                $this->assertStringNotContainsString('gap054-link.txt', $entry, "archive must not contain {$entry}");
+            }
+
+            exec('tar -xzOf ' . escapeshellarg($archive) . ' | grep -c ' . escapeshellarg(self::SENTINEL), $count);
+            $this->assertSame('0', trim($count[0] ?? '0'));
+        } finally {
+            @unlink($linkPath);
+            @unlink($secretPath);
         }
     }
 }

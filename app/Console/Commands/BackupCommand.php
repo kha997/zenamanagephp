@@ -219,6 +219,11 @@ class BackupCommand extends Command
         );
 
         foreach ($iterator as $item) {
+            // Never follow symlinks: a link cannot pull secrets or out-of-tree files into a backup (GAP-054).
+            if ($item->isLink()) {
+                continue;
+            }
+
             $itemRealPath = realpath($item->getPathname());
 
             if ($itemRealPath !== false) {

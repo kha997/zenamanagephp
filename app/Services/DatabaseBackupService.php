@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Services\Backup\MysqlClient;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
@@ -49,16 +50,9 @@ class DatabaseBackupService
 
             // Get database configuration
             $config = config('database.connections.mysql');
-            
-            // Build mysqldump command
-            $command = $this->buildMysqldumpCommand($config, $filepath);
-            
+
             // Execute backup
-            $result = Process::run($command);
-            
-            if (!$result->successful()) {
-                throw new \Exception('Backup failed: ' . $result->errorOutput());
-            }
+            app(MysqlClient::class)->dump($config, $filepath, $this->fullDumpOptions($config));
 
             // Compress backup if enabled
             if ($this->compressBackups) {
@@ -119,16 +113,14 @@ class DatabaseBackupService
 
             // Get database configuration
             $config = config('database.connections.mysql');
-            
-            // Build mysqldump command for incremental backup
-            $command = $this->buildIncrementalMysqldumpCommand($config, $filepath);
-            
+
             // Execute backup
-            $result = Process::run($command);
-            
-            if (!$result->successful()) {
-                throw new \Exception('Incremental backup failed: ' . $result->errorOutput());
-            }
+            app(MysqlClient::class)->dump(
+                $config,
+                $filepath,
+                ['--single-transaction', '--where=updated_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)', '--no-create-info', '--complete-insert'],
+                $this->getTablesWithUpdatedAt(),
+            );
 
             // Compress backup if enabled
             if ($this->compressBackups) {
@@ -190,16 +182,9 @@ class DatabaseBackupService
 
             // Get database configuration
             $config = config('database.connections.mysql');
-            
-            // Build mysql restore command
-            $command = $this->buildMysqlRestoreCommand($config, $filepath);
-            
+
             // Execute restore
-            $result = Process::run($command);
-            
-            if (!$result->successful()) {
-                throw new \Exception('Restore failed: ' . $result->errorOutput());
-            }
+            app(MysqlClient::class)->restore($config, $filepath);
 
             Log::info('Database restored successfully', [
                 'filename' => $filename,
@@ -324,88 +309,21 @@ class DatabaseBackupService
     }
 
     /**
-     * Build mysqldump command
+     * @param array<string, mixed> $config
+     * @return list<string>
      */
-    private function buildMysqldumpCommand(array $config, string $filepath): string
+    private function fullDumpOptions(array $config): array
     {
-        $command = "mysqldump";
-        $command .= " --host={$config['host']}";
-        $command .= " --port={$config['port']}";
-        $command .= " --user={$config['username']}";
-        
-        if (!empty($config['password'])) {
-            $command .= " --password={$config['password']}";
-        }
-        
-        $command .= " --single-transaction";
-        $command .= " --routines";
-        $command .= " --triggers";
-        $command .= " --events";
-        $command .= " --add-drop-database";
-        $command .= " --add-drop-table";
-        $command .= " --create-options";
-        $command .= " --disable-keys";
-        $command .= " --extended-insert";
-        $command .= " --quick";
-        $command .= " --lock-tables=false";
-        
-        // Exclude tables
+        $options = [
+            '--single-transaction', '--routines', '--triggers', '--events',
+            '--add-drop-database', '--add-drop-table', '--create-options',
+            '--disable-keys', '--extended-insert', '--quick', '--lock-tables=false',
+        ];
         foreach ($this->excludedTables as $table) {
-            $command .= " --ignore-table={$config['database']}.{$table}";
+            $options[] = '--ignore-table=' . $config['database'] . '.' . $table;
         }
-        
-        $command .= " {$config['database']} > {$filepath}";
-        
-        return $command;
-    }
 
-    /**
-     * Build incremental mysqldump command
-     */
-    private function buildIncrementalMysqldumpCommand(array $config, string $filepath): string
-    {
-        $command = "mysqldump";
-        $command .= " --host={$config['host']}";
-        $command .= " --port={$config['port']}";
-        $command .= " --user={$config['username']}";
-        
-        if (!empty($config['password'])) {
-            $command .= " --password={$config['password']}";
-        }
-        
-        $command .= " --single-transaction";
-        $command .= " --where='updated_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)'";
-        $command .= " --no-create-info";
-        $command .= " --complete-insert";
-        
-        // Only backup tables with updated_at column
-        $tables = $this->getTablesWithUpdatedAt();
-        if (!empty($tables)) {
-            $command .= " " . implode(' ', $tables);
-        }
-        
-        $command .= " {$config['database']} > {$filepath}";
-        
-        return $command;
-    }
-
-    /**
-     * Build mysql restore command
-     */
-    private function buildMysqlRestoreCommand(array $config, string $filepath): string
-    {
-        $command = "mysql";
-        $command .= " --host={$config['host']}";
-        $command .= " --port={$config['port']}";
-        $command .= " --user={$config['username']}";
-        
-        if (!empty($config['password'])) {
-            $command .= " --password={$config['password']}";
-        }
-        
-        $command .= " {$config['database']} < {$filepath}";
-        
-        return $command;
+        return $options;
     }
 
     /**
@@ -432,8 +350,7 @@ class DatabaseBackupService
      */
     private function compressBackup(string $filepath): void
     {
-        $command = "gzip {$filepath}";
-        Process::run($command);
+        Process::run(['gzip', $filepath]);
     }
 
     /**
@@ -441,8 +358,7 @@ class DatabaseBackupService
      */
     private function decompressBackup(string $filepath): void
     {
-        $command = "gunzip {$filepath}";
-        Process::run($command);
+        Process::run(['gunzip', $filepath]);
     }
 
     /**

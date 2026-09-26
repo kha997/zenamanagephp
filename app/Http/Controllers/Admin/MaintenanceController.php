@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\MaintenanceTask;
 use App\Models\PerformanceMetric;
 use App\Models\SystemLog;
+use App\Services\Backup\MysqlClient;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
@@ -421,21 +422,7 @@ class MaintenanceController extends Controller
                     throw new \RuntimeException('MySQL backup configuration is incomplete');
                 }
 
-                $command = sprintf(
-                    'mysqldump --user=%s --password=%s --host=%s --port=%s %s > %s',
-                    $config['username'] ?? '',
-                    $config['password'] ?? '',
-                    $config['host'],
-                    $config['port'] ?? 3306,
-                    $config['database'],
-                    $path
-                );
-
-                exec($command, $output, $returnCode);
-
-                if ($returnCode !== 0) {
-                    throw new \Exception('mysqldump command failed');
-                }
+                app(MysqlClient::class)->dump($config, $path);
 
                 if (!file_exists($path) || filesize($path) === 0) {
                     throw new \Exception('Backup file is empty');

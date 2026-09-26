@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\MaintenanceTask;
+use App\Services\Backup\MysqlClient;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -95,21 +96,11 @@ class BackupCommand extends Command
                 throw new \RuntimeException('MySQL backup configuration is incomplete');
             }
 
-            $command = sprintf(
-                'mysqldump --user=%s --password=%s --host=%s --port=%s --single-transaction --routines --triggers %s > %s',
-                $config['username'] ?? '',
-                $config['password'] ?? '',
-                $config['host'],
-                $config['port'] ?? 3306,
-                $config['database'],
-                $filepath
+            app(MysqlClient::class)->dump(
+                $config,
+                $filepath,
+                ['--single-transaction', '--routines', '--triggers'],
             );
-
-            exec($command, $output, $returnCode);
-
-            if ($returnCode !== 0) {
-                throw new \Exception('Database backup failed with return code: ' . $returnCode);
-            }
 
             if (!file_exists($filepath) || filesize($filepath) === 0) {
                 throw new \Exception('Database backup file is empty or does not exist');

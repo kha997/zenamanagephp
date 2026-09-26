@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\MaintenanceTask;
 use App\Models\PerformanceMetric;
 use App\Models\SystemLog;
+use App\Services\Backup\MysqlClient;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
@@ -259,21 +260,11 @@ class MaintenanceCommand extends Command
                     throw new \RuntimeException('MySQL backup configuration is incomplete');
                 }
 
-                $command = sprintf(
-                    'mysqldump --user=%s --password=%s --host=%s --port=%s --single-transaction --routines --triggers %s > %s',
-                    $config['username'] ?? '',
-                    $config['password'] ?? '',
-                    $config['host'],
-                    $config['port'] ?? 3306,
-                    $config['database'],
-                    $path
+                app(MysqlClient::class)->dump(
+                    $config,
+                    $path,
+                    ['--single-transaction', '--routines', '--triggers'],
                 );
-
-                exec($command, $output, $returnCode);
-
-                if ($returnCode !== 0) {
-                    throw new \RuntimeException('mysqldump command failed with return code: ' . $returnCode);
-                }
 
                 if (!file_exists($path) || filesize($path) === 0) {
                     throw new \RuntimeException('Database backup file is empty or missing');

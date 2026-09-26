@@ -3,14 +3,14 @@ work_id: GAP-054
 owner_governance_version: 1
 owner_gate_2_record: docs/owner-decisions/GAP-054/02-design.md
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-09-26-gap-054-scheduler-production-safety-evidence.md
   plan: docs/superpowers/plans/2026-09-26-gap-054-scheduler-production-safety-implementation.md
@@ -19,15 +19,15 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-09-26T19:07:12+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-09-26: 'bạn kiểm tra nếu an toàn thì merge' (verify it is safe, then merge). Recorded as Gate-3 approval conditional on the agent's pre-merge safety verification, which passed: canonical main unchanged at adacc5cc5fb8a08353cc90576076724e45e6e8bc, PR #318 MERGEABLE/CLEAN, 33/33 checks green at reviewed head c02733a2ef2404aff26d858d9408ff3f0733b9be, implementation subject cafa0a983ae1478e7d8b091141df3b55a5726fb4, implementation-tree digest 7108b2925e8c8300207afecb7994e2c300cd9d9778746670112c8a5c6c29cce7, and no workflow deploys on push to main. Authorizes Ready transition and squash merge only; production deployment and scheduler enablement remain separate operator decisions."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-26T14:23:01+07:00"
-  updated_at: "2026-09-26T14:23:01+07:00"
+  updated_at: "2026-09-26T19:07:12+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "The approved scheduler/backup safety design is implemented proof-first; every behavior test was observed failing on the unchanged code and passing after; per-task and whole-branch reviews closed with no open Critical/Important finding; all 33 exact-head PR checks passed, including PHPStan and every real-MySQL job."
@@ -38,11 +38,23 @@ technical_evidence:
   verified_pr_head_sha: "cafa0a983ae1478e7d8b091141df3b55a5726fb4"
   verified_at: "2026-09-26T14:23:01+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "7108b2925e8c8300207afecb7994e2c300cd9d9778746670112c8a5c6c29cce7"
+  decision_recorded_at: "2026-09-26T19:07:12+07:00"
 ---
 
 # GAP-054 — Gate 3 release evidence
+
+## Owner Gate-3 decision — approved
+
+Owner approved GAP-054 Gate 3 in-session on 2026-09-26 ("bạn kiểm tra nếu an
+toàn thì merge"), conditional on a pre-merge safety check that passed:
+canonical main still at `adacc5cc5fb8a08353cc90576076724e45e6e8bc`, PR #318
+mergeable and clean, 33/33 checks green at reviewed head `c02733a2ef2404aff26d858d9408ff3f0733b9be`,
+implementation subject `cafa0a983ae1478e7d8b091141df3b55a5726fb4`, and
+implementation-tree digest `7108b2925e8c8300207afecb7994e2c300cd9d9778746670112c8a5c6c29cce7`. No workflow deploys on a push to main
+(`production.yml` is manual `workflow_dispatch`). This decision authorizes the
+Ready transition and squash merge only; production deployment and enabling the
+scheduler remain separate operator decisions.
 
 ## Gói quyết định phát hành
 
@@ -100,7 +112,7 @@ cách quay lại phiên bản trước.
 việc tự động ở production vẫn là quyết định vận hành riêng, làm theo hướng dẫn
 mới trong runbook.
 
-**Quyết định của chủ doanh nghiệp:** ☐ Phát hành  ☐ Yêu cầu chỉnh sửa nghiệp vụ  ☐ Hoãn phát hành
+**Quyết định của chủ doanh nghiệp:** ☑ Phát hành (2026-09-26, sau khi kiểm tra an toàn)  ☐ Yêu cầu chỉnh sửa nghiệp vụ  ☐ Hoãn phát hành
 
 ## Implemented change (base `adacc5cc`, subject `cafa0a98`)
 

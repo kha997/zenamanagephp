@@ -102,6 +102,10 @@ final class MysqlClient
 
     private function quote(string $value): string
     {
-        return '"' . str_replace(['\\', '"'], ['\\\\', '\\"'], $value) . '"';
+        return '"' . str_replace(
+            ['\\', '"', "\n", "\r"],
+            ['\\\\', '\\"', '\\n', '\\r'],
+            $value
+        ) . '"';
     }
 }

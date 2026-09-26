@@ -55,8 +55,39 @@ class MysqlClientTest extends TestCase
         $this->assertSame(['zena_prod', 'users'], array_slice($seen['command'], -2));
         $this->assertSame(0600, $seen['mode']);
         $this->assertStringContainsString('user="zena"', $seen['contents']);
-        $this->assertStringContainsString('password=', $seen['contents']);
+
+        // Exact-line assertion: the password must be escaped the same way
+        // MysqlClient::quote() escapes it (backslash first, then quote),
+        // never truncated, altered, or interpolated as shell/SQL metacharacters.
+        $escapedPassword = str_replace(['\\', '"'], ['\\\\', '\\"'], self::PASSWORD);
+        $expectedLine = 'password="' . $escapedPassword . '"';
+        $lines = explode("\n", rtrim($seen['contents'], "\n"));
+        $this->assertContains($expectedLine, $lines);
+
         $this->assertFileDoesNotExist($seen['file']);
+    }
+
+    public function test_dump_escapes_newlines_in_password_to_prevent_option_injection(): void
+    {
+        $config = $this->config();
+        $config['password'] = "abc\nssl-mode=DISABLED";
+
+        $seen = [];
+        Process::fake(function (PendingProcess $process) use (&$seen) {
+            $file = $this->optionFileFrom($process->command);
+            $seen['contents'] = (string) file_get_contents($file);
+
+            return Process::result();
+        });
+
+        (new MysqlClient())->dump($config, '/tmp/out.sql');
+
+        $lines = explode("\n", rtrim($seen['contents'], "\n"));
+        foreach ($lines as $line) {
+            $this->assertFalse(str_starts_with($line, 'ssl-mode'), "unexpected injected option-file line: {$line}");
+        }
+        $passwordLines = array_values(array_filter($lines, static fn (string $line): bool => str_starts_with($line, 'password=')));
+        $this->assertCount(1, $passwordLines);
     }
 
     public function test_option_file_is_removed_when_dump_fails(): void
@@ -83,19 +114,27 @@ class MysqlClientTest extends TestCase
     {
         $input = tempnam(sys_get_temp_dir(), 'gap054-restore-');
         file_put_contents($input, 'SELECT 1;');
-        $seen = [];
-        Process::fake(function (PendingProcess $process) use (&$seen) {
-            $this->optionFileFrom($process->command);
-            $seen = $process->command;
 
-            return Process::result();
-        });
+        try {
+            $seen = [];
+            Process::fake(function (PendingProcess $process) use (&$seen) {
+                $this->optionFileFrom($process->command);
+                $seen = [
+                    'command' => $process->command,
+                    'input' => $process->input,
+                ];
 
-        (new MysqlClient())->restore($this->config(), $input);
-        unlink($input);
+                return Process::result();
+            });
 
-        $this->assertSame('mysql', $seen[0]);
-        $this->assertSame('zena_prod', end($seen));
-        $this->assertNotContains('<', $seen);
+            (new MysqlClient())->restore($this->config(), $input);
+        } finally {
+            unlink($input);
+        }
+
+        $this->assertSame('mysql', $seen['command'][0]);
+        $this->assertSame('zena_prod', end($seen['command']));
+        $this->assertNotContains('<', $seen['command']);
+        $this->assertNotNull($seen['input'], 'restore() must attach the input file as process input, not shell redirection');
     }
 }

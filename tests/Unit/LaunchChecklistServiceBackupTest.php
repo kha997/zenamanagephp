@@ -120,4 +120,13 @@ class LaunchChecklistServiceBackupTest extends TestCase
     {
         $this->assertTrue($this->callPrivate('setupBackupSystem'));
     }
+
+    public function test_check_backup_system_is_false_when_backup_disk_is_unreachable(): void
+    {
+        // An unknown/unreachable BACKUP_DISK must fail the readiness check
+        // closed (false), not crash getReadinessScore() with an exception.
+        config(['backup.disk' => 'gap054-missing-disk']);
+
+        $this->assertFalse($this->callPrivate('checkBackupSystem'));
+    }
 }

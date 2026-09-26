@@ -439,21 +439,23 @@ class DatabaseBackupService
 
     /**
      * Get tables with updated_at column
+     *
+     * @return list<string>
      */
     private function getTablesWithUpdatedAt(): array
     {
         try {
             $tables = DB::select("
-                SELECT TABLE_NAME 
-                FROM INFORMATION_SCHEMA.COLUMNS 
-                WHERE TABLE_SCHEMA = DATABASE() 
+                SELECT TABLE_NAME
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
                 AND COLUMN_NAME = 'updated_at'
             ");
-            
-            return array_map(function ($table) {
-                return $table->TABLE_NAME;
-            }, $tables);
-            
+
+            return array_values(array_map(function ($table) {
+                return (string) $table->TABLE_NAME;
+            }, $tables));
+
         } catch (\Exception $e) {
             Log::warning('Failed to get tables with updated_at column', [
                 'error' => $e->getMessage()

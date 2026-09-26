@@ -405,7 +405,13 @@ class LaunchChecklistService
 
     private function getLatestBackupTimestamp(): ?int
     {
-        return BackupArchiveStore::fromConfig()->newestTimestamp();
+        try {
+            return BackupArchiveStore::fromConfig()->newestTimestamp();
+        } catch (\Throwable $e) {
+            report($e);
+
+            return null;
+        }
     }
 
     private function checkMonitoringSetup(): bool

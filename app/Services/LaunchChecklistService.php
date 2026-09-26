@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Services\Backup\BackupArchiveStore;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -404,24 +405,13 @@ class LaunchChecklistService
 
     private function getLatestBackupTimestamp(): ?int
     {
-        $backupDir = storage_path('backups');
+        try {
+            return BackupArchiveStore::fromConfig()->newestTimestamp();
+        } catch (\Throwable $e) {
+            report($e);
 
-        // Match every artifact `backup:run` can produce: the compressed
-        // archive from a normal run, plus raw .sql/.sql.gz in case a run
-        // was interrupted before compression (see BackupCommand cleanup fix).
-        $patterns = ['/backup_*.tar.gz', '/backup_*', '/*.sql', '/*.sql.gz'];
-
-        $newest = null;
-        foreach ($patterns as $pattern) {
-            foreach (glob($backupDir . $pattern) ?: [] as $path) {
-                $mtime = filemtime($path);
-                if ($mtime !== false && ($newest === null || $mtime > $newest)) {
-                    $newest = $mtime;
-                }
-            }
+            return null;
         }
-
-        return $newest;
     }
 
     private function checkMonitoringSetup(): bool

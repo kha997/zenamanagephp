@@ -1,11 +1,11 @@
 ---
 work_id: GAP-055
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-09-29-gap-055-http-cache-flush-evidence.md
   plan: null
@@ -14,17 +14,22 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-09-29T06:52:18+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-09-29: 'APPROVE GAP-055 Gate 1'. Bound to reviewed Draft PR #322 head 49414d7bc02afa522c7bf29793d50dac5ccee777, canonical base 30f7104588bfc69373a1a21f4d8bc078d50543b7. Approves the Gate-1 problem/evidence and authorizes preparing Gate 2 only; not an implementation, Ready state, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-29T06:46:36+07:00"
-  updated_at: "2026-09-29T06:47:00+07:00"
+  updated_at: "2026-09-29T06:52:18+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-055 Gate 1 in-session on 2026-09-29 against Draft PR #322
+head `49414d7bc02afa522c7bf29793d50dac5ccee777`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

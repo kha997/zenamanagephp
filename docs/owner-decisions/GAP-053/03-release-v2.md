@@ -37,6 +37,9 @@ technical_evidence:
   implementation_tree_digest: "a3c354c285dd844608109f27c6d3edf11945d97a0cf4fdb3178498a2b5ea5960"
   verified_pr_head_sha: "da730d333a9f7ed5e47b8e77289595168d256f2c"
   verified_at: "2026-09-28T23:19:27+07:00"
+owner_decision_binding:
+  implementation_tree_digest: null
+  decision_recorded_at: null
 ---
 
 # GAP-053 — Gate 3 re-presentation after base refresh (v2)

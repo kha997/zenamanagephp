@@ -3,7 +3,6 @@
 namespace Tests\Performance;
 
 use Tests\TestCase;
-use App\Models\User;
 use App\Models\UserDashboard;
 use App\Models\DashboardWidget;
 use App\Models\DashboardMetric;
@@ -658,10 +657,15 @@ class DashboardPerformanceTest extends TestCase
     public function it_can_handle_role_based_filtering_performance()
     {
         // Test different roles
-        $roles = ['project_manager', 'site_engineer', 'qc_inspector', 'client_rep'];
+        $roles = [
+            'project_manager' => 'project_manager',
+            'site_engineer' => 'site_engineer',
+            'qc_inspector' => 'qc_inspector',
+            'client_rep' => 'client',
+        ];
         
-        foreach ($roles as $role) {
-            $user = User::create([
+        foreach ($roles as $role => $rbacRole) {
+            $user = $this->createTenantUserWithRbac($this->tenant, $role, $rbacRole, [], [
                 'name' => "Test {$role}",
                 'email' => "{$role}@example.com",
                 'password' => Hash::make('password'),

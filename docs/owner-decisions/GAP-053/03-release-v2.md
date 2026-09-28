@@ -3,14 +3,14 @@ work_id: GAP-053
 owner_governance_version: 1
 owner_gate_2_record: docs/owner-decisions/GAP-053/02-design.md
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-09-15-gap-053-dashboard-rbac-performance-fixture-evidence.md
   plan: docs/superpowers/plans/2026-09-15-gap-053-dashboard-rbac-performance-fixture-implementation.md
@@ -19,15 +19,15 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-09-29T06:26:49+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-09-29: 'APPROVE GAP-053 Gate 3'. Bound to refreshed implementation subject b6a18f73599622caaee8018908a9b52aea64d550 (PR head 8f40cb75bd44edf7bf49fd66fc4693982e6dda08, 33/33 checks green) and implementation-tree digest 5c323ec663d0dc4199718f6e0a2b970de598078d6ffca4d6e459a8eebf27233d (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28 to merge PRs verified safe and eligible; no deployment authorized."
   reconciliation_required: false
 supersedes: "docs/owner-decisions/GAP-053/03-release.md"
 superseded_by: null
 timestamps:
   created_at: "2026-09-28T23:19:27+07:00"
-  updated_at: "2026-09-29T00:11:34+07:00"
+  updated_at: "2026-09-29T06:26:49+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "Implementation content is byte-identical to the v1-approved GAP-053 change; only conflict-free merges of origin/main (latest 30f71045) were added for strict branch protection. Canonical digest recomputed at the refreshed subject; the same tool reproduces the v1-bound digest 8b25a50d at ff825fb9. Exact-head PR CI must be fully green before approval."
@@ -38,13 +38,17 @@ technical_evidence:
   verified_pr_head_sha: "b6a18f73599622caaee8018908a9b52aea64d550"
   verified_at: "2026-09-29T00:11:34+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "5c323ec663d0dc4199718f6e0a2b970de598078d6ffca4d6e459a8eebf27233d"
+  decision_recorded_at: "2026-09-29T06:26:49+07:00"
 ---
 
 # GAP-053 — Gate 3 re-presentation after base refresh (v2)
 
-## OWNER GATE 3: AWAITING OWNER DECISION
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 v2 in-session on 2026-09-29, bound to implementation
+subject `b6a18f73599622caaee8018908a9b52aea64d550` and implementation-tree digest `5c323ec663d0dc4199718f6e0a2b970de598078d6ffca4d6e459a8eebf27233d`. No deployment is
+authorized.
 
 ## Owner Summary
 

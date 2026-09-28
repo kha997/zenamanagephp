@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-09-29-gap-055-http-cache-flush-evidence.md
   plan: null
   branch: docs/GAP-055-admin-clear-cache-flush
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/322
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-29T06:46:36+07:00"
-  updated_at: "2026-09-29T06:46:36+07:00"
+  updated_at: "2026-09-29T06:47:00+07:00"
 generated_by: agent
 ---
 

@@ -139,3 +139,23 @@ checks — are **not** currently automated in `production.yml` and remain a
 manual post-deploy checklist item for the human operator until a future
 task automates them. This is a known, explicit gap, not an implemented
 feature.
+
+## Enable the scheduler (optional, GAP-054)
+
+The application scheduler is off by default (`ENABLE_SCHEDULER=false`). After
+the GAP-054 release its workloads are safe to enable. To enable on this host:
+
+1. Run it on exactly **one** host. Multi-host scheduling is not supported yet.
+2. Use Redis for the cache (`CACHE_DRIVER=redis`) so overlap locks are shared.
+3. Set `ENABLE_SCHEDULER=true` in `shared/.env` and add the cron entry
+   `* * * * * cd /var/www/zena/current && php artisan schedule:run >> /dev/null 2>&1`
+   for the web-server user.
+4. Recommended: set `BACKUP_DISK` (and `BACKUP_PATH`) to a disk on another
+   machine/provider. Unset keeps archives in `storage/backups` on this host.
+5. Retention defaults: full backups 30 days, database backups 7 days
+   (`BACKUP_FULL_*` / `BACKUP_DATABASE_*` in `config/backup.php`).
+6. Backups never contain `.env`. Keep a secure copy of `shared/.env`
+   separately; a restore needs it.
+7. Before enabling, review any pre-existing `storage/backups/backup_*`
+   archives from before GAP-054: they may contain a copy of `.env` and are
+   never removed automatically.

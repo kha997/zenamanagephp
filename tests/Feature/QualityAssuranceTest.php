@@ -223,14 +223,14 @@ class QualityAssuranceTest extends TestCase
     {
         $this->actingAs($this->admin);
 
-        // Test maintenance command execution
-        $exitCode = Artisan::call('maintenance:run', ['--task' => 'cache']);
+        $exitCode = Artisan::call('maintenance:run', ['--task' => 'logs']);
         $this->assertEquals(0, $exitCode);
 
-        // Verify maintenance task was created
         $this->assertDatabaseHas('maintenance_tasks', [
-            'task' => 'Clear application cache'
+            'task' => 'Cleanup old logs',
         ]);
+
+        $this->assertNotEquals(0, Artisan::call('maintenance:run', ['--task' => 'cache']));
     }
 
     /**

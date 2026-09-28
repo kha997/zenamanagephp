@@ -40,7 +40,7 @@ class BackupCommandTest extends TestCase
     {
         $this->artisan('backup:run', ['--type' => 'database'])->assertExitCode(0);
 
-        $archives = glob($this->backupDir . '/backup_*.tar.gz') ?: [];
+        $archives = glob($this->backupDir . '/backup_database_*.tar.gz') ?: [];
         $this->assertCount(1, $archives, 'database-only backup should compress and leave exactly one archive, not an uncompressed directory');
 
         $looseDirs = array_filter(glob($this->backupDir . '/backup_*') ?: [], 'is_dir');
@@ -54,13 +54,13 @@ class BackupCommandTest extends TestCase
 
     public function test_old_archives_beyond_max_backups_are_cleaned_up(): void
     {
-        config(['backup.max_backups' => 1]);
+        config(['backup.disk' => null, 'backup.retention.database.max_backups' => 1]);
 
         $this->artisan('backup:run', ['--type' => 'database'])->assertExitCode(0);
         sleep(1); // backup directory names are second-precision — force a distinct timestamp
         $this->artisan('backup:run', ['--type' => 'database'])->assertExitCode(0);
 
-        $archives = glob($this->backupDir . '/backup_*.tar.gz') ?: [];
+        $archives = glob($this->backupDir . '/backup_database_*.tar.gz') ?: [];
         $this->assertCount(1, $archives, 'cleanup should enforce max_backups even for database-only runs');
     }
 }

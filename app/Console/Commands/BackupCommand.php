@@ -3,8 +3,11 @@
 namespace App\Console\Commands;
 
 use App\Models\MaintenanceTask;
+use App\Services\Backup\BackupArchiveStore;
+use App\Services\Backup\MysqlClient;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Process;
 
 class BackupCommand extends Command
 {
@@ -23,7 +26,7 @@ class BackupCommand extends Command
      */
     public function handle()
     {
-        $type = $this->option('type');
+        $type = (string) $this->option('type');
 
         $this->info('Starting backup process...');
 
@@ -35,33 +38,34 @@ class BackupCommand extends Command
             'started_at' => now()
         ]);
 
-        try {
-            $backupDir = $this->createBackupDirectory();
+        if (!in_array($type, ['all', 'database', 'files', 'config'], true)) {
+            $this->error('Invalid backup type. Available types: all, database, files, config');
+            $task->markAsFailed('Invalid backup type');
+            return 1;
+        }
 
-            switch ($type) {
-                case 'all':
-                    $this->backupDatabase($backupDir);
-                    $this->backupFiles($backupDir);
-                    $this->backupConfig($backupDir);
-                    break;
-                case 'database':
-                    $this->backupDatabase($backupDir);
-                    break;
-                case 'files':
-                    $this->backupFiles($backupDir);
-                    break;
-                case 'config':
-                    $this->backupConfig($backupDir);
-                    break;
-                default:
-                    $this->error('Invalid backup type. Available types: all, database, files, config');
-                    $task->markAsFailed('Invalid backup type');
-                    return 1;
+        $archiveType = $type === 'all' ? 'full' : $type;
+
+        try {
+            $backupDir = $this->createBackupDirectory($archiveType);
+
+            if ($type === 'all' || $type === 'database') {
+                $this->backupDatabase($backupDir);
+            }
+            if ($type === 'all' || $type === 'files') {
+                $this->backupFiles($backupDir);
+            }
+            if ($type === 'all' || $type === 'config') {
+                $this->backupConfig($backupDir);
             }
 
             $this->createBackupManifest($backupDir);
-            $this->compressBackup($backupDir);
-            $this->cleanupOldBackups();
+            $archive = $this->compressBackup($backupDir);
+            $store = BackupArchiveStore::fromConfig();
+            $keepName = basename($archive);
+            $location = $store->store($archive);
+            $pruned = $store->prune($archiveType, $keepName);
+            $this->info("✓ Backup stored: {$location}" . ($pruned > 0 ? " ({$pruned} old {$archiveType} backups removed)" : ''));
 
             $task->markAsCompleted(['backup_type' => $type]);
             $this->info('Backup completed successfully!');
@@ -76,13 +80,9 @@ class BackupCommand extends Command
     /**
      * Backup database
      */
-    private function backupDatabase($backupDir = null)
+    private function backupDatabase(string $backupDir)
     {
         $this->info('Backing up database...');
-
-        if (!$backupDir) {
-            $backupDir = $this->createBackupDirectory();
-        }
 
         $filename = 'database_' . date('Y-m-d_H-i-s') . '.sql';
         $filepath = $backupDir . '/' . $filename;
@@ -95,21 +95,11 @@ class BackupCommand extends Command
                 throw new \RuntimeException('MySQL backup configuration is incomplete');
             }
 
-            $command = sprintf(
-                'mysqldump --user=%s --password=%s --host=%s --port=%s --single-transaction --routines --triggers %s > %s',
-                $config['username'] ?? '',
-                $config['password'] ?? '',
-                $config['host'],
-                $config['port'] ?? 3306,
-                $config['database'],
-                $filepath
+            app(MysqlClient::class)->dump(
+                $config,
+                $filepath,
+                ['--single-transaction', '--routines', '--triggers'],
             );
-
-            exec($command, $output, $returnCode);
-
-            if ($returnCode !== 0) {
-                throw new \Exception('Database backup failed with return code: ' . $returnCode);
-            }
 
             if (!file_exists($filepath) || filesize($filepath) === 0) {
                 throw new \Exception('Database backup file is empty or does not exist');
@@ -124,27 +114,25 @@ class BackupCommand extends Command
     /**
      * Backup application files
      */
-    private function backupFiles($backupDir = null)
+    private function backupFiles(string $backupDir)
     {
         $this->info('Backing up application files...');
-
-        if (!$backupDir) {
-            $backupDir = $this->createBackupDirectory();
-        }
 
         $filesDir = $backupDir . '/files';
         mkdir($filesDir, 0755, true);
 
+        $excluded = BackupArchiveStore::fromConfig()->localPathsExcludedFromFileBackups();
+
         // Backup storage directory
-        $this->backupDirectory(storage_path('app'), $filesDir . '/storage_app');
-        
+        $this->backupDirectory(storage_path('app'), $filesDir . '/storage_app', $excluded);
+
         // Backup public uploads
         if (is_dir(public_path('uploads'))) {
-            $this->backupDirectory(public_path('uploads'), $filesDir . '/public_uploads');
+            $this->backupDirectory(public_path('uploads'), $filesDir . '/public_uploads', $excluded);
         }
 
         // Backup logs
-        $this->backupDirectory(storage_path('logs'), $filesDir . '/logs');
+        $this->backupDirectory(storage_path('logs'), $filesDir . '/logs', $excluded);
 
         $this->info('✓ Application files backup completed');
     }
@@ -152,21 +140,15 @@ class BackupCommand extends Command
     /**
      * Backup configuration files
      */
-    private function backupConfig($backupDir = null)
+    private function backupConfig(string $backupDir)
     {
         $this->info('Backing up configuration files...');
-
-        if (!$backupDir) {
-            $backupDir = $this->createBackupDirectory();
-        }
 
         $configDir = $backupDir . '/config';
         mkdir($configDir, 0755, true);
 
-        // Backup environment file
-        if (file_exists(base_path('.env'))) {
-            copy(base_path('.env'), $configDir . '/.env');
-        }
+        // Never collect .env / .env.*: secrets are kept out-of-band
+        // (docs/runbooks/gap-049-host-provisioning.md) — GAP-054.
 
         // Backup configuration files
         $configFiles = [
@@ -200,14 +182,14 @@ class BackupCommand extends Command
     /**
      * Create backup directory
      */
-    private function createBackupDirectory()
+    private function createBackupDirectory(string $type): string
     {
         $backupBaseDir = storage_path('backups');
         if (!is_dir($backupBaseDir)) {
             mkdir($backupBaseDir, 0755, true);
         }
 
-        $backupDir = $backupBaseDir . '/backup_' . date('Y-m-d_H-i-s');
+        $backupDir = $backupBaseDir . '/backup_' . $type . '_' . date('Y-m-d_H-i-s');
         mkdir($backupDir, 0755, true);
 
         return $backupDir;
@@ -215,8 +197,10 @@ class BackupCommand extends Command
 
     /**
      * Backup directory recursively
+     *
+     * @param list<string> $excluded absolute local paths (files or directories) that must never be copied
      */
-    private function backupDirectory($source, $destination)
+    private function backupDirectory(string $source, string $destination, array $excluded = []): void
     {
         if (!is_dir($source)) {
             return;
@@ -224,14 +208,38 @@ class BackupCommand extends Command
 
         mkdir($destination, 0755, true);
 
+        $excludedRealPaths = array_values(array_filter(array_map(
+            static fn (string $path): string|false => realpath($path),
+            $excluded,
+        ), static fn ($path): bool => $path !== false));
+
         $iterator = new \RecursiveIteratorIterator(
             new \RecursiveDirectoryIterator($source, \RecursiveDirectoryIterator::SKIP_DOTS),
             \RecursiveIteratorIterator::SELF_FIRST
         );
 
         foreach ($iterator as $item) {
+            // Never follow symlinks: a link cannot pull secrets or out-of-tree files into a backup (GAP-054).
+            if ($item->isLink()) {
+                continue;
+            }
+
+            $itemRealPath = realpath($item->getPathname());
+
+            if ($itemRealPath !== false) {
+                foreach ($excludedRealPaths as $excludedRealPath) {
+                    if ($itemRealPath === $excludedRealPath || str_starts_with($itemRealPath, $excludedRealPath . '/')) {
+                        continue 2;
+                    }
+                }
+            }
+
+            if (preg_match('/^\.env(\..*)?$/', $item->getFilename()) === 1) {
+                continue;
+            }
+
             $targetPath = $destination . DIRECTORY_SEPARATOR . $iterator->getSubPathName();
-            
+
             if ($item->isDir()) {
                 mkdir($targetPath, 0755, true);
             } else {
@@ -297,16 +305,17 @@ class BackupCommand extends Command
     /**
      * Compress backup directory
      */
-    private function compressBackup($backupDir)
+    private function compressBackup(string $backupDir): string
     {
         $this->info('Compressing backup...');
 
         $archivePath = $backupDir . '.tar.gz';
-        $command = "tar -czf {$archivePath} -C " . dirname($backupDir) . " " . basename($backupDir);
 
-        exec($command, $output, $returnCode);
+        $result = Process::run([
+            'tar', '-czf', $archivePath, '-C', dirname($backupDir), basename($backupDir),
+        ]);
 
-        if ($returnCode !== 0) {
+        if (!$result->successful()) {
             throw new \Exception('Backup compression failed');
         }
 
@@ -314,52 +323,8 @@ class BackupCommand extends Command
         $this->removeDirectory($backupDir);
 
         $this->info('✓ Backup compressed: ' . $this->formatBytes(filesize($archivePath)));
-    }
 
-    /**
-     * Cleanup old backups
-     */
-    private function cleanupOldBackups()
-    {
-        $this->info('Cleaning up old backups...');
-
-        $backupDir = storage_path('backups');
-        $maxBackups = config('backup.max_backups', 10);
-        $maxAge = config('backup.max_age_days', 30);
-
-        $backups = glob($backupDir . '/backup_*.tar.gz');
-        
-        // Sort by modification time (newest first)
-        usort($backups, function($a, $b) {
-            return filemtime($b) - filemtime($a);
-        });
-
-        $deletedCount = 0;
-
-        // Remove backups exceeding max count
-        if (count($backups) > $maxBackups) {
-            $toDelete = array_slice($backups, $maxBackups);
-            foreach ($toDelete as $backup) {
-                unlink($backup);
-                $deletedCount++;
-            }
-            // Keep the survivors list in sync so the age-based pass below
-            // doesn't filemtime() a path this pass already unlinked.
-            $backups = array_slice($backups, 0, $maxBackups);
-        }
-
-        // Remove backups older than max age
-        $cutoffTime = time() - ($maxAge * 24 * 60 * 60);
-        foreach ($backups as $backup) {
-            if (file_exists($backup) && filemtime($backup) < $cutoffTime) {
-                unlink($backup);
-                $deletedCount++;
-            }
-        }
-
-        if ($deletedCount > 0) {
-            $this->info("✓ Cleaned up {$deletedCount} old backups");
-        }
+        return $archivePath;
     }
 
     /**

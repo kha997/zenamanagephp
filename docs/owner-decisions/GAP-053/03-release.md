@@ -24,7 +24,7 @@ decision_provenance:
   owner_response_reference: "Owner decision in-session on 2026-09-17: 'APPROVE GAP-053 Gate 3.' Approval is bound to reviewed Draft PR #317 head 4fa4b8c0e9decfb95f75349fdaa7f99b85dfbfa1, implementation subject ff825fb9eb41a0ca927da2446dec999c25c964be, and implementation-tree digest 8b25a50d7ea7e5fca0cd9cf7f7b0fe2282913620acd5309a45405c633bc6e73e. This records the Gate-3 decision only; no Ready transition, merge, release, deployment, or change to GAP-041 PR #316 is authorized by this message."
   reconciliation_required: false
 supersedes: null
-superseded_by: null
+superseded_by: "docs/owner-decisions/GAP-053/03-release-v2.md"
 timestamps:
   created_at: "2026-09-15T17:37:01+07:00"
   updated_at: "2026-09-17T09:12:09+07:00"

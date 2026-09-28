@@ -91,6 +91,42 @@ is referenced by any workflow, Dockerfile, compose file, or GAP-049 runbook
 package.json`: no match). They are legacy/manual operator scripts — dangerous
 if run, but not on an automated path.
 
+### Correction (2026-09-28, before any Gate-1 decision)
+
+The table above is **incomplete**. It was built from a grep over the eight
+listed files only. A repository-wide scan on `origin/main`
+`2e47f01d0` (`git grep -n -E -e '-p ?"?\$\{?[A-Z_]*(PASS|PWD)' -- ':!vendor'
+':!node_modules' ':!docs' ':!*.md'`) returns **31 sites in 11 files**:
+
+| File:line | Missed by the original table? |
+|---|---|
+| `docker-manage.sh:160, 207` | **Yes** — `mysqldump`/`mysql -u root -p"${MYSQL_ROOT_PASSWORD:-root_password}"` (root, hard-coded fallback) |
+| `scripts/backup-database.sh:46` | no |
+| `scripts/backup-system.sh:115, 447` | no |
+| `scripts/deploy-production.sh:86` | no |
+| `scripts/deploy.sh:75, 268` | **line 268 yes** — restore path, root, same hard-coded fallback |
+| `scripts/dr-automation.sh:108, 159, 193, 315, 357` | no |
+| `scripts/maintenance-database.sh:28, 35, 42, 48, 54, 60, 66` | **Yes** (7 sites) |
+| `scripts/monitor-system.sh:128` | no |
+| `scripts/performance-monitor.sh:28` | no |
+| `scripts/setup-production.sh:358` | no |
+| `scripts/setup-replication.sh:40, 58, 65, 92, 109, 118, 126, 136` | **Yes** (8 sites) |
+
+Four sites use MySQL `root` with the hard-coded fallback password
+`root_password` (`docker-manage.sh:160,207`, `scripts/deploy.sh:75,268`).
+
+The statement "None of the scripts above is referenced by any workflow" stays
+true for the originally listed scripts, but **not for the full set**:
+`.github/workflows/automated-deployment.yml:227` runs `./docker-manage.sh
+backup` over SSH on the production host in its `deploy-production` job
+(trigger: `release: published` or `workflow_dispatch`). That surface is dormant
+today — the repository has no GitHub releases, the job is gated on
+`check-production-secrets`, and the workflow's last run was
+`2026-07-07T04:14:10Z` — but it is an automated path, and GAP-049 evidence
+already classifies `docker-manage.sh` as actively invoked by
+`automated-deployment.yml`. Candidate GAP-056 therefore covers all 31 sites and
+records the dormant automated reachability.
+
 ## Out of scope for this Gate 1
 
 - Fixing items 2 and 3 (each becomes its own governed GAP at Gate 1 later).

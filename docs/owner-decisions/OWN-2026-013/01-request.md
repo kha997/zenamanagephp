@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-26T20:26:14+07:00"
-  updated_at: "2026-09-26T20:28:01+07:00"
+  updated_at: "2026-09-28T10:00:00+07:00"
 generated_by: agent
 ---
 
@@ -43,10 +43,13 @@ GAP-054. Đề nghị cho phép thiết kế một lần đối soát sổ để
 2. **Nút "xoá bộ nhớ đệm" trong trang quản trị** vẫn xoá sạch toàn bộ bộ nhớ đệm
    — cùng tác hại mà GAP-054 vừa loại bỏ khỏi việc tự động: một lần bấm là bộ
    đếm chặn dò mật khẩu của mọi khách hàng về 0.
-3. **Một số script vận hành cũ** (13 chỗ trong 8 file) đưa mật khẩu cơ sở dữ
-   liệu lên dòng lệnh; một script còn dùng tài khoản quản trị cơ sở dữ liệu với
-   mật khẩu dự phòng viết sẵn. Các script này không nằm trên đường triển khai
-   chính thức, nhưng nguy hiểm nếu có người chạy tay.
+3. **Một số script vận hành cũ** (31 chỗ trong 11 file — đã đính chính
+   2026-09-28, bản đầu ghi thiếu còn 13 chỗ/8 file) đưa mật khẩu cơ sở dữ liệu
+   lên dòng lệnh; 4 chỗ dùng tài khoản quản trị cơ sở dữ liệu (`root`) với mật
+   khẩu dự phòng viết sẵn. Các script này không nằm trên đường triển khai chính
+   thức; riêng `docker-manage.sh` được workflow `automated-deployment.yml` gọi
+   khi deploy production — workflow đó hiện không hoạt động (không có release,
+   thiếu secrets, lần chạy cuối 2026-07-07) nhưng vẫn là đường tự động.
 
 ## Người dùng bị ảnh hưởng
 

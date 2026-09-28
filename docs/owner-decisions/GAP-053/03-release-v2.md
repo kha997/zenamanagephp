@@ -27,16 +27,16 @@ supersedes: "docs/owner-decisions/GAP-053/03-release.md"
 superseded_by: null
 timestamps:
   created_at: "2026-09-28T23:19:27+07:00"
-  updated_at: "2026-09-28T23:19:27+07:00"
+  updated_at: "2026-09-29T00:11:34+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "Implementation content is byte-identical to the v1-approved GAP-053 change; only a conflict-free merge of origin/main (2e47f01d) was added for strict branch protection. Canonical digest recomputed at the refreshed subject; the same tool reproduces the v1-bound digest 8b25a50d at ff825fb9. Exact-head PR CI must be fully green before approval."
+mandatory_technical_gate_summary: "Implementation content is byte-identical to the v1-approved GAP-053 change; only conflict-free merges of origin/main (latest 30f71045) were added for strict branch protection. Canonical digest recomputed at the refreshed subject; the same tool reproduces the v1-bound digest 8b25a50d at ff825fb9. Exact-head PR CI must be fully green before approval."
 technical_evidence:
-  base_sha: "2e47f01d0de1445afbace352622a368a226d0b57"
-  subject_sha: "da730d333a9f7ed5e47b8e77289595168d256f2c"
-  implementation_tree_digest: "a3c354c285dd844608109f27c6d3edf11945d97a0cf4fdb3178498a2b5ea5960"
-  verified_pr_head_sha: "da730d333a9f7ed5e47b8e77289595168d256f2c"
-  verified_at: "2026-09-28T23:19:27+07:00"
+  base_sha: "30f7104588bfc69373a1a21f4d8bc078d50543b7"
+  subject_sha: "b6a18f73599622caaee8018908a9b52aea64d550"
+  implementation_tree_digest: "5c323ec663d0dc4199718f6e0a2b970de598078d6ffca4d6e459a8eebf27233d"
+  verified_pr_head_sha: "b6a18f73599622caaee8018908a9b52aea64d550"
+  verified_at: "2026-09-29T00:11:34+07:00"
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null
@@ -49,8 +49,9 @@ owner_decision_binding:
 ## Owner Summary
 
 Nội dung sửa của GAP-053 **không đổi** so với bản Owner đã duyệt ngày
-2026-09-17 (v1). Chỉ có một việc mới: nhánh được cập nhật với `main` (3 commit
-không liên quan: phát hành GAP-054, bản ghi phát hành GAP-054, file brainstorm)
+2026-09-17 (v1). Chỉ có một việc mới: nhánh được cập nhật với `main` (4 commit
+không liên quan: phát hành GAP-054, bản ghi phát hành GAP-054, file brainstorm,
+đối soát sổ OWN-2026-013)
 vì `main` bắt buộc nhánh phải mới nhất trước khi merge. Việc cập nhật làm đổi
 "dấu vân tay" cây mã, nên quyết định cũ tự động hết hiệu lực và cần Owner duyệt
 lại trên dấu vân tay mới. Đề xuất: duyệt để phát hành.
@@ -66,8 +67,9 @@ lại trên dấu vân tay mới. Đề xuất: duyệt để phát hành.
   #318), `5441bc2e` (GAP-054 execution record, PR #319), `2e47f01d`
   (brainstorm restore, PR #321). Branch protection on `main` is `strict`, so
   the branch was refreshed with a normal merge commit (no rebase, no
-  force-push): `9f88f5225bb6f9e3210e97040c8aa8113ebe6f31`. The merge was
-  conflict-free.
+  force-push): `9f88f5225bb6f9e3210e97040c8aa8113ebe6f31`, then again after
+  PR #320 merged (`30f7104588bfc69373a1a21f4d8bc078d50543b7`, OWN-2026-013 register reconciliation): `b6a18f73599622caaee8018908a9b52aea64d550`. Both
+  merges were conflict-free.
 - `git diff origin/main...HEAD` after the refresh is exactly the same six
   GAP-053 files as before (832 insertions, 4 deletions; the only functional
   file is `tests/Performance/DashboardPerformanceTest.php`, 8+/4-). No

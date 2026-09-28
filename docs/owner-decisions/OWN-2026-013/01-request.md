@@ -1,11 +1,11 @@
 ---
 work_id: OWN-2026-013
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-09-26-own-2026-013-gap054-post-release-reconciliation.md
   plan: null
@@ -14,17 +14,26 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-09-28T23:16:43+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-09-28: 'APPROVE OWN-2026-013 Gate 1'. Given against evidence-corrected head 8860d180c2cfc3d0ad2c2e9576f6a5d52f0046d1 (31 sites / 11 files, docker-manage.sh automated reachability). Authorizes preparation of Gate 2 only; not Gate-2 approval, register edits, fixes, Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-26T20:26:14+07:00"
-  updated_at: "2026-09-28T10:00:00+07:00"
+  updated_at: "2026-09-28T23:16:43+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved OWN-2026-013 Gate 1 in-session on 2026-09-28 ("APPROVE
+OWN-2026-013 Gate 1") against evidence-corrected head
+`8860d180c2cfc3d0ad2c2e9576f6a5d52f0046d1`. This authorizes preparation of the
+bounded Gate-2 register-reconciliation design only. It does not authorize
+Gate-2 approval, register edits, fixes to GAP-055/GAP-056 candidates, Gate 3,
+merge, release, or deployment.
 
 ## Owner Summary
 

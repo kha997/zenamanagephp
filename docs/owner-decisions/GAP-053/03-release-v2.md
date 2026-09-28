@@ -30,12 +30,12 @@ timestamps:
   updated_at: "2026-09-28T23:19:27+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "PLACEHOLDER"
+mandatory_technical_gate_summary: "Implementation content is byte-identical to the v1-approved GAP-053 change; only a conflict-free merge of origin/main (2e47f01d) was added for strict branch protection. Canonical digest recomputed at the refreshed subject; the same tool reproduces the v1-bound digest 8b25a50d at ff825fb9. Exact-head PR CI must be fully green before approval."
 technical_evidence:
-  base_sha: "PLACEHOLDER"
-  subject_sha: "PLACEHOLDER"
-  implementation_tree_digest: "PLACEHOLDER"
-  verified_pr_head_sha: "PLACEHOLDER"
+  base_sha: "2e47f01d0de1445afbace352622a368a226d0b57"
+  subject_sha: "da730d333a9f7ed5e47b8e77289595168d256f2c"
+  implementation_tree_digest: "a3c354c285dd844608109f27c6d3edf11945d97a0cf4fdb3178498a2b5ea5960"
+  verified_pr_head_sha: "da730d333a9f7ed5e47b8e77289595168d256f2c"
   verified_at: "2026-09-28T23:19:27+07:00"
 ---
 

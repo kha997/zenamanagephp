@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-09-29-gap-058-badge-api-evidence.md
   plan: null
   branch: docs/GAP-058-badge-api-500
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/326
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-29T23:02:58+07:00"
-  updated_at: "2026-09-29T23:02:58+07:00"
+  updated_at: "2026-09-29T23:10:20+07:00"
 generated_by: agent
 ---
 

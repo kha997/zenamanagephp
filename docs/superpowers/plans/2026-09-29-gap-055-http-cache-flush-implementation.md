@@ -1,3 +1,9 @@
+---
+work_id: GAP-055
+owner_governance_version: 1
+owner_gate_2_record: docs/owner-decisions/GAP-055/02-design.md
+---
+
 # GAP-055 — HTTP cache-flush fix: implementation plan
 
 Design: `docs/owner-decisions/GAP-055/02-design.md` (Option 1, approved 2026-09-29).

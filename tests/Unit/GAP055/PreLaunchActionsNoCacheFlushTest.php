@@ -3,16 +3,20 @@
 namespace Tests\Unit\GAP055;
 
 use App\Services\LaunchChecklistService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
 
 /**
- * GAP-055: pre-launch actions (also run by GET launch-report) must not flush
- * the shared cache store. Artisan is mocked so no command really runs.
+ * GAP-055: pre-launch work (also reached by GET launch-report) must not flush
+ * the shared cache store. Since GAP-057 it is read-only readiness and runs no
+ * Artisan command at all, which is strictly stronger. Artisan is mocked.
  */
 final class PreLaunchActionsNoCacheFlushTest extends TestCase
 {
-    public function test_pre_launch_actions_never_call_cache_clear(): void
+    use RefreshDatabase;
+
+    public function test_pre_launch_readiness_never_calls_cache_clear_or_any_command(): void
     {
         $called = [];
         Artisan::shouldReceive('call')->andReturnUsing(function (string $command) use (&$called) {
@@ -21,12 +25,9 @@ final class PreLaunchActionsNoCacheFlushTest extends TestCase
             return 0;
         });
 
-        app(LaunchChecklistService::class)->executePreLaunchActions();
+        app(LaunchChecklistService::class)->getPreLaunchReadiness();
 
         $this->assertNotContains('cache:clear', $called);
-        $this->assertSame(
-            ['config:clear', 'route:clear', 'optimize', 'config:cache', 'route:cache', 'migrate'],
-            $called
-        );
+        $this->assertSame([], $called);
     }
 }

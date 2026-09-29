@@ -1,11 +1,11 @@
 ---
 work_id: GAP-056
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-09-29-gap-056-script-mysql-password-evidence.md
   plan: null
@@ -14,21 +14,26 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-09-29T07:50:39+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-09-29: 'APPROVE GAP-056 Gate 2 Option 1'. Reviewed design head: 2e33741be5a26ac4e67cf9c3e5128078f124b74c. Approves Option 1 and its exact contracts/allowlist (shared 0600 option-file helper, in-container root option file, no fallback passwords, setup-production credential file + credential-free cron script, no env files in backups, shell-script architecture guard and helper tests); not Gate 3, merge, release, deployment, credential rotation or host cleanup."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-29T07:48:52+07:00"
-  updated_at: "2026-09-29T07:48:52+07:00"
+  updated_at: "2026-09-29T07:50:39+07:00"
 generated_by: agent
 ---
 
 # GAP-056 — Shell scripts expose the MySQL password: Gate 2 design
 
-## OWNER GATE 2: AWAITING OWNER DECISION
+## OWNER GATE 2: APPROVED — OPTION 1
+
+Owner approved Option 1 in-session on 2026-09-29 against reviewed design head
+`2e33741be5a26ac4e67cf9c3e5128078f124b74c`. This authorizes only the bounded implementation defined by this packet;
+it does not authorize Gate 3, merge, release, deployment, credential rotation
+or host cleanup.
 
 ## Owner Summary
 

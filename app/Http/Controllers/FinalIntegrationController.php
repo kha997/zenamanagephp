@@ -66,14 +66,21 @@ class FinalIntegrationController extends Controller
         ]);
     }
 
+    /**
+     * Refuse to perform pre-launch actions from the web (GAP-057).
+     *
+     * Migrations and compiled caches are performed only by the deployment step
+     * (GAP-049 migration safety contract); this reports read-only readiness.
+     */
     public function executePreLaunchActions()
     {
-        $actions = $this->launchChecklistService->executePreLaunchActions();
         return response()->json([
-            'status' => 'success',
-            'actions' => $actions,
-            'message' => 'Pre-launch actions executed'
-        ]);
+            'success' => false,
+            'message' => 'Pre-launch actions (migrations, compiled caches) are performed only by deployment '
+                . '(php artisan deploy:migrate), never from a web request.',
+            // Under 'data' so the error envelope keeps it (error.details.data).
+            'data' => ['readiness' => $this->launchChecklistService->getPreLaunchReadiness()],
+        ], 409);
     }
 
     public function executeLaunchActions()
@@ -190,7 +197,7 @@ class FinalIntegrationController extends Controller
             'production_checks' => $this->launchChecklistService->runProductionReadinessChecks(),
             'launch_tasks' => $this->launchChecklistService->runLaunchPreparationTasks(),
             'go_live_checklist' => $this->launchChecklistService->getGoLiveChecklist(),
-            'pre_launch_actions' => $this->launchChecklistService->executePreLaunchActions(),
+            'pre_launch_readiness' => $this->launchChecklistService->getPreLaunchReadiness(),
             'launch_actions' => $this->launchChecklistService->executeLaunchActions(),
             'generated_at' => now()->toISOString(),
             'generated_by' => Auth::user() ? Auth::user()->name : 'System'

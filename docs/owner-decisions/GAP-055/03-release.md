@@ -1,14 +1,14 @@
 ---
 work_id: GAP-055
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-09-29-gap-055-http-cache-flush-evidence.md
   plan: docs/superpowers/plans/2026-09-29-gap-055-http-cache-flush-implementation.md
@@ -17,15 +17,15 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-09-29T07:35:04+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-09-29: 'APPROVE GAP-055 Gate 3'. Given after the packet was presented at PR head 93122381f652be8377fe662ff24fadb03d2ca28d; bound to implementation subject af087dcf09626784f6fb59457fb17b0fe656bd85 and implementation-tree digest 17bf6858e8b85eb7a8c2657c96800d88121dd6b41d9d19b57b5acd4fcb8d76b2 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28 to merge PRs verified safe and eligible; no deployment authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-29T07:27:24+07:00"
-  updated_at: "2026-09-29T07:27:24+07:00"
+  updated_at: "2026-09-29T07:35:04+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "Option-1 implementation at subject af087dcf: 4 new tests RED on base then GREEN; 2 legacy expectations updated and proven RED on old code; 60 related tests / 655 assertions green locally; governance unit suite 187 green; all 33 exact-head PR checks green; diff exactly the Gate-2 allowlist; canonical digest computed at subject."
@@ -36,13 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "af087dcf09626784f6fb59457fb17b0fe656bd85"
   verified_at: "2026-09-29T07:27:24+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "17bf6858e8b85eb7a8c2657c96800d88121dd6b41d9d19b57b5acd4fcb8d76b2"
+  decision_recorded_at: "2026-09-29T07:35:04+07:00"
 ---
 
 # GAP-055 — Gate 3 release decision
 
-## OWNER GATE 3: AWAITING OWNER DECISION
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-09-29, bound to implementation subject
+`af087dcf09626784f6fb59457fb17b0fe656bd85` and implementation-tree digest `17bf6858e8b85eb7a8c2657c96800d88121dd6b41d9d19b57b5acd4fcb8d76b2`. No deployment is authorized.
 
 ## Gói quyết định phát hành
 

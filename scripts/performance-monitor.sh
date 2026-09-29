@@ -5,6 +5,9 @@
 
 set -e
 
+# GAP-056: MySQL credentials via 0600 option files, never on the command line.
+source "$(dirname "${BASH_SOURCE[0]}")/lib/mysql-credentials.sh"
+
 # Configuration
 APP_URL="http://localhost"
 LOG_FILE="/var/log/zenamanage/performance.log"
@@ -25,7 +28,9 @@ get_response_time() {
 
 # Function to check database performance
 check_database_performance() {
-    local query_time=$(mysql -h"${DB_HOST:-localhost}" -u"${DB_USERNAME}" -p"${DB_PASSWORD}" "${DB_DATABASE}" -e "SELECT BENCHMARK(1000, MD5('test'));" 2>/dev/null | tail -1 | awk '{print $2}')
+    # GAP-056: no credentials -> report nothing rather than abort monitoring.
+    mysql_option_file DB_CNF "$DB_USERNAME" "$DB_PASSWORD" || return 0
+    local query_time=$(mysql --defaults-extra-file="$DB_CNF" -h"${DB_HOST:-localhost}" -u"${DB_USERNAME}" "${DB_DATABASE}" -e "SELECT BENCHMARK(1000, MD5('test'));" 2>/dev/null | tail -1 | awk '{print $2}')
     echo "$query_time"
 }
 

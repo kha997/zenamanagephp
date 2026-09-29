@@ -5,6 +5,9 @@
 
 set -e
 
+# GAP-056: MySQL credentials via 0600 option files, never on the command line.
+source "$(dirname "${BASH_SOURCE[0]}")/lib/mysql-credentials.sh"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -83,7 +86,8 @@ create_backup() {
     DB_PASS=$(grep DB_PASSWORD .env | cut -d '=' -f2)
     
     if command -v mysqldump &> /dev/null && [[ -n "$DB_NAME" && -n "$DB_USER" ]]; then
-        mysqldump -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" > "$BACKUP_PATH/db_$DEPLOYMENT_ID.sql"
+        mysql_option_file DB_CNF "$DB_USER" "$DB_PASS"
+        mysqldump --defaults-extra-file="$DB_CNF" -u "$DB_USER" "$DB_NAME" > "$BACKUP_PATH/db_$DEPLOYMENT_ID.sql"
         success "Database backup created: $BACKUP_PATH/db_$DEPLOYMENT_ID.sql"
     else
         warning "Could not create database backup - mysqldump not found or missing DB credentials"

@@ -5,6 +5,9 @@
 
 set -e
 
+# GAP-056: MySQL credentials via 0600 option files, never on the command line.
+source "$(dirname "${BASH_SOURCE[0]}")/scripts/lib/mysql-credentials.sh"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -157,16 +160,16 @@ create_backup() {
     
     # Backup database
     log_info "Backing up database..."
-    docker-compose -f "$DOCKER_COMPOSE_FILE" exec mysql mysqldump -u root -p"${MYSQL_ROOT_PASSWORD:-root_password}" --all-databases > "$backup_dir/database.sql"
+    mysql_compose_root_client "$DOCKER_COMPOSE_FILE" mysql mysqldump --all-databases > "$backup_dir/database.sql"
     
     # Backup application files
     log_info "Backing up application files..."
     tar -czf "$backup_dir/storage.tar.gz" storage/
     tar -czf "$backup_dir/public.tar.gz" public/
     
-    # Backup configuration
+    # Backup configuration. production.env holds every secret and is never
+    # copied into a backup (GAP-056); it is restored from the secret store.
     log_info "Backing up configuration..."
-    cp production.env "$backup_dir/"
     cp "$DOCKER_COMPOSE_FILE" "$backup_dir/"
     
     log_success "Backup created in $backup_dir"
@@ -204,7 +207,7 @@ restore_backup() {
         log_info "Restoring database..."
         docker-compose -f "$DOCKER_COMPOSE_FILE" up -d mysql
         sleep 10
-        docker-compose -f "$DOCKER_COMPOSE_FILE" exec mysql mysql -u root -p"${MYSQL_ROOT_PASSWORD:-root_password}" < "$backup_dir/database.sql"
+        mysql_compose_root_client "$DOCKER_COMPOSE_FILE" mysql mysql < "$backup_dir/database.sql"
     fi
     
     # Restore files

@@ -5,6 +5,9 @@
 
 set -e
 
+# GAP-056: MySQL credentials via 0600 option files, never on the command line.
+source "$(dirname "${BASH_SOURCE[0]}")/lib/mysql-credentials.sh"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -72,7 +75,7 @@ create_backup() {
     # Backup database
     if docker-compose ps db | grep -q "Up"; then
         log "Backing up database..."
-        docker-compose exec -T db mysqldump -u root -p${DB_ROOT_PASSWORD:-root_password} --all-databases > "$BACKUP_PATH/database.sql"
+        mysql_compose_root_client - db mysqldump --all-databases > "$BACKUP_PATH/database.sql"
         success "Database backup created"
     fi
     
@@ -265,7 +268,7 @@ rollback() {
         log "Restoring database..."
         docker-compose up -d db
         sleep 10
-        docker-compose exec -T db mysql -u root -p${DB_ROOT_PASSWORD:-root_password} < "$BACKUP_PATH/database.sql"
+        mysql_compose_root_client - db mysql < "$BACKUP_PATH/database.sql"
         success "Database restored"
     fi
     

@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-09-29-gap-057-http-launch-actions-evidence.md
   plan: null
   branch: docs/GAP-057-http-launch-actions
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/324
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-29T14:14:14+07:00"
-  updated_at: "2026-09-29T14:14:14+07:00"
+  updated_at: "2026-09-29T14:15:08+07:00"
 generated_by: agent
 ---
 

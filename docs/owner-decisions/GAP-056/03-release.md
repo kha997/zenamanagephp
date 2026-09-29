@@ -1,14 +1,14 @@
 ---
 work_id: GAP-056
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-09-29-gap-056-script-mysql-password-evidence.md
   plan: docs/superpowers/plans/2026-09-29-gap-056-script-mysql-password-implementation.md
@@ -17,15 +17,15 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-09-29T12:25:06+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-09-29: 'APPROVE GAP-056 Gate 3'. Given after the packet (including the disclosed deviations: 32 not 31 sites, removed literal 'password' defaults, root crontab, empty-crontab fix) was presented at PR head f34225d96cd82309ddf16516c0c88ce12876ab2a with 33/33 checks green; bound to implementation subject 1f573a55cc49c70e2bf47002d2124f4b6fd9bf78 and implementation-tree digest b1441886ad1d74506a4b37a62ddd35f879f8b430289a65dab1d105d1d72844e5 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment, credential rotation or host cleanup authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-29T08:30:49+07:00"
-  updated_at: "2026-09-29T08:30:49+07:00"
+  updated_at: "2026-09-29T12:25:06+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "Option-1 implementation at subject 1f573a55: shell-script architecture guard RED at base (34 offenders) and GREEN; helper and setup-production tests RED without the fix and GREEN; 217 governance/architecture/GAP-056 tests and DeploymentGuardTest green locally; bash -n clean on all 12 touched scripts; all 33 exact-head PR checks green; diff exactly the Gate-2 allowlist; canonical digest computed at subject."
@@ -36,13 +36,17 @@ technical_evidence:
   verified_pr_head_sha: "1f573a55cc49c70e2bf47002d2124f4b6fd9bf78"
   verified_at: "2026-09-29T08:30:49+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "b1441886ad1d74506a4b37a62ddd35f879f8b430289a65dab1d105d1d72844e5"
+  decision_recorded_at: "2026-09-29T12:25:06+07:00"
 ---
 
 # GAP-056 — Gate 3 release decision
 
-## OWNER GATE 3: AWAITING OWNER DECISION
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-09-29, bound to implementation subject
+`1f573a55cc49c70e2bf47002d2124f4b6fd9bf78` and implementation-tree digest `b1441886ad1d74506a4b37a62ddd35f879f8b430289a65dab1d105d1d72844e5`. No deployment, credential rotation
+or host cleanup is authorized.
 
 ## Gói quyết định phát hành
 

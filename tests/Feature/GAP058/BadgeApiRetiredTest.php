@@ -17,7 +17,7 @@ final class BadgeApiRetiredTest extends TestCase
         $offenders = [];
         foreach (Route::getRoutes() as $route) {
             $name = (string) $route->getName();
-            if (str_starts_with($route->uri(), 'api/badges') || str_starts_with($name, 'api.badges.')) {
+            if (str_starts_with($route->uri(), 'api/badges') || str_starts_with($name, 'api.badges.')) { // SSOT_ALLOW_ORPHAN(reason=NEGATIVE_PROBE_LEGACY_SURFACE)
                 $offenders[] = $route->uri() . ' (' . $name . ')';
             }
         }
@@ -44,7 +44,7 @@ final class BadgeApiRetiredTest extends TestCase
                     continue;
                 }
                 $source = (string) file_get_contents($file->getPathname());
-                if (str_contains($source, 'BadgeService') || str_contains($source, 'BadgeController') || str_contains($source, '/api/badges')) {
+                if (str_contains($source, 'BadgeService') || str_contains($source, 'BadgeController') || str_contains($source, '/api/badges')) { // SSOT_ALLOW_ORPHAN(reason=NEGATIVE_PROBE_LEGACY_SURFACE)
                     $offenders[] = substr($file->getPathname(), strlen($root) + 1);
                 }
             }

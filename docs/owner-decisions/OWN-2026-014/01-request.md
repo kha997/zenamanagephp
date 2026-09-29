@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-09-29-own-2026-014-gap053-057-post-release-reconciliation.md
   plan: null
   branch: docs/OWN-2026-014-gap053-057-post-release-reconciliation
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/325
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-29T22:39:19+07:00"
-  updated_at: "2026-09-29T22:39:19+07:00"
+  updated_at: "2026-09-29T22:39:45+07:00"
 generated_by: agent
 ---
 

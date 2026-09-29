@@ -31,4 +31,38 @@ class NoCommandLineDatabasePasswordTest extends TestCase
 
         $this->assertSame([], $offenders, 'MySQL passwords must never be passed as process arguments (GAP-054)');
     }
+
+    /**
+     * GAP-056: tracked shell scripts must not pass a MySQL password as a
+     * process argument, and must not fall back to a hard-coded root password.
+     * Line-based and without any path exemption.
+     */
+    public function test_no_tracked_shell_script_passes_a_mysql_password_on_the_command_line(): void
+    {
+        $root = dirname(__DIR__, 2);
+        exec('git -C ' . escapeshellarg($root) . ' ls-files -z -- "*.sh"', $out, $code);
+        $this->assertSame(0, $code, 'git ls-files failed');
+        $files = array_filter(explode("\0", implode("\n", $out)));
+        $this->assertNotEmpty($files);
+
+        $offenders = [];
+        foreach ($files as $relative) {
+            $lines = file($root . '/' . $relative) ?: [];
+            $mysqlFile = preg_match('/\bmysql(dump|admin)?\b/', implode('', $lines)) === 1;
+            foreach ($lines as $index => $line) {
+                $mysqlContext = preg_match('/\bmysql(dump|admin)?\b/', $line) === 1;
+                $passwordArg = preg_match('/(^|\s)-p"?\$|(^|\s)-p\$\{|--password=/', $line) === 1;
+                $rootFallback = str_contains($line, ':-root_password');
+                // A database password variable defaulted to a non-empty
+                // literal, e.g. DB_PASSWORD=${DB_PASSWORD:-"password"}.
+                $defaultedPassword = $mysqlFile
+                    && preg_match('/[A-Z_]*PASS(WORD)?=\$\{[A-Z_]+:-[^}]/', $line) === 1;
+                if (($mysqlContext && $passwordArg) || $rootFallback || $defaultedPassword) {
+                    $offenders[] = $relative . ':' . ($index + 1);
+                }
+            }
+        }
+
+        $this->assertSame([], $offenders, 'MySQL passwords must never be passed as process arguments or defaulted to a literal (GAP-056)');
+    }
 }

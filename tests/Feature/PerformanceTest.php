@@ -352,15 +352,15 @@ class PerformanceTest extends TestCase
     {
         $this->actingAs($this->admin);
 
-        // Test cache clearing performance
+        // GAP-055: cache clearing is refused (409) without flushing the shared store.
         $startTime = microtime(true);
         $response = $this->post('/admin/maintenance/clear-cache');
         $endTime = microtime(true);
 
         $maintenanceTime = ($endTime - $startTime) * 1000;
 
-        $response->assertStatus(200);
-        $this->assertLessThan(1000, $maintenanceTime, 'Cache clearing should complete within 1000ms');
+        $response->assertStatus(409);
+        $this->assertLessThan(1000, $maintenanceTime, 'Cache clear refusal should complete within 1000ms');
 
         // Test database maintenance performance
         $startTime = microtime(true);

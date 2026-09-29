@@ -278,33 +278,22 @@ class MaintenanceController extends Controller
     }
 
     /**
-     * Clear application cache
+     * Refuse to clear the application cache (GAP-055).
+     *
+     * The default cache store also holds every tenant's rate-limit counters and
+     * OIDC login state, and there is no maintenance-owned cache namespace, so a
+     * web request must never flush it. Compiled config/route/view caches are
+     * owned by the deploy step (GAP-054).
      */
     public function clearCache()
     {
-        try {
-            Artisan::call('cache:clear');
-            Artisan::call('config:clear');
-            Artisan::call('route:clear');
-            Artisan::call('view:clear');
+        $this->logMaintenanceTask('Cache clear refused: shared cache store is never flushed from the web (GAP-055)', 'warning');
 
-            // Clear Redis cache
-            Cache::flush();
-
-            $this->logMaintenanceTask('Cache cleared successfully', 'success');
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Cache cleared successfully'
-            ]);
-        } catch (\Exception $e) {
-            $this->logMaintenanceTask('Cache clear failed: ' . $e->getMessage(), 'error');
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to clear cache: ' . $e->getMessage()
-            ], 500);
-        }
+        return response()->json([
+            'success' => false,
+            'message' => 'Cache clear is disabled: the shared cache holds rate-limit counters and login state for every tenant, '
+                . 'so it is never flushed from the web. Compiled caches are refreshed by deployment.',
+        ], 409);
     }
 
     /**

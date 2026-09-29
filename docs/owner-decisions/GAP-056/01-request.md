@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-09-29-gap-056-script-mysql-password-evidence.md
   plan: null
   branch: docs/GAP-056-script-mysql-password-argv
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/323
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-29T07:44:26+07:00"
-  updated_at: "2026-09-29T07:44:26+07:00"
+  updated_at: "2026-09-29T07:46:20+07:00"
 generated_by: agent
 ---
 

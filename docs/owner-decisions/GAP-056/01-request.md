@@ -1,11 +1,11 @@
 ---
 work_id: GAP-056
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-09-29-gap-056-script-mysql-password-evidence.md
   plan: null
@@ -14,17 +14,23 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-09-29T07:47:34+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-09-29: 'APPROVE GAP-056 Gate 1'. Bound to reviewed Draft PR #323 head 195c2dfa1e4a5ad31991eda2fc7c16f57e3ac2b9, canonical base 368536793117816417373a3bde2ac636d46b7d42. The Owner did not answer the open operational question (whether setup-production.sh / docker-manage.sh were ever run on a real server); it remains open. Authorizes preparing Gate 2 only; not implementation, credential rotation, host cleanup, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-29T07:44:26+07:00"
-  updated_at: "2026-09-29T07:46:20+07:00"
+  updated_at: "2026-09-29T07:47:34+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-056 Gate 1 in-session on 2026-09-29 against Draft PR #323
+head `195c2dfa1e4a5ad31991eda2fc7c16f57e3ac2b9`. The operational question below (were the scripts ever run on a real
+server?) remains unanswered. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

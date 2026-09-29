@@ -1,11 +1,11 @@
 ---
 work_id: GAP-058
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-09-29-gap-058-badge-api-evidence.md
   plan: null
@@ -14,17 +14,24 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-09-29T23:13:22+07:00"
+  owner_response_reference: "Owner decisions in-session on 2026-09-29: product choice 'Không cần lúc này' (menu count badges are not wanted now; retire the dead badge API) and 'APPROVE GAP-058 Gate 1'. Bound to reviewed Draft PR #326 head 7c31796f7ea89ac2122cb5b6dc47feaf64991129, canonical base 93fd0d7ab58b8e281affbfab9aef0fc3c6e09389. Authorizes preparing a Gate-2 retirement design only; not implementation, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-29T23:02:58+07:00"
-  updated_at: "2026-09-29T23:10:20+07:00"
+  updated_at: "2026-09-29T23:13:22+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED — badges not wanted now
+
+Owner approved GAP-058 Gate 1 in-session on 2026-09-29 against Draft PR #326
+head `7c31796f7ea89ac2122cb5b6dc47feaf64991129`, choosing **"Không cần lúc này"**: menu count badges are not wanted
+in the Operator navigation now, so Gate 2 designs retirement of the dead badge
+API surface. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

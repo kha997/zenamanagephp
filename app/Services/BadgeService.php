@@ -9,6 +9,28 @@ use Illuminate\Support\Facades\Http;
 class BadgeService
 {
     /**
+     * Sidebar items that have a badge endpoint. Badge cache keys are
+     * badge_{itemId}_user_{userId} for these ids.
+     */
+    protected const BADGE_ENDPOINTS = [
+        'tasks' => '/api/metrics/tasks?status=pending',
+        'projects' => '/api/metrics/projects?status=active',
+        'users' => '/api/metrics/users?status=active',
+        'notifications' => '/api/metrics/notifications?unread=true',
+        'approvals' => '/api/metrics/approvals?pending=true',
+        'rfis' => '/api/metrics/rfis?status=pending',
+        'submittals' => '/api/metrics/submittals?status=pending',
+        'change-requests' => '/api/metrics/change-requests?status=pending',
+        'qc-inspections' => '/api/metrics/qc/inspections?status=pending',
+        'ncr' => '/api/metrics/ncr?status=open',
+        'hse-incidents' => '/api/metrics/hse/incidents?status=open',
+        'material-requests' => '/api/metrics/materials/requests?status=pending',
+        'purchase-orders' => '/api/metrics/po?status=pending',
+        'invoices' => '/api/metrics/invoices?status=pending',
+        'bills' => '/api/metrics/bills?status=pending',
+    ];
+
+    /**
      * Get badge count for a sidebar item.
      */
     public function getBadgeCount(string $itemId, ?User $user = null): int
@@ -82,23 +104,7 @@ class BadgeService
      */
     protected function getBadgeEndpoint(string $itemId): ?string
     {
-        $endpoints = [
-            'tasks' => '/api/metrics/tasks?status=pending',
-            'projects' => '/api/metrics/projects?status=active',
-            'users' => '/api/metrics/users?status=active',
-            'notifications' => '/api/metrics/notifications?unread=true',
-            'approvals' => '/api/metrics/approvals?pending=true',
-            'rfis' => '/api/metrics/rfis?status=pending',
-            'submittals' => '/api/metrics/submittals?status=pending',
-            'change-requests' => '/api/metrics/change-requests?status=pending',
-            'qc-inspections' => '/api/metrics/qc/inspections?status=pending',
-            'ncr' => '/api/metrics/ncr?status=open',
-            'hse-incidents' => '/api/metrics/hse/incidents?status=open',
-            'material-requests' => '/api/metrics/materials/requests?status=pending',
-            'purchase-orders' => '/api/metrics/po?status=pending',
-            'invoices' => '/api/metrics/invoices?status=pending',
-            'bills' => '/api/metrics/bills?status=pending',
-        ];
+        $endpoints = self::BADGE_ENDPOINTS;
 
         return $endpoints[$itemId] ?? null;
     }
@@ -128,26 +134,19 @@ class BadgeService
 
     /**
      * Clear all badge caches for a user.
+     *
+     * Forgets only this user's badge keys; the shared cache store (which also
+     * holds every tenant's rate-limit counters) is never flushed (GAP-055).
      */
     public function clearUserBadgeCache(?User $user = null): void
     {
         $user = $user ?? Auth::user();
-        
-        if ($user) {
-            $cacheKey = "badge_*_user_{$user->id}";
-            
-            Cache::flush();
-        }
-    }
 
-    /**
-     * Clear badge cache for a specific item for all users.
-     */
-    public function clearItemBadgeCache(string $itemId): void
-    {
-        $cacheKey = "badge_{$itemId}_user_*";
-        
-        Cache::flush();
+        if ($user) {
+            foreach (array_keys(self::BADGE_ENDPOINTS) as $itemId) {
+                Cache::forget("badge_{$itemId}_user_{$user->id}");
+            }
+        }
     }
 
     /**

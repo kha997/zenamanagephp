@@ -221,8 +221,8 @@ class LaunchChecklistService
         $actions = [];
         
         try {
-            // Clear caches
-            Artisan::call('cache:clear');
+            // Clear compiled caches only. The shared cache store is never
+            // flushed here: it holds every tenant's rate-limit counters (GAP-055).
             Artisan::call('config:clear');
             Artisan::call('route:clear');
             $actions['clear_caches'] = 'success';

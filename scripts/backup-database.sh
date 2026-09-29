@@ -6,6 +6,9 @@
 
 set -e
 
+# GAP-056: MySQL credentials via 0600 option files, never on the command line.
+source "$(dirname "${BASH_SOURCE[0]}")/lib/mysql-credentials.sh"
+
 # Configuration
 BACKUP_DIR="/var/backups/zena/database"
 DATE=$(date +"%Y%m%d_%H%M%S")
@@ -43,7 +46,7 @@ fi
 log_info "Creating database backup..."
 BACKUP_FILE="$BACKUP_DIR/zena_db_backup_$DATE.sql"
 
-docker exec $DB_CONTAINER mysqldump -u$DB_USER -p$DB_PASSWORD $DB_NAME > $BACKUP_FILE
+mysql_container_client "$DB_CONTAINER" "$DB_USER" "$DB_PASSWORD" mysqldump "$DB_NAME" > "$BACKUP_FILE"
 
 if [ $? -eq 0 ]; then
     # Compress backup

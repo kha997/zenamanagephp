@@ -5,6 +5,9 @@
 
 set -e
 
+# GAP-056: MySQL credentials via 0600 option files, never on the command line.
+source "$(dirname "${BASH_SOURCE[0]}")/lib/mysql-credentials.sh"
+
 # Cấu hình
 ENVIRONMENT=${1:-production}
 APP_DIR="/var/www/zenamanage"
@@ -124,8 +127,9 @@ if [ ! -z "${APP_URL}" ]; then
 fi
 
 # 7. Kiểm tra database connections
-if [ ! -z "${DB_HOST}" ]; then
-    DB_CONNECTIONS=$(mysql -h"${DB_HOST}" -u"${DB_USERNAME}" -p"${DB_PASSWORD}" -e "SHOW STATUS LIKE 'Threads_connected';" | tail -1 | awk '{print $2}' 2>/dev/null || echo "0")
+# GAP-056: skip the metric (instead of aborting monitoring) without credentials.
+if [ ! -z "${DB_HOST}" ] && mysql_option_file DB_CNF "$DB_USERNAME" "$DB_PASSWORD"; then
+    DB_CONNECTIONS=$(mysql --defaults-extra-file="$DB_CNF" -h"${DB_HOST}" -u"${DB_USERNAME}" -e "SHOW STATUS LIKE 'Threads_connected';" | tail -1 | awk '{print $2}' 2>/dev/null || echo "0")
     
     log_metric "db_connections" "${DB_CONNECTIONS}" ""
     

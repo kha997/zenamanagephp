@@ -5,13 +5,16 @@
 
 set -e
 
+# GAP-056: MySQL credentials via 0600 option files, never on the command line.
+source "$(dirname "${BASH_SOURCE[0]}")/lib/mysql-credentials.sh"
+
 # Configuration
 BACKUP_DIR=${BACKUP_DIR:-"/var/backups/zenamanage"}
 DB_HOST=${DB_HOST:-"localhost"}
 DB_PORT=${DB_PORT:-"3306"}
 DB_NAME=${DB_NAME:-"zenamanage"}
 DB_USER=${DB_USER:-"root"}
-DB_PASSWORD=${DB_PASSWORD:-"password"}
+DB_PASSWORD=${DB_PASSWORD:-}  # GAP-056: no default; database steps fail closed without it
 APP_DIR=${APP_DIR:-"/var/www/html"}
 RETENTION_DAYS=${RETENTION_DAYS:-"30"}
 COMPRESSION=${COMPRESSION:-"gzip"}
@@ -112,7 +115,8 @@ backup_database() {
     local backup_file="$backup_path/database.sql"
     
     # Create database dump
-    mysqldump -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" \
+    mysql_option_file DB_CNF "$DB_USER" "$DB_PASSWORD"
+    mysqldump --defaults-extra-file="$DB_CNF" -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" \
         --single-transaction \
         --routines \
         --triggers \
@@ -444,7 +448,8 @@ restore_database() {
     fi
     
     # Restore database
-    mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" < "$temp_file"
+    mysql_option_file DB_CNF "$DB_USER" "$DB_PASSWORD"
+    mysql --defaults-extra-file="$DB_CNF" -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" < "$temp_file"
     
     if [ $? -eq 0 ]; then
         log "Database restore completed successfully"

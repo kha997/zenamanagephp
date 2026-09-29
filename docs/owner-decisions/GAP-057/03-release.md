@@ -1,14 +1,14 @@
 ---
 work_id: GAP-057
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-09-29-gap-057-http-launch-actions-evidence.md
   plan: docs/superpowers/plans/2026-09-29-gap-057-http-launch-actions-implementation.md
@@ -17,15 +17,15 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-09-29T20:31:00+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-09-29: 'APPROVE GAP-057 Gate 3'. Given after the packet (including the disclosed deviations: readiness under error.details.data, PHPStan docblock) was presented at PR head be75999188de4618d0b769dd1774ff4376f1c84d; bound to implementation subject 40bd0bd66bd857e002a02d9850be2a32db09f042 and implementation-tree digest dc9876bec255f4d83cfa58add4b18058e82e223e83ac64b2ff3aaed01c7be936 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-29T20:00:28+07:00"
-  updated_at: "2026-09-29T20:00:28+07:00"
+  updated_at: "2026-09-29T20:31:00+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "Option-1 implementation at subject 40bd0bd6: 4 new tests RED on base then GREEN; GAP-055 invariant test rewritten stricter; 214 related tests green locally; all 33 exact-head PR checks green (first run red only on a PHPStan array-shape docblock, fixed); diff exactly the Gate-2 allowlist; canonical digest computed at subject."
@@ -36,13 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "40bd0bd66bd857e002a02d9850be2a32db09f042"
   verified_at: "2026-09-29T20:00:28+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "dc9876bec255f4d83cfa58add4b18058e82e223e83ac64b2ff3aaed01c7be936"
+  decision_recorded_at: "2026-09-29T20:31:00+07:00"
 ---
 
 # GAP-057 — Gate 3 release decision
 
-## OWNER GATE 3: AWAITING OWNER DECISION
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-09-29, bound to implementation subject
+`40bd0bd66bd857e002a02d9850be2a32db09f042` and implementation-tree digest `dc9876bec255f4d83cfa58add4b18058e82e223e83ac64b2ff3aaed01c7be936`. No deployment is authorized.
 
 ## Gói quyết định phát hành
 

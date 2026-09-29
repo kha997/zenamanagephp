@@ -222,6 +222,8 @@ class LaunchChecklistService
      * step (.github/workflows/production.yml -> php artisan deploy:migrate,
      * GAP-049 migration safety contract). A web request only reports their
      * state; it never runs an Artisan command or writes any file.
+     *
+     * @return array{pending_migrations: int|null, config_cached: bool, routes_cached: bool, performed_by: string, error?: string}
      */
     public function getPreLaunchReadiness(): array
     {

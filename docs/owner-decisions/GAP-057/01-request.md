@@ -1,11 +1,11 @@
 ---
 work_id: GAP-057
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-09-29-gap-057-http-launch-actions-evidence.md
   plan: null
@@ -14,17 +14,22 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-09-29T18:04:08+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-09-29: 'APPROVE GAP-057 Gate 1'. Bound to reviewed Draft PR #324 head 64afe8f622a973ad13ffd11ec506bf598afa819c, canonical base 18cc0f796abd6735bd2abe1ebf318b10aec58d7d. Authorizes preparing Gate 2 only; not implementation, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-29T14:14:14+07:00"
-  updated_at: "2026-09-29T14:15:08+07:00"
+  updated_at: "2026-09-29T18:04:08+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-057 Gate 1 in-session on 2026-09-29 against Draft PR #324
+head `64afe8f622a973ad13ffd11ec506bf598afa819c`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

@@ -173,7 +173,7 @@ class ConfigureSMTP extends Command
      */
     private function updateEnvironmentFile(array $config): bool
     {
-        $envPath = $this->laravel->environmentFilePath();
+        $envPath = app()->environmentFilePath();
 
         if (!File::exists($envPath)) {
             $this->error('Environment file not found. Please create .env file first.');

@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-09-30-gap-060-a11y-perf-workflow-evidence.md
   plan: null
   branch: docs/GAP-060-a11y-perf-ci-red
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/329
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-30T19:55:01+07:00"
-  updated_at: "2026-09-30T19:55:01+07:00"
+  updated_at: "2026-09-30T19:55:17+07:00"
 generated_by: agent
 ---
 

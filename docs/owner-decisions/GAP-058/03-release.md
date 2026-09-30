@@ -1,14 +1,14 @@
 ---
 work_id: GAP-058
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-09-29-gap-058-badge-api-evidence.md
   plan: docs/superpowers/plans/2026-09-29-gap-058-badge-api-retirement-implementation.md
@@ -17,15 +17,15 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-09-30T11:35:47+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-09-30: 'APPROVE GAP-058 Gate 3'. Given after the packet (including the disclosed deviations: one allow_orphan_routes.txt line outside the allowlist, deletions committed in the test commit) was presented at PR head 28668019b989990a7949570e1aa4238a8ed58d78 with 33/33 checks green; bound to implementation subject 6193aec2d5ed6fc81ab8329c11fb868db189fba5 and implementation-tree digest 67ab00c990a9de046dcf2255a5ee698107ab38bc4cf36d455c6f3db64edd6c93 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-30T00:53:03+07:00"
-  updated_at: "2026-09-30T00:53:03+07:00"
+  updated_at: "2026-09-30T11:35:47+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "Option-1 retirement at subject 6193aec2: retirement test RED 3/3 at base then GREEN; 242 related tests green locally; route guard OK; SSOT orphan-route lint passes after declaring the intentional negative probe; all 33 exact-head PR checks green; diff = Gate-2 allowlist plus one disclosed line in scripts/ssot/allow_orphan_routes.txt; canonical digest computed at subject."
@@ -36,13 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "6193aec2d5ed6fc81ab8329c11fb868db189fba5"
   verified_at: "2026-09-30T00:53:03+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "67ab00c990a9de046dcf2255a5ee698107ab38bc4cf36d455c6f3db64edd6c93"
+  decision_recorded_at: "2026-09-30T11:35:47+07:00"
 ---
 
 # GAP-058 — Gate 3 release decision
 
-## OWNER GATE 3: AWAITING OWNER DECISION
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-09-30, bound to implementation subject
+`6193aec2d5ed6fc81ab8329c11fb868db189fba5` and implementation-tree digest `67ab00c990a9de046dcf2255a5ee698107ab38bc4cf36d455c6f3db64edd6c93`. No deployment is authorized.
 
 ## Gói quyết định phát hành
 

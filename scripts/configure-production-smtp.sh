@@ -45,8 +45,9 @@ fi
 
 # Backup current .env file
 if [[ -f "$ENV_FILE" ]]; then
-    cp "$ENV_FILE" "$BACKUP_ENV_FILE"
-    success "Backed up current .env file to: $BACKUP_ENV_FILE"
+    # GAP-059: the backup holds every secret, so it is owner-only (0600).
+    (umask 077 && cp "$ENV_FILE" "$BACKUP_ENV_FILE")
+    success "Backed up current .env file to: $BACKUP_ENV_FILE (owner-only)"
 fi
 
 # SMTP Provider Selection
@@ -126,29 +127,38 @@ fi
 # Update .env file
 log "Updating .env file with SMTP configuration..."
 
-# Function to update or add environment variable
+# Function to update or add environment variable (GAP-059).
+# The value is double-quoted with \, " and $ escaped as .env parsing expects,
+# and handed to awk through the environment, never on a command line. The file
+# is rewritten via a temp file that keeps .env's mode; no .env.bak is created.
 update_env_var() {
     local key=$1
     local value=$2
-    
-    if grep -q "^$key=" "$ENV_FILE"; then
-        # Update existing variable
-        sed -i.bak "s/^$key=.*/$key=\"$value\"/" "$ENV_FILE"
-    else
-        # Add new variable
-        echo "$key=\"$value\"" >> "$ENV_FILE"
-    fi
+    local escaped tmp mode
+
+    escaped=${value//\\/\\\\}
+    escaped=${escaped//\"/\\\"}
+    escaped=${escaped//\$/\\\$}
+    mode=$(stat -c %a "$ENV_FILE" 2>/dev/null || stat -f %Lp "$ENV_FILE")
+    tmp=$(umask 077 && mktemp "${ENV_FILE}.XXXXXX")
+
+    ENV_KEY="$key" ENV_LINE="$key=\"$escaped\"" awk '
+        BEGIN { key = ENVIRON["ENV_KEY"] "="; line = ENVIRON["ENV_LINE"]; done = 0 }
+        index($0, key) == 1 { if (!done) { print line; done = 1 } next }
+        { print }
+        END { if (!done) print line }
+    ' "$ENV_FILE" > "$tmp"
+
+    chmod "$mode" "$tmp"
+    mv "$tmp" "$ENV_FILE"
 }
 
-# Update SMTP settings
-update_env_var "MAIL_MAILER" "smtp"
-update_env_var "MAIL_HOST" "$SMTP_HOST"
-update_env_var "MAIL_PORT" "$SMTP_PORT"
-update_env_var "MAIL_USERNAME" "$SMTP_USERNAME"
-update_env_var "MAIL_PASSWORD" "$SMTP_PASSWORD"
-update_env_var "MAIL_ENCRYPTION" "$SMTP_ENCRYPTION"
-update_env_var "MAIL_FROM_ADDRESS" "$FROM_ADDRESS"
-update_env_var "MAIL_FROM_NAME" "$FROM_NAME"
+# Update SMTP settings (GAP-059): smtp:configure is the single writer of the
+# MAIL_* values; the password goes in on STDIN (printf is a shell builtin), so
+# it never appears on a command line.
+if ! printf '%s\n' "$SMTP_PASSWORD" | php artisan smtp:configure --no-interaction --password-stdin --provider="$PROVIDER" --host="$SMTP_HOST" --port="$SMTP_PORT" --encryption="$SMTP_ENCRYPTION" --username="$SMTP_USERNAME" --from-address="$FROM_ADDRESS" --from-name="$FROM_NAME"; then
+    error "Failed to write the SMTP settings to $ENV_FILE"
+fi
 
 # Update queue settings for production
 update_env_var "MAIL_QUEUE_ENABLED" "true"
@@ -171,13 +181,6 @@ php artisan config:clear
 php artisan cache:clear
 success "Laravel caches cleared"
 
-# Test SMTP configuration
-log "Testing SMTP configuration..."
-if php artisan smtp:configure --provider="$PROVIDER" --host="$SMTP_HOST" --port="$SMTP_PORT" --username="$SMTP_USERNAME" --password="$SMTP_PASSWORD" --from-address="$FROM_ADDRESS" --from-name="$FROM_NAME"; then
-    success "SMTP configuration test passed"
-else
-    warning "SMTP configuration test failed - please check your credentials"
-fi
 
 # Test email sending
 log "Testing email sending..."

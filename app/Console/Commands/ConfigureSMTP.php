@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
+use Symfony\Component\Console\Input\StreamableInputInterface;
 
 class ConfigureSMTP extends Command
 {
@@ -18,7 +19,8 @@ class ConfigureSMTP extends Command
                             {--host= : SMTP host}
                             {--port= : SMTP port}
                             {--username= : SMTP username}
-                            {--password= : SMTP password}
+                            {--password= : Refused (GAP-059): a password on the command line is visible in the process list; use --password-stdin or --interactive}
+                            {--password-stdin : Read the SMTP password from STDIN (first line)}
                             {--encryption= : Encryption (tls, ssl, none)}
                             {--from-address= : From email address}
                             {--from-name= : From name}
@@ -34,15 +36,24 @@ class ConfigureSMTP extends Command
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(): int
     {
+        if ($this->option('password') !== null) {
+            $this->error('Refusing --password: a password on the command line is visible to other users in the process list (GAP-059). '
+                . 'Pipe it with --password-stdin or use --interactive.');
+
+            return self::FAILURE;
+        }
+
         $this->info('🚀 SMTP Configuration for Production');
         $this->newLine();
 
-        if ($this->option('interactive')) {
-            $this->interactiveConfiguration();
-        } else {
-            $this->commandLineConfiguration();
+        $written = $this->option('interactive')
+            ? $this->interactiveConfiguration()
+            : $this->commandLineConfiguration();
+
+        if (!$written) {
+            return self::FAILURE;
         }
 
         $this->newLine();
@@ -52,12 +63,14 @@ class ConfigureSMTP extends Command
         if ($this->confirm('Would you like to test the SMTP configuration?')) {
             $this->testSMTPConfiguration();
         }
+
+        return self::SUCCESS;
     }
 
     /**
      * Interactive configuration
      */
-    private function interactiveConfiguration(): void
+    private function interactiveConfiguration(): bool
     {
         $this->info('📧 Interactive SMTP Configuration');
         $this->newLine();
@@ -83,13 +96,13 @@ class ConfigureSMTP extends Command
         $config['from_address'] = $this->ask('From Email Address', $config['username']) ?: '';
         $config['from_name'] = $this->ask('From Name', 'ZenaManage') ?: 'ZenaManage';
 
-        $this->updateEnvironmentFile($config);
+        return $this->updateEnvironmentFile($config);
     }
 
     /**
      * Command line configuration
      */
-    private function commandLineConfiguration(): void
+    private function commandLineConfiguration(): bool
     {
         $provider = $this->option('provider') ?: 'gmail';
         
@@ -100,11 +113,23 @@ class ConfigureSMTP extends Command
         if ($this->option('port')) $config['port'] = $this->option('port');
         if ($this->option('encryption')) $config['encryption'] = $this->option('encryption');
         if ($this->option('username')) $config['username'] = $this->option('username');
-        if ($this->option('password')) $config['password'] = $this->option('password');
+        if ($this->option('password-stdin')) $config['password'] = $this->readPasswordFromStdin();
         if ($this->option('from-address')) $config['from_address'] = $this->option('from-address');
         if ($this->option('from-name')) $config['from_name'] = $this->option('from-name');
 
-        $this->updateEnvironmentFile($config);
+        return $this->updateEnvironmentFile($config);
+    }
+
+    /**
+     * Read the password from the first line of STDIN (GAP-059), so it never
+     * appears on a process command line.
+     */
+    private function readPasswordFromStdin(): string
+    {
+        $stream = $this->input instanceof StreamableInputInterface ? $this->input->getStream() : null;
+        $line = fgets($stream ?? STDIN);
+
+        return $line === false ? '' : rtrim($line, "\r\n");
     }
 
     /**
@@ -146,45 +171,54 @@ class ConfigureSMTP extends Command
     /**
      * Update environment file
      */
-    private function updateEnvironmentFile(array $config): void
+    private function updateEnvironmentFile(array $config): bool
     {
-        $envPath = base_path('.env');
-        
+        $envPath = $this->laravel->environmentFilePath();
+
         if (!File::exists($envPath)) {
             $this->error('Environment file not found. Please create .env file first.');
-            return;
+            return false;
         }
 
         $envContent = File::get($envPath);
-        
+
         // Update mail configuration
         $envContent = $this->updateEnvValue($envContent, 'MAIL_MAILER', 'smtp');
-        $envContent = $this->updateEnvValue($envContent, 'MAIL_HOST', $config['host']);
-        $envContent = $this->updateEnvValue($envContent, 'MAIL_PORT', $config['port']);
-        $envContent = $this->updateEnvValue($envContent, 'MAIL_USERNAME', $config['username']);
-        $envContent = $this->updateEnvValue($envContent, 'MAIL_PASSWORD', $config['password']);
-        $envContent = $this->updateEnvValue($envContent, 'MAIL_ENCRYPTION', $config['encryption']);
-        $envContent = $this->updateEnvValue($envContent, 'MAIL_FROM_ADDRESS', $config['from_address']);
-        $envContent = $this->updateEnvValue($envContent, 'MAIL_FROM_NAME', $config['from_name']);
+        $envContent = $this->updateEnvValue($envContent, 'MAIL_HOST', (string) ($config['host'] ?? ''));
+        $envContent = $this->updateEnvValue($envContent, 'MAIL_PORT', (string) ($config['port'] ?? ''));
+        $envContent = $this->updateEnvValue($envContent, 'MAIL_USERNAME', (string) ($config['username'] ?? ''));
+        $envContent = $this->updateEnvValue($envContent, 'MAIL_PASSWORD', (string) ($config['password'] ?? ''));
+        $envContent = $this->updateEnvValue($envContent, 'MAIL_ENCRYPTION', (string) ($config['encryption'] ?? ''));
+        $envContent = $this->updateEnvValue($envContent, 'MAIL_FROM_ADDRESS', (string) ($config['from_address'] ?? ''));
+        $envContent = $this->updateEnvValue($envContent, 'MAIL_FROM_NAME', (string) ($config['from_name'] ?? ''));
 
-        File::put($envPath, $envContent);
-        
+        // Write to a sibling temp file and rename, keeping the original mode.
+        $mode = fileperms($envPath) & 0777;
+        $tmp = $envPath . '.tmp-' . bin2hex(random_bytes(4));
+        File::put($tmp, $envContent);
+        chmod($tmp, $mode);
+        rename($tmp, $envPath);
+
         $this->info('Environment file updated successfully!');
+
+        return true;
     }
 
     /**
-     * Update environment value
+     * Update environment value (GAP-059): always double-quoted with \, " and
+     * $ escaped as phpdotenv reads them, and replaced through a callback so
+     * the value is never interpreted as regex back-references.
      */
     private function updateEnvValue(string $content, string $key, string $value): string
     {
-        $pattern = "/^{$key}=.*$/m";
-        $replacement = "{$key}={$value}";
-        
+        $line = $key . '="' . strtr($value, ['\\' => '\\\\', '"' => '\\"', '$' => '\\$']) . '"';
+        $pattern = '/^' . preg_quote($key, '/') . '=.*$/m';
+
         if (preg_match($pattern, $content)) {
-            return preg_replace($pattern, $replacement, $content);
-        } else {
-            return $content . "\n{$replacement}";
+            return (string) preg_replace_callback($pattern, static fn (): string => $line, $content, 1);
         }
+
+        return rtrim($content, "\n") . "\n" . $line . "\n";
     }
 
     /**

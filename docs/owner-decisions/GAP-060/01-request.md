@@ -1,11 +1,11 @@
 ---
 work_id: GAP-060
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-09-30-gap-060-a11y-perf-workflow-evidence.md
   plan: null
@@ -14,17 +14,22 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-09-30T19:56:11+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-09-30: 'APPROVE GAP-060 Gate 1'. Bound to reviewed Draft PR #329 head d3f104b947fde7b6f878ede4fe3a63ee64733197, canonical base 8233b3ef7b56857e46c62185c8e005e377cd8372. Authorizes preparing Gate 2 only; not workflow/test changes, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-30T19:55:01+07:00"
-  updated_at: "2026-09-30T19:55:17+07:00"
+  updated_at: "2026-09-30T19:56:11+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-060 Gate 1 in-session on 2026-09-30 against Draft PR #329
+head `d3f104b947fde7b6f878ede4fe3a63ee64733197`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

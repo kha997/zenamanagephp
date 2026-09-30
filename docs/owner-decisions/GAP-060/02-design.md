@@ -1,11 +1,11 @@
 ---
 work_id: GAP-060
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-09-30-gap-060-a11y-perf-workflow-evidence.md
   plan: null
@@ -14,21 +14,25 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-09-30T19:58:25+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-09-30: 'APPROVE GAP-060 Gate 2 Option 1'. Reviewed design head: 4dd7739c7c20d934d906586ed95b7241d316971a. Approves Option 1 and its exact contracts/allowlist (keep and fix e2e-tests; remove accessibility-tests, performance-budget, performance-heavy, lighthouse-ci; rename workflow; fix stale E2E expectations with per-item disclosure, stop on genuine app bugs; add WorkflowReferencesExistTest); not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-30T19:56:43+07:00"
-  updated_at: "2026-09-30T19:56:43+07:00"
+  updated_at: "2026-09-30T19:58:25+07:00"
 generated_by: agent
 ---
 
 # GAP-060 — Nightly a11y/perf workflow: Gate 2 design
 
-## OWNER GATE 2: AWAITING OWNER DECISION
+## OWNER GATE 2: APPROVED — OPTION 1
+
+Owner approved Option 1 in-session on 2026-09-30 against reviewed design head
+`4dd7739c7c20d934d906586ed95b7241d316971a`. This authorizes only the bounded implementation defined by this packet;
+it does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

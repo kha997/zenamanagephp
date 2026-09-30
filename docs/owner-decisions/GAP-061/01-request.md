@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-09-30-gap-061-e2e-suite-evidence.md
   plan: null
   branch: docs/GAP-061-e2e-suite-never-worked
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/330
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-30T22:12:17+07:00"
-  updated_at: "2026-09-30T22:12:17+07:00"
+  updated_at: "2026-09-30T22:12:34+07:00"
 generated_by: agent
 ---
 

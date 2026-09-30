@@ -1,11 +1,11 @@
 ---
 work_id: GAP-061
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-09-30-gap-061-e2e-suite-evidence.md
   plan: null
@@ -14,17 +14,24 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-09-30T22:28:11+07:00"
+  owner_response_reference: "Owner decisions in-session on 2026-09-30: product choice 'Gỡ bây giờ' (retire the two broken E2E files now; new journey tests, if wanted, later as separate work) and 'APPROVE GAP-061 Gate 1'. Bound to reviewed Draft PR #330 head 18aaf272c5f0eeef30c006d7210fd931c90f087b, canonical base aac94caf890d7229baa3f514860786088e252ee8. Authorizes preparing a Gate-2 retirement design only; not implementation, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-30T22:12:17+07:00"
-  updated_at: "2026-09-30T22:12:34+07:00"
+  updated_at: "2026-09-30T22:28:11+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED — retire now
+
+Owner approved GAP-061 Gate 1 in-session on 2026-09-30 against Draft PR #330
+head `18aaf272c5f0eeef30c006d7210fd931c90f087b`, choosing **"Gỡ bây giờ"**: retire `CriticalUserFlowsE2ETest` and
+`DashboardE2ETest` now; new journey tests, if wanted, become separate work. This
+authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

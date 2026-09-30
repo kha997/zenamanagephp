@@ -1,11 +1,11 @@
 ---
 work_id: OWN-2026-015
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-09-30-own-2026-015-gap058-059-post-release-reconciliation.md
   plan: null
@@ -14,17 +14,22 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-09-30T17:45:27+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-09-30: 'APPROVE OWN-2026-015 Gate 1.' Bound to reviewed Draft PR #328 head aea17f5df99484fe99c6466016bd773533427959, canonical base 3e6d55f0cd5c1fc68a9725ef1741bd6708bd0c52. Authorizes preparing Gate 2 only; not register edits, Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-30T17:43:42+07:00"
-  updated_at: "2026-09-30T17:43:58+07:00"
+  updated_at: "2026-09-30T17:45:27+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved OWN-2026-015 Gate 1 in-session on 2026-09-30 against Draft PR
+#328 head `aea17f5df99484fe99c6466016bd773533427959`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

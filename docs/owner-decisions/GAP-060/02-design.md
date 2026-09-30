@@ -19,7 +19,7 @@ decision_provenance:
   owner_response_reference: "Owner decision in-session on 2026-09-30: 'APPROVE GAP-060 Gate 2 Option 1'. Reviewed design head: 4dd7739c7c20d934d906586ed95b7241d316971a. Approves Option 1 and its exact contracts/allowlist (keep and fix e2e-tests; remove accessibility-tests, performance-budget, performance-heavy, lighthouse-ci; rename workflow; fix stale E2E expectations with per-item disclosure, stop on genuine app bugs; add WorkflowReferencesExistTest); not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
-superseded_by: null
+superseded_by: "docs/owner-decisions/GAP-060/02-design-v2.md"
 timestamps:
   created_at: "2026-09-30T19:56:43+07:00"
   updated_at: "2026-09-30T19:58:25+07:00"

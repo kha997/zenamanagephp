@@ -1,11 +1,11 @@
 ---
 work_id: GAP-061
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-09-30-gap-061-e2e-suite-evidence.md
   plan: null
@@ -14,21 +14,25 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-09-30T22:30:27+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-09-30: 'APPROVE GAP-061 Gate 2 Option 1'. Reviewed design head: 69996b5174f16babad12686fcfeb0bff68718cf9. Approves Option 1 and its exact allowlist (delete tests/E2E/CriticalUserFlowsE2ETest.php and tests/E2E/DashboardE2ETest.php; plan; GAP-061 packets); not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-30T22:28:57+07:00"
-  updated_at: "2026-09-30T22:28:57+07:00"
+  updated_at: "2026-09-30T22:30:27+07:00"
 generated_by: agent
 ---
 
 # GAP-061 — Retire the never-working E2E files: Gate 2 design
 
-## OWNER GATE 2: AWAITING OWNER DECISION
+## OWNER GATE 2: APPROVED — OPTION 1
+
+Owner approved Option 1 in-session on 2026-09-30 against reviewed design head
+`69996b5174f16babad12686fcfeb0bff68718cf9`. This authorizes only the bounded retirement defined by this packet; it
+does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

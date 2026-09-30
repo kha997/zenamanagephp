@@ -52,7 +52,7 @@ bí mật, không để lại `.env.bak`, và bản sao lưu `.env` chỉ chủ 
 
 ### `app/Console/Commands/ConfigureSMTP.php`
 
-- `updateEnvValue()`: ghi `KEY="…"` với `\\` → `\\\\`, `"` → `\\"`, `$` → `\\$`
+- `updateEnvValue()`: ghi `KEY="…"` với `\` → `\\`, `"` → `\"`, `$` → `\$`
   (định dạng double-quoted của vlucas/phpdotenv v5), thay dòng bằng
   `preg_replace_callback` (không còn back-reference). Hợp đồng kiểm chứng: giá
   trị đọc lại bằng `Dotenv\Parser\Parser` bằng đúng giá trị gốc.

@@ -1,11 +1,11 @@
 ---
 work_id: GAP-059
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-09-30-gap-059-smtp-password-evidence.md
   plan: null
@@ -14,17 +14,22 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-09-30T12:44:32+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-09-30: 'APPROVE GAP-059 Gate 1'. Bound to reviewed Draft PR #327 head 8a61abe242c923ad3c6cedf454623e2ca911e581, canonical base 943577f75e8e519dfb42109a094a2632a670fd35. Authorizes preparing Gate 2 only; not implementation, credential rotation, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-30T12:08:41+07:00"
-  updated_at: "2026-09-30T12:08:57+07:00"
+  updated_at: "2026-09-30T12:44:32+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-059 Gate 1 in-session on 2026-09-30 against Draft PR #327
+head `8a61abe242c923ad3c6cedf454623e2ca911e581`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

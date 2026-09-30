@@ -191,7 +191,7 @@ log "=========================="
 
 # Test SMTP configuration
 log "Testing SMTP configuration..."
-if php artisan smtp:configure --provider=gmail --host=smtp.gmail.com --port=587 --username=test@example.com --password=test123 --from-address=test@example.com --from-name="Test App"; then
+if printf '%s\n' 'test123' | php artisan smtp:configure --no-interaction --password-stdin --provider=gmail --host=smtp.gmail.com --port=587 --username=test@example.com --from-address=test@example.com --from-name="Test App"; then
     success "SMTP configuration test passed"
 else
     warning "SMTP configuration test failed"

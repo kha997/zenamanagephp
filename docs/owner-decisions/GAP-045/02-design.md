@@ -1,11 +1,11 @@
 ---
 work_id: GAP-045
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-01-gap-045-perf-timing-evidence.md
   plan: null
@@ -14,19 +14,25 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-02T00:07:29+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-02: 'APPROVE GAP-045 Gate 2 Option A'. Reviewed design head: 985441e30731531d93caf6ab2714889c5beb86ec. Approves Option A and its exact allowlist (tests/Performance/DashboardPerformanceTest.php only: it_can_load_alerts_with_large_dataset_quickly and it_can_mark_alerts_as_read_quickly gate on query counts and correctness, 450/1000ms reported via reportTimingBudget, thresholds unchanged); not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-02T00:02:09+07:00"
-  updated_at: "2026-10-02T00:02:09+07:00"
+  updated_at: "2026-10-02T00:07:29+07:00"
 generated_by: agent
 ---
 
 # GAP-045 — Dashboard performance timing assertions: Gate 2 design
+
+## OWNER GATE 2: APPROVED — OPTION A
+
+Owner approved Option A in-session on 2026-10-02 against reviewed design head
+`985441e30731531d93caf6ab2714889c5beb86ec`. This authorizes only the bounded implementation defined by this packet;
+it does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

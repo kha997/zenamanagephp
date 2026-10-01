@@ -25,7 +25,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-15T08:13:59+07:00"
-  updated_at: "2026-09-15T11:31:43+07:00"
+  updated_at: "2026-10-01T21:07:07+07:00"
 generated_by: agent
 residual_risk_rating: medium
 mandatory_technical_gate_summary: "Option D and its full behavioral LIVE acceptance contract are implemented and proven, but the release-governance requirement that every current-head check be green has not passed: truthful execution of all 19 DashboardPerformanceTest tests exposes an existing role-based-filtering assertion (HTTP 403 versus expected 200), and the evidence-freshness policy therefore rejects awaiting_owner/ready. Resolving that contradiction would require out-of-scope application/test work or a separately authorized governance/design decision."
@@ -213,30 +213,31 @@ evidence and remains reproducible from the frozen subject.
 
 ## Exact-head CI blocker
 
-At PR head `6ec937232d434eecafae35975548381cabba385f`, the truthful Dashboard
-performance leg had executed all 19 tests and failed real assertions. The Owner
-Governance job's structural lint and digest checks
-passed far enough to enter its bounded live-check polling, then exited non-zero
-with the explicit finding that `awaiting_owner/ready` is invalid while other
-current-head checks are not green. This is not implementation-tree drift; it is
-the exact policy consequence of making the previously false-green test surface
-truthful.
+**Update 2026-10-01 (blocker changed, still blocked).** After merging `main`
+(GAP-053 fixed the role-based 403; GAP-060 had already retired the phantom
+tiers on `main`), PR #316 head `680d7ace34dab1ac23ee87c63f6cbb60882bfb4e` ran
+33/33 green with Monitoring 10 passed / 45 assertions and Dashboard 19 passed
+/ 157 assertions. A fresh disposable zero-selection proof on that tree (branch
+`proof/GAP-041-zero-selection-live-v3`, commit `e538f565`, run `36869114743`,
+jobs `110392045236`/`110392045246`) printed `No tests found` and exited 1 on
+both legs; the branch was deleted and is not an ancestor of PR #316.
 
-No in-scope correction can make both requirements true. Changing the existing
-assertions, changing GAP-045's threshold, optimizing application behavior, or
-weakening/exempting the evidence-freshness policy would all exceed the approved
-GAP-041 contract. Owner/design reconciliation is therefore required before this
-packet may return to `awaiting_owner`.
+At head `9ad1877ccecf98fdac2443b1fc4589b491d40091` (register text only), run
+`36869260580` job `110392498623`: Dashboard 17 passed / 2 failed on the two
+GAP-045 timing assertions — alerts median 529.21ms vs 450ms
+(`DashboardPerformanceTest.php:290`) and mark-100-alerts 1027.92ms vs 1000ms
+(`:410`). The same tree content passed one run earlier, so these are variable
+timing assertions, now visible because the job finally runs the tests.
+
+GAP-041 must not change those thresholds or the application (Owner direction in
+the GAP-045 register row). The evidence-freshness rule therefore still blocks
+`awaiting_owner/ready`.
 
 ## Next decision needed before Gate 3
 
-Choose a separately authorized disposition for the pre-existing Dashboard
-assertion failures or reconcile the Gate-3 all-checks-green rule with the
-approved truthfulness contract. GAP-041 itself should not silently absorb either
-change.
-
-This blocked packet requests no Gate-3 approval. It must remain blocked until a
-new authorized design basis makes exact-head evidence freshness pass.
+Resolve GAP-045 under its own governance (Gate 1: repeated controlled LIVE
+measurements to tell CI variance from a real regression), then re-run this
+packet's exact-head evidence. GAP-041 itself should not absorb that change.
 
 ## What the Owner is not being asked to decide
 

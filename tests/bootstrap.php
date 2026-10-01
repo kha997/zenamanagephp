@@ -55,7 +55,7 @@ if ($invariantsMode !== 'mysql') {
     // ZENA_INVARIANTS_DB=mysql directly (routes-guardrails.yml's
     // mysql-parity step; automated-testing.yml's performance-tests;
     // ci-cd.yml's "Prove GAP-032 migrations" step; a11y-perf-testing.yml's
-    // e2e-tests) runs its own
+    // gap040-cold-start-proof job, GAP-060) runs its own
     // "php artisan migrate[:fresh] --force" step first.
     //
     // This precondition is now enforced, not just documented: both

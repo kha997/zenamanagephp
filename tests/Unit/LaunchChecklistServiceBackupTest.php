@@ -14,6 +14,7 @@ class LaunchChecklistServiceBackupTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config(['backup.disk' => null]);
         $this->backupDir = storage_path('backups');
         if (!is_dir($this->backupDir)) {
             mkdir($this->backupDir, 0755, true);
@@ -118,5 +119,14 @@ class LaunchChecklistServiceBackupTest extends TestCase
     public function test_setup_backup_system_succeeds_when_dir_writable_and_deps_present(): void
     {
         $this->assertTrue($this->callPrivate('setupBackupSystem'));
+    }
+
+    public function test_check_backup_system_is_false_when_backup_disk_is_unreachable(): void
+    {
+        // An unknown/unreachable BACKUP_DISK must fail the readiness check
+        // closed (false), not crash getReadinessScore() with an exception.
+        config(['backup.disk' => 'gap054-missing-disk']);
+
+        $this->assertFalse($this->callPrivate('checkBackupSystem'));
     }
 }

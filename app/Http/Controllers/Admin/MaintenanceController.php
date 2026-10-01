@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\MaintenanceTask;
 use App\Models\PerformanceMetric;
 use App\Models\SystemLog;
+use App\Services\Backup\MysqlClient;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
@@ -277,33 +278,22 @@ class MaintenanceController extends Controller
     }
 
     /**
-     * Clear application cache
+     * Refuse to clear the application cache (GAP-055).
+     *
+     * The default cache store also holds every tenant's rate-limit counters and
+     * OIDC login state, and there is no maintenance-owned cache namespace, so a
+     * web request must never flush it. Compiled config/route/view caches are
+     * owned by the deploy step (GAP-054).
      */
     public function clearCache()
     {
-        try {
-            Artisan::call('cache:clear');
-            Artisan::call('config:clear');
-            Artisan::call('route:clear');
-            Artisan::call('view:clear');
+        $this->logMaintenanceTask('Cache clear refused: shared cache store is never flushed from the web (GAP-055)', 'warning');
 
-            // Clear Redis cache
-            Cache::flush();
-
-            $this->logMaintenanceTask('Cache cleared successfully', 'success');
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Cache cleared successfully'
-            ]);
-        } catch (\Exception $e) {
-            $this->logMaintenanceTask('Cache clear failed: ' . $e->getMessage(), 'error');
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to clear cache: ' . $e->getMessage()
-            ], 500);
-        }
+        return response()->json([
+            'success' => false,
+            'message' => 'Cache clear is disabled: the shared cache holds rate-limit counters and login state for every tenant, '
+                . 'so it is never flushed from the web. Compiled caches are refreshed by deployment.',
+        ], 409);
     }
 
     /**
@@ -421,21 +411,7 @@ class MaintenanceController extends Controller
                     throw new \RuntimeException('MySQL backup configuration is incomplete');
                 }
 
-                $command = sprintf(
-                    'mysqldump --user=%s --password=%s --host=%s --port=%s %s > %s',
-                    $config['username'] ?? '',
-                    $config['password'] ?? '',
-                    $config['host'],
-                    $config['port'] ?? 3306,
-                    $config['database'],
-                    $path
-                );
-
-                exec($command, $output, $returnCode);
-
-                if ($returnCode !== 0) {
-                    throw new \Exception('mysqldump command failed');
-                }
+                app(MysqlClient::class)->dump($config, $path);
 
                 if (!file_exists($path) || filesize($path) === 0) {
                     throw new \Exception('Backup file is empty');

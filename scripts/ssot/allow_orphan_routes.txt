@@ -9,3 +9,4 @@
 /api/project-templates/categories|reason=NEGATIVE_PROBE_LEGACY_SURFACE
 /api/project-templates/{template}/create-project|reason=NEGATIVE_PROBE_LEGACY_SURFACE
 /api/project-templates/{template}/duplicate|reason=NEGATIVE_PROBE_LEGACY_SURFACE
+/api/badges|reason=NEGATIVE_PROBE_LEGACY_SURFACE

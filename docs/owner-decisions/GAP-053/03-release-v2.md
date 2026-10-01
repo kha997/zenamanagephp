@@ -1,0 +1,109 @@
+---
+work_id: GAP-053
+owner_governance_version: 1
+owner_gate_2_record: docs/owner-decisions/GAP-053/02-design.md
+gate: 3
+gate_status: approved
+technical_readiness:
+  value: ready
+  generated_by: engineering_evidence
+owner_decision:
+  value: approved
+  authority: human_owner
+decision_requested: null
+references:
+  spec: docs/audits/2026-09-15-gap-053-dashboard-rbac-performance-fixture-evidence.md
+  plan: docs/superpowers/plans/2026-09-15-gap-053-dashboard-rbac-performance-fixture-implementation.md
+  branch: docs/GAP-053-dashboard-rbac-performance-fixture-gate1
+  pr: https://github.com/kha997/zenamanagephp/pull/317
+  release: null
+decision_provenance:
+  trust_level: claimed_repo_record
+  recorded_by: agent
+  recorded_at: "2026-09-29T06:26:49+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-09-29: 'APPROVE GAP-053 Gate 3'. Bound to refreshed implementation subject b6a18f73599622caaee8018908a9b52aea64d550 (PR head 8f40cb75bd44edf7bf49fd66fc4693982e6dda08, 33/33 checks green) and implementation-tree digest 5c323ec663d0dc4199718f6e0a2b970de598078d6ffca4d6e459a8eebf27233d (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28 to merge PRs verified safe and eligible; no deployment authorized."
+  reconciliation_required: false
+supersedes: "docs/owner-decisions/GAP-053/03-release.md"
+superseded_by: null
+timestamps:
+  created_at: "2026-09-28T23:19:27+07:00"
+  updated_at: "2026-09-29T06:26:49+07:00"
+generated_by: agent
+residual_risk_rating: low
+mandatory_technical_gate_summary: "Implementation content is byte-identical to the v1-approved GAP-053 change; only conflict-free merges of origin/main (latest 30f71045) were added for strict branch protection. Canonical digest recomputed at the refreshed subject; the same tool reproduces the v1-bound digest 8b25a50d at ff825fb9. Exact-head PR CI must be fully green before approval."
+technical_evidence:
+  base_sha: "30f7104588bfc69373a1a21f4d8bc078d50543b7"
+  subject_sha: "b6a18f73599622caaee8018908a9b52aea64d550"
+  implementation_tree_digest: "5c323ec663d0dc4199718f6e0a2b970de598078d6ffca4d6e459a8eebf27233d"
+  verified_pr_head_sha: "b6a18f73599622caaee8018908a9b52aea64d550"
+  verified_at: "2026-09-29T00:11:34+07:00"
+owner_decision_binding:
+  implementation_tree_digest: "5c323ec663d0dc4199718f6e0a2b970de598078d6ffca4d6e459a8eebf27233d"
+  decision_recorded_at: "2026-09-29T06:26:49+07:00"
+---
+
+# GAP-053 — Gate 3 re-presentation after base refresh (v2)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 v2 in-session on 2026-09-29, bound to implementation
+subject `b6a18f73599622caaee8018908a9b52aea64d550` and implementation-tree digest `5c323ec663d0dc4199718f6e0a2b970de598078d6ffca4d6e459a8eebf27233d`. No deployment is
+authorized.
+
+## Owner Summary
+
+Nội dung sửa của GAP-053 **không đổi** so với bản Owner đã duyệt ngày
+2026-09-17 (v1). Chỉ có một việc mới: nhánh được cập nhật với `main` (4 commit
+không liên quan: phát hành GAP-054, bản ghi phát hành GAP-054, file brainstorm,
+đối soát sổ OWN-2026-013)
+vì `main` bắt buộc nhánh phải mới nhất trước khi merge. Việc cập nhật làm đổi
+"dấu vân tay" cây mã, nên quyết định cũ tự động hết hiệu lực và cần Owner duyệt
+lại trên dấu vân tay mới. Đề xuất: duyệt để phát hành.
+
+## What changed since v1
+
+- v1 (approved 2026-09-17) was bound to subject
+  `ff825fb9eb41a0ca927da2446dec999c25c964be`, digest
+  `8b25a50d7ea7e5fca0cd9cf7f7b0fe2282913620acd5309a45405c633bc6e73e`, base
+  `adacc5cc5fb8a08353cc90576076724e45e6e8bc`. v1 is preserved unchanged except
+  for its `superseded_by` pointer.
+- `origin/main` advanced by three commits: `a473298e` (GAP-054 release, PR
+  #318), `5441bc2e` (GAP-054 execution record, PR #319), `2e47f01d`
+  (brainstorm restore, PR #321). Branch protection on `main` is `strict`, so
+  the branch was refreshed with a normal merge commit (no rebase, no
+  force-push): `9f88f5225bb6f9e3210e97040c8aa8113ebe6f31`, then again after
+  PR #320 merged (`30f7104588bfc69373a1a21f4d8bc078d50543b7`, OWN-2026-013 register reconciliation): `b6a18f73599622caaee8018908a9b52aea64d550`. Both
+  merges were conflict-free.
+- `git diff origin/main...HEAD` after the refresh is exactly the same six
+  GAP-053 files as before (832 insertions, 4 deletions; the only functional
+  file is `tests/Performance/DashboardPerformanceTest.php`, 8+/4-). No
+  GAP-053 content was edited.
+- None of the three incoming commits touches
+  `tests/Performance/DashboardPerformanceTest.php`, dashboard code, RBAC, or
+  the GAP-053 fixture helper.
+
+All v1 proof (RED at Gate-2 head, local GREEN, canonical identity probe,
+GAP-052 contract, genuine-MySQL exact-method run `34961116166`) remains valid
+for the unchanged implementation and is incorporated by reference from
+`docs/owner-decisions/GAP-053/03-release.md`.
+
+## Exact-head evidence (refreshed)
+
+See `technical_evidence` above: exact-head CI on the refreshed subject and the
+canonical digest recomputed with
+`owner_governance_compute_implementation_tree_digest()` for `GAP-053` (this v2
+packet excluded; v1 included as an ordinary blob).
+
+## Residual risk and rollback
+
+Unchanged from v1: low, test-only. Rollback is a revert of the squash commit.
+
+## Owner decision requested
+
+Approve release of the refreshed exact implementation tree bound above,
+request a correction, or defer.
+
+## What the owner is NOT being asked to decide
+
+Not re-reviewing the GAP-053 fix itself (unchanged since v1), GAP-041 PR #316,
+GAP-045 thresholds, or any deployment.

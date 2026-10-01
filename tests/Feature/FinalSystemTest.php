@@ -298,14 +298,15 @@ class FinalSystemTest extends TestCase
 
         $this->get('/admin/maintenance')->assertStatus(200);
 
+        // GAP-055: clear-cache refuses (409) and never flushes the shared store.
         $actions = [
-            ['/admin/maintenance/clear-cache', ['success' => true]],
-            ['/admin/maintenance/database', ['success' => true]],
-            ['/admin/maintenance/cleanup-logs', ['success' => true]],
-            ['/admin/maintenance/backup-database', ['success' => true]],
+            ['/admin/maintenance/clear-cache', 409, ['success' => false]],
+            ['/admin/maintenance/database', 200, ['success' => true]],
+            ['/admin/maintenance/cleanup-logs', 200, ['success' => true]],
+            ['/admin/maintenance/backup-database', 200, ['success' => true]],
         ];
 
-        foreach ($actions as [$path, $expectedJson]) {
+        foreach ($actions as [$path, $expectedStatus, $expectedJson]) {
             $uri = ltrim($path, '/');
 
             if (!$this->routeExists('POST', $uri)) {
@@ -313,7 +314,7 @@ class FinalSystemTest extends TestCase
             }
 
             $response = $this->postJson($path);
-            $response->assertStatus(200)->assertJson($expectedJson);
+            $response->assertStatus($expectedStatus)->assertJson($expectedJson);
         }
     }
 
@@ -817,14 +818,14 @@ class FinalSystemTest extends TestCase
     {
         $this->actingAs($this->admin);
 
-        // Test maintenance command execution
-        $exitCode = Artisan::call('maintenance:run', ['--task' => 'cache']);
+        $exitCode = Artisan::call('maintenance:run', ['--task' => 'logs']);
         $this->assertEquals(0, $exitCode);
 
-        // Verify maintenance task was created
         $this->assertDatabaseHas('maintenance_tasks', [
-            'task' => 'Clear application cache',
+            'task' => 'Cleanup old logs',
         ]);
+
+        $this->assertNotEquals(0, Artisan::call('maintenance:run', ['--task' => 'cache']));
     }
 
     /**

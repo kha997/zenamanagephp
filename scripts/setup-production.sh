@@ -344,32 +344,55 @@ optimize_application() {
 }
 
 # Create backup script
+# GAP-056: the database password lives only in a root-owned 0600 option file;
+# the generated backup script contains no secret, is 0700, never passes a
+# password on the command line, keeps backups in a 0700 directory, and never
+# archives .env files.
 create_backup_script() {
     log "Creating backup script..."
-    
-    sudo mkdir -p "$BACKUP_PATH"
-    
-    sudo tee /usr/local/bin/zenamanage-backup > /dev/null << EOF
-#!/bin/bash
-DATE=\$(date +%Y%m%d_%H%M%S)
-BACKUP_DIR="$BACKUP_PATH"
 
-# Database backup
-mysqldump -u $DB_USER -p$DB_PASS $DB_NAME > \$BACKUP_DIR/db_\$DATE.sql
+    local cnf_path="${BACKUP_CNF_PATH:-/etc/zenamanage/backup.cnf}"
+    local script_path="${BACKUP_SCRIPT_PATH:-/usr/local/bin/zenamanage-backup}"
+    local escaped_pass="${DB_PASS//\\/\\\\}"
+    escaped_pass="${escaped_pass//\"/\\\"}"
 
-# File backup
-tar -czf \$BACKUP_DIR/files_\$DATE.tar.gz -C $PROJECT_PATH .
+    sudo mkdir -p "$BACKUP_PATH" "$(dirname "$cnf_path")"
+    sudo chmod 700 "$BACKUP_PATH"
+
+    # printf is a builtin, so the password is never a process argument.
+    (umask 077 && printf '[client]\nuser="%s"\npassword="%s"\n' "$DB_USER" "$escaped_pass" \
+        | sudo tee "$cnf_path" > /dev/null)
+    sudo chmod 600 "$cnf_path"
+
+    {
+        printf '#!/bin/bash\n'
+        printf 'set -e\n'
+        printf 'umask 077\n'
+        printf 'CNF=%q\n' "$cnf_path"
+        printf 'BACKUP_DIR=%q\n' "$BACKUP_PATH"
+        printf 'PROJECT_PATH=%q\n' "$PROJECT_PATH"
+        printf 'DB_NAME=%q\n' "$DB_NAME"
+        cat <<'SCRIPT'
+DATE=$(date +%Y%m%d_%H%M%S)
+
+# Database backup (credentials from the 0600 option file only)
+mysqldump --defaults-extra-file="$CNF" "$DB_NAME" > "$BACKUP_DIR/db_$DATE.sql"
+
+# File backup (never archive .env files)
+tar -czf "$BACKUP_DIR/files_$DATE.tar.gz" --exclude='.env' --exclude='*.env' --exclude='.env.*' -C "$PROJECT_PATH" .
 
 # Keep only last 7 days of backups
-find \$BACKUP_DIR -name "*.sql" -mtime +7 -delete
-find \$BACKUP_DIR -name "*.tar.gz" -mtime +7 -delete
-EOF
-    
-    sudo chmod +x /usr/local/bin/zenamanage-backup
-    
-    # Add to crontab
-    (crontab -l 2>/dev/null; echo "0 2 * * * /usr/local/bin/zenamanage-backup") | crontab -
-    
+find "$BACKUP_DIR" -name "*.sql" -mtime +7 -delete
+find "$BACKUP_DIR" -name "*.tar.gz" -mtime +7 -delete
+SCRIPT
+    } | sudo tee "$script_path" > /dev/null
+
+    sudo chmod 700 "$script_path"
+
+    # Root's crontab: the script and its option file are root-only.
+    # grep -v exits 1 on an empty crontab; that must not abort under set -e.
+    { sudo crontab -l 2>/dev/null | grep -vF "$script_path" || true; echo "0 2 * * * $script_path"; } | sudo crontab -
+
     success "Backup script created"
 }
 

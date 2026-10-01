@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
+use App\Services\Backup\BackupArchiveStore;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Artisan;
 
 class LaunchChecklistService
 {
@@ -215,39 +215,36 @@ class LaunchChecklistService
         ];
     }
 
-    public function executePreLaunchActions(): array
+    /**
+     * Read-only pre-launch readiness (GAP-057).
+     *
+     * Migrations and compiled config/route caches are owned by the deployment
+     * step (.github/workflows/production.yml -> php artisan deploy:migrate,
+     * GAP-049 migration safety contract). A web request only reports their
+     * state; it never runs an Artisan command or writes any file.
+     *
+     * @return array{pending_migrations: int|null, config_cached: bool, routes_cached: bool, performed_by: string, error?: string}
+     */
+    public function getPreLaunchReadiness(): array
     {
-        $actions = [];
-        
+        $readiness = [
+            'pending_migrations' => null,
+            'config_cached' => app()->configurationIsCached(),
+            'routes_cached' => app()->routesAreCached(),
+            'performed_by' => 'deployment (.github/workflows/production.yml -> php artisan deploy:migrate)',
+        ];
+
         try {
-            // Clear caches
-            Artisan::call('cache:clear');
-            Artisan::call('config:clear');
-            Artisan::call('route:clear');
-            $actions['clear_caches'] = 'success';
-        } catch (\Exception $e) {
-            $actions['clear_caches'] = 'failed: ' . $e->getMessage();
+            $migrator = app('migrator');
+            $files = $migrator->getMigrationFiles(array_merge([database_path('migrations')], $migrator->paths()));
+            $repository = $migrator->getRepository();
+            $ran = $repository->repositoryExists() ? $repository->getRan() : [];
+            $readiness['pending_migrations'] = count(array_diff(array_keys($files), $ran));
+        } catch (\Throwable $e) {
+            $readiness['error'] = 'Could not read migration status: ' . $e->getMessage();
         }
-        
-        try {
-            // Optimize application
-            Artisan::call('optimize');
-            Artisan::call('config:cache');
-            Artisan::call('route:cache');
-            $actions['optimize_application'] = 'success';
-        } catch (\Exception $e) {
-            $actions['optimize_application'] = 'failed: ' . $e->getMessage();
-        }
-        
-        try {
-            // Run migrations
-            Artisan::call('migrate', ['--force' => true]);
-            $actions['run_migrations'] = 'success';
-        } catch (\Exception $e) {
-            $actions['run_migrations'] = 'failed: ' . $e->getMessage();
-        }
-        
-        return $actions;
+
+        return $readiness;
     }
 
     public function executeLaunchActions(): array
@@ -404,24 +401,13 @@ class LaunchChecklistService
 
     private function getLatestBackupTimestamp(): ?int
     {
-        $backupDir = storage_path('backups');
+        try {
+            return BackupArchiveStore::fromConfig()->newestTimestamp();
+        } catch (\Throwable $e) {
+            report($e);
 
-        // Match every artifact `backup:run` can produce: the compressed
-        // archive from a normal run, plus raw .sql/.sql.gz in case a run
-        // was interrupted before compression (see BackupCommand cleanup fix).
-        $patterns = ['/backup_*.tar.gz', '/backup_*', '/*.sql', '/*.sql.gz'];
-
-        $newest = null;
-        foreach ($patterns as $pattern) {
-            foreach (glob($backupDir . $pattern) ?: [] as $path) {
-                $mtime = filemtime($path);
-                if ($mtime !== false && ($newest === null || $mtime > $newest)) {
-                    $newest = $mtime;
-                }
-            }
+            return null;
         }
-
-        return $newest;
     }
 
     private function checkMonitoringSetup(): bool

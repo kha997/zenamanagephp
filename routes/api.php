@@ -974,18 +974,6 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
     });
 });
 
-        // Badge Management Routes
-        Route::prefix('badges')->middleware(['auth:sanctum'])->group(function () {
-            Route::get('/{itemId}', [App\Http\Controllers\Api\BadgeController::class, 'getBadgeCount'])->name('api.badges.get-count');
-            Route::post('/counts', [App\Http\Controllers\Api\BadgeController::class, 'getBadgeCounts'])->name('api.badges.get-counts');
-            Route::put('/{itemId}', [App\Http\Controllers\Api\BadgeController::class, 'updateBadgeCount'])->name('api.badges.update-count');
-            Route::post('/update', [App\Http\Controllers\Api\BadgeController::class, 'updateBadgeCounts'])->name('api.badges.update-counts');
-            Route::delete('/{itemId}/cache', [App\Http\Controllers\Api\BadgeController::class, 'clearBadgeCache'])->name('api.badges.clear-cache');
-            Route::delete('/cache', [App\Http\Controllers\Api\BadgeController::class, 'clearUserBadgeCache'])->name('api.badges.clear-user-cache');
-            Route::post('/config', [App\Http\Controllers\Api\BadgeController::class, 'getBadgeConfig'])->name('api.badges.get-config');
-            Route::post('/batch-update', [App\Http\Controllers\Api\BadgeController::class, 'batchUpdateBadges'])->name('api.badges.batch-update');
-        });
-
         // User Preferences Routes
         Route::prefix('user-preferences')->middleware(['auth:sanctum'])->group(function () {
             Route::get('/', [App\Http\Controllers\Api\UserPreferenceController::class, 'getPreferences'])->middleware('rbac:user-preferences.read')->name('api.user-preferences.get');

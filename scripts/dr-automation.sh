@@ -5,6 +5,9 @@
 
 set -e
 
+# GAP-056: MySQL credentials via 0600 option files, never on the command line.
+source "$(dirname "${BASH_SOURCE[0]}")/lib/mysql-credentials.sh"
+
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
@@ -105,7 +108,8 @@ automate_full_backup() {
     # Backup database
     if command -v mysqldump >/dev/null 2>&1; then
         log_info "Backing up database..."
-        mysqldump -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" > "$backup_path/database.sql"
+        mysql_option_file DB_CNF "$DB_USER" "$DB_PASSWORD"
+        mysqldump --defaults-extra-file="$DB_CNF" -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" "$DB_NAME" > "$backup_path/database.sql"
         log_success "Database backup completed"
     else
         log_warning "mysqldump not available, skipping database backup"
@@ -156,7 +160,8 @@ automate_incremental_backup() {
     # Backup database changes
     if command -v mysqldump >/dev/null 2>&1; then
         log_info "Backing up database changes..."
-        mysqldump -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" > "$backup_path/database.sql"
+        mysql_option_file DB_CNF "$DB_USER" "$DB_PASSWORD"
+        mysqldump --defaults-extra-file="$DB_CNF" -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" "$DB_NAME" > "$backup_path/database.sql"
         log_success "Database backup completed"
     fi
     
@@ -190,7 +195,8 @@ automate_database_backup() {
     # Backup database
     if command -v mysqldump >/dev/null 2>&1; then
         log_info "Backing up database..."
-        mysqldump -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" > "$backup_path/database.sql"
+        mysql_option_file DB_CNF "$DB_USER" "$DB_PASSWORD"
+        mysqldump --defaults-extra-file="$DB_CNF" -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" "$DB_NAME" > "$backup_path/database.sql"
         log_success "Database backup completed"
     else
         log_error "mysqldump not available"
@@ -312,7 +318,8 @@ automate_full_recovery() {
     # Recover database
     if [ -f "$backup_path/database.sql" ]; then
         log_info "Recovering database..."
-        mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < "$backup_path/database.sql"
+        mysql_option_file DB_CNF "$DB_USER" "$DB_PASSWORD"
+        mysql --defaults-extra-file="$DB_CNF" -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" "$DB_NAME" < "$backup_path/database.sql"
         log_success "Database recovered"
     fi
     
@@ -354,7 +361,8 @@ automate_database_recovery() {
     
     # Recover database
     log_info "Recovering database..."
-    mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < "$backup_path/database.sql"
+    mysql_option_file DB_CNF "$DB_USER" "$DB_PASSWORD"
+    mysql --defaults-extra-file="$DB_CNF" -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" "$DB_NAME" < "$backup_path/database.sql"
     log_success "Database recovered"
     
     # Start database

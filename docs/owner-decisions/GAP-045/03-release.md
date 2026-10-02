@@ -1,14 +1,14 @@
 ---
 work_id: GAP-045
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-01-gap-045-perf-timing-evidence.md
   plan: null
@@ -17,15 +17,15 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-02T07:03:09+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-02: 'APPROVE GAP-045 Gate 3'. Given after the packet was presented at PR head e2e7bb9a46d5e71cb1cb4ad235c1b5c0d73357e6 with 33/33 exact-head checks green; bound to implementation subject 25df79395a83c5d9fe6d106d2c6e5f67184466b1 and implementation-tree digest 04ceb1e05fdd069034e6eb0c3a0d4f95693cc2721ba38c12a5987b20b6898fe5 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-02T00:31:37+07:00"
-  updated_at: "2026-10-02T00:31:37+07:00"
+  updated_at: "2026-10-02T07:03:09+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "Option-A implementation at subject 25df7939: diff exactly the Gate-2 allowlist (one test file, two methods + private reportTimingBudget); 3 local mutation proofs (N+1 in markAlertAsRead -> 1002>800 RED; alerts list truncated to 50 -> count gate RED; budget forced to 1ms -> warning annotation + summary row, test GREEN); full DashboardPerformanceTest 19/19 locally; disposable 10x CI run 36897403420 on GAP-041 head + this change: 10/10 jobs 19/19 passed incl. 3 AMD EPYC 7763 runners, 5 jobs emitted over-budget warnings instead of failing; all 33 exact-head PR checks green; canonical digest computed at subject."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "25df79395a83c5d9fe6d106d2c6e5f67184466b1"
   verified_at: "2026-10-02T00:31:37+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "04ceb1e05fdd069034e6eb0c3a0d4f95693cc2721ba38c12a5987b20b6898fe5"
+  decision_recorded_at: "2026-10-02T07:03:09+07:00"
 ---
 
 # GAP-045 — Gate 3 release decision
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-02, bound to implementation subject
+`25df79395a83c5d9fe6d106d2c6e5f67184466b1` and implementation-tree digest `04ceb1e05fdd069034e6eb0c3a0d4f95693cc2721ba38c12a5987b20b6898fe5`. No deployment is authorized.
 
 ## Gói quyết định phát hành
 

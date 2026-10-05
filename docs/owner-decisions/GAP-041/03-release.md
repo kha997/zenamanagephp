@@ -1,14 +1,14 @@
 ---
 work_id: GAP-041
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/superpowers/specs/2026-08-21-gap-041-ci-test-selection-truthfulness-design.md
   plan: docs/superpowers/plans/2026-09-15-gap-041-ci-test-selection-truthfulness-implementation.md
@@ -17,15 +17,15 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-05T23:26:07+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-05: 'APPROVE GAP-041 Gate 3'. Given after the packet was presented at PR head cf712f89724924db8e40bf1074075c34532e2e2f with 33/33 exact-head checks green; bound to implementation subject a9e7fe7e8110aac8801030628a58ea1f6ca5b81a and implementation-tree digest 1859db39134df36e004710dbca1235228d3cd37b881a1e59b363cead3d6bd278 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-09-15T08:13:59+07:00"
-  updated_at: "2026-10-05T22:52:15+07:00"
+  updated_at: "2026-10-05T23:26:07+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "Option D at subject a9e7fe7e (main 49c84e37 merged in): performance-tests runs --group=performance --fail-on-empty-test-suite after the GAP-039 MySQL preflight; exact-head run 37331118265: Monitoring 10 passed/45 assertions, Dashboard 19 passed/161 assertions, all 33 PR checks green; fresh disposable zero-selection proof v4 on this exact tree (run 37335745972) printed 'No tests found' and exited 1 on both legs; both former blockers resolved by separately governed releases (GAP-053 role 403, GAP-045 timing); canonical digest computed at subject."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "a9e7fe7e8110aac8801030628a58ea1f6ca5b81a"
   verified_at: "2026-10-05T22:52:15+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "1859db39134df36e004710dbca1235228d3cd37b881a1e59b363cead3d6bd278"
+  decision_recorded_at: "2026-10-05T23:26:07+07:00"
 ---
 
 # GAP-041 — Gate 3 release decision packet
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-05, bound to implementation subject
+`a9e7fe7e8110aac8801030628a58ea1f6ca5b81a` and implementation-tree digest `1859db39134df36e004710dbca1235228d3cd37b881a1e59b363cead3d6bd278`. No deployment is authorized.
 
 ## Gói quyết định phát hành
 

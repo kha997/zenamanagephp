@@ -287,10 +287,16 @@ class DashboardPerformanceTest extends TestCase
             echo "\nAlerts latency samples (ms): [{$samplesText}] | median: " . sprintf('%.2f', $medianMs) . " | query counts: [{$queriesText}] | max queries: {$maxQueryCount}\n";
         }
 
-        $this->assertLessThan(
-            $latencyBudgetMs,
-            $medianMs,
-            "Alerts median load time should be less than {$latencyBudgetMs}ms"
+        // GAP-045: wall-clock latency depends on the CI runner's CPU class, so it is
+        // reported against the budget; the deterministic checks below are the gate.
+        $this->reportTimingBudget('Alerts median load', $medianMs, $latencyBudgetMs);
+
+        $expectedAlertCount = DashboardAlert::forUser($this->user->id)->notExpired()->count();
+        $this->assertGreaterThan(0, $expectedAlertCount);
+        $this->assertCount(
+            $expectedAlertCount,
+            $response->json('data'),
+            'Alerts endpoint should return every alert of the user'
         );
         $this->assertLessThanOrEqual(
             $queryBudget,
@@ -397,6 +403,12 @@ class DashboardPerformanceTest extends TestCase
             ->take(100)
             ->get();
 
+        $this->assertCount(100, $alerts);
+        $queryBudgetPerRequest = 8;
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
         $startTime = microtime(true);
         
         foreach ($alerts as $alert) {
@@ -406,10 +418,24 @@ class DashboardPerformanceTest extends TestCase
         
         $endTime = microtime(true);
         $executionTime = ($endTime - $startTime) * 1000; // Convert to milliseconds
-        
-        $this->assertLessThan(1000, $executionTime, 'Marking 100 alerts as read should complete in less than 1000ms');
-        
-        echo "\nMark 100 alerts as read time: {$executionTime}ms\n";
+
+        $queryCount = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        // GAP-045: the timing is reported, not asserted; query count and the
+        // persisted result are the deterministic gate.
+        $this->reportTimingBudget('Mark 100 alerts as read', $executionTime, 1000);
+
+        $this->assertLessThanOrEqual(
+            $queryBudgetPerRequest * $alerts->count(),
+            $queryCount,
+            "Marking alerts as read should use at most {$queryBudgetPerRequest} queries per request"
+        );
+        $this->assertSame(
+            0,
+            DashboardAlert::whereIn('id', $alerts->pluck('id'))->where('is_read', false)->count(),
+            'Every marked alert should be persisted as read'
+        );
     }
 
     /** @test */
@@ -686,6 +712,33 @@ class DashboardPerformanceTest extends TestCase
             $this->assertLessThan(500, $executionTime, "Role-based filtering for {$role} should complete in less than 500ms");
             
             echo "\nRole-based filtering for {$role}: {$executionTime}ms\n";
+        }
+    }
+
+    /**
+     * GAP-045: report a wall-clock timing against its budget without failing the test.
+     * Over budget on GitHub Actions emits a warning annotation and a job-summary row.
+     */
+    private function reportTimingBudget(string $label, float $ms, float $budgetMs): void
+    {
+        $line = sprintf('%s: %.2fms (budget %.0fms)', $label, $ms, $budgetMs);
+        echo "\n{$line}\n";
+
+        if ($ms <= $budgetMs) {
+            return;
+        }
+
+        if (getenv('GITHUB_ACTIONS') === 'true') {
+            echo "::warning title=Perf budget (GAP-045)::{$line}\n";
+        }
+
+        $summaryFile = getenv('GITHUB_STEP_SUMMARY');
+        if (is_string($summaryFile) && $summaryFile !== '') {
+            file_put_contents(
+                $summaryFile,
+                sprintf("| %s | %.2fms | %.0fms | over budget (GAP-045, not gating) |\n", $label, $ms, $budgetMs),
+                FILE_APPEND
+            );
         }
     }
 }

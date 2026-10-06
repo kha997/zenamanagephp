@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-10-06-gap-062-ssot-test-lint-false-green-evidence.md
   plan: null
   branch: docs/GAP-062-ssot-test-lint-false-green
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/334
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

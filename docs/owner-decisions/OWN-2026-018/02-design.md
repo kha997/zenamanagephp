@@ -1,11 +1,11 @@
 ---
 work_id: OWN-2026-018
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-06-own-2026-018-gap062-post-release-reconciliation.md
   plan: null
@@ -14,19 +14,25 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-06T17:58:33+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-06: 'APPROVE OWN-2026-018 Gate 2 Option B'. Reviewed design head: a5fd782b8dd8ea3ee5c00612fc9ec5f493a2a34e. Approves Option B and its exact allowlist (OPERATIONAL_GAP_REGISTER.md new Tier-1 row GAP-062 after GAP-061 per the row contract, plus docs/audits/2026-10-06-own-2026-018-reconciliation-record.md); not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-06T17:55:46+07:00"
-  updated_at: "2026-10-06T17:55:46+07:00"
+  updated_at: "2026-10-06T17:58:33+07:00"
 generated_by: agent
 ---
 
 # OWN-2026-018 — GAP-062 post-release reconciliation: Gate 2 design
+
+## OWNER GATE 2: APPROVED — OPTION B
+
+Owner approved Option B in-session on 2026-10-06 against reviewed design head
+`a5fd782b8dd8ea3ee5c00612fc9ec5f493a2a34e`. This authorizes only the bounded register reconciliation and dedicated
+record defined by this packet; not Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

@@ -1,11 +1,11 @@
 ---
 work_id: GAP-063
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-06-gap-063-treasury-runtime-readiness-audit.md
   plan: null
@@ -14,19 +14,25 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-06T19:51:30+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-06: 'APPROVE GAP-063 Gate 2 Option A'. Reviewed design head: cc82ec8c800cb37ec455ba1f7e8abfd368c15a80. Approves Option A and its exact allowlist, including the two flagged points (alias-based role defaults across the inconsistent role catalogue; Client gets no Treasury access) and the 16th code treasury.all_projects; not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-06T18:37:44+07:00"
-  updated_at: "2026-10-06T18:37:44+07:00"
+  updated_at: "2026-10-06T19:51:30+07:00"
 generated_by: agent
 ---
 
 # GAP-063 — Treasury S1 foundation: Gate 2 design
+
+## OWNER GATE 2: APPROVED — OPTION A
+
+Owner approved Option A in-session on 2026-10-06 against reviewed design head
+`cc82ec8c800cb37ec455ba1f7e8abfd368c15a80`. This authorizes only the bounded implementation defined by this packet;
+it does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

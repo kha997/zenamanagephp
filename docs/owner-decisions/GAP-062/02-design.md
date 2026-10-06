@@ -1,11 +1,11 @@
 ---
 work_id: GAP-062
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-06-gap-062-ssot-test-lint-false-green-evidence.md
   plan: null
@@ -14,19 +14,25 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-06T11:20:36+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-06: 'APPROVE GAP-062 Gate 2 Option 1'. Reviewed design head: 9e75dc2715ccab26b38e4f0825728bc13df2428a. Approves Option 1 and its exact allowlist (lint_tests.sh LC_ALL=C + rg fail-closed guard + line-insensitive baseline compare; denylist minus three live endpoints; regenerated baselines; ripgrep install step in ci-cd.yml code-quality job and ci-cd-code-quality-debug.yml); not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-06T11:15:55+07:00"
-  updated_at: "2026-10-06T11:15:55+07:00"
+  updated_at: "2026-10-06T11:20:36+07:00"
 generated_by: agent
 ---
 
 # GAP-062 — SSOT test lint false-green: Gate 2 design
+
+## OWNER GATE 2: APPROVED — OPTION 1
+
+Owner approved Option 1 in-session on 2026-10-06 against reviewed design head
+`9e75dc2715ccab26b38e4f0825728bc13df2428a`. This authorizes only the bounded implementation defined by this packet;
+it does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

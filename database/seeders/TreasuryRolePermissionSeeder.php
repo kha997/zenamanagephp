@@ -93,11 +93,13 @@ class TreasuryRolePermissionSeeder extends Seeder
         $lowered = array_values(array_unique(array_map('strtolower', $roleNames)));
         $placeholders = implode(',', array_fill(0, count($lowered), '?'));
 
-        Role::query()
+        $roles = Role::query()
             ->whereRaw("LOWER(name) IN ({$placeholders})", $lowered)
-            ->get()
-            ->each(static function (Role $role) use ($permissionIds): void {
-                $role->permissions()->syncWithoutDetaching($permissionIds);
-            });
+            ->get();
+
+        foreach ($roles as $role) {
+            /** @var Role $role */
+            $role->permissions()->syncWithoutDetaching($permissionIds);
+        }
     }
 }

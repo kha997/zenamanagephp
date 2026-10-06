@@ -1,14 +1,14 @@
 ---
 work_id: OWN-2026-018
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-06-own-2026-018-reconciliation-record.md
   plan: null
@@ -17,15 +17,15 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-06T18:06:52+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-06: 'APPROVE OWN-2026-018 Gate 3'. Given after the packet was presented at PR head c14f5739514c22754b5d89c02251bc2d4125351d with both exact-head checks green; bound to implementation subject 1c9d4d4a3d44699bfcec95a017f724085e203be8 and implementation-tree digest 452a933b59efa18876fee3abb0225afab3e81c06bde3a5824097f86ec1fcad94 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-06T18:01:26+07:00"
-  updated_at: "2026-10-06T18:01:26+07:00"
+  updated_at: "2026-10-06T18:06:52+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "Documentation-only subject 1c9d4d4a: diff vs origin/main is exactly the Option-B allowlist (one new register row + reconciliation record) plus OWN-2026-018 Gate-1 evidence and Gate 1/2 packets; structural lint, gate ordering, tests/Unit/OwnerGovernance (187) and git diff --check pass; GAP-062 Gate-3 packet byte-identical; both exact-head PR checks green; canonical digest computed at subject."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "1c9d4d4a3d44699bfcec95a017f724085e203be8"
   verified_at: "2026-10-06T18:01:26+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "452a933b59efa18876fee3abb0225afab3e81c06bde3a5824097f86ec1fcad94"
+  decision_recorded_at: "2026-10-06T18:06:52+07:00"
 ---
 
 # OWN-2026-018 — Gate 3 release decision
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-06, bound to implementation subject
+`1c9d4d4a3d44699bfcec95a017f724085e203be8` and implementation-tree digest `452a933b59efa18876fee3abb0225afab3e81c06bde3a5824097f86ec1fcad94`. No deployment is authorized.
 
 ## Gói quyết định phát hành
 

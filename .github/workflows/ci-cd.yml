@@ -138,5 +138,11 @@ jobs:
     - name: Run Deptrac (architecture boundaries)
       run: composer deptrac
 
+    - name: Install ripgrep (SSOT test lint, GAP-062)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ripgrep
+        rg --version
+
     - name: Run SSOT Lint
       run: composer ssot:lint

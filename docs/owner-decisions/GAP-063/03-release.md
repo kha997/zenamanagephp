@@ -1,14 +1,14 @@
 ---
 work_id: GAP-063
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-06-gap-063-treasury-runtime-readiness-audit.md
   plan: docs/superpowers/plans/2026-10-06-gap-063-treasury-s1-foundation-implementation.md
@@ -17,15 +17,15 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-06T23:10:38+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-06: 'APPROVE GAP-063 Gate 3'. Given after the packet (including the two disclosed files beyond the Gate-2 allowlist and the no-Finance-role-in-default-seeding note) was presented at PR head 71c1fc2baa47e9181ce179f669b75c61b28dbbe9 with 33/33 exact-head checks green; bound to implementation subject ba15d6837b3148c568b9e3b9510213a025433b30 and implementation-tree digest 52ba46313d71d5d200710eab794944eba9ae727611291d33d3cae0177801f507 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-06T22:23:55+07:00"
-  updated_at: "2026-10-06T22:23:55+07:00"
+  updated_at: "2026-10-06T23:10:38+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "Treasury S1 at subject ba15d683: 16 treasury.* codes + alias-based role defaults, TreasuryPolicy (tenant + code + all_projects-or-membership), parties/wallets API and operator pages; 44 new feature tests green; related suites green locally (276 + 515 tests); composer ssot:lint parts, governance lint and gate ordering pass; default DatabaseSeeder run gives System Admin 16, Project Manager 5, Project Member 1 treasury codes; pages verified in a local run; first CI run red on one PHPStan error (fixed), then 33/33 PR checks green; two disclosed files beyond the Gate-2 allowlist; canonical digest computed at subject."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "ba15d6837b3148c568b9e3b9510213a025433b30"
   verified_at: "2026-10-06T22:23:55+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "52ba46313d71d5d200710eab794944eba9ae727611291d33d3cae0177801f507"
+  decision_recorded_at: "2026-10-06T23:10:38+07:00"
 ---
 
 # GAP-063 — Gate 3 release decision (Treasury S1)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-06, bound to implementation subject
+`ba15d6837b3148c568b9e3b9510213a025433b30` and implementation-tree digest `52ba46313d71d5d200710eab794944eba9ae727611291d33d3cae0177801f507`. No deployment is authorized.
 
 ## Gói quyết định phát hành
 

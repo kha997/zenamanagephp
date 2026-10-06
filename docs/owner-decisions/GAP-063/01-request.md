@@ -1,11 +1,11 @@
 ---
 work_id: GAP-063
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-06-gap-063-treasury-runtime-readiness-audit.md
   plan: null
@@ -14,17 +14,22 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-06T18:34:17+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-06: 'APPROVE GAP-063 Gate 1'. Bound to reviewed Draft PR #336 head cf70fcfab3b3b6940b1cbce1c990d29e2653b1b0, canonical base f652ceebfa5f641207138243a4a8e3eba7a2909c, including the Owner's in-session business answers recorded in this packet (Admin/super_admin = X with self-approval, Finance = accountant, PM + SiteEngineer = Z; project wallets only in S1; web UI from S1). Authorizes preparing Gate 2 for slice S1 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-06T18:23:59+07:00"
-  updated_at: "2026-10-06T18:23:59+07:00"
+  updated_at: "2026-10-06T18:34:17+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-063 Gate 1 in-session on 2026-10-06 against Draft PR #336
+head `cf70fcfab3b3b6940b1cbce1c990d29e2653b1b0`. This authorizes preparation of Gate 2 for slice S1 only.
 
 ## Owner Summary
 

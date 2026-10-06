@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-10-06-gap-063-treasury-runtime-readiness-audit.md
   plan: null
   branch: docs/GAP-063-treasury-runtime-gate1
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/336
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

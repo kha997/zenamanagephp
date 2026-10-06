@@ -22,6 +22,8 @@ final class OperatorNavigationDefinition
             new OperatorNavItem('Nhà cung cấp', 'operator.vendors.index', 'Mua sắm', 'vendors'),
             new OperatorNavItem('BOQ', 'operator.boqs.index', 'Thương mại', 'boqs'),
             new OperatorNavItem('Hợp đồng', 'operator.contracts.index', 'Thương mại', 'contracts'),
+            new OperatorNavItem('Ngân quỹ', 'operator.treasury.index', 'Tài chính', 'treasury'),
+            new OperatorNavItem('Đối tác tài chính', 'operator.treasury.parties.index', 'Tài chính', 'treasury-parties'),
             new OperatorNavItem('Dự án', 'app.projects', 'Dự án', 'projects'),
             new OperatorNavItem('Công việc', 'app.tasks', 'Dự án', 'tasks'),
             new OperatorNavItem('Khối lượng', 'app.workload.index', 'Dự án', 'workload'),

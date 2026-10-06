@@ -4,6 +4,7 @@ namespace App\Models\Treasury;
 
 use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -18,6 +19,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class TreasuryFinancialParty extends Model
 {
+    /** @use HasFactory<\Database\Factories\Treasury\TreasuryFinancialPartyFactory> */
+    use HasFactory;
     use HasUlids;
     use TenantScope;
 

@@ -685,6 +685,19 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::get('/vendors/{id}', [App\Http\Controllers\Web\VendorPageController::class, 'show'])->middleware('rbac:vendor.view')->name('vendors.show');
 
     // Contracts
+    // Project Treasury S1 (GAP-063): parties (tenant level) and project wallets
+    Route::get('/treasury', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'index'])->middleware('rbac:treasury.view')->name('treasury.index');
+    Route::get('/treasury/parties', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'parties'])->middleware('rbac:treasury.manage_parties')->name('treasury.parties.index');
+    Route::post('/treasury/parties', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'storeParty'])->middleware('rbac:treasury.manage_parties')->name('treasury.parties.store');
+    Route::get('/treasury/parties/{party}/edit', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'editParty'])->middleware('rbac:treasury.manage_parties')->name('treasury.parties.edit');
+    Route::post('/treasury/parties/{party}/update', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'updateParty'])->middleware('rbac:treasury.manage_parties')->name('treasury.parties.update');
+    Route::post('/treasury/parties/{party}/delete', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'destroyParty'])->middleware('rbac:treasury.manage_parties')->name('treasury.parties.destroy');
+    Route::get('/projects/{project}/treasury', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'project'])->middleware('rbac:treasury.view')->name('treasury.projects.show');
+    Route::post('/projects/{project}/treasury/wallets', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'storeWallet'])->middleware('rbac:treasury.manage_wallets')->name('treasury.projects.wallets.store');
+    Route::get('/projects/{project}/treasury/wallets/{wallet}/edit', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'editWallet'])->middleware('rbac:treasury.manage_wallets')->name('treasury.projects.wallets.edit');
+    Route::post('/projects/{project}/treasury/wallets/{wallet}/update', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'updateWallet'])->middleware('rbac:treasury.manage_wallets')->name('treasury.projects.wallets.update');
+    Route::post('/projects/{project}/treasury/wallets/{wallet}/delete', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'destroyWallet'])->middleware('rbac:treasury.manage_wallets')->name('treasury.projects.wallets.destroy');
+
     Route::get('/contracts', [App\Http\Controllers\Web\ContractPageController::class, 'index'])->middleware('rbac:contract.view')->name('contracts.index');
     Route::get('/contracts/create', [App\Http\Controllers\Web\ContractPageController::class, 'create'])->middleware('rbac:contract.create')->name('contracts.create');
     Route::post('/contracts', [App\Http\Controllers\Web\ContractPageController::class, 'store'])->middleware('rbac:contract.create')->name('contracts.store');

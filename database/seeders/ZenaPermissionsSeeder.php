@@ -254,6 +254,24 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'invitation.create', 'module' => 'invitation', 'action' => 'create', 'description' => 'Create invitations'],
         ['code' => 'invitation.revoke', 'module' => 'invitation', 'action' => 'revoke', 'description' => 'Revoke invitations'],
         ['code' => 'invitation.accept', 'module' => 'invitation', 'action' => 'accept', 'description' => 'Accept invitations'],
+
+        // Project Treasury (GAP-063 S1; GAP-037 design)
+        ['code' => 'treasury.view', 'module' => 'treasury', 'action' => 'view', 'description' => 'View project treasury (wallets, parties, later balances)'],
+        ['code' => 'treasury.all_projects', 'module' => 'treasury', 'action' => 'all_projects', 'description' => 'Access treasury of every project in the tenant without project membership'],
+        ['code' => 'treasury.manage_parties', 'module' => 'treasury', 'action' => 'manage_parties', 'description' => 'Create/update/delete treasury financial parties'],
+        ['code' => 'treasury.manage_wallets', 'module' => 'treasury', 'action' => 'manage_wallets', 'description' => 'Create/update/delete project treasury wallets'],
+        ['code' => 'treasury.declare_funding', 'module' => 'treasury', 'action' => 'declare_funding', 'description' => 'Declare funding received'],
+        ['code' => 'treasury.create_transfer', 'module' => 'treasury', 'action' => 'create_transfer', 'description' => 'Create internal transfers between wallets'],
+        ['code' => 'treasury.create_expense', 'module' => 'treasury', 'action' => 'create_expense', 'description' => 'Create treasury expenses'],
+        ['code' => 'treasury.submit_expense', 'module' => 'treasury', 'action' => 'submit_expense', 'description' => 'Submit treasury expenses for approval'],
+        ['code' => 'treasury.approve_expense', 'module' => 'treasury', 'action' => 'approve_expense', 'description' => 'Approve or reject treasury expenses'],
+        ['code' => 'treasury.self_approve_expense', 'module' => 'treasury', 'action' => 'self_approve_expense', 'description' => 'Approve treasury expenses created by oneself (audited)'],
+        ['code' => 'treasury.reconcile', 'module' => 'treasury', 'action' => 'reconcile', 'description' => 'Reconcile posted treasury transactions'],
+        ['code' => 'treasury.reverse', 'module' => 'treasury', 'action' => 'reverse', 'description' => 'Reverse posted treasury transactions'],
+        ['code' => 'treasury.adjust', 'module' => 'treasury', 'action' => 'adjust', 'description' => 'Post treasury adjustments'],
+        ['code' => 'treasury.view_audit', 'module' => 'treasury', 'action' => 'view_audit', 'description' => 'View treasury audit trail'],
+        ['code' => 'treasury.export', 'module' => 'treasury', 'action' => 'export', 'description' => 'Export treasury reports'],
+        ['code' => 'treasury.manage_period_lock', 'module' => 'treasury', 'action' => 'manage_period_lock', 'description' => 'Manage treasury period locks'],
     ];
 
     private const PERMISSION_TABLE = 'permissions';

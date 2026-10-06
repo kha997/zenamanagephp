@@ -10,6 +10,9 @@
     >
         <x-ui.button-link :href="route('app.projects')" variant="secondary">Quay lại</x-ui.button-link>
         <x-ui.button-link href="/app/projects/{{ $project->id }}/edit">Sửa dự án</x-ui.button-link>
+        @can('treasury.view-project', $project)
+            <x-ui.button-link :href="route('operator.treasury.projects.show', $project->id)" variant="secondary">Ngân quỹ</x-ui.button-link>
+        @endcan
         <x-ui.template-dropdown :links="$projectTemplates->map(fn ($tpl) => [
             'label' => $tpl->name,
             'href' => route('app.projects.documents.render', [$project->id, $tpl->id]),

@@ -1,11 +1,11 @@
 ---
 work_id: GAP-062
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-06-gap-062-ssot-test-lint-false-green-evidence.md
   plan: null
@@ -14,17 +14,22 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-06T11:15:11+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-06: 'APPROVE GAP-062 Gate 1'. Bound to reviewed Draft PR #334 head d363d4ff026044c8462959396fec1a4ac341c859, canonical base 1c2b01607c6ee014adad777a9f6656cd0e9298c4. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-06T11:09:35+07:00"
-  updated_at: "2026-10-06T11:09:35+07:00"
+  updated_at: "2026-10-06T11:15:11+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-062 Gate 1 in-session on 2026-10-06 against Draft PR #334
+head `d363d4ff026044c8462959396fec1a4ac341c859`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

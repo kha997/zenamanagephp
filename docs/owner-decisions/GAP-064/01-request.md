@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-10-07-gap-064-treasury-s2-ledger-readiness.md
   plan: null
   branch: docs/GAP-064-treasury-s2-ledger
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/337
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

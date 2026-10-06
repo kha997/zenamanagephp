@@ -1,7 +1,30 @@
+tests/Feature/Api/ChangeRequestStakeholderNotificationTest.php:141:        $cr = ChangeRequest::create([
+tests/Feature/Api/ChangeRequestStakeholderNotificationTest.php:166:        $cr = ChangeRequest::create([
+tests/Feature/Api/ChangeRequestStakeholderNotificationTest.php:74:        return ChangeRequest::create([
+tests/Feature/Api/EventRecordOutboxApiTest.php:116:        EventRecord::create([
+tests/Feature/Api/EventRecordOutboxApiTest.php:125:        $taskRecord = EventRecord::create([
+tests/Feature/Api/EventRecordOutboxApiTest.php:150:        $record = EventRecord::create([
+tests/Feature/Api/EventRecordOutboxApiTest.php:170:        $foreignRecord = EventRecord::create([
+tests/Feature/Api/EventRecordOutboxApiTest.php:46:        $own = EventRecord::create([
+tests/Feature/Api/EventRecordOutboxApiTest.php:64:        EventRecord::create([
+tests/Feature/Api/EventRecordOutboxApiTest.php:88:        EventRecord::create([
+tests/Feature/Api/EventRecordOutboxApiTest.php:97:        $escalated = EventRecord::create([
+tests/Feature/Api/ExportTenantIsolationTest.php:330:        $request = \Illuminate\Http\Request::create('/api/tasks/bulk/export', 'POST', ['format' => 'json']);
+tests/Feature/Api/RfiApiTest.php:211:        \App\Models\UserRoleProject::create([
+tests/Feature/Api/RfiApiTest.php:333:        \App\Models\UserRoleProject::create([
+tests/Feature/Api/RfiApiTest.php:393:        \App\Models\UserRoleProject::create([
+tests/Feature/Api/RfiApiTest.php:412:        \App\Models\UserRoleProject::create([
+tests/Feature/Api/RfiApiTest.php:440:        \App\Models\UserRoleProject::create([
+tests/Feature/Api/RfiApiTest.php:587:        \App\Models\UserRoleProject::create([
+tests/Feature/Api/RfiApiTest.php:692:        \App\Models\UserRoleProject::create(['project_id' => $this->project->id, 'user_id' => $target->id, 'role_id' => $memberRole->id]);
+tests/Feature/Api/RfiApiTest.php:717:        \App\Models\UserRoleProject::create(['project_id' => $this->project->id, 'user_id' => $target->id, 'role_id' => $targetMemberRole->id]);
+tests/Feature/Api/RfiApiTest.php:728:        \App\Models\UserRoleProject::create(['project_id' => $this->project->id, 'user_id' => $regular->id, 'role_id' => $role->id]);
+tests/Feature/Api/RfiApiTest.php:753:        \App\Models\UserRoleProject::create([
+tests/Feature/Api/RfiApiTest.php:778:        \App\Models\UserRoleProject::create([
+tests/Feature/Api/SubmittalResubmitLifecycleTest.php:207:            $role = Role::create([
 tests/Feature/Api/SupportTenantIsolationTest.php:107:        SupportDocumentation::create([
 tests/Feature/Api/SupportTenantIsolationTest.php:119:        SupportDocumentation::create([
 tests/Feature/Api/SupportTenantIsolationTest.php:49:        $ticket = SupportTicket::create([
 tests/Feature/Api/SupportTenantIsolationTest.php:76:        $ticket = SupportTicket::create([
-tests/Feature/Api/TaskDependenciesTest.php:327:        return TaskDependency::create([
 tests/Feature/Api/V1DashboardTaskAssignmentsCompatibilityTest.php:188:        $request = \Illuminate\Http\Request::create("/api/v1/dashboard/users/{$this->user->id}/assignments/stats", 'GET');
 tests/Feature/Api/V1TaskAssignmentsCompatibilityTest.php:188:        $request = \Illuminate\Http\Request::create("/api/v1/task-assignments/{$this->assignmentId}", 'GET');

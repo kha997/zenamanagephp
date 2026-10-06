@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# GAP-062: deterministic sort/comm order on macOS and Linux runners.
+export LC_ALL=C
+
+# GAP-062: every collector below shells out to ripgrep; without it each
+# inventory is silently empty and the lint reports a false pass.
+if ! command -v rg >/dev/null 2>&1; then
+  echo "[ssot] ripgrep (rg) is required — refusing to report a false pass" >&2
+  exit 1
+fi
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
@@ -181,8 +191,20 @@ check_with_baseline() {
     return 0
   fi
 
+  # GAP-062: compare without line numbers (path:NNN:content -> path:content)
+  # so edits elsewhere in a file do not turn baselined lines into "new" ones.
+  local base_keys="$TMP_DIR/base_keys_${label}.txt"
   local new_file="$TMP_DIR/new_${label}.txt"
-  comm -13 "$baseline_file" "$current_file" > "$new_file" || true
+  sed -E 's/^([^:]+):[0-9]+:/\1:/' "$baseline_file" | sort -u > "$base_keys"
+  : > "$new_file"
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    local key
+    key="$(printf '%s\n' "$line" | sed -E 's/^([^:]+):[0-9]+:/\1:/')"
+    if ! grep -qxF -- "$key" "$base_keys"; then
+      printf '%s\n' "$line" >> "$new_file"
+    fi
+  done < "$current_file"
 
   if [[ -s "$new_file" ]]; then
     echo ""

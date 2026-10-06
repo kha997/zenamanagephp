@@ -1,0 +1,64 @@
+tests/Feature/Api/RfiApiTest.php:211:        \App\Models\UserRoleProject::create([
+tests/Feature/Api/RfiApiTest.php:333:        \App\Models\UserRoleProject::create([
+tests/Feature/Api/RfiApiTest.php:393:        \App\Models\UserRoleProject::create([
+tests/Feature/Api/RfiApiTest.php:412:        \App\Models\UserRoleProject::create([
+tests/Feature/Api/RfiApiTest.php:440:        \App\Models\UserRoleProject::create([
+tests/Feature/Api/RfiApiTest.php:587:        \App\Models\UserRoleProject::create([
+tests/Feature/Api/RfiApiTest.php:692:        \App\Models\UserRoleProject::create(['project_id' => $this->project->id, 'user_id' => $target->id, 'role_id' => $memberRole->id]);
+tests/Feature/Api/RfiApiTest.php:717:        \App\Models\UserRoleProject::create(['project_id' => $this->project->id, 'user_id' => $target->id, 'role_id' => $targetMemberRole->id]);
+tests/Feature/Api/RfiApiTest.php:728:        \App\Models\UserRoleProject::create(['project_id' => $this->project->id, 'user_id' => $regular->id, 'role_id' => $role->id]);
+tests/Feature/Api/RfiApiTest.php:753:        \App\Models\UserRoleProject::create([
+tests/Feature/Api/RfiApiTest.php:778:        \App\Models\UserRoleProject::create([
+tests/Feature/Api/SubmittalResubmitLifecycleTest.php:207:            $role = Role::create([
+tests/Feature/GAP042Gate3Round1CorrectionsTest.php:133:        $globalRole = Role::create(['name' => 'C2Global-' . uniqid(), 'scope' => 'system']);
+tests/Feature/GAP042Gate3Round1CorrectionsTest.php:134:        $globalPerm = Permission::create(['code' => 'c2.globalview', 'module' => 'c2', 'action' => 'globalview']);
+tests/Feature/GAP042Gate3Round1CorrectionsTest.php:137:        $ownRole = Role::create(['name' => 'C2Own-' . uniqid(), 'scope' => 'custom', 'tenant_id' => $this->tenantA->id]);
+tests/Feature/GAP042Gate3Round1CorrectionsTest.php:138:        $ownPerm = Permission::create(['code' => 'c2.ownview', 'module' => 'c2', 'action' => 'ownview']);
+tests/Feature/GAP042Gate3Round1CorrectionsTest.php:141:        $otherRole = Role::create(['name' => 'C2Other-' . uniqid(), 'scope' => 'custom', 'tenant_id' => $this->tenantB->id]);
+tests/Feature/GAP042Gate3Round1CorrectionsTest.php:142:        $otherPerm = Permission::create(['code' => 'c2.otherview', 'module' => 'c2', 'action' => 'otherview']);
+tests/Feature/GAP042Gate3Round1CorrectionsTest.php:159:        $ownRole = Role::create(['name' => 'C2ImportOwn-' . uniqid(), 'scope' => 'custom', 'tenant_id' => $this->tenantA->id]);
+tests/Feature/GAP042Gate3Round1CorrectionsTest.php:160:        Permission::create(['code' => 'c2i.action', 'module' => 'c2i', 'action' => 'action']);
+tests/Feature/GAP042Gate3Round1CorrectionsTest.php:183:        $globalRole = Role::create(['name' => 'C2ImportGlobal-' . uniqid(), 'scope' => 'system']);
+tests/Feature/GAP042Gate3Round1CorrectionsTest.php:184:        Permission::create(['code' => 'c2ig.action', 'module' => 'c2ig', 'action' => 'action']);
+tests/Feature/GAP042Gate3Round1CorrectionsTest.php:207:        $bRole = Role::create(['name' => 'C2ImportBOnly-' . uniqid(), 'scope' => 'custom', 'tenant_id' => $this->tenantB->id]);
+tests/Feature/GAP042Gate3Round1CorrectionsTest.php:208:        Permission::create(['code' => 'c2ib.action', 'module' => 'c2ib', 'action' => 'action']);
+tests/Feature/GAP042Gate3Round1CorrectionsTest.php:237:        $role = Role::create(['name' => 'C3Escalate-' . uniqid(), 'scope' => 'custom', 'tenant_id' => $this->tenantA->id]);
+tests/Feature/GAP042Gate3Round1CorrectionsTest.php:258:        $malformed = Role::create(['name' => 'C3Malformed-' . uniqid(), 'scope' => 'system']);
+tests/Feature/GAP042Gate3Round1CorrectionsTest.php:275:        $genuine = Role::create(['name' => 'C3Genuine-' . uniqid(), 'scope' => 'system', 'tenant_id' => null]);
+tests/Feature/GAP042Gate3Round1CorrectionsTest.php:297:        $role = Role::create(['name' => 'C4Role-' . uniqid(), 'scope' => 'project', 'tenant_id' => $this->tenantA->id]);
+tests/Feature/GAP042Gate3Round1CorrectionsTest.php:330:        $bRole = Role::create(['name' => 'C4BRole-' . uniqid(), 'scope' => 'project', 'tenant_id' => $this->tenantB->id]);
+tests/Feature/GAP042Gate3Round1CorrectionsTest.php:358:        $role = Role::create(['name' => 'C4Legit-' . uniqid(), 'scope' => 'project', 'tenant_id' => $this->tenantA->id]);
+tests/Feature/GAP042Gate3Round1CorrectionsTest.php:385:        $bRole = Role::create(['name' => 'C4Custom-' . uniqid(), 'scope' => 'custom', 'tenant_id' => $this->tenantB->id]);
+tests/Feature/GAP042Gate3Round1CorrectionsTest.php:467:        $role = Role::create(['name' => 'C6Actor-' . uniqid(), 'scope' => 'system']);
+tests/Feature/GAP042Gate3Round2CorrectionsTest.php:137:        $ownRole = Role::create(['name' => 'C10ImportOwn-' . uniqid(), 'scope' => 'custom', 'tenant_id' => $this->tenantA->id]);
+tests/Feature/GAP042Gate3Round2CorrectionsTest.php:138:        Permission::create(['code' => 'c10i.action', 'module' => 'c10i', 'action' => 'action']);
+tests/Feature/GAP042Gate3Round2CorrectionsTest.php:188:        $bRole = Role::create(['name' => 'C11CrossTenant-' . uniqid(), 'scope' => 'custom', 'tenant_id' => $this->tenantB->id]);
+tests/Feature/GAP042Gate3Round2CorrectionsTest.php:212:        $globalRole = Role::create(['name' => 'C11Global-' . uniqid(), 'scope' => 'system']);
+tests/Feature/GAP042Gate3Round2CorrectionsTest.php:235:        $ownRole = Role::create(['name' => 'C11Own-' . uniqid(), 'scope' => 'custom', 'tenant_id' => $this->tenantA->id]);
+tests/Feature/GAP042RbacProductionFidelityTest.php:142:        $roleA = Role::create(['name' => 'RoleA-' . uniqid(), 'scope' => 'custom', 'tenant_id' => $this->tenantA->id]);
+tests/Feature/GAP042RbacProductionFidelityTest.php:143:        $roleB = Role::create(['name' => 'RoleB-' . uniqid(), 'scope' => 'custom', 'tenant_id' => $this->tenantB->id]);
+tests/Feature/GAP042RbacProductionFidelityTest.php:144:        $systemRole = Role::create(['name' => 'GlobalSys-' . uniqid(), 'scope' => 'system', 'tenant_id' => null]);
+tests/Feature/GAP042RbacProductionFidelityTest.php:229:        $perm1 = Permission::create(['code' => 'gap042.view', 'module' => 'gap042', 'action' => 'view']);
+tests/Feature/GAP042RbacProductionFidelityTest.php:230:        $perm2 = Permission::create(['code' => 'gap042.edit', 'module' => 'gap042', 'action' => 'edit']);
+tests/Feature/GAP042RbacProductionFidelityTest.php:232:        $systemRole = Role::create(['name' => 'Sys-' . uniqid(), 'scope' => 'system']);
+tests/Feature/GAP042RbacProductionFidelityTest.php:235:        $customRole = Role::create(['name' => 'Cus-' . uniqid(), 'scope' => 'custom', 'tenant_id' => $this->tenantA->id]);
+tests/Feature/GAP042RbacProductionFidelityTest.php:239:        $projectRole = Role::create(['name' => 'Proj-' . uniqid(), 'scope' => 'project', 'tenant_id' => $this->tenantA->id]);
+tests/Feature/GAP042RbacProductionFidelityTest.php:272:        $perm = Permission::create(['code' => 'gap042.custom.check', 'module' => 'gap042', 'action' => 'customcheck']);
+tests/Feature/GAP042RbacProductionFidelityTest.php:273:        $role = Role::create(['name' => 'CustomRole-' . uniqid(), 'scope' => 'custom', 'tenant_id' => $this->tenantA->id]);
+tests/Feature/GAP042RbacProductionFidelityTest.php:297:        $systemRole = Role::create(['name' => 'SysAssign-' . uniqid(), 'scope' => 'system']);
+tests/Feature/GAP042RbacProductionFidelityTest.php:315:        $customRole = Role::create(['name' => 'CustAssign-' . uniqid(), 'scope' => 'custom', 'tenant_id' => $this->tenantA->id]);
+tests/Feature/GAP042RbacProductionFidelityTest.php:320:        $projectRole = Role::create(['name' => 'ProjAssign-' . uniqid(), 'scope' => 'project', 'tenant_id' => $this->tenantA->id]);
+tests/Feature/GAP042RbacProductionFidelityTest.php:328:        $permission = Permission::create(['code' => 'gap042.sync.check', 'module' => 'gap042', 'action' => 'synccheck']);
+tests/Feature/GAP042RbacProductionFidelityTest.php:348:        $projectRole = Role::create(['name' => 'BulkProj-' . uniqid(), 'scope' => 'project', 'tenant_id' => $this->tenantA->id]);
+tests/Feature/GAP042RbacProductionFidelityTest.php:378:        $bRole = Role::create(['name' => 'BOnlyCustom-' . uniqid(), 'scope' => 'custom', 'tenant_id' => $this->tenantB->id]);
+tests/Feature/GAP042RbacProductionFidelityTest.php:397:        $aRole = Role::create(['name' => 'AOnlyCustom-' . uniqid(), 'scope' => 'custom', 'tenant_id' => $this->tenantA->id]);
+tests/Feature/GAP042RbacProductionFidelityTest.php:415:        $aProjectRole = Role::create(['name' => 'AProjRole-' . uniqid(), 'scope' => 'project', 'tenant_id' => $this->tenantA->id]);
+tests/Feature/GAP042RbacProductionFidelityTest.php:433:        $role = Role::create(['name' => 'IdentityCheck-' . uniqid(), 'scope' => 'system']);
+tests/Feature/GAP042RbacProductionFidelityTest.php:457:        $projectRole = Role::create(['name' => 'RestoredProj-' . uniqid(), 'scope' => 'project', 'tenant_id' => $this->tenantA->id]);
+tests/Feature/GAP042RbacProductionFidelityTest.php:497:        $aRole = Role::create(['name' => 'CrossProj-' . uniqid(), 'scope' => 'project', 'tenant_id' => $this->tenantA->id]);
+tests/Feature/GAP042RbacProductionFidelityTest.php:538:        $global = Role::create(['name' => 'GlobalPrecedence-' . uniqid(), 'scope' => 'system', 'tenant_id' => null]);
+tests/Feature/GAP042RbacProductionFidelityTest.php:539:        $roleA = Role::create(['name' => 'PrecedenceA-' . uniqid(), 'scope' => 'custom', 'tenant_id' => $this->tenantA->id]);
+tests/Feature/GAP042RbacProductionFidelityTest.php:540:        $roleB = Role::create(['name' => 'PrecedenceB-' . uniqid(), 'scope' => 'custom', 'tenant_id' => $this->tenantB->id]);
+tests/Feature/GAP042RbacProductionFidelityTest.php:573:        $global = Role::create(['name' => 'GlobalRO-' . uniqid(), 'scope' => 'system', 'tenant_id' => null]);
+tests/Feature/GAP042RbacProductionFidelityTest.php:574:        $permission = Permission::create(['code' => 'gap042.global.ro', 'module' => 'gap042', 'action' => 'ro']);
+tests/Feature/GAP042RbacProductionFidelityTest.php:611:        $ownRole = Role::create(['name' => 'OwnMutable-' . uniqid(), 'scope' => 'custom', 'tenant_id' => $this->tenantA->id]);

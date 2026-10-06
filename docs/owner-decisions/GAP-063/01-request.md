@@ -65,6 +65,14 @@ trong dự án (khung trống cho các lát sau). Chưa có ghi sổ tiền.
    theo dự án trước?
 3. **Giao diện:** có màn hình web ngay từ S1, hay làm API trước?
 
+## Câu trả lời của Owner (trong phiên, 2026-10-06)
+
+1. **Vai trò:** Admin (và super_admin) = chủ doanh nghiệp X, được tự duyệt chi;
+   Finance = kế toán; PM và SiteEngineer = kỹ sư/chỉ huy Z (không tự duyệt). Các
+   vai trò khác chỉ xem khi là thành viên dự án.
+2. **Ví:** chỉ ví theo dự án trong S1; ví dùng chung công ty để lát sau.
+3. **Giao diện:** có màn hình web ngay từ S1 (kèm API).
+
 ## Loại trừ rõ ràng
 
 Không mở lại thiết kế đã duyệt (A–D, v17); không sửa
@@ -77,7 +85,7 @@ Gate 1 chỉ là tài liệu.
 
 ## Đề xuất
 
-Phê duyệt Gate 1 (S1) và trả lời 3 câu hỏi.
+Phê duyệt Gate 1 (S1); Gate 2 sẽ thiết kế theo 3 câu trả lời trên.
 
 ## Decision Needed
 

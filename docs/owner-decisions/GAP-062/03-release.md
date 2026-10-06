@@ -1,14 +1,14 @@
 ---
 work_id: GAP-062
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-06-gap-062-ssot-test-lint-false-green-evidence.md
   plan: null
@@ -17,15 +17,15 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-06T13:02:35+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-06: 'APPROVE GAP-062 Gate 3'. Given after the packet was presented at PR head b7c636b6b36f6e0316c9865006438a0b05905c2c with 33/33 exact-head checks green; bound to implementation subject db44ecfaf2e1e7481763132677c3b27e803a692c and implementation-tree digest 0610c418c0af00db147ec794b7fe04aed01fbcbf399d21cb30106adb86083f74 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-06T12:21:39+07:00"
-  updated_at: "2026-10-06T12:21:39+07:00"
+  updated_at: "2026-10-06T13:02:35+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "Option-1 implementation at subject db44ecfa: diff exactly the Gate-2 allowlist; local proofs (rg hidden -> exit 1 with guard message; new raw Role::create -> exit 1; blank lines above baselined lines -> pass; clean tree -> pass); baselines only grew in the three disclosed categories (raw_model_create 7->30 incl. one stale entry dropped, raw_model_create_feature 0->64, raw_model_create_zena 0->1), all others unchanged; exact-head CI run 37413461093 code-quality job prints ripgrep 14.1.0 and 'SSOT test lint passed' with zero 'rg: command not found'; disposable proof run 37413491370 fails code-quality on the planted Permission::create; 33/33 PR checks green; canonical digest computed at subject."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "db44ecfaf2e1e7481763132677c3b27e803a692c"
   verified_at: "2026-10-06T12:21:39+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "0610c418c0af00db147ec794b7fe04aed01fbcbf399d21cb30106adb86083f74"
+  decision_recorded_at: "2026-10-06T13:02:35+07:00"
 ---
 
 # GAP-062 — Gate 3 release decision
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-06, bound to implementation subject
+`db44ecfaf2e1e7481763132677c3b27e803a692c` and implementation-tree digest `0610c418c0af00db147ec794b7fe04aed01fbcbf399d21cb30106adb86083f74`. No deployment is authorized.
 
 ## Gói quyết định phát hành
 

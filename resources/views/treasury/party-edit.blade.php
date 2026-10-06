@@ -26,7 +26,7 @@
                     <input id="name" name="name" type="text" class="operator-input" value="{{ old('name', $party->name) }}" maxlength="255" required>
                 </div>
             </div>
-            <button type="submit" class="operator-button">Lưu</button>
+            <button type="submit" class="operator-button operator-button-primary">Lưu</button>
         </form>
     </x-ui.card>
 @endsection

@@ -29,7 +29,7 @@
                     <input id="name" name="name" type="text" class="operator-input" value="{{ old('name') }}" maxlength="255" required>
                 </div>
             </div>
-            <button type="submit" class="operator-button">Thêm đối tác</button>
+            <button type="submit" class="operator-button operator-button-primary">Thêm đối tác</button>
         </form>
     </x-ui.card>
 

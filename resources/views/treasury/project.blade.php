@@ -48,7 +48,7 @@
             <form method="POST" action="{{ route('operator.treasury.projects.wallets.store', $project->id) }}" class="space-y-5" data-testid="treasury-wallet-form">
                 @csrf
                 @include('treasury._wallet-fields', ['wallet' => null])
-                <button type="submit" class="operator-button">Thêm ví</button>
+                <button type="submit" class="operator-button operator-button-primary">Thêm ví</button>
             </form>
         </x-ui.card>
     @endif

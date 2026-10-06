@@ -13,7 +13,7 @@
         <form method="POST" action="{{ route('operator.treasury.projects.wallets.update', [$project->id, $wallet->id]) }}" class="space-y-5">
             @csrf
             @include('treasury._wallet-fields', ['wallet' => $wallet])
-            <button type="submit" class="operator-button">Lưu</button>
+            <button type="submit" class="operator-button operator-button-primary">Lưu</button>
         </form>
     </x-ui.card>
 @endsection

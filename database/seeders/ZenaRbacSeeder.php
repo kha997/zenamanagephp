@@ -30,6 +30,7 @@ class ZenaRbacSeeder extends Seeder
         $this->createRoles();
         $this->createUsers();
         $this->assignRolePermissions();
+        $this->call(TreasuryRolePermissionSeeder::class);
 
         if (env('ZENA_RBAC_SEED_SAMPLE_DATA', false)) {
             try {
@@ -94,6 +95,23 @@ class ZenaRbacSeeder extends Seeder
             'report.view', 'report.export',
             // Admin
             'admin.user.manage', 'admin.role.manage', 'admin.system.manage',
+            // Project Treasury (GAP-063)
+            'treasury.view',
+            'treasury.all_projects',
+            'treasury.manage_parties',
+            'treasury.manage_wallets',
+            'treasury.declare_funding',
+            'treasury.create_transfer',
+            'treasury.create_expense',
+            'treasury.submit_expense',
+            'treasury.approve_expense',
+            'treasury.self_approve_expense',
+            'treasury.reconcile',
+            'treasury.reverse',
+            'treasury.adjust',
+            'treasury.view_audit',
+            'treasury.export',
+            'treasury.manage_period_lock',
         ];
 
         foreach ($codes as $code) {

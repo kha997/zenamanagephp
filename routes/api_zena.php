@@ -311,6 +311,23 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::delete('/{id}', [\App\Http\Controllers\Api\MaterialController::class, 'destroy'])->middleware('rbac:material.delete')->name('materials.destroy');
         });
 
+        // Project Treasury S1 (GAP-063): tenant-level parties, project wallets
+        Route::group(['prefix' => 'treasury/parties', 'as' => 'treasury.parties.'], function () {
+            Route::get('/', [\App\Http\Controllers\Api\Treasury\TreasuryPartyController::class, 'index'])->middleware('rbac:treasury.view')->name('index');
+            Route::post('/', [\App\Http\Controllers\Api\Treasury\TreasuryPartyController::class, 'store'])->middleware('rbac:treasury.manage_parties')->name('store');
+            Route::get('/{party}', [\App\Http\Controllers\Api\Treasury\TreasuryPartyController::class, 'show'])->middleware('rbac:treasury.view')->name('show');
+            Route::put('/{party}', [\App\Http\Controllers\Api\Treasury\TreasuryPartyController::class, 'update'])->middleware('rbac:treasury.manage_parties')->name('update');
+            Route::delete('/{party}', [\App\Http\Controllers\Api\Treasury\TreasuryPartyController::class, 'destroy'])->middleware('rbac:treasury.manage_parties')->name('destroy');
+        });
+
+        Route::group(['prefix' => 'projects/{project}/treasury/wallets', 'as' => 'treasury.wallets.'], function () {
+            Route::get('/', [\App\Http\Controllers\Api\Treasury\TreasuryWalletController::class, 'index'])->middleware('rbac:treasury.view')->name('index');
+            Route::post('/', [\App\Http\Controllers\Api\Treasury\TreasuryWalletController::class, 'store'])->middleware('rbac:treasury.manage_wallets')->name('store');
+            Route::get('/{wallet}', [\App\Http\Controllers\Api\Treasury\TreasuryWalletController::class, 'show'])->middleware('rbac:treasury.view')->name('show');
+            Route::put('/{wallet}', [\App\Http\Controllers\Api\Treasury\TreasuryWalletController::class, 'update'])->middleware('rbac:treasury.manage_wallets')->name('update');
+            Route::delete('/{wallet}', [\App\Http\Controllers\Api\Treasury\TreasuryWalletController::class, 'destroy'])->middleware('rbac:treasury.manage_wallets')->name('destroy');
+        });
+
         Route::group(['prefix' => 'vendors'], function () {
             Route::get('/', [\App\Http\Controllers\Api\VendorController::class, 'index'])->middleware('rbac:vendor.view')->name('vendors.index');
             Route::post('/', [\App\Http\Controllers\Api\VendorController::class, 'store'])->middleware('rbac:vendor.create')->name('vendors.store');

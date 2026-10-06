@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Policies\TreasuryPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+use Illuminate\Support\Facades\Gate;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -54,6 +56,12 @@ class AuthServiceProvider extends ServiceProvider
     public function boot()
     {
         $this->registerPolicies();
+
+        // GAP-063: Project Treasury abilities (no single owning model).
+        Gate::define('treasury.view-project', [TreasuryPolicy::class, 'viewProject']);
+        Gate::define('treasury.manage-wallets', [TreasuryPolicy::class, 'manageWallets']);
+        Gate::define('treasury.view-parties', [TreasuryPolicy::class, 'viewParties']);
+        Gate::define('treasury.manage-parties', [TreasuryPolicy::class, 'manageParties']);
         
         // Temporarily disable Spatie Permission to fix cache issues
         // $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->registerPermissions();

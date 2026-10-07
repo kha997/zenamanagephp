@@ -1,14 +1,14 @@
 ---
 work_id: GAP-066
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-07-gap-066-treasury-s3-expenses-readiness.md
   plan: docs/superpowers/plans/2026-10-07-gap-066-treasury-s3-expenses-implementation.md
@@ -17,15 +17,15 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-08T00:21:19+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-08: 'APPROVE GAP-066 Gate 3'. Given after the packet (including the disclosed locking net-allocation read, register limited to ledger facts, public posting helpers, rbac:treasury.view on the web expense-action route with per-action policy checks) was presented at PR head 1ae8d35085bb0af4685da0c8d5aad531abaa1609 with 34/34 exact-head checks green; bound to implementation subject 3f780adcae723db0e29594ed3d5ef7f405d172cb and implementation-tree digest 7cb018c5bbb37b7656c44e7217f5c87a721305298cce4d210cdfec60046de658 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-07T23:16:02+07:00"
-  updated_at: "2026-10-07T23:16:02+07:00"
+  updated_at: "2026-10-08T00:21:19+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "Treasury S3 at subject 3f780adc: expense draft/submit/approve(=post)/reject(terminal)/copy, mandatory cost allocation with v17 §6.3 cap, atomic ContractExpense creation, self-approval recorded and reported, expense reversal with §2.2b coupling; 88 Treasury feature tests green locally; real-MySQL race on one cost's cap from two wallets passes in CI (Treasury concurrency job: 2 tests / 6 assertions, run 37647761355) and a disposable cost-lock removal makes it fail (run 37617655931, job 112779812677); first CI run red on 3 PHPStan errors (fixed); exact-head PR checks green; UI verified in a local run; canonical digest computed at subject."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "3f780adcae723db0e29594ed3d5ef7f405d172cb"
   verified_at: "2026-10-07T23:16:02+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "7cb018c5bbb37b7656c44e7217f5c87a721305298cce4d210cdfec60046de658"
+  decision_recorded_at: "2026-10-08T00:21:19+07:00"
 ---
 
 # GAP-066 — Gate 3 release decision (Treasury S3 — chi phí và duyệt chi)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-08, bound to implementation subject
+`3f780adcae723db0e29594ed3d5ef7f405d172cb` and implementation-tree digest `7cb018c5bbb37b7656c44e7217f5c87a721305298cce4d210cdfec60046de658`. No deployment is authorized.
 
 ## Gói quyết định phát hành
 

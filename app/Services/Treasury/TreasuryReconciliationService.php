@@ -266,7 +266,7 @@ class TreasuryReconciliationService
             ->withoutGlobalScopes()
             ->whereIn('id', $entries->pluck('source_financial_document_id')->unique()->values()->all())
             ->get()
-            ->keyBy(static fn ($doc): string => (string) $doc->getKey());
+            ->keyBy(static fn ($doc): string => (string) data_get($doc, 'id'));
 
         $rows = [];
         foreach ($entries as $entry) {
@@ -315,7 +315,7 @@ class TreasuryReconciliationService
         if ($reconciliations->isEmpty()) {
             return [];
         }
-        $recIds = $reconciliations->map(static fn ($rec): string => (string) $rec->getKey())->all();
+        $recIds = $reconciliations->map(static fn ($rec): string => (string) data_get($rec, 'id'))->all();
 
         $lines = RecEntry::query()
             ->withoutGlobalScopes()
@@ -326,12 +326,12 @@ class TreasuryReconciliationService
             ->withoutGlobalScopes()
             ->whereIn('id', $lines->pluck('ledger_entry_id')->unique()->values()->all())
             ->get()
-            ->keyBy(static fn ($entry): string => (string) $entry->getKey());
+            ->keyBy(static fn ($entry): string => (string) data_get($entry, 'id'));
         $documents = Document::query()
             ->withoutGlobalScopes()
             ->whereIn('id', $entries->pluck('source_financial_document_id')->filter()->unique()->values()->all())
             ->get()
-            ->keyBy(static fn ($doc): string => (string) $doc->getKey());
+            ->keyBy(static fn ($doc): string => (string) data_get($doc, 'id'));
         $userIds = $lines->pluck('actor_id')->merge($reconciliations->pluck('reconciled_by'))->unique()->values()->all();
         $userNames = User::query()->whereIn('id', $userIds)->pluck('name', 'id');
 
@@ -358,7 +358,7 @@ class TreasuryReconciliationService
         foreach ($reconciliations as $rec) {
             $recLines = [];
             $active = false;
-            foreach ($lines->where('reconciliation_id', (string) $rec->getKey())->where('direction', RecEntry::DIRECTION_APPLY) as $line) {
+            foreach ($lines->where('reconciliation_id', (string) data_get($rec, 'id'))->where('direction', RecEntry::DIRECTION_APPLY) as $line) {
                 $entry = $entries->get((string) data_get($line, 'ledger_entry_id'));
                 $doc = $documents->get((string) data_get($entry, 'source_financial_document_id'));
                 $undo = $reverseOf[(string) data_get($line, 'id')] ?? null;
@@ -379,7 +379,7 @@ class TreasuryReconciliationService
                 ];
             }
             $history[] = [
-                'id' => (string) $rec->getKey(),
+                'id' => (string) data_get($rec, 'id'),
                 'wallet_id' => (string) data_get($rec, 'wallet_id'),
                 'wallet_name' => $walletIds[(string) data_get($rec, 'wallet_id')] ?? null,
                 'reconciliation_type' => (string) data_get($rec, 'reconciliation_type'),
@@ -417,7 +417,7 @@ class TreasuryReconciliationService
      * other entry of the same documents, in one statement, id ascending.
      *
      * @param list<string> $ids
-     * @return Collection<string, Entry> keyed by id
+     * @return Collection<string, mixed> ledger-entry rows keyed by id
      */
     private function lockEntries(array $ids): Collection
     {
@@ -443,7 +443,7 @@ class TreasuryReconciliationService
             ->orderBy('id')
             ->lockForUpdate()
             ->get()
-            ->keyBy(static fn ($entry): string => (string) $entry->getKey());
+            ->keyBy(static fn ($entry): string => (string) data_get($entry, 'id'));
     }
 
     /**
@@ -451,7 +451,7 @@ class TreasuryReconciliationService
      * latest committed rows are seen whatever the transaction's snapshot.
      *
      * @param list<string> $ledgerEntryIds
-     * @return Collection<int, RecEntry>
+     * @return Collection<int, mixed> reconciliation-entry rows
      */
     private function activeApplies(array $ledgerEntryIds): Collection
     {
@@ -494,7 +494,7 @@ class TreasuryReconciliationService
     }
 
     /**
-     * @param Collection<int, RecEntry> $applies
+     * @param Collection<int, mixed> $applies
      * @return Collection<int, RecEntry>
      */
     private function writeReverses(User $actor, Collection $applies): Collection
@@ -531,13 +531,14 @@ class TreasuryReconciliationService
 
         $moved = [];
         foreach ($documents as $doc) {
+            /** @var Document $doc */
             if (data_get($doc, 'posting_path') !== Document::POSTING_PATH_DIRECT
                 || !in_array(data_get($doc, 'status'), [Document::STATUS_POSTED_UNRECONCILED, Document::STATUS_POSTED_RECONCILED], true)) {
                 continue;
             }
             $entryIds = Entry::query()
                 ->withoutGlobalScopes()
-                ->where('source_financial_document_id', (string) $doc->getKey())
+                ->where('source_financial_document_id', (string) data_get($doc, 'id'))
                 ->pluck('id')
                 ->map(static fn ($id): string => (string) $id)
                 ->all();
@@ -548,7 +549,7 @@ class TreasuryReconciliationService
             if ($from !== $target) {
                 $doc->status = $target;
                 $doc->save();
-                $moved[] = ['document_id' => (string) $doc->getKey(), 'from' => $from, 'to' => $target];
+                $moved[] = ['document_id' => (string) data_get($doc, 'id'), 'from' => $from, 'to' => $target];
             }
         }
 
@@ -556,7 +557,7 @@ class TreasuryReconciliationService
     }
 
     /**
-     * @param Collection<string, Entry> $locked
+     * @param Collection<string, mixed> $locked
      * @param list<string> $ledgerEntryIds
      * @return list<string>
      */

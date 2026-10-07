@@ -8,6 +8,8 @@ use App\Models\Project;
 use App\Models\Tenant;
 use App\Models\Treasury\TreasuryFinancialDocument;
 use App\Models\Treasury\TreasuryFinancialParty;
+use App\Models\Treasury\TreasuryLedgerEntry;
+use App\Models\Treasury\TreasuryReconciliationEntry;
 use App\Models\Treasury\TreasuryWallet;
 use App\Models\User;
 use App\Services\Treasury\TreasuryBalanceService;
@@ -49,7 +51,7 @@ class TreasuryTransferConcurrencyTest extends TestCase
     {
         try {
             if (DB::connection('mysql')->getPdo()) {
-                foreach (['audit_logs', 'treasury_cost_settlement_allocations', 'treasury_expense_approvals', 'treasury_ledger_entries',
+                foreach (['audit_logs', 'treasury_reconciliation_entries', 'treasury_reconciliations', 'treasury_cost_settlement_allocations', 'treasury_expense_approvals', 'treasury_ledger_entries',
                     'treasury_financial_documents', 'contract_expenses', 'contracts', 'treasury_wallets',
                     'treasury_financial_parties', 'projects', 'users', 'tenants'] as $table) {
                     DB::connection('mysql')->table($table)->delete();
@@ -189,5 +191,55 @@ class TreasuryTransferConcurrencyTest extends TestCase
         $output = 'A: ' . $procA->getOutput() . $procA->getErrorOutput() . ' B: ' . $procB->getOutput() . $procB->getErrorOutput();
         $this->assertSame([0, 1], $exitCodes, 'Exactly one approval may succeed. ' . $output);
         $this->assertSame(7000, $expenses->netAllocationCents('contract_expense', (string) $cost->id));
+    }
+
+    /**
+     * GAP-067 — two processes reconcile the same ledger entry at once. Only
+     * the class-4 ledger-entry lock plus the locking active-apply read keep
+     * it to one active apply (there is no database constraint for that).
+     *
+     * @group stress
+     */
+    public function test_two_concurrent_reconciliations_cannot_both_apply_one_entry(): void
+    {
+        $this->skipUnlessMysqlAvailable();
+        $this->originalDefaultConnection = DB::getDefaultConnection();
+        DB::setDefaultConnection('mysql');
+
+        $tenant = Tenant::on('mysql')->create(Tenant::factory()->raw());
+        $actor = User::on('mysql')->create(User::factory()->raw(['tenant_id' => $tenant->id]));
+        $project = Project::on('mysql')->create(Project::factory()->raw([
+            'tenant_id' => $tenant->id, 'pm_id' => $actor->id, 'created_by' => $actor->id,
+        ]));
+        $investor = TreasuryFinancialParty::on('mysql')->create(['tenant_id' => $tenant->id, 'party_type' => 'investor', 'name' => 'A']);
+        $wallet = TreasuryWallet::on('mysql')->create([
+            'tenant_id' => $tenant->id, 'project_id' => $project->id, 'wallet_type' => 'company_bank', 'name' => 'Bank',
+        ]);
+        $funding = app(TreasuryPostingService::class)->declareFunding($project, $actor, [
+            'document_type' => 'funding', 'source_party_id' => (string) $investor->id,
+            'destination_wallet_id' => (string) $wallet->id, 'amount' => '100', 'transaction_date' => '2026-10-01',
+        ]);
+        $entryId = (string) TreasuryLedgerEntry::on('mysql')->where('source_financial_document_id', $funding->id)->value('id');
+
+        $php = (new PhpExecutableFinder())->find();
+        $args = fn (string $reference, string $hold): array => [
+            $php, 'artisan', 'treasury:concurrency-test-reconcile',
+            (string) $project->id, (string) $actor->id, (string) $wallet->id, $entryId, $reference, '--hold=' . $hold,
+        ];
+        $procA = new Process($args('SK-A', '3'), base_path(), ['DB_CONNECTION' => 'mysql']);
+        $procB = new Process($args('SK-B', '0'), base_path(), ['DB_CONNECTION' => 'mysql']);
+
+        $procA->start();
+        usleep(1_500_000);
+        $procB->start();
+        $procA->wait();
+        $procB->wait();
+
+        $exitCodes = [$procA->getExitCode(), $procB->getExitCode()];
+        sort($exitCodes);
+        $output = 'A: ' . $procA->getOutput() . $procA->getErrorOutput() . ' B: ' . $procB->getOutput() . $procB->getErrorOutput();
+        $this->assertSame([0, 1], $exitCodes, 'Exactly one reconciliation may succeed. ' . $output);
+        $this->assertSame(1, TreasuryReconciliationEntry::on('mysql')->where('ledger_entry_id', $entryId)->where('direction', 'apply')->count(), $output);
+        $this->assertSame('posted_reconciled', TreasuryFinancialDocument::on('mysql')->whereKey($funding->id)->value('status'));
     }
 }

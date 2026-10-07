@@ -704,6 +704,11 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::get('/projects/{project}/treasury/wallets/{wallet}/edit', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'editWallet'])->middleware('rbac:treasury.manage_wallets')->name('treasury.projects.wallets.edit');
     Route::post('/projects/{project}/treasury/wallets/{wallet}/update', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'updateWallet'])->middleware('rbac:treasury.manage_wallets')->name('treasury.projects.wallets.update');
     Route::post('/projects/{project}/treasury/wallets/{wallet}/delete', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'destroyWallet'])->middleware('rbac:treasury.manage_wallets')->name('treasury.projects.wallets.destroy');
+    // Project Treasury S4a (GAP-067): reconciliation
+    Route::get('/projects/{project}/treasury/wallets/{wallet}/reconcile', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'reconcileWallet'])->middleware('rbac:treasury.view')->name('treasury.projects.wallets.reconcile');
+    Route::post('/projects/{project}/treasury/wallets/{wallet}/reconcile', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'storeReconciliation'])->middleware('rbac:treasury.reconcile')->name('treasury.projects.wallets.reconcile.store');
+    Route::post('/projects/{project}/treasury/reconciliations/{treasuryReconciliation}/undo', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'undoReconciliation'])->middleware('rbac:treasury.reconcile')->name('treasury.projects.reconciliations.undo');
+    Route::post('/projects/{project}/treasury/reconciliation-entries/{treasuryReconciliationEntry}/undo', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'undoReconciliationEntry'])->middleware('rbac:treasury.reconcile')->name('treasury.projects.reconciliation-entries.undo');
 
     Route::get('/contracts', [App\Http\Controllers\Web\ContractPageController::class, 'index'])->middleware('rbac:contract.view')->name('contracts.index');
     Route::get('/contracts/create', [App\Http\Controllers\Web\ContractPageController::class, 'create'])->middleware('rbac:contract.create')->name('contracts.create');

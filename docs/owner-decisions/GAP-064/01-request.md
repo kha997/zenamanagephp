@@ -1,11 +1,11 @@
 ---
 work_id: GAP-064
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-07-gap-064-treasury-s2-ledger-readiness.md
   plan: null
@@ -14,17 +14,22 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-07T07:57:42+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-07: 'APPROVE GAP-064 Gate 1'. Bound to reviewed Draft PR #337 head b3571a34aba99ef14a4e01dc97dcec04627f3715, canonical base fbdc7b1c0fb1b6594e5216495121429659b60c35, including the Owner's in-session business answers recorded in this packet (transaction date + reference columns with duplicate warning; Z transfers only from wallets Z holds, X from any project wallet, accountant does not transfer; adjustments in S2, reason required, X and accountant only). Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-07T00:14:38+07:00"
-  updated_at: "2026-10-07T00:14:38+07:00"
+  updated_at: "2026-10-07T07:57:42+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-064 Gate 1 in-session on 2026-10-07 against Draft PR #337
+head `b3571a34aba99ef14a4e01dc97dcec04627f3715`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

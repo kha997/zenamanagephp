@@ -235,7 +235,7 @@ class TreasuryExpenseService
         $expenses = DB::table('contract_expenses')->where('tenant_id', (string) $project->tenant_id)->whereIn('contract_id', $contractIds)->orderBy('expense_date')->get();
         foreach ($expenses as $expense) {
             $rows[] = $this->payableRow(self::COST_CONTRACT_EXPENSE, (string) data_get($expense, 'id'),
-                (string) data_get($expense, 'description') . ' (' . (string) data_get($expense, 'category') . ')');
+                (string) data_get($expense, 'description') . ' (' . (new ContractExpense(['category' => (string) data_get($expense, 'category')]))->categoryLabel() . ')');
         }
         $lines = DB::table('material_receipt_lines')->where('tenant_id', (string) $project->tenant_id)->where('project_id', (string) $project->id)->orderBy('created_at')->get();
         foreach ($lines as $line) {

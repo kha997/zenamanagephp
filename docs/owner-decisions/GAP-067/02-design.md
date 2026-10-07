@@ -1,11 +1,11 @@
 ---
 work_id: GAP-067
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-08-gap-067-treasury-s4a-reconciliation-readiness.md
   plan: null
@@ -14,21 +14,25 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-08T04:51:39+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-08, verbatim: 'đồng nhất codebase giữa local và remote trước và tiến hành GAP-067 Gate 2 Option A bằng cloud session'. Reviewed design head: ab782f5ab660c5f312d07305ee397279d2b21713. Approves Option A and its exact allowlist (no migration; undo reason in audit_logs; transfer needs both wallets; reconciliation does not block reversal; reference rules), implementation to run in a cloud session; not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-08T04:50:00+07:00"
-  updated_at: "2026-10-08T04:50:00+07:00"
+  updated_at: "2026-10-08T04:51:39+07:00"
 generated_by: agent
 ---
 
 # GAP-067 — Treasury S4a reconciliation: Gate 2 design
 
-## OWNER GATE 2: AWAITING OWNER
+## OWNER GATE 2: APPROVED — OPTION A
+
+Owner approved Option A in-session on 2026-10-08 against reviewed design head
+`ab782f5ab660c5f312d07305ee397279d2b21713`. This authorizes only the bounded implementation defined by this packet;
+it does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

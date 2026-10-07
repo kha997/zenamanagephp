@@ -436,7 +436,7 @@ class TreasuryExpenseService
                 'description' => (string) $new['description'],
                 'recorded_by' => (string) $actor->id,
             ]);
-            $lines[] = [self::COST_CONTRACT_EXPENSE, (string) $contractExpense->id, TreasuryBalanceService::toCents((string) $new['amount'])];
+            $lines[] = [self::COST_CONTRACT_EXPENSE, (string) $contractExpense->getKey(), TreasuryBalanceService::toCents((string) $new['amount'])];
         }
 
         return $lines;

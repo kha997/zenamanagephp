@@ -128,11 +128,11 @@ class TreasuryPageController extends Controller
             // GAP-064 S2: balances, register and the actions this user may take.
             'summary' => $this->balances->projectSummary($model),
             'documents' => TreasuryFinancialDocument::query()
+                ->with(['sourceWallet', 'destinationWallet', 'sourceParty', 'destinationParty'])
                 ->where('tenant_id', (string) $model->tenant_id)
                 ->where('project_id', (string) $model->id)
                 // GAP-066: drafts / submitted / rejected expenses are not ledger facts.
                 ->whereIn('status', [TreasuryFinancialDocument::STATUS_POSTED_UNRECONCILED, TreasuryFinancialDocument::STATUS_POSTED_RECONCILED, TreasuryFinancialDocument::STATUS_REVERSED])
-                ->with(['sourceWallet', 'destinationWallet', 'sourceParty', 'destinationParty'])
                 ->orderByDesc('transaction_date')
                 ->orderByDesc('created_at')
                 ->limit(100)
@@ -145,11 +145,11 @@ class TreasuryPageController extends Controller
                 ->orderBy('code')
                 ->get(),
             'expenseList' => TreasuryFinancialDocument::query()
+                ->with(['sourceWallet', 'destinationParty'])
                 ->where('tenant_id', (string) $model->tenant_id)
                 ->where('project_id', (string) $model->id)
                 ->where('document_type', TreasuryFinancialDocument::TYPE_EXPENSE)
                 ->whereIn('status', [TreasuryFinancialDocument::STATUS_DRAFT, TreasuryFinancialDocument::STATUS_SUBMITTED, TreasuryFinancialDocument::STATUS_REJECTED])
-                ->with(['sourceWallet', 'destinationParty'])
                 ->orderByDesc('created_at')
                 ->get(),
             'selfApprovedIds' => \App\Models\Treasury\TreasuryExpenseApproval::query()

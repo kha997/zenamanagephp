@@ -8,7 +8,14 @@ use App\Models\Treasury\TreasuryFinancialParty;
 use App\Models\Treasury\TreasuryWallet;
 use App\Models\User;
 use App\Models\UserRoleProject;
+use App\Models\Treasury\TreasuryFinancialDocument;
+use App\Services\Treasury\TreasuryBalanceService;
+use App\Services\Treasury\TreasuryDuplicateSuspected;
+use App\Services\Treasury\TreasuryPostingService;
+use App\Services\Treasury\TreasuryRuleViolation;
 use App\Services\Treasury\TreasurySetupService;
+use Closure;
+use Illuminate\Validation\Rule;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,8 +29,11 @@ use Illuminate\Support\Facades\Gate;
  */
 class TreasuryPageController extends Controller
 {
-    public function __construct(private readonly TreasurySetupService $setup)
-    {
+    public function __construct(
+        private readonly TreasurySetupService $setup,
+        private readonly TreasuryPostingService $posting,
+        private readonly TreasuryBalanceService $balances,
+    ) {
     }
 
     public function index(): View
@@ -113,12 +123,130 @@ class TreasuryPageController extends Controller
                 ->orderBy('name')
                 ->get(),
             'canManageWallets' => Gate::forUser($user)->allows('treasury.manage-wallets', $model),
+            // GAP-064 S2: balances, register and the actions this user may take.
+            'summary' => $this->balances->projectSummary($model),
+            'documents' => TreasuryFinancialDocument::query()
+                ->where('tenant_id', (string) $model->tenant_id)
+                ->where('project_id', (string) $model->id)
+                ->with(['sourceWallet', 'destinationWallet', 'sourceParty', 'destinationParty'])
+                ->orderByDesc('transaction_date')
+                ->orderByDesc('created_at')
+                ->limit(100)
+                ->get(),
+            'can' => [
+                'declare' => Gate::forUser($user)->allows('treasury.declare-funding', $model),
+                'transfer' => Gate::forUser($user)->allows('treasury.create-transfer', $model),
+                'adjust' => Gate::forUser($user)->allows('treasury.adjust', $model),
+                'reverse' => Gate::forUser($user)->allows('treasury.reverse', $model),
+            ],
+            'transferSources' => TreasuryWallet::query()
+                ->where('tenant_id', (string) $model->tenant_id)
+                ->where('project_id', (string) $model->id)
+                ->orderBy('name')
+                ->get()
+                ->filter(fn (TreasuryWallet $wallet): bool => Gate::forUser($user)->allows('treasury.transfer-from-wallet', $wallet))
+                ->values(),
             'walletTypes' => TreasurySetupService::WALLET_TYPES,
             'parties' => TreasuryFinancialParty::query()
                 ->where('tenant_id', (string) $model->tenant_id)
                 ->orderBy('name')
                 ->get(),
         ]);
+    }
+
+    public function storeFunding(Request $request, string $project): RedirectResponse
+    {
+        return $this->post($request, $project, 'treasury.declare-funding', [
+            'document_type' => ['required', Rule::in([TreasuryFinancialDocument::TYPE_FUNDING, TreasuryFinancialDocument::TYPE_OWNER_CONTRIBUTION])],
+            'source_party_id' => ['required', 'string'],
+            'destination_wallet_id' => ['required', 'string'],
+        ], fn (Project $p, array $data) => $this->posting->declareFunding($p, $this->user(), $data, $request->boolean('confirm_duplicate')), 'Đã ghi nhận tiền nhận.');
+    }
+
+    public function storeTransfer(Request $request, string $project): RedirectResponse
+    {
+        return $this->post($request, $project, 'treasury.create-transfer', [
+            'source_wallet_id' => ['required', 'string'],
+            'destination_wallet_id' => ['required', 'string'],
+        ], fn (Project $p, array $data) => $this->posting->transfer($p, $this->user(), $data), 'Đã chuyển tiền giữa hai ví.');
+    }
+
+    public function storeAdjustment(Request $request, string $project): RedirectResponse
+    {
+        return $this->post($request, $project, 'treasury.adjust', [
+            'wallet_id' => ['required', 'string'],
+            'direction' => ['required', Rule::in(['increase', 'decrease'])],
+            'description' => ['required', 'string', 'max:2000'],
+        ], fn (Project $p, array $data) => $this->posting->adjust($p, $this->user(), $data), 'Đã ghi điều chỉnh.');
+    }
+
+    public function reverseDocument(Request $request, string $project, string $treasuryDocument): RedirectResponse
+    {
+        $model = $this->findProject($project);
+        $doc = $this->findDocument($model, $treasuryDocument);
+
+        return $this->post($request, $project, 'treasury.reverse', [
+            'description' => ['required', 'string', 'max:2000'],
+        ], fn (Project $p, array $data) => $this->posting->reverse($p, $this->user(), $doc, $data), 'Đã đảo bút toán.', withAmount: false);
+    }
+
+    public function linkReplacement(Request $request, string $project, string $treasuryDocument): RedirectResponse
+    {
+        $model = $this->findProject($project);
+        $this->authorize('treasury.reverse', $model);
+        $reversal = $this->findDocument($model, $treasuryDocument);
+        $data = $request->validate(['replacement_document_id' => ['required', 'string']]);
+        $replacement = $this->findDocument($model, (string) $data['replacement_document_id']);
+
+        try {
+            $this->posting->linkReplacement($model, $this->user(), $reversal, $replacement);
+        } catch (TreasuryRuleViolation $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return redirect()->route('operator.treasury.projects.show', $model->id)->with('success', 'Đã gắn chứng từ thay thế.');
+    }
+
+    /**
+     * @param array<string, array<int, mixed>> $rules
+     * @param Closure(Project, array<string, mixed>): TreasuryFinancialDocument $action
+     */
+    private function post(Request $request, string $project, string $ability, array $rules, Closure $action, string $success, bool $withAmount = true): RedirectResponse
+    {
+        $model = $this->findProject($project);
+        $this->authorize($ability, $model);
+
+        $common = [
+            'transaction_date' => ['required', 'date_format:Y-m-d'],
+            'reference' => ['nullable', 'string', 'max:100'],
+            'description' => ['nullable', 'string', 'max:2000'],
+        ];
+        if ($withAmount) {
+            $common['amount'] = ['required', 'numeric', 'gt:0', 'max:9999999999999.99', 'decimal:0,2'];
+        }
+        $data = $request->validate($rules + $common);
+
+        try {
+            $action($model, $data);
+        } catch (TreasuryDuplicateSuspected $e) {
+            return back()->withInput()->with('treasury_duplicate', $e->getMessage());
+        } catch (TreasuryRuleViolation $e) {
+            return back()->withInput()->withErrors([$e->field ?? 'document' => $e->getMessage()]);
+        }
+
+        return redirect()->route('operator.treasury.projects.show', $model->id)->with('success', $success);
+    }
+
+    private function findDocument(Project $project, string $id): TreasuryFinancialDocument
+    {
+        /** @var TreasuryFinancialDocument $found */
+        $found = TreasuryFinancialDocument::query()
+            ->where('tenant_id', (string) $project->tenant_id)
+            ->where('project_id', (string) $project->id)
+            ->whereKey($id)
+            ->firstOrFail();
+
+        return $found;
     }
 
     public function storeWallet(Request $request, string $project): RedirectResponse

@@ -328,6 +328,18 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::delete('/{wallet}', [\App\Http\Controllers\Api\Treasury\TreasuryWalletController::class, 'destroy'])->middleware('rbac:treasury.manage_wallets')->name('destroy');
         });
 
+        // Project Treasury S2 (GAP-064): ledger documents, balances, posting
+        Route::group(['prefix' => 'projects/{project}/treasury', 'as' => 'treasury.documents.'], function () {
+            Route::get('/documents', [\App\Http\Controllers\Api\Treasury\TreasuryDocumentController::class, 'index'])->middleware('rbac:treasury.view')->name('index');
+            Route::get('/documents/{treasuryDocument}', [\App\Http\Controllers\Api\Treasury\TreasuryDocumentController::class, 'show'])->middleware('rbac:treasury.view')->name('show');
+            Route::get('/balances', [\App\Http\Controllers\Api\Treasury\TreasuryDocumentController::class, 'balances'])->middleware('rbac:treasury.view')->name('balances');
+            Route::post('/funding', [\App\Http\Controllers\Api\Treasury\TreasuryDocumentController::class, 'funding'])->middleware('rbac:treasury.declare_funding')->name('funding');
+            Route::post('/transfers', [\App\Http\Controllers\Api\Treasury\TreasuryDocumentController::class, 'transfer'])->middleware('rbac:treasury.create_transfer')->name('transfers');
+            Route::post('/adjustments', [\App\Http\Controllers\Api\Treasury\TreasuryDocumentController::class, 'adjust'])->middleware('rbac:treasury.adjust')->name('adjustments');
+            Route::post('/documents/{treasuryDocument}/reverse', [\App\Http\Controllers\Api\Treasury\TreasuryDocumentController::class, 'reverse'])->middleware('rbac:treasury.reverse')->name('reverse');
+            Route::post('/documents/{treasuryDocument}/replacement', [\App\Http\Controllers\Api\Treasury\TreasuryDocumentController::class, 'replacement'])->middleware('rbac:treasury.reverse')->name('replacement');
+        });
+
         Route::group(['prefix' => 'vendors'], function () {
             Route::get('/', [\App\Http\Controllers\Api\VendorController::class, 'index'])->middleware('rbac:vendor.view')->name('vendors.index');
             Route::post('/', [\App\Http\Controllers\Api\VendorController::class, 'store'])->middleware('rbac:vendor.create')->name('vendors.store');

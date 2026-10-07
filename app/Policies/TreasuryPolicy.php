@@ -3,6 +3,8 @@
 namespace App\Policies;
 
 use App\Models\Project;
+use App\Models\Treasury\TreasuryFinancialParty;
+use App\Models\Treasury\TreasuryWallet;
 use App\Models\User;
 use App\Models\UserRoleProject;
 
@@ -24,6 +26,48 @@ class TreasuryPolicy
     public function manageWallets(User $user, Project $project): bool
     {
         return $this->projectAbility($user, $project, 'treasury.manage_wallets');
+    }
+
+    public function declareFunding(User $user, Project $project): bool
+    {
+        return $this->projectAbility($user, $project, 'treasury.declare_funding');
+    }
+
+    public function createTransfer(User $user, Project $project): bool
+    {
+        return $this->projectAbility($user, $project, 'treasury.create_transfer');
+    }
+
+    public function adjust(User $user, Project $project): bool
+    {
+        return $this->projectAbility($user, $project, 'treasury.adjust');
+    }
+
+    public function reverse(User $user, Project $project): bool
+    {
+        return $this->projectAbility($user, $project, 'treasury.reverse');
+    }
+
+    /**
+     * GAP-064 Owner answer 2: holders of treasury.manage_wallets (owner X)
+     * may move money out of any wallet of the project; everyone else only
+     * out of a wallet whose custodian party is linked to their own user.
+     */
+    public function transferFromWallet(User $user, TreasuryWallet $wallet): bool
+    {
+        if ((string) $user->tenant_id !== (string) $wallet->tenant_id) {
+            return false;
+        }
+
+        if ($user->hasPermission('treasury.manage_wallets')) {
+            return true;
+        }
+
+        return $wallet->custodian_party_id !== null
+            && TreasuryFinancialParty::query()
+                ->whereKey($wallet->custodian_party_id)
+                ->where('linked_user_id', (string) $user->id)
+                ->exists();
     }
 
     public function viewParties(User $user): bool

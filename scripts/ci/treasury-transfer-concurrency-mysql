@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Runs tests/Feature/Concurrency/TreasuryTransferConcurrencyTest.php against a
+# real MySQL connection in CI (GAP-064: the Treasury negative-balance guard
+# must be proven with two real connections, not sequential sqlite calls).
+# Modeled 1:1 on scripts/ci/document-workflow-concurrency-mysql: make sure
+# MySQL IS reachable so the test executes for real instead of skipping.
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
+cd "$ROOT_DIR"
+
+export APP_ENV=testing
+export PCOV_ENABLED=0
+
+# shellcheck disable=SC1091
+source scripts/ci/lib/mysql-fail-closed.sh
+
+zena_mysql_resolve_env
+zena_mysql_preflight_connection
+
+mkdir -p resources/views storage/framework/views storage/framework/cache bootstrap/cache
+
+php artisan optimize:clear
+php artisan migrate:fresh --force
+
+zena_mysql_ensure_connection
+
+JUNIT_OUT="${RUNNER_TEMP:-/tmp}/treasury-transfer-concurrency-junit.xml"
+./vendor/bin/phpunit tests/Feature/Concurrency/TreasuryTransferConcurrencyTest.php --log-junit "$JUNIT_OUT"
+
+# Same contract as scripts/ci/rfi-escalation-concurrency-mysql: this script
+# guarantees MySQL IS reachable via the preflight check above, so a SKIPPED
+# result here means the test's own connection check disagrees with our
+# preflight — fail loudly instead of reporting a false green.
+if grep -q 'skipped="[1-9]' "$JUNIT_OUT" 2>/dev/null; then
+    echo "ERROR: TreasuryTransferConcurrencyTest reported a SKIP despite MySQL being reachable per preflight — this must never be a silent pass." >&2
+    echo "Skip reason(s) from the junit report:" >&2
+    grep -A2 '<skipped' "$JUNIT_OUT" >&2 || true
+    exit 1
+fi

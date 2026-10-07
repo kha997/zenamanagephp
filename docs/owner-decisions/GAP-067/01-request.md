@@ -1,11 +1,11 @@
 ---
 work_id: GAP-067
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-08-gap-067-treasury-s4a-reconciliation-readiness.md
   plan: null
@@ -14,19 +14,22 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-08T04:45:00+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-08: 'APPROVE GAP-067 Gate 1'. Bound to reviewed Draft PR #340 head 130d180fb715017cb1c539c998a2a3b38d2e9ba8, canonical base a0381f5e3d5abaa37dc2f21f7099a09e6234ab2d, including the Owner's in-session answers recorded in this packet (S4 split into S4a reconciliation first and S4b routes later; S4b answers recorded only). Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-08T04:40:00+07:00"
-  updated_at: "2026-10-08T04:40:00+07:00"
+  updated_at: "2026-10-08T04:45:00+07:00"
 generated_by: agent
 ---
 
-## OWNER GATE 1: AWAITING OWNER
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-067 Gate 1 in-session on 2026-10-08 against Draft PR #340
+head `130d180fb715017cb1c539c998a2a3b38d2e9ba8`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

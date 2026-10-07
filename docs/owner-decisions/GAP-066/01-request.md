@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-10-07-gap-066-treasury-s3-expenses-readiness.md
   plan: null
   branch: docs/GAP-066-treasury-s3-expenses
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/339
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

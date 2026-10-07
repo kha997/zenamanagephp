@@ -130,7 +130,7 @@ class TreasuryPostingService
         if (!$increase && $data['direction'] !== 'decrease') {
             throw new TreasuryRuleViolation('Hướng điều chỉnh không hợp lệ.', 'direction');
         }
-        if (trim((string) ($data['description'] ?? '')) === '') {
+        if (trim($data['description']) === '') {
             throw new TreasuryRuleViolation('Điều chỉnh bắt buộc ghi lý do.', 'description');
         }
 
@@ -168,7 +168,7 @@ class TreasuryPostingService
         if ((string) $original->project_id !== (string) $project->id || (string) $original->tenant_id !== (string) $project->tenant_id) {
             throw new TreasuryRuleViolation('Chứng từ không thuộc dự án này.');
         }
-        if (trim((string) ($data['description'] ?? '')) === '') {
+        if (trim($data['description']) === '') {
             throw new TreasuryRuleViolation('Đảo bút toán bắt buộc ghi lý do.', 'description');
         }
 
@@ -213,11 +213,15 @@ class TreasuryPostingService
                 ->where('source_financial_document_id', (string) $locked->id)
                 ->orderBy('id')
                 ->get();
-            $this->postEntries($reversal, $entries->map(static fn (Entry $entry): array => [
-                (string) $entry->wallet_id,
-                $entry->direction === Entry::DIRECTION_CREDIT ? Entry::DIRECTION_DEBIT : Entry::DIRECTION_CREDIT,
-                'reversal',
-            ])->all());
+            $legs = [];
+            foreach ($entries as $entry) {
+                $legs[] = [
+                    (string) data_get($entry, 'wallet_id'),
+                    data_get($entry, 'direction') === Entry::DIRECTION_CREDIT ? Entry::DIRECTION_DEBIT : Entry::DIRECTION_CREDIT,
+                    'reversal',
+                ];
+            }
+            $this->postEntries($reversal, $legs);
 
             $before = $locked->status;
             $locked->status = Document::STATUS_REVERSED;
@@ -344,6 +348,7 @@ class TreasuryPostingService
     {
         $reference = trim((string) ($data['reference'] ?? ''));
 
+        /** @var Document|null $existing */
         $existing = Document::query()
             ->where('tenant_id', (string) $project->tenant_id)
             ->where('project_id', (string) $project->id)

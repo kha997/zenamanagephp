@@ -41,44 +41,44 @@ class TreasuryLedgerApiTest extends TestCase
     {
         $owner = $this->userWithRole($this->tenant, 'Admin');
 
-        $funding = $this->postJson($this->url('funding'), $this->fundingPayload('100000000'), $this->headersFor($owner))
+        $funding = $this->postJson($this->route('funding'), $this->fundingPayload('100000000'), $this->headersFor($owner))
             ->assertStatus(201)
             ->assertJsonPath('data.status', 'posted_unreconciled')
             ->assertJsonPath('data.transaction_date', fn ($v) => str_starts_with((string) $v, '2026-10-01'));
         $fundingId = (string) $funding->json('data.id');
 
-        $this->postJson($this->url('transfers'), [
+        $this->postJson($this->route('transfers'), [
             'source_wallet_id' => (string) $this->bank->id,
             'destination_wallet_id' => (string) $this->cash->id,
             'amount' => '40000000',
             'transaction_date' => '2026-10-02',
         ], $this->headersFor($owner))->assertStatus(201);
 
-        $this->getJson($this->url('balances'), $this->headersFor($owner))
+        $this->getJson($this->route('balances'), $this->headersFor($owner))
             ->assertOk()
             ->assertJsonPath('data.held_total', '100000000.00')
             ->assertJsonPath('data.wallets.' . $this->bank->id, '60000000.00')
             ->assertJsonPath('data.wallets.' . $this->cash->id, '40000000.00');
 
-        $this->postJson($this->url("documents/{$fundingId}/reverse"), [
+        $this->postJson($this->route('reverse', ['treasuryDocument' => $fundingId]), [
             'transaction_date' => '2026-10-03',
             'description' => 'Nhập nhầm',
         ], $this->headersFor($owner))->assertStatus(201)->assertJsonPath('data.document_type', 'reversal');
 
-        $this->getJson($this->url('documents'), $this->headersFor($owner))
+        $this->getJson($this->route('index'), $this->headersFor($owner))
             ->assertOk()->assertJsonCount(3, 'data');
-        $this->getJson($this->url("documents/{$fundingId}"), $this->headersFor($owner))
+        $this->getJson($this->route('show', ['treasuryDocument' => $fundingId]), $this->headersFor($owner))
             ->assertOk()->assertJsonPath('data.status', 'reversed');
     }
 
     public function test_duplicate_returns_409_until_confirmed(): void
     {
         $owner = $this->userWithRole($this->tenant, 'Admin');
-        $this->postJson($this->url('funding'), $this->fundingPayload('5000000'), $this->headersFor($owner))->assertStatus(201);
+        $this->postJson($this->route('funding'), $this->fundingPayload('5000000'), $this->headersFor($owner))->assertStatus(201);
 
-        $this->postJson($this->url('funding'), $this->fundingPayload('5000000'), $this->headersFor($owner))
+        $this->postJson($this->route('funding'), $this->fundingPayload('5000000'), $this->headersFor($owner))
             ->assertStatus(409);
-        $this->postJson($this->url('funding'), $this->fundingPayload('5000000') + ['confirm_duplicate' => true], $this->headersFor($owner))
+        $this->postJson($this->route('funding'), $this->fundingPayload('5000000') + ['confirm_duplicate' => true], $this->headersFor($owner))
             ->assertStatus(201);
     }
 
@@ -86,13 +86,13 @@ class TreasuryLedgerApiTest extends TestCase
     {
         $owner = $this->userWithRole($this->tenant, 'Admin');
 
-        $this->postJson($this->url('funding'), ['amount' => '-5'] + $this->fundingPayload('1'), $this->headersFor($owner))
+        $this->postJson($this->route('funding'), ['amount' => '-5'] + $this->fundingPayload('1'), $this->headersFor($owner))
             ->assertStatus(422)->assertJsonValidationErrors(['amount'], 'error.details.data');
-        $this->postJson($this->url('transfers'), [
+        $this->postJson($this->route('transfers'), [
             'source_wallet_id' => (string) $this->bank->id, 'destination_wallet_id' => (string) $this->cash->id,
             'amount' => '1', 'transaction_date' => '2026-10-02',
         ], $this->headersFor($owner))->assertStatus(422)->assertJsonValidationErrors(['source_wallet_id'], 'error.details.data');
-        $this->postJson($this->url('adjustments'), [
+        $this->postJson($this->route('adjustments'), [
             'wallet_id' => (string) $this->cash->id, 'direction' => 'increase', 'amount' => '1', 'transaction_date' => '2026-10-02',
         ], $this->headersFor($owner))->assertStatus(422)->assertJsonValidationErrors(['description'], 'error.details.data');
     }
@@ -105,20 +105,20 @@ class TreasuryLedgerApiTest extends TestCase
         $viewer = $this->userWithRole($this->tenant, 'Designer');
         $this->addMember($this->project, $viewer);
 
-        $this->postJson($this->url('funding'), $this->fundingPayload('1000'), $this->headersFor($engineer))->assertStatus(201);
-        $this->postJson($this->url('adjustments'), [
+        $this->postJson($this->route('funding'), $this->fundingPayload('1000'), $this->headersFor($engineer))->assertStatus(201);
+        $this->postJson($this->route('adjustments'), [
             'wallet_id' => (string) $this->cash->id, 'direction' => 'increase', 'amount' => '1',
             'transaction_date' => '2026-10-02', 'description' => 'x',
         ], $this->headersFor($engineer))->assertStatus(403);
 
-        $this->postJson($this->url('funding'), $this->fundingPayload('2000'), $this->headersFor($accountant))->assertStatus(403);
-        $this->postJson($this->url('adjustments'), [
+        $this->postJson($this->route('funding'), $this->fundingPayload('2000'), $this->headersFor($accountant))->assertStatus(403);
+        $this->postJson($this->route('adjustments'), [
             'wallet_id' => (string) $this->cash->id, 'direction' => 'increase', 'amount' => '1',
             'transaction_date' => '2026-10-02', 'description' => 'Số dư đầu kỳ',
         ], $this->headersFor($accountant))->assertStatus(201);
 
-        $this->getJson($this->url('balances'), $this->headersFor($viewer))->assertOk();
-        $this->postJson($this->url('funding'), $this->fundingPayload('3000'), $this->headersFor($viewer))->assertStatus(403);
+        $this->getJson($this->route('balances'), $this->headersFor($viewer))->assertOk();
+        $this->postJson($this->route('funding'), $this->fundingPayload('3000'), $this->headersFor($viewer))->assertStatus(403);
     }
 
     public function test_other_tenant_project_and_document_are_not_found(): void
@@ -126,8 +126,8 @@ class TreasuryLedgerApiTest extends TestCase
         $owner = $this->userWithRole($this->tenant, 'Admin');
         $foreignProject = $this->projectFor(Tenant::factory()->create());
 
-        $this->getJson("/api/zena/projects/{$foreignProject->id}/treasury/balances", $this->headersFor($owner))->assertStatus(404);
-        $this->postJson($this->url('documents/01J0000000000000000000000X/reverse'), [
+        $this->getJson(route('api.zena.treasury.documents.balances', ['project' => (string) $foreignProject->id], false), $this->headersFor($owner))->assertStatus(404);
+        $this->postJson($this->route('reverse', ['treasuryDocument' => '01J0000000000000000000000X']), [
             'transaction_date' => '2026-10-03', 'description' => 'x',
         ], $this->headersFor($owner))->assertStatus(404);
     }
@@ -147,9 +147,12 @@ class TreasuryLedgerApiTest extends TestCase
         ];
     }
 
-    private function url(string $suffix): string
+    /**
+     * @param array<string, string> $parameters
+     */
+    private function route(string $name, array $parameters = []): string
     {
-        return "/api/zena/projects/{$this->project->id}/treasury/{$suffix}";
+        return route('api.zena.treasury.documents.' . $name, ['project' => (string) $this->project->id] + $parameters, false);
     }
 
     /**

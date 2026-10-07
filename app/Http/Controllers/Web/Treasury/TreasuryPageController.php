@@ -144,7 +144,7 @@ class TreasuryPageController extends Controller
                 ->where('project_id', (string) $model->id)
                 ->orderBy('name')
                 ->get()
-                ->filter(fn (TreasuryWallet $wallet): bool => Gate::forUser($user)->allows('treasury.transfer-from-wallet', $wallet))
+                ->filter(fn ($wallet): bool => Gate::forUser($user)->allows('treasury.transfer-from-wallet', $wallet))
                 ->values(),
             'walletTypes' => TreasurySetupService::WALLET_TYPES,
             'parties' => TreasuryFinancialParty::query()

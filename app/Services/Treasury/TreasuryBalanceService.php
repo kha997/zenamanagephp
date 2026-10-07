@@ -39,8 +39,8 @@ class TreasuryBalanceService
             ->get(['direction', 'amount']);
 
         foreach ($rows as $row) {
-            $amount = self::toCents((string) $row->getAttribute('amount'));
-            $cents += $row->getAttribute('direction') === Entry::DIRECTION_CREDIT ? $amount : -$amount;
+            $amount = self::toCents((string) data_get($row, 'amount'));
+            $cents += data_get($row, 'direction') === Entry::DIRECTION_CREDIT ? $amount : -$amount;
         }
 
         return self::fromCents($cents);
@@ -91,9 +91,9 @@ class TreasuryBalanceService
 
         $cents = array_fill_keys($walletIds, 0);
         foreach ($rows as $row) {
-            $amount = (int) round((float) $row->getAttribute('total_cents'));
-            $walletId = (string) $row->getAttribute('wallet_id');
-            $cents[$walletId] += $row->getAttribute('direction') === Entry::DIRECTION_CREDIT ? $amount : -$amount;
+            $amount = (int) round((float) data_get($row, 'total_cents'));
+            $walletId = (string) data_get($row, 'wallet_id');
+            $cents[$walletId] += data_get($row, 'direction') === Entry::DIRECTION_CREDIT ? $amount : -$amount;
         }
 
         foreach ($cents as $walletId => $value) {
@@ -111,7 +111,8 @@ class TreasuryBalanceService
             ->where('project_id', (string) $project->id)
             ->where('document_type', $type)
             ->whereIn('status', [Document::STATUS_POSTED_UNRECONCILED, Document::STATUS_POSTED_RECONCILED])
-            ->value(DB::raw('ROUND(COALESCE(SUM(amount), 0) * 100)'));
+            ->selectRaw('ROUND(COALESCE(SUM(amount), 0) * 100) as total_cents')
+            ->value('total_cents');
 
         return self::fromCents((int) round((float) $total));
     }

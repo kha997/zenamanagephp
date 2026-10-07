@@ -1,11 +1,11 @@
 ---
 work_id: GAP-064
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-07-gap-064-treasury-s2-ledger-readiness.md
   plan: null
@@ -14,19 +14,25 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-07T08:17:02+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-07: 'APPROVE GAP-064 Gate 2 Option A'. Reviewed design head: f348a3cd3cc2228747ef4553170d46b671450d96. Approves Option A and its exact allowlist, including both flagged points (negative-balance guard on transfers and decrease adjustments with a new wallet lock class 0 placed before the approved 1-6 order; reversals exempt from the guard); not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-07T07:58:48+07:00"
-  updated_at: "2026-10-07T07:58:48+07:00"
+  updated_at: "2026-10-07T08:17:02+07:00"
 generated_by: agent
 ---
 
 # GAP-064 — Treasury S2 ledger engine: Gate 2 design
+
+## OWNER GATE 2: APPROVED — OPTION A
+
+Owner approved Option A in-session on 2026-10-07 against reviewed design head
+`f348a3cd3cc2228747ef4553170d46b671450d96`. This authorizes only the bounded implementation defined by this packet;
+it does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

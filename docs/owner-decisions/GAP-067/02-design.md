@@ -8,7 +8,7 @@ owner_decision:
 decision_requested: null
 references:
   spec: docs/audits/2026-10-08-gap-067-treasury-s4a-reconciliation-readiness.md
-  plan: null
+  plan: docs/superpowers/plans/2026-10-08-gap-067-treasury-s4a-reconciliation.md
   branch: docs/GAP-067-treasury-s4a-reconciliation
   pr: https://github.com/kha997/zenamanagephp/pull/340
   release: null

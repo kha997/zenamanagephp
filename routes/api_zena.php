@@ -352,6 +352,15 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::post('/expenses/{treasuryExpense}/copy', [\App\Http\Controllers\Api\Treasury\TreasuryExpenseController::class, 'copy'])->middleware('rbac:treasury.create_expense')->name('copy');
         });
 
+        // Project Treasury S4a (GAP-067): reconciliation
+        Route::group(['prefix' => 'projects/{project}/treasury', 'as' => 'treasury.reconciliation.'], function () {
+            Route::get('/wallets/{wallet}/reconciliation', [\App\Http\Controllers\Api\Treasury\TreasuryReconciliationController::class, 'wallet'])->middleware('rbac:treasury.view')->name('wallet');
+            Route::post('/wallets/{wallet}/reconciliations', [\App\Http\Controllers\Api\Treasury\TreasuryReconciliationController::class, 'store'])->middleware('rbac:treasury.reconcile')->name('store');
+            Route::get('/reconciliations', [\App\Http\Controllers\Api\Treasury\TreasuryReconciliationController::class, 'index'])->middleware('rbac:treasury.view')->name('index');
+            Route::post('/reconciliations/{treasuryReconciliation}/undo', [\App\Http\Controllers\Api\Treasury\TreasuryReconciliationController::class, 'undo'])->middleware('rbac:treasury.reconcile')->name('undo');
+            Route::post('/reconciliation-entries/{treasuryReconciliationEntry}/undo', [\App\Http\Controllers\Api\Treasury\TreasuryReconciliationController::class, 'undoEntry'])->middleware('rbac:treasury.reconcile')->name('entries.undo');
+        });
+
         Route::group(['prefix' => 'vendors'], function () {
             Route::get('/', [\App\Http\Controllers\Api\VendorController::class, 'index'])->middleware('rbac:vendor.view')->name('vendors.index');
             Route::post('/', [\App\Http\Controllers\Api\VendorController::class, 'store'])->middleware('rbac:vendor.create')->name('vendors.store');

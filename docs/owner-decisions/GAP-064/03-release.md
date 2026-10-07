@@ -1,14 +1,14 @@
 ---
 work_id: GAP-064
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-07-gap-064-treasury-s2-ledger-readiness.md
   plan: docs/superpowers/plans/2026-10-07-gap-064-treasury-s2-ledger-implementation.md
@@ -17,15 +17,15 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-07T14:58:27+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-07: 'APPROVE GAP-064 Gate 3'. Given after the packet (including the disclosed shared-lock balance read, the allowlist additions for the real-MySQL concurrency proof, and the out-of-scope ProductionBootstrapCommandTest finding) was presented at PR head 80fa800ab601de8ccbc911c98284b1eed16dbe5b with 34/34 exact-head checks green; bound to implementation subject 94e6407dff2545b0f6e013a650c62a2b9c3f04bc and implementation-tree digest 197b51084bbfeb7492b79171e5f0f4d5a2356df15037446eb66140fdf1481e57 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-07T13:54:14+07:00"
-  updated_at: "2026-10-07T13:54:14+07:00"
+  updated_at: "2026-10-07T14:58:27+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "Treasury S2 at subject 94e6407d: immediate direct posting of funding/owner contribution/transfer/adjustment, document reversal + replacement link, derived balances, register, audit rows, duplicate warning, negative-balance guard; 68 Treasury feature tests green locally; real-MySQL two-process concurrency test passes in the new CI job (1 test / 4 assertions, run 37580004944) and a disposable lock-removal mutation makes it fail (run 37580049863, job 112657401208: both transfers succeeded); related suites green; SSOT lint, orphan routes, governance lint pass; first CI run red (PHPStan row typing, orphan-route URL helper) then fixed; 34/34 exact-head PR checks green; UI verified in a local run; disclosed allowlist additions; canonical digest computed at subject."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "94e6407dff2545b0f6e013a650c62a2b9c3f04bc"
   verified_at: "2026-10-07T13:54:14+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "197b51084bbfeb7492b79171e5f0f4d5a2356df15037446eb66140fdf1481e57"
+  decision_recorded_at: "2026-10-07T14:58:27+07:00"
 ---
 
 # GAP-064 — Gate 3 release decision (Treasury S2 — ghi sổ)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-07, bound to implementation subject
+`94e6407dff2545b0f6e013a650c62a2b9c3f04bc` and implementation-tree digest `197b51084bbfeb7492b79171e5f0f4d5a2356df15037446eb66140fdf1481e57`. No deployment is authorized.
 
 ## Gói quyết định phát hành
 

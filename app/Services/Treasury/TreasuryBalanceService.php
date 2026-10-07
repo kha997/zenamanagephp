@@ -47,7 +47,7 @@ class TreasuryBalanceService
     }
 
     /**
-     * @return array{wallets: array<string, string>, held_total: string, investor_funding: string, owner_contribution: string}
+     * @return array{wallets: array<string, string>, held_total: string, investor_funding: string, owner_contribution: string, expenses: string, self_approved_expenses: string}
      */
     public function projectSummary(Project $project): array
     {
@@ -66,6 +66,9 @@ class TreasuryBalanceService
             'held_total' => self::fromCents($held),
             'investor_funding' => $this->postedTotal($project, Document::TYPE_FUNDING),
             'owner_contribution' => $this->postedTotal($project, Document::TYPE_OWNER_CONTRIBUTION),
+            // GAP-066: posted expenses, and the self-approved part reported separately.
+            'expenses' => $this->postedTotal($project, Document::TYPE_EXPENSE),
+            'self_approved_expenses' => $this->selfApprovedExpenseTotal($project),
         ];
     }
 
@@ -101,6 +104,26 @@ class TreasuryBalanceService
         }
 
         return $result;
+    }
+
+    private function selfApprovedExpenseTotal(Project $project): string
+    {
+        $documentIds = DB::table('treasury_expense_approvals')
+            ->where('tenant_id', (string) $project->tenant_id)
+            ->where('event', 'approved')
+            ->where('context->approval_mode', 'self_approval')
+            ->pluck('financial_document_id');
+
+        $total = Document::query()
+            ->withoutGlobalScopes()
+            ->where('tenant_id', (string) $project->tenant_id)
+            ->where('project_id', (string) $project->id)
+            ->whereIn('id', $documentIds)
+            ->whereIn('status', [Document::STATUS_POSTED_UNRECONCILED, Document::STATUS_POSTED_RECONCILED])
+            ->selectRaw('ROUND(COALESCE(SUM(amount), 0) * 100) as total_cents')
+            ->value('total_cents');
+
+        return self::fromCents((int) round((float) $total));
     }
 
     private function postedTotal(Project $project, string $type): string

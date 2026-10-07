@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Concurrency;
 
+use App\Models\Contract;
+use App\Models\ContractExpense;
 use App\Models\Project;
 use App\Models\Tenant;
 use App\Models\Treasury\TreasuryFinancialDocument;
@@ -9,6 +11,7 @@ use App\Models\Treasury\TreasuryFinancialParty;
 use App\Models\Treasury\TreasuryWallet;
 use App\Models\User;
 use App\Services\Treasury\TreasuryBalanceService;
+use App\Services\Treasury\TreasuryExpenseService;
 use App\Services\Treasury\TreasuryPostingService;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Group;
@@ -46,7 +49,8 @@ class TreasuryTransferConcurrencyTest extends TestCase
     {
         try {
             if (DB::connection('mysql')->getPdo()) {
-                foreach (['audit_logs', 'treasury_ledger_entries', 'treasury_financial_documents', 'treasury_wallets',
+                foreach (['audit_logs', 'treasury_cost_settlement_allocations', 'treasury_expense_approvals', 'treasury_ledger_entries',
+                    'treasury_financial_documents', 'contract_expenses', 'contracts', 'treasury_wallets',
                     'treasury_financial_parties', 'projects', 'users', 'tenants'] as $table) {
                     DB::connection('mysql')->table($table)->delete();
                 }
@@ -110,5 +114,80 @@ class TreasuryTransferConcurrencyTest extends TestCase
         $this->assertSame('30.00', app(TreasuryBalanceService::class)->walletBalance($source->fresh()));
         $this->assertSame(1, TreasuryFinancialDocument::on('mysql')
             ->where('project_id', $project->id)->where('document_type', 'internal_transfer')->count());
+    }
+
+    /**
+     * GAP-066 — two expenses paid from two DIFFERENT wallets (so the wallet
+     * lock cannot serialise them) each try to allocate 70 to the same cost of
+     * 100. Only the cost-source lock (v17 class 2) plus the locking
+     * net-allocation read can stop the second one.
+     */
+    public function test_two_concurrent_expense_approvals_cannot_overpay_one_cost(): void
+    {
+        $this->skipUnlessMysqlAvailable();
+        $this->originalDefaultConnection = DB::getDefaultConnection();
+        DB::setDefaultConnection('mysql');
+
+        $tenant = Tenant::on('mysql')->create(Tenant::factory()->raw());
+        $creator = User::on('mysql')->create(User::factory()->raw(['tenant_id' => $tenant->id]));
+        $approver = User::on('mysql')->create(User::factory()->raw(['tenant_id' => $tenant->id]));
+        $project = Project::on('mysql')->create(Project::factory()->raw([
+            'tenant_id' => $tenant->id, 'pm_id' => $creator->id, 'created_by' => $creator->id,
+        ]));
+        $investor = TreasuryFinancialParty::on('mysql')->create(['tenant_id' => $tenant->id, 'party_type' => 'investor', 'name' => 'A']);
+        $holder = TreasuryFinancialParty::on('mysql')->create([
+            'tenant_id' => $tenant->id, 'party_type' => 'employee', 'name' => 'Z', 'linked_user_id' => $creator->id,
+        ]);
+        $payee = TreasuryFinancialParty::on('mysql')->create(['tenant_id' => $tenant->id, 'party_type' => 'labour', 'name' => 'D']);
+        $walletA = TreasuryWallet::on('mysql')->create([
+            'tenant_id' => $tenant->id, 'project_id' => $project->id, 'wallet_type' => 'employee_cash', 'name' => 'A', 'custodian_party_id' => $holder->id,
+        ]);
+        $walletB = TreasuryWallet::on('mysql')->create([
+            'tenant_id' => $tenant->id, 'project_id' => $project->id, 'wallet_type' => 'employee_cash', 'name' => 'B', 'custodian_party_id' => $holder->id,
+        ]);
+        $posting = app(TreasuryPostingService::class);
+        foreach ([$walletA, $walletB] as $wallet) {
+            $posting->declareFunding($project, $creator, [
+                'document_type' => 'funding', 'source_party_id' => (string) $investor->id,
+                'destination_wallet_id' => (string) $wallet->id, 'amount' => '100', 'transaction_date' => '2026-10-01',
+            ], true);
+        }
+        $contract = Contract::on('mysql')->create(Contract::factory()->raw([
+            'tenant_id' => $tenant->id, 'project_id' => $project->id, 'created_by' => $creator->id,
+        ]));
+        $cost = ContractExpense::on('mysql')->create([
+            'tenant_id' => $tenant->id, 'contract_id' => $contract->id, 'expense_date' => '2026-10-01',
+            'amount' => '100', 'category' => 'labor', 'description' => 'Cost',
+        ]);
+        $expenses = app(TreasuryExpenseService::class);
+        $ids = [];
+        foreach ([$walletA, $walletB] as $wallet) {
+            $draft = $expenses->createDraft($project, $creator, [
+                'source_wallet_id' => (string) $wallet->id, 'destination_party_id' => (string) $payee->id,
+                'amount' => '70', 'transaction_date' => '2026-10-02',
+                'allocations' => [['cost_source_type' => 'contract_expense', 'cost_source_id' => (string) $cost->id, 'amount' => '70']],
+            ]);
+            $expenses->submit($project, $creator, $draft);
+            $ids[] = (string) $draft->id;
+        }
+
+        $php = (new PhpExecutableFinder())->find();
+        $args = fn (string $expenseId, string $hold): array => [
+            $php, 'artisan', 'treasury:concurrency-test-approve-expense', (string) $project->id, (string) $approver->id, $expenseId, '--hold=' . $hold,
+        ];
+        $procA = new Process($args($ids[0], '3'), base_path(), ['DB_CONNECTION' => 'mysql']);
+        $procB = new Process($args($ids[1], '0'), base_path(), ['DB_CONNECTION' => 'mysql']);
+
+        $procA->start();
+        usleep(1_500_000);
+        $procB->start();
+        $procA->wait();
+        $procB->wait();
+
+        $exitCodes = [$procA->getExitCode(), $procB->getExitCode()];
+        sort($exitCodes);
+        $output = 'A: ' . $procA->getOutput() . $procA->getErrorOutput() . ' B: ' . $procB->getOutput() . $procB->getErrorOutput();
+        $this->assertSame([0, 1], $exitCodes, 'Exactly one approval may succeed. ' . $output);
+        $this->assertSame(7000, $expenses->netAllocationCents('contract_expense', (string) $cost->id));
     }
 }

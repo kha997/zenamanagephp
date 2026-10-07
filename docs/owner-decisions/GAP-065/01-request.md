@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-10-07-gap-065-architecture-test-db-leak-evidence.md
   plan: null
   branch: docs/GAP-065-architecture-test-db-leak
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/338
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

@@ -4,6 +4,7 @@ namespace App\Services\Treasury;
 
 use App\Models\AuditLog;
 use App\Models\Project;
+use App\Models\Treasury\TreasuryCostSettlementAllocation as Allocation;
 use App\Models\Treasury\TreasuryFinancialDocument as Document;
 use App\Models\Treasury\TreasuryFinancialParty;
 use App\Models\Treasury\TreasuryLedgerEntry as Entry;
@@ -31,6 +32,7 @@ class TreasuryPostingService
         Document::TYPE_OWNER_CONTRIBUTION,
         Document::TYPE_INTERNAL_TRANSFER,
         Document::TYPE_ADJUSTMENT,
+        Document::TYPE_EXPENSE,
     ];
 
     /** The closed graph a directly posted document walks in one transaction (§2.1a). */
@@ -173,6 +175,12 @@ class TreasuryPostingService
         }
 
         return DB::transaction(function () use ($project, $actor, $original, $data): Document {
+            // GAP-066 / v17 §11: an expense's cost-source rows (class 2) are
+            // locked before the document rows (class 5).
+            $activeApplies = $original->document_type === Document::TYPE_EXPENSE
+                ? $this->lockActiveAppliesOf($original)
+                : collect();
+
             /** @var Document $locked */
             $locked = Document::query()->whereKey($original->id)->lockForUpdate()->firstOrFail();
 
@@ -222,6 +230,20 @@ class TreasuryPostingService
                 ];
             }
             $this->postEntries($reversal, $legs);
+
+            // v17 §2.2b: every active apply gets its compensating reverse row,
+            // linked to the reversal document, in this same transaction.
+            foreach ($activeApplies as $apply) {
+                Allocation::query()->create([
+                    'tenant_id' => (string) $reversal->tenant_id,
+                    'financial_document_id' => (string) $reversal->id,
+                    'cost_source_contract_expense_id' => data_get($apply, 'cost_source_contract_expense_id'),
+                    'cost_source_material_receipt_line_id' => data_get($apply, 'cost_source_material_receipt_line_id'),
+                    'direction' => Allocation::DIRECTION_REVERSE,
+                    'allocated_amount' => data_get($apply, 'allocated_amount'),
+                    'reverses_allocation_id' => (string) data_get($apply, 'id'),
+                ]);
+            }
 
             $before = $locked->status;
             $locked->status = Document::STATUS_REVERSED;
@@ -310,7 +332,7 @@ class TreasuryPostingService
     /**
      * @param list<array{0: string, 1: string, 2: string}> $legs wallet id, direction, entry type
      */
-    private function postEntries(Document $document, array $legs): void
+    public function postEntries(Document $document, array $legs): void
     {
         foreach ($legs as [$walletId, $direction, $entryType]) {
             Entry::query()->create([
@@ -334,11 +356,50 @@ class TreasuryPostingService
      */
     private function lockAndRequireBalance(TreasuryWallet $wallet, string $amount, string $field): void
     {
-        TreasuryWallet::query()->whereKey($wallet->id)->lockForUpdate()->first();
+        $this->lockWallet($wallet);
+        $this->requireBalance($wallet, $amount, $field);
+    }
 
+    /** Lock class 0 (GAP-064): the source wallet row, before any v17 class 1–6 lock. */
+    public function lockWallet(TreasuryWallet $wallet): void
+    {
+        TreasuryWallet::query()->whereKey($wallet->id)->lockForUpdate()->first();
+    }
+
+    /** Class-4 shared-locked balance read; the wallet must cover the amount. */
+    public function requireBalance(TreasuryWallet $wallet, string $amount, string $field): void
+    {
         if (TreasuryBalanceService::toCents($this->balances->lockedWalletBalance($wallet)) < TreasuryBalanceService::toCents($amount)) {
             throw new TreasuryRuleViolation('Số dư ví "' . $wallet->name . '" không đủ.', $field);
         }
+    }
+
+    /**
+     * Active (not yet compensated) apply allocations of an expense, with their
+     * cost-source rows locked in v17 §11 class-2 order: contract_expenses
+     * before material_receipt_lines, each by id.
+     *
+     * @return \Illuminate\Support\Collection<int, mixed>
+     */
+    private function lockActiveAppliesOf(Document $expense): \Illuminate\Support\Collection
+    {
+        $applies = Allocation::query()
+            ->where('financial_document_id', (string) $expense->id)
+            ->where('direction', Allocation::DIRECTION_APPLY)
+            ->whereNotIn('id', Allocation::query()->whereNotNull('reverses_allocation_id')->select('reverses_allocation_id'))
+            ->orderBy('id')
+            ->get();
+
+        $contractExpenseIds = $applies->pluck('cost_source_contract_expense_id')->filter()->map(static fn ($id): string => (string) $id)->unique()->sort()->values()->all();
+        $lineIds = $applies->pluck('cost_source_material_receipt_line_id')->filter()->map(static fn ($id): string => (string) $id)->unique()->sort()->values()->all();
+        if ($contractExpenseIds !== []) {
+            DB::table('contract_expenses')->whereIn('id', $contractExpenseIds)->orderBy('id')->lockForUpdate()->get(['id']);
+        }
+        if ($lineIds !== []) {
+            DB::table('material_receipt_lines')->whereIn('id', $lineIds)->orderBy('id')->lockForUpdate()->get(['id']);
+        }
+
+        return $applies;
     }
 
     /**
@@ -409,7 +470,7 @@ class TreasuryPostingService
     /**
      * @param array<string, mixed> $extra
      */
-    private function audit(User $actor, Document $document, string $action, array $extra = []): void
+    public function audit(User $actor, Document $document, string $action, array $extra = []): void
     {
         AuditLog::query()->create([
             'user_id' => (string) $actor->id,
@@ -418,7 +479,7 @@ class TreasuryPostingService
             'action' => $action,
             'entity_type' => 'treasury_financial_document',
             'entity_id' => (string) $document->id,
-            'new_data' => [
+            'new_data' => array_merge([
                 'document_type' => $document->document_type,
                 'status' => $document->status,
                 'amount' => (string) $document->amount,
@@ -426,7 +487,7 @@ class TreasuryPostingService
                 'reference' => $document->reference,
                 'description' => $document->description,
                 'status_path' => $action === 'treasury.document.reversed' ? null : self::IMMEDIATE_POSTING_PATH,
-            ] + $extra,
+            ], $extra),
         ]);
     }
 }

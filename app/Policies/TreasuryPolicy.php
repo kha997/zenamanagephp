@@ -38,6 +38,21 @@ class TreasuryPolicy
         return $this->projectAbility($user, $project, 'treasury.create_transfer');
     }
 
+    public function createExpense(User $user, Project $project): bool
+    {
+        return $this->projectAbility($user, $project, 'treasury.create_expense');
+    }
+
+    public function submitExpense(User $user, Project $project): bool
+    {
+        return $this->projectAbility($user, $project, 'treasury.submit_expense');
+    }
+
+    public function approveExpense(User $user, Project $project): bool
+    {
+        return $this->projectAbility($user, $project, 'treasury.approve_expense');
+    }
+
     public function adjust(User $user, Project $project): bool
     {
         return $this->projectAbility($user, $project, 'treasury.adjust');

@@ -68,6 +68,10 @@ class AuthServiceProvider extends ServiceProvider
         Gate::define('treasury.transfer-from-wallet', [TreasuryPolicy::class, 'transferFromWallet']);
         Gate::define('treasury.adjust', [TreasuryPolicy::class, 'adjust']);
         Gate::define('treasury.reverse', [TreasuryPolicy::class, 'reverse']);
+        // GAP-066: Treasury S3 expenses & approvals.
+        Gate::define('treasury.create-expense', [TreasuryPolicy::class, 'createExpense']);
+        Gate::define('treasury.submit-expense', [TreasuryPolicy::class, 'submitExpense']);
+        Gate::define('treasury.approve-expense', [TreasuryPolicy::class, 'approveExpense']);
         
         // Temporarily disable Spatie Permission to fix cache issues
         // $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->registerPermissions();

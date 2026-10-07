@@ -340,6 +340,18 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::post('/documents/{treasuryDocument}/replacement', [\App\Http\Controllers\Api\Treasury\TreasuryDocumentController::class, 'replacement'])->middleware('rbac:treasury.reverse')->name('replacement');
         });
 
+        // Project Treasury S3 (GAP-066): expenses & approvals
+        Route::group(['prefix' => 'projects/{project}/treasury', 'as' => 'treasury.expenses.'], function () {
+            Route::get('/expenses', [\App\Http\Controllers\Api\Treasury\TreasuryExpenseController::class, 'index'])->middleware('rbac:treasury.view')->name('index');
+            Route::get('/payables', [\App\Http\Controllers\Api\Treasury\TreasuryExpenseController::class, 'payables'])->middleware('rbac:treasury.view')->name('payables');
+            Route::post('/expenses', [\App\Http\Controllers\Api\Treasury\TreasuryExpenseController::class, 'store'])->middleware('rbac:treasury.create_expense')->name('store');
+            Route::put('/expenses/{treasuryExpense}', [\App\Http\Controllers\Api\Treasury\TreasuryExpenseController::class, 'update'])->middleware('rbac:treasury.create_expense')->name('update');
+            Route::post('/expenses/{treasuryExpense}/submit', [\App\Http\Controllers\Api\Treasury\TreasuryExpenseController::class, 'submit'])->middleware('rbac:treasury.submit_expense')->name('submit');
+            Route::post('/expenses/{treasuryExpense}/approve', [\App\Http\Controllers\Api\Treasury\TreasuryExpenseController::class, 'approve'])->middleware('rbac:treasury.approve_expense')->name('approve');
+            Route::post('/expenses/{treasuryExpense}/reject', [\App\Http\Controllers\Api\Treasury\TreasuryExpenseController::class, 'reject'])->middleware('rbac:treasury.approve_expense')->name('reject');
+            Route::post('/expenses/{treasuryExpense}/copy', [\App\Http\Controllers\Api\Treasury\TreasuryExpenseController::class, 'copy'])->middleware('rbac:treasury.create_expense')->name('copy');
+        });
+
         Route::group(['prefix' => 'vendors'], function () {
             Route::get('/', [\App\Http\Controllers\Api\VendorController::class, 'index'])->middleware('rbac:vendor.view')->name('vendors.index');
             Route::post('/', [\App\Http\Controllers\Api\VendorController::class, 'store'])->middleware('rbac:vendor.create')->name('vendors.store');

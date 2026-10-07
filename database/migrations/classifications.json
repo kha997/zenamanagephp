@@ -208,5 +208,6 @@
     "2026_08_28_120001_create_project_service_lines_table": "expand",
     "2026_08_30_100000_make_opportunities_service_category_nullable": "expand",
     "2026_09_02_000000_create_custom_user_roles_table": "expand",
-    "2026_10_07_000000_add_transaction_date_and_reference_to_treasury_financial_documents": "expand"
+    "2026_10_07_000000_add_transaction_date_and_reference_to_treasury_financial_documents": "expand",
+    "2026_10_07_100000_add_expense_plan_to_treasury_financial_documents": "expand"
 }

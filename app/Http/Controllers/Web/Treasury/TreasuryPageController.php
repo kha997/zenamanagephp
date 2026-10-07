@@ -11,6 +11,7 @@ use App\Models\UserRoleProject;
 use App\Models\Treasury\TreasuryFinancialDocument;
 use App\Services\Treasury\TreasuryBalanceService;
 use App\Services\Treasury\TreasuryDuplicateSuspected;
+use App\Services\Treasury\TreasuryExpenseService;
 use App\Services\Treasury\TreasuryPostingService;
 use App\Services\Treasury\TreasuryRuleViolation;
 use App\Services\Treasury\TreasurySetupService;
@@ -33,6 +34,7 @@ class TreasuryPageController extends Controller
         private readonly TreasurySetupService $setup,
         private readonly TreasuryPostingService $posting,
         private readonly TreasuryBalanceService $balances,
+        private readonly TreasuryExpenseService $expenses,
     ) {
     }
 
@@ -126,14 +128,41 @@ class TreasuryPageController extends Controller
             // GAP-064 S2: balances, register and the actions this user may take.
             'summary' => $this->balances->projectSummary($model),
             'documents' => TreasuryFinancialDocument::query()
+                ->with(['sourceWallet', 'destinationWallet', 'sourceParty', 'destinationParty'])
                 ->where('tenant_id', (string) $model->tenant_id)
                 ->where('project_id', (string) $model->id)
-                ->with(['sourceWallet', 'destinationWallet', 'sourceParty', 'destinationParty'])
+                // GAP-066: drafts / submitted / rejected expenses are not ledger facts.
+                ->whereIn('status', [TreasuryFinancialDocument::STATUS_POSTED_UNRECONCILED, TreasuryFinancialDocument::STATUS_POSTED_RECONCILED, TreasuryFinancialDocument::STATUS_REVERSED])
                 ->orderByDesc('transaction_date')
                 ->orderByDesc('created_at')
                 ->limit(100)
                 ->get(),
+            // GAP-066 S3: expenses, approval queue, payables.
+            'payables' => $this->expenses->payables($model),
+            'contracts' => \App\Models\Contract::query()
+                ->where('tenant_id', (string) $model->tenant_id)
+                ->where('project_id', (string) $model->id)
+                ->orderBy('code')
+                ->get(),
+            'expenseList' => TreasuryFinancialDocument::query()
+                ->with(['sourceWallet', 'destinationParty'])
+                ->where('tenant_id', (string) $model->tenant_id)
+                ->where('project_id', (string) $model->id)
+                ->where('document_type', TreasuryFinancialDocument::TYPE_EXPENSE)
+                ->whereIn('status', [TreasuryFinancialDocument::STATUS_DRAFT, TreasuryFinancialDocument::STATUS_SUBMITTED, TreasuryFinancialDocument::STATUS_REJECTED])
+                ->orderByDesc('created_at')
+                ->get(),
+            'selfApprovedIds' => \App\Models\Treasury\TreasuryExpenseApproval::query()
+                ->where('tenant_id', (string) $model->tenant_id)
+                ->where('event', 'approved')
+                ->where('context->approval_mode', 'self_approval')
+                ->pluck('financial_document_id')
+                ->map(static fn ($id): string => (string) $id)
+                ->all(),
             'can' => [
+                'createExpense' => Gate::forUser($user)->allows('treasury.create-expense', $model),
+                'submitExpense' => Gate::forUser($user)->allows('treasury.submit-expense', $model),
+                'approveExpense' => Gate::forUser($user)->allows('treasury.approve-expense', $model),
                 'declare' => Gate::forUser($user)->allows('treasury.declare-funding', $model),
                 'transfer' => Gate::forUser($user)->allows('treasury.create-transfer', $model),
                 'adjust' => Gate::forUser($user)->allows('treasury.adjust', $model),
@@ -235,6 +264,87 @@ class TreasuryPageController extends Controller
         }
 
         return redirect()->route('operator.treasury.projects.show', $model->id)->with('success', $success);
+    }
+
+    public function storeExpense(Request $request, string $project): RedirectResponse
+    {
+        $model = $this->findProject($project);
+        $this->authorize('treasury.create-expense', $model);
+        $data = $request->validate([
+            'source_wallet_id' => ['required', 'string'],
+            'destination_party_id' => ['required', 'string'],
+            'amount' => ['required', 'numeric', 'gt:0', 'max:9999999999999.99', 'decimal:0,2'],
+            'transaction_date' => ['required', 'date_format:Y-m-d'],
+            'reference' => ['nullable', 'string', 'max:100'],
+            'description' => ['nullable', 'string', 'max:2000'],
+            'lines' => ['nullable', 'array', 'max:3'],
+            'lines.*.cost' => ['nullable', 'string'],
+            'lines.*.amount' => ['nullable', 'numeric', 'decimal:0,2'],
+            'new_contract_id' => ['nullable', 'string'],
+            'new_category' => ['nullable', 'string'],
+            'new_amount' => ['nullable', 'numeric', 'decimal:0,2'],
+            'new_description' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $allocations = [];
+        foreach ((array) ($data['lines'] ?? []) as $line) {
+            $cost = (string) ($line['cost'] ?? '');
+            if ($cost === '' || !str_contains($cost, ':')) {
+                continue;
+            }
+            [$type, $id] = explode(':', $cost, 2);
+            $allocations[] = ['cost_source_type' => $type, 'cost_source_id' => $id, 'amount' => (string) ($line['amount'] ?? '0')];
+        }
+        $payload = $data + ['allocations' => $allocations];
+        if ((string) ($data['new_contract_id'] ?? '') !== '') {
+            $payload['new_contract_expense'] = [
+                'contract_id' => (string) $data['new_contract_id'],
+                'category' => (string) ($data['new_category'] ?? ''),
+                'amount' => (string) ($data['new_amount'] ?? '0'),
+                'description' => (string) ($data['new_description'] ?? ''),
+            ];
+        }
+
+        try {
+            $draft = $this->expenses->createDraft($model, $this->user(), $payload);
+            if ($request->input('action') === 'submit') {
+                $this->authorize('treasury.submit-expense', $model);
+                $this->expenses->submit($model, $this->user(), $draft);
+            }
+        } catch (TreasuryRuleViolation $e) {
+            return back()->withInput()->withErrors([$e->field ?? 'expense' => $e->getMessage()]);
+        }
+
+        return redirect()->route('operator.treasury.projects.show', $model->id)
+            ->with('success', $request->input('action') === 'submit' ? 'Đã gửi duyệt khoản chi.' : 'Đã lưu nháp khoản chi.');
+    }
+
+    public function expenseAction(Request $request, string $project, string $treasuryExpense, string $action): RedirectResponse
+    {
+        $model = $this->findProject($project);
+        $expense = $this->findDocument($model, $treasuryExpense);
+        $ability = match ($action) {
+            'submit' => 'treasury.submit-expense',
+            'approve', 'reject' => 'treasury.approve-expense',
+            'copy' => 'treasury.create-expense',
+            default => abort(404),
+        };
+        $this->authorize($ability, $model);
+
+        try {
+            match ($action) {
+                'submit' => $this->expenses->submit($model, $this->user(), $expense),
+                'approve' => $this->expenses->approve($model, $this->user(), $expense, $request->input('note')),
+                'reject' => $this->expenses->reject($model, $this->user(), $expense, (string) $request->input('note', '')),
+                'copy' => $this->expenses->copyToDraft($model, $this->user(), $expense),
+            };
+        } catch (TreasuryRuleViolation $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        $messages = ['submit' => 'Đã gửi duyệt.', 'approve' => 'Đã duyệt và ghi sổ khoản chi.', 'reject' => 'Đã từ chối khoản chi.', 'copy' => 'Đã sao chép thành nháp mới.'];
+
+        return redirect()->route('operator.treasury.projects.show', $model->id)->with('success', $messages[$action]);
     }
 
     private function findDocument(Project $project, string $id): TreasuryFinancialDocument

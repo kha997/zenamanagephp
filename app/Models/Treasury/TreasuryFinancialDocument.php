@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $amount
  * @property \Illuminate\Support\Carbon|null $transaction_date
  * @property string|null $reference
+ * @property array<string, mixed>|null $expense_plan
  * @property string|null $source_wallet_id
  * @property string|null $destination_wallet_id
  * @property string|null $source_party_id
@@ -61,7 +62,7 @@ class TreasuryFinancialDocument extends Model
 
     protected $fillable = [
         'tenant_id', 'project_id', 'document_type', 'status', 'posting_path',
-        'amount', 'transaction_date', 'reference', 'source_wallet_id', 'destination_wallet_id',
+        'amount', 'transaction_date', 'reference', 'expense_plan', 'source_wallet_id', 'destination_wallet_id',
         'source_party_id', 'destination_party_id', 'description',
         'created_by', 'approved_by', 'posted_at',
         'reversed_document_id', 'replacement_document_id',
@@ -71,6 +72,7 @@ class TreasuryFinancialDocument extends Model
     protected $casts = [
         'amount' => 'decimal:2',
         'transaction_date' => 'date',
+        'expense_plan' => 'array',
         'posted_at' => 'datetime',
     ];
 

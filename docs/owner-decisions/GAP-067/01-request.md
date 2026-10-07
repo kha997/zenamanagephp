@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-10-08-gap-067-treasury-s4a-reconciliation-readiness.md
   plan: null
   branch: docs/GAP-067-treasury-s4a-reconciliation
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/340
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

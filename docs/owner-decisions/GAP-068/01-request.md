@@ -1,11 +1,11 @@
 ---
 work_id: GAP-068
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-08-gap-068-reconciliation-mutation-response-evidence.md
   plan: null
@@ -14,17 +14,22 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-08T10:50:07+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-08, verbatim: 'APPROVE GAP-068 Gate 1'. Bound to reviewed Draft PR #341 head a8781148413fea8895c06e1843dcd23e92ef4df8, canonical base a534de0982f33c85e936ecb4d2aca67d4eee1aa9. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-08T09:18:18+07:00"
-  updated_at: "2026-10-08T09:18:18+07:00"
+  updated_at: "2026-10-08T10:50:07+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-068 Gate 1 in-session on 2026-10-08 against Draft PR #341
+head `a8781148413fea8895c06e1843dcd23e92ef4df8`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

@@ -6,7 +6,7 @@ technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: pending
+  value: none
   authority: human_owner
 decision_requested: approve_or_correction_or_defer
 references:
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-10-08T16:33:00+07:00"
+  recorded_at: "2026-10-08T16:31:29+07:00"
   owner_response_reference: null
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
-  created_at: "2026-10-08T16:33:00+07:00"
-  updated_at: "2026-10-08T16:33:00+07:00"
+  created_at: "2026-10-08T16:31:29+07:00"
+  updated_at: "2026-10-08T16:31:29+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-070 at subject a1db318d (lockfile commit 4f91ff14 plus a merge of main 989bf88b, GAP-069): composer.lock moves exactly six packages (guzzlehttp/guzzle 7.13.2->7.15.5, guzzlehttp/promises 2.5.0->2.5.3, guzzlehttp/psr7 2.12.3->2.13.1, laravel/framework v12.63.0->v12.69.3, league/commonmark 2.8.2->2.10.3, league/flysystem 3.35.2->3.36.0); no composer.json, code, config, migration, Dockerfile or workflow change. Red first: composer audit 20 advisories on base, 0 after. Local: Unit 943 and Feature+Integration 1794 tests with one root-only filesystem-permission failure each (also failing on main as root); 115 Treasury tests green after the merge; full PHPStan clean; SSOT, governance and docs lints pass; exact-head PR checks 34/34 green; CI Security Scan Report: no vulnerabilities."
@@ -34,7 +34,10 @@ technical_evidence:
   subject_sha: "a1db318dbf3ed3a0bb4f66d3b174907806460d6f"
   implementation_tree_digest: "52965e677826800f1ef8c6bb5c2143fdffe0d42e285f855495f77db9db2cb45c"
   verified_pr_head_sha: "a1db318dbf3ed3a0bb4f66d3b174907806460d6f"
-  verified_at: "2026-10-08T16:33:00+07:00"
+  verified_at: "2026-10-08T16:31:29+07:00"
+owner_decision_binding:
+  implementation_tree_digest: null
+  decision_recorded_at: null
 ---
 
 # GAP-070 — Gate 3 release decision (xoá 20 lỗ hổng Composer)

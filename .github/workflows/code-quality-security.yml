@@ -359,8 +359,23 @@ jobs:
         load: true
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        # Rebuild the OS-package layers every run so fixed Alpine packages are scanned (GAP-071)
+        no-cache-filters: production
     - name: Verify image present
       run: docker image inspect zenamanage:test
+
+    - name: Smoke test image (PHP extensions, php-fpm config)
+      run: |
+        modules="$(docker run --rm zenamanage:test php -m)"
+        missing=0
+        for ext in pdo_mysql mbstring xml zip intl gd 'Zend OPcache' bcmath sockets redis; do
+          if ! printf '%s\n' "$modules" | grep -qixF "$ext"; then
+            echo "::error::PHP extension missing from image: $ext"
+            missing=1
+          fi
+        done
+        [ "$missing" -eq 0 ]
+        docker run --rm zenamanage:test php-fpm -t
 
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@0.35.0

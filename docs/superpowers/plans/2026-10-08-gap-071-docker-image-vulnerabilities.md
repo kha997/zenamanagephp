@@ -12,5 +12,5 @@ Executes approved Gate 2 Option A (`docs/owner-decisions/GAP-071/02-design.md`).
 2. **Dockerfile.prod** (production stage only) — `apk upgrade --no-cache`; runtime packages and extension
    runtime libs (incl. `icu-data-full`); build deps in `.build-deps` removed after building the same PHP
    extensions and PECL `redis`; drop `git zip unzip redis imagemagick linux-headers` and PECL `imagick`.
-3. **docker-security job** — `no-cache-filters: production`; smoke step `php -m` (ten extensions) and `nginx -t`.
+3. **docker-security job** — `no-cache-filters: production`; smoke step `php -m` (ten extensions) and `php-fpm -t` (Owner amendment: `nginx -t` dropped, `nginx.conf` already invalid on main).
 4. **Verify** — Trivy: 0 findings with an available fix (list any unfixed); smoke green; exact-head CI green.

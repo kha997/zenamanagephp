@@ -16,13 +16,13 @@ decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
   recorded_at: "2026-10-08T17:43:42+07:00"
-  owner_response_reference: "Owner decision in-session on 2026-10-08, verbatim: 'APPROVE GAP-071 Gate 2 Option A'. Reviewed design head: 0bb7bdd7aa473a07d0c2b731b9e4628cf2fbacec. Approves Option A and its exact allowlist (Dockerfile.prod production stage: apk upgrade, build deps in a removable virtual group, explicit runtime libs incl. icu-data-full, drop git/zip/unzip/redis server/imagemagick/linux-headers and PECL imagick; docker-security job of code-quality-security.yml: no-cache-filters production and a php -m / nginx -t smoke step); not Gate 3, merge, release, or deployment."
+  owner_response_reference: "Owner decision in-session on 2026-10-08, verbatim: 'APPROVE GAP-071 Gate 2 Option A'. Reviewed design head: 0bb7bdd7aa473a07d0c2b731b9e4628cf2fbacec. Approves Option A and its exact allowlist (Dockerfile.prod production stage: apk upgrade, build deps in a removable virtual group, explicit runtime libs incl. icu-data-full, drop git/zip/unzip/redis server/imagemagick/linux-headers and PECL imagick; docker-security job of code-quality-security.yml: no-cache-filters production and a php -m / nginx -t smoke step); not Gate 3, merge, release, or deployment. Amendment on 2026-10-08 at head 389cef7b5c2eaccbc14ae12eb119030cb859f845: after the agent reported that docker/nginx/nginx.conf already fails nginx -t on main, the Owner selected the in-session option 'Bỏ nginx -t (Recommended)', described as equivalent to 'APPROVE GAP-071 Gate 2 amendment: drop nginx -t, add php-fpm -t' (the Owner had typed 'APPROVE GAP-071 Gate 2' twice before; the agent did not treat those as choosing an option). The smoke step is php -m plus php-fpm -t; nginx.conf and HEALTHCHECK are left for a separate Work ID."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-08T17:42:32+07:00"
-  updated_at: "2026-10-08T17:43:42+07:00"
+  updated_at: "2026-10-08T18:42:24+07:00"
 generated_by: agent
 ---
 
@@ -33,6 +33,14 @@ generated_by: agent
 Owner approved Option A in-session on 2026-10-08 against reviewed design head
 `0bb7bdd7aa473a07d0c2b731b9e4628cf2fbacec`. This authorizes only the bounded implementation defined by this packet;
 it does not authorize Gate 3, merge, release, or deployment.
+
+## Amendment (Owner, 2026-10-08) — smoke step
+
+`docker/nginx/nginx.conf` already fails `nginx -t` on main (top-level `upstream`
+without `http {}`), so an `nginx -t` smoke step could never pass. Owner chose:
+drop `nginx -t`; the smoke step runs `php -m` (ten extensions) and `php-fpm -t`.
+Fixing `nginx.conf` and the `HEALTHCHECK` (it curls the php-fpm port) is out of
+scope and left for a separate Work ID.
 
 ## Owner Summary
 

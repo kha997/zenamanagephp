@@ -1,14 +1,14 @@
 ---
 work_id: GAP-071
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-08-gap-071-docker-image-vulnerabilities-evidence.md
   plan: docs/superpowers/plans/2026-10-08-gap-071-docker-image-vulnerabilities.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-10-08T19:19:48+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-10-08T19:21:08+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-08, verbatim: 'APPROVE GAP-071 Gate 3'. Given after the packet was presented at PR head 7ee4d571117dd4d43617bdf66d76c79eae32176e (subject fb2965f83fb3c5178719ae62d70ed101bf8bd4df with 34/34 exact-head checks green); bound to implementation subject fb2965f83fb3c5178719ae62d70ed101bf8bd4df and implementation-tree digest 695780041f3a1a2bce6ea77d4663159175db52b9dc2d467da7132917ef959fa9 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-08T19:19:48+07:00"
-  updated_at: "2026-10-08T19:19:48+07:00"
+  updated_at: "2026-10-08T19:21:08+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-071 at subject fb2965f8: Dockerfile.prod production stage runs apk upgrade, keeps runtime packages (nginx, supervisor, curl, mysql-client) and extension runtime libs (incl. icu-data-full), builds the same PHP extensions plus PECL redis with removable build deps, and drops git, zip, unzip, redis server, imagemagick, linux-headers and PECL imagick. The docker-security job rebuilds the production stage without layer cache and smoke-tests the image (php -m lists the ten extensions; php-fpm -t passes). Red first: Docker Security Scan 32 OS-package vulnerabilities on the unchanged Dockerfile; after: 0 (at 389cef7b and again at fb2965f8). Final image 71 Alpine packages (was 120). Exact-head PR checks 34/34 green. nginx -t dropped by Owner amendment (docker/nginx/nginx.conf already invalid on main)."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "fb2965f83fb3c5178719ae62d70ed101bf8bd4df"
   verified_at: "2026-10-08T19:19:48+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "695780041f3a1a2bce6ea77d4663159175db52b9dc2d467da7132917ef959fa9"
+  decision_recorded_at: "2026-10-08T19:21:08+07:00"
 ---
 
 # GAP-071 — Gate 3 release decision (lỗ hổng gói hệ thống trong Docker image)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-08 ("APPROVE GAP-071 Gate 3"), bound to implementation subject
+`fb2965f83fb3c5178719ae62d70ed101bf8bd4df` and implementation-tree digest `695780041f3a1a2bce6ea77d4663159175db52b9dc2d467da7132917ef959fa9`. No deployment is authorized.
 
 ## Gói quyết định phát hành
 

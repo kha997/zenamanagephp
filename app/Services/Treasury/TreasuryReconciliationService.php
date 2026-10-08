@@ -36,6 +36,9 @@ class TreasuryReconciliationService
 
     public const TYPES = [self::TYPE_BANK_STATEMENT, self::TYPE_CASH_COUNT, self::TYPE_VOUCHER];
 
+    /** GAP-069: history pages beyond this are never computed (no offset overflow). */
+    public const MAX_HISTORY_PAGE = 10000;
+
     /**
      * Reconcile (apply) the given ledger entries of one wallet. All-or-nothing.
      *
@@ -299,27 +302,10 @@ class TreasuryReconciliationService
      */
     public function history(Project $project, ?TreasuryWallet $wallet = null, ?string $reconciliationId = null, int $page = 1, int $perPage = 100): array
     {
-        $walletIds = TreasuryWallet::query()
-            ->withoutGlobalScopes()
-            ->where('tenant_id', (string) $project->tenant_id)
-            ->where('project_id', (string) $project->id)
-            ->when($wallet !== null, static fn ($query) => $query->whereKey((string) data_get($wallet, 'id')))
-            ->pluck('name', 'id');
-
-        $query = Reconciliation::query()
-            ->withoutGlobalScopes()
-            ->where('tenant_id', (string) $project->tenant_id)
-            ->whereIn('wallet_id', $walletIds->keys()->all());
-        if ($reconciliationId !== null) {
-            $query->where('id', $reconciliationId);
-        }
-        $reconciliations = $query
-            ->orderByDesc('reconciled_at')
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->offset((max(1, $page) - 1) * max(1, $perPage))
-            ->limit(max(1, $perPage))
-            ->get();
+        $page = min(max(1, $page), self::MAX_HISTORY_PAGE);
+        $perPage = min(max(1, $perPage), 100);
+        $walletIds = $this->historyWalletNames($project, $wallet);
+        $reconciliations = $this->historyRows($project, $walletIds->keys()->all(), $reconciliationId, ($page - 1) * $perPage, $perPage);
         if ($reconciliations->isEmpty()) {
             return [];
         }
@@ -400,6 +386,56 @@ class TreasuryReconciliationService
         }
 
         return $history;
+    }
+
+    /**
+     * GAP-069: whether the history has more than $count reconciliations, i.e.
+     * a row exists right after the first $count (newest first).
+     */
+    public function historyExtendsBeyond(Project $project, ?TreasuryWallet $wallet, int $count): bool
+    {
+        $walletIds = $this->historyWalletNames($project, $wallet)->keys()->all();
+
+        return $this->historyRows($project, $walletIds, null, max(0, $count), 1)->isNotEmpty();
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<array-key, mixed> wallet name by id
+     */
+    private function historyWalletNames(Project $project, ?TreasuryWallet $wallet): Collection
+    {
+        return TreasuryWallet::query()
+            ->withoutGlobalScopes()
+            ->where('tenant_id', (string) $project->tenant_id)
+            ->where('project_id', (string) $project->id)
+            ->when($wallet !== null, static fn ($query) => $query->whereKey((string) data_get($wallet, 'id')))
+            ->pluck('name', 'id');
+    }
+
+    /**
+     * Newest-first reconciliations of the given wallets (id as tiebreak), one window.
+     *
+     * @param array<int|string, mixed> $walletIds
+     * @return Collection<int, mixed>
+     */
+    private function historyRows(Project $project, array $walletIds, ?string $reconciliationId, int $offset, int $limit): Collection
+    {
+        $query = Reconciliation::query()
+            ->withoutGlobalScopes()
+            ->where('tenant_id', (string) $project->tenant_id)
+            ->whereIn('wallet_id', $walletIds);
+        if ($reconciliationId !== null) {
+            $query->where('id', $reconciliationId);
+        }
+
+        return $query
+            ->orderByDesc('reconciled_at')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->offset($offset)
+            ->limit($limit)
+            ->get()
+            ->values();
     }
 
     /**

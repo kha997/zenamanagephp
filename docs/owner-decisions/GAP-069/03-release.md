@@ -1,14 +1,14 @@
 ---
 work_id: GAP-069
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-08-gap-069-reconciliation-page-overflow-evidence.md
   plan: docs/superpowers/plans/2026-10-08-gap-069-reconciliation-page-overflow.md
@@ -17,15 +17,15 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-08T15:40:10+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-08, verbatim: 'APPROVE GAP-069 Gate 3'. Given after the packet (including the disclosed historyExtendsBeyond probe) was presented at PR head 7a13bab97d2b8fe57d6f0f143f43e15d0fdfb506 with 34/34 exact-head checks green (Owner Governance Lint after one sibling-wait rerun, no code change); bound to implementation subject 31449f9f4607d2734b8ce95d30f3e135c43911ea and implementation-tree digest a97c27dfdbcfdba3cedf46d88856f1fa9b204cd5f9b9c27a4afbc651668bd526 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-08T14:14:46+07:00"
-  updated_at: "2026-10-08T14:14:46+07:00"
+  updated_at: "2026-10-08T15:40:10+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-069 at subject 31449f9f: TreasuryReconciliationService::history() clamps page to 1-10000 (MAX_HISTORY_PAGE) and per_page to 1-100 before computing the offset; the API rejects page > 10000 (422); the web page clamps ?page= and detects a next page with an exact offset probe (new historyExtendsBeyond) instead of multiplying past the bound. Red first: web ?page=9223372036854775807 returned 500 on the unfixed code; 3 new tests, 115 Treasury tests green after the fix; full PHPStan clean; SSOT, governance, docs lints and baseline guard pass; exact-head PR checks 34/34 green. No view, route, migration or permission change."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "31449f9f4607d2734b8ce95d30f3e135c43911ea"
   verified_at: "2026-10-08T14:14:46+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "a97c27dfdbcfdba3cedf46d88856f1fa9b204cd5f9b9c27a4afbc651668bd526"
+  decision_recorded_at: "2026-10-08T15:40:10+07:00"
 ---
 
 # GAP-069 — Gate 3 release decision (giới hạn số trang lịch sử đối soát)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-08 ("APPROVE GAP-069 Gate 3"), bound to implementation subject
+`31449f9f4607d2734b8ce95d30f3e135c43911ea` and implementation-tree digest `a97c27dfdbcfdba3cedf46d88856f1fa9b204cd5f9b9c27a4afbc651668bd526`. No deployment is authorized.
 
 ## Gói quyết định phát hành
 

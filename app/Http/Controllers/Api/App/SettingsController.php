@@ -114,17 +114,18 @@ class SettingsController extends BaseApiController
         $tenantId = (string) $userOrError->tenant_id;
 
         $updatedSettings = DB::transaction(function () use ($userOrError, $tenantId, $validator) {
-            $lockedUser = User::query()
+            $lockedUserQuery = User::query()
                 ->whereKey($userOrError->id)
-                ->where('tenant_id', $tenantId)
-                ->lockForUpdate()
-                ->first();
+                ->where('tenant_id', $tenantId);
+            $lockedUserQuery->lockForUpdate();
+            $lockedUser = $lockedUserQuery->first();
 
             if (!$lockedUser instanceof User) {
                 return ErrorEnvelopeService::error('TENANT_INVALID', 'X-Tenant-ID does not match authenticated user', [], 403);
             }
 
-            $preferences = is_array($lockedUser->preferences) ? $lockedUser->preferences : [];
+            $lockedPreferences = $lockedUser->getAttribute('preferences');
+            $preferences = is_array($lockedPreferences) ? $lockedPreferences : [];
             $currentSettings = $this->normalizeGeneralSettings($preferences['general'] ?? []);
 
             /** @var array<string, mixed> $validatedInput */
@@ -187,17 +188,18 @@ class SettingsController extends BaseApiController
         $tenantId = (string) $userOrError->tenant_id;
 
         $updatedSettings = DB::transaction(function () use ($userOrError, $tenantId, $validator) {
-            $lockedUser = User::query()
+            $lockedUserQuery = User::query()
                 ->whereKey($userOrError->id)
-                ->where('tenant_id', $tenantId)
-                ->lockForUpdate()
-                ->first();
+                ->where('tenant_id', $tenantId);
+            $lockedUserQuery->lockForUpdate();
+            $lockedUser = $lockedUserQuery->first();
 
             if (!$lockedUser instanceof User) {
                 return ErrorEnvelopeService::error('TENANT_INVALID', 'X-Tenant-ID does not match authenticated user', [], 403);
             }
 
-            $preferences = is_array($lockedUser->preferences) ? $lockedUser->preferences : [];
+            $lockedPreferences = $lockedUser->getAttribute('preferences');
+            $preferences = is_array($lockedPreferences) ? $lockedPreferences : [];
             $currentSettings = $this->normalizeSecuritySettings($preferences['security'] ?? []);
 
             /** @var array<string, mixed> $validatedInput */
@@ -284,17 +286,18 @@ class SettingsController extends BaseApiController
         }
 
         $updatedSettings = DB::transaction(function () use ($user, $tenantId, $validator) {
-            $lockedUser = User::query()
+            $lockedUserQuery = User::query()
                 ->whereKey($user->id)
-                ->where('tenant_id', $tenantId)
-                ->lockForUpdate()
-                ->first();
+                ->where('tenant_id', $tenantId);
+            $lockedUserQuery->lockForUpdate();
+            $lockedUser = $lockedUserQuery->first();
 
             if (!$lockedUser instanceof User) {
                 return ErrorEnvelopeService::error('TENANT_INVALID', 'X-Tenant-ID does not match authenticated user', [], 403);
             }
 
-            $preferences = is_array($lockedUser->preferences) ? $lockedUser->preferences : [];
+            $lockedPreferences = $lockedUser->getAttribute('preferences');
+            $preferences = is_array($lockedPreferences) ? $lockedPreferences : [];
             $currentSettings = $this->normalizeNotificationSettings($preferences['notifications'] ?? []);
 
             /** @var array<string, mixed> $validatedInput */

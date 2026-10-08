@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-10-08-gap-068-reconciliation-mutation-response-evidence.md
   plan: null
   branch: docs/GAP-068-reconciliation-mutation-response
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/341
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

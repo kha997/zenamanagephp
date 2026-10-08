@@ -1,14 +1,14 @@
 ---
 work_id: GAP-070
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-08-gap-070-composer-security-advisories-evidence.md
   plan: docs/superpowers/plans/2026-10-08-gap-070-composer-security-advisories.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-10-08T16:31:29+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-10-08T16:39:38+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-08, verbatim: 'APPROVE GAP-070 Gate 3'. Given after the packet was presented at PR head 961f3b5a23859e0a171b3878b9e8e4d67df9552f (subject a1db318dbf3ed3a0bb4f66d3b174907806460d6f with 34/34 exact-head checks green; Owner Governance Lint at 961f3b5 lost the 300s sibling wait, no code change); bound to implementation subject a1db318dbf3ed3a0bb4f66d3b174907806460d6f and implementation-tree digest 52965e677826800f1ef8c6bb5c2143fdffe0d42e285f855495f77db9db2cb45c (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-08T16:31:29+07:00"
-  updated_at: "2026-10-08T16:31:29+07:00"
+  updated_at: "2026-10-08T16:39:38+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-070 at subject a1db318d (lockfile commit 4f91ff14 plus a merge of main 989bf88b, GAP-069): composer.lock moves exactly six packages (guzzlehttp/guzzle 7.13.2->7.15.5, guzzlehttp/promises 2.5.0->2.5.3, guzzlehttp/psr7 2.12.3->2.13.1, laravel/framework v12.63.0->v12.69.3, league/commonmark 2.8.2->2.10.3, league/flysystem 3.35.2->3.36.0); no composer.json, code, config, migration, Dockerfile or workflow change. Red first: composer audit 20 advisories on base, 0 after. Local: Unit 943 and Feature+Integration 1794 tests with one root-only filesystem-permission failure each (also failing on main as root); 115 Treasury tests green after the merge; full PHPStan clean; SSOT, governance and docs lints pass; exact-head PR checks 34/34 green; CI Security Scan Report: no vulnerabilities."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "a1db318dbf3ed3a0bb4f66d3b174907806460d6f"
   verified_at: "2026-10-08T16:31:29+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "52965e677826800f1ef8c6bb5c2143fdffe0d42e285f855495f77db9db2cb45c"
+  decision_recorded_at: "2026-10-08T16:39:38+07:00"
 ---
 
 # GAP-070 — Gate 3 release decision (xoá 20 lỗ hổng Composer)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-08 ("APPROVE GAP-070 Gate 3"), bound to implementation subject
+`a1db318dbf3ed3a0bb4f66d3b174907806460d6f` and implementation-tree digest `52965e677826800f1ef8c6bb5c2143fdffe0d42e285f855495f77db9db2cb45c`. No deployment is authorized.
 
 ## Gói quyết định phát hành
 

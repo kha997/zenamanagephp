@@ -1,11 +1,11 @@
 ---
 work_id: GAP-070
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-08-gap-070-composer-security-advisories-evidence.md
   plan: null
@@ -14,17 +14,22 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-08T15:49:52+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-08, verbatim: 'APPROVE GAP-070 Gate 1'. Bound to reviewed Draft PR #343 head e41cd2eab9b467c3adf360f51f950ecb01766f8f, canonical base c8a38b8ff5312c2a40b72184858c8c8b7411508c. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-08T15:46:22+07:00"
-  updated_at: "2026-10-08T15:46:22+07:00"
+  updated_at: "2026-10-08T15:49:52+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-070 Gate 1 in-session on 2026-10-08 against Draft PR #343
+head `e41cd2eab9b467c3adf360f51f950ecb01766f8f`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

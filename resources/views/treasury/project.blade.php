@@ -46,7 +46,7 @@
         @if ($wallets->isEmpty())
             <x-ui.empty-state title="Chưa có ví" description="Thêm ví để chuẩn bị ghi nhận tiền của dự án." />
         @else
-            <x-ui.data-table :headers="$canManageWallets ? ['Tên ví', 'Loại', 'Người giữ', 'Số dư', 'Thao tác'] : ['Tên ví', 'Loại', 'Người giữ', 'Số dư']">
+            <x-ui.data-table :headers="['Tên ví', 'Loại', 'Người giữ', 'Số dư', 'Đã đối soát', 'Chưa đối soát', 'Thao tác']">
                 @foreach ($wallets as $wallet)
                     <tr data-testid="treasury-wallet-row">
                         <td class="font-medium text-slate-900">{{ $wallet->name }}</td>
@@ -54,15 +54,19 @@
                         <td class="text-sm text-slate-600">{{ $wallet->custodianParty?->name ?? '—' }}</td>
                         @php $balance = $summary['wallets'][$wallet->id] ?? '0.00'; @endphp
                         <td class="text-sm font-semibold {{ (float) $balance < 0 ? 'text-rose-600' : 'text-slate-900' }}">{{ $money($balance) }}</td>
-                        @if ($canManageWallets)
-                            <td class="flex gap-2">
+                        {{-- GAP-067 S4a: reconciled / unreconciled split of the same balance. --}}
+                        <td class="text-sm text-emerald-700" data-testid="treasury-wallet-reconciled">{{ $money($reconciliationSummary[$wallet->id]['reconciled'] ?? '0.00') }}</td>
+                        <td class="text-sm text-amber-700" data-testid="treasury-wallet-unreconciled">{{ $money($reconciliationSummary[$wallet->id]['unreconciled'] ?? '0.00') }}</td>
+                        <td class="flex gap-2">
+                            <a href="{{ route('operator.treasury.projects.wallets.reconcile', [$project->id, $wallet->id]) }}" class="operator-button operator-button-inline" data-testid="treasury-wallet-reconcile-link">Đối soát</a>
+                            @if ($canManageWallets)
                                 <a href="{{ route('operator.treasury.projects.wallets.edit', [$project->id, $wallet->id]) }}" class="operator-button operator-button-inline">Sửa</a>
                                 <form method="POST" action="{{ route('operator.treasury.projects.wallets.destroy', [$project->id, $wallet->id]) }}" onsubmit="return confirm('Xoá ví này?')">
                                     @csrf
                                     <button type="submit" class="operator-button operator-button-inline">Xoá</button>
                                 </form>
-                            </td>
-                        @endif
+                            @endif
+                        </td>
                     </tr>
                 @endforeach
             </x-ui.data-table>
@@ -299,6 +303,18 @@
     </x-ui.card>
 
     <x-ui.card title="Sổ giao dịch">
+        <form method="GET" action="{{ route('operator.treasury.projects.show', $project->id) }}" class="flex items-end gap-2 p-4" data-testid="treasury-register-filter">
+            <div class="operator-field">
+                <label for="register_status">Trạng thái</label>
+                <select id="register_status" name="status" class="operator-input">
+                    <option value="">Tất cả</option>
+                    <option value="posted_reconciled" @selected($statusFilter === 'posted_reconciled')>Đã đối soát</option>
+                    <option value="posted_unreconciled" @selected($statusFilter === 'posted_unreconciled')>Chưa đối soát</option>
+                    <option value="reversed" @selected($statusFilter === 'reversed')>Đã đảo</option>
+                </select>
+            </div>
+            <button type="submit" class="operator-button operator-button-inline">Lọc</button>
+        </form>
         @if ($documents->isEmpty())
             <x-ui.empty-state title="Chưa có giao dịch" description="Các khoản tiền nhận, chuyển ví, điều chỉnh sẽ hiện ở đây." />
         @else

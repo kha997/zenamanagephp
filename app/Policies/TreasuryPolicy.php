@@ -63,6 +63,12 @@ class TreasuryPolicy
         return $this->projectAbility($user, $project, 'treasury.reverse');
     }
 
+    /** GAP-067 S4a: reconcile and undo reconciliation of the project's wallets. */
+    public function reconcile(User $user, Project $project): bool
+    {
+        return $this->projectAbility($user, $project, 'treasury.reconcile');
+    }
+
     /**
      * GAP-064 Owner answer 2: holders of treasury.manage_wallets (owner X)
      * may move money out of any wallet of the project; everyone else only

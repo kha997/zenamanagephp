@@ -121,6 +121,39 @@ class TreasuryReconciliationHistoryPagingTest extends TestCase
     }
 
     /**
+     * GAP-069 — a huge page number must not overflow into a 500 (web) and is
+     * bounded at 10 000 on the API.
+     */
+    public function test_huge_page_numbers_are_bounded(): void
+    {
+        $this->reconcileNewest(1);
+        $page = route('operator.treasury.projects.wallets.reconcile', ['project' => (string) $this->project->id, 'wallet' => (string) $this->wallet->id], false);
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+        foreach (['9223372036854775807', '99999999999999999999', '10000'] as $huge) {
+            $this->actingAs($this->owner)->get($page . '?page=' . $huge, $headers)->assertOk()
+                ->assertSee('Chưa có lần đối soát nào')->assertDontSee('Trang sau');
+        }
+        $this->assertSame([], $this->reconciliation->history($this->project, null, null, PHP_INT_MAX, PHP_INT_MAX));
+    }
+
+    public function test_api_page_is_capped_at_10000(): void
+    {
+        $this->reconcileNewest(1);
+
+        $this->getJson($this->api('index') . '?page=10001', $this->headers())->assertStatus(422);
+        $this->getJson($this->api('index') . '?page=10000', $this->headers())->assertOk()->assertJsonCount(0, 'data');
+    }
+
+    public function test_next_page_probe_counts_reconciliations_exactly(): void
+    {
+        $this->reconcileNewest(3);
+
+        $this->assertTrue($this->reconciliation->historyExtendsBeyond($this->project, $this->wallet, 2));
+        $this->assertFalse($this->reconciliation->historyExtendsBeyond($this->project, $this->wallet, 3));
+        $this->assertFalse($this->reconciliation->historyExtendsBeyond($this->project, $this->wallet, 500000));
+    }
+
+    /**
      * Reconciles entries from the end of the list, dated today (newest).
      */
     private function reconcileNewest(int $count): void

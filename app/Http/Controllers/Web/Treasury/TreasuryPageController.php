@@ -366,11 +366,13 @@ class TreasuryPageController extends Controller
         $model = $this->findProject($project);
         $this->authorize('treasury.view-project', $model);
         $walletModel = $this->findWallet($model, $wallet);
-        // GAP-068: 50 reconciliations per page. A next page exists when the
-        // reconciliation right after this page does (a one-row page of size 1).
-        $page = max(1, (int) $request->query('page', '1'));
+        // GAP-068: 50 reconciliations per page; a next page exists when a
+        // reconciliation follows this page.
+        // GAP-069: the page number is bounded before any offset arithmetic.
+        $page = min(max(1, (int) $request->query('page', '1')), TreasuryReconciliationService::MAX_HISTORY_PAGE);
         $history = $this->reconciliation->history($model, $walletModel, null, $page, 50);
-        $hasNextPage = $this->reconciliation->history($model, $walletModel, null, $page * 50 + 1, 1) !== [];
+        $hasNextPage = $page < TreasuryReconciliationService::MAX_HISTORY_PAGE
+            && $this->reconciliation->historyExtendsBeyond($model, $walletModel, $page * 50);
 
         return view('treasury.reconcile', [
             'project' => $model,

@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 use Illuminate\Support\Facades\Auth;
 
 
+use App\Models\InteractionLog;
 use App\Models\Task;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -26,6 +27,7 @@ class UpdateInteractionLogRequest extends FormRequest
     public function rules(): array
     {
         $interactionLog = $this->route('interaction_log');
+        $interactionLog = $interactionLog instanceof InteractionLog ? $interactionLog : null;
         
         return [
             'project_id' => [
@@ -74,7 +76,7 @@ class UpdateInteractionLogRequest extends FormRequest
                 'sometimes',
                 'string',
                 Rule::in(['internal', 'client']),
-                function ($attribute, $value, $fail) {
+                function ($attribute, $value, $fail) use ($interactionLog) {
                     // Không cho phép thay đổi từ 'client' sang 'internal' nếu đã được approve
                     if ($interactionLog && 
                         $interactionLog->visibility === 'client' && 
@@ -87,9 +89,9 @@ class UpdateInteractionLogRequest extends FormRequest
             'client_approved' => [
                 'sometimes',
                 'boolean',
-                function ($attribute, $value, $fail) {
+                function ($attribute, $value, $fail) use ($interactionLog) {
                     // Chỉ cho phép approve nếu visibility là 'client'
-                    $visibility = $this->visibility ?? $interactionLog->visibility;
+                    $visibility = $this->visibility ?? $interactionLog?->visibility;
                     if ($value && $visibility !== 'client') {
                         $fail('Chỉ có thể approve interaction log với visibility = client.');
                     }

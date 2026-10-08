@@ -113,7 +113,7 @@ class SettingsController extends BaseApiController
 
         $tenantId = (string) $userOrError->tenant_id;
 
-        $updatedSettings = DB::transaction(function () use ($userOrError, $tenantId, $validator) {
+        $updatedSettings = DB::transaction(function () use ($userOrError, $tenantId) {
             $lockedUser = User::query()
                 ->whereKey($userOrError->id)
                 ->where('tenant_id', $tenantId)
@@ -186,7 +186,7 @@ class SettingsController extends BaseApiController
 
         $tenantId = (string) $userOrError->tenant_id;
 
-        $updatedSettings = DB::transaction(function () use ($userOrError, $tenantId, $validator) {
+        $updatedSettings = DB::transaction(function () use ($userOrError, $tenantId) {
             $lockedUser = User::query()
                 ->whereKey($userOrError->id)
                 ->where('tenant_id', $tenantId)
@@ -283,7 +283,7 @@ class SettingsController extends BaseApiController
             throw ValidationException::withMessages($validator->errors()->toArray());
         }
 
-        $updatedSettings = DB::transaction(function () use ($user, $tenantId, $validator) {
+        $updatedSettings = DB::transaction(function () use ($user, $tenantId) {
             $lockedUser = User::query()
                 ->whereKey($user->id)
                 ->where('tenant_id', $tenantId)

@@ -252,7 +252,7 @@ class HealthCheckService
             $testKey = 'health_check_redis_' . time();
             $testValue = 'test_value_' . rand(1000, 9999);
             
-            $redis->set($testKey, $testValue, 'EX', 60);
+            $redis->setex($testKey, 60, $testValue);
             $retrieved = $redis->get($testKey);
             $redis->del($testKey);
             

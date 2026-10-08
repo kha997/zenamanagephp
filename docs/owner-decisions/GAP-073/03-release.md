@@ -1,14 +1,14 @@
 ---
 work_id: GAP-073
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-08-gap-073-phpstan-2-3-evidence.md
   plan: docs/superpowers/plans/2026-10-08-gap-073-phpstan-2-3.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-10-08T22:47:06+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-10-08T22:50:12+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-08, verbatim: 'APPROVE GAP-073 Gate 3'. Given after the packet (including the disclosed validator-capture incident and fix) was presented at PR head 93ff9298f544a32ab25d06db0c8a1f69f0bc07f0 (subject 5d9f0b80799bbc56d2d2784e6e38186c99e5c2ca with 34/34 exact-head checks green); bound to implementation subject 5d9f0b80799bbc56d2d2784e6e38186c99e5c2ca and implementation-tree digest 807770bf9df7009062548161eccfe7b77613c54509774ac16e8bf9376c479293 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-08T22:47:06+07:00"
-  updated_at: "2026-10-08T22:47:06+07:00"
+  updated_at: "2026-10-08T22:50:12+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-073 at subject 5d9f0b80: phpstan/phpstan 2.2.5 -> 2.3.0 (lockfile moves only that package); the 10 PHPStan 2.3 findings fixed in place with no new suppressions (two fixed baseline entries removed). Red first: 10 errors on unchanged code. Disclosed deviation: the Gate-2 step 'drop unused $validator captures' was a PHPStan false positive and broke the settings PATCH endpoints at 9e385790 (CI API Tests (Fast): Undefined variable $validator); fixed at 5d9f0b80 by keeping the captures and typing the locked-user query (same query and lock), plus getAttribute('preferences'). PHPStan clean; settings API tests 14 passed; Unit 894 and Feature+Integration 1774 passed locally with one root-only failure each (also on main as root); lints pass; exact-head PR checks 34/34 green."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "5d9f0b80799bbc56d2d2784e6e38186c99e5c2ca"
   verified_at: "2026-10-08T22:47:06+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "807770bf9df7009062548161eccfe7b77613c54509774ac16e8bf9376c479293"
+  decision_recorded_at: "2026-10-08T22:50:12+07:00"
 ---
 
 # GAP-073 — Gate 3 release decision (PHPStan 2.3 và 10 lỗi)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-08 ("APPROVE GAP-073 Gate 3"), bound to implementation subject
+`5d9f0b80799bbc56d2d2784e6e38186c99e5c2ca` and implementation-tree digest `807770bf9df7009062548161eccfe7b77613c54509774ac16e8bf9376c479293`. No deployment is authorized.
 
 ## Gói quyết định phát hành
 

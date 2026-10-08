@@ -361,18 +361,25 @@ class TreasuryPageController extends Controller
     }
 
     /** GAP-067 S4a: one wallet's unreconciled entries, reconcile form and history. */
-    public function reconcileWallet(string $project, string $wallet): View
+    public function reconcileWallet(Request $request, string $project, string $wallet): View
     {
         $model = $this->findProject($project);
         $this->authorize('treasury.view-project', $model);
         $walletModel = $this->findWallet($model, $wallet);
+        // GAP-068: 50 reconciliations per page. A next page exists when the
+        // reconciliation right after this page does (a one-row page of size 1).
+        $page = max(1, (int) $request->query('page', '1'));
+        $history = $this->reconciliation->history($model, $walletModel, null, $page, 50);
+        $hasNextPage = $this->reconciliation->history($model, $walletModel, null, $page * 50 + 1, 1) !== [];
 
         return view('treasury.reconcile', [
             'project' => $model,
             'wallet' => $walletModel,
             'balances' => $this->reconciliation->walletSummary($walletModel),
             'entries' => $this->reconciliation->unreconciledEntries($walletModel),
-            'history' => $this->reconciliation->history($model, $walletModel),
+            'history' => $history,
+            'historyPage' => $page,
+            'historyHasNextPage' => $hasNextPage,
             'canReconcile' => Gate::forUser($this->user())->allows('treasury.reconcile', $model),
             'types' => TreasuryReconciliationService::TYPES,
         ]);

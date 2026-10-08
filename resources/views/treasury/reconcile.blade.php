@@ -145,5 +145,17 @@
                 @endforeach
             </div>
         @endif
+        @if ($historyPage > 1 || $historyHasNextPage)
+            {{-- GAP-068: plain links, 50 reconciliations per page. --}}
+            <div class="flex gap-2 px-4 pb-4" data-testid="treasury-reconciliation-history-pages">
+                @if ($historyPage > 1)
+                    <a href="{{ route('operator.treasury.projects.wallets.reconcile', [$project->id, $wallet->id]) }}?page={{ $historyPage - 1 }}" class="operator-button operator-button-inline">Trang trước</a>
+                @endif
+                <span class="text-sm text-slate-600">Trang {{ $historyPage }}</span>
+                @if ($historyHasNextPage)
+                    <a href="{{ route('operator.treasury.projects.wallets.reconcile', [$project->id, $wallet->id]) }}?page={{ $historyPage + 1 }}" class="operator-button operator-button-inline">Trang sau</a>
+                @endif
+            </div>
+        @endif
     </x-ui.card>
 @endsection

@@ -72,7 +72,7 @@ class TreasuryReconciliationController extends BaseApiController
             return $this->validationError([$e->field ?? 'reconciliation' => [$e->getMessage()]]);
         }
 
-        return $this->successResponse($this->historyItem($model, (string) $rec->id), 'Treasury reconciliation recorded', 201);
+        return $this->successResponse($this->reconciliation->historyItem($model, (string) $rec->id), 'Treasury reconciliation recorded', 201);
     }
 
     public function index(Request $request, string $project): JsonResponse
@@ -82,6 +82,13 @@ class TreasuryReconciliationController extends BaseApiController
             return $this->notFound('Project not found');
         }
         $this->authorize('treasury.view-project', $model);
+        $validator = Validator::make($request->all(), [
+            'page' => ['sometimes', 'integer', 'min:1'],
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+        ]);
+        if ($validator->fails()) {
+            return $this->validationError($validator->errors());
+        }
         $walletModel = null;
         if (($walletId = (string) $request->input('wallet_id')) !== '') {
             $walletModel = $this->findWallet($model, $walletId);
@@ -90,7 +97,10 @@ class TreasuryReconciliationController extends BaseApiController
             }
         }
 
-        return $this->successResponse($this->reconciliation->history($model, $walletModel), 'Treasury reconciliations retrieved successfully');
+        return $this->successResponse(
+            $this->reconciliation->history($model, $walletModel, null, (int) $request->input('page', 1), (int) $request->input('per_page', 100)),
+            'Treasury reconciliations retrieved successfully'
+        );
     }
 
     public function undo(Request $request, string $project, string $treasuryReconciliation): JsonResponse
@@ -115,7 +125,7 @@ class TreasuryReconciliationController extends BaseApiController
             return $this->validationError([$e->field ?? 'reconciliation' => [$e->getMessage()]]);
         }
 
-        return $this->successResponse($this->historyItem($model, (string) $rec->id), 'Treasury reconciliation undone');
+        return $this->successResponse($this->reconciliation->historyItem($model, (string) $rec->id), 'Treasury reconciliation undone');
     }
 
     public function undoEntry(Request $request, string $project, string $treasuryReconciliationEntry): JsonResponse
@@ -144,7 +154,7 @@ class TreasuryReconciliationController extends BaseApiController
             return $this->validationError([$e->field ?? 'reconciliation_entry' => [$e->getMessage()]]);
         }
 
-        return $this->successResponse($this->historyItem($model, (string) $line->reconciliation_id), 'Treasury reconciliation line undone');
+        return $this->successResponse($this->reconciliation->historyItem($model, (string) $line->reconciliation_id), 'Treasury reconciliation line undone');
     }
 
     private function reason(Request $request): string|JsonResponse
@@ -155,20 +165,6 @@ class TreasuryReconciliationController extends BaseApiController
         }
 
         return (string) $request->input('reason');
-    }
-
-    /**
-     * @return array<string, mixed>|null
-     */
-    private function historyItem(Project $project, string $reconciliationId): ?array
-    {
-        foreach ($this->reconciliation->history($project) as $item) {
-            if ($item['id'] === $reconciliationId) {
-                return $item;
-            }
-        }
-
-        return null;
     }
 
     private function findProject(string $id): ?Project

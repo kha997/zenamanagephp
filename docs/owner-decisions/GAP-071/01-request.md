@@ -1,11 +1,11 @@
 ---
 work_id: GAP-071
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-08-gap-071-docker-image-vulnerabilities-evidence.md
   plan: null
@@ -15,16 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-10-08T17:37:12+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-10-08T17:41:40+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-08, verbatim: 'APPROVE GAP-071 Gate 1'. Bound to reviewed Draft PR #344 head 5089552233c6e763565ddc220bcabd8c553acced, canonical base e1bd5de0d13113d2572f951d61bb873a38a3d146. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-08T17:37:12+07:00"
-  updated_at: "2026-10-08T17:37:12+07:00"
+  updated_at: "2026-10-08T17:41:40+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-071 Gate 1 in-session on 2026-10-08 against Draft PR #344
+head `5089552233c6e763565ddc220bcabd8c553acced`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

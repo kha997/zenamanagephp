@@ -291,11 +291,13 @@ class TreasuryReconciliationService
     }
 
     /**
-     * Reconciliation history of the project's wallets (optionally one wallet), newest first.
+     * Reconciliation history of the project's wallets (optionally one wallet),
+     * newest first, one page at a time (GAP-068). With $reconciliationId only
+     * that reconciliation is returned, whatever its age.
      *
      * @return list<array<string, mixed>>
      */
-    public function history(Project $project, ?TreasuryWallet $wallet = null): array
+    public function history(Project $project, ?TreasuryWallet $wallet = null, ?string $reconciliationId = null, int $page = 1, int $perPage = 100): array
     {
         $walletIds = TreasuryWallet::query()
             ->withoutGlobalScopes()
@@ -304,13 +306,19 @@ class TreasuryReconciliationService
             ->when($wallet !== null, static fn ($query) => $query->whereKey((string) data_get($wallet, 'id')))
             ->pluck('name', 'id');
 
-        $reconciliations = Reconciliation::query()
+        $query = Reconciliation::query()
             ->withoutGlobalScopes()
             ->where('tenant_id', (string) $project->tenant_id)
-            ->whereIn('wallet_id', $walletIds->keys()->all())
+            ->whereIn('wallet_id', $walletIds->keys()->all());
+        if ($reconciliationId !== null) {
+            $query->where('id', $reconciliationId);
+        }
+        $reconciliations = $query
             ->orderByDesc('reconciled_at')
             ->orderByDesc('created_at')
-            ->limit(100)
+            ->orderByDesc('id')
+            ->offset((max(1, $page) - 1) * max(1, $perPage))
+            ->limit(max(1, $perPage))
             ->get();
         if ($reconciliations->isEmpty()) {
             return [];
@@ -392,6 +400,16 @@ class TreasuryReconciliationService
         }
 
         return $history;
+    }
+
+    /**
+     * GAP-068: one reconciliation in the history() shape, looked up by id.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function historyItem(Project $project, string $reconciliationId): ?array
+    {
+        return $this->history($project, null, $reconciliationId)[0] ?? null;
     }
 
     /** A reconciliation of one of the project's wallets, or null. */

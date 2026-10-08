@@ -1,32 +1,38 @@
 ---
 work_id: GAP-070
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-08-gap-070-composer-security-advisories-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-10-08-gap-070-composer-security-advisories.md
   branch: docs/GAP-070-composer-security-advisories
   pr: https://github.com/kha997/zenamanagephp/pull/343
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-08T15:54:24+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-08, verbatim: 'APPROVE GAP-070 Gate 2 Option A'. Reviewed design head: 924cc4c3e6c04cae509e068693023b4251b13df9. Approves Option A and its exact allowlist (targeted lockfile update of guzzlehttp/guzzle, guzzlehttp/psr7, guzzlehttp/promises, league/commonmark, laravel/framework, league/flysystem; no composer.json, code, config, migration, Dockerfile or workflow change); not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-08T15:50:30+07:00"
-  updated_at: "2026-10-08T15:50:30+07:00"
+  updated_at: "2026-10-08T15:54:24+07:00"
 generated_by: agent
 ---
 
 # GAP-070 — Composer security advisories: Gate 2 design
+
+## OWNER GATE 2: APPROVED — OPTION A
+
+Owner approved Option A in-session on 2026-10-08 against reviewed design head
+`924cc4c3e6c04cae509e068693023b4251b13df9`. This authorizes only the bounded implementation defined by this packet;
+it does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

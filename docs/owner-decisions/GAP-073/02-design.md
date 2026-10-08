@@ -1,32 +1,38 @@
 ---
 work_id: GAP-073
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-08-gap-073-phpstan-2-3-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-10-08-gap-073-phpstan-2-3.md
   branch: docs/GAP-073-phpstan-2-3
   pr: https://github.com/kha997/zenamanagephp/pull/346
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-10-08T22:16:46+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-10-08T22:17:50+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-08, verbatim: 'APPROVE GAP-073 Gate 2 Option A'. Reviewed design head: 01fd6969f7fb84b0eb8073bab9c2b98b23db1e98. Approves Option A and its exact allowlist (phpstan/phpstan 2.3.x in composer.lock; in-place fixes in BasicSidebarController, UpdateInteractionLogRequest, Api/App/SettingsController, HealthCheckService; removal of the two fixed phpstan-baseline entries; no new suppressions); not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-08T22:16:46+07:00"
-  updated_at: "2026-10-08T22:16:46+07:00"
+  updated_at: "2026-10-08T22:17:50+07:00"
 generated_by: agent
 ---
 
 # GAP-073 — PHPStan 2.3 and its 10 findings: Gate 2 design
+
+## OWNER GATE 2: APPROVED — OPTION A
+
+Owner approved Option A in-session on 2026-10-08 against reviewed design head
+`01fd6969f7fb84b0eb8073bab9c2b98b23db1e98`. This authorizes only the bounded implementation defined by this packet;
+it does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

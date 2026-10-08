@@ -83,7 +83,7 @@ class TreasuryReconciliationController extends BaseApiController
         }
         $this->authorize('treasury.view-project', $model);
         $validator = Validator::make($request->all(), [
-            'page' => ['sometimes', 'integer', 'min:1'],
+            'page' => ['sometimes', 'integer', 'min:1', 'max:' . TreasuryReconciliationService::MAX_HISTORY_PAGE],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ]);
         if ($validator->fails()) {

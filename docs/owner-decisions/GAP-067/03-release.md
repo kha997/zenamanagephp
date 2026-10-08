@@ -1,14 +1,14 @@
 ---
 work_id: GAP-067
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-08-gap-067-treasury-s4a-reconciliation-readiness.md
   plan: docs/superpowers/plans/2026-10-08-gap-067-treasury-s4a-reconciliation.md
@@ -17,15 +17,15 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-08T08:05:57+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-08, verbatim: 'APPROVE GAP-067 Gate 3'. Given after the packet (including the disclosed wider class-4 lock over sibling entries of the same documents, locking active-apply read, page path following the existing treasury URL pattern, read side in the reconciliation service, 422 for already-reconciled, and the UTC 'today' note left unfixed) was presented at PR head 98827fd3ff402d0da91809cf102827ff4eac617f; implementation subject 0239a5cce4f35e5e35d8ab57e12315bc76f97a53 had 34/34 exact-head checks green; bound to implementation-tree digest 05daaa7bf320046dd667fc456c47ae94b7b7aa837e079e7f1981ef0f1a684541 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-08T06:01:24+07:00"
-  updated_at: "2026-10-08T06:01:24+07:00"
+  updated_at: "2026-10-08T08:05:57+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "Treasury S4a at subject 0239a5cc: per-ledger-entry reconciliation (apply / undo line / undo whole) with v17 §11 class-4 then class-5 locks, §12.1 promotion of direct documents, §12.2 regression except reversed documents, route-leg entries rejected, type/reference/date rules, undo reason in audit_logs; per-wallet reconciled/unreconciled balances, unreconciled list, history, register status filter; API + operator web page; no migration. 108 Treasury feature tests green locally (20 new). Real-MySQL race on one ledger entry passes in CI (Treasury concurrency job 3 tests, run 37695741028, job 113046900732) and a disposable removal of the class-4 lock and locking read makes it fail (run 37695760592, job 113046964992: both processes OK). Full PHPStan clean; exact-head PR checks 34/34 green; UI verified in a local run; canonical digest computed at subject."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "0239a5cce4f35e5e35d8ab57e12315bc76f97a53"
   verified_at: "2026-10-08T06:01:24+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "05daaa7bf320046dd667fc456c47ae94b7b7aa837e079e7f1981ef0f1a684541"
+  decision_recorded_at: "2026-10-08T08:05:57+07:00"
 ---
 
 # GAP-067 — Gate 3 release decision (Treasury S4a — đối soát)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-08 ("APPROVE GAP-067 Gate 3"), bound to implementation subject
+`0239a5cce4f35e5e35d8ab57e12315bc76f97a53` and implementation-tree digest `05daaa7bf320046dd667fc456c47ae94b7b7aa837e079e7f1981ef0f1a684541`. No deployment is authorized.
 
 ## Gói quyết định phát hành
 

@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-10-08-gap-072-composer-semver-safe-updates-evidence.md
   plan: null
   branch: docs/GAP-072-composer-semver-safe-updates
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/345
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

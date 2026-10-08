@@ -32,29 +32,37 @@ RUN npm run build
 # PHP-FPM stage
 FROM php:8.2-fpm-alpine AS production
 
-# Install system dependencies
+# Upgrade OS packages so fixed Alpine versions are always taken (GAP-071)
+RUN apk upgrade --no-cache
+
+# Runtime packages: services, tools used by the app, and the runtime
+# libraries of the PHP extensions built below
 RUN apk add --no-cache \
     nginx \
     supervisor \
     curl \
-    zip \
-    unzip \
-    git \
-    oniguruma-dev \
-    libxml2-dev \
-    libpng-dev \
-    libjpeg-turbo-dev \
-    freetype-dev \
-    libzip-dev \
-    icu-dev \
-    imagemagick \
-    linux-headers \
-    redis \
     mysql-client \
-    && rm -rf /var/cache/apk/*
+    libpng \
+    libjpeg-turbo \
+    freetype \
+    libzip \
+    icu-libs \
+    icu-data-full \
+    oniguruma \
+    libxml2
 
-# Install PHP extensions
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+# Build PHP and PECL extensions with temporary build deps, then remove them
+RUN apk add --no-cache --virtual .build-deps \
+        $PHPIZE_DEPS \
+        linux-headers \
+        oniguruma-dev \
+        libxml2-dev \
+        libpng-dev \
+        libjpeg-turbo-dev \
+        freetype-dev \
+        libzip-dev \
+        icu-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) \
         pdo_mysql \
         mbstring \
@@ -64,15 +72,11 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
         gd \
         opcache \
         bcmath \
-        sockets
-
-# Install PECL extensions with temporary phpize build deps
-RUN apk add --no-cache --virtual .phpize-deps \
-        $PHPIZE_DEPS \
-        imagemagick-dev \
-    && pecl install redis imagick \
-    && docker-php-ext-enable redis imagick \
-    && apk del .phpize-deps
+        sockets \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && rm -rf /tmp/pear \
+    && apk del .build-deps
 
 # Install Composer
 COPY --from=composer:2.6 /usr/bin/composer /usr/bin/composer

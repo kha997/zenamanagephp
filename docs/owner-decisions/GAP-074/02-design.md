@@ -1,32 +1,38 @@
 ---
 work_id: GAP-074
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-08-gap-074-prod-image-nginx-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-10-09-gap-074-prod-image-nginx.md
   branch: docs/GAP-074-prod-image-nginx
   pr: https://github.com/kha997/zenamanagephp/pull/347
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-10-09T07:07:15+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-10-09T07:08:39+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-09, verbatim: 'APPROVE GAP-074 Gate 2 Option B'. Reviewed design head: f4b53b1d226e129ff3c36fe8c11cdd4c9451eb62. Approves Option B and its exact allowlist (new docker/nginx/nginx.single-container.conf; Dockerfile.prod nginx COPY, EXPOSE 80, HEALTHCHECK on /api/health; supervisord nginx program without user=nginx; docker-security smoke step with nginx -t and a runtime container check of /robots.txt and /api/health); stop and report if the runtime smoke exposes defects outside these files; not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-09T07:07:15+07:00"
-  updated_at: "2026-10-09T07:07:15+07:00"
+  updated_at: "2026-10-09T07:08:39+07:00"
 generated_by: agent
 ---
 
 # GAP-074 — Production image nginx and HEALTHCHECK: Gate 2 design
+
+## OWNER GATE 2: APPROVED — OPTION B
+
+Owner approved Option B in-session on 2026-10-09 against reviewed design head
+`f4b53b1d226e129ff3c36fe8c11cdd4c9451eb62`. This authorizes only the bounded implementation defined by this packet;
+it does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

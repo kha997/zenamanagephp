@@ -388,7 +388,7 @@ jobs:
           zenamanage:test
         ok=0
         for i in $(seq 1 30); do
-          if curl -fsS -o /dev/null http://127.0.0.1:8080/api/health; then ok=1; break; fi
+          if curl -fsS --max-time 5 -o /dev/null http://127.0.0.1:8080/api/health; then ok=1; break; fi
           sleep 2
         done
         status=0
@@ -396,7 +396,7 @@ jobs:
           echo "::error::/api/health did not return 200 within 60s"
           status=1
         fi
-        curl -fsS -o /dev/null http://127.0.0.1:8080/robots.txt || { echo "::error::/robots.txt did not return 200"; status=1; }
+        curl -fsS --max-time 5 -o /dev/null http://127.0.0.1:8080/robots.txt || { echo "::error::/robots.txt did not return 200"; status=1; }
         if [ "$status" -ne 0 ]; then
           docker logs zenamanage-smoke || true
           docker exec zenamanage-smoke sh -c 'tail -n 50 /var/log/supervisor/*.log' || true

@@ -112,8 +112,8 @@ COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 RUN (grep -q '^nginx:' /etc/group || addgroup -S nginx) \
  && (id -u nginx >/dev/null 2>&1 || adduser -D -S -h /var/cache/nginx -s /sbin/nologin -G nginx nginx)
 
-# Create nginx directories
-RUN mkdir -p /var/cache/nginx /var/log/nginx /var/run/nginx
+# Create nginx and supervisor directories
+RUN mkdir -p /var/cache/nginx /var/log/nginx /var/run/nginx /var/log/supervisor
 
 # Set nginx permissions
 RUN chown -R nginx:nginx /var/cache/nginx /var/log/nginx /var/run/nginx

@@ -16,13 +16,13 @@ decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
   recorded_at: "2026-10-09T07:08:39+07:00"
-  owner_response_reference: "Owner decision in-session on 2026-10-09, verbatim: 'APPROVE GAP-074 Gate 2 Option B'. Reviewed design head: f4b53b1d226e129ff3c36fe8c11cdd4c9451eb62. Approves Option B and its exact allowlist (new docker/nginx/nginx.single-container.conf; Dockerfile.prod nginx COPY, EXPOSE 80, HEALTHCHECK on /api/health; supervisord nginx program without user=nginx; docker-security smoke step with nginx -t and a runtime container check of /robots.txt and /api/health); stop and report if the runtime smoke exposes defects outside these files; not Gate 3, merge, release, or deployment."
+  owner_response_reference: "Owner decision in-session on 2026-10-09, verbatim: 'APPROVE GAP-074 Gate 2 Option B'. Reviewed design head: f4b53b1d226e129ff3c36fe8c11cdd4c9451eb62. Approves Option B and its exact allowlist (new docker/nginx/nginx.single-container.conf; Dockerfile.prod nginx COPY, EXPOSE 80, HEALTHCHECK on /api/health; supervisord nginx program without user=nginx; docker-security smoke step with nginx -t and a runtime container check of /robots.txt and /api/health); stop and report if the runtime smoke exposes defects outside these files; not Gate 3, merge, release, or deployment. Amendment on 2026-10-09 at head 2cf38a6d8f3da0dcff211bfcfd8b744c4c73f056: after the runtime smoke showed supervisord exiting because /var/log/supervisor does not exist in the image, the Owner selected the in-session option 'Cho phép sửa lỗi khởi động (Recommended)': the agent may fix container startup defects exposed by the runtime smoke, limited to Dockerfile.prod, docker/supervisor/supervisord.conf and docker/nginx/nginx.single-container.conf, starting with creating /var/log/supervisor; every such change is disclosed in Gate 3."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-09T07:07:15+07:00"
-  updated_at: "2026-10-09T07:08:39+07:00"
+  updated_at: "2026-10-09T07:40:08+07:00"
 generated_by: agent
 ---
 
@@ -33,6 +33,14 @@ generated_by: agent
 Owner approved Option B in-session on 2026-10-09 against reviewed design head
 `f4b53b1d226e129ff3c36fe8c11cdd4c9451eb62`. This authorizes only the bounded implementation defined by this packet;
 it does not authorize Gate 3, merge, release, or deployment.
+
+## Amendment (Owner, 2026-10-09) — startup defects found by the runtime smoke
+
+The runtime smoke (Option B) showed supervisord exits at start:
+`The directory named as part of the path /var/log/supervisor/supervisord.log does not exist`.
+Owner chose: fix container startup defects exposed by the runtime smoke, limited to
+`Dockerfile.prod`, `docker/supervisor/supervisord.conf` and
+`docker/nginx/nginx.single-container.conf`; each change disclosed in Gate 3.
 
 ## Owner Summary
 

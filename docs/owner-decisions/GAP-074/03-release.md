@@ -1,14 +1,14 @@
 ---
 work_id: GAP-074
 gate: 3
-gate_status: approved
+gate_status: awaiting_owner
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: approved
+  value: none
   authority: human_owner
-decision_requested: null
+decision_requested: approve_or_correction_or_defer
 references:
   spec: docs/audits/2026-10-08-gap-074-prod-image-nginx-evidence.md
   plan: docs/superpowers/plans/2026-10-09-gap-074-prod-image-nginx.md
@@ -18,34 +18,37 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-10-09T08:11:57+07:00"
-  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-09, verbatim: 'APPROVE GAP-074 Gate 3'. Given after the packet (including the two disclosed startup fixes and the out-of-scope php.ini findings) was presented at PR head c6a573e828d361293190931da6089e4fedcf3ead (subject 2b49d094f79132654882ae5d179652359b6ac1fc with 34/34 exact-head checks green); bound to implementation subject 2b49d094f79132654882ae5d179652359b6ac1fc and implementation-tree digest 60a4802e68849bff9647a69fa827342c7e07ce286be3355d786f3a5bbfda1773 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment authorized."
+  recorded_at: "2026-10-09T14:53:52+07:00"
+  owner_response_reference: null
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-09T08:08:53+07:00"
-  updated_at: "2026-10-09T08:11:57+07:00"
+  updated_at: "2026-10-09T14:53:52+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "GAP-074 at subject 2b49d094: Dockerfile.prod now installs a dedicated single-container nginx config (docker/nginx/nginx.single-container.conf: fastcgi to 127.0.0.1:9000, root /var/www/html/public, logs to stdout/stderr, pid under /var/run/nginx) and the HEALTHCHECK probes http://127.0.0.1/api/health. Red first: nginx -t fails on the image built from main (upstream php-fpm / proxy include of the compose config). The CI docker-security job gains nginx -t and a runtime smoke (container must answer 200 on /api/health and /robots.txt). Disclosed startup fixes under the Owner's 2026-10-09 Gate-2 amendment: create /var/log/supervisor (supervisord exited at 2cf38a6); run the php-fpm master as root under supervisord (php-fpm exit 78, error_log permission denied at d17e455); pools still drop to www-data. Exact-head PR checks 34/34 green incl. Docker Security Scan with runtime smoke. Out-of-scope php.ini defects (disable_functions blocks proc_open/exec/curl_exec, wrong extension lines, opcache as extension) are reported for a new Work ID."
+mandatory_technical_gate_summary: "GAP-074 at subject 53bb84a6: Dockerfile.prod now installs a dedicated single-container nginx config (docker/nginx/nginx.single-container.conf: fastcgi to 127.0.0.1:9000, root /var/www/html/public, logs to stdout/stderr, pid under /var/run/nginx) and the HEALTHCHECK probes http://127.0.0.1/api/health. Red first: nginx -t fails on the image built from main (upstream php-fpm / proxy include of the compose config). The CI docker-security job gains nginx -t and a runtime smoke (container must answer 200 on /api/health and /robots.txt). Disclosed startup fixes under the Owner's 2026-10-09 Gate-2 amendment: create /var/log/supervisor (supervisord exited at 2cf38a6); run the php-fpm master as root under supervisord (php-fpm exit 78, error_log permission denied at d17e455); pools still drop to www-data. Post-approval correction (Owner choice 2026-10-09, re-approval required): the earlier Gate-3 approval bound to subject 2b49d094 / digest 60a4802e was superseded when the Owner chose to fix the Codex P2 finding; each runtime-smoke curl now has --max-time 5 (53bb84a6), so a stalled php-fpm cannot hold the CI job for hours. Exact-head PR checks 34/34 green at 2b49d094 and a58b65f8; re-verification at 53bb84a6 pending in CI. Out-of-scope php.ini defects (disable_functions blocks proc_open/exec/curl_exec, wrong extension lines, opcache as extension) are reported for a new Work ID."
 technical_evidence:
   base_sha: "92f0a04405de62f62f8c54f3df28ee67148ac8e8"
-  subject_sha: "2b49d094f79132654882ae5d179652359b6ac1fc"
-  implementation_tree_digest: "60a4802e68849bff9647a69fa827342c7e07ce286be3355d786f3a5bbfda1773"
-  verified_pr_head_sha: "2b49d094f79132654882ae5d179652359b6ac1fc"
-  verified_at: "2026-10-09T08:07:50+07:00"
+  subject_sha: "53bb84a6c87e801719b67836cb525c5d8de05bc5"
+  implementation_tree_digest: "450a7b620a8d94bd02ac40b5fabe0d3641e43c8f2ac45555bc8ea6286bfdc1c0"
+  verified_pr_head_sha: "53bb84a6c87e801719b67836cb525c5d8de05bc5"
+  verified_at: "2026-10-09T14:53:52+07:00"
 owner_decision_binding:
-  implementation_tree_digest: "60a4802e68849bff9647a69fa827342c7e07ce286be3355d786f3a5bbfda1773"
-  decision_recorded_at: "2026-10-09T08:11:57+07:00"
+  implementation_tree_digest: null
+  decision_recorded_at: null
 ---
 
 # GAP-074 — Gate 3 release decision (nginx.conf và healthcheck của image production)
 
-## OWNER GATE 3: APPROVED
+## Lịch sử quyết định
 
-Owner approved Gate 3 in-session on 2026-10-09 ("APPROVE GAP-074 Gate 3"), bound to implementation subject
-`2b49d094f79132654882ae5d179652359b6ac1fc` and implementation-tree digest `60a4802e68849bff9647a69fa827342c7e07ce286be3355d786f3a5bbfda1773`. No deployment is authorized.
+Owner đã duyệt Gate 3 lần đầu ("APPROVE GAP-074 Gate 3", 2026-10-09) tại subject
+`2b49d094f79132654882ae5d179652359b6ac1fc` / digest `60a4802e68849bff9647a69fa827342c7e07ce286be3355d786f3a5bbfda1773`. Sau đó Codex review chỉ ra
+bước chạy thử CI không giới hạn thời gian mỗi lệnh `curl`; Owner chọn "Sửa rồi
+duyệt lại Gate 3". Bản duyệt cũ không còn áp dụng; gói này chờ Owner duyệt lại
+tại subject mới.
 
 ## Gói quyết định phát hành
 
@@ -75,13 +78,17 @@ sửa lỗi khởi động"), chỉ trong các file đã duyệt:
   trình chính chạy root, các worker vẫn chạy bằng `www-data`/`nginx` như cấu
   hình pool/nginx — đây là cách chuẩn của php-fpm và nginx.
 
+Sửa sau lần duyệt đầu (Owner chọn sửa, cần duyệt lại): mỗi lệnh `curl` trong
+bước chạy thử CI có `--max-time 5` (`53bb84a`) để php-fpm treo không giữ job CI
+hàng giờ (góp ý P2 của Codex).
+
 **4. Bằng chứng kỹ thuật**
 
-- Base `92f0a044`; subject `2b49d094f79132654882ae5d179652359b6ac1fc`; digest
-  `60a4802e68849bff9647a69fa827342c7e07ce286be3355d786f3a5bbfda1773`.
+- Base `92f0a044`; subject `53bb84a6c87e801719b67836cb525c5d8de05bc5`; digest
+  `450a7b620a8d94bd02ac40b5fabe0d3641e43c8f2ac45555bc8ea6286bfdc1c0`.
 - **Đỏ trước:** `nginx -t` lỗi trên image build từ main; 2 lần chạy thử đỏ nêu
   ở mục 3.
-- CI exact head `2b49d09`: 34/34 pass, gồm Docker Security Scan: `nginx -t`
+- CI exact head `2b49d09` và `a58b65f`: 34/34 pass, gồm Docker Security Scan: `nginx -t`
   đạt, container trả 200 cho `/api/health` và `/robots.txt`, quét lỗ hổng 0.
 - Lint SSOT, governance, docs đạt.
 

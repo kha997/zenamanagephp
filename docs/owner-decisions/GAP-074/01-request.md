@@ -1,11 +1,11 @@
 ---
 work_id: GAP-074
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-08-gap-074-prod-image-nginx-evidence.md
   plan: null
@@ -15,16 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-10-08T23:45:20+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-10-09T07:05:58+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-09, verbatim: 'APPROVE GAP-074 Gate 1'. Bound to reviewed Draft PR #347 head 9064524dfc1d43fd4b8f9f581b03f10f699b0d88, canonical base 92f0a04405de62f62f8c54f3df28ee67148ac8e8. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-08T23:45:20+07:00"
-  updated_at: "2026-10-08T23:45:20+07:00"
+  updated_at: "2026-10-09T07:05:58+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-074 Gate 1 in-session on 2026-10-09 against Draft PR #347
+head `9064524dfc1d43fd4b8f9f581b03f10f699b0d88`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

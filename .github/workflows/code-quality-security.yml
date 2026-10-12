@@ -376,6 +376,33 @@ jobs:
         done
         [ "$missing" -eq 0 ]
         docker run --rm zenamanage:test php-fpm -t
+        docker run --rm zenamanage:test nginx -t
+
+    - name: Smoke test image (container serves HTTP)
+      run: |
+        app_key="base64:$(openssl rand -base64 32)"
+        docker run -d --name zenamanage-smoke -p 8080:80 \
+          -e APP_KEY="$app_key" -e APP_ENV=production -e APP_DEBUG=false \
+          -e DB_CONNECTION=sqlite -e DB_DATABASE=/tmp/smoke.sqlite \
+          -e CACHE_STORE=file -e SESSION_DRIVER=file -e QUEUE_CONNECTION=sync \
+          zenamanage:test
+        ok=0
+        for i in $(seq 1 30); do
+          if curl -fsS --max-time 5 -o /dev/null http://127.0.0.1:8080/api/health; then ok=1; break; fi
+          sleep 2
+        done
+        status=0
+        if [ "$ok" -ne 1 ]; then
+          echo "::error::/api/health did not return 200 within 60s"
+          status=1
+        fi
+        curl -fsS --max-time 5 -o /dev/null http://127.0.0.1:8080/robots.txt || { echo "::error::/robots.txt did not return 200"; status=1; }
+        if [ "$status" -ne 0 ]; then
+          docker logs zenamanage-smoke || true
+          docker exec zenamanage-smoke sh -c 'tail -n 50 /var/log/supervisor/*.log' || true
+        fi
+        docker rm -f zenamanage-smoke >/dev/null
+        exit "$status"
 
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@0.35.0

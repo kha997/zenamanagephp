@@ -1,14 +1,14 @@
 ---
 work_id: GAP-074
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-08-gap-074-prod-image-nginx-evidence.md
   plan: docs/superpowers/plans/2026-10-09-gap-074-prod-image-nginx.md
@@ -18,17 +18,17 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-10-09T14:53:52+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-10-12T22:43:47+07:00"
+  owner_response_reference: "Owner Gate-3 re-approval in-session on 2026-10-12. Owner first typed 'PPROVE GAP-074 Gate 3' (typo); on clarification the Owner selected the option 'APPROVE GAP-074 Gate 3'. Given after the reopened packet was presented at PR head 8b77cc0f90be65bb90a62be595e562c80c631716 with 34/34 exact-head checks green; bound to implementation subject 53bb84a6c87e801719b67836cb525c5d8de05bc5 and implementation-tree digest 450a7b620a8d94bd02ac40b5fabe0d3641e43c8f2ac45555bc8ea6286bfdc1c0 (recomputed at recording time, zero drift). Supersedes the 2026-10-09 approval at 2b49d094 / 60a4802e. Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-09T08:08:53+07:00"
-  updated_at: "2026-10-09T14:53:52+07:00"
+  updated_at: "2026-10-12T22:43:47+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "GAP-074 at subject 53bb84a6: Dockerfile.prod now installs a dedicated single-container nginx config (docker/nginx/nginx.single-container.conf: fastcgi to 127.0.0.1:9000, root /var/www/html/public, logs to stdout/stderr, pid under /var/run/nginx) and the HEALTHCHECK probes http://127.0.0.1/api/health. Red first: nginx -t fails on the image built from main (upstream php-fpm / proxy include of the compose config). The CI docker-security job gains nginx -t and a runtime smoke (container must answer 200 on /api/health and /robots.txt). Disclosed startup fixes under the Owner's 2026-10-09 Gate-2 amendment: create /var/log/supervisor (supervisord exited at 2cf38a6); run the php-fpm master as root under supervisord (php-fpm exit 78, error_log permission denied at d17e455); pools still drop to www-data. Post-approval correction (Owner choice 2026-10-09, re-approval required): the earlier Gate-3 approval bound to subject 2b49d094 / digest 60a4802e was superseded when the Owner chose to fix the Codex P2 finding; each runtime-smoke curl now has --max-time 5 (53bb84a6), so a stalled php-fpm cannot hold the CI job for hours. Exact-head PR checks 34/34 green at 2b49d094 and a58b65f8; re-verification at 53bb84a6 pending in CI. Out-of-scope php.ini defects (disable_functions blocks proc_open/exec/curl_exec, wrong extension lines, opcache as extension) are reported for a new Work ID."
+mandatory_technical_gate_summary: "GAP-074 at subject 53bb84a6: Dockerfile.prod now installs a dedicated single-container nginx config (docker/nginx/nginx.single-container.conf: fastcgi to 127.0.0.1:9000, root /var/www/html/public, logs to stdout/stderr, pid under /var/run/nginx) and the HEALTHCHECK probes http://127.0.0.1/api/health. Red first: nginx -t fails on the image built from main (upstream php-fpm / proxy include of the compose config). The CI docker-security job gains nginx -t and a runtime smoke (container must answer 200 on /api/health and /robots.txt). Disclosed startup fixes under the Owner's 2026-10-09 Gate-2 amendment: create /var/log/supervisor (supervisord exited at 2cf38a6); run the php-fpm master as root under supervisord (php-fpm exit 78, error_log permission denied at d17e455); pools still drop to www-data. Post-approval correction (Owner choice 2026-10-09, re-approval required): the earlier Gate-3 approval bound to subject 2b49d094 / digest 60a4802e was superseded when the Owner chose to fix the Codex P2 finding; each runtime-smoke curl now has --max-time 5 (53bb84a6), so a stalled php-fpm cannot hold the CI job for hours. Exact-head PR checks 34/34 green at 2b49d094 and a58b65f8; exact-head PR checks 34/34 green at 8b77cc0f (subject 53bb84a6 plus this packet). Out-of-scope php.ini defects (disable_functions blocks proc_open/exec/curl_exec, wrong extension lines, opcache as extension) are reported for a new Work ID."
 technical_evidence:
   base_sha: "92f0a04405de62f62f8c54f3df28ee67148ac8e8"
   subject_sha: "53bb84a6c87e801719b67836cb525c5d8de05bc5"
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "53bb84a6c87e801719b67836cb525c5d8de05bc5"
   verified_at: "2026-10-09T14:53:52+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "450a7b620a8d94bd02ac40b5fabe0d3641e43c8f2ac45555bc8ea6286bfdc1c0"
+  decision_recorded_at: "2026-10-12T22:43:47+07:00"
 ---
 
 # GAP-074 — Gate 3 release decision (nginx.conf và healthcheck của image production)
+
+## OWNER GATE 3: APPROVED
+
+Owner re-approved Gate 3 in-session on 2026-10-12 ("APPROVE GAP-074 Gate 3", confirmed by option selection after a typo),
+bound to implementation subject `53bb84a6c87e801719b67836cb525c5d8de05bc5` and implementation-tree digest `450a7b620a8d94bd02ac40b5fabe0d3641e43c8f2ac45555bc8ea6286bfdc1c0`. No deployment is authorized.
 
 ## Lịch sử quyết định
 

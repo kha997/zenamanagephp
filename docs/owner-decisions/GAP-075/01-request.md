@@ -1,11 +1,11 @@
 ---
 work_id: GAP-075
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-12-gap-075-quiet-bot-comments-evidence.md
   plan: null
@@ -15,16 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-10-12T23:07:37+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-10-12T23:11:03+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-12, verbatim: 'APPROVE GAP-075 Gate 1'. Bound to reviewed Draft PR #348 head 793d63cfeff0d38fd123ce23a20453b8afe2cb5c, canonical base 805a93e5e9d3e8e66d4373f581a1ce7af00bfcee. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-12T23:07:37+07:00"
-  updated_at: "2026-10-12T23:07:37+07:00"
+  updated_at: "2026-10-12T23:11:03+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-075 Gate 1 in-session on 2026-10-12 against Draft PR #348
+head `793d63cfeff0d38fd123ce23a20453b8afe2cb5c`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

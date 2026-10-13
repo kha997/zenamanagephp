@@ -1,14 +1,14 @@
 ---
 work_id: GAP-075
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-12-gap-075-quiet-bot-comments-evidence.md
   plan: docs/superpowers/plans/2026-10-12-gap-075-quiet-bot-comments.md
@@ -18,17 +18,17 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-10-13T08:35:43+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-10-13T20:35:05+07:00"
+  owner_response_reference: "Owner Gate-3 re-approval in-session on 2026-10-13, verbatim: 'APPROVE GAP-075 Gate 3'. Given after the reopened packet (three Codex P2 fixes at 1328b502) was presented at PR head 5e386da774562be0ffe2175b8db72947db421b69 with 34/34 exact-head checks green; bound to implementation subject 1328b502ce9649645df34e9c9049f9f0c4834b64 and implementation-tree digest 43f12178d744ee1643ddd94f34d362bb223086cff619c1ebd393ae4b231a9c41 (recomputed at recording time, zero drift). Supersedes the 2026-10-13 approval at 83e617bd / 0a38a256. Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-13T00:03:28+07:00"
-  updated_at: "2026-10-13T08:35:43+07:00"
+  updated_at: "2026-10-13T20:35:05+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "GAP-075 at subject 1328b502: the five code-quality-security PR comment steps keep one marked comment each (zena-ci:<key>), created or updated only on problems or regressions versus the base and deleted when clean; code style is limited to PR-changed files; the dependency report compares composer outdated --locked on the PR and base lockfiles; button-tests no longer posts its static comment. Clean path: exact-head CI green at d4e25ad5 and 83e617bd with zero report comments on PR #348. Positive path (disclosed throw-away commits): c393e7ee added a mis-formatted line to app/Http/Controllers/Controller.php and produced exactly one code-quality comment naming that file; the revert 83e617bd deleted it (app/ identical to d4e25ad5). Embedded scripts syntax-checked with node; syncReport create/no-op/update/delete verified with a mocked client; governance and docs lints pass. Post-approval correction (Owner choice 2026-10-13, re-approval required): the 2026-10-13 approval at 83e617bd / 0a38a256 was superseded when the Owner chose to fix three Codex P2 findings at 1328b502: comment steps run with always() so a failing PHPStan step still reports; a php-cs-fixer or PHPStan run that did not complete is reported instead of treated as clean; PR-scoped workflow concurrency cancels superseded PR runs. Exact-head CI at c790b87c green before the fix; re-verification at 1328b502 pending. Checks pass/fail, artifacts and SARIF upload are unchanged."
+mandatory_technical_gate_summary: "GAP-075 at subject 1328b502: the five code-quality-security PR comment steps keep one marked comment each (zena-ci:<key>), created or updated only on problems or regressions versus the base and deleted when clean; code style is limited to PR-changed files; the dependency report compares composer outdated --locked on the PR and base lockfiles; button-tests no longer posts its static comment. Clean path: exact-head CI green at d4e25ad5 and 83e617bd with zero report comments on PR #348. Positive path (disclosed throw-away commits): c393e7ee added a mis-formatted line to app/Http/Controllers/Controller.php and produced exactly one code-quality comment naming that file; the revert 83e617bd deleted it (app/ identical to d4e25ad5). Embedded scripts syntax-checked with node; syncReport create/no-op/update/delete verified with a mocked client; governance and docs lints pass. Post-approval correction (Owner choice 2026-10-13, re-approval required): the 2026-10-13 approval at 83e617bd / 0a38a256 was superseded when the Owner chose to fix three Codex P2 findings at 1328b502: comment steps run with always() so a failing PHPStan step still reports; a php-cs-fixer or PHPStan run that did not complete is reported instead of treated as clean; PR-scoped workflow concurrency cancels superseded PR runs. Exact-head CI at c790b87c green before the fix; exact-head PR checks 34/34 green at 5e386da7 (subject 1328b502 plus this packet). Checks pass/fail, artifacts and SARIF upload are unchanged."
 technical_evidence:
   base_sha: "805a93e5e9d3e8e66d4373f581a1ce7af00bfcee"
   subject_sha: "1328b502ce9649645df34e9c9049f9f0c4834b64"
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "1328b502ce9649645df34e9c9049f9f0c4834b64"
   verified_at: "2026-10-13T08:35:43+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "43f12178d744ee1643ddd94f34d362bb223086cff619c1ebd393ae4b231a9c41"
+  decision_recorded_at: "2026-10-13T20:35:05+07:00"
 ---
 
 # GAP-075 — Gate 3 release decision (bot chỉ comment khi có vấn đề)
+
+## OWNER GATE 3: APPROVED
+
+Owner re-approved Gate 3 in-session on 2026-10-13 ("APPROVE GAP-075 Gate 3"), bound to implementation subject
+`1328b502ce9649645df34e9c9049f9f0c4834b64` and implementation-tree digest `43f12178d744ee1643ddd94f34d362bb223086cff619c1ebd393ae4b231a9c41`. No deployment is authorized.
 
 ## Lịch sử quyết định
 

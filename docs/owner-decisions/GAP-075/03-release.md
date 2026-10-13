@@ -1,0 +1,104 @@
+---
+work_id: GAP-075
+gate: 3
+gate_status: approved
+technical_readiness:
+  value: ready
+  generated_by: engineering_evidence
+owner_decision:
+  value: approved
+  authority: human_owner
+decision_requested: null
+references:
+  spec: docs/audits/2026-10-12-gap-075-quiet-bot-comments-evidence.md
+  plan: docs/superpowers/plans/2026-10-12-gap-075-quiet-bot-comments.md
+  branch: docs/GAP-075-quiet-bot-comments
+  pr: https://github.com/kha997/zenamanagephp/pull/348
+  release: null
+decision_provenance:
+  trust_level: claimed_repo_record
+  recorded_by: agent
+  recorded_at: "2026-10-13T20:35:05+07:00"
+  owner_response_reference: "Owner Gate-3 re-approval in-session on 2026-10-13, verbatim: 'APPROVE GAP-075 Gate 3'. Given after the reopened packet (three Codex P2 fixes at 1328b502) was presented at PR head 5e386da774562be0ffe2175b8db72947db421b69 with 34/34 exact-head checks green; bound to implementation subject 1328b502ce9649645df34e9c9049f9f0c4834b64 and implementation-tree digest 43f12178d744ee1643ddd94f34d362bb223086cff619c1ebd393ae4b231a9c41 (recomputed at recording time, zero drift). Supersedes the 2026-10-13 approval at 83e617bd / 0a38a256. Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment authorized."
+  reconciliation_required: false
+supersedes: null
+superseded_by: null
+timestamps:
+  created_at: "2026-10-13T00:03:28+07:00"
+  updated_at: "2026-10-13T20:35:05+07:00"
+generated_by: agent
+residual_risk_rating: low
+mandatory_technical_gate_summary: "GAP-075 at subject 1328b502: the five code-quality-security PR comment steps keep one marked comment each (zena-ci:<key>), created or updated only on problems or regressions versus the base and deleted when clean; code style is limited to PR-changed files; the dependency report compares composer outdated --locked on the PR and base lockfiles; button-tests no longer posts its static comment. Clean path: exact-head CI green at d4e25ad5 and 83e617bd with zero report comments on PR #348. Positive path (disclosed throw-away commits): c393e7ee added a mis-formatted line to app/Http/Controllers/Controller.php and produced exactly one code-quality comment naming that file; the revert 83e617bd deleted it (app/ identical to d4e25ad5). Embedded scripts syntax-checked with node; syncReport create/no-op/update/delete verified with a mocked client; governance and docs lints pass. Post-approval correction (Owner choice 2026-10-13, re-approval required): the 2026-10-13 approval at 83e617bd / 0a38a256 was superseded when the Owner chose to fix three Codex P2 findings at 1328b502: comment steps run with always() so a failing PHPStan step still reports; a php-cs-fixer or PHPStan run that did not complete is reported instead of treated as clean; PR-scoped workflow concurrency cancels superseded PR runs. Exact-head CI at c790b87c green before the fix; exact-head PR checks 34/34 green at 5e386da7 (subject 1328b502 plus this packet). Checks pass/fail, artifacts and SARIF upload are unchanged."
+technical_evidence:
+  base_sha: "805a93e5e9d3e8e66d4373f581a1ce7af00bfcee"
+  subject_sha: "1328b502ce9649645df34e9c9049f9f0c4834b64"
+  implementation_tree_digest: "43f12178d744ee1643ddd94f34d362bb223086cff619c1ebd393ae4b231a9c41"
+  verified_pr_head_sha: "1328b502ce9649645df34e9c9049f9f0c4834b64"
+  verified_at: "2026-10-13T08:35:43+07:00"
+owner_decision_binding:
+  implementation_tree_digest: "43f12178d744ee1643ddd94f34d362bb223086cff619c1ebd393ae4b231a9c41"
+  decision_recorded_at: "2026-10-13T20:35:05+07:00"
+---
+
+# GAP-075 — Gate 3 release decision (bot chỉ comment khi có vấn đề)
+
+## OWNER GATE 3: APPROVED
+
+Owner re-approved Gate 3 in-session on 2026-10-13 ("APPROVE GAP-075 Gate 3"), bound to implementation subject
+`1328b502ce9649645df34e9c9049f9f0c4834b64` and implementation-tree digest `43f12178d744ee1643ddd94f34d362bb223086cff619c1ebd393ae4b231a9c41`. No deployment is authorized.
+
+## Lịch sử quyết định
+
+Owner đã duyệt Gate 3 lần đầu ("APPROVE GAP-075 Gate 3", 2026-10-13) tại subject
+`83e617bd2730fb17ec626e664a8df803637478d1` / digest `0a38a256f453f5df91a9b20a59f6bee9ea2f446e1fa0c558773931c9cf503386`. Sau đó Codex review nêu 3 lỗi nhỏ;
+Owner chọn "Sửa rồi duyệt lại Gate 3". Bản duyệt cũ không còn áp dụng; gói này
+chờ Owner duyệt lại tại subject mới.
+
+## Gói quyết định phát hành
+
+**1. Vấn đề là gì?** Mỗi lần push, 5 bước trong `code-quality-security.yml`
+tạo comment mới kể cả khi sạch/không đổi so với main (PR #347 nhận hơn 40
+comment); `button-tests.yml` đăng số coverage cố định (Gate 1).
+
+**2. Sau thay đổi (Gate 2, Phương án A):**
+
+- Mỗi loại báo cáo có **một** comment đánh dấu ẩn; chỉ tạo/sửa khi có vấn đề
+  hoặc xấu hơn main, tự xoá khi hết vấn đề.
+- Code style: chỉ các file PR sửa. Gói cũ: so `composer outdated --locked`
+  giữa PR và main, chỉ báo khi PR làm tăng.
+- Bỏ comment cố định của `button-tests.yml`.
+- Kết quả đạt/đỏ của các check, artifact, SARIF không đổi.
+- Sửa sau lần duyệt đầu (`1328b50`, theo góp ý Codex): bước comment chạy cả khi
+  PHPStan đỏ; php-cs-fixer/PHPStan chạy hỏng thì báo chứ không coi là sạch; mỗi
+  PR chỉ một lượt chạy (lượt cũ bị huỷ) để không tạo comment trùng.
+
+**3. Bằng chứng**
+
+- Base `805a93e5`; subject `1328b502ce9649645df34e9c9049f9f0c4834b64`; digest
+  `43f12178d744ee1643ddd94f34d362bb223086cff619c1ebd393ae4b231a9c41`.
+- Đường sạch: CI xanh ở `d4e25ad` và `83e617b`, PR #348 **không** có comment
+  báo cáo nào.
+- Đường có lỗi (commit thử, công khai): `c393e7e` thêm 1 dòng sai format vào
+  `Controller.php` → bot tạo đúng 1 comment nêu file đó; revert `83e617b` →
+  bot xoá comment; thư mục `app/` trở lại y như trước.
+- Script kiểm tra cú pháp bằng node; thử tạo/giữ/sửa/xoá với client giả lập;
+  lint governance, docs đạt.
+
+**4. Ngoài phạm vi** — Sửa 1702 file code style, nâng gói, biến các bước quét
+thành chặn merge, deploy.
+
+**5. Rủi ro còn lại** — Thấp: chỉ đổi cách đăng comment (các bước này vẫn
+`continue-on-error`). Comment cũ không có đánh dấu trên các PR trước giữ
+nguyên.
+
+**6. Hoàn tác** — Revert squash commit.
+
+**7. Đề xuất** — Duyệt phát hành tại subject/digest trên.
+
+## Decision Needed
+
+Owner chọn: `APPROVE GAP-075 Gate 3` / Request correction / Defer.
+
+## What the owner is NOT being asked to decide
+
+Không duyệt deploy.

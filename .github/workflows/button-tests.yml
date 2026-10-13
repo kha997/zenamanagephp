@@ -681,16 +681,3 @@ jobs:
         fi
         
         echo "🎉 All quality gates passed!"
-    
-    - name: Comment PR
-      continue-on-error: true
-      if: github.event_name == 'pull_request'
-      uses: actions/github-script@v8
-      with:
-        script: |
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: '🎉 **Button Test Suite Passed!**\n\n- ✅ Feature Tests: Passed\n- ✅ Browser Tests: Passed\n- ✅ Security Tests: Passed\n- ✅ Coverage: 95.1%\n- ✅ Quality Gates: All passed\n\nReady for merge! 🚀'
-          })

@@ -1,32 +1,38 @@
 ---
 work_id: GAP-076
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-13-gap-076-prod-php-ini-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-10-13-gap-076-prod-php-ini.md
   branch: docs/GAP-076-prod-php-ini
   pr: https://github.com/kha997/zenamanagephp/pull/349
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-10-13T22:49:23+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-10-13T22:50:05+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-13, verbatim: 'APPROVE GAP-076 Gate 2 Option A'. Reviewed design head: f6f6f93c3db565a4d7447eb1417bd97f17e4a083. Approves Option A and its exact allowlist (docker/php/php.ini: remove disable_functions and the [security] duplicate, extension= lines, [imagick], [opcache], redis session handler/path, error_log path, duplicated and obsolete directives; docker/php/opcache.ini: save_comments=1, interned_strings_buffer=32, drop file_cache, error_log, huge_code_pages, fast_shutdown; code-quality-security.yml docker-security smoke: PHP startup without warnings, proc_open/exec/curl_exec callable, OPcache with save_comments=1, php-fpm -t); not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-13T22:49:23+07:00"
-  updated_at: "2026-10-13T22:49:23+07:00"
+  updated_at: "2026-10-13T22:50:05+07:00"
 generated_by: agent
 ---
 
 # GAP-076 — Production php.ini: Gate 2 design
+
+## OWNER GATE 2: APPROVED — OPTION A
+
+Owner approved Option A in-session on 2026-10-13 against reviewed design head
+`f6f6f93c3db565a4d7447eb1417bd97f17e4a083`. This authorizes only the bounded implementation defined by this packet;
+it does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

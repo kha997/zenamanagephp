@@ -440,6 +440,24 @@ jobs:
         docker run --rm zenamanage:test php-fpm -t
         docker run --rm zenamanage:test nginx -t
 
+    - name: Smoke test image (PHP runtime settings)
+      run: |
+        startup="$(docker run --rm zenamanage:test php -d display_startup_errors=1 -d log_errors=0 -d error_log= -r 'echo "php started\n";' 2>&1)"
+        printf '%s\n' "$startup"
+        if printf '%s\n' "$startup" | grep -qiE 'warning|unable to load|deprecated'; then
+          echo "::error::PHP reports startup warnings (see output above)"
+          exit 1
+        fi
+        docker run --rm zenamanage:test php -r '
+          $fail = [];
+          foreach (["proc_open", "exec", "curl_exec", "curl_multi_exec", "shell_exec", "parse_ini_file"] as $fn) {
+              if (!function_exists($fn)) { $fail[] = "$fn is disabled"; }
+          }
+          if (!extension_loaded("Zend OPcache")) { $fail[] = "Zend OPcache not loaded"; }
+          if (ini_get("opcache.save_comments") !== "1") { $fail[] = "opcache.save_comments is not 1"; }
+          if ($fail) { fwrite(STDERR, implode("\n", $fail) . "\n"); exit(1); }
+          echo "PHP runtime settings OK\n";'
+
     - name: Smoke test image (container serves HTTP)
       run: |
         app_key="base64:$(openssl rand -base64 32)"

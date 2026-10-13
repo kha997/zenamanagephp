@@ -1,11 +1,11 @@
 ---
 work_id: GAP-076
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-13-gap-076-prod-php-ini-evidence.md
   plan: null
@@ -15,16 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-10-13T22:46:23+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-10-13T22:47:34+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-13, verbatim: 'APPROVE GAP-076 Gate 1'. Bound to reviewed Draft PR #349 head 09e46db7e37f3a25e9bdf9d75313d69e70b9150c, canonical base e7358e0a9dd9cc35e00bfef1aa6dad1329c4d5ae. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-13T22:46:23+07:00"
-  updated_at: "2026-10-13T22:46:23+07:00"
+  updated_at: "2026-10-13T22:47:34+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-076 Gate 1 in-session on 2026-10-13 against Draft PR #349
+head `09e46db7e37f3a25e9bdf9d75313d69e70b9150c`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

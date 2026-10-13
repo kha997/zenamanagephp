@@ -19,6 +19,11 @@ env:
   PHP_VERSION: '8.2'
   REPORT_SUMMARY_LIMIT: '20'
 
+# GAP-075: one run per PR at a time, so report comments reflect the latest head.
+concurrency:
+  group: code-quality-security-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
   pull-requests: write
@@ -96,7 +101,7 @@ jobs:
           phpcpd-report.txt
 
     - name: Comment Code Quality on PR
-      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+      if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
       continue-on-error: true
       uses: actions/github-script@v8
       with:
@@ -131,6 +136,11 @@ jobs:
           const phpstanErrors = (phpstan.totals?.errors ?? 0) + (phpstan.totals?.file_errors ?? 0);
           if (phpstanErrors > 0) {
             body += `### PHPStan Issues: ${phpstanErrors} errors\n`;
+          } else if (phpstan.status === 'failed') {
+            body += `### PHPStan did not complete (exit code ${phpstan.exit_code})\n`;
+          }
+          if (csFixer.status === 'failed') {
+            body += `\n### php-cs-fixer did not complete (exit code ${csFixer.exit_code})\n`;
           }
           const styleFiles = (csFixer.files || []).map(f => f.name).filter(name => changed.has(name));
           if (styleFiles.length > 0) {
@@ -214,7 +224,7 @@ jobs:
           cs-fixer-security.json
 
     - name: Comment Security Issues on PR
-      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+      if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
       continue-on-error: true
       uses: actions/github-script@v8
       with:
@@ -348,7 +358,7 @@ jobs:
           composer-require-checker.stderr.log
 
     - name: Comment Dependency Issues on PR
-      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+      if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
       continue-on-error: true
       uses: actions/github-script@v8
       with:
@@ -482,7 +492,7 @@ jobs:
         path: trivy-results.json
 
     - name: Comment Docker Security Issues on PR
-      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+      if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
       continue-on-error: true
       uses: actions/github-script@v8
       with:
@@ -583,7 +593,7 @@ jobs:
           composer-license-check.stderr.log
 
     - name: Comment License Issues on PR
-      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+      if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
       continue-on-error: true
       uses: actions/github-script@v8
       with:

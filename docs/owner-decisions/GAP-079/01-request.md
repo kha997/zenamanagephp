@@ -1,11 +1,11 @@
 ---
 work_id: GAP-079
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-14-gap-079-roleseeder-permission-name-evidence.md
   plan: null
@@ -15,16 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-10-14T22:26:16+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-10-14T22:27:35+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-14, verbatim: 'APPROVE GAP-079 Gate 1'. Bound to reviewed Draft PR #352 head 948fbbecd12421104736e57cc3c6a311ff957ef1, canonical base c7775a13ebabd22674815cc7fa4c9450fa020847. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-14T22:26:16+07:00"
-  updated_at: "2026-10-14T22:26:16+07:00"
+  updated_at: "2026-10-14T22:27:35+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-079 Gate 1 in-session on 2026-10-14 against Draft PR #352
+head `948fbbecd12421104736e57cc3c6a311ff957ef1`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

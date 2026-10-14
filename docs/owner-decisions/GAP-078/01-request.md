@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-10-14-gap-078-unrouted-sidebar-builders-evidence.md
   plan: null
   branch: docs/GAP-078-unrouted-sidebar-builders
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/351
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

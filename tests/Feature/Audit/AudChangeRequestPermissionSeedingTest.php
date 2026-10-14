@@ -26,9 +26,9 @@ class AudChangeRequestPermissionSeedingTest extends TestCase
         // for 'project.read' and 'user.manage', and neither PermissionSeeder.php
         // nor ZenaPermissionsSeeder.php's canonical lists ever touch those two
         // codes afterward, so they stay NULL. 'user.manage' is confirmed dead
-        // (only referenced as a hardcoded string in
-        // app/Http/Controllers/Admin/SimpleSidebarBuilderController.php:126, not
-        // by any real RBAC check). Fixing RoleSeeder.php is out of scope for this
+        // (its only reference was a hardcoded string in the unrouted
+        // Admin/SimpleSidebarBuilderController, removed in GAP-078; it was never
+        // used by any real RBAC check). Fixing RoleSeeder.php is out of scope for this
         // task (see Global Constraints) — allowlisting these two so this test
         // still catches any *other* NULL-name permission as a real regression,
         // without pretending the RoleSeeder bug doesn't exist.

@@ -1,11 +1,11 @@
 ---
 work_id: GAP-078
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-14-gap-078-unrouted-sidebar-builders-evidence.md
   plan: null
@@ -15,16 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-10-14T20:35:06+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-10-14T20:36:20+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-14, verbatim: 'APPROVE GAP-078 Gate 1'. Bound to reviewed Draft PR #351 head 4abb6d6aa809debca1567c3be0552ba1fd50a11f, canonical base 043e182176dbbb60e536a818b4ccafa6d967688d. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-14T20:35:06+07:00"
-  updated_at: "2026-10-14T20:35:06+07:00"
+  updated_at: "2026-10-14T20:36:20+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-078 Gate 1 in-session on 2026-10-14 against Draft PR #351
+head `4abb6d6aa809debca1567c3be0552ba1fd50a11f`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

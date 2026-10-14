@@ -1,14 +1,14 @@
 ---
 work_id: GAP-076
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-13-gap-076-prod-php-ini-evidence.md
   plan: docs/superpowers/plans/2026-10-13-gap-076-prod-php-ini.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-10-14T00:04:35+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-10-14T07:42:43+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-14, verbatim: 'APPROVE GAP-076 Gate 3'. Given after the packet was presented at PR head 102d6493398320d88c369be10585a7d8e6e3a5b7 (implementation CI green at b76f19ca); bound to implementation subject b76f19ca685509b55b6168cf801e759ed262cd00 and implementation-tree digest 9832053658d076eef96cce16a686c3443a2b3746454d5f7331195c2a68817506 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-14T00:04:35+07:00"
-  updated_at: "2026-10-14T00:04:35+07:00"
+  updated_at: "2026-10-14T07:42:43+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-076 at subject b76f19ca: docker/php/php.ini no longer disables proc_open/exec/curl_exec and the other listed functions, drops the 10 extension= lines that failed or duplicated the image's conf.d, the duplicate [opcache]/[security] sections, [imagick], the redis session handler, the unwritable error_log path and directives removed in PHP 8; docker/php/opcache.ini sets save_comments=1 and interned_strings_buffer=32 and drops the missing file_cache dir, unwritable error_log, huge_code_pages and fast_shutdown. CI docker-security gains a PHP runtime smoke (no startup warnings; proc_open, exec, curl_exec, curl_multi_exec, shell_exec, parse_ini_file callable; OPcache loaded with save_comments=1). Red first: the same smoke on php:8.2-fpm-alpine with the old ini files reported Unable to load openssl/curl/imagick and Invalid library opcache; green after. Exact-head CI green at b76f19ca including the production-image Docker Security Scan (php-fpm -t, nginx -t, runtime smoke, HTTP smoke, 0 vulnerabilities). Also applies to Dockerfile, Dockerfile.websocket and docker-compose, which share php.ini."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "b76f19ca685509b55b6168cf801e759ed262cd00"
   verified_at: "2026-10-14T00:04:35+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "9832053658d076eef96cce16a686c3443a2b3746454d5f7331195c2a68817506"
+  decision_recorded_at: "2026-10-14T07:42:43+07:00"
 ---
 
 # GAP-076 — Gate 3 release decision (sửa php.ini của image production)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-14 ("APPROVE GAP-076 Gate 3"), bound to implementation subject
+`b76f19ca685509b55b6168cf801e759ed262cd00` and implementation-tree digest `9832053658d076eef96cce16a686c3443a2b3746454d5f7331195c2a68817506`. No deployment is authorized.
 
 ## Gói quyết định phát hành
 

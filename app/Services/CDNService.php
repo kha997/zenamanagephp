@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Storage;
 
 /**
- * CDN Service
- * 
+ * CDN Service.
+ *
  * Provides CDN integration for static assets including:
  * - Asset URL generation with CDN prefix
  * - Asset versioning and cache busting
@@ -21,9 +20,13 @@ use Illuminate\Support\Facades\Config;
 class CDNService
 {
     private string $cdnUrl;
+
     private string $cdnProvider;
+
     private bool $enabled;
+
     private array $assetTypes;
+
     private array $cdnConfig;
 
     public function __construct()
@@ -36,7 +39,7 @@ class CDNService
     }
 
     /**
-     * Get CDN URL for asset
+     * Get CDN URL for asset.
      */
     public function url(string $path, bool $versioned = true): string
     {
@@ -45,12 +48,12 @@ class CDNService
         }
 
         $cdnPath = $this->buildCdnPath($path, $versioned);
-        
+
         return $this->cdnUrl . '/' . ltrim($cdnPath, '/');
     }
 
     /**
-     * Get CDN URL for multiple assets
+     * Get CDN URL for multiple assets.
      */
     public function urls(array $paths, bool $versioned = true): array
     {
@@ -60,7 +63,7 @@ class CDNService
     }
 
     /**
-     * Upload asset to CDN
+     * Upload asset to CDN.
      */
     public function upload(string $localPath, string $cdnPath = null): bool
     {
@@ -71,36 +74,37 @@ class CDNService
         try {
             $cdnPath = $cdnPath ?: $localPath;
             $content = Storage::disk('local')->get($localPath);
-            
+
             if ($content === null) {
                 Log::warning("Failed to read local file: {$localPath}");
+
                 return false;
             }
 
             $success = Storage::disk('cdn')->put($cdnPath, $content);
-            
+
             if ($success) {
                 Log::info("Asset uploaded to CDN: {$cdnPath}");
             }
 
             return $success;
-
         } catch (\Exception $e) {
-            Log::error("CDN upload failed: " . $e->getMessage(), [
+            Log::error('CDN upload failed: ' . $e->getMessage(), [
                 'local_path' => $localPath,
-                'cdn_path' => $cdnPath
+                'cdn_path' => $cdnPath,
             ]);
+
             return false;
         }
     }
 
     /**
-     * Upload multiple assets to CDN
+     * Upload multiple assets to CDN.
      */
     public function uploadBatch(array $assets): array
     {
         $results = [];
-        
+
         foreach ($assets as $localPath => $cdnPath) {
             $results[$localPath] = $this->upload($localPath, $cdnPath);
         }
@@ -109,7 +113,7 @@ class CDNService
     }
 
     /**
-     * Purge CDN cache for specific assets
+     * Purge CDN cache for specific assets.
      */
     public function purge(array $paths): bool
     {
@@ -124,15 +128,15 @@ class CDNService
                 'fastly' => $this->purgeFastly($paths),
                 default => $this->purgeGeneric($paths)
             };
-
         } catch (\Exception $e) {
-            Log::error("CDN purge failed: " . $e->getMessage());
+            Log::error('CDN purge failed: ' . $e->getMessage());
+
             return false;
         }
     }
 
     /**
-     * Purge all CDN cache
+     * Purge all CDN cache.
      */
     public function purgeAll(): bool
     {
@@ -147,15 +151,15 @@ class CDNService
                 'fastly' => $this->purgeFastlyAll(),
                 default => $this->purgeGenericAll()
             };
-
         } catch (\Exception $e) {
-            Log::error("CDN purge all failed: " . $e->getMessage());
+            Log::error('CDN purge all failed: ' . $e->getMessage());
+
             return false;
         }
     }
 
     /**
-     * Check CDN health
+     * Check CDN health.
      */
     public function healthCheck(): array
     {
@@ -165,11 +169,12 @@ class CDNService
             'url' => $this->cdnUrl,
             'status' => 'unknown',
             'response_time' => null,
-            'last_check' => now()->toISOString()
+            'last_check' => now()->toISOString(),
         ];
 
         if (!$this->enabled) {
             $health['status'] = 'disabled';
+
             return $health;
         }
 
@@ -180,7 +185,6 @@ class CDNService
 
             $health['status'] = $response ? 'healthy' : 'unhealthy';
             $health['response_time'] = ($endTime - $startTime) * 1000; // milliseconds
-
         } catch (\Exception $e) {
             $health['status'] = 'error';
             $health['error'] = $e->getMessage();
@@ -190,7 +194,7 @@ class CDNService
     }
 
     /**
-     * Get CDN statistics
+     * Get CDN statistics.
      */
     public function getStats(): array
     {
@@ -200,12 +204,12 @@ class CDNService
             'url' => $this->cdnUrl,
             'asset_types' => $this->assetTypes,
             'config' => $this->cdnConfig,
-            'health' => $this->healthCheck()
+            'health' => $this->healthCheck(),
         ];
     }
 
     /**
-     * Build CDN path with versioning
+     * Build CDN path with versioning.
      */
     private function buildCdnPath(string $path, bool $versioned): string
     {
@@ -220,21 +224,22 @@ class CDNService
     }
 
     /**
-     * Check if asset should be versioned
+     * Check if asset should be versioned.
      */
     private function shouldVersionAsset(string $path): bool
     {
         $extension = pathinfo($path, PATHINFO_EXTENSION);
+
         return in_array($extension, ['css', 'js', 'png', 'jpg', 'jpeg', 'gif', 'svg']);
     }
 
     /**
-     * Get asset version (file modification time)
+     * Get asset version (file modification time).
      */
     private function getAssetVersion(string $path): string
     {
         $fullPath = public_path($path);
-        
+
         if (file_exists($fullPath)) {
             return (string) filemtime($fullPath);
         }
@@ -243,7 +248,7 @@ class CDNService
     }
 
     /**
-     * Add version to asset path
+     * Add version to asset path.
      */
     private function addVersionToPath(string $path, string $version): string
     {
@@ -253,30 +258,31 @@ class CDNService
         $dirname = $pathInfo['dirname'] ?? '';
 
         $versionedFilename = $filename . '.v' . $version . '.' . $extension;
-        
+
         return $dirname !== '.' ? $dirname . '/' . $versionedFilename : $versionedFilename;
     }
 
     /**
-     * Test CDN connection
+     * Test CDN connection.
      */
     private function testCdnConnection(): bool
     {
         $testUrl = $this->cdnUrl . '/test.txt';
-        
+
         $context = stream_context_create([
             'http' => [
                 'timeout' => 10,
-                'method' => 'HEAD'
-            ]
+                'method' => 'HEAD',
+            ],
         ]);
 
         $headers = @get_headers($testUrl, 1, $context);
+
         return $headers && strpos($headers[0], '200') !== false;
     }
 
     /**
-     * Purge Cloudflare cache
+     * Purge Cloudflare cache.
      */
     private function purgeCloudflare(array $paths): bool
     {
@@ -285,6 +291,7 @@ class CDNService
 
         if (!$apiKey || !$zoneId) {
             Log::warning('Cloudflare API credentials not configured');
+
             return false;
         }
 
@@ -293,32 +300,33 @@ class CDNService
         }, $paths);
 
         $data = ['files' => $urls];
-        
+
         return $this->makeCloudflareRequest('purge_cache', $data);
     }
 
     /**
-     * Purge all Cloudflare cache
+     * Purge all Cloudflare cache.
      */
     private function purgeCloudflareAll(): bool
     {
         $data = ['purge_everything' => true];
+
         return $this->makeCloudflareRequest('purge_cache', $data);
     }
 
     /**
-     * Make Cloudflare API request
+     * Make Cloudflare API request.
      */
     private function makeCloudflareRequest(string $endpoint, array $data): bool
     {
         $apiKey = config('cdn.cloudflare.api_key');
         $zoneId = config('cdn.cloudflare.zone_id');
-        
+
         $url = "https://api.cloudflare.com/client/v4/zones/{$zoneId}/{$endpoint}";
-        
+
         $headers = [
             'Authorization: Bearer ' . $apiKey,
-            'Content-Type: application/json'
+            'Content-Type: application/json',
         ];
 
         $ch = curl_init();
@@ -334,12 +342,12 @@ class CDNService
         curl_close($ch);
 
         $success = $httpCode === 200;
-        
+
         if (!$success) {
-            Log::error("Cloudflare API request failed", [
+            Log::error('Cloudflare API request failed', [
                 'endpoint' => $endpoint,
                 'http_code' => $httpCode,
-                'response' => $response
+                'response' => $response,
             ]);
         }
 
@@ -347,60 +355,66 @@ class CDNService
     }
 
     /**
-     * Purge AWS CloudFront cache
+     * Purge AWS CloudFront cache.
      */
     private function purgeAWS(array $paths): bool
     {
         // Implementation for AWS CloudFront
         Log::info('AWS CloudFront purge not implemented yet');
+
         return false;
     }
 
     /**
-     * Purge all AWS CloudFront cache
+     * Purge all AWS CloudFront cache.
      */
     private function purgeAWSAll(): bool
     {
         // Implementation for AWS CloudFront
         Log::info('AWS CloudFront purge all not implemented yet');
+
         return false;
     }
 
     /**
-     * Purge Fastly cache
+     * Purge Fastly cache.
      */
     private function purgeFastly(array $paths): bool
     {
         // Implementation for Fastly
         Log::info('Fastly purge not implemented yet');
+
         return false;
     }
 
     /**
-     * Purge all Fastly cache
+     * Purge all Fastly cache.
      */
     private function purgeFastlyAll(): bool
     {
         // Implementation for Fastly
         Log::info('Fastly purge all not implemented yet');
+
         return false;
     }
 
     /**
-     * Generic purge implementation
+     * Generic purge implementation.
      */
     private function purgeGeneric(array $paths): bool
     {
         Log::info('Generic CDN purge not implemented yet');
+
         return false;
     }
 
     /**
-     * Generic purge all implementation
+     * Generic purge all implementation.
      */
     private function purgeGenericAll(): bool
     {
         Log::info('Generic CDN purge all not implemented yet');
+
         return false;
     }
 }

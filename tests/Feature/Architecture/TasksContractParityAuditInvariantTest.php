@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Architecture;
 
@@ -192,6 +194,7 @@ class TasksContractParityAuditInvariantTest extends TestCase
                 $methods = $route->methods();
                 if (in_array('GET', $methods, true)) {
                     $methods = array_values(array_filter($methods, static fn (string $method): bool => $method !== 'HEAD'));
+
                     return implode('|', array_merge($methods, ['HEAD'])) . ' ' . $route->uri();
                 }
 

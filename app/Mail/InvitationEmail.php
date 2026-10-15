@@ -2,7 +2,6 @@
 
 namespace App\Mail;
 
-use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -10,10 +9,12 @@ use Illuminate\Mail\Mailables\Envelope;
 
 class InvitationEmail extends Mailable implements ShouldQueue
 {
-
     public $invitation;
+
     public $acceptUrl;
+
     public $organizationName;
+
     public $inviterName;
 
     /**
@@ -70,7 +71,7 @@ class InvitationEmail extends Mailable implements ShouldQueue
     }
 
     /**
-     * Get display name for the role
+     * Get display name for the role.
      */
     private function getRoleDisplayName(): string
     {

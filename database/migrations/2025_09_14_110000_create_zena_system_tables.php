@@ -4,15 +4,14 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     /**
      * Run the migrations.
      */
     public function up(): void
     {
         // Z.E.N.A System Tables - Core Business Logic
-        
+
         // Projects table (Z.E.N.A specific)
         Schema::create('zena_projects', function (Blueprint $table) {
             $table->ulid('id')->primary();

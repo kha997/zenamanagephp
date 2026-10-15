@@ -2,36 +2,37 @@
 
 namespace Tests\Browser;
 
-use Tests\DuskTestCase;
-use Laravel\Dusk\Browser;
-use App\Models\User;
-use App\Models\Tenant;
 use App\Models\Project;
-use App\Models\Task;
+use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Laravel\Dusk\Browser;
+use Tests\DuskTestCase;
 
 class ProjectManagementTest extends DuskTestCase
 {
     use DatabaseMigrations;
 
     protected $tenant;
+
     protected $user;
+
     protected $project;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->tenant = Tenant::factory()->create();
         $this->user = User::factory()->create([
             'tenant_id' => $this->tenant->id,
             'email' => 'test@example.com',
-            'password' => bcrypt('password')
+            'password' => bcrypt('password'),
         ]);
-        
+
         $this->project = Project::factory()->create([
             'tenant_id' => $this->tenant->id,
-            'manager_id' => $this->user->id
+            'manager_id' => $this->user->id,
         ]);
     }
 
@@ -101,7 +102,7 @@ class ProjectManagementTest extends DuskTestCase
     public function user_can_filter_projects_by_status()
     {
         Project::factory()->create(['status' => 'completed', 'tenant_id' => $this->tenant->id]);
-        
+
         $this->browse(function (Browser $browser) {
             $browser->loginAs($this->user)
                     ->visit('/projects')

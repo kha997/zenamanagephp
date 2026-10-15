@@ -1,15 +1,17 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories\Src\RBAC\Models;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-use Src\RBAC\Models\UserRoleSystem;
-use Src\RBAC\Models\Role;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\Factory;
+use Src\RBAC\Models\Role;
+use Src\RBAC\Models\UserRoleSystem;
 
 /**
- * Factory cho UserRoleSystem model
- * 
+ * Factory cho UserRoleSystem model.
+ *
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Src\RBAC\Models\UserRoleSystem>
  */
 class UserRoleSystemFactory extends Factory
@@ -29,7 +31,7 @@ class UserRoleSystemFactory extends Factory
     }
 
     /**
-     * State: Active assignment
+     * State: Active assignment.
      */
     public function active(): static
     {
@@ -40,7 +42,7 @@ class UserRoleSystemFactory extends Factory
     }
 
     /**
-     * State: Expired assignment
+     * State: Expired assignment.
      */
     public function expired(): static
     {

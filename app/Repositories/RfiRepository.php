@@ -2,9 +2,8 @@
 
 namespace App\Repositories;
 
-use App\Models\Rfi;
-use App\Models\User;
 use App\Models\Project;
+use App\Models\Rfi;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Log;
@@ -147,7 +146,7 @@ class RfiRepository
             'rfi_id' => $rfi->id,
             'subject' => $rfi->subject,
             'project_id' => $rfi->project_id,
-            'created_by' => $rfi->created_by
+            'created_by' => $rfi->created_by,
         ]);
 
         return $rfi->load(['project', 'creator', 'assignee', 'tenant']);
@@ -169,7 +168,7 @@ class RfiRepository
         Log::info('RFI updated', [
             'rfi_id' => $rfi->id,
             'subject' => $rfi->subject,
-            'project_id' => $rfi->project_id
+            'project_id' => $rfi->project_id,
         ]);
 
         return $rfi->load(['project', 'creator', 'assignee', 'tenant']);
@@ -191,7 +190,7 @@ class RfiRepository
         Log::info('RFI deleted', [
             'rfi_id' => $id,
             'subject' => $rfi->subject,
-            'project_id' => $rfi->project_id
+            'project_id' => $rfi->project_id,
         ]);
 
         return true;
@@ -213,7 +212,7 @@ class RfiRepository
         Log::info('RFI soft deleted', [
             'rfi_id' => $id,
             'subject' => $rfi->subject,
-            'project_id' => $rfi->project_id
+            'project_id' => $rfi->project_id,
         ]);
 
         return true;
@@ -235,7 +234,7 @@ class RfiRepository
         Log::info('RFI restored', [
             'rfi_id' => $id,
             'subject' => $rfi->subject,
-            'project_id' => $rfi->project_id
+            'project_id' => $rfi->project_id,
         ]);
 
         return true;
@@ -317,12 +316,12 @@ class RfiRepository
 
         $rfi->update([
             'status' => $status,
-            'status_updated_at' => now()
+            'status_updated_at' => now(),
         ]);
 
         Log::info('RFI status updated', [
             'rfi_id' => $id,
-            'status' => $status
+            'status' => $status,
         ]);
 
         return true;
@@ -343,12 +342,12 @@ class RfiRepository
             'status' => 'answered',
             'answer' => $answer,
             'answered_by' => $answeredBy,
-            'answered_at' => now()
+            'answered_at' => now(),
         ]);
 
         Log::info('RFI answered', [
             'rfi_id' => $id,
-            'answered_by' => $answeredBy
+            'answered_by' => $answeredBy,
         ]);
 
         return true;
@@ -369,13 +368,13 @@ class RfiRepository
             'status' => 'closed',
             'closed_by' => $closedBy,
             'closed_at' => now(),
-            'closure_reason' => $reason
+            'closure_reason' => $reason,
         ]);
 
         Log::info('RFI closed', [
             'rfi_id' => $id,
             'closed_by' => $closedBy,
-            'reason' => $reason
+            'reason' => $reason,
         ]);
 
         return true;
@@ -394,12 +393,12 @@ class RfiRepository
 
         $rfi->update([
             'assigned_to' => $assigneeId,
-            'assigned_at' => now()
+            'assigned_at' => now(),
         ]);
 
         Log::info('RFI assigned', [
             'rfi_id' => $id,
-            'assigned_to' => $assigneeId
+            'assigned_to' => $assigneeId,
         ]);
 
         return true;
@@ -427,7 +426,7 @@ class RfiRepository
             'overdue_rfis' => $query->where('due_date', '<', now())
                                    ->where('status', '!=', 'closed')
                                    ->count(),
-            'recent_rfis' => $query->where('created_at', '>=', now()->subDays(7))->count()
+            'recent_rfis' => $query->where('created_at', '>=', now()->subDays(7))->count(),
         ];
     }
 
@@ -464,7 +463,7 @@ class RfiRepository
 
         Log::info('RFIs bulk updated', [
             'count' => $updated,
-            'ids' => $ids
+            'ids' => $ids,
         ]);
 
         return $updated;
@@ -479,7 +478,7 @@ class RfiRepository
 
         Log::info('RFIs bulk deleted', [
             'count' => $deleted,
-            'ids' => $ids
+            'ids' => $ids,
         ]);
 
         return $deleted;
@@ -503,7 +502,7 @@ class RfiRepository
             'type' => 'created',
             'date' => $rfi->created_at,
             'title' => 'RFI Created',
-            'description' => 'RFI ' . $rfi->subject . ' was created'
+            'description' => 'RFI ' . $rfi->subject . ' was created',
         ];
 
         // Add assignment
@@ -512,7 +511,7 @@ class RfiRepository
                 'type' => 'assigned',
                 'date' => $rfi->assigned_at,
                 'title' => 'RFI Assigned',
-                'description' => 'RFI assigned to user'
+                'description' => 'RFI assigned to user',
             ];
         }
 
@@ -522,7 +521,7 @@ class RfiRepository
                 'type' => 'status_changed',
                 'date' => $rfi->status_updated_at,
                 'title' => 'Status Changed',
-                'description' => 'Status changed to ' . $rfi->status
+                'description' => 'Status changed to ' . $rfi->status,
             ];
         }
 
@@ -532,7 +531,7 @@ class RfiRepository
                 'type' => 'answered',
                 'date' => $rfi->answered_at,
                 'title' => 'RFI Answered',
-                'description' => 'RFI was answered'
+                'description' => 'RFI was answered',
             ];
         }
 
@@ -542,7 +541,7 @@ class RfiRepository
                 'type' => 'closed',
                 'date' => $rfi->closed_at,
                 'title' => 'RFI Closed',
-                'description' => 'RFI was closed'
+                'description' => 'RFI was closed',
             ];
         }
 
@@ -599,16 +598,16 @@ class RfiRepository
         $attachments[] = [
             'file_path' => $filePath,
             'file_name' => $fileName,
-            'uploaded_at' => now()->toISOString()
+            'uploaded_at' => now()->toISOString(),
         ];
 
         $rfi->update([
-            'attachments' => $attachments
+            'attachments' => $attachments,
         ]);
 
         Log::info('Attachment added to RFI', [
             'rfi_id' => $id,
-            'file_name' => $fileName
+            'file_name' => $fileName,
         ]);
 
         return true;
@@ -631,12 +630,12 @@ class RfiRepository
         });
 
         $rfi->update([
-            'attachments' => array_values($attachments)
+            'attachments' => array_values($attachments),
         ]);
 
         Log::info('Attachment removed from RFI', [
             'rfi_id' => $id,
-            'file_path' => $filePath
+            'file_path' => $filePath,
         ]);
 
         return true;
@@ -671,7 +670,7 @@ class RfiRepository
             'is_overdue' => $isOverdue,
             'days_remaining' => $daysRemaining,
             'days_overdue' => $daysOverdue,
-            'sla_status' => $isOverdue ? 'overdue' : ($daysRemaining <= 1 ? 'urgent' : 'normal')
+            'sla_status' => $isOverdue ? 'overdue' : ($daysRemaining <= 1 ? 'urgent' : 'normal'),
         ];
     }
 

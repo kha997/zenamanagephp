@@ -17,23 +17,23 @@ class InvitationAuth
     {
         // Check if user is authenticated via session
         $user = session('user');
-        
+
         if (!$user) {
             // Redirect to login page if not authenticated
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Authentication required',
-                    'redirect' => '/login'
+                    'redirect' => '/login',
                 ], 401);
             }
-            
+
             return redirect('/login')->with('error', 'Please login to access this page');
         }
-        
+
         // Add user to request for easy access
         $request->merge(['authenticated_user' => $user]);
-        
+
         return $next($request);
     }
 }

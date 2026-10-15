@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Support;
 
@@ -118,6 +120,7 @@ class VietnameseMoneyWords
             if ($hangChuc === 0 && $hangDonVi > 0) {
                 return 'không trăm linh ' . self::$ones[$hangDonVi];
             }
+
             return 'không trăm ' . self::convertGroup($rest);
         }
 

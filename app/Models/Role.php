@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -9,8 +11,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Model Role - Quản lý vai trò trong hệ thống RBAC
- * 
+ * Model Role - Quản lý vai trò trong hệ thống RBAC.
+ *
  * @property string $id
  * @property string $name Tên vai trò
  * @property string $scope Phạm vi áp dụng (system, custom, project)
@@ -19,27 +21,28 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Role extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids;
+    use HasFactory;
 
     protected $table = 'roles';
-    
+
     /**
-     * Kiểu dữ liệu của khóa chính
+     * Kiểu dữ liệu của khóa chính.
      */
     protected $keyType = 'string';
 
     /**
-     * Tắt auto increment cho khóa chính
+     * Tắt auto increment cho khóa chính.
      */
     public $incrementing = false;
-    
+
     protected $fillable = [
         'name',
-        'scope', 
+        'scope',
         'allow_override',
         'description',
         'is_active',
-        'tenant_id'
+        'tenant_id',
     ];
 
     protected $casts = [
@@ -48,7 +51,7 @@ class Role extends Model
     ];
 
     /**
-     * Các scope hợp lệ cho role
+     * Các scope hợp lệ cho role.
      */
     public const SCOPE_SYSTEM = 'system';
     public const SCOPE_CUSTOM = 'custom';
@@ -61,7 +64,7 @@ class Role extends Model
     ];
 
     /**
-     * Relationship: Role có nhiều permissions
+     * Relationship: Role có nhiều permissions.
      */
     public function permissions(): BelongsToMany
     {
@@ -77,7 +80,7 @@ class Role extends Model
     }
 
     /**
-     * Relationship: Role được assign cho nhiều users ở system level
+     * Relationship: Role được assign cho nhiều users ở system level.
      */
     public function systemUsers(): BelongsToMany
     {
@@ -90,7 +93,7 @@ class Role extends Model
     }
 
     /**
-     * Relationship: Role có nhiều project assignments
+     * Relationship: Role có nhiều project assignments.
      */
     public function projectAssignments(): HasMany
     {
@@ -98,7 +101,7 @@ class Role extends Model
     }
 
     /**
-     * Kiểm tra role có permission cụ thể không
+     * Kiểm tra role có permission cụ thể không.
      */
     public function hasPermission(string $permissionCode): bool
     {
@@ -106,19 +109,19 @@ class Role extends Model
     }
 
     /**
-     * Kiểm tra role có thể override permission không
+     * Kiểm tra role có thể override permission không.
      */
     public function canOverridePermission(string $permissionCode): bool
     {
         $permission = $this->permissions()
             ->where('code', $permissionCode)
             ->first();
-            
+
         return $permission && $permission->pivot->allow_override;
     }
 
     /**
-     * Scope: Lọc theo scope
+     * Scope: Lọc theo scope.
      */
     public function scopeByScope($query, string $scope)
     {
@@ -126,7 +129,7 @@ class Role extends Model
     }
 
     /**
-     * Scope: Chỉ lấy system roles
+     * Scope: Chỉ lấy system roles.
      */
     public function scopeSystemRoles($query)
     {
@@ -134,7 +137,7 @@ class Role extends Model
     }
 
     /**
-     * Scope: Chỉ lấy project roles
+     * Scope: Chỉ lấy project roles.
      */
     public function scopeProjectRoles($query)
     {

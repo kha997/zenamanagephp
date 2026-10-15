@@ -2,30 +2,31 @@
 
 namespace Tests\Browser;
 
-use Tests\DuskTestCase;
-use Laravel\Dusk\Browser;
-use App\Models\User;
-use App\Models\Tenant;
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Laravel\Dusk\Browser;
+use Tests\DuskTestCase;
 
 class DashboardTest extends DuskTestCase
 {
     use DatabaseMigrations;
 
     protected $tenant;
+
     protected $user;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->tenant = Tenant::factory()->create();
         $this->user = User::factory()->create([
             'tenant_id' => $this->tenant->id,
             'email' => 'test@example.com',
-            'password' => bcrypt('password')
+            'password' => bcrypt('password'),
         ]);
     }
 
@@ -106,7 +107,7 @@ class DashboardTest extends DuskTestCase
     public function dashboard_shows_project_statistics()
     {
         Project::factory()->count(5)->create(['tenant_id' => $this->tenant->id]);
-        
+
         $this->browse(function (Browser $browser) {
             $browser->loginAs($this->user)
                     ->visit('/dashboard')
@@ -120,7 +121,7 @@ class DashboardTest extends DuskTestCase
     {
         $project = Project::factory()->create(['tenant_id' => $this->tenant->id]);
         Task::factory()->count(10)->create(['project_id' => $project->id]);
-        
+
         $this->browse(function (Browser $browser) {
             $browser->loginAs($this->user)
                     ->visit('/dashboard')

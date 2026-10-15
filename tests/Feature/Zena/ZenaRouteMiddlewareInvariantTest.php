@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Zena;
 
@@ -71,6 +73,7 @@ class ZenaRouteMiddlewareInvariantTest extends TestCase
     private function gatherMiddlewaresFor(string $uri): array
     {
         $route = $this->findRouteByUri($uri);
+
         return $route->gatherMiddleware();
     }
 
@@ -78,6 +81,7 @@ class ZenaRouteMiddlewareInvariantTest extends TestCase
     {
         $route = collect(Route::getRoutes())->first(static fn (RoutingRoute $route) => $route->uri() === $uri);
         $this->assertNotNull($route, sprintf('Route %s could not be located', $uri));
+
         return $route;
     }
 

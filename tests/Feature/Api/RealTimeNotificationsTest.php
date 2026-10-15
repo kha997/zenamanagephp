@@ -2,19 +2,22 @@
 
 namespace Tests\Feature\Api;
 
-use App\Models\User;
 use App\Models\Notification;
-use Tests\TestCase;
-use Tests\Traits\AuthenticationTestTrait;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Tests\TestCase;
+use Tests\Traits\AuthenticationTestTrait;
 use Tests\Traits\RouteNameTrait;
 
 class RealTimeNotificationsTest extends TestCase
 {
-    use RefreshDatabase, WithFaker, AuthenticationTestTrait, RouteNameTrait;
+    use RefreshDatabase;
+    use WithFaker;
+    use AuthenticationTestTrait;
+    use RouteNameTrait;
 
     protected $user;
+
     protected $tenantId;
 
     protected function setUp(): void
@@ -27,7 +30,7 @@ class RealTimeNotificationsTest extends TestCase
     }
 
     /**
-     * Test notification creation
+     * Test notification creation.
      */
     public function test_can_create_notification()
     {
@@ -38,7 +41,7 @@ class RealTimeNotificationsTest extends TestCase
             'title' => 'New Task Assigned',
             'message' => 'You have been assigned a new task',
             'priority' => 'normal',
-            'data' => ['task_id' => '123']
+            'data' => ['task_id' => '123'],
         ];
 
         $response = $this->apiPost($this->zena('notifications.store'), $notificationData);
@@ -58,18 +61,18 @@ class RealTimeNotificationsTest extends TestCase
                         'priority',
                         'created_at',
                         'updated_at',
-                    ]
+                    ],
                 ]);
 
         $this->assertDatabaseHas('notifications', [
             'user_id' => $this->user->id,
             'type' => 'task_assigned',
-            'title' => 'New Task Assigned'
+            'title' => 'New Task Assigned',
         ]);
     }
 
     /**
-     * Test notification listing
+     * Test notification listing.
      */
     public function test_can_get_notifications()
     {
@@ -91,9 +94,9 @@ class RealTimeNotificationsTest extends TestCase
                             'page',
                             'per_page',
                             'total',
-                            'last_page'
-                        ]
-                    ]
+                            'last_page',
+                        ],
+                    ],
                 ]);
 
         $notifications = $response->json('data');
@@ -101,7 +104,7 @@ class RealTimeNotificationsTest extends TestCase
     }
 
     /**
-     * Test marking notification as read
+     * Test marking notification as read.
      */
     public function test_can_mark_notification_as_read()
     {
@@ -124,7 +127,7 @@ class RealTimeNotificationsTest extends TestCase
                         'read_at',
                         'created_at',
                         'updated_at',
-                    ]
+                    ],
                 ]);
 
         $notification->refresh();
@@ -132,7 +135,7 @@ class RealTimeNotificationsTest extends TestCase
     }
 
     /**
-     * Test marking all notifications as read
+     * Test marking all notifications as read.
      */
     public function test_can_mark_all_notifications_as_read()
     {
@@ -143,7 +146,7 @@ class RealTimeNotificationsTest extends TestCase
         $response->assertStatus(200)
                 ->assertJsonStructure([
                     'status',
-                    'message'
+                    'message',
                 ]);
 
         $unreadCount = Notification::where('user_id', $this->user->id)
@@ -155,14 +158,14 @@ class RealTimeNotificationsTest extends TestCase
     }
 
     /**
-     * Test getting unread notification count
+     * Test getting unread notification count.
      */
     public function test_can_get_unread_notification_count()
     {
         Notification::factory()->count(3)->create($this->notificationAttributes());
 
         Notification::factory()->count(2)->create($this->notificationAttributes([
-            'read_at' => now()
+            'read_at' => now(),
         ]));
 
         $response = $this->apiGet($this->zena('notifications.unread-count'));
@@ -171,28 +174,28 @@ class RealTimeNotificationsTest extends TestCase
                 ->assertJsonStructure([
                     'status',
                     'data' => [
-                        'count'
-                    ]
+                        'count',
+                    ],
                 ]);
 
         $this->assertEquals(3, $response->json('data.count'));
     }
 
     /**
-     * Test getting notification statistics
+     * Test getting notification statistics.
      */
     public function test_can_get_notification_statistics()
     {
         Notification::factory()->count(2)->create($this->notificationAttributes([
             'type' => 'task_assigned',
             'priority' => 'critical',
-            'read_at' => null
+            'read_at' => null,
         ]));
 
         Notification::factory()->count(3)->create($this->notificationAttributes([
             'type' => 'rfi_submitted',
             'priority' => 'normal',
-            'read_at' => now()
+            'read_at' => now(),
         ]));
 
         $response = $this->apiGet($this->zena('notifications.stats'));
@@ -205,8 +208,8 @@ class RealTimeNotificationsTest extends TestCase
                         'unread',
                         'read',
                         'by_type',
-                        'by_priority'
-                    ]
+                        'by_priority',
+                    ],
                 ]);
 
         $stats = $response->json('data');
@@ -216,20 +219,20 @@ class RealTimeNotificationsTest extends TestCase
     }
 
     /**
-     * Test notification filtering by type
+     * Test notification filtering by type.
      */
     public function test_can_filter_notifications_by_type()
     {
         Notification::factory()->count(2)->create([
             'user_id' => $this->user->id,
             'tenant_id' => $this->tenantId,
-            'type' => 'task_assigned'
+            'type' => 'task_assigned',
         ]);
 
         Notification::factory()->count(3)->create([
             'user_id' => $this->user->id,
             'tenant_id' => $this->tenantId,
-            'type' => 'rfi_submitted'
+            'type' => 'rfi_submitted',
         ]);
 
         $response = $this->apiGet($this->zena('notifications.index', query: ['type' => 'task_assigned']));
@@ -245,34 +248,34 @@ class RealTimeNotificationsTest extends TestCase
                             'page',
                             'per_page',
                             'total',
-                            'last_page'
-                        ]
-                    ]
+                            'last_page',
+                        ],
+                    ],
                 ]);
 
         $notifications = $response->json('data');
         $this->assertCount(2, $notifications);
-        
+
         foreach ($notifications as $notification) {
             $this->assertEquals('task_assigned', $notification['type']);
         }
     }
 
     /**
-     * Test notification filtering by status
+     * Test notification filtering by status.
      */
     public function test_can_filter_notifications_by_status()
     {
         Notification::factory()->count(2)->create([
             'user_id' => $this->user->id,
             'tenant_id' => $this->tenantId,
-            'read_at' => null
+            'read_at' => null,
         ]);
 
         Notification::factory()->count(3)->create([
             'user_id' => $this->user->id,
             'tenant_id' => $this->tenantId,
-            'read_at' => now()
+            'read_at' => now(),
         ]);
 
         $response = $this->apiGet($this->zena('notifications.index', query: ['status' => 'unread']));
@@ -281,14 +284,14 @@ class RealTimeNotificationsTest extends TestCase
 
         $notifications = $response->json('data');
         $this->assertCount(2, $notifications);
-        
+
         foreach ($notifications as $notification) {
             $this->assertNull($notification['read_at']);
         }
     }
 
     /**
-     * Test notification deletion
+     * Test notification deletion.
      */
     public function test_can_delete_notification()
     {
@@ -300,12 +303,12 @@ class RealTimeNotificationsTest extends TestCase
         $response->assertJsonStructure(['success']);
 
         $this->assertDatabaseMissing('notifications', [
-            'id' => $notification->id
+            'id' => $notification->id,
         ]);
     }
 
     /**
-     * Test notification validation
+     * Test notification validation.
      */
     public function test_notification_creation_requires_valid_data()
     {
@@ -321,7 +324,7 @@ class RealTimeNotificationsTest extends TestCase
     }
 
     /**
-     * Test notification type validation
+     * Test notification type validation.
      */
     public function test_notification_type_validation()
     {
@@ -331,7 +334,7 @@ class RealTimeNotificationsTest extends TestCase
             'type' => 'invalid_type',
             'title' => 'Test',
             'message' => 'Test message',
-            'priority' => 'normal'
+            'priority' => 'normal',
         ]);
 
         $response->assertStatus(422);
@@ -341,7 +344,7 @@ class RealTimeNotificationsTest extends TestCase
     }
 
     /**
-     * Test notification priority validation
+     * Test notification priority validation.
      */
     public function test_notification_priority_validation()
     {
@@ -351,7 +354,7 @@ class RealTimeNotificationsTest extends TestCase
             'type' => 'task_assigned',
             'title' => 'Test',
             'message' => 'Test message',
-            'priority' => 'invalid_priority'
+            'priority' => 'invalid_priority',
         ]);
 
         $response->assertStatus(422);
@@ -361,7 +364,7 @@ class RealTimeNotificationsTest extends TestCase
     }
 
     /**
-     * Test unauthorized access
+     * Test unauthorized access.
      */
     public function test_unauthorized_access_returns_401()
     {
@@ -370,12 +373,12 @@ class RealTimeNotificationsTest extends TestCase
     }
 
     /**
-     * Test notification expiration
+     * Test notification expiration.
      */
     public function test_notification_expiration()
     {
         $notification = Notification::factory()->create($this->notificationAttributes([
-            'metadata' => ['expires_at' => now()->subHour()->toISOString()]
+            'metadata' => ['expires_at' => now()->subHour()->toISOString()],
         ]));
 
         $response = $this->apiGet($this->zena('notifications.show', ['id' => $notification->id]));

@@ -1,22 +1,24 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
+use App\Models\Tenant;
+use App\Models\User;
+use GuzzleHttp\Client;
+use GuzzleHttp\Promise\Utils;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use App\Models\User;
-use App\Models\Tenant;
 use Src\CoreProject\Models\Project;
 use Src\CoreProject\Models\Task;
 use Src\RBAC\Services\AuthService;
-use GuzzleHttp\Client;
-use GuzzleHttp\Promise\Utils;
+use Tests\TestCase;
 use Tests\Traits\TenantUserFactoryTrait;
 
 /**
- * Test tải với concurrent users
+ * Test tải với concurrent users.
  *
  * @group performance
  * @group slow
@@ -28,10 +30,15 @@ class LoadTest extends TestCase
     use TenantUserFactoryTrait;
 
     private $baseUrl;
+
     private $httpClient;
+
     private AuthService $authService;
+
     private int $loadTestScale = 1;
+
     private ?string $databaseDriver = null;
+
     private ?string $appUrlConnectivityError = null;
 
     protected function setUp(): void
@@ -50,7 +57,7 @@ class LoadTest extends TestCase
         $this->httpClient = new Client([
             'base_uri' => $this->baseUrl,
             'timeout' => 30,
-            'http_errors' => false
+            'http_errors' => false,
         ]);
 
         $this->appUrlConnectivityError = $this->probeAppUrlConnectivity();
@@ -154,7 +161,7 @@ class LoadTest extends TestCase
     }
 
     /**
-     * Test concurrent login requests
+     * Test concurrent login requests.
      */
     public function test_concurrent_login_requests()
     {
@@ -177,7 +184,7 @@ class LoadTest extends TestCase
                 $successCount++;
             } else {
                 $errorCount++;
-                $sampleFailure = $sampleFailure ?? $this->createSampleFailure(
+                $sampleFailure ??= $this->createSampleFailure(
                     $statusCode,
                     $response->getContent()
                 );
@@ -189,21 +196,21 @@ class LoadTest extends TestCase
         if ($sampleFailure !== null) {
             echo "\nSample failure -> status: {$sampleFailure['status']}, body: {$sampleFailure['message']}\n";
         }
-        
+
         // Assert performance requirements
         $this->assertGreaterThan(15, $successCount, 'At least 75% of requests should succeed');
         $this->assertLessThan(10, $totalTime, 'Total time should be less than 10 seconds');
-        
+
         echo "\nConcurrent Login Test:\n";
         echo "Total requests: {$concurrentRequests}\n";
         echo "Successful: {$successCount}\n";
         echo "Errors: {$errorCount}\n";
-        echo "Total time: " . round($totalTime, 2) . "s\n";
-        echo "Average time per request: " . round($totalTime / $concurrentRequests, 3) . "s\n";
+        echo 'Total time: ' . round($totalTime, 2) . "s\n";
+        echo 'Average time per request: ' . round($totalTime / $concurrentRequests, 3) . "s\n";
     }
 
     /**
-     * Test concurrent API requests
+     * Test concurrent API requests.
      */
     public function test_concurrent_api_requests()
     {
@@ -211,35 +218,35 @@ class LoadTest extends TestCase
         // Tạo authenticated users
         $users = User::limit(10)->get();
         $tokens = [];
-        
+
         foreach ($users as $user) {
             $tokens[] = $this->authService->createTokenForUser($user);
         }
-        
+
         $concurrentRequests = 50;
         $promises = [];
         $startTime = microtime(true);
-        
+
         // Tạo concurrent API requests
         for ($i = 0; $i < $concurrentRequests; $i++) {
             $token = $tokens[$i % count($tokens)];
-            
+
             $promises[] = $this->httpClient->getAsync('/api/v1/projects', [
                 'headers' => [
                     'Authorization' => 'Bearer ' . $token,
-                    'Accept' => 'application/json'
-                ]
+                    'Accept' => 'application/json',
+                ],
             ]);
         }
-        
+
         // Wait for all requests
         $responses = Utils::settle($promises)->wait();
         $totalTime = microtime(true) - $startTime;
-        
+
         $successCount = 0;
         $errorCount = 0;
         $responseTimes = [];
-        
+
         foreach ($responses as $response) {
             if ($response['state'] === 'fulfilled') {
                 $statusCode = $response['value']->getStatusCode();
@@ -252,21 +259,21 @@ class LoadTest extends TestCase
                 $errorCount++;
             }
         }
-        
+
         // Performance assertions
         $this->assertGreaterThan(40, $successCount, 'At least 80% of requests should succeed');
         $this->assertLessThan(15, $totalTime, 'Total time should be less than 15 seconds');
-        
+
         echo "\nConcurrent API Test:\n";
         echo "Total requests: {$concurrentRequests}\n";
         echo "Successful: {$successCount}\n";
         echo "Errors: {$errorCount}\n";
-        echo "Total time: " . round($totalTime, 2) . "s\n";
-        echo "Requests per second: " . round($concurrentRequests / $totalTime, 2) . "\n";
+        echo 'Total time: ' . round($totalTime, 2) . "s\n";
+        echo 'Requests per second: ' . round($concurrentRequests / $totalTime, 2) . "\n";
     }
 
     /**
-     * Test database connection pool under load
+     * Test database connection pool under load.
      */
     public function test_database_connection_pool_load()
     {
@@ -274,11 +281,11 @@ class LoadTest extends TestCase
         $concurrentQueries = 30;
         $promises = [];
         $startTime = microtime(true);
-        
+
         // Get token for authentication
         $user = User::first();
         $token = $this->authService->createTokenForUser($user);
-        
+
         // Simulate concurrent database operations
         for ($i = 0; $i < $concurrentQueries; $i++) {
             $promises[] = $this->httpClient->postAsync('/api/v1/projects', [
@@ -286,22 +293,22 @@ class LoadTest extends TestCase
                     'name' => 'Load Test Project ' . $i,
                     'description' => 'Created during load test',
                     'start_date' => '2024-01-01',
-                    'end_date' => '2024-12-31'
+                    'end_date' => '2024-12-31',
                 ],
                 'headers' => [
                     'Authorization' => 'Bearer ' . $token,
                     'Accept' => 'application/json',
-                    'Content-Type' => 'application/json'
-                ]
+                    'Content-Type' => 'application/json',
+                ],
             ]);
         }
-        
+
         $responses = Utils::settle($promises)->wait();
         $totalTime = microtime(true) - $startTime;
-        
+
         $successCount = 0;
         $errorCount = 0;
-        
+
         foreach ($responses as $response) {
             if ($response['state'] === 'fulfilled') {
                 $statusCode = $response['value']->getStatusCode();
@@ -314,7 +321,7 @@ class LoadTest extends TestCase
                 $errorCount++;
             }
         }
-        
+
         // Check database connections
         $this->assertGreaterThan(20, $successCount, 'Most database operations should succeed');
         $activeConnections = $this->fetchActiveDbConnections();
@@ -326,7 +333,7 @@ class LoadTest extends TestCase
         echo "Concurrent operations: {$concurrentQueries}\n";
         echo "Successful: {$successCount}\n";
         echo "Errors: {$errorCount}\n";
-        echo "Total time: " . round($totalTime, 2) . "s\n";
+        echo 'Total time: ' . round($totalTime, 2) . "s\n";
         if ($activeConnections !== null) {
             echo "Active DB connections: {$activeConnections}\n";
         } else {
@@ -335,52 +342,52 @@ class LoadTest extends TestCase
     }
 
     /**
-     * Test memory usage under concurrent load
+     * Test memory usage under concurrent load.
      */
     public function test_memory_usage_under_load()
     {
         $this->skipIfAppIsUnreachable();
         $initialMemory = memory_get_usage(true);
         $peakMemory = memory_get_peak_usage(true);
-        
+
         // Simulate high memory usage scenario
         $users = User::limit(5)->get();
         $tokens = [];
-        
+
         foreach ($users as $user) {
             $tokens[] = $this->authService->createTokenForUser($user);
         }
-        
+
         $promises = [];
-        
+
         // Create requests that load large datasets
         for ($i = 0; $i < 20; $i++) {
             $token = $tokens[$i % count($tokens)];
-            
+
             $promises[] = $this->httpClient->getAsync('/api/v1/projects?per_page=100', [
                 'headers' => [
                     'Authorization' => 'Bearer ' . $token,
-                    'Accept' => 'application/json'
-                ]
+                    'Accept' => 'application/json',
+                ],
             ]);
         }
-        
+
         $responses = Utils::settle($promises)->wait();
-        
+
         $finalMemory = memory_get_usage(true);
         $finalPeakMemory = memory_get_peak_usage(true);
-        
+
         $memoryIncrease = $finalMemory - $initialMemory;
         $peakIncrease = $finalPeakMemory - $peakMemory;
-        
+
         // Memory should not increase dramatically
         $this->assertLessThan(100 * 1024 * 1024, $memoryIncrease, 'Memory increase should be less than 100MB');
-        
+
         echo "\nMemory Load Test:\n";
-        echo "Initial memory: " . round($initialMemory / 1024 / 1024, 2) . "MB\n";
-        echo "Final memory: " . round($finalMemory / 1024 / 1024, 2) . "MB\n";
-        echo "Memory increase: " . round($memoryIncrease / 1024 / 1024, 2) . "MB\n";
-        echo "Peak memory increase: " . round($peakIncrease / 1024 / 1024, 2) . "MB\n";
+        echo 'Initial memory: ' . round($initialMemory / 1024 / 1024, 2) . "MB\n";
+        echo 'Final memory: ' . round($finalMemory / 1024 / 1024, 2) . "MB\n";
+        echo 'Memory increase: ' . round($memoryIncrease / 1024 / 1024, 2) . "MB\n";
+        echo 'Peak memory increase: ' . round($peakIncrease / 1024 / 1024, 2) . "MB\n";
     }
 
     private function skipIfAppIsUnreachable(): void
@@ -409,6 +416,7 @@ class LoadTest extends TestCase
         $connection = @fsockopen($host, $port, $errno, $errstr, $timeout);
         if ($connection === false) {
             $message = $errstr ?: 'connection refused';
+
             return sprintf('%s (%s:%d) is unreachable: %s', $url, $host, $port, $message);
         }
 

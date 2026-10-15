@@ -1,11 +1,12 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     /**
      * Run the migrations.
      */
@@ -32,7 +33,7 @@ return new class extends Migration
             $table->text('error_message')->nullable();
             $table->timestamp('executed_at');
             $table->timestamps();
-            
+
             // Indexes for performance
             $table->index(['executed_at', 'is_slow']);
             $table->index(['user_id', 'executed_at']);

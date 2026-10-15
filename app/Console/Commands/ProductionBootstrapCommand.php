@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Console\Commands;
 
@@ -36,11 +38,13 @@ class ProductionBootstrapCommand extends Command
         if (Tenant::query()->count() > 0) {
             if ($alreadyBootstrapped) {
                 $this->warn('Bootstrap already completed previously — refusing to run again (idempotent fail-closed).');
+
                 return 2;
             }
 
             $this->warn('Database already contains tenant data not created by this command — verify existing state instead of bootstrapping.');
             $this->line('If this is the existing-data case, verify the real tenant/admin/RBAC state instead of bootstrapping.');
+
             return 1;
         }
 
@@ -50,6 +54,7 @@ class ProductionBootstrapCommand extends Command
 
         if (!$tenantName || !$tenantSlug || !$adminEmail) {
             $this->error('--tenant-name, --tenant-slug, and --admin-email are all required.');
+
             return 1;
         }
 

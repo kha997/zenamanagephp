@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Services;
 
@@ -18,6 +20,7 @@ class TeamExceptionQueryTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenant;
+
     private OpenWorkReadQuery $openWorkReadQuery;
 
     protected function setUp(): void

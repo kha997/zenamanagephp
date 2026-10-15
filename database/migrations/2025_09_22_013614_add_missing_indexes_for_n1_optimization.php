@@ -1,13 +1,12 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\QueryException;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\QueryException;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     /**
      * Run the migrations.
      */
@@ -21,7 +20,7 @@ return new class extends Migration
         } catch (\Exception $e) {
             // Index might already exist
         }
-        
+
         try {
             Schema::table('users', function (Blueprint $table) {
                 $table->index(['created_at'], 'users_created_at_index');
@@ -29,7 +28,7 @@ return new class extends Migration
         } catch (\Exception $e) {
             // Index might already exist
         }
-        
+
         // Add composite indexes for common N+1 patterns
         try {
             Schema::table('projects', function (Blueprint $table) {
@@ -38,7 +37,7 @@ return new class extends Migration
         } catch (\Exception $e) {
             // Index might already exist
         }
-        
+
         try {
             Schema::table('users', function (Blueprint $table) {
                 $table->index(['tenant_id', 'status'], 'users_tenant_status_index');
@@ -46,7 +45,7 @@ return new class extends Migration
         } catch (\Exception $e) {
             // Index might already exist
         }
-        
+
         // Add indexes for document relationships
         try {
             Schema::table('document_versions', function (Blueprint $table) {
@@ -56,7 +55,7 @@ return new class extends Migration
         } catch (\Exception $e) {
             // Indexes might already exist
         }
-        
+
         // Add indexes for task assignments
         try {
             Schema::table('task_assignments', function (Blueprint $table) {
@@ -66,7 +65,7 @@ return new class extends Migration
         } catch (\Exception $e) {
             // Indexes might already exist
         }
-        
+
         // Add indexes for project team members
         try {
             Schema::table('project_team_members', function (Blueprint $table) {
@@ -115,7 +114,7 @@ return new class extends Migration
                 $this->dropIndexIfExists($tableName, $indexName);
             }
         }
-        
+
         $this->dropIndexIfExists('project_team_members', 'project_team_members_project_user_index');
         $this->dropIndexIfExists('project_team_members', 'project_team_members_user_created_index');
     }
@@ -133,7 +132,7 @@ return new class extends Migration
 
     private function dropIndexIfExists(string $tableName, string $indexName): void
     {
-        if (! $this->indexExists($tableName, $indexName)) {
+        if (!$this->indexExists($tableName, $indexName)) {
             return;
         }
 
@@ -194,7 +193,7 @@ return new class extends Migration
         }
 
         if ($driver === 'sqlite') {
-            if (! $this->indexExists($tableName, $indexName)) {
+            if (!$this->indexExists($tableName, $indexName)) {
                 return false;
             }
 

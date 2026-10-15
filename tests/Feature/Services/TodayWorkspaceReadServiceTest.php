@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Services;
 
@@ -17,9 +19,13 @@ class TodayWorkspaceReadServiceTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenant;
+
     private User $actor;
+
     private Project $project;
+
     private TodayWorkspaceReadService $service;
+
     private OpenWorkReadQuery $openWorkReadQuery;
 
     protected function setUp(): void
@@ -122,7 +128,7 @@ class TodayWorkspaceReadServiceTest extends TestCase
     {
         $this->taskFor($this->actor, ['name' => 'Việc sống sót', 'title' => 'Việc sống sót']);
 
-        $failingService = new class(app(OpenWorkReadQuery::class)) extends TodayWorkspaceReadService {
+        $failingService = new class (app(OpenWorkReadQuery::class)) extends TodayWorkspaceReadService {
             public function __construct(OpenWorkReadQuery $openWorkReadQuery)
             {
                 parent::__construct(
@@ -149,7 +155,7 @@ class TodayWorkspaceReadServiceTest extends TestCase
     {
         $this->taskFor($this->actor, ['name' => 'Việc không liên quan', 'title' => 'Việc không liên quan']);
 
-        $failingService = new class(app(OpenWorkReadQuery::class)) extends TodayWorkspaceReadService {
+        $failingService = new class (app(OpenWorkReadQuery::class)) extends TodayWorkspaceReadService {
             public function __construct(OpenWorkReadQuery $openWorkReadQuery)
             {
                 parent::__construct(

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Console\Commands\Testing;
 
@@ -29,6 +31,7 @@ class TreasuryConcurrencyTestTransfer extends Command
         $actor = User::query()->findOrFail($this->argument('actor_id'));
 
         DB::beginTransaction();
+
         try {
             $document = $posting->transfer($project, $actor, [
                 'source_wallet_id' => (string) $this->argument('source_wallet_id'),

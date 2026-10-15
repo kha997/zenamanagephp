@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
@@ -11,7 +13,8 @@ use Tests\Traits\AuthenticationTrait;
 
 class LegacyTenantIsolationTest extends TestCase
 {
-    use RefreshDatabase, AuthenticationTrait;
+    use RefreshDatabase;
+    use AuthenticationTrait;
 
     public function test_rfis_are_blocked_for_other_tenants(): void
     {

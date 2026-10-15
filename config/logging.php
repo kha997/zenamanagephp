@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
@@ -14,7 +16,7 @@ return [
             'driver' => 'stack',
             'channels' => array_filter([
                 'single',
-                env('LOG_SLACK_WEBHOOK_URL') ? 'slack' : null
+                env('LOG_SLACK_WEBHOOK_URL') ? 'slack' : null,
             ]),
             'ignore_exceptions' => false,
         ],
@@ -81,7 +83,7 @@ return [
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
         ],
-        
+
         // Custom channels cho Z.E.N.A
         'websocket' => [
             'driver' => 'daily',
@@ -103,14 +105,14 @@ return [
             'level' => env('LOG_LEVEL', 'info'),
             'days' => env('LOG_DAILY_DAYS', 30),
         ],
-        
+
         'api' => [
             'driver' => 'daily',
             'path' => storage_path('logs/api.log'),
             'level' => env('LOG_LEVEL', 'info'),
             'days' => 30,
         ],
-        
+
         'security' => [
             'driver' => 'daily',
             'path' => storage_path('logs/security.log'),

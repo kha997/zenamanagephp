@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services\Crm;
 
@@ -31,7 +33,7 @@ class OpportunityServiceLineClassificationService
     public function reconcile(User $actor, Opportunity $opportunity, array $desiredServiceLines): Opportunity
     {
         foreach ($desiredServiceLines as $line) {
-            if (! in_array($line, ServiceLine::VALUES, true)) {
+            if (!in_array($line, ServiceLine::VALUES, true)) {
                 throw ValidationException::withMessages(['service_line' => ["Invalid Service Line [{$line}]."]]);
             }
         }
@@ -69,7 +71,7 @@ class OpportunityServiceLineClassificationService
             // Remove rows no longer desired (CONFIRMED lines dropped from the
             // set, and any mapper-owned INFERRED row not superseded below).
             foreach ($existingRows as $row) {
-                if (! in_array($row->service_line, $desiredServiceLines, true)) {
+                if (!in_array($row->service_line, $desiredServiceLines, true)) {
                     $priorProvenance = $row->provenance;
                     $serviceLine = $row->service_line;
                     $row->delete();
@@ -98,7 +100,7 @@ class OpportunityServiceLineClassificationService
                 }
 
                 $row->provenance = ServiceLineProvenance::CONFIRMED;
-                $row->source = $row->source ?? 'confirm:ui';
+                $row->source ??= 'confirm:ui';
                 $row->save();
 
                 $this->recordEvent($locked, $actor, 'crm.opportunity.service_line_confirmed', [

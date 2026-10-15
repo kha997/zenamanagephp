@@ -56,7 +56,7 @@ use OpenApi\Annotations as OA;
  *         )
  *     )
  * )
- * 
+ *
  * @OA\Schema(
  *     schema="ErrorCodes",
  *     type="object",

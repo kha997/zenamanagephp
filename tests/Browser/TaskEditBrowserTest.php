@@ -2,25 +2,27 @@
 
 namespace Tests\Browser;
 
-use Tests\DuskTestCase;
-use Laravel\Dusk\Browser;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Src\CoreProject\Models\Task;
-use Src\CoreProject\Models\Project;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Dusk\Browser;
+use Src\CoreProject\Models\Project;
+use Src\CoreProject\Models\Task;
+use Tests\DuskTestCase;
 
 class TaskEditBrowserTest extends DuskTestCase
 {
     use RefreshDatabase;
 
     protected $task;
+
     protected $project;
+
     protected $user;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create test data
         $this->project = Project::create([
             'id' => '01k5e2kkwynze0f37a8a4d3435',

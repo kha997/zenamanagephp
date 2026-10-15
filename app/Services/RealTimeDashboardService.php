@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -6,7 +8,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 /**
- * RealTimeDashboardService - Service cho real-time dashboard analytics
+ * RealTimeDashboardService - Service cho real-time dashboard analytics.
  */
 class RealTimeDashboardService
 {
@@ -28,19 +30,19 @@ class RealTimeDashboardService
                 'calendar_events' => 'Calendar Events',
                 'recent_activities' => 'Recent Activities',
                 'performance_metrics' => 'Performance Metrics',
-                'system_health' => 'System Health'
-            ]
+                'system_health' => 'System Health',
+            ],
         ];
     }
 
     /**
-     * Get real-time dashboard data
+     * Get real-time dashboard data.
      */
     public function getDashboardData(string $userId, array $widgets = []): array
     {
         $widgets = empty($widgets) ? array_keys($this->dashboardConfig['widgets']) : $widgets;
         $cacheKey = "dashboard_{$userId}_" . md5(implode(',', $widgets));
-        
+
         return Cache::remember($cacheKey, $this->dashboardConfig['real_time_ttl'], function () use ($widgets, $userId) {
             $dashboardData = ['widgets' => []];
 
@@ -53,12 +55,12 @@ class RealTimeDashboardService
     }
 
     /**
-     * Get specific widget data
+     * Get specific widget data.
      */
     public function getWidgetData(string $widgetType, string $userId): array
     {
         $cacheKey = "widget_{$widgetType}_{$userId}";
-        
+
         return Cache::remember($cacheKey, $this->dashboardConfig['real_time_ttl'], function () use ($widgetType, $userId) {
             switch ($widgetType) {
                 case 'task_status':
@@ -82,81 +84,80 @@ class RealTimeDashboardService
     }
 
     /**
-     * Get dashboard analytics
+     * Get dashboard analytics.
      */
     public function getDashboardAnalytics(string $userId, string $period = 'week'): array
     {
         $cacheKey = "dashboard_analytics_{$userId}_{$period}";
-        
+
         return Cache::remember($cacheKey, $this->dashboardConfig['cache_ttl'], function () use ($userId, $period) {
             return [
                 'period' => $period,
-                'activities' => []
+                'activities' => [],
             ];
         });
     }
 
     /**
-     * Get real-time notifications
+     * Get real-time notifications.
      */
     public function getRealTimeNotifications(string $userId): array
     {
         $cacheKey = "notifications_{$userId}";
-        
+
         return Cache::remember($cacheKey, $this->dashboardConfig['real_time_ttl'], function () use ($userId) {
             return [
                 'user_id' => $userId,
-                'notifications' => []
+                'notifications' => [],
             ];
         });
     }
 
     /**
-     * Update dashboard preferences
+     * Update dashboard preferences.
      */
     public function updateDashboardPreferences(string $userId, array $preferences): array
     {
         try {
             $cacheKey = "dashboard_preferences_{$userId}";
             Cache::put($cacheKey, $preferences, 86400); // 24 hours
-            
+
             return [
                 'success' => true,
                 'preferences' => $preferences,
-                'updated_at' => now()->toISOString()
+                'updated_at' => now()->toISOString(),
             ];
-            
         } catch (\Exception $e) {
             Log::error('Failed to update dashboard preferences', [
                 'user_id' => $userId,
                 'preferences' => $preferences,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
 
     /**
-     * Get dashboard preferences
+     * Get dashboard preferences.
      */
     public function getDashboardPreferences(string $userId): array
     {
         $cacheKey = "dashboard_preferences_{$userId}";
         $preferences = Cache::get($cacheKey, []);
-        
+
         return [
             'preferences' => $preferences,
             'default_widgets' => array_keys($this->dashboardConfig['widgets']),
-            'available_widgets' => $this->dashboardConfig['widgets']
+            'available_widgets' => $this->dashboardConfig['widgets'],
         ];
     }
 
     /**
-     * Widget Data Methods
+     * Widget Data Methods.
      */
     private function getProjectOverviewWidget(string $userId): array
     {
@@ -168,13 +169,13 @@ class RealTimeDashboardService
                 'active_projects' => 0,
                 'completed_projects' => 0,
                 'overdue_projects' => 0,
-                'recent_projects' => []
+                'recent_projects' => [],
             ],
             'chart_data' => [
                 'labels' => ['Active', 'Completed', 'Overdue'],
-                'values' => [0, 0, 0]
+                'values' => [0, 0, 0],
             ],
-            'last_updated' => now()->toISOString()
+            'last_updated' => now()->toISOString(),
         ];
     }
 
@@ -188,13 +189,13 @@ class RealTimeDashboardService
                 'pending_tasks' => 0,
                 'in_progress_tasks' => 0,
                 'completed_tasks' => 0,
-                'overdue_tasks' => 0
+                'overdue_tasks' => 0,
             ],
             'chart_data' => [
                 'labels' => ['Pending', 'In Progress', 'Completed', 'Overdue'],
-                'values' => [0, 0, 0, 0]
+                'values' => [0, 0, 0, 0],
             ],
-            'last_updated' => now()->toISOString()
+            'last_updated' => now()->toISOString(),
         ];
     }
 
@@ -207,13 +208,13 @@ class RealTimeDashboardService
                 'active_users' => 0,
                 'online_users' => 0,
                 'recent_logins' => [],
-                'activity_summary' => []
+                'activity_summary' => [],
             ],
             'chart_data' => [
                 'labels' => ['Today', 'Yesterday', 'This Week'],
-                'values' => [0, 0, 0]
+                'values' => [0, 0, 0],
             ],
-            'last_updated' => now()->toISOString()
+            'last_updated' => now()->toISOString(),
         ];
     }
 
@@ -226,13 +227,13 @@ class RealTimeDashboardService
                 'total_budget' => 0,
                 'actual_cost' => 0,
                 'remaining_budget' => 0,
-                'cost_percentage' => 0
+                'cost_percentage' => 0,
             ],
             'chart_data' => [
                 'labels' => ['Budget', 'Actual Cost', 'Remaining'],
-                'values' => [0, 0, 0]
+                'values' => [0, 0, 0],
             ],
-            'last_updated' => now()->toISOString()
+            'last_updated' => now()->toISOString(),
         ];
     }
 
@@ -244,9 +245,9 @@ class RealTimeDashboardService
             'data' => [
                 'today_events' => [],
                 'upcoming_events' => [],
-                'overdue_events' => []
+                'overdue_events' => [],
             ],
-            'last_updated' => now()->toISOString()
+            'last_updated' => now()->toISOString(),
         ];
     }
 
@@ -257,9 +258,9 @@ class RealTimeDashboardService
             'title' => 'Recent Activities',
             'data' => [
                 'activities' => [],
-                'activity_count' => 0
+                'activity_count' => 0,
             ],
-            'last_updated' => now()->toISOString()
+            'last_updated' => now()->toISOString(),
         ];
     }
 
@@ -272,13 +273,13 @@ class RealTimeDashboardService
                 'response_time' => 0,
                 'memory_usage' => 0,
                 'cpu_usage' => 0,
-                'cache_hit_rate' => 0
+                'cache_hit_rate' => 0,
             ],
             'chart_data' => [
                 'labels' => ['Response Time', 'Memory Usage', 'CPU Usage'],
-                'values' => [0, 0, 0]
+                'values' => [0, 0, 0],
             ],
-            'last_updated' => now()->toISOString()
+            'last_updated' => now()->toISOString(),
         ];
     }
 
@@ -292,14 +293,14 @@ class RealTimeDashboardService
                 'uptime' => 0,
                 'database_status' => 'connected',
                 'cache_status' => 'connected',
-                'storage_status' => 'available'
+                'storage_status' => 'available',
             ],
-            'last_updated' => now()->toISOString()
+            'last_updated' => now()->toISOString(),
         ];
     }
 
     /**
-     * Analytics Methods
+     * Analytics Methods.
      */
     private function getProjectTrends(string $userId, string $period): array
     {
@@ -308,13 +309,13 @@ class RealTimeDashboardService
             'trends' => [
                 'created' => [],
                 'completed' => [],
-                'overdue' => []
+                'overdue' => [],
             ],
             'summary' => [
                 'total_created' => 0,
                 'total_completed' => 0,
-                'total_overdue' => 0
-            ]
+                'total_overdue' => 0,
+            ],
         ];
     }
 
@@ -325,12 +326,12 @@ class RealTimeDashboardService
             'trends' => [
                 'completed' => [],
                 'pending' => [],
-                'overdue' => []
+                'overdue' => [],
             ],
             'summary' => [
                 'completion_rate' => 0,
-                'average_completion_time' => 0
-            ]
+                'average_completion_time' => 0,
+            ],
         ];
     }
 
@@ -341,12 +342,12 @@ class RealTimeDashboardService
             'trends' => [
                 'productivity_score' => [],
                 'activity_level' => [],
-                'task_completion' => []
+                'task_completion' => [],
             ],
             'summary' => [
                 'average_productivity' => 0,
-                'peak_productivity_hours' => []
-            ]
+                'peak_productivity_hours' => [],
+            ],
         ];
     }
 
@@ -357,13 +358,13 @@ class RealTimeDashboardService
             'trends' => [
                 'budget_utilization' => [],
                 'cost_trends' => [],
-                'savings' => []
+                'savings' => [],
             ],
             'summary' => [
                 'total_budget' => 0,
                 'total_spent' => 0,
-                'budget_utilization_rate' => 0
-            ]
+                'budget_utilization_rate' => 0,
+            ],
         ];
     }
 
@@ -374,25 +375,25 @@ class RealTimeDashboardService
             'patterns' => [
                 'hourly_activity' => [],
                 'daily_activity' => [],
-                'weekly_activity' => []
+                'weekly_activity' => [],
             ],
             'summary' => [
                 'most_active_hour' => 0,
                 'most_active_day' => '',
-                'average_daily_activity' => 0
-            ]
+                'average_daily_activity' => 0,
+            ],
         ];
     }
 
     /**
-     * Notification Methods
+     * Notification Methods.
      */
     private function getUserNotifications(string $userId): array
     {
         return [
             'recent' => [],
             'important' => [],
-            'system' => []
+            'system' => [],
         ];
     }
 
@@ -402,7 +403,7 @@ class RealTimeDashboardService
     }
 
     /**
-     * Get dashboard statistics
+     * Get dashboard statistics.
      */
     public function getDashboardStatistics(): array
     {
@@ -412,7 +413,7 @@ class RealTimeDashboardService
             'cache_ttl' => $this->dashboardConfig['cache_ttl'],
             'real_time_ttl' => $this->dashboardConfig['real_time_ttl'],
             'max_widgets' => $this->dashboardConfig['max_widgets'],
-            'default_refresh_interval' => $this->dashboardConfig['default_refresh_interval']
+            'default_refresh_interval' => $this->dashboardConfig['default_refresh_interval'],
         ];
     }
 }

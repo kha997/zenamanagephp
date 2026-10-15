@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -14,10 +16,11 @@ class SecurityGuardService
     public function validateSidebarConfig(array $config, User $user): array
     {
         $errors = [];
-        
+
         // Check if user has permission to access sidebar config
         if (!$this->canAccessSidebarConfig($user)) {
             $errors[] = 'User does not have permission to access sidebar configuration';
+
             return $errors;
         }
 
@@ -63,6 +66,7 @@ class SecurityGuardService
 
         if (!isset($config['items']) || !is_array($config['items'])) {
             $errors[] = 'Config must have items array';
+
             return $errors;
         }
 
@@ -229,7 +233,7 @@ class SecurityGuardService
             // Check for dangerous protocols
             $dangerousProtocols = ['javascript:', 'data:', 'vbscript:', 'file:'];
             $href = strtolower($item['href']);
-            
+
             foreach ($dangerousProtocols as $protocol) {
                 if (strpos($href, $protocol) === 0) {
                     $errors[] = "Item {$index}: Dangerous protocol detected in href '{$item['href']}'";
@@ -327,7 +331,7 @@ class SecurityGuardService
         }
 
         $host = $parsedUrl['host'];
-        
+
         // Allow localhost for development
         if (in_array($host, ['localhost', '127.0.0.1', '::1'])) {
             return true;
@@ -404,6 +408,7 @@ class SecurityGuardService
     public function isSafeToUse(array $config, User $user): bool
     {
         $errors = $this->validateSidebarConfig($config, $user);
+
         return empty($errors);
     }
 
@@ -449,7 +454,7 @@ class SecurityGuardService
             if (is_string($value)) {
                 // Remove HTML tags
                 $config[$key] = strip_tags($value);
-                
+
                 // Escape special characters
                 $config[$key] = htmlspecialchars($config[$key], ENT_QUOTES, 'UTF-8');
             } elseif (is_array($value)) {
@@ -486,6 +491,7 @@ class SecurityGuardService
                 'user_id' => $user->id,
                 'activity_count' => $activityCount,
             ]);
+
             return true;
         }
 

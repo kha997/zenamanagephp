@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Unit\Migrations\Treasury\Concerns;
 
@@ -153,7 +155,7 @@ trait BuildsTreasuryCheckFixtures
         $contract = Contract::on($conn)->create([
             'tenant_id' => (string) $tenant->id,
             'project_id' => (string) $project->id,
-            'code' => 'CTR-CHK-'.uniqid(),
+            'code' => 'CTR-CHK-' . uniqid(),
             'title' => 'HĐ test check',
             'contract_type' => Contract::TYPE_CONSTRUCTION,
             'created_by' => (string) $user->id,
@@ -175,13 +177,13 @@ trait BuildsTreasuryCheckFixtures
         $receipt = MaterialReceipt::on($conn)->create([
             'tenant_id' => (string) $tenant->id,
             'project_id' => $project->id,
-            'receipt_number' => 'MR-CHK-'.uniqid(),
+            'receipt_number' => 'MR-CHK-' . uniqid(),
             'receipt_date' => '2026-08-18',
         ]);
 
         $material = Material::on($conn)->create([
             'tenant_id' => (string) $tenant->id,
-            'code' => 'MAT-CHK-'.uniqid(),
+            'code' => 'MAT-CHK-' . uniqid(),
             'name' => 'Test Material',
             'category' => 'concrete',
             'unit' => 'm3',
@@ -203,7 +205,7 @@ trait BuildsTreasuryCheckFixtures
     {
         return TreasuryFundChain::on($conn)->create([
             'tenant_id' => $tenant->id, 'project_id' => $project->id,
-            'chain_reference' => 'FC-'.uniqid(),
+            'chain_reference' => 'FC-' . uniqid(),
         ]);
     }
 }

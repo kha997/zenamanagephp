@@ -1,36 +1,33 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\BaselineResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Src\CoreProject\Models\Baseline;
-use App\Http\Resources\BaselineResource;
 use Src\Foundation\Utils\JSendResponse;
 use Src\RBAC\Middleware\RBACMiddleware;
-use Src\RBAC\Traits\HasRBACContext;
 
 /**
- * Controller xử lý các hoạt động CRUD cho Baseline
- * 
- * @package Src\CoreProject\Controllers
+ * Controller xử lý các hoạt động CRUD cho Baseline.
  */
-
 class BaselineController
 {
-    
     protected BaselineService $baselineService;
-    
+
     public function __construct(BaselineService $baselineService)
     {
         // Xóa middleware khỏi constructor - sẽ áp dụng trong routes
         // $this->middleware(RBACMiddleware::class);
         $this->baselineService = $baselineService;
     }
-    
+
     /**
      * Lấy danh sách baselines theo project
-     * GET /api/v1/projects/{projectId}/baselines
+     * GET /api/v1/projects/{projectId}/baselines.
      *
      * @param Request $request
      * @param string $projectId
@@ -60,9 +57,8 @@ class BaselineController
             $baselines = $query->get();
 
             return JSendResponse::success([
-                'baselines' => BaselineResource::collection($baselines)
+                'baselines' => BaselineResource::collection($baselines),
             ]);
-
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể lấy danh sách baselines: ' . $e->getMessage(), 500);
         }
@@ -70,7 +66,7 @@ class BaselineController
 
     /**
      * Tạo baseline mới
-     * POST /api/v1/projects/{projectId}/baselines
+     * POST /api/v1/projects/{projectId}/baselines.
      *
      * @param Request $request
      * @param string $projectId
@@ -89,7 +85,7 @@ class BaselineController
                 'start_date' => 'required|date',
                 'end_date' => 'required|date|after:start_date',
                 'cost' => 'required|numeric|min:0',
-                'note' => 'nullable|string|max:1000'
+                'note' => 'nullable|string|max:1000',
             ]);
 
             if ($validator->fails()) {
@@ -109,14 +105,13 @@ class BaselineController
                 'cost' => $request->input('cost'),
                 'version' => $latestVersion + 1,
                 'note' => $request->input('note'),
-                'created_by' => $this->getCurrentUserId($request)
+                'created_by' => $this->getCurrentUserId($request),
             ]);
 
             return JSendResponse::success([
                 'baseline' => new BaselineResource($baseline->load('creator')),
-                'message' => 'Baseline đã được tạo thành công'
+                'message' => 'Baseline đã được tạo thành công',
             ], 201);
-
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể tạo baseline: ' . $e->getMessage(), 500);
         }
@@ -124,7 +119,7 @@ class BaselineController
 
     /**
      * Lấy thông tin chi tiết baseline
-     * GET /api/v1/baselines/{id}
+     * GET /api/v1/baselines/{id}.
      *
      * @param Request $request
      * @param string $id
@@ -141,9 +136,8 @@ class BaselineController
             }
 
             return JSendResponse::success([
-                'baseline' => new BaselineResource($baseline)
+                'baseline' => new BaselineResource($baseline),
             ]);
-
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể lấy thông tin baseline: ' . $e->getMessage(), 500);
         }
@@ -151,7 +145,7 @@ class BaselineController
 
     /**
      * Cập nhật baseline
-     * PUT/PATCH /api/v1/baselines/{id}
+     * PUT/PATCH /api/v1/baselines/{id}.
      *
      * @param Request $request
      * @param string $id
@@ -171,7 +165,7 @@ class BaselineController
                 'start_date' => 'sometimes|required|date',
                 'end_date' => 'sometimes|required|date|after:start_date',
                 'cost' => 'sometimes|required|numeric|min:0',
-                'note' => 'nullable|string|max:1000'
+                'note' => 'nullable|string|max:1000',
             ]);
 
             if ($validator->fails()) {
@@ -183,9 +177,8 @@ class BaselineController
 
             return JSendResponse::success([
                 'baseline' => new BaselineResource($baseline->fresh(['creator', 'project'])),
-                'message' => 'Baseline đã được cập nhật thành công'
+                'message' => 'Baseline đã được cập nhật thành công',
             ]);
-
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể cập nhật baseline: ' . $e->getMessage(), 500);
         }
@@ -193,7 +186,7 @@ class BaselineController
 
     /**
      * Xóa baseline
-     * DELETE /api/v1/baselines/{id}
+     * DELETE /api/v1/baselines/{id}.
      *
      * @param Request $request
      * @param string $id
@@ -212,44 +205,42 @@ class BaselineController
             $baseline->delete();
 
             return JSendResponse::success([
-                'message' => 'Baseline đã được xóa thành công'
+                'message' => 'Baseline đã được xóa thành công',
             ]);
-
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể xóa baseline: ' . $e->getMessage(), 500);
         }
     }
-    
+
     /**
      * So sánh hai baseline
-     * GET /api/v1/baselines/{id1}/compare/{id2}
+     * GET /api/v1/baselines/{id1}/compare/{id2}.
      */
     public function compare(Request $request, string $id1, string $id2): JsonResponse
     {
         try {
             $baseline1 = Baseline::findOrFail($id1);
             $baseline2 = Baseline::findOrFail($id2);
-            
+
             // Kiểm tra quyền
             if (!$this->hasPermission($request, 'baseline.view', $baseline1->project_id) ||
                 !$this->hasPermission($request, 'baseline.view', $baseline2->project_id)) {
                 return JSendResponse::error('Không có quyền so sánh baselines', 403);
             }
-            
+
             $comparison = $this->baselineService->compareBaselines($baseline1, $baseline2);
-            
+
             return JSendResponse::success([
-                'comparison' => $comparison
+                'comparison' => $comparison,
             ]);
-            
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể so sánh baselines: ' . $e->getMessage(), 500);
         }
     }
-    
+
     /**
      * Tạo baseline từ dữ liệu project hiện tại
-     * POST /api/v1/projects/{projectId}/baselines/from-current
+     * POST /api/v1/projects/{projectId}/baselines/from-current.
      */
     public function createFromCurrent(Request $request, string $projectId): JsonResponse
     {
@@ -258,36 +249,35 @@ class BaselineController
             if (!$this->hasPermission($request, 'baseline.create', $projectId)) {
                 return JSendResponse::error('Không có quyền tạo baseline', 403);
             }
-            
+
             $validator = Validator::make($request->all(), [
                 'type' => 'required|in:contract,execution',
-                'note' => 'nullable|string|max:1000'
+                'note' => 'nullable|string|max:1000',
             ]);
-            
+
             if ($validator->fails()) {
                 return JSendResponse::fail($validator->errors(), 422);
             }
-            
+
             $baseline = $this->baselineService->createBaselineFromProject(
                 $projectId,
                 $request->input('type'),
                 $this->getCurrentUserId($request),
                 $request->input('note')
             );
-            
+
             return JSendResponse::success([
                 'baseline' => new BaselineResource($baseline->load('creator')),
-                'message' => 'Baseline đã được tạo từ dữ liệu project hiện tại'
+                'message' => 'Baseline đã được tạo từ dữ liệu project hiện tại',
             ], 201);
-            
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể tạo baseline: ' . $e->getMessage(), 500);
         }
     }
-    
+
     /**
      * Lấy báo cáo baseline cho project
-     * GET /api/v1/projects/{projectId}/baselines/report
+     * GET /api/v1/projects/{projectId}/baselines/report.
      */
     public function report(Request $request, string $projectId): JsonResponse
     {
@@ -296,21 +286,20 @@ class BaselineController
             if (!$this->hasPermission($request, 'baseline.view', $projectId)) {
                 return JSendResponse::error('Không có quyền xem báo cáo baseline', 403);
             }
-            
+
             $report = $this->baselineService->getProjectBaselineReport($projectId);
-            
+
             return JSendResponse::success([
-                'report' => $report
+                'report' => $report,
             ]);
-            
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể tạo báo cáo baseline: ' . $e->getMessage(), 500);
         }
     }
-    
+
     /**
      * Re-baseline project từ baseline hiện tại
-     * POST /api/v1/baselines/{id}/rebaseline
+     * POST /api/v1/baselines/{id}/rebaseline.
      *
      * @param Request $request
      * @param string $id
@@ -328,7 +317,7 @@ class BaselineController
 
             $validator = Validator::make($request->all(), [
                 'note' => 'nullable|string|max:1000',
-                'linked_contract_id' => 'nullable|string'
+                'linked_contract_id' => 'nullable|string',
             ]);
 
             if ($validator->fails()) {
@@ -344,9 +333,8 @@ class BaselineController
 
             return JSendResponse::success([
                 'baseline' => new BaselineResource($newBaseline->load('creator')),
-                'message' => 'Re-baseline đã được tạo thành công'
+                'message' => 'Re-baseline đã được tạo thành công',
             ], 201);
-
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể tạo re-baseline: ' . $e->getMessage(), 500);
         }
@@ -354,7 +342,7 @@ class BaselineController
 
     /**
      * Lấy variance analysis cho project
-     * GET /api/v1/projects/{projectId}/variance
+     * GET /api/v1/projects/{projectId}/variance.
      *
      * @param Request $request
      * @param string $projectId
@@ -372,9 +360,8 @@ class BaselineController
             $variance = $this->baselineService->calculateProjectVariance($projectId, $baselineType);
 
             return JSendResponse::success([
-                'variance' => $variance
+                'variance' => $variance,
             ]);
-
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể tính toán variance: ' . $e->getMessage(), 500);
         }
@@ -382,7 +369,7 @@ class BaselineController
 
     /**
      * Lấy lịch sử baseline changes
-     * GET /api/v1/baselines/{id}/history
+     * GET /api/v1/baselines/{id}/history.
      *
      * @param Request $request
      * @param string $id
@@ -401,9 +388,8 @@ class BaselineController
             $history = $baseline->history()->with('creator')->orderBy('created_at', 'desc')->get();
 
             return JSendResponse::success([
-                'history' => $history
+                'history' => $history,
             ]);
-
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể lấy lịch sử baseline: ' . $e->getMessage(), 500);
         }
@@ -411,7 +397,7 @@ class BaselineController
 
     /**
      * Lấy current baseline cho project
-     * GET /api/v1/projects/{projectId}/baselines/current
+     * GET /api/v1/projects/{projectId}/baselines/current.
      *
      * @param Request $request
      * @param string $projectId
@@ -433,12 +419,10 @@ class BaselineController
             }
 
             return JSendResponse::success([
-                'baseline' => new BaselineResource($currentBaseline->load('creator'))
+                'baseline' => new BaselineResource($currentBaseline->load('creator')),
             ]);
-
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể lấy baseline hiện tại: ' . $e->getMessage(), 500);
         }
     }
-
 }

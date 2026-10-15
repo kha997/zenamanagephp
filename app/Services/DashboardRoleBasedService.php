@@ -16,12 +16,13 @@ use App\Models\User;
 use App\Models\UserDashboard;
 use App\Services\Dashboard\DashboardWidgetCatalog;
 use App\Services\Dashboard\WidgetDataContext;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 class DashboardRoleBasedService
 {
     protected DashboardWidgetCatalog $widgetCatalog;
+
     protected WidgetDataResolver $widgetDataResolver;
 
     public function __construct(
@@ -33,7 +34,7 @@ class DashboardRoleBasedService
     }
 
     /**
-     * Get role-based dashboard configuration
+     * Get role-based dashboard configuration.
      */
     public function getRoleBasedDashboard(User $user, ?string $projectId = null): array
     {
@@ -44,19 +45,19 @@ class DashboardRoleBasedService
             // Get role-specific configuration
             $roleConfig = $this->getRoleConfiguration($role);
             $this->assertProjectContext($user, $projectId);
-            
+
             // Get user's current dashboard or create default
             $dashboard = $this->getOrCreateUserDashboard($user, $roleConfig);
-            
+
             // Get role-specific widgets with data
             $widgets = $this->getRoleBasedWidgets($user, $roleConfig, $projectId);
-            
+
             // Get role-specific metrics
             $metrics = $this->getRoleBasedMetrics($user, $projectId);
-            
+
             // Get role-specific alerts
             $alerts = $this->getRoleBasedAlerts($user, $projectId);
-            
+
             // Get role-specific permissions
             $permissions = $this->getRolePermissions($role);
 
@@ -67,22 +68,22 @@ class DashboardRoleBasedService
                 'alerts' => $alerts,
                 'permissions' => $permissions,
                 'role_config' => $roleConfig,
-                'project_context' => $this->getProjectContext($user, $projectId)
+                'project_context' => $this->getProjectContext($user, $projectId),
             ];
-
         } catch (\Exception $e) {
             Log::error('Failed to get role-based dashboard', [
                 'user_id' => $user->id,
                 'role' => $user->role,
                 'project_id' => $projectId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             throw $e;
         }
     }
 
     /**
-     * Get role-specific configuration
+     * Get role-specific configuration.
      */
     public function getRoleConfiguration(string $role): array
     {
@@ -90,7 +91,7 @@ class DashboardRoleBasedService
     }
 
     /**
-     * Get or create user dashboard based on role
+     * Get or create user dashboard based on role.
      */
     protected function getOrCreateUserDashboard(User $user, array $roleConfig): array
     {
@@ -101,14 +102,14 @@ class DashboardRoleBasedService
         if (!$dashboard) {
             // Create default dashboard for role
             $defaultLayout = $this->createDefaultLayoutForRole($user, $roleConfig);
-            
+
             $dashboard = UserDashboard::create([
                 'user_id' => $user->id,
                 'tenant_id' => $user->tenant_id,
                 'name' => $roleConfig['name'] . ' Dashboard',
                 'layout' => json_encode($defaultLayout),
                 'is_default' => true,
-                'preferences' => json_encode($this->getDefaultPreferencesForRole($roleConfig))
+                'preferences' => json_encode($this->getDefaultPreferencesForRole($roleConfig)),
             ]);
         }
 
@@ -129,12 +130,12 @@ class DashboardRoleBasedService
             'preferences' => $preferences,
             'is_default' => $dashboard->is_default,
             'created_at' => $dashboard->created_at,
-            'updated_at' => $dashboard->updated_at
+            'updated_at' => $dashboard->updated_at,
         ];
     }
 
     /**
-     * Get role-based widgets with data
+     * Get role-based widgets with data.
      */
     public function getRoleBasedWidgets(User $user, array $roleConfig, ?string $projectId = null, bool $includeData = true): array
     {
@@ -149,7 +150,7 @@ class DashboardRoleBasedService
             if ($widget && $this->userCanAccessWidget($user, $widget)) {
                 $entry = [
                     'widget' => $widget->toArray(),
-                    'permissions' => $this->getWidgetPermissions($user, $widget)
+                    'permissions' => $this->getWidgetPermissions($user, $widget),
                 ];
 
                 if ($includeData) {
@@ -169,7 +170,7 @@ class DashboardRoleBasedService
     }
 
     /**
-     * Get widget data based on user role
+     * Get widget data based on user role.
      */
     protected function getWidgetDataForRole(User $user, DashboardWidget $widget, ?string $projectId = null): array
     {
@@ -202,14 +203,13 @@ class DashboardRoleBasedService
             });
         }
 
-        if (! $query->exists()) {
+        if (!$query->exists()) {
             throw new ForbiddenDashboardProject((string) $projectId);
         }
     }
 
-
     /**
-     * Get project overview data based on role
+     * Get project overview data based on role.
      */
     public function getProjectOverviewData(User $user, ?string $projectId = null): array
     {
@@ -217,7 +217,7 @@ class DashboardRoleBasedService
         $tenantId = $user->tenant_id;
 
         $query = Project::where('tenant_id', $tenantId);
-        
+
         // Role-based project access
         if ($projectId) {
             $query->where('id', $projectId);
@@ -243,9 +243,9 @@ class DashboardRoleBasedService
                     'status' => $project->status,
                     'progress' => $project->progress_percentage,
                     'budget' => $project->budget,
-                    'spent' => $project->spent_amount
+                    'spent' => $project->spent_amount,
                 ];
-            })
+            }),
         ];
 
         // Add role-specific metrics
@@ -256,13 +256,13 @@ class DashboardRoleBasedService
                     ->where('status', '!=', 'completed')
                     ->count();
                 break;
-            
+
             case 'site_engineer':
                 $overview['daily_inspections'] = Inspection::whereIn('project_id', $projects->pluck('id'))
                     ->whereDate('scheduled_date', today())
                     ->count();
                 break;
-            
+
             case 'qc_inspector':
                 $overview['pending_ncrs'] = NCR::whereIn('project_id', $projects->pluck('id'))
                     ->where('status', 'open')
@@ -274,7 +274,7 @@ class DashboardRoleBasedService
     }
 
     /**
-     * Get task progress data based on role
+     * Get task progress data based on role.
      */
     public function getTaskProgressData(User $user, ?string $projectId = null): array
     {
@@ -282,7 +282,7 @@ class DashboardRoleBasedService
         $tenantId = $user->tenant_id;
 
         $query = Task::where('tenant_id', $tenantId);
-        
+
         if ($projectId) {
             $query->where('project_id', $projectId);
         }
@@ -295,17 +295,17 @@ class DashboardRoleBasedService
                     $q->where('user_id', $user->id);
                 });
                 break;
-            
+
             case 'site_engineer':
                 // Site engineer sees assigned tasks
                 $query->where('assigned_to', $user->id);
                 break;
-            
+
             case 'design_lead':
                 // Design lead sees design-related tasks
                 $query->where('category', 'design');
                 break;
-            
+
             case 'qc_inspector':
                 // QC inspector sees quality-related tasks
                 $query->where('category', 'quality');
@@ -322,7 +322,7 @@ class DashboardRoleBasedService
             'overdue_tasks' => $tasks->where('due_date', '<', now())
                 ->where('status', '!=', 'completed')
                 ->count(),
-            'completion_rate' => $tasks->count() > 0 
+            'completion_rate' => $tasks->count() > 0
                 ? round(($tasks->where('status', 'completed')->count() / $tasks->count()) * 100, 2)
                 : 0,
             'recent_tasks' => $tasks->sortByDesc('created_at')->take(10)->map(function ($task) {
@@ -332,14 +332,14 @@ class DashboardRoleBasedService
                     'status' => $task->status,
                     'priority' => $task->priority,
                     'due_date' => $task->due_date,
-                    'assigned_to' => $task->assigned_to
+                    'assigned_to' => $task->assigned_to,
                 ];
-            })
+            }),
         ];
     }
 
     /**
-     * Get RFI status data based on role
+     * Get RFI status data based on role.
      */
     public function getRFIStatusData(User $user, ?string $projectId = null): array
     {
@@ -347,7 +347,7 @@ class DashboardRoleBasedService
         $tenantId = $user->tenant_id;
 
         $query = RFI::where('tenant_id', $tenantId);
-        
+
         if ($projectId) {
             $query->where('project_id', $projectId);
         }
@@ -359,11 +359,11 @@ class DashboardRoleBasedService
                     $q->where('user_id', $user->id);
                 });
                 break;
-            
+
             case 'design_lead':
                 $query->where('discipline', 'design');
                 break;
-            
+
             case 'site_engineer':
                 $query->where('discipline', 'construction');
                 break;
@@ -387,14 +387,14 @@ class DashboardRoleBasedService
                     'status' => $rfi->status,
                     'priority' => $rfi->priority,
                     'due_date' => $rfi->due_date,
-                    'discipline' => $rfi->discipline
+                    'discipline' => $rfi->discipline,
                 ];
-            })
+            }),
         ];
     }
 
     /**
-     * Get budget tracking data based on role
+     * Get budget tracking data based on role.
      */
     public function getBudgetTrackingData(User $user, ?string $projectId = null): array
     {
@@ -402,7 +402,7 @@ class DashboardRoleBasedService
         $tenantId = $user->tenant_id;
 
         $query = Project::where('tenant_id', $tenantId);
-        
+
         if ($projectId) {
             $query->where('id', $projectId);
         } elseif ($role !== 'system_admin') {
@@ -421,54 +421,54 @@ class DashboardRoleBasedService
             'total_budget' => $totalBudget,
             'total_spent' => $totalSpent,
             'remaining_budget' => $remainingBudget,
-            'budget_utilization' => $totalBudget > 0 
+            'budget_utilization' => $totalBudget > 0
                 ? round(($totalSpent / $totalBudget) * 100, 2)
                 : 0,
             'budget_variance' => $this->calculateBudgetVariance($projects),
             'monthly_spending' => $this->getMonthlySpending($projects),
             'top_expense_categories' => $this->getTopExpenseCategories($projects),
-            'budget_alerts' => $this->getBudgetAlerts($projects)
+            'budget_alerts' => $this->getBudgetAlerts($projects),
         ];
     }
 
     /**
-     * Get role-based metrics
+     * Get role-based metrics.
      */
     public function getRoleBasedMetrics(User $user, ?string $projectId = null): array
     {
         $role = $user->role;
         $roleConfig = $this->getRoleConfiguration($role);
-        
+
         $metrics = [];
-        
+
         foreach ($roleConfig['priority_metrics'] as $metricCode) {
             $metric = DashboardMetric::where('code', $metricCode)
                 ->where('tenant_id', $user->tenant_id)
                 ->where('is_active', true)
                 ->first();
-            
+
             if ($metric) {
                 $value = $this->getMetricValue($user, $metric, $projectId);
                 $metrics[] = [
                     'metric' => $metric->toArray(),
                     'value' => $value,
                     'trend' => $this->getMetricTrend($user, $metric, $projectId),
-                    'target' => $this->getMetricTarget($user, $metric, $projectId)
+                    'target' => $this->getMetricTarget($user, $metric, $projectId),
                 ];
             }
         }
-        
+
         return $metrics;
     }
 
     /**
-     * Get role-based alerts
+     * Get role-based alerts.
      */
     public function getRoleBasedAlerts(User $user, ?string $projectId = null): array
     {
         $role = $user->role;
         $roleConfig = $this->getRoleConfiguration($role);
-        
+
         $alerts = DashboardAlert::where('user_id', $user->id)
             ->where('tenant_id', $user->tenant_id)
             ->where('is_read', false)
@@ -479,7 +479,7 @@ class DashboardRoleBasedService
             ->orderBy('created_at', 'desc')
             ->limit(20)
             ->get();
-        
+
         return $alerts->map(function ($alert) {
             return [
                 'id' => $alert->id,
@@ -490,13 +490,13 @@ class DashboardRoleBasedService
                 'context' => $alert->context,
                 'triggered_at' => $alert->triggered_at,
                 'widget_id' => $alert->widget_id,
-                'metric_id' => $alert->metric_id
+                'metric_id' => $alert->metric_id,
             ];
         })->toArray();
     }
 
     /**
-     * Get role permissions
+     * Get role permissions.
      */
     public function getRolePermissions(string $role): array
     {
@@ -507,7 +507,7 @@ class DashboardRoleBasedService
                 'projects' => ['view_all', 'edit_all', 'delete_all'],
                 'users' => ['view_all', 'edit_all', 'delete_all'],
                 'reports' => ['view_all', 'export_all'],
-                'settings' => ['view_all', 'edit_all']
+                'settings' => ['view_all', 'edit_all'],
             ],
             'project_manager' => [
                 'dashboard' => ['view', 'edit', 'share'],
@@ -515,7 +515,7 @@ class DashboardRoleBasedService
                 'projects' => ['view_assigned', 'edit_assigned'],
                 'users' => ['view_team', 'edit_team'],
                 'reports' => ['view_assigned', 'export_assigned'],
-                'settings' => ['view_project', 'edit_project']
+                'settings' => ['view_project', 'edit_project'],
             ],
             'design_lead' => [
                 'dashboard' => ['view', 'edit'],
@@ -523,7 +523,7 @@ class DashboardRoleBasedService
                 'projects' => ['view_assigned', 'edit_design'],
                 'users' => ['view_team'],
                 'reports' => ['view_design', 'export_design'],
-                'settings' => ['view_design']
+                'settings' => ['view_design'],
             ],
             'site_engineer' => [
                 'dashboard' => ['view', 'edit'],
@@ -531,7 +531,7 @@ class DashboardRoleBasedService
                 'projects' => ['view_assigned', 'edit_field'],
                 'users' => ['view_team'],
                 'reports' => ['view_field', 'export_field'],
-                'settings' => ['view_field']
+                'settings' => ['view_field'],
             ],
             'qc_inspector' => [
                 'dashboard' => ['view'],
@@ -539,7 +539,7 @@ class DashboardRoleBasedService
                 'projects' => ['view_assigned'],
                 'users' => ['view_team'],
                 'reports' => ['view_quality', 'export_quality'],
-                'settings' => ['view_quality']
+                'settings' => ['view_quality'],
             ],
             'client_rep' => [
                 'dashboard' => ['view'],
@@ -547,7 +547,7 @@ class DashboardRoleBasedService
                 'projects' => ['view_assigned'],
                 'users' => ['view_team'],
                 'reports' => ['view_client', 'export_client'],
-                'settings' => ['view_client']
+                'settings' => ['view_client'],
             ],
             'subcontractor_lead' => [
                 'dashboard' => ['view', 'edit'],
@@ -555,20 +555,20 @@ class DashboardRoleBasedService
                 'projects' => ['view_assigned', 'edit_subcontractor'],
                 'users' => ['view_team'],
                 'reports' => ['view_subcontractor', 'export_subcontractor'],
-                'settings' => ['view_subcontractor']
-            ]
+                'settings' => ['view_subcontractor'],
+            ],
         ];
 
         return $permissions[$role] ?? $permissions['client_rep'];
     }
 
     /**
-     * Check if user can access widget
+     * Check if user can access widget.
      */
     public function userCanAccessWidget(User $user, DashboardWidget $widget): bool
     {
         $permissions = json_decode($widget->permissions, true) ?? [];
-        
+
         if (empty($permissions)) {
             return true; // No restrictions
         }
@@ -577,24 +577,24 @@ class DashboardRoleBasedService
     }
 
     /**
-     * Get widget permissions for user
+     * Get widget permissions for user.
      */
     public function getWidgetPermissions(User $user, DashboardWidget $widget): array
     {
         $rolePermissions = $this->getRolePermissions($user->role);
         $widgetPermissions = json_decode($widget->permissions, true) ?? [];
-        
+
         return [
             'can_view' => $this->userCanAccessWidget($user, $widget),
             'can_edit' => in_array('edit', $rolePermissions['widgets']),
             'can_delete' => in_array('delete', $rolePermissions['widgets']),
             'can_configure' => in_array('configure', $rolePermissions['widgets']),
-            'can_share' => in_array('share', $rolePermissions['dashboard'])
+            'can_share' => in_array('share', $rolePermissions['dashboard']),
         ];
     }
 
     /**
-     * Create default layout for role
+     * Create default layout for role.
      */
     protected function createDefaultLayoutForRole(User $user, array $roleConfig): array
     {
@@ -622,17 +622,17 @@ class DashboardRoleBasedService
                     'position' => ['x' => 0, 'y' => $y],
                     'config' => $widget->config ?? [],
                     'is_customizable' => $this->isWidgetCustomizableForRole($user->role),
-                    'created_at' => now()->toISOString()
+                    'created_at' => now()->toISOString(),
                 ];
-                
+
                 $size = $this->getDefaultSizeForRole($user->role, $widgetCode);
                 $sizeMap = [
                     'small' => 2,
                     'medium' => 4,
                     'large' => 6,
-                    'extra-large' => 8
+                    'extra-large' => 8,
                 ];
-                
+
                 $y += $sizeMap[$size] ?? 4;
             }
         }
@@ -641,7 +641,7 @@ class DashboardRoleBasedService
     }
 
     /**
-     * Get default size for widget based on role
+     * Get default size for widget based on role.
      */
     protected function getDefaultSizeForRole(string $role, string $widgetCode): string
     {
@@ -649,40 +649,41 @@ class DashboardRoleBasedService
             'system_admin' => [
                 'system_health' => 'large',
                 'user_management' => 'medium',
-                'tenant_overview' => 'extra-large'
+                'tenant_overview' => 'extra-large',
             ],
             'project_manager' => [
                 'project_overview' => 'large',
                 'task_progress' => 'medium',
                 'budget_tracking' => 'medium',
-                'schedule_timeline' => 'large'
+                'schedule_timeline' => 'large',
             ],
             'site_engineer' => [
                 'daily_tasks' => 'large',
                 'site_diary' => 'medium',
-                'inspection_checklist' => 'medium'
+                'inspection_checklist' => 'medium',
             ],
             'qc_inspector' => [
                 'inspection_schedule' => 'large',
                 'ncr_tracking' => 'medium',
-                'quality_metrics' => 'medium'
-            ]
+                'quality_metrics' => 'medium',
+            ],
         ];
 
         return $sizeMap[$role][$widgetCode] ?? 'medium';
     }
 
     /**
-     * Check if widget is customizable for role
+     * Check if widget is customizable for role.
      */
     protected function isWidgetCustomizableForRole(string $role): bool
     {
         $customizableRoles = ['system_admin', 'project_manager', 'design_lead', 'site_engineer'];
+
         return in_array($role, $customizableRoles);
     }
 
     /**
-     * Get default preferences for role
+     * Get default preferences for role.
      */
     protected function getDefaultPreferencesForRole(array $roleConfig): array
     {
@@ -691,7 +692,7 @@ class DashboardRoleBasedService
             'refresh_interval' => 300,
             'compact_mode' => false,
             'show_widget_borders' => true,
-            'enable_animations' => true
+            'enable_animations' => true,
         ];
 
         // Role-specific preferences
@@ -700,12 +701,12 @@ class DashboardRoleBasedService
                 $basePreferences['theme'] = 'dark';
                 $basePreferences['refresh_interval'] = 60;
                 break;
-            
+
             case 'Site Engineer':
                 $basePreferences['compact_mode'] = true;
                 $basePreferences['refresh_interval'] = 180;
                 break;
-            
+
             case 'QC Inspector':
                 $basePreferences['show_widget_borders'] = false;
                 break;
@@ -715,7 +716,7 @@ class DashboardRoleBasedService
     }
 
     /**
-     * Get project context for user
+     * Get project context for user.
      */
     public function getProjectContext(User $user, ?string $projectId = null): array
     {
@@ -740,7 +741,7 @@ class DashboardRoleBasedService
                 return [
                     'id' => $p->id,
                     'name' => $p->name,
-                    'status' => $p->status
+                    'status' => $p->status,
                 ];
             });
 
@@ -752,20 +753,20 @@ class DashboardRoleBasedService
                 'progress' => $project->progress_percentage,
                 'budget' => $project->budget,
                 'start_date' => $project->start_date,
-                'end_date' => $project->end_date
+                'end_date' => $project->end_date,
             ],
-            'available_projects' => $availableProjects
+            'available_projects' => $availableProjects,
         ];
     }
 
     /**
-     * Helper methods for data calculations
+     * Helper methods for data calculations.
      */
     public function calculateAverageResponseTime(Collection $rfis): float
     {
         $responseTimes = $rfis->where('status', 'closed')
             ->map(function ($rfi) {
-                return $rfi->answered_at ? 
+                return $rfi->answered_at ?
                     $rfi->answered_at->diffInHours($rfi->created_at) : 0;
             })
             ->filter()
@@ -781,14 +782,14 @@ class DashboardRoleBasedService
             $actual = $project->spent_amount;
             $variance = $actual - $planned;
             $variancePercentage = $planned > 0 ? ($variance / $planned) * 100 : 0;
-            
+
             return [
                 'project_id' => $project->id,
                 'project_name' => $project->name,
                 'planned' => $planned,
                 'actual' => $actual,
                 'variance' => $variance,
-                'variance_percentage' => $variancePercentage
+                'variance_percentage' => $variancePercentage,
             ];
         });
 
@@ -796,7 +797,7 @@ class DashboardRoleBasedService
             'total_variance' => $variances->sum('variance'),
             'average_variance_percentage' => $variances->avg('variance_percentage'),
             'projects_over_budget' => $variances->where('variance', '>', 0)->count(),
-            'projects_under_budget' => $variances->where('variance', '<', 0)->count()
+            'projects_under_budget' => $variances->where('variance', '<', 0)->count(),
         ];
     }
 
@@ -806,7 +807,7 @@ class DashboardRoleBasedService
         return [
             'current_month' => 0,
             'previous_month' => 0,
-            'monthly_trend' => 'stable'
+            'monthly_trend' => 'stable',
         ];
     }
 
@@ -816,29 +817,29 @@ class DashboardRoleBasedService
         return [
             ['category' => 'Labor', 'amount' => 0, 'percentage' => 0],
             ['category' => 'Materials', 'amount' => 0, 'percentage' => 0],
-            ['category' => 'Equipment', 'amount' => 0, 'percentage' => 0]
+            ['category' => 'Equipment', 'amount' => 0, 'percentage' => 0],
         ];
     }
 
     public function getBudgetAlerts(Collection $projects): array
     {
         $alerts = [];
-        
+
         foreach ($projects as $project) {
-            $utilization = $project->budget > 0 ? 
+            $utilization = $project->budget > 0 ?
                 ($project->spent_amount / $project->budget) * 100 : 0;
-            
+
             if ($utilization > 80) {
                 $alerts[] = [
                     'project_id' => $project->id,
                     'project_name' => $project->name,
                     'type' => 'budget_warning',
                     'message' => 'Budget utilization exceeds 80%',
-                    'severity' => 'medium'
+                    'severity' => 'medium',
                 ];
             }
         }
-        
+
         return $alerts;
     }
 
@@ -848,7 +849,7 @@ class DashboardRoleBasedService
         return [
             'milestones' => [],
             'critical_path' => [],
-            'schedule_variance' => 0
+            'schedule_variance' => 0,
         ];
     }
 
@@ -858,7 +859,7 @@ class DashboardRoleBasedService
         return [
             'team_members' => [],
             'performance_metrics' => [],
-            'productivity_trend' => 'stable'
+            'productivity_trend' => 'stable',
         ];
     }
 
@@ -868,7 +869,7 @@ class DashboardRoleBasedService
         return [
             'quality_score' => 0,
             'defect_rate' => 0,
-            'inspection_completion' => 0
+            'inspection_completion' => 0,
         ];
     }
 
@@ -878,7 +879,7 @@ class DashboardRoleBasedService
         return [
             'safety_score' => 0,
             'incidents_count' => 0,
-            'days_since_last_incident' => 0
+            'days_since_last_incident' => 0,
         ];
     }
 
@@ -888,7 +889,7 @@ class DashboardRoleBasedService
         return [
             'scheduled_inspections' => [],
             'completed_inspections' => [],
-            'overdue_inspections' => []
+            'overdue_inspections' => [],
         ];
     }
 
@@ -898,7 +899,7 @@ class DashboardRoleBasedService
         return [
             'open_ncrs' => [],
             'closed_ncrs' => [],
-            'average_resolution_time' => 0
+            'average_resolution_time' => 0,
         ];
     }
 
@@ -908,7 +909,7 @@ class DashboardRoleBasedService
         return [
             'system_uptime' => 99.9,
             'active_users' => 0,
-            'storage_usage' => 0
+            'storage_usage' => 0,
         ];
     }
 
@@ -918,7 +919,7 @@ class DashboardRoleBasedService
         return [
             'total_users' => 0,
             'active_users' => 0,
-            'new_users_this_month' => 0
+            'new_users_this_month' => 0,
         ];
     }
 

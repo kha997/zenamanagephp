@@ -7,13 +7,14 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Password Policy Service
- * 
+ * Password Policy Service.
+ *
  * Handles advanced password policies, validation, and security
  */
 class PasswordPolicyService
 {
     private SecureAuditService $auditService;
+
     private array $policyConfig;
 
     public function __construct(SecureAuditService $auditService)
@@ -29,12 +30,12 @@ class PasswordPolicyService
             'history_count' => 5,
             'max_failed_attempts' => 5,
             'lockout_duration_minutes' => 30,
-            'common_passwords_check' => true
+            'common_passwords_check' => true,
         ]);
     }
 
     /**
-     * Validate password against policy
+     * Validate password against policy.
      */
     public function validatePassword(string $password, User $user = null): array
     {
@@ -101,12 +102,12 @@ class PasswordPolicyService
             'valid' => empty($errors),
             'errors' => $errors,
             'score' => min(100, $score),
-            'strength' => $this->getPasswordStrength($score)
+            'strength' => $this->getPasswordStrength($score),
         ];
     }
 
     /**
-     * Update user password with policy enforcement
+     * Update user password with policy enforcement.
      */
     public function updatePassword(User $user, string $newPassword, string $currentPassword = null): array
     {
@@ -117,7 +118,7 @@ class PasswordPolicyService
                 return [
                     'success' => false,
                     'message' => 'Password does not meet policy requirements',
-                    'errors' => $validation['errors']
+                    'errors' => $validation['errors'],
                 ];
             }
 
@@ -125,7 +126,7 @@ class PasswordPolicyService
             if ($currentPassword && !Hash::check($currentPassword, $user->password)) {
                 return [
                     'success' => false,
-                    'message' => 'Current password is incorrect'
+                    'message' => 'Current password is incorrect',
                 ];
             }
 
@@ -138,7 +139,7 @@ class PasswordPolicyService
                 'password_changed_at' => Carbon::now(),
                 'password_expires_at' => Carbon::now()->addDays($this->policyConfig['max_age_days']),
                 'password_failed_attempts' => 0,
-                'password_locked_until' => null
+                'password_locked_until' => null,
             ]);
 
             // Log password change
@@ -151,41 +152,41 @@ class PasswordPolicyService
             return [
                 'success' => true,
                 'message' => 'Password updated successfully',
-                'expires_at' => $user->password_expires_at
+                'expires_at' => $user->password_expires_at,
             ];
-
         } catch (\Exception $e) {
             Log::error('Password update failed', [
                 'user_id' => $user->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return [
                 'success' => false,
-                'message' => 'Failed to update password'
+                'message' => 'Failed to update password',
             ];
         }
     }
 
     /**
-     * Check if password is expired
+     * Check if password is expired.
      */
     public function isPasswordExpired(User $user): bool
     {
-        return $user->password_expires_at && 
+        return $user->password_expires_at &&
                $user->password_expires_at->isPast();
     }
 
     /**
-     * Check if user is locked out
+     * Check if user is locked out.
      */
     public function isUserLockedOut(User $user): bool
     {
-        return $user->password_locked_until && 
+        return $user->password_locked_until &&
                $user->password_locked_until->isFuture();
     }
 
     /**
-     * Record failed login attempt
+     * Record failed login attempt.
      */
     public function recordFailedAttempt(User $user): array
     {
@@ -199,7 +200,7 @@ class PasswordPolicyService
             // Lock account if max attempts reached
             if ($attempts >= $maxAttempts) {
                 $updateData['password_locked_until'] = Carbon::now()->addMinutes($lockoutDuration);
-                
+
                 // Log account lockout
                 $this->auditService->logAction(
                     userId: $user->id,
@@ -208,7 +209,7 @@ class PasswordPolicyService
                     entityId: $user->id,
                     newData: [
                         'failed_attempts' => $attempts,
-                        'locked_until' => $updateData['password_locked_until']
+                        'locked_until' => $updateData['password_locked_until'],
                     ],
                     tenantId: $user->tenant_id
                 );
@@ -220,25 +221,25 @@ class PasswordPolicyService
                 'attempts' => $attempts,
                 'max_attempts' => $maxAttempts,
                 'locked' => $attempts >= $maxAttempts,
-                'locked_until' => $updateData['password_locked_until'] ?? null
+                'locked_until' => $updateData['password_locked_until'] ?? null,
             ];
-
         } catch (\Exception $e) {
             Log::error('Failed attempt recording failed', [
                 'user_id' => $user->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return [
                 'attempts' => 0,
                 'max_attempts' => $this->policyConfig['max_failed_attempts'],
                 'locked' => false,
-                'locked_until' => null
+                'locked_until' => null,
             ];
         }
     }
 
     /**
-     * Reset failed attempts on successful login
+     * Reset failed attempts on successful login.
      */
     public function resetFailedAttempts(User $user): void
     {
@@ -246,7 +247,7 @@ class PasswordPolicyService
             if ($user->password_failed_attempts > 0) {
                 $user->update([
                     'password_failed_attempts' => 0,
-                    'password_locked_until' => null
+                    'password_locked_until' => null,
                 ]);
 
                 // Log successful login after failed attempts
@@ -261,13 +262,13 @@ class PasswordPolicyService
         } catch (\Exception $e) {
             Log::error('Reset failed attempts failed', [
                 'user_id' => $user->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
 
     /**
-     * Get password policy status for user
+     * Get password policy status for user.
      */
     public function getPasswordStatus(User $user): array
     {
@@ -288,12 +289,12 @@ class PasswordPolicyService
             'password_expires_at' => $user->password_expires_at,
             'days_until_expiry' => $daysUntilExpiry,
             'locked_until' => $user->password_locked_until,
-            'policy' => $this->policyConfig
+            'policy' => $this->policyConfig,
         ];
     }
 
     /**
-     * Check if password is in history
+     * Check if password is in history.
      */
     private function isPasswordInHistory(string $password, User $user): bool
     {
@@ -302,7 +303,7 @@ class PasswordPolicyService
         }
 
         $history = json_decode($user->password_history, true);
-        
+
         foreach ($history as $hashedPassword) {
             if (Hash::check($password, $hashedPassword)) {
                 return true;
@@ -313,23 +314,23 @@ class PasswordPolicyService
     }
 
     /**
-     * Update password history
+     * Update password history.
      */
     private function updatePasswordHistory(User $user, string $currentPassword): void
     {
         $history = $user->password_history ? json_decode($user->password_history, true) : [];
-        
+
         // Add current password to history
         array_unshift($history, $currentPassword);
-        
+
         // Keep only the required number of passwords
         $history = array_slice($history, 0, $this->policyConfig['history_count']);
-        
+
         $user->update(['password_history' => json_encode($history)]);
     }
 
     /**
-     * Check if password contains user information
+     * Check if password contains user information.
      */
     private function containsUserInfo(string $password, User $user): bool
     {
@@ -337,11 +338,11 @@ class PasswordPolicyService
         $userInfo = [
             $user->name,
             $user->email,
-            $emailParts[0] // email username part
+            $emailParts[0], // email username part
         ];
 
         $passwordLower = strtolower($password);
-        
+
         foreach ($userInfo as $info) {
             if ($info && strlen($info) > 2 && strpos($passwordLower, strtolower($info)) !== false) {
                 return true;
@@ -352,28 +353,37 @@ class PasswordPolicyService
     }
 
     /**
-     * Check if password is common
+     * Check if password is common.
      */
     private function isCommonPassword(string $password): bool
     {
         $commonPasswords = [
             'password', '123456', '123456789', 'qwerty', 'abc123',
             'password123', 'admin', 'letmein', 'welcome', 'monkey',
-            '1234567890', 'password1', 'qwerty123', 'dragon', 'master'
+            '1234567890', 'password1', 'qwerty123', 'dragon', 'master',
         ];
 
         return in_array(strtolower($password), $commonPasswords);
     }
 
     /**
-     * Get password strength description
+     * Get password strength description.
      */
     private function getPasswordStrength(int $score): string
     {
-        if ($score < 40) return 'Very Weak';
-        if ($score < 60) return 'Weak';
-        if ($score < 80) return 'Medium';
-        if ($score < 90) return 'Strong';
+        if ($score < 40) {
+            return 'Very Weak';
+        }
+        if ($score < 60) {
+            return 'Weak';
+        }
+        if ($score < 80) {
+            return 'Medium';
+        }
+        if ($score < 90) {
+            return 'Strong';
+        }
+
         return 'Very Strong';
     }
 }

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Audit;
 
@@ -6,10 +8,10 @@ use App\Models\Ncr;
 use App\Models\Project;
 use App\Models\QcPlan;
 use App\Models\SiteDiary;
-use App\Models\Tenant;
+use App\Models\Task;
 use App\Models\TaskAssignment;
 use App\Models\TaskDependency;
-use App\Models\Task;
+use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;

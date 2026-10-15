@@ -7,8 +7,8 @@ use Illuminate\Support\Str;
 
 /**
  * Error Envelope Service
- * Standardized error response format for ZenaManage API
- * 
+ * Standardized error response format for ZenaManage API.
+ *
  * Format:
  * {
  *   "error": {
@@ -22,8 +22,8 @@ use Illuminate\Support\Str;
 class ErrorEnvelopeService
 {
     /**
-     * Generate error response with envelope format
-     * 
+     * Generate error response with envelope format.
+     *
      * @param string $code Error code (e.g., E422.VALIDATION)
      * @param string $message Error message (will be translated if key exists)
      * @param array $details Additional error details
@@ -39,22 +39,22 @@ class ErrorEnvelopeService
         ?string $requestId = null
     ): JsonResponse {
         $errorId = $requestId ?? self::generateRequestId();
-        
+
         // Try to translate message if it's a translation key
         $translatedMessage = self::translateMessage($message);
-        
+
         $error = [
             'id' => $errorId,
             'code' => $code,
             'message' => $translatedMessage,
-            'details' => $details
+            'details' => $details,
         ];
-        
+
         $responseBody = [
             'status' => 'error',
             'success' => false,
             'message' => $translatedMessage,
-            'error' => $error
+            'error' => $error,
         ];
 
         if (isset($details['validation'])) {
@@ -62,18 +62,18 @@ class ErrorEnvelopeService
         }
 
         $response = response()->json($responseBody, $statusCode);
-        
+
         // Add Retry-After header for specific status codes
         if (in_array($statusCode, [429, 503])) {
             $response->header('Retry-After', '60');
         }
-        
+
         return $response;
     }
-    
+
     /**
-     * Generate validation error response
-     * 
+     * Generate validation error response.
+     *
      * @param array $validationErrors Validation errors
      * @param string|null $requestId Request ID for correlation
      * @return JsonResponse
@@ -90,10 +90,10 @@ class ErrorEnvelopeService
             $requestId
         );
     }
-    
+
     /**
-     * Generate authentication error response
-     * 
+     * Generate authentication error response.
+     *
      * @param string $message Authentication error message
      * @param string|null $requestId Request ID for correlation
      * @return JsonResponse
@@ -110,10 +110,10 @@ class ErrorEnvelopeService
             $requestId
         );
     }
-    
+
     /**
-     * Generate authorization error response
-     * 
+     * Generate authorization error response.
+     *
      * @param string $message Authorization error message
      * @param string|null $requestId Request ID for correlation
      * @return JsonResponse
@@ -130,10 +130,10 @@ class ErrorEnvelopeService
             $requestId
         );
     }
-    
+
     /**
-     * Generate not found error response
-     * 
+     * Generate not found error response.
+     *
      * @param string $resource Resource that was not found
      * @param string|null $requestId Request ID for correlation
      * @return JsonResponse
@@ -150,10 +150,10 @@ class ErrorEnvelopeService
             $requestId
         );
     }
-    
+
     /**
-     * Generate conflict error response
-     * 
+     * Generate conflict error response.
+     *
      * @param string $message Conflict error message
      * @param array $details Additional conflict details
      * @param string|null $requestId Request ID for correlation
@@ -172,10 +172,10 @@ class ErrorEnvelopeService
             $requestId
         );
     }
-    
+
     /**
-     * Generate rate limit error response
-     * 
+     * Generate rate limit error response.
+     *
      * @param string $message Rate limit error message
      * @param int $retryAfter Seconds to wait before retry
      * @param string|null $requestId Request ID for correlation
@@ -194,10 +194,10 @@ class ErrorEnvelopeService
             $requestId
         );
     }
-    
+
     /**
-     * Generate server error response
-     * 
+     * Generate server error response.
+     *
      * @param string $message Server error message
      * @param array $details Additional error details
      * @param string|null $requestId Request ID for correlation
@@ -216,10 +216,10 @@ class ErrorEnvelopeService
             $requestId
         );
     }
-    
+
     /**
-     * Generate service unavailable error response
-     * 
+     * Generate service unavailable error response.
+     *
      * @param string $message Service unavailable message
      * @param int $retryAfter Seconds to wait before retry
      * @param string|null $requestId Request ID for correlation
@@ -238,32 +238,32 @@ class ErrorEnvelopeService
             $requestId
         );
     }
-    
+
     /**
-     * Generate request ID for correlation
-     * 
+     * Generate request ID for correlation.
+     *
      * @return string
      */
     private static function generateRequestId(): string
     {
         return 'req_' . Str::random(8);
     }
-    
+
     /**
-     * Get request ID from current request
-     * 
+     * Get request ID from current request.
+     *
      * @return string|null
      */
     public static function getCurrentRequestId(): ?string
     {
-        return request()->header('X-Request-Id') ?? 
-               request()->header('X-Correlation-ID') ?? 
+        return request()->header('X-Request-Id') ??
+               request()->header('X-Correlation-ID') ??
                null;
     }
-    
+
     /**
-     * Translate message if it's a translation key
-     * 
+     * Translate message if it's a translation key.
+     *
      * @param string $message
      * @return string
      */
@@ -277,7 +277,7 @@ class ErrorEnvelopeService
                 return $translated;
             }
         }
-        
+
         // Return original message if no translation found
         return $message;
     }

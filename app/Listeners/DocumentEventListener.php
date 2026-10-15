@@ -1,19 +1,18 @@
 <?php
 
 namespace App\Listeners;
-use Illuminate\Support\Facades\Auth;
 
-
+use App\Events\DocumentApproved;
+use App\Events\DocumentCreated;
+use App\Events\DocumentDeleted;
+use App\Events\DocumentUpdated;
+use App\Events\DocumentVersionChanged;
 use App\Models\Document;
 use App\Models\Notification;
 use App\Models\User;
-use App\Events\DocumentCreated;
-use App\Events\DocumentUpdated;
-use App\Events\DocumentDeleted;
-use App\Events\DocumentApproved;
-use App\Events\DocumentVersionChanged;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class DocumentEventListener implements ShouldQueue
@@ -26,12 +25,12 @@ class DocumentEventListener implements ShouldQueue
     public function handleDocumentCreated(DocumentCreated $event)
     {
         $document = $event->document;
-        
+
         Log::info('Document created', [
             'document_id' => $document->id,
             'document_name' => $document->name,
             'tenant_id' => $document->tenant_id,
-            'created_by' => $document->created_by
+            'created_by' => $document->created_by,
         ]);
 
         // Notify project team members
@@ -54,10 +53,10 @@ class DocumentEventListener implements ShouldQueue
                     'data' => json_encode([
                         'document_id' => $document->id,
                         'document_name' => $document->name,
-                        'project_id' => $document->project_id
+                        'project_id' => $document->project_id,
                     ]),
                     'priority' => 'normal',
-                    'channels' => json_encode(['inapp', 'email'])
+                    'channels' => json_encode(['inapp', 'email']),
                 ]);
             }
         }
@@ -69,16 +68,16 @@ class DocumentEventListener implements ShouldQueue
     public function handleDocumentUpdated(DocumentUpdated $event)
     {
         $document = $event->document;
-        
+
         Log::info('Document updated', [
             'document_id' => $document->id,
             'document_name' => $document->name,
             'tenant_id' => $document->tenant_id,
-            'updated_by' => $document->updated_by
+            'updated_by' => $document->updated_by,
         ]);
 
         // Notify document watchers
-        $watchers = User::whereHas('documentWatchers', function($query) use ($document) {
+        $watchers = User::whereHas('documentWatchers', function ($query) use ($document) {
             $query->where('document_id', $document->id);
         })->get();
 
@@ -93,10 +92,10 @@ class DocumentEventListener implements ShouldQueue
                 'data' => json_encode([
                     'document_id' => $document->id,
                     'document_name' => $document->name,
-                    'project_id' => $document->project_id
+                    'project_id' => $document->project_id,
                 ]),
                 'priority' => 'normal',
-                'channels' => json_encode(['inapp'])
+                'channels' => json_encode(['inapp']),
             ]);
         }
     }
@@ -107,12 +106,12 @@ class DocumentEventListener implements ShouldQueue
     public function handleDocumentDeleted(DocumentDeleted $event)
     {
         $document = $event->document;
-        
+
         Log::info('Document deleted', [
             'document_id' => $document->id,
             'document_name' => $document->name,
             'tenant_id' => $document->tenant_id,
-            'deleted_by' => Auth::id()
+            'deleted_by' => Auth::id(),
         ]);
 
         // Notify project team members
@@ -135,10 +134,10 @@ class DocumentEventListener implements ShouldQueue
                     'data' => json_encode([
                         'document_id' => $document->id,
                         'document_name' => $document->name,
-                        'project_id' => $document->project_id
+                        'project_id' => $document->project_id,
                     ]),
                     'priority' => 'high',
-                    'channels' => json_encode(['inapp', 'email'])
+                    'channels' => json_encode(['inapp', 'email']),
                 ]);
             }
         }
@@ -150,12 +149,12 @@ class DocumentEventListener implements ShouldQueue
     public function handleDocumentApproved(DocumentApproved $event)
     {
         $document = $event->document;
-        
+
         Log::info('Document approved', [
             'document_id' => $document->id,
             'document_name' => $document->name,
             'tenant_id' => $document->tenant_id,
-            'approved_by' => Auth::id()
+            'approved_by' => Auth::id(),
         ]);
 
         // Notify document creator
@@ -170,10 +169,10 @@ class DocumentEventListener implements ShouldQueue
                 'data' => json_encode([
                     'document_id' => $document->id,
                     'document_name' => $document->name,
-                    'project_id' => $document->project_id
+                    'project_id' => $document->project_id,
                 ]),
                 'priority' => 'normal',
-                'channels' => json_encode(['inapp', 'email'])
+                'channels' => json_encode(['inapp', 'email']),
             ]);
         }
     }
@@ -186,17 +185,17 @@ class DocumentEventListener implements ShouldQueue
         $document = $event->document;
         $oldVersion = $event->oldVersion;
         $newVersion = $event->newVersion;
-        
+
         Log::info('Document version changed', [
             'document_id' => $document->id,
             'document_name' => $document->name,
             'old_version' => $oldVersion,
             'new_version' => $newVersion,
-            'tenant_id' => $document->tenant_id
+            'tenant_id' => $document->tenant_id,
         ]);
 
         // Notify document watchers about version change
-        $watchers = User::whereHas('documentWatchers', function($query) use ($document) {
+        $watchers = User::whereHas('documentWatchers', function ($query) use ($document) {
             $query->where('document_id', $document->id);
         })->get();
 
@@ -213,10 +212,10 @@ class DocumentEventListener implements ShouldQueue
                     'document_name' => $document->name,
                     'old_version' => $oldVersion,
                     'new_version' => $newVersion,
-                    'project_id' => $document->project_id
+                    'project_id' => $document->project_id,
                 ]),
                 'priority' => 'normal',
-                'channels' => json_encode(['inapp'])
+                'channels' => json_encode(['inapp']),
             ]);
         }
     }

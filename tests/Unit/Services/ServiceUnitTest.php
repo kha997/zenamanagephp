@@ -1,9 +1,11 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
-use App\Services\RateLimitService;
 use App\Services\AdvancedCacheService;
+use App\Services\RateLimitService;
 use App\Services\WebSocketService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
@@ -24,13 +26,14 @@ class ServiceUnitTest extends TestCase
             Cache::macro('expire', function (string $key, int $seconds) {
                 $value = Cache::get($key);
                 Cache::put($key, $value, $seconds);
+
                 return true;
             });
         }
     }
 
     /**
-     * Test RateLimitService functionality
+     * Test RateLimitService functionality.
      */
     public function test_rate_limit_service()
     {
@@ -63,7 +66,7 @@ class ServiceUnitTest extends TestCase
     }
 
     /**
-     * Test AdvancedCacheService functionality
+     * Test AdvancedCacheService functionality.
      *
      * @group redis
      */
@@ -80,7 +83,7 @@ class ServiceUnitTest extends TestCase
                 "AdvancedCacheService should expose {$method}() as part of its public API"
             );
         }
-        
+
         // Test cache stats
         $stats = $service->getStats();
         $this->assertIsArray($stats);
@@ -110,7 +113,7 @@ class ServiceUnitTest extends TestCase
     }
 
     /**
-     * Test WebSocketService functionality
+     * Test WebSocketService functionality.
      */
     public function test_websocket_service()
     {
@@ -147,21 +150,21 @@ class ServiceUnitTest extends TestCase
     }
 
     /**
-     * Test service error handling
+     * Test service error handling.
      */
     public function test_service_error_handling()
     {
         $rateLimitService = new RateLimitService();
         $cacheService = new AdvancedCacheService();
         $websocketService = new WebSocketService();
-        
+
         // Test invalid rate limit type
         $configRequest = Request::create('/nonexistent', 'GET', [], [], [], ['REMOTE_ADDR' => '198.51.100.7']);
         $config = $rateLimitService->getRateLimitConfig($configRequest, 'invalid_type');
         $this->assertIsArray($config);
         $this->assertArrayHasKey('requests_per_minute', $config);
         $this->assertArrayHasKey('daily_limit', $config);
-        
+
         // Test cache service with invalid operations
         try {
             $cacheService->get('non_existent_key');
@@ -169,7 +172,7 @@ class ServiceUnitTest extends TestCase
         } catch (\Exception $e) {
             $this->fail('Cache service should handle non-existent keys gracefully');
         }
-        
+
         // Test WebSocket service with invalid data
         try {
             $this->assertTrue($websocketService->markUserOnline(''));
@@ -180,7 +183,7 @@ class ServiceUnitTest extends TestCase
     }
 
     /**
-     * Test service performance
+     * Test service performance.
      */
     /** @group performance */
     public function test_service_performance()
@@ -189,7 +192,7 @@ class ServiceUnitTest extends TestCase
         $cacheService = new AdvancedCacheService();
         $websocketService = new WebSocketService();
         $performanceRequest = Request::create('/performance', 'GET', [], [], [], ['REMOTE_ADDR' => '192.0.2.1']);
-        
+
         // Test rate limit service performance
         $startTime = microtime(true);
         for ($i = 0; $i < 100; $i++) {
@@ -198,7 +201,7 @@ class ServiceUnitTest extends TestCase
         $endTime = microtime(true);
         $rateLimitTime = ($endTime - $startTime) * 1000;
         $this->assertLessThan(100, $rateLimitTime, 'Rate limit service should be fast');
-        
+
         // Test cache service performance
         try {
             $redisAvailable = Redis::ping();
@@ -215,7 +218,7 @@ class ServiceUnitTest extends TestCase
             $cacheTime = ($endTime - $startTime) * 1000;
             $this->assertLessThan(500, $cacheTime, 'Cache service should be reasonably fast');
         }
-        
+
         // Test WebSocket service performance
         $startTime = microtime(true);
         for ($i = 0; $i < 100; $i++) {
@@ -227,26 +230,26 @@ class ServiceUnitTest extends TestCase
     }
 
     /**
-     * Test service data validation
+     * Test service data validation.
      */
     public function test_service_data_validation()
     {
         $cacheService = new AdvancedCacheService();
         $websocketService = new WebSocketService();
-        
+
         // Test cache service data validation
         $stats = $cacheService->getStats();
         $this->assertIsFloat($stats['hit_rate']);
         $this->assertIsFloat($stats['miss_rate']);
         $this->assertIsInt($stats['total_keys']);
         $this->assertIsString($stats['memory_usage']);
-        
+
         // Validate rate ranges
         $this->assertGreaterThanOrEqual(0, $stats['hit_rate']);
         $this->assertLessThanOrEqual(1, $stats['hit_rate']);
         $this->assertGreaterThanOrEqual(0, $stats['miss_rate']);
         $this->assertLessThanOrEqual(1, $stats['miss_rate']);
-        
+
         // Test WebSocket service data validation
         $stats = $websocketService->getStats();
         $this->assertIsInt($stats['total_connections']);
@@ -255,7 +258,7 @@ class ServiceUnitTest extends TestCase
         $this->assertIsInt($stats['total_messages_received']);
         $this->assertIsInt($stats['uptime']);
         $this->assertIsFloat($stats['cpu_usage']);
-        
+
         // Validate ranges
         $this->assertGreaterThanOrEqual(0, $stats['total_connections']);
         $this->assertGreaterThanOrEqual(0, $stats['active_connections']);

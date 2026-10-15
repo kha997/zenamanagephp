@@ -11,7 +11,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class SupportDocumentation extends Model
 {
-    use HasFactory, HasUlids, SoftDeletes, TenantScope;
+    use HasFactory;
+    use HasUlids;
+    use SoftDeletes;
+    use TenantScope;
 
     protected $fillable = [
         'tenant_id',

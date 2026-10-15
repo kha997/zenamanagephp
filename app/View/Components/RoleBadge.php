@@ -8,6 +8,7 @@ use Illuminate\View\Component;
 class RoleBadge extends Component
 {
     public $role;
+
     public $user;
 
     /**
@@ -20,7 +21,7 @@ class RoleBadge extends Component
     }
 
     /**
-     * Get the user's primary role
+     * Get the user's primary role.
      */
     private function getUserRole()
     {
@@ -29,7 +30,7 @@ class RoleBadge extends Component
         }
 
         // For now, return a default role
-        
+
         return 'Project Manager';
     }
 

@@ -1,16 +1,12 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Src\WorkTemplate\Models\Template;
 use Src\WorkTemplate\Services\TemplateService;
-use Src\CoreProject\Models\Project;
-use Src\WorkTemplate\Models\ProjectPhase;
-use Src\WorkTemplate\Models\ProjectTask;
-use Illuminate\Support\Facades\Event;
-use Src\WorkTemplate\Events\TemplateApplied;
+use Tests\TestCase;
 
 class TemplateServiceTest extends TestCase
 {
@@ -25,7 +21,7 @@ class TemplateServiceTest extends TestCase
     }
 
     /**
-     * Test applyToProject method với full mode
+     * Test applyToProject method với full mode.
      */
     public function test_apply_template_to_project_full_mode(): void
     {
@@ -34,7 +30,7 @@ class TemplateServiceTest extends TestCase
     }
 
     /**
-     * Test applyToProject method với partial mode
+     * Test applyToProject method với partial mode.
      */
     public function test_apply_template_to_project_partial_mode(): void
     {
@@ -43,7 +39,7 @@ class TemplateServiceTest extends TestCase
     }
 
     /**
-     * Test validateConditionalTags method
+     * Test validateConditionalTags method.
      */
     public function test_validate_conditional_tags(): void
     {
@@ -52,7 +48,7 @@ class TemplateServiceTest extends TestCase
     }
 
     /**
-     * Test extractConditionalTags method
+     * Test extractConditionalTags method.
      */
     public function test_extract_conditional_tags(): void
     {
@@ -61,7 +57,7 @@ class TemplateServiceTest extends TestCase
     }
 
     /**
-     * Test calculateEstimatedDuration method
+     * Test calculateEstimatedDuration method.
      */
     public function test_calculate_estimated_duration(): void
     {
@@ -70,7 +66,7 @@ class TemplateServiceTest extends TestCase
     }
 
     /**
-     * Test isProjectBusy method
+     * Test isProjectBusy method.
      */
     public function test_is_project_busy(): void
     {
@@ -79,7 +75,7 @@ class TemplateServiceTest extends TestCase
     }
 
     /**
-     * Test createPhaseFromTemplate method
+     * Test createPhaseFromTemplate method.
      */
     public function test_create_phase_from_template(): void
     {
@@ -88,7 +84,7 @@ class TemplateServiceTest extends TestCase
     }
 
     /**
-     * Test createTaskFromTemplate method
+     * Test createTaskFromTemplate method.
      */
     public function test_create_task_from_template(): void
     {
@@ -97,7 +93,7 @@ class TemplateServiceTest extends TestCase
     }
 
     /**
-     * Test createTaskFromTemplate với conditional tag không active
+     * Test createTaskFromTemplate với conditional tag không active.
      */
     public function test_create_task_with_inactive_conditional_tag(): void
     {

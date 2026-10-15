@@ -2,12 +2,11 @@
 
 namespace App\Services\Security;
 
-use App\Models\User;
 use App\Models\Tenant;
-use Illuminate\Support\Facades\Log;
+use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class SecurityAuditService
 {
@@ -19,7 +18,7 @@ class SecurityAuditService
         $auditResults = [
             'timestamp' => now()->toISOString(),
             'overall_score' => 0,
-            'checks' => []
+            'checks' => [],
         ];
 
         // Run security checks
@@ -54,7 +53,7 @@ class SecurityAuditService
         $checks['users_without_roles'] = [
             'count' => $usersWithoutRoles,
             'status' => $usersWithoutRoles === 0 ? 'pass' : 'fail',
-            'message' => $usersWithoutRoles === 0 ? 'All users have roles assigned' : "{$usersWithoutRoles} users without roles"
+            'message' => $usersWithoutRoles === 0 ? 'All users have roles assigned' : "{$usersWithoutRoles} users without roles",
         ];
         $score += $usersWithoutRoles === 0 ? 10 : 0;
 
@@ -63,7 +62,7 @@ class SecurityAuditService
         $checks['inactive_users'] = [
             'count' => $inactiveUsers,
             'status' => $inactiveUsers < 10 ? 'pass' : 'warning',
-            'message' => $inactiveUsers < 10 ? 'Few inactive users' : "{$inactiveUsers} inactive users"
+            'message' => $inactiveUsers < 10 ? 'Few inactive users' : "{$inactiveUsers} inactive users",
         ];
         $score += $inactiveUsers < 10 ? 10 : 5;
 
@@ -75,14 +74,14 @@ class SecurityAuditService
         $checks['weak_passwords'] = [
             'count' => $weakPasswordUsers,
             'status' => $weakPasswordUsers === 0 ? 'pass' : 'fail',
-            'message' => $weakPasswordUsers === 0 ? 'No weak passwords detected' : "{$weakPasswordUsers} users with weak passwords"
+            'message' => $weakPasswordUsers === 0 ? 'No weak passwords detected' : "{$weakPasswordUsers} users with weak passwords",
         ];
         $score += $weakPasswordUsers === 0 ? 15 : 0;
 
         return [
             'score' => $score,
             'max_score' => 35,
-            'checks' => $checks
+            'checks' => $checks,
         ];
     }
 
@@ -101,7 +100,7 @@ class SecurityAuditService
         $checks['cross_tenant_access'] = [
             'count' => $crossTenantAccess,
             'status' => $crossTenantAccess === 0 ? 'pass' : 'fail',
-            'message' => $crossTenantAccess === 0 ? 'No cross-tenant access detected' : "{$crossTenantAccess} cross-tenant access violations"
+            'message' => $crossTenantAccess === 0 ? 'No cross-tenant access detected' : "{$crossTenantAccess} cross-tenant access violations",
         ];
         $score += $crossTenantAccess === 0 ? 20 : 0;
 
@@ -112,14 +111,14 @@ class SecurityAuditService
         $checks['orphaned_records'] = [
             'count' => $orphanedRecords,
             'status' => $orphanedRecords === 0 ? 'pass' : 'fail',
-            'message' => $orphanedRecords === 0 ? 'No orphaned records' : "{$orphanedRecords} orphaned records"
+            'message' => $orphanedRecords === 0 ? 'No orphaned records' : "{$orphanedRecords} orphaned records",
         ];
         $score += $orphanedRecords === 0 ? 15 : 0;
 
         return [
             'score' => $score,
             'max_score' => 35,
-            'checks' => $checks
+            'checks' => $checks,
         ];
     }
 
@@ -136,7 +135,7 @@ class SecurityAuditService
         $checks['password_hashing'] = [
             'count' => $unhashedPasswords,
             'status' => $unhashedPasswords === 0 ? 'pass' : 'fail',
-            'message' => $unhashedPasswords === 0 ? 'All passwords are hashed' : "{$unhashedPasswords} unhashed passwords"
+            'message' => $unhashedPasswords === 0 ? 'All passwords are hashed' : "{$unhashedPasswords} unhashed passwords",
         ];
         $score += $unhashedPasswords === 0 ? 20 : 0;
 
@@ -145,14 +144,14 @@ class SecurityAuditService
         $checks['password_expiration'] = [
             'count' => $expiredPasswords,
             'status' => $expiredPasswords < 5 ? 'pass' : 'warning',
-            'message' => $expiredPasswords < 5 ? 'Few expired passwords' : "{$expiredPasswords} expired passwords"
+            'message' => $expiredPasswords < 5 ? 'Few expired passwords' : "{$expiredPasswords} expired passwords",
         ];
         $score += $expiredPasswords < 5 ? 15 : 5;
 
         return [
             'score' => $score,
             'max_score' => 35,
-            'checks' => $checks
+            'checks' => $checks,
         ];
     }
 
@@ -169,7 +168,7 @@ class SecurityAuditService
         $checks['session_lifetime'] = [
             'value' => $sessionLifetime,
             'status' => $sessionLifetime <= 120 ? 'pass' : 'warning',
-            'message' => $sessionLifetime <= 120 ? 'Session lifetime is secure' : 'Session lifetime is too long'
+            'message' => $sessionLifetime <= 120 ? 'Session lifetime is secure' : 'Session lifetime is too long',
         ];
         $score += $sessionLifetime <= 120 ? 15 : 5;
 
@@ -178,14 +177,14 @@ class SecurityAuditService
         $checks['session_encryption'] = [
             'enabled' => $sessionEncryption,
             'status' => $sessionEncryption ? 'pass' : 'fail',
-            'message' => $sessionEncryption ? 'Session encryption enabled' : 'Session encryption disabled'
+            'message' => $sessionEncryption ? 'Session encryption enabled' : 'Session encryption disabled',
         ];
         $score += $sessionEncryption ? 20 : 0;
 
         return [
             'score' => $score,
             'max_score' => 35,
-            'checks' => $checks
+            'checks' => $checks,
         ];
     }
 
@@ -202,7 +201,7 @@ class SecurityAuditService
         $checks['rate_limiting'] = [
             'enabled' => $rateLimitingEnabled,
             'status' => $rateLimitingEnabled ? 'pass' : 'fail',
-            'message' => $rateLimitingEnabled ? 'API rate limiting enabled' : 'API rate limiting disabled'
+            'message' => $rateLimitingEnabled ? 'API rate limiting enabled' : 'API rate limiting disabled',
         ];
         $score += $rateLimitingEnabled ? 15 : 0;
 
@@ -211,14 +210,14 @@ class SecurityAuditService
         $checks['api_authentication'] = [
             'required' => $apiAuthRequired,
             'status' => $apiAuthRequired ? 'pass' : 'fail',
-            'message' => $apiAuthRequired ? 'API authentication required' : 'API authentication not required'
+            'message' => $apiAuthRequired ? 'API authentication required' : 'API authentication not required',
         ];
         $score += $apiAuthRequired ? 20 : 0;
 
         return [
             'score' => $score,
             'max_score' => 35,
-            'checks' => $checks
+            'checks' => $checks,
         ];
     }
 
@@ -235,7 +234,7 @@ class SecurityAuditService
         $checks['file_size_limit'] = [
             'max_size_mb' => $maxFileSize / 1024,
             'status' => $maxFileSize <= 10240 ? 'pass' : 'warning',
-            'message' => $maxFileSize <= 10240 ? 'File size limit is secure' : 'File size limit is too high'
+            'message' => $maxFileSize <= 10240 ? 'File size limit is secure' : 'File size limit is too high',
         ];
         $score += $maxFileSize <= 10240 ? 15 : 5;
 
@@ -244,14 +243,14 @@ class SecurityAuditService
         $checks['allowed_file_types'] = [
             'types' => $allowedTypes,
             'status' => count($allowedTypes) > 0 ? 'pass' : 'fail',
-            'message' => count($allowedTypes) > 0 ? 'File types restricted' : 'No file type restrictions'
+            'message' => count($allowedTypes) > 0 ? 'File types restricted' : 'No file type restrictions',
         ];
         $score += count($allowedTypes) > 0 ? 20 : 0;
 
         return [
             'score' => $score,
             'max_score' => 35,
-            'checks' => $checks
+            'checks' => $checks,
         ];
     }
 
@@ -268,7 +267,7 @@ class SecurityAuditService
         $checks['database_encryption'] = [
             'enabled' => $dbEncryption,
             'status' => $dbEncryption ? 'pass' : 'warning',
-            'message' => $dbEncryption ? 'Database encryption enabled' : 'Database encryption disabled'
+            'message' => $dbEncryption ? 'Database encryption enabled' : 'Database encryption disabled',
         ];
         $score += $dbEncryption ? 20 : 5;
 
@@ -277,14 +276,14 @@ class SecurityAuditService
         $checks['database_backups'] = [
             'enabled' => $backupEnabled,
             'status' => $backupEnabled ? 'pass' : 'warning',
-            'message' => $backupEnabled ? 'Database backups enabled' : 'Database backups disabled'
+            'message' => $backupEnabled ? 'Database backups enabled' : 'Database backups disabled',
         ];
         $score += $backupEnabled ? 15 : 5;
 
         return [
             'score' => $score,
             'max_score' => 35,
-            'checks' => $checks
+            'checks' => $checks,
         ];
     }
 
@@ -301,7 +300,7 @@ class SecurityAuditService
         $checks['csrf_protection'] = [
             'enabled' => $csrfEnabled,
             'status' => $csrfEnabled ? 'pass' : 'fail',
-            'message' => $csrfEnabled ? 'CSRF protection enabled' : 'CSRF protection disabled'
+            'message' => $csrfEnabled ? 'CSRF protection enabled' : 'CSRF protection disabled',
         ];
         $score += $csrfEnabled ? 15 : 0;
 
@@ -310,14 +309,14 @@ class SecurityAuditService
         $checks['security_headers'] = [
             'count' => count($securityHeaders),
             'status' => count($securityHeaders) >= 3 ? 'pass' : 'warning',
-            'message' => count($securityHeaders) >= 3 ? 'Security headers configured' : 'Few security headers configured'
+            'message' => count($securityHeaders) >= 3 ? 'Security headers configured' : 'Few security headers configured',
         ];
         $score += count($securityHeaders) >= 3 ? 20 : 5;
 
         return [
             'score' => $score,
             'max_score' => 35,
-            'checks' => $checks
+            'checks' => $checks,
         ];
     }
 
@@ -343,14 +342,14 @@ class SecurityAuditService
     public function generateSecurityReport(): array
     {
         $auditResults = $this->performSecurityAudit();
-        
+
         $report = [
             'title' => 'Security Audit Report',
             'generated_at' => now()->toISOString(),
             'overall_score' => $auditResults['overall_score'],
             'status' => $this->getSecurityStatus($auditResults['overall_score']),
             'recommendations' => $this->generateRecommendations($auditResults['checks']),
-            'details' => $auditResults
+            'details' => $auditResults,
         ];
 
         // Cache the report
@@ -364,10 +363,19 @@ class SecurityAuditService
      */
     protected function getSecurityStatus(int $score): string
     {
-        if ($score >= 90) return 'excellent';
-        if ($score >= 80) return 'good';
-        if ($score >= 70) return 'fair';
-        if ($score >= 60) return 'poor';
+        if ($score >= 90) {
+            return 'excellent';
+        }
+        if ($score >= 80) {
+            return 'good';
+        }
+        if ($score >= 70) {
+            return 'fair';
+        }
+        if ($score >= 60) {
+            return 'poor';
+        }
+
         return 'critical';
     }
 
@@ -385,14 +393,14 @@ class SecurityAuditService
                         'category' => $checkName,
                         'check' => $subCheckName,
                         'priority' => 'high',
-                        'recommendation' => $this->getRecommendation($checkName, $subCheckName, $subCheck)
+                        'recommendation' => $this->getRecommendation($checkName, $subCheckName, $subCheck),
                     ];
                 } elseif ($subCheck['status'] === 'warning') {
                     $recommendations[] = [
                         'category' => $checkName,
                         'check' => $subCheckName,
                         'priority' => 'medium',
-                        'recommendation' => $this->getRecommendation($checkName, $subCheckName, $subCheck)
+                        'recommendation' => $this->getRecommendation($checkName, $subCheckName, $subCheck),
                     ];
                 }
             }
@@ -415,10 +423,11 @@ class SecurityAuditService
             'api_security.rate_limiting' => 'Enable API rate limiting to prevent abuse.',
             'file_upload_security.allowed_file_types' => 'Restrict file upload types to prevent malicious uploads.',
             'database_security.database_encryption' => 'Enable database encryption for sensitive data.',
-            'middleware_security.csrf_protection' => 'Enable CSRF protection to prevent cross-site request forgery.'
+            'middleware_security.csrf_protection' => 'Enable CSRF protection to prevent cross-site request forgery.',
         ];
 
         $key = "{$category}.{$check}";
+
         return $recommendations[$key] ?? 'Review and improve this security aspect.';
     }
 }

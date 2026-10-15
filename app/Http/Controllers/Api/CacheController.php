@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
@@ -9,8 +11,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * Cache Management Controller
- * 
+ * Cache Management Controller.
+ *
  * Provides endpoints for:
  * - Cache statistics and monitoring
  * - Cache invalidation
@@ -27,13 +29,13 @@ class CacheController extends Controller
     }
 
     /**
-     * Get cache statistics
+     * Get cache statistics.
      */
     public function getStats(): JsonResponse
     {
         try {
             $stats = $this->cacheService->getStats();
-            
+
             return response()->json([
                 'success' => true,
                 'data' => $stats,
@@ -50,7 +52,7 @@ class CacheController extends Controller
     }
 
     /**
-     * Invalidate cache by key
+     * Invalidate cache by key.
      */
     public function invalidateKey(Request $request): JsonResponse
     {
@@ -64,9 +66,10 @@ class CacheController extends Controller
             $prefixedKey = "tenant:{$tenantId}:{$key}";
             $keyExisted = Cache::has($prefixedKey) || Cache::has($key);
             $success = $this->cacheService->invalidate($key);
-            
+
             if ($success) {
                 $message = "Cache key '{$key}' invalidated successfully";
+
                 return response()->json([
                     'success' => true,
                     'message' => $message,
@@ -93,7 +96,7 @@ class CacheController extends Controller
     }
 
     /**
-     * Invalidate cache by tags
+     * Invalidate cache by tags.
      */
     public function invalidateTags(Request $request): JsonResponse
     {
@@ -105,12 +108,13 @@ class CacheController extends Controller
         try {
             $tags = $request->input('tags');
             $success = $this->cacheService->invalidate(null, $tags);
-            
+
             if ($success) {
                 $message = 'Cache tags invalidated successfully';
                 if (Cache::supportsTags()) {
                     Cache::tags($tags)->flush();
                 }
+
                 return response()->json([
                     'success' => true,
                     'message' => $message,
@@ -138,7 +142,7 @@ class CacheController extends Controller
     }
 
     /**
-     * Invalidate cache by pattern
+     * Invalidate cache by pattern.
      */
     public function invalidatePattern(Request $request): JsonResponse
     {
@@ -157,9 +161,10 @@ class CacheController extends Controller
                 ], 400);
             }
             $success = $this->cacheService->invalidate(null, null, $pattern);
-            
+
             if ($success) {
                 $message = "Cache pattern '{$pattern}' invalidated successfully";
+
                 return response()->json([
                     'success' => true,
                     'message' => $message,
@@ -186,7 +191,7 @@ class CacheController extends Controller
     }
 
     /**
-     * Warm up cache
+     * Warm up cache.
      */
     public function warmUp(Request $request): JsonResponse
     {
@@ -199,12 +204,13 @@ class CacheController extends Controller
         try {
             $keys = $request->input('keys');
             $dataProvider = $request->input('data_provider');
-            
+
             $dataProviderCallback = $this->getDataProvider($dataProvider);
             $success = $this->cacheService->warmUp($keys, $dataProviderCallback);
-            
+
             if ($success) {
                 $message = 'Cache warmed up successfully';
+
                 return response()->json([
                     'success' => true,
                     'message' => $message,
@@ -233,16 +239,17 @@ class CacheController extends Controller
     }
 
     /**
-     * Clear all cache
+     * Clear all cache.
      */
     public function clearAll(): JsonResponse
     {
         try {
             // This would typically require admin permissions
             $success = $this->cacheService->invalidate(null, null, '*');
-            
+
             if ($success) {
                 $message = 'All cache cleared successfully';
+
                 return response()->json([
                     'success' => true,
                     'message' => $message,
@@ -269,7 +276,7 @@ class CacheController extends Controller
     }
 
     /**
-     * Get cache configuration
+     * Get cache configuration.
      */
     public function getConfig(): JsonResponse
     {
@@ -311,7 +318,7 @@ class CacheController extends Controller
     }
 
     /**
-     * Get data provider callback
+     * Get data provider callback.
      */
     private function getDataProvider(string $provider): callable
     {

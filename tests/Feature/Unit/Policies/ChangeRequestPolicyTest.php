@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Unit\Policies;
 
-use App\Models\User;
 use App\Models\ChangeRequest;
 use App\Models\Tenant;
+use App\Models\User;
 use App\Policies\ChangeRequestPolicy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -14,30 +14,33 @@ class ChangeRequestPolicyTest extends TestCase
     use RefreshDatabase;
 
     protected $policy;
+
     protected $tenant;
+
     protected $user;
+
     protected $changeRequest;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->policy = new ChangeRequestPolicy();
-        
+
         $this->tenant = Tenant::factory()->create([
             'slug' => 'test-tenant-' . uniqid(),
-            'name' => 'Test Tenant'
+            'name' => 'Test Tenant',
         ]);
-        
+
         $this->user = User::factory()->create([
             'tenant_id' => $this->tenant->id,
-            'email' => 'test@example-' . uniqid() . '.com'
+            'email' => 'test@example-' . uniqid() . '.com',
         ]);
-        
+
         $this->changeRequest = ChangeRequest::factory()->create([
             'tenant_id' => $this->tenant->id,
             'created_by' => $this->user->id,
-            'title' => 'Test Change Request'
+            'title' => 'Test Change Request',
         ]);
     }
 
@@ -52,9 +55,9 @@ class ChangeRequestPolicyTest extends TestCase
         $otherTenant = Tenant::factory()->create(['slug' => 'other-tenant-' . uniqid()]);
         $otherChangeRequest = ChangeRequest::factory()->create([
             'tenant_id' => $otherTenant->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
-        
+
         $this->user->assignRole('pm');
         $this->assertFalse($this->policy->view($this->user, $otherChangeRequest));
     }

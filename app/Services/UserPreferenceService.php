@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -36,7 +38,7 @@ class UserPreferenceService
         $preference = UserSidebarPreference::where('user_id', $user->id)
             ->where('is_enabled', true)
             ->first();
-        
+
         if (!$preference) {
             $preference = UserSidebarPreference::create([
                 'user_id' => $user->id,
@@ -47,10 +49,10 @@ class UserPreferenceService
         } else {
             $preference->update(['preferences' => $preferences]);
         }
-        
+
         // Clear cache
         $this->clearUserPreferencesCache($user);
-        
+
         return $preference;
     }
 
@@ -150,32 +152,32 @@ class UserPreferenceService
     public function applyUserPreferences(array $sidebarConfig, User $user): array
     {
         $preferences = $this->getUserPreferences($user);
-        
-        if (empty($preferences['pinned_items']) && 
-            empty($preferences['hidden_items']) && 
+
+        if (empty($preferences['pinned_items']) &&
+            empty($preferences['hidden_items']) &&
             empty($preferences['custom_order'])) {
             return $sidebarConfig;
         }
-        
+
         $items = $sidebarConfig['items'] ?? [];
-        
+
         // Apply custom order
         if (!empty($preferences['custom_order'])) {
             $items = $this->applyCustomOrder($items, $preferences['custom_order']);
         }
-        
+
         // Apply pinned items (move to top)
         if (!empty($preferences['pinned_items'])) {
             $items = $this->applyPinnedItems($items, $preferences['pinned_items']);
         }
-        
+
         // Apply hidden items (remove from display)
         if (!empty($preferences['hidden_items'])) {
             $items = $this->applyHiddenItems($items, $preferences['hidden_items']);
         }
-        
+
         $sidebarConfig['items'] = $items;
-        
+
         // Apply theme and display preferences
         $sidebarConfig['user_preferences'] = [
             'theme' => $preferences['theme'] ?? 'auto',
@@ -183,7 +185,7 @@ class UserPreferenceService
             'show_badges' => $preferences['show_badges'] ?? true,
             'auto_expand_groups' => $preferences['auto_expand_groups'] ?? false,
         ];
-        
+
         return $sidebarConfig;
     }
 
@@ -194,7 +196,7 @@ class UserPreferenceService
     {
         $orderedItems = [];
         $remainingItems = $items;
-        
+
         // Add items in custom order
         foreach ($customOrder as $itemId) {
             foreach ($remainingItems as $index => $item) {
@@ -205,10 +207,10 @@ class UserPreferenceService
                 }
             }
         }
-        
+
         // Add remaining items
         $orderedItems = array_merge($orderedItems, array_values($remainingItems));
-        
+
         return $orderedItems;
     }
 
@@ -219,7 +221,7 @@ class UserPreferenceService
     {
         $pinned = [];
         $unpinned = [];
-        
+
         foreach ($items as $item) {
             if (in_array($item['id'], $pinnedItems)) {
                 $pinned[] = $item;
@@ -227,7 +229,7 @@ class UserPreferenceService
                 $unpinned[] = $item;
             }
         }
-        
+
         return array_merge($pinned, $unpinned);
     }
 
@@ -249,7 +251,7 @@ class UserPreferenceService
         $preference = UserSidebarPreference::where('user_id', $user->id)
             ->where('is_enabled', true)
             ->first();
-        
+
         if (!$preference) {
             $preference = UserSidebarPreference::create([
                 'user_id' => $user->id,
@@ -258,7 +260,7 @@ class UserPreferenceService
                 'version' => 1,
             ]);
         }
-        
+
         return $preference;
     }
 
@@ -279,11 +281,11 @@ class UserPreferenceService
         $preference = UserSidebarPreference::where('user_id', $user->id)
             ->where('is_enabled', true)
             ->first();
-        
+
         if ($preference) {
             $preference->resetToDefault();
         }
-        
+
         $this->clearUserPreferencesCache($user);
     }
 
@@ -293,7 +295,7 @@ class UserPreferenceService
     public function getUserPreferenceStats(User $user): array
     {
         $preferences = $this->getUserPreferences($user);
-        
+
         return [
             'pinned_items_count' => count($preferences['pinned_items'] ?? []),
             'hidden_items_count' => count($preferences['hidden_items'] ?? []),
@@ -311,13 +313,13 @@ class UserPreferenceService
     public function bulkUpdatePreferences(User $user, array $updates): void
     {
         $preferences = $this->getUserPreferences($user);
-        
+
         foreach ($updates as $key => $value) {
             if (array_key_exists($key, $preferences)) {
                 $preferences[$key] = $value;
             }
         }
-        
+
         $this->updateUserPreferences($user, $preferences);
     }
 }

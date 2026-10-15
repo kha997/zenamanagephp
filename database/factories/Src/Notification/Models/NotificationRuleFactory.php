@@ -1,17 +1,19 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories\Src\Notification\Models;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-use Src\Notification\Models\NotificationRule;
-use Src\Notification\Models\Notification;
-use Src\CoreProject\Models\Project;
-use Illuminate\Support\Str;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
+use Src\CoreProject\Models\Project;
+use Src\Notification\Models\Notification;
+use Src\Notification\Models\NotificationRule;
 
 /**
- * Factory cho NotificationRule model
- * 
+ * Factory cho NotificationRule model.
+ *
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Src\Notification\Models\NotificationRule>
  */
 class NotificationRuleFactory extends Factory
@@ -25,6 +27,7 @@ class NotificationRuleFactory extends Factory
             'user_id' => User::factory(),
             'tenant_id' => function (array $attributes) {
                 $user = User::find($attributes['user_id']);
+
                 return $user ? $user->tenant_id : null;
             },
             'project_id' => $this->faker->optional(0.6)->randomElement([null, Project::factory()]),
@@ -39,7 +42,7 @@ class NotificationRuleFactory extends Factory
     }
 
     /**
-     * State: For specific user
+     * State: For specific user.
      */
     public function forUser(string $userId): static
     {
@@ -49,7 +52,7 @@ class NotificationRuleFactory extends Factory
     }
 
     /**
-     * State: Global rule (no project)
+     * State: Global rule (no project).
      */
     public function global(): static
     {
@@ -59,7 +62,7 @@ class NotificationRuleFactory extends Factory
     }
 
     /**
-     * State: Project-specific rule
+     * State: Project-specific rule.
      */
     public function forProject(string $projectId): static
     {
@@ -69,7 +72,7 @@ class NotificationRuleFactory extends Factory
     }
 
     /**
-     * State: Enabled rule
+     * State: Enabled rule.
      */
     public function enabled(): static
     {
@@ -79,7 +82,7 @@ class NotificationRuleFactory extends Factory
     }
 
     /**
-     * State: Critical priority only
+     * State: Critical priority only.
      */
     public function criticalOnly(): static
     {

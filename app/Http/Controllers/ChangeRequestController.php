@@ -1,8 +1,9 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Src\ChangeRequest\Models\ChangeRequest;
@@ -13,9 +14,7 @@ use Src\Foundation\Utils\JSendResponse;
 use Src\RBAC\Middleware\RBACMiddleware;
 
 /**
- * Controller xử lý các hoạt động CRUD và workflow cho Change Request
- * 
- * @package Src\ChangeRequest\Controllers
+ * Controller xử lý các hoạt động CRUD và workflow cho Change Request.
  */
 class ChangeRequestController extends Controller
 {
@@ -25,7 +24,7 @@ class ChangeRequestController extends Controller
     private ChangeRequestService $changeRequestService;
 
     /**
-     * Constructor - áp dụng RBAC middleware và inject service
+     * Constructor - áp dụng RBAC middleware và inject service.
      */
     public function __construct(ChangeRequestService $changeRequestService)
     {
@@ -35,7 +34,7 @@ class ChangeRequestController extends Controller
 
     /**
      * Lấy danh sách change requests theo project
-     * GET /api/v1/projects/{project_id}/cr?status=
+     * GET /api/v1/projects/{project_id}/cr?status=.
      *
      * @param Request $request
      * @param string $projectId
@@ -61,7 +60,7 @@ class ChangeRequestController extends Controller
 
     /**
      * Tạo change request mới
-     * POST /api/v1/projects/{project_id}/cr
+     * POST /api/v1/projects/{project_id}/cr.
      *
      * @param StoreChangeRequestRequest $request
      * @param string $projectId
@@ -88,7 +87,7 @@ class ChangeRequestController extends Controller
 
     /**
      * Lấy thông tin chi tiết change request
-     * GET /api/v1/projects/{project_id}/cr/{id}
+     * GET /api/v1/projects/{project_id}/cr/{id}.
      *
      * @param string $projectId
      * @param string $id
@@ -113,7 +112,7 @@ class ChangeRequestController extends Controller
 
     /**
      * Cập nhật change request (chỉ khi ở trạng thái draft)
-     * PUT /api/v1/projects/{project_id}/cr/{id}
+     * PUT /api/v1/projects/{project_id}/cr/{id}.
      *
      * @param UpdateChangeRequestRequest $request
      * @param string $projectId
@@ -140,7 +139,7 @@ class ChangeRequestController extends Controller
 
     /**
      * Xóa change request (chỉ khi ở trạng thái draft)
-     * DELETE /api/v1/projects/{project_id}/cr/{id}
+     * DELETE /api/v1/projects/{project_id}/cr/{id}.
      *
      * @param string $projectId
      * @param string $id
@@ -175,7 +174,7 @@ class ChangeRequestController extends Controller
 
     /**
      * Submit change request để chờ phê duyệt
-     * POST /api/v1/cr/{id}/submit
+     * POST /api/v1/cr/{id}/submit.
      *
      * @param SubmitChangeRequestRequest $request
      * @param string $id
@@ -200,7 +199,7 @@ class ChangeRequestController extends Controller
 
     /**
      * Phê duyệt change request
-     * POST /api/v1/cr/{id}/approve
+     * POST /api/v1/cr/{id}/approve.
      *
      * @param DecideChangeRequestRequest $request
      * @param string $id
@@ -226,7 +225,7 @@ class ChangeRequestController extends Controller
 
     /**
      * Từ chối change request
-     * POST /api/v1/cr/{id}/reject
+     * POST /api/v1/cr/{id}/reject.
      *
      * @param DecideChangeRequestRequest $request
      * @param string $id
@@ -252,7 +251,7 @@ class ChangeRequestController extends Controller
 
     /**
      * Lấy thống kê change requests theo project
-     * GET /api/v1/projects/{project_id}/cr/stats
+     * GET /api/v1/projects/{project_id}/cr/stats.
      *
      * @param string $projectId
      * @return JsonResponse
@@ -270,7 +269,7 @@ class ChangeRequestController extends Controller
 
     /**
      * Quản lý liên kết CR với entities khác
-     * POST /api/v1/cr/{id}/links
+     * POST /api/v1/cr/{id}/links.
      *
      * @param Request $request
      * @param string $id
@@ -283,7 +282,7 @@ class ChangeRequestController extends Controller
                 'linked_type' => 'required|in:task,document,component',
                 'linked_id' => 'required|string',
                 'action' => 'required|in:add,remove',
-                'description' => 'nullable|string|max:500'
+                'description' => 'nullable|string|max:500',
             ]);
 
             $result = $this->changeRequestService->manageEntityLink(
@@ -294,7 +293,7 @@ class ChangeRequestController extends Controller
                 $request->get('description')
             );
 
-            $message = $request->get('action') === 'add' 
+            $message = $request->get('action') === 'add'
                 ? 'Liên kết đã được thêm thành công'
                 : 'Liên kết đã được xóa thành công';
 
@@ -306,7 +305,7 @@ class ChangeRequestController extends Controller
 
     /**
      * Resolve the current actor ID for audit trails
-     * Uses Auth facade instead of helper globals for better testability
+     * Uses Auth facade instead of helper globals for better testability.
      *
      * @return string|int The actor ID or 'system' as fallback
      */
@@ -322,11 +321,11 @@ class ChangeRequestController extends Controller
             if (config('app.debug')) {
                 \Log::warning('Controller: Unable to resolve actor ID', [
                     'error' => $e->getMessage(),
-                    'controller' => static::class
+                    'controller' => static::class,
                 ]);
             }
         }
-        
+
         // Fallback to 'system' for test environments or when auth is unavailable
         return 'system';
     }

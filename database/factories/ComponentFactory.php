@@ -1,28 +1,30 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
 use App\Models\Component;
 use App\Models\Project;
+use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /**
- * Factory cho Component model
- * 
+ * Factory cho Component model.
+ *
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Component>
  */
 class ComponentFactory extends Factory
 {
     /**
-     * Model được tạo bởi factory này
+     * Model được tạo bởi factory này.
      *
      * @var string
      */
     protected $model = Component::class;
 
     /**
-     * Định nghĩa trạng thái mặc định của model
+     * Định nghĩa trạng thái mặc định của model.
      *
      * @return array<string, mixed>
      */
@@ -40,7 +42,7 @@ class ComponentFactory extends Factory
     }
 
     /**
-     * Tạo component con với parent cụ thể
+     * Tạo component con với parent cụ thể.
      */
     public function withParent(Component $parent): static
     {
@@ -53,7 +55,7 @@ class ComponentFactory extends Factory
     }
 
     /**
-     * Tạo component cho project cụ thể
+     * Tạo component cho project cụ thể.
      */
     public function forProject(Project $project): static
     {
@@ -63,7 +65,7 @@ class ComponentFactory extends Factory
     }
 
     /**
-     * Tạo component với tiến độ hoàn thành
+     * Tạo component với tiến độ hoàn thành.
      */
     public function completed(): static
     {
@@ -73,7 +75,7 @@ class ComponentFactory extends Factory
     }
 
     /**
-     * Tạo component chưa bắt đầu
+     * Tạo component chưa bắt đầu.
      */
     public function notStarted(): static
     {
@@ -84,7 +86,7 @@ class ComponentFactory extends Factory
     }
 
     /**
-     * Tạo component đang thực hiện
+     * Tạo component đang thực hiện.
      */
     public function inProgress(): static
     {

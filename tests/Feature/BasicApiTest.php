@@ -1,19 +1,21 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 /**
- * Basic API tests to check if routes are working
+ * Basic API tests to check if routes are working.
  */
 class BasicApiTest extends TestCase
 {
     use RefreshDatabase;
 
     /**
-     * Test health check endpoint
+     * Test health check endpoint.
      */
     public function test_health_check(): void
     {
@@ -29,13 +31,13 @@ class BasicApiTest extends TestCase
                         'environment',
                         'laravel_version',
                         'database',
-                        'services'
-                    ]
+                        'services',
+                    ],
                 ]);
     }
 
     /**
-     * Test API info endpoint
+     * Test API info endpoint.
      */
     public function test_api_info(): void
     {
@@ -48,13 +50,13 @@ class BasicApiTest extends TestCase
                         'name',
                         'version',
                         'description',
-                        'features'
-                    ]
+                        'features',
+                    ],
                 ]);
     }
 
     /**
-     * Test that protected routes return 401 without auth
+     * Test that protected routes return 401 without auth.
      */
     public function test_protected_routes_require_auth(): void
     {
@@ -69,7 +71,7 @@ class BasicApiTest extends TestCase
     }
 
     /**
-     * Test auth routes are accessible
+     * Test auth routes are accessible.
      */
     public function test_auth_routes_accessible(): void
     {

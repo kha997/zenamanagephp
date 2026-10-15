@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -44,10 +46,10 @@ class DocumentApproverAssignmentService
                     ->where('user_id', $newApproverId)
                     ->whereNull('left_at')
                     ->exists();
-                if (! $isProjectMember) {
+                if (!$isProjectMember) {
                     throw DocumentApproverAssignmentException::notProjectMember();
                 }
-                if (! $target->hasPermission('document.approve')) {
+                if (!$target->hasPermission('document.approve')) {
                     throw DocumentApproverAssignmentException::targetLacksApprovalPermission();
                 }
             }

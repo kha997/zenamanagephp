@@ -1,17 +1,14 @@
 <?php
 
 namespace App\Listeners;
-use Illuminate\Support\Facades\Auth;
 
-
-use App\Models\QcInspection;
-use App\Models\Notification;
-use App\Models\User;
-use App\Events\QcInspectionCreated;
-use App\Events\QcInspectionCompleted;
 use App\Events\QcInspectionApproved;
+use App\Events\QcInspectionCompleted;
+use App\Events\QcInspectionCreated;
+use App\Models\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class QcInspectionEventListener implements ShouldQueue
@@ -21,12 +18,12 @@ class QcInspectionEventListener implements ShouldQueue
     public function handleQcInspectionCreated(QcInspectionCreated $event)
     {
         $qcInspection = $event->qcInspection;
-        
+
         Log::info('QC Inspection created', [
             'qc_inspection_id' => $qcInspection->id,
             'name' => $qcInspection->name,
             'tenant_id' => $qcInspection->tenant_id,
-            'created_by' => $qcInspection->created_by
+            'created_by' => $qcInspection->created_by,
         ]);
 
         // Notify inspector
@@ -41,10 +38,10 @@ class QcInspectionEventListener implements ShouldQueue
                 'data' => json_encode([
                     'qc_inspection_id' => $qcInspection->id,
                     'name' => $qcInspection->name,
-                    'project_id' => $qcInspection->project_id
+                    'project_id' => $qcInspection->project_id,
                 ]),
                 'priority' => 'normal',
-                'channels' => json_encode(['inapp', 'email'])
+                'channels' => json_encode(['inapp', 'email']),
             ]);
         }
     }
@@ -52,12 +49,12 @@ class QcInspectionEventListener implements ShouldQueue
     public function handleQcInspectionCompleted(QcInspectionCompleted $event)
     {
         $qcInspection = $event->qcInspection;
-        
+
         Log::info('QC Inspection completed', [
             'qc_inspection_id' => $qcInspection->id,
             'name' => $qcInspection->name,
             'tenant_id' => $qcInspection->tenant_id,
-            'completed_by' => Auth::id()
+            'completed_by' => Auth::id(),
         ]);
 
         // Notify project team members
@@ -80,10 +77,10 @@ class QcInspectionEventListener implements ShouldQueue
                     'data' => json_encode([
                         'qc_inspection_id' => $qcInspection->id,
                         'name' => $qcInspection->name,
-                        'project_id' => $qcInspection->project_id
+                        'project_id' => $qcInspection->project_id,
                     ]),
                     'priority' => 'normal',
-                    'channels' => json_encode(['inapp'])
+                    'channels' => json_encode(['inapp']),
                 ]);
             }
         }
@@ -92,12 +89,12 @@ class QcInspectionEventListener implements ShouldQueue
     public function handleQcInspectionApproved(QcInspectionApproved $event)
     {
         $qcInspection = $event->qcInspection;
-        
+
         Log::info('QC Inspection approved', [
             'qc_inspection_id' => $qcInspection->id,
             'name' => $qcInspection->name,
             'tenant_id' => $qcInspection->tenant_id,
-            'approved_by' => Auth::id()
+            'approved_by' => Auth::id(),
         ]);
 
         // Notify inspector
@@ -112,10 +109,10 @@ class QcInspectionEventListener implements ShouldQueue
                 'data' => json_encode([
                     'qc_inspection_id' => $qcInspection->id,
                     'name' => $qcInspection->name,
-                    'project_id' => $qcInspection->project_id
+                    'project_id' => $qcInspection->project_id,
                 ]),
                 'priority' => 'normal',
-                'channels' => json_encode(['inapp', 'email'])
+                'channels' => json_encode(['inapp', 'email']),
             ]);
         }
     }

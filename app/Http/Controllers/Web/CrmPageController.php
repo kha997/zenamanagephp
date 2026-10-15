@@ -235,7 +235,7 @@ class CrmPageController extends Controller
 
         $lead = Lead::query()->forTenant($tenantId)->whereKey($id)->first();
 
-        if (! $lead instanceof Lead) {
+        if (!$lead instanceof Lead) {
             return response()->json(['success' => false, 'message' => 'Lead not found'], 404);
         }
 
@@ -328,7 +328,7 @@ class CrmPageController extends Controller
 
         $opportunity = Opportunity::query()->forTenant($tenantId)->whereKey($id)->first();
 
-        if (! $opportunity instanceof Opportunity) {
+        if (!$opportunity instanceof Opportunity) {
             return response()->json(['success' => false, 'message' => 'Opportunity not found'], 404);
         }
 
@@ -442,7 +442,7 @@ class CrmPageController extends Controller
      */
     private function buildBoqCardViewModel(Opportunity $opportunity): ?array
     {
-        if (! $opportunity->external_boq_project_code) {
+        if (!$opportunity->external_boq_project_code) {
             return null;
         }
 
@@ -477,7 +477,7 @@ class CrmPageController extends Controller
             ->where('source_opportunity_id', $opportunity->id)
             ->first();
 
-        if (! $eligible && ! $existingContract instanceof Contract) {
+        if (!$eligible && !$existingContract instanceof Contract) {
             return null;
         }
 
@@ -699,7 +699,7 @@ class CrmPageController extends Controller
             ->whereKey($id)
             ->first();
 
-        if (! $opp instanceof Opportunity) {
+        if (!$opp instanceof Opportunity) {
             return back()->with('error', 'Không tìm thấy cơ hội.');
         }
 
@@ -725,7 +725,7 @@ class CrmPageController extends Controller
             ->findOrFail($id);
 
         $validated = $request->validate([
-            'type' => ['required', 'string', 'in:'.implode(',', OpportunityAppointment::VALID_TYPES)],
+            'type' => ['required', 'string', 'in:' . implode(',', OpportunityAppointment::VALID_TYPES)],
             'scheduled_at' => ['required', 'date', 'after:now'],
             'location' => ['nullable', 'string', 'max:255'],
             'assigned_to' => ['nullable', 'string'],
@@ -737,7 +737,7 @@ class CrmPageController extends Controller
                 ->whereKey($validated['assigned_to'])
                 ->exists();
 
-            if (! $assigneeExists) {
+            if (!$assigneeExists) {
                 return back()->withInput()->withErrors(['assigned_to' => 'Người phụ trách không hợp lệ.']);
             }
         }
@@ -783,7 +783,7 @@ class CrmPageController extends Controller
             ->where('tenant_id', $tenantId)
             ->findOrFail($id);
 
-        if (! OpportunityAppointment::canTransition($appointment->status, OpportunityAppointment::STATUS_COMPLETED)) {
+        if (!OpportunityAppointment::canTransition($appointment->status, OpportunityAppointment::STATUS_COMPLETED)) {
             return back()->with('error', 'Không thể chuyển trạng thái.');
         }
 
@@ -821,7 +821,7 @@ class CrmPageController extends Controller
             ->where('tenant_id', $tenantId)
             ->findOrFail($id);
 
-        if (! OpportunityAppointment::canTransition($appointment->status, OpportunityAppointment::STATUS_CANCELLED)) {
+        if (!OpportunityAppointment::canTransition($appointment->status, OpportunityAppointment::STATUS_CANCELLED)) {
             return back()->with('error', 'Không thể chuyển trạng thái.');
         }
 
@@ -859,7 +859,7 @@ class CrmPageController extends Controller
             ->where('tenant_id', $tenantId)
             ->findOrFail($id);
 
-        if (! OpportunityAppointment::canTransition($appointment->status, OpportunityAppointment::STATUS_RESCHEDULED)) {
+        if (!OpportunityAppointment::canTransition($appointment->status, OpportunityAppointment::STATUS_RESCHEDULED)) {
             return back()->with('error', 'Không thể chuyển trạng thái.');
         }
 
@@ -906,7 +906,7 @@ class CrmPageController extends Controller
             ->whereKey($id)
             ->first();
 
-        if (! $quote instanceof Quote) {
+        if (!$quote instanceof Quote) {
             return back()->with('error', 'Không tìm thấy báo giá.');
         }
 
@@ -952,7 +952,7 @@ class CrmPageController extends Controller
                     'price_note' => $line['price_note'] ?? null,
                 ]);
 
-                if (! empty($line['benchmark_type']) && ! empty($line['code'])) {
+                if (!empty($line['benchmark_type']) && !empty($line['code'])) {
                     PriceReferenceEntry::create([
                         'tenant_id' => $tenantId,
                         'work_item_code' => $line['code'],
@@ -986,7 +986,7 @@ class CrmPageController extends Controller
 
         $entry = PriceReferenceEntry::latestFor($tenantId, $code, $unit);
 
-        if (! $entry) {
+        if (!$entry) {
             return response()->json(['data' => null]);
         }
 
@@ -1033,11 +1033,11 @@ class CrmPageController extends Controller
             ->whereKey($id)
             ->first();
 
-        if (! $quote instanceof Quote) {
+        if (!$quote instanceof Quote) {
             return back()->with('error', 'Không tìm thấy báo giá.');
         }
 
-        if (! Quote::canTransition($quote->status, Quote::STATUS_SENT)) {
+        if (!Quote::canTransition($quote->status, Quote::STATUS_SENT)) {
             return back()->with('error', 'Không thể chuyển trạng thái.');
         }
 
@@ -1046,7 +1046,7 @@ class CrmPageController extends Controller
             ->where('tenant_id', $tenantId)
             ->exists();
 
-        if (! $hasLines) {
+        if (!$hasLines) {
             return back()->with('error', 'Cần ít nhất một dòng để gửi báo giá.');
         }
 
@@ -1063,7 +1063,7 @@ class CrmPageController extends Controller
                 ->lockForUpdate()
                 ->first();
 
-            if ($opportunity !== null && ! $opportunity->hasConfirmedServiceLine()) {
+            if ($opportunity !== null && !$opportunity->hasConfirmedServiceLine()) {
                 $blocked = true;
 
                 return;
@@ -1108,11 +1108,11 @@ class CrmPageController extends Controller
             ->whereKey($id)
             ->first();
 
-        if (! $quote instanceof Quote) {
+        if (!$quote instanceof Quote) {
             return back()->with('error', 'Không tìm thấy báo giá.');
         }
 
-        if (! Quote::canTransition($quote->status, Quote::STATUS_ACCEPTED)) {
+        if (!Quote::canTransition($quote->status, Quote::STATUS_ACCEPTED)) {
             return back()->with('error', 'Không thể chuyển trạng thái.');
         }
 
@@ -1137,11 +1137,11 @@ class CrmPageController extends Controller
             ->whereKey($id)
             ->first();
 
-        if (! $quote instanceof Quote) {
+        if (!$quote instanceof Quote) {
             return back()->with('error', 'Không tìm thấy báo giá.');
         }
 
-        if (! Quote::canTransition($quote->status, Quote::STATUS_REJECTED)) {
+        if (!Quote::canTransition($quote->status, Quote::STATUS_REJECTED)) {
             return back()->with('error', 'Không thể chuyển trạng thái.');
         }
 
@@ -1166,7 +1166,7 @@ class CrmPageController extends Controller
             ->whereKey($id)
             ->first();
 
-        if (! $original instanceof Quote) {
+        if (!$original instanceof Quote) {
             return back()->with('error', 'Không tìm thấy báo giá.');
         }
 
@@ -1224,7 +1224,7 @@ class CrmPageController extends Controller
             ->whereKey($id)
             ->first();
 
-        if (! $quote instanceof Quote) {
+        if (!$quote instanceof Quote) {
             return back()->with('error', 'Không tìm thấy báo giá.');
         }
 
@@ -1256,7 +1256,7 @@ class CrmPageController extends Controller
             ->whereKey($id)
             ->first();
 
-        if (! $quote instanceof Quote) {
+        if (!$quote instanceof Quote) {
             abort(404);
         }
 
@@ -1278,11 +1278,11 @@ class CrmPageController extends Controller
             return back()->with('error', 'Không thể tạo PDF báo giá vào lúc này.');
         }
 
-        $filename = 'bao-gia-'.$quote->quote_number.'.pdf';
+        $filename = 'bao-gia-' . $quote->quote_number . '.pdf';
 
         return response($pdfBytes, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="'.$filename.'"',
+            'Content-Disposition' => 'inline; filename="' . $filename . '"',
         ]);
     }
 
@@ -1319,7 +1319,7 @@ class CrmPageController extends Controller
 
         return response($pdfBytes, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="bao-gia-'.Str::slug($tpl->name).'-'.$quote->quote_number.'.pdf"',
+            'Content-Disposition' => 'inline; filename="bao-gia-' . Str::slug($tpl->name) . '-' . $quote->quote_number . '.pdf"',
         ]);
     }
 }

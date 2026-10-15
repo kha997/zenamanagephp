@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Events;
 
@@ -9,7 +11,8 @@ use Illuminate\Queue\SerializesModels;
 
 class WorkTemplateCreated
 {
-    use Dispatchable, SerializesModels;
+    use Dispatchable;
+    use SerializesModels;
 
     public function __construct(
         public WorkTemplate $template,

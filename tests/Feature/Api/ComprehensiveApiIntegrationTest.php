@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
@@ -15,7 +17,9 @@ use Tests\Traits\AuthenticationTrait;
 
 class ComprehensiveApiIntegrationTest extends TestCase
 {
-    use RefreshDatabase, WithFaker, AuthenticationTrait;
+    use RefreshDatabase;
+    use WithFaker;
+    use AuthenticationTrait;
 
     protected function setUp(): void
     {
@@ -24,7 +28,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
     }
 
     /**
-     * Test complete authentication workflow with rate limiting
+     * Test complete authentication workflow with rate limiting.
      */
     public function test_complete_authentication_workflow()
     {
@@ -34,15 +38,15 @@ class ComprehensiveApiIntegrationTest extends TestCase
         $response->assertJsonStructure([
             'success',
             'data' => [
-                'csrf_token'
-            ]
+                'csrf_token',
+            ],
         ]);
 
         // Test login with rate limiting
         $user = \App\Models\User::factory()->create([
             'email' => 'test@example.com',
             'password' => bcrypt('password123'),
-            'role' => 'admin'
+            'role' => 'admin',
         ]);
         $role = Role::firstOrCreate(
             ['name' => 'admin'],
@@ -68,7 +72,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
 
         $loginData = [
             'email' => 'test@example.com',
-            'password' => 'password123'
+            'password' => 'password123',
         ];
 
         // First login attempt
@@ -79,8 +83,8 @@ class ComprehensiveApiIntegrationTest extends TestCase
             'data' => [
                 'user',
                 'token',
-                'expires_at'
-            ]
+                'expires_at',
+            ],
         ]);
 
         // Check rate limiting headers
@@ -93,7 +97,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
         // Test authenticated endpoints
         $headers = [
             'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json'
+            'Accept' => 'application/json',
         ];
         if ($tenantId !== null && $tenantId !== '') {
             $headers['X-Tenant-ID'] = (string) $tenantId;
@@ -109,8 +113,8 @@ class ComprehensiveApiIntegrationTest extends TestCase
                 'id',
                 'name',
                 'email',
-                'created_at'
-            ]
+                'created_at',
+            ],
         ]);
 
         // Test permissions endpoint
@@ -121,8 +125,8 @@ class ComprehensiveApiIntegrationTest extends TestCase
             'success',
             'data' => [
                 'permissions',
-                'roles'
-            ]
+                'roles',
+            ],
         ]);
 
         // Test logout
@@ -131,12 +135,12 @@ class ComprehensiveApiIntegrationTest extends TestCase
         $response->assertStatus(200);
         $response->assertJsonStructure([
             'success',
-            'message'
+            'message',
         ]);
     }
 
     /**
-     * Test dashboard workflow with caching
+     * Test dashboard workflow with caching.
      */
     public function test_dashboard_workflow_with_caching()
     {
@@ -155,8 +159,8 @@ class ComprehensiveApiIntegrationTest extends TestCase
                 'projects',
                 'tasks',
                 'notifications',
-                'statistics'
-            ]
+                'statistics',
+            ],
         ]);
 
         // Second request should be faster (cached)
@@ -174,8 +178,8 @@ class ComprehensiveApiIntegrationTest extends TestCase
             'data' => [
                 'charts',
                 'metrics',
-                'trends'
-            ]
+                'trends',
+            ],
         ]);
 
         // Test dashboard notifications
@@ -186,8 +190,8 @@ class ComprehensiveApiIntegrationTest extends TestCase
             'success',
             'data' => [
                 'notifications',
-                'unread_count'
-            ]
+                'unread_count',
+            ],
         ]);
 
         // Test dashboard preferences
@@ -199,13 +203,13 @@ class ComprehensiveApiIntegrationTest extends TestCase
             'data' => [
                 'theme',
                 'layout',
-                'widgets'
-            ]
+                'widgets',
+            ],
         ]);
     }
 
     /**
-     * Test cache management workflow
+     * Test cache management workflow.
      */
     public function test_cache_management_workflow()
     {
@@ -230,7 +234,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
         $this->actingAsSanctumBearerToken($user);
         $response = $this->postJson('/api/cache/warmup', [
             'keys' => ['dashboard_data', 'user_preferences'],
-            'data_provider' => 'dashboard'
+            'data_provider' => 'dashboard',
         ], $headers);
         $response->assertStatus(200);
 
@@ -241,7 +245,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
 
         $this->actingAsSanctumBearerToken($user);
         $response = $this->postJson('/api/cache/invalidate/key', [
-            'key' => $testKey
+            'key' => $testKey,
         ], $headers);
         $response->assertStatus(200);
 
@@ -249,7 +253,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
     }
 
     /**
-     * Test WebSocket workflow
+     * Test WebSocket workflow.
      */
     public function test_websocket_workflow()
     {
@@ -282,8 +286,8 @@ class ComprehensiveApiIntegrationTest extends TestCase
             'connection_id' => $connectionId,
             'metadata' => [
                 'browser' => 'Chrome',
-                'os' => 'macOS'
-            ]
+                'os' => 'macOS',
+            ],
         ], $headers);
         $response->assertStatus(200);
 
@@ -294,8 +298,8 @@ class ComprehensiveApiIntegrationTest extends TestCase
             'activity_type' => 'page_view',
             'activity_data' => [
                 'page' => '/dashboard',
-                'duration' => 30
-            ]
+                'duration' => 30,
+            ],
         ], $headers);
         $response->assertStatus(200);
 
@@ -306,7 +310,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
             'type' => 'system_message',
             'title' => 'Test Message',
             'message' => 'This is a test message',
-            'priority' => 'normal'
+            'priority' => 'normal',
         ], $headers);
         $response->assertStatus(200);
 
@@ -317,9 +321,9 @@ class ComprehensiveApiIntegrationTest extends TestCase
             'event' => 'system_notification',
             'data' => [
                 'title' => 'System Update',
-                'message' => 'System will be updated in 5 minutes'
+                'message' => 'System will be updated in 5 minutes',
             ],
-            'target_users' => [$user->id]
+            'target_users' => [$user->id],
         ], $headers);
         $response->assertStatus(200);
 
@@ -328,13 +332,13 @@ class ComprehensiveApiIntegrationTest extends TestCase
         $response = $this->postJson('/api/websocket/offline', [
             'user_id' => $user->id,
             'connection_id' => $connectionId,
-            'reason' => 'user_disconnect'
+            'reason' => 'user_disconnect',
         ], $headers);
         $response->assertStatus(200);
     }
 
     /**
-     * Test multi-tenant isolation
+     * Test multi-tenant isolation.
      */
     public function test_multi_tenant_isolation()
     {
@@ -344,23 +348,23 @@ class ComprehensiveApiIntegrationTest extends TestCase
 
         $user1 = \App\Models\User::factory()->create([
             'tenant_id' => $tenant1->id,
-            'role' => 'admin'
+            'role' => 'admin',
         ]);
         $user2 = \App\Models\User::factory()->create([
             'tenant_id' => $tenant2->id,
-            'role' => 'admin'
+            'role' => 'admin',
         ]);
         $this->grantAuthPermissions($user1);
         $this->grantAuthPermissions($user2);
 
         $headers1 = [
             'Accept' => 'application/json',
-            'X-Tenant-ID' => (string) $tenant1->id
+            'X-Tenant-ID' => (string) $tenant1->id,
         ];
 
         $headers2 = [
             'Accept' => 'application/json',
-            'X-Tenant-ID' => (string) $tenant2->id
+            'X-Tenant-ID' => (string) $tenant2->id,
         ];
 
         // Test that users can only access their own data
@@ -388,7 +392,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
     }
 
     /**
-     * Test error handling across all endpoints
+     * Test error handling across all endpoints.
      */
     public function test_comprehensive_error_handling()
     {
@@ -398,14 +402,14 @@ class ComprehensiveApiIntegrationTest extends TestCase
 
         $response = $this->getJson('/api/auth/me', [
             'Authorization' => 'Bearer invalid_token',
-            'Accept' => 'application/json'
+            'Accept' => 'application/json',
         ]);
         $response->assertStatus(401);
 
         // Test rate limiting errors
         $loginData = [
             'email' => 'test@example.com',
-            'password' => 'password'
+            'password' => 'password',
         ];
 
         // Exhaust rate limit
@@ -419,8 +423,8 @@ class ComprehensiveApiIntegrationTest extends TestCase
             'success',
             'error' => [
                 'message',
-                'code'
-            ]
+                'code',
+            ],
         ]);
 
         // Test validation errors
@@ -430,7 +434,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
         // Test invalid cache key
         $this->actingAsSanctumBearerToken($user);
         $response = $this->postJson('/api/cache/invalidate/key', [
-            'key' => ''
+            'key' => '',
         ], $headers);
         $response->assertStatus(422);
 
@@ -438,13 +442,13 @@ class ComprehensiveApiIntegrationTest extends TestCase
         $this->actingAsSanctumBearerToken($user);
         $response = $this->postJson('/api/websocket/online', [
             'user_id' => 'invalid_id',
-            'connection_id' => ''
+            'connection_id' => '',
         ], $headers);
         $response->assertStatus(422);
     }
 
     /**
-     * Test performance across all endpoints
+     * Test performance across all endpoints.
      */
     /** @group performance */
     public function test_performance_across_endpoints()
@@ -463,7 +467,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
             '/api/cache/config',
             '/api/websocket/info',
             '/api/websocket/stats',
-            '/api/websocket/test'
+            '/api/websocket/test',
         ];
 
         foreach ($endpoints as $endpoint) {
@@ -473,16 +477,16 @@ class ComprehensiveApiIntegrationTest extends TestCase
             $endTime = microtime(true);
 
             $response->assertStatus(200);
-            
+
             $responseTime = ($endTime - $startTime) * 1000; // Convert to milliseconds
-            
+
             // Assert response time is reasonable (less than 500ms for pages, 300ms for APIs)
             $this->assertLessThan(300, $responseTime, "Endpoint {$endpoint} took {$responseTime}ms");
         }
     }
 
     /**
-     * Test security headers across all endpoints
+     * Test security headers across all endpoints.
      */
     public function test_security_headers()
     {
@@ -494,7 +498,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
             '/api/auth/me',
             '/api/dashboard/data',
             '/api/cache/stats',
-            '/api/websocket/info'
+            '/api/websocket/info',
         ];
 
         foreach ($endpoints as $endpoint) {

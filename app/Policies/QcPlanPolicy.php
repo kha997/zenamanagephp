@@ -2,8 +2,8 @@
 
 namespace App\Policies;
 
-use App\Models\User;
 use App\Models\QcPlan;
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class QcPlanPolicy
@@ -17,7 +17,10 @@ class QcPlanPolicy
 
     public function view(User $user, QcPlan $qcPlan)
     {
-        if ($user->tenant_id !== $qcPlan->tenant_id) return false;
+        if ($user->tenant_id !== $qcPlan->tenant_id) {
+            return false;
+        }
+
         return $user->hasRole(['super_admin', 'admin', 'pm', 'designer', 'engineer']);
     }
 
@@ -28,25 +31,37 @@ class QcPlanPolicy
 
     public function update(User $user, QcPlan $qcPlan)
     {
-        if ($user->tenant_id !== $qcPlan->tenant_id) return false;
+        if ($user->tenant_id !== $qcPlan->tenant_id) {
+            return false;
+        }
+
         return $user->id === $qcPlan->created_by || $user->hasRole(['super_admin', 'admin', 'pm']);
     }
 
     public function delete(User $user, QcPlan $qcPlan)
     {
-        if ($user->tenant_id !== $qcPlan->tenant_id) return false;
+        if ($user->tenant_id !== $qcPlan->tenant_id) {
+            return false;
+        }
+
         return $user->hasRole(['super_admin', 'admin']);
     }
 
     public function approve(User $user, QcPlan $qcPlan)
     {
-        if ($user->tenant_id !== $qcPlan->tenant_id) return false;
+        if ($user->tenant_id !== $qcPlan->tenant_id) {
+            return false;
+        }
+
         return $user->hasRole(['super_admin', 'admin', 'pm']);
     }
 
     public function execute(User $user, QcPlan $qcPlan)
     {
-        if ($user->tenant_id !== $qcPlan->tenant_id) return false;
+        if ($user->tenant_id !== $qcPlan->tenant_id) {
+            return false;
+        }
+
         return $user->hasRole(['super_admin', 'admin', 'pm', 'designer', 'engineer']);
     }
 }

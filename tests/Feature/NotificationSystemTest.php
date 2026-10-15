@@ -3,19 +3,17 @@
 namespace Tests\Feature;
 
 use App\Models\Notification;
-use App\Models\User;
-use App\Models\Tenant;
 use App\Models\Project;
 use App\Models\Task;
-use App\Services\NotificationService;
-use Tests\TestCase;
+use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
 
 /**
- * Test Notification System
- * 
+ * Test Notification System.
+ *
  * Kịch bản: Test hệ thống thông báo với các chức năng chính
  * - Tạo và gửi thông báo
  * - Quản lý trạng thái đọc/chưa đọc
@@ -29,21 +27,24 @@ class NotificationSystemTest extends TestCase
     use RefreshDatabase;
 
     private $tenant;
+
     private $user;
+
     private $project;
+
     private $task;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Set cache driver to array for testing
         config(['cache.default' => 'array']);
         Cache::flush();
-        
+
         // Disable foreign key constraints for testing
         \DB::statement('PRAGMA foreign_keys=OFF;');
-        
+
         // Tạo tenant
         $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
@@ -84,7 +85,7 @@ class NotificationSystemTest extends TestCase
     }
 
     /**
-     * Test tạo notification cơ bản
+     * Test tạo notification cơ bản.
      */
     public function test_can_create_basic_notification(): void
     {
@@ -114,12 +115,12 @@ class NotificationSystemTest extends TestCase
     }
 
     /**
-     * Test tạo notification với các priority khác nhau
+     * Test tạo notification với các priority khác nhau.
      */
     public function test_can_create_notifications_with_different_priorities(): void
     {
         $priorities = ['critical', 'normal', 'low'];
-        
+
         foreach ($priorities as $priority) {
             $notification = Notification::create([
                 'user_id' => $this->user->id,
@@ -132,7 +133,7 @@ class NotificationSystemTest extends TestCase
             ]);
 
             $this->assertEquals($priority, $notification->priority);
-            
+
             if ($priority === 'critical') {
                 $this->assertTrue($notification->isCritical());
             } else {
@@ -142,12 +143,12 @@ class NotificationSystemTest extends TestCase
     }
 
     /**
-     * Test tạo notification với các channel khác nhau
+     * Test tạo notification với các channel khác nhau.
      */
     public function test_can_create_notifications_with_different_channels(): void
     {
         $channels = ['inapp', 'email', 'webhook'];
-        
+
         foreach ($channels as $channel) {
             $notification = Notification::create([
                 'user_id' => $this->user->id,
@@ -166,7 +167,7 @@ class NotificationSystemTest extends TestCase
     }
 
     /**
-     * Test đánh dấu notification là đã đọc
+     * Test đánh dấu notification là đã đọc.
      */
     public function test_can_mark_notification_as_read(): void
     {
@@ -181,17 +182,17 @@ class NotificationSystemTest extends TestCase
         ]);
 
         $this->assertFalse($notification->isRead());
-        
+
         $result = $notification->markAsRead();
         $this->assertTrue($result);
-        
+
         $notification->refresh();
         $this->assertTrue($notification->isRead());
         $this->assertNotNull($notification->read_at);
     }
 
     /**
-     * Test đánh dấu notification là chưa đọc
+     * Test đánh dấu notification là chưa đọc.
      */
     public function test_can_mark_notification_as_unread(): void
     {
@@ -207,17 +208,17 @@ class NotificationSystemTest extends TestCase
         ]);
 
         $this->assertTrue($notification->isRead());
-        
+
         $result = $notification->markAsUnread();
         $this->assertTrue($result);
-        
+
         $notification->refresh();
         $this->assertFalse($notification->isRead());
         $this->assertNull($notification->read_at);
     }
 
     /**
-     * Test lấy số lượng notification chưa đọc
+     * Test lấy số lượng notification chưa đọc.
      */
     public function test_can_get_unread_notification_count(): void
     {
@@ -240,7 +241,7 @@ class NotificationSystemTest extends TestCase
     }
 
     /**
-     * Test đánh dấu tất cả notifications là đã đọc
+     * Test đánh dấu tất cả notifications là đã đọc.
      */
     public function test_can_mark_all_notifications_as_read(): void
     {
@@ -265,7 +266,7 @@ class NotificationSystemTest extends TestCase
     }
 
     /**
-     * Test lọc notifications theo user
+     * Test lọc notifications theo user.
      */
     public function test_can_filter_notifications_by_user(): void
     {
@@ -317,12 +318,12 @@ class NotificationSystemTest extends TestCase
     }
 
     /**
-     * Test lọc notifications theo priority
+     * Test lọc notifications theo priority.
      */
     public function test_can_filter_notifications_by_priority(): void
     {
         $priorities = ['critical', 'normal', 'low'];
-        
+
         foreach ($priorities as $priority) {
             Notification::create([
                 'user_id' => $this->user->id,
@@ -345,12 +346,12 @@ class NotificationSystemTest extends TestCase
     }
 
     /**
-     * Test lọc notifications theo channel
+     * Test lọc notifications theo channel.
      */
     public function test_can_filter_notifications_by_channel(): void
     {
         $channels = ['inapp', 'email', 'webhook'];
-        
+
         foreach ($channels as $channel) {
             Notification::create([
                 'user_id' => $this->user->id,
@@ -373,7 +374,7 @@ class NotificationSystemTest extends TestCase
     }
 
     /**
-     * Test lọc notifications theo trạng thái đọc/chưa đọc
+     * Test lọc notifications theo trạng thái đọc/chưa đọc.
      */
     public function test_can_filter_notifications_by_read_status(): void
     {
@@ -407,12 +408,12 @@ class NotificationSystemTest extends TestCase
     }
 
     /**
-     * Test sắp xếp notifications theo priority
+     * Test sắp xếp notifications theo priority.
      */
     public function test_can_order_notifications_by_priority(): void
     {
         $priorities = ['low', 'normal', 'critical'];
-        
+
         foreach ($priorities as $priority) {
             Notification::create([
                 'user_id' => $this->user->id,
@@ -426,14 +427,14 @@ class NotificationSystemTest extends TestCase
         }
 
         $orderedNotifications = Notification::orderByPriority()->get();
-        
+
         $this->assertEquals('critical', $orderedNotifications->first()->priority);
         $this->assertEquals('normal', $orderedNotifications->skip(1)->first()->priority);
         $this->assertEquals('low', $orderedNotifications->last()->priority);
     }
 
     /**
-     * Test multi-tenant isolation
+     * Test multi-tenant isolation.
      */
     public function test_notifications_are_isolated_by_tenant(): void
     {
@@ -486,7 +487,7 @@ class NotificationSystemTest extends TestCase
     }
 
     /**
-     * Test notification với metadata và data
+     * Test notification với metadata và data.
      */
     public function test_can_create_notification_with_metadata_and_data(): void
     {
@@ -525,7 +526,7 @@ class NotificationSystemTest extends TestCase
     }
 
     /**
-     * Test cleanup old notifications
+     * Test cleanup old notifications.
      */
     public function test_can_cleanup_old_notifications(): void
     {
@@ -565,7 +566,7 @@ class NotificationSystemTest extends TestCase
     }
 
     /**
-     * Test bulk notification creation
+     * Test bulk notification creation.
      */
     public function test_can_create_bulk_notifications(): void
     {

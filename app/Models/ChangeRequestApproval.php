@@ -1,14 +1,15 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * ChangeRequestApproval Model - Multi-level approvals for change requests
- * 
+ * ChangeRequestApproval Model - Multi-level approvals for change requests.
+ *
  * @property string $id ULID primary key
  * @property string $change_request_id ID change request (ULID)
  * @property string $user_id ID người phê duyệt (ULID)
@@ -21,7 +22,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class ChangeRequestApproval extends Model
 {
-
     protected $fillable = [
         'id',
         'change_request_id',
@@ -41,7 +41,7 @@ class ChangeRequestApproval extends Model
     ];
 
     /**
-     * Relationship: Approval belongs to change request
+     * Relationship: Approval belongs to change request.
      */
     public function changeRequest(): BelongsTo
     {
@@ -49,7 +49,7 @@ class ChangeRequestApproval extends Model
     }
 
     /**
-     * Relationship: Approval belongs to user
+     * Relationship: Approval belongs to user.
      */
     public function user(): BelongsTo
     {
@@ -57,7 +57,7 @@ class ChangeRequestApproval extends Model
     }
 
     /**
-     * Approve this level
+     * Approve this level.
      */
     public function approve(string $comments = null): bool
     {
@@ -69,7 +69,7 @@ class ChangeRequestApproval extends Model
     }
 
     /**
-     * Reject this level
+     * Reject this level.
      */
     public function reject(string $comments): bool
     {
@@ -80,7 +80,7 @@ class ChangeRequestApproval extends Model
     }
 
     /**
-     * Check if approved
+     * Check if approved.
      */
     public function isApproved(): bool
     {
@@ -88,7 +88,7 @@ class ChangeRequestApproval extends Model
     }
 
     /**
-     * Check if rejected
+     * Check if rejected.
      */
     public function isRejected(): bool
     {
@@ -96,7 +96,7 @@ class ChangeRequestApproval extends Model
     }
 
     /**
-     * Check if pending
+     * Check if pending.
      */
     public function isPending(): bool
     {

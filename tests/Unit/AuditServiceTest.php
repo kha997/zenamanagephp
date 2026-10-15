@@ -1,38 +1,41 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Src\Common\Services\AuditService;
-use App\Models\User;
-use App\Models\Tenant;
 use App\Models\Project;
-use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Auth;
+use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Src\Common\Services\AuditService;
+use Tests\TestCase;
 
 /**
- * Unit tests cho AuditService
+ * Unit tests cho AuditService.
  */
 class AuditServiceTest extends TestCase
 {
     use RefreshDatabase;
 
     private AuditService $auditService;
+
     private User $user;
+
     private Project $project;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Mock Auth facade to prevent request errors
         $mockRequest = Request::create('/test', 'GET');
         Auth::setRequest($mockRequest);
-        
+
         $this->auditService = new AuditService();
-        
+
         $tenant = Tenant::factory()->create();
         $this->user = User::factory()->create(['tenant_id' => $tenant->id]);
         $this->project = Project::create([
@@ -42,12 +45,12 @@ class AuditServiceTest extends TestCase
             'description' => 'Test project for audit service',
             'status' => 'active',
             'progress' => 50,
-            'budget_total' => 100000
+            'budget_total' => 100000,
         ]);
     }
 
     /**
-     * Test logging user actions
+     * Test logging user actions.
      */
     public function test_log_user_action(): void
     {
@@ -58,9 +61,9 @@ class AuditServiceTest extends TestCase
             'old_values' => null,
             'new_values' => $this->project->toArray(),
             'ip_address' => '192.168.1.1',
-            'user_agent' => 'Test Browser'
+            'user_agent' => 'Test Browser',
         ];
-        
+
         $auditLog = $this->auditService->logAction(
             $this->user->id,
             $actionData['action'],
@@ -71,23 +74,23 @@ class AuditServiceTest extends TestCase
             $actionData['ip_address'],
             $actionData['user_agent']
         );
-        
+
         $this->assertNotNull($auditLog);
         $this->assertEquals($this->user->id, $auditLog->user_id);
         $this->assertEquals('project.created', $auditLog->action);
         $this->assertEquals('project', $auditLog->entity_type);
         $this->assertEquals($this->project->id, $auditLog->entity_id);
-        
+
         $this->assertDatabaseHas('audit_logs', [
             'user_id' => $this->user->id,
             'action' => 'project.created',
             'entity_type' => 'project',
-            'entity_id' => $this->project->id
+            'entity_id' => $this->project->id,
         ]);
     }
 
     /**
-     * Test audit trail query
+     * Test audit trail query.
      */
     public function test_audit_trail_query(): void
     {
@@ -98,7 +101,7 @@ class AuditServiceTest extends TestCase
             'project',
             $this->project->id
         );
-        
+
         $this->auditService->logAction(
             $this->user->id,
             'project.updated',
@@ -107,20 +110,20 @@ class AuditServiceTest extends TestCase
             ['name' => 'Old Name'],
             ['name' => 'New Name']
         );
-        
+
         // Query audit trail
         $auditTrail = $this->auditService->getAuditTrail(
             'project',
             $this->project->id
         );
-        
+
         $this->assertEquals(2, $auditTrail->count());
         $this->assertEquals('project.updated', $auditTrail->first()->action);
         $this->assertEquals('project.created', $auditTrail->last()->action);
     }
 
     /**
-     * Test sensitive data filtering
+     * Test sensitive data filtering.
      */
     public function test_sensitive_data_filtering(): void
     {
@@ -129,11 +132,11 @@ class AuditServiceTest extends TestCase
             'email' => 'john@example.com',
             'password' => 'secret123',
             'api_key' => 'sk_test_123456',
-            'credit_card' => '4111-1111-1111-1111'
+            'credit_card' => '4111-1111-1111-1111',
         ];
-        
+
         $filtered = $this->auditService->filterSensitiveData($sensitiveData);
-        
+
         $this->assertEquals('John Doe', $filtered['name']);
         $this->assertEquals('john@example.com', $filtered['email']);
         $this->assertEquals('[FILTERED]', $filtered['password']);
@@ -142,7 +145,7 @@ class AuditServiceTest extends TestCase
     }
 
     /**
-     * Test audit log retention policy
+     * Test audit log retention policy.
      */
     public function test_audit_log_retention_policy(): void
     {
@@ -153,11 +156,11 @@ class AuditServiceTest extends TestCase
             'test',
             'test_id'
         );
-        
+
         // Manually set created_at to old date
         $oldLog->created_at = now()->subYears(3);
         $oldLog->save();
-        
+
         // Tạo recent log
         $recentLog = $this->auditService->logAction(
             $this->user->id,
@@ -165,10 +168,10 @@ class AuditServiceTest extends TestCase
             'test',
             'test_id'
         );
-        
+
         // Run cleanup (retention period: 2 years)
         $deletedCount = $this->auditService->cleanupOldLogs(2);
-        
+
         $this->assertEquals(1, $deletedCount);
         $this->assertDatabaseMissing('audit_logs', ['id' => $oldLog->id]);
         $this->assertDatabaseHas('audit_logs', ['id' => $recentLog->id]);

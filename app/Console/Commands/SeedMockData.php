@@ -27,11 +27,12 @@ class SeedMockData extends Command
     public function handle()
     {
         $this->info('🚀 Starting Mock Data Seeding Process...');
-        
+
         if ($this->option('fresh')) {
             $this->warn('⚠️  Fresh mode enabled - this will clear existing data!');
             if (!$this->confirm('Are you sure you want to proceed?')) {
                 $this->info('❌ Operation cancelled.');
+
                 return;
             }
         }
@@ -51,7 +52,6 @@ class SeedMockData extends Command
             $this->info('   - Admin Dashboard: http://localhost:8000/admin');
             $this->info('');
             $this->info('🧹 To clean up after testing, run: php artisan mock:clean');
-
         } catch (\Exception $e) {
             $this->error('❌ Error seeding mock data: ' . $e->getMessage());
             $this->error('Stack trace: ' . $e->getTraceAsString());

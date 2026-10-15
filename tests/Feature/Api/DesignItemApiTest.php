@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
@@ -18,9 +20,13 @@ class DesignItemApiTest extends TestCase
     use TenantUserFactoryTrait;
 
     private Tenant $tenantA;
+
     private Tenant $tenantB;
+
     private User $userA;
+
     private User $userB;
+
     private Project $projectA;
 
     protected function setUp(): void

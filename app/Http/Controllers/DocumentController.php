@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
@@ -8,9 +10,7 @@ use Src\DocumentManagement\Resources\DocumentResource;
 use Src\Foundation\Utils\JSendResponse;
 
 /**
- * Controller xử lý các hoạt động CRUD cho Document
- * 
- * @package Src\DocumentManagement\Controllers
+ * Controller xử lý các hoạt động CRUD cho Document.
  */
 class DocumentController
 {
@@ -22,8 +22,8 @@ class DocumentController
     }
 
     /**
-     * Lấy ID người dùng hiện tại một cách an toàn
-     * 
+     * Lấy ID người dùng hiện tại một cách an toàn.
+     *
      * @param Request $request
      * @return string
      */
@@ -38,7 +38,7 @@ class DocumentController
     }
 
     /**
-     * Lấy danh sách documents theo project
+     * Lấy danh sách documents theo project.
      *
      * @param Request $request
      * @return JsonResponse
@@ -55,13 +55,13 @@ class DocumentController
                 'entity_type' => $request->get('entity_type'),
                 'entity_id' => $request->get('entity_id'),
                 'visibility' => $request->get('visibility'),
-                'client_approved' => $request->get('client_approved')
+                'client_approved' => $request->get('client_approved'),
             ];
 
             $documents = $this->documentService->getDocumentsByProject($projectId, $filters);
 
             return JSendResponse::success([
-                'documents' => new DocumentCollection($documents)
+                'documents' => new DocumentCollection($documents),
             ]);
         } catch (\Exception $e) {
             return JSendResponse::error('Failed to retrieve documents: ' . $e->getMessage(), 500);
@@ -69,7 +69,7 @@ class DocumentController
     }
 
     /**
-     * Lấy thông tin chi tiết document
+     * Lấy thông tin chi tiết document.
      *
      * @param string $id
      * @return JsonResponse
@@ -78,13 +78,13 @@ class DocumentController
     {
         try {
             $document = $this->documentService->getDocumentById($id);
-            
+
             if (!$document) {
                 return JSendResponse::error('Document not found', 404);
             }
 
             return JSendResponse::success([
-                'document' => new DocumentResource($document)
+                'document' => new DocumentResource($document),
             ]);
         } catch (\Exception $e) {
             return JSendResponse::error('Failed to retrieve document: ' . $e->getMessage(), 500);
@@ -92,7 +92,7 @@ class DocumentController
     }
 
     /**
-     * Tạo document mới
+     * Tạo document mới.
      *
      * @param StoreDocumentRequest $request
      * @return JsonResponse
@@ -105,9 +105,9 @@ class DocumentController
                 $request->file('file'),
                 $request->user('api')->id  // Sửa từ $request->user()->id
             );
-    
+
             return JSendResponse::success([
-                'document' => new DocumentResource($document)
+                'document' => new DocumentResource($document),
             ], 'Document created successfully', 201);
         } catch (\Exception $e) {
             return JSendResponse::error('Failed to create document: ' . $e->getMessage(), 500);
@@ -115,7 +115,7 @@ class DocumentController
     }
 
     /**
-     * Cập nhật thông tin document
+     * Cập nhật thông tin document.
      *
      * @param UpdateDocumentRequest $request
      * @param string $id
@@ -129,13 +129,13 @@ class DocumentController
                 $request->validated(),
                 $request->user('api')->id  // Sửa từ $request->user()->id
             );
-    
+
             if (!$document) {
                 return JSendResponse::error('Document not found', 404);
             }
-    
+
             return JSendResponse::success([
-                'document' => new DocumentResource($document)
+                'document' => new DocumentResource($document),
             ], 'Document updated successfully');
         } catch (\Exception $e) {
             return JSendResponse::error('Failed to update document: ' . $e->getMessage(), 500);
@@ -143,7 +143,7 @@ class DocumentController
     }
 
     /**
-     * Xóa document
+     * Xóa document.
      *
      * @param Request $request
      * @param string $id
@@ -153,7 +153,7 @@ class DocumentController
     {
         try {
             $result = $this->documentService->deleteDocument($id, $this->getUserId($request));
-            
+
             if (!$result) {
                 return JSendResponse::error('Document not found', 404);
             }
@@ -165,7 +165,7 @@ class DocumentController
     }
 
     /**
-     * Tạo version mới cho document
+     * Tạo version mới cho document.
      *
      * @param Request $request
      * @param string $id
@@ -176,7 +176,7 @@ class DocumentController
         try {
             $request->validate([
                 'file' => 'required|file|max:10240', // 10MB
-                'comment' => 'nullable|string|max:500'
+                'comment' => 'nullable|string|max:500',
             ]);
 
             $version = $this->documentService->createNewVersion(
@@ -191,7 +191,7 @@ class DocumentController
             }
 
             return JSendResponse::success([
-                'version' => $version
+                'version' => $version,
             ], 'New version created successfully', 201);
         } catch (\Exception $e) {
             return JSendResponse::error('Failed to create version: ' . $e->getMessage(), 500);
@@ -199,7 +199,7 @@ class DocumentController
     }
 
     /**
-     * Revert document về version cũ
+     * Revert document về version cũ.
      *
      * @param Request $request
      * @param string $id
@@ -210,7 +210,7 @@ class DocumentController
         try {
             $request->validate([
                 'version_number' => 'required|integer|min:1',
-                'comment' => 'nullable|string|max:500'
+                'comment' => 'nullable|string|max:500',
             ]);
 
             $version = $this->documentService->revertToVersion(
@@ -225,7 +225,7 @@ class DocumentController
             }
 
             return JSendResponse::success([
-                'version' => $version
+                'version' => $version,
             ], 'Document reverted successfully');
         } catch (\Exception $e) {
             return JSendResponse::error('Failed to revert document: ' . $e->getMessage(), 500);
@@ -233,7 +233,7 @@ class DocumentController
     }
 
     /**
-     * Phê duyệt document cho client
+     * Phê duyệt document cho client.
      *
      * @param Request $request
      * @param string $id
@@ -243,13 +243,13 @@ class DocumentController
     {
         try {
             $document = $this->documentService->approveForClient($id, $this->getUserId($request));
-            
+
             if (!$document) {
                 return JSendResponse::error('Document not found', 404);
             }
 
             return JSendResponse::success([
-                'document' => new DocumentResource($document)
+                'document' => new DocumentResource($document),
             ], 'Document approved for client successfully');
         } catch (\Exception $e) {
             return JSendResponse::error('Failed to approve document: ' . $e->getMessage(), 500);
@@ -257,7 +257,7 @@ class DocumentController
     }
 
     /**
-     * Download file của document version
+     * Download file của document version.
      *
      * @param string $documentId
      * @param int $versionNumber
@@ -273,7 +273,7 @@ class DocumentController
     }
 
     /**
-     * Lấy thống kê documents theo project
+     * Lấy thống kê documents theo project.
      *
      * @param string $projectId
      * @return JsonResponse
@@ -284,7 +284,7 @@ class DocumentController
             $stats = $this->documentService->getDocumentStatistics($projectId);
 
             return JSendResponse::success([
-                'statistics' => $stats
+                'statistics' => $stats,
             ]);
         } catch (\Exception $e) {
             return JSendResponse::error('Failed to get statistics: ' . $e->getMessage(), 500);

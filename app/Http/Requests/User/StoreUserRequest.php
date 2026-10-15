@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests\User;
 
@@ -6,7 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Password;
 
 /**
- * Form Request để validate dữ liệu tạo user mới
+ * Form Request để validate dữ liệu tạo user mới.
  */
 class StoreUserRequest extends FormRequest
 {
@@ -27,17 +29,17 @@ class StoreUserRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'unique:users,email', 'max:255'],
             'password' => [
-                'required', 
-                'string', 
+                'required',
+                'string',
                 Password::min(8)
                     ->letters()
                     ->mixedCase()
                     ->numbers()
                     ->symbols()
                     ->uncompromised(),
-                'confirmed'
+                'confirmed',
             ],
-            'tenant_id' => ['required', 'exists:tenants,id']
+            'tenant_id' => ['required', 'exists:tenants,id'],
         ];
     }
 
@@ -59,7 +61,7 @@ class StoreUserRequest extends FormRequest
             'password.uncompromised' => 'Mật khẩu này đã bị lộ trong các vụ rò rỉ dữ liệu',
             'password.confirmed' => 'Xác nhận mật khẩu không khớp',
             'tenant_id.required' => 'Tenant ID là bắt buộc',
-            'tenant_id.exists' => 'Tenant không tồn tại'
+            'tenant_id.exists' => 'Tenant không tồn tại',
         ];
     }
 }

@@ -7,7 +7,7 @@ class NotificationService
     protected static array $notifications = [];
 
     /**
-     * Add a notification
+     * Add a notification.
      */
     public static function add(string $type, string $title, string $message, bool $dismissible = true): void
     {
@@ -16,12 +16,12 @@ class NotificationService
             'title' => $title,
             'message' => $message,
             'dismissible' => $dismissible,
-            'id' => uniqid('notif_')
+            'id' => uniqid('notif_'),
         ];
     }
 
     /**
-     * Add info notification
+     * Add info notification.
      */
     public static function info(string $title, string $message, bool $dismissible = true): void
     {
@@ -29,7 +29,7 @@ class NotificationService
     }
 
     /**
-     * Add success notification
+     * Add success notification.
      */
     public static function success(string $title, string $message, bool $dismissible = true): void
     {
@@ -37,7 +37,7 @@ class NotificationService
     }
 
     /**
-     * Add warning notification
+     * Add warning notification.
      */
     public static function warning(string $title, string $message, bool $dismissible = true): void
     {
@@ -45,7 +45,7 @@ class NotificationService
     }
 
     /**
-     * Add error notification
+     * Add error notification.
      */
     public static function error(string $title, string $message, bool $dismissible = true): void
     {
@@ -53,7 +53,7 @@ class NotificationService
     }
 
     /**
-     * Get all notifications
+     * Get all notifications.
      */
     public static function getAll(): array
     {
@@ -61,7 +61,7 @@ class NotificationService
     }
 
     /**
-     * Clear all notifications
+     * Clear all notifications.
      */
     public static function clear(): void
     {
@@ -69,7 +69,7 @@ class NotificationService
     }
 
     /**
-     * Get notifications for specific user context
+     * Get notifications for specific user context.
      */
     public static function getUserNotifications($user = null): array
     {
@@ -92,16 +92,16 @@ class NotificationService
     }
 
     /**
-     * Add system-wide notifications
+     * Add system-wide notifications.
      */
     public static function addSystemNotifications(): void
     {
         // System maintenance notifications
         static::add('warning', 'System Maintenance', 'Scheduled maintenance on Sunday 2:00 AM - 4:00 AM');
-        
+
         // Feature announcements
         static::add('info', 'New Feature', 'Quick Actions has been updated with new project templates');
-        
+
         // Tips and hints
         static::add('info', 'Tip', 'Use keyboard shortcuts (Ctrl+N) to create new projects faster');
     }

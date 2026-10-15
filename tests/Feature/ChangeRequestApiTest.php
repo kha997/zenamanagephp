@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
@@ -22,13 +24,19 @@ use Tests\Traits\SchemaAwareChangeRequestAssertions;
 
 class ChangeRequestApiTest extends TestCase
 {
-    use RefreshDatabase, WithFaker, AuthenticationTestTrait;
+    use RefreshDatabase;
+    use WithFaker;
+    use AuthenticationTestTrait;
     use SchemaAwareChangeRequestAssertions;
 
     protected Tenant $tenant;
+
     protected Project $project;
+
     protected User $user;
+
     protected array $headers = [];
+
     protected ?string $token = null;
 
     protected function setUp(): void
@@ -50,7 +58,7 @@ class ChangeRequestApiTest extends TestCase
 
     private function ensureChangeRequestPermissions(array $permissionCodes = null): void
     {
-        $permissionCodes = $permissionCodes ?? [
+        $permissionCodes ??= [
             'change-request.create',
             'change-request.view',
             'change-request.update',
@@ -87,7 +95,7 @@ class ChangeRequestApiTest extends TestCase
     }
 
     /**
-     * Test create change request
+     * Test create change request.
      */
     public function test_can_create_change_request()
     {
@@ -101,7 +109,7 @@ class ChangeRequestApiTest extends TestCase
             'schedule_impact_days' => 7,
             'priority' => 'medium',
             'justification' => 'Reduce long-term maintenance costs',
-            'alternatives_considered' => 'Maintain current finishing or use porcelain instead'
+            'alternatives_considered' => 'Maintain current finishing or use porcelain instead',
         ];
 
         $response = $this->withHeaders($this->headers)
@@ -119,12 +127,12 @@ class ChangeRequestApiTest extends TestCase
             'title' => $payload['title'],
             'project_id' => $this->project->id,
             'tenant_id' => $this->tenant->id,
-            'status' => 'draft'
+            'status' => 'draft',
         ]);
     }
 
     /**
-     * Test get all change requests
+     * Test get all change requests.
      */
     public function test_can_get_all_change_requests()
     {
@@ -150,13 +158,13 @@ class ChangeRequestApiTest extends TestCase
                              'per_page',
                              'total',
                              'last_page',
-                         ]
-                     ]
+                         ],
+                     ],
                  ]);
     }
 
     /**
-     * Test submit change request for approval
+     * Test submit change request for approval.
      */
     public function test_can_submit_change_request_for_approval()
     {
@@ -167,7 +175,7 @@ class ChangeRequestApiTest extends TestCase
             'project_id' => $this->project->id,
             'requested_by' => $this->user->id,
             'assigned_to' => $approver->id,
-            'status' => 'draft'
+            'status' => 'draft',
         ]);
 
         $response = $this->withHeaders($this->headers)
@@ -182,7 +190,7 @@ class ChangeRequestApiTest extends TestCase
         $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,
             'tenant_id' => $this->tenant->id,
-            'status' => 'submitted'
+            'status' => 'submitted',
         ]);
 
         $this->assertSame(1, Notification::query()
@@ -194,7 +202,7 @@ class ChangeRequestApiTest extends TestCase
     }
 
     /**
-     * Test approve change request
+     * Test approve change request.
      */
     public function test_can_approve_change_request()
     {
@@ -204,7 +212,7 @@ class ChangeRequestApiTest extends TestCase
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'requested_by' => $requester->id,
-            'status' => 'submitted'
+            'status' => 'submitted',
         ]);
 
         $payload = [
@@ -240,7 +248,7 @@ class ChangeRequestApiTest extends TestCase
     }
 
     /**
-     * Test reject change request
+     * Test reject change request.
      */
     public function test_can_reject_change_request()
     {
@@ -250,12 +258,12 @@ class ChangeRequestApiTest extends TestCase
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'requested_by' => $requester->id,
-            'status' => 'submitted'
+            'status' => 'submitted',
         ]);
 
         $payload = [
             'rejection_reason' => 'Budget constraints',
-            'rejection_comments' => 'Cannot absorb this cost this quarter'
+            'rejection_comments' => 'Cannot absorb this cost this quarter',
         ];
 
         $response = $this->withHeaders($this->headers)
@@ -276,7 +284,7 @@ class ChangeRequestApiTest extends TestCase
             'tenant_id' => $this->tenant->id,
             'status' => 'rejected',
             'rejection_reason' => $payload['rejection_reason'],
-            'rejected_by' => $this->user->id
+            'rejected_by' => $this->user->id,
         ]);
 
         $this->assertSame(1, Notification::query()
@@ -288,7 +296,7 @@ class ChangeRequestApiTest extends TestCase
     }
 
     /**
-     * Test validation errors
+     * Test validation errors.
      */
     public function test_create_change_request_validation_errors()
     {
@@ -316,7 +324,7 @@ class ChangeRequestApiTest extends TestCase
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'requested_by' => $this->user->id,
-            'status' => 'submitted'
+            'status' => 'submitted',
         ]);
 
         $response = $this->withHeaders($this->headers)
@@ -325,7 +333,7 @@ class ChangeRequestApiTest extends TestCase
         $response->assertStatus(400)
                  ->assertJson([
                      'status' => 'error',
-                     'message' => 'Only draft change requests can be submitted'
+                     'message' => 'Only draft change requests can be submitted',
                  ]);
     }
 

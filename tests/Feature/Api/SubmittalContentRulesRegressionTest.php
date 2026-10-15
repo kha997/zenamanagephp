@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
@@ -17,7 +19,9 @@ class SubmittalContentRulesRegressionTest extends TestCase
     use RouteNameTrait;
 
     private User $user;
+
     private Submittal $submittal;
+
     private array $authHeaders;
 
     protected function setUp(): void

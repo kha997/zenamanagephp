@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Collection;
 class TaskRepository
 {
     /**
-     * Get all tasks
+     * Get all tasks.
      */
     public function getAll(): Collection
     {
@@ -16,7 +16,7 @@ class TaskRepository
     }
 
     /**
-     * Get task by ID
+     * Get task by ID.
      */
     public function getById(int $id): ?Task
     {
@@ -24,7 +24,7 @@ class TaskRepository
     }
 
     /**
-     * Create new task
+     * Create new task.
      */
     public function create(array $data): Task
     {
@@ -32,7 +32,7 @@ class TaskRepository
     }
 
     /**
-     * Update task
+     * Update task.
      */
     public function update(int $id, array $data): bool
     {
@@ -40,12 +40,12 @@ class TaskRepository
         if (!$task) {
             return false;
         }
-        
+
         return $task->update($data);
     }
 
     /**
-     * Delete task
+     * Delete task.
      */
     public function delete(int $id): bool
     {
@@ -53,7 +53,7 @@ class TaskRepository
         if (!$task) {
             return false;
         }
-        
+
         return $task->delete();
     }
 }

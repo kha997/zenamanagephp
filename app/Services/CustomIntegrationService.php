@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -7,7 +9,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
- * CustomIntegrationService - Service cho custom integrations
+ * CustomIntegrationService - Service cho custom integrations.
  */
 class CustomIntegrationService
 {
@@ -25,13 +27,13 @@ class CustomIntegrationService
             'allowed_domains' => config('integrations.custom.allowed_domains', []),
             'rate_limit' => [
                 'requests_per_minute' => 60,
-                'requests_per_hour' => 1000
-            ]
+                'requests_per_hour' => 1000,
+            ],
         ];
     }
 
     /**
-     * Create custom integration
+     * Create custom integration.
      */
     public function createIntegration(array $config): array
     {
@@ -46,7 +48,7 @@ class CustomIntegrationService
                 'secret' => $this->generateSecret(),
                 'status' => 'active',
                 'created_at' => now()->toISOString(),
-                'created_by' => $config['user_id'] ?? null
+                'created_by' => $config['user_id'] ?? null,
             ];
 
             // Store integration
@@ -54,30 +56,29 @@ class CustomIntegrationService
 
             return [
                 'success' => true,
-                'integration' => $integration
+                'integration' => $integration,
             ];
-
         } catch (\Exception $e) {
             Log::error('Failed to create custom integration', [
                 'config' => $config,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
 
     /**
-     * Update custom integration
+     * Update custom integration.
      */
     public function updateIntegration(string $integrationId, array $updates): array
     {
         try {
             $integration = $this->getIntegration($integrationId);
-            
+
             if (!$integration) {
                 return ['success' => false, 'error' => 'Integration not found'];
             }
@@ -89,31 +90,30 @@ class CustomIntegrationService
 
             return [
                 'success' => true,
-                'integration' => $integration
+                'integration' => $integration,
             ];
-
         } catch (\Exception $e) {
             Log::error('Failed to update custom integration', [
                 'integration_id' => $integrationId,
                 'updates' => $updates,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
 
     /**
-     * Delete custom integration
+     * Delete custom integration.
      */
     public function deleteIntegration(string $integrationId): array
     {
         try {
             $integration = $this->getIntegration($integrationId);
-            
+
             if (!$integration) {
                 return ['success' => false, 'error' => 'Integration not found'];
             }
@@ -122,54 +122,54 @@ class CustomIntegrationService
 
             return [
                 'success' => true,
-                'message' => 'Integration deleted successfully'
+                'message' => 'Integration deleted successfully',
             ];
-
         } catch (\Exception $e) {
             Log::error('Failed to delete custom integration', [
                 'integration_id' => $integrationId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
 
     /**
-     * Get integration by ID
+     * Get integration by ID.
      */
     public function getIntegration(string $integrationId): ?array
     {
         $cacheKey = "integration_{$integrationId}";
+
         return Cache::get($cacheKey);
     }
 
     /**
-     * Get all integrations
+     * Get all integrations.
      */
     public function getAllIntegrations(string $userId = null): array
     {
         $cacheKey = 'all_integrations' . ($userId ? "_{$userId}" : '');
-        
+
         return Cache::remember($cacheKey, $this->integrationConfig['cache_ttl'], function () use ($userId) {
             return [
                 'user_id' => $userId,
-                'integrations' => []
+                'integrations' => [],
             ];
         });
     }
 
     /**
-     * Test integration
+     * Test integration.
      */
     public function testIntegration(string $integrationId): array
     {
         try {
             $integration = $this->getIntegration($integrationId);
-            
+
             if (!$integration) {
                 return ['success' => false, 'error' => 'Integration not found'];
             }
@@ -179,30 +179,29 @@ class CustomIntegrationService
             return [
                 'success' => true,
                 'test_result' => $testResult,
-                'tested_at' => now()->toISOString()
+                'tested_at' => now()->toISOString(),
             ];
-
         } catch (\Exception $e) {
             Log::error('Failed to test integration', [
                 'integration_id' => $integrationId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
 
     /**
-     * Execute integration
+     * Execute integration.
      */
     public function executeIntegration(string $integrationId, array $data): array
     {
         try {
             $integration = $this->getIntegration($integrationId);
-            
+
             if (!$integration) {
                 return ['success' => false, 'error' => 'Integration not found'];
             }
@@ -216,31 +215,30 @@ class CustomIntegrationService
             return [
                 'success' => true,
                 'result' => $result,
-                'executed_at' => now()->toISOString()
+                'executed_at' => now()->toISOString(),
             ];
-
         } catch (\Exception $e) {
             Log::error('Failed to execute integration', [
                 'integration_id' => $integrationId,
                 'data' => $data,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
 
     /**
-     * Handle webhook
+     * Handle webhook.
      */
     public function handleWebhook(string $integrationId, array $payload, array $headers = []): array
     {
         try {
             $integration = $this->getIntegration($integrationId);
-            
+
             if (!$integration) {
                 return ['success' => false, 'error' => 'Integration not found'];
             }
@@ -255,25 +253,24 @@ class CustomIntegrationService
             return [
                 'success' => true,
                 'result' => $result,
-                'processed_at' => now()->toISOString()
+                'processed_at' => now()->toISOString(),
             ];
-
         } catch (\Exception $e) {
             Log::error('Failed to handle webhook', [
                 'integration_id' => $integrationId,
                 'payload' => $payload,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
 
     /**
-     * Get integration logs
+     * Get integration logs.
      */
     public function getIntegrationLogs(string $integrationId, int $limit = 50): array
     {
@@ -283,24 +280,23 @@ class CustomIntegrationService
             return [
                 'success' => true,
                 'logs' => $logs,
-                'total' => count($logs)
+                'total' => count($logs),
             ];
-
         } catch (\Exception $e) {
             Log::error('Failed to get integration logs', [
                 'integration_id' => $integrationId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
 
     /**
-     * Get integration statistics
+     * Get integration statistics.
      */
     public function getIntegrationStatistics(string $integrationId): array
     {
@@ -309,24 +305,23 @@ class CustomIntegrationService
 
             return [
                 'success' => true,
-                'statistics' => $stats
+                'statistics' => $stats,
             ];
-
         } catch (\Exception $e) {
             Log::error('Failed to get integration statistics', [
                 'integration_id' => $integrationId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
 
     /**
-     * Helper Methods
+     * Helper Methods.
      */
     private function generateApiKey(): string
     {
@@ -376,20 +371,19 @@ class CustomIntegrationService
             $response = Http::timeout($this->integrationConfig['timeout'])
                 ->post($integration['webhook_url'], [
                     'test' => true,
-                    'timestamp' => now()->toISOString()
+                    'timestamp' => now()->toISOString(),
                 ]);
 
             return [
                 'status' => $response->successful() ? 'success' : 'failed',
                 'response_code' => $response->status(),
                 'response_time' => $response->transferStats?->getTransferTime() ?? 0,
-                'message' => $response->successful() ? 'Webhook test successful' : 'Webhook test failed'
+                'message' => $response->successful() ? 'Webhook test successful' : 'Webhook test failed',
             ];
-
         } catch (\Exception $e) {
             return [
                 'status' => 'failed',
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ];
         }
     }
@@ -406,13 +400,12 @@ class CustomIntegrationService
                 'status' => $response->successful() ? 'success' : 'failed',
                 'response_code' => $response->status(),
                 'response_time' => $response->transferStats?->getTransferTime() ?? 0,
-                'message' => $response->successful() ? 'API test successful' : 'API test failed'
+                'message' => $response->successful() ? 'API test successful' : 'API test failed',
             ];
-
         } catch (\Exception $e) {
             return [
                 'status' => 'failed',
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ];
         }
     }
@@ -430,13 +423,12 @@ class CustomIntegrationService
 
             return [
                 'status' => 'success',
-                'message' => 'Database connection successful'
+                'message' => 'Database connection successful',
             ];
-
         } catch (\Exception $e) {
             return [
                 'status' => 'failed',
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ];
         }
     }
@@ -464,13 +456,12 @@ class CustomIntegrationService
             return [
                 'success' => $response->successful(),
                 'response_code' => $response->status(),
-                'response_data' => $response->json()
+                'response_data' => $response->json(),
             ];
-
         } catch (\Exception $e) {
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
@@ -486,13 +477,12 @@ class CustomIntegrationService
             return [
                 'success' => $response->successful(),
                 'response_code' => $response->status(),
-                'response_data' => $response->json()
+                'response_data' => $response->json(),
             ];
-
         } catch (\Exception $e) {
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
@@ -512,13 +502,12 @@ class CustomIntegrationService
 
             return [
                 'success' => $result,
-                'affected_rows' => $stmt->rowCount()
+                'affected_rows' => $stmt->rowCount(),
             ];
-
         } catch (\Exception $e) {
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
@@ -527,7 +516,7 @@ class CustomIntegrationService
     {
         $signature = $headers['X-Signature'] ?? $headers['x-signature'] ?? '';
         $expectedSignature = hash_hmac('sha256', json_encode($payload), $integration['secret']);
-        
+
         return hash_equals($expectedSignature, $signature);
     }
 
@@ -537,7 +526,7 @@ class CustomIntegrationService
         return [
             'processed' => true,
             'payload_size' => strlen(json_encode($payload)),
-            'integration_id' => $integration['id']
+            'integration_id' => $integration['id'],
         ];
     }
 
@@ -554,7 +543,7 @@ class CustomIntegrationService
             'successful_executions' => 0,
             'failed_executions' => 0,
             'average_response_time' => 0,
-            'last_execution' => null
+            'last_execution' => null,
         ];
     }
 }

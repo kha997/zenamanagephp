@@ -2,19 +2,19 @@
 
 namespace App\Services;
 
+use App\Models\Tenant;
 use Carbon\Carbon;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Schema\Blueprint;
-use App\Models\Tenant;
 
 class DataRetentionService
 {
     /**
-     * Execute data retention policies
+     * Execute data retention policies.
      */
     public static function executeRetentionPolicies(string|\Stringable|null $tenantId = null, bool $dryRun = true, bool $allowSystem = false, ?Tenant $tenant = null): array
     {
@@ -22,7 +22,6 @@ class DataRetentionService
 
         // Normalize ULID/Stringable to string for downstream lookups
         $tenantId = $tenantId !== null ? (string) $tenantId : null;
-
 
         if ($tenantId && !$tenant) {
             $tenant = Tenant::where('id', $tenantId)->first();
@@ -79,7 +78,7 @@ class DataRetentionService
     }
 
     /**
-     * Execute a specific retention policy
+     * Execute a specific retention policy.
      */
     protected static function executePolicy(object $policy, ?string $tenantId, bool $dryRun, bool $allowSystem): array
     {
@@ -104,7 +103,7 @@ class DataRetentionService
     }
 
     /**
-     * Soft delete records older than cutoff date
+     * Soft delete records older than cutoff date.
      */
     protected static function softDeleteRecords(string $tableName, string $dateColumn, Carbon $cutoffDate, ?string $tenantId, bool $dryRun): array
     {
@@ -135,7 +134,7 @@ class DataRetentionService
     }
 
     /**
-     * Hard delete records older than cutoff date
+     * Hard delete records older than cutoff date.
      */
     protected static function hardDeleteRecords(string $tableName, string $dateColumn, Carbon $cutoffDate, ?string $tenantId, bool $dryRun): array
     {
@@ -165,7 +164,7 @@ class DataRetentionService
     }
 
     /**
-     * Archive records older than cutoff date
+     * Archive records older than cutoff date.
      */
     protected static function archiveRecords(object $policy, string $tableName, string $dateColumn, Carbon $cutoffDate, ?string $tenantId, bool $dryRun, bool $allowSystem): array
     {
@@ -215,7 +214,7 @@ class DataRetentionService
     }
 
     /**
-     * Create archive table
+     * Create archive table.
      */
     protected static function createArchiveTable(string $originalTable, string $archiveTable): bool
     {
@@ -406,21 +405,25 @@ class DataRetentionService
 
         if (str_contains($period, 'day')) {
             $days = (int) preg_replace('/[^0-9]/', '', $period);
+
             return now()->subDays($days);
         }
 
         if (str_contains($period, 'week')) {
             $weeks = (int) preg_replace('/[^0-9]/', '', $period);
+
             return now()->subWeeks($weeks);
         }
 
         if (str_contains($period, 'month')) {
             $months = (int) preg_replace('/[^0-9]/', '', $period);
+
             return now()->subMonths($months);
         }
 
         if (str_contains($period, 'year')) {
             $years = (int) preg_replace('/[^0-9]/', '', $period);
+
             return now()->subYears($years);
         }
 
@@ -428,7 +431,7 @@ class DataRetentionService
     }
 
     /**
-     * Get retention policy status
+     * Get retention policy status.
      */
     public static function getRetentionStatus(): array
     {
@@ -454,7 +457,7 @@ class DataRetentionService
     }
 
     /**
-     * Get count of records that would be processed
+     * Get count of records that would be processed.
      */
     protected static function getRecordsToProcess(object $policy, Carbon $cutoffDate): int
     {
@@ -475,7 +478,7 @@ class DataRetentionService
     }
 
     /**
-     * Clean up orphaned records
+     * Clean up orphaned records.
      */
     public static function cleanupOrphanedRecords(): array
     {

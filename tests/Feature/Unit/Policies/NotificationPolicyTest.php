@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Unit\Policies;
 
-use App\Models\User;
 use App\Models\Notification;
 use App\Models\Tenant;
+use App\Models\User;
 use App\Policies\NotificationPolicy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -14,30 +14,33 @@ class NotificationPolicyTest extends TestCase
     use RefreshDatabase;
 
     protected $policy;
+
     protected $tenant;
+
     protected $user;
+
     protected $notification;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->policy = new NotificationPolicy();
-        
+
         $this->tenant = Tenant::factory()->create([
             'slug' => 'test-tenant-' . uniqid(),
-            'name' => 'Test Tenant'
+            'name' => 'Test Tenant',
         ]);
-        
+
         $this->user = User::factory()->create([
             'tenant_id' => $this->tenant->id,
-            'email' => 'test@example-' . uniqid() . '.com'
+            'email' => 'test@example-' . uniqid() . '.com',
         ]);
-        
+
         $this->notification = Notification::factory()->create([
             'tenant_id' => $this->tenant->id,
             'user_id' => $this->user->id,
-            'title' => 'Test Notification'
+            'title' => 'Test Notification',
         ]);
     }
 
@@ -51,9 +54,9 @@ class NotificationPolicyTest extends TestCase
         $otherTenant = Tenant::factory()->create(['slug' => 'other-tenant-' . uniqid()]);
         $otherNotification = Notification::factory()->create([
             'tenant_id' => $otherTenant->id,
-            'user_id' => $this->user->id
+            'user_id' => $this->user->id,
         ]);
-        
+
         $this->assertFalse($this->policy->view($this->user, $otherNotification));
     }
 

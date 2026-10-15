@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Architecture;
 
@@ -105,7 +107,7 @@ class ProjectModelReferenceAllowlistTest extends TestCase
         $this->assertSame(
             [],
             $unexpected,
-            "New file(s) import Src\\CoreProject\\Models\\Project outside the allowlist: " . implode(', ', $unexpected)
+            'New file(s) import Src\\CoreProject\\Models\\Project outside the allowlist: ' . implode(', ', $unexpected)
             . ". If this is intentional, add the file to docs/architecture/project-model-reference-inventory.md first, then to this test's ALLOWED_FILES."
         );
     }

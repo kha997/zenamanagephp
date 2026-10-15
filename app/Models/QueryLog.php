@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -28,7 +30,7 @@ class QueryLog extends Model
         'is_slow',
         'is_error',
         'error_message',
-        'executed_at'
+        'executed_at',
     ];
 
     protected $casts = [
@@ -39,11 +41,11 @@ class QueryLog extends Model
         'rows_returned' => 'integer',
         'is_slow' => 'boolean',
         'is_error' => 'boolean',
-        'executed_at' => 'datetime'
+        'executed_at' => 'datetime',
     ];
 
     /**
-     * Get the user that executed the query
+     * Get the user that executed the query.
      */
     public function user(): BelongsTo
     {
@@ -51,7 +53,7 @@ class QueryLog extends Model
     }
 
     /**
-     * Scope for slow queries
+     * Scope for slow queries.
      */
     public function scopeSlow($query)
     {
@@ -59,7 +61,7 @@ class QueryLog extends Model
     }
 
     /**
-     * Scope for error queries
+     * Scope for error queries.
      */
     public function scopeErrors($query)
     {
@@ -67,7 +69,7 @@ class QueryLog extends Model
     }
 
     /**
-     * Scope for queries by type
+     * Scope for queries by type.
      */
     public function scopeByType($query, string $type)
     {
@@ -75,7 +77,7 @@ class QueryLog extends Model
     }
 
     /**
-     * Scope for queries by user
+     * Scope for queries by user.
      */
     public function scopeByUser($query, string $userId)
     {
@@ -83,7 +85,7 @@ class QueryLog extends Model
     }
 
     /**
-     * Scope for queries within time range
+     * Scope for queries within time range.
      */
     public function scopeWithinTimeRange($query, $start, $end)
     {
@@ -91,7 +93,7 @@ class QueryLog extends Model
     }
 
     /**
-     * Scope for queries with high execution time
+     * Scope for queries with high execution time.
      */
     public function scopeHighExecutionTime($query, float $threshold = 1000)
     {
@@ -99,7 +101,7 @@ class QueryLog extends Model
     }
 
     /**
-     * Get query performance statistics
+     * Get query performance statistics.
      */
     public static function getPerformanceStats($startDate = null, $endDate = null)
     {
@@ -124,12 +126,12 @@ class QueryLog extends Model
             'slowest_queries' => $query->clone()
                 ->orderBy('execution_time', 'desc')
                 ->limit(10)
-                ->get(['sql', 'execution_time', 'executed_at'])
+                ->get(['sql', 'execution_time', 'executed_at']),
         ];
     }
 
     /**
-     * Get top slow queries
+     * Get top slow queries.
      */
     public static function getTopSlowQueries(int $limit = 10)
     {
@@ -140,7 +142,7 @@ class QueryLog extends Model
     }
 
     /**
-     * Get query frequency analysis
+     * Get query frequency analysis.
      */
     public static function getQueryFrequencyAnalysis(int $limit = 20)
     {
@@ -159,7 +161,7 @@ class QueryLog extends Model
     }
 
     /**
-     * Clean up old query logs
+     * Clean up old query logs.
      */
     public static function cleanupOldLogs(int $days = 30)
     {

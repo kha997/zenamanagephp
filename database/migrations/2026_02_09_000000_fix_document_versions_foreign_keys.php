@@ -5,8 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     private const COPY_COLUMNS = [
         'id',
         'document_id',
@@ -32,6 +31,7 @@ return new class extends Migration
 
         if (Schema::getConnection()->getDriverName() === 'sqlite') {
             $this->rebuildForSqlite();
+
             return;
         }
 
@@ -65,6 +65,7 @@ return new class extends Migration
 
         if (Schema::getConnection()->getDriverName() === 'sqlite') {
             $this->rebuildForSqlite();
+
             return;
         }
 

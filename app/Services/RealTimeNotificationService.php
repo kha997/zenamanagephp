@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -8,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Pusher\Pusher;
 
 /**
- * RealTimeNotificationService - Service cho real-time notifications
+ * RealTimeNotificationService - Service cho real-time notifications.
  */
 class RealTimeNotificationService
 {
@@ -22,13 +24,13 @@ class RealTimeNotificationService
             config('broadcasting.connections.pusher.app_id'),
             [
                 'cluster' => config('broadcasting.connections.pusher.options.cluster'),
-                'useTLS' => true
+                'useTLS' => true,
             ]
         );
     }
 
     /**
-     * Send project update notification
+     * Send project update notification.
      */
     public function sendProjectUpdate(Project $project, string $updatedBy, array $changes): void
     {
@@ -40,29 +42,28 @@ class RealTimeNotificationService
                     'name' => $project->name,
                     'code' => $project->code,
                     'progress' => $project->progress,
-                    'status' => $project->status
+                    'status' => $project->status,
                 ],
                 'updated_by' => $updatedBy,
                 'changes' => $changes,
-                'timestamp' => now()->toISOString()
+                'timestamp' => now()->toISOString(),
             ];
 
             $this->broadcastToProject($project->id, 'project.updated', $data);
-            
+
             // Log activity
             ProjectActivity::logProjectUpdated($project, $updatedBy, $changes);
-            
         } catch (\Exception $e) {
             Log::error('Failed to send project update notification', [
                 'error' => $e->getMessage(),
                 'project_id' => $project->id,
-                'updated_by' => $updatedBy
+                'updated_by' => $updatedBy,
             ]);
         }
     }
 
     /**
-     * Send milestone completion notification
+     * Send milestone completion notification.
      */
     public function sendMilestoneCompleted(\App\Models\ProjectMilestone $milestone, string $completedBy): void
     {
@@ -74,33 +75,32 @@ class RealTimeNotificationService
                     'name' => $milestone->name,
                     'description' => $milestone->description,
                     'target_date' => $milestone->target_date?->toISOString(),
-                    'completed_date' => $milestone->completed_date?->toISOString()
+                    'completed_date' => $milestone->completed_date?->toISOString(),
                 ],
                 'project' => [
                     'id' => $milestone->project->id,
                     'name' => $milestone->project->name,
-                    'code' => $milestone->project->code
+                    'code' => $milestone->project->code,
                 ],
                 'completed_by' => $completedBy,
-                'timestamp' => now()->toISOString()
+                'timestamp' => now()->toISOString(),
             ];
 
             $this->broadcastToProject($milestone->project_id, 'milestone.completed', $data);
-            
+
             // Log activity
             ProjectActivity::logMilestoneCompleted($milestone, $completedBy);
-            
         } catch (\Exception $e) {
             Log::error('Failed to send milestone completion notification', [
                 'error' => $e->getMessage(),
                 'milestone_id' => $milestone->id,
-                'completed_by' => $completedBy
+                'completed_by' => $completedBy,
             ]);
         }
     }
 
     /**
-     * Send task update notification
+     * Send task update notification.
      */
     public function sendTaskUpdate(\App\Models\Task $task, string $updatedBy, array $changes): void
     {
@@ -114,34 +114,33 @@ class RealTimeNotificationService
                     'status' => $task->status,
                     'priority' => $task->priority,
                     'due_date' => $task->due_date?->toISOString(),
-                    'assigned_to' => $task->assigned_to
+                    'assigned_to' => $task->assigned_to,
                 ],
                 'project' => [
                     'id' => $task->project->id,
                     'name' => $task->project->name,
-                    'code' => $task->project->code
+                    'code' => $task->project->code,
                 ],
                 'updated_by' => $updatedBy,
                 'changes' => $changes,
-                'timestamp' => now()->toISOString()
+                'timestamp' => now()->toISOString(),
             ];
 
             $this->broadcastToProject($task->project_id, 'task.updated', $data);
-            
+
             // Log activity
             ProjectActivity::logTaskUpdated($task, $updatedBy, $changes);
-            
         } catch (\Exception $e) {
             Log::error('Failed to send task update notification', [
                 'error' => $e->getMessage(),
                 'task_id' => $task->id,
-                'updated_by' => $updatedBy
+                'updated_by' => $updatedBy,
             ]);
         }
     }
 
     /**
-     * Send team member joined notification
+     * Send team member joined notification.
      */
     public function sendTeamMemberJoined(Project $project, User $user, string $role, string $addedBy): void
     {
@@ -151,36 +150,35 @@ class RealTimeNotificationService
                 'project' => [
                     'id' => $project->id,
                     'name' => $project->name,
-                    'code' => $project->code
+                    'code' => $project->code,
                 ],
                 'user' => [
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
-                    'avatar' => $user->avatar
+                    'avatar' => $user->avatar,
                 ],
                 'role' => $role,
                 'added_by' => $addedBy,
-                'timestamp' => now()->toISOString()
+                'timestamp' => now()->toISOString(),
             ];
 
             $this->broadcastToProject($project->id, 'team.member_joined', $data);
-            
+
             // Log activity
             ProjectActivity::logTeamMemberJoined($project, $user, $role, $addedBy);
-            
         } catch (\Exception $e) {
             Log::error('Failed to send team member joined notification', [
                 'error' => $e->getMessage(),
                 'project_id' => $project->id,
                 'user_id' => $user->id,
-                'added_by' => $addedBy
+                'added_by' => $addedBy,
             ]);
         }
     }
 
     /**
-     * Send document upload notification
+     * Send document upload notification.
      */
     public function sendDocumentUploaded(\App\Models\Document $document, string $uploadedBy): void
     {
@@ -193,33 +191,32 @@ class RealTimeNotificationService
                     'description' => $document->description,
                     'document_type' => $document->document_type,
                     'file_size' => $document->file_size,
-                    'file_name' => $document->file_name
+                    'file_name' => $document->file_name,
                 ],
                 'project' => [
                     'id' => $document->project->id,
                     'name' => $document->project->name,
-                    'code' => $document->project->code
+                    'code' => $document->project->code,
                 ],
                 'uploaded_by' => $uploadedBy,
-                'timestamp' => now()->toISOString()
+                'timestamp' => now()->toISOString(),
             ];
 
             $this->broadcastToProject($document->project_id, 'document.uploaded', $data);
-            
+
             // Log activity
             ProjectActivity::logDocumentUploaded($document, $uploadedBy);
-            
         } catch (\Exception $e) {
             Log::error('Failed to send document upload notification', [
                 'error' => $e->getMessage(),
                 'document_id' => $document->id,
-                'uploaded_by' => $uploadedBy
+                'uploaded_by' => $uploadedBy,
             ]);
         }
     }
 
     /**
-     * Send project status change notification
+     * Send project status change notification.
      */
     public function sendProjectStatusChange(Project $project, string $oldStatus, string $newStatus, string $changedBy): void
     {
@@ -230,32 +227,31 @@ class RealTimeNotificationService
                     'id' => $project->id,
                     'name' => $project->name,
                     'code' => $project->code,
-                    'status' => $newStatus
+                    'status' => $newStatus,
                 ],
                 'old_status' => $oldStatus,
                 'new_status' => $newStatus,
                 'changed_by' => $changedBy,
-                'timestamp' => now()->toISOString()
+                'timestamp' => now()->toISOString(),
             ];
 
             $this->broadcastToProject($project->id, 'project.status_changed', $data);
-            
+
             // Log activity
             ProjectActivity::logProjectUpdated($project, $changedBy, [
-                'status' => ['old' => $oldStatus, 'new' => $newStatus]
+                'status' => ['old' => $oldStatus, 'new' => $newStatus],
             ]);
-            
         } catch (\Exception $e) {
             Log::error('Failed to send project status change notification', [
                 'error' => $e->getMessage(),
                 'project_id' => $project->id,
-                'changed_by' => $changedBy
+                'changed_by' => $changedBy,
             ]);
         }
     }
 
     /**
-     * Send custom notification
+     * Send custom notification.
      */
     public function sendCustomNotification(
         string $projectId,
@@ -265,7 +261,7 @@ class RealTimeNotificationService
     ): void {
         try {
             $notificationData = array_merge($data, [
-                'timestamp' => now()->toISOString()
+                'timestamp' => now()->toISOString(),
             ]);
 
             if ($userId) {
@@ -273,19 +269,18 @@ class RealTimeNotificationService
             } else {
                 $this->broadcastToProject($projectId, $event, $notificationData);
             }
-            
         } catch (\Exception $e) {
             Log::error('Failed to send custom notification', [
                 'error' => $e->getMessage(),
                 'project_id' => $projectId,
                 'event' => $event,
-                'user_id' => $userId
+                'user_id' => $userId,
             ]);
         }
     }
 
     /**
-     * Broadcast to project channel
+     * Broadcast to project channel.
      */
     private function broadcastToProject(string $projectId, string $event, array $data): void
     {
@@ -293,7 +288,7 @@ class RealTimeNotificationService
     }
 
     /**
-     * Broadcast to user channel
+     * Broadcast to user channel.
      */
     private function broadcastToUser(string $userId, string $event, array $data): void
     {
@@ -301,7 +296,7 @@ class RealTimeNotificationService
     }
 
     /**
-     * Broadcast to tenant channel
+     * Broadcast to tenant channel.
      */
     private function broadcastToTenant(string $tenantId, string $event, array $data): void
     {
@@ -309,7 +304,7 @@ class RealTimeNotificationService
     }
 
     /**
-     * Get notification history for project
+     * Get notification history for project.
      */
     public function getNotificationHistory(string $projectId, int $limit = 50): array
     {
@@ -328,22 +323,22 @@ class RealTimeNotificationService
                     'id' => $activity->user->id,
                     'name' => $activity->user->name,
                     'email' => $activity->user->email,
-                    'avatar' => $activity->user->avatar
+                    'avatar' => $activity->user->avatar,
                 ],
                 'metadata' => $activity->metadata,
                 'timestamp' => $activity->created_at->toISOString(),
-                'time_ago' => $activity->time_ago
+                'time_ago' => $activity->time_ago,
             ];
         })->toArray();
     }
 
     /**
-     * Get user notification preferences
+     * Get user notification preferences.
      */
     public function getUserNotificationPreferences(string $userId): array
     {
         $user = User::find($userId);
-        
+
         if (!$user) {
             return [];
         }
@@ -359,18 +354,18 @@ class RealTimeNotificationService
             'status_changes' => true,
             'email_notifications' => true,
             'push_notifications' => true,
-            'real_time_updates' => true
+            'real_time_updates' => true,
         ], $preferences);
     }
 
     /**
-     * Update user notification preferences
+     * Update user notification preferences.
      */
     public function updateUserNotificationPreferences(string $userId, array $preferences): bool
     {
         try {
             $user = User::find($userId);
-            
+
             if (!$user) {
                 return false;
             }
@@ -382,22 +377,21 @@ class RealTimeNotificationService
             );
 
             $user->update(['preferences' => $currentPreferences]);
-            
+
             return true;
-            
         } catch (\Exception $e) {
             Log::error('Failed to update user notification preferences', [
                 'error' => $e->getMessage(),
                 'user_id' => $userId,
-                'preferences' => $preferences
+                'preferences' => $preferences,
             ]);
-            
+
             return false;
         }
     }
 
     /**
-     * Send bulk notification to project team
+     * Send bulk notification to project team.
      */
     public function sendBulkNotificationToTeam(
         Project $project,
@@ -413,12 +407,11 @@ class RealTimeNotificationService
             foreach ($teamMembers as $member) {
                 $this->broadcastToUser($member->user_id, $event, $data);
             }
-            
         } catch (\Exception $e) {
             Log::error('Failed to send bulk notification to team', [
                 'error' => $e->getMessage(),
                 'project_id' => $project->id,
-                'event' => $event
+                'event' => $event,
             ]);
         }
     }

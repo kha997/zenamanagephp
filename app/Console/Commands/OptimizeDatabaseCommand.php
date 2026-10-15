@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Console\Commands;
 
@@ -8,11 +10,12 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Command để tối ưu hóa database
+ * Command để tối ưu hóa database.
  */
 class OptimizeDatabaseCommand extends Command
 {
     protected $signature = 'db:optimize {--analyze : Analyze slow queries}';
+
     protected $description = 'Optimize database performance';
 
     public function __construct(
@@ -46,7 +49,7 @@ class OptimizeDatabaseCommand extends Command
                 ['Metric', 'Value'],
                 [['Slow Queries Count', $analysis['slow_queries_count']]]
             );
-            
+
             $this->info('💡 Recommendations:');
             foreach ($analysis['recommendations'] as $recommendation) {
                 $this->line("  - {$recommendation}");
@@ -58,6 +61,7 @@ class OptimizeDatabaseCommand extends Command
         $this->queryOptimizationService->clearProjectCaches();
 
         $this->info('✅ Database optimization completed!');
+
         return 0;
     }
 
@@ -66,7 +70,7 @@ class OptimizeDatabaseCommand extends Command
         $tables = [
             'projects', 'tasks', 'components', 'interaction_logs',
             'documents', 'document_versions', 'change_requests',
-            'notifications', 'users'
+            'notifications', 'users',
         ];
 
         foreach ($tables as $table) {

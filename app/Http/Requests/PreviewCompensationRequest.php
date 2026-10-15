@@ -1,18 +1,18 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Form Request để xác thực dữ liệu khi preview compensation trước khi áp dụng contract
- * 
- * @package Src\Compensation\Requests
+ * Form Request để xác thực dữ liệu khi preview compensation trước khi áp dụng contract.
  */
 class PreviewCompensationRequest extends FormRequest
 {
     /**
-     * Xác định user có quyền thực hiện request này không
+     * Xác định user có quyền thực hiện request này không.
      */
     public function authorize(): bool
     {
@@ -20,7 +20,7 @@ class PreviewCompensationRequest extends FormRequest
     }
 
     /**
-     * Các quy tắc validation cho request
+     * Các quy tắc validation cho request.
      */
     public function rules(): array
     {
@@ -28,26 +28,26 @@ class PreviewCompensationRequest extends FormRequest
             'project_id' => [
                 'required',
                 'integer',
-                'exists:projects,id'
+                'exists:projects,id',
             ],
             'contract_id' => [
                 'required',
                 'integer',
-                'exists:contracts,id'
+                'exists:contracts,id',
             ],
             'task_ids' => [
                 'nullable',
-                'array'
+                'array',
             ],
             'task_ids.*' => [
                 'integer',
-                'exists:tasks,id'
-            ]
+                'exists:tasks,id',
+            ],
         ];
     }
 
     /**
-     * Thông báo lỗi tùy chỉnh
+     * Thông báo lỗi tùy chỉnh.
      */
     public function messages(): array
     {
@@ -57,7 +57,7 @@ class PreviewCompensationRequest extends FormRequest
             'contract_id.required' => 'Contract ID là bắt buộc',
             'contract_id.exists' => 'Contract không tồn tại',
             'task_ids.array' => 'Task IDs phải là một mảng',
-            'task_ids.*.exists' => 'Task không tồn tại'
+            'task_ids.*.exists' => 'Task không tồn tại',
         ];
     }
 }

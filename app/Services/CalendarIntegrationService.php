@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -10,7 +12,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
- * CalendarIntegrationService - Service cho calendar integrations
+ * CalendarIntegrationService - Service cho calendar integrations.
  */
 class CalendarIntegrationService
 {
@@ -24,31 +26,31 @@ class CalendarIntegrationService
         $this->googleClient->setRedirectUri(config('services.google.redirect_uri'));
         $this->googleClient->setScopes([
             'https://www.googleapis.com/auth/calendar',
-            'https://www.googleapis.com/auth/calendar.events'
+            'https://www.googleapis.com/auth/calendar.events',
         ]);
     }
 
     /**
-     * Connect Google Calendar
+     * Connect Google Calendar.
      */
     public function connectGoogleCalendar(User $user, string $authCode): CalendarIntegration
     {
         try {
             $token = $this->googleClient->fetchAccessTokenWithAuthCode($authCode);
-            
+
             if (isset($token['error'])) {
                 throw new \Exception('Failed to get access token: ' . $token['error']);
             }
 
             $this->googleClient->setAccessToken($token);
-            
+
             // Get calendar service
             $calendarService = new Calendar($this->googleClient);
             $calendarList = $calendarService->calendarList->listCalendarList();
-            
+
             // Create integration for primary calendar
             $primaryCalendar = $calendarList->getItems()[0] ?? null;
-            
+
             if (!$primaryCalendar) {
                 throw new \Exception('No calendar found');
             }
@@ -60,7 +62,7 @@ class CalendarIntegrationService
                 'calendar_name' => $primaryCalendar->getSummary(),
                 'access_token' => $token['access_token'],
                 'refresh_token' => $token['refresh_token'] ?? null,
-                'token_expires_at' => isset($token['expires_in']) 
+                'token_expires_at' => isset($token['expires_in'])
                     ? now()->addSeconds($token['expires_in'])
                     : null,
                 'provider_data' => [
@@ -68,24 +70,23 @@ class CalendarIntegrationService
                     'calendar_summary' => $primaryCalendar->getSummary(),
                     'calendar_description' => $primaryCalendar->getDescription(),
                     'time_zone' => $primaryCalendar->getTimeZone(),
-                    'access_role' => $primaryCalendar->getAccessRole()
-                ]
+                    'access_role' => $primaryCalendar->getAccessRole(),
+                ],
             ]);
 
             return $integration;
-            
         } catch (\Exception $e) {
             Log::error('Failed to connect Google Calendar', [
                 'error' => $e->getMessage(),
-                'user_id' => $user->id
+                'user_id' => $user->id,
             ]);
-            
+
             throw $e;
         }
     }
 
     /**
-     * Connect Outlook Calendar
+     * Connect Outlook Calendar.
      */
     public function connectOutlookCalendar(User $user, string $authCode): CalendarIntegration
     {
@@ -95,7 +96,7 @@ class CalendarIntegrationService
                 'client_secret' => config('services.microsoft.client_secret'),
                 'code' => $authCode,
                 'redirect_uri' => config('services.microsoft.redirect_uri'),
-                'grant_type' => 'authorization_code'
+                'grant_type' => 'authorization_code',
             ]);
 
             if (!$tokenResponse->successful()) {
@@ -103,7 +104,7 @@ class CalendarIntegrationService
             }
 
             $tokenData = $tokenResponse->json();
-            
+
             // Get user's calendars
             $calendarsResponse = Http::withToken($tokenData['access_token'])
                 ->get('https://graph.microsoft.com/v1.0/me/calendars');
@@ -114,7 +115,7 @@ class CalendarIntegrationService
 
             $calendars = $calendarsResponse->json();
             $primaryCalendar = $calendars['value'][0] ?? null;
-            
+
             if (!$primaryCalendar) {
                 throw new \Exception('No calendar found');
             }
@@ -126,7 +127,7 @@ class CalendarIntegrationService
                 'calendar_name' => $primaryCalendar['name'],
                 'access_token' => $tokenData['access_token'],
                 'refresh_token' => $tokenData['refresh_token'] ?? null,
-                'token_expires_at' => isset($tokenData['expires_in']) 
+                'token_expires_at' => isset($tokenData['expires_in'])
                     ? now()->addSeconds($tokenData['expires_in'])
                     : null,
                 'provider_data' => [
@@ -134,24 +135,23 @@ class CalendarIntegrationService
                     'calendar_name' => $primaryCalendar['name'],
                     'calendar_color' => $primaryCalendar['color'] ?? null,
                     'can_edit' => $primaryCalendar['canEdit'] ?? false,
-                    'can_share' => $primaryCalendar['canShare'] ?? false
-                ]
+                    'can_share' => $primaryCalendar['canShare'] ?? false,
+                ],
             ]);
 
             return $integration;
-            
         } catch (\Exception $e) {
             Log::error('Failed to connect Outlook Calendar', [
                 'error' => $e->getMessage(),
-                'user_id' => $user->id
+                'user_id' => $user->id,
             ]);
-            
+
             throw $e;
         }
     }
 
     /**
-     * Refresh access token
+     * Refresh access token.
      */
     public function refreshAccessToken(CalendarIntegration $integration): bool
     {
@@ -161,43 +161,42 @@ class CalendarIntegrationService
             } elseif ($integration->provider === CalendarIntegration::PROVIDER_OUTLOOK) {
                 return $this->refreshOutlookToken($integration);
             }
-            
+
             return false;
-            
         } catch (\Exception $e) {
             Log::error('Failed to refresh access token', [
                 'error' => $e->getMessage(),
-                'integration_id' => $integration->id
+                'integration_id' => $integration->id,
             ]);
-            
+
             return false;
         }
     }
 
     /**
-     * Refresh Google token
+     * Refresh Google token.
      */
     private function refreshGoogleToken(CalendarIntegration $integration): bool
     {
         $this->googleClient->setRefreshToken($integration->refresh_token);
         $token = $this->googleClient->fetchAccessTokenWithRefreshToken();
-        
+
         if (isset($token['error'])) {
             return false;
         }
 
         $integration->update([
             'access_token' => $token['access_token'],
-            'token_expires_at' => isset($token['expires_in']) 
+            'token_expires_at' => isset($token['expires_in'])
                 ? now()->addSeconds($token['expires_in'])
-                : null
+                : null,
         ]);
 
         return true;
     }
 
     /**
-     * Refresh Outlook token
+     * Refresh Outlook token.
      */
     private function refreshOutlookToken(CalendarIntegration $integration): bool
     {
@@ -205,7 +204,7 @@ class CalendarIntegrationService
             'client_id' => config('services.microsoft.client_id'),
             'client_secret' => config('services.microsoft.client_secret'),
             'refresh_token' => $integration->refresh_token,
-            'grant_type' => 'refresh_token'
+            'grant_type' => 'refresh_token',
         ]);
 
         if (!$response->successful()) {
@@ -213,25 +212,25 @@ class CalendarIntegrationService
         }
 
         $tokenData = $response->json();
-        
+
         $integration->update([
             'access_token' => $tokenData['access_token'],
             'refresh_token' => $tokenData['refresh_token'] ?? $integration->refresh_token,
-            'token_expires_at' => isset($tokenData['expires_in']) 
+            'token_expires_at' => isset($tokenData['expires_in'])
                 ? now()->addSeconds($tokenData['expires_in'])
-                : null
+                : null,
         ]);
 
         return true;
     }
 
     /**
-     * Sync project milestones to calendar
+     * Sync project milestones to calendar.
      */
     public function syncProjectMilestones(Project $project, CalendarIntegration $integration): int
     {
         $syncedCount = 0;
-        
+
         try {
             $milestones = $project->milestones()
                                 ->whereNotNull('target_date')
@@ -239,20 +238,19 @@ class CalendarIntegrationService
 
             foreach ($milestones as $milestone) {
                 $event = CalendarEvent::createFromMilestone($milestone, $integration);
-                
+
                 if ($this->createExternalEvent($integration, $event)) {
                     $event->update(['is_synced' => true, 'last_synced_at' => now()]);
                     $syncedCount++;
                 }
             }
-            
+
             $integration->updateLastSync();
-            
         } catch (\Exception $e) {
             Log::error('Failed to sync project milestones', [
                 'error' => $e->getMessage(),
                 'project_id' => $project->id,
-                'integration_id' => $integration->id
+                'integration_id' => $integration->id,
             ]);
         }
 
@@ -260,12 +258,12 @@ class CalendarIntegrationService
     }
 
     /**
-     * Sync project tasks to calendar
+     * Sync project tasks to calendar.
      */
     public function syncProjectTasks(Project $project, CalendarIntegration $integration): int
     {
         $syncedCount = 0;
-        
+
         try {
             $tasks = $project->tasks()
                             ->whereNotNull('due_date')
@@ -273,20 +271,19 @@ class CalendarIntegrationService
 
             foreach ($tasks as $task) {
                 $event = CalendarEvent::createFromTask($task, $integration);
-                
+
                 if ($this->createExternalEvent($integration, $event)) {
                     $event->update(['is_synced' => true, 'last_synced_at' => now()]);
                     $syncedCount++;
                 }
             }
-            
+
             $integration->updateLastSync();
-            
         } catch (\Exception $e) {
             Log::error('Failed to sync project tasks', [
                 'error' => $e->getMessage(),
                 'project_id' => $project->id,
-                'integration_id' => $integration->id
+                'integration_id' => $integration->id,
             ]);
         }
 
@@ -294,7 +291,7 @@ class CalendarIntegrationService
     }
 
     /**
-     * Create external calendar event
+     * Create external calendar event.
      */
     private function createExternalEvent(CalendarIntegration $integration, CalendarEvent $event): bool
     {
@@ -304,22 +301,21 @@ class CalendarIntegrationService
             } elseif ($integration->provider === CalendarIntegration::PROVIDER_OUTLOOK) {
                 return $this->createOutlookEvent($integration, $event);
             }
-            
+
             return false;
-            
         } catch (\Exception $e) {
             Log::error('Failed to create external event', [
                 'error' => $e->getMessage(),
                 'integration_id' => $integration->id,
-                'event_id' => $event->id
+                'event_id' => $event->id,
             ]);
-            
+
             return false;
         }
     }
 
     /**
-     * Create Google Calendar event
+     * Create Google Calendar event.
      */
     private function createGoogleEvent(CalendarIntegration $integration, CalendarEvent $event): bool
     {
@@ -331,30 +327,30 @@ class CalendarIntegrationService
             'description' => $event->description,
             'start' => [
                 'dateTime' => $event->start_time->toRfc3339String(),
-                'timeZone' => config('app.timezone')
+                'timeZone' => config('app.timezone'),
             ],
             'end' => [
                 'dateTime' => $event->end_time->toRfc3339String(),
-                'timeZone' => config('app.timezone')
+                'timeZone' => config('app.timezone'),
             ],
-            'location' => $event->location
+            'location' => $event->location,
         ]);
 
         $createdEvent = $calendarService->events->insert($integration->calendar_id, $googleEvent);
-        
+
         $event->update([
             'external_event_id' => $createdEvent->getId(),
             'metadata' => array_merge($event->metadata ?? [], [
                 'google_event_id' => $createdEvent->getId(),
-                'google_event_link' => $createdEvent->getHtmlLink()
-            ])
+                'google_event_link' => $createdEvent->getHtmlLink(),
+            ]),
         ]);
 
         return true;
     }
 
     /**
-     * Create Outlook Calendar event
+     * Create Outlook Calendar event.
      */
     private function createOutlookEvent(CalendarIntegration $integration, CalendarEvent $event): bool
     {
@@ -363,19 +359,19 @@ class CalendarIntegrationService
                 'subject' => $event->title,
                 'body' => [
                     'contentType' => 'text',
-                    'content' => $event->description ?? ''
+                    'content' => $event->description ?? '',
                 ],
                 'start' => [
                     'dateTime' => $event->start_time->toISOString(),
-                    'timeZone' => config('app.timezone')
+                    'timeZone' => config('app.timezone'),
                 ],
                 'end' => [
                     'dateTime' => $event->end_time->toISOString(),
-                    'timeZone' => config('app.timezone')
+                    'timeZone' => config('app.timezone'),
                 ],
                 'location' => [
-                    'displayName' => $event->location ?? ''
-                ]
+                    'displayName' => $event->location ?? '',
+                ],
             ]);
 
         if (!$response->successful()) {
@@ -383,38 +379,37 @@ class CalendarIntegrationService
         }
 
         $outlookEvent = $response->json();
-        
+
         $event->update([
             'external_event_id' => $outlookEvent['id'],
             'metadata' => array_merge($event->metadata ?? [], [
                 'outlook_event_id' => $outlookEvent['id'],
-                'outlook_event_link' => $outlookEvent['webLink']
-            ])
+                'outlook_event_link' => $outlookEvent['webLink'],
+            ]),
         ]);
 
         return true;
     }
 
     /**
-     * Sync external events to local database
+     * Sync external events to local database.
      */
     public function syncExternalEvents(CalendarIntegration $integration, Carbon $startDate, Carbon $endDate): int
     {
         $syncedCount = 0;
-        
+
         try {
             if ($integration->provider === CalendarIntegration::PROVIDER_GOOGLE) {
                 $syncedCount = $this->syncGoogleEvents($integration, $startDate, $endDate);
             } elseif ($integration->provider === CalendarIntegration::PROVIDER_OUTLOOK) {
                 $syncedCount = $this->syncOutlookEvents($integration, $startDate, $endDate);
             }
-            
+
             $integration->updateLastSync();
-            
         } catch (\Exception $e) {
             Log::error('Failed to sync external events', [
                 'error' => $e->getMessage(),
-                'integration_id' => $integration->id
+                'integration_id' => $integration->id,
             ]);
         }
 
@@ -422,7 +417,7 @@ class CalendarIntegrationService
     }
 
     /**
-     * Sync Google Calendar events
+     * Sync Google Calendar events.
      */
     private function syncGoogleEvents(CalendarIntegration $integration, Carbon $startDate, Carbon $endDate): int
     {
@@ -435,12 +430,12 @@ class CalendarIntegrationService
                 'timeMin' => $startDate->toRfc3339String(),
                 'timeMax' => $endDate->toRfc3339String(),
                 'singleEvents' => true,
-                'orderBy' => 'startTime'
+                'orderBy' => 'startTime',
             ]
         );
 
         $syncedCount = 0;
-        
+
         foreach ($events->getItems() as $googleEvent) {
             $existingEvent = CalendarEvent::where('external_event_id', $googleEvent->getId())
                                         ->where('calendar_integration_id', $integration->id)
@@ -463,10 +458,10 @@ class CalendarIntegrationService
                         'google_event_id' => $googleEvent->getId(),
                         'google_event_link' => $googleEvent->getHtmlLink(),
                         'creator' => $googleEvent->getCreator(),
-                        'organizer' => $googleEvent->getOrganizer()
-                    ]
+                        'organizer' => $googleEvent->getOrganizer(),
+                    ],
                 ]);
-                
+
                 $syncedCount++;
             }
         }
@@ -475,7 +470,7 @@ class CalendarIntegrationService
     }
 
     /**
-     * Sync Outlook Calendar events
+     * Sync Outlook Calendar events.
      */
     private function syncOutlookEvents(CalendarIntegration $integration, Carbon $startDate, Carbon $endDate): int
     {
@@ -483,7 +478,7 @@ class CalendarIntegrationService
             ->get("https://graph.microsoft.com/v1.0/me/calendars/{$integration->calendar_id}/events", [
                 'startDateTime' => $startDate->toISOString(),
                 'endDateTime' => $endDate->toISOString(),
-                '$orderby' => 'start/dateTime'
+                '$orderby' => 'start/dateTime',
             ]);
 
         if (!$response->successful()) {
@@ -492,7 +487,7 @@ class CalendarIntegrationService
 
         $events = $response->json();
         $syncedCount = 0;
-        
+
         foreach ($events['value'] as $outlookEvent) {
             $existingEvent = CalendarEvent::where('external_event_id', $outlookEvent['id'])
                                         ->where('calendar_integration_id', $integration->id)
@@ -515,10 +510,10 @@ class CalendarIntegrationService
                         'outlook_event_id' => $outlookEvent['id'],
                         'outlook_event_link' => $outlookEvent['webLink'],
                         'organizer' => $outlookEvent['organizer'],
-                        'attendees' => $outlookEvent['attendees'] ?? []
-                    ]
+                        'attendees' => $outlookEvent['attendees'] ?? [],
+                    ],
                 ]);
-                
+
                 $syncedCount++;
             }
         }
@@ -527,7 +522,7 @@ class CalendarIntegrationService
     }
 
     /**
-     * Get user's calendar overview
+     * Get user's calendar overview.
      */
     public function getUserCalendarOverview(User $user, int $days = 30): array
     {
@@ -538,12 +533,12 @@ class CalendarIntegrationService
 
         $overview = [
             'total_integrations' => $integrations->count(),
-            'healthy_integrations' => $integrations->filter(fn($i) => $i->isHealthy())->count(),
+            'healthy_integrations' => $integrations->filter(fn ($i) => $i->isHealthy())->count(),
             'total_events' => 0,
             'project_events' => 0,
             'upcoming_events' => collect(),
             'today_events' => collect(),
-            'conflicts' => collect()
+            'conflicts' => collect(),
         ];
 
         foreach ($integrations as $integration) {
@@ -559,30 +554,29 @@ class CalendarIntegrationService
     }
 
     /**
-     * Disconnect calendar integration
+     * Disconnect calendar integration.
      */
     public function disconnectCalendar(CalendarIntegration $integration): bool
     {
         try {
             // Delete all associated events
             $integration->events()->delete();
-            
+
             // Deactivate integration
             $integration->update([
                 'is_active' => false,
                 'sync_enabled' => false,
                 'access_token' => null,
-                'refresh_token' => null
+                'refresh_token' => null,
             ]);
 
             return true;
-            
         } catch (\Exception $e) {
             Log::error('Failed to disconnect calendar', [
                 'error' => $e->getMessage(),
-                'integration_id' => $integration->id
+                'integration_id' => $integration->id,
             ]);
-            
+
             return false;
         }
     }

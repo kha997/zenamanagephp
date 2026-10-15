@@ -1,21 +1,20 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Buttons;
 
-use App\Models\Project;
-use App\Models\Task;
 use App\Models\Tenant;
 use App\Models\User;
-use App\Providers\RouteServiceProvider;
-use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth;
+use Tests\TestCase;
 
 /**
- * Button Authentication Test
- * 
+ * Button Authentication Test.
+ *
  * Tests authentication flows for all interactive elements
  */
 class ButtonAuthenticationTest extends TestCase
@@ -23,28 +22,29 @@ class ButtonAuthenticationTest extends TestCase
     use RefreshDatabase;
 
     protected $tenant;
+
     protected $users = [];
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create test tenant
         $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
             'slug' => 'test-company-' . uniqid(),
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
         // Create users for each role
         $roles = ['super_admin', 'admin', 'pm', 'designer', 'engineer', 'guest'];
-        
+
         foreach ($roles as $role) {
             $this->users[$role] = User::factory()->create([
                 'name' => ucfirst($role) . ' User',
                 'email' => $role . '@test-' . uniqid() . '.com',
                 'password' => Hash::make('password'),
-                'tenant_id' => $this->tenant->id
+                'tenant_id' => $this->tenant->id,
             ]);
         }
 
@@ -53,13 +53,13 @@ class ButtonAuthenticationTest extends TestCase
     }
 
     /**
-     * Test login button functionality
+     * Test login button functionality.
      */
     public function test_login_button_works(): void
     {
         $response = $this->post('/login', [
             'email' => $this->users['pm']->email,
-            'password' => 'password'
+            'password' => 'password',
         ]);
 
         // AuthController::login() redirects to /app/today (post-login landing
@@ -69,12 +69,12 @@ class ButtonAuthenticationTest extends TestCase
     }
 
     /**
-     * Test logout button functionality
+     * Test logout button functionality.
      */
     public function test_logout_button_works(): void
     {
         $this->actingAs($this->users['pm']);
-        
+
         $response = $this->post('/logout');
         $loginPath = Route::has('login') ? route('login', [], false) : '/login';
         $response->assertRedirect($loginPath);
@@ -82,7 +82,7 @@ class ButtonAuthenticationTest extends TestCase
     }
 
     /**
-     * Test authentication required for protected routes
+     * Test authentication required for protected routes.
      */
     public function test_protected_routes_require_authentication(): void
     {
@@ -102,13 +102,13 @@ class ButtonAuthenticationTest extends TestCase
     }
 
     /**
-     * Test API authentication
+     * Test API authentication.
      */
     public function test_api_authentication(): void
     {
         $response = $this->postJson('/api/auth/login', [
             'email' => $this->users['pm']->email,
-            'password' => 'password'
+            'password' => 'password',
         ]);
 
         $response->assertStatus(200)
@@ -129,53 +129,53 @@ class ButtonAuthenticationTest extends TestCase
     }
 
     /**
-     * Test session management
+     * Test session management.
      */
     public function test_session_management(): void
     {
         $this->actingAs($this->users['pm']);
-        
+
         $loginPath = Route::has('login') ? route('login', [], false) : '/login';
 
         // Test session persistence
         $response = $this->get('/app/dashboard');
         $response->assertStatus(200);
-        
+
         // Test session timeout (simulate)
         $this->app['session']->flush();
         Auth::logout();
-        
+
         $response = $this->get('/app/dashboard');
         $response->assertRedirect($loginPath);
     }
 
     /**
-     * Test password reset functionality
+     * Test password reset functionality.
      */
     public function test_password_reset_button(): void
     {
         $response = $this->post('/api/auth/password/reset', [
-            'email' => $this->users['pm']->email
+            'email' => $this->users['pm']->email,
         ]);
 
         $response->assertStatus(200);
     }
 
     /**
-     * Test invalid credentials handling
+     * Test invalid credentials handling.
      */
     public function test_invalid_credentials_handling(): void
     {
         $response = $this->post('/login', [
             'email' => $this->users['pm']->email,
-            'password' => 'wrong_password'
+            'password' => 'wrong_password',
         ]);
 
         $response->assertSessionHasErrors(['email']);
     }
 
     /**
-     * Test rate limiting on login attempts
+     * Test rate limiting on login attempts.
      */
     public function test_login_rate_limiting(): void
     {
@@ -183,9 +183,9 @@ class ButtonAuthenticationTest extends TestCase
         for ($i = 0; $i < 6; $i++) {
             $response = $this->post('/login', [
                 'email' => $this->users['pm']->email,
-                'password' => 'wrong_password'
+                'password' => 'wrong_password',
             ]);
-            
+
             if ($i < 5) {
                 $response->assertSessionHasErrors(['email']);
             } else {

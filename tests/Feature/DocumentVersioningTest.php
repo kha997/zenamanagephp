@@ -1,23 +1,23 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Models\Project;
-use App\Models\Task;
 use App\Models\Document;
 use App\Models\DocumentVersion;
+use App\Models\Project;
+use App\Models\Task;
 use App\Models\Tenant;
-use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Tests\TestCase;
 use Tests\Traits\TenantUserFactoryTrait;
 
 /**
- * Test Document Versioning và File Management
- * 
+ * Test Document Versioning và File Management.
+ *
  * Kịch bản: Tạo documents → Upload files → Test versioning → Test file management
  */
 class DocumentVersioningTest extends TestCase
@@ -26,8 +26,11 @@ class DocumentVersioningTest extends TestCase
     use TenantUserFactoryTrait;
 
     private $tenant;
+
     private $project;
+
     private $task;
+
     private $user;
 
     protected function setUp(): void
@@ -71,7 +74,7 @@ class DocumentVersioningTest extends TestCase
     }
 
     /**
-     * Test tạo document với version đầu tiên
+     * Test tạo document với version đầu tiên.
      */
     public function test_can_create_document_with_initial_version(): void
     {
@@ -105,7 +108,7 @@ class DocumentVersioningTest extends TestCase
             'metadata' => [
                 'file_size' => 1024,
                 'mime_type' => 'application/pdf',
-                'original_name' => 'test-document.pdf'
+                'original_name' => 'test-document.pdf',
             ],
             'created_by' => $this->user->id,
         ]);
@@ -137,7 +140,7 @@ class DocumentVersioningTest extends TestCase
     }
 
     /**
-     * Test tạo version mới cho document
+     * Test tạo version mới cho document.
      */
     public function test_can_create_new_version_for_document(): void
     {
@@ -170,7 +173,7 @@ class DocumentVersioningTest extends TestCase
             'metadata' => [
                 'file_size' => 2048,
                 'mime_type' => 'application/pdf',
-                'original_name' => 'test-document-v2.pdf'
+                'original_name' => 'test-document-v2.pdf',
             ],
             'created_by' => $this->user->id,
         ]);
@@ -197,7 +200,7 @@ class DocumentVersioningTest extends TestCase
     }
 
     /**
-     * Test revert về version cũ
+     * Test revert về version cũ.
      */
     public function test_can_revert_to_previous_version(): void
     {
@@ -261,7 +264,7 @@ class DocumentVersioningTest extends TestCase
     }
 
     /**
-     * Test file upload với different storage drivers
+     * Test file upload với different storage drivers.
      */
     public function test_can_upload_files_with_different_storage_drivers(): void
     {
@@ -330,7 +333,7 @@ class DocumentVersioningTest extends TestCase
     }
 
     /**
-     * Test document visibility và client approval
+     * Test document visibility và client approval.
      */
     public function test_document_visibility_and_client_approval(): void
     {
@@ -383,7 +386,7 @@ class DocumentVersioningTest extends TestCase
     }
 
     /**
-     * Test document linking với different entities
+     * Test document linking với different entities.
      */
     public function test_document_linking_with_different_entities(): void
     {
@@ -438,7 +441,7 @@ class DocumentVersioningTest extends TestCase
     }
 
     /**
-     * Test document versioning workflow end-to-end
+     * Test document versioning workflow end-to-end.
      */
     public function test_document_versioning_workflow_end_to_end(): void
     {
@@ -522,7 +525,7 @@ class DocumentVersioningTest extends TestCase
     }
 
     /**
-     * Test document versioning với bulk operations
+     * Test document versioning với bulk operations.
      */
     public function test_document_versioning_bulk_operations(): void
     {

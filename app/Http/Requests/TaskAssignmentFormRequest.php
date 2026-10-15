@@ -1,13 +1,13 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Form Request cho TaskAssignment validation
- * 
- * @package App\Http\Requests
+ * Form Request cho TaskAssignment validation.
  */
 class TaskAssignmentFormRequest extends FormRequest
 {
@@ -61,11 +61,12 @@ class TaskAssignmentFormRequest extends FormRequest
                         return $query->where('id', '!=', $assignmentId);
                     })
                     ->sum('split_percentage');
-                
-                $newTotal = $currentTotal + (float)$this->split_percentage;
-                
+
+                $newTotal = $currentTotal + (float) $this->split_percentage;
+
                 if ($newTotal > 100) {
-                    $validator->errors()->add('split_percentage', 
+                    $validator->errors()->add(
+                        'split_percentage',
                         'Tổng phần trăm phân chia cho task này không được vượt quá 100%. ' .
                         'Hiện tại: ' . $currentTotal . '%, còn lại: ' . (100 - $currentTotal) . '%'
                     );

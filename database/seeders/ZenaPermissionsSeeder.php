@@ -1,11 +1,13 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Seeders;
 
 use App\Models\Permission;
 use App\Models\Role;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Schema;
 
 class ZenaPermissionsSeeder extends Seeder
 {
@@ -285,6 +287,7 @@ class ZenaPermissionsSeeder extends Seeder
 
         if ($lookupColumn === null) {
             $this->command?->warn('Skipping ZenaPermissionsSeeder: permissions table lacks code/name column.');
+
             return;
         }
 

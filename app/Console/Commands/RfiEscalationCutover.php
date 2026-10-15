@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Console\Commands;
 
@@ -37,6 +39,7 @@ class RfiEscalationCutover extends Command
 
         if ($total > 0) {
             $this->error("Cutover blocked: {$total} legacy RFI record(s) still unconfirmed (escalated={$unconfirmedEscalated}, pending={$unconfirmedPending}, snapshot-only={$unconfirmedSnapshot}). Run rfi:escalation-preflight-report and rfi:confirm-legacy-escalation for each one first.");
+
             return self::FAILURE;
         }
 

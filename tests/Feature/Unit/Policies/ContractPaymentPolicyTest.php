@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Unit\Policies;
 
@@ -18,8 +20,11 @@ class ContractPaymentPolicyTest extends TestCase
     use RefreshDatabase;
 
     private ContractPaymentPolicy $policy;
+
     private Tenant $tenant;
+
     private User $user;
+
     private ContractPayment $payment;
 
     protected function setUp(): void

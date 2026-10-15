@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     /**
      * Run the migrations.
      */
@@ -17,7 +16,7 @@ return new class extends Migration
                 $table->dropColumn('message');
             });
         }
-        
+
         if (Schema::hasColumn('notifications', 'is_read')) {
             // SQLite native DROP COLUMN (Laravel 11+) refuses to drop a column
             // still referenced by an index — drop legacy indexes first.
@@ -33,45 +32,45 @@ return new class extends Migration
                 $table->dropColumn('is_read');
             });
         }
-        
+
         // Add missing columns
         Schema::table('notifications', function (Blueprint $table) {
             if (!Schema::hasColumn('notifications', 'priority')) {
                 $table->enum('priority', ['critical', 'normal', 'low'])->default('normal')->after('type');
             }
-            
+
             if (!Schema::hasColumn('notifications', 'body')) {
                 $table->text('body')->nullable()->after('title');
             }
-            
+
             if (!Schema::hasColumn('notifications', 'link_url')) {
                 $table->string('link_url')->nullable()->after('body');
             }
-            
+
             if (!Schema::hasColumn('notifications', 'channel')) {
                 $table->enum('channel', ['inapp', 'email', 'webhook'])->default('inapp')->after('link_url');
             }
-            
+
             if (!Schema::hasColumn('notifications', 'metadata')) {
                 $table->json('metadata')->nullable()->after('data');
             }
-            
+
             if (!Schema::hasColumn('notifications', 'event_key')) {
                 $table->string('event_key')->nullable()->after('metadata');
             }
-            
+
             if (!Schema::hasColumn('notifications', 'project_id')) {
                 $table->ulid('project_id')->nullable()->after('event_key');
             }
         });
-        
+
         // Add foreign key constraints
         Schema::table('notifications', function (Blueprint $table) {
             if (!Schema::hasColumn('notifications', 'project_id')) {
                 $table->foreign('project_id')->references('id')->on('projects')->onDelete('cascade');
             }
         });
-        
+
         // Add indexes
         Schema::table('notifications', function (Blueprint $table) {
             $indexes = [
@@ -79,9 +78,9 @@ return new class extends Migration
                 'notifications_priority_index',
                 'notifications_channel_index',
                 'notifications_project_id_index',
-                'notifications_event_key_index'
+                'notifications_event_key_index',
             ];
-            
+
             foreach ($indexes as $index) {
                 if (!$this->indexExists($index)) {
                     switch ($index) {
@@ -118,14 +117,14 @@ return new class extends Migration
         Schema::table('notifications', function (Blueprint $table) {
             // Drop foreign keys
             $table->dropForeign(['project_id']);
-            
+
             // Drop indexes
             $table->dropIndex(['user_id', 'read_at']);
             $table->dropIndex(['priority']);
             $table->dropIndex(['channel']);
             $table->dropIndex(['project_id']);
             $table->dropIndex(['event_key']);
-            
+
             // Drop columns
             $table->dropColumn([
                 'priority',
@@ -134,19 +133,19 @@ return new class extends Migration
                 'channel',
                 'metadata',
                 'event_key',
-                'project_id'
+                'project_id',
             ]);
         });
     }
-    
+
     /**
-     * Check if index exists (compatible with SQLite and MySQL)
+     * Check if index exists (compatible with SQLite and MySQL).
      */
     private function indexExists(string $indexName): bool
     {
         $connection = Schema::getConnection();
         $database = $connection->getDatabaseName();
-        
+
         if ($connection->getDriverName() === 'sqlite') {
             $indexes = $connection->select("PRAGMA index_list('notifications')");
             foreach ($indexes as $index) {
@@ -154,9 +153,11 @@ return new class extends Migration
                     return true;
                 }
             }
+
             return false;
         } else {
-            $indexes = $connection->select("SHOW INDEX FROM notifications WHERE Key_name = ?", [$indexName]);
+            $indexes = $connection->select('SHOW INDEX FROM notifications WHERE Key_name = ?', [$indexName]);
+
             return count($indexes) > 0;
         }
     }

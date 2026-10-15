@@ -2,10 +2,10 @@
 
 namespace Tests;
 
-use Illuminate\Support\Collection;
 use Facebook\WebDriver\Chrome\ChromeOptions;
 use Facebook\WebDriver\Remote\DesiredCapabilities;
 use Facebook\WebDriver\Remote\RemoteWebDriver;
+use Illuminate\Support\Collection;
 use Laravel\Dusk\TestCase as BaseTestCase;
 
 abstract class DuskTestCase extends BaseTestCase
@@ -19,7 +19,7 @@ abstract class DuskTestCase extends BaseTestCase
      */
     public static function prepare(): void
     {
-        if (! static::runningInSail() && ! static::hasExternalDriverUrl()) {
+        if (!static::runningInSail() && !static::hasExternalDriverUrl()) {
             static::startChromeDriver();
         }
     }
@@ -30,7 +30,7 @@ abstract class DuskTestCase extends BaseTestCase
     protected function driver(): RemoteWebDriver
     {
         $driverUrl = $this->driverUrl();
-        $options = (new ChromeOptions)->addArguments(collect([
+        $options = (new ChromeOptions())->addArguments(collect([
             $this->shouldStartMaximized() ? '--start-maximized' : '--window-size=1920,1080',
             '--no-sandbox',
             '--disable-dev-shm-usage',
@@ -46,10 +46,12 @@ abstract class DuskTestCase extends BaseTestCase
         }
 
         $this->waitForChromeDriver($driverUrl);
+
         return RemoteWebDriver::create(
             $driverUrl,
             DesiredCapabilities::chrome()->setCapability(
-                ChromeOptions::CAPABILITY, $options
+                ChromeOptions::CAPABILITY,
+                $options
             )
         );
     }
@@ -86,6 +88,7 @@ abstract class DuskTestCase extends BaseTestCase
         return isset($_SERVER['DUSK_START_MAXIMIZED']) ||
                isset($_ENV['DUSK_START_MAXIMIZED']);
     }
+
     /**
      * CI can be slower to start ChromeDriver. Wait until port is accepting connections.
      */
@@ -98,6 +101,7 @@ abstract class DuskTestCase extends BaseTestCase
             $fp = @fsockopen($host, $port, $errno, $errstr, 0.25);
             if ($fp) {
                 fclose($fp);
+
                 return;
             }
             usleep($sleepMs * 1000);
@@ -105,5 +109,4 @@ abstract class DuskTestCase extends BaseTestCase
 
         throw new \RuntimeException("ChromeDriver not reachable at {$host}:{$port} after {$retries} retries");
     }
-
 }

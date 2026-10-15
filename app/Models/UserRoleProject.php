@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -7,8 +9,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Model UserRoleProject - Quản lý vai trò của user trong project cụ thể
- * 
+ * Model UserRoleProject - Quản lý vai trò của user trong project cụ thể.
+ *
  * @property string $id
  * @property string $project_id ID dự án (ULID)
  * @property string $user_id ID người dùng (ULID)
@@ -21,33 +23,32 @@ class UserRoleProject extends Model
 {
     use HasUlids;
 
-
     protected $table = 'project_user_roles';
-    
+
     /**
-     * Kiểu dữ liệu của khóa chính
+     * Kiểu dữ liệu của khóa chính.
      */
     protected $keyType = 'string';
 
     /**
-     * Tắt auto increment cho khóa chính
+     * Tắt auto increment cho khóa chính.
      */
     public $incrementing = false;
-    
+
     protected $fillable = [
         'project_id',
         'user_id',
-        'role_id'
+        'role_id',
     ];
 
     protected $casts = [
         'created_at' => 'datetime:c',
         'updated_at' => 'datetime:c',
-        'deleted_at' => 'datetime:c'
+        'deleted_at' => 'datetime:c',
     ];
 
     /**
-     * Relationship: Thuộc về project
+     * Relationship: Thuộc về project.
      */
     public function project(): BelongsTo
     {
@@ -55,7 +56,7 @@ class UserRoleProject extends Model
     }
 
     /**
-     * Relationship: Thuộc về user
+     * Relationship: Thuộc về user.
      */
     public function user(): BelongsTo
     {
@@ -63,7 +64,7 @@ class UserRoleProject extends Model
     }
 
     /**
-     * Relationship: Thuộc về role
+     * Relationship: Thuộc về role.
      */
     public function role(): BelongsTo
     {
@@ -71,7 +72,7 @@ class UserRoleProject extends Model
     }
 
     /**
-     * Scope: Lọc theo project
+     * Scope: Lọc theo project.
      */
     public function scopeForProject($query, string $projectId)
     {
@@ -79,7 +80,7 @@ class UserRoleProject extends Model
     }
 
     /**
-     * Scope: Lọc theo user
+     * Scope: Lọc theo user.
      */
     public function scopeForUser($query, string $userId)
     {
@@ -87,7 +88,7 @@ class UserRoleProject extends Model
     }
 
     /**
-     * Scope: Lọc theo role
+     * Scope: Lọc theo role.
      */
     public function scopeForRole($query, string $roleId)
     {
@@ -95,7 +96,7 @@ class UserRoleProject extends Model
     }
 
     /**
-     * Scope: Chỉ lấy các assignment đang hoạt động (chưa bị soft delete)
+     * Scope: Chỉ lấy các assignment đang hoạt động (chưa bị soft delete).
      */
     public function scopeActive($query)
     {
@@ -103,7 +104,7 @@ class UserRoleProject extends Model
     }
 
     /**
-     * Scope: Lọc theo project và user
+     * Scope: Lọc theo project và user.
      */
     public function scopeForProjectAndUser($query, string $projectId, string $userId)
     {

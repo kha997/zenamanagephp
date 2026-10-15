@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests;
 
@@ -49,7 +51,7 @@ class SidebarConfigRequest extends FormRequest
             'config.items.*.pinned' => 'boolean',
             'config.items.*.show_if' => 'nullable|array',
             'config.items.*.show_if.*' => 'string|max:128',
-            
+
             // Group-specific validation
             'config.items.*.children' => 'nullable|array|required_if:config.items.*.type,group',
             'config.items.*.children.*.id' => 'required_with:config.items.*.children|string|max:64',
@@ -72,7 +74,7 @@ class SidebarConfigRequest extends FormRequest
             'config.items.*.children.*.pinned' => 'boolean',
             'config.items.*.children.*.show_if' => 'nullable|array',
             'config.items.*.children.*.show_if.*' => 'string|max:128',
-            
+
             'tenant_id' => 'nullable|ulid|exists:tenants,id',
             'is_enabled' => 'boolean',
         ];
@@ -164,7 +166,7 @@ class SidebarConfigRequest extends FormRequest
     {
         $items = $this->input('config.items', []);
         $ids = [];
-        
+
         foreach ($items as $index => $item) {
             if (isset($item['id'])) {
                 if (in_array($item['id'], $ids)) {
@@ -175,7 +177,7 @@ class SidebarConfigRequest extends FormRequest
                 }
                 $ids[] = $item['id'];
             }
-            
+
             // Check child item IDs
             if (isset($item['children'])) {
                 foreach ($item['children'] as $childIndex => $child) {
@@ -199,10 +201,10 @@ class SidebarConfigRequest extends FormRequest
     protected function validateRequiredFields($validator): void
     {
         $items = $this->input('config.items', []);
-        
+
         foreach ($items as $index => $item) {
             $type = $item['type'] ?? null;
-            
+
             switch ($type) {
                 case 'link':
                     if (empty($item['to'])) {
@@ -212,7 +214,7 @@ class SidebarConfigRequest extends FormRequest
                         );
                     }
                     break;
-                    
+
                 case 'external':
                     if (empty($item['href'])) {
                         $validator->errors()->add(
@@ -221,12 +223,12 @@ class SidebarConfigRequest extends FormRequest
                         );
                     }
                     break;
-                    
+
                 case 'group':
                     if (empty($item['children']) || !is_array($item['children'])) {
                         $validator->errors()->add(
                             "config.items.{$index}.children",
-                            "Group items must have children."
+                            'Group items must have children.'
                         );
                     }
                     break;
@@ -240,24 +242,24 @@ class SidebarConfigRequest extends FormRequest
     protected function validateLinkFields($validator): void
     {
         $items = $this->input('config.items', []);
-        
+
         foreach ($items as $index => $item) {
             $hasTo = !empty($item['to']);
             $hasHref = !empty($item['href']);
-            
+
             if ($hasTo && $hasHref) {
                 $validator->errors()->add(
                     "config.items.{$index}",
                     "Items cannot have both 'to' and 'href' fields."
                 );
             }
-            
+
             // Check child items
             if (isset($item['children'])) {
                 foreach ($item['children'] as $childIndex => $child) {
                     $childHasTo = !empty($child['to']);
                     $childHasHref = !empty($child['href']);
-                    
+
                     if ($childHasTo && $childHasHref) {
                         $validator->errors()->add(
                             "config.items.{$index}.children.{$childIndex}",

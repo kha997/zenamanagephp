@@ -1,16 +1,16 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Model BaselineHistory để theo dõi lịch sử thay đổi baseline
- * 
+ * Model BaselineHistory để theo dõi lịch sử thay đổi baseline.
+ *
  * @property int $id
  * @property string $baseline_id
  * @property int $from_version
@@ -22,7 +22,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class BaselineHistory extends Model
 {
-
     protected $table = 'baseline_history';
 
     protected $fillable = [
@@ -42,7 +41,7 @@ class BaselineHistory extends Model
     ];
 
     /**
-     * Quan hệ với Baseline
+     * Quan hệ với Baseline.
      */
     public function baseline(): BelongsTo
     {
@@ -50,7 +49,7 @@ class BaselineHistory extends Model
     }
 
     /**
-     * Quan hệ với User (người thực hiện thay đổi)
+     * Quan hệ với User (người thực hiện thay đổi).
      */
     public function creator(): BelongsTo
     {
@@ -58,7 +57,7 @@ class BaselineHistory extends Model
     }
 
     /**
-     * Scope để lọc theo baseline
+     * Scope để lọc theo baseline.
      */
     public function scopeForBaseline(Builder $query, string $baselineId): Builder
     {
@@ -66,7 +65,7 @@ class BaselineHistory extends Model
     }
 
     /**
-     * Scope để lọc theo version range
+     * Scope để lọc theo version range.
      */
     public function scopeVersionRange(Builder $query, int $fromVersion, int $toVersion): Builder
     {
@@ -75,7 +74,7 @@ class BaselineHistory extends Model
     }
 
     /**
-     * Scope để sắp xếp theo thời gian tạo mới nhất
+     * Scope để sắp xếp theo thời gian tạo mới nhất.
      */
     public function scopeLatest(Builder $query): Builder
     {
@@ -83,7 +82,7 @@ class BaselineHistory extends Model
     }
 
     /**
-     * Tạo bản ghi lịch sử khi baseline được re-baseline
+     * Tạo bản ghi lịch sử khi baseline được re-baseline.
      */
     public static function recordRebaseline(
         string $baselineId,
@@ -102,7 +101,7 @@ class BaselineHistory extends Model
     }
 
     /**
-     * Lấy lịch sử thay đổi của một baseline
+     * Lấy lịch sử thay đổi của một baseline.
      */
     public static function getHistoryForBaseline(string $baselineId): \Illuminate\Database\Eloquent\Collection
     {
@@ -113,7 +112,7 @@ class BaselineHistory extends Model
     }
 
     /**
-     * Kiểm tra xem có phải là version upgrade không
+     * Kiểm tra xem có phải là version upgrade không.
      */
     public function isVersionUpgrade(): bool
     {
@@ -121,7 +120,7 @@ class BaselineHistory extends Model
     }
 
     /**
-     * Kiểm tra xem có phải là version downgrade không
+     * Kiểm tra xem có phải là version downgrade không.
      */
     public function isVersionDowngrade(): bool
     {
@@ -129,7 +128,7 @@ class BaselineHistory extends Model
     }
 
     /**
-     * Lấy mức độ thay đổi version
+     * Lấy mức độ thay đổi version.
      */
     public function getVersionDifference(): int
     {

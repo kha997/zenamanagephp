@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Concurrency;
 
@@ -415,7 +417,7 @@ class OpportunityServiceLineConcurrencyTest extends TestCase
         // bootstrap time (empirically several hundred ms, which would
         // otherwise dwarf and swamp the actual race window).
         $markerDeadline = microtime(true) + 5.0;
-        while (! file_exists($startMarker)) {
+        while (!file_exists($startMarker)) {
             if (microtime(true) > $markerDeadline) {
                 $this->fail('createContract() subprocess never reached its start marker within 5s: ' . $procA->getOutput() . $procA->getErrorOutput());
             }
@@ -448,6 +450,7 @@ class OpportunityServiceLineConcurrencyTest extends TestCase
             }
 
             $attemptStart = microtime(true);
+
             try {
                 $service->reconcile($actor, $opportunity, []);
             } catch (ValidationException $e) {
@@ -461,7 +464,7 @@ class OpportunityServiceLineConcurrencyTest extends TestCase
                 $fastBeforeContractCount++;
             }
 
-            if (! $procA->isRunning() && $fastBeforeContractCount > 0) {
+            if (!$procA->isRunning() && $fastBeforeContractCount > 0) {
                 // procA already finished and we still observed a fast,
                 // pre-Contract completion in this same iteration — no
                 // point spinning further, the defect (if present) is

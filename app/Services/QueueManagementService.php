@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Redis;
 class QueueManagementService
 {
     protected $connection;
+
     protected $queues;
 
     public function __construct()
@@ -17,14 +18,14 @@ class QueueManagementService
         $this->connection = config('queue.default', 'redis');
         $this->queues = [
             'emails-high',
-            'emails-medium', 
+            'emails-medium',
             'emails-low',
-            'emails-welcome'
+            'emails-welcome',
         ];
     }
 
     /**
-     * Get queue statistics
+     * Get queue statistics.
      */
     public function getQueueStats(): array
     {
@@ -49,7 +50,7 @@ class QueueManagementService
             Log::error('Failed to get queue statistics', [
                 'error' => $e->getMessage(),
             ]);
-            
+
             return [
                 'connection' => $this->connection,
                 'error' => $e->getMessage(),
@@ -58,7 +59,7 @@ class QueueManagementService
     }
 
     /**
-     * Get statistics for specific queue
+     * Get statistics for specific queue.
      */
     private function getQueueStatsForQueue(string $queue): array
     {
@@ -80,7 +81,7 @@ class QueueManagementService
                 'queue' => $queue,
                 'error' => $e->getMessage(),
             ]);
-            
+
             return [
                 'pending' => 0,
                 'failed' => 0,
@@ -92,12 +93,12 @@ class QueueManagementService
     }
 
     /**
-     * Get Redis queue statistics
+     * Get Redis queue statistics.
      */
     private function getRedisQueueStats(string $queue): array
     {
         $redis = Redis::connection();
-        
+
         $pendingKey = "queues:{$queue}";
         $failedKey = "queues:{$queue}:failed";
         $processingKey = "queues:{$queue}:processing";
@@ -111,7 +112,7 @@ class QueueManagementService
     }
 
     /**
-     * Get database queue statistics
+     * Get database queue statistics.
      */
     private function getDatabaseQueueStats(string $queue): array
     {
@@ -132,7 +133,7 @@ class QueueManagementService
     }
 
     /**
-     * Get active workers
+     * Get active workers.
      */
     private function getActiveWorkers(): array
     {
@@ -146,12 +147,13 @@ class QueueManagementService
             Log::warning('Failed to get active workers', [
                 'error' => $e->getMessage(),
             ]);
+
             return [];
         }
     }
 
     /**
-     * Get Redis workers
+     * Get Redis workers.
      */
     private function getRedisWorkers(): array
     {
@@ -160,7 +162,7 @@ class QueueManagementService
 
         // Get worker keys
         $workerKeys = $redis->keys('queues:*:workers');
-        
+
         foreach ($workerKeys as $key) {
             $workerData = $redis->hgetall($key);
             if (!empty($workerData)) {
@@ -178,7 +180,7 @@ class QueueManagementService
     }
 
     /**
-     * Clear failed jobs
+     * Clear failed jobs.
      */
     public function clearFailedJobs(string $queue = null): bool
     {
@@ -188,24 +190,25 @@ class QueueManagementService
             } elseif ($this->connection === 'database') {
                 return $this->clearDatabaseFailedJobs($queue);
             }
-            
+
             return false;
         } catch (\Exception $e) {
             Log::error('Failed to clear failed jobs', [
                 'queue' => $queue,
                 'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
 
     /**
-     * Clear Redis failed jobs
+     * Clear Redis failed jobs.
      */
     private function clearRedisFailedJobs(string $queue = null): bool
     {
         $redis = Redis::connection();
-        
+
         if ($queue) {
             $failedKey = "queues:{$queue}:failed";
             $redis->del($failedKey);
@@ -215,12 +218,12 @@ class QueueManagementService
                 $redis->del($failedKey);
             }
         }
-        
+
         return true;
     }
 
     /**
-     * Clear database failed jobs
+     * Clear database failed jobs.
      */
     private function clearDatabaseFailedJobs(string $queue = null): bool
     {
@@ -229,34 +232,36 @@ class QueueManagementService
         } else {
             \DB::table('failed_jobs')->delete();
         }
-        
+
         return true;
     }
 
     /**
-     * Restart queue workers
+     * Restart queue workers.
      */
     public function restartWorkers(): bool
     {
         try {
             // Clear cache
             Cache::flush();
-            
+
             // Restart queue workers
             $this->runCommand('queue:restart');
-            
+
             Log::info('Queue workers restarted successfully');
+
             return true;
         } catch (\Exception $e) {
             Log::error('Failed to restart queue workers', [
                 'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
 
     /**
-     * Start queue workers
+     * Start queue workers.
      */
     public function startWorkers(): bool
     {
@@ -264,19 +269,21 @@ class QueueManagementService
             foreach ($this->queues as $queue) {
                 $this->startWorkerForQueue($queue);
             }
-            
+
             Log::info('Queue workers started successfully');
+
             return true;
         } catch (\Exception $e) {
             Log::error('Failed to start queue workers', [
                 'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
 
     /**
-     * Start worker for specific queue
+     * Start worker for specific queue.
      */
     private function startWorkerForQueue(string $queue): void
     {
@@ -296,24 +303,26 @@ class QueueManagementService
     }
 
     /**
-     * Stop queue workers
+     * Stop queue workers.
      */
     public function stopWorkers(): bool
     {
         try {
             $this->runCommand('queue:restart');
             Log::info('Queue workers stopped successfully');
+
             return true;
         } catch (\Exception $e) {
             Log::error('Failed to stop queue workers', [
                 'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
 
     /**
-     * Run artisan command
+     * Run artisan command.
      */
     private function runCommand(string $command): void
     {
@@ -321,12 +330,12 @@ class QueueManagementService
     }
 
     /**
-     * Get queue health status
+     * Get queue health status.
      */
     public function getHealthStatus(): array
     {
         $stats = $this->getQueueStats();
-        
+
         $health = [
             'status' => 'healthy',
             'issues' => [],

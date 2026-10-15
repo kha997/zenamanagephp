@@ -57,7 +57,7 @@ class SanctumBearerTransportGuardContractTest extends TestCase
 
         try {
             $response = $this->withHeaders([
-                'Authorization' => 'Bearer '.$plainTextToken,
+                'Authorization' => 'Bearer ' . $plainTextToken,
             ])->getJson('/__gap051_bearer_contract');
         } catch (RuntimeException $exception) {
             self::assertStringContainsString('GAP-051', $exception->getMessage());
@@ -85,7 +85,7 @@ class SanctumBearerTransportGuardContractTest extends TestCase
 
         try {
             $response = $this->withHeaders([
-                'Authorization' => 'Bearer '.$plainTextToken,
+                'Authorization' => 'Bearer ' . $plainTextToken,
             ])->getJson('/__gap051_bearer_contract');
         } catch (RuntimeException $exception) {
             self::assertStringContainsString('GAP-051', $exception->getMessage());
@@ -168,7 +168,7 @@ class SanctumBearerTransportGuardContractTest extends TestCase
     {
         $tokenOwner = User::factory()->create();
         $issuedToken = $tokenOwner->createToken('gap051-repeated-transport', ['documents:read']);
-        $headers = ['Authorization' => 'Bearer '.$issuedToken->plainTextToken];
+        $headers = ['Authorization' => 'Bearer ' . $issuedToken->plainTextToken];
 
         for ($dispatchNumber = 1; $dispatchNumber <= 2; $dispatchNumber++) {
             $response = $this->getJson('/__gap051_bearer_contract', $headers);
@@ -304,7 +304,7 @@ class SanctumBearerTransportGuardContractTest extends TestCase
     {
         $user = User::factory()->create();
         config([
-            'app.key' => 'base64:'.base64_encode(str_repeat('g', 32)),
+            'app.key' => 'base64:' . base64_encode(str_repeat('g', 32)),
             'session.driver' => 'file',
             'session.files' => storage_path('framework/sessions'),
         ]);
@@ -361,8 +361,8 @@ class SanctumBearerTransportGuardContractTest extends TestCase
                 $apiMiddleware,
                 sprintf(
                     'GAP-051: [%s] materially enables session/stateful authentication on API routes. '
-                    .'Gate 1 no-production-exposure evidence is no longer valid; open a follow-up Work ID '
-                    .'and reassess before changing this invariant.',
+                    . 'Gate 1 no-production-exposure evidence is no longer valid; open a follow-up Work ID '
+                    . 'and reassess before changing this invariant.',
                     $statefulMiddleware
                 )
             );

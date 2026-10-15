@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
@@ -11,9 +13,7 @@ use Src\Notification\Resources\NotificationRuleResource;
 use Src\RBAC\Middleware\RBACMiddleware;
 
 /**
- * Controller xử lý các hoạt động CRUD cho Notification Rules
- * 
- * @package Src\Notification\Controllers
+ * Controller xử lý các hoạt động CRUD cho Notification Rules.
  */
 class NotificationRuleController
 {
@@ -23,7 +23,7 @@ class NotificationRuleController
     private NotificationRuleService $notificationRuleService;
 
     /**
-     * Constructor - áp dụng RBAC middleware và inject service
+     * Constructor - áp dụng RBAC middleware và inject service.
      */
     public function __construct(NotificationRuleService $notificationRuleService)
     {
@@ -33,7 +33,7 @@ class NotificationRuleController
     }
 
     /**
-     * Lấy ID người dùng hiện tại một cách an toàn
+     * Lấy ID người dùng hiện tại một cách an toàn.
      *
      * @return string|null
      */
@@ -43,6 +43,7 @@ class NotificationRuleController
             if (AuthHelper::check()) {
                 return AuthHelper::id();
             }
+
             return null;
         } catch (Exception $e) {
             return null;
@@ -50,7 +51,7 @@ class NotificationRuleController
     }
 
     /**
-     * Lấy danh sách notification rules của user hiện tại
+     * Lấy danh sách notification rules của user hiện tại.
      *
      * @param Request $request
      * @return JsonResponse
@@ -62,11 +63,11 @@ class NotificationRuleController
             if (!$userId) {
                 return JSendResponse::error('Người dùng chưa được xác thực', 401);
             }
-            
+
             $projectId = $request->get('project_id');
             $eventKey = $request->get('event_key');
             $isEnabled = $request->get('is_enabled');
-            
+
             $rules = $this->notificationRuleService->getUserRules(
                 $userId,
                 $projectId,
@@ -83,7 +84,7 @@ class NotificationRuleController
     }
 
     /**
-     * Tạo notification rule mới
+     * Tạo notification rule mới.
      *
      * @param StoreNotificationRuleRequest $request
      * @return JsonResponse
@@ -95,10 +96,10 @@ class NotificationRuleController
             if (!$userId) {
                 return JSendResponse::error('Người dùng chưa được xác thực', 401);
             }
-            
+
             $data = $request->validated();
             $data['user_id'] = $userId;
-            
+
             $rule = $this->notificationRuleService->createRule($data);
 
             return JSendResponse::success(
@@ -112,7 +113,7 @@ class NotificationRuleController
     }
 
     /**
-     * Lấy thông tin chi tiết notification rule
+     * Lấy thông tin chi tiết notification rule.
      *
      * @param string $ulid
      * @return JsonResponse
@@ -124,7 +125,7 @@ class NotificationRuleController
             if (!$userId) {
                 return JSendResponse::error('Người dùng chưa được xác thực', 401);
             }
-            
+
             $rule = $this->notificationRuleService->getRuleById($ulid);
 
             if (!$rule || $rule->user_id !== $userId) {
@@ -140,7 +141,7 @@ class NotificationRuleController
     }
 
     /**
-     * Cập nhật notification rule
+     * Cập nhật notification rule.
      *
      * @param UpdateNotificationRuleRequest $request
      * @param string $ulid
@@ -153,7 +154,7 @@ class NotificationRuleController
             if (!$userId) {
                 return JSendResponse::error('Người dùng chưa được xác thực', 401);
             }
-            
+
             $rule = $this->notificationRuleService->updateRule(
                 $ulid,
                 $request->validated(),
@@ -170,7 +171,7 @@ class NotificationRuleController
     }
 
     /**
-     * Xóa notification rule
+     * Xóa notification rule.
      *
      * @param string $ulid
      * @return JsonResponse
@@ -182,7 +183,7 @@ class NotificationRuleController
             if (!$userId) {
                 return JSendResponse::error('Người dùng chưa được xác thực', 401);
             }
-            
+
             $rule = NotificationRule::where('ulid', $ulid)
                 ->where('user_id', $userId)
                 ->first();
@@ -203,7 +204,7 @@ class NotificationRuleController
     }
 
     /**
-     * Bật/tắt notification rule
+     * Bật/tắt notification rule.
      *
      * @param string $ulid
      * @return JsonResponse
@@ -215,10 +216,11 @@ class NotificationRuleController
             if (!$userId) {
                 return JSendResponse::error('Người dùng chưa được xác thực', 401);
             }
-            
+
             $rule = $this->notificationRuleService->toggleRule($ulid, $userId);
 
             $status = $rule->is_enabled ? 'bật' : 'tắt';
+
             return JSendResponse::success(
                 new NotificationRuleResource($rule),
                 "Quy tắc thông báo đã được {$status}"
@@ -229,7 +231,7 @@ class NotificationRuleController
     }
 
     /**
-     * Tạo quy tắc mặc định cho user
+     * Tạo quy tắc mặc định cho user.
      *
      * @param Request $request
      * @return JsonResponse
@@ -241,11 +243,11 @@ class NotificationRuleController
             if (!$userId) {
                 return JSendResponse::error('Người dùng chưa được xác thực', 401);
             }
-            
+
             $request->validate([
-                'project_id' => 'nullable|integer|exists:projects,id'
+                'project_id' => 'nullable|integer|exists:projects,id',
             ]);
-            
+
             $rules = $this->notificationRuleService->createDefaultRules(
                 $userId,
                 $request->get('project_id')
@@ -261,7 +263,7 @@ class NotificationRuleController
     }
 
     /**
-     * Test notification rule với event giả lập
+     * Test notification rule với event giả lập.
      *
      * @param Request $request
      * @param string $ulid
@@ -272,14 +274,14 @@ class NotificationRuleController
         try {
             $request->validate([
                 'event_data' => 'required|array',
-                'priority' => 'required|in:critical,normal,low'
+                'priority' => 'required|in:critical,normal,low',
             ]);
-            
+
             $currentUserId = $this->getUserId();
             if (!$currentUserId) {
                 return JSendResponse::error('Người dùng chưa được xác thực', 401);
             }
-            
+
             $result = $this->notificationRuleService->testRule(
                 $ulid,
                 $currentUserId,
@@ -297,7 +299,7 @@ class NotificationRuleController
     }
 
     /**
-     * Lấy danh sách các event có thể sử dụng cho notification rules
+     * Lấy danh sách các event có thể sử dụng cho notification rules.
      *
      * @return JsonResponse
      */
@@ -307,7 +309,7 @@ class NotificationRuleController
             $events = $this->notificationRuleService->getAvailableEvents();
 
             return JSendResponse::success([
-                'events' => $events
+                'events' => $events,
             ]);
         } catch (Exception $e) {
             return JSendResponse::error('Không thể lấy danh sách events: ' . $e->getMessage());
@@ -315,7 +317,7 @@ class NotificationRuleController
     }
 
     /**
-     * Lấy notification rules theo project
+     * Lấy notification rules theo project.
      *
      * @param int $projectId
      * @return JsonResponse
@@ -327,7 +329,7 @@ class NotificationRuleController
             if (!$userId) {
                 return JSendResponse::error('Người dùng chưa được xác thực', 401);
             }
-            
+
             $rules = $this->notificationRuleService->getRulesByProject(
                 $userId,
                 $projectId

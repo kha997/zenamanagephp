@@ -1,28 +1,29 @@
 <?php
 
 namespace App\Services;
-use Illuminate\Support\Facades\Auth;
-
 
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Database\QueryException;
 
 /**
- * Bulk Operations Service
- * 
+ * Bulk Operations Service.
+ *
  * Handles bulk operations for users, projects, tasks, and documents
  */
 class BulkOperationsService
 {
     private SecureAuditService $auditService;
+
     private int $batchSize;
+
     private int $maxOperations;
 
     public function __construct(SecureAuditService $auditService)
@@ -39,7 +40,7 @@ class BulkOperationsService
     */
 
     /**
-     * Bulk create users
+     * Bulk create users.
      */
     public function bulkCreateUsers(array $userData, string $tenantId = null): array
     {
@@ -52,7 +53,7 @@ class BulkOperationsService
             'created' => 0,
             'errors' => [],
             'created_users' => [],
-            'results' => []
+            'results' => [],
         ];
 
         $fatalError = false;
@@ -99,7 +100,7 @@ class BulkOperationsService
                         $results['errors'][] = [
                             'index' => $index,
                             'data' => $data,
-                            'error' => $e->getMessage()
+                            'error' => $e->getMessage(),
                         ];
 
                         if ($e instanceof QueryException) {
@@ -127,15 +128,15 @@ class BulkOperationsService
             Log::info('Bulk user creation completed', [
                 'total' => $totalOperations,
                 'success' => $results['success'],
-                'failed' => $results['failed']
+                'failed' => $results['failed'],
             ]);
 
             $results['created'] = count($results['created_users']);
             $results['failed'] = max($results['failed'], count($results['errors']));
             $results['results'] = $results['created_users'];
-
         } catch (\Exception $e) {
             DB::rollBack();
+
             throw new \Exception('Bulk user creation failed: ' . $e->getMessage());
         }
 
@@ -143,7 +144,7 @@ class BulkOperationsService
     }
 
     /**
-     * Bulk update users
+     * Bulk update users.
      */
     public function bulkUpdateUsers(array $updates): array
     {
@@ -153,7 +154,7 @@ class BulkOperationsService
             'success' => 0,
             'failed' => 0,
             'errors' => [],
-            'updated_users' => []
+            'updated_users' => [],
         ];
 
         try {
@@ -164,7 +165,7 @@ class BulkOperationsService
                     try {
                         $user = User::findOrFail($update['id']);
                         $oldData = $user->toArray();
-                        
+
                         $user->forceFill($update['data']);
                         $user->save();
                         $results['updated_users'][] = $user;
@@ -184,7 +185,7 @@ class BulkOperationsService
                         $results['errors'][] = [
                             'index' => $index,
                             'update' => $update,
-                            'error' => $e->getMessage()
+                            'error' => $e->getMessage(),
                         ];
                     }
                 }
@@ -195,11 +196,11 @@ class BulkOperationsService
             Log::info('Bulk user update completed', [
                 'total' => count($updates),
                 'success' => $results['success'],
-                'failed' => $results['failed']
+                'failed' => $results['failed'],
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
+
             throw new \Exception('Bulk user update failed: ' . $e->getMessage());
         }
 
@@ -207,7 +208,7 @@ class BulkOperationsService
     }
 
     /**
-     * Bulk delete users
+     * Bulk delete users.
      */
     public function bulkDeleteUsers(array $userIds): array
     {
@@ -217,7 +218,7 @@ class BulkOperationsService
             'success' => 0,
             'failed' => 0,
             'errors' => [],
-            'deleted_users' => []
+            'deleted_users' => [],
         ];
 
         try {
@@ -225,15 +226,15 @@ class BulkOperationsService
 
             foreach (array_chunk($userIds, $this->batchSize) as $batch) {
                 $cacheKey = 'bulk:users:' . md5(implode(',', $batch));
-                $users = Cache::remember($cacheKey, 300, function() use ($batch) {
+                $users = Cache::remember($cacheKey, 300, function () use ($batch) {
                     return User::whereIn('id', $batch)->get();
                 });
-                
+
                 foreach ($users as $user) {
                     try {
                         $oldData = $user->toArray();
                         $user->delete();
-                        
+
                         $results['deleted_users'][] = $user->id;
                         $results['success']++;
 
@@ -249,7 +250,7 @@ class BulkOperationsService
                         $results['failed']++;
                         $results['errors'][] = [
                             'user_id' => $user->id,
-                            'error' => $e->getMessage()
+                            'error' => $e->getMessage(),
                         ];
                     }
                 }
@@ -260,11 +261,11 @@ class BulkOperationsService
             Log::info('Bulk user deletion completed', [
                 'total' => count($userIds),
                 'success' => $results['success'],
-                'failed' => $results['failed']
+                'failed' => $results['failed'],
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
+
             throw new \Exception('Bulk user deletion failed: ' . $e->getMessage());
         }
 
@@ -278,7 +279,7 @@ class BulkOperationsService
     */
 
     /**
-     * Bulk create projects
+     * Bulk create projects.
      */
     public function bulkCreateProjects(array $projectData, string $tenantId = null): array
     {
@@ -289,7 +290,7 @@ class BulkOperationsService
             'failed' => 0,
             'created' => 0,
             'errors' => [],
-            'created_projects' => []
+            'created_projects' => [],
         ];
 
         try {
@@ -315,7 +316,7 @@ class BulkOperationsService
                         $results['errors'][] = [
                             'index' => $index,
                             'data' => $data,
-                            'error' => $e->getMessage()
+                            'error' => $e->getMessage(),
                         ];
                     }
                 }
@@ -325,9 +326,9 @@ class BulkOperationsService
 
             $results['created'] = count($results['created_projects']);
             $results['failed'] = max($results['failed'], count($results['errors']));
-
         } catch (\Exception $e) {
             DB::rollBack();
+
             throw new \Exception('Bulk project creation failed: ' . $e->getMessage());
         }
 
@@ -335,7 +336,7 @@ class BulkOperationsService
     }
 
     /**
-     * Bulk update projects
+     * Bulk update projects.
      */
     public function bulkUpdateProjects(array $updates): array
     {
@@ -345,7 +346,7 @@ class BulkOperationsService
             'success' => 0,
             'failed' => 0,
             'errors' => [],
-            'updated_projects' => []
+            'updated_projects' => [],
         ];
 
         try {
@@ -356,7 +357,7 @@ class BulkOperationsService
                     try {
                         $project = Project::findOrFail($update['id']);
                         $oldData = $project->toArray();
-                        
+
                         $project->update($update['data']);
                         $results['updated_projects'][] = $project;
                         $results['success']++;
@@ -375,16 +376,16 @@ class BulkOperationsService
                         $results['errors'][] = [
                             'index' => $index,
                             'update' => $update,
-                            'error' => $e->getMessage()
+                            'error' => $e->getMessage(),
                         ];
                     }
                 }
             }
 
             DB::commit();
-
         } catch (\Exception $e) {
             DB::rollBack();
+
             throw new \Exception('Bulk project update failed: ' . $e->getMessage());
         }
 
@@ -398,7 +399,7 @@ class BulkOperationsService
     */
 
     /**
-     * Bulk create tasks
+     * Bulk create tasks.
      */
     public function bulkCreateTasks(array $taskData, string $projectId = null, string $tenantId = null): array
     {
@@ -409,7 +410,7 @@ class BulkOperationsService
             'failed' => 0,
             'created' => 0,
             'errors' => [],
-            'created_tasks' => []
+            'created_tasks' => [],
         ];
 
         try {
@@ -437,7 +438,7 @@ class BulkOperationsService
                         $results['errors'][] = [
                             'index' => $index,
                             'data' => $data,
-                            'error' => $e->getMessage()
+                            'error' => $e->getMessage(),
                         ];
                     }
                 }
@@ -447,9 +448,9 @@ class BulkOperationsService
 
             $results['created'] = count($results['created_tasks']);
             $results['failed'] = max($results['failed'], count($results['errors']));
-
         } catch (\Exception $e) {
             DB::rollBack();
+
             throw new \Exception('Bulk task creation failed: ' . $e->getMessage());
         }
 
@@ -457,7 +458,7 @@ class BulkOperationsService
     }
 
     /**
-     * Bulk update task status
+     * Bulk update task status.
      */
     public function bulkUpdateTaskStatus(array $taskIds, string $status): array
     {
@@ -467,7 +468,7 @@ class BulkOperationsService
             'success' => 0,
             'failed' => 0,
             'errors' => [],
-            'updated_tasks' => []
+            'updated_tasks' => [],
         ];
 
         try {
@@ -475,15 +476,15 @@ class BulkOperationsService
 
             foreach (array_chunk($taskIds, $this->batchSize) as $batch) {
                 $cacheKey = 'bulk:tasks:' . md5(implode(',', $batch));
-                $tasks = Cache::remember($cacheKey, 300, function() use ($batch) {
+                $tasks = Cache::remember($cacheKey, 300, function () use ($batch) {
                     return Task::whereIn('id', $batch)->get();
                 });
-                
+
                 foreach ($tasks as $task) {
                     try {
                         $oldData = $task->toArray();
                         $task->update(['status' => $status]);
-                        
+
                         $results['updated_tasks'][] = $task->id;
                         $results['success']++;
 
@@ -501,16 +502,16 @@ class BulkOperationsService
                         $results['failed']++;
                         $results['errors'][] = [
                             'task_id' => $task->id,
-                            'error' => $e->getMessage()
+                            'error' => $e->getMessage(),
                         ];
                     }
                 }
             }
 
             DB::commit();
-
         } catch (\Exception $e) {
             DB::rollBack();
+
             throw new \Exception('Bulk task status update failed: ' . $e->getMessage());
         }
 
@@ -524,7 +525,7 @@ class BulkOperationsService
     */
 
     /**
-     * Bulk assign users to projects
+     * Bulk assign users to projects.
      */
     public function bulkAssignUsersToProjects(array $assignments): array
     {
@@ -534,7 +535,7 @@ class BulkOperationsService
             'success' => 0,
             'failed' => 0,
             'errors' => [],
-            'assignments' => []
+            'assignments' => [],
         ];
 
         try {
@@ -544,14 +545,14 @@ class BulkOperationsService
                 try {
                     $user = User::findOrFail($assignment['user_id']);
                     $project = Project::findOrFail($assignment['project_id']);
-                    
+
                     // Add user to project (implement based on your relationship)
                     $results['assignments'][] = [
                         'user_id' => $user->id,
                         'project_id' => $project->id,
-                        'role' => $assignment['role'] ?? 'member'
+                        'role' => $assignment['role'] ?? 'member',
                     ];
-                    
+
                     $results['success']++;
 
                     // Log assignment
@@ -568,15 +569,15 @@ class BulkOperationsService
                     $results['errors'][] = [
                         'index' => $index,
                         'assignment' => $assignment,
-                        'error' => $e->getMessage()
+                        'error' => $e->getMessage(),
                     ];
                 }
             }
 
             DB::commit();
-
         } catch (\Exception $e) {
             DB::rollBack();
+
             throw new \Exception('Bulk user-project assignment failed: ' . $e->getMessage());
         }
 
@@ -590,7 +591,7 @@ class BulkOperationsService
     */
 
     /**
-     * Validate bulk operation limits
+     * Validate bulk operation limits.
      */
     private function validateBulkOperation(int $count, string $operation): void
     {
@@ -604,38 +605,38 @@ class BulkOperationsService
     }
 
     /**
-     * Create user with validation
+     * Create user with validation.
      */
     private function createUser(array $data, string $tenantId = null): User
     {
         $data['password'] = bcrypt($data['password'] ?? 'defaultpassword123');
         $data['tenant_id'] = $tenantId ?? Auth::user()?->tenant_id;
-        
+
         return User::create($data);
     }
 
     /**
-     * Create project with validation
+     * Create project with validation.
      */
     private function createProject(array $data, string $tenantId = null): Project
     {
         $data['tenant_id'] = $tenantId ?? Auth::user()?->tenant_id;
-        
+
         return Project::create($data);
     }
 
     /**
-     * Create task with validation
+     * Create task with validation.
      */
     private function createTask(array $data, string $tenantId = null): Task
     {
         $data['tenant_id'] = $tenantId ?? Auth::user()?->tenant_id;
-        
+
         return Task::create($data);
     }
 
     /**
-     * Get bulk operation status
+     * Get bulk operation status.
      */
     public function getBulkOperationStatus(string $operationId): ?array
     {
@@ -643,18 +644,18 @@ class BulkOperationsService
     }
 
     /**
-     * Queue bulk operation for background processing
+     * Queue bulk operation for background processing.
      */
     public function queueBulkOperation(string $operation, array $data): string
     {
         $operationId = uniqid('bulk_', true);
-        
+
         Cache::put("bulk_operation:{$operationId}", [
             'operation' => $operation,
             'data' => $data,
             'status' => 'queued',
             'created_at' => Carbon::now(),
-            'progress' => 0
+            'progress' => 0,
         ], 3600); // 1 hour
 
         // Queue the job (implement with your queue system)

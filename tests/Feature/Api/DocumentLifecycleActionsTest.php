@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
@@ -24,7 +26,9 @@ class DocumentLifecycleActionsTest extends TestCase
     use RouteNameTrait;
 
     private Tenant $tenant;
+
     private Project $project;
+
     private User $actor;
 
     protected function setUp(): void

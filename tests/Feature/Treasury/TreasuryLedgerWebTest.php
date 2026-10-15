@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Treasury;
 
@@ -20,9 +22,13 @@ class TreasuryLedgerWebTest extends TestCase
     use TreasuryAccessTestHelpers;
 
     private Tenant $tenant;
+
     private Project $project;
+
     private TreasuryFinancialParty $investor;
+
     private TreasuryWallet $bank;
+
     private TreasuryWallet $cash;
 
     /** @var array<string, string> */

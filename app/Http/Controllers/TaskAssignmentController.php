@@ -1,22 +1,22 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\TaskAssignmentResource;
 use Illuminate\Http\JsonResponse;
 use Src\CoreProject\Models\TaskAssignment;
-use App\Http\Resources\TaskAssignmentResource;
 use Src\Foundation\Utils\JSendResponse;
 use Src\RBAC\Middleware\RBACMiddleware;
 
 /**
- * Controller xử lý các hoạt động CRUD cho TaskAssignment
- * 
- * @package Src\CoreProject\Controllers
+ * Controller xử lý các hoạt động CRUD cho TaskAssignment.
  */
 class TaskAssignmentController
 {
     /**
-     * Constructor - áp dụng RBAC middleware
+     * Constructor - áp dụng RBAC middleware.
      */
     public function __construct()
     {
@@ -25,7 +25,7 @@ class TaskAssignmentController
     }
 
     /**
-     * Lấy danh sách assignments của một task
+     * Lấy danh sách assignments của một task.
      *
      * @param Request $request
      * @param string $projectId
@@ -44,7 +44,7 @@ class TaskAssignmentController
                 ->get();
 
             return JSendResponse::success([
-                'assignments' => TaskAssignmentResource::collection($assignments)
+                'assignments' => TaskAssignmentResource::collection($assignments),
             ]);
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể lấy danh sách assignments: ' . $e->getMessage(), 500);
@@ -52,7 +52,7 @@ class TaskAssignmentController
     }
 
     /**
-     * Tạo assignment mới
+     * Tạo assignment mới.
      *
      * @param StoreTaskAssignmentRequest $request
      * @param string $projectId
@@ -82,7 +82,7 @@ class TaskAssignmentController
 
             return JSendResponse::success([
                 'assignment' => new TaskAssignmentResource($assignment),
-                'message' => 'Task assignment đã được tạo thành công.'
+                'message' => 'Task assignment đã được tạo thành công.',
             ], 201);
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể tạo task assignment: ' . $e->getMessage(), 500);
@@ -90,7 +90,7 @@ class TaskAssignmentController
     }
 
     /**
-     * Lấy thông tin chi tiết một assignment
+     * Lấy thông tin chi tiết một assignment.
      *
      * @param string $projectId
      * @param string $taskId
@@ -109,7 +109,7 @@ class TaskAssignmentController
                 ->firstOrFail();
 
             return JSendResponse::success([
-                'assignment' => new TaskAssignmentResource($assignment)
+                'assignment' => new TaskAssignmentResource($assignment),
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return JSendResponse::error('Task assignment không tồn tại.', 404);
@@ -119,7 +119,7 @@ class TaskAssignmentController
     }
 
     /**
-     * Cập nhật thông tin assignment
+     * Cập nhật thông tin assignment.
      *
      * @param UpdateTaskAssignmentRequest $request
      * @param string $projectId
@@ -144,7 +144,7 @@ class TaskAssignmentController
                 $currentTotal = TaskAssignment::where('task_id', $taskId)
                     ->where('id', '!=', $assignmentId)
                     ->sum('split_percent');
-                    
+
                 if ($currentTotal + $assignmentData['split_percent'] > 100) {
                     return JSendResponse::error(
                         'Tổng phần trăm phân chia không được vượt quá 100%. Hiện tại (không bao gồm assignment này): ' . $currentTotal . '%',
@@ -161,7 +161,7 @@ class TaskAssignmentController
 
             return JSendResponse::success([
                 'assignment' => new TaskAssignmentResource($assignment),
-                'message' => 'Task assignment đã được cập nhật thành công.'
+                'message' => 'Task assignment đã được cập nhật thành công.',
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return JSendResponse::error('Task assignment không tồn tại.', 404);
@@ -171,7 +171,7 @@ class TaskAssignmentController
     }
 
     /**
-     * Xóa assignment
+     * Xóa assignment.
      *
      * @param string $projectId
      * @param string $taskId
@@ -194,7 +194,7 @@ class TaskAssignmentController
             event(new \Src\CoreProject\Events\TaskAssignmentDeleted($assignment));
 
             return JSendResponse::success([
-                'message' => 'Task assignment đã được xóa thành công.'
+                'message' => 'Task assignment đã được xóa thành công.',
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return JSendResponse::error('Task assignment không tồn tại.', 404);
@@ -204,7 +204,7 @@ class TaskAssignmentController
     }
 
     /**
-     * Lấy thống kê assignments của user trong project
+     * Lấy thống kê assignments của user trong project.
      *
      * @param string $projectId
      * @param string $userId
@@ -214,8 +214,8 @@ class TaskAssignmentController
     {
         try {
             $assignments = TaskAssignment::whereHas('task', function ($query) use ($projectId) {
-                    $query->where('project_id', $projectId);
-                })
+                $query->where('project_id', $projectId);
+            })
                 ->where('user_id', $userId)
                 ->with(['task'])
                 ->get();
@@ -224,7 +224,7 @@ class TaskAssignmentController
                 'total_assignments' => $assignments->count(),
                 'total_workload_percentage' => $assignments->sum('split_percent'),
                 'tasks_by_status' => $assignments->groupBy('task.status')->map->count(),
-                'assignments' => TaskAssignmentResource::collection($assignments)
+                'assignments' => TaskAssignmentResource::collection($assignments),
             ];
 
             return JSendResponse::success($stats);

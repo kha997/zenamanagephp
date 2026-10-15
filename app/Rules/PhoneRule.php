@@ -7,6 +7,7 @@ use Illuminate\Contracts\Validation\Rule;
 class PhoneRule implements Rule
 {
     protected $format;
+
     protected $countryCode;
 
     /**

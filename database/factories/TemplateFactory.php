@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories;
 
@@ -6,21 +8,21 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Src\WorkTemplate\Models\Template;
 
 /**
- * Factory cho Template model
- * 
+ * Factory cho Template model.
+ *
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Src\WorkTemplate\Models\Template>
  */
 class TemplateFactory extends Factory
 {
     /**
-     * Model được tạo bởi factory này
+     * Model được tạo bởi factory này.
      *
      * @var string
      */
     protected $model = Template::class;
 
     /**
-     * Định nghĩa trạng thái mặc định của model
+     * Định nghĩa trạng thái mặc định của model.
      *
      * @return array<string, mixed>
      */
@@ -38,7 +40,7 @@ class TemplateFactory extends Factory
     }
 
     /**
-     * Tạo template không hoạt động
+     * Tạo template không hoạt động.
      */
     public function inactive(): static
     {
@@ -48,7 +50,7 @@ class TemplateFactory extends Factory
     }
 
     /**
-     * Tạo template với category cụ thể
+     * Tạo template với category cụ thể.
      */
     public function withCategory(string $category): static
     {
@@ -58,7 +60,7 @@ class TemplateFactory extends Factory
     }
 
     /**
-     * Tạo template với version cụ thể
+     * Tạo template với version cụ thể.
      */
     public function withVersion(int $version): static
     {
@@ -68,7 +70,7 @@ class TemplateFactory extends Factory
     }
 
     /**
-     * Tạo template với JSON body không hợp lệ
+     * Tạo template với JSON body không hợp lệ.
      */
     public function withInvalidJsonBody(): static
     {
@@ -81,7 +83,7 @@ class TemplateFactory extends Factory
     }
 
     /**
-     * Tạo template với nhiều phases và tasks
+     * Tạo template với nhiều phases và tasks.
      */
     public function withComplexStructure(): static
     {
@@ -91,7 +93,7 @@ class TemplateFactory extends Factory
     }
 
     /**
-     * Tạo JSON body hợp lệ cho template
+     * Tạo JSON body hợp lệ cho template.
      */
     private function generateValidJsonBody(): array
     {
@@ -148,17 +150,17 @@ class TemplateFactory extends Factory
     }
 
     /**
-     * Tạo JSON body phức tạp với nhiều phases và tasks
+     * Tạo JSON body phức tạp với nhiều phases và tasks.
      */
     private function generateComplexJsonBody(): array
     {
         $phases = [];
         $phaseCount = $this->faker->numberBetween(3, 5);
-        
+
         for ($i = 1; $i <= $phaseCount; $i++) {
             $tasks = [];
             $taskCount = $this->faker->numberBetween(2, 6);
-            
+
             for ($j = 1; $j <= $taskCount; $j++) {
                 $tasks[] = [
                     'name' => "Task {$i}.{$j}: " . $this->faker->words(3, true),
@@ -169,14 +171,14 @@ class TemplateFactory extends Factory
                     'conditional_tag' => $this->faker->optional(0.3)->randomElement(['design_required', 'testing_required', 'review_needed']),
                 ];
             }
-            
+
             $phases[] = [
                 'name' => "Phase {$i}: " . $this->faker->words(2, true),
                 'order' => $i,
                 'tasks' => $tasks,
             ];
         }
-        
+
         return [
             'template_name' => $this->faker->words(3, true) . ' Complex Template',
             'description' => $this->faker->paragraph(),

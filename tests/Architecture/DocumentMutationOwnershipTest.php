@@ -1,11 +1,13 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Architecture;
 
+use Illuminate\Routing\Route as RoutingRoute;
+use Illuminate\Support\Facades\Route;
 use ReflectionClass;
 use ReflectionMethod;
-use Illuminate\Support\Facades\Route;
-use Illuminate\Routing\Route as RoutingRoute;
 use Tests\TestCase;
 
 /**
@@ -315,7 +317,7 @@ final class DocumentMutationOwnershipTest extends TestCase
         foreach (Route::getRoutes() as $route) {
             /** @var RoutingRoute $route */
             $action = $route->getActionName();
-            if (! str_contains($action, '@')) {
+            if (!str_contains($action, '@')) {
                 continue;
             }
             if (array_intersect($mutatingVerbs, $route->methods()) === []) {
@@ -323,10 +325,10 @@ final class DocumentMutationOwnershipTest extends TestCase
             }
 
             [$class, $method] = explode('@', $action, 2);
-            if (! class_exists($class) || ! method_exists($class, $method)) {
+            if (!class_exists($class) || !method_exists($class, $method)) {
                 continue;
             }
-            if (! $this->touchesDocumentSurface($this->methodSource($class . '@' . $method))) {
+            if (!$this->touchesDocumentSurface($this->methodSource($class . '@' . $method))) {
                 continue;
             }
 
@@ -347,7 +349,7 @@ final class DocumentMutationOwnershipTest extends TestCase
         foreach (Route::getRoutes() as $route) {
             /** @var RoutingRoute $route */
             $action = $route->getActionName();
-            if (! str_contains($action, '@')) {
+            if (!str_contains($action, '@')) {
                 continue;
             }
             $classes[explode('@', $action, 2)[0]] = true;
@@ -368,7 +370,7 @@ final class DocumentMutationOwnershipTest extends TestCase
 
         foreach ((new ReflectionClass($class))->getProperties() as $property) {
             $type = $property->getType();
-            if (! $type instanceof \ReflectionNamedType) {
+            if (!$type instanceof \ReflectionNamedType) {
                 continue;
             }
             $shortName = ($position = strrpos($type->getName(), '\\')) === false
@@ -391,7 +393,7 @@ final class DocumentMutationOwnershipTest extends TestCase
 
     private function classSource(string $class): string
     {
-        if (! class_exists($class)) {
+        if (!class_exists($class)) {
             return '';
         }
 
@@ -426,7 +428,7 @@ final class DocumentMutationOwnershipTest extends TestCase
         }
 
         foreach (array_unique($matches[1]) as $helper) {
-            if ($helper === $method || ! method_exists($class, $helper)) {
+            if ($helper === $method || !method_exists($class, $helper)) {
                 continue;
             }
             $reflection = new ReflectionMethod($class, $helper);

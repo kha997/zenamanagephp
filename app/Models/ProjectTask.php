@@ -1,18 +1,19 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * ProjectTask Model
- * 
+ * ProjectTask Model.
+ *
  * Quản lý các task trong dự án
  * Được tạo từ template hoặc thêm thủ công
  * Hỗ trợ conditional tags để ẩn/hiện task
- * 
+ *
  * @property string $id
  * @property string $project_id
  * @property string|null $phase_id
@@ -30,22 +31,23 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class ProjectTask extends Model
 {
-
     protected $table = 'project_tasks';
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     /**
-     * Các trạng thái task có thể có
+     * Các trạng thái task có thể có.
      */
-    const STATUS_PENDING = 'pending';
-    const STATUS_IN_PROGRESS = 'in_progress';
-    const STATUS_COMPLETED = 'completed';
-    const STATUS_ON_HOLD = 'on_hold';
-    const STATUS_CANCELLED = 'cancelled';
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_IN_PROGRESS = 'in_progress';
+    public const STATUS_COMPLETED = 'completed';
+    public const STATUS_ON_HOLD = 'on_hold';
+    public const STATUS_CANCELLED = 'cancelled';
 
     /**
-     * Các trường có thể mass assignment
+     * Các trường có thể mass assignment.
      */
     protected $fillable = [
         'project_id',
@@ -60,11 +62,11 @@ class ProjectTask extends Model
         'template_id',
         'template_task_id',
         'created_by',
-        'updated_by'
+        'updated_by',
     ];
 
     /**
-     * Các trường cần cast kiểu dữ liệu
+     * Các trường cần cast kiểu dữ liệu.
      */
     protected $casts = [
         'duration_days' => 'integer',
@@ -72,11 +74,11 @@ class ProjectTask extends Model
         'is_hidden' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
-        'deleted_at' => 'datetime'
+        'deleted_at' => 'datetime',
     ];
 
     /**
-     * Relationship với project (giả sử có Project model)
+     * Relationship với project (giả sử có Project model).
      */
     public function project(): BelongsTo
     {
@@ -84,7 +86,7 @@ class ProjectTask extends Model
     }
 
     /**
-     * Relationship với phase
+     * Relationship với phase.
      */
     public function phase(): BelongsTo
     {
@@ -92,7 +94,7 @@ class ProjectTask extends Model
     }
 
     /**
-     * Relationship với template nếu được tạo từ template
+     * Relationship với template nếu được tạo từ template.
      */
     public function template(): BelongsTo
     {
@@ -100,7 +102,7 @@ class ProjectTask extends Model
     }
 
     /**
-     * Scope để lọc tasks visible (không bị ẩn)
+     * Scope để lọc tasks visible (không bị ẩn).
      */
     public function scopeVisible($query)
     {
@@ -108,7 +110,7 @@ class ProjectTask extends Model
     }
 
     /**
-     * Scope để lọc theo project
+     * Scope để lọc theo project.
      */
     public function scopeByProject($query, string $projectId)
     {
@@ -116,7 +118,7 @@ class ProjectTask extends Model
     }
 
     /**
-     * Scope để lọc theo phase
+     * Scope để lọc theo phase.
      */
     public function scopeByPhase($query, string $phaseId)
     {
@@ -124,7 +126,7 @@ class ProjectTask extends Model
     }
 
     /**
-     * Scope để lọc theo status
+     * Scope để lọc theo status.
      */
     public function scopeByStatus($query, string $status)
     {
@@ -132,7 +134,7 @@ class ProjectTask extends Model
     }
 
     /**
-     * Scope để lọc theo conditional tag
+     * Scope để lọc theo conditional tag.
      */
     public function scopeByConditionalTag($query, string $tag)
     {
@@ -140,7 +142,7 @@ class ProjectTask extends Model
     }
 
     /**
-     * Kiểm tra xem task có được tạo từ template không
+     * Kiểm tra xem task có được tạo từ template không.
      */
     public function isFromTemplate(): bool
     {
@@ -148,7 +150,7 @@ class ProjectTask extends Model
     }
 
     /**
-     * Kiểm tra xem task có conditional tag không
+     * Kiểm tra xem task có conditional tag không.
      */
     public function hasConditionalTag(): bool
     {
@@ -156,17 +158,17 @@ class ProjectTask extends Model
     }
 
     /**
-     * Toggle visibility của task dựa trên conditional tag
+     * Toggle visibility của task dựa trên conditional tag.
      */
     public function toggleConditionalVisibility(bool $isVisible): void
     {
         $this->update([
-            'is_hidden' => !$isVisible
+            'is_hidden' => !$isVisible,
         ]);
     }
 
     /**
-     * Kiểm tra xem task có đang hoàn thành không
+     * Kiểm tra xem task có đang hoàn thành không.
      */
     public function isCompleted(): bool
     {
@@ -174,7 +176,7 @@ class ProjectTask extends Model
     }
 
     /**
-     * Kiểm tra xem task có đang trong tiến trình không
+     * Kiểm tra xem task có đang trong tiến trình không.
      */
     public function isInProgress(): bool
     {
@@ -182,7 +184,7 @@ class ProjectTask extends Model
     }
 
     /**
-     * Lấy danh sách tất cả status có thể có
+     * Lấy danh sách tất cả status có thể có.
      */
     public static function getAvailableStatuses(): array
     {
@@ -191,17 +193,17 @@ class ProjectTask extends Model
             self::STATUS_IN_PROGRESS,
             self::STATUS_COMPLETED,
             self::STATUS_ON_HOLD,
-            self::STATUS_CANCELLED
+            self::STATUS_CANCELLED,
         ];
     }
 
     /**
-     * Cập nhật progress và tự động thay đổi status nếu cần
+     * Cập nhật progress và tự động thay đổi status nếu cần.
      */
     public function updateProgress(float $progressPercent): void
     {
         $this->progress_percent = max(0, min(100, $progressPercent));
-        
+
         // Tự động cập nhật status dựa trên progress
         if ($this->progress_percent == 0 && $this->status !== self::STATUS_PENDING) {
             $this->status = self::STATUS_PENDING;
@@ -210,13 +212,13 @@ class ProjectTask extends Model
         } elseif ($this->progress_percent == 100) {
             $this->status = self::STATUS_COMPLETED;
         }
-        
+
         $this->save();
     }
 
     /**
-     * Tạo factory instance mới cho model
-     * 
+     * Tạo factory instance mới cho model.
+     *
      * @return \Database\Factories\Src\WorkTemplate\Models\ProjectTaskFactory
      */
     protected static function newFactory()

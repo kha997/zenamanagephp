@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
@@ -14,13 +16,20 @@ use Tests\Traits\RouteNameTrait;
 
 class ContractApiTest extends TestCase
 {
-    use RefreshDatabase, AuthenticationTestTrait, RouteNameTrait;
+    use RefreshDatabase;
+    use AuthenticationTestTrait;
+    use RouteNameTrait;
 
     private Tenant $tenantA;
+
     private Tenant $tenantB;
+
     private User $userA;
+
     private User $userB;
+
     private Project $projectA;
+
     private Project $projectB;
 
     /** @var list<string> */
@@ -177,7 +186,6 @@ class ContractApiTest extends TestCase
                 'amount' => 999,
             ], $this->freshHeadersFor($this->userA))
             ->assertStatus(404);
-
     }
 
     public function test_payment_rbac_denies_without_permission_and_allows_with_permission(): void
@@ -200,7 +208,6 @@ class ContractApiTest extends TestCase
             $limitedHeaders
         )
             ->assertStatus(403);
-
     }
 
     /**

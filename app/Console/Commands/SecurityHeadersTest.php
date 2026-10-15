@@ -85,9 +85,8 @@ class SecurityHeadersTest extends Command
                 if ($detailed) {
                     $this->showDetailedHeaders($headers, $securityHeaders);
                 }
-
             } catch (\Exception $e) {
-                $this->error("Error: " . $e->getMessage());
+                $this->error('Error: ' . $e->getMessage());
                 $results[] = [
                     'name' => $name,
                     'url' => $endpoint,
@@ -105,7 +104,7 @@ class SecurityHeadersTest extends Command
     }
 
     /**
-     * Get list of security headers to check
+     * Get list of security headers to check.
      */
     protected function getSecurityHeadersList(): array
     {
@@ -127,7 +126,7 @@ class SecurityHeadersTest extends Command
     }
 
     /**
-     * Calculate security score based on headers
+     * Calculate security score based on headers.
      */
     protected function calculateSecurityScore(array $headers, array $securityHeaders): int
     {
@@ -144,27 +143,27 @@ class SecurityHeadersTest extends Command
     }
 
     /**
-     * Show detailed header analysis
+     * Show detailed header analysis.
      */
     protected function showDetailedHeaders(array $headers, array $securityHeaders): void
     {
         $this->line('Security Headers Analysis:');
-        
+
         foreach ($securityHeaders as $header => $weight) {
             $status = isset($headers[$header]) && !empty($headers[$header]) ? '✓' : '✗';
             $value = $headers[$header] ?? 'Not Set';
-            
+
             // Handle array values
             if (is_array($value)) {
                 $value = implode(', ', $value);
             }
-            
+
             $this->line("  {$status} {$header}: {$value}");
         }
     }
 
     /**
-     * Show test summary
+     * Show test summary.
      */
     protected function showSummary(array $results, array $securityHeaders): void
     {
@@ -173,8 +172,8 @@ class SecurityHeadersTest extends Command
         $this->newLine();
 
         $totalTests = count($results);
-        $successfulTests = count(array_filter($results, fn($r) => $r['status'] !== 'ERROR'));
-        $averageScore = $successfulTests > 0 ? 
+        $successfulTests = count(array_filter($results, fn ($r) => $r['status'] !== 'ERROR'));
+        $averageScore = $successfulTests > 0 ?
             round(array_sum(array_column($results, 'security_score')) / $successfulTests) : 0;
 
         $this->line("Total Tests: {$totalTests}");
@@ -184,7 +183,7 @@ class SecurityHeadersTest extends Command
 
         // Security recommendations
         $this->info('Security Recommendations:');
-        
+
         if ($averageScore >= 90) {
             $this->line('✓ Excellent security headers implementation');
         } elseif ($averageScore >= 70) {

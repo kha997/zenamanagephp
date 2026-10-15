@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Architecture;
 
@@ -32,7 +34,7 @@ class DeploymentProcessConfigInvariantTest extends TestCase
 
     private function readProjectFile(string $path): string
     {
-        $absolutePath = dirname(__DIR__, 3).DIRECTORY_SEPARATOR.$path;
+        $absolutePath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . $path;
 
         $this->assertFileExists($absolutePath);
 

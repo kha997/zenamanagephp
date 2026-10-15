@@ -1,15 +1,17 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories\Src\DocumentManagement\Models;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-use Src\DocumentManagement\Models\DocumentVersion;
-use Src\DocumentManagement\Models\Document;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\Factory;
+use Src\DocumentManagement\Models\Document;
+use Src\DocumentManagement\Models\DocumentVersion;
 
 /**
- * Factory cho DocumentVersion model
- * 
+ * Factory cho DocumentVersion model.
+ *
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Src\DocumentManagement\Models\DocumentVersion>
  */
 class DocumentVersionFactory extends Factory
@@ -35,7 +37,7 @@ class DocumentVersionFactory extends Factory
     }
 
     /**
-     * State: First version
+     * State: First version.
      */
     public function firstVersion(): static
     {
@@ -46,7 +48,7 @@ class DocumentVersionFactory extends Factory
     }
 
     /**
-     * State: Reverted version
+     * State: Reverted version.
      */
     public function reverted(int $fromVersion): static
     {
@@ -57,7 +59,7 @@ class DocumentVersionFactory extends Factory
     }
 
     /**
-     * State: S3 storage
+     * State: S3 storage.
      */
     public function s3Storage(): static
     {

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Console\Commands\Testing;
 
@@ -30,6 +32,7 @@ class TreasuryConcurrencyTestApproveExpense extends Command
         $actor = User::query()->findOrFail($this->argument('actor_id'));
 
         DB::beginTransaction();
+
         try {
             /** @var TreasuryFinancialDocument $expense */
             $expense = TreasuryFinancialDocument::query()->withoutGlobalScopes()->findOrFail($this->argument('expense_id'));

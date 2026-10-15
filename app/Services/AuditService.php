@@ -1,17 +1,16 @@
 <?php
 
 namespace App\Services;
-use Illuminate\Support\Facades\Auth;
-
 
 use App\Models\InteractionLog;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class AuditService
 {
     /**
-     * Log user action
+     * Log user action.
      */
     public function logAction(array $data): InteractionLog
     {
@@ -32,7 +31,7 @@ class AuditService
     }
 
     /**
-     * Log CRUD operations
+     * Log CRUD operations.
      */
     public function logCrudOperation(string $action, string $model, $modelId, array $data = []): void
     {
@@ -57,7 +56,7 @@ class AuditService
     }
 
     /**
-     * Log authentication events
+     * Log authentication events.
      */
     public function logAuthEvent(string $event, array $data = []): void
     {
@@ -77,7 +76,7 @@ class AuditService
     }
 
     /**
-     * Log file operations
+     * Log file operations.
      */
     public function logFileOperation(string $operation, string $filePath, array $data = []): void
     {
@@ -101,7 +100,7 @@ class AuditService
     }
 
     /**
-     * Log system events
+     * Log system events.
      */
     public function logSystemEvent(string $event, array $data = []): void
     {
@@ -123,7 +122,7 @@ class AuditService
     }
 
     /**
-     * Get audit trail for specific entity
+     * Get audit trail for specific entity.
      */
     public function getAuditTrail(string $entityType, string $entityId, array $filters = []): \Illuminate\Database\Eloquent\Collection
     {
@@ -174,12 +173,12 @@ class AuditService
     }
 
     /**
-     * Get user activity summary
+     * Get user activity summary.
      */
     public function getUserActivitySummary(string $userId, int $days = 30): array
     {
         $startDate = now()->subDays($days);
-        
+
         $activities = InteractionLog::where('user_id', $userId)
             ->where('created_at', '>=', $startDate)
             ->remember(300)
@@ -191,13 +190,13 @@ class AuditService
             'actions_by_project' => $activities->whereNotNull('project_id')
                 ->groupBy('project_id')
                 ->map->count(),
-            'daily_activity' => $activities->groupBy(function($item) {
+            'daily_activity' => $activities->groupBy(function ($item) {
                 return $item->created_at->format('Y-m-d');
             })->map->count(),
-            'most_active_day' => $activities->groupBy(function($item) {
+            'most_active_day' => $activities->groupBy(function ($item) {
                 return $item->created_at->format('Y-m-d');
             })->sortDesc()->keys()->first(),
-            'recent_actions' => $activities->take(10)->map(function($activity) {
+            'recent_actions' => $activities->take(10)->map(function ($activity) {
                 return [
                     'type' => $activity->type,
                     'content' => $activity->content,
@@ -211,12 +210,12 @@ class AuditService
     }
 
     /**
-     * Get project activity summary
+     * Get project activity summary.
      */
     public function getProjectActivitySummary(string $projectId, int $days = 30): array
     {
         $startDate = now()->subDays($days);
-        
+
         $activities = InteractionLog::where('project_id', $projectId)
             ->where('created_at', '>=', $startDate)
             ->remember(300)
@@ -228,7 +227,7 @@ class AuditService
             'actions_by_user' => $activities->whereNotNull('user_id')
                 ->groupBy('user_id')
                 ->map->count(),
-            'daily_activity' => $activities->groupBy(function($item) {
+            'daily_activity' => $activities->groupBy(function ($item) {
                 return $item->created_at->format('Y-m-d');
             })->map->count(),
             'most_active_user' => $activities->whereNotNull('user_id')
@@ -236,7 +235,7 @@ class AuditService
                 ->sortDesc()
                 ->keys()
                 ->first(),
-            'recent_actions' => $activities->take(10)->map(function($activity) {
+            'recent_actions' => $activities->take(10)->map(function ($activity) {
                 return [
                     'type' => $activity->type,
                     'content' => $activity->content,
@@ -250,12 +249,12 @@ class AuditService
     }
 
     /**
-     * Get compliance report
+     * Get compliance report.
      */
     public function getComplianceReport(string $tenantId, int $days = 30): array
     {
         $startDate = now()->subDays($days);
-        
+
         $activities = InteractionLog::where('tenant_id', $tenantId)
             ->where('created_at', '>=', $startDate)
             ->remember(300)
@@ -269,7 +268,7 @@ class AuditService
             'total_actions' => $activities->count(),
             'unique_users' => $activities->pluck('user_id')->unique()->count(),
             'actions_by_type' => $activities->groupBy('type')->map->count(),
-            'actions_by_day' => $activities->groupBy(function($item) {
+            'actions_by_day' => $activities->groupBy(function ($item) {
                 return $item->created_at->format('Y-m-d');
             })->map->count(),
             'top_users' => $activities->whereNotNull('user_id')
@@ -286,28 +285,28 @@ class AuditService
     }
 
     /**
-     * Clean old audit logs
+     * Clean old audit logs.
      */
     public function cleanOldLogs(int $daysToKeep = 365): int
     {
         $cutoffDate = now()->subDays($daysToKeep);
-        
+
         $deletedCount = InteractionLog::where('created_at', '<', $cutoffDate)
             ->where('is_internal', true) // Only delete internal logs
             ->delete();
 
         Log::info("Cleaned {$deletedCount} old audit logs older than {$daysToKeep} days");
-        
+
         return $deletedCount;
     }
 
     /**
-     * Export audit trail
+     * Export audit trail.
      */
     public function exportAuditTrail(string $entityType, string $entityId, string $format = 'json'): string
     {
         $auditTrail = $this->getAuditTrail($entityType, $entityId);
-        
+
         switch ($format) {
             case 'json':
                 return $auditTrail->toJson(JSON_PRETTY_PRINT);
@@ -319,12 +318,12 @@ class AuditService
     }
 
     /**
-     * Convert audit trail to CSV
+     * Convert audit trail to CSV.
      */
     private function convertToCsv(\Illuminate\Database\Eloquent\Collection $auditTrail): string
     {
         $csv = "Date,User,Type,Content,Project,Task,Component,Metadata\n";
-        
+
         foreach ($auditTrail as $log) {
             $csv .= sprintf(
                 "%s,%s,%s,%s,%s,%s,%s,%s\n",
@@ -338,17 +337,17 @@ class AuditService
                 '"' . str_replace('"', '""', json_encode($log->metadata)) . '"'
             );
         }
-        
+
         return $csv;
     }
 
     /**
-     * Get audit statistics
+     * Get audit statistics.
      */
     public function getAuditStatistics(string $tenantId, int $days = 30): array
     {
         $startDate = now()->subDays($days);
-        
+
         $stats = [
             'total_logs' => InteractionLog::where('tenant_id', $tenantId)
                 ->where('created_at', '>=', $startDate)

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
@@ -21,10 +23,15 @@ class TaskOverdueEscalationApiTest extends TestCase
     private const CAPA_CONTEXT_TAG = 'inspection-ncr-capa';
 
     protected Tenant $tenant;
+
     protected User $actor;
+
     protected User $assignee;
+
     protected array $headers;
+
     protected array $assigneeHeaders;
+
     protected Project $project;
 
     protected function setUp(): void

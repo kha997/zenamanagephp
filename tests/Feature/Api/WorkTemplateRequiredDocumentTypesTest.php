@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
@@ -18,6 +20,7 @@ class WorkTemplateRequiredDocumentTypesTest extends TestCase
     use TenantUserFactoryTrait;
 
     private Tenant $tenant;
+
     private User $user;
 
     protected function setUp(): void

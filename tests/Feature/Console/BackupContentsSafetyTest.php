@@ -79,7 +79,7 @@ class BackupContentsSafetyTest extends TestCase
         // The real nesting risk: BACKUP_DISK=local stores archives under
         // storage/app (the local disk root), which backupFiles() copies.
         $dir = storage_path('app/backups/gap054-probe');
-        @mkdir($dir, 0755, true);
+        @mkdir($dir, 0o755, true);
         file_put_contents($dir . '/backup_full_2026-01-01_00-00-00.tar.gz', 'old');
         config(['backup.disk' => 'local', 'backup.path' => 'backups/gap054-probe']);
 
@@ -97,7 +97,7 @@ class BackupContentsSafetyTest extends TestCase
     public function test_symlink_to_a_secret_inside_storage_is_not_followed(): void
     {
         $secretPath = storage_path('framework/testing/gap054-secret.env');
-        @mkdir(dirname($secretPath), 0755, true);
+        @mkdir(dirname($secretPath), 0o755, true);
         file_put_contents($secretPath, 'APP_KEY=' . self::SENTINEL . "\n");
 
         $linkPath = storage_path('app/gap054-link.txt');

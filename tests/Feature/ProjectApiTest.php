@@ -1,23 +1,28 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Models\Permission;
+use App\Models\Role;
+use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
-use Tests\TestCase;
-use App\Models\User;
-use App\Models\Tenant;
-use Src\CoreProject\Models\Project;
-use App\Models\Role;
-use App\Models\Permission;
 use Illuminate\Support\Facades\Hash;
+use Src\CoreProject\Models\Project;
+use Tests\TestCase;
 
 class ProjectApiTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use RefreshDatabase;
+    use WithFaker;
 
     protected $user;
+
     protected $tenant;
+
     protected $token;
 
     private function apiHeaders(): array
@@ -30,39 +35,39 @@ class ProjectApiTest extends TestCase
     }
 
     /**
-     * Setup method
+     * Setup method.
      */
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Tạo tenant
         $this->tenant = Tenant::factory()->create([
             'id' => 1,
             'name' => 'Test Company',
-            'domain' => 'test.com'
+            'domain' => 'test.com',
         ]);
-        
+
         // Tạo user và login để lấy token
         $this->user = User::factory()->create([
             'tenant_id' => $this->tenant->id,
             'password' => Hash::make('password123'),
         ]);
-        
+
         // Tạo role và permissions
         $this->createRolesAndPermissions();
-        
+
         // Login để lấy token
         $loginResponse = $this->postJson('/api/auth/login', [
             'email' => $this->user->email,
             'password' => 'password123',
         ]);
-        
+
         $this->token = $loginResponse->json('token');
     }
 
     /**
-     * Tạo roles và permissions cho test
+     * Tạo roles và permissions cho test.
      */
     private function createRolesAndPermissions()
     {
@@ -74,7 +79,7 @@ class ProjectApiTest extends TestCase
             'project.update',
             'project.delete',
         ];
-        
+
         foreach ($permissions as $permissionCode) {
             Permission::updateOrCreate(
                 ['name' => $permissionCode],
@@ -82,17 +87,17 @@ class ProjectApiTest extends TestCase
                     'code' => $permissionCode,
                     'module' => 'project',
                     'action' => explode('.', $permissionCode)[1] ?? 'access',
-                    'description' => 'Permission for ' . $permissionCode
+                    'description' => 'Permission for ' . $permissionCode,
                 ]
             );
         }
-        
+
         // Tạo role admin (lowercase)
         $adminRole = Role::firstOrCreate(
             ['name' => 'admin'],
             [
                 'scope' => 'system',
-                'description' => 'System Administrator'
+                'description' => 'System Administrator',
             ]
         );
 
@@ -101,28 +106,28 @@ class ProjectApiTest extends TestCase
             ['name' => 'Admin'],
             [
                 'scope' => 'system',
-                'description' => 'System Administrator'
+                'description' => 'System Administrator',
             ]
         );
-        
+
         $permissionIds = Permission::whereIn('name', $permissions)->pluck('id')->toArray();
-        
+
         // Gán permissions cho các role
         $adminRole->permissions()->syncWithoutDetaching($permissionIds);
         $adminRoleCamel->permissions()->syncWithoutDetaching($permissionIds);
-        
+
         // Gán role cho user
         $this->user->roles()->syncWithoutDetaching([$adminRole->id, $adminRoleCamel->id]);
     }
 
     /**
-     * Test get all projects
+     * Test get all projects.
      */
     public function test_can_get_all_projects()
     {
         // Tạo test data
         Project::factory()->count(3)->create([
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $response = $this->withHeaders($this->apiHeaders())
@@ -139,14 +144,14 @@ class ProjectApiTest extends TestCase
                              'page',
                              'per_page',
                              'total',
-                             'last_page'
-                         ]
-                     ]
+                             'last_page',
+                         ],
+                     ],
                  ]);
     }
 
     /**
-     * Test create project
+     * Test create project.
      */
     public function test_can_create_project()
     {
@@ -156,7 +161,7 @@ class ProjectApiTest extends TestCase
             'start_date' => now()->format('Y-m-d'),
             'end_date' => now()->addMonths(6)->format('Y-m-d'),
             'status' => 'planning',
-            'planned_cost' => 1000000
+            'planned_cost' => 1000000,
         ];
 
         $response = $this->withHeaders($this->apiHeaders())
@@ -174,25 +179,25 @@ class ProjectApiTest extends TestCase
                          'tenant_id',
                          'status',
                          'created_at',
-                         'updated_at'
-                     ]
+                         'updated_at',
+                     ],
                  ])
                  ->assertJsonPath('data.name', $projectData['name'])
                  ->assertJsonPath('data.tenant_id', (string) $this->tenant->id);
 
         $this->assertDatabaseHas('projects', [
             'name' => $projectData['name'],
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
     }
 
     /**
-     * Test get single project
+     * Test get single project.
      */
     public function test_can_get_single_project()
     {
         $project = Project::factory()->create([
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $response = $this->withHeaders($this->apiHeaders())
@@ -226,12 +231,12 @@ class ProjectApiTest extends TestCase
     }
 
     /**
-     * Test update project
+     * Test update project.
      */
     public function test_can_update_project()
     {
         $project = Project::factory()->create([
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $updateData = [
@@ -254,17 +259,17 @@ class ProjectApiTest extends TestCase
 
         $this->assertDatabaseHas('projects', [
             'id' => $project->id,
-            'name' => 'Updated Project Name'
+            'name' => 'Updated Project Name',
         ]);
     }
 
     /**
-     * Test delete project
+     * Test delete project.
      */
     public function test_can_delete_project()
     {
         $project = Project::factory()->create([
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $response = $this->withHeaders($this->apiHeaders())
@@ -274,21 +279,21 @@ class ProjectApiTest extends TestCase
                  ->assertJsonStructure([
                      'status',
                      'message',
-                     'data'
+                     'data',
                  ])
                  ->assertJson([
                      'status' => 'success',
                      'message' => 'Project deleted successfully',
-                     'data' => []
+                     'data' => [],
                  ]);
 
         $this->assertSoftDeleted('projects', [
-            'id' => $project->id
+            'id' => $project->id,
         ]);
     }
 
     /**
-     * Test validation errors
+     * Test validation errors.
      */
     public function test_create_project_validation_errors()
     {
@@ -301,7 +306,7 @@ class ProjectApiTest extends TestCase
     }
 
     /**
-     * Test unauthorized access
+     * Test unauthorized access.
      */
     public function test_unauthorized_access_to_projects()
     {
@@ -314,7 +319,7 @@ class ProjectApiTest extends TestCase
     }
 
     /**
-     * Test project not found
+     * Test project not found.
      */
     public function test_project_not_found()
     {

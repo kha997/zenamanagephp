@@ -1,10 +1,12 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
 use App\Http\Middleware\RoleBasedAccessControlMiddleware;
-use App\Models\MaterialRequest;
 use App\Models\MaterialReceipt;
+use App\Models\MaterialRequest;
 use App\Models\Project;
 use App\Models\Tenant;
 use App\Models\User;
@@ -20,8 +22,11 @@ class MaterialRequestApiTest extends TestCase
     use TenantUserFactoryTrait;
 
     private Tenant $tenantA;
+
     private Tenant $tenantB;
+
     private User $userA;
+
     private User $userB;
 
     /** @var list<string> */

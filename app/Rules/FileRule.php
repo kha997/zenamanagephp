@@ -8,7 +8,9 @@ use Illuminate\Http\UploadedFile;
 class FileRule implements Rule
 {
     protected $maxSize;
+
     protected $allowedTypes;
+
     protected $allowedExtensions;
 
     /**

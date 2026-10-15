@@ -1,19 +1,20 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Src\Foundation\Helpers\AuthHelper;
+
 /**
- * Form Request để xác thực dữ liệu khi tạo Notification Rule mới
- * 
- * @package Src\Notification\Requests
+ * Form Request để xác thực dữ liệu khi tạo Notification Rule mới.
  */
 class StoreNotificationRuleRequest extends FormRequest
 {
     /**
-     * Xác định user có quyền thực hiện request này không
+     * Xác định user có quyền thực hiện request này không.
      */
     public function authorize(): bool
     {
@@ -21,7 +22,7 @@ class StoreNotificationRuleRequest extends FormRequest
     }
 
     /**
-     * Các quy tắc validation cho request
+     * Các quy tắc validation cho request.
      */
     public function rules(): array
     {
@@ -29,59 +30,59 @@ class StoreNotificationRuleRequest extends FormRequest
             'user_id' => [
                 'required',
                 'integer',
-                'exists:users,id'
+                'exists:users,id',
             ],
             'project_id' => [
                 'nullable',
                 'integer',
-                'exists:projects,id'
+                'exists:projects,id',
             ],
             'event_key' => [
                 'required',
                 'string',
-                'max:100'
+                'max:100',
             ],
             'min_priority' => [
                 'required',
                 'string',
-                Rule::in(['critical', 'normal', 'low'])
+                Rule::in(['critical', 'normal', 'low']),
             ],
             'channels' => [
                 'required',
                 'array',
-                'min:1'
+                'min:1',
             ],
             'channels.*' => [
                 'required',
                 'string',
-                Rule::in(['inapp', 'email', 'webhook'])
+                Rule::in(['inapp', 'email', 'webhook']),
             ],
             'conditions' => [
                 'nullable',
-                'array'
+                'array',
             ],
             'conditions.*.field' => [
                 'required_with:conditions',
                 'string',
-                'max:100'
+                'max:100',
             ],
             'conditions.*.operator' => [
                 'required_with:conditions',
                 'string',
-                Rule::in(['=', '!=', '>', '<', '>=', '<=', 'contains', 'not_contains', 'in', 'not_in'])
+                Rule::in(['=', '!=', '>', '<', '>=', '<=', 'contains', 'not_contains', 'in', 'not_in']),
             ],
             'conditions.*.value' => [
-                'required_with:conditions'
+                'required_with:conditions',
             ],
             'is_enabled' => [
                 'sometimes',
-                'boolean'
-            ]
+                'boolean',
+            ],
         ];
     }
 
     /**
-     * Các thông báo lỗi tùy chỉnh
+     * Các thông báo lỗi tùy chỉnh.
      */
     public function messages(): array
     {
@@ -99,13 +100,13 @@ class StoreNotificationRuleRequest extends FormRequest
             'conditions.*.field.required_with' => 'Trường điều kiện là bắt buộc.',
             'conditions.*.operator.required_with' => 'Toán tử điều kiện là bắt buộc.',
             'conditions.*.operator.in' => 'Toán tử phải là một trong: =, !=, >, <, >=, <=, contains, not_contains, in, not_in.',
-            'conditions.*.value.required_with' => 'Giá trị điều kiện là bắt buộc.'
+            'conditions.*.value.required_with' => 'Giá trị điều kiện là bắt buộc.',
         ];
     }
 
     /**
-     * Lấy ID của user hiện tại một cách an toàn
-     * 
+     * Lấy ID của user hiện tại một cách an toàn.
+     *
      * @return int|null
      */
     private function getUserId(): ?int
@@ -118,12 +119,12 @@ class StoreNotificationRuleRequest extends FormRequest
             // Log error nếu cần thiết
             // Log::warning('Cannot get user ID: ' . $e->getMessage());
         }
-        
+
         return null;
     }
 
     /**
-     * Chuẩn bị dữ liệu cho validation
+     * Chuẩn bị dữ liệu cho validation.
      */
     protected function prepareForValidation(): void
     {
@@ -132,7 +133,7 @@ class StoreNotificationRuleRequest extends FormRequest
             $userId = $this->getUserId();
             if ($userId !== null) {
                 $this->merge([
-                    'user_id' => $userId
+                    'user_id' => $userId,
                 ]);
             }
         }
@@ -140,13 +141,13 @@ class StoreNotificationRuleRequest extends FormRequest
         // Mặc định is_enabled là true nếu không được chỉ định
         if (!$this->has('is_enabled')) {
             $this->merge([
-                'is_enabled' => true
+                'is_enabled' => true,
             ]);
         }
     }
 
     /**
-     * Xử lý sau khi validation thành công
+     * Xử lý sau khi validation thành công.
      */
     public function withValidator($validator): void
     {

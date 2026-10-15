@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+
 class AdminOnlyMiddleware
 {
     /**
@@ -21,6 +22,7 @@ class AdminOnlyMiddleware
             if ($request->expectsJson()) {
                 return response()->json(['error' => 'Unauthenticated'], 401);
             }
+
             return redirect('/login')->with('error', 'Please login to access admin area.');
         }
 
@@ -31,6 +33,7 @@ class AdminOnlyMiddleware
             if ($request->expectsJson()) {
                 return response()->json(['error' => 'Access denied. Admin privileges required.'], 403);
             }
+
             return redirect('/app/dashboard')->with('error', 'Access denied. Admin privileges required.');
         }
 

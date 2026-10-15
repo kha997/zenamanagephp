@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
@@ -6,21 +8,17 @@ use App\Models\User;
 use App\Services\UserManagementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
 use Src\Foundation\Utils\JSendResponse;
 
 /**
- * Controller xử lý các hoạt động CRUD cho User
- * 
- * @package App\Http\Controllers
+ * Controller xử lý các hoạt động CRUD cho User.
  */
 class UserController extends Controller
 {
     private UserManagementService $userService;
 
     /**
-     * Constructor - inject UserManagementService
+     * Constructor - inject UserManagementService.
      */
     public function __construct(UserManagementService $userService)
     {
@@ -29,7 +27,7 @@ class UserController extends Controller
 
     /**
      * Lấy danh sách users
-     * GET /api/v1/users
+     * GET /api/v1/users.
      */
     public function index(Request $request): JsonResponse
     {
@@ -39,8 +37,8 @@ class UserController extends Controller
             }
 
             $result = $this->userService->getUsers($request);
-            return JSendResponse::success($result);
 
+            return JSendResponse::success($result);
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể lấy danh sách users: ' . $e->getMessage(), 500);
         }
@@ -48,7 +46,7 @@ class UserController extends Controller
 
     /**
      * Tạo user mới
-     * POST /api/v1/users
+     * POST /api/v1/users.
      */
     public function store(Request $request): JsonResponse
     {
@@ -58,8 +56,8 @@ class UserController extends Controller
             }
 
             $result = $this->userService->createUser($request);
-            return JSendResponse::success($result, 201);
 
+            return JSendResponse::success($result, 201);
         } catch (\InvalidArgumentException $e) {
             return JSendResponse::fail(['validation' => $e->getMessage()], 422);
         } catch (\Exception $e) {
@@ -69,7 +67,7 @@ class UserController extends Controller
 
     /**
      * Lấy thông tin chi tiết user
-     * GET /api/v1/users/{id}
+     * GET /api/v1/users/{id}.
      */
     public function show(Request $request, string $id): JsonResponse
     {
@@ -79,8 +77,8 @@ class UserController extends Controller
             }
 
             $user = $this->userService->getUserById($request, $id);
-            return JSendResponse::success(['user' => $user]);
 
+            return JSendResponse::success(['user' => $user]);
         } catch (\UnauthorizedHttpException $e) {
             return JSendResponse::error($e->getMessage(), 403);
         } catch (\Exception $e) {
@@ -90,7 +88,7 @@ class UserController extends Controller
 
     /**
      * Cập nhật thông tin user
-     * PUT/PATCH /api/v1/users/{id}
+     * PUT/PATCH /api/v1/users/{id}.
      */
     public function update(Request $request, string $id): JsonResponse
     {
@@ -100,8 +98,8 @@ class UserController extends Controller
             }
 
             $result = $this->userService->updateUser($request, $id);
-            return JSendResponse::success($result);
 
+            return JSendResponse::success($result);
         } catch (\UnauthorizedHttpException $e) {
             return JSendResponse::error($e->getMessage(), 403);
         } catch (\InvalidArgumentException $e) {
@@ -113,7 +111,7 @@ class UserController extends Controller
 
     /**
      * Xóa user
-     * DELETE /api/v1/users/{id}
+     * DELETE /api/v1/users/{id}.
      */
     public function destroy(Request $request, string $id): JsonResponse
     {
@@ -123,8 +121,8 @@ class UserController extends Controller
             }
 
             $result = $this->userService->deleteUser($request, $id);
-            return JSendResponse::success($result);
 
+            return JSendResponse::success($result);
         } catch (\UnauthorizedHttpException $e) {
             return JSendResponse::error($e->getMessage(), 403);
         } catch (\Exception $e) {
@@ -133,7 +131,7 @@ class UserController extends Controller
     }
 
     /**
-     * Kiểm tra quyền truy cập
+     * Kiểm tra quyền truy cập.
      */
     private function hasPermission(Request $request, string $permission): bool
     {

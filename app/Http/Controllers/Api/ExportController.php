@@ -45,7 +45,9 @@ class ExportController extends Controller
 
             $query = Task::query()
                 ->where('tenant_id', $trustedTenantId)
-                ->whereHas('project', fn ($projectQuery) => $projectQuery
+                ->whereHas(
+                    'project',
+                    fn ($projectQuery) => $projectQuery
                     ->where('tenant_id', $trustedTenantId)
                 );
 
@@ -209,11 +211,11 @@ class ExportController extends Controller
 
             rewind($temp);
 
-            if (! Storage::put($partPath, $temp)) {
+            if (!Storage::put($partPath, $temp)) {
                 throw new \RuntimeException('Unable to write temporary export artifact.');
             }
 
-            if (! Storage::move($partPath, $filePath)) {
+            if (!Storage::move($partPath, $filePath)) {
                 throw new \RuntimeException('Unable to publish export artifact.');
             }
 
@@ -223,6 +225,7 @@ class ExportController extends Controller
             if (Storage::exists($partPath)) {
                 Storage::delete($partPath);
             }
+
             throw $e;
         } finally {
             if (is_resource($temp)) {
@@ -297,11 +300,11 @@ class ExportController extends Controller
 
             rewind($temp);
 
-            if (! Storage::put($partPath, $temp)) {
+            if (!Storage::put($partPath, $temp)) {
                 throw new \RuntimeException('Unable to write temporary export artifact.');
             }
 
-            if (! Storage::move($partPath, $filePath)) {
+            if (!Storage::move($partPath, $filePath)) {
                 throw new \RuntimeException('Unable to publish export artifact.');
             }
 
@@ -311,6 +314,7 @@ class ExportController extends Controller
             if (Storage::exists($partPath)) {
                 Storage::delete($partPath);
             }
+
             throw $e;
         } finally {
             if (is_resource($temp)) {

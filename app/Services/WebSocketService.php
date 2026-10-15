@@ -1,14 +1,15 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
-use Illuminate\Http\Request;
 
 /**
- * Real-time WebSocket Service
- * 
+ * Real-time WebSocket Service.
+ *
  * Provides WebSocket functionality for:
  * - Live dashboard updates
  * - Real-time notifications
@@ -66,7 +67,7 @@ class WebSocketService
     ];
 
     /**
-     * Broadcast message to specific channel
+     * Broadcast message to specific channel.
      */
     public function broadcast(string $channel, string $event, array $data, string $tenantId = null): bool
     {
@@ -83,10 +84,10 @@ class WebSocketService
         try {
             $fullChannel = $this->buildChannelName($channel, $tenantId);
             $message = $this->buildMessage($event, $data);
-            
+
             // Publish to Redis for WebSocket server
             Redis::publish($fullChannel, json_encode($message));
-            
+
             // Log the broadcast
             Log::info('WebSocket broadcast', [
                 'channel' => $fullChannel,
@@ -94,7 +95,7 @@ class WebSocketService
                 'data_size' => strlen(json_encode($data)),
                 'tenant_id' => $tenantId,
             ]);
-            
+
             return true;
         } catch (\Exception $e) {
             Log::error('WebSocket broadcast failed', [
@@ -103,21 +104,23 @@ class WebSocketService
                 'error' => $e->getMessage(),
                 'tenant_id' => $tenantId,
             ]);
+
             return false;
         }
     }
 
     /**
-     * Broadcast to user-specific channel
+     * Broadcast to user-specific channel.
      */
     public function broadcastToUser(string $userId, string $event, array $data, string $tenantId = null): bool
     {
         $channel = "user:{$userId}";
+
         return $this->broadcast($channel, $event, $data, $tenantId);
     }
 
     /**
-     * Broadcast to tenant-specific channel
+     * Broadcast to tenant-specific channel.
      */
     public function broadcastToTenant(string $tenantId, string $channel, string $event, array $data): bool
     {
@@ -125,7 +128,7 @@ class WebSocketService
     }
 
     /**
-     * Broadcast to multiple users
+     * Broadcast to multiple users.
      */
     public function broadcastToUsers(array $userIds, string $event, array $data, string $tenantId = null): bool
     {
@@ -135,11 +138,12 @@ class WebSocketService
                 $success = false;
             }
         }
+
         return $success;
     }
 
     /**
-     * Subscribe to channel (for WebSocket server)
+     * Subscribe to channel (for WebSocket server).
      */
     public function subscribe(string $channel, callable $callback): void
     {
@@ -159,7 +163,7 @@ class WebSocketService
     }
 
     /**
-     * Get online users count
+     * Get online users count.
      */
     public function getOnlineUsersCount(string $tenantId = null): int
     {
@@ -168,20 +172,22 @@ class WebSocketService
         }
 
         try {
-            $pattern = $tenantId ? "online_users:{$tenantId}:*" : "online_users:*";
+            $pattern = $tenantId ? "online_users:{$tenantId}:*" : 'online_users:*';
             $keys = Redis::keys($pattern);
+
             return count($keys);
         } catch (\Exception $e) {
             Log::error('Failed to get online users count', [
                 'error' => $e->getMessage(),
                 'tenant_id' => $tenantId,
             ]);
+
             return 0;
         }
     }
 
     /**
-     * Mark user as online
+     * Mark user as online.
      */
     public function markUserOnline(string $userId, string $tenantId = null): bool
     {
@@ -194,7 +200,7 @@ class WebSocketService
                     'online_at' => time(),
                     'last_seen' => time(),
                 ];
-                
+
                 Redis::setex($key, 300, json_encode($data)); // 5 minutes TTL
             }
 
@@ -211,12 +217,13 @@ class WebSocketService
                 'error' => $e->getMessage(),
                 'tenant_id' => $tenantId,
             ]);
+
             return false;
         }
     }
 
     /**
-     * Mark user as offline
+     * Mark user as offline.
      */
     public function markUserOffline(string $userId, string $tenantId = null): bool
     {
@@ -239,12 +246,13 @@ class WebSocketService
                 'error' => $e->getMessage(),
                 'tenant_id' => $tenantId,
             ]);
+
             return false;
         }
     }
 
     /**
-     * Update user activity
+     * Update user activity.
      */
     public function updateUserActivity(string $userId, string $activity, array $metadata = [], string $tenantId = null): bool
     {
@@ -279,12 +287,13 @@ class WebSocketService
                 'error' => $e->getMessage(),
                 'tenant_id' => $tenantId,
             ]);
+
             return false;
         }
     }
 
     /**
-     * Send notification via WebSocket
+     * Send notification via WebSocket.
      */
     public function sendNotification(string $userId, array $notification, string $tenantId = null): bool
     {
@@ -294,7 +303,7 @@ class WebSocketService
                 'notification' => $notification,
                 'timestamp' => time(),
             ];
-            
+
             return $this->broadcastToUser($userId, $event, $data, $tenantId);
         } catch (\Exception $e) {
             Log::error('Failed to send WebSocket notification', [
@@ -302,12 +311,13 @@ class WebSocketService
                 'error' => $e->getMessage(),
                 'tenant_id' => $tenantId,
             ]);
+
             return false;
         }
     }
 
     /**
-     * Broadcast dashboard update
+     * Broadcast dashboard update.
      */
     public function broadcastDashboardUpdate(string $event, array $data, string $tenantId = null): bool
     {
@@ -315,25 +325,27 @@ class WebSocketService
     }
 
     /**
-     * Broadcast project update
+     * Broadcast project update.
      */
     public function broadcastProjectUpdate(int $projectId, string $event, array $data, string $tenantId = null): bool
     {
         $data['project_id'] = $projectId;
+
         return $this->broadcast('projects', $event, $data, $tenantId);
     }
 
     /**
-     * Broadcast task update
+     * Broadcast task update.
      */
     public function broadcastTaskUpdate(int $taskId, string $event, array $data, string $tenantId = null): bool
     {
         $data['task_id'] = $taskId;
+
         return $this->broadcast('tasks', $event, $data, $tenantId);
     }
 
     /**
-     * Get WebSocket statistics
+     * Get WebSocket statistics.
      */
     public function getStats(): array
     {
@@ -350,12 +362,13 @@ class WebSocketService
                 'event_types' => $this->eventTypes,
                 'redis_connected' => $this->isRedisConnected(),
             ];
-            
+
             return $stats;
         } catch (\Exception $e) {
             Log::error('Failed to get WebSocket stats', [
                 'error' => $e->getMessage(),
             ]);
+
             return [];
         }
     }
@@ -392,21 +405,21 @@ class WebSocketService
     }
 
     /**
-     * Build channel name with tenant isolation
+     * Build channel name with tenant isolation.
      */
     private function buildChannelName(string $channel, string $tenantId = null): string
     {
         $baseChannel = $this->channels[$channel] ?? $channel;
-        
+
         if ($tenantId) {
             return "tenant:{$tenantId}:{$baseChannel}";
         }
-        
+
         return $baseChannel;
     }
 
     /**
-     * Build message structure
+     * Build message structure.
      */
     private function buildMessage(string $event, array $data): array
     {
@@ -419,19 +432,19 @@ class WebSocketService
     }
 
     /**
-     * Build online user key
+     * Build online user key.
      */
     private function buildOnlineUserKey(string $userId, string $tenantId = null): string
     {
         if ($tenantId) {
             return "online_users:{$tenantId}:{$userId}";
         }
-        
+
         return "online_users:{$userId}";
     }
 
     /**
-     * Check if Redis is connected
+     * Check if Redis is connected.
      */
     private function isRedisConnected(): bool
     {
@@ -441,6 +454,7 @@ class WebSocketService
 
         try {
             Redis::ping();
+
             return true;
         } catch (\Exception $e) {
             return false;
@@ -457,16 +471,16 @@ class WebSocketService
     }
 
     /**
-     * Validate event type
+     * Validate event type.
      */
     public function isValidEvent(string $channel, string $event): bool
     {
-        return isset($this->eventTypes[$channel]) && 
+        return isset($this->eventTypes[$channel]) &&
                in_array($event, $this->eventTypes[$channel]);
     }
 
     /**
-     * Get available channels
+     * Get available channels.
      */
     public function getChannels(): array
     {
@@ -474,7 +488,7 @@ class WebSocketService
     }
 
     /**
-     * Get available event types for channel
+     * Get available event types for channel.
      */
     public function getEventTypes(string $channel): array
     {

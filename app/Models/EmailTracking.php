@@ -3,14 +3,12 @@
 namespace App\Models;
 
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 class EmailTracking extends Model
 {
-
     protected $table = 'email_tracking';
 
     protected $fillable = [
@@ -87,7 +85,7 @@ class EmailTracking extends Model
     }
 
     /**
-     * Mark email as sent
+     * Mark email as sent.
      */
     public function markAsSent(): void
     {
@@ -98,7 +96,7 @@ class EmailTracking extends Model
     }
 
     /**
-     * Mark email as delivered
+     * Mark email as delivered.
      */
     public function markAsDelivered(): void
     {
@@ -109,7 +107,7 @@ class EmailTracking extends Model
     }
 
     /**
-     * Mark email as opened
+     * Mark email as opened.
      */
     public function markAsOpened(array $details = []): void
     {
@@ -122,7 +120,7 @@ class EmailTracking extends Model
     }
 
     /**
-     * Mark email as clicked
+     * Mark email as clicked.
      */
     public function markAsClicked(array $details = []): void
     {
@@ -135,7 +133,7 @@ class EmailTracking extends Model
     }
 
     /**
-     * Mark email as bounced
+     * Mark email as bounced.
      */
     public function markAsBounced(string $reason = null): void
     {
@@ -147,7 +145,7 @@ class EmailTracking extends Model
     }
 
     /**
-     * Mark email as failed
+     * Mark email as failed.
      */
     public function markAsFailed(string $reason = null): void
     {
@@ -159,7 +157,7 @@ class EmailTracking extends Model
     }
 
     /**
-     * Check if email has been opened
+     * Check if email has been opened.
      */
     public function isOpened(): bool
     {
@@ -167,7 +165,7 @@ class EmailTracking extends Model
     }
 
     /**
-     * Check if email has been clicked
+     * Check if email has been clicked.
      */
     public function isClicked(): bool
     {
@@ -175,50 +173,61 @@ class EmailTracking extends Model
     }
 
     /**
-     * Get delivery time in seconds
+     * Get delivery time in seconds.
      */
     public function getDeliveryTime(): ?int
     {
         if ($this->sent_at && $this->delivered_at) {
             return (int) round($this->delivered_at->diffInSeconds($this->sent_at));
         }
+
         return null;
     }
 
     /**
-     * Get time to open in seconds
+     * Get time to open in seconds.
      */
     public function getTimeToOpen(): ?int
     {
         if ($this->sent_at && $this->opened_at) {
             return (int) round($this->opened_at->diffInSeconds($this->sent_at));
         }
+
         return null;
     }
 
     /**
-     * Get time to click in seconds
+     * Get time to click in seconds.
      */
     public function getTimeToClick(): ?int
     {
         if ($this->sent_at && $this->clicked_at) {
             return (int) round($this->clicked_at->diffInSeconds($this->sent_at));
         }
+
         return null;
     }
 
     /**
-     * Get engagement score (0-100)
+     * Get engagement score (0-100).
      */
     public function getEngagementScore(): int
     {
         $score = 0;
-        
-        if ($this->isOpened()) $score += 30;
-        if ($this->isClicked()) $score += 50;
-        if ($this->open_count > 1) $score += 10;
-        if ($this->click_count > 1) $score += 10;
-        
+
+        if ($this->isOpened()) {
+            $score += 30;
+        }
+        if ($this->isClicked()) {
+            $score += 50;
+        }
+        if ($this->open_count > 1) {
+            $score += 10;
+        }
+        if ($this->click_count > 1) {
+            $score += 10;
+        }
+
         return min($score, 100);
     }
 }

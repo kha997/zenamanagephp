@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests\Auth;
 
@@ -20,7 +22,7 @@ class PasswordResetRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'email', 'exists:users,email']
+            'email' => ['required', 'email', 'exists:users,email'],
         ];
     }
 
@@ -32,7 +34,7 @@ class PasswordResetRequest extends FormRequest
         return [
             'email.required' => 'Email address is required.',
             'email.email' => 'Please provide a valid email address.',
-            'email.exists' => 'No account found with this email address.'
+            'email.exists' => 'No account found with this email address.',
         ];
     }
 }

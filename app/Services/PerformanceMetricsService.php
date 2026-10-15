@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -7,13 +9,13 @@ use Illuminate\Support\Facades\Redis;
 
 /**
  * Service theo dõi và báo cáo performance metrics
- * Cung cấp insights về database performance, cache hit rates, và response times
+ * Cung cấp insights về database performance, cache hit rates, và response times.
  */
 class PerformanceMetricsService
 {
     /**
-     * Get comprehensive performance metrics
-     * 
+     * Get comprehensive performance metrics.
+     *
      * @return array
      */
     public function getMetrics(): array
@@ -27,8 +29,8 @@ class PerformanceMetricsService
     }
 
     /**
-     * Get database performance metrics
-     * 
+     * Get database performance metrics.
+     *
      * @return array
      */
     private function getDatabaseMetrics(): array
@@ -60,7 +62,7 @@ class PerformanceMetricsService
 
         // Calculate buffer pool hit rate
         if (isset($result['innodb_buffer_pool_read_requests']) && isset($result['innodb_buffer_pool_reads'])) {
-            $hitRate = ($result['innodb_buffer_pool_read_requests'] - $result['innodb_buffer_pool_reads']) 
+            $hitRate = ($result['innodb_buffer_pool_read_requests'] - $result['innodb_buffer_pool_reads'])
                      / $result['innodb_buffer_pool_read_requests'] * 100;
             $result['buffer_pool_hit_rate'] = round($hitRate, 2);
         }
@@ -69,8 +71,8 @@ class PerformanceMetricsService
     }
 
     /**
-     * Get cache performance metrics
-     * 
+     * Get cache performance metrics.
+     *
      * @return array
      */
     private function getCacheMetrics(): array
@@ -90,8 +92,8 @@ class PerformanceMetricsService
     }
 
     /**
-     * Calculate cache hit rate
-     * 
+     * Calculate cache hit rate.
+     *
      * @param array $info
      * @return float
      */
@@ -105,8 +107,8 @@ class PerformanceMetricsService
     }
 
     /**
-     * Get memory usage metrics
-     * 
+     * Get memory usage metrics.
+     *
      * @return array
      */
     private function getMemoryMetrics(): array
@@ -121,14 +123,14 @@ class PerformanceMetricsService
     }
 
     /**
-     * Get query performance metrics
-     * 
+     * Get query performance metrics.
+     *
      * @return array
      */
     private function getQueryMetrics(): array
     {
         // Get top 5 slowest query patterns
-        $slowQueries = DB::select("
+        $slowQueries = DB::select('
             SELECT 
                 DIGEST_TEXT as query_pattern,
                 COUNT_STAR as exec_count,
@@ -138,7 +140,7 @@ class PerformanceMetricsService
             WHERE DIGEST_TEXT IS NOT NULL
             ORDER BY AVG_TIMER_WAIT DESC 
             LIMIT 5
-        ");
+        ');
 
         return [
             'slow_queries' => $slowQueries,
@@ -147,41 +149,41 @@ class PerformanceMetricsService
     }
 
     /**
-     * Get total queries executed today
-     * 
+     * Get total queries executed today.
+     *
      * @return int
      */
     private function getTotalQueriesToday(): int
     {
-        $result = DB::select("
+        $result = DB::select('
             SELECT COUNT(*) as total
             FROM performance_schema.events_statements_history_long
             WHERE TIMER_START >= UNIX_TIMESTAMP(CURDATE()) * 1000000000000
-        ");
+        ');
 
         return (int) ($result[0]->total ?? 0);
     }
 
     /**
-     * Format bytes to human readable format
-     * 
+     * Format bytes to human readable format.
+     *
      * @param int $bytes
      * @return string
      */
     private function formatBytes(int $bytes): string
     {
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        
+
         for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
             $bytes /= 1024;
         }
-        
+
         return round($bytes, 2) . ' ' . $units[$i];
     }
 
     /**
-     * Log performance metrics to file
-     * 
+     * Log performance metrics to file.
+     *
      * @return void
      */
     public function logMetrics(): void
@@ -189,7 +191,7 @@ class PerformanceMetricsService
         $metrics = $this->getMetrics();
         $logData = [
             'timestamp' => now()->toISOString(),
-            'metrics' => $metrics
+            'metrics' => $metrics,
         ];
 
         file_put_contents(

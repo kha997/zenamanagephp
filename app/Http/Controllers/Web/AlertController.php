@@ -1,22 +1,23 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
-use Illuminate\Support\Facades\Auth;
-
 
 use App\Http\Controllers\Controller;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
 /**
  * Alert Controller
- * Handles system alerts management
+ * Handles system alerts management.
  */
 class AlertController extends Controller
 {
     /**
-     * Display alerts page
+     * Display alerts page.
      */
     public function index()
     {
@@ -24,7 +25,7 @@ class AlertController extends Controller
     }
 
     /**
-     * Get all alerts
+     * Get all alerts.
      */
     public function getAlerts(Request $request): JsonResponse
     {
@@ -44,7 +45,7 @@ class AlertController extends Controller
                     'status' => 'active',
                     'created_at' => Carbon::now()->subHours(2)->toISOString(),
                     'icon' => 'fas fa-exclamation-triangle',
-                    'color' => 'red'
+                    'color' => 'red',
                 ],
                 [
                     'id' => 2,
@@ -55,7 +56,7 @@ class AlertController extends Controller
                     'status' => 'resolved',
                     'created_at' => Carbon::now()->subHours(4)->toISOString(),
                     'icon' => 'fas fa-database',
-                    'color' => 'orange'
+                    'color' => 'orange',
                 ],
                 [
                     'id' => 3,
@@ -66,7 +67,7 @@ class AlertController extends Controller
                     'status' => 'active',
                     'created_at' => Carbon::now()->subHours(1)->toISOString(),
                     'icon' => 'fas fa-memory',
-                    'color' => 'orange'
+                    'color' => 'orange',
                 ],
                 [
                     'id' => 4,
@@ -77,7 +78,7 @@ class AlertController extends Controller
                     'status' => 'acknowledged',
                     'created_at' => Carbon::now()->subHours(6)->toISOString(),
                     'icon' => 'fas fa-hdd',
-                    'color' => 'yellow'
+                    'color' => 'yellow',
                 ],
                 [
                     'id' => 5,
@@ -88,7 +89,7 @@ class AlertController extends Controller
                     'status' => 'active',
                     'created_at' => Carbon::now()->subDays(1)->toISOString(),
                     'icon' => 'fas fa-certificate',
-                    'color' => 'yellow'
+                    'color' => 'yellow',
                 ],
                 [
                     'id' => 6,
@@ -99,20 +100,20 @@ class AlertController extends Controller
                     'status' => 'resolved',
                     'created_at' => Carbon::now()->subHours(12)->toISOString(),
                     'icon' => 'fas fa-check-circle',
-                    'color' => 'blue'
-                ]
+                    'color' => 'blue',
+                ],
             ];
 
             // Filter by severity
             if ($severity && $severity !== 'all') {
-                $alerts = array_filter($alerts, function($alert) use ($severity) {
+                $alerts = array_filter($alerts, function ($alert) use ($severity) {
                     return $alert['severity'] === $severity;
                 });
             }
 
             // Filter by status
             if ($status && $status !== 'all') {
-                $alerts = array_filter($alerts, function($alert) use ($severity) {
+                $alerts = array_filter($alerts, function ($alert) use ($severity) {
                     return $alert['severity'] === $severity;
                 });
             }
@@ -127,21 +128,20 @@ class AlertController extends Controller
                     'total' => count($alerts),
                     'filters' => [
                         'severity' => $severity,
-                        'status' => $status
-                    ]
-                ]
+                        'status' => $status,
+                    ],
+                ],
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to get alerts: ' . $e->getMessage()
+                'message' => 'Failed to get alerts: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Create new alert
+     * Create new alert.
      */
     public function createAlert(Request $request): JsonResponse
     {
@@ -154,14 +154,14 @@ class AlertController extends Controller
             'tags' => 'nullable|array',
             'notify_users' => 'nullable|array',
             'auto_resolve' => 'nullable|boolean',
-            'resolve_after' => 'nullable|integer|min:1'
+            'resolve_after' => 'nullable|integer|min:1',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -181,7 +181,7 @@ class AlertController extends Controller
                 'auto_resolve' => $request->auto_resolve ?? false,
                 'resolve_after' => $request->resolve_after ?? null,
                 'icon' => $this->getIconForCategory($request->category ?? 'manual'),
-                'color' => $this->getColorForSeverity($request->severity)
+                'color' => $this->getColorForSeverity($request->severity),
             ];
 
             // In production, save to database
@@ -192,33 +192,32 @@ class AlertController extends Controller
                 'success' => true,
                 'message' => 'Alert created successfully',
                 'data' => [
-                    'alert' => $alertData
-                ]
+                    'alert' => $alertData,
+                ],
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create alert: ' . $e->getMessage()
+                'message' => 'Failed to create alert: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Update alert status
+     * Update alert status.
      */
     public function updateStatus(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'alert_id' => 'required|integer',
-            'status' => 'required|in:active,acknowledged,resolved,closed'
+            'status' => 'required|in:active,acknowledged,resolved,closed',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -234,32 +233,31 @@ class AlertController extends Controller
                 'message' => "Alert status updated to {$newStatus}",
                 'data' => [
                     'alert_id' => $alertId,
-                    'new_status' => $newStatus
-                ]
+                    'new_status' => $newStatus,
+                ],
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update alert status: ' . $e->getMessage()
+                'message' => 'Failed to update alert status: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Delete alert
+     * Delete alert.
      */
     public function deleteAlert(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'alert_id' => 'required|integer'
+            'alert_id' => 'required|integer',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -273,20 +271,19 @@ class AlertController extends Controller
                 'success' => true,
                 'message' => 'Alert deleted successfully',
                 'data' => [
-                    'alert_id' => $alertId
-                ]
+                    'alert_id' => $alertId,
+                ],
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to delete alert: ' . $e->getMessage()
+                'message' => 'Failed to delete alert: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Get alert statistics
+     * Get alert statistics.
      */
     public function getStatistics(): JsonResponse
     {
@@ -300,24 +297,23 @@ class AlertController extends Controller
                 'active' => 12,
                 'acknowledged' => 8,
                 'resolved' => 25,
-                'closed' => 3
+                'closed' => 3,
             ];
 
             return response()->json([
                 'success' => true,
-                'data' => $stats
+                'data' => $stats,
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to get statistics: ' . $e->getMessage()
+                'message' => 'Failed to get statistics: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Get icon for category
+     * Get icon for category.
      */
     private function getIconForCategory(string $category): string
     {
@@ -329,14 +325,14 @@ class AlertController extends Controller
             'storage' => 'fas fa-hdd',
             'backup' => 'fas fa-backup',
             'performance' => 'fas fa-tachometer-alt',
-            'manual' => 'fas fa-exclamation-triangle'
+            'manual' => 'fas fa-exclamation-triangle',
         ];
 
         return $icons[$category] ?? 'fas fa-exclamation-triangle';
     }
 
     /**
-     * Get color for severity
+     * Get color for severity.
      */
     private function getColorForSeverity(string $severity): string
     {
@@ -344,7 +340,7 @@ class AlertController extends Controller
             'critical' => 'red',
             'high' => 'orange',
             'medium' => 'yellow',
-            'low' => 'blue'
+            'low' => 'blue',
         ];
 
         return $colors[$severity] ?? 'blue';

@@ -1,12 +1,14 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Api\DesignItemController as ApiDesignItemController;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Web\Concerns\DelegatesToApiControllers;
-use App\Models\Document;
 use App\Models\DesignItem;
+use App\Models\Document;
 use App\Models\EventRecord;
 use App\Models\Opportunity;
 use App\Models\Project;

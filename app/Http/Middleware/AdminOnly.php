@@ -22,23 +22,24 @@ class AdminOnly
             if ($request->expectsJson()) {
                 return response()->json(['message' => 'Unauthenticated.'], 401);
             }
+
             return redirect()->route('login');
         }
-        
+
         $user = Auth::user();
-        
+
         // Check if user has super admin role
         if (!$user->isSuperAdmin()) {
             if ($request->expectsJson()) {
                 return response()->json([
                     'message' => 'Access denied. Super Admin access required.',
-                    'error' => 'INSUFFICIENT_PERMISSIONS'
+                    'error' => 'INSUFFICIENT_PERMISSIONS',
                 ], 403);
             }
-            
+
             abort(403, 'Access denied. Super Admin access required.');
         }
-        
+
         return $next($request);
     }
 }

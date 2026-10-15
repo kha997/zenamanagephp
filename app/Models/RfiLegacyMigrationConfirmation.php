@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -22,7 +24,9 @@ class RfiLegacyMigrationConfirmation extends Model
     use HasUlids;
 
     protected $table = 'rfi_legacy_migration_confirmations';
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [

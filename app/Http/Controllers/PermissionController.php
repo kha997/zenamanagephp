@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
@@ -9,7 +11,7 @@ use Src\RBAC\Models\Permission;
 use Src\RBAC\Resources\PermissionResource;
 
 /**
- * Controller quản lý permissions trong hệ thống RBAC
+ * Controller quản lý permissions trong hệ thống RBAC.
  */
 class PermissionController
 {
@@ -22,7 +24,7 @@ class PermissionController
 
     /**
      * Lấy danh sách permissions
-     * GET /api/v1/rbac/permissions
+     * GET /api/v1/rbac/permissions.
      */
     public function index(Request $request): JsonResponse
     {
@@ -59,7 +61,7 @@ class PermissionController
 
             return response()->json([
                 'status' => 'success',
-                'data' => ['permissions_by_module' => $transformedData]
+                'data' => ['permissions_by_module' => $transformedData],
             ]);
         }
 
@@ -75,15 +77,15 @@ class PermissionController
                     'current_page' => $permissions->currentPage(),
                     'per_page' => $permissions->perPage(),
                     'total' => $permissions->total(),
-                    'last_page' => $permissions->lastPage()
-                ]
-            ]
+                    'last_page' => $permissions->lastPage(),
+                ],
+            ],
         ]);
     }
 
     /**
      * Tạo permission mới
-     * POST /api/v1/rbac/permissions
+     * POST /api/v1/rbac/permissions.
      */
     public function store(Request $request): JsonResponse
     {
@@ -101,7 +103,7 @@ class PermissionController
             $errors['action'] = 'Action không được để trống';
         }
 
-        if (! empty($module) && ! empty($action)) {
+        if (!empty($module) && !empty($action)) {
             $code = Permission::generateCode($module, $action);
 
             if (Permission::where('code', $code)->exists()) {
@@ -109,11 +111,11 @@ class PermissionController
             }
         }
 
-        if (! empty($errors)) {
+        if (!empty($errors)) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Dữ liệu không hợp lệ',
-                'errors' => $errors
+                'errors' => $errors,
             ], 400);
         }
 
@@ -122,7 +124,7 @@ class PermissionController
             'code' => Permission::generateCode($module, $action),
             'module' => $module,
             'action' => $action,
-            'description' => $request->get('description')
+            'description' => $request->get('description'),
         ]);
 
         // Phát sự kiện
@@ -132,12 +134,12 @@ class PermissionController
             'module' => $permission->module,
             'action' => $permission->action,
             'actorId' => $request->get('user_id'),
-            'timestamp' => now()->toISOString()
+            'timestamp' => now()->toISOString(),
         ]);
 
         return response()->json([
             'status' => 'success',
-            'data' => ['permission' => PermissionResource::make($permission)]
+            'data' => ['permission' => PermissionResource::make($permission)],
         ], 201);
     }
 }

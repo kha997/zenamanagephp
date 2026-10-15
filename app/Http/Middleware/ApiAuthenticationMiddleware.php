@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
@@ -9,8 +11,8 @@ use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * API Authentication Middleware
- * 
+ * API Authentication Middleware.
+ *
  * Handles authentication for API endpoints with multiple authentication methods:
  * 1. Sanctum token authentication
  * 2. Session-based authentication (for SPA)
@@ -28,24 +30,24 @@ class ApiAuthenticationMiddleware
         try {
             // Try different authentication methods
             $user = $this->authenticateUser($request);
-            
+
             if (!$user) {
                 return $this->unauthorizedResponse('Authentication required');
             }
-            
+
             // Set the authenticated user
             Auth::setUser($user);
             $request->setUserResolver(function () use ($user) {
                 return $user;
             });
-            
+
             // Add user context to request
             $request->attributes->set('auth_user', $user);
             $request->attributes->set('tenant_id', $user->tenant_id);
-            
+
             // Set tenant context globally
             app()->instance('current_tenant_id', $user->tenant_id);
-            
+
             // Log successful authentication
             Log::info('User authenticated via API', [
                 'user_id' => $user->id,
@@ -53,24 +55,23 @@ class ApiAuthenticationMiddleware
                 'tenant_id' => $user->tenant_id,
                 'method' => $this->getAuthMethod($request),
                 'ip' => $request->ip(),
-                'user_agent' => $request->userAgent()
+                'user_agent' => $request->userAgent(),
             ]);
-            
+
             return $next($request);
-            
         } catch (\Exception $e) {
             Log::error('Authentication error', [
                 'error' => $e->getMessage(),
                 'ip' => $request->ip(),
-                'user_agent' => $request->userAgent()
+                'user_agent' => $request->userAgent(),
             ]);
-            
+
             return $this->unauthorizedResponse('Authentication failed');
         }
     }
-    
+
     /**
-     * Authenticate user using multiple methods
+     * Authenticate user using multiple methods.
      */
     private function authenticateUser(Request $request): ?\App\Models\User
     {
@@ -78,139 +79,139 @@ class ApiAuthenticationMiddleware
         if ($request->bearerToken()) {
             return $this->authenticateViaSanctum($request);
         }
-        
+
         // Method 2: Session-based authentication (for SPA)
         if ($request->hasSession() && $request->session()->has('auth')) {
             return $this->authenticateViaSession($request);
         }
-        
+
         // Method 3: API key authentication
         if ($request->header('X-API-Key')) {
             return $this->authenticateViaApiKey($request);
         }
-        
+
         // Method 4: Check if already authenticated via Sanctum
         if (Auth::guard('sanctum')->check()) {
             return Auth::guard('sanctum')->user();
         }
-        
+
         return null;
     }
-    
+
     /**
-     * Authenticate via Sanctum token
+     * Authenticate via Sanctum token.
      */
     private function authenticateViaSanctum(Request $request): ?\App\Models\User
     {
         $token = $request->bearerToken();
-        
+
         if (!$token) {
             return null;
         }
-        
+
         // Find the token in database
         $personalAccessToken = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
-        
+
         if (!$personalAccessToken) {
             return null;
         }
-        
+
         // Check if token is expired
         if ($personalAccessToken->expires_at && $personalAccessToken->expires_at->isPast()) {
             return null;
         }
-        
+
         // Get the user
         $user = $personalAccessToken->tokenable;
-        
+
         if (!$user || !$user->is_active) {
             return null;
         }
-        
+
         // Update last activity
         $personalAccessToken->forceFill([
             'last_used_at' => now(),
         ])->save();
-        
+
         return $user;
     }
-    
+
     /**
-     * Authenticate via session (for SPA)
+     * Authenticate via session (for SPA).
      */
     private function authenticateViaSession(Request $request): ?\App\Models\User
     {
         if (!$request->hasSession()) {
             return null;
         }
-        
+
         $session = $request->session();
         $userId = $session->get('auth.user_id');
-        
+
         if (!$userId) {
             return null;
         }
-        
+
         $user = \App\Models\User::find($userId);
-        
+
         if (!$user || !$user->is_active) {
             return null;
         }
-        
+
         // Update last activity
         $user->update(['last_activity_at' => now()]);
-        
+
         return $user;
     }
-    
+
     /**
-     * Authenticate via API key
+     * Authenticate via API key.
      */
     private function authenticateViaApiKey(Request $request): ?\App\Models\User
     {
         $apiKey = $request->header('X-API-Key');
-        
+
         if (!$apiKey) {
             return null;
         }
-        
+
         // Find user by API key (you might want to create a separate API keys table)
         $user = \App\Models\User::where('api_key', $apiKey)
             ->where('is_active', true)
             ->first();
-        
+
         if (!$user) {
             return null;
         }
-        
+
         // Update last activity
         $user->update(['last_activity_at' => now()]);
-        
+
         return $user;
     }
-    
+
     /**
-     * Get authentication method used
+     * Get authentication method used.
      */
     private function getAuthMethod(Request $request): string
     {
         if ($request->bearerToken()) {
             return 'sanctum_token';
         }
-        
+
         if ($request->hasSession() && $request->session()->has('auth')) {
             return 'session';
         }
-        
+
         if ($request->header('X-API-Key')) {
             return 'api_key';
         }
-        
+
         return 'unknown';
     }
-    
+
     /**
-     * Return unauthorized response
+     * Return unauthorized response.
      */
     private function unauthorizedResponse(string $message): Response
     {
@@ -218,7 +219,7 @@ class ApiAuthenticationMiddleware
             'success' => false,
             'error' => 'Unauthorized',
             'message' => $message,
-            'code' => 'AUTH_REQUIRED'
+            'code' => 'AUTH_REQUIRED',
         ], 401);
     }
 }

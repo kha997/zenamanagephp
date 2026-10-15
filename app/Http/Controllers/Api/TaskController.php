@@ -1,9 +1,10 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
-use App\Http\Controllers\Api\BaseApiController;
 use App\Models\EventRecord;
 use App\Models\Notification;
 use App\Models\Task;
@@ -204,7 +205,7 @@ class TaskController extends BaseApiController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->error('Unauthorized', 401);
             }
@@ -213,7 +214,7 @@ class TaskController extends BaseApiController
                 'project:id,name,status',
                 'assignee:id,name,email',
                 'creator:id,name,email',
-                'tenant:id,name'
+                'tenant:id,name',
             ]);
 
             // Apply tenant filter
@@ -261,9 +262,9 @@ class TaskController extends BaseApiController
                 ->paginate($perPage);
 
             return $this->zenaSuccessResponse($tasks, 'Tasks retrieved successfully');
-
         } catch (\Exception $e) {
             Log::error('Task index error: ' . $e->getMessage());
+
             return $this->error('Failed to retrieve tasks', 500);
         }
     }
@@ -275,7 +276,7 @@ class TaskController extends BaseApiController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->error('Unauthorized', 401);
             }
@@ -363,12 +364,12 @@ class TaskController extends BaseApiController
                 'Task created successfully',
                 201
             );
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             return $this->failResponse($e->errors(), 'Validation failed', 422);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Task store error: ' . $e->getMessage());
+
             return $this->error('Failed to create task', 500);
         }
     }
@@ -379,7 +380,7 @@ class TaskController extends BaseApiController
     public function show(Request $request, string $id): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->error('Unauthorized', 401);
         }
@@ -495,7 +496,7 @@ class TaskController extends BaseApiController
     public function update(Request $request, string $id): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->error('Unauthorized', 401);
         }
@@ -536,7 +537,7 @@ class TaskController extends BaseApiController
         try {
             $updateData = $request->only([
                 'name', 'description', 'status', 'priority', 'start_date', 'end_date',
-                'progress_percent', 'estimated_hours', 'actual_hours', 'dependencies'
+                'progress_percent', 'estimated_hours', 'actual_hours', 'dependencies',
             ]);
             $requestedDependencies = $updateData['dependencies'] ?? null;
 
@@ -563,7 +564,6 @@ class TaskController extends BaseApiController
                 $task->load(['project', 'component', 'assignments.user']),
                 'Task updated successfully'
             );
-
         } catch (\Exception $e) {
             return $this->error('Failed to update task: ' . $e->getMessage(), 500);
         }
@@ -575,7 +575,7 @@ class TaskController extends BaseApiController
     public function destroy(Request $request, string $id): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->error('Unauthorized', 401);
         }
@@ -598,19 +598,18 @@ class TaskController extends BaseApiController
             $task->delete();
 
             return $this->zenaSuccessResponse(null, 'Task deleted successfully');
-
         } catch (\Exception $e) {
             return $this->error('Failed to delete task: ' . $e->getMessage(), 500);
         }
     }
 
     /**
-     * Update task status
+     * Update task status.
      */
     public function updateStatus(Request $request, string $id): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->error('Unauthorized', 401);
         }
@@ -644,19 +643,18 @@ class TaskController extends BaseApiController
                 $task->load(['project', 'component', 'assignments.user']),
                 'Task status updated successfully'
             );
-
         } catch (\Exception $e) {
             return $this->error('Failed to update task status: ' . $e->getMessage(), 500);
         }
     }
 
     /**
-     * Get task dependencies
+     * Get task dependencies.
      */
     public function getDependencies(Request $request, string $id): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->error('Unauthorized', 401);
         }
@@ -679,13 +677,13 @@ class TaskController extends BaseApiController
     }
 
     /**
-     * Assign user to task
+     * Assign user to task.
      */
     public function assignUser(Request $request, string $id): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->error('Unauthorized', 401);
             }
@@ -722,23 +720,23 @@ class TaskController extends BaseApiController
             ]);
 
             return $this->zenaSuccessResponse($task->load(['assignee', 'project']), 'User assigned to task successfully');
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             return $this->failResponse($e->errors(), 'Validation failed', 422);
         } catch (\Exception $e) {
             Log::error('Task assign user error: ' . $e->getMessage());
+
             return $this->error('Failed to assign user to task', 500);
         }
     }
 
     /**
-     * Assign task to team
+     * Assign task to team.
      */
     public function assignTeam(Request $request, string $id): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->error('Unauthorized', 401);
             }
@@ -787,23 +785,23 @@ class TaskController extends BaseApiController
             ]);
 
             return $this->zenaSuccessResponse($assignment->load(['team', 'task']), 'Team assigned to task successfully');
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             return $this->failResponse($e->errors(), 'Validation failed', 422);
         } catch (\Exception $e) {
             Log::error('Task assign team error: ' . $e->getMessage());
+
             return $this->error('Failed to assign team to task', 500);
         }
     }
 
     /**
-     * Update task dependencies
+     * Update task dependencies.
      */
     public function updateDependencies(Request $request, string $id): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->error('Unauthorized', 401);
             }
@@ -852,23 +850,23 @@ class TaskController extends BaseApiController
             $task->update(['updated_by' => $user->id]);
 
             return $this->zenaSuccessResponse($task->load(['dependencies']), 'Task dependencies updated successfully');
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             return $this->failResponse($e->errors(), 'Validation failed', 422);
         } catch (\Exception $e) {
             Log::error('Task update dependencies error: ' . $e->getMessage());
+
             return $this->error('Failed to update task dependencies', 500);
         }
     }
 
     /**
-     * Get task watchers
+     * Get task watchers.
      */
     public function getWatchers(Request $request, string $id): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->error('Unauthorized', 401);
             }
@@ -888,21 +886,21 @@ class TaskController extends BaseApiController
             $watchers = $task->watchers()->select('id', 'name', 'email')->get();
 
             return $this->zenaSuccessResponse($watchers, 'Task watchers retrieved successfully');
-
         } catch (\Exception $e) {
             Log::error('Task get watchers error: ' . $e->getMessage());
+
             return $this->error('Failed to retrieve task watchers', 500);
         }
     }
 
     /**
-     * Add watcher to task
+     * Add watcher to task.
      */
     public function addWatcher(Request $request, string $id): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->error('Unauthorized', 401);
             }
@@ -932,23 +930,23 @@ class TaskController extends BaseApiController
             } else {
                 return $this->error('User is already watching this task', 400);
             }
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             return $this->failResponse($e->errors(), 'Validation failed', 422);
         } catch (\Exception $e) {
             Log::error('Task add watcher error: ' . $e->getMessage());
+
             return $this->error('Failed to add watcher to task', 500);
         }
     }
 
     /**
-     * Remove watcher from task
+     * Remove watcher from task.
      */
     public function removeWatcher(Request $request, string $id): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->error('Unauthorized', 401);
             }
@@ -978,29 +976,29 @@ class TaskController extends BaseApiController
             } else {
                 return $this->error('User is not watching this task', 400);
             }
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             return $this->failResponse($e->errors(), 'Validation failed', 422);
         } catch (\Exception $e) {
             Log::error('Task remove watcher error: ' . $e->getMessage());
+
             return $this->error('Failed to remove watcher from task', 500);
         }
     }
 
     /**
-     * Get task statistics
+     * Get task statistics.
      */
     public function statistics(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->error('Unauthorized', 401);
             }
 
             $query = Task::query();
-            
+
             // Apply tenant filter
             if ($user->tenant_id) {
                 $query->forTenant($user->tenant_id);
@@ -1032,15 +1030,15 @@ class TaskController extends BaseApiController
             ];
 
             return $this->zenaSuccessResponse($stats, 'Task statistics retrieved successfully');
-
         } catch (\Exception $e) {
             Log::error('Task statistics error: ' . $e->getMessage());
+
             return $this->error('Failed to retrieve task statistics', 500);
         }
     }
 
     /**
-     * Add task dependency
+     * Add task dependency.
      */
     public function addDependency(Request $request, string $id): JsonResponse
     {
@@ -1097,17 +1095,17 @@ class TaskController extends BaseApiController
             } else {
                 return $this->error('Dependency already exists', 400);
             }
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             return $this->failResponse($e->errors(), 'Validation failed', 422);
         } catch (\Exception $e) {
             Log::error('Task add dependency error: ' . $e->getMessage());
+
             return $this->error('Failed to add dependency', 500);
         }
     }
 
     /**
-     * Remove task dependency
+     * Remove task dependency.
      */
     public function removeDependency(Request $request, string $id): JsonResponse
     {
@@ -1154,13 +1152,12 @@ class TaskController extends BaseApiController
             } else {
                 return $this->error('Dependency not found', 400);
             }
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             return $this->failResponse($e->errors(), 'Validation failed', 422);
         } catch (\Exception $e) {
             Log::error('Task remove dependency error: ' . $e->getMessage());
+
             return $this->error('Failed to remove dependency', 500);
         }
     }
-
 }

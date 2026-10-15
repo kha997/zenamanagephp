@@ -1,8 +1,9 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,8 +12,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Model DocumentVersion để quản lý các phiên bản tài liệu
- * 
+ * Model DocumentVersion để quản lý các phiên bản tài liệu.
+ *
  * @property string $id
  * @property string $document_id
  * @property int $version_number
@@ -27,14 +28,17 @@ use Illuminate\Support\Facades\Storage;
  */
 class DocumentVersion extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids;
+    use HasFactory;
 
     protected $table = 'document_versions';
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     /**
-     * Các storage driver hỗ trợ
+     * Các storage driver hỗ trợ.
      */
     public const STORAGE_LOCAL = 'local';
     public const STORAGE_S3 = 's3';
@@ -42,7 +46,7 @@ class DocumentVersion extends Model
     public const STORAGE_GCS = 'gcs';
 
     /**
-     * Danh sách các storage driver hợp lệ
+     * Danh sách các storage driver hợp lệ.
      */
     public const VALID_STORAGE_DRIVERS = [
         self::STORAGE_LOCAL,
@@ -109,7 +113,7 @@ class DocumentVersion extends Model
     private function snapshotValue(string $key): ?string
     {
         $metadata = $this->metadata;
-        if (! is_array($metadata)) {
+        if (!is_array($metadata)) {
             return null;
         }
 
@@ -119,7 +123,7 @@ class DocumentVersion extends Model
     }
 
     /**
-     * Quan hệ với Document
+     * Quan hệ với Document.
      */
     public function document(): BelongsTo
     {
@@ -127,7 +131,7 @@ class DocumentVersion extends Model
     }
 
     /**
-     * Quan hệ với User (người tạo)
+     * Quan hệ với User (người tạo).
      */
     public function creator(): BelongsTo
     {
@@ -135,7 +139,7 @@ class DocumentVersion extends Model
     }
 
     /**
-     * Scope để lọc theo document
+     * Scope để lọc theo document.
      */
     public function scopeForDocument(Builder $query, string $documentId): Builder
     {
@@ -143,7 +147,7 @@ class DocumentVersion extends Model
     }
 
     /**
-     * Scope để lọc theo storage driver
+     * Scope để lọc theo storage driver.
      */
     public function scopeWithStorageDriver(Builder $query, string $driver): Builder
     {
@@ -151,7 +155,7 @@ class DocumentVersion extends Model
     }
 
     /**
-     * Scope để lấy các version được revert
+     * Scope để lấy các version được revert.
      */
     public function scopeReverted(Builder $query): Builder
     {
@@ -159,7 +163,7 @@ class DocumentVersion extends Model
     }
 
     /**
-     * Scope để sắp xếp theo version number
+     * Scope để sắp xếp theo version number.
      */
     public function scopeOrderByVersion(Builder $query, string $direction = 'desc'): Builder
     {
@@ -167,7 +171,7 @@ class DocumentVersion extends Model
     }
 
     /**
-     * Kiểm tra xem version này có phải là revert không
+     * Kiểm tra xem version này có phải là revert không.
      */
     public function isReverted(): bool
     {
@@ -175,7 +179,7 @@ class DocumentVersion extends Model
     }
 
     /**
-     * Kiểm tra storage driver có hợp lệ không
+     * Kiểm tra storage driver có hợp lệ không.
      */
     public function isValidStorageDriver(): bool
     {
@@ -183,7 +187,7 @@ class DocumentVersion extends Model
     }
 
     /**
-     * Lấy URL để download file
+     * Lấy URL để download file.
      */
     public function getDownloadUrl(): ?string
     {
@@ -206,7 +210,7 @@ class DocumentVersion extends Model
     }
 
     /**
-     * Kiểm tra xem file có tồn tại không
+     * Kiểm tra xem file có tồn tại không.
      */
     public function fileExists(): bool
     {
@@ -218,7 +222,7 @@ class DocumentVersion extends Model
     }
 
     /**
-     * Lấy kích thước file
+     * Lấy kích thước file.
      */
     public function getFileSize(): ?int
     {
@@ -230,7 +234,7 @@ class DocumentVersion extends Model
     }
 
     /**
-     * Lấy tên file từ path
+     * Lấy tên file từ path.
      */
     public function getFileName(): string
     {
@@ -238,7 +242,7 @@ class DocumentVersion extends Model
     }
 
     /**
-     * Lấy extension của file
+     * Lấy extension của file.
      */
     public function getFileExtension(): string
     {
@@ -246,7 +250,7 @@ class DocumentVersion extends Model
     }
 
     /**
-     * Lấy tên file gốc từ metadata
+     * Lấy tên file gốc từ metadata.
      */
     public function getOriginalFileName(): ?string
     {
@@ -254,7 +258,7 @@ class DocumentVersion extends Model
     }
 
     /**
-     * Lấy MIME type từ metadata
+     * Lấy MIME type từ metadata.
      */
     public function getMimeType(): ?string
     {
@@ -262,7 +266,7 @@ class DocumentVersion extends Model
     }
 
     /**
-     * Lấy kích thước file từ metadata
+     * Lấy kích thước file từ metadata.
      */
     public function getFileSizeFromMetadata(): ?int
     {
@@ -270,19 +274,19 @@ class DocumentVersion extends Model
     }
 
     /**
-     * Lấy formatted file size
+     * Lấy formatted file size.
      */
     public function getFormattedFileSize(): string
     {
         $size = $this->getFileSizeFromMetadata() ?? $this->getFileSize();
-        
+
         if (!$size) {
             return 'Unknown';
         }
 
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
         $power = $size > 0 ? floor(log($size, 1024)) : 0;
-        
+
         return number_format($size / pow(1024, $power), 2, '.', ',') . ' ' . $units[$power];
     }
 }

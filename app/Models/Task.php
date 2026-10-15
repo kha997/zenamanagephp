@@ -1,7 +1,10 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Services\TaskDependencyService;
 use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,12 +16,10 @@ use Illuminate\Support\Facades\Log;
 use Src\Compensation\Models\TaskCompensation;
 use Src\Foundation\EventBus;
 use Src\Foundation\Helpers\AuthHelper;
-use App\Models\TaskDependency;
-use App\Services\TaskDependencyService;
 
 /**
- * Model Task - Quản lý công việc
- * 
+ * Model Task - Quản lý công việc.
+ *
  * @property string $id ULID của task (primary key)
  * @property string $project_id ID dự án (ULID)
  * @property string|null $component_id ID component (ULID)
@@ -38,14 +39,17 @@ use App\Services\TaskDependencyService;
  */
 class Task extends Model
 {
-    use HasUlids, HasFactory, TenantScope;
-    
+    use HasUlids;
+    use HasFactory;
+    use TenantScope;
+
     protected $table = 'tasks';
-    
+
     // Cấu hình ULID primary key
     protected $keyType = 'string';
+
     public $incrementing = false;
-    
+
     protected $fillable = [
         'tenant_id',
         'project_id',
@@ -77,7 +81,7 @@ class Task extends Model
         'created_by',
         'blocked_at',
         'blocker_note',
-        'blocked_by'
+        'blocked_by',
     ];
 
     protected $casts = [
@@ -94,7 +98,7 @@ class Task extends Model
         'actual_cost' => 'float',
         'progress_percent' => 'integer',
         'tags' => 'array',
-        'client_approved' => 'boolean'
+        'client_approved' => 'boolean',
     ];
 
     public function setTitleAttribute(?string $value): void
@@ -121,11 +125,11 @@ class Task extends Model
         'actual_cost' => 0.0,
         'progress_percent' => 0.0,
         'visibility' => 'internal',
-        'client_approved' => false
+        'client_approved' => false,
     ];
 
     /**
-     * Các trạng thái hợp lệ
+     * Các trạng thái hợp lệ.
      */
     public const STATUS_PENDING = 'pending';
     public const STATUS_IN_PROGRESS = 'in_progress';
@@ -143,7 +147,7 @@ class Task extends Model
     ];
 
     /**
-     * Các mức độ ưu tiên
+     * Các mức độ ưu tiên.
      */
     public const PRIORITY_LOW = 'low';
     public const PRIORITY_MEDIUM = 'medium';
@@ -171,7 +175,7 @@ class Task extends Model
     }
 
     /**
-     * Relationship: Task thuộc về tenant
+     * Relationship: Task thuộc về tenant.
      */
     public function tenant(): BelongsTo
     {
@@ -179,7 +183,7 @@ class Task extends Model
     }
 
     /**
-     * Relationship: Task thuộc về project
+     * Relationship: Task thuộc về project.
      */
     public function project(): BelongsTo
     {
@@ -197,7 +201,7 @@ class Task extends Model
     }
 
     /**
-     * Relationship: Task được assign cho user
+     * Relationship: Task được assign cho user.
      */
     public function assignee(): BelongsTo
     {
@@ -215,7 +219,7 @@ class Task extends Model
     }
 
     /**
-     * Relationship: Task được tạo bởi user
+     * Relationship: Task được tạo bởi user.
      */
     public function creator(): BelongsTo
     {
@@ -223,7 +227,7 @@ class Task extends Model
     }
 
     /**
-     * Relationship: Task có thể thuộc về component
+     * Relationship: Task có thể thuộc về component.
      */
     public function component(): BelongsTo
     {
@@ -231,7 +235,7 @@ class Task extends Model
     }
 
     /**
-     * Relationship: Task có nhiều assignments
+     * Relationship: Task có nhiều assignments.
      */
     public function assignments(): HasMany
     {
@@ -239,7 +243,7 @@ class Task extends Model
     }
 
     /**
-     * Relationship: Task được assign cho nhiều users
+     * Relationship: Task được assign cho nhiều users.
      */
     public function assignedUsers(): BelongsToMany
     {
@@ -253,7 +257,7 @@ class Task extends Model
     }
 
     /**
-     * Relationship: Task có nhiều watchers
+     * Relationship: Task có nhiều watchers.
      */
     public function watchers(): BelongsToMany
     {
@@ -266,7 +270,7 @@ class Task extends Model
     }
 
     /**
-     * Relationship: Task depends on other tasks
+     * Relationship: Task depends on other tasks.
      */
     public function dependencies(): BelongsToMany
     {
@@ -279,7 +283,7 @@ class Task extends Model
     }
 
     /**
-     * Relationship: Tasks that depend on this task
+     * Relationship: Tasks that depend on this task.
      */
     public function dependents(): BelongsToMany
     {
@@ -294,12 +298,14 @@ class Task extends Model
     public function addDependency(string $dependencyId): bool
     {
         $service = app(TaskDependencyService::class);
+
         return $service->addDependency($this->id, $dependencyId, $this->tenant_id)['success'];
     }
 
     public function removeDependency(string $dependencyId): bool
     {
         $service = app(TaskDependencyService::class);
+
         return $service->removeDependency($this->id, $dependencyId, $this->tenant_id)['success'];
     }
 
@@ -356,7 +362,7 @@ class Task extends Model
     }
 
     /**
-     * Relationship: Task có nhiều interaction logs
+     * Relationship: Task có nhiều interaction logs.
      */
     public function interactionLogs(): HasMany
     {
@@ -364,7 +370,7 @@ class Task extends Model
     }
 
     /**
-     * Relationship: Task có thể có compensation
+     * Relationship: Task có thể có compensation.
      */
     public function compensation(): HasOne
     {
@@ -372,20 +378,20 @@ class Task extends Model
     }
 
     /**
-     * Cập nhật tiến độ task
+     * Cập nhật tiến độ task.
      */
     public function updateProgress(float $newProgress): void
     {
         $oldProgress = $this->progress_percent;
         $this->update(['progress_percent' => $newProgress]);
-        
+
         // Auto update status based on progress
         if ($newProgress >= 100 && $this->status !== self::STATUS_COMPLETED) {
             $this->update(['status' => self::STATUS_COMPLETED]);
         } elseif ($newProgress > 0 && $this->status === self::STATUS_PENDING) {
             $this->update(['status' => self::STATUS_IN_PROGRESS]);
         }
-        
+
         // Dispatch event
         EventBus::dispatch('Task.Progress.Updated', [
             'task_id' => $this->ulid,
@@ -393,28 +399,28 @@ class Task extends Model
             'component_id' => $this->component?->ulid,
             'old_progress' => $oldProgress,
             'new_progress' => $newProgress,
-            'actor_id' => $this->resolveActorId() ?? 'system'
+            'actor_id' => $this->resolveActorId() ?? 'system',
         ]);
     }
 
     /**
-     * Kiểm tra task có thể bắt đầu không (dependencies đã hoàn thành)
+     * Kiểm tra task có thể bắt đầu không (dependencies đã hoàn thành).
      */
     public function canStart(): bool
     {
         if (empty($this->dependencies_json)) {
             return true;
         }
-        
+
         $dependentTasks = Task::whereIn('ulid', $this->dependencies_json)->get();
-        
+
         return $dependentTasks->every(function ($task) {
             return $task->status === self::STATUS_COMPLETED;
         });
     }
 
     /**
-     * Lấy các tasks phụ thuộc vào task này
+     * Lấy các tasks phụ thuộc vào task này.
      */
     public function getDependentTasks()
     {
@@ -424,7 +430,7 @@ class Task extends Model
     }
 
     /**
-     * Scope: Lọc theo project
+     * Scope: Lọc theo project.
      */
     public function scopeForProject($query, int $projectId)
     {
@@ -432,7 +438,7 @@ class Task extends Model
     }
 
     /**
-     * Scope: Lọc theo component
+     * Scope: Lọc theo component.
      */
     public function scopeForComponent($query, int $componentId)
     {
@@ -440,7 +446,7 @@ class Task extends Model
     }
 
     /**
-     * Scope: Chỉ lấy tasks không ẩn
+     * Scope: Chỉ lấy tasks không ẩn.
      */
     public function scopeVisible($query)
     {
@@ -448,7 +454,7 @@ class Task extends Model
     }
 
     /**
-     * Scope: Lọc theo status
+     * Scope: Lọc theo status.
      */
     public function scopeByStatus($query, string $status)
     {
@@ -456,7 +462,7 @@ class Task extends Model
     }
 
     /**
-     * Scope: Lọc theo priority
+     * Scope: Lọc theo priority.
      */
     public function scopeByPriority($query, string $priority)
     {
@@ -464,19 +470,19 @@ class Task extends Model
     }
 
     /**
-     * Scope: Tasks có thể bắt đầu
+     * Scope: Tasks có thể bắt đầu.
      */
     public function scopeCanStart($query)
     {
         return $query->where('status', self::STATUS_PENDING)
-                    ->where(function($q) {
+                    ->where(function ($q) {
                         $q->whereNull('dependencies_json')
                           ->orWhereJsonLength('dependencies_json', 0);
                     });
     }
 
     /**
-     * Resolve actor ID safely
+     * Resolve actor ID safely.
      */
     protected function resolveActorId(): ?int
     {
@@ -484,12 +490,13 @@ class Task extends Model
             return AuthHelper::id();
         } catch (\Throwable $e) {
             Log::warning('Could not resolve actor ID: ' . $e->getMessage());
+
             return null;
         }
     }
 
     /**
-     * Tạo factory instance mới cho model
+     * Tạo factory instance mới cho model.
      */
     protected static function newFactory()
     {

@@ -2,21 +2,21 @@
 
 namespace Tests\Feature\Api;
 
-use App\Models\Tenant;
-use Illuminate\Database\Eloquent\Builder;
-use App\Models\User;
 use App\Models\ChangeRequest;
 use App\Models\Project;
 use App\Models\Rfi;
 use App\Models\Submittal;
 use App\Models\Task;
+use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
-use Illuminate\Testing\TestResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Testing\TestResponse;
+use Tests\TestCase;
 use Tests\Traits\AuthenticationTestTrait;
 use Tests\Traits\RouteNameTrait;
-use Tests\TestCase;
 
 /**
  * @group performance
@@ -24,7 +24,10 @@ use Tests\TestCase;
  */
 class PerformanceTest extends TestCase
 {
-    use LazilyRefreshDatabase, WithFaker, AuthenticationTestTrait, RouteNameTrait;
+    use LazilyRefreshDatabase;
+    use WithFaker;
+    use AuthenticationTestTrait;
+    use RouteNameTrait;
 
     private const PROJECT_LISTING_COUNT = 35;
     private const TASK_LISTING_COUNT = 120;
@@ -43,7 +46,9 @@ class PerformanceTest extends TestCase
     private const QUERY_COUNT_TASKS = 60;
 
     protected Tenant $tenant;
+
     protected User $user;
+
     protected Project $project;
 
     protected function setUp(): void
@@ -193,7 +198,6 @@ class PerformanceTest extends TestCase
         $data = $this->assertPaginatedResponse($response, 1);
 
         $this->assertNotEmpty($data);
-
     }
 
     public function test_filtering_performance(): void

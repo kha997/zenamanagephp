@@ -51,18 +51,18 @@ class SystemMonitor extends Command
         while (time() < $endTime) {
             $iteration++;
             $timestamp = now()->toISOString();
-            
+
             $this->line("Iteration {$iteration} - {$timestamp}");
-            
+
             $metrics = $this->collectMetrics();
             $results[] = $metrics;
-            
+
             $this->displayMetrics($metrics, $output);
-            
+
             if ($log) {
                 $this->logMetrics($metrics);
             }
-            
+
             if (time() < $endTime) {
                 sleep($interval);
             }
@@ -76,7 +76,7 @@ class SystemMonitor extends Command
     }
 
     /**
-     * Collect system metrics
+     * Collect system metrics.
      */
     private function collectMetrics(): array
     {
@@ -92,7 +92,7 @@ class SystemMonitor extends Command
     }
 
     /**
-     * Get system metrics
+     * Get system metrics.
      */
     private function getSystemMetrics(): array
     {
@@ -109,7 +109,7 @@ class SystemMonitor extends Command
     }
 
     /**
-     * Get database metrics
+     * Get database metrics.
      */
     private function getDatabaseMetrics(): array
     {
@@ -117,7 +117,7 @@ class SystemMonitor extends Command
             $users = DB::table('users')->count();
             $invitations = DB::table('invitations')->count();
             $emailTracking = DB::table('email_tracking')->count();
-            
+
             return [
                 'users_count' => $users,
                 'invitations_count' => $invitations,
@@ -133,14 +133,14 @@ class SystemMonitor extends Command
     }
 
     /**
-     * Get Redis metrics
+     * Get Redis metrics.
      */
     private function getRedisMetrics(): array
     {
         try {
             $info = Redis::info();
             $memory = Redis::info('memory');
-            
+
             return [
                 'connected_clients' => $info['connected_clients'] ?? 0,
                 'used_memory' => $memory['used_memory'] ?? 0,
@@ -157,7 +157,7 @@ class SystemMonitor extends Command
     }
 
     /**
-     * Get queue metrics
+     * Get queue metrics.
      */
     private function getQueueMetrics(): array
     {
@@ -166,17 +166,17 @@ class SystemMonitor extends Command
             $totalPending = 0;
             $totalFailed = 0;
             $totalProcessing = 0;
-            
+
             foreach ($queues as $queue) {
                 $pending = Redis::llen("queues:{$queue}");
                 $failed = Redis::llen("queues:{$queue}:failed");
                 $processing = Redis::llen("queues:{$queue}:processing");
-                
+
                 $totalPending += $pending;
                 $totalFailed += $failed;
                 $totalProcessing += $processing;
             }
-            
+
             return [
                 'total_pending' => $totalPending,
                 'total_failed' => $totalFailed,
@@ -191,30 +191,30 @@ class SystemMonitor extends Command
     }
 
     /**
-     * Get email metrics
+     * Get email metrics.
      */
     private function getEmailMetrics(): array
     {
         try {
             $last24Hours = now()->subHours(24);
-            
+
             $totalSent = DB::table('email_tracking')
                 ->where('created_at', '>=', $last24Hours)
                 ->count();
-                
+
             $totalDelivered = DB::table('email_tracking')
                 ->where('created_at', '>=', $last24Hours)
                 ->where('status', 'delivered')
                 ->count();
-                
+
             $totalFailed = DB::table('email_tracking')
                 ->where('created_at', '>=', $last24Hours)
                 ->where('status', 'failed')
                 ->count();
-            
+
             $deliveryRate = $totalSent > 0 ? round(($totalDelivered / $totalSent) * 100, 2) : 0;
             $failureRate = $totalSent > 0 ? round(($totalFailed / $totalSent) * 100, 2) : 0;
-            
+
             return [
                 'total_sent_24h' => $totalSent,
                 'total_delivered_24h' => $totalDelivered,
@@ -230,14 +230,14 @@ class SystemMonitor extends Command
     }
 
     /**
-     * Get cache metrics
+     * Get cache metrics.
      */
     private function getCacheMetrics(): array
     {
         try {
             $driver = config('cache.default');
             $store = Cache::store();
-            
+
             return [
                 'driver' => $driver,
                 'store' => get_class($store),
@@ -252,7 +252,7 @@ class SystemMonitor extends Command
     }
 
     /**
-     * Display metrics
+     * Display metrics.
      */
     private function displayMetrics(array $metrics, string $output): void
     {
@@ -270,7 +270,7 @@ class SystemMonitor extends Command
     }
 
     /**
-     * Display metrics as table
+     * Display metrics as table.
      */
     private function displayTable(array $metrics): void
     {
@@ -279,7 +279,7 @@ class SystemMonitor extends Command
         $redis = $metrics['redis'];
         $queue = $metrics['queue'];
         $email = $metrics['email'];
-        
+
         $this->table(['Metric', 'Value'], [
             ['Memory Usage', $this->formatBytes($system['memory_usage'])],
             ['Memory Peak', $this->formatBytes($system['memory_peak'])],
@@ -297,7 +297,7 @@ class SystemMonitor extends Command
     }
 
     /**
-     * Display metrics as CSV
+     * Display metrics as CSV.
      */
     private function displayCsv(array $metrics): void
     {
@@ -306,7 +306,7 @@ class SystemMonitor extends Command
         $redis = $metrics['redis'];
         $queue = $metrics['queue'];
         $email = $metrics['email'];
-        
+
         $csv = [
             $metrics['timestamp'],
             $this->formatBytes($system['memory_usage']),
@@ -322,12 +322,12 @@ class SystemMonitor extends Command
             $email['total_sent_24h'] ?? 'N/A',
             $email['delivery_rate'] ?? 0,
         ];
-        
+
         $this->line(implode(',', $csv));
     }
 
     /**
-     * Log metrics
+     * Log metrics.
      */
     private function logMetrics(array $metrics): void
     {
@@ -337,19 +337,20 @@ class SystemMonitor extends Command
     }
 
     /**
-     * Display monitoring summary
+     * Display monitoring summary.
      */
     private function displaySummary(array $results): void
     {
         if (empty($results)) {
             $this->warn('No monitoring data collected');
+
             return;
         }
 
         $count = count($results);
         $first = $results[0];
         $last = $results[$count - 1];
-        
+
         $this->table(['Metric', 'First', 'Last', 'Change'], [
             ['Memory Usage', $this->formatBytes($first['system']['memory_usage']), $this->formatBytes($last['system']['memory_usage']), $this->getChange($first['system']['memory_usage'], $last['system']['memory_usage'])],
             ['Queue Pending', $first['queue']['total_pending'] ?? 'N/A', $last['queue']['total_pending'] ?? 'N/A', $this->getChange($first['queue']['total_pending'] ?? 0, $last['queue']['total_pending'] ?? 0)],
@@ -359,7 +360,7 @@ class SystemMonitor extends Command
     }
 
     /**
-     * Format bytes
+     * Format bytes.
      */
     private function formatBytes(int $bytes): string
     {
@@ -367,29 +368,29 @@ class SystemMonitor extends Command
         $bytes = max($bytes, 0);
         $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
         $pow = min($pow, count($units) - 1);
-        
+
         $bytes /= pow(1024, $pow);
-        
+
         return round($bytes, 2) . ' ' . $units[$pow];
     }
 
     /**
-     * Get change indicator
+     * Get change indicator.
      */
     private function getChange($first, $last): string
     {
         if ($first === 'N/A' || $last === 'N/A') {
             return 'N/A';
         }
-        
+
         $change = $last - $first;
-        
+
         if ($change > 0) {
             return "↗️ +{$change}";
         } elseif ($change < 0) {
             return "↘️ {$change}";
         } else {
-            return "➡️ 0";
+            return '➡️ 0';
         }
     }
 }

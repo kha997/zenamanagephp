@@ -19,7 +19,7 @@ class DashboardRoleValidator
 
     public function assertSupported(string $role): void
     {
-        if (! in_array($role, self::ROLES, true)) {
+        if (!in_array($role, self::ROLES, true)) {
             throw new UnsupportedDashboardRole($role);
         }
     }

@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     /**
      * Run the migrations.
      *
@@ -20,7 +19,7 @@ return new class extends Migration
             $table->integer('password_failed_attempts')->default(0)->after('password_expires_at');
             $table->timestamp('password_locked_until')->nullable()->after('password_failed_attempts');
             $table->json('password_history')->nullable()->after('password_locked_until');
-            
+
             // Indexes
             $table->index('password_expires_at');
             $table->index('password_locked_until');

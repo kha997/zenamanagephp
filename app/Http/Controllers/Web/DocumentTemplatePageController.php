@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
 
@@ -287,6 +289,7 @@ class DocumentTemplatePageController extends Controller
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
+
         return (string) $user->tenant_id;
     }
 
@@ -299,6 +302,7 @@ class DocumentTemplatePageController extends Controller
         foreach ($this->contextRegistry->all() as $slug => $provider) {
             $labels[$slug] = $provider->label();
         }
+
         return $labels;
     }
 }

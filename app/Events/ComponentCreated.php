@@ -12,10 +12,14 @@ use Illuminate\Queue\SerializesModels;
 
 class ComponentCreated implements ShouldBroadcast
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+    use Dispatchable;
+    use InteractsWithSockets;
+    use SerializesModels;
 
     public Component $component;
+
     public User $user;
+
     public array $metadata;
 
     /**

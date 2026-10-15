@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
@@ -19,7 +21,9 @@ class TodayPageTest extends TestCase
     use TenantUserFactoryTrait;
 
     private Tenant $tenant;
+
     private User $viewer;
+
     private Project $project;
 
     protected function setUp(): void

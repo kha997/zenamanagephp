@@ -1,45 +1,47 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class CsrfProtectionTest extends TestCase
 {
-    protected bool $autoAppendCsrfToken = false;
-
     use RefreshDatabase;
+
+    protected bool $autoAppendCsrfToken = false;
 
     protected User $user;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create test user
         $this->user = User::factory()->create([
             'email' => 'test@example.com',
-            'password' => bcrypt('password123')
+            'password' => bcrypt('password123'),
         ]);
     }
 
     /**
-     * Test CSRF protection on login form
+     * Test CSRF protection on login form.
      */
     public function test_login_form_requires_csrf_token(): void
     {
         $response = $this->post('/login', [
             'email' => 'test@example.com',
-            'password' => 'password123'
+            'password' => 'password123',
         ]);
 
         $response->assertStatus(419); // CSRF token mismatch
     }
 
     /**
-     * Test CSRF protection on project creation
+     * Test CSRF protection on project creation.
      */
     public function test_project_creation_requires_csrf_token(): void
     {
@@ -47,14 +49,14 @@ class CsrfProtectionTest extends TestCase
 
         $response = $this->post('/projects', [
             'name' => 'Test Project',
-            'description' => 'Test Description'
+            'description' => 'Test Description',
         ]);
 
         $response->assertStatus(419); // CSRF token mismatch
     }
 
     /**
-     * Test CSRF protection on task creation
+     * Test CSRF protection on task creation.
      */
     public function test_task_creation_requires_csrf_token(): void
     {
@@ -62,14 +64,14 @@ class CsrfProtectionTest extends TestCase
 
         $response = $this->post('/tasks', [
             'title' => 'Test Task',
-            'description' => 'Test Description'
+            'description' => 'Test Description',
         ]);
 
         $response->assertStatus(419); // CSRF token mismatch
     }
 
     /**
-     * Test CSRF protection on document upload
+     * Test CSRF protection on document upload.
      */
     public function test_document_upload_requires_csrf_token(): void
     {
@@ -77,14 +79,14 @@ class CsrfProtectionTest extends TestCase
 
         $response = $this->post(route('app.documents.store'), [
             'title' => 'Test Document',
-            'content' => 'Test Content'
+            'content' => 'Test Content',
         ]);
 
         $response->assertStatus(419); // CSRF token mismatch
     }
 
     /**
-     * Test CSRF protection on profile update
+     * Test CSRF protection on profile update.
      */
     public function test_profile_update_requires_csrf_token(): void
     {
@@ -92,14 +94,14 @@ class CsrfProtectionTest extends TestCase
 
         $response = $this->put('/profile', [
             'name' => 'Updated Name',
-            'email' => 'updated@example.com'
+            'email' => 'updated@example.com',
         ]);
 
         $response->assertStatus(419); // CSRF token mismatch
     }
 
     /**
-     * Test successful form submission with CSRF token
+     * Test successful form submission with CSRF token.
      */
     public function test_form_submission_with_csrf_token_succeeds(): void
     {
@@ -111,23 +113,24 @@ class CsrfProtectionTest extends TestCase
         $response = $this->post('/projects', [
             '_token' => $csrfToken,
             'name' => 'Test Project',
-            'description' => 'Test Description'
+            'description' => 'Test Description',
         ]);
 
         $response->assertStatus(302); // Redirect after successful creation
     }
 
     /**
-     * Extract CSRF token from HTML content
+     * Extract CSRF token from HTML content.
      */
     private function extractCsrfToken(string $content): ?string
     {
         preg_match('/name="_token" value="([^"]+)"/', $content, $matches);
+
         return $matches[1] ?? null;
     }
 
     /**
-     * Test CSRF token is present in forms
+     * Test CSRF token is present in forms.
      */
     public function test_csrf_token_present_in_forms(): void
     {

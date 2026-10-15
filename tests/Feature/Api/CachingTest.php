@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
@@ -11,7 +13,9 @@ use Tests\Traits\AuthenticationTrait;
 
 class CachingTest extends TestCase
 {
-    use RefreshDatabase, WithFaker, AuthenticationTrait;
+    use RefreshDatabase;
+    use WithFaker;
+    use AuthenticationTrait;
 
     protected function setUp(): void
     {
@@ -20,7 +24,7 @@ class CachingTest extends TestCase
     }
 
     /**
-     * Test cache stats endpoint
+     * Test cache stats endpoint.
      */
     public function test_cache_stats_endpoint()
     {
@@ -42,8 +46,8 @@ class CachingTest extends TestCase
                 'uptime',
                 'connected_clients',
                 'used_memory_human',
-                'redis_version'
-            ]
+                'redis_version',
+            ],
         ]);
 
         $data = $response->json('data');
@@ -54,7 +58,7 @@ class CachingTest extends TestCase
     }
 
     /**
-     * Test cache config endpoint
+     * Test cache config endpoint.
      */
     public function test_cache_config_endpoint()
     {
@@ -74,8 +78,8 @@ class CachingTest extends TestCase
                 'serializer',
                 'compression',
                 'tags_enabled',
-                'warmup_enabled'
-            ]
+                'warmup_enabled',
+            ],
         ]);
 
         $data = $response->json('data');
@@ -85,7 +89,7 @@ class CachingTest extends TestCase
     }
 
     /**
-     * Test cache key invalidation
+     * Test cache key invalidation.
      */
     public function test_cache_key_invalidation()
     {
@@ -101,7 +105,7 @@ class CachingTest extends TestCase
 
         // Invalidate the key
         $response = $this->postJson('/api/cache/invalidate/key', [
-            'key' => $cacheKey
+            'key' => $cacheKey,
         ], $headers);
 
         $response->assertStatus(200);
@@ -109,8 +113,8 @@ class CachingTest extends TestCase
             'success',
             'data' => [
                 'invalidated_keys',
-                'message'
-            ]
+                'message',
+            ],
         ]);
 
         // Verify key is invalidated
@@ -118,7 +122,7 @@ class CachingTest extends TestCase
     }
 
     /**
-     * Test cache tags invalidation
+     * Test cache tags invalidation.
      */
     public function test_cache_tags_invalidation()
     {
@@ -132,7 +136,7 @@ class CachingTest extends TestCase
         $key1 = $this->tenantCacheKey('key1', $user);
         $key2 = $this->tenantCacheKey('key2', $user);
         $key3 = $this->tenantCacheKey('key3', $user);
-        
+
         Cache::tags([$tag1])->put($key1, 'value1', 300);
         Cache::tags([$tag2])->put($key2, 'value2', 300);
         Cache::tags([$tag1, $tag2])->put($key3, 'value3', 300);
@@ -143,7 +147,7 @@ class CachingTest extends TestCase
 
         // Invalidate by tag
         $response = $this->postJson('/api/cache/invalidate/tags', [
-            'tags' => [$tag1]
+            'tags' => [$tag1],
         ], $headers);
 
         $response->assertStatus(200);
@@ -151,8 +155,8 @@ class CachingTest extends TestCase
             'success',
             'data' => [
                 'invalidated_keys',
-                'message'
-            ]
+                'message',
+            ],
         ]);
 
         // Verify keys with tag1 are invalidated
@@ -162,7 +166,7 @@ class CachingTest extends TestCase
     }
 
     /**
-     * Test cache pattern invalidation
+     * Test cache pattern invalidation.
      */
     public function test_cache_pattern_invalidation()
     {
@@ -188,7 +192,7 @@ class CachingTest extends TestCase
 
         // Invalidate by pattern
         $response = $this->postJson('/api/cache/invalidate/pattern', [
-            'pattern' => 'user_123_*'
+            'pattern' => 'user_123_*',
         ], $headers);
 
         $response->assertStatus(200);
@@ -196,8 +200,8 @@ class CachingTest extends TestCase
             'success',
             'data' => [
                 'invalidated_keys',
-                'message'
-            ]
+                'message',
+            ],
         ]);
 
         // Verify pattern-based invalidation
@@ -208,7 +212,7 @@ class CachingTest extends TestCase
     }
 
     /**
-     * Test cache warmup
+     * Test cache warmup.
      */
     public function test_cache_warmup()
     {
@@ -220,9 +224,9 @@ class CachingTest extends TestCase
             'keys' => [
                 'dashboard_data',
                 'user_preferences',
-                'system_config'
+                'system_config',
             ],
-            'data_provider' => 'dashboard'
+            'data_provider' => 'dashboard',
         ], $headers);
 
         $response->assertStatus(200);
@@ -230,8 +234,8 @@ class CachingTest extends TestCase
             'success',
             'data' => [
                 'warmed_keys',
-                'message'
-            ]
+                'message',
+            ],
         ]);
 
         $data = $response->json('data');
@@ -240,7 +244,7 @@ class CachingTest extends TestCase
     }
 
     /**
-     * Test cache clear all
+     * Test cache clear all.
      */
     public function test_cache_clear_all()
     {
@@ -269,8 +273,8 @@ class CachingTest extends TestCase
             'success',
             'data' => [
                 'cleared_keys',
-                'message'
-            ]
+                'message',
+            ],
         ]);
 
         // Verify all cache is cleared
@@ -280,7 +284,7 @@ class CachingTest extends TestCase
     }
 
     /**
-     * Test dashboard caching middleware
+     * Test dashboard caching middleware.
      */
     public function test_dashboard_caching_middleware()
     {
@@ -296,7 +300,7 @@ class CachingTest extends TestCase
         // Second request - should be cached
         $response2 = $this->getJson('/api/dashboard/data', $headers);
         $response2->assertStatus(200);
-        
+
         // Check if caching headers are present
         if ($response2->headers->has('X-Cache-Status')) {
             $this->assertEquals('HIT', $response2->headers->get('X-Cache-Status'));
@@ -307,7 +311,7 @@ class CachingTest extends TestCase
     }
 
     /**
-     * Test cache performance metrics
+     * Test cache performance metrics.
      */
     public function test_cache_performance_metrics()
     {
@@ -335,7 +339,7 @@ class CachingTest extends TestCase
     }
 
     /**
-     * Test cache error handling
+     * Test cache error handling.
      */
     public function test_cache_error_handling()
     {
@@ -345,7 +349,7 @@ class CachingTest extends TestCase
 
         // Test invalid key invalidation
         $response = $this->postJson('/api/cache/invalidate/key', [
-            'key' => 'non_existent_key'
+            'key' => 'non_existent_key',
         ], $headers);
 
         $response->assertStatus(200);
@@ -354,7 +358,7 @@ class CachingTest extends TestCase
 
         // Test invalid pattern
         $response = $this->postJson('/api/cache/invalidate/pattern', [
-            'pattern' => 'invalid_pattern['
+            'pattern' => 'invalid_pattern[',
         ], $headers);
 
         $response->assertStatus(400);
@@ -362,8 +366,8 @@ class CachingTest extends TestCase
             'success',
             'error' => [
                 'message',
-                'code'
-            ]
+                'code',
+            ],
         ]);
     }
 

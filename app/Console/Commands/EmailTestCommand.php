@@ -43,15 +43,16 @@ class EmailTestCommand extends Command
         $type = $this->option('type');
         $sync = $this->option('sync');
 
-        $this->info("Testing email configuration...");
+        $this->info('Testing email configuration...');
         $this->info("Email: {$email}");
         $this->info("Type: {$type}");
-        $this->info("Mode: " . ($sync ? 'Synchronous' : 'Queued'));
+        $this->info('Mode: ' . ($sync ? 'Synchronous' : 'Queued'));
 
         try {
             // Validate email
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $this->error('Invalid email address');
+
                 return 1;
             }
 
@@ -61,13 +62,14 @@ class EmailTestCommand extends Command
             if ($result['success']) {
                 $this->info('✅ Test email sent successfully!');
                 $this->info("Message: {$result['message']}");
-                
+
                 if (isset($result['tracking_id'])) {
                     $this->info("Tracking ID: {$result['tracking_id']}");
                 }
             } else {
                 $this->error('❌ Failed to send test email');
                 $this->error("Error: {$result['message']}");
+
                 return 1;
             }
 
@@ -79,12 +81,13 @@ class EmailTestCommand extends Command
                 'type' => $type,
                 'error' => $e->getMessage(),
             ]);
+
             return 1;
         }
     }
 
     /**
-     * Test email configuration
+     * Test email configuration.
      */
     private function testEmailConfiguration(string $email, string $type, bool $sync): array
     {
@@ -105,7 +108,7 @@ class EmailTestCommand extends Command
     }
 
     /**
-     * Test invitation email
+     * Test invitation email.
      */
     private function testInvitationEmail(string $email, bool $sync): array
     {
@@ -146,7 +149,7 @@ class EmailTestCommand extends Command
     }
 
     /**
-     * Test welcome email
+     * Test welcome email.
      */
     private function testWelcomeEmail(string $email, bool $sync): array
     {
@@ -187,7 +190,7 @@ class EmailTestCommand extends Command
     }
 
     /**
-     * Test simple email
+     * Test simple email.
      */
     private function testSimpleEmail(string $email): array
     {

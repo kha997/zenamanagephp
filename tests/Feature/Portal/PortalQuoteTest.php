@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Portal;
 
@@ -18,10 +20,15 @@ class PortalQuoteTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenant;
+
     private Account $account;
+
     private Opportunity $opportunity;
+
     private Quote $sentQuote;
+
     private Quote $draftQuote;
+
     private User $creator;
 
     protected function setUp(): void

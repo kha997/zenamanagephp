@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -8,11 +10,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use App\Models\Project;
 
 /**
- * Model Contract - Quản lý hợp đồng dự án
- * 
+ * Model Contract - Quản lý hợp đồng dự án.
+ *
  * @property string $id ULID của contract (primary key)
  * @property string $project_id ID dự án (ULID)
  * @property string $contract_number Số hợp đồng
@@ -35,14 +36,17 @@ use App\Models\Project;
  */
 class Contract extends Model
 {
-    use HasUlids, HasFactory, TenantScope;
+    use HasUlids;
+    use HasFactory;
+    use TenantScope;
 
     protected $table = 'contracts';
-    
+
     // Cấu hình ULID primary key
     protected $keyType = 'string';
+
     public $incrementing = false;
-    
+
     protected $fillable = [
         'tenant_id',
         'project_id',
@@ -132,7 +136,7 @@ class Contract extends Model
     }
 
     /**
-     * Relationship: Contract thuộc về project
+     * Relationship: Contract thuộc về project.
      */
     public function project(): BelongsTo
     {
@@ -140,7 +144,7 @@ class Contract extends Model
     }
 
     /**
-     * Relationship: Contract có nhiều task compensations
+     * Relationship: Contract có nhiều task compensations.
      */
     public function taskCompensations(): HasMany
     {
@@ -189,7 +193,7 @@ class Contract extends Model
     }
 
     /**
-     * Scope: Lọc theo project
+     * Scope: Lọc theo project.
      */
     public function scopeForProject($query, string $projectId)
     {
@@ -197,7 +201,7 @@ class Contract extends Model
     }
 
     /**
-     * Scope: Lọc theo status
+     * Scope: Lọc theo status.
      */
     public function scopeByStatus($query, string $status)
     {
@@ -205,7 +209,7 @@ class Contract extends Model
     }
 
     /**
-     * Scope: Lấy contract active (status = 'active')
+     * Scope: Lấy contract active (status = 'active').
      */
     public function scopeActive($query)
     {
@@ -213,7 +217,7 @@ class Contract extends Model
     }
 
     /**
-     * Scope: Lấy contract mới nhất theo version
+     * Scope: Lấy contract mới nhất theo version.
      */
     public function scopeLatestVersion($query)
     {
@@ -221,7 +225,7 @@ class Contract extends Model
     }
 
     /**
-     * Kiểm tra xem contract có thể được cập nhật không
+     * Kiểm tra xem contract có thể được cập nhật không.
      */
     public function canBeUpdated(): bool
     {
@@ -229,7 +233,7 @@ class Contract extends Model
     }
 
     /**
-     * Kiểm tra xem contract có thể được apply compensation không
+     * Kiểm tra xem contract có thể được apply compensation không.
      */
     public function canApplyCompensation(): bool
     {

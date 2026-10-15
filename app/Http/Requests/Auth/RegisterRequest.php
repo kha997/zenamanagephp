@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests\Auth;
 
@@ -6,7 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Form Request để validate dữ liệu đăng ký
+ * Form Request để validate dữ liệu đăng ký.
  */
 class RegisterRequest extends FormRequest
 {
@@ -28,17 +30,17 @@ class RegisterRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'unique:users,email', 'max:255'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
-            
+
             // Tenant data
             'company_name' => ['required', 'string', 'max:255'],
             'company_domain' => [
-                'nullable', 
-                'string', 
-                'max:100', 
-                Rule::unique('tenants', 'domain')->whereNotNull('domain')
+                'nullable',
+                'string',
+                'max:100',
+                Rule::unique('tenants', 'domain')->whereNotNull('domain'),
             ],
             'company_phone' => ['nullable', 'string', 'max:20'],
-            'company_address' => ['nullable', 'string', 'max:500']
+            'company_address' => ['nullable', 'string', 'max:500'],
         ];
     }
 
@@ -54,12 +56,12 @@ class RegisterRequest extends FormRequest
             'password.required' => 'Mật khẩu là bắt buộc',
             'password.min' => 'Mật khẩu phải có ít nhất 8 ký tự',
             'password.confirmed' => 'Xác nhận mật khẩu không khớp',
-            'company_name.required' => 'Tên công ty là bắt buộc'
+            'company_name.required' => 'Tên công ty là bắt buộc',
         ];
     }
 
     /**
-     * Get user data from request
+     * Get user data from request.
      */
     public function getUserData(): array
     {
@@ -67,7 +69,7 @@ class RegisterRequest extends FormRequest
     }
 
     /**
-     * Get tenant data from request
+     * Get tenant data from request.
      */
     public function getTenantData(): array
     {
@@ -75,7 +77,7 @@ class RegisterRequest extends FormRequest
             'name' => $this->input('company_name'),
             'domain' => $this->input('company_domain'),
             'phone' => $this->input('company_phone'),
-            'address' => $this->input('company_address')
+            'address' => $this->input('company_address'),
         ];
     }
 }

@@ -1,29 +1,31 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Browser;
 
+use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Laravel\Dusk\Browser;
 use Tests\DuskTestCase;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
-use App\Models\User;
-use App\Models\Tenant;
 
 /**
- * Browser testing cho Authentication
+ * Browser testing cho Authentication.
  */
 class AuthenticationTest extends DuskTestCase
 {
     use DatabaseMigrations;
 
     /**
-     * Test login with valid credentials
+     * Test login with valid credentials.
      */
     public function test_login_with_valid_credentials()
     {
         $tenant = Tenant::factory()->create();
         $user = User::factory()->create([
             'tenant_id' => $tenant->id,
-            'email' => 'test@example.com'
+            'email' => 'test@example.com',
         ]);
 
         $this->browse(function (Browser $browser) use ($user) {
@@ -38,7 +40,7 @@ class AuthenticationTest extends DuskTestCase
     }
 
     /**
-     * Test login with invalid credentials
+     * Test login with invalid credentials.
      */
     public function test_login_with_invalid_credentials()
     {
@@ -54,7 +56,7 @@ class AuthenticationTest extends DuskTestCase
     }
 
     /**
-     * Test logout functionality
+     * Test logout functionality.
      */
     public function test_logout_functionality()
     {
@@ -73,7 +75,7 @@ class AuthenticationTest extends DuskTestCase
     }
 
     /**
-     * Test registration flow
+     * Test registration flow.
      */
     public function test_user_registration()
     {
@@ -91,14 +93,14 @@ class AuthenticationTest extends DuskTestCase
     }
 
     /**
-     * Test password reset flow
+     * Test password reset flow.
      */
     public function test_password_reset_flow()
     {
         $tenant = Tenant::factory()->create();
         $user = User::factory()->create([
             'tenant_id' => $tenant->id,
-            'email' => 'reset@example.com'
+            'email' => 'reset@example.com',
         ]);
 
         $this->browse(function (Browser $browser) use ($user) {

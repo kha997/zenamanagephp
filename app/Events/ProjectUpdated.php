@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Events;
 
@@ -11,13 +13,15 @@ class ProjectUpdated implements ShouldBroadcast
 {
     use InteractsWithSockets;
 
-    public function __construct(public Project $project) {}
+    public function __construct(public Project $project)
+    {
+    }
 
     public function broadcastOn(): array
     {
         return [
             new Channel("tenant.{$this->project->tenant_id}.projects"),
-            new Channel("project.{$this->project->id}")
+            new Channel("project.{$this->project->id}"),
         ];
     }
 
@@ -25,7 +29,7 @@ class ProjectUpdated implements ShouldBroadcast
     {
         return [
             'project' => $this->project->load('users', 'tasks'),
-            'timestamp' => now()->toISOString()
+            'timestamp' => now()->toISOString(),
         ];
     }
 }

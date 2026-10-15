@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Auth;
 class SupportTicketController extends Controller
 {
     /**
-     * Display a listing of support tickets
+     * Display a listing of support tickets.
      */
     public function index(Request $request)
     {
@@ -56,7 +56,7 @@ class SupportTicketController extends Controller
     }
 
     /**
-     * Show the form for creating a new support ticket
+     * Show the form for creating a new support ticket.
      */
     public function create()
     {
@@ -65,21 +65,21 @@ class SupportTicketController extends Controller
             'billing' => 'Billing Question',
             'feature_request' => 'Feature Request',
             'bug_report' => 'Bug Report',
-            'general' => 'General Inquiry'
+            'general' => 'General Inquiry',
         ];
 
         $priorities = [
             'low' => 'Low',
             'medium' => 'Medium',
             'high' => 'High',
-            'urgent' => 'Urgent'
+            'urgent' => 'Urgent',
         ];
 
         return view('admin.support.tickets.create', compact('categories', 'priorities'));
     }
 
     /**
-     * Store a newly created support ticket
+     * Store a newly created support ticket.
      */
     public function store(Request $request)
     {
@@ -89,7 +89,7 @@ class SupportTicketController extends Controller
             'category' => 'required|in:technical,billing,feature_request,bug_report,general',
             'priority' => 'required|in:low,medium,high,urgent',
             'attachments' => 'nullable|array|max:5',
-            'attachments.*' => 'file|max:10240' // 10MB max per file
+            'attachments.*' => 'file|max:10240', // 10MB max per file
         ]);
 
         $ticket = SupportTicket::create([
@@ -101,7 +101,7 @@ class SupportTicketController extends Controller
             'status' => 'open',
             'user_id' => Auth::id(),
             'assigned_to' => null,
-            'due_date' => $this->calculateDueDate($request->priority)
+            'due_date' => $this->calculateDueDate($request->priority),
         ]);
 
         // Handle attachments
@@ -113,7 +113,7 @@ class SupportTicketController extends Controller
                     'filename' => $file->getClientOriginalName(),
                     'path' => $path,
                     'size' => $file->getSize(),
-                    'mime_type' => $file->getMimeType()
+                    'mime_type' => $file->getMimeType(),
                 ];
             }
             $ticket->update(['attachments' => $attachments]);
@@ -133,7 +133,7 @@ class SupportTicketController extends Controller
     }
 
     /**
-     * Display the specified support ticket
+     * Display the specified support ticket.
      */
     public function show(SupportTicket $ticket)
     {
@@ -148,7 +148,7 @@ class SupportTicketController extends Controller
     }
 
     /**
-     * Show the form for editing the specified support ticket
+     * Show the form for editing the specified support ticket.
      */
     public function edit(SupportTicket $ticket)
     {
@@ -159,14 +159,14 @@ class SupportTicketController extends Controller
             'billing' => 'Billing Question',
             'feature_request' => 'Feature Request',
             'bug_report' => 'Bug Report',
-            'general' => 'General Inquiry'
+            'general' => 'General Inquiry',
         ];
 
         $priorities = [
             'low' => 'Low',
             'medium' => 'Medium',
             'high' => 'High',
-            'urgent' => 'Urgent'
+            'urgent' => 'Urgent',
         ];
 
         $statuses = [
@@ -174,7 +174,7 @@ class SupportTicketController extends Controller
             'in_progress' => 'In Progress',
             'pending_customer' => 'Pending Customer',
             'resolved' => 'Resolved',
-            'closed' => 'Closed'
+            'closed' => 'Closed',
         ];
 
         $supportAgents = User::where('role', 'support_agent')
@@ -185,7 +185,7 @@ class SupportTicketController extends Controller
     }
 
     /**
-     * Update the specified support ticket
+     * Update the specified support ticket.
      */
     public function update(Request $request, SupportTicket $ticket)
     {
@@ -198,7 +198,7 @@ class SupportTicketController extends Controller
             'priority' => 'required|in:low,medium,high,urgent',
             'status' => 'required|in:open,in_progress,pending_customer,resolved,closed',
             'assigned_to' => 'nullable|exists:users,id',
-            'due_date' => 'nullable|date|after:today'
+            'due_date' => 'nullable|date|after:today',
         ]);
 
         $oldStatus = $ticket->status;
@@ -211,7 +211,7 @@ class SupportTicketController extends Controller
             'priority' => $request->priority,
             'status' => $request->status,
             'assigned_to' => $request->assigned_to,
-            'due_date' => $request->due_date
+            'due_date' => $request->due_date,
         ]);
 
         // Send notifications for status changes
@@ -231,7 +231,7 @@ class SupportTicketController extends Controller
                 'old_status' => $oldStatus,
                 'new_status' => $request->status,
                 'old_assigned_to' => $oldAssignedTo,
-                'new_assigned_to' => $request->assigned_to
+                'new_assigned_to' => $request->assigned_to,
             ])
             ->log('Support ticket updated');
 
@@ -240,21 +240,21 @@ class SupportTicketController extends Controller
     }
 
     /**
-     * Add a message to the support ticket
+     * Add a message to the support ticket.
      */
     public function addMessage(Request $request, SupportTicket $ticket)
     {
         $request->validate([
             'message' => 'required|string',
             'attachments' => 'nullable|array|max:5',
-            'attachments.*' => 'file|max:10240'
+            'attachments.*' => 'file|max:10240',
         ]);
 
         $message = SupportTicketMessage::create([
             'ticket_id' => $ticket->id,
             'user_id' => Auth::id(),
             'message' => $request->message,
-            'is_internal' => $request->boolean('is_internal', false)
+            'is_internal' => $request->boolean('is_internal', false),
         ]);
 
         // Handle attachments
@@ -266,7 +266,7 @@ class SupportTicketController extends Controller
                     'filename' => $file->getClientOriginalName(),
                     'path' => $path,
                     'size' => $file->getSize(),
-                    'mime_type' => $file->getMimeType()
+                    'mime_type' => $file->getMimeType(),
                 ];
             }
             $message->update(['attachments' => $attachments]);
@@ -291,7 +291,7 @@ class SupportTicketController extends Controller
     }
 
     /**
-     * Close the specified support ticket
+     * Close the specified support ticket.
      */
     public function close(SupportTicket $ticket)
     {
@@ -300,7 +300,7 @@ class SupportTicketController extends Controller
         $ticket->update([
             'status' => 'closed',
             'closed_at' => now(),
-            'closed_by' => Auth::id()
+            'closed_by' => Auth::id(),
         ]);
 
         // Send notification
@@ -316,7 +316,7 @@ class SupportTicketController extends Controller
     }
 
     /**
-     * Generate unique ticket number
+     * Generate unique ticket number.
      */
     private function generateTicketNumber()
     {
@@ -328,11 +328,11 @@ class SupportTicketController extends Controller
     }
 
     /**
-     * Calculate due date based on priority
+     * Calculate due date based on priority.
      */
     private function calculateDueDate($priority)
     {
-        $days = match($priority) {
+        $days = match ($priority) {
             'urgent' => 1,
             'high' => 3,
             'medium' => 7,
@@ -344,7 +344,7 @@ class SupportTicketController extends Controller
     }
 
     /**
-     * Notify support team of new ticket
+     * Notify support team of new ticket.
      */
     private function notifySupportTeam(SupportTicket $ticket)
     {
@@ -358,7 +358,7 @@ class SupportTicketController extends Controller
     }
 
     /**
-     * Notify status change
+     * Notify status change.
      */
     private function notifyStatusChange(SupportTicket $ticket, $oldStatus, $newStatus)
     {
@@ -370,7 +370,7 @@ class SupportTicketController extends Controller
     }
 
     /**
-     * Notify assignment change
+     * Notify assignment change.
      */
     private function notifyAssignmentChange(SupportTicket $ticket, $oldAssignedTo, $newAssignedTo)
     {
@@ -381,7 +381,7 @@ class SupportTicketController extends Controller
     }
 
     /**
-     * Notify new message
+     * Notify new message.
      */
     private function notifyNewMessage(SupportTicket $ticket, SupportTicketMessage $message)
     {
@@ -397,7 +397,7 @@ class SupportTicketController extends Controller
     }
 
     /**
-     * Notify ticket closed
+     * Notify ticket closed.
      */
     private function notifyTicketClosed(SupportTicket $ticket)
     {
@@ -409,7 +409,7 @@ class SupportTicketController extends Controller
     }
 
     /**
-     * Get support ticket statistics
+     * Get support ticket statistics.
      */
     public function statistics()
     {
@@ -427,14 +427,14 @@ class SupportTicketController extends Controller
                 ->get(),
             'tickets_by_priority' => SupportTicket::selectRaw('priority, COUNT(*) as count')
                 ->groupBy('priority')
-                ->get()
+                ->get(),
         ];
 
         return view('admin.support.statistics', compact('stats'));
     }
 
     /**
-     * Get average resolution time
+     * Get average resolution time.
      */
     private function getAverageResolutionTime()
     {

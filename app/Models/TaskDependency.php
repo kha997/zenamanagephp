@@ -2,17 +2,16 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Traits\TenantScope;
 
 class TaskDependency extends Model
 {
     use TenantScope;
 
     protected $table = 'task_dependencies';
-    
+
     protected $fillable = [
         'tenant_id',
         'task_id',
@@ -21,11 +20,11 @@ class TaskDependency extends Model
 
     protected $casts = [
         'created_at' => 'datetime',
-        'updated_at' => 'datetime'
+        'updated_at' => 'datetime',
     ];
 
     /**
-     * Relationship: Dependency belongs to a task
+     * Relationship: Dependency belongs to a task.
      */
     public function task(): BelongsTo
     {
@@ -33,7 +32,7 @@ class TaskDependency extends Model
     }
 
     /**
-     * Relationship: Dependency depends on another task
+     * Relationship: Dependency depends on another task.
      */
     public function dependsOnTask(): BelongsTo
     {
@@ -41,7 +40,7 @@ class TaskDependency extends Model
     }
 
     /**
-     * Relationship: Dependency belongs to a tenant
+     * Relationship: Dependency belongs to a tenant.
      */
     public function tenant(): BelongsTo
     {
@@ -49,7 +48,7 @@ class TaskDependency extends Model
     }
 
     /**
-     * Scope: Filter by tenant
+     * Scope: Filter by tenant.
      */
     public function scopeForTenant($query, string $tenantId)
     {
@@ -57,7 +56,7 @@ class TaskDependency extends Model
     }
 
     /**
-     * Scope: Filter by task
+     * Scope: Filter by task.
      */
     public function scopeForTask($query, string $taskId)
     {
@@ -65,7 +64,7 @@ class TaskDependency extends Model
     }
 
     /**
-     * Scope: Filter by depends on task
+     * Scope: Filter by depends on task.
      */
     public function scopeDependsOnTask($query, string $taskId)
     {

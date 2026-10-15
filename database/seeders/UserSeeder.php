@@ -1,15 +1,17 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 /**
- * User Seeder
- * 
+ * User Seeder.
+ *
  * Tạo dữ liệu mẫu cho users
  * Sử dụng ULID và liên kết với tenant qua ULID
  */
@@ -21,7 +23,7 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         $defaultTenant = Tenant::where('name', 'ZENA Company')->first();
-        
+
         if ($defaultTenant) {
             // Tạo admin user cho tenant mặc định - sử dụng firstOrCreate để tránh trùng lặp
             User::firstOrCreate(
@@ -30,7 +32,7 @@ class UserSeeder extends Seeder
                     'name' => 'Admin User',
                     'password' => Hash::make('password'),
                     'tenant_id' => $defaultTenant->id, // ULID
-                    'is_active' => true
+                    'is_active' => true,
                 ]
             );
 
@@ -38,7 +40,7 @@ class UserSeeder extends Seeder
             $existingUsersCount = User::where('tenant_id', $defaultTenant->id)
                 ->where('email', '!=', 'admin@zena.local')
                 ->count();
-            
+
             // Chỉ tạo thêm user nếu chưa đủ 5 user
             if ($existingUsersCount < 5) {
                 $this->seedUsersForTenant(
@@ -53,7 +55,7 @@ class UserSeeder extends Seeder
         foreach ($otherTenants as $tenant) {
             // Kiểm tra số lượng user hiện có cho tenant này
             $existingUsersCount = User::where('tenant_id', $tenant->id)->count();
-            
+
             // Chỉ tạo thêm user nếu chưa đủ 3 user
             if ($existingUsersCount < 3) {
                 $this->seedUsersForTenant(

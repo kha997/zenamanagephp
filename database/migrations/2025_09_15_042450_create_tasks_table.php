@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     /**
      * Run the migrations.
      */
@@ -29,10 +28,10 @@ return new class extends Migration
             $table->json('dependencies')->nullable();
             $table->timestamps();
             $table->softDeletes();
-            
+
             $table->foreign('project_id')->references('id')->on('projects')->onDelete('cascade');
             $table->foreign('assignee_id')->references('id')->on('users')->onDelete('set null');
-            
+
             $table->index(['project_id', 'status']);
             $table->index(['assignee_id', 'status']);
             $table->index(['start_date', 'end_date']);

@@ -1,19 +1,18 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests;
 
-use App\Http\Requests\BaseApiRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Form Request để xác thực dữ liệu khi tạo Component mới
- * 
- * @package zenamanage\CoreProject\Requests
+ * Form Request để xác thực dữ liệu khi tạo Component mới.
  */
 class StoreComponentRequest extends BaseApiRequest
 {
     /**
-     * Xác định user có quyền thực hiện request này không
+     * Xác định user có quyền thực hiện request này không.
      */
     public function authorize(): bool
     {
@@ -21,7 +20,7 @@ class StoreComponentRequest extends BaseApiRequest
     }
 
     /**
-     * Các quy tắc validation cho request
+     * Các quy tắc validation cho request.
      */
     public function rules(): array
     {
@@ -29,7 +28,7 @@ class StoreComponentRequest extends BaseApiRequest
             'project_id' => [
                 'required',
                 'integer',
-                'exists:projects,id'
+                'exists:projects,id',
             ],
             'parent_component_id' => [
                 'nullable',
@@ -39,11 +38,11 @@ class StoreComponentRequest extends BaseApiRequest
                     // Kiểm tra parent component phải thuộc cùng project
                     if ($value && $this->project_id) {
                         $parentComponent = \zenamanage\CoreProject\Models\Component::find($value);
-                        if ($parentComponent && $parentComponent->project_id !== (int)$this->project_id) {
+                        if ($parentComponent && $parentComponent->project_id !== (int) $this->project_id) {
                             $fail('Parent component phải thuộc cùng dự án.');
                         }
                     }
-                }
+                },
             ],
             'name' => [
                 'required',
@@ -51,51 +50,51 @@ class StoreComponentRequest extends BaseApiRequest
                 'max:255',
                 Rule::unique('components')
                     ->where('project_id', $this->project_id)
-                    ->where('parent_component_id', $this->parent_component_id)
+                    ->where('parent_component_id', $this->parent_component_id),
             ],
             'description' => [
                 'nullable',
                 'string',
-                'max:1000'
+                'max:1000',
             ],
             'progress_percent' => [
                 'nullable',
                 'numeric',
                 'min:0',
-                'max:100'
+                'max:100',
             ],
             'planned_cost' => [
                 'nullable',
                 'numeric',
-                'min:0'
+                'min:0',
             ],
             'actual_cost' => [
                 'nullable',
                 'numeric',
-                'min:0'
+                'min:0',
             ],
             'tags' => [
                 'nullable',
-                'array'
+                'array',
             ],
             'tags.*' => [
                 'string',
-                'max:50'
+                'max:50',
             ],
             'visibility' => [
                 'nullable',
                 'string',
-                'in:internal,client'
+                'in:internal,client',
             ],
             'client_approved' => [
                 'nullable',
-                'boolean'
-            ]
+                'boolean',
+            ],
         ];
     }
 
     /**
-     * Chuẩn bị dữ liệu trước khi validation
+     * Chuẩn bị dữ liệu trước khi validation.
      */
     protected function prepareForValidation(): void
     {
@@ -105,7 +104,7 @@ class StoreComponentRequest extends BaseApiRequest
             'planned_cost' => $this->planned_cost ?? 0,
             'actual_cost' => $this->actual_cost ?? 0,
             'visibility' => $this->visibility ?? 'internal',
-            'client_approved' => $this->client_approved ?? false
+            'client_approved' => $this->client_approved ?? false,
         ]);
     }
 }

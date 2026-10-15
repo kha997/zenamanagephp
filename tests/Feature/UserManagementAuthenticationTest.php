@@ -1,18 +1,19 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\Tenant;
-use Tests\TestCase;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Hash;
+use Tests\TestCase;
 
 /**
- * Test User Management & Authentication System
- * 
+ * Test User Management & Authentication System.
+ *
  * Kịch bản: Test đăng nhập, đăng ký, quản lý user, và authentication features
  */
 class UserManagementAuthenticationTest extends TestCase
@@ -20,15 +21,16 @@ class UserManagementAuthenticationTest extends TestCase
     use RefreshDatabase;
 
     private $tenant;
+
     private $user;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Disable foreign key constraints for testing
         \DB::statement('PRAGMA foreign_keys=OFF;');
-        
+
         // Tạo tenant
         $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
@@ -52,7 +54,7 @@ class UserManagementAuthenticationTest extends TestCase
     }
 
     /**
-     * Test user creation
+     * Test user creation.
      */
     public function test_can_create_user(): void
     {
@@ -81,7 +83,7 @@ class UserManagementAuthenticationTest extends TestCase
     }
 
     /**
-     * Test user authentication with valid credentials
+     * Test user authentication with valid credentials.
      */
     public function test_can_authenticate_with_valid_credentials(): void
     {
@@ -91,14 +93,14 @@ class UserManagementAuthenticationTest extends TestCase
         ];
 
         $this->assertTrue(Auth::attempt($credentials));
-        
+
         $authenticatedUser = Auth::user();
         $this->assertEquals($this->user->id, $authenticatedUser->id);
         $this->assertEquals($this->user->email, $authenticatedUser->email);
     }
 
     /**
-     * Test user authentication with invalid credentials
+     * Test user authentication with invalid credentials.
      */
     public function test_cannot_authenticate_with_invalid_credentials(): void
     {
@@ -112,7 +114,7 @@ class UserManagementAuthenticationTest extends TestCase
     }
 
     /**
-     * Test user authentication with non-existent email
+     * Test user authentication with non-existent email.
      */
     public function test_cannot_authenticate_with_non_existent_email(): void
     {
@@ -126,7 +128,7 @@ class UserManagementAuthenticationTest extends TestCase
     }
 
     /**
-     * Test inactive user cannot authenticate
+     * Test inactive user cannot authenticate.
      */
     public function test_inactive_user_cannot_authenticate(): void
     {
@@ -151,7 +153,7 @@ class UserManagementAuthenticationTest extends TestCase
     }
 
     /**
-     * Test user logout
+     * Test user logout.
      */
     public function test_can_logout_user(): void
     {
@@ -167,7 +169,7 @@ class UserManagementAuthenticationTest extends TestCase
     }
 
     /**
-     * Test user update
+     * Test user update.
      */
     public function test_can_update_user(): void
     {
@@ -188,7 +190,7 @@ class UserManagementAuthenticationTest extends TestCase
     }
 
     /**
-     * Test password update
+     * Test password update.
      */
     public function test_can_update_user_password(): void
     {
@@ -202,7 +204,7 @@ class UserManagementAuthenticationTest extends TestCase
     }
 
     /**
-     * Test user status toggle
+     * Test user status toggle.
      */
     public function test_can_toggle_user_status(): void
     {
@@ -216,7 +218,7 @@ class UserManagementAuthenticationTest extends TestCase
     }
 
     /**
-     * Test user profile data
+     * Test user profile data.
      */
     public function test_can_manage_user_profile_data(): void
     {
@@ -246,7 +248,7 @@ class UserManagementAuthenticationTest extends TestCase
     }
 
     /**
-     * Test user tenant relationship
+     * Test user tenant relationship.
      */
     public function test_user_tenant_relationship(): void
     {
@@ -255,7 +257,7 @@ class UserManagementAuthenticationTest extends TestCase
     }
 
     /**
-     * Test user soft delete
+     * Test user soft delete.
      */
     public function test_can_soft_delete_user(): void
     {
@@ -270,7 +272,7 @@ class UserManagementAuthenticationTest extends TestCase
     }
 
     /**
-     * Test user restore from soft delete
+     * Test user restore from soft delete.
      */
     public function test_can_restore_soft_deleted_user(): void
     {
@@ -285,7 +287,7 @@ class UserManagementAuthenticationTest extends TestCase
     }
 
     /**
-     * Test user email uniqueness is enforced globally
+     * Test user email uniqueness is enforced globally.
      */
     public function test_email_uniqueness_within_tenant(): void
     {
@@ -311,7 +313,7 @@ class UserManagementAuthenticationTest extends TestCase
     }
 
     /**
-     * Test user last login tracking
+     * Test user last login tracking.
      */
     public function test_can_track_last_login(): void
     {
@@ -324,7 +326,7 @@ class UserManagementAuthenticationTest extends TestCase
     }
 
     /**
-     * Test user remember token
+     * Test user remember token.
      */
     public function test_can_generate_remember_token(): void
     {
@@ -338,7 +340,7 @@ class UserManagementAuthenticationTest extends TestCase
     }
 
     /**
-     * Test user API token generation
+     * Test user API token generation.
      */
     public function test_can_generate_api_token(): void
     {
@@ -352,7 +354,7 @@ class UserManagementAuthenticationTest extends TestCase
     }
 
     /**
-     * Test user bulk operations
+     * Test user bulk operations.
      */
     public function test_can_perform_bulk_user_operations(): void
     {

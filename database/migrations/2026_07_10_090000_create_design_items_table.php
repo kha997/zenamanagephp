@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -8,8 +10,7 @@ use Illuminate\Support\Facades\Schema;
 // NOTE: the spec listed an optional `phase_id` FK to `project_phases`, but that table has no
 // backing migration anywhere in this codebase (ProjectPhase model is unused/unbacked — verified
 // during planning). Deliberately omitted; project_id alone is enough scoping for now.
-return new class extends Migration
-{
+return new class () extends Migration {
     public function up(): void
     {
         Schema::create('design_items', function (Blueprint $table) {

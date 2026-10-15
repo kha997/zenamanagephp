@@ -1,9 +1,14 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Models\Permission;
+use App\Models\Role;
+use App\Models\Tenant;
+use App\Models\User;
 use Tests\TestCase;
-use App\Models\{User, Project, Tenant, Role, Permission};
 
 class ProjectManagementTest extends TestCase
 {
@@ -11,7 +16,7 @@ class ProjectManagementTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $user = User::factory()->for($tenant)->create();
-        
+
         $permission = Permission::firstOrCreate(
             ['code' => 'project.create'],
             [
@@ -34,19 +39,19 @@ class ProjectManagementTest extends TestCase
 
         $role->permissions()->syncWithoutDetaching($permission->id);
         $user->roles()->syncWithoutDetaching($role->id);
-        
+
         $response = $this->actingAs($user)
             ->post('/api/projects', [
                 'name' => 'Test Project',
                 'description' => 'Test Description',
                 'start_date' => now()->addDay()->toDateString(),
-                'end_date' => now()->addMonth()->toDateString()
+                'end_date' => now()->addMonth()->toDateString(),
             ]);
-            
+
         $response->assertStatus(201);
         $this->assertDatabaseHas('projects', [
             'name' => 'Test Project',
-            'tenant_id' => $tenant->id
+            'tenant_id' => $tenant->id,
         ]);
     }
 }

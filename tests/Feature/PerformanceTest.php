@@ -2,17 +2,15 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
+use App\Models\Dashboard;
+use App\Models\PerformanceMetric;
+use App\Models\Tenant;
+use App\Models\Widget;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
-use App\Models\User;
-use App\Models\Tenant;
-use App\Models\Dashboard;
-use App\Models\Widget;
-use App\Models\SupportTicket;
-use App\Models\PerformanceMetric;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
 use Tests\Traits\AuthenticationTrait;
 use Tests\Traits\RouteNameTrait;
 
@@ -21,19 +19,24 @@ use Tests\Traits\RouteNameTrait;
  */
 class PerformanceTest extends TestCase
 {
-    use RefreshDatabase, WithFaker, AuthenticationTrait, RouteNameTrait;
+    use RefreshDatabase;
+    use WithFaker;
+    use AuthenticationTrait;
+    use RouteNameTrait;
 
     private const SLOW_TESTS_ENV = 'RUN_SLOW_TESTS';
     private const STRESS_TESTS_ENV = 'RUN_STRESS_TESTS';
 
     protected $user;
+
     protected $admin;
+
     protected Tenant $tenant;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->tenant = Tenant::factory()->create();
 
         $password = bcrypt('password');
@@ -48,7 +51,7 @@ class PerformanceTest extends TestCase
     }
 
     /**
-     * Test API response times
+     * Test API response times.
      */
     public function test_api_response_times()
     {
@@ -58,9 +61,9 @@ class PerformanceTest extends TestCase
         $startTime = microtime(true);
         $response = $this->getJson('/api/v1/dashboard');
         $endTime = microtime(true);
-        
+
         $responseTime = ($endTime - $startTime) * 1000; // Convert to milliseconds
-        
+
         $response->assertStatus(200);
         $this->assertLessThan(500, $responseTime, 'Dashboard list API should respond within 500ms');
 
@@ -68,9 +71,9 @@ class PerformanceTest extends TestCase
         $startTime = microtime(true);
         $response = $this->getJson('/api/v1/dashboard/widgets');
         $endTime = microtime(true);
-        
+
         $responseTime = ($endTime - $startTime) * 1000;
-        
+
         $response->assertStatus(200);
         $this->assertLessThan(300, $responseTime, 'Widget list API should respond within 300ms');
 
@@ -78,15 +81,15 @@ class PerformanceTest extends TestCase
         $startTime = microtime(true);
         $response = $this->getJson('/api/v1/notifications');
         $endTime = microtime(true);
-        
+
         $responseTime = ($endTime - $startTime) * 1000;
-        
+
         $response->assertStatus(200);
         $this->assertLessThan(400, $responseTime, 'Notifications API should respond within 400ms');
     }
 
     /**
-     * Test database query performance
+     * Test database query performance.
      */
     public function test_database_query_performance()
     {
@@ -94,7 +97,7 @@ class PerformanceTest extends TestCase
 
         // Create test data
         $dashboards = Dashboard::factory()->count(50)->create(['user_id' => $this->user->id]);
-        
+
         foreach ($dashboards as $dashboard) {
             Widget::factory()->count(5)->create(['dashboard_id' => $dashboard->id]);
         }
@@ -103,9 +106,9 @@ class PerformanceTest extends TestCase
         $startTime = microtime(true);
         $dashboards = Dashboard::with('widgets')->where('user_id', $this->user->id)->get();
         $endTime = microtime(true);
-        
+
         $queryTime = ($endTime - $startTime) * 1000;
-        
+
         $this->assertLessThan(200, $queryTime, 'Dashboard query with widgets should complete within 200ms');
         $this->assertCount(50, $dashboards);
 
@@ -117,15 +120,15 @@ class PerformanceTest extends TestCase
             ->select('dashboards.name', 'widgets.name', 'widgets.type')
             ->get();
         $endTime = microtime(true);
-        
+
         $queryTime = ($endTime - $startTime) * 1000;
-        
+
         $this->assertLessThan(300, $queryTime, 'Complex join query should complete within 300ms');
         $this->assertCount(250, $result); // 50 dashboards * 5 widgets each
     }
 
     /**
-     * Test cache performance
+     * Test cache performance.
      */
     public function test_cache_performance()
     {
@@ -135,7 +138,7 @@ class PerformanceTest extends TestCase
         $startTime = microtime(true);
         Cache::put('test_key', 'test_value', 60);
         $endTime = microtime(true);
-        
+
         $writeTime = ($endTime - $startTime) * 1000;
         $this->assertLessThan(10, $writeTime, 'Cache write should complete within 10ms');
 
@@ -143,7 +146,7 @@ class PerformanceTest extends TestCase
         $startTime = microtime(true);
         $value = Cache::get('test_key');
         $endTime = microtime(true);
-        
+
         $readTime = ($endTime - $startTime) * 1000;
         $this->assertLessThan(5, $readTime, 'Cache read should complete within 5ms');
         $this->assertEquals('test_value', $value);
@@ -154,13 +157,13 @@ class PerformanceTest extends TestCase
             Cache::put("bulk_key_{$i}", "bulk_value_{$i}", 60);
         }
         $endTime = microtime(true);
-        
+
         $bulkWriteTime = ($endTime - $startTime) * 1000;
         $this->assertLessThan(100, $bulkWriteTime, 'Bulk cache writes should complete within 100ms');
     }
 
     /**
-     * Test memory usage
+     * Test memory usage.
      */
     public function test_memory_usage()
     {
@@ -200,7 +203,7 @@ class PerformanceTest extends TestCase
     }
 
     /**
-     * Test concurrent request handling
+     * Test concurrent request handling.
      */
     public function test_concurrent_request_handling()
     {
@@ -229,7 +232,7 @@ class PerformanceTest extends TestCase
     }
 
     /**
-     * Test large dataset handling
+     * Test large dataset handling.
      */
     public function test_large_dataset_handling()
     {
@@ -259,7 +262,7 @@ class PerformanceTest extends TestCase
     }
 
     /**
-     * Test file upload performance
+     * Test file upload performance.
      */
     public function test_file_upload_performance()
     {
@@ -291,7 +294,7 @@ class PerformanceTest extends TestCase
     }
 
     /**
-     * Test search performance
+     * Test search performance.
      */
     public function test_search_performance()
     {
@@ -302,7 +305,7 @@ class PerformanceTest extends TestCase
             Dashboard::factory()->create([
                 'user_id' => $this->user->id,
                 'name' => "Dashboard {$i}",
-                'description' => "Description for dashboard {$i}"
+                'description' => "Description for dashboard {$i}",
             ]);
         }
 
@@ -328,7 +331,7 @@ class PerformanceTest extends TestCase
     }
 
     /**
-     * Test WebSocket performance
+     * Test WebSocket performance.
      */
     public function test_websocket_performance()
     {
@@ -346,7 +349,7 @@ class PerformanceTest extends TestCase
     }
 
     /**
-     * Test maintenance task performance
+     * Test maintenance task performance.
      */
     public function test_maintenance_task_performance()
     {
@@ -374,7 +377,7 @@ class PerformanceTest extends TestCase
     }
 
     /**
-     * Test backup performance
+     * Test backup performance.
      */
     public function test_backup_performance()
     {
@@ -395,7 +398,7 @@ class PerformanceTest extends TestCase
     }
 
     /**
-     * Test system health check performance
+     * Test system health check performance.
      */
     public function test_system_health_check_performance()
     {
@@ -413,7 +416,7 @@ class PerformanceTest extends TestCase
     }
 
     /**
-     * Test performance metrics collection
+     * Test performance metrics collection.
      */
     public function test_performance_metrics_collection()
     {
@@ -434,7 +437,7 @@ class PerformanceTest extends TestCase
     }
 
     /**
-     * Test stress test with mixed operations
+     * Test stress test with mixed operations.
      */
     public function test_stress_test_mixed_operations()
     {
@@ -449,7 +452,7 @@ class PerformanceTest extends TestCase
                 'name' => "Stress Test Dashboard {$i}",
                 'description' => "Stress test description {$i}",
                 'layout' => 'grid',
-                'is_public' => false
+                'is_public' => false,
             ]);
 
             if ($dashboardResponse->status() === 201) {
@@ -461,12 +464,12 @@ class PerformanceTest extends TestCase
                     'type' => 'chart',
                     'title' => "Widget {$i}",
                     'config' => ['chart_type' => 'line'],
-                    'position' => ['x' => 0, 'y' => 0, 'w' => 6, 'h' => 4]
+                    'position' => ['x' => 0, 'y' => 0, 'w' => 6, 'h' => 4],
                 ]);
 
                 // Update dashboard
                 $this->put($this->namedRoute('api.legacy.dashboards.update', ['dashboard' => $dashboardId]), [
-                    'name' => "Updated Dashboard {$i}"
+                    'name' => "Updated Dashboard {$i}",
                 ]);
 
                 // Get dashboard
@@ -485,7 +488,7 @@ class PerformanceTest extends TestCase
     }
 
     /**
-     * Test memory leak detection
+     * Test memory leak detection.
      *
      * @group slow
      * @group performance
@@ -501,7 +504,7 @@ class PerformanceTest extends TestCase
         // Perform operations that might cause memory leaks
         for ($i = 0; $i < 100; $i++) {
             $dashboard = Dashboard::factory()->create(['user_id' => $this->user->id]);
-            
+
             for ($j = 0; $j < 10; $j++) {
                 Widget::factory()->create(['dashboard_id' => $dashboard->id]);
             }

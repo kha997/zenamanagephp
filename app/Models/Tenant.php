@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -9,8 +11,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 /**
- * Tenant Model - Represents an organization/company in the multi-tenant system
- * 
+ * Tenant Model - Represents an organization/company in the multi-tenant system.
+ *
  * @property string $id ULID primary key
  * @property string $name
  * @property string $slug
@@ -26,7 +28,8 @@ use Illuminate\Support\Str;
  */
 class Tenant extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids;
+    use HasFactory;
 
     /**
      * The attributes that are mass assignable.
@@ -71,12 +74,12 @@ class Tenant extends Model
     protected static function boot()
     {
         parent::boot();
-        
+
         // Tự động tạo slug từ name khi tạo mới
         static::creating(function ($tenant) {
             if (empty($tenant->slug)) {
                 $tenant->slug = Str::slug($tenant->name);
-                
+
                 // Đảm bảo slug là duy nhất
                 $originalSlug = $tenant->slug;
                 $counter = 1;
@@ -86,12 +89,12 @@ class Tenant extends Model
                 }
             }
         });
-        
+
         // Cập nhật slug khi name thay đổi
         static::updating(function ($tenant) {
             if ($tenant->isDirty('name') && empty($tenant->slug)) {
                 $tenant->slug = Str::slug($tenant->name);
-                
+
                 // Đảm bảo slug là duy nhất (trừ chính nó)
                 $originalSlug = $tenant->slug;
                 $counter = 1;
@@ -104,7 +107,7 @@ class Tenant extends Model
     }
 
     /**
-     * Get all users belonging to this tenant
+     * Get all users belonging to this tenant.
      *
      * @return HasMany
      */
@@ -114,7 +117,7 @@ class Tenant extends Model
     }
 
     /**
-     * Get all projects belonging to this tenant
+     * Get all projects belonging to this tenant.
      *
      * @return HasMany
      */
@@ -124,7 +127,7 @@ class Tenant extends Model
     }
 
     /**
-     * Check if tenant is active
+     * Check if tenant is active.
      *
      * @return bool
      */
@@ -134,7 +137,7 @@ class Tenant extends Model
     }
 
     /**
-     * Check if tenant trial has expired
+     * Check if tenant trial has expired.
      *
      * @return bool
      */

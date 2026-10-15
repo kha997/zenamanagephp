@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
@@ -26,7 +28,9 @@ class DocumentUploadValidationTest extends TestCase
     use RouteNameTrait;
 
     protected Tenant $tenant;
+
     protected User $user;
+
     protected Project $project;
 
     protected function setUp(): void

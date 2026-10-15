@@ -1,17 +1,19 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Models\Project;
 use App\Models\ChangeRequest;
+use App\Models\Project;
 use App\Models\Tenant;
-use Tests\TestCase;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 /**
- * Test Change Request Workflow và Approval Process
- * 
+ * Test Change Request Workflow và Approval Process.
+ *
  * Kịch bản: PM tạo CR → Client Rep phê duyệt → Apply impact
  */
 class ChangeRequestWorkflowTest extends TestCase
@@ -19,14 +21,17 @@ class ChangeRequestWorkflowTest extends TestCase
     use RefreshDatabase;
 
     private $tenant;
+
     private $project;
+
     private $projectManager;
+
     private $clientRep;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Tạo tenant
         $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
@@ -72,7 +77,7 @@ class ChangeRequestWorkflowTest extends TestCase
     }
 
     /**
-     * Test tạo CR với impact analysis
+     * Test tạo CR với impact analysis.
      */
     public function test_can_create_change_request_with_impact_analysis(): void
     {
@@ -95,13 +100,13 @@ class ChangeRequestWorkflowTest extends TestCase
                 'schedule_delay' => 5,
                 'cost_increase' => 50000,
                 'quality_impact' => 'low',
-                'risk_level' => 'medium'
+                'risk_level' => 'medium',
             ],
             'risk_assessment' => [
                 'technical_risk' => 'low',
                 'schedule_risk' => 'medium',
                 'cost_risk' => 'medium',
-                'quality_risk' => 'low'
+                'quality_risk' => 'low',
             ],
         ];
 
@@ -130,7 +135,7 @@ class ChangeRequestWorkflowTest extends TestCase
     }
 
     /**
-     * Test submit CR để phê duyệt
+     * Test submit CR để phê duyệt.
      */
     public function test_can_submit_change_request_for_approval(): void
     {
@@ -153,7 +158,7 @@ class ChangeRequestWorkflowTest extends TestCase
                 'schedule_delay' => 3,
                 'cost_increase' => 25000,
                 'quality_impact' => 'medium',
-                'risk_level' => 'low'
+                'risk_level' => 'low',
             ],
         ]);
 
@@ -173,7 +178,7 @@ class ChangeRequestWorkflowTest extends TestCase
     }
 
     /**
-     * Test approval workflow với audit trail
+     * Test approval workflow với audit trail.
      */
     public function test_approval_workflow_with_audit_trail(): void
     {
@@ -196,7 +201,7 @@ class ChangeRequestWorkflowTest extends TestCase
                 'schedule_delay' => 7,
                 'cost_increase' => 75000,
                 'quality_impact' => 'medium',
-                'risk_level' => 'medium'
+                'risk_level' => 'medium',
             ],
         ]);
 
@@ -206,12 +211,12 @@ class ChangeRequestWorkflowTest extends TestCase
 
         // Client Rep approve với note
         $approvalResult = $changeRequest->approve(
-            $this->clientRep->id, 
+            $this->clientRep->id,
             'Approved with conditions: Monitor progress closely'
         );
 
         $this->assertTrue($approvalResult);
-        
+
         // Kiểm tra audit trail
         $approvedCr = $changeRequest->fresh();
         $this->assertEquals(ChangeRequest::STATUS_APPROVED, $approvedCr->status);
@@ -221,7 +226,7 @@ class ChangeRequestWorkflowTest extends TestCase
     }
 
     /**
-     * Test reject change request
+     * Test reject change request.
      */
     public function test_can_reject_change_request(): void
     {
@@ -244,7 +249,7 @@ class ChangeRequestWorkflowTest extends TestCase
                 'schedule_delay' => 10,
                 'cost_increase' => 100000,
                 'quality_impact' => 'high',
-                'risk_level' => 'high'
+                'risk_level' => 'high',
             ],
         ]);
 
@@ -254,12 +259,12 @@ class ChangeRequestWorkflowTest extends TestCase
 
         // Client Rep reject với reason
         $rejectResult = $changeRequest->reject(
-            $this->clientRep->id, 
+            $this->clientRep->id,
             'Rejected due to budget constraints and timeline impact'
         );
 
         $this->assertTrue($rejectResult);
-        
+
         // Kiểm tra rejection
         $rejectedCr = $changeRequest->fresh();
         $this->assertEquals(ChangeRequest::STATUS_REJECTED, $rejectedCr->status);
@@ -270,7 +275,7 @@ class ChangeRequestWorkflowTest extends TestCase
     }
 
     /**
-     * Test apply CR vào project/baseline
+     * Test apply CR vào project/baseline.
      */
     public function test_can_apply_change_request_to_project(): void
     {
@@ -296,7 +301,7 @@ class ChangeRequestWorkflowTest extends TestCase
                 'schedule_delay' => 5,
                 'cost_increase' => 50000,
                 'quality_impact' => 'low',
-                'risk_level' => 'medium'
+                'risk_level' => 'medium',
             ],
         ]);
 
@@ -314,7 +319,7 @@ class ChangeRequestWorkflowTest extends TestCase
     }
 
     /**
-     * Test change request workflow end-to-end
+     * Test change request workflow end-to-end.
      */
     public function test_change_request_workflow_end_to_end(): void
     {
@@ -337,7 +342,7 @@ class ChangeRequestWorkflowTest extends TestCase
                 'schedule_delay' => 6,
                 'cost_increase' => 60000,
                 'quality_impact' => 'medium',
-                'risk_level' => 'medium'
+                'risk_level' => 'medium',
             ],
         ]);
 

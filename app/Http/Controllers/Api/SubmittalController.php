@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
@@ -81,7 +83,6 @@ class SubmittalController extends ApiBaseController
             }
 
             /** @var \App\Models\User $user */
-
             $this->authorize('viewAny', Submittal::class);
 
             $query = $this->submittalQuery();
@@ -137,7 +138,6 @@ class SubmittalController extends ApiBaseController
             }
 
             /** @var \App\Models\User $user */
-
             $this->authorize('create', Submittal::class);
 
             $validator = Validator::make($request->all(), [
@@ -209,7 +209,6 @@ class SubmittalController extends ApiBaseController
             }
 
             /** @var \App\Models\User $user */
-
             $submittal = $this->submittalForTenant($id, [
                 'project:id,name',
                 'submittedBy:id,name',
@@ -242,7 +241,6 @@ class SubmittalController extends ApiBaseController
             }
 
             /** @var \App\Models\User $user */
-
             $submittal = $this->submittalForTenant($id);
             $this->authorize('update', $submittal);
 
@@ -299,7 +297,6 @@ class SubmittalController extends ApiBaseController
             }
 
             /** @var \App\Models\User $user */
-
             $submittal = $this->submittalForTenant($id);
             $this->authorize('delete', $submittal);
 
@@ -343,7 +340,6 @@ class SubmittalController extends ApiBaseController
             }
 
             /** @var \App\Models\User $user */
-
             $submittal = $this->submittalForTenant($id);
             $this->authorize('submit', $submittal);
 
@@ -398,7 +394,6 @@ class SubmittalController extends ApiBaseController
             }
 
             /** @var \App\Models\User $user */
-
             $submittal = $this->submittalForTenant($id);
             $this->authorize('startRevision', $submittal);
 
@@ -441,7 +436,6 @@ class SubmittalController extends ApiBaseController
             }
 
             /** @var \App\Models\User $user */
-
             $submittal = $this->submittalForTenant($id);
 
             $reviewStatus = $request->input('review_status') ?? $request->input('status');
@@ -519,7 +513,6 @@ class SubmittalController extends ApiBaseController
             }
 
             /** @var \App\Models\User $user */
-
             $submittal = $this->submittalForTenant($id);
             $this->authorize('approve', $submittal);
 
@@ -575,7 +568,6 @@ class SubmittalController extends ApiBaseController
             }
 
             /** @var \App\Models\User $user */
-
             $submittal = $this->submittalForTenant($id);
             $this->authorize('reject', $submittal);
 

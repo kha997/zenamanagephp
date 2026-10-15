@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories\Src\RBAC\Models;
 
@@ -7,8 +9,8 @@ use Illuminate\Support\Str;
 use Src\RBAC\Models\Role;
 
 /**
- * Factory cho Role model
- * 
+ * Factory cho Role model.
+ *
  * Tạo test data cho RBAC roles với các scopes khác nhau
  */
 class RoleFactory extends Factory
@@ -16,7 +18,7 @@ class RoleFactory extends Factory
     protected $model = Role::class;
 
     /**
-     * Define the model's default state
+     * Define the model's default state.
      */
     public function definition(): array
     {
@@ -29,17 +31,17 @@ class RoleFactory extends Factory
                 'Developer',
                 'QA Engineer',
                 'Client',
-                'Stakeholder'
+                'Stakeholder',
             ]) . '-' . $uniqueSuffix,
             'scope' => $this->faker->randomElement(['system', 'custom', 'project']),
             'description' => $this->faker->sentence(10),
             'created_at' => now(),
-            'updated_at' => now()
+            'updated_at' => now(),
         ];
     }
 
     /**
-     * System scope role state
+     * System scope role state.
      */
     public function system(): static
     {
@@ -48,13 +50,13 @@ class RoleFactory extends Factory
             'name' => $this->faker->randomElement([
                 'Super Admin',
                 'System Administrator',
-                'Global Manager'
-            ]) . '-' . Str::lower((string) Str::ulid())
+                'Global Manager',
+            ]) . '-' . Str::lower((string) Str::ulid()),
         ]);
     }
 
     /**
-     * Project scope role state
+     * Project scope role state.
      */
     public function project(): static
     {
@@ -64,19 +66,19 @@ class RoleFactory extends Factory
                 'Project Owner',
                 'Project Manager',
                 'Team Member',
-                'Observer'
-            ]) . '-' . Str::lower((string) Str::ulid())
+                'Observer',
+            ]) . '-' . Str::lower((string) Str::ulid()),
         ]);
     }
 
     /**
-     * Custom scope role state
+     * Custom scope role state.
      */
     public function custom(): static
     {
         return $this->state(fn (array $attributes) => [
             'scope' => 'custom',
-            'name' => 'Custom ' . $this->faker->jobTitle . '-' . Str::lower((string) Str::ulid())
+            'name' => 'Custom ' . $this->faker->jobTitle . '-' . Str::lower((string) Str::ulid()),
         ]);
     }
 }

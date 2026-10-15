@@ -1,16 +1,17 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Src\CoreProject\Models\Task;
 
 /**
- * Model TaskCompensation - Quản lý compensation cho tasks
- * 
+ * Model TaskCompensation - Quản lý compensation cho tasks.
+ *
  * @property string $id ULID của compensation (primary key)
  * @property string $task_id ID task (ULID)
  * @property float $base_contract_value_percent % giá trị hợp đồng cơ bản
@@ -24,13 +25,13 @@ use Src\CoreProject\Models\Task;
  */
 class TaskCompensation extends Model
 {
-
     protected $table = 'tasks_compensation';
-    
+
     // Cấu hình ULID primary key
     protected $keyType = 'string';
+
     public $incrementing = false;
-    
+
     protected $fillable = [
         'task_id',
         'base_contract_value_percent',
@@ -42,25 +43,25 @@ class TaskCompensation extends Model
         'locked_by',
         'notes',
         'created_by',
-        'updated_by'
+        'updated_by',
     ];
 
     protected $casts = [
         'base_contract_value_percent' => 'float',
         'effective_contract_value_percent' => 'float',
         'snapshot_contract_value' => 'float',
-        'locked_at' => 'datetime'
+        'locked_at' => 'datetime',
     ];
 
     protected $attributes = [
         'base_contract_value_percent' => 0.0,
         'effective_contract_value_percent' => 0.0,
         'snapshot_contract_value' => 0.0,
-        'status' => 'pending'
+        'status' => 'pending',
     ];
 
     /**
-     * Relationship: Compensation thuộc về task
+     * Relationship: Compensation thuộc về task.
      */
     public function task(): BelongsTo
     {
@@ -68,7 +69,7 @@ class TaskCompensation extends Model
     }
 
     /**
-     * Relationship: Compensation thuộc về contract
+     * Relationship: Compensation thuộc về contract.
      */
     public function contract(): BelongsTo
     {
@@ -76,7 +77,7 @@ class TaskCompensation extends Model
     }
 
     /**
-     * Scope: Lọc theo task
+     * Scope: Lọc theo task.
      */
     public function scopeForTask($query, string $taskId)
     {
@@ -84,7 +85,7 @@ class TaskCompensation extends Model
     }
 
     /**
-     * Scope: Lọc theo status
+     * Scope: Lọc theo status.
      */
     public function scopeByStatus($query, string $status)
     {
@@ -92,7 +93,7 @@ class TaskCompensation extends Model
     }
 
     /**
-     * Scope: Lấy compensation pending (chưa lock)
+     * Scope: Lấy compensation pending (chưa lock).
      */
     public function scopePending($query)
     {
@@ -100,7 +101,7 @@ class TaskCompensation extends Model
     }
 
     /**
-     * Scope: Lấy compensation đã lock
+     * Scope: Lấy compensation đã lock.
      */
     public function scopeLocked($query)
     {
@@ -108,7 +109,7 @@ class TaskCompensation extends Model
     }
 
     /**
-     * Scope: Lọc theo contract
+     * Scope: Lọc theo contract.
      */
     public function scopeForContract($query, string $contractId)
     {
@@ -116,7 +117,7 @@ class TaskCompensation extends Model
     }
 
     /**
-     * Lock compensation với contract value hiện tại
+     * Lock compensation với contract value hiện tại.
      */
     public function lockWithContract(Contract $contract, string $lockedBy): bool
     {
@@ -129,27 +130,27 @@ class TaskCompensation extends Model
             'contract_id' => $contract->id,
             'snapshot_contract_value' => $contract->total_value * ($this->effective_contract_value_percent / 100),
             'locked_at' => Carbon::now(),
-            'locked_by' => $lockedBy
+            'locked_by' => $lockedBy,
         ]);
 
         return true;
     }
 
     /**
-     * Cập nhật effective percent từ base percent (có thể áp dụng policy)
+     * Cập nhật effective percent từ base percent (có thể áp dụng policy).
      */
     public function updateEffectivePercent(?float $customPercent = null): void
     {
         // Nếu có custom percent thì dùng, không thì dùng base percent
         $effectivePercent = $customPercent ?? $this->base_contract_value_percent;
-        
+
         $this->update([
-            'effective_contract_value_percent' => $effectivePercent
+            'effective_contract_value_percent' => $effectivePercent,
         ]);
     }
 
     /**
-     * Tính toán compensation value dựa trên contract hiện tại
+     * Tính toán compensation value dựa trên contract hiện tại.
      */
     public function calculateCurrentValue(Contract $contract): float
     {
@@ -157,7 +158,7 @@ class TaskCompensation extends Model
     }
 
     /**
-     * Kiểm tra xem compensation có thể được cập nhật không
+     * Kiểm tra xem compensation có thể được cập nhật không.
      */
     public function canBeUpdated(): bool
     {
@@ -165,7 +166,7 @@ class TaskCompensation extends Model
     }
 
     /**
-     * Kiểm tra xem compensation có thể được lock không
+     * Kiểm tra xem compensation có thể được lock không.
      */
     public function canBeLocked(): bool
     {

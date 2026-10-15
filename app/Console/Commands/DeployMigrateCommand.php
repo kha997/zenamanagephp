@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Console\Commands;
 
@@ -30,6 +32,7 @@ class DeployMigrateCommand extends Command
 
         if ($pending === []) {
             $this->info('No pending migrations.');
+
             return 0;
         }
 
@@ -40,6 +43,7 @@ class DeployMigrateCommand extends Command
             ));
             $this->error('Unclassified pending migration(s), refusing to run: ' . implode(', ', $unclassified));
             $this->error('Add an entry to ' . $manifestPath . ' ("expand" or "breaking") before deploying.');
+
             return 1;
         }
 
@@ -48,11 +52,13 @@ class DeployMigrateCommand extends Command
         if ($hasBreaking && !$this->option('allow-breaking')) {
             $this->error('Breaking migration(s) present in this deploy — refusing to run as an ordinary pre-cutover migration.');
             $this->error('Follow docs/runbooks/gap-049-migration-safety.md: classify, backup, enter maintenance mode, then re-run with --allow-breaking.');
+
             return 2;
         }
 
         if ($hasBreaking && $this->option('allow-breaking') && !$this->laravel->isDownForMaintenance()) {
             $this->error('Breaking migration(s) require the application to be in maintenance mode before running. Run `php artisan down` first.');
+
             return 3;
         }
 

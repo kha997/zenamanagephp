@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Unit\OwnerGovernance;
 
@@ -48,27 +50,27 @@ class FetchPrChangedFilesTest extends TestCase
         int $apiExit
     ): string {
         $dir = sys_get_temp_dir() . '/fake-gh-' . bin2hex(random_bytes(6));
-        mkdir($dir, 0777, true);
+        mkdir($dir, 0o777, true);
         $this->tempDirs[] = $dir;
 
         $changedFilesStdoutLiteral = escapeshellarg($changedFilesStdout);
         $apiStdoutLiteral = escapeshellarg($apiStdout);
 
         $script = <<<SH
-#!/usr/bin/env bash
-if [ "\$1" = "pr" ] && [ "\$2" = "view" ]; then
-    printf '%s' {$changedFilesStdoutLiteral}
-    exit {$changedFilesExit}
-fi
-if [ "\$1" = "api" ]; then
-    printf '%s' {$apiStdoutLiteral}
-    exit {$apiExit}
-fi
-echo "fake gh: unrecognized invocation: \$*" >&2
-exit 99
-SH;
+            #!/usr/bin/env bash
+            if [ "\$1" = "pr" ] && [ "\$2" = "view" ]; then
+                printf '%s' {$changedFilesStdoutLiteral}
+                exit {$changedFilesExit}
+            fi
+            if [ "\$1" = "api" ]; then
+                printf '%s' {$apiStdoutLiteral}
+                exit {$apiExit}
+            fi
+            echo "fake gh: unrecognized invocation: \$*" >&2
+            exit 99
+            SH;
         file_put_contents($dir . '/gh', $script);
-        chmod($dir . '/gh', 0755);
+        chmod($dir . '/gh', 0o755);
 
         return $dir;
     }
@@ -129,7 +131,7 @@ SH;
         $this->assertSame(0, $result['exit']);
         $decoded = json_decode($result['stdout'], true, 512, JSON_THROW_ON_ERROR);
         $this->assertCount(101, $decoded);
-        $this->assertContains('app/Http/Controllers/Api/ExportController.php', $decoded, "File #101 (beyond the old GraphQL files(first: 100) cap) must be present — the whole point of this correction is that this file is never silently dropped.");
+        $this->assertContains('app/Http/Controllers/Api/ExportController.php', $decoded, 'File #101 (beyond the old GraphQL files(first: 100) cap) must be present — the whole point of this correction is that this file is never silently dropped.');
     }
 
     // --- Scenario: fetched count != authoritative changedFiles total — FAIL CLOSED ---

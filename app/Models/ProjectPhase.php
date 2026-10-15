@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -9,11 +11,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * ProjectPhase Model
- * 
+ * ProjectPhase Model.
+ *
  * Quản lý các giai đoạn (phases) trong dự án
  * Được tạo từ template hoặc thêm thủ công
- * 
+ *
  * @property string $id
  * @property string $project_id
  * @property string $name
@@ -25,14 +27,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class ProjectPhase extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids;
+    use HasFactory;
 
     protected $table = 'project_phases';
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     /**
-     * Các trường có thể mass assignment
+     * Các trường có thể mass assignment.
      */
     protected $fillable = [
         'project_id',
@@ -41,21 +46,21 @@ class ProjectPhase extends Model
         'template_id',
         'template_phase_id',
         'created_by',
-        'updated_by'
+        'updated_by',
     ];
 
     /**
-     * Các trường cần cast kiểu dữ liệu
+     * Các trường cần cast kiểu dữ liệu.
      */
     protected $casts = [
         'order' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
-        'deleted_at' => 'datetime'
+        'deleted_at' => 'datetime',
     ];
 
     /**
-     * Relationship với project (giả sử có Project model)
+     * Relationship với project (giả sử có Project model).
      */
     public function project(): BelongsTo
     {
@@ -63,7 +68,7 @@ class ProjectPhase extends Model
     }
 
     /**
-     * Relationship với template nếu được tạo từ template
+     * Relationship với template nếu được tạo từ template.
      */
     public function template(): BelongsTo
     {
@@ -71,7 +76,7 @@ class ProjectPhase extends Model
     }
 
     /**
-     * Relationship với các tasks trong phase này
+     * Relationship với các tasks trong phase này.
      */
     public function tasks(): HasMany
     {
@@ -80,7 +85,7 @@ class ProjectPhase extends Model
     }
 
     /**
-     * Relationship với các tasks visible (không bị ẩn bởi conditional tags)
+     * Relationship với các tasks visible (không bị ẩn bởi conditional tags).
      */
     public function visibleTasks(): HasMany
     {
@@ -90,7 +95,7 @@ class ProjectPhase extends Model
     }
 
     /**
-     * Scope để sắp xếp theo thứ tự
+     * Scope để sắp xếp theo thứ tự.
      */
     public function scopeOrdered($query)
     {
@@ -98,7 +103,7 @@ class ProjectPhase extends Model
     }
 
     /**
-     * Scope để lọc theo project
+     * Scope để lọc theo project.
      */
     public function scopeByProject($query, string $projectId)
     {
@@ -106,22 +111,23 @@ class ProjectPhase extends Model
     }
 
     /**
-     * Tính progress của phase dựa trên tasks
+     * Tính progress của phase dựa trên tasks.
      */
     public function getProgressPercentAttribute(): float
     {
         $visibleTasks = $this->visibleTasks;
-        
+
         if ($visibleTasks->count() === 0) {
             return 0.0;
         }
-        
+
         $totalProgress = $visibleTasks->sum('progress_percent');
+
         return round($totalProgress / $visibleTasks->count(), 2);
     }
 
     /**
-     * Kiểm tra xem phase có được tạo từ template không
+     * Kiểm tra xem phase có được tạo từ template không.
      */
     public function isFromTemplate(): bool
     {
@@ -129,7 +135,7 @@ class ProjectPhase extends Model
     }
 
     /**
-     * Lấy số lượng tasks trong phase
+     * Lấy số lượng tasks trong phase.
      */
     public function getTaskCountAttribute(): int
     {
@@ -137,7 +143,7 @@ class ProjectPhase extends Model
     }
 
     /**
-     * Lấy số lượng tasks visible trong phase
+     * Lấy số lượng tasks visible trong phase.
      */
     public function getVisibleTaskCountAttribute(): int
     {
@@ -145,7 +151,7 @@ class ProjectPhase extends Model
     }
 
     /**
-     * Lấy duration ước tính của phase
+     * Lấy duration ước tính của phase.
      */
     public function getEstimatedDurationAttribute(): int
     {
@@ -153,8 +159,8 @@ class ProjectPhase extends Model
     }
 
     /**
-     * Tạo factory instance mới cho model
-     * 
+     * Tạo factory instance mới cho model.
+     *
      * @return \Database\Factories\Src\WorkTemplate\Models\ProjectPhaseFactory
      */
     protected static function newFactory()

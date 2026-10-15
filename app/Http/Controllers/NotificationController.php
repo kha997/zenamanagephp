@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
@@ -10,9 +12,7 @@ use Src\Notification\Resources\NotificationResource;
 use Src\RBAC\Middleware\RBACMiddleware;
 
 /**
- * Controller xử lý các hoạt động CRUD và quản lý thông báo
- * 
- * @package Src\Notification\Controllers
+ * Controller xử lý các hoạt động CRUD và quản lý thông báo.
  */
 class NotificationController
 {
@@ -22,7 +22,7 @@ class NotificationController
     private NotificationService $notificationService;
 
     /**
-     * Constructor - áp dụng RBAC middleware và inject service
+     * Constructor - áp dụng RBAC middleware và inject service.
      */
     public function __construct(NotificationService $notificationService)
     {
@@ -32,7 +32,7 @@ class NotificationController
     }
 
     /**
-     * Lấy ID người dùng hiện tại một cách an toàn
+     * Lấy ID người dùng hiện tại một cách an toàn.
      *
      * @return int|null
      */
@@ -42,6 +42,7 @@ class NotificationController
             if (AuthHelper::check()) {
                 return AuthHelper::id();
             }
+
             return null;
         } catch (Exception $e) {
             return null;
@@ -49,7 +50,7 @@ class NotificationController
     }
 
     /**
-     * Lấy danh sách notifications của user hiện tại
+     * Lấy danh sách notifications của user hiện tại.
      *
      * @param Request $request
      * @return JsonResponse
@@ -61,12 +62,12 @@ class NotificationController
             if (!$userId) {
                 return JSendResponse::error('Người dùng chưa được xác thực', 401);
             }
-            
+
             $filters = [
                 'priority' => $request->get('priority'),
                 'channel' => $request->get('channel'),
                 'read' => $request->get('read'),
-                'limit' => $request->get('limit', 20)
+                'limit' => $request->get('limit', 20),
             ];
 
             $notifications = $this->notificationService->getUserNotifications($userId, $filters);
@@ -80,7 +81,7 @@ class NotificationController
     }
 
     /**
-     * Tạo notification mới (chỉ dành cho admin/system)
+     * Tạo notification mới (chỉ dành cho admin/system).
      *
      * @param StoreNotificationRequest $request
      * @return JsonResponse
@@ -103,7 +104,7 @@ class NotificationController
     }
 
     /**
-     * Lấy thông tin chi tiết notification
+     * Lấy thông tin chi tiết notification.
      *
      * @param string $ulid
      * @return JsonResponse
@@ -127,7 +128,7 @@ class NotificationController
     }
 
     /**
-     * Cập nhật notification (chỉ admin/system)
+     * Cập nhật notification (chỉ admin/system).
      *
      * @param UpdateNotificationRequest $request
      * @param string $ulid
@@ -151,7 +152,7 @@ class NotificationController
     }
 
     /**
-     * Xóa notification (chỉ admin/system)
+     * Xóa notification (chỉ admin/system).
      *
      * @param string $ulid
      * @return JsonResponse
@@ -171,7 +172,7 @@ class NotificationController
     }
 
     /**
-     * Đánh dấu notification đã đọc
+     * Đánh dấu notification đã đọc.
      *
      * @param string $ulid
      * @return JsonResponse
@@ -196,7 +197,7 @@ class NotificationController
     }
 
     /**
-     * Đánh dấu notification chưa đọc
+     * Đánh dấu notification chưa đọc.
      *
      * @param string $ulid
      * @return JsonResponse
@@ -221,7 +222,7 @@ class NotificationController
     }
 
     /**
-     * Đánh dấu tất cả notifications đã đọc
+     * Đánh dấu tất cả notifications đã đọc.
      *
      * @return JsonResponse
      */
@@ -245,7 +246,7 @@ class NotificationController
     }
 
     /**
-     * Lấy số lượng notifications chưa đọc
+     * Lấy số lượng notifications chưa đọc.
      *
      * @return JsonResponse
      */
@@ -268,7 +269,7 @@ class NotificationController
     }
 
     /**
-     * Gửi notification test (chỉ admin)
+     * Gửi notification test (chỉ admin).
      *
      * @param Request $request
      * @return JsonResponse
@@ -281,7 +282,7 @@ class NotificationController
                 'title' => 'required|string|max:255',
                 'body' => 'required|string|max:1000',
                 'channel' => 'required|in:inapp,email,webhook',
-                'priority' => 'required|in:critical,normal,low'
+                'priority' => 'required|in:critical,normal,low',
             ]);
 
             $notification = $this->notificationService->sendNotification(

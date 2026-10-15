@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Providers;
 
@@ -74,7 +76,7 @@ class AuthServiceProvider extends ServiceProvider
         Gate::define('treasury.approve-expense', [TreasuryPolicy::class, 'approveExpense']);
         // GAP-067: Treasury S4a reconciliation.
         Gate::define('treasury.reconcile', [TreasuryPolicy::class, 'reconcile']);
-        
+
         // Temporarily disable Spatie Permission to fix cache issues
         // $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->registerPermissions();
     }

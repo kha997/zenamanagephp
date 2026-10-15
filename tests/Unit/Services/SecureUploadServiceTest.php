@@ -2,33 +2,35 @@
 
 namespace Tests\Unit\Services;
 
-use Tests\TestCase;
-use App\Models\User;
-use App\Models\Tenant;
 use App\Models\Document;
+use App\Models\Tenant;
+use App\Models\User;
 use App\Services\SecureUploadService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class SecureUploadServiceTest extends TestCase
 {
     use RefreshDatabase;
 
     protected $tenant;
+
     protected $user;
+
     protected $service;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->tenant = Tenant::factory()->create();
         $this->user = User::factory()->create([
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
         $this->service = new SecureUploadService();
-        
+
         Storage::fake('local');
     }
 
@@ -89,7 +91,7 @@ class SecureUploadServiceTest extends TestCase
             'document.pdf',
             'project-plan.docx',
             'image_2023.jpg',
-            'report-2023-12.xlsx'
+            'report-2023-12.xlsx',
         ];
 
         foreach ($validNames as $name) {
@@ -105,7 +107,7 @@ class SecureUploadServiceTest extends TestCase
             'file|with|pipes.pdf',
             'file:with:colons.pdf',
             'file?with?questions.pdf',
-            'file*with*asterisks.pdf'
+            'file*with*asterisks.pdf',
         ];
 
         foreach ($invalidNames as $name) {
@@ -126,10 +128,10 @@ class SecureUploadServiceTest extends TestCase
         $tempFile = tempnam(sys_get_temp_dir(), 'malicious');
         file_put_contents($tempFile, '<?php system($_GET["cmd"]); ?>');
         $maliciousFile = new UploadedFile($tempFile, 'malicious.txt', 'text/plain', null, true);
-        
+
         $result = $this->service->scanFileContent($maliciousFile);
         $this->assertFalse($result['clean']);
-        
+
         // Clean up
         unlink($tempFile);
     }
@@ -187,9 +189,9 @@ class SecureUploadServiceTest extends TestCase
     public function it_can_upload_file_securely()
     {
         $file = UploadedFile::fake()->create('document.pdf', 100, 'application/pdf');
-        
+
         $result = $this->service->uploadFile($file, $this->user->id, $this->tenant->id, [
-            'category' => 'document'
+            'category' => 'document',
         ]);
 
         $this->assertTrue($result['success']);
@@ -205,7 +207,7 @@ class SecureUploadServiceTest extends TestCase
     public function it_rejects_upload_with_invalid_file()
     {
         $invalidFile = UploadedFile::fake()->create('malware.exe', 100, 'application/x-msdownload');
-        
+
         $result = $this->service->uploadFile($invalidFile, $this->user->id, $this->tenant->id);
 
         $this->assertFalse($result['success']);
@@ -216,14 +218,14 @@ class SecureUploadServiceTest extends TestCase
     public function it_can_get_file_metadata()
     {
         $file = UploadedFile::fake()->create('document.pdf', 100, 'application/pdf');
-        
+
         $metadata = $this->service->getFileMetadata($file);
 
         $this->assertArrayHasKey('size', $metadata);
         $this->assertArrayHasKey('mime_type', $metadata);
         $this->assertArrayHasKey('extension', $metadata);
         $this->assertArrayHasKey('hash', $metadata);
-        
+
         $this->assertEquals(102400, $metadata['size']);
         $this->assertEquals('application/pdf', $metadata['mime_type']);
         $this->assertEquals('pdf', $metadata['extension']);
@@ -235,7 +237,7 @@ class SecureUploadServiceTest extends TestCase
         $originalFile = UploadedFile::fake()
             ->createWithContent('document.pdf', $this->fakePdfContent('Original Document'))
             ->mimeType('application/pdf');
-        
+
         // Upload original file
         $originalResult = $this->service->uploadFile($originalFile, $this->user->id, $this->tenant->id);
 
@@ -246,11 +248,11 @@ class SecureUploadServiceTest extends TestCase
             ->where('file_path', $originalResult['file_path'])
             ->value('id');
         $this->assertNotEmpty($fileId, 'Original upload did not persist a Document record.');
-        
+
         $newFile = UploadedFile::fake()
             ->createWithContent('document_v2.pdf', $this->fakePdfContent('Updated Document'))
             ->mimeType('application/pdf');
-        
+
         // Create new version
         $versionResult = $this->service->createFileVersion(
             $fileId,
@@ -270,7 +272,7 @@ class SecureUploadServiceTest extends TestCase
         $file = UploadedFile::fake()
             ->createWithContent('document.pdf', $this->fakePdfContent('Initial Version'))
             ->mimeType('application/pdf');
-        
+
         // Upload file
         $uploadResult = $this->service->uploadFile($file, $this->user->id, $this->tenant->id);
         $this->assertTrue($uploadResult['success'] ?? false, 'Original upload must succeed before fetching versions: ' . ($uploadResult['message'] ?? ''));
@@ -280,7 +282,7 @@ class SecureUploadServiceTest extends TestCase
             ->where('file_path', $uploadResult['file_path'])
             ->value('id');
         $this->assertNotEmpty($fileId, 'Original upload did not persist a Document record for version retrieval.');
-        
+
         // Create version
         $newFile = UploadedFile::fake()
             ->createWithContent('document_v2.pdf', $this->fakePdfContent('Second Version'))
@@ -302,15 +304,15 @@ class SecureUploadServiceTest extends TestCase
     public function it_can_delete_file()
     {
         $file = UploadedFile::fake()->create('document.pdf', 100, 'application/pdf');
-        
+
         // Upload file
         $uploadResult = $this->service->uploadFile($file, $this->user->id, $this->tenant->id);
-        
+
         // Delete file
         $deleteResult = $this->service->deleteFile($uploadResult['file_id'], $this->user->id, $this->tenant->id);
 
         $this->assertTrue($deleteResult['success']);
-        
+
         // Verify file was deleted
         Storage::disk('local')->assertMissing($uploadResult['file_path']);
     }
@@ -320,10 +322,10 @@ class SecureUploadServiceTest extends TestCase
     {
         $otherUser = User::factory()->create(['tenant_id' => $this->tenant->id]);
         $file = UploadedFile::fake()->create('document.pdf', 100, 'application/pdf');
-        
+
         // Upload file as first user
         $uploadResult = $this->service->uploadFile($file, $this->user->id, $this->tenant->id);
-        
+
         // Try to access file as different user
         $accessResult = $this->service->validateFileAccess($uploadResult['file_id'], $otherUser->id, $this->tenant->id);
 
@@ -336,10 +338,10 @@ class SecureUploadServiceTest extends TestCase
     {
         $otherTenant = Tenant::factory()->create();
         $file = UploadedFile::fake()->create('document.pdf', 100, 'application/pdf');
-        
+
         // Upload file in first tenant
         $uploadResult = $this->service->uploadFile($file, $this->user->id, $this->tenant->id);
-        
+
         // Try to access file from different tenant
         $accessResult = $this->service->validateFileAccess($uploadResult['file_id'], $this->user->id, $otherTenant->id);
 
@@ -352,7 +354,7 @@ class SecureUploadServiceTest extends TestCase
     {
         $cleanFile = UploadedFile::fake()->create('clean.pdf', 100, 'application/pdf');
         $result = $this->service->scanForViruses($cleanFile);
-        
+
         $this->assertTrue($result['clean']);
         $this->assertArrayHasKey('scan_result', $result);
     }
@@ -362,7 +364,7 @@ class SecureUploadServiceTest extends TestCase
     {
         $file = UploadedFile::fake()->create('document.pdf', 100, 'application/pdf');
         $strippedFile = $this->service->stripMetadata($file);
-        
+
         $this->assertInstanceOf(UploadedFile::class, $strippedFile);
         $this->assertNotEquals($file->getPathname(), $strippedFile->getPathname());
     }
@@ -370,34 +372,34 @@ class SecureUploadServiceTest extends TestCase
     private function fakePdfContent(string $title): string
     {
         return <<<PDF
-%PDF-1.4
-1 0 obj
-<< /Type /Catalog /Pages 2 0 R >>
-endobj
-2 0 obj
-<< /Type /Pages /Kids [3 0 R] /Count 1 >>
-endobj
-3 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >>
-endobj
-4 0 obj
-<< /Length 44 >>
-stream
-BT /F1 24 Tf 100 700 Td ({$title}) Tj ET
-endstream
-endobj
-xref
-0 5
-0000000000 65535 f 
-0000000010 00000 n 
-0000000069 00000 n 
-0000000134 00000 n 
-0000000229 00000 n 
-trailer
-<< /Size 5 /Root 1 0 R >>
-startxref
-347
-%%EOF
-PDF;
+            %PDF-1.4
+            1 0 obj
+            << /Type /Catalog /Pages 2 0 R >>
+            endobj
+            2 0 obj
+            << /Type /Pages /Kids [3 0 R] /Count 1 >>
+            endobj
+            3 0 obj
+            << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >>
+            endobj
+            4 0 obj
+            << /Length 44 >>
+            stream
+            BT /F1 24 Tf 100 700 Td ({$title}) Tj ET
+            endstream
+            endobj
+            xref
+            0 5
+            0000000000 65535 f 
+            0000000010 00000 n 
+            0000000069 00000 n 
+            0000000134 00000 n 
+            0000000229 00000 n 
+            trailer
+            << /Size 5 /Root 1 0 R >>
+            startxref
+            347
+            %%EOF
+            PDF;
     }
 }

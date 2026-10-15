@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -8,8 +10,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Model DashboardMetric - Quản lý metrics và KPIs
- * 
+ * Model DashboardMetric - Quản lý metrics và KPIs.
+ *
  * @property string $id
  * @property string $metric_code Mã metric
  * @property string $category Danh mục metric
@@ -22,13 +24,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class DashboardMetric extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids;
+    use HasFactory;
 
     protected $table = 'dashboard_metrics';
-    
+
     protected $keyType = 'string';
+
     public $incrementing = false;
-    
+
     protected $fillable = [
         'code',
         'metric_code',
@@ -45,7 +49,7 @@ class DashboardMetric extends Model
         'display_config',
         'config',
         'metadata',
-        'value'
+        'value',
     ];
 
     protected $casts = [
@@ -87,7 +91,7 @@ class DashboardMetric extends Model
     }
 
     /**
-     * Các danh mục metric hợp lệ
+     * Các danh mục metric hợp lệ.
      */
     public const CATEGORY_PROJECT = 'project';
     public const CATEGORY_BUDGET = 'budget';
@@ -108,7 +112,7 @@ class DashboardMetric extends Model
     ];
 
     /**
-     * Relationship: Metric có nhiều giá trị theo thời gian
+     * Relationship: Metric có nhiều giá trị theo thời gian.
      */
     public function values(): HasMany
     {
@@ -116,7 +120,7 @@ class DashboardMetric extends Model
     }
 
     /**
-     * Scope: Lọc theo category
+     * Scope: Lọc theo category.
      */
     public function scopeByCategory($query, string $category)
     {
@@ -124,7 +128,7 @@ class DashboardMetric extends Model
     }
 
     /**
-     * Scope: Chỉ lấy metric active
+     * Scope: Chỉ lấy metric active.
      */
     public function scopeActive($query)
     {
@@ -132,7 +136,7 @@ class DashboardMetric extends Model
     }
 
     /**
-     * Scope: Lọc theo metric code
+     * Scope: Lọc theo metric code.
      */
     public function scopeByCode($query, string $code)
     {
@@ -140,7 +144,7 @@ class DashboardMetric extends Model
     }
 
     /**
-     * Lấy giá trị metric mới nhất cho project
+     * Lấy giá trị metric mới nhất cho project.
      */
     public function getLatestValueForProject(string $projectId): ?DashboardMetricValue
     {
@@ -151,7 +155,7 @@ class DashboardMetric extends Model
     }
 
     /**
-     * Lấy giá trị metric mới nhất cho tenant
+     * Lấy giá trị metric mới nhất cho tenant.
      */
     public function getLatestValueForTenant(string $tenantId): ?DashboardMetricValue
     {
@@ -163,7 +167,7 @@ class DashboardMetric extends Model
     }
 
     /**
-     * Lấy giá trị metric trong khoảng thời gian
+     * Lấy giá trị metric trong khoảng thời gian.
      */
     public function getValuesInRange(string $tenantId, ?string $projectId, $startDate, $endDate)
     {
@@ -178,12 +182,12 @@ class DashboardMetric extends Model
     }
 
     /**
-     * Tính toán giá trị metric
+     * Tính toán giá trị metric.
      */
     public function calculateValue(string $tenantId, ?string $projectId = null, array $context = []): float
     {
         $config = $this->calculation_config ?? [];
-        
+
         if (empty($config)) {
             return 0.0;
         }
@@ -202,7 +206,7 @@ class DashboardMetric extends Model
     }
 
     /**
-     * Tính toán giá trị đơn giản
+     * Tính toán giá trị đơn giản.
      */
     private function calculateSimpleValue(array $config, string $tenantId, ?string $projectId, array $context): float
     {
@@ -211,7 +215,7 @@ class DashboardMetric extends Model
     }
 
     /**
-     * Tính toán giá trị tổng hợp
+     * Tính toán giá trị tổng hợp.
      */
     private function calculateAggregateValue(array $config, string $tenantId, ?string $projectId, array $context): float
     {
@@ -220,7 +224,7 @@ class DashboardMetric extends Model
     }
 
     /**
-     * Tính toán giá trị theo công thức
+     * Tính toán giá trị theo công thức.
      */
     private function calculateFormulaValue(array $config, string $tenantId, ?string $projectId, array $context): float
     {
@@ -229,7 +233,7 @@ class DashboardMetric extends Model
     }
 
     /**
-     * Lưu giá trị metric
+     * Lưu giá trị metric.
      */
     public function saveValue(string $tenantId, ?string $projectId, float $value, array $metadata = []): DashboardMetricValue
     {
@@ -238,12 +242,12 @@ class DashboardMetric extends Model
             'tenant_id' => $tenantId,
             'value' => $value,
             'metadata' => $metadata,
-            'recorded_at' => now()
+            'recorded_at' => now(),
         ]);
     }
 
     /**
-     * Lấy cấu hình hiển thị
+     * Lấy cấu hình hiển thị.
      */
     public function getDisplayConfig(): array
     {
@@ -251,7 +255,7 @@ class DashboardMetric extends Model
     }
 
     /**
-     * Lấy cấu hình tính toán
+     * Lấy cấu hình tính toán.
      */
     public function getCalculationConfig(): array
     {

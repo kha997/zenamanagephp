@@ -19,10 +19,10 @@ return [
 
     'asset_types' => [
         'css',
-        'js', 
+        'js',
         'images',
         'fonts',
-        'videos'
+        'videos',
     ],
 
     /*

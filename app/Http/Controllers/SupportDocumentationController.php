@@ -11,7 +11,7 @@ use Illuminate\Support\Str;
 class SupportDocumentationController extends Controller
 {
     /**
-     * Display a listing of support documentation
+     * Display a listing of support documentation.
      */
     public function index(Request $request)
     {
@@ -52,14 +52,14 @@ class SupportDocumentationController extends Controller
             'api_documentation' => 'API Documentation',
             'admin_guide' => 'Admin Guide',
             'maintenance' => 'Maintenance',
-            'security' => 'Security'
+            'security' => 'Security',
         ];
 
         return view('admin.support.documentation.index', compact('documents', 'categories'));
     }
 
     /**
-     * Show the form for creating a new documentation
+     * Show the form for creating a new documentation.
      */
     public function create()
     {
@@ -71,20 +71,20 @@ class SupportDocumentationController extends Controller
             'api_documentation' => 'API Documentation',
             'admin_guide' => 'Admin Guide',
             'maintenance' => 'Maintenance',
-            'security' => 'Security'
+            'security' => 'Security',
         ];
 
         $statuses = [
             'draft' => 'Draft',
             'published' => 'Published',
-            'archived' => 'Archived'
+            'archived' => 'Archived',
         ];
 
         return view('admin.support.documentation.create', compact('categories', 'statuses'));
     }
 
     /**
-     * Store a newly created documentation
+     * Store a newly created documentation.
      */
     public function store(Request $request)
     {
@@ -95,7 +95,7 @@ class SupportDocumentationController extends Controller
             'status' => 'required|in:draft,published,archived',
             'tags' => 'nullable|string',
             'attachments' => 'nullable|array|max:10',
-            'attachments.*' => 'file|max:10240' // 10MB max per file
+            'attachments.*' => 'file|max:10240', // 10MB max per file
         ]);
 
         $document = SupportDocumentation::create([
@@ -106,7 +106,7 @@ class SupportDocumentationController extends Controller
             'status' => $request->status,
             'tags' => $request->tags,
             'author_id' => Auth::id(),
-            'published_at' => $request->status === 'published' ? now() : null
+            'published_at' => $request->status === 'published' ? now() : null,
         ]);
 
         // Handle attachments
@@ -118,7 +118,7 @@ class SupportDocumentationController extends Controller
                     'filename' => $file->getClientOriginalName(),
                     'path' => $path,
                     'size' => $file->getSize(),
-                    'mime_type' => $file->getMimeType()
+                    'mime_type' => $file->getMimeType(),
                 ];
             }
             $document->update(['attachments' => $attachments]);
@@ -129,7 +129,7 @@ class SupportDocumentationController extends Controller
     }
 
     /**
-     * Display the specified documentation
+     * Display the specified documentation.
      */
     public function show(SupportDocumentation $document)
     {
@@ -142,7 +142,7 @@ class SupportDocumentationController extends Controller
     }
 
     /**
-     * Show the form for editing the specified documentation
+     * Show the form for editing the specified documentation.
      */
     public function edit(SupportDocumentation $document)
     {
@@ -154,20 +154,20 @@ class SupportDocumentationController extends Controller
             'api_documentation' => 'API Documentation',
             'admin_guide' => 'Admin Guide',
             'maintenance' => 'Maintenance',
-            'security' => 'Security'
+            'security' => 'Security',
         ];
 
         $statuses = [
             'draft' => 'Draft',
             'published' => 'Published',
-            'archived' => 'Archived'
+            'archived' => 'Archived',
         ];
 
         return view('admin.support.documentation.edit', compact('document', 'categories', 'statuses'));
     }
 
     /**
-     * Update the specified documentation
+     * Update the specified documentation.
      */
     public function update(Request $request, SupportDocumentation $document)
     {
@@ -178,7 +178,7 @@ class SupportDocumentationController extends Controller
             'status' => 'required|in:draft,published,archived',
             'tags' => 'nullable|string',
             'attachments' => 'nullable|array|max:10',
-            'attachments.*' => 'file|max:10240'
+            'attachments.*' => 'file|max:10240',
         ]);
 
         // Create version before updating
@@ -192,24 +192,24 @@ class SupportDocumentationController extends Controller
             'status' => $request->status,
             'tags' => $request->tags,
             'updated_by' => Auth::id(),
-            'published_at' => $request->status === 'published' && $document->status !== 'published' ? now() : $document->published_at
+            'published_at' => $request->status === 'published' && $document->status !== 'published' ? now() : $document->published_at,
         ]);
 
         // Handle new attachments
         if ($request->hasFile('attachments')) {
             $existingAttachments = $document->attachments ?? [];
             $newAttachments = [];
-            
+
             foreach ($request->file('attachments') as $file) {
                 $path = $file->store('support-docs/' . $document->id, 'public');
                 $newAttachments[] = [
                     'filename' => $file->getClientOriginalName(),
                     'path' => $path,
                     'size' => $file->getSize(),
-                    'mime_type' => $file->getMimeType()
+                    'mime_type' => $file->getMimeType(),
                 ];
             }
-            
+
             $document->update(['attachments' => array_merge($existingAttachments, $newAttachments)]);
         }
 
@@ -218,7 +218,7 @@ class SupportDocumentationController extends Controller
     }
 
     /**
-     * Delete the specified documentation
+     * Delete the specified documentation.
      */
     public function destroy(SupportDocumentation $document)
     {
@@ -236,7 +236,7 @@ class SupportDocumentationController extends Controller
     }
 
     /**
-     * Create version of documentation
+     * Create version of documentation.
      */
     private function createVersion(SupportDocumentation $document)
     {
@@ -244,12 +244,12 @@ class SupportDocumentationController extends Controller
             'title' => $document->title,
             'content' => $document->content,
             'version_number' => $document->versions()->count() + 1,
-            'created_by' => Auth::id()
+            'created_by' => Auth::id(),
         ]);
     }
 
     /**
-     * Get documentation by category for public access
+     * Get documentation by category for public access.
      */
     public function getByCategory($category)
     {
@@ -262,7 +262,7 @@ class SupportDocumentationController extends Controller
     }
 
     /**
-     * Search documentation
+     * Search documentation.
      */
     public function search(Request $request)
     {
@@ -289,7 +289,7 @@ class SupportDocumentationController extends Controller
     }
 
     /**
-     * Get documentation statistics
+     * Get documentation statistics.
      */
     public function statistics()
     {
@@ -307,14 +307,14 @@ class SupportDocumentationController extends Controller
                 ->get(),
             'most_viewed' => SupportDocumentation::orderBy('view_count', 'desc')
                 ->limit(10)
-                ->get()
+                ->get(),
         ];
 
         return view('admin.support.documentation.statistics', compact('stats'));
     }
 
     /**
-     * Export documentation
+     * Export documentation.
      */
     public function export(Request $request)
     {
@@ -342,15 +342,15 @@ class SupportDocumentationController extends Controller
     }
 
     /**
-     * Export to CSV
+     * Export to CSV.
      */
     private function exportToCsv($documents)
     {
         $filename = 'documentation_' . date('Y-m-d_H-i-s') . '.csv';
-        
+
         $headers = [
             'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"'
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ];
 
         $callback = function () use ($documents) {
@@ -367,7 +367,7 @@ class SupportDocumentationController extends Controller
                     $document->status,
                     $document->view_count,
                     $document->created_at->format('Y-m-d H:i:s'),
-                    $document->updated_at->format('Y-m-d H:i:s')
+                    $document->updated_at->format('Y-m-d H:i:s'),
                 ]);
             }
 
@@ -378,14 +378,14 @@ class SupportDocumentationController extends Controller
     }
 
     /**
-     * Export to PDF
+     * Export to PDF.
      */
     private function exportToPdf($documents)
     {
         // This would require a PDF library like dompdf or tcpdf
         // For now, return a simple HTML representation
         $html = '<h1>Documentation Export</h1>';
-        
+
         foreach ($documents as $document) {
             $html .= '<h2>' . $document->title . '</h2>';
             $html .= '<p><strong>Category:</strong> ' . $document->category . '</p>';

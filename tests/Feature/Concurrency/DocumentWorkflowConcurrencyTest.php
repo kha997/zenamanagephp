@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Concurrency;
 
@@ -25,7 +27,6 @@ use Tests\TestCase;
  * cannot exercise cross-connection row locking and would be a false proof — this
  * test skips itself with an explicit message if the "mysql" connection is
  * unreachable, mirroring RfiEscalationConcurrencyTest.php.
- *
  */
 #[Group('stress')]
 class DocumentWorkflowConcurrencyTest extends TestCase

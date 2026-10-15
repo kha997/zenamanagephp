@@ -45,6 +45,7 @@ class WarmEmailCache extends Command
         // Check if caching is enabled
         if (!$force && !config('mail.template_cache.enabled', true)) {
             $this->warn('Email template caching is disabled. Use --force to warm up anyway.');
+
             return 0;
         }
 
@@ -58,7 +59,7 @@ class WarmEmailCache extends Command
             }
 
             $this->info('Email template cache warm-up completed successfully!');
-            
+
             // Show cache statistics
             $this->showCacheStats();
 
@@ -69,12 +70,13 @@ class WarmEmailCache extends Command
                 'error' => $e->getMessage(),
                 'templates' => $templates,
             ]);
+
             return 1;
         }
     }
 
     /**
-     * Warm up common templates
+     * Warm up common templates.
      */
     private function warmUpCommonTemplates(): void
     {
@@ -102,7 +104,7 @@ class WarmEmailCache extends Command
     }
 
     /**
-     * Warm up specific templates
+     * Warm up specific templates.
      */
     private function warmUpSpecificTemplates(array $templates): void
     {
@@ -115,13 +117,13 @@ class WarmEmailCache extends Command
     }
 
     /**
-     * Warm up individual template
+     * Warm up individual template.
      */
     private function warmUpTemplate(string $template, array $data): void
     {
         try {
             $this->line("  Warming up: {$template}");
-            
+
             // For invitation template, create a mock invitation object
             if ($template === 'invitation') {
                 $invitation = new \App\Models\Invitation([
@@ -134,7 +136,7 @@ class WarmEmailCache extends Command
                     'expires_at' => now()->addDays(7),
                     'token' => 'test-token',
                 ]);
-                
+
                 $organization = new \App\Models\Organization([
                     'id' => 1,
                     'name' => $data['organizationName'] ?? 'Test Organization',
@@ -143,12 +145,12 @@ class WarmEmailCache extends Command
                     'description' => 'Test organization',
                     'status' => 'active',
                 ]);
-                
+
                 $invitation->setRelation('organization', $organization);
                 $data['invitation'] = $invitation;
                 $data['acceptUrl'] = config('app.url') . '/invitations/accept/test-token';
             }
-            
+
             // For welcome template, create a mock user object
             if ($template === 'welcome') {
                 $user = new \App\Models\User([
@@ -160,7 +162,7 @@ class WarmEmailCache extends Command
                     'joined_at' => now(),
                     'email_verified_at' => now(),
                 ]);
-                
+
                 $organization = new \App\Models\Organization([
                     'id' => 1,
                     'name' => $data['organizationName'] ?? 'Test Organization',
@@ -169,15 +171,15 @@ class WarmEmailCache extends Command
                     'description' => 'Test organization',
                     'status' => 'active',
                 ]);
-                
+
                 $user->setRelation('organization', $organization);
                 $data['user'] = $user;
             }
-            
+
             $renderedContent = $this->templateCacheService->renderTemplate($template, $data);
-            
+
             $this->info("    ✓ {$template} cached successfully");
-            
+
             Log::debug('Email template warmed up', [
                 'template' => $template,
                 'data_keys' => array_keys($data),
@@ -192,7 +194,7 @@ class WarmEmailCache extends Command
     }
 
     /**
-     * Get default data for template
+     * Get default data for template.
      */
     private function getDefaultDataForTemplate(string $template): array
     {
@@ -216,15 +218,15 @@ class WarmEmailCache extends Command
     }
 
     /**
-     * Show cache statistics
+     * Show cache statistics.
      */
     private function showCacheStats(): void
     {
         $this->newLine();
         $this->info('Cache Statistics:');
-        
+
         $stats = $this->templateCacheService->getCacheStats();
-        
+
         $this->table(
             ['Metric', 'Value'],
             [
@@ -239,7 +241,7 @@ class WarmEmailCache extends Command
         if (!empty($stats['templates'])) {
             $this->newLine();
             $this->info('Cached Templates:');
-            
+
             $templateData = [];
             foreach ($stats['templates'] as $template => $info) {
                 $templateData[] = [
@@ -248,7 +250,7 @@ class WarmEmailCache extends Command
                     $info['last_cached'] ?? 'N/A',
                 ];
             }
-            
+
             $this->table(
                 ['Template', 'Count', 'Last Cached'],
                 $templateData

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Zena;
 
@@ -22,11 +24,17 @@ class PaymentCertificateFlowTest extends TestCase
     use TenantUserFactoryTrait;
 
     private Tenant $tenant;
+
     private User $user;
+
     private Project $project;
+
     private Contract $contract;
+
     private Boq $boq;
+
     private BoqLineItem $line1;
+
     private BoqLineItem $line2;
 
     protected function setUp(): void

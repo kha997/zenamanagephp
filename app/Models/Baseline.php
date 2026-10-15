@@ -1,8 +1,9 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,8 +13,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Src\ChangeRequest\Models\ChangeRequest;
 
 /**
- * Model Baseline để quản lý các baseline của dự án
- * 
+ * Model Baseline để quản lý các baseline của dự án.
+ *
  * @property string $id
  * @property string $project_id
  * @property string $type
@@ -29,20 +30,23 @@ use Src\ChangeRequest\Models\ChangeRequest;
  */
 class Baseline extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids;
+    use HasFactory;
 
     protected $table = 'baselines';
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     /**
-     * Các loại baseline có thể có
+     * Các loại baseline có thể có.
      */
     public const TYPE_CONTRACT = 'contract';
     public const TYPE_EXECUTION = 'execution';
 
     /**
-     * Danh sách các loại baseline hợp lệ
+     * Danh sách các loại baseline hợp lệ.
      */
     public const VALID_TYPES = [
         self::TYPE_CONTRACT,
@@ -71,7 +75,7 @@ class Baseline extends Model
     ];
 
     /**
-     * Quan hệ với Project
+     * Quan hệ với Project.
      */
     public function project(): BelongsTo
     {
@@ -79,7 +83,7 @@ class Baseline extends Model
     }
 
     /**
-     * Quan hệ với User (người tạo)
+     * Quan hệ với User (người tạo).
      */
     public function creator(): BelongsTo
     {
@@ -87,7 +91,7 @@ class Baseline extends Model
     }
 
     /**
-     * Quan hệ với ChangeRequest (contract liên quan)
+     * Quan hệ với ChangeRequest (contract liên quan).
      */
     public function linkedContract(): BelongsTo
     {
@@ -95,7 +99,7 @@ class Baseline extends Model
     }
 
     /**
-     * Quan hệ với BaselineHistory (lịch sử thay đổi)
+     * Quan hệ với BaselineHistory (lịch sử thay đổi).
      */
     public function histories(): HasMany
     {
@@ -103,7 +107,7 @@ class Baseline extends Model
     }
 
     /**
-     * Scope để lọc theo loại baseline
+     * Scope để lọc theo loại baseline.
      */
     public function scopeOfType(Builder $query, string $type): Builder
     {
@@ -111,7 +115,7 @@ class Baseline extends Model
     }
 
     /**
-     * Scope để lấy baseline mới nhất theo loại
+     * Scope để lấy baseline mới nhất theo loại.
      */
     public function scopeLatestByType(Builder $query, string $type): Builder
     {
@@ -121,7 +125,7 @@ class Baseline extends Model
     }
 
     /**
-     * Scope để lọc theo dự án
+     * Scope để lọc theo dự án.
      */
     public function scopeForProject(Builder $query, string $projectId): Builder
     {
@@ -129,7 +133,7 @@ class Baseline extends Model
     }
 
     /**
-     * Kiểm tra xem baseline có phải là contract baseline không
+     * Kiểm tra xem baseline có phải là contract baseline không.
      */
     public function isContractBaseline(): bool
     {
@@ -137,7 +141,7 @@ class Baseline extends Model
     }
 
     /**
-     * Kiểm tra xem baseline có phải là execution baseline không
+     * Kiểm tra xem baseline có phải là execution baseline không.
      */
     public function isExecutionBaseline(): bool
     {
@@ -145,7 +149,7 @@ class Baseline extends Model
     }
 
     /**
-     * Tính toán số ngày của baseline
+     * Tính toán số ngày của baseline.
      */
     public function getDurationInDays(): int
     {
@@ -153,7 +157,7 @@ class Baseline extends Model
     }
 
     /**
-     * Tạo baseline mới với version tự động tăng và ghi lại lịch sử
+     * Tạo baseline mới với version tự động tăng và ghi lại lịch sử.
      */
     public static function createNewVersion(array $attributes, ?string $rebaselineNote = null): self
     {
@@ -164,7 +168,7 @@ class Baseline extends Model
 
         $oldVersion = $latestBaseline ? $latestBaseline->version : 0;
         $newVersion = $oldVersion + 1;
-        
+
         $attributes['version'] = $newVersion;
         $newBaseline = static::create($attributes);
 
@@ -183,23 +187,23 @@ class Baseline extends Model
     }
 
     /**
-     * Thực hiện re-baseline với ghi lại lịch sử
+     * Thực hiện re-baseline với ghi lại lịch sử.
      */
     public function rebaseline(array $updates, string $note): self
     {
         $oldVersion = $this->version;
         $newVersion = $oldVersion + 1;
-        
+
         // Tạo baseline mới với version tăng
         $newAttributes = array_merge($this->toArray(), $updates, [
             'version' => $newVersion,
             'created_by' => $updates['created_by'] ?? $this->created_by,
         ]);
-        
+
         unset($newAttributes['id'], $newAttributes['created_at'], $newAttributes['updated_at']);
-        
+
         $newBaseline = static::create($newAttributes);
-        
+
         // Ghi lại lịch sử thay đổi
         BaselineHistory::recordRebaseline(
             $newBaseline->id,
@@ -208,12 +212,12 @@ class Baseline extends Model
             $note,
             $updates['created_by'] ?? $this->created_by
         );
-        
+
         return $newBaseline;
     }
 
     /**
-     * Lấy baseline hiện tại (version cao nhất) theo loại
+     * Lấy baseline hiện tại (version cao nhất) theo loại.
      */
     public static function getCurrentBaseline(string $projectId, string $type): ?self
     {

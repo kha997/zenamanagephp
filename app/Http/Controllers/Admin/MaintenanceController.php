@@ -1,8 +1,6 @@
 <?php
 
 namespace App\Http\Controllers\Admin;
-use Illuminate\Support\Facades\Auth;
-
 
 use App\Http\Controllers\Controller;
 use App\Models\MaintenanceTask;
@@ -11,13 +9,14 @@ use App\Models\SystemLog;
 use App\Services\Backup\MysqlClient;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class MaintenanceController extends Controller
 {
     /**
-     * Display maintenance dashboard
+     * Display maintenance dashboard.
      */
     public function index()
     {
@@ -39,14 +38,14 @@ class MaintenanceController extends Controller
     }
 
     /**
-     * Get system health status
+     * Get system health status.
      */
     private function getSystemHealth()
     {
         $health = [
             'status' => 'healthy',
             'services' => [],
-            'issues' => []
+            'issues' => [],
         ];
 
         // Check database connection
@@ -54,12 +53,12 @@ class MaintenanceController extends Controller
             DB::connection()->getPdo();
             $health['services']['database'] = [
                 'status' => 'healthy',
-                'response_time' => $this->getDatabaseResponseTime()
+                'response_time' => $this->getDatabaseResponseTime(),
             ];
         } catch (\Exception $e) {
             $health['services']['database'] = [
                 'status' => 'unhealthy',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
             $health['issues'][] = 'Database connection failed';
         }
@@ -69,12 +68,12 @@ class MaintenanceController extends Controller
             Cache::store('redis')->put('health_check', 'ok', 10);
             $health['services']['redis'] = [
                 'status' => 'healthy',
-                'response_time' => $this->getRedisResponseTime()
+                'response_time' => $this->getRedisResponseTime(),
             ];
         } catch (\Exception $e) {
             $health['services']['redis'] = [
                 'status' => 'unhealthy',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
             $health['issues'][] = 'Redis connection failed';
         }
@@ -100,7 +99,7 @@ class MaintenanceController extends Controller
     }
 
     /**
-     * Get recent system logs
+     * Get recent system logs.
      */
     private function getRecentLogs()
     {
@@ -110,7 +109,7 @@ class MaintenanceController extends Controller
     }
 
     /**
-     * Get maintenance tasks
+     * Get maintenance tasks.
      */
     private function getMaintenanceTasks()
     {
@@ -121,7 +120,7 @@ class MaintenanceController extends Controller
     }
 
     /**
-     * Get performance metrics
+     * Get performance metrics.
      */
     private function getPerformanceMetrics()
     {
@@ -131,7 +130,7 @@ class MaintenanceController extends Controller
     }
 
     /**
-     * Get disk usage information
+     * Get disk usage information.
      */
     private function getDiskUsage()
     {
@@ -143,12 +142,12 @@ class MaintenanceController extends Controller
             'total' => $this->formatBytes($totalSpace),
             'used' => $this->formatBytes($usedSpace),
             'free' => $this->formatBytes($freeSpace),
-            'usage_percentage' => round(($usedSpace / $totalSpace) * 100, 2)
+            'usage_percentage' => round(($usedSpace / $totalSpace) * 100, 2),
         ];
     }
 
     /**
-     * Get database statistics
+     * Get database statistics.
      */
     private function getDatabaseStats()
     {
@@ -165,13 +164,13 @@ class MaintenanceController extends Controller
                     GROUP BY table_schema
                 ");
 
-                $tableCount = DB::select("SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema = DATABASE()");
+                $tableCount = DB::select('SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema = DATABASE()');
                 $connectionCount = DB::select("SHOW STATUS LIKE 'Threads_connected'");
 
                 return [
                     'size_mb' => $stats[0]->size_mb ?? 0,
                     'table_count' => $tableCount[0]->count ?? 0,
-                    'connections' => $connectionCount[0]->Value ?? 0
+                    'connections' => $connectionCount[0]->Value ?? 0,
                 ];
             }
 
@@ -187,63 +186,66 @@ class MaintenanceController extends Controller
                 return [
                     'size_mb' => $sizeMb,
                     'table_count' => $countValue,
-                    'connections' => 0
+                    'connections' => 0,
                 ];
             }
 
             return [
                 'size_mb' => 0,
                 'table_count' => 0,
-                'connections' => 0
+                'connections' => 0,
             ];
         } catch (\Exception $e) {
             return [
                 'size_mb' => 0,
                 'table_count' => 0,
                 'connections' => 0,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
 
     /**
-     * Get database response time
+     * Get database response time.
      */
     private function getDatabaseResponseTime()
     {
         $start = microtime(true);
         DB::select('SELECT 1');
+
         return round((microtime(true) - $start) * 1000, 2);
     }
 
     /**
-     * Get Redis response time
+     * Get Redis response time.
      */
     private function getRedisResponseTime()
     {
         $start = microtime(true);
         Cache::store('redis')->get('health_check');
+
         return round((microtime(true) - $start) * 1000, 2);
     }
 
     /**
-     * Get memory usage percentage
+     * Get memory usage percentage.
      */
     private function getMemoryUsage()
     {
         $memoryUsage = memory_get_usage(true);
         $memoryLimit = ini_get('memory_limit');
-        
+
         if ($memoryLimit === '-1') {
             return 0; // No limit
         }
-        
+
         $memoryLimitBytes = $this->convertToBytes($memoryLimit);
+
         return round(($memoryUsage / $memoryLimitBytes) * 100, 2);
     }
 
     /**
-     * Convert memory limit string to bytes
+     * Convert memory limit string to bytes.
      */
     private function convertToBytes($val)
     {
@@ -254,8 +256,10 @@ class MaintenanceController extends Controller
         switch ($last) {
             case 'g':
                 $val *= 1024;
+                // no break
             case 'm':
                 $val *= 1024;
+                // no break
             case 'k':
                 $val *= 1024;
         }
@@ -264,7 +268,7 @@ class MaintenanceController extends Controller
     }
 
     /**
-     * Format bytes to human readable format
+     * Format bytes to human readable format.
      */
     private function formatBytes($bytes, $precision = 2)
     {
@@ -297,7 +301,7 @@ class MaintenanceController extends Controller
     }
 
     /**
-     * Optimize application
+     * Optimize application.
      */
     public function optimize()
     {
@@ -310,20 +314,20 @@ class MaintenanceController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Application optimized successfully'
+                'message' => 'Application optimized successfully',
             ]);
         } catch (\Exception $e) {
             $this->logMaintenanceTask('Application optimization failed: ' . $e->getMessage(), 'error');
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to optimize application: ' . $e->getMessage()
+                'message' => 'Failed to optimize application: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Run database maintenance
+     * Run database maintenance.
      */
     public function databaseMaintenance()
     {
@@ -352,20 +356,20 @@ class MaintenanceController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Database maintenance completed successfully'
+                'message' => 'Database maintenance completed successfully',
             ]);
         } catch (\Exception $e) {
             $this->logMaintenanceTask('Database maintenance failed: ' . $e->getMessage(), 'error');
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to run database maintenance: ' . $e->getMessage()
+                'message' => 'Failed to run database maintenance: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Clean up old logs
+     * Clean up old logs.
      */
     public function cleanupLogs()
     {
@@ -376,20 +380,20 @@ class MaintenanceController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => "Cleaned up {$deletedCount} old log entries"
+                'message' => "Cleaned up {$deletedCount} old log entries",
             ]);
         } catch (\Exception $e) {
             $this->logMaintenanceTask('Log cleanup failed: ' . $e->getMessage(), 'error');
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to cleanup logs: ' . $e->getMessage()
+                'message' => 'Failed to cleanup logs: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Backup database
+     * Backup database.
      */
     public function backupDatabase()
     {
@@ -399,7 +403,7 @@ class MaintenanceController extends Controller
 
             // Create backup directory if it doesn't exist
             if (!file_exists(dirname($path))) {
-                mkdir(dirname($path), 0755, true);
+                mkdir(dirname($path), 0o755, true);
             }
 
             $driver = DB::connection()->getDriverName();
@@ -425,14 +429,14 @@ class MaintenanceController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Database backup created successfully',
-                'filename' => $filename
+                'filename' => $filename,
             ]);
         } catch (\Exception $e) {
             $this->logMaintenanceTask('Database backup failed: ' . $e->getMessage(), 'error');
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create database backup: ' . $e->getMessage()
+                'message' => 'Failed to create database backup: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -456,7 +460,7 @@ class MaintenanceController extends Controller
     }
 
     /**
-     * Log maintenance task
+     * Log maintenance task.
      */
     private function logMaintenanceTask($message, $level = 'info')
     {
@@ -464,19 +468,19 @@ class MaintenanceController extends Controller
             'task' => $message,
             'level' => $level,
             'user_id' => Auth::id(),
-            'completed_at' => now()
+            'completed_at' => now(),
         ]);
 
         SystemLog::create([
             'level' => $level,
             'message' => $message,
             'context' => ['maintenance' => true],
-            'user_id' => Auth::id()
+            'user_id' => Auth::id(),
         ]);
     }
 
     /**
-     * Get system performance data
+     * Get system performance data.
      */
     public function getPerformanceData()
     {
@@ -486,20 +490,20 @@ class MaintenanceController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $metrics
+            'data' => $metrics,
         ]);
     }
 
     /**
-     * Get system health data
+     * Get system health data.
      */
     public function getHealthData()
     {
         $health = $this->getSystemHealth();
-        
+
         return response()->json([
             'success' => true,
-            'data' => $health
+            'data' => $health,
         ]);
     }
 }

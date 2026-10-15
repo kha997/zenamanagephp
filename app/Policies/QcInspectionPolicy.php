@@ -2,8 +2,8 @@
 
 namespace App\Policies;
 
-use App\Models\User;
 use App\Models\QcInspection;
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class QcInspectionPolicy
@@ -17,7 +17,10 @@ class QcInspectionPolicy
 
     public function view(User $user, QcInspection $qcInspection)
     {
-        if ($user->tenant_id !== $qcInspection->tenant_id) return false;
+        if ($user->tenant_id !== $qcInspection->tenant_id) {
+            return false;
+        }
+
         return $user->hasRole(['super_admin', 'admin', 'pm', 'designer', 'engineer']);
     }
 
@@ -28,25 +31,37 @@ class QcInspectionPolicy
 
     public function update(User $user, QcInspection $qcInspection)
     {
-        if ($user->tenant_id !== $qcInspection->tenant_id) return false;
+        if ($user->tenant_id !== $qcInspection->tenant_id) {
+            return false;
+        }
+
         return $user->id === $qcInspection->inspector_id || $user->hasRole(['super_admin', 'admin', 'pm']);
     }
 
     public function delete(User $user, QcInspection $qcInspection)
     {
-        if ($user->tenant_id !== $qcInspection->tenant_id) return false;
+        if ($user->tenant_id !== $qcInspection->tenant_id) {
+            return false;
+        }
+
         return $user->hasRole(['super_admin', 'admin']);
     }
 
     public function complete(User $user, QcInspection $qcInspection)
     {
-        if ($user->tenant_id !== $qcInspection->tenant_id) return false;
+        if ($user->tenant_id !== $qcInspection->tenant_id) {
+            return false;
+        }
+
         return $user->id === $qcInspection->inspector_id || $user->hasRole(['super_admin', 'admin', 'pm']);
     }
 
     public function approve(User $user, QcInspection $qcInspection)
     {
-        if ($user->tenant_id !== $qcInspection->tenant_id) return false;
+        if ($user->tenant_id !== $qcInspection->tenant_id) {
+            return false;
+        }
+
         return $user->hasRole(['super_admin', 'admin', 'pm']);
     }
 }

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
@@ -6,7 +8,6 @@ use App\Exceptions\DeliverablePdfExportUnavailableException;
 use App\Models\Contract;
 use App\Models\Project;
 use App\Models\Tenant;
-use App\Models\User;
 use App\Services\DeliverablePdfExportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -20,7 +21,7 @@ class ContractPdfExportTest extends TestCase
     public function test_contract_pdf_endpoint_streams_pdf_bytes(): void
     {
         $this->app->bind(DeliverablePdfExportService::class, function () {
-            return new class extends DeliverablePdfExportService {
+            return new class () extends DeliverablePdfExportService {
                 public function render(string $html, array $options = [], array $documentMeta = []): string
                 {
                     return '%PDF-1.4 fake-contract-pdf-bytes';
@@ -61,7 +62,7 @@ class ContractPdfExportTest extends TestCase
     public function test_web_contract_pdf_route_redirects_with_flash_error_when_export_unavailable(): void
     {
         $this->app->bind(DeliverablePdfExportService::class, function () {
-            return new class extends DeliverablePdfExportService {
+            return new class () extends DeliverablePdfExportService {
                 public function render(string $html, array $options = [], array $documentMeta = []): string
                 {
                     throw new DeliverablePdfExportUnavailableException();

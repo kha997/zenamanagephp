@@ -1,45 +1,50 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Models\Permission as AppPermission;
+use App\Models\Role as AppRole;
+use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
-use Tests\TestCase;
-use App\Models\User;
-use App\Models\Tenant;
-use App\Models\Role as AppRole;
-use App\Models\Permission as AppPermission;
-use Src\RBAC\Models\Role;
-use Src\RBAC\Models\Permission;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\Sanctum;
+use Src\RBAC\Models\Permission;
+use Src\RBAC\Models\Role;
+use Tests\TestCase;
 
 class RbacApiTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use RefreshDatabase;
+    use WithFaker;
 
     protected $user;
+
     protected $tenant;
+
     protected $token;
 
     /**
-     * Setup method
+     * Setup method.
      */
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->tenant = Tenant::factory()->create([
             'id' => 1,
             'name' => 'Test Company',
-            'domain' => 'test.com'
+            'domain' => 'test.com',
         ]);
-        
+
         $this->user = User::factory()->create([
             'tenant_id' => $this->tenant->id,
             'password' => Hash::make('password123'),
         ]);
-        
+
         $this->createRolesAndPermissions();
         $this->grantAppRbacPermissions();
 
@@ -47,7 +52,7 @@ class RbacApiTest extends TestCase
     }
 
     /**
-     * Tạo roles và permissions cho test
+     * Tạo roles và permissions cho test.
      */
     private function createRolesAndPermissions()
     {
@@ -59,26 +64,26 @@ class RbacApiTest extends TestCase
             'permission.read',
             'user.assign_role',
         ];
-        
+
         foreach ($permissions as $permissionCode) {
             Permission::factory()->create([
                 'code' => $permissionCode,
                 'module' => explode('.', $permissionCode)[0],
                 'action' => explode('.', $permissionCode)[1],
-                'description' => 'Permission for ' . $permissionCode
+                'description' => 'Permission for ' . $permissionCode,
             ]);
         }
-        
+
         $adminRole = Role::factory()->create([
             'name' => 'Admin',
             'scope' => 'system',
-            'description' => 'System Administrator'
+            'description' => 'System Administrator',
         ]);
-        
+
         $adminRole->permissions()->attach(
             Permission::whereIn('code', $permissions)->pluck('id')
         );
-        
+
         $this->user->systemRoles()->attach($adminRole->id);
     }
 
@@ -128,7 +133,7 @@ class RbacApiTest extends TestCase
     }
 
     /**
-     * Test get all roles
+     * Test get all roles.
      */
     public function test_can_get_all_roles()
     {
@@ -150,18 +155,18 @@ class RbacApiTest extends TestCase
                                      'scope',
                                      'description',
                                      'created_at',
-                                     'updated_at'
-                                 ]
+                                     'updated_at',
+                                 ],
                              ],
-                             'meta'
+                             'meta',
                          ],
-                         'pagination'
-                     ]
+                         'pagination',
+                     ],
                  ]);
     }
 
     /**
-     * Test create role
+     * Test create role.
      */
     public function test_can_create_role()
     {
@@ -169,7 +174,7 @@ class RbacApiTest extends TestCase
             'name' => 'Project Manager',
             'scope' => 'custom',
             'description' => 'Manages projects and teams',
-            'permissions' => Permission::limit(3)->pluck('id')->toArray()
+            'permissions' => Permission::limit(3)->pluck('id')->toArray(),
         ];
 
         $response = $this->withHeaders([
@@ -186,19 +191,19 @@ class RbacApiTest extends TestCase
                              'scope',
                              'description',
                              'created_at',
-                             'updated_at'
-                         ]
-                     ]
+                             'updated_at',
+                         ],
+                     ],
                  ]);
 
         $this->assertDatabaseHas('roles', [
             'name' => 'Project Manager',
-            'scope' => 'custom'
+            'scope' => 'custom',
         ]);
     }
 
     /**
-     * Test update role
+     * Test update role.
      */
     public function test_can_update_role()
     {
@@ -212,7 +217,7 @@ class RbacApiTest extends TestCase
 
         $updateData = [
             'name' => 'Updated Role Name',
-            'description' => 'Updated description'
+            'description' => 'Updated description',
         ];
 
         $response = $this->withHeaders([
@@ -225,19 +230,19 @@ class RbacApiTest extends TestCase
                      'data' => [
                          'role' => [
                              'id' => $role->id,
-                             'name' => 'Updated Role Name'
-                         ]
-                     ]
+                             'name' => 'Updated Role Name',
+                         ],
+                     ],
                  ]);
 
         $this->assertDatabaseHas('roles', [
             'id' => $role->id,
-            'name' => 'Updated Role Name'
+            'name' => 'Updated Role Name',
         ]);
     }
 
     /**
-     * Test delete role
+     * Test delete role.
      */
     public function test_can_delete_role()
     {
@@ -255,17 +260,17 @@ class RbacApiTest extends TestCase
                  ->assertJson([
                      'status' => 'success',
                      'data' => [
-                         'message' => 'Vai trò đã được xóa thành công'
-                     ]
+                         'message' => 'Vai trò đã được xóa thành công',
+                     ],
                  ]);
 
         $this->assertDatabaseMissing('roles', [
-            'id' => $role->id
+            'id' => $role->id,
         ]);
     }
 
     /**
-     * Test get all permissions
+     * Test get all permissions.
      */
     public function test_can_get_all_permissions()
     {
@@ -285,22 +290,22 @@ class RbacApiTest extends TestCase
                                  'action',
                                  'description',
                                  'created_at',
-                                 'updated_at'
-                             ]
-                         ]
-                     ]
+                                 'updated_at',
+                             ],
+                         ],
+                     ],
                  ]);
     }
 
     /**
-     * Test assign role to user
+     * Test assign role to user.
      */
     public function test_can_assign_role_to_user()
     {
         $targetUser = User::factory()->create([
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
-        
+
         // GAP-042 §6a: assignSystemRole() now verifies the target role
         // actually has scope=system (closes a previously-unchecked gap) —
         // this test must use a deterministic system-scope role, not the
@@ -312,32 +317,32 @@ class RbacApiTest extends TestCase
         ])->postJson('/api/v1/rbac/user-roles', [
             'user_id' => $targetUser->id,
             'role_id' => $role->id,
-            'scope' => 'system'
+            'scope' => 'system',
         ]);
 
         $response->assertStatus(200)
                  ->assertJson([
                      'status' => 'success',
                      'data' => [
-                         'message' => 'Vai trò đã được gán thành công'
-                     ]
+                         'message' => 'Vai trò đã được gán thành công',
+                     ],
                  ]);
 
         $this->assertDatabaseHas('system_user_roles', [
             'user_id' => $targetUser->id,
-            'role_id' => $role->id
+            'role_id' => $role->id,
         ]);
     }
 
     /**
-     * Test remove role from user
+     * Test remove role from user.
      */
     public function test_can_remove_role_from_user()
     {
         $targetUser = User::factory()->create([
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
-        
+
         $role = Role::factory()->create(['scope' => 'system']);
         $targetUser->systemRoles()->attach($role->id);
 
@@ -349,18 +354,18 @@ class RbacApiTest extends TestCase
                  ->assertJson([
                      'status' => 'success',
                      'data' => [
-                         'message' => 'Vai trò đã được gỡ bỏ thành công'
-                     ]
+                         'message' => 'Vai trò đã được gỡ bỏ thành công',
+                     ],
                  ]);
 
         $this->assertDatabaseMissing('system_user_roles', [
             'user_id' => $targetUser->id,
-            'role_id' => $role->id
+            'role_id' => $role->id,
         ]);
     }
 
     /**
-     * Test unauthorized access returns 401
+     * Test unauthorized access returns 401.
      */
     public function test_unauthorized_access_returns_401()
     {
@@ -369,22 +374,22 @@ class RbacApiTest extends TestCase
     }
 
     /**
-     * Test forbidden access without permissions
+     * Test forbidden access without permissions.
      */
     public function test_forbidden_access_without_permissions()
     {
         // Tạo user không có quyền
         $userWithoutPermissions = User::factory()->create([
             'tenant_id' => $this->tenant->id,
-            'password' => Hash::make('password123')
+            'password' => Hash::make('password123'),
         ]);
-        
+
         Sanctum::actingAs($userWithoutPermissions);
 
         $response = $this->postJson('/api/v1/rbac/roles', [
             'name' => 'Test Role',
             'scope' => 'custom',
-            'description' => 'Test Description'
+            'description' => 'Test Description',
         ]);
 
         $response->assertStatus(403);

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -24,7 +26,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class OpportunityAppointment extends Model
 {
-    use HasUlids, TenantScope;
+    use HasUlids;
+    use TenantScope;
 
     /** @use HasFactory<\Database\Factories\OpportunityAppointmentFactory> */
     use HasFactory;

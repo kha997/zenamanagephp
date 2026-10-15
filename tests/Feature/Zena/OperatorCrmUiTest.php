@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Zena;
 
@@ -18,6 +20,7 @@ class OperatorCrmUiTest extends TestCase
     use TenantUserFactoryTrait;
 
     private Tenant $tenant;
+
     private User $user;
 
     protected function setUp(): void
@@ -449,7 +452,7 @@ class OperatorCrmUiTest extends TestCase
         // simulate an unexpected DB/infra failure surfacing from
         // OpportunityStageTransitionService::transition().
         $this->app->bind(\App\Services\Crm\OpportunityStageTransitionService::class, function () {
-            return new class extends \App\Services\Crm\OpportunityStageTransitionService {
+            return new class () extends \App\Services\Crm\OpportunityStageTransitionService {
                 public function transition(\App\Models\User $actor, Opportunity $opportunity, string $toStage, ?string $lostReason): Opportunity
                 {
                     throw new \RuntimeException('Simulated unexpected failure');

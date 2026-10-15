@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories\Src\CoreProject\Models;
 
@@ -6,8 +8,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Src\CoreProject\Models\WorkTemplate;
 
 /**
- * Factory cho WorkTemplate model
- * 
+ * Factory cho WorkTemplate model.
+ *
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Src\CoreProject\Models\WorkTemplate>
  */
 class WorkTemplateFactory extends Factory
@@ -27,7 +29,7 @@ class WorkTemplateFactory extends Factory
                         'tasks' => [
                             ['name' => 'Requirements Analysis', 'duration' => 5],
                             ['name' => 'Design Review', 'duration' => 3],
-                        ]
+                        ],
                     ],
                     [
                         'name' => 'Execution Phase',
@@ -35,13 +37,13 @@ class WorkTemplateFactory extends Factory
                         'tasks' => [
                             ['name' => 'Implementation', 'duration' => 15],
                             ['name' => 'Testing', 'duration' => 5],
-                        ]
-                    ]
+                        ],
+                    ],
                 ],
                 'resources' => [
                     'required_skills' => ['project_management', 'technical_analysis'],
-                    'estimated_team_size' => $this->faker->numberBetween(3, 8)
-                ]
+                    'estimated_team_size' => $this->faker->numberBetween(3, 8),
+                ],
             ],
             'version' => $this->faker->numberBetween(1, 5),
             'is_active' => $this->faker->boolean(80),
@@ -50,7 +52,7 @@ class WorkTemplateFactory extends Factory
     }
 
     /**
-     * State: Design template
+     * State: Design template.
      */
     public function design(): static
     {
@@ -61,7 +63,7 @@ class WorkTemplateFactory extends Factory
     }
 
     /**
-     * State: Construction template
+     * State: Construction template.
      */
     public function construction(): static
     {
@@ -72,7 +74,7 @@ class WorkTemplateFactory extends Factory
     }
 
     /**
-     * State: Active template
+     * State: Active template.
      */
     public function active(): static
     {

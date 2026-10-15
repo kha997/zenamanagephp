@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Unit\Migrations\Treasury;
 
@@ -73,7 +75,6 @@ class TreasuryNativeCheckConstraintsMysqlTest extends TestCase
         }
         parent::tearDown();
     }
-
 
     private function ulid(): string
     {
@@ -229,7 +230,7 @@ class TreasuryNativeCheckConstraintsMysqlTest extends TestCase
         $project = $this->project($tenant, self::CONN);
         $contract = \App\Models\Contract::on(self::CONN)->create([
             'tenant_id' => (string) $tenant->id, 'project_id' => (string) $project->id,
-            'code' => 'CTR-CHK-'.uniqid(), 'title' => 'HĐ', 'contract_type' => \App\Models\Contract::TYPE_CONSTRUCTION,
+            'code' => 'CTR-CHK-' . uniqid(), 'title' => 'HĐ', 'contract_type' => \App\Models\Contract::TYPE_CONSTRUCTION,
             'created_by' => (string) $user->id,
         ]);
         $contractPayment = \App\Models\ContractPayment::on(self::CONN)->create(\App\Models\ContractPayment::factory()->raw([

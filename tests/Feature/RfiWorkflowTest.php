@@ -1,18 +1,19 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\Project;
 use App\Models\Rfi;
 use App\Models\Tenant;
-use Tests\TestCase;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Auth;
+use Tests\TestCase;
 
 /**
- * Test RFI Workflow - Request for Information workflow
- * 
+ * Test RFI Workflow - Request for Information workflow.
+ *
  * Kịch bản: Site Engineer gửi RFI → Design Lead trả lời → PM đóng
  */
 class RfiWorkflowTest extends TestCase
@@ -20,15 +21,19 @@ class RfiWorkflowTest extends TestCase
     use RefreshDatabase;
 
     private $tenant;
+
     private $project;
+
     private $siteEngineer;
+
     private $designLead;
+
     private $projectManager;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Tạo tenant
         $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
@@ -84,7 +89,7 @@ class RfiWorkflowTest extends TestCase
     }
 
     /**
-     * Test tạo RFI với thông tin đầy đủ
+     * Test tạo RFI với thông tin đầy đủ.
      */
     public function test_can_create_rfi_with_complete_information(): void
     {
@@ -128,7 +133,7 @@ class RfiWorkflowTest extends TestCase
     }
 
     /**
-     * Test gán RFI cho người xử lý
+     * Test gán RFI cho người xử lý.
      */
     public function test_can_assign_rfi_to_handler(): void
     {
@@ -162,13 +167,13 @@ class RfiWorkflowTest extends TestCase
     }
 
     /**
-     * Test SLA tracking (3 ngày)
+     * Test SLA tracking (3 ngày).
      */
     public function test_sla_tracking_three_days(): void
     {
         // Tạo RFI với due_date 3 ngày từ bây giờ
         $dueDate = now()->addDays(3);
-        
+
         $rfi = Rfi::create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
@@ -194,7 +199,7 @@ class RfiWorkflowTest extends TestCase
     }
 
     /**
-     * Test trả lời RFI với attachments
+     * Test trả lời RFI với attachments.
      */
     public function test_can_answer_rfi_with_attachments(): void
     {
@@ -227,14 +232,14 @@ class RfiWorkflowTest extends TestCase
                     'filename' => 'foundation_design.pdf',
                     'path' => 'attachments/foundation_design.pdf',
                     'size' => 1024000,
-                    'type' => 'application/pdf'
+                    'type' => 'application/pdf',
                 ],
                 [
                     'filename' => 'reinforcement_details.dwg',
                     'path' => 'attachments/reinforcement_details.dwg',
                     'size' => 2048000,
-                    'type' => 'application/dwg'
-                ]
+                    'type' => 'application/dwg',
+                ],
             ],
             'status' => 'answered',
         ];
@@ -256,13 +261,13 @@ class RfiWorkflowTest extends TestCase
     }
 
     /**
-     * Test escalation khi quá hạn
+     * Test escalation khi quá hạn.
      */
     public function test_escalation_when_overdue(): void
     {
         // Tạo RFI với due_date đã quá hạn
         $overdueDate = now()->subDays(1);
-        
+
         $rfi = Rfi::create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
@@ -302,7 +307,7 @@ class RfiWorkflowTest extends TestCase
     }
 
     /**
-     * Test đóng RFI (chỉ khi đã trả lời)
+     * Test đóng RFI (chỉ khi đã trả lời).
      */
     public function test_can_close_rfi_only_when_answered(): void
     {
@@ -343,7 +348,7 @@ class RfiWorkflowTest extends TestCase
     }
 
     /**
-     * Test không thể đóng RFI khi chưa trả lời
+     * Test không thể đóng RFI khi chưa trả lời.
      */
     public function test_cannot_close_rfi_when_not_answered(): void
     {
@@ -365,7 +370,7 @@ class RfiWorkflowTest extends TestCase
 
         // Thử đóng RFI (sẽ fail trong business logic)
         $this->expectException(\Exception::class);
-        
+
         // Trong thực tế, business logic sẽ kiểm tra status trước khi cho phép đóng
         if ($rfi->status !== 'answered') {
             throw new \Exception('Cannot close RFI that has not been answered');
@@ -373,7 +378,7 @@ class RfiWorkflowTest extends TestCase
     }
 
     /**
-     * Test visibility control (internal/client)
+     * Test visibility control (internal/client).
      */
     public function test_visibility_control_internal_client(): void
     {
@@ -417,7 +422,7 @@ class RfiWorkflowTest extends TestCase
     }
 
     /**
-     * Test file attachments security
+     * Test file attachments security.
      */
     public function test_file_attachments_security(): void
     {
@@ -431,7 +436,7 @@ class RfiWorkflowTest extends TestCase
                 'checksum' => 'abc123def456',
                 'uploaded_by' => $this->designLead->id,
                 'uploaded_at' => now()->toISOString(),
-            ]
+            ],
         ];
 
         $rfi = Rfi::create([
@@ -461,7 +466,7 @@ class RfiWorkflowTest extends TestCase
     }
 
     /**
-     * Test RFI workflow end-to-end
+     * Test RFI workflow end-to-end.
      */
     public function test_rfi_workflow_end_to_end(): void
     {

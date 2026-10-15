@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -7,13 +9,13 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Service tối ưu hóa các truy vấn database phức tạp
- * Cung cấp các method để optimize N+1 queries, eager loading, và chunking
+ * Cung cấp các method để optimize N+1 queries, eager loading, và chunking.
  */
 class QueryOptimizationService
 {
     /**
-     * Optimize project queries với eager loading
-     * 
+     * Optimize project queries với eager loading.
+     *
      * @param Builder $query
      * @param array $relations
      * @return Builder
@@ -29,18 +31,18 @@ class QueryOptimizationService
                 $q->select(['id', 'project_id', 'component_id', 'name', 'status', 'start_date', 'end_date'])
                   ->where('is_hidden', false);
             },
-            'tenant:id,name'
+            'tenant:id,name',
         ];
 
         $relations = array_merge($defaultRelations, $relations);
-        
+
         return $query->with($relations)
                     ->select(['id', 'tenant_id', 'name', 'description', 'status', 'progress', 'start_date', 'end_date']);
     }
 
     /**
-     * Optimize interaction logs queries với filtering
-     * 
+     * Optimize interaction logs queries với filtering.
+     *
      * @param Builder $query
      * @param array $filters
      * @return Builder
@@ -58,7 +60,7 @@ class QueryOptimizationService
 
         if (isset($filters['visibility'])) {
             $query->where('visibility', $filters['visibility']);
-            
+
             if ($filters['visibility'] === 'client') {
                 $query->where('client_approved', true);
             }
@@ -76,14 +78,14 @@ class QueryOptimizationService
         $query->with('creator:id,name,email');
 
         return $query->select([
-            'id', 'project_id', 'linked_task_id', 'type', 'description', 
-            'tag_path', 'visibility', 'client_approved', 'created_by', 'created_at'
+            'id', 'project_id', 'linked_task_id', 'type', 'description',
+            'tag_path', 'visibility', 'client_approved', 'created_by', 'created_at',
         ]);
     }
 
     /**
-     * Optimize user dashboard queries
-     * 
+     * Optimize user dashboard queries.
+     *
      * @param int $userId
      * @param int $tenantId
      * @return array
@@ -107,15 +109,15 @@ class QueryOptimizationService
     }
 
     /**
-     * Optimize component hierarchy queries
-     * 
+     * Optimize component hierarchy queries.
+     *
      * @param int $projectId
      * @return array
      */
     public function getComponentHierarchy(int $projectId): array
     {
         // Sử dụng recursive CTE cho MySQL 8.0+
-        $components = DB::select("
+        $components = DB::select('
             WITH RECURSIVE component_tree AS (
                 SELECT id, parent_component_id, name, progress_percent, planned_cost, actual_cost, 0 as level
                 FROM components 
@@ -129,14 +131,14 @@ class QueryOptimizationService
                 WHERE c.project_id = ?
             )
             SELECT * FROM component_tree ORDER BY level, name
-        ", [$projectId, $projectId]);
+        ', [$projectId, $projectId]);
 
         return $components;
     }
 
     /**
-     * Batch process large datasets với chunking
-     * 
+     * Batch process large datasets với chunking.
+     *
      * @param Builder $query
      * @param callable $callback
      * @param int $chunkSize
@@ -150,14 +152,14 @@ class QueryOptimizationService
     }
 
     /**
-     * Analyze slow queries và suggest optimizations
-     * 
+     * Analyze slow queries và suggest optimizations.
+     *
      * @return array
      */
     public function analyzeSlowQueries(): array
     {
         // Enable slow query log analysis
-        $slowQueries = DB::select("
+        $slowQueries = DB::select('
             SELECT 
                 sql_text,
                 exec_count,
@@ -167,7 +169,7 @@ class QueryOptimizationService
             WHERE avg_timer_wait > 1000000000  -- queries taking more than 1 second
             ORDER BY avg_timer_wait DESC 
             LIMIT 10
-        ");
+        ');
 
         return $slowQueries;
     }

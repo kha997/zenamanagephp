@@ -1,17 +1,19 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use Src\DocumentManagement\Models\Document;
-use Src\DocumentManagement\Models\DocumentVersion;
-use Src\CoreProject\Models\Project;
-use Src\CoreProject\Models\Task;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Src\CoreProject\Models\Project;
+use Src\CoreProject\Models\Task;
+use Src\DocumentManagement\Models\Document;
+use Src\DocumentManagement\Models\DocumentVersion;
 
 /**
- * Document Seeder
- * 
+ * Document Seeder.
+ *
  * Tạo dữ liệu mẫu cho documents và document versions
  */
 class DocumentSeeder extends Seeder
@@ -37,7 +39,7 @@ class DocumentSeeder extends Seeder
                     ->forDocument($document->id)
                     ->create([
                         'version_number' => 1,
-                        'created_by' => $users->random()->id
+                        'created_by' => $users->random()->id,
                     ]);
 
                 // Cập nhật current_version_id
@@ -49,7 +51,7 @@ class DocumentSeeder extends Seeder
                         ->forDocument($document->id)
                         ->create([
                             'version_number' => $i,
-                            'created_by' => $users->random()->id
+                            'created_by' => $users->random()->id,
                         ]);
 
                     // Cập nhật current version
@@ -69,7 +71,7 @@ class DocumentSeeder extends Seeder
                     ->forDocument($taskDocument->id)
                     ->create([
                         'version_number' => 1,
-                        'created_by' => $users->random()->id
+                        'created_by' => $users->random()->id,
                     ]);
 
                 $taskDocument->update(['current_version_id' => $version->id]);

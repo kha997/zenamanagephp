@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Zena;
 
@@ -30,7 +32,7 @@ class ZenaRbacPermissionStoreInvariantTest extends TestCase
 
         $role = AppRole::firstOrNew(['name' => 'RBAC Guard Role']);
 
-        if (! $role->exists && empty($role->id)) {
+        if (!$role->exists && empty($role->id)) {
             $role->id = (string) Str::ulid();
         }
 

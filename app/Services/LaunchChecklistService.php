@@ -3,9 +3,9 @@
 namespace App\Services;
 
 use App\Services\Backup\BackupArchiveStore;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class LaunchChecklistService
 {
@@ -24,7 +24,7 @@ class LaunchChecklistService
             'readiness_score' => $this->getReadinessScore(),
             'test_coverage' => $this->getTestCoverage(),
             'documentation_completeness' => $this->getDocumentationCompleteness(),
-            'last_updated' => now()->toISOString()
+            'last_updated' => now()->toISOString(),
         ];
     }
 
@@ -33,22 +33,23 @@ class LaunchChecklistService
         try {
             // Check database connection
             DB::connection()->getPdo();
-            
+
             // Check cache connection
             Cache::put('launch_check', 'ok', 60);
             $cacheCheck = Cache::get('launch_check') === 'ok';
-            
+
             // Check file permissions
             $storageWritable = is_writable(storage_path());
             $bootstrapWritable = is_writable(base_path('bootstrap/cache'));
-            
+
             if ($cacheCheck && $storageWritable && $bootstrapWritable) {
                 return 'Production Ready';
             }
-            
+
             return 'Issues Detected';
         } catch (\Exception $e) {
             Log::error('System status check failed: ' . $e->getMessage());
+
             return 'System Error';
         }
     }
@@ -65,10 +66,11 @@ class LaunchChecklistService
             'backup_system' => $this->checkBackupSystem(),
             'monitoring_setup' => $this->checkMonitoringSetup(),
             'security_config' => $this->checkSecurityConfig(),
-            'performance_optimization' => $this->checkPerformanceOptimization()
+            'performance_optimization' => $this->checkPerformanceOptimization(),
         ];
-        
+
         $passedChecks = array_filter($checks);
+
         return (int) round((count($passedChecks) / count($checks)) * 100);
     }
 
@@ -81,9 +83,9 @@ class LaunchChecklistService
             'functionality_testing' => 90,
             'performance_testing' => 85,
             'accessibility_testing' => 95,
-            'mobile_testing' => 90
+            'mobile_testing' => 90,
         ];
-        
+
         return (int) round(array_sum($testCategories) / count($testCategories));
     }
 
@@ -94,16 +96,16 @@ class LaunchChecklistService
             'USER_DOCUMENTATION.md',
             'DEVELOPER_DOCUMENTATION.md',
             'DEPLOYMENT_GUIDE.md',
-            'README.md'
+            'README.md',
         ];
-        
+
         $existingFiles = 0;
         foreach ($documentationFiles as $file) {
             if (file_exists(base_path($file))) {
                 $existingFiles++;
             }
         }
-        
+
         return (int) round(($existingFiles / count($documentationFiles)) * 100);
     }
 
@@ -115,9 +117,9 @@ class LaunchChecklistService
             'mobile_optimization' => $this->checkMobileOptimization(),
             'accessibility' => $this->checkAccessibility(),
             'performance_optimization' => $this->checkPerformanceOptimization(),
-            'api_integration' => $this->checkApiIntegration()
+            'api_integration' => $this->checkApiIntegration(),
         ];
-        
+
         return $integrations;
     }
 
@@ -129,9 +131,9 @@ class LaunchChecklistService
             'file_permissions' => $this->checkFilePermissions(),
             'ssl_certificate' => $this->checkSslCertificate(),
             'environment_variables' => $this->checkEnvironmentConfig(),
-            'error_logging' => $this->checkErrorLogging()
+            'error_logging' => $this->checkErrorLogging(),
         ];
-        
+
         return $checks;
     }
 
@@ -143,9 +145,9 @@ class LaunchChecklistService
             'security_audit' => $this->runSecurityAudit(),
             'performance_validation' => $this->validatePerformance(),
             'backup_setup' => $this->setupBackupSystem(),
-            'monitoring_setup' => $this->setupMonitoring()
+            'monitoring_setup' => $this->setupMonitoring(),
         ];
-        
+
         return $tasks;
     }
 
@@ -156,62 +158,62 @@ class LaunchChecklistService
                 'id' => 1,
                 'title' => 'All Tests Passing',
                 'description' => 'Comprehensive test suite validation',
-                'completed' => $this->checkAllTestsPassing()
+                'completed' => $this->checkAllTestsPassing(),
             ],
             [
                 'id' => 2,
                 'title' => 'Documentation Complete',
                 'description' => 'All documentation reviewed and updated',
-                'completed' => $this->checkDocumentationComplete()
+                'completed' => $this->checkDocumentationComplete(),
             ],
             [
                 'id' => 3,
                 'title' => 'Security Audit Passed',
                 'description' => 'Security review and validation completed',
-                'completed' => $this->checkSecurityAuditPassed()
+                'completed' => $this->checkSecurityAuditPassed(),
             ],
             [
                 'id' => 4,
                 'title' => 'Performance Targets Met',
                 'description' => 'All performance metrics within targets',
-                'completed' => $this->checkPerformanceTargetsMet()
+                'completed' => $this->checkPerformanceTargetsMet(),
             ],
             [
                 'id' => 5,
                 'title' => 'Backup System Configured',
                 'description' => 'Automated backup system in place',
-                'completed' => $this->checkBackupSystemConfigured()
+                'completed' => $this->checkBackupSystemConfigured(),
             ],
             [
                 'id' => 6,
                 'title' => 'Monitoring Active',
                 'description' => 'Production monitoring systems active',
-                'completed' => $this->checkMonitoringActive()
+                'completed' => $this->checkMonitoringActive(),
             ],
             [
                 'id' => 7,
                 'title' => 'SSL Certificate Valid',
                 'description' => 'HTTPS SSL certificate configured',
-                'completed' => $this->checkSslCertificate()
+                'completed' => $this->checkSslCertificate(),
             ],
             [
                 'id' => 8,
                 'title' => 'Environment Variables Set',
                 'description' => 'Production environment configured',
-                'completed' => $this->checkEnvironmentConfig()
+                'completed' => $this->checkEnvironmentConfig(),
             ],
             [
                 'id' => 9,
                 'title' => 'Database Migrated',
                 'description' => 'Production database migrations completed',
-                'completed' => $this->checkDatabaseMigrated()
+                'completed' => $this->checkDatabaseMigrated(),
             ],
             [
                 'id' => 10,
                 'title' => 'Assets Compiled',
                 'description' => 'Production assets compiled and optimized',
-                'completed' => $this->checkAssetsCompiled()
-            ]
+                'completed' => $this->checkAssetsCompiled(),
+            ],
         ];
     }
 
@@ -250,28 +252,28 @@ class LaunchChecklistService
     public function executeLaunchActions(): array
     {
         $actions = [];
-        
+
         try {
             // Start services (simulated)
             $actions['start_services'] = 'success';
         } catch (\Exception $e) {
             $actions['start_services'] = 'failed: ' . $e->getMessage();
         }
-        
+
         try {
             // Verify deployment
             $actions['verify_deployment'] = 'success';
         } catch (\Exception $e) {
             $actions['verify_deployment'] = 'failed: ' . $e->getMessage();
         }
-        
+
         try {
             // Enable monitoring
             $actions['enable_monitoring'] = 'success';
         } catch (\Exception $e) {
             $actions['enable_monitoring'] = 'failed: ' . $e->getMessage();
         }
-        
+
         return $actions;
     }
 
@@ -280,6 +282,7 @@ class LaunchChecklistService
     {
         try {
             DB::connection()->getPdo();
+
             return true;
         } catch (\Exception $e) {
             return false;
@@ -290,6 +293,7 @@ class LaunchChecklistService
     {
         try {
             Cache::put('test', 'value', 60);
+
             return Cache::get('test') === 'value';
         } catch (\Exception $e) {
             return false;
@@ -353,6 +357,7 @@ class LaunchChecklistService
 
         if (!$stream) {
             Log::warning("SSL check failed for {$host}: {$errstr}");
+
             return false;
         }
 
@@ -373,6 +378,7 @@ class LaunchChecklistService
 
         if ($daysRemaining <= 0) {
             Log::error("SSL certificate for {$host} has expired");
+
             return false;
         }
 
@@ -480,23 +486,27 @@ class LaunchChecklistService
     {
         $backupDir = storage_path('backups');
 
-        if (!is_dir($backupDir) && !@mkdir($backupDir, 0755, true)) {
+        if (!is_dir($backupDir) && !@mkdir($backupDir, 0o755, true)) {
             Log::error('Failed to create backup directory: ' . $backupDir);
+
             return false;
         }
 
         if (!is_writable($backupDir)) {
             Log::error('Backup directory is not writable: ' . $backupDir);
+
             return false;
         }
 
         if (!class_exists(\App\Console\Commands\BackupCommand::class)) {
             Log::error('BackupCommand class not found');
+
             return false;
         }
 
         if (!file_exists(config_path('backup.php'))) {
             Log::error('backup.php config not found');
+
             return false;
         }
 

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
 
@@ -423,6 +425,7 @@ class ContractPageController extends Controller
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
+
         return (string) $user->tenant_id;
     }
 
@@ -499,7 +502,7 @@ class ContractPageController extends Controller
         ]);
 
         $boq = $contract->boq;
-        if (! $boq) {
+        if (!$boq) {
             abort(404);
         }
 
@@ -532,7 +535,7 @@ class ContractPageController extends Controller
         }
 
         $boq = $contract->boq;
-        if (! $boq) {
+        if (!$boq) {
             abort(404);
         }
 
@@ -824,7 +827,7 @@ class ContractPageController extends Controller
         $contract = Contract::query()->where('tenant_id', $tenantId)->findOrFail($id);
 
         $boq = $contract->boq;
-        if (! $boq) {
+        if (!$boq) {
             return back()->with('error', 'Hợp đồng chưa có bảng khối lượng.');
         }
 

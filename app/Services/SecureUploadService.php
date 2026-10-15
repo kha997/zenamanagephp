@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 class SecureUploadService
 {
     /**
-     * Allowed file types with their MIME types
+     * Allowed file types with their MIME types.
      */
     private array $allowedMimeTypes = [
         // Documents
@@ -20,7 +20,7 @@ class SecureUploadService
         'xlsx' => ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
         'ppt' => ['application/vnd.ms-powerpoint'],
         'pptx' => ['application/vnd.openxmlformats-officedocument.presentationml.presentation'],
-        
+
         // Images
         'jpg' => ['image/jpeg'],
         'jpeg' => ['image/jpeg'],
@@ -29,22 +29,22 @@ class SecureUploadService
         'bmp' => ['image/bmp'],
         'svg' => ['image/svg+xml'],
         'webp' => ['image/webp'],
-        
+
         // Text files
         'txt' => ['text/plain'],
         'csv' => ['text/csv', 'application/csv'],
         'rtf' => ['application/rtf'],
-        
+
         // Archives
         'zip' => ['application/zip'],
         'rar' => ['application/x-rar-compressed'],
         '7z' => ['application/x-7z-compressed'],
-        
+
         // CAD files
         'dwg' => ['application/dwg'],
         'dxf' => ['application/dxf'],
         'dwf' => ['application/dwf'],
-        
+
         // Audio/Video (for project documentation)
         'mp3' => ['audio/mpeg'],
         'mp4' => ['video/mp4'],
@@ -53,31 +53,31 @@ class SecureUploadService
     ];
 
     /**
-     * Maximum file size in bytes (10MB)
+     * Maximum file size in bytes (10MB).
      */
     private int $maxFileSize = 10 * 1024 * 1024;
 
     /**
-     * Dangerous file extensions
+     * Dangerous file extensions.
      */
     private array $dangerousExtensions = [
         'exe', 'bat', 'cmd', 'com', 'pif', 'scr', 'vbs', 'js', 'jar',
-        'php', 'asp', 'jsp', 'py', 'rb', 'pl', 'sh', 'ps1'
+        'php', 'asp', 'jsp', 'py', 'rb', 'pl', 'sh', 'ps1',
     ];
 
     /**
-     * Validate file type
+     * Validate file type.
      */
     public function validateFileType(UploadedFile $file): array
     {
         $extension = strtolower($file->getClientOriginalExtension());
         $mimeType = $file->getMimeType();
-        
+
         // Check if extension is dangerous
         if (in_array($extension, $this->dangerousExtensions)) {
             return [
                 'valid' => false,
-                'message' => 'File type not allowed for security reasons'
+                'message' => 'File type not allowed for security reasons',
             ];
         }
 
@@ -85,7 +85,7 @@ class SecureUploadService
         if (!array_key_exists($extension, $this->allowedMimeTypes)) {
             return [
                 'valid' => false,
-                'message' => 'File type not supported'
+                'message' => 'File type not supported',
             ];
         }
 
@@ -93,18 +93,18 @@ class SecureUploadService
         if (!in_array($mimeType, $this->allowedMimeTypes[$extension])) {
             return [
                 'valid' => false,
-                'message' => 'File type mismatch detected'
+                'message' => 'File type mismatch detected',
             ];
         }
 
         // Additional MIME type validation using file content (skip for empty files)
         $realMimeType = $this->getRealMimeType($file);
-        
+
         // Skip real MIME type validation for empty files (common in testing)
         if ($realMimeType && $realMimeType !== 'application/x-empty' && !in_array($realMimeType, $this->allowedMimeTypes[$extension])) {
             return [
                 'valid' => false,
-                'message' => 'File content does not match declared type'
+                'message' => 'File content does not match declared type',
             ];
         }
 
@@ -112,14 +112,14 @@ class SecureUploadService
     }
 
     /**
-     * Validate file size
+     * Validate file size.
      */
     public function validateFileSize(UploadedFile $file): array
     {
         if ($file->getSize() > $this->maxFileSize) {
             return [
                 'valid' => false,
-                'message' => 'File size exceeds maximum allowed size'
+                'message' => 'File size exceeds maximum allowed size',
             ];
         }
 
@@ -127,7 +127,7 @@ class SecureUploadService
     }
 
     /**
-     * Validate file name
+     * Validate file name.
      */
     public function validateFileName(string $fileName): array
     {
@@ -135,7 +135,7 @@ class SecureUploadService
         if (strpos($fileName, '..') !== false || strpos($fileName, '/') !== false || strpos($fileName, '\\') !== false) {
             return [
                 'valid' => false,
-                'message' => 'Invalid file name'
+                'message' => 'Invalid file name',
             ];
         }
 
@@ -145,7 +145,7 @@ class SecureUploadService
             if (strpos($fileName, $char) !== false) {
                 return [
                     'valid' => false,
-                    'message' => 'File name contains invalid characters'
+                    'message' => 'File name contains invalid characters',
                 ];
             }
         }
@@ -154,7 +154,7 @@ class SecureUploadService
         if (strlen($fileName) > 255) {
             return [
                 'valid' => false,
-                'message' => 'File name too long'
+                'message' => 'File name too long',
             ];
         }
 
@@ -162,17 +162,17 @@ class SecureUploadService
     }
 
     /**
-     * Scan file content for malicious patterns
+     * Scan file content for malicious patterns.
      */
     public function scanFileContent(UploadedFile $file): array
     {
         $content = file_get_contents($file->getPathname());
-        
+
         // Check for script tags
         if (preg_match('/<script[^>]*>.*?<\/script>/is', $content)) {
             return [
                 'clean' => false,
-                'message' => 'File contains script tags'
+                'message' => 'File contains script tags',
             ];
         }
 
@@ -180,7 +180,7 @@ class SecureUploadService
         if (preg_match('/<\?php|<\?=/', $content)) {
             return [
                 'clean' => false,
-                'message' => 'File contains PHP code'
+                'message' => 'File contains PHP code',
             ];
         }
 
@@ -198,7 +198,7 @@ class SecureUploadService
             if (preg_match($pattern, $content)) {
                 return [
                     'clean' => false,
-                    'message' => 'File contains potentially malicious code'
+                    'message' => 'File contains potentially malicious code',
                 ];
             }
         }
@@ -207,7 +207,7 @@ class SecureUploadService
     }
 
     /**
-     * Get real MIME type from file content
+     * Get real MIME type from file content.
      */
     private function getRealMimeType(UploadedFile $file): ?string
     {
@@ -223,19 +223,19 @@ class SecureUploadService
     }
 
     /**
-     * Generate secure filename
+     * Generate secure filename.
      */
     public function generateSecureFilename(string $originalName): string
     {
         $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
         $prefix = $this->getFilePrefix($extension);
         $randomId = Str::random(32);
-        
+
         return "{$prefix}_{$randomId}.{$extension}";
     }
 
     /**
-     * Get file prefix based on type
+     * Get file prefix based on type.
      */
     private function getFilePrefix(string $extension): string
     {
@@ -262,19 +262,19 @@ class SecureUploadService
     }
 
     /**
-     * Create signed URL for file access
+     * Create signed URL for file access.
      */
     public function createSignedUrl(string $filePath, string $userId, string $tenantId): string
     {
         $expires = time() + 3600; // 1 hour
         $data = "{$filePath}|{$userId}|{$tenantId}|{$expires}";
         $signature = hash_hmac('sha256', $data, config('app.key'));
-        
+
         return Storage::disk('local')->url($filePath) . "?signature={$signature}&expires={$expires}";
     }
 
     /**
-     * Validate signed URL
+     * Validate signed URL.
      */
     public function validateSignedUrl(string $filePath, string $signature, int $expires, string $userId, string $tenantId): array
     {
@@ -282,7 +282,7 @@ class SecureUploadService
         if ($expires < time()) {
             return [
                 'valid' => false,
-                'message' => 'URL has expired'
+                'message' => 'URL has expired',
             ];
         }
 
@@ -293,7 +293,7 @@ class SecureUploadService
         if (!hash_equals($expectedSignature, $signature)) {
             return [
                 'valid' => false,
-                'message' => 'Invalid signature'
+                'message' => 'Invalid signature',
             ];
         }
 
@@ -301,7 +301,7 @@ class SecureUploadService
     }
 
     /**
-     * Upload file securely
+     * Upload file securely.
      */
     public function uploadFile(UploadedFile $file, string $userId, string $tenantId, array $metadata = []): array
     {
@@ -310,7 +310,7 @@ class SecureUploadService
         if (!$typeValidation['valid']) {
             return [
                 'success' => false,
-                'message' => $typeValidation['message']
+                'message' => $typeValidation['message'],
             ];
         }
 
@@ -319,7 +319,7 @@ class SecureUploadService
         if (!$sizeValidation['valid']) {
             return [
                 'success' => false,
-                'message' => $sizeValidation['message']
+                'message' => $sizeValidation['message'],
             ];
         }
 
@@ -328,7 +328,7 @@ class SecureUploadService
         if (!$nameValidation['valid']) {
             return [
                 'success' => false,
-                'message' => $nameValidation['message']
+                'message' => $nameValidation['message'],
             ];
         }
 
@@ -337,7 +337,7 @@ class SecureUploadService
         if (!$contentScan['clean']) {
             return [
                 'success' => false,
-                'message' => $contentScan['message']
+                'message' => $contentScan['message'],
             ];
         }
 
@@ -359,13 +359,13 @@ class SecureUploadService
             'file_size' => $file->getSize(),
             'file_type' => $file->getClientOriginalExtension(),
             'mime_type' => $file->getMimeType(),
-            'file_hash' => hash_file('sha256', $file->getPathname())
+            'file_hash' => hash_file('sha256', $file->getPathname()),
         ];
-        
+
         if (isset($metadata['project_id'])) {
             $fileData['project_id'] = $metadata['project_id'];
         }
-        
+
         $fileRecord = \App\Models\Document::create($fileData);
 
         // Create signed URL
@@ -376,12 +376,12 @@ class SecureUploadService
             'file_id' => $fileRecord->id,
             'file_path' => $storedPath,
             'signed_url' => $signedUrl,
-            'metadata' => $this->getFileMetadata($file)
+            'metadata' => $this->getFileMetadata($file),
         ];
     }
 
     /**
-     * Get file metadata
+     * Get file metadata.
      */
     public function getFileMetadata(UploadedFile $file): array
     {
@@ -390,12 +390,12 @@ class SecureUploadService
             'mime_type' => $file->getMimeType(),
             'extension' => $file->getClientOriginalExtension(),
             'hash' => hash_file('sha256', $file->getPathname()),
-            'real_mime_type' => $this->getRealMimeType($file)
+            'real_mime_type' => $this->getRealMimeType($file),
         ];
     }
 
     /**
-     * Create file version
+     * Create file version.
      */
     public function createFileVersion(string $fileId, UploadedFile $newFile, string $userId, string $tenantId, string $versionNote = ''): array
     {
@@ -406,7 +406,7 @@ class SecureUploadService
         if (!$originalFile) {
             return [
                 'success' => false,
-                'message' => 'Original file not found'
+                'message' => 'Original file not found',
             ];
         }
 
@@ -415,7 +415,7 @@ class SecureUploadService
         if (!$validation['valid']) {
             return [
                 'success' => false,
-                'message' => $validation['message']
+                'message' => $validation['message'],
             ];
         }
 
@@ -439,18 +439,18 @@ class SecureUploadService
             'file_type' => $newFile->getClientOriginalExtension(),
             'mime_type' => $newFile->getMimeType(),
             'file_hash' => hash_file('sha256', $newFile->getPathname()),
-            'parent_document_id' => $fileId
+            'parent_document_id' => $fileId,
         ]);
 
         return [
             'success' => true,
             'version_id' => $versionRecord->id,
-            'version' => $versionRecord->version
+            'version' => $versionRecord->version,
         ];
     }
 
     /**
-     * Get file versions
+     * Get file versions.
      */
     public function getFileVersions(string $fileId, string $tenantId): \Illuminate\Support\Collection
     {
@@ -462,7 +462,7 @@ class SecureUploadService
     }
 
     /**
-     * Delete file
+     * Delete file.
      */
     public function deleteFile(string $fileId, string $userId, string $tenantId): array
     {
@@ -473,7 +473,7 @@ class SecureUploadService
         if (!$file) {
             return [
                 'success' => false,
-                'message' => 'File not found'
+                'message' => 'File not found',
             ];
         }
 
@@ -481,7 +481,7 @@ class SecureUploadService
         if ($file->uploaded_by !== $userId) {
             return [
                 'success' => false,
-                'message' => 'Access denied'
+                'message' => 'Access denied',
             ];
         }
 
@@ -495,7 +495,7 @@ class SecureUploadService
     }
 
     /**
-     * Validate file access
+     * Validate file access.
      */
     public function validateFileAccess(string $fileId, string $userId, string $tenantId): array
     {
@@ -506,7 +506,7 @@ class SecureUploadService
         if (!$file) {
             return [
                 'allowed' => false,
-                'message' => 'File not found'
+                'message' => 'File not found',
             ];
         }
 
@@ -519,7 +519,7 @@ class SecureUploadService
             if (!$project) {
                 return [
                     'allowed' => false,
-                    'message' => 'Project not found'
+                    'message' => 'Project not found',
                 ];
             }
         }
@@ -530,7 +530,7 @@ class SecureUploadService
             // For now, we'll deny access to non-uploaders
             return [
                 'allowed' => false,
-                'message' => 'Access denied'
+                'message' => 'Access denied',
             ];
         }
 
@@ -538,30 +538,30 @@ class SecureUploadService
     }
 
     /**
-     * Scan for viruses (placeholder implementation)
+     * Scan for viruses (placeholder implementation).
      */
     public function scanForViruses(UploadedFile $file): array
     {
         // In a real implementation, you would integrate with a virus scanning service
         // For now, we'll do basic content scanning
         $contentScan = $this->scanFileContent($file);
-        
+
         return [
             'clean' => $contentScan['clean'],
             'scan_result' => $contentScan['clean'] ? 'clean' : 'threat_detected',
-            'message' => $contentScan['clean'] ? 'File is clean' : $contentScan['message']
+            'message' => $contentScan['clean'] ? 'File is clean' : $contentScan['message'],
         ];
     }
 
     /**
-     * Strip metadata from file
+     * Strip metadata from file.
      */
     public function stripMetadata(UploadedFile $file): UploadedFile
     {
         $tempPath = tempnam(sys_get_temp_dir(), 'stripped_');
-        
-        // For images, we could 
-        
+
+        // For images, we could
+
         return new UploadedFile(
             $tempPath,
             $file->getClientOriginalName(),

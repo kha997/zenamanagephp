@@ -1,7 +1,10 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Web;
 
+use App\Http\Middleware\VerifyCsrfToken;
 use App\Models\Project;
 use App\Models\Role;
 use App\Models\Task;
@@ -9,18 +12,9 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Models\WorkInstance;
 use App\Models\WorkTemplate;
-use App\Models\WorkTemplateChecklistItem;
-use App\Models\WorkTemplatePhase;
-use App\Models\WorkTemplateRequiredDocument;
-use App\Models\WorkTemplateTask;
-use App\Models\WorkTemplateTaskAssignment;
-use App\Models\WorkTemplateTrigger;
-use App\Models\WorkTemplateVersion;
-use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RoleSeeder;
 use Database\Seeders\ZenaPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use App\Http\Middleware\VerifyCsrfToken;
 use Tests\Feature\Api\Concerns\InteractsWithWorkTemplateV2;
 use Tests\TestCase;
 

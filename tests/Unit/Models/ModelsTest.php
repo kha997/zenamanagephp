@@ -2,21 +2,21 @@
 
 namespace Tests\Unit\Models;
 
-use Tests\TestCase;
-use App\Models\User;
-use App\Models\Project;
-use App\Models\Task;
-use App\Models\Document;
-use App\Models\Team;
-use App\Models\Notification;
 use App\Models\ChangeRequest;
-use App\Models\Rfi;
-use App\Models\QcPlan;
+use App\Models\Document;
+use App\Models\Notification;
+use App\Models\Project;
 use App\Models\QcInspection;
-use App\Models\Tenant;
+use App\Models\QcPlan;
+use App\Models\Rfi;
 use App\Models\Role;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Models\Task;
+use App\Models\Team;
+use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class ModelsTest extends TestCase
 {
@@ -27,7 +27,7 @@ class ModelsTest extends TestCase
     {
         $user = new User();
         $fillable = $user->getFillable();
-        
+
         $this->assertContains('name', $fillable);
         $this->assertContains('email', $fillable);
         $this->assertContains('password', $fillable);
@@ -39,7 +39,7 @@ class ModelsTest extends TestCase
     {
         $user = new User();
         $hidden = $user->getHidden();
-        
+
         $this->assertContains('password', $hidden);
         $this->assertContains('remember_token', $hidden);
     }
@@ -49,7 +49,7 @@ class ModelsTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $user = User::factory()->create(['tenant_id' => $tenant->id]);
-        
+
         $this->assertInstanceOf(Tenant::class, $user->tenant);
         $this->assertEquals($tenant->id, $user->tenant->id);
     }
@@ -59,9 +59,9 @@ class ModelsTest extends TestCase
     {
         $user = User::factory()->create();
         $role = Role::factory()->create();
-        
+
         $user->roles()->attach($role);
-        
+
         $this->assertInstanceOf(Collection::class, $user->roles);
         $this->assertTrue($user->roles->contains($role));
     }
@@ -71,7 +71,7 @@ class ModelsTest extends TestCase
     {
         $user = User::factory()->create();
         $project = Project::factory()->create(['manager_id' => $user->id]);
-        
+
         $this->assertInstanceOf(Collection::class, $user->projects);
         $this->assertTrue($user->projects->contains($project));
     }
@@ -81,7 +81,7 @@ class ModelsTest extends TestCase
     {
         $project = new Project();
         $fillable = $project->getFillable();
-        
+
         $this->assertContains('name', $fillable);
         $this->assertContains('description', $fillable);
         $this->assertContains('status', $fillable);
@@ -95,7 +95,7 @@ class ModelsTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $project = Project::factory()->create(['tenant_id' => $tenant->id]);
-        
+
         $this->assertInstanceOf(Tenant::class, $project->tenant);
         $this->assertEquals($tenant->id, $project->tenant->id);
     }
@@ -105,7 +105,7 @@ class ModelsTest extends TestCase
     {
         $user = User::factory()->create();
         $project = Project::factory()->create(['manager_id' => $user->id]);
-        
+
         $this->assertInstanceOf(User::class, $project->manager);
         $this->assertEquals($user->id, $project->manager->id);
     }
@@ -115,7 +115,7 @@ class ModelsTest extends TestCase
     {
         $project = Project::factory()->create();
         $task = Task::factory()->create(['project_id' => $project->id]);
-        
+
         $this->assertInstanceOf(Collection::class, $project->tasks);
         $this->assertTrue($project->tasks->contains($task));
     }
@@ -131,10 +131,10 @@ class ModelsTest extends TestCase
             'created_by' => $teamLead->id,
             'updated_by' => $teamLead->id,
         ]);
-        
+
         $project->teams()->attach($team);
         $project->load('teams');
-        
+
         $this->assertInstanceOf(Collection::class, $project->teams);
         $this->assertTrue($project->teams->contains('id', $team->id));
     }
@@ -144,7 +144,7 @@ class ModelsTest extends TestCase
     {
         $task = new Task();
         $fillable = $task->getFillable();
-        
+
         $this->assertContains('name', $fillable);
         $this->assertContains('description', $fillable);
         $this->assertContains('status', $fillable);
@@ -158,7 +158,7 @@ class ModelsTest extends TestCase
     {
         $project = Project::factory()->create();
         $task = Task::factory()->create(['project_id' => $project->id]);
-        
+
         $this->assertInstanceOf(Project::class, $task->project);
         $this->assertEquals($project->id, $task->project->id);
     }
@@ -168,7 +168,7 @@ class ModelsTest extends TestCase
     {
         $user = User::factory()->create();
         $task = Task::factory()->create(['assignee_id' => $user->id]);
-        
+
         $this->assertInstanceOf(User::class, $task->assignee);
         $this->assertEquals($user->id, $task->assignee->id);
     }
@@ -178,7 +178,7 @@ class ModelsTest extends TestCase
     {
         $user = User::factory()->create();
         $task = Task::factory()->create(['created_by' => $user->id]);
-        
+
         $this->assertInstanceOf(User::class, $task->creator);
         $this->assertEquals($user->id, $task->creator->id);
     }
@@ -188,9 +188,9 @@ class ModelsTest extends TestCase
     {
         $task1 = Task::factory()->create();
         $task2 = Task::factory()->create();
-        
+
         $task1->dependencies()->attach($task2);
-        
+
         $dependencies = $task1->dependencies()->get();
 
         $this->assertInstanceOf(Collection::class, $dependencies);
@@ -202,7 +202,7 @@ class ModelsTest extends TestCase
     {
         $document = new Document();
         $fillable = $document->getFillable();
-        
+
         $this->assertContains('name', $fillable);
         $this->assertContains('description', $fillable);
         $this->assertContains('file_path', $fillable);
@@ -217,7 +217,7 @@ class ModelsTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $document = Document::factory()->create(['tenant_id' => $tenant->id]);
-        
+
         $this->assertInstanceOf(Tenant::class, $document->tenant);
         $this->assertEquals($tenant->id, $document->tenant->id);
     }
@@ -227,7 +227,7 @@ class ModelsTest extends TestCase
     {
         $project = Project::factory()->create();
         $document = Document::factory()->create(['project_id' => $project->id]);
-        
+
         $this->assertInstanceOf(Project::class, $document->project);
         $this->assertEquals($project->id, $document->project->id);
     }
@@ -237,7 +237,7 @@ class ModelsTest extends TestCase
     {
         $user = User::factory()->create();
         $document = Document::factory()->create(['created_by' => $user->id]);
-        
+
         $this->assertInstanceOf(User::class, $document->creator);
         $this->assertEquals($user->id, $document->creator->id);
     }
@@ -247,7 +247,7 @@ class ModelsTest extends TestCase
     {
         $team = new Team();
         $fillable = $team->getFillable();
-        
+
         $this->assertContains('name', $fillable);
         $this->assertContains('description', $fillable);
         $this->assertContains('status', $fillable);
@@ -260,7 +260,7 @@ class ModelsTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $team = Team::factory()->create(['tenant_id' => $tenant->id]);
-        
+
         $this->assertInstanceOf(Tenant::class, $team->tenant);
         $this->assertEquals($tenant->id, $team->tenant->id);
     }
@@ -270,7 +270,7 @@ class ModelsTest extends TestCase
     {
         $user = User::factory()->create();
         $team = Team::factory()->create(['leader_id' => $user->id]);
-        
+
         $this->assertInstanceOf(User::class, $team->leader);
         $this->assertEquals($user->id, $team->leader->id);
     }
@@ -280,9 +280,9 @@ class ModelsTest extends TestCase
     {
         $team = Team::factory()->create();
         $user = User::factory()->create();
-        
+
         $team->members()->attach($user);
-        
+
         $this->assertInstanceOf(Collection::class, $team->members);
         $this->assertTrue($team->members->contains($user));
     }
@@ -292,9 +292,9 @@ class ModelsTest extends TestCase
     {
         $team = Team::factory()->create();
         $project = Project::factory()->create();
-        
+
         $team->projects()->attach($project);
-        
+
         $this->assertInstanceOf(Collection::class, $team->projects);
         $this->assertTrue($team->projects->contains($project));
     }
@@ -304,7 +304,7 @@ class ModelsTest extends TestCase
     {
         $notification = new Notification();
         $fillable = $notification->getFillable();
-        
+
         $this->assertContains('title', $fillable);
         $this->assertContains('body', $fillable);
         $this->assertContains('type', $fillable);
@@ -318,7 +318,7 @@ class ModelsTest extends TestCase
     {
         $user = User::factory()->create();
         $notification = Notification::factory()->create(['user_id' => $user->id]);
-        
+
         $this->assertInstanceOf(User::class, $notification->user);
         $this->assertEquals($user->id, $notification->user->id);
     }
@@ -328,7 +328,7 @@ class ModelsTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $notification = Notification::factory()->create(['tenant_id' => $tenant->id]);
-        
+
         $this->assertInstanceOf(Tenant::class, $notification->tenant);
         $this->assertEquals($tenant->id, $notification->tenant->id);
     }
@@ -338,7 +338,7 @@ class ModelsTest extends TestCase
     {
         $changeRequest = new ChangeRequest();
         $fillable = $changeRequest->getFillable();
-        
+
         $this->assertContains('title', $fillable);
         $this->assertContains('description', $fillable);
         $this->assertContains('status', $fillable);
@@ -353,7 +353,7 @@ class ModelsTest extends TestCase
     {
         $project = Project::factory()->create();
         $changeRequest = ChangeRequest::factory()->create(['project_id' => $project->id]);
-        
+
         $this->assertInstanceOf(Project::class, $changeRequest->project);
         $this->assertEquals($project->id, $changeRequest->project->id);
     }
@@ -363,7 +363,7 @@ class ModelsTest extends TestCase
     {
         $user = User::factory()->create();
         $changeRequest = ChangeRequest::factory()->create(['requested_by' => $user->id]);
-        
+
         $this->assertInstanceOf(User::class, $changeRequest->creator);
         $this->assertEquals($user->id, $changeRequest->creator->id);
     }
@@ -373,7 +373,7 @@ class ModelsTest extends TestCase
     {
         $rfi = new Rfi();
         $fillable = $rfi->getFillable();
-        
+
         $this->assertContains('subject', $fillable);
         $this->assertContains('question', $fillable);
         $this->assertContains('status', $fillable);
@@ -388,7 +388,7 @@ class ModelsTest extends TestCase
     {
         $project = Project::factory()->create();
         $rfi = Rfi::factory()->create(['project_id' => $project->id]);
-        
+
         $this->assertInstanceOf(Project::class, $rfi->project);
         $this->assertEquals($project->id, $rfi->project->id);
     }
@@ -398,7 +398,7 @@ class ModelsTest extends TestCase
     {
         $user = User::factory()->create();
         $rfi = Rfi::factory()->create(['created_by' => $user->id]);
-        
+
         $this->assertInstanceOf(User::class, $rfi->creator);
         $this->assertEquals($user->id, $rfi->creator->id);
     }
@@ -408,7 +408,7 @@ class ModelsTest extends TestCase
     {
         $qcPlan = new QcPlan();
         $fillable = $qcPlan->getFillable();
-        
+
         $this->assertContains('title', $fillable);
         $this->assertContains('description', $fillable);
         $this->assertContains('status', $fillable);
@@ -423,7 +423,7 @@ class ModelsTest extends TestCase
     {
         $project = Project::factory()->create();
         $qcPlan = QcPlan::factory()->create(['project_id' => $project->id]);
-        
+
         $this->assertInstanceOf(Project::class, $qcPlan->project);
         $this->assertEquals($project->id, $qcPlan->project->id);
     }
@@ -433,7 +433,7 @@ class ModelsTest extends TestCase
     {
         $user = User::factory()->create();
         $qcPlan = QcPlan::factory()->create(['created_by' => $user->id]);
-        
+
         $this->assertInstanceOf(User::class, $qcPlan->creator);
         $this->assertEquals($user->id, $qcPlan->creator->id);
     }
@@ -443,7 +443,7 @@ class ModelsTest extends TestCase
     {
         $qcInspection = new QcInspection();
         $fillable = $qcInspection->getFillable();
-        
+
         $this->assertContains('title', $fillable);
         $this->assertContains('description', $fillable);
         $this->assertContains('status', $fillable);
@@ -459,7 +459,7 @@ class ModelsTest extends TestCase
         $project = Project::factory()->create();
         $qcPlan = QcPlan::factory()->create(['project_id' => $project->id]);
         $qcInspection = QcInspection::factory()->create(['qc_plan_id' => $qcPlan->id]);
-        
+
         $this->assertInstanceOf(Project::class, $qcInspection->project);
         $this->assertEquals($project->id, $qcInspection->project->id);
     }
@@ -469,7 +469,7 @@ class ModelsTest extends TestCase
     {
         $user = User::factory()->create();
         $qcInspection = QcInspection::factory()->create(['inspector_id' => $user->id]);
-        
+
         $this->assertInstanceOf(User::class, $qcInspection->inspector);
         $this->assertEquals($user->id, $qcInspection->inspector->id);
     }
@@ -487,9 +487,9 @@ class ModelsTest extends TestCase
             ChangeRequest::class,
             Rfi::class,
             QcPlan::class,
-            QcInspection::class
+            QcInspection::class,
         ];
-        
+
         foreach ($models as $modelClass) {
             $model = new $modelClass();
             $this->assertTrue($model->timestamps, $modelClass . ' should have timestamps enabled');
@@ -509,9 +509,9 @@ class ModelsTest extends TestCase
             ChangeRequest::class,
             Rfi::class,
             QcPlan::class,
-            QcInspection::class
+            QcInspection::class,
         ];
-        
+
         foreach ($models as $modelClass) {
             $model = new $modelClass();
             $tableName = $model->getTable();

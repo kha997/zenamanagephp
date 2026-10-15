@@ -4,7 +4,6 @@ namespace App\Repositories;
 
 use App\Models\Document;
 use App\Models\Project;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Log;
@@ -130,7 +129,7 @@ class DocumentRepository
             'document_id' => $document->id,
             'name' => $document->name,
             'project_id' => $document->project_id,
-            'tenant_id' => $document->tenant_id
+            'tenant_id' => $document->tenant_id,
         ]);
 
         return $document->load(['project', 'creator', 'tenant']);
@@ -152,7 +151,7 @@ class DocumentRepository
         Log::info('Document updated', [
             'document_id' => $document->id,
             'name' => $document->name,
-            'project_id' => $document->project_id
+            'project_id' => $document->project_id,
         ]);
 
         return $document->load(['project', 'creator', 'tenant']);
@@ -179,7 +178,7 @@ class DocumentRepository
         Log::info('Document deleted', [
             'document_id' => $id,
             'name' => $document->name,
-            'project_id' => $document->project_id
+            'project_id' => $document->project_id,
         ]);
 
         return true;
@@ -201,7 +200,7 @@ class DocumentRepository
         Log::info('Document soft deleted', [
             'document_id' => $id,
             'name' => $document->name,
-            'project_id' => $document->project_id
+            'project_id' => $document->project_id,
         ]);
 
         return true;
@@ -223,7 +222,7 @@ class DocumentRepository
         Log::info('Document restored', [
             'document_id' => $id,
             'name' => $document->name,
-            'project_id' => $document->project_id
+            'project_id' => $document->project_id,
         ]);
 
         return true;
@@ -295,12 +294,12 @@ class DocumentRepository
 
         $document->update([
             'status' => $status,
-            'status_updated_at' => now()
+            'status_updated_at' => now(),
         ]);
 
         Log::info('Document status updated', [
             'document_id' => $id,
-            'status' => $status
+            'status' => $status,
         ]);
 
         return true;
@@ -320,12 +319,12 @@ class DocumentRepository
         $document->update([
             'status' => 'approved',
             'approved_by' => $approvedBy,
-            'approved_at' => now()
+            'approved_at' => now(),
         ]);
 
         Log::info('Document approved', [
             'document_id' => $id,
-            'approved_by' => $approvedBy
+            'approved_by' => $approvedBy,
         ]);
 
         return true;
@@ -346,13 +345,13 @@ class DocumentRepository
             'status' => 'rejected',
             'rejected_by' => $rejectedBy,
             'rejected_at' => now(),
-            'rejection_reason' => $reason
+            'rejection_reason' => $reason,
         ]);
 
         Log::info('Document rejected', [
             'document_id' => $id,
             'rejected_by' => $rejectedBy,
-            'reason' => $reason
+            'reason' => $reason,
         ]);
 
         return true;
@@ -377,7 +376,7 @@ class DocumentRepository
             'rejected_documents' => $query->where('status', 'rejected')->count(),
             'total_size' => $query->sum('file_size'),
             'average_size' => $query->avg('file_size'),
-            'recent_documents' => $query->where('created_at', '>=', now()->subDays(7))->count()
+            'recent_documents' => $query->where('created_at', '>=', now()->subDays(7))->count(),
         ];
     }
 
@@ -413,7 +412,7 @@ class DocumentRepository
 
         Log::info('Documents bulk updated', [
             'count' => $updated,
-            'ids' => $ids
+            'ids' => $ids,
         ]);
 
         return $updated;
@@ -437,7 +436,7 @@ class DocumentRepository
 
         Log::info('Documents bulk deleted', [
             'count' => $deleted,
-            'ids' => $ids
+            'ids' => $ids,
         ]);
 
         return $deleted;
@@ -483,7 +482,7 @@ class DocumentRepository
             'project_id' => $originalDocument->project_id,
             'tenant_id' => $originalDocument->tenant_id,
             'version' => $nextVersion,
-            'status' => 'draft'
+            'status' => 'draft',
         ]);
 
         return $this->create($data);
@@ -553,7 +552,7 @@ class DocumentRepository
 
         Log::info('Document downloaded', [
             'document_id' => $id,
-            'name' => $document->name
+            'name' => $document->name,
         ]);
 
         return $document->file_path;
@@ -581,7 +580,7 @@ class DocumentRepository
             'created_at' => $document->created_at,
             'updated_at' => $document->updated_at,
             'download_count' => $document->download_count,
-            'last_downloaded_at' => $document->last_downloaded_at
+            'last_downloaded_at' => $document->last_downloaded_at,
         ];
     }
 }

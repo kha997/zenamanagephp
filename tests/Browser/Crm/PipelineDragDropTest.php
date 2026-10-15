@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Browser\Crm;
 
@@ -19,7 +21,9 @@ class PipelineDragDropTest extends DuskTestCase
     use DatabaseMigrations;
 
     protected Tenant $tenant;
+
     protected User $user;
+
     protected Account $account;
 
     protected function setUp(): void
@@ -232,8 +236,8 @@ class PipelineDragDropTest extends DuskTestCase
                 ->waitFor('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn', 10);
 
             $browser->script([
-                "window.__pendingCount = 0;"
-                . "window.fetch = function() { window.__pendingCount++; return new Promise(function(){}); };",
+                'window.__pendingCount = 0;'
+                . 'window.fetch = function() { window.__pendingCount++; return new Promise(function(){}); };',
             ]);
 
             $browser->click('[data-opportunity-id="' . $opportunity->id . '"] .crm-stage-transition-btn')
@@ -477,7 +481,7 @@ class PipelineDragDropTest extends DuskTestCase
 
             $browser->script([
                 "var handle = document.querySelector('[data-opportunity-id=\"{$opportunity->id}\"] .crm-drag-handle');"
-                . "var dt = new DataTransfer();"
+                . 'var dt = new DataTransfer();'
                 . "handle.dispatchEvent(new DragEvent('dragstart', {bubbles: true, cancelable: true, dataTransfer: dt}));"
                 . "var target = document.querySelector('[data-board-group=\"consulting_survey\"]');"
                 . "target.dispatchEvent(new DragEvent('drop', {bubbles: true, cancelable: true, dataTransfer: dt}));",
@@ -501,7 +505,7 @@ class PipelineDragDropTest extends DuskTestCase
 
             $browser->script([
                 "var handle = document.querySelector('[data-opportunity-id=\"{$opportunity->id}\"] .crm-drag-handle');"
-                . "var dt = new DataTransfer();"
+                . 'var dt = new DataTransfer();'
                 . "handle.dispatchEvent(new DragEvent('dragstart', {bubbles: true, cancelable: true, dataTransfer: dt}));"
                 . "var target = document.querySelector('[data-board-group=\"lost_nurture\"]');"
                 . "target.dispatchEvent(new DragEvent('drop', {bubbles: true, cancelable: true, dataTransfer: dt}));",
@@ -530,7 +534,7 @@ class PipelineDragDropTest extends DuskTestCase
 
             $browser->script([
                 "var handle = document.querySelector('[data-opportunity-id=\"{$opportunity->id}\"] .crm-drag-handle');"
-                . "var dt = new DataTransfer();"
+                . 'var dt = new DataTransfer();'
                 . "handle.dispatchEvent(new DragEvent('dragstart', {bubbles: true, cancelable: true, dataTransfer: dt}));"
                 . "var target = document.querySelector('[data-board-group=\"new\"]');"
                 . "target.dispatchEvent(new DragEvent('drop', {bubbles: true, cancelable: true, dataTransfer: dt}));",
@@ -557,7 +561,7 @@ class PipelineDragDropTest extends DuskTestCase
 
             $browser->script([
                 "var handle = document.querySelector('[data-opportunity-id=\"{$opportunity->id}\"] .crm-drag-handle');"
-                . "var dt = new DataTransfer();"
+                . 'var dt = new DataTransfer();'
                 . "handle.dispatchEvent(new DragEvent('dragstart', {bubbles: true, cancelable: true, dataTransfer: dt}));"
                 . "var target = document.querySelector('[data-board-group=\"consulting_survey\"]');"
                 . "target.dispatchEvent(new DragEvent('drop', {bubbles: true, cancelable: true, dataTransfer: dt}));",

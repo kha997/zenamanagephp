@@ -1,17 +1,19 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories\Src\ChangeRequest\Models;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Src\ChangeRequest\Models\CrLink;
 use Src\ChangeRequest\Models\ChangeRequest;
+use Src\ChangeRequest\Models\CrLink;
+use Src\CoreProject\Models\Component;
 use Src\CoreProject\Models\Task;
 use Src\DocumentManagement\Models\Document;
-use Src\CoreProject\Models\Component;
 
 /**
- * Factory cho CrLink model
- * 
+ * Factory cho CrLink model.
+ *
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Src\ChangeRequest\Models\CrLink>
  */
 class CrLinkFactory extends Factory
@@ -22,7 +24,7 @@ class CrLinkFactory extends Factory
     {
         $linkableTypes = [Task::class, Document::class, Component::class];
         $linkableType = $this->faker->randomElement($linkableTypes);
-        
+
         return [
             'change_request_id' => ChangeRequest::factory(),
             'linkable_type' => $linkableType,
@@ -33,7 +35,7 @@ class CrLinkFactory extends Factory
     }
 
     /**
-     * State: Linked to task
+     * State: Linked to task.
      */
     public function linkedToTask(): static
     {
@@ -44,7 +46,7 @@ class CrLinkFactory extends Factory
     }
 
     /**
-     * State: Impact link
+     * State: Impact link.
      */
     public function impact(): static
     {

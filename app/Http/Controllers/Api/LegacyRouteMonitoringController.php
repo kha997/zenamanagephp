@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
@@ -78,22 +80,22 @@ class LegacyRouteMonitoringController extends Controller
      *         @OA\JsonContent(ref="#/components/schemas/ErrorEnvelope")
      *     )
      * )
-     * 
+     *
      * Get legacy route usage statistics
      */
     public function getUsageStats(): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user || !$user->hasRole('admin')) {
                 return response()->json([
                     'error' => [
                         'id' => 'req_' . substr(md5(uniqid()), 0, 8),
                         'code' => 'E403.AUTHORIZATION',
                         'message' => 'Admin role required to access legacy route monitoring',
-                        'details' => []
-                    ]
+                        'details' => [],
+                    ],
                 ], 403);
             }
 
@@ -102,9 +104,8 @@ class LegacyRouteMonitoringController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $stats,
-                'message' => 'Legacy route usage statistics retrieved successfully'
+                'message' => 'Legacy route usage statistics retrieved successfully',
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'error' => [
@@ -112,9 +113,9 @@ class LegacyRouteMonitoringController extends Controller
                     'code' => 'E500.SERVER_ERROR',
                     'message' => 'Failed to retrieve legacy route usage statistics',
                     'details' => [
-                        'exception' => $e->getMessage()
-                    ]
-                ]
+                        'exception' => $e->getMessage(),
+                    ],
+                ],
             ], 500);
         }
     }
@@ -165,22 +166,22 @@ class LegacyRouteMonitoringController extends Controller
      *         @OA\JsonContent(ref="#/components/schemas/ErrorEnvelope")
      *     )
      * )
-     * 
+     *
      * Get migration phase statistics
      */
     public function getMigrationPhaseStats(): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user || !$user->hasRole('admin')) {
                 return response()->json([
                     'error' => [
                         'id' => 'req_' . substr(md5(uniqid()), 0, 8),
                         'code' => 'E403.AUTHORIZATION',
                         'message' => 'Admin role required to access migration phase statistics',
-                        'details' => []
-                    ]
+                        'details' => [],
+                    ],
                 ], 403);
             }
 
@@ -189,9 +190,8 @@ class LegacyRouteMonitoringController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $stats,
-                'message' => 'Migration phase statistics retrieved successfully'
+                'message' => 'Migration phase statistics retrieved successfully',
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'error' => [
@@ -199,9 +199,9 @@ class LegacyRouteMonitoringController extends Controller
                     'code' => 'E500.SERVER_ERROR',
                     'message' => 'Failed to retrieve migration phase statistics',
                     'details' => [
-                        'exception' => $e->getMessage()
-                    ]
-                ]
+                        'exception' => $e->getMessage(),
+                    ],
+                ],
             ], 500);
         }
     }
@@ -251,22 +251,22 @@ class LegacyRouteMonitoringController extends Controller
      *         @OA\JsonContent(ref="#/components/schemas/ErrorEnvelope")
      *     )
      * )
-     * 
+     *
      * Generate comprehensive usage report
      */
     public function generateReport(): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user || !$user->hasRole('admin')) {
                 return response()->json([
                     'error' => [
                         'id' => 'req_' . substr(md5(uniqid()), 0, 8),
                         'code' => 'E403.AUTHORIZATION',
                         'message' => 'Admin role required to generate legacy route reports',
-                        'details' => []
-                    ]
+                        'details' => [],
+                    ],
                 ], 403);
             }
 
@@ -275,9 +275,8 @@ class LegacyRouteMonitoringController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $report,
-                'message' => 'Legacy route usage report generated successfully'
+                'message' => 'Legacy route usage report generated successfully',
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'error' => [
@@ -285,9 +284,9 @@ class LegacyRouteMonitoringController extends Controller
                     'code' => 'E500.SERVER_ERROR',
                     'message' => 'Failed to generate legacy route usage report',
                     'details' => [
-                        'exception' => $e->getMessage()
-                    ]
-                ]
+                        'exception' => $e->getMessage(),
+                    ],
+                ],
             ], 500);
         }
     }
@@ -328,7 +327,7 @@ class LegacyRouteMonitoringController extends Controller
      *         @OA\JsonContent(ref="#/components/schemas/ErrorEnvelope")
      *     )
      * )
-     * 
+     *
      * Record legacy route usage
      */
     public function recordUsage(Request $request): JsonResponse
@@ -337,7 +336,7 @@ class LegacyRouteMonitoringController extends Controller
             $request->validate([
                 'legacy_path' => 'required|string',
                 'new_path' => 'required|string',
-                'metadata' => 'sometimes|array'
+                'metadata' => 'sometimes|array',
             ]);
 
             $this->monitoringService->recordUsage(
@@ -348,9 +347,8 @@ class LegacyRouteMonitoringController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Legacy route usage recorded successfully'
+                'message' => 'Legacy route usage recorded successfully',
             ]);
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'error' => [
@@ -358,9 +356,9 @@ class LegacyRouteMonitoringController extends Controller
                     'code' => 'E422.VALIDATION',
                     'message' => 'Validation failed',
                     'details' => [
-                        'validation' => $e->errors()
-                    ]
-                ]
+                        'validation' => $e->errors(),
+                    ],
+                ],
             ], 422);
         } catch (\Exception $e) {
             return response()->json([
@@ -369,9 +367,9 @@ class LegacyRouteMonitoringController extends Controller
                     'code' => 'E500.SERVER_ERROR',
                     'message' => 'Failed to record legacy route usage',
                     'details' => [
-                        'exception' => $e->getMessage()
-                    ]
-                ]
+                        'exception' => $e->getMessage(),
+                    ],
+                ],
             ], 500);
         }
     }
@@ -411,29 +409,29 @@ class LegacyRouteMonitoringController extends Controller
      *         @OA\JsonContent(ref="#/components/schemas/ErrorEnvelope")
      *     )
      * )
-     * 
+     *
      * Clean up old monitoring data
      */
     public function cleanup(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user || !$user->hasRole('admin')) {
                 return response()->json([
                     'error' => [
                         'id' => 'req_' . substr(md5(uniqid()), 0, 8),
                         'code' => 'E403.AUTHORIZATION',
                         'message' => 'Admin role required to clean up monitoring data',
-                        'details' => []
-                    ]
+                        'details' => [],
+                    ],
                 ], 403);
             }
 
             $validator = Validator::make($request->all(), [
-                'days_to_keep' => 'nullable|integer|min:0'
+                'days_to_keep' => 'nullable|integer|min:0',
             ]);
-    
+
             if ($validator->fails()) {
                 return response()->json([
                     'error' => [
@@ -441,9 +439,9 @@ class LegacyRouteMonitoringController extends Controller
                         'code' => 'E422.VALIDATION',
                         'message' => 'Validation failed',
                         'details' => [
-                            'validation' => $validator->errors()->toArray()
-                        ]
-                    ]
+                            'validation' => $validator->errors()->toArray(),
+                        ],
+                    ],
                 ], 422);
             }
 
@@ -454,11 +452,10 @@ class LegacyRouteMonitoringController extends Controller
                 'success' => true,
                 'data' => [
                     'cleared_entries' => $clearedEntries,
-                    'days_kept' => $daysToKeep
+                    'days_kept' => $daysToKeep,
                 ],
-                'message' => 'Legacy route monitoring data cleaned successfully'
+                'message' => 'Legacy route monitoring data cleaned successfully',
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'error' => [
@@ -466,9 +463,9 @@ class LegacyRouteMonitoringController extends Controller
                     'code' => 'E500.SERVER_ERROR',
                     'message' => 'Failed to clean up monitoring data',
                     'details' => [
-                        'exception' => $e->getMessage()
-                    ]
-                ]
+                        'exception' => $e->getMessage(),
+                    ],
+                ],
             ], 500);
         }
     }

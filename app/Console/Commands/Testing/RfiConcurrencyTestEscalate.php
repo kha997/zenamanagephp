@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Console\Commands\Testing;
 
@@ -25,9 +27,11 @@ class RfiConcurrencyTestEscalate extends Command
         try {
             $escalation = $service->escalate($rfi, $this->argument('target_id'), $this->argument('escalator_id'), $this->argument('reason'));
             $this->line('OK ' . $escalation->id);
+
             return self::SUCCESS;
         } catch (RfiEscalationConflictException $e) {
             $this->line('CONFLICT ' . $e->getMessage());
+
             return self::FAILURE;
         }
     }

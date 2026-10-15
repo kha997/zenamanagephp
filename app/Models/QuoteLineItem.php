@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -24,8 +26,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class QuoteLineItem extends Model
 {
     use HasUlids;
+
     /** @use HasFactory<\Database\Factories\QuoteLineItemFactory> */
     use HasFactory;
+
     use TenantScope;
 
     protected $table = 'quote_line_items';

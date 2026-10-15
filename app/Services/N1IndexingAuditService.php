@@ -2,15 +2,15 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class N1IndexingAuditService
 {
     /**
-     * Perform comprehensive N+1 and indexing audit
+     * Perform comprehensive N+1 and indexing audit.
      */
     public static function auditN1AndIndexing(): array
     {
@@ -27,12 +27,12 @@ class N1IndexingAuditService
     }
 
     /**
-     * Analyze N+1 query patterns
+     * Analyze N+1 query patterns.
      */
     protected static function analyzeN1Queries(): array
     {
         $analysis = [];
-        
+
         // Common N+1 patterns to check
         $patterns = [
             'projects_with_tasks' => [
@@ -75,13 +75,13 @@ class N1IndexingAuditService
     }
 
     /**
-     * Analyze a specific N+1 pattern
+     * Analyze a specific N+1 pattern.
      */
     protected static function analyzeN1Pattern(array $pattern): array
     {
         try {
             $modelClass = $pattern['model'];
-            
+
             if (!class_exists($modelClass)) {
                 return [
                     'status' => 'error',
@@ -89,9 +89,9 @@ class N1IndexingAuditService
                 ];
             }
 
-            $model = new $modelClass;
+            $model = new $modelClass();
             $tableName = $model->getTable();
-            
+
             // Check if relationship exists
             $relationship = $pattern['relationship'];
             if (!method_exists($model, $relationship)) {
@@ -103,10 +103,10 @@ class N1IndexingAuditService
 
             // Analyze relationship definition
             $relationshipAnalysis = self::analyzeRelationship($model, $relationship);
-            
+
             // Check for proper eager loading
             $eagerLoadingAnalysis = self::analyzeEagerLoading($modelClass, $relationship);
-            
+
             // Check for N+1 prevention measures
             $preventionAnalysis = self::analyzeN1Prevention($modelClass, $relationship);
 
@@ -129,14 +129,14 @@ class N1IndexingAuditService
     }
 
     /**
-     * Analyze relationship definition
+     * Analyze relationship definition.
      */
     protected static function analyzeRelationship(Model $model, string $relationship): array
     {
         try {
             $relation = $model->$relationship();
             $relationType = class_basename($relation);
-            
+
             $analysis = [
                 'type' => $relationType,
                 'foreign_key' => null,
@@ -177,7 +177,7 @@ class N1IndexingAuditService
     }
 
     /**
-     * Analyze eager loading patterns
+     * Analyze eager loading patterns.
      */
     protected static function analyzeEagerLoading(string $modelClass, string $relationship): array
     {
@@ -207,7 +207,7 @@ class N1IndexingAuditService
     }
 
     /**
-     * Analyze N+1 prevention measures
+     * Analyze N+1 prevention measures.
      */
     protected static function analyzeN1Prevention(string $modelClass, string $relationship): array
     {
@@ -220,7 +220,7 @@ class N1IndexingAuditService
 
         // Check for global scopes that might prevent N+1
         try {
-            $model = new $modelClass;
+            $model = new $modelClass();
             if (method_exists($model, 'getGlobalScopes')) {
                 $globalScopes = $model->getGlobalScopes();
                 $analysis['global_scopes'] = !empty($globalScopes);
@@ -232,7 +232,7 @@ class N1IndexingAuditService
         // Check for query scopes
         $reflection = new \ReflectionClass($modelClass);
         $methods = $reflection->getMethods(\ReflectionMethod::IS_PUBLIC);
-        
+
         foreach ($methods as $method) {
             if (str_starts_with($method->getName(), 'scope')) {
                 $analysis['query_scopes'] = true;
@@ -244,7 +244,7 @@ class N1IndexingAuditService
     }
 
     /**
-     * Generate N+1 recommendations
+     * Generate N+1 recommendations.
      */
     protected static function generateN1Recommendations(array $relationshipAnalysis, array $eagerLoadingAnalysis, array $preventionAnalysis): array
     {
@@ -288,12 +288,12 @@ class N1IndexingAuditService
     }
 
     /**
-     * Analyze indexing patterns
+     * Analyze indexing patterns.
      */
     protected static function analyzeIndexing(): array
     {
         $analysis = [];
-        
+
         $tables = [
             'projects' => ['tenant_id', 'status', 'created_at'],
             'tasks' => ['project_id', 'status', 'assignee_id', 'created_at'],
@@ -311,7 +311,7 @@ class N1IndexingAuditService
     }
 
     /**
-     * Analyze table indexing
+     * Analyze table indexing.
      */
     protected static function analyzeTableIndexing(string $table, array $importantColumns): array
     {
@@ -328,7 +328,7 @@ class N1IndexingAuditService
 
             // Check for composite indexes
             $compositeIndexes = self::getCompositeIndexes($existingIndexes);
-            
+
             // Generate recommendations
             foreach ($importantColumns as $column) {
                 if (in_array($column, $missingIndexes)) {
@@ -375,7 +375,7 @@ class N1IndexingAuditService
     }
 
     /**
-     * Analyze query performance
+     * Analyze query performance.
      */
     protected static function analyzeQueryPerformance(): array
     {
@@ -389,7 +389,7 @@ class N1IndexingAuditService
     }
 
     /**
-     * Get slow queries from database
+     * Get slow queries from database.
      */
     protected static function getSlowQueries(): array
     {
@@ -410,7 +410,7 @@ class N1IndexingAuditService
     }
 
     /**
-     * Analyze query patterns
+     * Analyze query patterns.
      */
     protected static function analyzeQueryPatterns(): array
     {
@@ -429,15 +429,15 @@ class N1IndexingAuditService
     }
 
     /**
-     * Get performance metrics
+     * Get performance metrics.
      */
     protected static function getPerformanceMetrics(): array
     {
         try {
             $metrics = [];
-            
+
             $tables = ['projects', 'tasks', 'documents', 'users', 'project_activities', 'audit_logs'];
-            
+
             foreach ($tables as $table) {
                 $count = DB::table($table)->count();
                 $metrics[$table] = [
@@ -456,7 +456,7 @@ class N1IndexingAuditService
     }
 
     /**
-     * Generate overall recommendations
+     * Generate overall recommendations.
      */
     protected static function generateRecommendations(): array
     {
@@ -500,7 +500,7 @@ class N1IndexingAuditService
     }
 
     /**
-     * Generate optimization plan
+     * Generate optimization plan.
      */
     protected static function generateOptimizationPlan(): array
     {
@@ -536,13 +536,14 @@ class N1IndexingAuditService
     }
 
     /**
-     * Helper methods
+     * Helper methods.
      */
     protected static function getTableIndexes(string $table): array
     {
         try {
             $indexes = DB::select("SHOW INDEX FROM {$table}");
-            return array_map(function($index) {
+
+            return array_map(function ($index) {
                 return [
                     'name' => $index->Key_name,
                     'column' => $index->Column_name,
@@ -562,6 +563,7 @@ class N1IndexingAuditService
                 return true;
             }
         }
+
         return false;
     }
 
@@ -573,6 +575,7 @@ class N1IndexingAuditService
                 $composite[] = $index['name'];
             }
         }
+
         return array_unique($composite);
     }
 
@@ -583,6 +586,7 @@ class N1IndexingAuditService
                 return true;
             }
         }
+
         return false;
     }
 
@@ -594,6 +598,7 @@ class N1IndexingAuditService
                 return false;
             }
         }
+
         return true;
     }
 
@@ -601,25 +606,44 @@ class N1IndexingAuditService
     {
         $highPriority = ['tenant_id', 'project_id', 'user_id', 'status'];
         $mediumPriority = ['created_at', 'updated_at', 'email'];
-        
-        if (in_array($column, $highPriority)) return 'high';
-        if (in_array($column, $mediumPriority)) return 'medium';
+
+        if (in_array($column, $highPriority)) {
+            return 'high';
+        }
+        if (in_array($column, $mediumPriority)) {
+            return 'medium';
+        }
+
         return 'low';
     }
 
     protected static function getSizeCategory(int $count): string
     {
-        if ($count < 1000) return 'small';
-        if ($count < 10000) return 'medium';
-        if ($count < 100000) return 'large';
+        if ($count < 1000) {
+            return 'small';
+        }
+        if ($count < 10000) {
+            return 'medium';
+        }
+        if ($count < 100000) {
+            return 'large';
+        }
+
         return 'very_large';
     }
 
     protected static function getPerformanceImpact(int $count): string
     {
-        if ($count < 1000) return 'minimal';
-        if ($count < 10000) return 'low';
-        if ($count < 100000) return 'medium';
+        if ($count < 1000) {
+            return 'minimal';
+        }
+        if ($count < 10000) {
+            return 'low';
+        }
+        if ($count < 100000) {
+            return 'medium';
+        }
+
         return 'high';
     }
 }

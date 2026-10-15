@@ -2,13 +2,15 @@
 
 namespace App\Rules;
 
-use Illuminate\Contracts\Validation\Rule;
 use Carbon\Carbon;
+use Illuminate\Contracts\Validation\Rule;
 
 class DateRule implements Rule
 {
     protected $format;
+
     protected $minDate;
+
     protected $maxDate;
 
     /**

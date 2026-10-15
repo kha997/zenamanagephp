@@ -2,11 +2,8 @@
 
 namespace App\Policies;
 
-use Illuminate\Auth\Access\HandlesAuthorization;
-
 class TaskPolicy
 {
-
     /**
      * Determine whether the user can view any models.
      */
@@ -42,8 +39,8 @@ class TaskPolicy
         }
 
         // Client can view client-visible tasks in their projects
-        if ($user->hasRole('client') && 
-            $task->project->client_id === $user->id && 
+        if ($user->hasRole('client') &&
+            $task->project->client_id === $user->id &&
             $task->visibility === 'client') {
             return true;
         }
@@ -167,8 +164,8 @@ class TaskPolicy
         }
 
         // Client can comment on client-visible tasks in their projects
-        if ($user->hasRole('client') && 
-            $task->project->client_id === $user->id && 
+        if ($user->hasRole('client') &&
+            $task->project->client_id === $user->id &&
             $task->visibility === 'client') {
             return true;
         }

@@ -21,7 +21,7 @@ class NotificationController extends ApiBaseController
     public function index(Request $request): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
@@ -61,7 +61,7 @@ class NotificationController extends ApiBaseController
     public function store(Request $request): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
@@ -102,7 +102,6 @@ class NotificationController extends ApiBaseController
             $this->broadcastNotification($notification);
 
             return $this->zenaSuccessResponse($notification, 'Notification created successfully', 201);
-
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to create notification: ' . $e->getMessage(), 500);
         }
@@ -114,7 +113,7 @@ class NotificationController extends ApiBaseController
     public function show(string $id): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
@@ -130,12 +129,12 @@ class NotificationController extends ApiBaseController
     }
 
     /**
-     * Mark notification as read
+     * Mark notification as read.
      */
     public function markAsRead(string $id): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
@@ -149,23 +148,22 @@ class NotificationController extends ApiBaseController
 
         try {
             $notification->update([
-                'read_at' => now()
+                'read_at' => now(),
             ]);
 
             return $this->zenaSuccessResponse($notification, 'Notification marked as read');
-
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to mark notification as read: ' . $e->getMessage(), 500);
         }
     }
 
     /**
-     * Mark all notifications as read
+     * Mark all notifications as read.
      */
     public function markAllAsRead(): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
@@ -174,11 +172,10 @@ class NotificationController extends ApiBaseController
             Notification::where('user_id', $user->id)
                 ->whereNull('read_at')
                 ->update([
-                    'read_at' => now()
+                    'read_at' => now(),
                 ]);
 
-        return $this->zenaSuccessResponse(null, 'All notifications marked as read');
-
+            return $this->zenaSuccessResponse(null, 'All notifications marked as read');
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to mark all notifications as read: ' . $e->getMessage(), 500);
         }
@@ -190,7 +187,7 @@ class NotificationController extends ApiBaseController
     public function destroy(string $id): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
@@ -205,20 +202,19 @@ class NotificationController extends ApiBaseController
         try {
             $notification->delete();
 
-        return $this->zenaSuccessResponse(null, 'Notification deleted successfully');
-
+            return $this->zenaSuccessResponse(null, 'Notification deleted successfully');
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to delete notification: ' . $e->getMessage(), 500);
         }
     }
 
     /**
-     * Get unread notification count
+     * Get unread notification count.
      */
     public function getUnreadCount(): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
@@ -231,12 +227,12 @@ class NotificationController extends ApiBaseController
     }
 
     /**
-     * Get notification statistics
+     * Get notification statistics.
      */
     public function getStats(): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
@@ -259,27 +255,26 @@ class NotificationController extends ApiBaseController
     }
 
     /**
-     * Broadcast notification via real-time channels
+     * Broadcast notification via real-time channels.
      */
     private function broadcastNotification(Notification $notification): void
     {
         try {
             // Broadcast via WebSocket
             $this->broadcastWebSocket($notification);
-            
+
             // Broadcast via SSE
             $this->broadcastSSE($notification);
-            
         } catch (\Exception $e) {
             \Log::error('Error broadcasting notification', [
                 'notification_id' => $notification->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
 
     /**
-     * Broadcast via WebSocket
+     * Broadcast via WebSocket.
      */
     private function broadcastWebSocket(Notification $notification): void
     {
@@ -293,25 +288,24 @@ class NotificationController extends ApiBaseController
                     'message' => $notification->message,
                     'priority' => $notification->priority,
                     'created_at' => $notification->created_at->toISOString(),
-                ]
+                ],
             ];
 
             // Use Redis pub/sub to communicate with WebSocket server
             \Illuminate\Support\Facades\Redis::publish('websocket_broadcast', json_encode([
                 'user_id' => $notification->user_id,
-                'message' => $message
+                'message' => $message,
             ]));
-            
         } catch (\Exception $e) {
             \Log::error('Error broadcasting WebSocket notification', [
                 'notification_id' => $notification->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
 
     /**
-     * Broadcast via SSE
+     * Broadcast via SSE.
      */
     private function broadcastSSE(Notification $notification): void
     {
@@ -326,13 +320,12 @@ class NotificationController extends ApiBaseController
                     'message' => $notification->message,
                     'priority' => $notification->priority,
                     'created_at' => $notification->created_at->toISOString(),
-                ]
+                ],
             ], 60);
-            
         } catch (\Exception $e) {
             \Log::error('Error broadcasting SSE notification', [
                 'notification_id' => $notification->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }

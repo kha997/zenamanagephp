@@ -8,16 +8,20 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
- * Secure File Upload Service
- * 
+ * Secure File Upload Service.
+ *
  * Enhanced file upload security with comprehensive validation
  */
 class SecureFileUploadService
 {
     private array $allowedMimeTypes;
+
     private array $allowedExtensions;
+
     private int $maxFileSize;
+
     private string $uploadPath;
+
     private bool $scanForViruses;
 
     public function __construct()
@@ -26,20 +30,20 @@ class SecureFileUploadService
             'image/jpeg', 'image/png', 'image/gif', 'image/webp',
             'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'text/plain', 'text/csv', 'application/zip', 'application/x-rar-compressed'
+            'text/plain', 'text/csv', 'application/zip', 'application/x-rar-compressed',
         ]);
-        
+
         $this->allowedExtensions = config('upload.allowed_extensions', [
-            'jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'csv', 'zip', 'rar'
+            'jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'csv', 'zip', 'rar',
         ]);
-        
+
         $this->maxFileSize = config('upload.max_file_size', 10 * 1024 * 1024); // 10MB
         $this->uploadPath = config('upload.path', 'uploads');
         $this->scanForViruses = config('upload.scan_viruses', false);
     }
 
     /**
-     * Upload file with security validation
+     * Upload file with security validation.
      */
     public function uploadFile(UploadedFile $file, string $subPath = '', array $options = []): array
     {
@@ -50,7 +54,7 @@ class SecureFileUploadService
                 return [
                     'success' => false,
                     'message' => 'File validation failed',
-                    'errors' => $validation['errors']
+                    'errors' => $validation['errors'],
                 ];
             }
 
@@ -62,7 +66,7 @@ class SecureFileUploadService
             if (!$this->performSecurityChecks($file)) {
                 return [
                     'success' => false,
-                    'message' => 'File failed security checks'
+                    'message' => 'File failed security checks',
                 ];
             }
 
@@ -77,30 +81,29 @@ class SecureFileUploadService
                 'original_name' => $file->getClientOriginalName(),
                 'stored_path' => $storedPath,
                 'size' => $file->getSize(),
-                'mime_type' => $file->getMimeType()
+                'mime_type' => $file->getMimeType(),
             ]);
 
             return [
                 'success' => true,
                 'message' => 'File uploaded successfully',
-                'data' => $metadata
+                'data' => $metadata,
             ];
-
         } catch (\Exception $e) {
             Log::error('File upload failed', [
                 'error' => $e->getMessage(),
-                'file_name' => $file->getClientOriginalName()
+                'file_name' => $file->getClientOriginalName(),
             ]);
-            
+
             return [
                 'success' => false,
-                'message' => 'File upload failed'
+                'message' => 'File upload failed',
             ];
         }
     }
 
     /**
-     * Validate file
+     * Validate file.
      */
     private function validateFile(UploadedFile $file): array
     {
@@ -141,12 +144,12 @@ class SecureFileUploadService
 
         return [
             'valid' => empty($errors),
-            'errors' => $errors
+            'errors' => $errors,
         ];
     }
 
     /**
-     * Validate file content
+     * Validate file content.
      */
     private function validateFileContent(UploadedFile $file): bool
     {
@@ -167,7 +170,7 @@ class SecureFileUploadService
             'image/jpeg' => ["\xFF\xD8\xFF"],
             'image/png' => ["\x89\x50\x4E\x47"],
             'image/gif' => ["\x47\x49\x46\x38"],
-            'application/pdf' => ["%PDF"],
+            'application/pdf' => ['%PDF'],
             'application/zip' => ["\x50\x4B\x03\x04", "\x50\x4B\x05\x06", "\x50\x4B\x07\x08"],
         ];
 
@@ -177,6 +180,7 @@ class SecureFileUploadService
                     return true;
                 }
             }
+
             return false;
         }
 
@@ -185,9 +189,9 @@ class SecureFileUploadService
             "\x7F\x45\x4C\x46", // ELF
             "\x4D\x5A", // PE/DOS
             "\xFE\xED\xFA", // Mach-O
-            "#!/", // Shell script
-            "<?php", // PHP
-            "<%", // ASP
+            '#!/', // Shell script
+            '<?php', // PHP
+            '<%', // ASP
         ];
 
         foreach ($executableSignatures as $signature) {
@@ -200,7 +204,7 @@ class SecureFileUploadService
     }
 
     /**
-     * Perform additional security checks
+     * Perform additional security checks.
      */
     private function performSecurityChecks(UploadedFile $file): bool
     {
@@ -218,13 +222,13 @@ class SecureFileUploadService
     }
 
     /**
-     * Check image security
+     * Check image security.
      */
     private function checkImageSecurity(UploadedFile $file): bool
     {
         // Check for embedded PHP code in images
         $content = file_get_contents($file->getPathname());
-        
+
         if (strpos($content, '<?php') !== false || strpos($content, '<?=') !== false) {
             return false;
         }
@@ -234,7 +238,7 @@ class SecureFileUploadService
             '/eval\s*\(/i',
             '/base64_decode/i',
             '/gzinflate/i',
-            '/str_rot13/i'
+            '/str_rot13/i',
         ];
 
         foreach ($suspiciousPatterns as $pattern) {
@@ -247,13 +251,13 @@ class SecureFileUploadService
     }
 
     /**
-     * Check document security
+     * Check document security.
      */
     private function checkDocumentSecurity(UploadedFile $file): bool
     {
         // For now, just check file size and basic validation
-        // In production, you might want to 
-        
+        // In production, you might want to
+
         // Check for embedded scripts
         if (preg_match('/<script[^>]*>.*?<\/script>/i', $content)) {
             return false;
@@ -263,36 +267,36 @@ class SecureFileUploadService
     }
 
     /**
-     * Generate secure filename
+     * Generate secure filename.
      */
     private function generateSecureFilename(UploadedFile $file): string
     {
         $extension = $file->getClientOriginalExtension();
         $timestamp = Carbon::now()->format('Y-m-d_H-i-s');
         $random = Str::random(8);
-        
+
         return "{$timestamp}_{$random}.{$extension}";
     }
 
     /**
-     * Build upload path
+     * Build upload path.
      */
     private function buildPath(string $subPath, string $filename): string
     {
         $path = $this->uploadPath;
-        
+
         if ($subPath) {
             $path .= '/' . trim($subPath, '/');
         }
-        
+
         // Add year/month for organization
         $path .= '/' . Carbon::now()->format('Y/m');
-        
+
         return $path;
     }
 
     /**
-     * Generate file metadata
+     * Generate file metadata.
      */
     private function generateFileMetadata(UploadedFile $file, string $storedPath): array
     {
@@ -305,35 +309,37 @@ class SecureFileUploadService
             'mime_type' => $file->getMimeType(),
             'extension' => $file->getClientOriginalExtension(),
             'uploaded_at' => Carbon::now()->toIso8601String(),
-            'checksum' => hash_file('sha256', $file->getPathname())
+            'checksum' => hash_file('sha256', $file->getPathname()),
         ];
     }
 
     /**
-     * Delete file securely
+     * Delete file securely.
      */
     public function deleteFile(string $path): bool
     {
         try {
             if (Storage::disk('public')->exists($path)) {
                 Storage::disk('public')->delete($path);
-                
+
                 Log::info('File deleted', ['path' => $path]);
+
                 return true;
             }
-            
+
             return false;
         } catch (\Exception $e) {
             Log::error('File deletion failed', [
                 'path' => $path,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
 
     /**
-     * Get file info
+     * Get file info.
      */
     public function getFileInfo(string $path): ?array
     {
@@ -343,18 +349,19 @@ class SecureFileUploadService
             }
 
             $fullPath = Storage::disk('public')->path($path);
-            
+
             return [
                 'path' => $path,
                 'size' => filesize($fullPath),
                 'modified_at' => Carbon::createFromTimestamp(filemtime($fullPath)),
-                'checksum' => hash_file('sha256', $fullPath)
+                'checksum' => hash_file('sha256', $fullPath),
             ];
         } catch (\Exception $e) {
             Log::error('Get file info failed', [
                 'path' => $path,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }

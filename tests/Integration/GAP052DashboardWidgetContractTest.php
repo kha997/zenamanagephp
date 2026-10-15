@@ -1,27 +1,28 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Integration;
 
-use App\Contracts\Dashboard\WidgetDataResolver;
 use App\Contracts\Dashboard\WidgetDataProvider;
+use App\Contracts\Dashboard\WidgetDataResolver;
 use App\Models\DashboardWidget;
 use App\Models\Project;
-use App\Models\Role;
 use App\Models\Tenant;
-use App\Models\User;
-use App\Services\Dashboard\DashboardWidgetDataResolver;
 use App\Services\Dashboard\DashboardWidgetCatalog;
+use App\Services\Dashboard\DashboardWidgetDataResolver;
 use App\Services\Dashboard\RoleBasedWidgetDataCalculator;
 use App\Services\Dashboard\RoleBasedWidgetProvider;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Mockery;
-use Tests\Traits\AuthenticationTrait;
 use Tests\TestCase;
+use Tests\Traits\AuthenticationTrait;
 
 final class GAP052DashboardWidgetContractTest extends TestCase
 {
-    use RefreshDatabase, AuthenticationTrait;
+    use RefreshDatabase;
+    use AuthenticationTrait;
 
     /** @test */
     public function both_retained_routes_cover_all_seven_roles_without_inventing_providers(): void
@@ -41,7 +42,7 @@ final class GAP052DashboardWidgetContractTest extends TestCase
         foreach ($capabilities as $dashboardRole => $codes) {
             $user = $this->createTenantUser(
                 $tenant,
-                ['role' => $dashboardRole, 'email' => $dashboardRole.'@gap052.example.com'],
+                ['role' => $dashboardRole, 'email' => $dashboardRole . '@gap052.example.com'],
                 ['admin'],
             );
 
@@ -148,7 +149,7 @@ final class GAP052DashboardWidgetContractTest extends TestCase
         $this->app->instance(WidgetDataResolver::class, $resolver);
 
         $this->apiAs($user, $tenant);
-        foreach (['/api/v1/dashboard/role-based?project_id='.$foreignProject->id, '/api/v1/dashboard/role-based/widgets?include_data=1&project_id='.$foreignProject->id] as $endpoint) {
+        foreach (['/api/v1/dashboard/role-based?project_id=' . $foreignProject->id, '/api/v1/dashboard/role-based/widgets?include_data=1&project_id=' . $foreignProject->id] as $endpoint) {
             $response = $this->getJson($endpoint);
             $response->assertStatus(403)
                 ->assertJsonPath('error.code', 'DASHBOARD.PROJECT_FORBIDDEN')
@@ -177,7 +178,7 @@ final class GAP052DashboardWidgetContractTest extends TestCase
             ]);
         }
 
-        $throwingProvider = new class implements WidgetDataProvider {
+        $throwingProvider = new class () implements WidgetDataProvider {
             public function supports(string $widgetCode): bool
             {
                 return $widgetCode === 'project_overview';

@@ -2,26 +2,31 @@
 
 namespace Tests\Unit;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use App\Services\TaskService;
-use App\Services\AuditService;
-use App\Services\TaskRepository;
-use App\Models\Task;
 use App\Models\Project;
+use App\Models\Task;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\AuditService;
+use App\Services\TaskRepository;
+use App\Services\TaskService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
+use Tests\TestCase;
 
 class TaskServiceTest extends TestCase
 {
     use RefreshDatabase;
 
     protected $taskService;
+
     protected TaskRepository $taskRepository;
+
     protected $auditService;
+
     protected $project;
+
     protected $user;
+
     protected $tenant;
 
     protected function setUp(): void

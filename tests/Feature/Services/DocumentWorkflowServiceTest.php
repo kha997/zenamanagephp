@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Services;
 
@@ -27,8 +29,11 @@ class DocumentWorkflowServiceTest extends TestCase
     use RouteNameTrait;
 
     private DocumentWorkflowService $service;
+
     private Tenant $tenant;
+
     private Project $project;
+
     private User $actor;
 
     protected function setUp(): void

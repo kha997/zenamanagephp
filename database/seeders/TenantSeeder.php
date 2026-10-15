@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Seeders;
 
@@ -6,8 +8,8 @@ use App\Models\Tenant;
 use Illuminate\Database\Seeder;
 
 /**
- * Tenant Seeder
- * 
+ * Tenant Seeder.
+ *
  * Tạo dữ liệu mẫu cho các tenant (công ty/tổ chức)
  * Sử dụng ULID làm primary key
  */
@@ -29,8 +31,8 @@ class TenantSeeder extends Seeder
                 'settings' => [
                     'timezone' => 'Asia/Ho_Chi_Minh',
                     'currency' => 'VND',
-                    'language' => 'vi'
-                ]
+                    'language' => 'vi',
+                ],
             ]
         );
 

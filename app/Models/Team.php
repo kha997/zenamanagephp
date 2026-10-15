@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -28,11 +30,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Team extends Model
 {
-    use HasUlids, HasFactory, TenantScope;
+    use HasUlids;
+    use HasFactory;
+    use TenantScope;
 
     protected $table = 'teams';
-    
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [
@@ -62,7 +67,7 @@ class Team extends Model
     ];
 
     /**
-     * Team status constants
+     * Team status constants.
      */
     public const STATUS_ACTIVE = 'active';
     public const STATUS_INACTIVE = 'inactive';
@@ -75,7 +80,7 @@ class Team extends Model
     ];
 
     /**
-     * Team member roles
+     * Team member roles.
      */
     public const ROLE_MEMBER = 'member';
     public const ROLE_LEAD = 'lead';
@@ -88,7 +93,7 @@ class Team extends Model
     ];
 
     /**
-     * RELATIONSHIPS
+     * RELATIONSHIPS.
      */
 
     /**
@@ -191,11 +196,11 @@ class Team extends Model
     }
 
     /**
-     * SCOPES
+     * SCOPES.
      */
 
     /**
-     * Scope: Filter by tenant
+     * Scope: Filter by tenant.
      */
     public function scopeForTenant($query, string $tenantId)
     {
@@ -203,7 +208,7 @@ class Team extends Model
     }
 
     /**
-     * Scope: Filter by status
+     * Scope: Filter by status.
      */
     public function scopeActive($query)
     {
@@ -211,7 +216,7 @@ class Team extends Model
     }
 
     /**
-     * Scope: Filter by department
+     * Scope: Filter by department.
      */
     public function scopeByDepartment($query, string $department)
     {
@@ -219,7 +224,7 @@ class Team extends Model
     }
 
     /**
-     * Scope: Search teams
+     * Scope: Search teams.
      */
     public function scopeSearch($query, string $search)
     {
@@ -230,7 +235,7 @@ class Team extends Model
     }
 
     /**
-     * BUSINESS LOGIC METHODS
+     * BUSINESS LOGIC METHODS.
      */
 
     /**

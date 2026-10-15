@@ -3,14 +3,14 @@
 namespace App\Http\Requests;
 
 /**
- * Centralized Validation Rules
- * 
+ * Centralized Validation Rules.
+ *
  * Provides consistent validation rules across the application
  */
 class ValidationRules
 {
     /**
-     * Common validation patterns
+     * Common validation patterns.
      */
     public static function email(): string
     {
@@ -93,7 +93,7 @@ class ValidationRules
     }
 
     /**
-     * User validation rules
+     * User validation rules.
      */
     public static function userCreate(): array
     {
@@ -170,7 +170,7 @@ class ValidationRules
     }
 
     /**
-     * Project validation rules
+     * Project validation rules.
      */
     public static function projectCreate(): array
     {
@@ -224,7 +224,7 @@ class ValidationRules
     }
 
     /**
-     * Task validation rules
+     * Task validation rules.
      */
     public static function taskCreate(): array
     {
@@ -295,7 +295,7 @@ class ValidationRules
     }
 
     /**
-     * Document validation rules
+     * Document validation rules.
      */
     public static function documentUpload(): array
     {
@@ -325,7 +325,7 @@ class ValidationRules
     }
 
     /**
-     * SSO validation rules
+     * SSO validation rules.
      */
     public static function oidcInitiate(): array
     {
@@ -367,7 +367,7 @@ class ValidationRules
     }
 
     /**
-     * Import/Export validation rules
+     * Import/Export validation rules.
      */
     public static function exportFilters(): array
     {
@@ -404,7 +404,7 @@ class ValidationRules
     }
 
     /**
-     * Search and filter validation rules
+     * Search and filter validation rules.
      */
     public static function search(): array
     {
@@ -452,7 +452,7 @@ class ValidationRules
     }
 
     /**
-     * MFA validation rules
+     * MFA validation rules.
      */
     public static function mfaEnable(): array
     {
@@ -477,7 +477,7 @@ class ValidationRules
     }
 
     /**
-     * Email verification validation rules
+     * Email verification validation rules.
      */
     public static function emailSendVerification(): array
     {
@@ -509,7 +509,7 @@ class ValidationRules
     }
 
     /**
-     * Session management validation rules
+     * Session management validation rules.
      */
     public static function sessionRevoke(): array
     {
@@ -527,7 +527,7 @@ class ValidationRules
     }
 
     /**
-     * Bulk assignment validation rules
+     * Bulk assignment validation rules.
      */
     public static function bulkAssignUsersToProjects(): array
     {
@@ -540,7 +540,7 @@ class ValidationRules
     }
 
     /**
-     * Custom validation messages
+     * Custom validation messages.
      */
     public static function messages(): array
     {

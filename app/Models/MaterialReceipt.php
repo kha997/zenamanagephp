@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -11,7 +13,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class MaterialReceipt extends Model
 {
-    use HasUlids, HasFactory, TenantScope;
+    use HasUlids;
+    use HasFactory;
+    use TenantScope;
 
     protected $table = 'material_receipts';
 

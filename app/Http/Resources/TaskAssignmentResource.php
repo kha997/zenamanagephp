@@ -1,14 +1,16 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * TaskAssignment API Resource
- * 
+ * TaskAssignment API Resource.
+ *
  * Transforms TaskAssignment model for JSON responses according to JSend specification
- * 
+ *
  * @property \App\Models\TaskAssignment $resource
  */
 class TaskAssignmentResource extends JsonResource
@@ -26,15 +28,15 @@ class TaskAssignmentResource extends JsonResource
             'task_id' => $this->task_id,
             'user_id' => $this->user_id,
             'split_percentage' => (float) $this->split_percentage,
-            
+
             // Computed fields
             'workload_hours' => $this->getWorkloadHours(),
             'is_primary_assignee' => $this->isPrimaryAssignee(),
-            
+
             // Relationships - conditional loading
             'task' => new TaskResource($this->whenLoaded('task')),
             'user' => new UserResource($this->whenLoaded('user')),
-            
+
             // Timestamps
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),

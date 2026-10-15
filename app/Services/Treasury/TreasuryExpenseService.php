@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services\Treasury;
 
@@ -234,13 +236,19 @@ class TreasuryExpenseService
         $contractIds = Contract::query()->where('tenant_id', (string) $project->tenant_id)->where('project_id', (string) $project->id)->pluck('id');
         $expenses = DB::table('contract_expenses')->where('tenant_id', (string) $project->tenant_id)->whereIn('contract_id', $contractIds)->orderBy('expense_date')->get();
         foreach ($expenses as $expense) {
-            $rows[] = $this->payableRow(self::COST_CONTRACT_EXPENSE, (string) data_get($expense, 'id'),
-                (string) data_get($expense, 'description') . ' (' . (new ContractExpense(['category' => (string) data_get($expense, 'category')]))->categoryLabel() . ')');
+            $rows[] = $this->payableRow(
+                self::COST_CONTRACT_EXPENSE,
+                (string) data_get($expense, 'id'),
+                (string) data_get($expense, 'description') . ' (' . (new ContractExpense(['category' => (string) data_get($expense, 'category')]))->categoryLabel() . ')'
+            );
         }
         $lines = DB::table('material_receipt_lines')->where('tenant_id', (string) $project->tenant_id)->where('project_id', (string) $project->id)->orderBy('created_at')->get();
         foreach ($lines as $line) {
-            $rows[] = $this->payableRow(self::COST_MATERIAL_LINE, (string) data_get($line, 'id'),
-                'Phiếu nhập — ' . (string) (data_get($line, 'notes') ?? data_get($line, 'id')));
+            $rows[] = $this->payableRow(
+                self::COST_MATERIAL_LINE,
+                (string) data_get($line, 'id'),
+                'Phiếu nhập — ' . (string) (data_get($line, 'notes') ?? data_get($line, 'id'))
+            );
         }
 
         return $rows;

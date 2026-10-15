@@ -2,20 +2,23 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Src\CoreProject\Models\Task;
-use Src\CoreProject\Models\Project;
-use App\Models\User;
 use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Src\CoreProject\Models\Project;
+use Src\CoreProject\Models\Task;
+use Tests\TestCase;
 
 class TaskEditTest extends TestCase
 {
     use RefreshDatabase;
 
     protected $task;
+
     protected $project;
+
     protected $user;
+
     protected $tenant;
 
     protected function setUp(): void

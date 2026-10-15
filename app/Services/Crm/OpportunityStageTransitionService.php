@@ -38,7 +38,7 @@ class OpportunityStageTransitionService
     {
         Gate::forUser($actor)->authorize('update', $opportunity);
 
-        if (! in_array($toStage, Opportunity::VALID_STAGES, true)) {
+        if (!in_array($toStage, Opportunity::VALID_STAGES, true)) {
             throw ValidationException::withMessages(['pipeline_stage' => ['Giai đoạn không hợp lệ.']]);
         }
 
@@ -62,7 +62,7 @@ class OpportunityStageTransitionService
                 throw ValidationException::withMessages(['lost_reason' => ['Vui lòng nhập lý do khi chuyển sang Thua.']]);
             }
 
-            if (in_array($toStage, self::CLASSIFICATION_GATED_STAGES, true) && ! $locked->hasConfirmedServiceLine()) {
+            if (in_array($toStage, self::CLASSIFICATION_GATED_STAGES, true) && !$locked->hasConfirmedServiceLine()) {
                 throw ValidationException::withMessages([
                     'service_line' => ['At least one confirmed Service Line is required before entering this stage.'],
                 ]);

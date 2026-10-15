@@ -14,24 +14,24 @@ use App\Models\Document;
 use App\Models\Project;
 use App\Models\Submittal;
 use App\Models\Task;
-use App\Services\DocumentLifecycleService;
-use App\Services\DocumentWorkflowService;
 use App\Services\DocumentCreationService;
+use App\Services\DocumentLifecycleService;
 use App\Services\DocumentStatusService;
 use App\Services\DocumentVersionService;
+use App\Services\DocumentWorkflowService;
 use App\Services\ErrorEnvelopeService;
 use App\Services\ZenaAuditLogger;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Src\Foundation\Services\FileStorageService;
 use Throwable;
 
@@ -249,6 +249,7 @@ class SimpleDocumentController extends Controller
             return $this->zenaSuccessResponse($document, 'Document uploaded successfully', 201);
         } catch (Throwable $e) {
             Log::error('Document creation failed', ['message' => $e->getMessage()]);
+
             return ErrorEnvelopeService::serverError('Failed to create document');
         }
     }
@@ -920,5 +921,4 @@ class SimpleDocumentController extends Controller
 
         return null;
     }
-
 }

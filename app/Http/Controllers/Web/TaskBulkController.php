@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
 
@@ -12,33 +14,33 @@ use Illuminate\Support\Facades\Validator;
 
 /**
  * Task Bulk Operations Controller
- * Handles bulk operations for tasks
+ * Handles bulk operations for tasks.
  */
 class TaskBulkController extends Controller
 {
     /**
-     * Bulk export tasks
+     * Bulk export tasks.
      */
     public function bulkExport(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'task_ids' => 'required|array',
             'task_ids.*' => 'integer|exists:tasks,id',
-            'format' => 'in:csv,excel,pdf,json'
+            'format' => 'in:csv,excel,pdf,json',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
         try {
             $taskIds = $request->task_ids;
             $format = $request->get('format', 'csv');
-            
+
             $tasks = Task::with(['project', 'assignee'])
                 ->whereIn('id', $taskIds)
                 ->get();
@@ -46,7 +48,7 @@ class TaskBulkController extends Controller
             if ($tasks->isEmpty()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No tasks found for export'
+                    'message' => 'No tasks found for export',
                 ], 404);
             }
 
@@ -74,34 +76,33 @@ class TaskBulkController extends Controller
                 'data' => [
                     'filename' => $filename,
                     'download_url' => route('tasks.download-export', ['filename' => $filename]),
-                    'tasks_count' => $tasks->count()
-                ]
+                    'tasks_count' => $tasks->count(),
+                ],
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to export tasks: ' . $e->getMessage()
+                'message' => 'Failed to export tasks: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Bulk status change
+     * Bulk status change.
      */
     public function bulkStatusChange(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'task_ids' => 'required|array',
             'task_ids.*' => 'integer|exists:tasks,id',
-            'status' => 'required|in:pending,in_progress,completed,cancelled,archived'
+            'status' => 'required|in:pending,in_progress,completed,cancelled,archived',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -114,7 +115,7 @@ class TaskBulkController extends Controller
             $updatedCount = Task::whereIn('id', $taskIds)
                 ->update([
                     'status' => $newStatus,
-                    'updated_at' => now()
+                    'updated_at' => now(),
                 ]);
 
             DB::commit();
@@ -124,35 +125,35 @@ class TaskBulkController extends Controller
                 'message' => "Successfully updated {$updatedCount} tasks to {$newStatus} status",
                 'data' => [
                     'updated_count' => $updatedCount,
-                    'new_status' => $newStatus
-                ]
+                    'new_status' => $newStatus,
+                ],
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update task status: ' . $e->getMessage()
+                'message' => 'Failed to update task status: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Bulk assign tasks
+     * Bulk assign tasks.
      */
     public function bulkAssign(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'task_ids' => 'required|array',
             'task_ids.*' => 'integer|exists:tasks,id',
-            'assignee_id' => 'required|integer|exists:users,id'
+            'assignee_id' => 'required|integer|exists:users,id',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -165,7 +166,7 @@ class TaskBulkController extends Controller
             $updatedCount = Task::whereIn('id', $taskIds)
                 ->update([
                     'assignee_id' => $assigneeId,
-                    'updated_at' => now()
+                    'updated_at' => now(),
                 ]);
 
             DB::commit();
@@ -175,34 +176,34 @@ class TaskBulkController extends Controller
                 'message' => "Successfully assigned {$updatedCount} tasks",
                 'data' => [
                     'updated_count' => $updatedCount,
-                    'assignee_id' => $assigneeId
-                ]
+                    'assignee_id' => $assigneeId,
+                ],
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to assign tasks: ' . $e->getMessage()
+                'message' => 'Failed to assign tasks: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Bulk archive tasks
+     * Bulk archive tasks.
      */
     public function bulkArchive(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'task_ids' => 'required|array',
-            'task_ids.*' => 'integer|exists:tasks,id'
+            'task_ids.*' => 'integer|exists:tasks,id',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -214,7 +215,7 @@ class TaskBulkController extends Controller
             $updatedCount = Task::whereIn('id', $taskIds)
                 ->update([
                     'status' => 'archived',
-                    'updated_at' => now()
+                    'updated_at' => now(),
                 ]);
 
             DB::commit();
@@ -223,34 +224,34 @@ class TaskBulkController extends Controller
                 'success' => true,
                 'message' => "Successfully archived {$updatedCount} tasks",
                 'data' => [
-                    'updated_count' => $updatedCount
-                ]
+                    'updated_count' => $updatedCount,
+                ],
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to archive tasks: ' . $e->getMessage()
+                'message' => 'Failed to archive tasks: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Bulk delete tasks
+     * Bulk delete tasks.
      */
     public function bulkDelete(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'task_ids' => 'required|array',
-            'task_ids.*' => 'integer|exists:tasks,id'
+            'task_ids.*' => 'integer|exists:tasks,id',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -267,33 +268,33 @@ class TaskBulkController extends Controller
                 'success' => true,
                 'message' => "Successfully deleted {$deletedCount} tasks",
                 'data' => [
-                    'deleted_count' => $deletedCount
-                ]
+                    'deleted_count' => $deletedCount,
+                ],
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to delete tasks: ' . $e->getMessage()
+                'message' => 'Failed to delete tasks: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Duplicate task
+     * Duplicate task.
      */
     public function duplicate(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'task_id' => 'required|integer|exists:tasks,id'
+            'task_id' => 'required|integer|exists:tasks,id',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -301,7 +302,7 @@ class TaskBulkController extends Controller
             DB::beginTransaction();
 
             $originalTask = Task::findOrFail($request->task_id);
-            
+
             $newTask = $originalTask->replicate();
             $newTask->name = $originalTask->name . ' (Copy)';
             $newTask->status = 'pending';
@@ -317,21 +318,21 @@ class TaskBulkController extends Controller
                 'data' => [
                     'original_task_id' => $originalTask->id,
                     'new_task_id' => $newTask->id,
-                    'new_task_name' => $newTask->name
-                ]
+                    'new_task_name' => $newTask->name,
+                ],
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to duplicate task: ' . $e->getMessage()
+                'message' => 'Failed to duplicate task: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Export to CSV
+     * Export to CSV.
      */
     private function exportToCsv($tasks, $filePath): void
     {
@@ -351,13 +352,13 @@ class TaskBulkController extends Controller
                 $task->progress_percent . '%',
                 $task->estimated_hours,
                 $task->actual_hours,
-                $task->created_at->format('Y-m-d H:i:s')
+                $task->created_at->format('Y-m-d H:i:s'),
             ];
         }
 
         $csvContent = '';
         foreach ($csvData as $row) {
-            $csvContent .= implode(',', array_map(function($field) {
+            $csvContent .= implode(',', array_map(function ($field) {
                 return '"' . str_replace('"', '""', $field) . '"';
             }, $row)) . "\n";
         }
@@ -366,29 +367,29 @@ class TaskBulkController extends Controller
     }
 
     /**
-     * Export to Excel (simplified - using CSV format)
+     * Export to Excel (simplified - using CSV format).
      */
     private function exportToExcel($tasks, $filePath): void
     {
-        // For now, 
+        // For now,
     }
 
     /**
-     * Export to PDF
+     * Export to PDF.
      */
     private function exportToPdf($tasks, $filePath): void
     {
         // For now, create a simple text file
-        // In production, you would 
-        $pdfContent .= "Generated: " . now()->format('Y-m-d H:i:s') . "\n";
-        $pdfContent .= "Total Tasks: " . $tasks->count() . "\n\n";
+        // In production, you would
+        $pdfContent .= 'Generated: ' . now()->format('Y-m-d H:i:s') . "\n";
+        $pdfContent .= 'Total Tasks: ' . $tasks->count() . "\n\n";
 
         foreach ($tasks as $task) {
             $pdfContent .= "Task ID: {$task->id}\n";
             $pdfContent .= "Name: {$task->name}\n";
             $pdfContent .= "Status: {$task->status}\n";
-            $pdfContent .= "Project: " . ($task->project->name ?? 'N/A') . "\n";
-            $pdfContent .= "Assignee: " . ($task->assignee->name ?? 'Unassigned') . "\n";
+            $pdfContent .= 'Project: ' . ($task->project->name ?? 'N/A') . "\n";
+            $pdfContent .= 'Assignee: ' . ($task->assignee->name ?? 'Unassigned') . "\n";
             $pdfContent .= "Progress: {$task->progress_percent}%\n";
             $pdfContent .= "Due Date: {$task->due_date}\n";
             $pdfContent .= "---\n\n";
@@ -398,7 +399,7 @@ class TaskBulkController extends Controller
     }
 
     /**
-     * Export to JSON
+     * Export to JSON.
      */
     private function exportToJson($tasks, $filePath): void
     {
@@ -406,9 +407,9 @@ class TaskBulkController extends Controller
             'export_info' => [
                 'generated_at' => now()->toISOString(),
                 'total_tasks' => $tasks->count(),
-                'format' => 'json'
+                'format' => 'json',
             ],
-            'tasks' => $tasks->map(function($task) {
+            'tasks' => $tasks->map(function ($task) {
                 return [
                     'id' => $task->id,
                     'name' => $task->name,
@@ -422,49 +423,49 @@ class TaskBulkController extends Controller
                     'estimated_hours' => $task->estimated_hours,
                     'actual_hours' => $task->actual_hours,
                     'created_at' => $task->created_at->toISOString(),
-                    'updated_at' => $task->updated_at->toISOString()
+                    'updated_at' => $task->updated_at->toISOString(),
                 ];
-            })
+            }),
         ];
 
         Storage::put($filePath, json_encode($jsonData, JSON_PRETTY_PRINT));
     }
 
     /**
-     * Download exported file
+     * Download exported file.
      */
     public function downloadExport(Request $request, string $filename)
     {
         $filePath = 'exports/' . $filename;
-        
+
         if (!Storage::exists($filePath)) {
             abort(404, 'Export file not found');
         }
 
         $mimeType = $this->getMimeType($filename);
-        
+
         return Response::download(
             Storage::path($filePath),
             $filename,
             [
                 'Content-Type' => $mimeType,
-                'Content-Disposition' => 'attachment; filename="' . $filename . '"'
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
             ]
         );
     }
 
     /**
-     * Get MIME type for file
+     * Get MIME type for file.
      */
     private function getMimeType(string $filename): string
     {
         $extension = pathinfo($filename, PATHINFO_EXTENSION);
-        
+
         $mimeTypes = [
             'csv' => 'text/csv',
             'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'pdf' => 'application/pdf',
-            'json' => 'application/json'
+            'json' => 'application/json',
         ];
 
         return $mimeTypes[$extension] ?? 'application/octet-stream';

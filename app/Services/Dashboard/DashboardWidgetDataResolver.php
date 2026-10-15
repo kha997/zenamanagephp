@@ -34,7 +34,7 @@ final class DashboardWidgetDataResolver implements WidgetDataResolver
         $role = (string) $context->user->getAttribute('role');
 
         foreach ($this->providers as $provider) {
-            if (! $provider->supports($widgetCode)) {
+            if (!$provider->supports($widgetCode)) {
                 continue;
             }
 

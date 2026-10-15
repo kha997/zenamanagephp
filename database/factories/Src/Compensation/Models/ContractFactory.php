@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories\Src\Compensation\Models;
 
@@ -7,8 +9,8 @@ use Src\Compensation\Models\Contract;
 use Src\CoreProject\Models\Project;
 
 /**
- * Factory cho Contract model
- * 
+ * Factory cho Contract model.
+ *
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Src\Compensation\Models\Contract>
  */
 class ContractFactory extends Factory
@@ -19,7 +21,7 @@ class ContractFactory extends Factory
     {
         $startDate = $this->faker->dateTimeBetween('-1 year', 'now');
         $endDate = $this->faker->dateTimeBetween($startDate, '+2 years');
-        
+
         return [
             'project_id' => Project::factory(),
             'contract_number' => 'CT-' . $this->faker->unique()->numberBetween(10000, 99999),
@@ -42,7 +44,7 @@ class ContractFactory extends Factory
     }
 
     /**
-     * State: Active contract
+     * State: Active contract.
      */
     public function active(): static
     {
@@ -53,7 +55,7 @@ class ContractFactory extends Factory
     }
 
     /**
-     * State: Draft contract
+     * State: Draft contract.
      */
     public function draft(): static
     {

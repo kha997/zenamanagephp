@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Zena;
 
@@ -20,7 +22,9 @@ class AiDesignItemSuggestionTest extends TestCase
     private const ENDPOINT = 'https://api.anthropic.com/v1/messages';
 
     private Tenant $tenant;
+
     private User $user;
+
     private Project $project;
 
     protected function setUp(): void
@@ -166,7 +170,7 @@ class AiDesignItemSuggestionTest extends TestCase
         Http::assertSent(function ($request) {
             $content = $request->data()['messages'][0]['content'];
 
-            return str_contains($content, 'DESIGN, CONSTRUCTION') && ! str_contains($content, 'interior');
+            return str_contains($content, 'DESIGN, CONSTRUCTION') && !str_contains($content, 'interior');
         });
     }
 
@@ -215,7 +219,7 @@ class AiDesignItemSuggestionTest extends TestCase
         Http::assertSent(function ($request) {
             $content = $request->data()['messages'][0]['content'];
 
-            return str_contains($content, 'landscape') && ! str_contains($content, 'DESIGN');
+            return str_contains($content, 'landscape') && !str_contains($content, 'DESIGN');
         });
     }
 

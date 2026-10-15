@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Console\Commands;
 
@@ -7,11 +9,12 @@ use Illuminate\Console\Command;
 
 /**
  * Command để monitor và log performance metrics
- * Chạy định kỳ để theo dõi hiệu suất hệ thống
+ * Chạy định kỳ để theo dõi hiệu suất hệ thống.
  */
 class PerformanceMonitorCommand extends Command
 {
     protected $signature = 'performance:monitor {--log : Log metrics to file}';
+
     protected $description = 'Monitor system performance metrics';
 
     public function __construct(
@@ -26,24 +29,24 @@ class PerformanceMonitorCommand extends Command
     public function handle(): int
     {
         $this->info('🔍 Collecting performance metrics...');
-        
+
         $metrics = $this->metricsService->getMetrics();
-        
+
         // Display metrics in console
         $this->displayMetrics($metrics);
-        
+
         // Log to file if requested
         if ($this->option('log')) {
             $this->metricsService->logMetrics();
             $this->info('📝 Metrics logged to file.');
         }
-        
+
         return Command::SUCCESS;
     }
 
     /**
-     * Display metrics in formatted table
-     * 
+     * Display metrics in formatted table.
+     *
      * @param array $metrics
      * @return void
      */
@@ -56,7 +59,7 @@ class PerformanceMonitorCommand extends Command
             $dbData[] = [ucwords(str_replace('_', ' ', $key)), $value];
         }
         $this->table(['Metric', 'Value'], $dbData);
-        
+
         // Cache metrics
         $this->info('🗄️ Cache Metrics:');
         $cacheData = [];
@@ -64,7 +67,7 @@ class PerformanceMonitorCommand extends Command
             $cacheData[] = [ucwords(str_replace('_', ' ', $key)), $value];
         }
         $this->table(['Metric', 'Value'], $cacheData);
-        
+
         // Memory metrics
         $this->info('💾 Memory Metrics:');
         $memoryData = [];

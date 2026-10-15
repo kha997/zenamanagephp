@@ -1,9 +1,9 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Models\Tenant;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,8 +12,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Src\CoreProject\Models\Project;
 
 /**
- * Model NotificationRule để quản lý quy tắc thông báo
- * 
+ * Model NotificationRule để quản lý quy tắc thông báo.
+ *
  * @property string $id
  * @property string $user_id
  * @property string|null $project_id
@@ -27,14 +27,17 @@ use Src\CoreProject\Models\Project;
  */
 class NotificationRule extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids;
+    use HasFactory;
 
     protected $table = 'notification_rules';
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     /**
-     * Các event key có thể có
+     * Các event key có thể có.
      */
     public const EVENT_TASK_ASSIGNED = 'task.assigned';
     public const EVENT_TASK_COMPLETED = 'task.completed';
@@ -47,7 +50,7 @@ class NotificationRule extends Model
     public const EVENT_INTERACTION_LOG_CREATED = 'interaction_log.created';
 
     /**
-     * Danh sách các event key hợp lệ
+     * Danh sách các event key hợp lệ.
      */
     public const VALID_EVENT_KEYS = [
         self::EVENT_TASK_ASSIGNED,
@@ -79,7 +82,7 @@ class NotificationRule extends Model
     ];
 
     /**
-     * Quan hệ với User
+     * Quan hệ với User.
      */
     public function user(): BelongsTo
     {
@@ -87,7 +90,7 @@ class NotificationRule extends Model
     }
 
     /**
-     * Quan hệ với Project (nullable)
+     * Quan hệ với Project (nullable).
      */
     public function project(): BelongsTo
     {
@@ -100,7 +103,7 @@ class NotificationRule extends Model
     }
 
     /**
-     * Scope để lọc theo user
+     * Scope để lọc theo user.
      */
     public function scopeForUser(Builder $query, string $userId): Builder
     {
@@ -108,7 +111,7 @@ class NotificationRule extends Model
     }
 
     /**
-     * Scope để lọc theo project
+     * Scope để lọc theo project.
      */
     public function scopeForProject(Builder $query, string $projectId): Builder
     {
@@ -116,7 +119,7 @@ class NotificationRule extends Model
     }
 
     /**
-     * Scope để lọc theo event key
+     * Scope để lọc theo event key.
      */
     public function scopeForEvent(Builder $query, string $eventKey): Builder
     {
@@ -124,7 +127,7 @@ class NotificationRule extends Model
     }
 
     /**
-     * Scope để lấy các rule đang enabled
+     * Scope để lấy các rule đang enabled.
      */
     public function scopeEnabled(Builder $query): Builder
     {
@@ -132,7 +135,7 @@ class NotificationRule extends Model
     }
 
     /**
-     * Scope để lấy các rule global (không specific cho project)
+     * Scope để lấy các rule global (không specific cho project).
      */
     public function scopeGlobal(Builder $query): Builder
     {
@@ -140,7 +143,7 @@ class NotificationRule extends Model
     }
 
     /**
-     * Scope để lấy các rule specific cho project
+     * Scope để lấy các rule specific cho project.
      */
     public function scopeProjectSpecific(Builder $query): Builder
     {
@@ -148,7 +151,7 @@ class NotificationRule extends Model
     }
 
     /**
-     * Kiểm tra xem rule có enabled không
+     * Kiểm tra xem rule có enabled không.
      */
     public function isEnabled(): bool
     {
@@ -156,7 +159,7 @@ class NotificationRule extends Model
     }
 
     /**
-     * Kiểm tra xem rule có phải global không
+     * Kiểm tra xem rule có phải global không.
      */
     public function isGlobal(): bool
     {
@@ -164,7 +167,7 @@ class NotificationRule extends Model
     }
 
     /**
-     * Kiểm tra xem priority có thỏa mãn rule không
+     * Kiểm tra xem priority có thỏa mãn rule không.
      */
     public function matchesPriority(string $priority): bool
     {
@@ -181,7 +184,7 @@ class NotificationRule extends Model
     }
 
     /**
-     * Kiểm tra xem channel có được enable không
+     * Kiểm tra xem channel có được enable không.
      */
     public function hasChannel(string $channel): bool
     {
@@ -189,25 +192,27 @@ class NotificationRule extends Model
     }
 
     /**
-     * Enable rule
+     * Enable rule.
      */
     public function enable(): bool
     {
         $this->is_enabled = true;
+
         return $this->save();
     }
 
     /**
-     * Disable rule
+     * Disable rule.
      */
     public function disable(): bool
     {
         $this->is_enabled = false;
+
         return $this->save();
     }
 
     /**
-     * Lấy các rule áp dụng cho event và user cụ thể
+     * Lấy các rule áp dụng cho event và user cụ thể.
      */
     public static function getApplicableRules(string $userId, string $eventKey, ?string $projectId = null): \Illuminate\Database\Eloquent\Collection
     {
@@ -229,7 +234,7 @@ class NotificationRule extends Model
     }
 
     /**
-     * Tạo rule mặc định cho user mới
+     * Tạo rule mặc định cho user mới.
      */
     public static function createDefaultRulesForUser(string $userId): void
     {

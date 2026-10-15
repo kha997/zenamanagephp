@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
@@ -23,7 +25,9 @@ class SiteEngineerDashboardApiTest extends TestCase
     private const CAPA_CONTEXT_TAG = 'inspection-ncr-capa';
 
     protected Tenant $tenant;
+
     protected User $actor;
+
     protected array $headers;
 
     protected function setUp(): void

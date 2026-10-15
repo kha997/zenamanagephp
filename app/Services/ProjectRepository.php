@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Collection;
 class ProjectRepository
 {
     /**
-     * Get all projects
+     * Get all projects.
      */
     public function getAll(): Collection
     {
@@ -16,7 +16,7 @@ class ProjectRepository
     }
 
     /**
-     * Get project by ID
+     * Get project by ID.
      */
     public function getById(int $id): ?Project
     {
@@ -24,7 +24,7 @@ class ProjectRepository
     }
 
     /**
-     * Create new project
+     * Create new project.
      */
     public function create(array $data): Project
     {
@@ -32,7 +32,7 @@ class ProjectRepository
     }
 
     /**
-     * Update project
+     * Update project.
      */
     public function update(int $id, array $data): bool
     {
@@ -40,12 +40,12 @@ class ProjectRepository
         if (!$project) {
             return false;
         }
-        
+
         return $project->update($data);
     }
 
     /**
-     * Delete project
+     * Delete project.
      */
     public function delete(int $id): bool
     {
@@ -53,7 +53,7 @@ class ProjectRepository
         if (!$project) {
             return false;
         }
-        
+
         return $project->delete();
     }
 }

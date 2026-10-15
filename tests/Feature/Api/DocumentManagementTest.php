@@ -2,18 +2,18 @@
 
 namespace Tests\Feature\Api;
 
+use App\Enums\DocumentApprovalStatus;
+use App\Enums\DocumentLifecycleStatus;
+use App\Enums\DocumentWorkflowStatus;
+use App\Models\ChangeRequest;
+use App\Models\Component;
 use App\Models\Document;
 use App\Models\DocumentVersion;
 use App\Models\Project;
-use App\Models\Tenant;
 use App\Models\Task;
-use App\Models\Component;
-use App\Models\ChangeRequest;
+use App\Models\Tenant;
 use App\Models\User;
 use App\Services\DocumentWorkflowService;
-use App\Enums\DocumentWorkflowStatus;
-use App\Enums\DocumentApprovalStatus;
-use App\Enums\DocumentLifecycleStatus;
 use Illuminate\Filesystem\FilesystemManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -32,7 +32,9 @@ class DocumentManagementTest extends TestCase
     use RouteNameTrait;
 
     protected Tenant $tenant;
+
     protected User $user;
+
     protected Project $project;
 
     protected function setUp(): void

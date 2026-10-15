@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\MaintenanceTask;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

@@ -3,8 +3,8 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\File;
 
 class CleanupLegacyRoutes extends Command
 {
@@ -28,7 +28,7 @@ class CleanupLegacyRoutes extends Command
     public function handle()
     {
         $this->info('🧹 Starting ZenaManage Legacy Cleanup...');
-        
+
         if ($this->option('dry-run')) {
             $this->warn('🔍 DRY RUN MODE - No files will be modified');
         }
@@ -43,12 +43,12 @@ class CleanupLegacyRoutes extends Command
     }
 
     /**
-     * Clean up old view files
+     * Clean up old view files.
      */
     private function cleanupOldViews()
     {
         $this->info('📁 Cleaning up old view files...');
-        
+
         $oldViews = [
             'resources/views/dashboards/admin.blade.php',
             'resources/views/dashboards/project-manager.blade.php',
@@ -74,12 +74,12 @@ class CleanupLegacyRoutes extends Command
     }
 
     /**
-     * Clean up old controller files
+     * Clean up old controller files.
      */
     private function cleanupOldControllers()
     {
         $this->info('🎮 Cleaning up old controller files...');
-        
+
         $oldControllers = [
             'app/Http/Controllers/DashboardController.php',
             'app/Http/Controllers/AdminDashboardController.php',
@@ -105,12 +105,12 @@ class CleanupLegacyRoutes extends Command
     }
 
     /**
-     * Clean up old route files
+     * Clean up old route files.
      */
     private function cleanupOldRoutes()
     {
         $this->info('🛣️ Cleaning up old route files...');
-        
+
         $oldRoutes = [
             'routes/dashboard.php',
             'routes/admin.php',
@@ -131,12 +131,12 @@ class CleanupLegacyRoutes extends Command
     }
 
     /**
-     * Clean up old asset files
+     * Clean up old asset files.
      */
     private function cleanupOldAssets()
     {
         $this->info('🎨 Cleaning up old asset files...');
-        
+
         $oldAssets = [
             'public/css/dashboard.css',
             'public/css/admin.css',
@@ -157,12 +157,12 @@ class CleanupLegacyRoutes extends Command
     }
 
     /**
-     * Update documentation
+     * Update documentation.
      */
     private function updateDocumentation()
     {
         $this->info('📚 Updating documentation...');
-        
+
         if (!$this->option('dry-run')) {
             // Update README.md
             $readmePath = 'README.md';
@@ -180,8 +180,8 @@ class CleanupLegacyRoutes extends Command
             Artisan::call('route:clear');
             Artisan::call('view:clear');
             Artisan::call('cache:clear');
-            
-            $this->line("  Cleared all caches");
+
+            $this->line('  Cleared all caches');
         }
     }
 }

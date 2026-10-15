@@ -4,12 +4,11 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Log;
 
 class SchemaAuditService
 {
     /**
-     * Audit documents and history schemas
+     * Audit documents and history schemas.
      */
     public static function auditDocumentsAndHistory(): array
     {
@@ -27,7 +26,7 @@ class SchemaAuditService
     }
 
     /**
-     * Audit documents table schema
+     * Audit documents table schema.
      */
     protected static function auditDocumentsTable(): array
     {
@@ -35,7 +34,7 @@ class SchemaAuditService
         $columns = Schema::getColumnListing($table);
         $indexes = self::getTableIndexes($table);
         $foreignKeys = self::getTableForeignKeys($table);
-        
+
         return [
             'table_name' => $table,
             'columns' => $columns,
@@ -48,7 +47,7 @@ class SchemaAuditService
     }
 
     /**
-     * Audit document_versions table schema
+     * Audit document_versions table schema.
      */
     protected static function auditDocumentVersionsTable(): array
     {
@@ -56,7 +55,7 @@ class SchemaAuditService
         $columns = Schema::getColumnListing($table);
         $indexes = self::getTableIndexes($table);
         $foreignKeys = self::getTableForeignKeys($table);
-        
+
         return [
             'table_name' => $table,
             'columns' => $columns,
@@ -69,7 +68,7 @@ class SchemaAuditService
     }
 
     /**
-     * Audit project_activities table schema
+     * Audit project_activities table schema.
      */
     protected static function auditProjectActivitiesTable(): array
     {
@@ -77,7 +76,7 @@ class SchemaAuditService
         $columns = Schema::getColumnListing($table);
         $indexes = self::getTableIndexes($table);
         $foreignKeys = self::getTableForeignKeys($table);
-        
+
         return [
             'table_name' => $table,
             'columns' => $columns,
@@ -90,7 +89,7 @@ class SchemaAuditService
     }
 
     /**
-     * Audit audit_logs table schema
+     * Audit audit_logs table schema.
      */
     protected static function auditAuditLogsTable(): array
     {
@@ -98,7 +97,7 @@ class SchemaAuditService
         $columns = Schema::getColumnListing($table);
         $indexes = self::getTableIndexes($table);
         $foreignKeys = self::getTableForeignKeys($table);
-        
+
         return [
             'table_name' => $table,
             'columns' => $columns,
@@ -111,12 +110,12 @@ class SchemaAuditService
     }
 
     /**
-     * Analyze documents table issues
+     * Analyze documents table issues.
      */
     protected static function analyzeDocumentsTableIssues(array $columns, array $indexes, array $foreignKeys): array
     {
         $issues = [];
-        
+
         // Check for missing indexes
         if (!self::hasIndex($indexes, ['tenant_id', 'status'])) {
             $issues[] = [
@@ -126,7 +125,7 @@ class SchemaAuditService
                 'impact' => 'Slow queries when filtering documents by tenant and status',
             ];
         }
-        
+
         if (!self::hasIndex($indexes, ['project_id', 'category', 'status'])) {
             $issues[] = [
                 'type' => 'missing_index',
@@ -135,7 +134,7 @@ class SchemaAuditService
                 'impact' => 'Slow queries when filtering project documents by category and status',
             ];
         }
-        
+
         if (!self::hasIndex($indexes, ['created_at'])) {
             $issues[] = [
                 'type' => 'missing_index',
@@ -144,7 +143,7 @@ class SchemaAuditService
                 'impact' => 'Slow queries when sorting or filtering by creation date',
             ];
         }
-        
+
         // Check for potential data integrity issues
         if (!in_array('tenant_id', $columns) || !in_array('project_id', $columns)) {
             $issues[] = [
@@ -154,7 +153,7 @@ class SchemaAuditService
                 'impact' => 'Potential data leakage between tenants or projects',
             ];
         }
-        
+
         // Check for file hash uniqueness
         if (!self::hasUniqueIndex($indexes, ['file_hash'])) {
             $issues[] = [
@@ -164,17 +163,17 @@ class SchemaAuditService
                 'impact' => 'Potential duplicate file storage and inconsistent data',
             ];
         }
-        
+
         return $issues;
     }
 
     /**
-     * Analyze document_versions table issues
+     * Analyze document_versions table issues.
      */
     protected static function analyzeDocumentVersionsTableIssues(array $columns, array $indexes, array $foreignKeys): array
     {
         $issues = [];
-        
+
         // Check for missing indexes
         if (!self::hasIndex($indexes, ['document_id', 'created_at'])) {
             $issues[] = [
@@ -184,7 +183,7 @@ class SchemaAuditService
                 'impact' => 'Slow queries when retrieving document version history',
             ];
         }
-        
+
         if (!self::hasIndex($indexes, ['created_by', 'created_at'])) {
             $issues[] = [
                 'type' => 'missing_index',
@@ -193,7 +192,7 @@ class SchemaAuditService
                 'impact' => 'Slow queries when tracking user document version activity',
             ];
         }
-        
+
         // Check for version number integrity
         if (!self::hasUniqueIndex($indexes, ['document_id', 'version_number'])) {
             $issues[] = [
@@ -203,17 +202,17 @@ class SchemaAuditService
                 'impact' => 'Potential duplicate version numbers for the same document',
             ];
         }
-        
+
         return $issues;
     }
 
     /**
-     * Analyze project_activities table issues
+     * Analyze project_activities table issues.
      */
     protected static function analyzeProjectActivitiesTableIssues(array $columns, array $indexes, array $foreignKeys): array
     {
         $issues = [];
-        
+
         // Check for missing indexes
         if (!self::hasIndex($indexes, ['entity_type', 'entity_id', 'created_at'])) {
             $issues[] = [
@@ -223,7 +222,7 @@ class SchemaAuditService
                 'impact' => 'Slow queries when retrieving activity history for specific entities',
             ];
         }
-        
+
         if (!self::hasIndex($indexes, ['action', 'created_at'])) {
             $issues[] = [
                 'type' => 'missing_index',
@@ -232,7 +231,7 @@ class SchemaAuditService
                 'impact' => 'Slow queries when filtering activities by action type',
             ];
         }
-        
+
         // Check for tenant isolation
         if (!in_array('tenant_id', $columns)) {
             $issues[] = [
@@ -242,17 +241,17 @@ class SchemaAuditService
                 'impact' => 'Potential data leakage between tenants in activity logs',
             ];
         }
-        
+
         return $issues;
     }
 
     /**
-     * Analyze audit_logs table issues
+     * Analyze audit_logs table issues.
      */
     protected static function analyzeAuditLogsTableIssues(array $columns, array $indexes, array $foreignKeys): array
     {
         $issues = [];
-        
+
         // Check for missing indexes
         if (!self::hasIndex($indexes, ['entity_type', 'entity_id', 'created_at'])) {
             $issues[] = [
@@ -262,7 +261,7 @@ class SchemaAuditService
                 'impact' => 'Slow queries when retrieving audit history for specific entities',
             ];
         }
-        
+
         if (!self::hasIndex($indexes, ['action', 'created_at'])) {
             $issues[] = [
                 'type' => 'missing_index',
@@ -271,7 +270,7 @@ class SchemaAuditService
                 'impact' => 'Slow queries when filtering audit logs by action type',
             ];
         }
-        
+
         // Check for data retention
         $issues[] = [
             'type' => 'data_retention',
@@ -279,17 +278,17 @@ class SchemaAuditService
             'description' => 'Consider implementing data retention policy for audit logs',
             'impact' => 'Audit logs may grow indefinitely without proper cleanup',
         ];
-        
+
         return $issues;
     }
 
     /**
-     * Suggest documents table optimizations
+     * Suggest documents table optimizations.
      */
     protected static function suggestDocumentsTableOptimizations(array $columns, array $indexes): array
     {
         $optimizations = [];
-        
+
         // Add composite indexes for common query patterns
         $optimizations[] = [
             'type' => 'index',
@@ -297,21 +296,21 @@ class SchemaAuditService
             'columns' => ['tenant_id', 'status'],
             'description' => 'Optimize tenant-scoped status queries',
         ];
-        
+
         $optimizations[] = [
             'type' => 'index',
             'name' => 'documents_project_category_status_index',
             'columns' => ['project_id', 'category', 'status'],
             'description' => 'Optimize project document filtering by category and status',
         ];
-        
+
         $optimizations[] = [
             'type' => 'index',
             'name' => 'documents_created_at_index',
             'columns' => ['created_at'],
             'description' => 'Optimize time-based queries and sorting',
         ];
-        
+
         // Add unique constraint for file hash
         $optimizations[] = [
             'type' => 'unique_constraint',
@@ -319,55 +318,55 @@ class SchemaAuditService
             'columns' => ['file_hash'],
             'description' => 'Prevent duplicate file storage',
         ];
-        
+
         return $optimizations;
     }
 
     /**
-     * Suggest document_versions table optimizations
+     * Suggest document_versions table optimizations.
      */
     protected static function suggestDocumentVersionsTableOptimizations(array $columns, array $indexes): array
     {
         $optimizations = [];
-        
+
         $optimizations[] = [
             'type' => 'index',
             'name' => 'document_versions_document_created_index',
             'columns' => ['document_id', 'created_at'],
             'description' => 'Optimize version history queries',
         ];
-        
+
         $optimizations[] = [
             'type' => 'index',
             'name' => 'document_versions_created_by_created_index',
             'columns' => ['created_by', 'created_at'],
             'description' => 'Optimize user activity queries',
         ];
-        
+
         return $optimizations;
     }
 
     /**
-     * Suggest project_activities table optimizations
+     * Suggest project_activities table optimizations.
      */
     protected static function suggestProjectActivitiesTableOptimizations(array $columns, array $indexes): array
     {
         $optimizations = [];
-        
+
         $optimizations[] = [
             'type' => 'index',
             'name' => 'project_activities_entity_history_index',
             'columns' => ['entity_type', 'entity_id', 'created_at'],
             'description' => 'Optimize entity history queries',
         ];
-        
+
         $optimizations[] = [
             'type' => 'index',
             'name' => 'project_activities_action_created_index',
             'columns' => ['action', 'created_at'],
             'description' => 'Optimize action-based queries',
         ];
-        
+
         // Add tenant_id column if missing
         if (!in_array('tenant_id', $columns)) {
             $optimizations[] = [
@@ -377,36 +376,36 @@ class SchemaAuditService
                 'description' => 'Add tenant_id column for proper tenant isolation',
             ];
         }
-        
+
         return $optimizations;
     }
 
     /**
-     * Suggest audit_logs table optimizations
+     * Suggest audit_logs table optimizations.
      */
     protected static function suggestAuditLogsTableOptimizations(array $columns, array $indexes): array
     {
         $optimizations = [];
-        
+
         $optimizations[] = [
             'type' => 'index',
             'name' => 'audit_logs_entity_history_index',
             'columns' => ['entity_type', 'entity_id', 'created_at'],
             'description' => 'Optimize entity audit history queries',
         ];
-        
+
         $optimizations[] = [
             'type' => 'index',
             'name' => 'audit_logs_action_created_index',
             'columns' => ['action', 'created_at'],
             'description' => 'Optimize action-based audit queries',
         ];
-        
+
         return $optimizations;
     }
 
     /**
-     * Generate overall recommendations
+     * Generate overall recommendations.
      */
     protected static function generateRecommendations(): array
     {
@@ -450,15 +449,15 @@ class SchemaAuditService
     }
 
     /**
-     * Analyze performance characteristics
+     * Analyze performance characteristics.
      */
     protected static function analyzePerformance(): array
     {
         $analysis = [];
-        
+
         // Analyze table sizes
         $tables = ['documents', 'document_versions', 'project_activities', 'audit_logs'];
-        
+
         foreach ($tables as $table) {
             try {
                 $count = DB::table($table)->count();
@@ -473,18 +472,19 @@ class SchemaAuditService
                 ];
             }
         }
-        
+
         return $analysis;
     }
 
     /**
-     * Get table indexes
+     * Get table indexes.
      */
     protected static function getTableIndexes(string $table): array
     {
         try {
             $indexes = DB::select("SHOW INDEX FROM {$table}");
-            return array_map(function($index) {
+
+            return array_map(function ($index) {
                 return [
                     'name' => $index->Key_name,
                     'column' => $index->Column_name,
@@ -498,7 +498,7 @@ class SchemaAuditService
     }
 
     /**
-     * Get table foreign keys
+     * Get table foreign keys.
      */
     protected static function getTableForeignKeys(string $table): array
     {
@@ -516,6 +516,7 @@ class SchemaAuditService
                 AND TABLE_NAME = '{$table}' 
                 AND REFERENCED_TABLE_NAME IS NOT NULL
             ");
+
             return $foreignKeys;
         } catch (\Exception $e) {
             return [];
@@ -523,21 +524,22 @@ class SchemaAuditService
     }
 
     /**
-     * Check if table has specific index
+     * Check if table has specific index.
      */
     protected static function hasIndex(array $indexes, array $columns): bool
     {
         foreach ($indexes as $index) {
-            if ($index['name'] === implode('_', $columns) . '_index' || 
+            if ($index['name'] === implode('_', $columns) . '_index' ||
                 $index['name'] === implode('_', $columns) . '_unique') {
                 return true;
             }
         }
+
         return false;
     }
 
     /**
-     * Check if table has unique index
+     * Check if table has unique index.
      */
     protected static function hasUniqueIndex(array $indexes, array $columns): bool
     {
@@ -546,28 +548,43 @@ class SchemaAuditService
                 return true;
             }
         }
+
         return false;
     }
 
     /**
-     * Get size category based on row count
+     * Get size category based on row count.
      */
     protected static function getSizeCategory(int $count): string
     {
-        if ($count < 1000) return 'small';
-        if ($count < 10000) return 'medium';
-        if ($count < 100000) return 'large';
+        if ($count < 1000) {
+            return 'small';
+        }
+        if ($count < 10000) {
+            return 'medium';
+        }
+        if ($count < 100000) {
+            return 'large';
+        }
+
         return 'very_large';
     }
 
     /**
-     * Get performance impact based on row count
+     * Get performance impact based on row count.
      */
     protected static function getPerformanceImpact(int $count): string
     {
-        if ($count < 1000) return 'minimal';
-        if ($count < 10000) return 'low';
-        if ($count < 100000) return 'medium';
+        if ($count < 1000) {
+            return 'minimal';
+        }
+        if ($count < 10000) {
+            return 'low';
+        }
+        if ($count < 100000) {
+            return 'medium';
+        }
+
         return 'high';
     }
 }

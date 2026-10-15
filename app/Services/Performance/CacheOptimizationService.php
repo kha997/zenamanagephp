@@ -16,21 +16,21 @@ class CacheOptimizationService
     {
         $optimizationResults = [
             'timestamp' => now()->toISOString(),
-            'optimizations' => []
+            'optimizations' => [],
         ];
 
         // Clear expired cache entries
         $optimizationResults['optimizations']['clear_expired'] = $this->clearExpiredCache();
-        
+
         // Optimize cache keys
         $optimizationResults['optimizations']['optimize_keys'] = $this->optimizeCacheKeys();
-        
+
         // Analyze cache usage
         $optimizationResults['optimizations']['analyze_usage'] = $this->analyzeCacheUsage();
-        
+
         // Optimize cache configuration
         $optimizationResults['optimizations']['optimize_config'] = $this->optimizeCacheConfig();
-        
+
         // Generate cache report
         $optimizationResults['report'] = $this->generateCacheReport();
 
@@ -52,7 +52,7 @@ class CacheOptimizationService
             if (config('cache.default') === 'redis') {
                 $redis = Redis::connection();
                 $keys = $redis->keys('*');
-                
+
                 foreach ($keys as $key) {
                     $ttl = $redis->ttl($key);
                     if ($ttl === -1) { // No expiration set
@@ -66,7 +66,7 @@ class CacheOptimizationService
                 if (is_dir($cachePath)) {
                     $files = glob($cachePath . '/*');
                     $now = time();
-                    
+
                     foreach ($files as $file) {
                         if (is_file($file) && ($now - filemtime($file)) > 3600) {
                             unlink($file);
@@ -84,7 +84,7 @@ class CacheOptimizationService
         return [
             'cleared_count' => $clearedCount,
             'duration_ms' => $duration,
-            'status' => 'completed'
+            'status' => 'completed',
         ];
     }
 
@@ -103,7 +103,7 @@ class CacheOptimizationService
                 'tenant_settings',
                 'project_teams',
                 'task_dependencies',
-                'document_versions'
+                'document_versions',
             ];
 
             foreach ($commonKeys as $key) {
@@ -121,7 +121,7 @@ class CacheOptimizationService
         return [
             'optimized_count' => $optimizedCount,
             'duration_ms' => $duration,
-            'status' => 'completed'
+            'status' => 'completed',
         ];
     }
 
@@ -135,7 +135,7 @@ class CacheOptimizationService
             'memory_usage' => 0,
             'hit_rate' => 0,
             'miss_rate' => 0,
-            'top_keys' => []
+            'top_keys' => [],
         ];
 
         try {
@@ -176,7 +176,7 @@ class CacheOptimizationService
         $optimizations['driver'] = [
             'current' => $currentDriver,
             'recommended' => 'redis',
-            'status' => $currentDriver === 'redis' ? 'optimal' : 'suboptimal'
+            'status' => $currentDriver === 'redis' ? 'optimal' : 'suboptimal',
         ];
 
         // Check cache TTL settings
@@ -184,7 +184,7 @@ class CacheOptimizationService
         $optimizations['ttl'] = [
             'current' => $defaultTtl,
             'recommended' => 3600,
-            'status' => $defaultTtl <= 3600 ? 'optimal' : 'too_long'
+            'status' => $defaultTtl <= 3600 ? 'optimal' : 'too_long',
         ];
 
         // Check cache prefix
@@ -192,7 +192,7 @@ class CacheOptimizationService
         $optimizations['prefix'] = [
             'current' => $prefix,
             'recommended' => 'zenamanage',
-            'status' => !empty($prefix) ? 'optimal' : 'missing'
+            'status' => !empty($prefix) ? 'optimal' : 'missing',
         ];
 
         return $optimizations;
@@ -209,7 +209,7 @@ class CacheOptimizationService
             'cache_prefix' => config('cache.prefix'),
             'memory_usage' => $this->getMemoryUsage(),
             'performance_metrics' => $this->getPerformanceMetrics(),
-            'recommendations' => $this->getCacheRecommendations()
+            'recommendations' => $this->getCacheRecommendations(),
         ];
 
         return $report;
@@ -225,7 +225,7 @@ class CacheOptimizationService
             'tenant_settings' => 3600,  // 1 hour
             'project_teams' => 1800,    // 30 minutes
             'task_dependencies' => 900, // 15 minutes
-            'document_versions' => 3600 // 1 hour
+            'document_versions' => 3600, // 1 hour
         ];
 
         return $ttlMap[$key] ?? 3600;
@@ -239,7 +239,7 @@ class CacheOptimizationService
         $memory = [
             'current' => memory_get_usage(true),
             'peak' => memory_get_peak_usage(true),
-            'limit' => ini_get('memory_limit')
+            'limit' => ini_get('memory_limit'),
         ];
 
         $memory['current_mb'] = round($memory['current'] / 1024 / 1024, 2);
@@ -256,7 +256,7 @@ class CacheOptimizationService
         $metrics = [
             'cache_hits' => Cache::get('cache_hits', 0),
             'cache_misses' => Cache::get('cache_misses', 0),
-            'cache_sets' => Cache::get('cache_sets', 0)
+            'cache_sets' => Cache::get('cache_sets', 0),
         ];
 
         $total = $metrics['cache_hits'] + $metrics['cache_misses'];
@@ -277,7 +277,7 @@ class CacheOptimizationService
         if (config('cache.default') !== 'redis') {
             $recommendations[] = [
                 'priority' => 'high',
-                'recommendation' => 'Switch to Redis cache driver for better performance'
+                'recommendation' => 'Switch to Redis cache driver for better performance',
             ];
         }
 
@@ -285,7 +285,7 @@ class CacheOptimizationService
         if (config('cache.ttl', 3600) > 3600) {
             $recommendations[] = [
                 'priority' => 'medium',
-                'recommendation' => 'Reduce cache TTL to prevent stale data'
+                'recommendation' => 'Reduce cache TTL to prevent stale data',
             ];
         }
 
@@ -293,7 +293,7 @@ class CacheOptimizationService
         if (empty(config('cache.prefix'))) {
             $recommendations[] = [
                 'priority' => 'low',
-                'recommendation' => 'Set cache prefix for better organization'
+                'recommendation' => 'Set cache prefix for better organization',
             ];
         }
 
@@ -307,7 +307,7 @@ class CacheOptimizationService
     {
         $warmUpResults = [
             'timestamp' => now()->toISOString(),
-            'warmed_items' => []
+            'warmed_items' => [],
         ];
 
         $startTime = microtime(true);
@@ -316,7 +316,7 @@ class CacheOptimizationService
             // Warm up user permissions
             $users = DB::table('users')->limit(100)->get();
             foreach ($users as $user) {
-                Cache::remember("user_permissions_{$user->id}", 1800, function() use ($user) {
+                Cache::remember("user_permissions_{$user->id}", 1800, function () use ($user) {
                     return DB::table('user_roles')
                         ->join('roles', 'user_roles.role_id', '=', 'roles.id')
                         ->where('user_roles.user_id', $user->id)
@@ -329,7 +329,7 @@ class CacheOptimizationService
             // Warm up tenant settings
             $tenants = DB::table('tenants')->get();
             foreach ($tenants as $tenant) {
-                Cache::remember("tenant_settings_{$tenant->id}", 3600, function() use ($tenant) {
+                Cache::remember("tenant_settings_{$tenant->id}", 3600, function () use ($tenant) {
                     return DB::table('tenant_settings')
                         ->where('tenant_id', $tenant->id)
                         ->pluck('value', 'key')
@@ -337,7 +337,6 @@ class CacheOptimizationService
                 });
                 $warmUpResults['warmed_items'][] = "tenant_settings_{$tenant->id}";
             }
-
         } catch (\Exception $e) {
             Log::error('Error warming up cache', ['error' => $e->getMessage()]);
         }
@@ -363,7 +362,7 @@ class CacheOptimizationService
             if (config('cache.default') === 'redis') {
                 $redis = Redis::connection();
                 $keys = $redis->keys("*{$pattern}*");
-                
+
                 foreach ($keys as $key) {
                     $redis->del($key);
                     $clearedCount++;
@@ -391,7 +390,7 @@ class CacheOptimizationService
             'pattern' => $pattern,
             'cleared_count' => $clearedCount,
             'duration_ms' => $duration,
-            'status' => 'completed'
+            'status' => 'completed',
         ];
     }
 }

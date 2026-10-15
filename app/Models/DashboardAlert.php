@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -9,11 +11,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DashboardAlert extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids;
+    use HasFactory;
 
     protected $table = 'dashboard_alerts';
 
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [
@@ -50,7 +54,7 @@ class DashboardAlert extends Model
     ];
 
     /**
-     * Relationship: Alert thuộc về user
+     * Relationship: Alert thuộc về user.
      */
     public function user(): BelongsTo
     {
@@ -58,7 +62,7 @@ class DashboardAlert extends Model
     }
 
     /**
-     * Relationship: Alert thuộc về project
+     * Relationship: Alert thuộc về project.
      */
     public function project(): BelongsTo
     {
@@ -66,7 +70,7 @@ class DashboardAlert extends Model
     }
 
     /**
-     * Relationship: Alert thuộc về tenant
+     * Relationship: Alert thuộc về tenant.
      */
     public function tenant(): BelongsTo
     {
@@ -74,7 +78,7 @@ class DashboardAlert extends Model
     }
 
     /**
-     * Scope: Lọc theo user
+     * Scope: Lọc theo user.
      */
     public function scopeForUser($query, string $userId)
     {
@@ -82,7 +86,7 @@ class DashboardAlert extends Model
     }
 
     /**
-     * Scope: Lọc theo project
+     * Scope: Lọc theo project.
      */
     public function scopeForProject($query, string $projectId)
     {
@@ -90,7 +94,7 @@ class DashboardAlert extends Model
     }
 
     /**
-     * Scope: Lọc theo tenant
+     * Scope: Lọc theo tenant.
      */
     public function scopeForTenant($query, string $tenantId)
     {
@@ -98,7 +102,7 @@ class DashboardAlert extends Model
     }
 
     /**
-     * Scope: Lọc theo type
+     * Scope: Lọc theo type.
      */
     public function scopeByType($query, string $type)
     {

@@ -1,123 +1,134 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Redis;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redis;
 
 /**
- * Redis Caching Service
- * 
+ * Redis Caching Service.
+ *
  * Provides intelligent caching for frequently accessed data
  */
 class RedisCachingService
 {
     private string $defaultStore = 'redis';
+
     private int $defaultTtl = 3600; // 1 hour
+
     private array $cacheStats = [];
 
     /**
-     * Cache user data with intelligent invalidation
+     * Cache user data with intelligent invalidation.
      */
     public function cacheUserData(int $userId, callable $callback, int $ttl = null): mixed
     {
         $key = "user:{$userId}";
-        $ttl = $ttl ?? $this->defaultTtl;
+        $ttl ??= $this->defaultTtl;
 
         return Cache::store($this->defaultStore)->remember($key, $ttl, function () use ($callback, $userId) {
             $this->logCacheHit('user', $userId);
+
             return $callback();
         });
     }
 
     /**
-     * Cache project data with relationships
+     * Cache project data with relationships.
      */
     public function cacheProjectData(string $projectId, callable $callback, int $ttl = null): mixed
     {
         $key = "project:{$projectId}";
-        $ttl = $ttl ?? $this->defaultTtl;
+        $ttl ??= $this->defaultTtl;
 
         return Cache::store($this->defaultStore)->remember($key, $ttl, function () use ($callback, $projectId) {
             $this->logCacheHit('project', $projectId);
+
             return $callback();
         });
     }
 
     /**
-     * Cache task data with filters
+     * Cache task data with filters.
      */
     public function cacheTaskData(string $taskId, callable $callback, int $ttl = null): mixed
     {
         $key = "task:{$taskId}";
-        $ttl = $ttl ?? $this->defaultTtl;
+        $ttl ??= $this->defaultTtl;
 
         return Cache::store($this->defaultStore)->remember($key, $ttl, function () use ($callback, $taskId) {
             $this->logCacheHit('task', $taskId);
+
             return $callback();
         });
     }
 
     /**
-     * Cache dashboard data with tenant isolation
+     * Cache dashboard data with tenant isolation.
      */
     public function cacheDashboardData(string $tenantId, string $userId, callable $callback, int $ttl = null): mixed
     {
         $key = "dashboard:{$tenantId}:{$userId}";
-        $ttl = $ttl ?? 1800; // 30 minutes for dashboard data
+        $ttl ??= 1800; // 30 minutes for dashboard data
 
         return Cache::store($this->defaultStore)->remember($key, $ttl, function () use ($callback, $tenantId, $userId) {
             $this->logCacheHit('dashboard', "{$tenantId}:{$userId}");
+
             return $callback();
         });
     }
 
     /**
-     * Cache analytics data with time-based invalidation
+     * Cache analytics data with time-based invalidation.
      */
     public function cacheAnalyticsData(string $type, array $filters, callable $callback, int $ttl = null): mixed
     {
         $key = "analytics:{$type}:" . md5(serialize($filters));
-        $ttl = $ttl ?? 3600; // 1 hour for analytics
+        $ttl ??= 3600; // 1 hour for analytics
 
         return Cache::store($this->defaultStore)->remember($key, $ttl, function () use ($callback, $type, $filters) {
             $this->logCacheHit('analytics', $type);
+
             return $callback();
         });
     }
 
     /**
-     * Cache search results with query-based keys
+     * Cache search results with query-based keys.
      */
     public function cacheSearchResults(string $entity, array $query, callable $callback, int $ttl = null): mixed
     {
         $key = "search:{$entity}:" . md5(serialize($query));
-        $ttl = $ttl ?? 1800; // 30 minutes for search results
+        $ttl ??= 1800; // 30 minutes for search results
 
         return Cache::store($this->defaultStore)->remember($key, $ttl, function () use ($callback, $entity, $query) {
             $this->logCacheHit('search', $entity);
+
             return $callback();
         });
     }
 
     /**
-     * Cache frequently accessed lists
+     * Cache frequently accessed lists.
      */
     public function cacheListData(string $listType, array $filters, callable $callback, int $ttl = null): mixed
     {
         $key = "list:{$listType}:" . md5(serialize($filters));
-        $ttl = $ttl ?? 1800; // 30 minutes for lists
+        $ttl ??= 1800; // 30 minutes for lists
 
         return Cache::store($this->defaultStore)->remember($key, $ttl, function () use ($callback, $listType, $filters) {
             $this->logCacheHit('list', $listType);
+
             return $callback();
         });
     }
 
     /**
-     * Invalidate cache by pattern
+     * Invalidate cache by pattern.
      */
     public function invalidateByPattern(string $pattern): int
     {
@@ -129,21 +140,20 @@ class RedisCachingService
 
             $deleted = Redis::del($keys);
             $this->logCacheInvalidation($pattern, $deleted);
-            
-            return $deleted;
 
+            return $deleted;
         } catch (\Exception $e) {
             Log::error('Failed to invalidate cache by pattern', [
                 'pattern' => $pattern,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return 0;
         }
     }
 
     /**
-     * Invalidate user-related cache
+     * Invalidate user-related cache.
      */
     public function invalidateUserCache(int $userId): void
     {
@@ -151,7 +161,7 @@ class RedisCachingService
             "user:{$userId}",
             "dashboard:*:{$userId}",
             "user_preferences:{$userId}",
-            "user_permissions:{$userId}"
+            "user_permissions:{$userId}",
         ];
 
         foreach ($patterns as $pattern) {
@@ -160,7 +170,7 @@ class RedisCachingService
     }
 
     /**
-     * Invalidate project-related cache
+     * Invalidate project-related cache.
      */
     public function invalidateProjectCache(string $projectId): void
     {
@@ -169,7 +179,7 @@ class RedisCachingService
             "project_tasks:{$projectId}",
             "project_documents:{$projectId}",
             "project_analytics:{$projectId}",
-            "project_team:{$projectId}"
+            "project_team:{$projectId}",
         ];
 
         foreach ($patterns as $pattern) {
@@ -178,7 +188,7 @@ class RedisCachingService
     }
 
     /**
-     * Invalidate task-related cache
+     * Invalidate task-related cache.
      */
     public function invalidateTaskCache(string $taskId): void
     {
@@ -186,7 +196,7 @@ class RedisCachingService
             "task:{$taskId}",
             "task_assignments:{$taskId}",
             "task_documents:{$taskId}",
-            "task_comments:{$taskId}"
+            "task_comments:{$taskId}",
         ];
 
         foreach ($patterns as $pattern) {
@@ -195,7 +205,7 @@ class RedisCachingService
     }
 
     /**
-     * Warm up cache with frequently accessed data
+     * Warm up cache with frequently accessed data.
      */
     public function warmUpCache(): void
     {
@@ -204,30 +214,29 @@ class RedisCachingService
 
             // Warm up user data
             $this->warmUpUserCache();
-            
+
             // Warm up project data
             $this->warmUpProjectCache();
-            
+
             // Warm up dashboard data
             $this->warmUpDashboardCache();
 
             Log::info('Cache warm-up completed successfully');
-
         } catch (\Exception $e) {
             Log::error('Cache warm-up failed', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
 
     /**
-     * Get cache statistics
+     * Get cache statistics.
      */
     public function getCacheStats(): array
     {
         try {
             $info = Redis::info();
-            
+
             return [
                 'redis_version' => $info['redis_version'] ?? 'unknown',
                 'used_memory' => $info['used_memory_human'] ?? 'unknown',
@@ -236,41 +245,40 @@ class RedisCachingService
                 'keyspace_hits' => $info['keyspace_hits'] ?? 0,
                 'keyspace_misses' => $info['keyspace_misses'] ?? 0,
                 'hit_rate' => $this->calculateHitRate($info),
-                'cache_stats' => $this->cacheStats
+                'cache_stats' => $this->cacheStats,
             ];
-
         } catch (\Exception $e) {
             Log::error('Failed to get cache statistics', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return [];
         }
     }
 
     /**
-     * Clear all cache
+     * Clear all cache.
      */
     public function clearAllCache(): bool
     {
         try {
             Redis::flushdb();
             $this->cacheStats = [];
-            
-            Log::info('All cache cleared successfully');
-            return true;
 
+            Log::info('All cache cleared successfully');
+
+            return true;
         } catch (\Exception $e) {
             Log::error('Failed to clear all cache', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return false;
         }
     }
 
     /**
-     * Warm up user cache
+     * Warm up user cache.
      */
     private function warmUpUserCache(): void
     {
@@ -287,7 +295,7 @@ class RedisCachingService
     }
 
     /**
-     * Warm up project cache
+     * Warm up project cache.
      */
     private function warmUpProjectCache(): void
     {
@@ -304,7 +312,7 @@ class RedisCachingService
     }
 
     /**
-     * Warm up dashboard cache
+     * Warm up dashboard cache.
      */
     private function warmUpDashboardCache(): void
     {
@@ -317,47 +325,47 @@ class RedisCachingService
             $this->cacheDashboardData($tenant->id, 'system', function () use ($tenant) {
                 return [
                     'tenant_id' => $tenant->id,
-                    'cached_at' => now()
+                    'cached_at' => now(),
                 ];
             }, 1800); // 30 minutes
         }
     }
 
     /**
-     * Calculate cache hit rate
+     * Calculate cache hit rate.
      */
     private function calculateHitRate(array $info): float
     {
         $hits = $info['keyspace_hits'] ?? 0;
         $misses = $info['keyspace_misses'] ?? 0;
-        
+
         if ($hits + $misses === 0) {
             return 0.0;
         }
-        
+
         return round(($hits / ($hits + $misses)) * 100, 2);
     }
 
     /**
-     * Log cache hit
+     * Log cache hit.
      */
     private function logCacheHit(string $type, string $key): void
     {
         if (!isset($this->cacheStats[$type])) {
             $this->cacheStats[$type] = ['hits' => 0, 'misses' => 0];
         }
-        
+
         $this->cacheStats[$type]['hits']++;
     }
 
     /**
-     * Log cache invalidation
+     * Log cache invalidation.
      */
     private function logCacheInvalidation(string $pattern, int $count): void
     {
         Log::info('Cache invalidated', [
             'pattern' => $pattern,
-            'keys_deleted' => $count
+            'keys_deleted' => $count,
         ]);
     }
 }

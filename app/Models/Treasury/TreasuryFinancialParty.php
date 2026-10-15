@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models\Treasury;
 
@@ -21,6 +23,7 @@ class TreasuryFinancialParty extends Model
 {
     /** @use HasFactory<\Database\Factories\Treasury\TreasuryFinancialPartyFactory> */
     use HasFactory;
+
     use HasUlids;
     use TenantScope;
 

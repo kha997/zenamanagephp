@@ -27,7 +27,7 @@ final class RoleBasedWidgetProvider implements WidgetDataProvider
     {
         $widgetCode = (string) $widget->getAttribute('code');
 
-        if (! $this->supports($widgetCode)) {
+        if (!$this->supports($widgetCode)) {
             return WidgetDataResult::unsupported();
         }
 

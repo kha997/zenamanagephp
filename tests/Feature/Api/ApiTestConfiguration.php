@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
@@ -8,10 +10,11 @@ use Tests\TestCase;
 
 class ApiTestConfiguration extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use RefreshDatabase;
+    use WithFaker;
 
     /**
-     * Test that all required services are available
+     * Test that all required services are available.
      *
      * @group redis
      */
@@ -47,7 +50,7 @@ class ApiTestConfiguration extends TestCase
     }
 
     /**
-     * Test middleware registration
+     * Test middleware registration.
      */
     public function test_middleware_registration()
     {
@@ -60,12 +63,12 @@ class ApiTestConfiguration extends TestCase
     }
 
     /**
-     * Test service provider registration
+     * Test service provider registration.
      */
     public function test_service_provider_registration()
     {
         $app = app();
-        
+
         // Test that our services are bound
         $this->assertTrue($app->bound(\App\Services\RateLimitService::class));
         $this->assertTrue($app->bound(\App\Services\AdvancedCacheService::class));
@@ -73,12 +76,12 @@ class ApiTestConfiguration extends TestCase
     }
 
     /**
-     * Test route registration
+     * Test route registration.
      */
     public function test_route_registration()
     {
         $routes = \Illuminate\Support\Facades\Route::getRoutes();
-        
+
         $requiredRoutes = [
             'api/auth/login',
             'api/auth/logout',
@@ -89,7 +92,7 @@ class ApiTestConfiguration extends TestCase
             'api/cache/config',
             'api/websocket/info',
             'api/websocket/stats',
-            'api/websocket/test'
+            'api/websocket/test',
         ];
 
         foreach ($requiredRoutes as $route) {
@@ -105,7 +108,7 @@ class ApiTestConfiguration extends TestCase
     }
 
     /**
-     * Test environment configuration
+     * Test environment configuration.
      */
     public function test_environment_configuration()
     {
@@ -115,7 +118,7 @@ class ApiTestConfiguration extends TestCase
             'APP_ENV',
             'APP_KEY',
             'DB_CONNECTION',
-            'CACHE_DRIVER'
+            'CACHE_DRIVER',
         ];
 
         foreach ($requiredEnvVars as $envVar) {
@@ -128,13 +131,13 @@ class ApiTestConfiguration extends TestCase
     }
 
     /**
-     * Test database configuration
+     * Test database configuration.
      */
     public function test_database_configuration()
     {
         $connection = \Illuminate\Support\Facades\DB::connection();
         $this->assertTrue($connection->getPdo() !== null, 'Database connection is not available');
-        
+
         // Test that we can run migrations
         try {
             \Illuminate\Support\Facades\Artisan::call('migrate:status');
@@ -145,7 +148,7 @@ class ApiTestConfiguration extends TestCase
     }
 
     /**
-     * Test Redis configuration
+     * Test Redis configuration.
      *
      * @group redis
      */
@@ -154,7 +157,7 @@ class ApiTestConfiguration extends TestCase
         try {
             $redis = \Illuminate\Support\Facades\Redis::connection();
             $this->assertTrue($redis->ping() === 'PONG', 'Redis connection is not working');
-            
+
             // Test basic Redis operations
             $redis->set('test_key', 'test_value');
             $value = $redis->get('test_key');
@@ -168,7 +171,7 @@ class ApiTestConfiguration extends TestCase
     }
 
     /**
-     * Test API response format consistency
+     * Test API response format consistency.
      */
     public function test_api_response_format()
     {
@@ -177,7 +180,7 @@ class ApiTestConfiguration extends TestCase
         $response->assertStatus(200);
         $response->assertJsonStructure([
             'success',
-            'data'
+            'data',
         ]);
 
         // Test authenticated endpoint
@@ -186,17 +189,17 @@ class ApiTestConfiguration extends TestCase
 
         $response = $this->getJson('/api/auth/me', [
             'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json'
+            'Accept' => 'application/json',
         ]);
         $response->assertStatus(200);
         $response->assertJsonStructure([
             'success',
-            'data'
+            'data',
         ]);
     }
 
     /**
-     * Test error response format
+     * Test error response format.
      */
     public function test_error_response_format()
     {
@@ -207,8 +210,8 @@ class ApiTestConfiguration extends TestCase
             'success',
             'error' => [
                 'message',
-                'code'
-            ]
+                'code',
+            ],
         ]);
 
         // Test 404 error
@@ -217,14 +220,14 @@ class ApiTestConfiguration extends TestCase
     }
 
     /**
-     * Test CORS configuration
+     * Test CORS configuration.
      */
     public function test_cors_configuration()
     {
         $response = $this->options('/api/auth/login', [], [
             'Origin' => 'http://localhost:3000',
             'Access-Control-Request-Method' => 'POST',
-            'Access-Control-Request-Headers' => 'Content-Type, Authorization'
+            'Access-Control-Request-Headers' => 'Content-Type, Authorization',
         ]);
 
         $response->assertStatus(200);
@@ -234,17 +237,17 @@ class ApiTestConfiguration extends TestCase
     }
 
     /**
-     * Test security headers
+     * Test security headers.
      */
     public function test_security_headers()
     {
         $response = $this->getJson('/api/csrf-token');
-        
+
         $requiredHeaders = [
             'X-Content-Type-Options',
             'X-Frame-Options',
             'X-XSS-Protection',
-            'Referrer-Policy'
+            'Referrer-Policy',
         ];
 
         foreach ($requiredHeaders as $header) {

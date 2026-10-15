@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
@@ -10,8 +12,7 @@ class DeliverablePdfExportServiceTest extends TestCase
 {
     public function test_it_renders_pdf_bytes_via_the_configured_node_script(): void
     {
-        $service = new class extends DeliverablePdfExportService
-        {
+        $service = new class () extends DeliverablePdfExportService {
             /** @var array<int, string> */
             public array $capturedCommand = [];
 
@@ -53,8 +54,7 @@ class DeliverablePdfExportServiceTest extends TestCase
         putenv('DELIVERABLE_PDF_BROWSER_PATH=/tmp/chromium');
 
         try {
-            $service = new class extends DeliverablePdfExportService
-            {
+            $service = new class () extends DeliverablePdfExportService {
                 /** @var array<string, string> */
                 public array $capturedEnvironment = [];
 
@@ -84,8 +84,7 @@ class DeliverablePdfExportServiceTest extends TestCase
 
     public function test_it_throws_a_specific_exception_when_node_is_unavailable(): void
     {
-        $service = new class extends DeliverablePdfExportService
-        {
+        $service = new class () extends DeliverablePdfExportService {
             protected function resolveNodeBinary(): ?string
             {
                 return null;
@@ -131,8 +130,7 @@ class DeliverablePdfExportServiceTest extends TestCase
 
     public function test_it_builds_expected_node_arguments_for_pdf_options(): void
     {
-        $service = new class extends DeliverablePdfExportService
-        {
+        $service = new class () extends DeliverablePdfExportService {
             public function exposeBuildCommand(string $nodeBinary, string $htmlPath, string $pdfPath, array $options, array $documentMeta): array
             {
                 return $this->buildCommand($nodeBinary, $htmlPath, $pdfPath, $options, $documentMeta);

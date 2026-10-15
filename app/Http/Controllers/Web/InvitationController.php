@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Http\Controllers\Controller;
 use App\Models\Invitation;
 use App\Models\Organization;
 use App\Models\Project;
@@ -10,7 +11,6 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
-use App\Http\Controllers\Controller;
 
 class InvitationController extends Controller
 {
@@ -21,14 +21,14 @@ class InvitationController extends Controller
     //     $this->emailService = $emailService;
     // }
     /**
-     * Display invitation management page
+     * Display invitation management page.
      */
     public function index(Request $request): View
     {
         // Get authenticated user from session
         $user = $request->get('authenticated_user');
         $organizationId = $user->organization_id ?? 1;
-        
+
         $invitations = Invitation::with(['project', 'inviter', 'accepter'])
             ->where('organization_id', $organizationId)
             ->orderBy('created_at', 'desc')
@@ -38,17 +38,17 @@ class InvitationController extends Controller
     }
 
     /**
-     * Show the form for creating a new invitation
+     * Show the form for creating a new invitation.
      */
     public function create(Request $request): View
     {
         // Get authenticated user from session
         $user = $request->get('authenticated_user');
         $organizationId = $user->organization_id ?? 1;
-        
+
         // Get organization or create a demo one
         $organization = Organization::find($organizationId);
-        
+
         if (!$organization) {
             // Create a demo organization if none exists
             $organization = Organization::create([
@@ -56,23 +56,23 @@ class InvitationController extends Controller
                 'slug' => 'demo-org',
                 'domain' => 'demo.com',
                 'description' => 'Demo organization for testing',
-                'status' => 'active'
+                'status' => 'active',
             ]);
         }
-        
+
         try {
             $projects = Project::where('organization_id', $organization->id)->get();
         } catch (\Exception $e) {
             $projects = collect(); // Empty collection if projects table doesn't exist or has issues
         }
-        
+
         $roles = $organization->getAvailableRoles();
 
         return view('invitations.create', compact('projects', 'roles'));
     }
 
     /**
-     * Store a newly created invitation
+     * Store a newly created invitation.
      */
     public function store(Request $request): JsonResponse
     {
@@ -89,7 +89,7 @@ class InvitationController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -106,7 +106,7 @@ class InvitationController extends Controller
         if ($existingUser) {
             return response()->json([
                 'success' => false,
-                'message' => 'User with this email already exists in your organization'
+                'message' => 'User with this email already exists in your organization',
             ], 400);
         }
 
@@ -123,26 +123,24 @@ class InvitationController extends Controller
                 'expires_at' => Carbon::now()->addDays(7),
             ]);
 
-            
             // $emailSent = $this->emailService->sendInvitationEmail($invitation);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Invitation created successfully!',
                 'data' => $invitation,
-                'email_sent' => false // Will be true when email is implemented
+                'email_sent' => false, // Will be true when email is implemented
             ], 201);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create invitation: ' . $e->getMessage()
+                'message' => 'Failed to create invitation: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Show invitation acceptance form
+     * Show invitation acceptance form.
      */
     public function accept(Request $request, string $token): View
     {
@@ -156,7 +154,7 @@ class InvitationController extends Controller
     }
 
     /**
-     * Process invitation acceptance
+     * Process invitation acceptance.
      */
     public function processAcceptance(Request $request, string $token): JsonResponse
     {
@@ -165,7 +163,7 @@ class InvitationController extends Controller
         if (!$invitation || !$invitation->canBeAccepted()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid or expired invitation'
+                'message' => 'Invalid or expired invitation',
             ], 400);
         }
 
@@ -179,7 +177,7 @@ class InvitationController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -207,25 +205,24 @@ class InvitationController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Account created successfully',
-                'data' => $user
+                'data' => $user,
             ], 201);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create account: ' . $e->getMessage()
+                'message' => 'Failed to create account: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Display invitation management page for admins
+     * Display invitation management page for admins.
      */
     public function manage(Request $request): View
     {
         $user = $request->get('authenticated_user');
         $organizationId = $user->organization_id ?? 1;
-        
+
         $invitations = Invitation::with(['project', 'inviter', 'accepter'])
             ->where('organization_id', $organizationId)
             ->orderBy('created_at', 'desc')
@@ -235,7 +232,7 @@ class InvitationController extends Controller
     }
 
     /**
-     * Bulk create invitations
+     * Bulk create invitations.
      */
     public function bulkCreate(Request $request): JsonResponse
     {
@@ -255,14 +252,14 @@ class InvitationController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
         $user = $request->get('authenticated_user');
         $organizationId = $user->organization_id ?? 1;
         $organization = Organization::find($organizationId);
-        
+
         $createdInvitations = [];
         $errors = [];
 
@@ -302,7 +299,6 @@ class InvitationController extends Controller
                 ]);
 
                 $createdInvitations[] = $invitation;
-
             } catch (\Exception $e) {
                 $errors[] = "Row {$index}: " . $e->getMessage();
             }
@@ -310,53 +306,51 @@ class InvitationController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => "Created " . count($createdInvitations) . " invitations successfully",
+            'message' => 'Created ' . count($createdInvitations) . ' invitations successfully',
             'data' => [
                 'created_count' => count($createdInvitations),
                 'error_count' => count($errors),
-                'errors' => $errors
-            ]
+                'errors' => $errors,
+            ],
         ]);
     }
 
     /**
-     * Resend invitation
+     * Resend invitation.
      */
     public function resend(Request $request, Invitation $invitation): JsonResponse
     {
         if ($invitation->status !== 'pending') {
             return response()->json([
                 'success' => false,
-                'message' => 'Can only resend pending invitations'
+                'message' => 'Can only resend pending invitations',
             ], 400);
         }
 
         try {
             $invitation->resend();
-            
 
             return response()->json([
                 'success' => true,
-                'message' => 'Invitation resent successfully'
+                'message' => 'Invitation resent successfully',
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to resend invitation: ' . $e->getMessage()
+                'message' => 'Failed to resend invitation: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Cancel invitation
+     * Cancel invitation.
      */
     public function cancel(Request $request, Invitation $invitation): JsonResponse
     {
         if ($invitation->status !== 'pending') {
             return response()->json([
                 'success' => false,
-                'message' => 'Can only cancel pending invitations'
+                'message' => 'Can only cancel pending invitations',
             ], 400);
         }
 
@@ -365,13 +359,12 @@ class InvitationController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Invitation cancelled successfully'
+                'message' => 'Invitation cancelled successfully',
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to cancel invitation: ' . $e->getMessage()
+                'message' => 'Failed to cancel invitation: ' . $e->getMessage(),
             ], 500);
         }
     }

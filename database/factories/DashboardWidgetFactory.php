@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories;
 
@@ -40,7 +42,7 @@ class DashboardWidgetFactory extends Factory
     }
 
     /**
-     * Widget type: Chart
+     * Widget type: Chart.
      */
     public function chart(): static
     {
@@ -55,7 +57,7 @@ class DashboardWidgetFactory extends Factory
     }
 
     /**
-     * Widget type: Metric
+     * Widget type: Metric.
      */
     public function metric(): static
     {
@@ -70,7 +72,7 @@ class DashboardWidgetFactory extends Factory
     }
 
     /**
-     * Widget type: Table
+     * Widget type: Table.
      */
     public function table(): static
     {
@@ -85,7 +87,7 @@ class DashboardWidgetFactory extends Factory
     }
 
     /**
-     * Widget category: Overview
+     * Widget category: Overview.
      */
     public function overview(): static
     {
@@ -95,7 +97,7 @@ class DashboardWidgetFactory extends Factory
     }
 
     /**
-     * Widget category: Analytics
+     * Widget category: Analytics.
      */
     public function analytics(): static
     {
@@ -105,7 +107,7 @@ class DashboardWidgetFactory extends Factory
     }
 
     /**
-     * Widget category: Progress
+     * Widget category: Progress.
      */
     public function progress(): static
     {
@@ -115,7 +117,7 @@ class DashboardWidgetFactory extends Factory
     }
 
     /**
-     * Inactive widget
+     * Inactive widget.
      */
     public function inactive(): static
     {

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Portal;
 
@@ -12,7 +14,6 @@ use App\Models\Project;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
 
 class PortalDesignItemActionsTest extends TestCase
@@ -20,9 +21,13 @@ class PortalDesignItemActionsTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenant;
+
     private Account $account;
+
     private Project $project;
+
     private User $assignee;
+
     private DesignItem $item;
 
     protected function setUp(): void

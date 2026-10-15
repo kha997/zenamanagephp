@@ -1,15 +1,17 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Redis;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Redis;
 
 /**
- * Advanced Caching Service
- * 
+ * Advanced Caching Service.
+ *
  * Provides sophisticated caching capabilities:
  * - Multi-tier caching (Redis, Memory, Database)
  * - Cache invalidation strategies
@@ -37,19 +39,20 @@ class AdvancedCacheService
     ];
 
     /**
-     * Get cached data with fallback strategies
+     * Get cached data with fallback strategies.
      */
     public function get(string $key, callable $fallback = null, array $options = []): mixed
     {
         $startTime = microtime(true);
         $tenantId = $this->getTenantId();
         $fullKey = $this->buildKey($key, $tenantId);
-        
+
         try {
             // Try Redis first
             $data = $this->getFromRedis($fullKey);
             if ($data !== null) {
                 $this->logCacheHit($key, 'redis', microtime(true) - $startTime);
+
                 return $data;
             }
 
@@ -59,6 +62,7 @@ class AdvancedCacheService
                 $this->logCacheHit($key, 'laravel', microtime(true) - $startTime);
                 // Store in Redis for faster access
                 $this->storeInRedis($fullKey, $data, $options);
+
                 return $data;
             }
 
@@ -67,36 +71,37 @@ class AdvancedCacheService
                 $data = $fallback();
                 $this->set($key, $data, $options);
                 $this->logCacheMiss($key, 'fallback', microtime(true) - $startTime);
+
                 return $data;
             }
 
             $this->logCacheMiss($key, 'none', microtime(true) - $startTime);
-            return null;
 
+            return null;
         } catch (\Exception $e) {
             Log::error('Cache get error', [
                 'key' => $key,
                 'error' => $e->getMessage(),
                 'tenant_id' => $tenantId,
             ]);
-            
+
             // Fallback to direct execution
             if ($fallback !== null) {
                 return $fallback();
             }
-            
+
             return null;
         }
     }
 
     /**
-     * Store data in cache with multiple strategies
+     * Store data in cache with multiple strategies.
      */
     public function set(string $key, mixed $data, array $options = []): bool
     {
         $tenantId = $this->getTenantId();
         $fullKey = $this->buildKey($key, $tenantId);
-        
+
         $strategy = $options['strategy'] ?? $this->getStrategy($key);
         $ttl = $options['ttl'] ?? $this->getTtl($key);
         $tags = $options['tags'] ?? $this->getTags($key);
@@ -118,17 +123,18 @@ class AdvancedCacheService
                 'error' => $e->getMessage(),
                 'tenant_id' => $tenantId,
             ]);
+
             return false;
         }
     }
 
     /**
-     * Invalidate cache by key, tags, or pattern
+     * Invalidate cache by key, tags, or pattern.
      */
     public function invalidate(string $key = null, array $tags = null, string $pattern = null): bool
     {
         $tenantId = $this->getTenantId();
-        
+
         try {
             if ($key !== null) {
                 $fullKey = $this->buildKey($key, $tenantId);
@@ -153,21 +159,22 @@ class AdvancedCacheService
                 'error' => $e->getMessage(),
                 'tenant_id' => $tenantId,
             ]);
+
             return false;
         }
     }
 
     /**
-     * Warm up cache with frequently accessed data
+     * Warm up cache with frequently accessed data.
      */
     public function warmUp(array $keys, callable $dataProvider): bool
     {
         $tenantId = $this->getTenantId();
-        
+
         try {
             foreach ($keys as $key) {
                 $fullKey = $this->buildKey($key, $tenantId);
-                
+
                 // Check if already cached
                 if ($this->getFromRedis($fullKey) !== null) {
                     continue;
@@ -187,12 +194,13 @@ class AdvancedCacheService
                 'error' => $e->getMessage(),
                 'tenant_id' => $tenantId,
             ]);
+
             return false;
         }
     }
 
     /**
-     * Get cache statistics
+     * Get cache statistics.
      */
     public function getStats(): array
     {
@@ -244,109 +252,116 @@ class AdvancedCacheService
             ];
         } catch (\Exception $e) {
             Log::error('Cache stats error', ['error' => $e->getMessage()]);
+
             return $defaultStats;
         }
     }
 
     /**
-     * Write-through cache strategy
+     * Write-through cache strategy.
      */
     private function writeThrough(string $key, mixed $data, int $ttl, array $tags): bool
     {
         $success = true;
-        
+
         // Store in Redis
         if (!$this->storeInRedis($key, $data, $ttl)) {
             $success = false;
         }
-        
+
         // Store in Laravel cache
         if (!Cache::put($key, $data, $ttl)) {
             $success = false;
         }
-        
+
         // Store tags for invalidation
         $this->storeTags($key, $tags);
-        
+
         return $success;
     }
 
     /**
-     * Write-behind cache strategy
+     * Write-behind cache strategy.
      */
     private function writeBehind(string $key, mixed $data, int $ttl, array $tags): bool
     {
         // Store in Redis immediately
         $this->storeInRedis($key, $data, $ttl);
-        
+
         // Queue Laravel cache update
         // In a real implementation, you might use a queue
         Cache::put($key, $data, $ttl);
-        
+
         $this->storeTags($key, $tags);
-        
+
         return true;
     }
 
     /**
-     * Write-around cache strategy
+     * Write-around cache strategy.
      */
     private function writeAround(string $key, mixed $data, int $ttl, array $tags): bool
     {
         // Only store in Redis, not in Laravel cache
         $this->storeInRedis($key, $data, $ttl);
         $this->storeTags($key, $tags);
-        
+
         return true;
     }
 
     /**
-     * Get data from Redis
+     * Get data from Redis.
      */
     private function getFromRedis(string $key): mixed
     {
         try {
             $data = Redis::get($key);
+
             return $data ? json_decode($data, true) : null;
         } catch (\Exception $e) {
             Log::warning('Redis get error', ['key' => $key, 'error' => $e->getMessage()]);
+
             return null;
         }
     }
 
     /**
-     * Store data in Redis
+     * Store data in Redis.
      */
     private function storeInRedis(string $key, mixed $data, int $ttl = null): bool
     {
         try {
-            $ttl = $ttl ?? $this->cacheConfig['default_ttl'];
+            $ttl ??= $this->cacheConfig['default_ttl'];
             $serialized = json_encode($data);
-            
+
             Redis::setex($key, $ttl, $serialized);
+
             return true;
         } catch (\Exception $e) {
             Log::warning('Redis set error', ['key' => $key, 'error' => $e->getMessage()]);
+
             return false;
         }
     }
 
     /**
-     * Delete data from Redis
+     * Delete data from Redis.
      */
     private function deleteFromRedis(string $key): bool
     {
         try {
             Redis::del($key);
+
             return true;
         } catch (\Exception $e) {
             Log::warning('Redis delete error', ['key' => $key, 'error' => $e->getMessage()]);
+
             return false;
         }
     }
 
     /**
-     * Store cache tags for invalidation
+     * Store cache tags for invalidation.
      */
     private function storeTags(string $key, array $tags): void
     {
@@ -358,12 +373,13 @@ class AdvancedCacheService
     }
 
     /**
-     * Invalidate cache by tags
+     * Invalidate cache by tags.
      */
     private function invalidateByTags(array $tags, string $tenantId): void
     {
         foreach ($tags as $tag) {
             $tagKey = "tag:{$tag}:{$tenantId}";
+
             try {
                 $keys = Redis::smembers($tagKey);
             } catch (\Exception $e) {
@@ -390,7 +406,7 @@ class AdvancedCacheService
     }
 
     /**
-     * Invalidate cache by pattern
+     * Invalidate cache by pattern.
      */
     private function invalidateByPattern(string $pattern, string $tenantId): void
     {
@@ -455,7 +471,7 @@ class AdvancedCacheService
     }
 
     /**
-     * Build cache key with tenant isolation
+     * Build cache key with tenant isolation.
      */
     private function buildKey(string $key, string $tenantId): string
     {
@@ -463,7 +479,7 @@ class AdvancedCacheService
     }
 
     /**
-     * Get tenant ID from current context
+     * Get tenant ID from current context.
      */
     private function getTenantId(): string
     {
@@ -475,7 +491,7 @@ class AdvancedCacheService
     }
 
     /**
-     * Get cache strategy for key
+     * Get cache strategy for key.
      */
     private function getStrategy(string $key): string
     {
@@ -484,12 +500,12 @@ class AdvancedCacheService
                 return $config['strategy'];
             }
         }
-        
+
         return 'write_through';
     }
 
     /**
-     * Get TTL for key
+     * Get TTL for key.
      */
     private function getTtl(string $key): int
     {
@@ -498,12 +514,12 @@ class AdvancedCacheService
                 return $config['ttl'];
             }
         }
-        
+
         return $this->cacheConfig['default_ttl'];
     }
 
     /**
-     * Get tags for key
+     * Get tags for key.
      */
     private function getTags(string $key): array
     {
@@ -512,12 +528,12 @@ class AdvancedCacheService
                 return $config['tags'];
             }
         }
-        
+
         return [];
     }
 
     /**
-     * Log cache hit
+     * Log cache hit.
      */
     private function logCacheHit(string $key, string $source, float $duration): void
     {
@@ -529,7 +545,7 @@ class AdvancedCacheService
     }
 
     /**
-     * Log cache miss
+     * Log cache miss.
      */
     private function logCacheMiss(string $key, string $source, float $duration): void
     {
@@ -541,7 +557,7 @@ class AdvancedCacheService
     }
 
     /**
-     * Calculate cache hit rate
+     * Calculate cache hit rate.
      */
     private function calculateHitRate(array $info): float
     {
@@ -568,7 +584,7 @@ class AdvancedCacheService
     }
 
     /**
-     * Get cache size
+     * Get cache size.
      */
     private function getCacheSize(): int
     {

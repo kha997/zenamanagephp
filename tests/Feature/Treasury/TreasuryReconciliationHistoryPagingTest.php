@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Treasury;
 
@@ -26,9 +28,13 @@ class TreasuryReconciliationHistoryPagingTest extends TestCase
     use TreasuryAccessTestHelpers;
 
     private Tenant $tenant;
+
     private Project $project;
+
     private User $owner;
+
     private TreasuryWallet $wallet;
+
     private TreasuryReconciliationService $reconciliation;
 
     /** @var list<string> */

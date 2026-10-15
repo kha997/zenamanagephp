@@ -1,14 +1,14 @@
 ---
 work_id: GAP-081
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-15-gap-081-git-blame-ignore-revs-evidence.md
   plan: docs/superpowers/plans/2026-10-15-gap-081-git-blame-ignore-revs.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-10-15T19:15:40+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-10-15T19:35:20+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-15, verbatim: 'APPROVE GAP-081 Gate 3'. Given after the packet was presented at PR head 9feb2afa3a4620b1659e7fbde328618c022cf95d (implementation CI 34/34 green at 1a058295); bound to implementation subject 1a0582958aea62b6f972a4482b1bd5b6e888e199 and implementation-tree digest 2a55892145ba09577e589369fa20886bdf08806e4cb791d681a1dc3e6d55e785 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-15T19:15:40+07:00"
-  updated_at: "2026-10-15T19:15:40+07:00"
+  updated_at: "2026-10-15T19:35:20+07:00"
 generated_by: agent
 residual_risk_rating: none
 mandatory_technical_gate_summary: "GAP-081 at subject 1a058295: adds the root .git-blame-ignore-revs with a comment header and the single hash 40d19ab10f51c77587127f2ab5c477724f4ab7cf (GAP-080 squash). The hash resolves to a commit on main; git blame --ignore-revs-file on database/seeders/RoleSeeder.php attributes lines 1 and 3 to f913f040 instead of 40d19ab1 (line 2, a blank line the reformat added, stays on 40d19ab1). No code, CI or history change. Governance and docs lints pass; exact-head CI 34/34 green at 1a058295."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "1a0582958aea62b6f972a4482b1bd5b6e888e199"
   verified_at: "2026-10-15T19:15:40+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "2a55892145ba09577e589369fa20886bdf08806e4cb791d681a1dc3e6d55e785"
+  decision_recorded_at: "2026-10-15T19:35:20+07:00"
 ---
 
 # GAP-081 — Gate 3 release decision (.git-blame-ignore-revs)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-15 ("APPROVE GAP-081 Gate 3"), bound to implementation subject
+`1a0582958aea62b6f972a4482b1bd5b6e888e199` and implementation-tree digest `2a55892145ba09577e589369fa20886bdf08806e4cb791d681a1dc3e6d55e785`. No deployment is authorized.
 
 ## Gói quyết định phát hành
 

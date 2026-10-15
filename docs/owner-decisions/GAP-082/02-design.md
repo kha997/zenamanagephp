@@ -1,32 +1,38 @@
 ---
 work_id: GAP-082
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-15-gap-082-major-package-upgrades-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-10-15-gap-082-major-package-upgrades.md
   branch: docs/GAP-082-major-package-upgrades
   pr: https://github.com/kha997/zenamanagephp/pull/355
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-10-15T22:27:35+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-10-15T22:28:47+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-15, verbatim: 'APPROVE GAP-082 Gate 2 Option A'. Reviewed design head: 3291ea958abf5cd635ea5c9d238046c0fe97f477. Approves Option A and its exact allowlist (composer.json/composer.lock via composer require -w for doctrine/dbal ^4.5, laravel/tinker ^3.0, darkaonline/l5-swagger ^11.2 and their own dependencies; @OA docblock-to-attribute conversion in the four listed Api files only; config/l5-swagger.php keys v11 requires; regenerated storage/api-docs/api-docs.json; docs); Guzzle 8 excluded; not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-15T22:27:35+07:00"
-  updated_at: "2026-10-15T22:27:35+07:00"
+  updated_at: "2026-10-15T22:28:47+07:00"
 generated_by: agent
 ---
 
 # GAP-082 — Major package upgrades: Gate 2 design
+
+## OWNER GATE 2: APPROVED — OPTION A
+
+Owner approved Option A in-session on 2026-10-15 against reviewed design head
+`3291ea958abf5cd635ea5c9d238046c0fe97f477`. This authorizes only the bounded implementation defined by this packet;
+it does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

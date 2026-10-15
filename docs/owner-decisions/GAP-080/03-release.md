@@ -1,14 +1,14 @@
 ---
 work_id: GAP-080
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-15-gap-080-code-style-evidence.md
   plan: docs/superpowers/plans/2026-10-15-gap-080-code-style.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-10-15T13:30:37+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-10-15T13:34:11+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-15, verbatim: 'APPROVE GAP-080 Gate 3'. Given after the packet was presented at PR head feb75660f401e75cebb146bdc8abf97659cf0bec (implementation CI 34/34 green at 9346d99d); bound to implementation subject 9346d99dc335ab1bc8a1e18d297934222ed2d54b and implementation-tree digest d681d767b10bce311c70e00a0962757055417b7938e209ca583e161f126799b7 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-15T13:30:37+07:00"
-  updated_at: "2026-10-15T13:30:37+07:00"
+  updated_at: "2026-10-15T13:34:11+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-080 at subject 9346d99d: .php-cs-fixer.php disables no_trailing_whitespace_in_string, phpdoc_to_comment and self_accessor; one mechanical php-cs-fixer run (c5d2d882, no hand edits) reformats 1694 files in app, config, database, routes and tests, leaving 0 fixable files; scripts/dev/ast-equivalence-check.php reports all 1694 files syntax-tree equivalent to the pre-reformat commit; php -l clean; PHPStan clean; route:list identical apart from closure source line numbers; view:cache and config:cache clean; Unit/Feature/Integration locally with only the two known root-only failures (same on main). code-quality-security.yml uses the locked php-cs-fixer and now fails Code Quality Analysis when a PR's changed files have style issues: proven red on throw-away b73a6151 and green after its revert 9346d99d. Owner amendments: two phpstan-baseline messages follow the anonymous-class line shift (:8 -> :10); five SSOT baselines re-keyed to new line numbers (183 lines, identical once line numbers are removed); scripts/ci/fetch-pr-changed-files.sh merges per-page arrays (pre-existing bug that failed every PR with more than 100 files) with a new multi-page test. Exact-head CI 34/34 green at 9346d99d."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "9346d99dc335ab1bc8a1e18d297934222ed2d54b"
   verified_at: "2026-10-15T13:30:37+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "d681d767b10bce311c70e00a0962757055417b7938e209ca583e161f126799b7"
+  decision_recorded_at: "2026-10-15T13:34:11+07:00"
 ---
 
 # GAP-080 — Gate 3 release decision (định dạng lại code style)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-15 ("APPROVE GAP-080 Gate 3"), bound to implementation subject
+`9346d99dc335ab1bc8a1e18d297934222ed2d54b` and implementation-tree digest `d681d767b10bce311c70e00a0962757055417b7938e209ca583e161f126799b7`. No deployment is authorized.
 
 ## Gói quyết định phát hành
 

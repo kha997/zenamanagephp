@@ -2,10 +2,8 @@
 
 namespace App\Services\Security;
 
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class SecurityMonitoringService
 {
@@ -17,21 +15,21 @@ class SecurityMonitoringService
         $monitoringResults = [
             'timestamp' => now()->toISOString(),
             'events' => [],
-            'alerts' => []
+            'alerts' => [],
         ];
 
         // Monitor failed login attempts
         $monitoringResults['events']['failed_logins'] = $this->monitorFailedLogins();
-        
+
         // Monitor suspicious activities
         $monitoringResults['events']['suspicious_activities'] = $this->monitorSuspiciousActivities();
-        
+
         // Monitor privilege escalations
         $monitoringResults['events']['privilege_escalations'] = $this->monitorPrivilegeEscalations();
-        
+
         // Monitor data access patterns
         $monitoringResults['events']['data_access'] = $this->monitorDataAccess();
-        
+
         // Generate alerts
         $monitoringResults['alerts'] = $this->generateSecurityAlerts($monitoringResults['events']);
 
@@ -56,7 +54,7 @@ class SecurityMonitoringService
             foreach ($logFiles as $logFile) {
                 $content = file_get_contents($logFile);
                 $lines = explode("\n", $content);
-                
+
                 foreach ($lines as $line) {
                     if (strpos($line, 'Failed login attempt') !== false) {
                         preg_match('/\[(.*?)\].*Failed login attempt for (.*?) from (.*?)/', $line, $matches);
@@ -64,11 +62,11 @@ class SecurityMonitoringService
                             $timestamp = $matches[1];
                             $email = $matches[2];
                             $ip = $matches[3];
-                            
+
                             $failedAttempts[] = [
                                 'timestamp' => $timestamp,
                                 'email' => $email,
-                                'ip' => $ip
+                                'ip' => $ip,
                             ];
                         }
                     }
@@ -78,11 +76,11 @@ class SecurityMonitoringService
             // Group by IP and email
             $ipAttempts = [];
             $emailAttempts = [];
-            
+
             foreach ($failedAttempts as $attempt) {
                 $ip = $attempt['ip'];
                 $email = $attempt['email'];
-                
+
                 $ipAttempts[$ip] = ($ipAttempts[$ip] ?? 0) + 1;
                 $emailAttempts[$email] = ($emailAttempts[$email] ?? 0) + 1;
             }
@@ -95,7 +93,7 @@ class SecurityMonitoringService
                         'severity' => 'high',
                         'ip' => $ip,
                         'count' => $count,
-                        'message' => "Multiple failed login attempts from IP: {$ip}"
+                        'message' => "Multiple failed login attempts from IP: {$ip}",
                     ];
                 }
             }
@@ -107,11 +105,10 @@ class SecurityMonitoringService
                         'severity' => 'high',
                         'email' => $email,
                         'count' => $count,
-                        'message' => "Multiple failed login attempts for email: {$email}"
+                        'message' => "Multiple failed login attempts for email: {$email}",
                     ];
                 }
             }
-
         } catch (\Exception $e) {
             Log::error('Error monitoring failed logins', ['error' => $e->getMessage()]);
         }
@@ -119,7 +116,7 @@ class SecurityMonitoringService
         return [
             'events' => $events,
             'count' => count($events),
-            'threshold' => $alertThreshold
+            'threshold' => $alertThreshold,
         ];
     }
 
@@ -142,14 +139,13 @@ class SecurityMonitoringService
             // Monitor data exports
             $dataExports = $this->detectDataExports();
             $events = array_merge($events, $dataExports);
-
         } catch (\Exception $e) {
             Log::error('Error monitoring suspicious activities', ['error' => $e->getMessage()]);
         }
 
         return [
             'events' => $events,
-            'count' => count($events)
+            'count' => count($events),
         ];
     }
 
@@ -169,7 +165,7 @@ class SecurityMonitoringService
             foreach ($roleChanges as $change) {
                 $user = DB::table('users')->where('id', $change->user_id)->first();
                 $role = DB::table('roles')->where('id', $change->role_id)->first();
-                
+
                 if ($role && in_array($role->name, ['admin', 'super_admin'])) {
                     $events[] = [
                         'type' => 'privilege_escalation',
@@ -177,18 +173,17 @@ class SecurityMonitoringService
                         'user_id' => $change->user_id,
                         'user_email' => $user->email ?? 'Unknown',
                         'role' => $role->name,
-                        'message' => "User {$user->email} assigned admin role"
+                        'message' => "User {$user->email} assigned admin role",
                     ];
                 }
             }
-
         } catch (\Exception $e) {
             Log::error('Error monitoring privilege escalations', ['error' => $e->getMessage()]);
         }
 
         return [
             'events' => $events,
-            'count' => count($events)
+            'count' => count($events),
         ];
     }
 
@@ -207,14 +202,13 @@ class SecurityMonitoringService
             // Monitor cross-tenant access
             $crossTenantAccess = $this->detectCrossTenantAccess();
             $events = array_merge($events, $crossTenantAccess);
-
         } catch (\Exception $e) {
             Log::error('Error monitoring data access', ['error' => $e->getMessage()]);
         }
 
         return [
             'events' => $events,
-            'count' => count($events)
+            'count' => count($events),
         ];
     }
 
@@ -240,11 +234,10 @@ class SecurityMonitoringService
                         'severity' => 'medium',
                         'user_id' => $user->id,
                         'ip' => $ip,
-                        'message' => "User {$user->email} logged in from unusual location"
+                        'message' => "User {$user->email} logged in from unusual location",
                     ];
                 }
             }
-
         } catch (\Exception $e) {
             Log::error('Error detecting unusual access patterns', ['error' => $e->getMessage()]);
         }
@@ -268,17 +261,16 @@ class SecurityMonitoringService
             foreach ($roleAssignments as $assignment) {
                 $user = DB::table('users')->where('id', $assignment->user_id)->first();
                 $role = DB::table('roles')->where('id', $assignment->role_id)->first();
-                
+
                 $events[] = [
                     'type' => 'role_assignment',
                     'severity' => 'medium',
                     'user_id' => $assignment->user_id,
                     'user_email' => $user->email ?? 'Unknown',
                     'role' => $role->name ?? 'Unknown',
-                    'message' => "Role {$role->name} assigned to user {$user->email}"
+                    'message' => "Role {$role->name} assigned to user {$user->email}",
                 ];
             }
-
         } catch (\Exception $e) {
             Log::error('Error detecting privilege changes', ['error' => $e->getMessage()]);
         }
@@ -306,11 +298,10 @@ class SecurityMonitoringService
                         'severity' => 'medium',
                         'user_id' => $operation->user_id,
                         'record_count' => $operation->record_count,
-                        'message' => "Large data export: {$operation->record_count} records"
+                        'message' => "Large data export: {$operation->record_count} records",
                     ];
                 }
             }
-
         } catch (\Exception $e) {
             Log::error('Error detecting data exports', ['error' => $e->getMessage()]);
         }
@@ -338,10 +329,9 @@ class SecurityMonitoringService
                     'severity' => 'medium',
                     'user_id' => $query->user_id,
                     'record_count' => $query->record_count,
-                    'message' => "Large data access: {$query->record_count} records"
+                    'message' => "Large data access: {$query->record_count} records",
                 ];
             }
-
         } catch (\Exception $e) {
             Log::error('Error detecting bulk data access', ['error' => $e->getMessage()]);
         }
@@ -369,10 +359,9 @@ class SecurityMonitoringService
                     'severity' => 'high',
                     'user_id' => $access->user_id,
                     'resource' => $access->resource,
-                    'message' => "Cross-tenant access detected: {$access->resource}"
+                    'message' => "Cross-tenant access detected: {$access->resource}",
                 ];
             }
-
         } catch (\Exception $e) {
             Log::error('Error detecting cross-tenant access', ['error' => $e->getMessage()]);
         }
@@ -396,7 +385,7 @@ class SecurityMonitoringService
                             'severity' => $event['severity'],
                             'message' => $event['message'],
                             'timestamp' => now()->toISOString(),
-                            'action_required' => true
+                            'action_required' => true,
                         ];
                     }
                 }
@@ -412,7 +401,7 @@ class SecurityMonitoringService
     public function generateSecurityMonitoringReport(): array
     {
         $monitoringResults = $this->monitorSecurityEvents();
-        
+
         $report = [
             'title' => 'Security Monitoring Report',
             'generated_at' => now()->toISOString(),
@@ -422,7 +411,7 @@ class SecurityMonitoringService
             'low_severity_events' => $this->countLowSeverityEvents($monitoringResults['events']),
             'alerts' => $monitoringResults['alerts'],
             'recommendations' => $this->generateMonitoringRecommendations($monitoringResults),
-            'details' => $monitoringResults
+            'details' => $monitoringResults,
         ];
 
         return $report;
@@ -443,6 +432,7 @@ class SecurityMonitoringService
                 }
             }
         }
+
         return $count;
     }
 
@@ -461,6 +451,7 @@ class SecurityMonitoringService
                 }
             }
         }
+
         return $count;
     }
 
@@ -479,6 +470,7 @@ class SecurityMonitoringService
                 }
             }
         }
+
         return $count;
     }
 
@@ -494,25 +486,25 @@ class SecurityMonitoringService
         if ($highSeverityCount > 0) {
             $recommendations[] = [
                 'priority' => 'high',
-                'recommendation' => 'Immediate action required: ' . $highSeverityCount . ' high severity security events detected'
+                'recommendation' => 'Immediate action required: ' . $highSeverityCount . ' high severity security events detected',
             ];
         }
 
         // Check for failed login attempts
-        if (isset($monitoringResults['events']['failed_logins']['count']) && 
+        if (isset($monitoringResults['events']['failed_logins']['count']) &&
             $monitoringResults['events']['failed_logins']['count'] > 0) {
             $recommendations[] = [
                 'priority' => 'medium',
-                'recommendation' => 'Review failed login attempts and consider implementing additional security measures'
+                'recommendation' => 'Review failed login attempts and consider implementing additional security measures',
             ];
         }
 
         // Check for privilege escalations
-        if (isset($monitoringResults['events']['privilege_escalations']['count']) && 
+        if (isset($monitoringResults['events']['privilege_escalations']['count']) &&
             $monitoringResults['events']['privilege_escalations']['count'] > 0) {
             $recommendations[] = [
                 'priority' => 'high',
-                'recommendation' => 'Review privilege escalations and ensure proper authorization'
+                'recommendation' => 'Review privilege escalations and ensure proper authorization',
             ];
         }
 
@@ -526,7 +518,7 @@ class SecurityMonitoringService
     {
         $alerts = [
             'timestamp' => now()->toISOString(),
-            'alerts_configured' => []
+            'alerts_configured' => [],
         ];
 
         try {
@@ -535,7 +527,7 @@ class SecurityMonitoringService
                 'type' => 'failed_login',
                 'threshold' => 5,
                 'timeframe' => '1 hour',
-                'action' => 'email_notification'
+                'action' => 'email_notification',
             ];
 
             // Configure privilege escalation alerts
@@ -543,7 +535,7 @@ class SecurityMonitoringService
                 'type' => 'privilege_escalation',
                 'threshold' => 1,
                 'timeframe' => '24 hours',
-                'action' => 'immediate_notification'
+                'action' => 'immediate_notification',
             ];
 
             // Configure cross-tenant access alerts
@@ -551,9 +543,8 @@ class SecurityMonitoringService
                 'type' => 'cross_tenant_access',
                 'threshold' => 1,
                 'timeframe' => '1 hour',
-                'action' => 'immediate_notification'
+                'action' => 'immediate_notification',
             ];
-
         } catch (\Exception $e) {
             Log::error('Error setting up security alerts', ['error' => $e->getMessage()]);
         }

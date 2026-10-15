@@ -1,18 +1,20 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * InteractionLogResource
- * 
+ * InteractionLogResource.
+ *
  * Transform InteractionLog model cho JSON API responses
  */
 class InteractionLogResource extends JsonResource
 {
     /**
-     * Transform the resource into an array
+     * Transform the resource into an array.
      *
      * @param Request $request
      * @return array<string, mixed>
@@ -29,16 +31,16 @@ class InteractionLogResource extends JsonResource
             'visibility' => $this->visibility,
             'client_approved' => (bool) $this->client_approved,
             'created_by' => $this->created_by,
-            
+
             // Computed fields
             'is_client_visible' => $this->visibility === 'client' && $this->client_approved,
             'tag_hierarchy' => $this->tag_path ? explode('/', $this->tag_path) : [],
-            
+
             // Relationships (conditional loading)
             'project' => new ProjectResource($this->whenLoaded('project')),
             'linked_task' => new TaskResource($this->whenLoaded('linkedTask')),
             'creator' => new UserResource($this->whenLoaded('creator')),
-            
+
             // Metadata
             'created_at' => $this->created_at?->toISOString(),
         ];

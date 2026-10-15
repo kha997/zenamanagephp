@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -7,14 +9,12 @@ use Illuminate\Support\Facades\Log;
 use Src\Foundation\Helpers\AuthHelper;
 
 /**
- * Service class for handling event dispatching with safe actor ID resolution
- * 
- * @package Src\Foundation\Services
+ * Service class for handling event dispatching with safe actor ID resolution.
  */
 class EventBus
 {
     /**
-     * Dispatch an event with safe actor ID handling
+     * Dispatch an event with safe actor ID handling.
      *
      * @param object $event The event object to dispatch
      * @return void
@@ -23,18 +23,18 @@ class EventBus
     {
         // Safely determine actor ID
         $actorId = $this->resolveActorId();
-        
+
         // Set actor_id if the event object supports it
         if (property_exists($event, 'actor_id')) {
             $event->actor_id = $actorId;
         }
-        
+
         // Dispatch the event
         Event::dispatch($event);
     }
-    
+
     /**
-     * Safely resolve the current actor ID
+     * Safely resolve the current actor ID.
      *
      * @return string|int The actor ID or 'system' as fallback
      */
@@ -50,17 +50,17 @@ class EventBus
             if (config('app.debug')) {
                 Log::warning('EventBus: Unable to resolve actor ID', [
                     'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
+                    'trace' => $e->getTraceAsString(),
                 ]);
             }
         }
-        
+
         // Fallback to 'system' for test environments or when auth is unavailable
         return 'system';
     }
-    
+
     /**
-     * Dispatch multiple events with safe actor ID handling
+     * Dispatch multiple events with safe actor ID handling.
      *
      * @param array $events Array of event objects
      * @return void

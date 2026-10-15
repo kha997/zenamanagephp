@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
@@ -23,9 +25,13 @@ class AuthSensitiveRoutesProtectionTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenant;
+
     private User $baseUser;
+
     private Project $project;
+
     private Task $task;
+
     private string $downloadFilename = 'protected-test.csv';
 
     protected function setUp(): void

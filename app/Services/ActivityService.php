@@ -2,40 +2,40 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 class ActivityService
 {
     /**
-     * Get recent activities for the current user/tenant
+     * Get recent activities for the current user/tenant.
      */
     public function getRecentActivities(int $limit = 10): array
     {
         $tenantId = Auth::user()->tenant_id ?? 'default';
         $cacheKey = "activities_{$tenantId}";
-        
+
         return Cache::remember($cacheKey, 60, function () use ($tenantId, $limit) {
             return $this->generateActivities($tenantId, $limit);
         });
     }
-    
+
     /**
-     * Generate activities based on tenant data
+     * Generate activities based on tenant data.
      */
     private function generateActivities(string $tenantId, int $limit): array
     {
         $isAdmin = Auth::user()->hasRole('super_admin');
-        
+
         if ($isAdmin) {
             return $this->getAdminActivities($limit);
         } else {
             return $this->getTenantActivities($tenantId, $limit);
         }
     }
-    
+
     /**
-     * Get admin-specific activities
+     * Get admin-specific activities.
      */
     private function getAdminActivities(int $limit): array
     {
@@ -46,7 +46,7 @@ class ActivityService
                 'user' => 'System',
                 'time' => '2 hours ago',
                 'icon' => 'fas fa-user-plus',
-                'url' => '/admin/users'
+                'url' => '/admin/users',
             ],
             [
                 'id' => 2,
@@ -54,7 +54,7 @@ class ActivityService
                 'user' => 'Admin',
                 'time' => '4 hours ago',
                 'icon' => 'fas fa-project-diagram',
-                'url' => '/admin/projects'
+                'url' => '/admin/projects',
             ],
             [
                 'id' => 3,
@@ -62,7 +62,7 @@ class ActivityService
                 'user' => 'System',
                 'time' => '6 hours ago',
                 'icon' => 'fas fa-shield-alt',
-                'url' => '/admin/security'
+                'url' => '/admin/security',
             ],
             [
                 'id' => 4,
@@ -70,7 +70,7 @@ class ActivityService
                 'user' => 'System',
                 'time' => '8 hours ago',
                 'icon' => 'fas fa-database',
-                'url' => '/admin/settings'
+                'url' => '/admin/settings',
             ],
             [
                 'id' => 5,
@@ -78,13 +78,13 @@ class ActivityService
                 'user' => 'System',
                 'time' => '12 hours ago',
                 'icon' => 'fas fa-chart-bar',
-                'url' => '/admin/analytics'
-            ]
+                'url' => '/admin/analytics',
+            ],
         ];
     }
-    
+
     /**
-     * Get tenant-specific activities
+     * Get tenant-specific activities.
      */
     private function getTenantActivities(string $tenantId, int $limit): array
     {
@@ -95,7 +95,7 @@ class ActivityService
                 'user' => 'John Doe',
                 'time' => '2 hours ago',
                 'icon' => 'fas fa-project-diagram',
-                'url' => '/app/projects/1'
+                'url' => '/app/projects/1',
             ],
             [
                 'id' => 2,
@@ -103,7 +103,7 @@ class ActivityService
                 'user' => 'Jane Smith',
                 'time' => '4 hours ago',
                 'icon' => 'fas fa-tasks',
-                'url' => '/app/tasks/1'
+                'url' => '/app/tasks/1',
             ],
             [
                 'id' => 3,
@@ -111,7 +111,7 @@ class ActivityService
                 'user' => 'Mike Johnson',
                 'time' => '6 hours ago',
                 'icon' => 'fas fa-file-alt',
-                'url' => '/app/documents/1'
+                'url' => '/app/documents/1',
             ],
             [
                 'id' => 4,
@@ -119,7 +119,7 @@ class ActivityService
                 'user' => 'John Doe',
                 'time' => '8 hours ago',
                 'icon' => 'fas fa-user-plus',
-                'url' => '/app/team'
+                'url' => '/app/team',
             ],
             [
                 'id' => 5,
@@ -127,7 +127,7 @@ class ActivityService
                 'user' => 'Jane Smith',
                 'time' => '12 hours ago',
                 'icon' => 'fas fa-check-circle',
-                'url' => '/app/tasks/2'
+                'url' => '/app/tasks/2',
             ],
             [
                 'id' => 6,
@@ -135,7 +135,7 @@ class ActivityService
                 'user' => 'Mike Johnson',
                 'time' => '1 day ago',
                 'icon' => 'fas fa-layer-group',
-                'url' => '/app/templates/1'
+                'url' => '/app/templates/1',
             ],
             [
                 'id' => 7,
@@ -143,7 +143,7 @@ class ActivityService
                 'user' => 'John Doe',
                 'time' => '1 day ago',
                 'icon' => 'fas fa-dollar-sign',
-                'url' => '/app/projects/1'
+                'url' => '/app/projects/1',
             ],
             [
                 'id' => 8,
@@ -151,69 +151,71 @@ class ActivityService
                 'user' => 'Jane Smith',
                 'time' => '2 days ago',
                 'icon' => 'fas fa-calendar-alt',
-                'url' => '/app/calendar'
-            ]
+                'url' => '/app/calendar',
+            ],
         ];
     }
-    
+
     /**
-     * Log a new activity
+     * Log a new activity.
      */
     public function logActivity(array $activityData): bool
     {
         $tenantId = Auth::user()->tenant_id ?? 'default';
         $cacheKey = "activities_{$tenantId}";
-        
+
         $activities = Cache::get($cacheKey, []);
         array_unshift($activities, array_merge($activityData, [
             'id' => time(), // Simple ID generation
             'time' => 'Just now',
-            'user' => Auth::user()->first_name . ' ' . Auth::user()->last_name
+            'user' => Auth::user()->first_name . ' ' . Auth::user()->last_name,
         ]));
-        
+
         // Keep only the last 50 activities
         $activities = array_slice($activities, 0, 50);
-        
+
         Cache::put($cacheKey, $activities, 60);
-        
+
         // In a real application, you would also save to database
         // Activity::create($activityData);
-        
+
         return true;
     }
-    
+
     /**
-     * Get activity statistics
+     * Get activity statistics.
      */
     public function getActivityStats(): array
     {
         $tenantId = Auth::user()->tenant_id ?? 'default';
         $activities = $this->getRecentActivities(50);
-        
+
         $stats = [
             'total' => count($activities),
-            'today' => count(array_filter($activities, fn($activity) => 
-                strpos($activity['time'], 'hour') !== false || 
+            'today' => count(array_filter(
+                $activities,
+                fn ($activity) => strpos($activity['time'], 'hour') !== false ||
                 strpos($activity['time'], 'minute') !== false ||
                 strpos($activity['time'], 'Just now') !== false
             )),
-            'this_week' => count(array_filter($activities, fn($activity) => 
-                strpos($activity['time'], 'day') !== false && 
-                (int)filter_var($activity['time'], FILTER_SANITIZE_NUMBER_INT) <= 7
+            'this_week' => count(array_filter(
+                $activities,
+                fn ($activity) => strpos($activity['time'], 'day') !== false &&
+                (int) filter_var($activity['time'], FILTER_SANITIZE_NUMBER_INT) <= 7
             )),
-            'by_user' => $this->getActivitiesByUser($activities)
+            'by_user' => $this->getActivitiesByUser($activities),
         ];
-        
+
         return $stats;
     }
-    
+
     /**
-     * Get activities grouped by user
+     * Get activities grouped by user.
      */
     private function getActivitiesByUser(array $activities): array
     {
         $userActivities = [];
-        
+
         foreach ($activities as $activity) {
             $user = $activity['user'];
             if (!isset($userActivities[$user])) {
@@ -221,34 +223,35 @@ class ActivityService
             }
             $userActivities[$user]++;
         }
-        
+
         return $userActivities;
     }
-    
+
     /**
-     * Get activities by type
+     * Get activities by type.
      */
     public function getActivitiesByType(string $type): array
     {
         $tenantId = Auth::user()->tenant_id ?? 'default';
         $activities = $this->getRecentActivities(50);
-        
-        return array_filter($activities, fn($activity) => 
-            strpos($activity['description'], $type) !== false
+
+        return array_filter(
+            $activities,
+            fn ($activity) => strpos($activity['description'], $type) !== false
         );
     }
-    
+
     /**
-     * Clear old activities
+     * Clear old activities.
      */
     public function clearOldActivities(int $daysOld = 30): bool
     {
         $tenantId = Auth::user()->tenant_id ?? 'default';
         $cacheKey = "activities_{$tenantId}";
-        
+
         // In a real application, you would delete from database
         // Activity::where('created_at', '<', now()->subDays($daysOld))->delete();
-        
+
         return true;
     }
 }

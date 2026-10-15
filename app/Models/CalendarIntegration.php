@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -9,8 +11,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * CalendarIntegration Model - Calendar integrations cho users
- * 
+ * CalendarIntegration Model - Calendar integrations cho users.
+ *
  * @property string $id ULID primary key
  * @property string $user_id ID người dùng
  * @property string $provider Provider (google, outlook, apple)
@@ -26,13 +28,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class CalendarIntegration extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids;
+    use HasFactory;
 
     protected $table = 'calendar_integrations';
-    
+
     protected $keyType = 'string';
+
     public $incrementing = false;
-    
+
     protected $fillable = [
         'user_id',
         'provider',
@@ -44,7 +48,7 @@ class CalendarIntegration extends Model
         'provider_data',
         'is_active',
         'sync_enabled',
-        'last_sync_at'
+        'last_sync_at',
     ];
 
     protected $casts = [
@@ -52,16 +56,16 @@ class CalendarIntegration extends Model
         'provider_data' => 'array',
         'is_active' => 'boolean',
         'sync_enabled' => 'boolean',
-        'last_sync_at' => 'datetime'
+        'last_sync_at' => 'datetime',
     ];
 
     protected $hidden = [
         'access_token',
-        'refresh_token'
+        'refresh_token',
     ];
 
     /**
-     * Provider constants
+     * Provider constants.
      */
     public const PROVIDER_GOOGLE = 'google';
     public const PROVIDER_OUTLOOK = 'outlook';
@@ -76,7 +80,7 @@ class CalendarIntegration extends Model
     ];
 
     /**
-     * Relationships
+     * Relationships.
      */
     public function user(): BelongsTo
     {
@@ -89,7 +93,7 @@ class CalendarIntegration extends Model
     }
 
     /**
-     * Scopes
+     * Scopes.
      */
     public function scopeActive($query)
     {
@@ -112,32 +116,32 @@ class CalendarIntegration extends Model
     }
 
     /**
-     * Check if token is expired
+     * Check if token is expired.
      */
     public function isTokenExpired(): bool
     {
         if (!$this->token_expires_at) {
             return false;
         }
-        
+
         return $this->token_expires_at->isPast();
     }
 
     /**
-     * Check if token needs refresh
+     * Check if token needs refresh.
      */
     public function needsTokenRefresh(): bool
     {
         if (!$this->token_expires_at) {
             return false;
         }
-        
+
         // Refresh if expires within 5 minutes
         return $this->token_expires_at->subMinutes(5)->isPast();
     }
 
     /**
-     * Update last sync time
+     * Update last sync time.
      */
     public function updateLastSync(): void
     {
@@ -145,35 +149,35 @@ class CalendarIntegration extends Model
     }
 
     /**
-     * Get provider configuration
+     * Get provider configuration.
      */
     public function getProviderConfig(): array
     {
-        return match($this->provider) {
+        return match ($this->provider) {
             self::PROVIDER_GOOGLE => [
                 'client_id' => config('services.google.client_id'),
                 'client_secret' => config('services.google.client_secret'),
                 'redirect_uri' => config('services.google.redirect_uri'),
-                'scopes' => ['https://www.googleapis.com/auth/calendar']
+                'scopes' => ['https://www.googleapis.com/auth/calendar'],
             ],
             self::PROVIDER_OUTLOOK => [
                 'client_id' => config('services.microsoft.client_id'),
                 'client_secret' => config('services.microsoft.client_secret'),
                 'redirect_uri' => config('services.microsoft.redirect_uri'),
-                'scopes' => ['https://graph.microsoft.com/calendars.readwrite']
+                'scopes' => ['https://graph.microsoft.com/calendars.readwrite'],
             ],
             self::PROVIDER_APPLE => [
                 'client_id' => config('services.apple.client_id'),
                 'client_secret' => config('services.apple.client_secret'),
                 'redirect_uri' => config('services.apple.redirect_uri'),
-                'scopes' => ['calendars']
+                'scopes' => ['calendars'],
             ],
             default => []
         };
     }
 
     /**
-     * Get calendar events for date range
+     * Get calendar events for date range.
      */
     public function getEventsForDateRange(Carbon $startDate, Carbon $endDate): \Illuminate\Database\Eloquent\Collection
     {
@@ -184,7 +188,7 @@ class CalendarIntegration extends Model
     }
 
     /**
-     * Get upcoming events
+     * Get upcoming events.
      */
     public function getUpcomingEvents(int $limit = 10): \Illuminate\Database\Eloquent\Collection
     {
@@ -196,46 +200,46 @@ class CalendarIntegration extends Model
     }
 
     /**
-     * Check if integration is healthy
+     * Check if integration is healthy.
      */
     public function isHealthy(): bool
     {
-        return $this->is_active && 
-               $this->sync_enabled && 
+        return $this->is_active &&
+               $this->sync_enabled &&
                !$this->isTokenExpired() &&
                $this->access_token;
     }
 
     /**
-     * Get integration status
+     * Get integration status.
      */
     public function getStatus(): string
     {
         if (!$this->is_active) {
             return 'inactive';
         }
-        
+
         if (!$this->sync_enabled) {
             return 'sync_disabled';
         }
-        
+
         if ($this->isTokenExpired()) {
             return 'token_expired';
         }
-        
+
         if (!$this->access_token) {
             return 'not_connected';
         }
-        
+
         return 'healthy';
     }
 
     /**
-     * Accessors
+     * Accessors.
      */
     public function getProviderLabelAttribute(): string
     {
-        return match($this->provider) {
+        return match ($this->provider) {
             self::PROVIDER_GOOGLE => 'Google Calendar',
             self::PROVIDER_OUTLOOK => 'Microsoft Outlook',
             self::PROVIDER_APPLE => 'Apple Calendar',
@@ -246,7 +250,7 @@ class CalendarIntegration extends Model
 
     public function getStatusColorAttribute(): string
     {
-        return match($this->getStatus()) {
+        return match ($this->getStatus()) {
             'healthy' => 'green',
             'inactive' => 'gray',
             'sync_disabled' => 'yellow',
@@ -261,7 +265,7 @@ class CalendarIntegration extends Model
         if (!$this->last_sync_at) {
             return 'Never';
         }
-        
+
         return $this->last_sync_at->diffForHumans();
     }
 }

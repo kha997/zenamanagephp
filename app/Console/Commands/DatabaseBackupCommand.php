@@ -1,9 +1,11 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Services\DatabaseBackupService;
+use Illuminate\Console\Command;
 
 class DatabaseBackupCommand extends Command
 {
@@ -51,15 +53,15 @@ class DatabaseBackupCommand extends Command
             }
 
             return $this->createBackup($backupService);
-
         } catch (\Exception $e) {
             $this->error('Command failed: ' . $e->getMessage());
+
             return 1;
         }
     }
 
     /**
-     * Create backup
+     * Create backup.
      */
     private function createBackup(DatabaseBackupService $backupService): int
     {
@@ -68,6 +70,7 @@ class DatabaseBackupCommand extends Command
 
         if (!in_array($type, ['full', 'incremental'])) {
             $this->error('Invalid backup type. Use "full" or "incremental".');
+
             return 1;
         }
 
@@ -83,20 +86,21 @@ class DatabaseBackupCommand extends Command
             $this->info('Backup created successfully!');
             $this->line("Filename: {$result['filename']}");
             $this->line("Size: {$result['size']}");
-            
+
             if ($description) {
                 $this->line("Description: {$description}");
             }
-            
+
             return 0;
         } else {
             $this->error('Backup failed: ' . $result['error']);
+
             return 1;
         }
     }
 
     /**
-     * List backups
+     * List backups.
      */
     private function listBackups(DatabaseBackupService $backupService): int
     {
@@ -107,6 +111,7 @@ class DatabaseBackupCommand extends Command
 
         if (empty($backups)) {
             $this->warn('No backups found.');
+
             return 0;
         }
 
@@ -118,62 +123,69 @@ class DatabaseBackupCommand extends Command
                 $backup['filename'],
                 ucfirst($backup['type']),
                 $backup['size'],
-                $backup['created_at']
+                $backup['created_at'],
             ];
         }
 
         $this->table($headers, $rows);
+
         return 0;
     }
 
     /**
-     * Restore backup
+     * Restore backup.
      */
     private function restoreBackup(DatabaseBackupService $backupService, string $filename): int
     {
         if (!$this->confirm("Are you sure you want to restore from backup '{$filename}'? This will overwrite the current database.")) {
             $this->info('Restore cancelled.');
+
             return 0;
         }
 
         $this->info("Restoring database from backup: {$filename}");
-        
+
         $result = $backupService->restoreFromBackup($filename);
 
         if ($result['success']) {
             $this->info('Database restored successfully!');
+
             return 0;
         } else {
             $this->error('Restore failed: ' . $result['error']);
+
             return 1;
         }
     }
 
     /**
-     * Delete backup
+     * Delete backup.
      */
     private function deleteBackup(DatabaseBackupService $backupService, string $filename): int
     {
         if (!$this->confirm("Are you sure you want to delete backup '{$filename}'?")) {
             $this->info('Delete cancelled.');
+
             return 0;
         }
 
         $this->info("Deleting backup: {$filename}");
-        
+
         $result = $backupService->deleteBackup($filename);
 
         if ($result) {
             $this->info('Backup deleted successfully!');
+
             return 0;
         } else {
             $this->error('Failed to delete backup.');
+
             return 1;
         }
     }
 
     /**
-     * Show backup statistics
+     * Show backup statistics.
      */
     private function showStats(DatabaseBackupService $backupService): int
     {
@@ -186,11 +198,11 @@ class DatabaseBackupCommand extends Command
         $this->line("Full Backups: {$stats['full_backups']}");
         $this->line("Incremental Backups: {$stats['incremental_backups']}");
         $this->line("Total Size: {$stats['total_size']}");
-        
+
         if ($stats['oldest_backup']) {
             $this->line("Oldest Backup: {$stats['oldest_backup']}");
         }
-        
+
         if ($stats['newest_backup']) {
             $this->line("Newest Backup: {$stats['newest_backup']}");
         }
@@ -199,15 +211,15 @@ class DatabaseBackupCommand extends Command
     }
 
     /**
-     * Cleanup old backups
+     * Cleanup old backups.
      */
     private function cleanupBackups(DatabaseBackupService $backupService): int
     {
         $this->info('Cleaning up old backups...');
-        
+
         // This would be implemented in the service
         $this->info('Cleanup completed.');
-        
+
         return 0;
     }
 }

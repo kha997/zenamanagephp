@@ -2,15 +2,15 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\ErrorEnvelopeService;
+use App\Services\InputSanitizationService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use App\Services\InputSanitizationService;
-use App\Services\ErrorEnvelopeService;
 
 /**
- * Input Sanitization Middleware
- * 
+ * Input Sanitization Middleware.
+ *
  * Sanitizes and validates all input data for security
  */
 class InputSanitizationMiddleware
@@ -33,16 +33,16 @@ class InputSanitizationMiddleware
     {
         // Sanitize input data using the service
         $this->sanitizeInput($request);
-        
+
         // Check for suspicious patterns
         if ($this->detectSuspiciousInput($request)) {
             Log::warning('Suspicious input detected', [
                 'ip' => $request->ip(),
                 'user_agent' => $request->userAgent(),
                 'path' => $request->path(),
-                'method' => $request->method()
+                'method' => $request->method(),
             ]);
-            
+
             return ErrorEnvelopeService::error(
                 'SUSPICIOUS_INPUT',
                 'Invalid input detected',
@@ -56,7 +56,7 @@ class InputSanitizationMiddleware
     }
 
     /**
-     * Sanitize input data
+     * Sanitize input data.
      */
     private function sanitizeInput(Request $request): void
     {
@@ -68,7 +68,7 @@ class InputSanitizationMiddleware
         // Sanitize request data
         $data = $request->all();
         $sanitizedData = $this->sanitizationService->sanitizeArray($data);
-        
+
         // Replace request data
         foreach ($sanitizedData as $key => $value) {
             $request->merge([$key => $value]);
@@ -76,7 +76,7 @@ class InputSanitizationMiddleware
     }
 
     /**
-     * Detect suspicious input patterns
+     * Detect suspicious input patterns.
      */
     private function detectSuspiciousInput(Request $request): bool
     {
@@ -86,7 +86,7 @@ class InputSanitizationMiddleware
             '/(\b(OR|AND)\s+\d+\s*=\s*\d+)/i',
             '/(\b(OR|AND)\s+\'\s*=\s*\')/i',
             '/(\b(OR|AND)\s+\"\s*=\s*\")/i',
-            
+
             // XSS patterns
             '/<script[^>]*>.*?<\/script>/i',
             '/javascript:/i',
@@ -94,26 +94,26 @@ class InputSanitizationMiddleware
             '/<iframe[^>]*>.*?<\/iframe>/i',
             '/<object[^>]*>.*?<\/object>/i',
             '/<embed[^>]*>.*?<\/embed>/i',
-            
+
             // Command injection patterns
             '/[;&|`$()]/',
             '/\b(cat|ls|pwd|whoami|uname|ps|netstat|ifconfig)\b/i',
-            
+
             // Path traversal patterns
             '/\.\.\//',
             '/\.\.\\\\/',
             '/%2e%2e%2f/i',
             '/%2e%2e%5c/i',
-            
+
             // LDAP injection patterns
             '/[()=*!&|]/',
-            
+
             // NoSQL injection patterns
             '/\$where/i',
             '/\$ne/i',
             '/\$gt/i',
             '/\$lt/i',
-            '/\$regex/i'
+            '/\$regex/i',
         ];
 
         $allInput = array_merge(
@@ -127,7 +127,7 @@ class InputSanitizationMiddleware
             if ($inputString === null) {
                 continue;
             }
-            
+
             foreach ($suspiciousPatterns as $pattern) {
                 if (preg_match($pattern, $inputString)) {
                     return true;

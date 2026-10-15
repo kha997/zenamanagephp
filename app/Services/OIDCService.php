@@ -10,13 +10,14 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
 /**
- * OpenID Connect Service
- * 
+ * OpenID Connect Service.
+ *
  * Handles OIDC authentication with external providers
  */
 class OIDCService
 {
     private array $config;
+
     private SecureAuditService $auditService;
 
     public function __construct(SecureAuditService $auditService)
@@ -26,24 +27,24 @@ class OIDCService
     }
 
     /**
-     * Generate authorization URL for OIDC provider
+     * Generate authorization URL for OIDC provider.
      */
     public function getAuthorizationUrl(string $provider, string $state = null): array
     {
         $providerConfig = $this->getProviderConfig($provider);
-        
+
         if (!$providerConfig) {
             throw new \Exception("OIDC provider '{$provider}' not configured");
         }
 
         $state = $state ?: Str::random(32);
         $nonce = Str::random(32);
-        
+
         // Store state and nonce for validation
         Cache::put("oidc_state:{$state}", [
             'nonce' => $nonce,
             'provider' => $provider,
-            'expires_at' => Carbon::now()->addSeconds($this->config['security']['state_expires_in'])
+            'expires_at' => Carbon::now()->addSeconds($this->config['security']['state_expires_in']),
         ], $this->config['security']['state_expires_in']);
 
         $params = [
@@ -66,12 +67,12 @@ class OIDCService
         return [
             'authorization_url' => $authorizationUrl,
             'state' => $state,
-            'nonce' => $nonce
+            'nonce' => $nonce,
         ];
     }
 
     /**
-     * Handle OIDC callback and exchange code for tokens
+     * Handle OIDC callback and exchange code for tokens.
      */
     public function handleCallback(string $provider, string $code, string $state): array
     {
@@ -86,13 +87,13 @@ class OIDCService
         }
 
         $providerConfig = $this->getProviderConfig($provider);
-        
+
         // Exchange code for tokens
         $tokenResponse = $this->exchangeCodeForTokens($providerConfig, $code);
-        
+
         // Get user info
         $userInfo = $this->getUserInfo($providerConfig, $tokenResponse['access_token']);
-        
+
         // Validate ID token if present
         if (isset($tokenResponse['id_token'])) {
             $this->validateIdToken($providerConfig, $tokenResponse['id_token'], $stateData['nonce']);
@@ -116,7 +117,7 @@ class OIDCService
             newData: [
                 'provider' => $provider,
                 'oidc_user_id' => $userInfo['sub'] ?? null,
-                'email' => $userInfo['email'] ?? null
+                'email' => $userInfo['email'] ?? null,
             ]
         );
 
@@ -124,12 +125,12 @@ class OIDCService
             'user' => $user,
             'token' => $localToken,
             'provider' => $provider,
-            'oidc_data' => $userInfo
+            'oidc_data' => $userInfo,
         ];
     }
 
     /**
-     * Exchange authorization code for tokens
+     * Exchange authorization code for tokens.
      */
     private function exchangeCodeForTokens(array $providerConfig, string $code): array
     {
@@ -149,7 +150,7 @@ class OIDCService
     }
 
     /**
-     * Get user information from OIDC provider
+     * Get user information from OIDC provider.
      */
     private function getUserInfo(array $providerConfig, string $accessToken): array
     {
@@ -163,7 +164,7 @@ class OIDCService
     }
 
     /**
-     * Validate ID token
+     * Validate ID token.
      */
     private function validateIdToken(array $providerConfig, string $idToken, string $nonce): void
     {
@@ -203,12 +204,12 @@ class OIDCService
     }
 
     /**
-     * Create or update user from OIDC data
+     * Create or update user from OIDC data.
      */
     private function createOrUpdateUser(string $provider, array $userInfo): User
     {
         $email = $userInfo['email'] ?? null;
-        
+
         if (!$email) {
             throw new \Exception('Email is required for OIDC authentication');
         }
@@ -224,7 +225,7 @@ class OIDCService
             if (!$this->config['security']['auto_create_users']) {
                 throw new \Exception('User not found and auto-creation is disabled');
             }
-            
+
             $user = $this->createUserFromOIDC($provider, $userInfo);
         }
 
@@ -232,12 +233,12 @@ class OIDCService
     }
 
     /**
-     * Update existing user with OIDC data
+     * Update existing user with OIDC data.
      */
     private function updateUserFromOIDC(User $user, string $provider, array $userInfo): void
     {
         $fieldMapping = $this->config['field_mapping'];
-        
+
         foreach ($fieldMapping as $localField => $oidcField) {
             if (isset($userInfo[$oidcField])) {
                 $user->$localField = $userInfo[$oidcField];
@@ -249,17 +250,17 @@ class OIDCService
         $user->oidc_subject_id = $userInfo['sub'] ?? null;
         $user->oidc_data = $userInfo;
         $user->last_login_at = Carbon::now();
-        
+
         $user->save();
     }
 
     /**
-     * Create new user from OIDC data
+     * Create new user from OIDC data.
      */
     private function createUserFromOIDC(string $provider, array $userInfo): User
     {
         $fieldMapping = $this->config['field_mapping'];
-        
+
         $userData = [
             'name' => $userInfo['name'] ?? $userInfo['email'],
             'email' => $userInfo['email'],
@@ -296,16 +297,17 @@ class OIDCService
     }
 
     /**
-     * Generate local JWT token for user
+     * Generate local JWT token for user.
      */
     private function generateLocalToken(User $user): string
     {
         $authService = app(AuthService::class);
+
         return $authService->generateToken($user);
     }
 
     /**
-     * Get provider configuration
+     * Get provider configuration.
      */
     private function getProviderConfig(string $provider): ?array
     {
@@ -313,18 +315,18 @@ class OIDCService
     }
 
     /**
-     * Get available providers
+     * Get available providers.
      */
     public function getAvailableProviders(): array
     {
         $providers = [];
-        
+
         foreach ($this->config['providers'] as $name => $config) {
             if (!empty($config['client_id']) && !empty($config['client_secret'])) {
                 $providers[] = [
                     'name' => $name,
                     'display_name' => ucfirst($name),
-                    'authorization_url' => $this->getAuthorizationUrl($name)['authorization_url']
+                    'authorization_url' => $this->getAuthorizationUrl($name)['authorization_url'],
                 ];
             }
         }
@@ -333,12 +335,12 @@ class OIDCService
     }
 
     /**
-     * Revoke OIDC tokens
+     * Revoke OIDC tokens.
      */
     public function revokeTokens(string $provider, string $accessToken): bool
     {
         $providerConfig = $this->getProviderConfig($provider);
-        
+
         if (!$providerConfig || !isset($providerConfig['revocation_endpoint'])) {
             return false;
         }
@@ -353,24 +355,23 @@ class OIDCService
     }
 
     /**
-     * Get JWKS for token validation
+     * Get JWKS for token validation.
      */
     public function getJWKS(string $provider): array
     {
         $providerConfig = $this->getProviderConfig($provider);
-        
+
         if (!$providerConfig || !isset($providerConfig['jwks_uri'])) {
             return [];
         }
 
         $cacheKey = "oidc_jwks:{$provider}";
-        
+
         return Cache::remember($cacheKey, $this->config['cache']['ttl'], function () use ($response) {
-            
             if ($response->successful()) {
                 return $response->json();
             }
-            
+
             return [];
         });
     }

@@ -16,11 +16,11 @@ final class SetupProductionBackupScriptTest extends TestCase
     public function test_generated_backup_script_holds_no_secret_and_is_root_only(): void
     {
         $dir = sys_get_temp_dir() . '/gap056-setup-' . bin2hex(random_bytes(6));
-        mkdir($dir . '/bin', 0700, true);
+        mkdir($dir . '/bin', 0o700, true);
         file_put_contents($dir . '/bin/sudo', "#!/usr/bin/env bash\nprintf 'SUDO %s\\n' \"\$*\" >> \"\$STUB_LOG\"\n\"\$@\"\n");
         file_put_contents($dir . '/bin/crontab', "#!/usr/bin/env bash\nif [ \"\$1\" = \"-\" ]; then cat > \"\$STUB_CRON\"; fi\nexit 0\n");
-        chmod($dir . '/bin/sudo', 0755);
-        chmod($dir . '/bin/crontab', 0755);
+        chmod($dir . '/bin/sudo', 0o755);
+        chmod($dir . '/bin/crontab', 0o755);
 
         $source = (string) file_get_contents(dirname(__DIR__, 3) . '/scripts/setup-production.sh');
         $this->assertSame(1, preg_match('/^create_backup_script\(\) \{\n.*?^\}\n/ms', $source, $m));

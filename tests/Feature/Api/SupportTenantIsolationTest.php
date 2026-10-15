@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
@@ -7,13 +9,15 @@ use App\Models\SupportTicket;
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Tests\TestCase;
 use Tests\Traits\AuthenticationTrait;
 use Tests\Traits\RouteNameTrait;
-use Tests\TestCase;
 
 class SupportTenantIsolationTest extends TestCase
 {
-    use RefreshDatabase, AuthenticationTrait, RouteNameTrait;
+    use RefreshDatabase;
+    use AuthenticationTrait;
+    use RouteNameTrait;
 
     public function test_support_ticket_store_ignores_payload_tenant_id(): void
     {
@@ -135,5 +139,4 @@ class SupportTenantIsolationTest extends TestCase
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.tenant_id', $tenantA->id);
     }
-
 }

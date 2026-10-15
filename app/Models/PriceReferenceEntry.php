@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -22,8 +24,10 @@ use Illuminate\Database\Eloquent\Model;
 class PriceReferenceEntry extends Model
 {
     use HasUlids;
+
     /** @use HasFactory<\Database\Factories\PriceReferenceEntryFactory> */
     use HasFactory;
+
     use TenantScope;
 
     public const UPDATED_AT = null;

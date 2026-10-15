@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Models\Project;
 use App\Models\Submittal;
 use App\Models\Tenant;
-use App\Models\Project;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;

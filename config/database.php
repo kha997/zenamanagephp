@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 use Illuminate\Support\Str;
 
@@ -28,7 +30,6 @@ return [
     */
 
     'connections' => [
-
         'sqlite' => [
             'driver' => 'sqlite',
             'url' => env('DATABASE_URL'),
@@ -102,14 +103,14 @@ return [
                 'max_lifetime' => env('DB_MAX_LIFETIME', 3600),
             ],
         ],
-    
+
         'testing' => [
             'driver' => 'sqlite',
             'database' => ':memory:',
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
         ],
-        
+
         'mysql_testing' => [
             'driver' => 'mysql',
             'url' => env('DATABASE_URL'),
@@ -135,7 +136,7 @@ return [
         'client' => env('REDIS_CLIENT', 'phpredis'),
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'redis'),
-            'prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_database_'),
+            'prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_') . '_database_'),
         ],
         'default' => [
             'url' => env('REDIS_URL'),
@@ -191,5 +192,4 @@ return [
     */
 
     'migrations' => 'migrations',
-
 ];

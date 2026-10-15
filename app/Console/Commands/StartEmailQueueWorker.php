@@ -94,13 +94,13 @@ class StartEmailQueueWorker extends Command
             if (!$daemon) {
                 $process->wait();
             }
-
         } catch (\Exception $e) {
             $this->error('Failed to start email queue worker: ' . $e->getMessage());
             Log::error('Failed to start email queue worker', [
                 'error' => $e->getMessage(),
                 'command' => implode(' ', $command),
             ]);
+
             return 1;
         }
 

@@ -3,7 +3,6 @@
 namespace App\Repositories;
 
 use App\Models\ChangeRequest;
-use App\Models\User;
 use App\Models\Project;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -147,7 +146,7 @@ class ChangeRequestRepository
             'change_request_id' => $changeRequest->id,
             'title' => $changeRequest->title,
             'project_id' => $changeRequest->project_id,
-            'created_by' => $changeRequest->created_by
+            'created_by' => $changeRequest->created_by,
         ]);
 
         return $changeRequest->load(['project', 'creator', 'assignee', 'tenant']);
@@ -169,7 +168,7 @@ class ChangeRequestRepository
         Log::info('Change request updated', [
             'change_request_id' => $changeRequest->id,
             'title' => $changeRequest->title,
-            'project_id' => $changeRequest->project_id
+            'project_id' => $changeRequest->project_id,
         ]);
 
         return $changeRequest->load(['project', 'creator', 'assignee', 'tenant']);
@@ -191,7 +190,7 @@ class ChangeRequestRepository
         Log::info('Change request deleted', [
             'change_request_id' => $id,
             'title' => $changeRequest->title,
-            'project_id' => $changeRequest->project_id
+            'project_id' => $changeRequest->project_id,
         ]);
 
         return true;
@@ -213,7 +212,7 @@ class ChangeRequestRepository
         Log::info('Change request soft deleted', [
             'change_request_id' => $id,
             'title' => $changeRequest->title,
-            'project_id' => $changeRequest->project_id
+            'project_id' => $changeRequest->project_id,
         ]);
 
         return true;
@@ -235,7 +234,7 @@ class ChangeRequestRepository
         Log::info('Change request restored', [
             'change_request_id' => $id,
             'title' => $changeRequest->title,
-            'project_id' => $changeRequest->project_id
+            'project_id' => $changeRequest->project_id,
         ]);
 
         return true;
@@ -316,12 +315,12 @@ class ChangeRequestRepository
 
         $changeRequest->update([
             'status' => $status,
-            'status_updated_at' => now()
+            'status_updated_at' => now(),
         ]);
 
         Log::info('Change request status updated', [
             'change_request_id' => $id,
-            'status' => $status
+            'status' => $status,
         ]);
 
         return true;
@@ -342,12 +341,12 @@ class ChangeRequestRepository
             'status' => 'approved',
             'approved_by' => $approvedBy,
             'approved_at' => now(),
-            'approval_comments' => $comments
+            'approval_comments' => $comments,
         ]);
 
         Log::info('Change request approved', [
             'change_request_id' => $id,
-            'approved_by' => $approvedBy
+            'approved_by' => $approvedBy,
         ]);
 
         return true;
@@ -368,13 +367,13 @@ class ChangeRequestRepository
             'status' => 'rejected',
             'rejected_by' => $rejectedBy,
             'rejected_at' => now(),
-            'rejection_reason' => $reason
+            'rejection_reason' => $reason,
         ]);
 
         Log::info('Change request rejected', [
             'change_request_id' => $id,
             'rejected_by' => $rejectedBy,
-            'reason' => $reason
+            'reason' => $reason,
         ]);
 
         return true;
@@ -393,12 +392,12 @@ class ChangeRequestRepository
 
         $changeRequest->update([
             'assigned_to' => $assigneeId,
-            'assigned_at' => now()
+            'assigned_at' => now(),
         ]);
 
         Log::info('Change request assigned', [
             'change_request_id' => $id,
-            'assigned_to' => $assigneeId
+            'assigned_to' => $assigneeId,
         ]);
 
         return true;
@@ -421,16 +420,16 @@ class ChangeRequestRepository
         $comments[] = [
             'user_id' => $userId,
             'comment' => $comment,
-            'created_at' => now()->toISOString()
+            'created_at' => now()->toISOString(),
         ];
 
         $changeRequest->update([
-            'comments' => $comments
+            'comments' => $comments,
         ]);
 
         Log::info('Comment added to change request', [
             'change_request_id' => $id,
-            'user_id' => $userId
+            'user_id' => $userId,
         ]);
 
         return true;
@@ -456,7 +455,7 @@ class ChangeRequestRepository
             'high_priority_change_requests' => $query->where('priority', 'high')->count(),
             'medium_priority_change_requests' => $query->where('priority', 'medium')->count(),
             'low_priority_change_requests' => $query->where('priority', 'low')->count(),
-            'recent_change_requests' => $query->where('created_at', '>=', now()->subDays(7))->count()
+            'recent_change_requests' => $query->where('created_at', '>=', now()->subDays(7))->count(),
         ];
     }
 
@@ -493,7 +492,7 @@ class ChangeRequestRepository
 
         Log::info('Change requests bulk updated', [
             'count' => $updated,
-            'ids' => $ids
+            'ids' => $ids,
         ]);
 
         return $updated;
@@ -508,7 +507,7 @@ class ChangeRequestRepository
 
         Log::info('Change requests bulk deleted', [
             'count' => $deleted,
-            'ids' => $ids
+            'ids' => $ids,
         ]);
 
         return $deleted;
@@ -532,7 +531,7 @@ class ChangeRequestRepository
             'type' => 'created',
             'date' => $changeRequest->created_at,
             'title' => 'Change Request Created',
-            'description' => 'Change request ' . $changeRequest->title . ' was created'
+            'description' => 'Change request ' . $changeRequest->title . ' was created',
         ];
 
         // Add assignment
@@ -541,7 +540,7 @@ class ChangeRequestRepository
                 'type' => 'assigned',
                 'date' => $changeRequest->assigned_at,
                 'title' => 'Change Request Assigned',
-                'description' => 'Change request assigned to user'
+                'description' => 'Change request assigned to user',
             ];
         }
 
@@ -551,7 +550,7 @@ class ChangeRequestRepository
                 'type' => 'status_changed',
                 'date' => $changeRequest->status_updated_at,
                 'title' => 'Status Changed',
-                'description' => 'Status changed to ' . $changeRequest->status
+                'description' => 'Status changed to ' . $changeRequest->status,
             ];
         }
 
@@ -561,7 +560,7 @@ class ChangeRequestRepository
                 'type' => 'approved',
                 'date' => $changeRequest->approved_at,
                 'title' => 'Change Request Approved',
-                'description' => 'Change request was approved'
+                'description' => 'Change request was approved',
             ];
         }
 
@@ -571,7 +570,7 @@ class ChangeRequestRepository
                 'type' => 'rejected',
                 'date' => $changeRequest->rejected_at,
                 'title' => 'Change Request Rejected',
-                'description' => 'Change request was rejected'
+                'description' => 'Change request was rejected',
             ];
         }
 
@@ -642,16 +641,16 @@ class ChangeRequestRepository
         $attachments[] = [
             'file_path' => $filePath,
             'file_name' => $fileName,
-            'uploaded_at' => now()->toISOString()
+            'uploaded_at' => now()->toISOString(),
         ];
 
         $changeRequest->update([
-            'attachments' => $attachments
+            'attachments' => $attachments,
         ]);
 
         Log::info('Attachment added to change request', [
             'change_request_id' => $id,
-            'file_name' => $fileName
+            'file_name' => $fileName,
         ]);
 
         return true;
@@ -674,12 +673,12 @@ class ChangeRequestRepository
         });
 
         $changeRequest->update([
-            'attachments' => array_values($attachments)
+            'attachments' => array_values($attachments),
         ]);
 
         Log::info('Attachment removed from change request', [
             'change_request_id' => $id,
-            'file_path' => $filePath
+            'file_path' => $filePath,
         ]);
 
         return true;

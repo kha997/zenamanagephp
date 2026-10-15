@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -11,7 +13,9 @@ class PortalLoginToken extends Model
     use HasUlids;
 
     protected $table = 'portal_login_tokens';
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [

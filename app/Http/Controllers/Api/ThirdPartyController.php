@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
@@ -8,14 +10,14 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Third Party Integration Controller
- * 
+ * Third Party Integration Controller.
+ *
  * Handles integrations with external services like Slack, Teams, Discord, GitHub, Jira, etc.
  */
 class ThirdPartyController extends BaseApiController
 {
     /**
-     * Send notification to Slack
+     * Send notification to Slack.
      */
     public function sendSlackNotification(Request $request): JsonResponse
     {
@@ -25,14 +27,14 @@ class ThirdPartyController extends BaseApiController
                 'message' => 'required|string|max:4000',
                 'channel' => 'nullable|string|max:255',
                 'username' => 'nullable|string|max:255',
-                'icon_emoji' => 'nullable|string|max:255'
+                'icon_emoji' => 'nullable|string|max:255',
             ]);
 
             $payload = [
                 'text' => $request->input('message'),
                 'channel' => $request->input('channel'),
                 'username' => $request->input('username', 'ZENA Bot'),
-                'icon_emoji' => $request->input('icon_emoji', ':robot_face:')
+                'icon_emoji' => $request->input('icon_emoji', ':robot_face:'),
             ];
 
             $response = Http::post($request->input('webhook_url'), $payload);
@@ -42,15 +44,15 @@ class ThirdPartyController extends BaseApiController
             }
 
             return $this->errorResponse('Failed to send Slack notification', 400);
-
         } catch (\Exception $e) {
             Log::error('Slack notification failed: ' . $e->getMessage());
+
             return $this->errorResponse('Notification failed: ' . $e->getMessage(), 500);
         }
     }
 
     /**
-     * Send notification to Microsoft Teams
+     * Send notification to Microsoft Teams.
      */
     public function sendTeamsNotification(Request $request): JsonResponse
     {
@@ -59,7 +61,7 @@ class ThirdPartyController extends BaseApiController
                 'webhook_url' => 'required|url',
                 'title' => 'required|string|max:255',
                 'message' => 'required|string|max:4000',
-                'theme_color' => 'nullable|string|max:7'
+                'theme_color' => 'nullable|string|max:7',
             ]);
 
             $payload = [
@@ -70,9 +72,9 @@ class ThirdPartyController extends BaseApiController
                 'sections' => [
                     [
                         'activityTitle' => $request->input('title'),
-                        'text' => $request->input('message')
-                    ]
-                ]
+                        'text' => $request->input('message'),
+                    ],
+                ],
             ];
 
             $response = Http::post($request->input('webhook_url'), $payload);
@@ -82,15 +84,15 @@ class ThirdPartyController extends BaseApiController
             }
 
             return $this->errorResponse('Failed to send Teams notification', 400);
-
         } catch (\Exception $e) {
             Log::error('Teams notification failed: ' . $e->getMessage());
+
             return $this->errorResponse('Notification failed: ' . $e->getMessage(), 500);
         }
     }
 
     /**
-     * Send notification to Discord
+     * Send notification to Discord.
      */
     public function sendDiscordNotification(Request $request): JsonResponse
     {
@@ -99,13 +101,13 @@ class ThirdPartyController extends BaseApiController
                 'webhook_url' => 'required|url',
                 'content' => 'required|string|max:2000',
                 'username' => 'nullable|string|max:255',
-                'avatar_url' => 'nullable|url'
+                'avatar_url' => 'nullable|url',
             ]);
 
             $payload = [
                 'content' => $request->input('content'),
                 'username' => $request->input('username', 'ZENA Bot'),
-                'avatar_url' => $request->input('avatar_url')
+                'avatar_url' => $request->input('avatar_url'),
             ];
 
             $response = Http::post($request->input('webhook_url'), $payload);
@@ -115,15 +117,15 @@ class ThirdPartyController extends BaseApiController
             }
 
             return $this->errorResponse('Failed to send Discord notification', 400);
-
         } catch (\Exception $e) {
             Log::error('Discord notification failed: ' . $e->getMessage());
+
             return $this->errorResponse('Notification failed: ' . $e->getMessage(), 500);
         }
     }
 
     /**
-     * Create GitHub issue
+     * Create GitHub issue.
      */
     public function createGitHubIssue(Request $request): JsonResponse
     {
@@ -135,40 +137,41 @@ class ThirdPartyController extends BaseApiController
                 'title' => 'required|string|max:255',
                 'body' => 'required|string|max:65536',
                 'labels' => 'nullable|array',
-                'assignees' => 'nullable|array'
+                'assignees' => 'nullable|array',
             ]);
 
             $payload = [
                 'title' => $request->input('title'),
                 'body' => $request->input('body'),
                 'labels' => $request->input('labels', []),
-                'assignees' => $request->input('assignees', [])
+                'assignees' => $request->input('assignees', []),
             ];
 
             $response = Http::withHeaders([
                 'Authorization' => 'token ' . $request->input('token'),
-                'Accept' => 'application/vnd.github.v3+json'
+                'Accept' => 'application/vnd.github.v3+json',
             ])->post("https://api.github.com/repos/{$request->input('owner')}/{$request->input('repo')}/issues", $payload);
 
             if ($response->successful()) {
                 $issue = $response->json();
+
                 return $this->successResponse([
                     'issue_number' => $issue['number'],
                     'html_url' => $issue['html_url'],
-                    'state' => $issue['state']
+                    'state' => $issue['state'],
                 ], 'GitHub issue created successfully');
             }
 
             return $this->errorResponse('Failed to create GitHub issue: ' . $response->body(), 400);
-
         } catch (\Exception $e) {
             Log::error('GitHub issue creation failed: ' . $e->getMessage());
+
             return $this->errorResponse('Issue creation failed: ' . $e->getMessage(), 500);
         }
     }
 
     /**
-     * Create Jira issue
+     * Create Jira issue.
      */
     public function createJiraIssue(Request $request): JsonResponse
     {
@@ -182,7 +185,7 @@ class ThirdPartyController extends BaseApiController
                 'summary' => 'required|string|max:255',
                 'description' => 'required|string|max:65536',
                 'priority' => 'nullable|string|max:255',
-                'assignee' => 'nullable|string|max:255'
+                'assignee' => 'nullable|string|max:255',
             ]);
 
             $payload = [
@@ -190,8 +193,8 @@ class ThirdPartyController extends BaseApiController
                     'project' => ['key' => $request->input('project_key')],
                     'summary' => $request->input('summary'),
                     'description' => $request->input('description'),
-                    'issuetype' => ['name' => $request->input('issue_type')]
-                ]
+                    'issuetype' => ['name' => $request->input('issue_type')],
+                ],
             ];
 
             if ($request->has('priority')) {
@@ -207,23 +210,24 @@ class ThirdPartyController extends BaseApiController
 
             if ($response->successful()) {
                 $issue = $response->json();
+
                 return $this->successResponse([
                     'issue_key' => $issue['key'],
                     'issue_id' => $issue['id'],
-                    'self' => $issue['self']
+                    'self' => $issue['self'],
                 ], 'Jira issue created successfully');
             }
 
             return $this->errorResponse('Failed to create Jira issue: ' . $response->body(), 400);
-
         } catch (\Exception $e) {
             Log::error('Jira issue creation failed: ' . $e->getMessage());
+
             return $this->errorResponse('Issue creation failed: ' . $e->getMessage(), 500);
         }
     }
 
     /**
-     * Create Trello card
+     * Create Trello card.
      */
     public function createTrelloCard(Request $request): JsonResponse
     {
@@ -235,7 +239,7 @@ class ThirdPartyController extends BaseApiController
                 'name' => 'required|string|max:255',
                 'desc' => 'nullable|string|max:16384',
                 'due' => 'nullable|date',
-                'labels' => 'nullable|array'
+                'labels' => 'nullable|array',
             ]);
 
             $payload = [
@@ -245,30 +249,31 @@ class ThirdPartyController extends BaseApiController
                 'name' => $request->input('name'),
                 'desc' => $request->input('desc'),
                 'due' => $request->input('due'),
-                'idLabels' => $request->input('labels', [])
+                'idLabels' => $request->input('labels', []),
             ];
 
             $response = Http::post('https://api.trello.com/1/cards', $payload);
 
             if ($response->successful()) {
                 $card = $response->json();
+
                 return $this->successResponse([
                     'card_id' => $card['id'],
                     'short_url' => $card['shortUrl'],
-                    'url' => $card['url']
+                    'url' => $card['url'],
                 ], 'Trello card created successfully');
             }
 
             return $this->errorResponse('Failed to create Trello card: ' . $response->body(), 400);
-
         } catch (\Exception $e) {
             Log::error('Trello card creation failed: ' . $e->getMessage());
+
             return $this->errorResponse('Card creation failed: ' . $e->getMessage(), 500);
         }
     }
 
     /**
-     * Create Asana task
+     * Create Asana task.
      */
     public function createAsanaTask(Request $request): JsonResponse
     {
@@ -280,7 +285,7 @@ class ThirdPartyController extends BaseApiController
                 'notes' => 'nullable|string|max:65536',
                 'due_on' => 'nullable|date',
                 'assignee' => 'nullable|string|max:255',
-                'projects' => 'nullable|array'
+                'projects' => 'nullable|array',
             ]);
 
             $payload = [
@@ -290,28 +295,29 @@ class ThirdPartyController extends BaseApiController
                     'notes' => $request->input('notes'),
                     'due_on' => $request->input('due_on'),
                     'assignee' => $request->input('assignee'),
-                    'projects' => $request->input('projects', [])
-                ]
+                    'projects' => $request->input('projects', []),
+                ],
             ];
 
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $request->input('access_token'),
-                'Content-Type' => 'application/json'
+                'Content-Type' => 'application/json',
             ])->post('https://app.asana.com/api/1.0/tasks', $payload);
 
             if ($response->successful()) {
                 $task = $response->json();
+
                 return $this->successResponse([
                     'task_id' => $task['data']['gid'],
                     'name' => $task['data']['name'],
-                    'permalink_url' => $task['data']['permalink_url']
+                    'permalink_url' => $task['data']['permalink_url'],
                 ], 'Asana task created successfully');
             }
 
             return $this->errorResponse('Failed to create Asana task: ' . $response->body(), 400);
-
         } catch (\Exception $e) {
             Log::error('Asana task creation failed: ' . $e->getMessage());
+
             return $this->errorResponse('Task creation failed: ' . $e->getMessage(), 500);
         }
     }

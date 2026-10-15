@@ -1,16 +1,18 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use Src\InteractionLogs\Models\InteractionLog;
-use Src\CoreProject\Models\Project;
-use Src\CoreProject\Models\Task;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Src\CoreProject\Models\Project;
+use Src\CoreProject\Models\Task;
+use Src\InteractionLogs\Models\InteractionLog;
 
 /**
- * InteractionLog Seeder
- * 
+ * InteractionLog Seeder.
+ *
  * Tạo dữ liệu mẫu cho interaction logs
  */
 class InteractionLogSeeder extends Seeder
@@ -29,7 +31,7 @@ class InteractionLogSeeder extends Seeder
             InteractionLog::factory(5)
                 ->forProject($project->id)
                 ->create([
-                    'created_by' => $users->random()->id
+                    'created_by' => $users->random()->id,
                 ]);
 
             // Tạo interaction logs liên kết với tasks
@@ -40,7 +42,7 @@ class InteractionLogSeeder extends Seeder
                         ->forProject($project->id)
                         ->forTask($task->id)
                         ->create([
-                            'created_by' => $users->random()->id
+                            'created_by' => $users->random()->id,
                         ]);
                 }
             }
@@ -50,7 +52,7 @@ class InteractionLogSeeder extends Seeder
                 ->forProject($project->id)
                 ->clientVisible()  // ✅ Đã thay từ clientApproved() thành clientVisible()
                 ->create([
-                    'created_by' => $users->random()->id
+                    'created_by' => $users->random()->id,
                 ]);
         }
     }

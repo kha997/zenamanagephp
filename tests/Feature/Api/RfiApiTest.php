@@ -2,21 +2,26 @@
 
 namespace Tests\Feature\Api;
 
-use Tests\TestCase;
-use App\Models\User;
 use App\Models\Project;
 use App\Models\Rfi;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Tests\TestCase;
 use Tests\Traits\AuthenticationTestTrait;
 use Tests\Traits\RouteNameTrait;
 use Tests\Traits\TenantUserFactoryTrait;
 
 class RfiApiTest extends TestCase
 {
-    use RefreshDatabase, WithFaker, AuthenticationTestTrait, RouteNameTrait, TenantUserFactoryTrait;
+    use RefreshDatabase;
+    use WithFaker;
+    use AuthenticationTestTrait;
+    use RouteNameTrait;
+    use TenantUserFactoryTrait;
 
     protected User $user;
+
     protected Project $project;
 
     protected function setUp(): void
@@ -32,7 +37,7 @@ class RfiApiTest extends TestCase
     }
 
     /**
-     * Test RFI index endpoint
+     * Test RFI index endpoint.
      */
     public function test_can_get_rfi_list()
     {
@@ -56,22 +61,22 @@ class RfiApiTest extends TestCase
                             'description',
                             'status',
                             'priority',
-                            'created_at'
-                        ]
+                            'created_at',
+                        ],
                     ],
                     'meta' => [
                         'pagination' => [
                             'page',
                             'per_page',
                             'total',
-                            'last_page'
-                        ]
-                    ]
+                            'last_page',
+                        ],
+                    ],
                 ]);
     }
 
     /**
-     * Test RFI creation
+     * Test RFI creation.
      */
     public function test_can_create_rfi()
     {
@@ -82,7 +87,7 @@ class RfiApiTest extends TestCase
             'rfi_number' => 'RFI-001',
             'priority' => 'medium',
             'location' => 'Building A',
-            'drawing_reference' => 'DW-001'
+            'drawing_reference' => 'DW-001',
         ];
 
         $response = $this->apiPost($this->zena('rfis.store'), $rfiData);
@@ -95,18 +100,18 @@ class RfiApiTest extends TestCase
                         'title',
                         'description',
                         'status',
-                        'priority'
-                    ]
+                        'priority',
+                    ],
                 ]);
 
         $this->assertDatabaseHas('rfis', [
             'title' => 'Test RFI',
-            'project_id' => $this->project->id
+            'project_id' => $this->project->id,
         ]);
     }
 
     /**
-     * Test RFI validation
+     * Test RFI validation.
      */
     public function test_rfi_creation_requires_valid_data()
     {
@@ -117,7 +122,7 @@ class RfiApiTest extends TestCase
     }
 
     /**
-     * Test RFI show endpoint
+     * Test RFI show endpoint.
      */
     public function test_can_get_single_rfi()
     {
@@ -137,13 +142,13 @@ class RfiApiTest extends TestCase
                         'title',
                         'description',
                         'status',
-                        'priority'
-                    ]
+                        'priority',
+                    ],
                 ]);
     }
 
     /**
-     * Test RFI update
+     * Test RFI update.
      */
     public function test_can_update_rfi()
     {
@@ -156,7 +161,7 @@ class RfiApiTest extends TestCase
         $updateData = [
             'title' => 'Updated RFI Title',
             'description' => 'Updated description',
-            'priority' => 'high'
+            'priority' => 'high',
         ];
 
         $response = $this->apiPut($this->zena('rfis.update', ['id' => $rfi->id]), $updateData);
@@ -168,13 +173,13 @@ class RfiApiTest extends TestCase
                         'id',
                         'title',
                         'description',
-                        'priority'
-                    ]
+                        'priority',
+                    ],
                 ]);
 
         $this->assertDatabaseHas('rfis', [
             'id' => $rfi->id,
-            'title' => 'Updated RFI Title'
+            'title' => 'Updated RFI Title',
         ]);
     }
 
@@ -223,7 +228,7 @@ class RfiApiTest extends TestCase
     }
 
     /**
-     * Test RFI assignment
+     * Test RFI assignment.
      */
     public function test_can_assign_rfi()
     {
@@ -235,7 +240,7 @@ class RfiApiTest extends TestCase
 
         $assignData = [
             'assigned_to' => $this->user->id,
-            'assignment_notes' => 'Please review this RFI'
+            'assignment_notes' => 'Please review this RFI',
         ];
 
         $response = $this->apiPost($this->zena('rfis.assign', ['id' => $rfi->id]), $assignData);
@@ -247,19 +252,19 @@ class RfiApiTest extends TestCase
                         'id',
                         'assigned_to',
                         'assignment_notes',
-                        'status'
-                    ]
+                        'status',
+                    ],
                 ]);
 
         $this->assertDatabaseHas('rfis', [
             'id' => $rfi->id,
             'assigned_to' => $this->user->id,
-            'status' => 'in_progress'
+            'status' => 'in_progress',
         ]);
     }
 
     /**
-     * Test RFI response
+     * Test RFI response.
      */
     public function test_can_respond_to_rfi()
     {
@@ -267,13 +272,13 @@ class RfiApiTest extends TestCase
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id,
-            'status' => 'in_progress'
+            'status' => 'in_progress',
         ]);
 
         $responseData = [
             'response' => 'This is the response to the RFI',
             'response_notes' => 'Additional notes',
-            'status' => 'answered'
+            'status' => 'answered',
         ];
 
         $response = $this->apiPost($this->zena('rfis.respond', ['id' => $rfi->id]), $responseData);
@@ -284,14 +289,14 @@ class RfiApiTest extends TestCase
                     'data' => [
                         'id',
                         'response',
-                        'status'
-                    ]
+                        'status',
+                    ],
                 ]);
 
         $this->assertDatabaseHas('rfis', [
             'id' => $rfi->id,
             'response' => 'This is the response to the RFI',
-            'status' => 'answered'
+            'status' => 'answered',
         ]);
     }
 
@@ -348,7 +353,7 @@ class RfiApiTest extends TestCase
     }
 
     /**
-     * Test RFI escalation
+     * Test RFI escalation.
      */
     public function test_can_escalate_rfi()
     {
@@ -356,12 +361,12 @@ class RfiApiTest extends TestCase
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id,
-            'status' => 'in_progress'
+            'status' => 'in_progress',
         ]);
 
         $escalateData = [
             'escalated_to' => $this->user->id,
-            'escalation_reason' => 'Urgent issue requiring immediate attention'
+            'escalation_reason' => 'Urgent issue requiring immediate attention',
         ];
 
         $response = $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), $escalateData);
@@ -373,8 +378,8 @@ class RfiApiTest extends TestCase
                         'id',
                         'escalated_to',
                         'escalation_reason',
-                        'status'
-                    ]
+                        'status',
+                    ],
                 ]);
 
         $rfi->refresh();
@@ -595,7 +600,7 @@ class RfiApiTest extends TestCase
     }
 
     /**
-     * Test RFI closure
+     * Test RFI closure.
      */
     public function test_can_close_rfi()
     {
@@ -603,7 +608,7 @@ class RfiApiTest extends TestCase
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id,
-            'status' => 'answered'
+            'status' => 'answered',
         ]);
 
         $response = $this->apiPost($this->zena('rfis.close', ['id' => $rfi->id]));
@@ -614,18 +619,18 @@ class RfiApiTest extends TestCase
                     'data' => [
                         'id',
                         'status',
-                        'closed_at'
-                    ]
+                        'closed_at',
+                    ],
                 ]);
 
         $this->assertDatabaseHas('rfis', [
             'id' => $rfi->id,
-            'status' => 'closed'
+            'status' => 'closed',
         ]);
     }
 
     /**
-     * Test RFI deletion
+     * Test RFI deletion.
      */
     public function test_can_delete_rfi()
     {
@@ -640,12 +645,12 @@ class RfiApiTest extends TestCase
         $response->assertStatus(200);
 
         $this->assertDatabaseMissing('rfis', [
-            'id' => $rfi->id
+            'id' => $rfi->id,
         ]);
     }
 
     /**
-     * Test unauthorized access
+     * Test unauthorized access.
      */
     public function test_unauthorized_access_returns_401()
     {
@@ -798,6 +803,7 @@ class RfiApiTest extends TestCase
         try {
             \Illuminate\Support\Facades\DB::transaction(function () use ($service, $rfi, $target) {
                 $service->escalate($rfi, $target->id, $this->user->id, 'Will be rolled back by an outer failure');
+
                 // Force the OUTER transaction to fail after the escalate() call's own inner
                 // transaction has already returned successfully, proving that a failure in the
                 // surrounding unit of work still results in zero notifications once everything
@@ -811,5 +817,4 @@ class RfiApiTest extends TestCase
         $this->assertDatabaseCount('rfi_escalations', 0);
         $this->assertDatabaseCount('notifications', 0);
     }
-
 }

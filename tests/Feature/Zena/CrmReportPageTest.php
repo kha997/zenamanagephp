@@ -1,15 +1,17 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Zena;
 
 use App\Http\Middleware\RoleBasedAccessControlMiddleware;
 use App\Models\Account;
-use App\Models\Opportunity;
-use App\Models\Tenant;
-use App\Models\User;
 use App\Models\Contract;
 use App\Models\ContractPayment;
+use App\Models\Opportunity;
 use App\Models\Project;
+use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
@@ -22,6 +24,7 @@ class CrmReportPageTest extends TestCase
     use TenantUserFactoryTrait;
 
     private Tenant $tenant;
+
     private User $viewer;
 
     protected function setUp(): void

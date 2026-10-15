@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
 
@@ -7,13 +9,13 @@ use App\Models\User;
 use App\Services\OpenWorkReadQuery;
 use App\Support\Work\OpenWorkItem;
 use Illuminate\Support\Collection;
-use Illuminate\View\View;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\View\View;
 
 /**
  * Trang "Khối lượng công việc" — việc đang mở (Task + Hạng mục thiết kế)
  * nhóm theo người, sắp theo tải giảm dần.
- * Spec: docs/superpowers/specs/2026-07-19-workload-view-design.md
+ * Spec: docs/superpowers/specs/2026-07-19-workload-view-design.md.
  *
  * myWork() là góc nhìn cá nhân của cùng dữ liệu — chỉ việc của
  * người đang đăng nhập, không có khối "Chưa phân công".

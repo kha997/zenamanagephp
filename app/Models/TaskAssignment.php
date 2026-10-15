@@ -1,20 +1,25 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Traits\TenantScope;
 
 class TaskAssignment extends Model
 {
-    use HasUlids, HasFactory, TenantScope;
+    use HasUlids;
+    use HasFactory;
+    use TenantScope;
 
     protected $table = 'task_assignments';
-    
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [
@@ -54,7 +59,7 @@ class TaskAssignment extends Model
     ];
 
     /**
-     * Task assignment roles
+     * Task assignment roles.
      */
     public const ROLE_ASSIGNEE = 'assignee';
     public const ROLE_REVIEWER = 'reviewer';
@@ -67,7 +72,7 @@ class TaskAssignment extends Model
     ];
 
     /**
-     * Task assignment statuses
+     * Task assignment statuses.
      */
     public const STATUS_ASSIGNED = 'assigned';
     public const STATUS_IN_PROGRESS = 'in_progress';
@@ -82,7 +87,7 @@ class TaskAssignment extends Model
     ];
 
     /**
-     * Assignment types
+     * Assignment types.
      */
     public const TYPE_USER = 'user';
     public const TYPE_TEAM = 'team';
@@ -116,7 +121,7 @@ class TaskAssignment extends Model
     }
 
     /**
-     * RELATIONSHIPS
+     * RELATIONSHIPS.
      */
 
     /**
@@ -160,11 +165,11 @@ class TaskAssignment extends Model
     }
 
     /**
-     * SCOPES
+     * SCOPES.
      */
 
     /**
-     * Scope: Filter by role
+     * Scope: Filter by role.
      */
     public function scopeByRole($query, string $role)
     {
@@ -172,7 +177,7 @@ class TaskAssignment extends Model
     }
 
     /**
-     * Scope: Filter by assignment type
+     * Scope: Filter by assignment type.
      */
     public function scopeByType($query, string $type)
     {
@@ -180,7 +185,7 @@ class TaskAssignment extends Model
     }
 
     /**
-     * Scope: Filter by user assignments
+     * Scope: Filter by user assignments.
      */
     public function scopeForUser($query, string $userId)
     {
@@ -189,7 +194,7 @@ class TaskAssignment extends Model
     }
 
     /**
-     * Scope: Filter by team assignments
+     * Scope: Filter by team assignments.
      */
     public function scopeForTeam($query, string $teamId)
     {
@@ -198,7 +203,7 @@ class TaskAssignment extends Model
     }
 
     /**
-     * Scope: Filter by status
+     * Scope: Filter by status.
      */
     public function scopeByStatus($query, string $status)
     {
@@ -206,7 +211,7 @@ class TaskAssignment extends Model
     }
 
     /**
-     * Scope: Active assignments
+     * Scope: Active assignments.
      */
     public function scopeActive($query)
     {
@@ -214,7 +219,7 @@ class TaskAssignment extends Model
     }
 
     /**
-     * Scope: Filter by task
+     * Scope: Filter by task.
      */
     public function scopeByTask($query, string $taskId)
     {
@@ -222,11 +227,11 @@ class TaskAssignment extends Model
     }
 
     /**
-     * BUSINESS LOGIC METHODS
+     * BUSINESS LOGIC METHODS.
      */
 
     /**
-     * Check if assignment is for a user
+     * Check if assignment is for a user.
      */
     public function isUserAssignment(): bool
     {
@@ -234,7 +239,7 @@ class TaskAssignment extends Model
     }
 
     /**
-     * Check if assignment is for a team
+     * Check if assignment is for a team.
      */
     public function isTeamAssignment(): bool
     {
@@ -242,7 +247,7 @@ class TaskAssignment extends Model
     }
 
     /**
-     * Get the assignee (user or team)
+     * Get the assignee (user or team).
      */
     public function getAssigneeAttribute()
     {
@@ -250,7 +255,7 @@ class TaskAssignment extends Model
     }
 
     /**
-     * Get assignee name
+     * Get assignee name.
      */
     public function getAssigneeNameAttribute(): string
     {
@@ -262,7 +267,7 @@ class TaskAssignment extends Model
     }
 
     /**
-     * Mark assignment as started
+     * Mark assignment as started.
      */
     public function markAsStarted(): void
     {
@@ -275,7 +280,7 @@ class TaskAssignment extends Model
     }
 
     /**
-     * Mark assignment as completed
+     * Mark assignment as completed.
      */
     public function markAsCompleted(): void
     {
@@ -288,7 +293,7 @@ class TaskAssignment extends Model
     }
 
     /**
-     * Mark assignment as cancelled
+     * Mark assignment as cancelled.
      */
     public function markAsCancelled(): void
     {
@@ -299,7 +304,7 @@ class TaskAssignment extends Model
     }
 
     /**
-     * Update actual hours
+     * Update actual hours.
      */
     public function updateActualHours(float $hours): void
     {
@@ -307,18 +312,19 @@ class TaskAssignment extends Model
     }
 
     /**
-     * Get assignment duration in hours
+     * Get assignment duration in hours.
      */
     public function getDurationHoursAttribute(): ?float
     {
         if ($this->started_at && $this->completed_at) {
             return $this->started_at->diffInHours($this->completed_at);
         }
+
         return null;
     }
 
     /**
-     * Get remaining hours
+     * Get remaining hours.
      */
     public function getRemainingHoursAttribute(): float
     {

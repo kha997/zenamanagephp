@@ -4,12 +4,12 @@ namespace Database\Factories;
 
 use App\Models\Document;
 use App\Models\Project;
-use App\Models\User;
 use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
-use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Document>

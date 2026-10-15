@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -20,6 +22,7 @@ final class ExportTenantProjectionService
             $watchers = $task->getAttribute('watchers');
             if (is_string($watchers)) {
                 $decoded = json_decode($watchers, true);
+
                 return is_array($decoded) ? $decoded : [];
             }
 

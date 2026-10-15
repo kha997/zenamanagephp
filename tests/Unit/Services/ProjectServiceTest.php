@@ -1,36 +1,38 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
 use App\Models\Project;
-use App\Models\User;
 use App\Services\ProjectService;
 use Tests\TestCase;
-use Tests\Traits\DatabaseTrait;
 use Tests\Traits\AuthenticationTrait;
+use Tests\Traits\DatabaseTrait;
 
 /**
- * Unit tests cho ProjectService
+ * Unit tests cho ProjectService.
  */
 class ProjectServiceTest extends TestCase
 {
-    use DatabaseTrait, AuthenticationTrait;
-    
+    use DatabaseTrait;
+    use AuthenticationTrait;
+
     private ProjectService $projectService;
-    
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->projectService = app(ProjectService::class);
     }
-    
+
     /**
-     * Test create project
+     * Test create project.
      */
     public function test_can_create_project(): void
     {
         $user = $this->createAuthenticatedUser();
-        
+
         $projectData = [
             'name' => 'Test Project',
             'description' => 'Test Description',
@@ -38,76 +40,76 @@ class ProjectServiceTest extends TestCase
             'end_date' => now()->addMonths(6)->format('Y-m-d'),
             'status' => 'planning',
         ];
-        
+
         $project = $this->projectService->createProject(
             $projectData,
             $user->id,
             $user->tenant_id
         );
-        
+
         $this->assertInstanceOf(Project::class, $project);
         $this->assertEquals('Test Project', $project->name);
         $this->assertEquals($user->tenant_id, $project->tenant_id);
     }
-    
+
     /**
-     * Test update project
+     * Test update project.
      */
     public function test_can_update_project(): void
     {
         $user = $this->createAuthenticatedUser();
         $project = Project::factory()->create(['tenant_id' => $user->tenant_id]);
-        
+
         $updateData = [
             'name' => 'Updated Project Name',
             'status' => 'active',
         ];
-        
+
         $updatedProject = $this->projectService->updateProject($project, $updateData, $user->id);
-        
+
         $this->assertEquals('Updated Project Name', $updatedProject->name);
         $this->assertEquals('active', $updatedProject->status);
     }
-    
+
     /**
-     * Test delete project
+     * Test delete project.
      */
     public function test_can_delete_project(): void
     {
         $user = $this->createAuthenticatedUser();
         $project = Project::factory()->create(['tenant_id' => $user->tenant_id]);
-        
+
         $result = $this->projectService->deleteProject($project, $user->id);
-        
+
         $this->assertTrue($result);
         $this->assertSoftDeleted('projects', ['id' => $project->id]);
     }
-    
+
     /**
-     * Test get projects with filters
+     * Test get projects with filters.
      */
     public function test_can_get_projects_with_filters(): void
     {
         $user = $this->createAuthenticatedUser();
-        
+
         // Create test projects
         Project::factory()->count(3)->create([
             'tenant_id' => $user->tenant_id,
-            'status' => 'active'
+            'status' => 'active',
         ]);
-        
+
         Project::factory()->count(2)->create([
             'tenant_id' => $user->tenant_id,
-            'status' => 'completed'
+            'status' => 'completed',
         ]);
-        
+
         // Test filter by status
         $activeProjects = $this->projectService->getProjectsList(
             ['status' => 'active']
         );
-        
+
         $this->assertCount(3, $activeProjects);
-        
+
         foreach ($activeProjects as $project) {
             $this->assertEquals('active', $project->status);
         }

@@ -1,16 +1,17 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests;
-use Illuminate\Support\Facades\Auth;
-
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
 /**
- * User Form Request
- * 
+ * User Form Request.
+ *
  * Handles validation logic for User creation and updates
  */
 class UserFormRequest extends FormRequest
@@ -34,7 +35,7 @@ class UserFormRequest extends FormRequest
     {
         $userId = $this->route('user')?->id;
         $isUpdate = $this->isMethod('PUT') || $this->isMethod('PATCH');
-        
+
         return [
             'name' => 'required|string|max:255',
             'email' => [
@@ -43,7 +44,7 @@ class UserFormRequest extends FormRequest
                 'max:255',
                 Rule::unique('users', 'email')
                     ->where('tenant_id', Auth::user()->tenant_id)
-                    ->ignore($userId)
+                    ->ignore($userId),
             ],
             'password' => [
                 $isUpdate ? 'nullable' : 'required',
@@ -53,13 +54,13 @@ class UserFormRequest extends FormRequest
                     ->mixedCase()
                     ->numbers()
                     ->symbols()
-                    ->uncompromised()
+                    ->uncompromised(),
             ],
             'password_confirmation' => 'required_with:password|same:password',
             'system_roles' => 'nullable|array',
             'system_roles.*' => [
                 'integer',
-                Rule::exists('roles', 'id')->where('scope', 'system')
+                Rule::exists('roles', 'id')->where('scope', 'system'),
             ],
         ];
     }

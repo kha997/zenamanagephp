@@ -2,16 +2,14 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use App\Models\User;
-use App\Models\Tenant;
 use App\Models\Project;
-use App\Models\Task;
+use App\Models\Tenant;
+use App\Models\User;
 use App\Services\BulkOperationsService;
 use App\Services\SecureAuditService;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Tests\TestCase;
 
 /**
  * @group performance
@@ -21,27 +19,29 @@ class BulkOperationsNoAuthTest extends TestCase
     use RefreshDatabase;
 
     protected $tenant;
+
     protected $user;
+
     protected $bulkService;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create tenant and user
         $this->tenant = Tenant::factory()->create([
             'name' => 'Test Tenant',
             'slug' => 'test-tenant-' . Str::lower((string) Str::ulid()),
-            'status' => 'active'
+            'status' => 'active',
         ]);
-        
+
         $this->user = User::factory()->create([
             'name' => 'Test User',
             'email' => 'test+' . Str::lower((string) Str::ulid()) . '@example.com',
             'password' => bcrypt('password'),
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
-        
+
         $this->bulkService = new BulkOperationsService(new SecureAuditService());
     }
 
@@ -52,14 +52,14 @@ class BulkOperationsNoAuthTest extends TestCase
                 'name' => 'User 1',
                 'email' => 'user1@example.com',
                 'password' => 'password123',
-                'tenant_id' => $this->tenant->id
+                'tenant_id' => $this->tenant->id,
             ],
             [
-                'name' => 'User 2', 
+                'name' => 'User 2',
                 'email' => 'user2@example.com',
                 'password' => 'password123',
-                'tenant_id' => $this->tenant->id
-            ]
+                'tenant_id' => $this->tenant->id,
+            ],
         ];
 
         $result = $this->bulkService->bulkCreateUsers($userData);
@@ -68,7 +68,7 @@ class BulkOperationsNoAuthTest extends TestCase
         $this->assertEquals(2, $result['created']);
         $this->assertEquals(0, $result['failed']);
         $this->assertCount(2, $result['created_users']);
-        
+
         // Verify users were created
         $this->assertDatabaseHas('users', ['email' => 'user1@example.com']);
         $this->assertDatabaseHas('users', ['email' => 'user2@example.com']);
@@ -82,15 +82,15 @@ class BulkOperationsNoAuthTest extends TestCase
                 'description' => 'Test project 1',
                 'status' => 'active',
                 'tenant_id' => $this->tenant->id,
-                'created_by' => $this->user->id
+                'created_by' => $this->user->id,
             ],
             [
                 'name' => 'Project 2',
-                'description' => 'Test project 2', 
+                'description' => 'Test project 2',
                 'status' => 'active',
                 'tenant_id' => $this->tenant->id,
-                'created_by' => $this->user->id
-            ]
+                'created_by' => $this->user->id,
+            ],
         ];
 
         $result = $this->bulkService->bulkCreateProjects($projectData);
@@ -98,7 +98,7 @@ class BulkOperationsNoAuthTest extends TestCase
         $this->assertTrue($result['success'] > 0);
         $this->assertEquals(2, $result['created']);
         $this->assertEquals(0, $result['failed']);
-        
+
         // Verify projects were created
         $this->assertDatabaseHas('projects', ['name' => 'Project 1']);
         $this->assertDatabaseHas('projects', ['name' => 'Project 2']);
@@ -112,7 +112,7 @@ class BulkOperationsNoAuthTest extends TestCase
             'description' => 'Test project',
             'status' => 'active',
             'tenant_id' => $this->tenant->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
         $taskData = [
@@ -123,17 +123,17 @@ class BulkOperationsNoAuthTest extends TestCase
                 'priority' => 'high',
                 'project_id' => $project->id,
                 'tenant_id' => $this->tenant->id,
-                'created_by' => $this->user->id
+                'created_by' => $this->user->id,
             ],
             [
                 'name' => 'Task 2',
                 'description' => 'Test task 2',
-                'status' => 'pending', 
+                'status' => 'pending',
                 'priority' => 'medium',
                 'project_id' => $project->id,
                 'tenant_id' => $this->tenant->id,
-                'created_by' => $this->user->id
-            ]
+                'created_by' => $this->user->id,
+            ],
         ];
 
         $result = $this->bulkService->bulkCreateTasks($taskData);
@@ -141,7 +141,7 @@ class BulkOperationsNoAuthTest extends TestCase
         $this->assertTrue($result['success'] > 0);
         $this->assertEquals(2, $result['created']);
         $this->assertEquals(0, $result['failed']);
-        
+
         // Verify tasks were created
         $this->assertDatabaseHas('tasks', ['name' => 'Task 1']);
         $this->assertDatabaseHas('tasks', ['name' => 'Task 2']);
@@ -152,7 +152,7 @@ class BulkOperationsNoAuthTest extends TestCase
         // Test empty data
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('No operations to perform');
-        
+
         $this->bulkService->bulkCreateUsers([]);
     }
 
@@ -163,8 +163,8 @@ class BulkOperationsNoAuthTest extends TestCase
                 'name' => '', // Invalid: empty name
                 'email' => 'invalid-email', // Invalid: bad email format
                 'password' => '123', // Invalid: too short
-                'tenant_id' => $this->tenant->id
-            ]
+                'tenant_id' => $this->tenant->id,
+            ],
         ];
 
         $result = $this->bulkService->bulkCreateUsers($invalidData);
@@ -181,7 +181,7 @@ class BulkOperationsNoAuthTest extends TestCase
         $otherTenant = Tenant::factory()->create([
             'name' => 'Other Tenant',
             'slug' => 'other-tenant',
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
         // Try to create user with different tenant_id
@@ -190,8 +190,8 @@ class BulkOperationsNoAuthTest extends TestCase
                 'name' => 'User 1',
                 'email' => 'user1@example.com',
                 'password' => 'password123',
-                'tenant_id' => $otherTenant->id // Different tenant
-            ]
+                'tenant_id' => $otherTenant->id, // Different tenant
+            ],
         ];
 
         $result = $this->bulkService->bulkCreateUsers($userData);
@@ -205,7 +205,7 @@ class BulkOperationsNoAuthTest extends TestCase
     public function test_bulk_operations_performance()
     {
         $startTime = microtime(true);
-        
+
         // Create 10 users
         $userData = [];
         for ($i = 1; $i <= 10; $i++) {
@@ -213,18 +213,18 @@ class BulkOperationsNoAuthTest extends TestCase
                 'name' => "User {$i}",
                 'email' => "user{$i}@example.com",
                 'password' => 'password123',
-                'tenant_id' => $this->tenant->id
+                'tenant_id' => $this->tenant->id,
             ];
         }
 
         $result = $this->bulkService->bulkCreateUsers($userData);
-        
+
         $endTime = microtime(true);
         $executionTime = $endTime - $startTime;
 
         $this->assertTrue($result['success'] > 0);
         $this->assertEquals(10, $result['created']);
-        
+
         // Should complete within reasonable time (5 seconds)
         $this->assertLessThan(5, $executionTime);
     }
@@ -236,7 +236,7 @@ class BulkOperationsNoAuthTest extends TestCase
             'name' => 'Existing User',
             'email' => 'existing@example.com',
             'password' => bcrypt('password'),
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $userData = [
@@ -244,14 +244,14 @@ class BulkOperationsNoAuthTest extends TestCase
                 'name' => 'User 1',
                 'email' => 'user1@example.com',
                 'password' => 'password123',
-                'tenant_id' => $this->tenant->id
+                'tenant_id' => $this->tenant->id,
             ],
             [
                 'name' => 'User 2',
                 'email' => 'existing@example.com', // Duplicate email - should fail
                 'password' => 'password123',
-                'tenant_id' => $this->tenant->id
-            ]
+                'tenant_id' => $this->tenant->id,
+            ],
         ];
 
         $result = $this->bulkService->bulkCreateUsers($userData);
@@ -269,14 +269,14 @@ class BulkOperationsNoAuthTest extends TestCase
                 'name' => 'Valid User',
                 'email' => 'valid@example.com',
                 'password' => 'password123',
-                'tenant_id' => $this->tenant->id
+                'tenant_id' => $this->tenant->id,
             ],
             [
                 'name' => '', // Invalid: empty name
                 'email' => 'invalid@example.com',
                 'password' => 'password123',
-                'tenant_id' => $this->tenant->id
-            ]
+                'tenant_id' => $this->tenant->id,
+            ],
         ];
 
         $result = $this->bulkService->bulkCreateUsers($userData);

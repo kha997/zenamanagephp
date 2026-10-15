@@ -7,9 +7,10 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 
 class TaskCreated implements ShouldBroadcast
 {
-
     public Task $task;
+
     public User $user;
+
     public array $metadata;
 
     /**

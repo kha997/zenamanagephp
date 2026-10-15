@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Services\gService;
 use App\Services\SecurityMonitoringService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -12,8 +11,8 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Security Dashboard Controller
- * 
+ * Security Dashboard Controller.
+ *
  * Provides security monitoring and analytics
  */
 class SecurityDashboardController extends Controller
@@ -26,7 +25,7 @@ class SecurityDashboardController extends Controller
     }
 
     /**
-     * Get security overview
+     * Get security overview.
      */
     public function getSecurityOverview(): JsonResponse
     {
@@ -44,19 +43,18 @@ class SecurityDashboardController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'data' => $overview
+                'data' => $overview,
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to get security overview: ' . $e->getMessage()
+                'message' => 'Failed to get security overview: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Get security events timeline
+     * Get security events timeline.
      */
     public function getSecurityEventsTimeline(Request $request): JsonResponse
     {
@@ -73,19 +71,18 @@ class SecurityDashboardController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'data' => $events
+                'data' => $events,
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to get security events timeline: ' . $e->getMessage()
+                'message' => 'Failed to get security events timeline: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Get failed login attempts
+     * Get failed login attempts.
      */
     public function getFailedLoginAttempts(Request $request): JsonResponse
     {
@@ -102,19 +99,18 @@ class SecurityDashboardController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'data' => $attempts
+                'data' => $attempts,
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to get failed login attempts: ' . $e->getMessage()
+                'message' => 'Failed to get failed login attempts: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Get suspicious activities
+     * Get suspicious activities.
      */
     public function getSuspiciousActivities(Request $request): JsonResponse
     {
@@ -131,19 +127,18 @@ class SecurityDashboardController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'data' => $activities
+                'data' => $activities,
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to get suspicious activities: ' . $e->getMessage()
+                'message' => 'Failed to get suspicious activities: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Get user security status
+     * Get user security status.
      */
     public function getUserSecurityStatus(Request $request): JsonResponse
     {
@@ -160,19 +155,18 @@ class SecurityDashboardController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'data' => $status
+                'data' => $status,
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to get user security status: ' . $e->getMessage()
+                'message' => 'Failed to get user security status: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Get security recommendations
+     * Get security recommendations.
      */
     public function getSecurityRecommendations(): JsonResponse
     {
@@ -181,19 +175,18 @@ class SecurityDashboardController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'data' => $recommendations
+                'data' => $recommendations,
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to get security recommendations: ' . $e->getMessage()
+                'message' => 'Failed to get security recommendations: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Get security alerts
+     * Get security alerts.
      */
     public function getSecurityAlerts(Request $request): JsonResponse
     {
@@ -210,19 +203,18 @@ class SecurityDashboardController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'data' => $alerts
+                'data' => $alerts,
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to get security alerts: ' . $e->getMessage()
+                'message' => 'Failed to get security alerts: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Get security metrics
+     * Get security metrics.
      */
     public function getSecurityMetrics(Request $request): JsonResponse
     {
@@ -244,19 +236,18 @@ class SecurityDashboardController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'data' => $metrics
+                'data' => $metrics,
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to get security metrics: ' . $e->getMessage()
+                'message' => 'Failed to get security metrics: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Export security report
+     * Export security report.
      */
     public function exportSecurityReport(Request $request): JsonResponse
     {
@@ -287,13 +278,12 @@ class SecurityDashboardController extends Controller
                     'format' => $format,
                     'period' => $period,
                     'generated_at' => now()->toISOString(),
-                ]
+                ],
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to export security report: ' . $e->getMessage()
+                'message' => 'Failed to export security report: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -377,7 +367,7 @@ class SecurityDashboardController extends Controller
 
     private function getLoginSuccessRate(string $period): float
     {
-        $startTime = match($period) {
+        $startTime = match ($period) {
             '1h' => Carbon::now()->subHour(),
             '24h' => Carbon::now()->subDay(),
             '7d' => Carbon::now()->subWeek(),
@@ -415,7 +405,7 @@ class SecurityDashboardController extends Controller
 
     private function getSecurityEventsTrend(string $period): array
     {
-        $startTime = match($period) {
+        $startTime = match ($period) {
             '1h' => Carbon::now()->subHour(),
             '24h' => Carbon::now()->subDay(),
             '7d' => Carbon::now()->subWeek(),
@@ -441,7 +431,7 @@ class SecurityDashboardController extends Controller
 
     private function getUserActivityScore(string $period): float
     {
-        $startTime = match($period) {
+        $startTime = match ($period) {
             '1h' => Carbon::now()->subHour(),
             '24h' => Carbon::now()->subDay(),
             '7d' => Carbon::now()->subWeek(),
@@ -460,7 +450,7 @@ class SecurityDashboardController extends Controller
 
     private function getThreatLevel(string $period): string
     {
-        $startTime = match($period) {
+        $startTime = match ($period) {
             '1h' => Carbon::now()->subHour(),
             '24h' => Carbon::now()->subDay(),
             '7d' => Carbon::now()->subWeek(),
@@ -473,7 +463,7 @@ class SecurityDashboardController extends Controller
             ->where('created_at', '>=', $startTime)
             ->count();
 
-        return match(true) {
+        return match (true) {
             $threatCount >= 100 => 'Critical',
             $threatCount >= 50 => 'High',
             $threatCount >= 20 => 'Medium',

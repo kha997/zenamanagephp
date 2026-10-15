@@ -1,31 +1,34 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use App\Models\User;
-use App\Models\Tenant;
 use App\Models\Project;
 use App\Models\ProjectMilestone;
+use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class SimpleProjectMilestoneTest extends TestCase
 {
     use RefreshDatabase;
 
     private User $user;
+
     private Tenant $tenant;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->tenant = Tenant::factory()->create();
         $this->user = User::factory()->create(['tenant_id' => $this->tenant->id]);
     }
 
     /**
-     * Test ProjectMilestone model creation with minimal data
+     * Test ProjectMilestone model creation with minimal data.
      */
     public function test_project_milestone_minimal_creation(): void
     {
@@ -36,12 +39,12 @@ class SimpleProjectMilestoneTest extends TestCase
             'status' => 'active',
             'start_date' => now(),
             'end_date' => now()->addDays(30),
-            'budget_total' => 100000
+            'budget_total' => 100000,
         ]);
 
         $milestone = ProjectMilestone::create([
             'project_id' => $project->id,
-            'name' => 'Test Milestone'
+            'name' => 'Test Milestone',
         ]);
 
         $this->assertNotNull($milestone);
@@ -52,7 +55,7 @@ class SimpleProjectMilestoneTest extends TestCase
     }
 
     /**
-     * Test ProjectMilestone model creation with all required fields
+     * Test ProjectMilestone model creation with all required fields.
      */
     public function test_project_milestone_full_creation(): void
     {
@@ -63,7 +66,7 @@ class SimpleProjectMilestoneTest extends TestCase
             'status' => 'active',
             'start_date' => now(),
             'end_date' => now()->addDays(30),
-            'budget_total' => 100000
+            'budget_total' => 100000,
         ]);
 
         $milestone = ProjectMilestone::create([
@@ -71,7 +74,7 @@ class SimpleProjectMilestoneTest extends TestCase
             'name' => 'Full Test Milestone',
             'description' => 'Full milestone description',
             'status' => 'pending',
-            'order' => 1
+            'order' => 1,
         ]);
 
         $this->assertNotNull($milestone);

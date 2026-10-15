@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Unit\OwnerGovernance;
 
@@ -21,7 +23,7 @@ class GrandfatherLoaderTest extends TestCase
     protected function tearDown(): void
     {
         foreach ($this->tempFiles as $f) {
-            @chmod($f, 0644);
+            @chmod($f, 0o644);
             @unlink($f);
         }
         $this->tempFiles = [];
@@ -46,12 +48,13 @@ class GrandfatherLoaderTest extends TestCase
     public function test_unreadable_file_throws(): void
     {
         $path = $this->writeTemp("docs/superpowers/specs/x.md\n");
-        chmod($path, 0000);
+        chmod($path, 0o000);
+
         try {
             $this->expectException(\RuntimeException::class);
             \owner_governance_load_grandfathered_paths($path);
         } finally {
-            chmod($path, 0644); // restore so tearDown can unlink
+            chmod($path, 0o644); // restore so tearDown can unlink
         }
     }
 

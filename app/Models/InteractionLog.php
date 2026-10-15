@@ -1,8 +1,9 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,8 +13,8 @@ use Src\CoreProject\Models\Project;
 use Src\CoreProject\Models\Task;
 
 /**
- * Model InteractionLog để quản lý các log tương tác
- * 
+ * Model InteractionLog để quản lý các log tương tác.
+ *
  * @property string $project_id
  * @property string|null $linked_task_id
  * @property string $type
@@ -27,14 +28,17 @@ use Src\CoreProject\Models\Task;
  */
 class InteractionLog extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids;
+    use HasFactory;
 
     protected $table = 'interaction_logs';
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     /**
-     * Các loại interaction log
+     * Các loại interaction log.
      */
     public const TYPE_CALL = 'call';
     public const TYPE_EMAIL = 'email';
@@ -43,13 +47,13 @@ class InteractionLog extends Model
     public const TYPE_FEEDBACK = 'feedback';
 
     /**
-     * Các mức độ hiển thị
+     * Các mức độ hiển thị.
      */
     public const VISIBILITY_INTERNAL = 'internal';
     public const VISIBILITY_CLIENT = 'client';
 
     /**
-     * Danh sách các loại hợp lệ
+     * Danh sách các loại hợp lệ.
      */
     public const VALID_TYPES = [
         self::TYPE_CALL,
@@ -60,7 +64,7 @@ class InteractionLog extends Model
     ];
 
     /**
-     * Danh sách các mức độ hiển thị hợp lệ
+     * Danh sách các mức độ hiển thị hợp lệ.
      */
     public const VALID_VISIBILITIES = [
         self::VISIBILITY_INTERNAL,
@@ -85,7 +89,7 @@ class InteractionLog extends Model
     ];
 
     /**
-     * Quan hệ với Project
+     * Quan hệ với Project.
      */
     public function project(): BelongsTo
     {
@@ -93,7 +97,7 @@ class InteractionLog extends Model
     }
 
     /**
-     * Quan hệ với Task (nếu có liên kết)
+     * Quan hệ với Task (nếu có liên kết).
      */
     public function linkedTask(): BelongsTo
     {
@@ -101,7 +105,7 @@ class InteractionLog extends Model
     }
 
     /**
-     * Quan hệ với User (người tạo)
+     * Quan hệ với User (người tạo).
      */
     public function creator(): BelongsTo
     {
@@ -109,7 +113,7 @@ class InteractionLog extends Model
     }
 
     /**
-     * Scope để lọc theo loại
+     * Scope để lọc theo loại.
      */
     public function scopeOfType(Builder $query, string $type): Builder
     {
@@ -117,7 +121,7 @@ class InteractionLog extends Model
     }
 
     /**
-     * Scope để lọc theo mức độ hiển thị
+     * Scope để lọc theo mức độ hiển thị.
      */
     public function scopeWithVisibility(Builder $query, string $visibility): Builder
     {
@@ -125,7 +129,7 @@ class InteractionLog extends Model
     }
 
     /**
-     * Scope để lấy các log hiển thị cho client (đã được approve)
+     * Scope để lấy các log hiển thị cho client (đã được approve).
      */
     public function scopeClientVisible(Builder $query): Builder
     {
@@ -134,7 +138,7 @@ class InteractionLog extends Model
     }
 
     /**
-     * Scope để lọc theo dự án
+     * Scope để lọc theo dự án.
      */
     public function scopeForProject(Builder $query, string $projectId): Builder
     {
@@ -142,7 +146,7 @@ class InteractionLog extends Model
     }
 
     /**
-     * Scope để lọc theo task
+     * Scope để lọc theo task.
      */
     public function scopeForTask(Builder $query, string $taskId): Builder
     {
@@ -150,7 +154,7 @@ class InteractionLog extends Model
     }
 
     /**
-     * Scope để lọc theo tag path
+     * Scope để lọc theo tag path.
      */
     public function scopeWithTagPath(Builder $query, string $tagPath): Builder
     {
@@ -158,7 +162,7 @@ class InteractionLog extends Model
     }
 
     /**
-     * Kiểm tra xem log có hiển thị cho client không
+     * Kiểm tra xem log có hiển thị cho client không.
      */
     public function isClientVisible(): bool
     {
@@ -166,7 +170,7 @@ class InteractionLog extends Model
     }
 
     /**
-     * Kiểm tra xem log có phải là internal không
+     * Kiểm tra xem log có phải là internal không.
      */
     public function isInternal(): bool
     {
@@ -174,7 +178,7 @@ class InteractionLog extends Model
     }
 
     /**
-     * Approve log để hiển thị cho client
+     * Approve log để hiển thị cho client.
      */
     public function approveForClient(): bool
     {
@@ -183,20 +187,22 @@ class InteractionLog extends Model
         }
 
         $this->client_approved = true;
+
         return $this->save();
     }
 
     /**
-     * Revoke approval cho client
+     * Revoke approval cho client.
      */
     public function revokeClientApproval(): bool
     {
         $this->client_approved = false;
+
         return $this->save();
     }
 
     /**
-     * Lấy các tag từ tag_path
+     * Lấy các tag từ tag_path.
      */
     public function getTags(): array
     {
@@ -208,7 +214,7 @@ class InteractionLog extends Model
     }
 
     /**
-     * Tạo factory instance mới cho model
+     * Tạo factory instance mới cho model.
      */
     protected static function newFactory()
     {

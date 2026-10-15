@@ -1,19 +1,20 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests;
-use Illuminate\Support\Facades\Auth;
-
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * Form request for notification rule validation
- * Handles validation logic for creating and updating notification rules
+ * Handles validation logic for creating and updating notification rules.
  */
 class NotificationRuleFormRequest extends FormRequest
 {
     /**
-     * Determine if the user is authorized to make this request
+     * Determine if the user is authorized to make this request.
      *
      * @return bool Authorization status
      */
@@ -21,28 +22,28 @@ class NotificationRuleFormRequest extends FormRequest
     {
         return Auth::check();
     }
-    
+
     /**
-     * Get the validation rules that apply to the request
+     * Get the validation rules that apply to the request.
      *
      * @return array<string, mixed> Validation rules
      */
     public function rules(): array
     {
         $isUpdate = $this->isMethod('PUT') || $this->isMethod('PATCH');
-        
+
         return [
             'event_key' => $isUpdate ? 'sometimes|string|max:100' : 'required|string|max:100',
             'project_id' => 'nullable|integer|exists:projects,id',
             'min_priority' => 'sometimes|in:low,normal,critical',
             'channels' => 'sometimes|array|min:1',
             'channels.*' => 'in:inapp,email,webhook',
-            'is_enabled' => 'sometimes|boolean'
+            'is_enabled' => 'sometimes|boolean',
         ];
     }
-    
+
     /**
-     * Get custom error messages for validation rules
+     * Get custom error messages for validation rules.
      *
      * @return array<string, string> Custom error messages
      */
@@ -58,12 +59,12 @@ class NotificationRuleFormRequest extends FormRequest
             'channels.array' => 'Channels must be an array.',
             'channels.min' => 'At least one channel must be selected.',
             'channels.*.in' => 'Invalid channel selected. Available channels: inapp, email, webhook.',
-            'is_enabled.boolean' => 'Enabled status must be true or false.'
+            'is_enabled.boolean' => 'Enabled status must be true or false.',
         ];
     }
-    
+
     /**
-     * Prepare the data for validation
+     * Prepare the data for validation.
      *
      * @return void
      */
@@ -73,11 +74,11 @@ class NotificationRuleFormRequest extends FormRequest
         if (!$this->has('min_priority')) {
             $this->merge(['min_priority' => 'normal']);
         }
-        
+
         if (!$this->has('channels')) {
             $this->merge(['channels' => ['inapp']]);
         }
-        
+
         if (!$this->has('is_enabled')) {
             $this->merge(['is_enabled' => true]);
         }

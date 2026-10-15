@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Zena;
 
@@ -9,9 +11,9 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Route as RoutingRoute;
-use Illuminate\Support\Facades\Route as RouteFacade;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Route as RouteFacade;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\PersonalAccessToken;
 use Tests\TestCase;
@@ -97,6 +99,7 @@ class ZenaListContractInvariantTest extends TestCase
     private function supportsGetOrHead(RoutingRoute $route): bool
     {
         $methods = $route->methods();
+
         return in_array('GET', $methods, true) || in_array('HEAD', $methods, true);
     }
 

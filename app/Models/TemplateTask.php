@@ -2,13 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TemplateTask extends Model
 {
-
     protected $fillable = [
         'template_id',
         'phase_key',
@@ -25,7 +23,7 @@ class TemplateTask extends Model
         'estimated_cost',
         'team_size',
         'is_milestone',
-        'sort_order'
+        'sort_order',
     ];
 
     protected $casts = [
@@ -36,11 +34,11 @@ class TemplateTask extends Model
         'checklist' => 'array',
         'approval_workflow' => 'array',
         'estimated_cost' => 'decimal:2',
-        'is_milestone' => 'boolean'
+        'is_milestone' => 'boolean',
     ];
 
     /**
-     * Get the template that owns this task
+     * Get the template that owns this task.
      */
     public function template(): BelongsTo
     {
@@ -48,7 +46,7 @@ class TemplateTask extends Model
     }
 
     /**
-     * Get tasks by phase
+     * Get tasks by phase.
      */
     public function scopeByPhase($query, $phaseKey)
     {
@@ -56,7 +54,7 @@ class TemplateTask extends Model
     }
 
     /**
-     * Get milestone tasks
+     * Get milestone tasks.
      */
     public function scopeMilestones($query)
     {
@@ -64,7 +62,7 @@ class TemplateTask extends Model
     }
 
     /**
-     * Get high priority tasks
+     * Get high priority tasks.
      */
     public function scopeHighPriority($query)
     {
@@ -72,7 +70,7 @@ class TemplateTask extends Model
     }
 
     /**
-     * Calculate total duration for phase
+     * Calculate total duration for phase.
      */
     public static function getPhaseDuration($templateId, $phaseKey)
     {
@@ -82,7 +80,7 @@ class TemplateTask extends Model
     }
 
     /**
-     * Get task dependencies
+     * Get task dependencies.
      */
     public function getDependencies()
     {
@@ -94,7 +92,7 @@ class TemplateTask extends Model
     }
 
     /**
-     * Check if task can start (all dependencies completed)
+     * Check if task can start (all dependencies completed).
      */
     public function canStart($completedTasks = [])
     {
@@ -108,7 +106,7 @@ class TemplateTask extends Model
     }
 
     /**
-     * Get critical path tasks
+     * Get critical path tasks.
      */
     public static function getCriticalPath($templateId)
     {
@@ -132,7 +130,7 @@ class TemplateTask extends Model
     }
 
     /**
-     * Find longest path from a task
+     * Find longest path from a task.
      */
     private static function findLongestPath($task, &$visited)
     {

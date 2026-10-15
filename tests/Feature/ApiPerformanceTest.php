@@ -1,34 +1,40 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use App\Models\User;
 use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Src\CoreProject\Models\Project;
 use Src\CoreProject\Models\Task;
-use Illuminate\Support\Facades\DB;
 use Tests\Support\SSOT\FixtureFactory;
+use Tests\TestCase;
 use Tests\Traits\AuthenticationTrait;
 
 /**
- * Performance tests cho API endpoints
- * 
+ * Performance tests cho API endpoints.
+ *
  * Kiểm tra response time và memory usage với large datasets
  *
  * @group performance
  */
 class ApiPerformanceTest extends TestCase
 {
-    use RefreshDatabase, FixtureFactory, AuthenticationTrait;
+    use RefreshDatabase;
+    use FixtureFactory;
+    use AuthenticationTrait;
 
     protected User $user;
+
     protected Tenant $tenant;
+
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->tenant = $this->createTenant();
         $this->user = $this->createTenantUserWithRbac(
             $this->tenant,
@@ -38,33 +44,33 @@ class ApiPerformanceTest extends TestCase
             ['role' => 'admin']
         );
         $this->apiAs($this->user, $this->tenant);
-        
+
         // Seed large dataset
         $this->seedLargeDataset();
     }
 
     /**
-     * Test projects list performance với pagination
+     * Test projects list performance với pagination.
      */
     public function test_projects_list_performance(): void
     {
         $startTime = microtime(true);
         $startMemory = memory_get_usage();
-        
+
         $response = $this->getJson('/api/v1/projects?per_page=50');
-        
+
         $endTime = microtime(true);
         $endMemory = memory_get_usage();
-        
+
         $responseTime = ($endTime - $startTime) * 1000; // Convert to milliseconds
         $memoryUsed = ($endMemory - $startMemory) / 1024 / 1024; // Convert to MB
-        
+
         $response->assertStatus(200);
-        
+
         // Performance assertions
         $this->assertLessThan(500, $responseTime, 'Response time should be under 500ms');
         $this->assertLessThan(10, $memoryUsed, 'Memory usage should be under 10MB');
-        
+
         // Verify pagination works
         $data = $response->json('data');
         $this->assertArrayHasKey('pagination', $data);
@@ -72,67 +78,67 @@ class ApiPerformanceTest extends TestCase
     }
 
     /**
-     * Test concurrent requests
+     * Test concurrent requests.
      */
     public function test_concurrent_requests_performance(): void
     {
         $concurrentRequests = 10;
         $promises = [];
-        
+
         $startTime = microtime(true);
-        
+
         // Simulate concurrent requests
         for ($i = 0; $i < $concurrentRequests; $i++) {
             $promises[] = $this->getJson('/api/v1/projects?page=' . ($i + 1));
         }
-        
+
         // Wait for all requests to complete
         foreach ($promises as $response) {
             $response->assertStatus(200);
         }
-        
+
         $endTime = microtime(true);
         $totalTime = ($endTime - $startTime) * 1000;
-        
+
         // All concurrent requests should complete within reasonable time
         $this->assertLessThan(2000, $totalTime, 'Concurrent requests should complete within 2 seconds');
     }
 
     /**
-     * Test database query optimization
+     * Test database query optimization.
      */
     public function test_database_query_optimization(): void
     {
         DB::enableQueryLog();
-        
+
         $response = $this->getJson('/api/v1/projects?include=tasks,components');
-        
+
         $queries = DB::getQueryLog();
         $queryCount = count($queries);
-        
+
         $response->assertStatus(200);
-        
+
         // Should use eager loading to avoid N+1 queries
         // Includes auth + tenant + RBAC checks before controller eager-loading query path.
         $this->assertLessThanOrEqual(12, $queryCount, 'Should use efficient queries with eager loading');
-        
+
         DB::disableQueryLog();
     }
 
     /**
-     * Seed large dataset for performance testing
+     * Seed large dataset for performance testing.
      */
     private function seedLargeDataset(): void
     {
         // Tạo 100 projects
         $projects = Project::factory(100)->create([
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
-        
+
         // Tạo 10 tasks per project (1000 tasks total)
         foreach ($projects->take(50) as $project) {
             Task::factory(10)->create([
-                'project_id' => $project->id
+                'project_id' => $project->id,
             ]);
         }
     }

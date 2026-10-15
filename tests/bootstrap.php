@@ -1,11 +1,13 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 $autoloadPath = dirname(__DIR__) . '/vendor/autoload.php';
 require $autoloadPath;
 
 $testingDirectory = dirname(__DIR__) . '/storage/framework/testing';
 if (!is_dir($testingDirectory)) {
-    mkdir($testingDirectory, 0775, true);
+    mkdir($testingDirectory, 0o775, true);
 }
 foreach (
     [
@@ -15,7 +17,7 @@ foreach (
     ] as $requiredDirectory
 ) {
     if (!is_dir($requiredDirectory)) {
-        mkdir($requiredDirectory, 0775, true);
+        mkdir($requiredDirectory, 0o775, true);
     }
 }
 

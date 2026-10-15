@@ -1,23 +1,24 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Models\Tenant;
+use App\Models\DashboardMetric;
+use App\Models\DashboardWidget;
 use App\Models\Project;
 use App\Models\Task;
-use App\Models\DashboardWidget;
+use App\Models\Tenant;
+use App\Models\User;
 use App\Models\UserDashboard;
-use App\Models\DashboardMetric;
 use App\Services\DashboardService;
-use App\Services\DashboardDataAggregationService;
-use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Tests\TestCase;
 
 /**
- * Test Dashboard & Analytics System
- * 
+ * Test Dashboard & Analytics System.
+ *
  * Kịch bản: Test dashboard widgets, analytics, metrics, và role-based data
  */
 class DashboardAnalyticsTest extends TestCase
@@ -25,17 +26,20 @@ class DashboardAnalyticsTest extends TestCase
     use RefreshDatabase;
 
     private $tenant;
+
     private $user;
+
     private $project;
+
     private $task;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Disable foreign key constraints for testing
         \DB::statement('PRAGMA foreign_keys=OFF;');
-        
+
         // Tạo tenant
         $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
@@ -79,7 +83,7 @@ class DashboardAnalyticsTest extends TestCase
     }
 
     /**
-     * Test dashboard widget creation
+     * Test dashboard widget creation.
      */
     public function test_can_create_dashboard_widget(): void
     {
@@ -90,15 +94,15 @@ class DashboardAnalyticsTest extends TestCase
             'config' => [
                 'chart_type' => 'bar',
                 'refresh_interval' => 30,
-                'size' => 'large'
+                'size' => 'large',
             ],
             'data_source' => [
                 'model' => 'Project',
-                'method' => 'getProjectStats'
+                'method' => 'getProjectStats',
             ],
             'permissions' => ['project_manager', 'admin'],
             'is_active' => true,
-            'description' => 'Overview of project statistics'
+            'description' => 'Overview of project statistics',
         ]);
 
         $this->assertDatabaseHas('dashboard_widgets', [
@@ -116,7 +120,7 @@ class DashboardAnalyticsTest extends TestCase
     }
 
     /**
-     * Test user dashboard creation
+     * Test user dashboard creation.
      */
     public function test_can_create_user_dashboard(): void
     {
@@ -127,18 +131,18 @@ class DashboardAnalyticsTest extends TestCase
             'layout_config' => [
                 'columns' => 3,
                 'rows' => 4,
-                'grid_gap' => '16px'
+                'grid_gap' => '16px',
             ],
             'widgets' => [
                 [
                     'id' => 'widget-1',
                     'position' => [0, 0],
-                    'size' => [2, 1]
-                ]
+                    'size' => [2, 1],
+                ],
             ],
             'preferences' => [
                 'theme' => 'light',
-                'refresh_interval' => 30
+                'refresh_interval' => 30,
             ],
             'is_default' => true,
             'is_active' => true,
@@ -160,7 +164,7 @@ class DashboardAnalyticsTest extends TestCase
     }
 
     /**
-     * Test dashboard metrics
+     * Test dashboard metrics.
      */
     public function test_can_create_dashboard_metrics(): void
     {
@@ -173,7 +177,7 @@ class DashboardAnalyticsTest extends TestCase
             'metadata' => [
                 'trend' => 'up',
                 'change_percentage' => 12.5,
-                'last_updated' => now()->toISOString()
+                'last_updated' => now()->toISOString(),
             ],
             'is_active' => true,
         ]);
@@ -195,7 +199,7 @@ class DashboardAnalyticsTest extends TestCase
     }
 
     /**
-     * Test dashboard service functionality
+     * Test dashboard service functionality.
      */
     public function test_dashboard_service_can_get_user_dashboard(): void
     {
@@ -219,7 +223,7 @@ class DashboardAnalyticsTest extends TestCase
     }
 
     /**
-     * Test dashboard data aggregation
+     * Test dashboard data aggregation.
      */
     public function test_dashboard_data_aggregation(): void
     {
@@ -264,7 +268,7 @@ class DashboardAnalyticsTest extends TestCase
     }
 
     /**
-     * Test dashboard widget filtering by role
+     * Test dashboard widget filtering by role.
      */
     public function test_dashboard_widget_role_filtering(): void
     {
@@ -305,7 +309,7 @@ class DashboardAnalyticsTest extends TestCase
     }
 
     /**
-     * Test dashboard customization
+     * Test dashboard customization.
      */
     public function test_dashboard_customization(): void
     {
@@ -325,8 +329,8 @@ class DashboardAnalyticsTest extends TestCase
             'layout_config' => [
                 'columns' => 4,
                 'rows' => 6,
-                'grid_gap' => '20px'
-            ]
+                'grid_gap' => '20px',
+            ],
         ]);
 
         $this->assertEquals(4, $dashboard->layout_config['columns']);
@@ -339,15 +343,15 @@ class DashboardAnalyticsTest extends TestCase
                     'id' => 'widget-1',
                     'position' => [0, 0],
                     'size' => [2, 1],
-                    'config' => ['title' => 'Test Widget']
+                    'config' => ['title' => 'Test Widget'],
                 ],
                 [
                     'id' => 'widget-2',
                     'position' => [2, 0],
                     'size' => [2, 1],
-                    'config' => ['title' => 'Another Widget']
-                ]
-            ]
+                    'config' => ['title' => 'Another Widget'],
+                ],
+            ],
         ]);
 
         $this->assertCount(2, $dashboard->widgets);
@@ -355,7 +359,7 @@ class DashboardAnalyticsTest extends TestCase
     }
 
     /**
-     * Test dashboard analytics calculations
+     * Test dashboard analytics calculations.
      */
     public function test_dashboard_analytics_calculations(): void
     {
@@ -404,7 +408,7 @@ class DashboardAnalyticsTest extends TestCase
     }
 
     /**
-     * Test dashboard real-time data
+     * Test dashboard real-time data.
      */
     public function test_dashboard_real_time_data(): void
     {
@@ -419,7 +423,7 @@ class DashboardAnalyticsTest extends TestCase
                 'tenant_id' => $this->tenant->id,
                 'metadata' => [
                     'last_updated' => now()->toISOString(),
-                    'trend' => rand(0, 1) ? 'up' : 'down'
+                    'trend' => rand(0, 1) ? 'up' : 'down',
                 ],
                 'is_active' => true,
             ]);
@@ -441,7 +445,7 @@ class DashboardAnalyticsTest extends TestCase
     }
 
     /**
-     * Test dashboard performance metrics
+     * Test dashboard performance metrics.
      */
     public function test_dashboard_performance_metrics(): void
     {
@@ -457,15 +461,15 @@ class DashboardAnalyticsTest extends TestCase
             DashboardMetric::create([
                 'name' => ucfirst(str_replace('_', ' ', $name)),
                 'value' => $value,
-                'unit' => $name === 'uptime' || $name === 'error_rate' ? '%' : 
+                'unit' => $name === 'uptime' || $name === 'error_rate' ? '%' :
                          ($name === 'response_time' ? 'ms' : 'req/min'),
                 'category' => 'performance',
                 'tenant_id' => $this->tenant->id,
                 'metadata' => [
-                    'threshold' => $name === 'response_time' ? 200 : 
-                                  ($name === 'uptime' ? 99.0 : 
+                    'threshold' => $name === 'response_time' ? 200 :
+                                  ($name === 'uptime' ? 99.0 :
                                    ($name === 'error_rate' ? 1.0 : 500)),
-                    'status' => $name === 'error_rate' ? 'warning' : 'good'
+                    'status' => $name === 'error_rate' ? 'warning' : 'good',
                 ],
                 'is_active' => true,
             ]);
@@ -484,7 +488,7 @@ class DashboardAnalyticsTest extends TestCase
     }
 
     /**
-     * Test dashboard widget data caching
+     * Test dashboard widget data caching.
      */
     public function test_dashboard_widget_data_caching(): void
     {
@@ -494,11 +498,11 @@ class DashboardAnalyticsTest extends TestCase
             'category' => 'analytics',
             'config' => [
                 'cache_ttl' => 300, // 5 minutes
-                'refresh_interval' => 60
+                'refresh_interval' => 60,
             ],
             'data_source' => [
                 'model' => 'Project',
-                'cache_key' => 'project_stats'
+                'cache_key' => 'project_stats',
             ],
             'is_active' => true,
         ]);
@@ -514,7 +518,7 @@ class DashboardAnalyticsTest extends TestCase
     }
 
     /**
-     * Test dashboard multi-tenant isolation
+     * Test dashboard multi-tenant isolation.
      */
     public function test_dashboard_multi_tenant_isolation(): void
     {

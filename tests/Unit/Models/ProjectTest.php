@@ -2,30 +2,32 @@
 
 namespace Tests\Unit\Models;
 
-use Tests\TestCase;
-use Src\CoreProject\Models\Project;
-use App\Models\User;
 use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Src\CoreProject\Models\Project;
+use Tests\TestCase;
 
 class ProjectTest extends TestCase
 {
     use RefreshDatabase;
 
     protected $tenant;
+
     protected $user;
+
     protected $project;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->tenant = Tenant::factory()->create();
         $this->user = User::factory()->create([
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
         $this->project = Project::factory()->create([
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
     }
 
@@ -49,7 +51,7 @@ class ProjectTest extends TestCase
     {
         $task = \Src\CoreProject\Models\Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $this->assertTrue($this->project->tasks->contains($task));
@@ -140,7 +142,7 @@ class ProjectTest extends TestCase
     public function it_can_have_budget_information()
     {
         $this->project->update([
-            'budget_total' => 100000.00
+            'budget_total' => 100000.00,
         ]);
 
         $this->assertEquals(100000.00, $this->project->budget_total);
@@ -154,7 +156,7 @@ class ProjectTest extends TestCase
 
         $this->project->update([
             'start_date' => $startDate,
-            'end_date' => $endDate
+            'end_date' => $endDate,
         ]);
 
         $this->assertEquals($startDate->format('Y-m-d'), $this->project->start_date->format('Y-m-d'));
@@ -187,7 +189,7 @@ class ProjectTest extends TestCase
     {
         $required = [
             'tenant_id', 'code', 'name', 'description', 'start_date', 'end_date',
-            'status', 'progress', 'budget_total'
+            'status', 'progress', 'budget_total',
         ];
 
         $actual = $this->project->getFillable();
@@ -216,7 +218,7 @@ class ProjectTest extends TestCase
 
         $this->project->update([
             'start_date' => $startDate,
-            'end_date' => $endDate
+            'end_date' => $endDate,
         ]);
 
         // Project model không có duration_in_days attribute, kiểm tra thủ công
@@ -229,7 +231,7 @@ class ProjectTest extends TestCase
     {
         $this->project->update([
             'end_date' => now()->subDays(1),
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
         // Project model không có isOverdue method, kiểm tra thủ công
@@ -238,7 +240,7 @@ class ProjectTest extends TestCase
 
         $this->project->update([
             'end_date' => now()->addDays(1),
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
         $isOverdue = $this->project->end_date && $this->project->end_date->isPast() && $this->project->status !== 'completed';
@@ -251,13 +253,13 @@ class ProjectTest extends TestCase
         \Src\CoreProject\Models\Task::factory()->create([
             'project_id' => $this->project->id,
             'status' => 'in_progress',
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         \Src\CoreProject\Models\Task::factory()->create([
             'project_id' => $this->project->id,
             'status' => 'completed',
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Project model không có active_tasks_count attribute, kiểm tra thủ công
@@ -271,13 +273,13 @@ class ProjectTest extends TestCase
         \Src\CoreProject\Models\Task::factory()->create([
             'project_id' => $this->project->id,
             'status' => 'completed',
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         \Src\CoreProject\Models\Task::factory()->create([
             'project_id' => $this->project->id,
             'status' => 'in_progress',
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Project model không có completed_tasks_count attribute, kiểm tra thủ công

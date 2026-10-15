@@ -1,17 +1,19 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories\Src\DocumentManagement\Models;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-use Src\DocumentManagement\Models\Document;
-use Src\CoreProject\Models\Project;
-use App\Models\User;
 use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
+use Src\CoreProject\Models\Project;
+use Src\DocumentManagement\Models\Document;
 
 /**
- * Factory cho Document model
- * 
+ * Factory cho Document model.
+ *
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Src\DocumentManagement\Models\Document>
  */
 class DocumentFactory extends Factory

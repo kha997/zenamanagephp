@@ -7,6 +7,7 @@ use Illuminate\Contracts\Validation\Rule;
 class EmailRule implements Rule
 {
     protected $allowMultiple;
+
     protected $maxEmails;
 
     /**
@@ -29,7 +30,7 @@ class EmailRule implements Rule
 
         if ($this->allowMultiple) {
             $emails = array_map('trim', explode(',', $value));
-            
+
             if (count($emails) > $this->maxEmails) {
                 return false;
             }

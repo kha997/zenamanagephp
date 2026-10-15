@@ -21,7 +21,7 @@ final class PaymentCertificateSummaryService
         $contract = $certificate->contract;
         $boq = $contract->boq;
 
-        if (! $boq) {
+        if (!$boq) {
             return [];
         }
 

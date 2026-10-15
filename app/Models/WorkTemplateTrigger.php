@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -10,7 +12,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WorkTemplateTrigger extends Model
 {
-    use HasUlids, HasFactory, TenantScope;
+    use HasUlids;
+    use HasFactory;
+    use TenantScope;
 
     public const VALID_EVENTS = [
         'task.started',
@@ -27,7 +31,9 @@ class WorkTemplateTrigger extends Model
     ];
 
     protected $table = 'work_template_triggers';
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [

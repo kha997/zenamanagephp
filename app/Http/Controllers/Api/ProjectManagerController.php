@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
@@ -72,14 +74,14 @@ class ProjectManagerController extends Controller
      *         @OA\JsonContent(ref="#/components/schemas/ErrorEnvelope")
      *     )
      * )
-     * 
+     *
      * Get dashboard statistics for Project Manager
      */
     public function getStats(): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user || !$user->hasRole('project_manager')) {
                 return ErrorEnvelopeService::authorizationError('project_manager.role_required');
             }
@@ -127,11 +129,11 @@ class ProjectManagerController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $stats,
-                'message' => 'Project Manager dashboard statistics retrieved successfully'
+                'message' => 'Project Manager dashboard statistics retrieved successfully',
             ]);
-
         } catch (\Exception $e) {
             Log::error('Project Manager dashboard stats error: ' . $e->getMessage());
+
             return ErrorEnvelopeService::serverError(
                 'project_manager.stats_retrieval_failed',
                 ['exception' => $e->getMessage()]
@@ -140,7 +142,7 @@ class ProjectManagerController extends Controller
     }
 
     /**
-     * Get financial metrics for Project Manager
+     * Get financial metrics for Project Manager.
      */
     private function getProjectManagerFinancialMetrics($projects): array
     {
@@ -148,9 +150,9 @@ class ProjectManagerController extends Controller
             $totalBudget = $projects->sum('budget_planned');
             $totalActual = $projects->sum('budget_actual');
             $totalRevenue = $projects->where('status', 'completed')->sum('budget_actual');
-            
+
             $budgetUtilization = $totalBudget > 0 ? ($totalActual / $totalBudget) * 100 : 0;
-            
+
             return [
                 'totalBudget' => $totalBudget,
                 'totalActual' => $totalActual,
@@ -158,9 +160,9 @@ class ProjectManagerController extends Controller
                 'budgetUtilization' => round($budgetUtilization, 2),
                 'profitMargin' => $this->calculateProjectManagerProfitMargin($projects),
             ];
-
         } catch (\Exception $e) {
             Log::error('Project Manager financial metrics error: ' . $e->getMessage());
+
             return [
                 'totalBudget' => 0,
                 'totalActual' => 0,
@@ -172,7 +174,7 @@ class ProjectManagerController extends Controller
     }
 
     /**
-     * Calculate profit margin for Project Manager
+     * Calculate profit margin for Project Manager.
      */
     private function calculateProjectManagerProfitMargin($projects): float
     {
@@ -180,19 +182,19 @@ class ProjectManagerController extends Controller
             $completedProjects = $projects->where('status', 'completed');
             $totalRevenue = $completedProjects->sum('budget_actual');
             $totalBudget = $completedProjects->sum('budget_planned');
-            
+
             if ($totalBudget > 0) {
                 return round((($totalRevenue - $totalBudget) / $totalBudget) * 100, 2);
             }
-            
-            return 0;
 
+            return 0;
         } catch (\Exception $e) {
             Log::error('Project Manager profit margin calculation error: ' . $e->getMessage());
+
             return 0;
         }
     }
-    
+
     /**
      * @OA\Get(
      *     path="/api/v1/project-manager/dashboard/timeline",
@@ -239,27 +241,27 @@ class ProjectManagerController extends Controller
      *         @OA\JsonContent(ref="#/components/schemas/ErrorEnvelope")
      *     )
      * )
-     * 
+     *
      * Get project timeline for Project Manager
      */
     public function getProjectTimeline(): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user || !$user->hasRole('project_manager')) {
                 return ErrorEnvelopeService::authorizationError('project_manager.role_required');
             }
-            
+
             $tenantId = $user->tenant_id;
-            
+
             // Get projects with timeline data
             $projects = Project::where('tenant_id', $tenantId)
                 ->where('pm_id', $user->id)
                 ->select(['id', 'name', 'start_date', 'end_date', 'status', 'progress'])
                 ->orderBy('start_date', 'asc')
                 ->get();
-            
+
             $timeline = $projects->map(function ($project) {
                 return [
                     'id' => $project->id,
@@ -268,20 +270,20 @@ class ProjectManagerController extends Controller
                     'end_date' => $project->end_date,
                     'status' => $project->status,
                     'progress' => $project->progress,
-                    'duration_days' => $project->start_date && $project->end_date 
-                        ? $project->start_date->diffInDays($project->end_date) 
+                    'duration_days' => $project->start_date && $project->end_date
+                        ? $project->start_date->diffInDays($project->end_date)
                         : null,
                 ];
             });
-            
+
             return response()->json([
                 'success' => true,
                 'data' => $timeline,
-                'message' => 'Project timeline retrieved successfully'
+                'message' => 'Project timeline retrieved successfully',
             ]);
-            
         } catch (\Exception $e) {
             Log::error('Project Manager timeline error: ' . $e->getMessage());
+
             return ErrorEnvelopeService::serverError(
                 'project_manager.timeline_retrieval_failed',
                 ['exception' => $e->getMessage()]

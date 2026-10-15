@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
@@ -11,7 +13,9 @@ use Tests\Traits\RouteNameTrait;
 
 class PayloadTenantIgnoredSmokeTest extends TestCase
 {
-    use RefreshDatabase, AuthenticationTrait, RouteNameTrait;
+    use RefreshDatabase;
+    use AuthenticationTrait;
+    use RouteNameTrait;
 
     public function test_payload_tenant_id_is_overridden_by_context(): void
     {

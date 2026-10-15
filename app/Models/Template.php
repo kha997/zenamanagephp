@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -8,11 +10,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Template Model
- * 
+ * Template Model.
+ *
  * Quản lý các mẫu công việc với versioning và categorization
  * Hỗ trợ JSON structure cho phases và tasks
- * 
+ *
  * @property string $template_name
  * @property string $category
  * @property array $json_body
@@ -23,14 +25,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Template extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids;
+    use HasFactory;
 
     protected $table = 'templates';
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     /**
-     * Các trường có thể mass assignment
+     * Các trường có thể mass assignment.
      */
     protected $fillable = [
         'template_name',
@@ -39,11 +44,11 @@ class Template extends Model
         'version',
         'is_active',
         'created_by',
-        'updated_by'
+        'updated_by',
     ];
 
     /**
-     * Các trường cần cast kiểu dữ liệu
+     * Các trường cần cast kiểu dữ liệu.
      */
     protected $casts = [
         'json_body' => 'array',
@@ -51,22 +56,22 @@ class Template extends Model
         'version' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
-        'deleted_at' => 'datetime'
+        'deleted_at' => 'datetime',
     ];
 
     /**
-     * Các category được phép
+     * Các category được phép.
      */
     public const CATEGORIES = [
         'Design',
-        'Construction', 
+        'Construction',
         'QC',
-        'Inspection'
+        'Inspection',
     ];
 
     /**
      * Relationship với template versions
-     * Một template có nhiều versions để theo dõi lịch sử thay đổi
+     * Một template có nhiều versions để theo dõi lịch sử thay đổi.
      */
     public function versions(): HasMany
     {
@@ -75,7 +80,7 @@ class Template extends Model
     }
 
     /**
-     * Relationship với project phases được tạo từ template này
+     * Relationship với project phases được tạo từ template này.
      */
     public function projectPhases(): HasMany
     {
@@ -83,7 +88,7 @@ class Template extends Model
     }
 
     /**
-     * Relationship với project tasks được tạo từ template này
+     * Relationship với project tasks được tạo từ template này.
      */
     public function projectTasks(): HasMany
     {
@@ -91,7 +96,7 @@ class Template extends Model
     }
 
     /**
-     * Scope để lấy các template đang active
+     * Scope để lấy các template đang active.
      */
     public function scopeActive($query)
     {
@@ -99,7 +104,7 @@ class Template extends Model
     }
 
     /**
-     * Scope để lọc theo category
+     * Scope để lọc theo category.
      */
     public function scopeByCategory($query, string $category)
     {
@@ -108,33 +113,33 @@ class Template extends Model
 
     /**
      * Tạo version mới khi update template
-     * Đảm bảo không mất dữ liệu lịch sử
+     * Đảm bảo không mất dữ liệu lịch sử.
      */
     public function createNewVersion(array $jsonBody, string $note = null, string $createdBy = null): TemplateVersion
     {
         $newVersion = $this->version + 1;
-        
+
         // Tạo version mới
         $templateVersion = $this->versions()->create([
             'version' => $newVersion,
             'json_body' => $jsonBody,
             'note' => $note,
-            'created_by' => $createdBy
+            'created_by' => $createdBy,
         ]);
-        
+
         // Cập nhật template với version và json_body mới
         $this->update([
             'version' => $newVersion,
             'json_body' => $jsonBody,
-            'updated_by' => $createdBy
+            'updated_by' => $createdBy,
         ]);
-        
+
         return $templateVersion;
     }
 
     /**
      * Validate JSON structure của template
-     * Đảm bảo có đúng format phases và tasks
+     * Đảm bảo có đúng format phases và tasks.
      */
     public function validateJsonStructure(array $jsonBody): bool
     {
@@ -142,18 +147,18 @@ class Template extends Model
         if (!isset($jsonBody['template_name'])) {
             return false;
         }
-        
+
         // Kiểm tra có phases array
         if (!isset($jsonBody['phases']) || !is_array($jsonBody['phases'])) {
             return false;
         }
-        
+
         // Kiểm tra structure của từng phase
         foreach ($jsonBody['phases'] as $phase) {
             if (!isset($phase['name']) || !isset($phase['tasks']) || !is_array($phase['tasks'])) {
                 return false;
             }
-            
+
             // Kiểm tra structure của từng task
             foreach ($phase['tasks'] as $task) {
                 $requiredFields = ['name', 'duration_days', 'role', 'contract_value_percent'];
@@ -164,12 +169,12 @@ class Template extends Model
                 }
             }
         }
-        
+
         return true;
     }
 
     /**
-     * Lấy tổng số tasks trong template
+     * Lấy tổng số tasks trong template.
      */
     public function getTotalTasksAttribute(): int
     {
@@ -181,11 +186,12 @@ class Template extends Model
                 }
             }
         }
+
         return $total;
     }
 
     /**
-     * Lấy tổng duration của template (tính theo critical path)
+     * Lấy tổng duration của template (tính theo critical path).
      */
     public function getEstimatedDurationAttribute(): int
     {
@@ -201,6 +207,7 @@ class Template extends Model
                 $totalDuration += $phaseDuration;
             }
         }
+
         return $totalDuration;
     }
 }

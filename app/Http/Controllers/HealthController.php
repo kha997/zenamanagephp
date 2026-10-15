@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
@@ -12,7 +14,7 @@ use Illuminate\Support\Facades\Storage;
 class HealthController extends Controller
 {
     /**
-     * Basic health check endpoint
+     * Basic health check endpoint.
      */
     public function index(): JsonResponse
     {
@@ -26,7 +28,7 @@ class HealthController extends Controller
     }
 
     /**
-     * Comprehensive health check with all services
+     * Comprehensive health check with all services.
      */
     public function detailed(): JsonResponse
     {
@@ -52,19 +54,19 @@ class HealthController extends Controller
     }
 
     /**
-     * Database health check
+     * Database health check.
      */
     private function checkDatabase(): array
     {
         try {
             $startTime = microtime(true);
-            
+
             // Test basic connection
             DB::connection()->getPdo();
-            
+
             // Test query execution
             $result = DB::select('SELECT 1 as test');
-            
+
             // Check database size
             $size = DB::select("
                 SELECT 
@@ -100,16 +102,16 @@ class HealthController extends Controller
     }
 
     /**
-     * Redis health check
+     * Redis health check.
      */
     private function checkRedis(): array
     {
         try {
             $startTime = microtime(true);
-            
+
             // Test Redis connection
             Redis::ping();
-            
+
             // Test Redis operations
             $testKey = 'health_check_' . time();
             Redis::set($testKey, 'test_value', 'EX', 60);
@@ -149,29 +151,29 @@ class HealthController extends Controller
     }
 
     /**
-     * Storage health check
+     * Storage health check.
      */
     private function checkStorage(): array
     {
         try {
             $startTime = microtime(true);
-            
+
             // Test storage write
             $testFile = 'health_check_' . time() . '.txt';
             $testContent = 'Health check test content';
-            
+
             Storage::put($testFile, $testContent);
-            
+
             // Test storage read
             $readContent = Storage::get($testFile);
-            
+
             if ($readContent !== $testContent) {
                 throw new \Exception('Storage read/write test failed');
             }
-            
+
             // Clean up test file
             Storage::delete($testFile);
-            
+
             // Get storage info
             $disk = Storage::disk();
             $totalSpace = disk_total_space(storage_path());
@@ -204,27 +206,27 @@ class HealthController extends Controller
     }
 
     /**
-     * Queue health check
+     * Queue health check.
      */
     private function checkQueue(): array
     {
         try {
             $startTime = microtime(true);
-            
+
             // Check queue connection
             $queue = app('queue');
             $connection = $queue->connection();
-            
+
             // Get queue size
             $size = $connection->size();
-            
+
             // Check failed jobs
             $failedJobs = $connection->size('failed');
-            
+
             // Test queue push
             $testJob = 'health_check_' . time();
             $connection->push('App\\Jobs\\HealthCheckJob', ['test' => $testJob]);
-            
+
             // Clean up test job
             $connection->pop('default');
 
@@ -252,23 +254,23 @@ class HealthController extends Controller
     }
 
     /**
-     * WebSocket health check
+     * WebSocket health check.
      */
     private function checkWebSocket(): array
     {
         try {
             $startTime = microtime(true);
-            
+
             // Check WebSocket server status
             $websocketHost = config('websockets.host', 'localhost');
             $websocketPort = config('websockets.port', 6001);
-            
+
             $connection = @fsockopen($websocketHost, $websocketPort, $errno, $errstr, 5);
-            
+
             if (!$connection) {
                 throw new \Exception("WebSocket server not reachable: $errstr ($errno)");
             }
-            
+
             fclose($connection);
 
             $responseTime = round((microtime(true) - $startTime) * 1000, 2);
@@ -295,23 +297,23 @@ class HealthController extends Controller
     }
 
     /**
-     * External services health check
+     * External services health check.
      */
     private function checkExternalServices(): array
     {
         $services = [];
-        
+
         // Check mail service
         $services['mail'] = $this->checkMailService();
-        
+
         // Check external APIs
         $services['external_apis'] = $this->checkExternalApis();
-        
+
         return $services;
     }
 
     /**
-     * Mail service health check
+     * Mail service health check.
      */
     private function checkMailService(): array
     {
@@ -324,7 +326,7 @@ class HealthController extends Controller
                     'message' => 'Mail service not configured',
                 ];
             }
-            
+
             return [
                 'status' => 'healthy',
                 'message' => 'Mail service configured',
@@ -340,27 +342,27 @@ class HealthController extends Controller
     }
 
     /**
-     * External APIs health check
+     * External APIs health check.
      */
     private function checkExternalApis(): array
     {
         $apis = [];
-        
+
         // Check if external APIs are configured
         $externalApis = config('services.external_apis', []);
-        
+
         foreach ($externalApis as $name => $config) {
             try {
                 $startTime = microtime(true);
-                
+
                 $client = new \GuzzleHttp\Client();
                 $response = $client->get($config['health_endpoint'], [
                     'timeout' => 5,
                     'verify' => false,
                 ]);
-                
+
                 $responseTime = round((microtime(true) - $startTime) * 1000, 2);
-                
+
                 $apis[$name] = [
                     'status' => $response->getStatusCode() === 200 ? 'healthy' : 'unhealthy',
                     'response_time_ms' => $responseTime,
@@ -375,54 +377,54 @@ class HealthController extends Controller
                 ];
             }
         }
-        
+
         return $apis;
     }
 
     /**
-     * Determine overall health status
+     * Determine overall health status.
      */
     private function determineOverallStatus(array $checks): string
     {
         $criticalServices = ['database', 'redis', 'storage'];
         $unhealthyCritical = 0;
-        
+
         foreach ($criticalServices as $service) {
             if (isset($checks[$service]) && $checks[$service]['status'] !== 'healthy') {
                 $unhealthyCritical++;
             }
         }
-        
+
         if ($unhealthyCritical > 0) {
             return 'unhealthy';
         }
-        
+
         $unhealthyServices = 0;
         foreach ($checks as $check) {
             if (is_array($check) && isset($check['status']) && $check['status'] !== 'healthy') {
                 $unhealthyServices++;
             }
         }
-        
+
         if ($unhealthyServices > 0) {
             return 'degraded';
         }
-        
+
         return 'healthy';
     }
 
     /**
-     * Metrics endpoint for Prometheus
+     * Metrics endpoint for Prometheus.
      */
     public function metrics(): string
     {
         $metrics = [];
-        
+
         // Application metrics
         $metrics[] = '# HELP app_uptime_seconds Application uptime in seconds';
         $metrics[] = '# TYPE app_uptime_seconds counter';
         $metrics[] = 'app_uptime_seconds ' . (time() - filemtime(base_path('bootstrap/app.php')));
-        
+
         // Database metrics
         try {
             $dbSize = DB::select("
@@ -431,14 +433,14 @@ class HealthController extends Controller
                 FROM information_schema.tables 
                 WHERE table_schema = DATABASE()
             ")[0]->{'DB Size in MB'} ?? 0;
-            
+
             $metrics[] = '# HELP app_database_size_mb Database size in MB';
             $metrics[] = '# TYPE app_database_size_mb gauge';
             $metrics[] = "app_database_size_mb $dbSize";
         } catch (\Exception $e) {
             // Ignore database errors for metrics
         }
-        
+
         // Redis metrics
         try {
             $redisInfo = Redis::info();
@@ -448,33 +450,33 @@ class HealthController extends Controller
         } catch (\Exception $e) {
             // Ignore Redis errors for metrics
         }
-        
+
         // Storage metrics
         try {
             $totalSpace = disk_total_space(storage_path());
             $freeSpace = disk_free_space(storage_path());
             $usedSpace = $totalSpace - $freeSpace;
-            
+
             $metrics[] = '# HELP app_storage_total_bytes Total storage space in bytes';
             $metrics[] = '# TYPE app_storage_total_bytes gauge';
             $metrics[] = "app_storage_total_bytes $totalSpace";
-            
+
             $metrics[] = '# HELP app_storage_free_bytes Free storage space in bytes';
             $metrics[] = '# TYPE app_storage_free_bytes gauge';
             $metrics[] = "app_storage_free_bytes $freeSpace";
-            
+
             $metrics[] = '# HELP app_storage_used_bytes Used storage space in bytes';
             $metrics[] = '# TYPE app_storage_used_bytes gauge';
             $metrics[] = "app_storage_used_bytes $usedSpace";
         } catch (\Exception $e) {
             // Ignore storage errors for metrics
         }
-        
+
         return implode("\n", $metrics) . "\n";
     }
 
     /**
-     * Readiness probe for Kubernetes
+     * Readiness probe for Kubernetes.
      */
     public function readiness(): JsonResponse
     {
@@ -500,7 +502,7 @@ class HealthController extends Controller
     }
 
     /**
-     * Liveness probe for Kubernetes
+     * Liveness probe for Kubernetes.
      */
     public function liveness(): JsonResponse
     {

@@ -1,10 +1,12 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Models;
 
 use App\Models\Account;
-use App\Models\DesignItem;
 use App\Models\ContractExpense;
+use App\Models\DesignItem;
 use App\Models\DesignItemRevision;
 use App\Models\KnowledgeArticle;
 use App\Models\Lead;
@@ -62,6 +64,7 @@ class TenantScopedCrmModelsTest extends TestCase
         $makeLead($tenantB, 'lead-b');
 
         app()->instance('tenant', $tenantA);
+
         try {
             $hints = Lead::query()->pluck('contact_hint')->all();
             $this->assertSame(['lead-a'], $hints);

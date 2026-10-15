@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\App;
 
@@ -65,12 +67,12 @@ class SettingsController extends BaseApiController
     {
         return response()->json(['message' => 'App Settings API - Coming Soon']);
     }
-    
+
     public function update(Request $request)
     {
         return response()->json(['message' => 'Update App Settings - Coming Soon']);
     }
-    
+
     public function general(Request $request): JsonResponse
     {
         $userOrError = $this->resolveTenantUser($request);
@@ -83,7 +85,7 @@ class SettingsController extends BaseApiController
 
         return $this->successResponse($settings, 'General settings retrieved successfully');
     }
-    
+
     public function updateGeneral(Request $request): JsonResponse
     {
         $userOrError = $this->resolveTenantUser($request);
@@ -144,7 +146,7 @@ class SettingsController extends BaseApiController
 
         return $this->successResponse($updatedSettings, 'General settings updated successfully');
     }
-    
+
     public function security(Request $request): JsonResponse
     {
         $userOrError = $this->resolveTenantUser($request);
@@ -157,7 +159,7 @@ class SettingsController extends BaseApiController
 
         return $this->successResponse($settings, 'Security settings retrieved successfully');
     }
-    
+
     public function updateSecurity(Request $request): JsonResponse
     {
         $userOrError = $this->resolveTenantUser($request);
@@ -218,7 +220,7 @@ class SettingsController extends BaseApiController
 
         return $this->successResponse($updatedSettings, 'Security settings updated successfully');
     }
-    
+
     public function notifications(Request $request): JsonResponse
     {
         $user = Auth::user();
@@ -248,7 +250,7 @@ class SettingsController extends BaseApiController
             'Notification settings retrieved successfully'
         );
     }
-    
+
     public function updateNotifications(Request $request): JsonResponse
     {
         $user = Auth::user();

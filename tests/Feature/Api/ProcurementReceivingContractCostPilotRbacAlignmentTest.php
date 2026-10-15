@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
@@ -16,7 +18,9 @@ class ProcurementReceivingContractCostPilotRbacAlignmentTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenant;
+
     private User $superAdmin;
+
     private Project $project;
 
     protected function setUp(): void

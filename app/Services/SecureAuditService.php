@@ -1,23 +1,22 @@
 <?php
 
 namespace App\Services;
-use Illuminate\Support\Facades\Auth;
-
 
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Secure Audit Service
- * 
+ * Secure Audit Service.
+ *
  * Enhanced audit logging with data masking and security features
  */
 class SecureAuditService
 {
     /**
-     * Log user action with data masking
+     * Log user action with data masking.
      */
     public function logAction(
         string $userId,
@@ -42,24 +41,25 @@ class SecureAuditService
                 'ip_address' => request()->ip(),
                 'user_agent' => request()->userAgent(),
                 'created_at' => Carbon::now(),
-                'updated_at' => Carbon::now()
+                'updated_at' => Carbon::now(),
             ];
-            
+
             DB::table('audit_logs')->insert($auditData);
-            
+
             return true;
         } catch (\Exception $e) {
             Log::error('Audit log failed', [
                 'user_id' => $userId,
                 'action' => $action,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
 
     /**
-     * Log authentication events
+     * Log authentication events.
      */
     public function logAuthEvent(string $event, array $data = []): void
     {
@@ -75,7 +75,7 @@ class SecureAuditService
     }
 
     /**
-     * Log CRUD operations
+     * Log CRUD operations.
      */
     public function logCrudOperation(
         string $action,
@@ -98,7 +98,7 @@ class SecureAuditService
     }
 
     /**
-     * Log role/permission changes
+     * Log role/permission changes.
      */
     public function logRoleChange(
         string $userId,
@@ -119,7 +119,7 @@ class SecureAuditService
     }
 
     /**
-     * Log password changes
+     * Log password changes.
      */
     public function logPasswordChange(
         string $userId,
@@ -138,12 +138,12 @@ class SecureAuditService
     }
 
     /**
-     * Log login events
+     * Log login events.
      */
     public function logLogin(string $userId, bool $success = true, ?string $tenantId = null): void
     {
         $action = $success ? 'login_success' : 'login_failed';
-        
+
         $this->logAction(
             userId: $userId,
             action: $action,
@@ -161,7 +161,7 @@ class SecureAuditService
     }
 
     /**
-     * Log logout events
+     * Log logout events.
      */
     public function logLogout(string $userId, ?string $tenantId = null): void
     {
@@ -177,12 +177,12 @@ class SecureAuditService
     }
 
     /**
-     * Mask sensitive data in audit logs
+     * Mask sensitive data in audit logs.
      */
     private function maskSensitiveData(array $data): array
     {
         $maskedData = $data;
-        
+
         // Fields to mask
         $sensitiveFields = [
             'password',
@@ -192,7 +192,7 @@ class SecureAuditService
             'refresh_token',
             'api_key',
             'secret',
-            'private_key'
+            'private_key',
         ];
 
         foreach ($sensitiveFields as $field) {
@@ -208,13 +208,13 @@ class SecureAuditService
             if (count($parts) === 2) {
                 $username = $parts[0];
                 $domain = $parts[1];
-                
+
                 if (strlen($username) > 2) {
                     $maskedUsername = substr($username, 0, 2) . str_repeat('*', strlen($username) - 2);
                 } else {
                     $maskedUsername = str_repeat('*', strlen($username));
                 }
-                
+
                 $maskedData['email'] = $maskedUsername . '@' . $domain;
             }
         }
@@ -233,7 +233,7 @@ class SecureAuditService
     }
 
     /**
-     * Get audit logs for a user (with tenant isolation)
+     * Get audit logs for a user (with tenant isolation).
      */
     public function getUserAuditLogs(
         string $userId,
@@ -255,7 +255,7 @@ class SecureAuditService
     }
 
     /**
-     * Get audit logs for an entity
+     * Get audit logs for an entity.
      */
     public function getEntityAuditLogs(
         string $entityType,

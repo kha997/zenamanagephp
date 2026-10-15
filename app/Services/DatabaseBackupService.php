@@ -1,25 +1,30 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
 use App\Services\Backup\MysqlClient;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
-use Carbon\Carbon;
 
 /**
- * Database Backup and Recovery Service
- * 
+ * Database Backup and Recovery Service.
+ *
  * Provides comprehensive database backup and recovery functionality
  */
 class DatabaseBackupService
 {
     private string $backupPath;
+
     private string $backupDisk;
+
     private int $maxBackups = 30;
+
     private bool $compressBackups = true;
+
     private array $excludedTables = ['query_logs', 'cache', 'sessions'];
 
     public function __construct()
@@ -31,20 +36,20 @@ class DatabaseBackupService
     }
 
     /**
-     * Create full database backup
+     * Create full database backup.
      */
     public function createFullBackup(string $description = null): array
     {
         try {
             $timestamp = Carbon::now()->format('Y-m-d_H-i-s');
             $filename = "full_backup_{$timestamp}.sql";
-            
+
             if ($description) {
                 $filename = "full_backup_{$timestamp}_{$this->sanitizeDescription($description)}.sql";
             }
 
             $filepath = $this->getBackupPath($filename);
-            
+
             // Create backup directory if it doesn't exist
             $this->ensureBackupDirectory();
 
@@ -62,14 +67,14 @@ class DatabaseBackupService
 
             // Store backup metadata
             $metadata = $this->storeBackupMetadata($filename, $filepath, 'full', $description);
-            
+
             // Cleanup old backups
             $this->cleanupOldBackups();
 
             Log::info('Database backup created successfully', [
                 'filename' => $filename,
                 'size' => $this->getFileSize($filepath),
-                'type' => 'full'
+                'type' => 'full',
             ]);
 
             return [
@@ -77,37 +82,36 @@ class DatabaseBackupService
                 'filename' => $filename,
                 'filepath' => $filepath,
                 'size' => $this->getFileSize($filepath),
-                'metadata' => $metadata
+                'metadata' => $metadata,
             ];
-
         } catch (\Exception $e) {
             Log::error('Database backup failed', [
                 'error' => $e->getMessage(),
-                'type' => 'full'
+                'type' => 'full',
             ]);
 
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
 
     /**
-     * Create incremental backup (only changed data)
+     * Create incremental backup (only changed data).
      */
     public function createIncrementalBackup(string $description = null): array
     {
         try {
             $timestamp = Carbon::now()->format('Y-m-d_H-i-s');
             $filename = "incremental_backup_{$timestamp}.sql";
-            
+
             if ($description) {
                 $filename = "incremental_backup_{$timestamp}_{$this->sanitizeDescription($description)}.sql";
             }
 
             $filepath = $this->getBackupPath($filename);
-            
+
             // Create backup directory if it doesn't exist
             $this->ensureBackupDirectory();
 
@@ -130,14 +134,14 @@ class DatabaseBackupService
 
             // Store backup metadata
             $metadata = $this->storeBackupMetadata($filename, $filepath, 'incremental', $description);
-            
+
             // Cleanup old backups
             $this->cleanupOldBackups();
 
             Log::info('Incremental database backup created successfully', [
                 'filename' => $filename,
                 'size' => $this->getFileSize($filepath),
-                'type' => 'incremental'
+                'type' => 'incremental',
             ]);
 
             return [
@@ -145,30 +149,29 @@ class DatabaseBackupService
                 'filename' => $filename,
                 'filepath' => $filepath,
                 'size' => $this->getFileSize($filepath),
-                'metadata' => $metadata
+                'metadata' => $metadata,
             ];
-
         } catch (\Exception $e) {
             Log::error('Incremental database backup failed', [
                 'error' => $e->getMessage(),
-                'type' => 'incremental'
+                'type' => 'incremental',
             ]);
 
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
 
     /**
-     * Restore database from backup
+     * Restore database from backup.
      */
     public function restoreFromBackup(string $filename): array
     {
         try {
             $filepath = $this->getBackupPath($filename);
-            
+
             // Check if backup file exists
             if (!file_exists($filepath)) {
                 throw new \Exception("Backup file not found: {$filename}");
@@ -188,37 +191,36 @@ class DatabaseBackupService
 
             Log::info('Database restored successfully', [
                 'filename' => $filename,
-                'filepath' => $filepath
+                'filepath' => $filepath,
             ]);
 
             return [
                 'success' => true,
                 'message' => 'Database restored successfully',
-                'filename' => $filename
+                'filename' => $filename,
             ];
-
         } catch (\Exception $e) {
             Log::error('Database restore failed', [
                 'error' => $e->getMessage(),
-                'filename' => $filename
+                'filename' => $filename,
             ]);
 
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
 
     /**
-     * List available backups
+     * List available backups.
      */
     public function listBackups(): array
     {
         try {
             $backupPath = $this->getBackupPath('');
             $files = glob($backupPath . '*.sql*');
-            
+
             $backups = [];
             foreach ($files as $file) {
                 $filename = basename($file);
@@ -226,7 +228,7 @@ class DatabaseBackupService
                     'filename' => $filename,
                     'size' => $this->getFileSize($file),
                     'created_at' => date('Y-m-d H:i:s', filemtime($file)),
-                    'type' => $this->getBackupType($filename)
+                    'type' => $this->getBackupType($filename),
                 ];
             }
 
@@ -236,10 +238,9 @@ class DatabaseBackupService
             });
 
             return $backups;
-
         } catch (\Exception $e) {
             Log::error('Failed to list backups', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return [];
@@ -247,29 +248,28 @@ class DatabaseBackupService
     }
 
     /**
-     * Delete backup file
+     * Delete backup file.
      */
     public function deleteBackup(string $filename): bool
     {
         try {
             $filepath = $this->getBackupPath($filename);
-            
+
             if (file_exists($filepath)) {
                 unlink($filepath);
-                
+
                 Log::info('Backup deleted successfully', [
-                    'filename' => $filename
+                    'filename' => $filename,
                 ]);
-                
+
                 return true;
             }
 
             return false;
-
         } catch (\Exception $e) {
             Log::error('Failed to delete backup', [
                 'error' => $e->getMessage(),
-                'filename' => $filename
+                'filename' => $filename,
             ]);
 
             return false;
@@ -277,19 +277,19 @@ class DatabaseBackupService
     }
 
     /**
-     * Get backup statistics
+     * Get backup statistics.
      */
     public function getBackupStats(): array
     {
         $backups = $this->listBackups();
-        
+
         $totalSize = 0;
         $fullBackups = 0;
         $incrementalBackups = 0;
-        
+
         foreach ($backups as $backup) {
             $totalSize += $backup['size'];
-            
+
             if ($backup['type'] === 'full') {
                 $fullBackups++;
             } elseif ($backup['type'] === 'incremental') {
@@ -304,7 +304,7 @@ class DatabaseBackupService
             'total_size' => $this->formatBytes($totalSize),
             'total_size_bytes' => $totalSize,
             'oldest_backup' => !empty($backups) ? end($backups)['created_at'] : null,
-            'newest_backup' => !empty($backups) ? $backups[0]['created_at'] : null
+            'newest_backup' => !empty($backups) ? $backups[0]['created_at'] : null,
         ];
     }
 
@@ -327,7 +327,7 @@ class DatabaseBackupService
     }
 
     /**
-     * Get backup path
+     * Get backup path.
      */
     private function getBackupPath(string $filename): string
     {
@@ -335,18 +335,18 @@ class DatabaseBackupService
     }
 
     /**
-     * Ensure backup directory exists
+     * Ensure backup directory exists.
      */
     private function ensureBackupDirectory(): void
     {
         $backupPath = $this->getBackupPath('');
         if (!is_dir($backupPath)) {
-            mkdir($backupPath, 0755, true);
+            mkdir($backupPath, 0o755, true);
         }
     }
 
     /**
-     * Compress backup file
+     * Compress backup file.
      */
     private function compressBackup(string $filepath): void
     {
@@ -354,7 +354,7 @@ class DatabaseBackupService
     }
 
     /**
-     * Decompress backup file
+     * Decompress backup file.
      */
     private function decompressBackup(string $filepath): void
     {
@@ -362,7 +362,7 @@ class DatabaseBackupService
     }
 
     /**
-     * Get file size
+     * Get file size.
      */
     private function getFileSize(string $filepath): int
     {
@@ -370,7 +370,7 @@ class DatabaseBackupService
     }
 
     /**
-     * Format bytes to human readable format
+     * Format bytes to human readable format.
      */
     private function formatBytes(int $bytes): string
     {
@@ -378,14 +378,14 @@ class DatabaseBackupService
         $bytes = max($bytes, 0);
         $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
         $pow = min($pow, count($units) - 1);
-        
+
         $bytes /= pow(1024, $pow);
-        
+
         return round($bytes, 2) . ' ' . $units[$pow];
     }
 
     /**
-     * Get backup type from filename
+     * Get backup type from filename.
      */
     private function getBackupType(string $filename): string
     {
@@ -394,12 +394,12 @@ class DatabaseBackupService
         } elseif (str_contains($filename, 'incremental_backup')) {
             return 'incremental';
         }
-        
+
         return 'unknown';
     }
 
     /**
-     * Sanitize description for filename
+     * Sanitize description for filename.
      */
     private function sanitizeDescription(string $description): string
     {
@@ -407,7 +407,7 @@ class DatabaseBackupService
     }
 
     /**
-     * Store backup metadata
+     * Store backup metadata.
      */
     private function storeBackupMetadata(string $filename, string $filepath, string $type, string $description = null): array
     {
@@ -417,20 +417,20 @@ class DatabaseBackupService
             'type' => $type,
             'description' => $description,
             'created_at' => now(),
-            'size' => $this->getFileSize($filepath)
+            'size' => $this->getFileSize($filepath),
         ];
     }
 
     /**
-     * Cleanup old backups
+     * Cleanup old backups.
      */
     private function cleanupOldBackups(): void
     {
         $backups = $this->listBackups();
-        
+
         if (count($backups) > $this->maxBackups) {
             $backupsToDelete = array_slice($backups, $this->maxBackups);
-            
+
             foreach ($backupsToDelete as $backup) {
                 $this->deleteBackup($backup['filename']);
             }
@@ -438,7 +438,7 @@ class DatabaseBackupService
     }
 
     /**
-     * Get tables with updated_at column
+     * Get tables with updated_at column.
      *
      * @return list<string>
      */
@@ -455,12 +455,11 @@ class DatabaseBackupService
             return array_values(array_map(function ($table) {
                 return (string) $table->TABLE_NAME;
             }, $tables));
-
         } catch (\Exception $e) {
             Log::warning('Failed to get tables with updated_at column', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return [];
         }
     }

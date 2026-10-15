@@ -1,15 +1,17 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 /**
- * API Rate Limiting Middleware
- * 
+ * API Rate Limiting Middleware.
+ *
  * Middleware này sẽ:
  * - Implement rate limiting per user/tenant
  * - Support different limits for different endpoints
@@ -19,18 +21,18 @@ use Illuminate\Support\Facades\Log;
 class APIRateLimitMiddleware
 {
     /**
-     * Default rate limits per minute
+     * Default rate limits per minute.
      */
     private const DEFAULT_LIMITS = [
         'general' => 60,
         'auth' => 10,
         'upload' => 5,
-        'export' => 3
+        'export' => 3,
     ];
-    
+
     /**
-     * Handle an incoming request
-     * 
+     * Handle an incoming request.
+     *
      * @param Request $request
      * @param Closure $next
      * @param string $limitType
@@ -40,38 +42,39 @@ class APIRateLimitMiddleware
     {
         $userId = $request->get('auth_user_id');
         $tenantId = $request->get('auth_tenant_id');
-        
+
         if (!$userId || !$tenantId) {
             // Skip rate limiting for unauthenticated requests
             return $next($request);
         }
-        
+
         $limit = $this->getLimit($limitType, $tenantId);
         $key = $this->getRateLimitKey($userId, $tenantId, $limitType);
-        
+
         $attempts = Cache::get($key, 0);
-        
+
         if ($attempts >= $limit) {
             $this->logRateLimitExceeded($userId, $tenantId, $limitType, $request);
+
             return $this->rateLimitResponse($limit);
         }
-        
+
         // Increment counter
         Cache::put($key, $attempts + 1, now()->addMinute());
-        
+
         $response = $next($request);
-        
+
         // Add rate limit headers
         $response->headers->set('X-RateLimit-Limit', $limit);
         $response->headers->set('X-RateLimit-Remaining', max(0, $limit - $attempts - 1));
         $response->headers->set('X-RateLimit-Reset', now()->addMinute()->timestamp);
-        
+
         return $response;
     }
-    
+
     /**
-     * Get rate limit for specific type and tenant
-     * 
+     * Get rate limit for specific type and tenant.
+     *
      * @param string $limitType
      * @param string $tenantId
      * @return int
@@ -86,13 +89,13 @@ class APIRateLimitMiddleware
                 return null;
             }
         );
-        
+
         return $tenantLimit ?? self::DEFAULT_LIMITS[$limitType] ?? self::DEFAULT_LIMITS['general'];
     }
-    
+
     /**
-     * Generate rate limit cache key
-     * 
+     * Generate rate limit cache key.
+     *
      * @param string $userId
      * @param string $tenantId
      * @param string $limitType
@@ -101,12 +104,13 @@ class APIRateLimitMiddleware
     private function getRateLimitKey(string $userId, string $tenantId, string $limitType): string
     {
         $minute = now()->format('Y-m-d-H-i');
+
         return "rate_limit:{$tenantId}:{$userId}:{$limitType}:{$minute}";
     }
-    
+
     /**
-     * Log rate limit exceeded event
-     * 
+     * Log rate limit exceeded event.
+     *
      * @param string $userId
      * @param string $tenantId
      * @param string $limitType
@@ -121,13 +125,13 @@ class APIRateLimitMiddleware
             'endpoint' => $request->getPathInfo(),
             'method' => $request->getMethod(),
             'ip_address' => $request->ip(),
-            'user_agent' => $request->userAgent()
+            'user_agent' => $request->userAgent(),
         ]);
     }
-    
+
     /**
-     * Return rate limit exceeded response
-     * 
+     * Return rate limit exceeded response.
+     *
      * @param int $limit
      * @return JsonResponse
      */
@@ -139,8 +143,8 @@ class APIRateLimitMiddleware
             'details' => [
                 'limit' => $limit,
                 'window' => '1 minute',
-                'retry_after' => 60
-            ]
+                'retry_after' => 60,
+            ],
         ], 429);
     }
 }

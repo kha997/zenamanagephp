@@ -1,14 +1,15 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Model UserRoleCustom - Quản lý vai trò tùy chỉnh của user
- * 
+ * Model UserRoleCustom - Quản lý vai trò tùy chỉnh của user.
+ *
  * @property string $id
  * @property string $user_id ID người dùng (ULID)
  * @property string $role_id ID vai trò (ULID)
@@ -18,32 +19,31 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class UserRoleCustom extends Model
 {
-
     protected $table = 'custom_user_roles';
-    
+
     /**
-     * Kiểu dữ liệu của khóa chính
+     * Kiểu dữ liệu của khóa chính.
      */
     protected $keyType = 'string';
 
     /**
-     * Tắt auto increment cho khóa chính
+     * Tắt auto increment cho khóa chính.
      */
     public $incrementing = false;
-    
+
     protected $fillable = [
         'user_id',
-        'role_id'
+        'role_id',
     ];
 
     protected $casts = [
         'created_at' => 'datetime:c',
         'updated_at' => 'datetime:c',
-        'deleted_at' => 'datetime:c'
+        'deleted_at' => 'datetime:c',
     ];
 
     /**
-     * Relationship: Thuộc về user
+     * Relationship: Thuộc về user.
      */
     public function user(): BelongsTo
     {
@@ -51,7 +51,7 @@ class UserRoleCustom extends Model
     }
 
     /**
-     * Relationship: Thuộc về role
+     * Relationship: Thuộc về role.
      */
     public function role(): BelongsTo
     {
@@ -59,7 +59,7 @@ class UserRoleCustom extends Model
     }
 
     /**
-     * Scope: Lọc theo user
+     * Scope: Lọc theo user.
      */
     public function scopeForUser($query, string $userId)
     {
@@ -67,7 +67,7 @@ class UserRoleCustom extends Model
     }
 
     /**
-     * Scope: Lọc theo role
+     * Scope: Lọc theo role.
      */
     public function scopeForRole($query, string $roleId)
     {
@@ -75,7 +75,7 @@ class UserRoleCustom extends Model
     }
 
     /**
-     * Scope: Chỉ lấy các assignment đang hoạt động (chưa bị soft delete)
+     * Scope: Chỉ lấy các assignment đang hoạt động (chưa bị soft delete).
      */
     public function scopeActive($query)
     {

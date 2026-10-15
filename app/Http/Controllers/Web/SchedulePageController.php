@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
 
@@ -18,6 +20,7 @@ use Throwable;
 class SchedulePageController extends Controller
 {
     use DelegatesToApiControllers;
+
     public function index(Request $request): View
     {
         $tenantId = (string) Auth::user()?->tenant_id;

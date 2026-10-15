@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -10,8 +12,7 @@ use Illuminate\Support\Facades\Schema;
  * make `service_category` nullable. Historical data is not touched or
  * reclassified; only the mechanism producing new false values is removed.
  */
-return new class extends Migration
-{
+return new class () extends Migration {
     public function up(): void
     {
         Schema::table('opportunities', function (Blueprint $table): void {

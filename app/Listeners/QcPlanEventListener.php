@@ -1,17 +1,14 @@
 <?php
 
 namespace App\Listeners;
-use Illuminate\Support\Facades\Auth;
 
-
-use App\Models\QcPlan;
-use App\Models\Notification;
-use App\Models\User;
-use App\Events\QcPlanCreated;
 use App\Events\QcPlanApproved;
+use App\Events\QcPlanCreated;
 use App\Events\QcPlanExecuted;
+use App\Models\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class QcPlanEventListener implements ShouldQueue
@@ -21,12 +18,12 @@ class QcPlanEventListener implements ShouldQueue
     public function handleQcPlanCreated(QcPlanCreated $event)
     {
         $qcPlan = $event->qcPlan;
-        
+
         Log::info('QC Plan created', [
             'qc_plan_id' => $qcPlan->id,
             'name' => $qcPlan->name,
             'tenant_id' => $qcPlan->tenant_id,
-            'created_by' => $qcPlan->created_by
+            'created_by' => $qcPlan->created_by,
         ]);
 
         // Notify project team members
@@ -49,10 +46,10 @@ class QcPlanEventListener implements ShouldQueue
                     'data' => json_encode([
                         'qc_plan_id' => $qcPlan->id,
                         'name' => $qcPlan->name,
-                        'project_id' => $qcPlan->project_id
+                        'project_id' => $qcPlan->project_id,
                     ]),
                     'priority' => 'normal',
-                    'channels' => json_encode(['inapp', 'email'])
+                    'channels' => json_encode(['inapp', 'email']),
                 ]);
             }
         }
@@ -61,12 +58,12 @@ class QcPlanEventListener implements ShouldQueue
     public function handleQcPlanApproved(QcPlanApproved $event)
     {
         $qcPlan = $event->qcPlan;
-        
+
         Log::info('QC Plan approved', [
             'qc_plan_id' => $qcPlan->id,
             'name' => $qcPlan->name,
             'tenant_id' => $qcPlan->tenant_id,
-            'approved_by' => Auth::id()
+            'approved_by' => Auth::id(),
         ]);
 
         // Notify QC Plan creator
@@ -81,10 +78,10 @@ class QcPlanEventListener implements ShouldQueue
                 'data' => json_encode([
                     'qc_plan_id' => $qcPlan->id,
                     'name' => $qcPlan->name,
-                    'project_id' => $qcPlan->project_id
+                    'project_id' => $qcPlan->project_id,
                 ]),
                 'priority' => 'normal',
-                'channels' => json_encode(['inapp', 'email'])
+                'channels' => json_encode(['inapp', 'email']),
             ]);
         }
     }
@@ -92,12 +89,12 @@ class QcPlanEventListener implements ShouldQueue
     public function handleQcPlanExecuted(QcPlanExecuted $event)
     {
         $qcPlan = $event->qcPlan;
-        
+
         Log::info('QC Plan executed', [
             'qc_plan_id' => $qcPlan->id,
             'name' => $qcPlan->name,
             'tenant_id' => $qcPlan->tenant_id,
-            'executed_by' => Auth::id()
+            'executed_by' => Auth::id(),
         ]);
 
         // Notify project team members
@@ -120,10 +117,10 @@ class QcPlanEventListener implements ShouldQueue
                     'data' => json_encode([
                         'qc_plan_id' => $qcPlan->id,
                         'name' => $qcPlan->name,
-                        'project_id' => $qcPlan->project_id
+                        'project_id' => $qcPlan->project_id,
                     ]),
                     'priority' => 'normal',
-                    'channels' => json_encode(['inapp'])
+                    'channels' => json_encode(['inapp']),
                 ]);
             }
         }

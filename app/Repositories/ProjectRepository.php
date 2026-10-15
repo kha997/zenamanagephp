@@ -3,7 +3,6 @@
 namespace App\Repositories;
 
 use App\Models\Project;
-use App\Models\User;
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -153,7 +152,7 @@ class ProjectRepository
             'project_id' => $project->id,
             'name' => $project->name,
             'tenant_id' => $project->tenant_id,
-            'manager_id' => $project->manager_id
+            'manager_id' => $project->manager_id,
         ]);
 
         return $project->load($this->defaultWith());
@@ -180,7 +179,7 @@ class ProjectRepository
         Log::info('Project updated', [
             'project_id' => $project->id,
             'name' => $project->name,
-            'tenant_id' => $project->tenant_id
+            'tenant_id' => $project->tenant_id,
         ]);
 
         return $project->load($this->defaultWith());
@@ -202,7 +201,7 @@ class ProjectRepository
         Log::info('Project deleted', [
             'project_id' => $id,
             'name' => $project->name,
-            'tenant_id' => $project->tenant_id
+            'tenant_id' => $project->tenant_id,
         ]);
 
         return true;
@@ -224,7 +223,7 @@ class ProjectRepository
         Log::info('Project soft deleted', [
             'project_id' => $id,
             'name' => $project->name,
-            'tenant_id' => $project->tenant_id
+            'tenant_id' => $project->tenant_id,
         ]);
 
         return true;
@@ -246,7 +245,7 @@ class ProjectRepository
         Log::info('Project restored', [
             'project_id' => $id,
             'name' => $project->name,
-            'tenant_id' => $project->tenant_id
+            'tenant_id' => $project->tenant_id,
         ]);
 
         return true;
@@ -324,12 +323,12 @@ class ProjectRepository
 
         $project->update([
             'status' => $status,
-            'status_updated_at' => now()
+            'status_updated_at' => now(),
         ]);
 
         Log::info('Project status updated', [
             'project_id' => $id,
-            'status' => $status
+            'status' => $status,
         ]);
 
         return true;
@@ -347,13 +346,13 @@ class ProjectRepository
         }
 
         $project->teams()->syncWithoutDetaching([
-            $teamId => ['role' => $role, 'assigned_at' => now()]
+            $teamId => ['role' => $role, 'assigned_at' => now()],
         ]);
 
         Log::info('Team assigned to project', [
             'project_id' => $projectId,
             'team_id' => $teamId,
-            'role' => $role
+            'role' => $role,
         ]);
 
         return true;
@@ -374,7 +373,7 @@ class ProjectRepository
 
         Log::info('Team removed from project', [
             'project_id' => $projectId,
-            'team_id' => $teamId
+            'team_id' => $teamId,
         ]);
 
         return true;
@@ -401,7 +400,7 @@ class ProjectRepository
                                       ->count(),
             'high_priority_projects' => $query->where('priority', 'high')->count(),
             'medium_priority_projects' => $query->where('priority', 'medium')->count(),
-            'low_priority_projects' => $query->where('priority', 'low')->count()
+            'low_priority_projects' => $query->where('priority', 'low')->count(),
         ];
     }
 
@@ -437,7 +436,7 @@ class ProjectRepository
 
         Log::info('Projects bulk updated', [
             'count' => $updated,
-            'ids' => $ids
+            'ids' => $ids,
         ]);
 
         return $updated;
@@ -452,7 +451,7 @@ class ProjectRepository
 
         Log::info('Projects bulk deleted', [
             'count' => $deleted,
-            'ids' => $ids
+            'ids' => $ids,
         ]);
 
         return $deleted;
@@ -477,7 +476,7 @@ class ProjectRepository
             'total_tasks' => $totalTasks,
             'completed_tasks' => $completedTasks,
             'progress_percentage' => $progress,
-            'estimated_completion' => $this->calculateEstimatedCompletion($project)
+            'estimated_completion' => $this->calculateEstimatedCompletion($project),
         ];
     }
 
@@ -525,7 +524,7 @@ class ProjectRepository
             'type' => 'project_start',
             'date' => $project->start_date,
             'title' => 'Project Started',
-            'description' => 'Project ' . $project->name . ' started'
+            'description' => 'Project ' . $project->name . ' started',
         ];
 
         // Add task milestones
@@ -536,7 +535,7 @@ class ProjectRepository
                 'title' => $task->name,
                 'description' => $task->description,
                 'status' => $task->status,
-                'priority' => $task->priority
+                'priority' => $task->priority,
             ];
         }
 
@@ -546,7 +545,7 @@ class ProjectRepository
                 'type' => 'project_end',
                 'date' => $project->end_date,
                 'title' => 'Project Deadline',
-                'description' => 'Project ' . $project->name . ' deadline'
+                'description' => 'Project ' . $project->name . ' deadline',
             ];
         }
 

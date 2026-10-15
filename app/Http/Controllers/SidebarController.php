@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class SidebarController extends Controller
 {
@@ -27,13 +27,13 @@ class SidebarController extends Controller
 
             return response()->json([
                 'success' => true,
-                'config' => $sidebarConfig
+                'config' => $sidebarConfig,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to load sidebar configuration',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -42,16 +42,16 @@ class SidebarController extends Controller
     {
         try {
             $defaultConfig = $this->sidebarService->getDefaultSidebarConfig($role);
-            
+
             return response()->json([
                 'success' => true,
-                'config' => $defaultConfig
+                'config' => $defaultConfig,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to load default sidebar configuration',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

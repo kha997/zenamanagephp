@@ -24,8 +24,11 @@ class WorkTemplateApplyBrowserTest extends DuskTestCase
     use InteractsWithWorkTemplateV2;
 
     protected Tenant $tenant;
+
     protected User $user;
+
     protected Project $project;
+
     protected WorkTemplate $template;
 
     protected function setUp(): void

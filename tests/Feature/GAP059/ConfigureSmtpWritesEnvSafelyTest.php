@@ -21,9 +21,9 @@ final class ConfigureSmtpWritesEnvSafelyTest extends TestCase
     {
         parent::setUp();
         $this->dir = sys_get_temp_dir() . '/gap059-' . bin2hex(random_bytes(6));
-        mkdir($this->dir, 0700, true);
+        mkdir($this->dir, 0o700, true);
         file_put_contents($this->dir . '/.env', "APP_NAME=Zena\nMAIL_PASSWORD=old\nOTHER=\"keep me\"\n");
-        chmod($this->dir . '/.env', 0640);
+        chmod($this->dir . '/.env', 0o640);
         $this->app->useEnvironmentPath($this->dir);
     }
 

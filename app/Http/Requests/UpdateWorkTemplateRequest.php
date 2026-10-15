@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests;
 
@@ -9,7 +11,7 @@ use Src\Shared\Requests\BaseApiRequest;
 class UpdateWorkTemplateRequest extends BaseApiRequest
 {
     /**
-     * Xác định user có quyền thực hiện request này không
+     * Xác định user có quyền thực hiện request này không.
      */
     public function authorize(): bool
     {
@@ -17,79 +19,79 @@ class UpdateWorkTemplateRequest extends BaseApiRequest
     }
 
     /**
-     * Các quy tắc validation
+     * Các quy tắc validation.
      */
     public function rules(): array
     {
         $templateId = $this->route('workTemplate');
-        
+
         return [
             'name' => [
                 'sometimes',
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('work_templates', 'name')->ignore($templateId)
+                Rule::unique('work_templates', 'name')->ignore($templateId),
             ],
             'description' => [
                 'nullable',
                 'string',
-                'max:1000'
+                'max:1000',
             ],
             'category' => [
                 'sometimes',
                 'required',
                 'string',
-                'in:' . implode(',', array_keys(WorkTemplate::CATEGORIES))
+                'in:' . implode(',', array_keys(WorkTemplate::CATEGORIES)),
             ],
             'template_data' => [
                 'sometimes',
                 'required',
-                'array'
+                'array',
             ],
             'template_data.tasks' => [
                 'nullable',
-                'array'
+                'array',
             ],
             'template_data.tasks.*.name' => [
                 'required_with:template_data.tasks',
                 'string',
-                'max:255'
+                'max:255',
             ],
             'template_data.tasks.*.description' => [
                 'nullable',
-                'string'
+                'string',
             ],
             'template_data.tasks.*.estimated_hours' => [
                 'nullable',
                 'numeric',
-                'min:0'
+                'min:0',
             ],
             'template_data.tasks.*.dependencies' => [
                 'nullable',
-                'array'
+                'array',
             ],
             'template_data.metadata' => [
                 'nullable',
-                'array'
+                'array',
             ],
             'is_active' => [
                 'nullable',
-                'boolean'
+                'boolean',
             ],
             'tags' => [
                 'nullable',
-                'array'
+                'array',
             ],
             'tags.*' => [
                 'string',
-                'max:50'
-            ]
+                'max:50',
+            ],
         ];
     }
 
     /**
-     * Validation bổ sung sau khi validation cơ bản
+     * Validation bổ sung sau khi validation cơ bản.
      */
     public function withValidator($validator)
     {
@@ -97,7 +99,7 @@ class UpdateWorkTemplateRequest extends BaseApiRequest
             // Kiểm tra cấu trúc template_data nếu có
             if ($this->has('template_data')) {
                 $templateData = $this->input('template_data', []);
-                
+
                 if (isset($templateData['tasks']) && is_array($templateData['tasks'])) {
                     $taskNames = [];
                     foreach ($templateData['tasks'] as $index => $task) {
@@ -111,7 +113,7 @@ class UpdateWorkTemplateRequest extends BaseApiRequest
                             }
                             $taskNames[] = $task['name'];
                         }
-                        
+
                         // Kiểm tra dependencies hợp lệ
                         if (isset($task['dependencies']) && is_array($task['dependencies'])) {
                             foreach ($task['dependencies'] as $depIndex => $dependency) {
@@ -126,7 +128,7 @@ class UpdateWorkTemplateRequest extends BaseApiRequest
                     }
                 }
             }
-            
+
             // Cảnh báo khi thay đổi category của template đang được sử dụng
             if ($this->has('category')) {
                 $template = WorkTemplate::find($this->route('workTemplate'));

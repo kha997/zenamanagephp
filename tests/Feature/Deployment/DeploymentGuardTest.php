@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Deployment;
 
@@ -128,6 +130,7 @@ class DeploymentGuardTest extends TestCase
     private function deployJobSteps(): array
     {
         $yaml = Yaml::parseFile(base_path('.github/workflows/production.yml'));
+
         return $yaml['jobs']['deploy']['steps'] ?? [];
     }
 
@@ -138,6 +141,7 @@ class DeploymentGuardTest extends TestCase
                 return $step;
             }
         }
+
         return null;
     }
 
@@ -272,7 +276,7 @@ class DeploymentGuardTest extends TestCase
         $elifStart = strrpos(substr($finalBlock, 0, $deployedUnverifiedLinePos), 'elif [');
         $this->assertNotFalse($elifStart);
         $elifLine = substr($finalBlock, $elifStart, $deployedUnverifiedLinePos - $elifStart);
-        $this->assertStringContainsString("steps.readiness.outcome", $elifLine);
+        $this->assertStringContainsString('steps.readiness.outcome', $elifLine);
         $this->assertStringContainsString('!= "failure"', $elifLine);
     }
 
@@ -288,7 +292,7 @@ class DeploymentGuardTest extends TestCase
         $elifLine = substr($content, $elifStart, $rolledBackLinePos - $elifStart);
 
         $this->assertStringContainsString('steps.recovery.outcome', $elifLine);
-        $this->assertStringContainsString("allow_breaking_migrations", $elifLine);
+        $this->assertStringContainsString('allow_breaking_migrations', $elifLine);
         $this->assertStringContainsString('!= "true"', $elifLine, 'rolled_back must never be reported for a breaking-migration deployment (Gate-2 A-5: breaking failures are maintenance/recovery-required, never a claimed rollback).');
         $this->assertStringContainsString('steps.post-recovery-readiness.outcome', $elifLine);
     }

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
@@ -20,9 +22,13 @@ class TodayTenantIsolationTest extends TestCase
     use TenantUserFactoryTrait;
 
     private Tenant $tenantA;
+
     private Tenant $tenantB;
+
     private User $viewer;
+
     private Project $projectA;
+
     private Project $projectB;
 
     protected function setUp(): void

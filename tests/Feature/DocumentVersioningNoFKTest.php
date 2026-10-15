@@ -1,17 +1,18 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Models\Project;
 use App\Models\Document;
+use App\Models\Project;
 use App\Models\Tenant;
-use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 use Tests\Traits\TenantUserFactoryTrait;
 
 /**
- * Test Document Versioning (No Foreign Keys)
+ * Test Document Versioning (No Foreign Keys).
  */
 class DocumentVersioningNoFKTest extends TestCase
 {
@@ -19,16 +20,18 @@ class DocumentVersioningNoFKTest extends TestCase
     use TenantUserFactoryTrait;
 
     private $tenant;
+
     private $project;
+
     private $user;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Disable foreign key constraints for testing
         \DB::statement('PRAGMA foreign_keys=OFF;');
-        
+
         // Tạo tenant
         $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
@@ -55,7 +58,7 @@ class DocumentVersioningNoFKTest extends TestCase
     }
 
     /**
-     * Test tạo document đơn giản
+     * Test tạo document đơn giản.
      */
     public function test_can_create_simple_document(): void
     {
@@ -103,7 +106,7 @@ class DocumentVersioningNoFKTest extends TestCase
     }
 
     /**
-     * Test document versioning
+     * Test document versioning.
      */
     public function test_document_versioning(): void
     {
@@ -149,7 +152,7 @@ class DocumentVersioningNoFKTest extends TestCase
     }
 
     /**
-     * Test document metadata
+     * Test document metadata.
      */
     public function test_document_metadata(): void
     {
@@ -191,7 +194,7 @@ class DocumentVersioningNoFKTest extends TestCase
     }
 
     /**
-     * Test document status changes
+     * Test document status changes.
      */
     public function test_document_status_changes(): void
     {
@@ -232,7 +235,7 @@ class DocumentVersioningNoFKTest extends TestCase
     }
 
     /**
-     * Test document categories
+     * Test document categories.
      */
     public function test_document_categories(): void
     {
@@ -266,7 +269,7 @@ class DocumentVersioningNoFKTest extends TestCase
     }
 
     /**
-     * Test document file types
+     * Test document file types.
      */
     public function test_document_file_types(): void
     {
@@ -303,12 +306,12 @@ class DocumentVersioningNoFKTest extends TestCase
     }
 
     /**
-     * Test document bulk operations
+     * Test document bulk operations.
      */
     public function test_document_bulk_operations(): void
     {
         $documents = [];
-        
+
         // Create multiple documents individually (bulk insert doesn't work with ULID)
         for ($i = 1; $i <= 5; $i++) {
             Document::create([

@@ -1,17 +1,17 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * AuditLog Model - Lưu trữ audit trail
+ * AuditLog Model - Lưu trữ audit trail.
  */
 class AuditLog extends Model
 {
-
     protected $fillable = [
         'user_id',
         'action',
@@ -36,7 +36,7 @@ class AuditLog extends Model
     ];
 
     /**
-     * Relationship with User
+     * Relationship with User.
      */
     public function user(): BelongsTo
     {
@@ -44,7 +44,7 @@ class AuditLog extends Model
     }
 
     /**
-     * Relationship with Project
+     * Relationship with Project.
      */
     public function project(): BelongsTo
     {
@@ -52,7 +52,7 @@ class AuditLog extends Model
     }
 
     /**
-     * Relationship with Tenant
+     * Relationship with Tenant.
      */
     public function tenant(): BelongsTo
     {
@@ -60,7 +60,7 @@ class AuditLog extends Model
     }
 
     /**
-     * Scope: Filter by entity type
+     * Scope: Filter by entity type.
      */
     public function scopeByEntityType($query, string $entityType)
     {
@@ -68,7 +68,7 @@ class AuditLog extends Model
     }
 
     /**
-     * Scope: Filter by action
+     * Scope: Filter by action.
      */
     public function scopeByAction($query, string $action)
     {
@@ -76,7 +76,7 @@ class AuditLog extends Model
     }
 
     /**
-     * Scope: Filter by user
+     * Scope: Filter by user.
      */
     public function scopeByUser($query, string $userId)
     {
@@ -84,7 +84,7 @@ class AuditLog extends Model
     }
 
     /**
-     * Scope: Filter by tenant
+     * Scope: Filter by tenant.
      */
     public function scopeByTenant($query, string $tenantId)
     {
@@ -92,7 +92,7 @@ class AuditLog extends Model
     }
 
     /**
-     * Scope: Filter by project
+     * Scope: Filter by project.
      */
     public function scopeByProject($query, string $projectId)
     {
@@ -100,7 +100,7 @@ class AuditLog extends Model
     }
 
     /**
-     * Scope: Filter by date range
+     * Scope: Filter by date range.
      */
     public function scopeByDateRange($query, string $startDate, string $endDate)
     {
@@ -108,7 +108,7 @@ class AuditLog extends Model
     }
 
     /**
-     * Get formatted action description
+     * Get formatted action description.
      */
     public function getFormattedActionAttribute(): string
     {
@@ -116,7 +116,7 @@ class AuditLog extends Model
     }
 
     /**
-     * Get entity name
+     * Get entity name.
      */
     public function getEntityNameAttribute(): string
     {

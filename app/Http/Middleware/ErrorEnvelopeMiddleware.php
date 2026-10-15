@@ -4,15 +4,14 @@ namespace App\Http\Middleware;
 
 use App\Services\ErrorEnvelopeService;
 use Closure;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response as BaseResponse;
 
 /**
  * Error Envelope Middleware
- * Automatically wraps error responses in standardized envelope format
+ * Automatically wraps error responses in standardized envelope format.
  */
 class ErrorEnvelopeMiddleware
 {
@@ -34,33 +33,33 @@ class ErrorEnvelopeMiddleware
                 ErrorEnvelopeService::getCurrentRequestId()
             );
         }
-        
+
         // Only process JSON responses
         if (!$response instanceof \Illuminate\Http\JsonResponse) {
             return $response;
         }
-        
+
         // Only process error responses (4xx, 5xx)
         if ($response->getStatusCode() < 400) {
             return $response;
         }
-        
+
         // Get current request ID
         $requestId = ErrorEnvelopeService::getCurrentRequestId();
-        
+
         // Get response data
         $data = $response->getData(true);
-        
+
         // If already in error envelope format, return as is
         if (isset($data['error']) && isset($data['error']['id'])) {
             return $response;
         }
-        
+
         // Convert to error envelope format
         $errorCode = $this->getErrorCode($response->getStatusCode());
         $errorMessage = $this->getErrorMessage($data, $response->getStatusCode());
         $errorDetails = $this->getErrorDetails($data);
-        
+
         $envelope = ErrorEnvelopeService::error(
             $errorCode,
             $errorMessage,
@@ -105,10 +104,10 @@ class ErrorEnvelopeMiddleware
             $target->headers->set($header, $values);
         }
     }
-    
+
     /**
-     * Get error code based on HTTP status code
-     * 
+     * Get error code based on HTTP status code.
+     *
      * @param int $statusCode
      * @return string
      */
@@ -125,13 +124,13 @@ class ErrorEnvelopeMiddleware
             500 => 'E500.SERVER_ERROR',
             503 => 'E503.SERVICE_UNAVAILABLE',
         ];
-        
+
         return $errorCodes[$statusCode] ?? 'E500.SERVER_ERROR';
     }
-    
+
     /**
-     * Get error message from response data
-     * 
+     * Get error message from response data.
+     *
      * @param array $data
      * @param int $statusCode
      * @return string
@@ -146,15 +145,15 @@ class ErrorEnvelopeMiddleware
 
             return $data['message'];
         }
-        
+
         if (isset($data['error'])) {
             return is_string($data['error']) ? $data['error'] : 'Error occurred';
         }
-        
+
         if (isset($data['errors'])) {
             return 'Validation failed';
         }
-        
+
         // Default messages based on status code
         $defaultMessages = [
             400 => 'Bad request',
@@ -167,35 +166,35 @@ class ErrorEnvelopeMiddleware
             500 => 'Internal server error',
             503 => 'Service temporarily unavailable',
         ];
-        
+
         return $defaultMessages[$statusCode] ?? 'An error occurred';
     }
-    
+
     /**
-     * Get error details from response data
-     * 
+     * Get error details from response data.
+     *
      * @param array $data
      * @return array
      */
     private function getErrorDetails(array $data): array
     {
         $details = [];
-        
+
         // Extract validation errors
         if (isset($data['errors'])) {
             $details['validation'] = $data['errors'];
         }
-        
+
         // Extract additional data
         if (isset($data['data'])) {
             $details['data'] = $data['data'];
         }
-        
+
         // Extract debug info in non-production
         if (!app()->environment('production') && isset($data['debug'])) {
             $details['debug'] = $data['debug'];
         }
-        
+
         return $details;
     }
 }

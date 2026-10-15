@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Web;
 
@@ -6,7 +8,6 @@ use App\Http\Middleware\RoleBasedAccessControlMiddleware;
 use App\Models\Document;
 use App\Models\Project;
 use App\Models\Tenant;
-use App\Models\User;
 use App\Models\WorkInstance;
 use App\Models\WorkInstanceStep;
 use App\Models\WorkTemplateStep;
@@ -20,6 +21,7 @@ class ProjectDocumentChecklistTest extends TestCase
     use TenantUserFactoryTrait;
 
     private Tenant $tenant;
+
     private Project $project;
 
     protected function setUp(): void

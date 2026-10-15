@@ -1,17 +1,18 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
 use Illuminate\Support\Facades\Cache;
-use Src\RBAC\Models\Role;
 use Src\RBAC\Models\UserRoleCustom;
 use Src\RBAC\Models\UserRoleProject;
 use Src\RBAC\Models\UserRoleSystem;
 
 /**
  * Service quản lý RBAC - tính toán quyền hiệu lực
- * Thực hiện logic 3 lớp quyền với nguyên tắc least privilege và allow_override
- * 
+ * Thực hiện logic 3 lớp quyền với nguyên tắc least privilege và allow_override.
+ *
  * Logic: Project-Specific > Custom > System-Wide
  * - Mỗi lớp có thể override lớp thấp hơn nếu có allow_override=true
  * - Áp dụng least privilege: chỉ lấy quyền có ở tất cả các lớp được assign
@@ -20,6 +21,7 @@ use Src\RBAC\Models\UserRoleSystem;
 class RBACManager
 {
     private EventBus $eventBus;
+
     private int $cacheTimeout = 300; // 5 minutes
 
     public function __construct(EventBus $eventBus)
@@ -28,41 +30,41 @@ class RBACManager
     }
 
     /**
-     * Tính toán quyền hiệu lực của user cho một project
+     * Tính toán quyền hiệu lực của user cho một project.
      */
     public function calculateEffectivePermissions(string $userId, ?string $projectId = null): array
     {
         $cacheKey = "effective_permissions_{$userId}_" . ($projectId ?? 'system');
-        
+
         return Cache::remember($cacheKey, $this->cacheTimeout, function () use ($userId, $projectId) {
             return $this->computeEffectivePermissions($userId, $projectId);
         });
     }
 
     /**
-     * Tính toán thực tế quyền hiệu lực (không cache)
+     * Tính toán thực tế quyền hiệu lực (không cache).
      */
     private function computeEffectivePermissions(string $userId, ?string $projectId = null): array
     {
         $permissionData = $this->getAllPermissionData($userId, $projectId);
-        
+
         return $this->calculatePermissionsFromData($permissionData);
     }
 
     /**
-     * Lấy tất cả dữ liệu quyền từ 3 lớp
+     * Lấy tất cả dữ liệu quyền từ 3 lớp.
      */
     private function getAllPermissionData(string $userId, ?string $projectId = null): array
     {
         return [
             'system' => $this->getSystemPermissionsWithOverride($userId),
             'custom' => $this->getCustomPermissionsWithOverride($userId),
-            'project' => $projectId ? $this->getProjectPermissionsWithOverride($userId, $projectId) : ['permissions' => [], 'overrides' => []]
+            'project' => $projectId ? $this->getProjectPermissionsWithOverride($userId, $projectId) : ['permissions' => [], 'overrides' => []],
         ];
     }
 
     /**
-     * Tính toán quyền hiệu lực từ dữ liệu
+     * Tính toán quyền hiệu lực từ dữ liệu.
      */
     private function calculatePermissionsFromData(array $data): array
     {
@@ -80,7 +82,7 @@ class RBACManager
     }
 
     /**
-     * Kiểm tra có quyền hệ thống không
+     * Kiểm tra có quyền hệ thống không.
      */
     private function hasSystemPermissions(array $data): bool
     {
@@ -88,7 +90,7 @@ class RBACManager
     }
 
     /**
-     * Kiểm tra có quyền custom không
+     * Kiểm tra có quyền custom không.
      */
     private function hasCustomPermissions(array $data): bool
     {
@@ -96,7 +98,7 @@ class RBACManager
     }
 
     /**
-     * Kiểm tra có quyền project không
+     * Kiểm tra có quyền project không.
      */
     private function hasProjectPermissions(array $data): bool
     {
@@ -104,7 +106,7 @@ class RBACManager
     }
 
     /**
-     * Xử lý quyền hệ thống
+     * Xử lý quyền hệ thống.
      */
     private function processSystemPermissions(array $data): array
     {
@@ -124,7 +126,7 @@ class RBACManager
     }
 
     /**
-     * Xử lý quyền custom
+     * Xử lý quyền custom.
      */
     private function processCustomPermissions(array $data): array
     {
@@ -140,16 +142,17 @@ class RBACManager
     }
 
     /**
-     * Xử lý quyền project
+     * Xử lý quyền project.
      */
     private function processProjectPermissions(array $data): array
     {
         $effectivePermissions = $data['project']['permissions'];
+
         return $this->addOverrides($effectivePermissions, $data['project']['overrides']);
     }
 
     /**
-     * Áp dụng nguyên tắc least privilege
+     * Áp dụng nguyên tắc least privilege.
      */
     private function applyLeastPrivilege(array $permissions1, array $permissions2): array
     {
@@ -157,7 +160,7 @@ class RBACManager
     }
 
     /**
-     * Thêm override permissions
+     * Thêm override permissions.
      */
     private function addOverrides(array $permissions, array $overrides): array
     {
@@ -165,7 +168,7 @@ class RBACManager
     }
 
     /**
-     * Lấy quyền hệ thống với thông tin override
+     * Lấy quyền hệ thống với thông tin override.
      */
     private function getSystemPermissionsWithOverride(string $userId): array
     {
@@ -187,12 +190,12 @@ class RBACManager
 
         return [
             'permissions' => array_unique($permissions),
-            'overrides' => array_unique($overrides)
+            'overrides' => array_unique($overrides),
         ];
     }
 
     /**
-     * Lấy quyền custom với thông tin override
+     * Lấy quyền custom với thông tin override.
      */
     private function getCustomPermissionsWithOverride(string $userId): array
     {
@@ -214,12 +217,12 @@ class RBACManager
 
         return [
             'permissions' => array_unique($permissions),
-            'overrides' => array_unique($overrides)
+            'overrides' => array_unique($overrides),
         ];
     }
 
     /**
-     * Lấy quyền project với thông tin override
+     * Lấy quyền project với thông tin override.
      */
     private function getProjectPermissionsWithOverride(string $userId, string $projectId): array
     {
@@ -242,39 +245,42 @@ class RBACManager
 
         return [
             'permissions' => array_unique($permissions),
-            'overrides' => array_unique($overrides)
+            'overrides' => array_unique($overrides),
         ];
     }
 
     /**
-     * Kiểm tra user có quyền cụ thể không
+     * Kiểm tra user có quyền cụ thể không.
      */
     public function hasPermission(string $userId, string $permission, ?string $projectId = null): bool
     {
         $permissions = $this->calculateEffectivePermissions($userId, $projectId);
+
         return in_array($permission, $permissions);
     }
 
     /**
-     * Kiểm tra user có bất kỳ quyền nào trong danh sách không
+     * Kiểm tra user có bất kỳ quyền nào trong danh sách không.
      */
     public function hasAnyPermission(string $userId, array $permissions, ?string $projectId = null): bool
     {
         $userPermissions = $this->calculateEffectivePermissions($userId, $projectId);
+
         return !empty(array_intersect($permissions, $userPermissions));
     }
 
     /**
-     * Kiểm tra user có tất cả quyền trong danh sách không
+     * Kiểm tra user có tất cả quyền trong danh sách không.
      */
     public function hasAllPermissions(string $userId, array $permissions, ?string $projectId = null): bool
     {
         $userPermissions = $this->calculateEffectivePermissions($userId, $projectId);
+
         return empty(array_diff($permissions, $userPermissions));
     }
 
     /**
-     * Xóa cache permissions của user
+     * Xóa cache permissions của user.
      */
     public function clearUserPermissionsCache(string $userId, ?string $projectId = null): void
     {
@@ -283,7 +289,7 @@ class RBACManager
     }
 
     /**
-     * Xóa tất cả cache permissions
+     * Xóa tất cả cache permissions.
      */
     public function clearAllPermissionsCache(): void
     {

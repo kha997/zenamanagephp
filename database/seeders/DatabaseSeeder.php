@@ -1,12 +1,14 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 
 /**
- * Main Database Seeder
- * 
+ * Main Database Seeder.
+ *
  * Điều phối việc chạy tất cả các seeder khác
  * Đảm bảo thứ tự chạy đúng để tránh lỗi foreign key
  */
@@ -23,7 +25,7 @@ class DatabaseSeeder extends Seeder
             TenantSeeder::class,
             ZenaBoqTenantSeeder::class,
             UserSeeder::class,
-            
+
             // RBAC System
             RoleSeeder::class,
             PermissionSeeder::class,
@@ -33,19 +35,19 @@ class DatabaseSeeder extends Seeder
             ZenaProjectManagerRolePermissionSeeder::class,
             UserRoleSeeder::class,
             WorkTemplateBaselineSeeder::class,
-            
+
             // Sidebar Configuration
             // SidebarConfigSeeder::class, // Commented out - table doesn't exist yet
-            
+
             // Test Users
             // TestUsersSeeder::class, // Commented out - needs table name fix
-            
+
             // Project Structure
             // WorkTemplateSeeder::class, // Commented out - may have issues
             // ProjectSeeder::class, // Commented out - may have issues
             // ComponentSeeder::class, // Commented out - may have issues
             // TaskSeeder::class, // Commented out - may have issues
-            
+
             // Feature-Specific Data
             // InteractionLogSeeder::class, // Commented out - may have issues
             // NotificationSeeder::class, // Commented out - may have issues

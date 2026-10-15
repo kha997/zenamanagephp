@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
@@ -6,7 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redis;
 
 /**
- * Middleware để thu thập metrics cho monitoring
+ * Middleware để thu thập metrics cho monitoring.
  */
 class MetricsMiddleware
 {
@@ -24,16 +26,16 @@ class MetricsMiddleware
         }
 
         $startTime = microtime(true);
-        
+
         $response = $next($request);
-        
+
         $this->recordMetrics($request, $response, $startTime);
-        
+
         return $response;
     }
 
     /**
-     * Ghi lại metrics cho request
+     * Ghi lại metrics cho request.
      *
      * @param Request $request
      * @param SymfonyResponse $response
@@ -47,29 +49,28 @@ class MetricsMiddleware
             $method = $request->getMethod();
             $route = $request->route()?->getName() ?? 'unknown';
             $statusCode = $response->getStatusCode();
-            
+
             // HTTP requests counter
             $this->incrementCounter('http_requests_total', [
                 'method' => $method,
                 'route' => $route,
                 'status_code' => $statusCode,
             ]);
-            
+
             // HTTP duration histogram
             $this->recordHistogram('http_request_duration_seconds', $duration, [
                 'method' => $method,
                 'route' => $route,
             ]);
-            
+
             // Memory usage gauge
             $this->setGauge('memory_usage_bytes', memory_get_usage(true), [
                 'type' => 'allocated',
             ]);
-            
+
             $this->setGauge('memory_usage_bytes', memory_get_peak_usage(true), [
                 'type' => 'peak',
             ]);
-            
         } catch (\Exception $e) {
             // Log error but don't break the request
             logger()->error('Failed to record metrics', [
@@ -80,7 +81,7 @@ class MetricsMiddleware
     }
 
     /**
-     * Tăng counter metric
+     * Tăng counter metric.
      *
      * @param string $name
      * @param array $labels
@@ -94,7 +95,7 @@ class MetricsMiddleware
     }
 
     /**
-     * Ghi lại histogram metric
+     * Ghi lại histogram metric.
      *
      * @param string $name
      * @param float $value
@@ -104,20 +105,20 @@ class MetricsMiddleware
     private function recordHistogram(string $name, float $value, array $labels = []): void
     {
         $buckets = config('metrics.prometheus.collectors.http_duration.buckets', []);
-        
+
         foreach ($buckets as $bucket) {
             if ($value <= $bucket) {
-                $bucketLabels = array_merge($labels, ['le' => (string)$bucket]);
+                $bucketLabels = array_merge($labels, ['le' => (string) $bucket]);
                 $key = $this->buildMetricKey($name . '_bucket', $bucketLabels);
                 Redis::incr($key);
                 Redis::expire($key, 3600);
             }
         }
-        
+
         // Record sum and count
         $sumKey = $this->buildMetricKey($name . '_sum', $labels);
         $countKey = $this->buildMetricKey($name . '_count', $labels);
-        
+
         Redis::incrByFloat($sumKey, $value);
         Redis::incr($countKey);
         Redis::expire($sumKey, 3600);
@@ -125,7 +126,7 @@ class MetricsMiddleware
     }
 
     /**
-     * Set gauge metric
+     * Set gauge metric.
      *
      * @param string $name
      * @param float $value
@@ -140,7 +141,7 @@ class MetricsMiddleware
     }
 
     /**
-     * Xây dựng key cho metric
+     * Xây dựng key cho metric.
      *
      * @param string $name
      * @param array $labels
@@ -150,7 +151,7 @@ class MetricsMiddleware
     {
         $namespace = config('metrics.prometheus.namespace', 'zenamanage');
         $labelString = '';
-        
+
         if (!empty($labels)) {
             ksort($labels);
             $labelPairs = [];
@@ -159,7 +160,7 @@ class MetricsMiddleware
             }
             $labelString = '{' . implode(',', $labelPairs) . '}';
         }
-        
+
         return "metrics:{$namespace}:{$name}{$labelString}";
     }
 }

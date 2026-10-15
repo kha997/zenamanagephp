@@ -1,16 +1,15 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests;
-use Illuminate\Support\Facades\Auth;
-
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
 /**
- * Form Request cho ChangeRequest validation
- * 
- * @package App\Http\Requests
+ * Form Request cho ChangeRequest validation.
  */
 class ChangeRequestFormRequest extends FormRequest
 {

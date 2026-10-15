@@ -7,9 +7,10 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 
 class DocumentUploaded implements ShouldBroadcast
 {
-
     public Document $document;
+
     public User $user;
+
     public array $metadata;
 
     /**

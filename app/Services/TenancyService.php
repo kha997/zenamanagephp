@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -9,6 +11,7 @@ use Illuminate\Http\Request;
 class TenancyService
 {
     private ?string $currentTenantId = null;
+
     private ?Tenant $currentTenant = null;
 
     public function setTenantContext(string $tenantId, ?Tenant $tenant = null): void

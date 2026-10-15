@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
 
@@ -12,33 +14,33 @@ use Illuminate\Support\Facades\Validator;
 
 /**
  * Project Bulk Operations Controller
- * Handles bulk operations for projects
+ * Handles bulk operations for projects.
  */
 class ProjectBulkController extends Controller
 {
     /**
-     * Bulk export projects
+     * Bulk export projects.
      */
     public function bulkExport(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'project_ids' => 'required|array',
             'project_ids.*' => 'integer|exists:projects,id',
-            'format' => 'in:csv,excel,pdf,json'
+            'format' => 'in:csv,excel,pdf,json',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
         try {
             $projectIds = $request->project_ids;
             $format = $request->get('format', 'csv');
-            
+
             $projects = Project::with(['client', 'pm', 'tasks'])
                 ->whereIn('id', $projectIds)
                 ->get();
@@ -46,7 +48,7 @@ class ProjectBulkController extends Controller
             if ($projects->isEmpty()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No projects found for export'
+                    'message' => 'No projects found for export',
                 ], 404);
             }
 
@@ -74,34 +76,33 @@ class ProjectBulkController extends Controller
                 'data' => [
                     'filename' => $filename,
                     'download_url' => route('projects.download-export', ['filename' => $filename]),
-                    'projects_count' => $projects->count()
-                ]
+                    'projects_count' => $projects->count(),
+                ],
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to export projects: ' . $e->getMessage()
+                'message' => 'Failed to export projects: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Bulk status change
+     * Bulk status change.
      */
     public function bulkStatusChange(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'project_ids' => 'required|array',
             'project_ids.*' => 'integer|exists:projects,id',
-            'status' => 'required|in:draft,active,on_hold,completed,archived'
+            'status' => 'required|in:draft,active,on_hold,completed,archived',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -114,7 +115,7 @@ class ProjectBulkController extends Controller
             $updatedCount = Project::whereIn('id', $projectIds)
                 ->update([
                     'status' => $newStatus,
-                    'updated_at' => now()
+                    'updated_at' => now(),
                 ]);
 
             DB::commit();
@@ -124,35 +125,35 @@ class ProjectBulkController extends Controller
                 'message' => "Successfully updated {$updatedCount} projects to {$newStatus} status",
                 'data' => [
                     'updated_count' => $updatedCount,
-                    'new_status' => $newStatus
-                ]
+                    'new_status' => $newStatus,
+                ],
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update project status: ' . $e->getMessage()
+                'message' => 'Failed to update project status: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Bulk assign projects
+     * Bulk assign projects.
      */
     public function bulkAssign(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'project_ids' => 'required|array',
             'project_ids.*' => 'integer|exists:projects,id',
-            'pm_id' => 'required|integer|exists:users,id'
+            'pm_id' => 'required|integer|exists:users,id',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -165,7 +166,7 @@ class ProjectBulkController extends Controller
             $updatedCount = Project::whereIn('id', $projectIds)
                 ->update([
                     'pm_id' => $pmId,
-                    'updated_at' => now()
+                    'updated_at' => now(),
                 ]);
 
             DB::commit();
@@ -175,34 +176,34 @@ class ProjectBulkController extends Controller
                 'message' => "Successfully assigned {$updatedCount} projects",
                 'data' => [
                     'updated_count' => $updatedCount,
-                    'pm_id' => $pmId
-                ]
+                    'pm_id' => $pmId,
+                ],
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to assign projects: ' . $e->getMessage()
+                'message' => 'Failed to assign projects: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Bulk archive projects
+     * Bulk archive projects.
      */
     public function bulkArchive(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'project_ids' => 'required|array',
-            'project_ids.*' => 'integer|exists:projects,id'
+            'project_ids.*' => 'integer|exists:projects,id',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -214,7 +215,7 @@ class ProjectBulkController extends Controller
             $updatedCount = Project::whereIn('id', $projectIds)
                 ->update([
                     'status' => 'archived',
-                    'updated_at' => now()
+                    'updated_at' => now(),
                 ]);
 
             DB::commit();
@@ -223,34 +224,34 @@ class ProjectBulkController extends Controller
                 'success' => true,
                 'message' => "Successfully archived {$updatedCount} projects",
                 'data' => [
-                    'updated_count' => $updatedCount
-                ]
+                    'updated_count' => $updatedCount,
+                ],
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to archive projects: ' . $e->getMessage()
+                'message' => 'Failed to archive projects: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Bulk delete projects
+     * Bulk delete projects.
      */
     public function bulkDelete(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'project_ids' => 'required|array',
-            'project_ids.*' => 'integer|exists:projects,id'
+            'project_ids.*' => 'integer|exists:projects,id',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -268,33 +269,33 @@ class ProjectBulkController extends Controller
                 'success' => true,
                 'message' => "Successfully deleted {$deletedCount} projects",
                 'data' => [
-                    'deleted_count' => $deletedCount
-                ]
+                    'deleted_count' => $deletedCount,
+                ],
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to delete projects: ' . $e->getMessage()
+                'message' => 'Failed to delete projects: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Duplicate project
+     * Duplicate project.
      */
     public function duplicate(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'project_id' => 'required|integer|exists:projects,id'
+            'project_id' => 'required|integer|exists:projects,id',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -302,7 +303,7 @@ class ProjectBulkController extends Controller
             DB::beginTransaction();
 
             $originalProject = Project::with('tasks')->findOrFail($request->project_id);
-            
+
             $newProject = $originalProject->replicate();
             $newProject->code = $originalProject->code . '-COPY-' . time();
             $newProject->name = $originalProject->name . ' (Copy)';
@@ -329,21 +330,21 @@ class ProjectBulkController extends Controller
                     'original_project_id' => $originalProject->id,
                     'new_project_id' => $newProject->id,
                     'new_project_name' => $newProject->name,
-                    'duplicated_tasks_count' => $originalProject->tasks->count()
-                ]
+                    'duplicated_tasks_count' => $originalProject->tasks->count(),
+                ],
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to duplicate project: ' . $e->getMessage()
+                'message' => 'Failed to duplicate project: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Export to CSV
+     * Export to CSV.
      */
     private function exportToCsv($projects, $filePath): void
     {
@@ -364,13 +365,13 @@ class ProjectBulkController extends Controller
                 $project->budget_total,
                 $project->progress . '%',
                 $project->tasks->count(),
-                $project->created_at->format('Y-m-d H:i:s')
+                $project->created_at->format('Y-m-d H:i:s'),
             ];
         }
 
         $csvContent = '';
         foreach ($csvData as $row) {
-            $csvContent .= implode(',', array_map(function($field) {
+            $csvContent .= implode(',', array_map(function ($field) {
                 return '"' . str_replace('"', '""', $field) . '"';
             }, $row)) . "\n";
         }
@@ -379,33 +380,33 @@ class ProjectBulkController extends Controller
     }
 
     /**
-     * Export to Excel (simplified - using CSV format)
+     * Export to Excel (simplified - using CSV format).
      */
     private function exportToExcel($projects, $filePath): void
     {
-        // For now, 
+        // For now,
     }
 
     /**
-     * Export to PDF
+     * Export to PDF.
      */
     private function exportToPdf($projects, $filePath): void
     {
         // For now, create a simple text file
-        // In production, you would 
-        $pdfContent .= "Generated: " . now()->format('Y-m-d H:i:s') . "\n";
-        $pdfContent .= "Total Projects: " . $projects->count() . "\n\n";
+        // In production, you would
+        $pdfContent .= 'Generated: ' . now()->format('Y-m-d H:i:s') . "\n";
+        $pdfContent .= 'Total Projects: ' . $projects->count() . "\n\n";
 
         foreach ($projects as $project) {
             $pdfContent .= "Project ID: {$project->id}\n";
             $pdfContent .= "Code: {$project->code}\n";
             $pdfContent .= "Name: {$project->name}\n";
             $pdfContent .= "Status: {$project->status}\n";
-            $pdfContent .= "Client: " . ($project->client->name ?? 'N/A') . "\n";
-            $pdfContent .= "PM: " . ($project->pm->name ?? 'N/A') . "\n";
+            $pdfContent .= 'Client: ' . ($project->client->name ?? 'N/A') . "\n";
+            $pdfContent .= 'PM: ' . ($project->pm->name ?? 'N/A') . "\n";
             $pdfContent .= "Progress: {$project->progress}%\n";
             $pdfContent .= "Budget: {$project->budget_total}\n";
-            $pdfContent .= "Tasks: " . $project->tasks->count() . "\n";
+            $pdfContent .= 'Tasks: ' . $project->tasks->count() . "\n";
             $pdfContent .= "---\n\n";
         }
 
@@ -413,7 +414,7 @@ class ProjectBulkController extends Controller
     }
 
     /**
-     * Export to JSON
+     * Export to JSON.
      */
     private function exportToJson($projects, $filePath): void
     {
@@ -421,9 +422,9 @@ class ProjectBulkController extends Controller
             'export_info' => [
                 'generated_at' => now()->toISOString(),
                 'total_projects' => $projects->count(),
-                'format' => 'json'
+                'format' => 'json',
             ],
-            'projects' => $projects->map(function($project) {
+            'projects' => $projects->map(function ($project) {
                 return [
                     'id' => $project->id,
                     'code' => $project->code,
@@ -438,49 +439,49 @@ class ProjectBulkController extends Controller
                     'progress' => $project->progress,
                     'tasks_count' => $project->tasks->count(),
                     'created_at' => $project->created_at->toISOString(),
-                    'updated_at' => $project->updated_at->toISOString()
+                    'updated_at' => $project->updated_at->toISOString(),
                 ];
-            })
+            }),
         ];
 
         Storage::put($filePath, json_encode($jsonData, JSON_PRETTY_PRINT));
     }
 
     /**
-     * Download exported file
+     * Download exported file.
      */
     public function downloadExport(Request $request, string $filename)
     {
         $filePath = 'exports/' . $filename;
-        
+
         if (!Storage::exists($filePath)) {
             abort(404, 'Export file not found');
         }
 
         $mimeType = $this->getMimeType($filename);
-        
+
         return Response::download(
             Storage::path($filePath),
             $filename,
             [
                 'Content-Type' => $mimeType,
-                'Content-Disposition' => 'attachment; filename="' . $filename . '"'
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
             ]
         );
     }
 
     /**
-     * Get MIME type for file
+     * Get MIME type for file.
      */
     private function getMimeType(string $filename): string
     {
         $extension = pathinfo($filename, PATHINFO_EXTENSION);
-        
+
         $mimeTypes = [
             'csv' => 'text/csv',
             'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'pdf' => 'application/pdf',
-            'json' => 'application/json'
+            'json' => 'application/json',
         ];
 
         return $mimeTypes[$extension] ?? 'application/octet-stream';

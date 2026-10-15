@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -9,8 +11,8 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Dashboard Real-Time Service
- * 
+ * Dashboard Real-Time Service.
+ *
  * Service xử lý real-time updates cho Dashboard System
  */
 class DashboardRealTimeService
@@ -23,7 +25,7 @@ class DashboardRealTimeService
     }
 
     /**
-     * Broadcast dashboard update
+     * Broadcast dashboard update.
      */
     public function broadcastDashboardUpdate(string $userId, string $widgetId, array $data): void
     {
@@ -31,13 +33,13 @@ class DashboardRealTimeService
             // Broadcast via WebSocket
             $this->broadcastWebSocket($userId, 'dashboard_update', [
                 'widget_id' => $widgetId,
-                'data' => $data
+                'data' => $data,
             ]);
 
             // Broadcast via SSE
             $this->broadcastSSE($userId, 'widget_update', [
                 'widget_id' => $widgetId,
-                'data' => $data
+                'data' => $data,
             ]);
 
             // Clear widget cache
@@ -45,160 +47,155 @@ class DashboardRealTimeService
 
             Log::info('Dashboard update broadcasted', [
                 'user_id' => $userId,
-                'widget_id' => $widgetId
+                'widget_id' => $widgetId,
             ]);
-
         } catch (\Exception $e) {
             Log::error('Error broadcasting dashboard update', [
                 'user_id' => $userId,
                 'widget_id' => $widgetId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
 
     /**
-     * Broadcast alert
+     * Broadcast alert.
      */
     public function broadcastAlert(string $userId, array $alert): void
     {
         try {
             // Broadcast via WebSocket
             $this->broadcastWebSocket($userId, 'alert', [
-                'alert' => $alert
+                'alert' => $alert,
             ]);
 
             // Broadcast via SSE
             $this->broadcastSSE($userId, 'new_alert', [
-                'alert' => $alert
+                'alert' => $alert,
             ]);
 
             Log::info('Alert broadcasted', [
                 'user_id' => $userId,
-                'alert_id' => $alert['id'] ?? 'unknown'
+                'alert_id' => $alert['id'] ?? 'unknown',
             ]);
-
         } catch (\Exception $e) {
             Log::error('Error broadcasting alert', [
                 'user_id' => $userId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
 
     /**
-     * Broadcast metric update
+     * Broadcast metric update.
      */
     public function broadcastMetricUpdate(string $tenantId, string $metricCode, array $data): void
     {
         try {
             // Broadcast to all users in tenant
             $users = User::where('tenant_id', $tenantId)->pluck('id');
-            
+
             foreach ($users as $userId) {
                 $this->broadcastWebSocket($userId, 'metric_update', [
                     'metric_code' => $metricCode,
-                    'data' => $data
+                    'data' => $data,
                 ]);
 
                 $this->broadcastSSE($userId, 'metric_update', [
                     'metric_code' => $metricCode,
-                    'data' => $data
+                    'data' => $data,
                 ]);
             }
 
             Log::info('Metric update broadcasted', [
                 'tenant_id' => $tenantId,
                 'metric_code' => $metricCode,
-                'users_count' => $users->count()
+                'users_count' => $users->count(),
             ]);
-
         } catch (\Exception $e) {
             Log::error('Error broadcasting metric update', [
                 'tenant_id' => $tenantId,
                 'metric_code' => $metricCode,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
 
     /**
-     * Broadcast project update
+     * Broadcast project update.
      */
     public function broadcastProjectUpdate(string $projectId, string $eventType, array $data): void
     {
         try {
             // Get all users with access to this project
             $users = $this->getProjectUsers($projectId);
-            
+
             foreach ($users as $userId) {
                 $this->broadcastWebSocket($userId, 'project_update', [
                     'project_id' => $projectId,
                     'event_type' => $eventType,
-                    'data' => $data
+                    'data' => $data,
                 ]);
 
                 $this->broadcastSSE($userId, 'project_update', [
                     'project_id' => $projectId,
                     'event_type' => $eventType,
-                    'data' => $data
+                    'data' => $data,
                 ]);
             }
 
             Log::info('Project update broadcasted', [
                 'project_id' => $projectId,
                 'event_type' => $eventType,
-                'users_count' => $users->count()
+                'users_count' => $users->count(),
             ]);
-
         } catch (\Exception $e) {
             Log::error('Error broadcasting project update', [
                 'project_id' => $projectId,
                 'event_type' => $eventType,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
 
     /**
-     * Broadcast system notification
+     * Broadcast system notification.
      */
     public function broadcastSystemNotification(string $tenantId, string $type, string $message, array $data = []): void
     {
         try {
             $users = User::where('tenant_id', $tenantId)->pluck('id');
-            
+
             foreach ($users as $userId) {
                 $this->broadcastWebSocket($userId, 'system_notification', [
                     'type' => $type,
                     'message' => $message,
-                    'data' => $data
+                    'data' => $data,
                 ]);
 
                 $this->broadcastSSE($userId, 'system_notification', [
                     'type' => $type,
                     'message' => $message,
-                    'data' => $data
+                    'data' => $data,
                 ]);
             }
 
             Log::info('System notification broadcasted', [
                 'tenant_id' => $tenantId,
                 'type' => $type,
-                'users_count' => $users->count()
+                'users_count' => $users->count(),
             ]);
-
         } catch (\Exception $e) {
             Log::error('Error broadcasting system notification', [
                 'tenant_id' => $tenantId,
                 'type' => $type,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
 
     /**
-     * Trigger widget data refresh
+     * Trigger widget data refresh.
      */
     public function triggerWidgetRefresh(string $userId, string $widgetId): void
     {
@@ -208,29 +205,28 @@ class DashboardRealTimeService
 
             // Broadcast refresh event
             $this->broadcastWebSocket($userId, 'widget_refresh', [
-                'widget_id' => $widgetId
+                'widget_id' => $widgetId,
             ]);
 
             $this->broadcastSSE($userId, 'widget_refresh', [
-                'widget_id' => $widgetId
+                'widget_id' => $widgetId,
             ]);
 
             Log::info('Widget refresh triggered', [
                 'user_id' => $userId,
-                'widget_id' => $widgetId
+                'widget_id' => $widgetId,
             ]);
-
         } catch (\Exception $e) {
             Log::error('Error triggering widget refresh', [
                 'user_id' => $userId,
                 'widget_id' => $widgetId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
 
     /**
-     * Broadcast WebSocket message
+     * Broadcast WebSocket message.
      */
     private function broadcastWebSocket(string $userId, string $event, array $data): void
     {
@@ -243,7 +239,7 @@ class DashboardRealTimeService
                     'user_id' => $userId,
                     'event' => $event,
                     'data' => $data,
-                    'timestamp' => now()->toISOString()
+                    'timestamp' => now()->toISOString(),
                 ];
 
                 // Use Redis pub/sub or Queue to communicate with WebSocket server
@@ -253,13 +249,13 @@ class DashboardRealTimeService
             Log::error('Error broadcasting WebSocket message', [
                 'user_id' => $userId,
                 'event' => $event,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
 
     /**
-     * Broadcast SSE message
+     * Broadcast SSE message.
      */
     private function broadcastSSE(string $userId, string $event, array $data): void
     {
@@ -268,40 +264,39 @@ class DashboardRealTimeService
             Cache::put($cacheKey, [
                 'event' => $event,
                 'data' => $data,
-                'timestamp' => now()->toISOString()
+                'timestamp' => now()->toISOString(),
             ], 60);
         } catch (\Exception $e) {
             Log::error('Error broadcasting SSE message', [
                 'user_id' => $userId,
                 'event' => $event,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
 
     /**
-     * Clear widget cache
+     * Clear widget cache.
      */
     private function clearWidgetCache(string $userId, string $widgetId): void
     {
         try {
             // Clear specific widget cache
             DashboardWidgetDataCache::clearCacheData($widgetId, $userId);
-            
+
             // Clear user's dashboard cache
             Cache::forget("dashboard_data_{$userId}");
-            
         } catch (\Exception $e) {
             Log::error('Error clearing widget cache', [
                 'user_id' => $userId,
                 'widget_id' => $widgetId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
 
     /**
-     * Get users with access to project
+     * Get users with access to project.
      */
     private function getProjectUsers(string $projectId): array
     {
@@ -313,14 +308,15 @@ class DashboardRealTimeService
         } catch (\Exception $e) {
             Log::error('Error getting project users', [
                 'project_id' => $projectId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return [];
         }
     }
 
     /**
-     * Check if WebSocket server is running
+     * Check if WebSocket server is running.
      */
     private function isWebSocketServerRunning(): bool
     {
@@ -328,12 +324,13 @@ class DashboardRealTimeService
             // Check if WebSocket server process is running
             $port = config('websocket.port', 8080);
             $connection = @fsockopen('127.0.0.1', $port, $errno, $errstr, 1);
-            
+
             if ($connection) {
                 fclose($connection);
+
                 return true;
             }
-            
+
             return false;
         } catch (\Exception $e) {
             return false;
@@ -341,7 +338,7 @@ class DashboardRealTimeService
     }
 
     /**
-     * Get real-time statistics
+     * Get real-time statistics.
      */
     public function getRealTimeStats(): array
     {
@@ -351,18 +348,19 @@ class DashboardRealTimeService
                 'sse_connections' => $this->getSSEConnections(),
                 'cache_hit_rate' => $this->getCacheHitRate(),
                 'broadcast_rate' => $this->getBroadcastRate(),
-                'last_update' => now()->toISOString()
+                'last_update' => now()->toISOString(),
             ];
         } catch (\Exception $e) {
             Log::error('Error getting real-time stats', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return [];
         }
     }
 
     /**
-     * Get WebSocket connections count
+     * Get WebSocket connections count.
      */
     private function getWebSocketConnections(): int
     {
@@ -375,13 +373,14 @@ class DashboardRealTimeService
     }
 
     /**
-     * Get SSE connections count
+     * Get SSE connections count.
      */
     private function getSSEConnections(): int
     {
         try {
             // Count active SSE connections from cache
             $keys = Cache::store('redis')->getRedis()->keys('sse_connection_*');
+
             return count($keys);
         } catch (\Exception $e) {
             return 0;
@@ -389,7 +388,7 @@ class DashboardRealTimeService
     }
 
     /**
-     * Get cache hit rate
+     * Get cache hit rate.
      */
     private function getCacheHitRate(): float
     {
@@ -397,7 +396,7 @@ class DashboardRealTimeService
             $hits = Cache::get('cache_hits', 0);
             $misses = Cache::get('cache_misses', 0);
             $total = $hits + $misses;
-            
+
             return $total > 0 ? round(($hits / $total) * 100, 2) : 0;
         } catch (\Exception $e) {
             return 0;
@@ -405,7 +404,7 @@ class DashboardRealTimeService
     }
 
     /**
-     * Get broadcast rate
+     * Get broadcast rate.
      */
     private function getBroadcastRate(): int
     {
@@ -417,7 +416,7 @@ class DashboardRealTimeService
     }
 
     /**
-     * Setup event listeners
+     * Setup event listeners.
      */
     public function setupEventListeners(): void
     {

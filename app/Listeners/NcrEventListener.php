@@ -1,18 +1,17 @@
 <?php
 
 namespace App\Listeners;
-use Illuminate\Support\Facades\Auth;
 
-
+use App\Events\NcrAssigned;
+use App\Events\NcrCreated;
+use App\Events\NcrResolved;
+use App\Events\NcrUpdated;
 use App\Models\Ncr;
 use App\Models\Notification;
 use App\Models\User;
-use App\Events\NcrCreated;
-use App\Events\NcrUpdated;
-use App\Events\NcrAssigned;
-use App\Events\NcrResolved;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class NcrEventListener implements ShouldQueue
@@ -22,13 +21,13 @@ class NcrEventListener implements ShouldQueue
     public function handleNcrCreated(NcrCreated $event)
     {
         $ncr = $event->ncr;
-        
+
         Log::info('NCR created', [
             'ncr_id' => $ncr->id,
             'title' => $ncr->title,
             'severity' => $ncr->severity,
             'tenant_id' => $ncr->tenant_id,
-            'created_by' => $ncr->created_by
+            'created_by' => $ncr->created_by,
         ]);
 
         // Notify project team members
@@ -52,10 +51,10 @@ class NcrEventListener implements ShouldQueue
                         'ncr_id' => $ncr->id,
                         'title' => $ncr->title,
                         'severity' => $ncr->severity,
-                        'project_id' => $ncr->project_id
+                        'project_id' => $ncr->project_id,
                     ]),
                     'priority' => $ncr->severity === 'critical' ? 'high' : 'normal',
-                    'channels' => json_encode(['inapp', 'email'])
+                    'channels' => json_encode(['inapp', 'email']),
                 ]);
             }
         }
@@ -64,12 +63,12 @@ class NcrEventListener implements ShouldQueue
     public function handleNcrUpdated(NcrUpdated $event)
     {
         $ncr = $event->ncr;
-        
+
         Log::info('NCR updated', [
             'ncr_id' => $ncr->id,
             'title' => $ncr->title,
             'tenant_id' => $ncr->tenant_id,
-            'updated_by' => Auth::id()
+            'updated_by' => Auth::id(),
         ]);
     }
 
@@ -77,12 +76,12 @@ class NcrEventListener implements ShouldQueue
     {
         $ncr = $event->ncr;
         $assignedTo = $event->assignedTo;
-        
+
         Log::info('NCR assigned', [
             'ncr_id' => $ncr->id,
             'title' => $ncr->title,
             'assigned_to' => $assignedTo->id,
-            'tenant_id' => $ncr->tenant_id
+            'tenant_id' => $ncr->tenant_id,
         ]);
 
         // Notify assigned user
@@ -96,22 +95,22 @@ class NcrEventListener implements ShouldQueue
             'data' => json_encode([
                 'ncr_id' => $ncr->id,
                 'title' => $ncr->title,
-                'project_id' => $ncr->project_id
+                'project_id' => $ncr->project_id,
             ]),
             'priority' => $ncr->severity === 'critical' ? 'high' : 'normal',
-            'channels' => json_encode(['inapp', 'email'])
+            'channels' => json_encode(['inapp', 'email']),
         ]);
     }
 
     public function handleNcrResolved(NcrResolved $event)
     {
         $ncr = $event->ncr;
-        
+
         Log::info('NCR resolved', [
             'ncr_id' => $ncr->id,
             'title' => $ncr->title,
             'tenant_id' => $ncr->tenant_id,
-            'resolved_by' => Auth::id()
+            'resolved_by' => Auth::id(),
         ]);
 
         // Notify NCR creator
@@ -126,10 +125,10 @@ class NcrEventListener implements ShouldQueue
                 'data' => json_encode([
                     'ncr_id' => $ncr->id,
                     'title' => $ncr->title,
-                    'project_id' => $ncr->project_id
+                    'project_id' => $ncr->project_id,
                 ]),
                 'priority' => 'normal',
-                'channels' => json_encode(['inapp', 'email'])
+                'channels' => json_encode(['inapp', 'email']),
             ]);
         }
     }

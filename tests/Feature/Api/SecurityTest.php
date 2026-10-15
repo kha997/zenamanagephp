@@ -3,10 +3,10 @@
 namespace Tests\Feature\Api;
 
 use App\Models\Permission;
+use App\Models\Project;
 use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
-use App\Models\Project;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Laravel\Sanctum\Sanctum;

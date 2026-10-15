@@ -14,7 +14,8 @@ use Tests\Traits\AuthenticationTrait;
  */
 final class LaunchEndpointsRunNoArtisanTest extends TestCase
 {
-    use RefreshDatabase, AuthenticationTrait;
+    use RefreshDatabase;
+    use AuthenticationTrait;
 
     /** @var list<string> */
     private array $artisanCalls = [];

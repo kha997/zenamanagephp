@@ -1,10 +1,12 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Models\UserDashboard;
-use App\Models\User;
 use App\Models\Tenant;
+use App\Models\User;
+use App\Models\UserDashboard;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -66,7 +68,7 @@ class UserDashboardFactory extends Factory
     }
 
     /**
-     * Default dashboard
+     * Default dashboard.
      */
     public function default(): static
     {
@@ -77,7 +79,7 @@ class UserDashboardFactory extends Factory
     }
 
     /**
-     * Inactive dashboard
+     * Inactive dashboard.
      */
     public function inactive(): static
     {
@@ -87,7 +89,7 @@ class UserDashboardFactory extends Factory
     }
 
     /**
-     * Dashboard with specific layout
+     * Dashboard with specific layout.
      */
     public function withLayout(int $columns = 3, int $rows = 4): static
     {

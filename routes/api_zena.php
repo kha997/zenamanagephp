@@ -1,7 +1,7 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -10,7 +10,6 @@ use App\Http\Controllers\Api\AuthController;
 */
 
 Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
-
     // Main API info route
     Route::get('/', function () {
         return response()->json([
@@ -40,7 +39,7 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
                         'GET /api/zena/pm/dashboard' => 'PM Dashboard',
                         'GET /api/zena/designer/dashboard' => 'Designer Dashboard',
                         'GET /api/zena/site-engineer/dashboard' => 'Site Engineer Dashboard',
-                    ]
+                    ],
                 ],
                 'timestamp' => now(),
             ],
@@ -64,7 +63,6 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
     })->name('api.health');
 
     Route::middleware(['auth:sanctum', 'tenant.isolation', 'input.sanitization', 'error.envelope'])->group(function () {
-
         Route::prefix('auth')->group(function () {
             Route::post('/logout', [AuthController::class, 'logout'])->middleware('rbac:auth.logout')->name('auth.logout');
             Route::get('/me', [AuthController::class, 'me'])->middleware('rbac:auth.me')->name('auth.me');
@@ -89,6 +87,7 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
         Route::get('/minimal-auth-test', function () {
             try {
                 $user = auth()->user();
+
                 return response()->json([
                     'success' => true,
                     'status' => 'success',
@@ -110,6 +109,7 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
         Route::get('/sanctum-auth-test', function () {
             try {
                 $user = auth('sanctum')->user();
+
                 return response()->json([
                     'success' => true,
                     'status' => 'success',
@@ -158,8 +158,8 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
                             'roles' => $roles,
                             'permissions' => $permissions,
                             'last_login_at' => $user->last_login_at,
-                        ]
-                    ]
+                        ],
+                    ],
                 ]);
             } catch (\Exception $e) {
                 return response()->json([
@@ -462,7 +462,6 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
                 Route::put('/{line}', [\App\Http\Controllers\Api\MaterialReceiptLineController::class, 'update'])->middleware('rbac:material-receipt-line.create')->name('material-receipts.lines.update');
             });
         });
-
 
         // Change Requests routes
         Route::group(['prefix' => 'change-requests'], function () {

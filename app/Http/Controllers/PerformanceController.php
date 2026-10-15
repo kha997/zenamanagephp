@@ -2,15 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class PerformanceController extends Controller
 {
     /**
-     * Get system performance metrics
+     * Get system performance metrics.
      */
     public function metrics()
     {
@@ -49,14 +48,14 @@ class PerformanceController extends Controller
                 'peak_memory' => memory_get_peak_usage(true),
                 'execution_time' => microtime(true) - LARAVEL_START,
                 'load_time' => $this->getAverageLoadTime(),
-            ]
+            ],
         ];
 
         return response()->json($metrics);
     }
 
     /**
-     * Get database connection count
+     * Get database connection count.
      */
     private function getDatabaseConnectionCount()
     {
@@ -68,12 +67,13 @@ class PerformanceController extends Controller
     }
 
     /**
-     * Get average query time
+     * Get average query time.
      */
     private function getAverageQueryTime()
     {
         try {
             $result = DB::select('SHOW STATUS LIKE "Slow_queries"');
+
             return $result[0]->Value ?? 0;
         } catch (\Exception $e) {
             return 0;
@@ -81,12 +81,13 @@ class PerformanceController extends Controller
     }
 
     /**
-     * Get slow queries
+     * Get slow queries.
      */
     private function getSlowQueries()
     {
         try {
             $result = DB::select('SHOW STATUS LIKE "Slow_queries"');
+
             return $result[0]->Value ?? 0;
         } catch (\Exception $e) {
             return 0;
@@ -94,7 +95,7 @@ class PerformanceController extends Controller
     }
 
     /**
-     * Get cache hit rate
+     * Get cache hit rate.
      */
     private function getCacheHitRate()
     {
@@ -103,7 +104,7 @@ class PerformanceController extends Controller
     }
 
     /**
-     * Get cache memory usage
+     * Get cache memory usage.
      */
     private function getCacheMemoryUsage()
     {
@@ -111,16 +112,18 @@ class PerformanceController extends Controller
             try {
                 $redis = app('redis');
                 $info = $redis->info('memory');
+
                 return $info['used_memory_human'] ?? 'N/A';
             } catch (\Exception $e) {
                 return 'N/A';
             }
         }
+
         return 'N/A';
     }
 
     /**
-     * Get total routes
+     * Get total routes.
      */
     private function getTotalRoutes()
     {
@@ -128,58 +131,58 @@ class PerformanceController extends Controller
     }
 
     /**
-     * Get admin routes count
+     * Get admin routes count.
      */
     private function getAdminRoutes()
     {
         $routes = app('router')->getRoutes();
         $adminRoutes = 0;
-        
+
         foreach ($routes as $route) {
             if (str_starts_with($route->uri(), 'admin')) {
                 $adminRoutes++;
             }
         }
-        
+
         return $adminRoutes;
     }
 
     /**
-     * Get app routes count
+     * Get app routes count.
      */
     private function getAppRoutes()
     {
         $routes = app('router')->getRoutes();
         $appRoutes = 0;
-        
+
         foreach ($routes as $route) {
             if (str_starts_with($route->uri(), 'app')) {
                 $appRoutes++;
             }
         }
-        
+
         return $appRoutes;
     }
 
     /**
-     * Get legacy routes count
+     * Get legacy routes count.
      */
     private function getLegacyRoutes()
     {
         $routes = app('router')->getRoutes();
         $legacyRoutes = 0;
-        
+
         foreach ($routes as $route) {
             if (str_starts_with($route->getName(), 'legacy.')) {
                 $legacyRoutes++;
             }
         }
-        
+
         return $legacyRoutes;
     }
 
     /**
-     * Get total users
+     * Get total users.
      */
     private function getTotalUsers()
     {
@@ -187,7 +190,7 @@ class PerformanceController extends Controller
     }
 
     /**
-     * Get active users
+     * Get active users.
      */
     private function getActiveUsers()
     {
@@ -195,17 +198,17 @@ class PerformanceController extends Controller
     }
 
     /**
-     * Get super admins
+     * Get super admins.
      */
     private function getSuperAdmins()
     {
-        return \App\Models\User::whereHas('roles', function($query) {
+        return \App\Models\User::whereHas('roles', function ($query) {
             $query->where('name', 'super_admin');
         })->count();
     }
 
     /**
-     * Get tenant users
+     * Get tenant users.
      */
     private function getTenantUsers()
     {
@@ -213,7 +216,7 @@ class PerformanceController extends Controller
     }
 
     /**
-     * Get average load time
+     * Get average load time.
      */
     private function getAverageLoadTime()
     {
@@ -222,7 +225,7 @@ class PerformanceController extends Controller
     }
 
     /**
-     * Clear system caches
+     * Clear system caches.
      */
     public function clearCaches()
     {
@@ -231,23 +234,23 @@ class PerformanceController extends Controller
             Artisan::call('route:clear');
             Artisan::call('view:clear');
             Artisan::call('cache:clear');
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'All caches cleared successfully',
-                'timestamp' => now()->toISOString()
+                'timestamp' => now()->toISOString(),
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to clear caches: ' . $e->getMessage(),
-                'timestamp' => now()->toISOString()
+                'timestamp' => now()->toISOString(),
             ], 500);
         }
     }
 
     /**
-     * Get system health status
+     * Get system health status.
      */
     public function health()
     {
@@ -259,11 +262,11 @@ class PerformanceController extends Controller
                 'cache' => $this->checkCache(),
                 'routes' => $this->checkRoutes(),
                 'permissions' => $this->checkPermissions(),
-            ]
+            ],
         ];
 
-        $allHealthy = collect($health['checks'])->every(fn($check) => $check['status'] === 'healthy');
-        
+        $allHealthy = collect($health['checks'])->every(fn ($check) => $check['status'] === 'healthy');
+
         if (!$allHealthy) {
             $health['status'] = 'degraded';
         }
@@ -272,12 +275,13 @@ class PerformanceController extends Controller
     }
 
     /**
-     * Check database connectivity
+     * Check database connectivity.
      */
     private function checkDatabase()
     {
         try {
             DB::connection()->getPdo();
+
             return ['status' => 'healthy', 'message' => 'Database connection successful'];
         } catch (\Exception $e) {
             return ['status' => 'unhealthy', 'message' => 'Database connection failed: ' . $e->getMessage()];
@@ -285,7 +289,7 @@ class PerformanceController extends Controller
     }
 
     /**
-     * Check cache functionality
+     * Check cache functionality.
      */
     private function checkCache()
     {
@@ -293,7 +297,7 @@ class PerformanceController extends Controller
             Cache::put('health_check', 'test', 60);
             $value = Cache::get('health_check');
             Cache::forget('health_check');
-            
+
             if ($value === 'test') {
                 return ['status' => 'healthy', 'message' => 'Cache functionality working'];
             } else {
@@ -305,7 +309,7 @@ class PerformanceController extends Controller
     }
 
     /**
-     * Check routes functionality
+     * Check routes functionality.
      */
     private function checkRoutes()
     {
@@ -322,7 +326,7 @@ class PerformanceController extends Controller
     }
 
     /**
-     * Check permissions system
+     * Check permissions system.
      */
     private function checkPermissions()
     {

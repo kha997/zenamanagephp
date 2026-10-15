@@ -43,7 +43,7 @@ class SetupMonitoring extends Command
 
         $this->newLine();
         $this->info('✅ Monitoring setup completed!');
-        
+
         // Test monitoring
         if ($this->confirm('Would you like to test the monitoring system?')) {
             $this->testMonitoring();
@@ -51,7 +51,7 @@ class SetupMonitoring extends Command
     }
 
     /**
-     * Interactive setup
+     * Interactive setup.
      */
     private function interactiveSetup(): void
     {
@@ -75,7 +75,7 @@ class SetupMonitoring extends Command
     }
 
     /**
-     * Command line setup
+     * Command line setup.
      */
     private function commandLineSetup(): void
     {
@@ -86,6 +86,7 @@ class SetupMonitoring extends Command
 
         if (!$alertEmail) {
             $this->error('Alert email is required. Use --alert-email option.');
+
             return;
         }
 
@@ -100,44 +101,45 @@ class SetupMonitoring extends Command
     }
 
     /**
-     * Update environment file
+     * Update environment file.
      */
     private function updateEnvironmentFile(array $config): void
     {
         $envPath = base_path('.env');
-        
+
         if (!File::exists($envPath)) {
             $this->error('Environment file not found. Please create .env file first.');
+
             return;
         }
 
         $envContent = File::get($envPath);
-        
+
         // Update monitoring configuration
         $envContent = $this->updateEnvValue($envContent, 'MONITORING_ENABLED', 'true');
         $envContent = $this->updateEnvValue($envContent, 'MONITORING_EMAIL_ALERTS', 'true');
         $envContent = $this->updateEnvValue($envContent, 'MONITORING_ALERT_EMAIL', '"' . $config['alert_email'] . '"');
-        
+
         if ($config['slack_webhook']) {
             $envContent = $this->updateEnvValue($envContent, 'MONITORING_SLACK_WEBHOOK', $config['slack_webhook']);
         }
-        
+
         $envContent = $this->updateEnvValue($envContent, 'MONITORING_CHECK_INTERVAL', $config['check_interval']);
         $envContent = $this->updateEnvValue($envContent, 'MONITORING_ALERT_THRESHOLD', $config['alert_threshold']);
 
         File::put($envPath, $envContent);
-        
+
         $this->info('Environment file updated with monitoring configuration!');
     }
 
     /**
-     * Update environment value
+     * Update environment value.
      */
     private function updateEnvValue(string $content, string $key, string $value): string
     {
         $pattern = "/^{$key}=.*$/m";
         $replacement = "{$key}={$value}";
-        
+
         if (preg_match($pattern, $content)) {
             return preg_replace($pattern, $replacement, $content);
         } else {
@@ -146,16 +148,16 @@ class SetupMonitoring extends Command
     }
 
     /**
-     * Setup cron jobs
+     * Setup cron jobs.
      */
     private function setupCronJobs(string $checkInterval): void
     {
         $this->info('⏰ Setting up cron jobs...');
-        
+
         $cronJobs = [
-            "*/5 * * * * cd " . base_path() . " && php artisan email:monitor --send-alerts",
-            "0 2 * * * cd " . base_path() . " && php artisan email:warm-cache",
-            "0 3 * * * cd " . base_path() . " && php artisan queue:restart",
+            '*/5 * * * * cd ' . base_path() . ' && php artisan email:monitor --send-alerts',
+            '0 2 * * * cd ' . base_path() . ' && php artisan email:warm-cache',
+            '0 3 * * * cd ' . base_path() . ' && php artisan queue:restart',
         ];
 
         $cronFile = '/tmp/zenamanage_cron';
@@ -173,15 +175,15 @@ class SetupMonitoring extends Command
     }
 
     /**
-     * Test monitoring
+     * Test monitoring.
      */
     private function testMonitoring(): void
     {
         $this->info('🧪 Testing Monitoring System...');
-        
+
         try {
             Artisan::call('email:monitor', [
-                '--send-alerts' => true
+                '--send-alerts' => true,
             ]);
 
             $output = Artisan::output();

@@ -12,60 +12,60 @@ use Illuminate\Support\Facades\Log;
 class CalculationService
 {
     /**
-     * Calculate project progress
+     * Calculate project progress.
      */
     public function calculateProjectProgress(string $projectId): float
     {
         $project = Project::findOrFail($projectId);
-        
+
         // Get all tasks for the project
         $tasks = Task::where('project_id', $projectId)->get();
-        
+
         if ($tasks->isEmpty()) {
             $progress = 0;
         } else {
             $totalWeight = 0;
             $completedWeight = 0;
-            
+
             foreach ($tasks as $task) {
                 $weight = $task->weight ?? 1;
                 $totalWeight += $weight;
-                
+
                 if ($task->status === 'completed') {
                     $completedWeight += $weight;
                 } elseif ($task->status === 'in_progress') {
                     $completedWeight += $weight * ($task->progress / 100);
                 }
             }
-            
+
             $progress = $totalWeight > 0 ? ($completedWeight / $totalWeight) * 100 : 0;
         }
-        
+
         // Update project progress
         $project->update(['progress' => round($progress, 2)]);
-        
+
         return $progress;
     }
 
     /**
-     * Calculate project budget utilization
+     * Calculate project budget utilization.
      */
     public function calculateProjectBudgetUtilization(string $projectId): array
     {
         $project = Project::findOrFail($projectId);
-        
+
         $totalBudget = $project->budget;
         $actualCost = $project->actual_cost;
-        
+
         // Calculate from tasks
         $taskCosts = Task::where('project_id', $projectId)
             ->where('status', 'completed')
             ->sum('actual_cost');
-        
+
         $totalActualCost = $actualCost + $taskCosts;
-        
+
         $utilization = $totalBudget > 0 ? ($totalActualCost / $totalBudget) * 100 : 0;
-        
+
         return [
             'total_budget' => $totalBudget,
             'actual_cost' => $totalActualCost,
@@ -76,16 +76,16 @@ class CalculationService
     }
 
     /**
-     * Calculate project timeline metrics
+     * Calculate project timeline metrics.
      */
     public function calculateProjectTimeline(string $projectId): array
     {
         $project = Project::findOrFail($projectId);
-        
+
         $startDate = $project->start_date;
         $endDate = $project->end_date;
         $now = now();
-        
+
         if (!$startDate || !$endDate) {
             return [
                 'total_duration' => null,
@@ -96,21 +96,21 @@ class CalculationService
                 'estimated_completion' => null,
             ];
         }
-        
+
         $totalDuration = $startDate->diffInDays($endDate);
         $elapsedDuration = $startDate->diffInDays($now);
         $remainingDuration = $now->diffInDays($endDate);
-        
+
         $progressPercentage = $totalDuration > 0 ? ($elapsedDuration / $totalDuration) * 100 : 0;
         $isOverdue = $now->isAfter($endDate);
-        
+
         // Estimate completion based on current progress
         $estimatedCompletion = null;
         if ($project->progress > 0 && $progressPercentage > 0) {
             $estimatedDays = ($elapsedDuration / $project->progress) * 100;
             $estimatedCompletion = $startDate->addDays($estimatedDays);
         }
-        
+
         return [
             'total_duration' => $totalDuration,
             'elapsed_duration' => $elapsedDuration,
@@ -122,13 +122,13 @@ class CalculationService
     }
 
     /**
-     * Calculate task dependencies impact
+     * Calculate task dependencies impact.
      */
     public function calculateTaskDependenciesImpact(string $taskId): array
     {
         $task = Task::findOrFail($taskId);
         $dependencies = $task->dependencies_json ?? [];
-        
+
         if (empty($dependencies)) {
             return [
                 'blocked_by' => [],
@@ -137,18 +137,18 @@ class CalculationService
                 'critical_path' => false,
             ];
         }
-        
+
         $blockedBy = Task::whereIn('id', $dependencies)
             ->where('status', '!=', 'completed')
             ->get();
-        
+
         $blocking = Task::whereJsonContains('dependencies_json', $taskId)
             ->get();
-        
+
         $canStart = $blockedBy->isEmpty();
-        
+
         return [
-            'blocked_by' => $blockedBy->map(function($t) {
+            'blocked_by' => $blockedBy->map(function ($t) {
                 return [
                     'id' => $t->id,
                     'name' => $t->name,
@@ -156,7 +156,7 @@ class CalculationService
                     'end_date' => $t->end_date?->format('Y-m-d'),
                 ];
             }),
-            'blocking' => $blocking->map(function($t) {
+            'blocking' => $blocking->map(function ($t) {
                 return [
                     'id' => $t->id,
                     'name' => $t->name,
@@ -169,20 +169,20 @@ class CalculationService
     }
 
     /**
-     * Calculate team workload
+     * Calculate team workload.
      */
     public function calculateTeamWorkload(string $projectId): array
     {
         $tasks = Task::where('project_id', $projectId)
             ->whereNotNull('user_id')
             ->get();
-        
+
         $workload = [];
-        
+
         foreach ($tasks as $task) {
             $userId = $task->user_id;
             $userName = $task->user?->name ?? 'Unknown';
-            
+
             if (!isset($workload[$userId])) {
                 $workload[$userId] = [
                     'user_id' => $userId,
@@ -196,10 +196,10 @@ class CalculationService
                     'completed_weight' => 0,
                 ];
             }
-            
+
             $workload[$userId]['total_tasks']++;
             $workload[$userId]['total_weight'] += $task->weight ?? 1;
-            
+
             switch ($task->status) {
                 case 'completed':
                     $workload[$userId]['completed_tasks']++;
@@ -212,29 +212,29 @@ class CalculationService
                     $workload[$userId]['pending_tasks']++;
                     break;
             }
-            
+
             if ($task->end_date && $task->end_date->isPast() && $task->status !== 'completed') {
                 $workload[$userId]['overdue_tasks']++;
             }
         }
-        
+
         // Calculate workload percentage
         foreach ($workload as &$userWorkload) {
-            $userWorkload['workload_percentage'] = $userWorkload['total_weight'] > 0 
-                ? ($userWorkload['completed_weight'] / $userWorkload['total_weight']) * 100 
+            $userWorkload['workload_percentage'] = $userWorkload['total_weight'] > 0
+                ? ($userWorkload['completed_weight'] / $userWorkload['total_weight']) * 100
                 : 0;
         }
-        
+
         return array_values($workload);
     }
 
     /**
-     * Calculate change request impact
+     * Calculate change request impact.
      */
     public function calculateChangeRequestImpact(string $changeRequestId): array
     {
         $changeRequest = ChangeRequest::findOrFail($changeRequestId);
-        
+
         $impact = [
             'cost_impact' => $changeRequest->cost_impact,
             'time_impact' => $changeRequest->time_impact,
@@ -243,7 +243,7 @@ class CalculationService
             'affected_components' => [],
             'overall_impact' => 'low',
         ];
-        
+
         // Find affected tasks
         if ($changeRequest->task_id) {
             $task = Task::find($changeRequest->task_id);
@@ -256,7 +256,7 @@ class CalculationService
                 ];
             }
         }
-        
+
         // Find affected components
         if ($changeRequest->component_id) {
             $component = Component::find($changeRequest->component_id);
@@ -269,20 +269,20 @@ class CalculationService
                 ];
             }
         }
-        
+
         // Calculate overall impact
         $impact['overall_impact'] = $this->calculateOverallImpact($impact);
-        
+
         return $impact;
     }
 
     /**
-     * Calculate risk level for change request
+     * Calculate risk level for change request.
      */
     private function calculateRiskLevel(ChangeRequest $changeRequest): string
     {
         $riskScore = 0;
-        
+
         // Cost impact
         if ($changeRequest->cost_impact > 10000) {
             $riskScore += 3;
@@ -291,7 +291,7 @@ class CalculationService
         } elseif ($changeRequest->cost_impact > 1000) {
             $riskScore += 1;
         }
-        
+
         // Time impact
         if ($changeRequest->time_impact > 30) {
             $riskScore += 3;
@@ -300,7 +300,7 @@ class CalculationService
         } elseif ($changeRequest->time_impact > 7) {
             $riskScore += 1;
         }
-        
+
         // Priority
         switch ($changeRequest->priority) {
             case 'critical':
@@ -313,7 +313,7 @@ class CalculationService
                 $riskScore += 1;
                 break;
         }
-        
+
         if ($riskScore >= 6) {
             return 'high';
         } elseif ($riskScore >= 3) {
@@ -324,24 +324,37 @@ class CalculationService
     }
 
     /**
-     * Calculate overall impact
+     * Calculate overall impact.
      */
     private function calculateOverallImpact(array $impact): string
     {
         $score = 0;
-        
-        if ($impact['cost_impact'] > 10000) $score += 2;
-        elseif ($impact['cost_impact'] > 5000) $score += 1;
-        
-        if ($impact['time_impact'] > 30) $score += 2;
-        elseif ($impact['time_impact'] > 14) $score += 1;
-        
-        if ($impact['risk_level'] === 'high') $score += 2;
-        elseif ($impact['risk_level'] === 'medium') $score += 1;
-        
-        if (count($impact['affected_tasks']) > 5) $score += 1;
-        if (count($impact['affected_components']) > 3) $score += 1;
-        
+
+        if ($impact['cost_impact'] > 10000) {
+            $score += 2;
+        } elseif ($impact['cost_impact'] > 5000) {
+            $score += 1;
+        }
+
+        if ($impact['time_impact'] > 30) {
+            $score += 2;
+        } elseif ($impact['time_impact'] > 14) {
+            $score += 1;
+        }
+
+        if ($impact['risk_level'] === 'high') {
+            $score += 2;
+        } elseif ($impact['risk_level'] === 'medium') {
+            $score += 1;
+        }
+
+        if (count($impact['affected_tasks']) > 5) {
+            $score += 1;
+        }
+        if (count($impact['affected_components']) > 3) {
+            $score += 1;
+        }
+
         if ($score >= 5) {
             return 'high';
         } elseif ($score >= 3) {
@@ -352,16 +365,16 @@ class CalculationService
     }
 
     /**
-     * Calculate project KPIs
+     * Calculate project KPIs.
      */
     public function calculateProjectKPIs(string $projectId): array
     {
         $project = Project::findOrFail($projectId);
-        
+
         $tasks = Task::where('project_id', $projectId)->get();
         $components = Component::where('project_id', $projectId)->get();
         $changeRequests = ChangeRequest::where('project_id', $projectId)->get();
-        
+
         $kpis = [
             'project_progress' => $project->progress,
             'budget_utilization' => $this->calculateProjectBudgetUtilization($projectId),
@@ -391,52 +404,52 @@ class CalculationService
             ],
             'team_workload' => $this->calculateTeamWorkload($projectId),
         ];
-        
+
         return $kpis;
     }
 
     /**
-     * Recalculate all project metrics
+     * Recalculate all project metrics.
      */
     public function recalculateProjectMetrics(string $projectId): array
     {
         DB::beginTransaction();
-        
+
         try {
             // Recalculate progress
             $this->calculateProjectProgress($projectId);
-            
+
             // Get updated KPIs
             $kpis = $this->calculateProjectKPIs($projectId);
-            
+
             DB::commit();
-            
+
             Log::info("Recalculated metrics for project: {$projectId}");
-            
+
             return $kpis;
-            
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error("Failed to recalculate project metrics: " . $e->getMessage());
+            Log::error('Failed to recalculate project metrics: ' . $e->getMessage());
+
             throw $e;
         }
     }
 
     /**
-     * Calculate resource utilization
+     * Calculate resource utilization.
      */
     public function calculateResourceUtilization(string $projectId): array
     {
         $tasks = Task::where('project_id', $projectId)
             ->whereNotNull('user_id')
             ->get();
-        
+
         $utilization = [];
-        
+
         foreach ($tasks as $task) {
             $userId = $task->user_id;
             $userName = $task->user?->name ?? 'Unknown';
-            
+
             if (!isset($utilization[$userId])) {
                 $utilization[$userId] = [
                     'user_id' => $userId,
@@ -447,26 +460,26 @@ class CalculationService
                     'utilization_percentage' => 0,
                 ];
             }
-            
+
             $estimatedHours = $task->estimated_hours ?? 0;
             $actualHours = $task->actual_hours ?? 0;
-            
+
             $utilization[$userId]['total_hours'] += $actualHours;
             $utilization[$userId]['estimated_hours'] += $estimatedHours;
-            
+
             if ($task->status === 'completed') {
                 $utilization[$userId]['completed_hours'] += $actualHours;
             }
         }
-        
+
         // Calculate utilization percentage
         foreach ($utilization as &$userUtilization) {
             if ($userUtilization['estimated_hours'] > 0) {
-                $userUtilization['utilization_percentage'] = 
+                $userUtilization['utilization_percentage'] =
                     ($userUtilization['total_hours'] / $userUtilization['estimated_hours']) * 100;
             }
         }
-        
+
         return array_values($utilization);
     }
 }

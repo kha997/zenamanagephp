@@ -45013,7 +45013,7 @@ parameters:
 			path: database/migrations/2025_09_19_174648_rename_zena_tables_to_standard_names.php
 
 		-
-			message: '#^Method Illuminate\\Database\\Migrations\\Migration@anonymous/database/migrations/2025_09_20_071043_add_missing_performance_indexes\.php\:8\:\:addIndexIfNotExists\(\) has parameter \$columns with no type specified\.$#'
+			message: '#^Method Illuminate\\Database\\Migrations\\Migration@anonymous/database/migrations/2025_09_20_071043_add_missing_performance_indexes\.php\:10\:\:addIndexIfNotExists\(\) has parameter \$columns with no type specified\.$#'
 			identifier: missingType.parameter
 			count: 1
 			path: database/migrations/2025_09_20_071043_add_missing_performance_indexes.php
@@ -45031,7 +45031,7 @@ parameters:
 			path: database/migrations/2025_09_20_071838_optimize_database_relationships_and_foreign_keys.php
 
 		-
-			message: '#^Method Illuminate\\Database\\Migrations\\Migration@anonymous/database/migrations/2025_09_20_071838_optimize_database_relationships_and_foreign_keys\.php\:8\:\:dropForeignIfExists\(\) has parameter \$columns with no value type specified in iterable type array\.$#'
+			message: '#^Method Illuminate\\Database\\Migrations\\Migration@anonymous/database/migrations/2025_09_20_071838_optimize_database_relationships_and_foreign_keys\.php\:10\:\:dropForeignIfExists\(\) has parameter \$columns with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
 			path: database/migrations/2025_09_20_071838_optimize_database_relationships_and_foreign_keys.php

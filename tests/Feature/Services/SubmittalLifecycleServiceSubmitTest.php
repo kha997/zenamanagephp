@@ -1,11 +1,12 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Services;
 
 use App\Exceptions\SubmittalTransitionNotAllowedException;
 use App\Models\Project;
 use App\Models\Submittal;
-use App\Models\SubmittalRevision;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\SubmittalLifecycleService;
@@ -17,8 +18,11 @@ class SubmittalLifecycleServiceSubmitTest extends TestCase
     use RefreshDatabase;
 
     private SubmittalLifecycleService $service;
+
     private Tenant $tenant;
+
     private User $user;
+
     private Project $project;
 
     protected function setUp(): void

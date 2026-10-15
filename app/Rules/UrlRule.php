@@ -7,6 +7,7 @@ use Illuminate\Contracts\Validation\Rule;
 class UrlRule implements Rule
 {
     protected $protocols;
+
     protected $requireProtocol;
 
     /**
@@ -36,7 +37,7 @@ class UrlRule implements Rule
                     break;
                 }
             }
-            
+
             if (!$hasValidProtocol) {
                 return false;
             }

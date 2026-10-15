@@ -1,18 +1,20 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use App\Models\User;
-use App\Models\Tenant;
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
 use Tests\Traits\AuthenticationTrait;
 
 /**
- * Feature tests for Task management endpoints
+ * Feature tests for Task management endpoints.
  */
 class TaskTest extends TestCase
 {
@@ -20,14 +22,17 @@ class TaskTest extends TestCase
     use AuthenticationTrait;
 
     private User $user;
+
     private Tenant $tenant;
+
     private Project $project;
+
     private string $token;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->tenant = Tenant::factory()->create();
         $this->user = $this->createTenantUser(
             $this->tenant,
@@ -41,7 +46,7 @@ class TaskTest extends TestCase
     }
 
     /**
-     * Test creating a new task
+     * Test creating a new task.
      */
     public function test_create_task(): void
     {
@@ -53,7 +58,7 @@ class TaskTest extends TestCase
             'priority' => 'medium',
             'estimated_hours' => 8,
             'start_date' => '2025-01-01',
-            'end_date' => '2025-01-15'
+            'end_date' => '2025-01-15',
         ];
 
         $response = $this->postJson('/api/v1/tasks', $taskData);
@@ -72,9 +77,9 @@ class TaskTest extends TestCase
                             'priority',
                             'estimated_hours',
                             'start_date',
-                            'end_date'
-                        ]
-                    ]
+                            'end_date',
+                        ],
+                    ],
                 ]);
 
         $this->assertDatabaseHas('tasks', [
@@ -90,18 +95,18 @@ class TaskTest extends TestCase
     }
 
     /**
-     * Test getting all tasks
+     * Test getting all tasks.
      */
     public function test_get_tasks(): void
     {
         // Create some test tasks
         Task::factory()->count(3)->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer ' . $this->token,
         ])->getJson('/api/tasks');
 
         $response->assertStatus(200)
@@ -114,34 +119,34 @@ class TaskTest extends TestCase
                             'description',
                             'status',
                             'priority',
-                            'estimated_hours'
-                        ]
-                    ]
+                            'estimated_hours',
+                        ],
+                    ],
                 ]);
 
         $this->assertEquals(3, count($response->json('data')));
     }
 
     /**
-     * Test getting tasks by project
+     * Test getting tasks by project.
      */
     public function test_get_tasks_by_project(): void
     {
         // Create tasks for this project
         Task::factory()->count(2)->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Create another project and tasks
         $otherProject = Project::factory()->create(['tenant_id' => $this->tenant->id]);
         Task::factory()->count(2)->create([
             'project_id' => $otherProject->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer ' . $this->token,
         ])->getJson("/api/projects/{$this->project->id}/tasks");
 
         $response->assertStatus(200);
@@ -149,17 +154,17 @@ class TaskTest extends TestCase
     }
 
     /**
-     * Test getting a specific task
+     * Test getting a specific task.
      */
     public function test_get_task(): void
     {
         $task = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer ' . $this->token,
         ])->getJson("/api/tasks/{$task->id}");
 
         $response->assertStatus(200)
@@ -171,19 +176,19 @@ class TaskTest extends TestCase
                         'description',
                         'status',
                         'priority',
-                        'estimated_hours'
-                    ]
+                        'estimated_hours',
+                    ],
                 ]);
     }
 
     /**
-     * Test updating a task
+     * Test updating a task.
      */
     public function test_update_task(): void
     {
         $task = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $updateData = [
@@ -191,11 +196,11 @@ class TaskTest extends TestCase
             'description' => 'Updated task description',
             'status' => 'in_progress',
             'priority' => 'high',
-            'estimated_hours' => 16
+            'estimated_hours' => 16,
         ];
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer ' . $this->token,
         ])->putJson("/api/tasks/{$task->id}", $updateData);
 
         $response->assertStatus(200)
@@ -209,36 +214,36 @@ class TaskTest extends TestCase
         $this->assertDatabaseHas('tasks', [
             'id' => $task->id,
             'name' => 'Updated Task Name',
-            'status' => 'in_progress'
+            'status' => 'in_progress',
         ]);
     }
 
     /**
-     * Test deleting a task
+     * Test deleting a task.
      */
     public function test_delete_task(): void
     {
         $task = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
+            'Authorization' => 'Bearer ' . $this->token,
         ])->deleteJson("/api/tasks/{$task->id}");
 
         $response->assertStatus(200)
                 ->assertJson([
-                    'message' => 'Task deleted successfully'
+                    'message' => 'Task deleted successfully',
                 ]);
 
         $this->assertDatabaseMissing('tasks', [
-            'id' => $task->id
+            'id' => $task->id,
         ]);
     }
 
     /**
-     * Test task validation
+     * Test task validation.
      */
     public function test_create_task_validation(): void
     {
@@ -261,7 +266,7 @@ class TaskTest extends TestCase
     }
 
     /**
-     * Test accessing task without authentication
+     * Test accessing task without authentication.
      */
     public function test_access_task_without_auth(): void
     {
@@ -274,21 +279,21 @@ class TaskTest extends TestCase
     }
 
     /**
-     * Test accessing task from different tenant
+     * Test accessing task from different tenant.
      */
     public function test_access_task_different_tenant(): void
     {
         $otherTenant = Tenant::factory()->create();
         $otherUser = User::factory()->create(['tenant_id' => $otherTenant->id]);
         $otherToken = $otherUser->createToken('test-token')->plainTextToken;
-        
+
         $task = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $otherToken
+            'Authorization' => 'Bearer ' . $otherToken,
         ])->getJson("/api/tasks/{$task->id}");
 
         $response->assertStatus(403);

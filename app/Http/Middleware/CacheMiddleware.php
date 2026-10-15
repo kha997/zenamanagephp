@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
@@ -7,7 +9,7 @@ use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * CacheMiddleware - Middleware cho caching optimization
+ * CacheMiddleware - Middleware cho caching optimization.
  */
 class CacheMiddleware
 {
@@ -31,14 +33,14 @@ class CacheMiddleware
                 'api/projects/*/delete',
                 'api/tasks/create',
                 'api/tasks/*/update',
-                'api/tasks/*/delete'
+                'api/tasks/*/delete',
             ],
             'excluded_methods' => ['POST', 'PUT', 'PATCH', 'DELETE'],
             'cache_headers' => [
                 'Cache-Control' => 'public, max-age=3600',
                 'ETag' => null,
-                'Last-Modified' => null
-            ]
+                'Last-Modified' => null,
+            ],
         ];
     }
 
@@ -64,7 +66,7 @@ class CacheMiddleware
 
         // Generate cache key
         $cacheKey = $this->generateCacheKey($request);
-        
+
         // Check if response is cached
         $cachedResponse = Cache::get($cacheKey);
         if ($cachedResponse) {
@@ -85,7 +87,7 @@ class CacheMiddleware
     }
 
     /**
-     * Check if route is excluded from caching
+     * Check if route is excluded from caching.
      */
     private function isExcludedRoute(Request $request): bool
     {
@@ -107,13 +109,13 @@ class CacheMiddleware
     }
 
     /**
-     * Generate cache key for request
+     * Generate cache key for request.
      */
     private function generateCacheKey(Request $request): string
     {
         $key = $this->cacheConfig['prefix'] . md5(
-            $request->method() . 
-            $request->getRequestUri() . 
+            $request->method() .
+            $request->getRequestUri() .
             $request->getQueryString() .
             $request->header('Authorization', '')
         );
@@ -122,7 +124,7 @@ class CacheMiddleware
     }
 
     /**
-     * Cache response
+     * Cache response.
      */
     private function cacheResponse(string $cacheKey, Response $response, string $ttl = null): void
     {
@@ -132,7 +134,7 @@ class CacheMiddleware
             'content' => $response->getContent(),
             'headers' => $response->headers->all(),
             'status_code' => $response->getStatusCode(),
-            'cached_at' => now()->toISOString()
+            'cached_at' => now()->toISOString(),
         ];
 
         Cache::put($cacheKey, $cacheData, $ttl);

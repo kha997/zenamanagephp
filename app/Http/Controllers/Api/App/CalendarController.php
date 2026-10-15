@@ -10,51 +10,51 @@ use Illuminate\Support\Facades\Log;
 class CalendarController extends Controller
 {
     /**
-     * Get calendar events for the authenticated user's tenant
+     * Get calendar events for the authenticated user's tenant.
      */
     public function index(Request $request)
     {
         try {
             $user = Auth::guard('sanctum')->user();
             $tenantId = $user->tenant_id;
-            
+
             // Get date range from request
             $startDate = $request->input('start_date', now()->startOfMonth()->toDateString());
             $endDate = $request->input('end_date', now()->endOfMonth()->toDateString());
-            
+
             // Get events based on user permissions
             $events = $this->getCalendarEvents($tenantId, $user->id, $startDate, $endDate);
-            
+
             return response()->json([
                 'status' => 'success',
                 'data' => [
                     'events' => $events,
                     'date_range' => [
                         'start' => $startDate,
-                        'end' => $endDate
+                        'end' => $endDate,
                     ],
-                    'tenant_id' => $tenantId
-                ]
+                    'tenant_id' => $tenantId,
+                ],
             ]);
-            
         } catch (\Exception $e) {
             Log::error('Calendar API Error: ' . $e->getMessage());
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to fetch calendar events'
+                'message' => 'Failed to fetch calendar events',
             ], 500);
         }
     }
-    
+
     /**
-     * Create a new calendar event
+     * Create a new calendar event.
      */
     public function store(Request $request)
     {
         try {
             $user = Auth::guard('sanctum')->user();
             $tenantId = $user->tenant_id;
-            
+
             $validated = $request->validate([
                 'title' => 'required|string|max:255',
                 'description' => 'nullable|string',
@@ -65,28 +65,28 @@ class CalendarController extends Controller
                 'type' => 'required|in:meeting,task,project,deadline,personal',
                 'project_id' => 'nullable|integer',
                 'task_id' => 'nullable|integer',
-                'is_all_day' => 'boolean'
+                'is_all_day' => 'boolean',
             ]);
-            
+
             // Check permissions for project/task if specified
             if ($validated['project_id']) {
                 if (!$this->hasProjectAccess($user->id, $validated['project_id'], $tenantId)) {
                     return response()->json([
                         'status' => 'error',
-                        'message' => 'No access to specified project'
+                        'message' => 'No access to specified project',
                     ], 403);
                 }
             }
-            
+
             if ($validated['task_id']) {
                 if (!$this->hasTaskAccess($user->id, $validated['task_id'], $tenantId)) {
                     return response()->json([
                         'status' => 'error',
-                        'message' => 'No access to specified task'
+                        'message' => 'No access to specified task',
                     ], 403);
                 }
             }
-            
+
             // Create event (mock implementation)
             $event = [
                 'id' => rand(1000, 9999),
@@ -102,49 +102,49 @@ class CalendarController extends Controller
                 'is_all_day' => $validated['is_all_day'] ?? false,
                 'user_id' => $user->id,
                 'tenant_id' => $tenantId,
-                'created_at' => now()->toISOString()
+                'created_at' => now()->toISOString(),
             ];
-            
+
             $this->logAudit('calendar_event_created', $user->id, $tenantId, $event);
-            
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Event created successfully',
-                'data' => $event
+                'data' => $event,
             ], 201);
-            
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
-                'errors' => $e->errors()
+                'errors' => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
             Log::error('Calendar Create Error: ' . $e->getMessage());
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to create event'
+                'message' => 'Failed to create event',
             ], 500);
         }
     }
-    
+
     /**
-     * Update a calendar event
+     * Update a calendar event.
      */
     public function update(Request $request, $id)
     {
         try {
             $user = Auth::guard('sanctum')->user();
             $tenantId = $user->tenant_id;
-            
+
             // Check if user has access to this event
             if (!$this->hasEventAccess($user->id, $id, $tenantId)) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'No access to this event'
+                    'message' => 'No access to this event',
                 ], 403);
             }
-            
+
             $validated = $request->validate([
                 'title' => 'sometimes|string|max:255',
                 'description' => 'nullable|string',
@@ -153,9 +153,9 @@ class CalendarController extends Controller
                 'start_time' => 'nullable|date_format:H:i',
                 'end_time' => 'nullable|date_format:H:i|after:start_time',
                 'type' => 'sometimes|in:meeting,task,project,deadline,personal',
-                'is_all_day' => 'boolean'
+                'is_all_day' => 'boolean',
             ]);
-            
+
             // Mock update
             $event = [
                 'id' => $id,
@@ -169,109 +169,109 @@ class CalendarController extends Controller
                 'is_all_day' => $validated['is_all_day'] ?? false,
                 'user_id' => $user->id,
                 'tenant_id' => $tenantId,
-                'updated_at' => now()->toISOString()
+                'updated_at' => now()->toISOString(),
             ];
-            
+
             $this->logAudit('calendar_event_updated', $user->id, $tenantId, $event);
-            
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Event updated successfully',
-                'data' => $event
+                'data' => $event,
             ]);
-            
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
-                'errors' => $e->errors()
+                'errors' => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
             Log::error('Calendar Update Error: ' . $e->getMessage());
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to update event'
+                'message' => 'Failed to update event',
             ], 500);
         }
     }
-    
+
     /**
-     * Delete a calendar event
+     * Delete a calendar event.
      */
     public function destroy($id)
     {
         try {
             $user = Auth::guard('sanctum')->user();
             $tenantId = $user->tenant_id;
-            
+
             // Check if user has access to this event
             if (!$this->hasEventAccess($user->id, $id, $tenantId)) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'No access to this event'
+                    'message' => 'No access to this event',
                 ], 403);
             }
-            
+
             $this->logAudit('calendar_event_deleted', $user->id, $tenantId, ['event_id' => $id]);
-            
+
             return response()->json([
                 'status' => 'success',
-                'message' => 'Event deleted successfully'
+                'message' => 'Event deleted successfully',
             ]);
-            
         } catch (\Exception $e) {
             Log::error('Calendar Delete Error: ' . $e->getMessage());
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to delete event'
+                'message' => 'Failed to delete event',
             ], 500);
         }
     }
-    
+
     /**
-     * Get upcoming events
+     * Get upcoming events.
      */
     public function upcoming(Request $request)
     {
         try {
             $user = Auth::guard('sanctum')->user();
             $tenantId = $user->tenant_id;
-            
+
             $limit = $request->input('limit', 10);
             $days = $request->input('days', 7);
-            
+
             $startDate = now()->toDateString();
             $endDate = now()->addDays($days)->toDateString();
-            
+
             $events = $this->getCalendarEvents($tenantId, $user->id, $startDate, $endDate);
-            
+
             // Sort by date and limit
-            usort($events, function($a, $b) {
+            usort($events, function ($a, $b) {
                 return strtotime($a['start_date'] . ' ' . $a['start_time']) - strtotime($b['start_date'] . ' ' . $b['start_time']);
             });
-            
+
             $events = array_slice($events, 0, $limit);
-            
+
             return response()->json([
                 'status' => 'success',
                 'data' => [
                     'events' => $events,
                     'limit' => $limit,
-                    'days' => $days
-                ]
+                    'days' => $days,
+                ],
             ]);
-            
         } catch (\Exception $e) {
             Log::error('Calendar Upcoming Error: ' . $e->getMessage());
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to fetch upcoming events'
+                'message' => 'Failed to fetch upcoming events',
             ], 500);
         }
     }
-    
+
     /**
-     * Get calendar events with permissions
+     * Get calendar events with permissions.
      */
     private function getCalendarEvents($tenantId, $userId, $startDate, $endDate)
     {
@@ -294,8 +294,8 @@ class CalendarController extends Controller
                 'permissions' => [
                     'can_edit' => true,
                     'can_delete' => true,
-                    'can_view' => true
-                ]
+                    'can_view' => true,
+                ],
             ],
             [
                 'id' => 2,
@@ -314,8 +314,8 @@ class CalendarController extends Controller
                 'permissions' => [
                     'can_edit' => true,
                     'can_delete' => false,
-                    'can_view' => true
-                ]
+                    'can_view' => true,
+                ],
             ],
             [
                 'id' => 3,
@@ -334,46 +334,46 @@ class CalendarController extends Controller
                 'permissions' => [
                     'can_edit' => true,
                     'can_delete' => true,
-                    'can_view' => true
-                ]
-            ]
+                    'can_view' => true,
+                ],
+            ],
         ];
-        
+
         // Filter by date range
-        return array_filter($events, function($event) use ($startDate, $endDate) {
+        return array_filter($events, function ($event) use ($startDate, $endDate) {
             return $event['start_date'] >= $startDate && $event['start_date'] <= $endDate;
         });
     }
-    
+
     /**
-     * Check if user has access to a project
+     * Check if user has access to a project.
      */
     private function hasProjectAccess($userId, $projectId, $tenantId)
     {
         // Mock implementation - in real app, check project permissions
         return true; // For demo purposes
     }
-    
+
     /**
-     * Check if user has access to a task
+     * Check if user has access to a task.
      */
     private function hasTaskAccess($userId, $taskId, $tenantId)
     {
         // Mock implementation - in real app, check task permissions
         return true; // For demo purposes
     }
-    
+
     /**
-     * Check if user has access to an event
+     * Check if user has access to an event.
      */
     private function hasEventAccess($userId, $eventId, $tenantId)
     {
         // Mock implementation - in real app, check event ownership/permissions
         return true; // For demo purposes
     }
-    
+
     /**
-     * Log audit trail
+     * Log audit trail.
      */
     private function logAudit($action, $userId, $tenantId, $data = [])
     {
@@ -382,7 +382,7 @@ class CalendarController extends Controller
             'user_id' => $userId,
             'tenant_id' => $tenantId,
             'data' => $data,
-            'timestamp' => now()->toISOString()
+            'timestamp' => now()->toISOString(),
         ]);
     }
 }

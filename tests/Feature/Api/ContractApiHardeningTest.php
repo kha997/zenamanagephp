@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
@@ -13,13 +15,20 @@ use Tests\Traits\RouteNameTrait;
 
 class ContractApiHardeningTest extends TestCase
 {
-    use RefreshDatabase, AuthenticationTestTrait, RouteNameTrait;
+    use RefreshDatabase;
+    use AuthenticationTestTrait;
+    use RouteNameTrait;
 
     private Tenant $tenantA;
+
     private Tenant $tenantB;
+
     private User $userA;
+
     private User $userB;
+
     private Project $projectA;
+
     private Contract $contractA;
 
     /** @var list<string> */
@@ -60,7 +69,6 @@ class ContractApiHardeningTest extends TestCase
             'total_value' => 15000,
             'created_by' => $this->userA->id,
         ]);
-
     }
 
     public function test_contract_index_denied_without_contract_view_permission(): void

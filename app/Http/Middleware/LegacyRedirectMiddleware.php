@@ -1,11 +1,13 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpFoundation\Response;
 
 class LegacyRedirectMiddleware
 {
@@ -17,16 +19,16 @@ class LegacyRedirectMiddleware
     public function handle(Request $request, Closure $next): Response
     {
         $legacyRoute = $this->getLegacyRoute($request->path());
-        
+
         if ($legacyRoute && $this->shouldRedirect($legacyRoute)) {
             return $this->createRedirectResponse($request, $legacyRoute);
         }
-        
+
         return $next($request);
     }
 
     /**
-     * Get legacy route information
+     * Get legacy route information.
      */
     private function getLegacyRoute(string $path): ?array
     {
@@ -36,50 +38,50 @@ class LegacyRedirectMiddleware
                 'announce_date' => '2024-12-20',
                 'redirect_date' => '2024-12-27',
                 'remove_date' => '2025-01-10',
-                'reason' => 'Standardize app routes'
+                'reason' => 'Standardize app routes',
             ],
             '/projects' => [
                 'new_path' => '/app/projects',
                 'announce_date' => '2024-12-20',
                 'redirect_date' => '2024-12-27',
                 'remove_date' => '2025-01-10',
-                'reason' => 'Standardize app routes'
+                'reason' => 'Standardize app routes',
             ],
             '/tasks' => [
                 'new_path' => '/app/tasks',
                 'announce_date' => '2024-12-20',
                 'redirect_date' => '2024-12-27',
                 'remove_date' => '2025-01-10',
-                'reason' => 'Standardize app routes'
-            ]
+                'reason' => 'Standardize app routes',
+            ],
         ];
 
         return $legacyRoutes[$path] ?? null;
     }
 
     /**
-     * Check if route should be redirected
+     * Check if route should be redirected.
      */
     private function shouldRedirect(array $legacyRoute): bool
     {
         $currentDate = now()->format('Y-m-d');
-        
+
         // Redirect if we're in the redirect phase
         return $currentDate >= $legacyRoute['redirect_date'] && $currentDate < $legacyRoute['remove_date'];
     }
 
     /**
-     * Create redirect response
+     * Create redirect response.
      */
     private function createRedirectResponse(Request $request, array $legacyRoute): Response
     {
         $newUrl = $legacyRoute['new_path'];
-        
+
         // Preserve query parameters
         if ($request->getQueryString()) {
             $newUrl .= '?' . $request->getQueryString();
         }
-        
+
         // Log the redirect
         Log::info('Legacy route redirected', [
             'legacy_path' => $request->path(),
@@ -88,9 +90,9 @@ class LegacyRedirectMiddleware
             'ip' => $request->ip(),
             'referer' => $request->header('Referer'),
             'timestamp' => now()->toISOString(),
-            'redirect_type' => '301'
+            'redirect_type' => '301',
         ]);
-        
+
         // Create 301 permanent redirect
         return redirect($newUrl, 301)
             ->header('X-Legacy-Redirect', 'true')

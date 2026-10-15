@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -10,7 +12,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WorkTemplateTaskAssignment extends Model
 {
-    use HasUlids, HasFactory, TenantScope;
+    use HasUlids;
+    use HasFactory;
+    use TenantScope;
 
     public const ASSIGNMENT_TYPE_ASSIGNEE = 'assignee';
     public const ASSIGNMENT_TYPE_APPROVER = 'approver';
@@ -23,7 +27,9 @@ class WorkTemplateTaskAssignment extends Model
     ];
 
     protected $table = 'work_template_task_assignments';
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [

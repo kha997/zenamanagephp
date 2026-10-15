@@ -2,8 +2,8 @@
 
 namespace Tests\Feature\Feature;
 
-use App\Models\User;
 use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -12,20 +12,21 @@ class MiddlewareIntegrationTest extends TestCase
     use RefreshDatabase;
 
     protected $tenant;
+
     protected $user;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->tenant = Tenant::factory()->create([
             'slug' => 'test-tenant-' . uniqid(),
-            'name' => 'Test Tenant'
+            'name' => 'Test Tenant',
         ]);
-        
+
         $this->user = User::factory()->create([
             'tenant_id' => $this->tenant->id,
-            'email' => 'test@example-' . uniqid() . '.com'
+            'email' => 'test@example-' . uniqid() . '.com',
         ]);
     }
 
@@ -39,7 +40,7 @@ class MiddlewareIntegrationTest extends TestCase
     {
         $this->user->assignRole('pm');
         $this->actingAs($this->user);
-        
+
         $response = $this->get('/dashboard');
         $this->assertTrue(in_array($response->status(), [200, 301, 302, 404], true));
     }
@@ -48,18 +49,18 @@ class MiddlewareIntegrationTest extends TestCase
     {
         $otherTenant = Tenant::factory()->create([
             'slug' => 'other-tenant-' . uniqid(),
-            'name' => 'Other Tenant'
+            'name' => 'Other Tenant',
         ]);
-        
+
         $otherUser = User::factory()->create([
             'tenant_id' => $otherTenant->id,
-            'email' => 'other@example-' . uniqid() . '.com'
+            'email' => 'other@example-' . uniqid() . '.com',
         ]);
-        
+
         $otherUser->assignRole('pm');
-        
+
         $this->actingAs($otherUser);
-        
+
         // Should be blocked by tenant middleware
         $response = $this->get('/dashboard');
         $this->assertTrue(in_array($response->status(), [301, 302, 403], true));
@@ -69,7 +70,7 @@ class MiddlewareIntegrationTest extends TestCase
     {
         $this->user->assignRole('engineer');
         $this->actingAs($this->user);
-        
+
         // Should be blocked by role middleware
         $response = $this->get('/dashboard/admin');
         $this->assertTrue(in_array($response->status(), [301, 302, 403, 404], true));
@@ -80,7 +81,7 @@ class MiddlewareIntegrationTest extends TestCase
         // Test that middleware executes in correct order: auth -> tenant -> role
         $this->user->assignRole('admin');
         $this->actingAs($this->user);
-        
+
         $response = $this->get('/dashboard/admin');
         $this->assertTrue(in_array($response->status(), [200, 301, 302, 404], true));
     }
@@ -89,12 +90,12 @@ class MiddlewareIntegrationTest extends TestCase
     {
         $this->user->assignRole('pm');
         $this->actingAs($this->user);
-        
+
         // Test CSRF protection on POST routes
         $response = $this->post('/test-task-update', [
-            'name' => 'Test Task'
+            'name' => 'Test Task',
         ]);
-        
+
         // Should either succeed (if CSRF is disabled for testing) or fail with CSRF error
         $this->assertTrue(in_array($response->status(), [200, 301, 302, 404, 419], true));
     }

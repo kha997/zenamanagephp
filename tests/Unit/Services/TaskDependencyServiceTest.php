@@ -2,34 +2,36 @@
 
 namespace Tests\Unit\Services;
 
-use Tests\TestCase;
-use App\Models\Task;
 use App\Models\Project;
-use App\Models\User;
+use App\Models\Task;
 use App\Models\Tenant;
-use App\Models\TaskDependency;
+use App\Models\User;
 use App\Services\TaskDependencyService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class TaskDependencyServiceTest extends TestCase
 {
     use RefreshDatabase;
 
     protected $tenant;
+
     protected $user;
+
     protected $project;
+
     protected $service;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->tenant = Tenant::factory()->create();
         $this->user = User::factory()->create([
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
         $this->project = Project::factory()->create([
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
         $this->service = new TaskDependencyService();
     }
@@ -39,12 +41,12 @@ class TaskDependencyServiceTest extends TestCase
     {
         $task1 = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $task2 = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $result = $this->service->addDependency($task1->id, $task2->id, $this->tenant->id);
@@ -53,7 +55,7 @@ class TaskDependencyServiceTest extends TestCase
         $this->assertDatabaseHas('task_dependencies', [
             'task_id' => $task1->id,
             'dependency_id' => $task2->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
     }
 
@@ -62,7 +64,7 @@ class TaskDependencyServiceTest extends TestCase
     {
         $task = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $result = $this->service->addDependency($task->id, $task->id, $this->tenant->id);
@@ -76,12 +78,12 @@ class TaskDependencyServiceTest extends TestCase
     {
         $task1 = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $task2 = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Add first dependency: task1 depends on task2
@@ -99,17 +101,17 @@ class TaskDependencyServiceTest extends TestCase
     {
         $task1 = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $task2 = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $task3 = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Create chain: task1 -> task2 -> task3
@@ -128,17 +130,17 @@ class TaskDependencyServiceTest extends TestCase
     {
         $task1 = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $task2 = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $task3 = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Create valid chain: task1 -> task2 -> task3
@@ -154,12 +156,12 @@ class TaskDependencyServiceTest extends TestCase
     {
         $task1 = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $task2 = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Add dependency first
@@ -172,7 +174,7 @@ class TaskDependencyServiceTest extends TestCase
         $this->assertDatabaseMissing('task_dependencies', [
             'task_id' => $task1->id,
             'dependency_id' => $task2->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
     }
 
@@ -181,17 +183,17 @@ class TaskDependencyServiceTest extends TestCase
     {
         $task1 = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $task2 = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $task3 = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Add dependencies
@@ -210,17 +212,17 @@ class TaskDependencyServiceTest extends TestCase
     {
         $task1 = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $task2 = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $task3 = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Add dependencies
@@ -240,13 +242,13 @@ class TaskDependencyServiceTest extends TestCase
         $task1 = Task::factory()->create([
             'project_id' => $this->project->id,
             'status' => 'pending',
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $task2 = Task::factory()->create([
             'project_id' => $this->project->id,
             'status' => 'pending',
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Add dependency: task1 depends on task2
@@ -273,19 +275,19 @@ class TaskDependencyServiceTest extends TestCase
         $task1 = Task::factory()->create([
             'project_id' => $this->project->id,
             'status' => 'pending',
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $task2 = Task::factory()->create([
             'project_id' => $this->project->id,
             'status' => 'pending',
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $task3 = Task::factory()->create([
             'project_id' => $this->project->id,
             'status' => 'pending',
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Create dependencies: task2 and task3 depend on task1
@@ -305,19 +307,19 @@ class TaskDependencyServiceTest extends TestCase
         $task1 = Task::factory()->create([
             'project_id' => $this->project->id,
             'estimated_hours' => 10,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $task2 = Task::factory()->create([
             'project_id' => $this->project->id,
             'estimated_hours' => 20,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $task3 = Task::factory()->create([
             'project_id' => $this->project->id,
             'estimated_hours' => 15,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Create dependencies: task1 -> task2 -> task3
@@ -338,7 +340,7 @@ class TaskDependencyServiceTest extends TestCase
     {
         $task = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $result = $this->service->addDependency($task->id, 'nonexistent-id', $this->tenant->id);
@@ -351,15 +353,15 @@ class TaskDependencyServiceTest extends TestCase
     public function it_handles_cross_tenant_access()
     {
         $otherTenant = Tenant::factory()->create();
-        
+
         $task1 = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $task2 = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $otherTenant->id
+            'tenant_id' => $otherTenant->id,
         ]);
 
         $result = $this->service->addDependency($task1->id, $task2->id, $this->tenant->id);

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Zena;
 
@@ -79,7 +81,7 @@ class ZenaSeedParityInvariantTest extends TestCase
         foreach (ZenaAdminRolePermissionSeeder::ADMIN_ROLE_NAMES as $name) {
             $role = AppRole::firstOrNew(['name' => $name]);
 
-            if (! $role->exists && empty($role->id)) {
+            if (!$role->exists && empty($role->id)) {
                 $role->id = (string) Str::ulid();
             }
 

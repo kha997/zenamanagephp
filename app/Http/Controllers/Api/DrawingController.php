@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
@@ -17,7 +19,7 @@ class DrawingController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
@@ -28,7 +30,7 @@ class DrawingController extends Controller
                 'component:id,name,type',
                 'uploadedBy:id,name,email',
                 'approvedBy:id,name,email',
-                'tenant:id,name'
+                'tenant:id,name',
             ])->where('type', 'drawing');
 
             // Apply tenant filter
@@ -65,15 +67,15 @@ class DrawingController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $drawings,
-                'message' => 'Drawings retrieved successfully'
+                'message' => 'Drawings retrieved successfully',
             ]);
-
         } catch (\Exception $e) {
             Log::error('Drawing index error: ' . $e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve drawings',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -86,7 +88,6 @@ class DrawingController extends Controller
      */
     public function store(Request $request)
     {
-        
     }
 
     /**
@@ -97,7 +98,6 @@ class DrawingController extends Controller
      */
     public function show($id)
     {
-        
     }
 
     /**
@@ -109,7 +109,6 @@ class DrawingController extends Controller
      */
     public function update(Request $request, $id)
     {
-        
     }
 
     /**
@@ -120,6 +119,5 @@ class DrawingController extends Controller
      */
     public function destroy($id)
     {
-        
     }
 }

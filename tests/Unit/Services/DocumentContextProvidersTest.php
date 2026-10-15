@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
@@ -10,9 +12,8 @@ use App\Models\PaymentCertificate;
 use App\Models\PaymentCertificateLine;
 use App\Models\Project;
 use App\Models\Tenant;
-use App\Models\User;
-use App\Services\DocumentContext\ContractContextProvider;
 use App\Services\DocumentContext\CertificateContextProvider;
+use App\Services\DocumentContext\ContractContextProvider;
 use App\Services\DocumentContext\DocumentContextRegistry;
 use App\Services\DocumentContext\ProjectContextProvider;
 use App\Services\DocumentContext\QuoteContextProvider;

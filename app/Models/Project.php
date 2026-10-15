@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -15,13 +17,10 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Src\Foundation\EventBus;
 use Src\Foundation\Helpers\AuthHelper;
-use App\Models\ProjectMilestone;
-use App\Models\UserRoleProject;
-use App\Models\User;
 
 /**
- * Model Project - Quản lý dự án
- * 
+ * Model Project - Quản lý dự án.
+ *
  * @property string $id ULID của project (primary key)
  * @property string $tenant_id ID công ty (ULID)
  * @property string $name Tên dự án
@@ -36,14 +35,18 @@ use App\Models\User;
  */
 class Project extends Model
 {
-    use HasUlids, HasFactory, SoftDeletes, TenantScope;
+    use HasUlids;
+    use HasFactory;
+    use SoftDeletes;
+    use TenantScope;
 
     protected $table = 'projects';
-    
+
     // Cấu hình ULID primary key
     protected $keyType = 'string';
+
     public $incrementing = false;
-    
+
     protected $fillable = [
         'tenant_id',
         'code',
@@ -61,7 +64,7 @@ class Project extends Model
         'budget_total',
         'budget_actual',
         'budget',
-        'spent_amount'
+        'spent_amount',
     ];
 
     protected $casts = [
@@ -72,13 +75,13 @@ class Project extends Model
         'budget_planned' => 'float',
         'budget_actual' => 'float',
         'tags' => 'array',
-        'settings' => 'array'
+        'settings' => 'array',
     ];
 
     protected $attributes = [
         'status' => 'planning',
         'progress' => 0.0,
-        'budget_total' => 0.0
+        'budget_total' => 0.0,
     ];
 
     protected static function booted(): void
@@ -124,7 +127,7 @@ class Project extends Model
     }
 
     /**
-     * Các trạng thái hợp lệ
+     * Các trạng thái hợp lệ.
      */
     public const STATUS_PLANNING = 'planning';
     public const STATUS_ACTIVE = 'active';
@@ -185,7 +188,7 @@ class Project extends Model
     }
 
     /**
-     * Relationship: Project thuộc về tenant
+     * Relationship: Project thuộc về tenant.
      */
     public function tenant(): BelongsTo
     {
@@ -218,7 +221,7 @@ class Project extends Model
     }
 
     /**
-     * Relationship: Project có nhiều components
+     * Relationship: Project có nhiều components.
      */
     public function components(): HasMany
     {
@@ -226,7 +229,7 @@ class Project extends Model
     }
 
     /**
-     * Relationship: Project có nhiều root components
+     * Relationship: Project có nhiều root components.
      */
     public function rootComponents(): HasMany
     {
@@ -235,7 +238,7 @@ class Project extends Model
     }
 
     /**
-     * Relationship: Project có nhiều tasks
+     * Relationship: Project có nhiều tasks.
      */
     public function tasks(): HasMany
     {
@@ -248,7 +251,7 @@ class Project extends Model
     }
 
     /**
-     * Relationship: Project có nhiều design items
+     * Relationship: Project có nhiều design items.
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\DesignItem, $this>
      */
@@ -258,7 +261,7 @@ class Project extends Model
     }
 
     /**
-     * Relationship: Project có nhiều user roles
+     * Relationship: Project có nhiều user roles.
      */
     public function userRoles(): HasMany
     {
@@ -266,7 +269,7 @@ class Project extends Model
     }
 
     /**
-     * Relationship: Project có nhiều bản ghi project-user cụ thể
+     * Relationship: Project có nhiều bản ghi project-user cụ thể.
      */
     public function projectUsers(): HasMany
     {
@@ -274,7 +277,7 @@ class Project extends Model
     }
 
     /**
-     * Relationship: Project có nhiều users thông qua roles
+     * Relationship: Project có nhiều users thông qua roles.
      */
     public function users(): BelongsToMany
     {
@@ -293,7 +296,7 @@ class Project extends Model
     }
 
     /**
-     * Relationship: Project có nhiều milestones
+     * Relationship: Project có nhiều milestones.
      */
     public function milestones(): HasMany
     {
@@ -301,7 +304,7 @@ class Project extends Model
     }
 
     /**
-     * Relationship: Project có nhiều baselines
+     * Relationship: Project có nhiều baselines.
      */
     public function baselines(): HasMany
     {
@@ -319,7 +322,7 @@ class Project extends Model
     }
 
     /**
-     * Relationship: Project có nhiều change requests
+     * Relationship: Project có nhiều change requests.
      */
     public function changeRequests(): HasMany
     {
@@ -327,7 +330,7 @@ class Project extends Model
     }
 
     /**
-     * Relationship: Project có nhiều documents
+     * Relationship: Project có nhiều documents.
      */
     public function documents(): HasMany
     {
@@ -335,7 +338,7 @@ class Project extends Model
     }
 
     /**
-     * Relationship: Project có nhiều teams
+     * Relationship: Project có nhiều teams.
      */
     public function teams(): BelongsToMany
     {
@@ -348,7 +351,7 @@ class Project extends Model
     }
 
     /**
-     * Relationship: Project có nhiều interaction logs
+     * Relationship: Project có nhiều interaction logs.
      */
     public function interactionLogs(): HasMany
     {
@@ -369,21 +372,23 @@ class Project extends Model
     }
 
     /**
-     * Tính toán lại tiến độ dự án từ components
+     * Tính toán lại tiến độ dự án từ components.
      */
     public function recalculateProgress(): void
     {
         $rootComponents = $this->rootComponents;
-        
+
         if ($rootComponents->isEmpty()) {
             $this->update(['progress' => 0.0]);
+
             return;
         }
 
         $totalWeight = $rootComponents->sum('planned_cost');
-        
+
         if ($totalWeight == 0) {
             $this->update(['progress' => 0.0]);
+
             return;
         }
 
@@ -394,7 +399,7 @@ class Project extends Model
         $newProgress = $weightedProgress / $totalWeight;
         $oldProgress = $this->progress;
         $this->update(['progress' => $newProgress]);
-        
+
         // Dispatch event với payload chuẩn
         EventBus::dispatch('Project.Project.ProgressUpdated', [
             'entityId' => $this->id,
@@ -403,14 +408,14 @@ class Project extends Model
             'changedFields' => [
                 'progress' => [
                     'old' => $oldProgress,
-                    'new' => $newProgress
-                ]
-            ]
+                    'new' => $newProgress,
+                ],
+            ],
         ]);
     }
 
     /**
-     * Tính toán tiến độ dựa trên milestones
+     * Tính toán tiến độ dựa trên milestones.
      */
     public function calculateProgress(): int
     {
@@ -426,16 +431,16 @@ class Project extends Model
 
         return (int) round(($completedMilestones / $totalMilestones) * 100);
     }
-    
+
     /**
-     * Tính toán lại chi phí thực tế từ components
+     * Tính toán lại chi phí thực tế từ components.
      */
     public function recalculateActualCost(): void
     {
         $totalCost = $this->rootComponents->sum('actual_cost');
         $oldCost = $this->actual_cost;
         $this->update(['actual_cost' => $totalCost]);
-        
+
         // Dispatch event với payload chuẩn
         EventBus::dispatch('Project.Project.CostUpdated', [
             'entityId' => $this->id,
@@ -444,14 +449,14 @@ class Project extends Model
             'changedFields' => [
                 'actual_cost' => [
                     'old' => $oldCost,
-                    'new' => $totalCost
-                ]
-            ]
+                    'new' => $totalCost,
+                ],
+            ],
         ]);
     }
 
     /**
-     * Scope: Lọc theo tenant
+     * Scope: Lọc theo tenant.
      */
     public function scopeForTenant($query, string $tenantId)
     {
@@ -459,7 +464,7 @@ class Project extends Model
     }
 
     /**
-     * Scope: Lọc theo status
+     * Scope: Lọc theo status.
      */
     public function scopeByStatus($query, string $status)
     {
@@ -467,7 +472,7 @@ class Project extends Model
     }
 
     /**
-     * Scope: Chỉ lấy projects active
+     * Scope: Chỉ lấy projects active.
      */
     public function scopeActive($query)
     {
@@ -475,7 +480,7 @@ class Project extends Model
     }
 
     /**
-     * Tạo factory instance mới cho model
+     * Tạo factory instance mới cho model.
      */
     protected static function newFactory()
     {
@@ -483,8 +488,8 @@ class Project extends Model
     }
 
     /**
-     * Resolve actor ID từ Auth facade với xử lý ngoại lệ
-     * 
+     * Resolve actor ID từ Auth facade với xử lý ngoại lệ.
+     *
      * @return string|int
      * @throws AuthenticationException
      */
@@ -494,14 +499,15 @@ class Project extends Model
             if (AuthHelper::check()) {
                 return AuthHelper::id();
             }
-            
+
             // Trả về 'system' nếu không có người dùng xác thực
             return 'system';
         } catch (\Throwable $e) {
             Log::warning('Failed to resolve actor ID from Auth facade', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
+
             return 'system';
         }
     }

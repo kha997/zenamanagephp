@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
@@ -28,10 +30,15 @@ class ChangeRequestStakeholderNotificationTest extends TestCase
     use AuthenticationTestTrait;
 
     protected Tenant $tenant;
+
     protected User $approver;
+
     protected User $requester;
+
     protected User $pm;
+
     protected Project $project;
+
     protected array $approverHeaders;
 
     protected function setUp(): void

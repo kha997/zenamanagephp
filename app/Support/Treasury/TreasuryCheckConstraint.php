@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Support\Treasury;
 
@@ -83,18 +85,18 @@ final class TreasuryCheckConstraint
         foreach ($checks as $name => $expression) {
             $checkClauses[] = sprintf('CONSTRAINT "%s" CHECK (%s)', $name, $expression);
         }
-        $checkSql = $checkClauses === [] ? '' : ', '.implode(', ', $checkClauses);
+        $checkSql = $checkClauses === [] ? '' : ', ' . implode(', ', $checkClauses);
 
         foreach ($blueprint->toSql() as $statement) {
             if (str_starts_with($statement, 'create table') && $checkSql !== '') {
                 if (!str_ends_with($statement, ')')) {
                     throw new \LogicException(
-                        "Unexpected SQLite create-table statement shape for `{$table}` -- ".
-                        'refusing to splice CHECK clauses into an unrecognized statement: '.$statement
+                        "Unexpected SQLite create-table statement shape for `{$table}` -- " .
+                        'refusing to splice CHECK clauses into an unrecognized statement: ' . $statement
                     );
                 }
 
-                $statement = substr($statement, 0, -1).$checkSql.')';
+                $statement = substr($statement, 0, -1) . $checkSql . ')';
             }
 
             $connection->statement($statement);

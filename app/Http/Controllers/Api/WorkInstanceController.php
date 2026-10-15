@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
@@ -15,10 +17,10 @@ use App\Services\WorkInstanceExportBundleService;
 use App\Services\ZenaAuditLogger;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -31,8 +33,7 @@ class WorkInstanceController extends BaseApiController
         private ZenaAuditLogger $auditLogger,
         private DeliverablePdfExportService $deliverablePdfExportService,
         private WorkInstanceExportBundleService $workInstanceExportBundleService
-    )
-    {
+    ) {
     }
 
     public function index(Request $request): JsonResponse
@@ -650,5 +651,4 @@ class WorkInstanceController extends BaseApiController
             'created_at' => optional($attachment->created_at)?->toIso8601String(),
         ];
     }
-
 }

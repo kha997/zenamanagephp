@@ -12,10 +12,14 @@ use Illuminate\Queue\SerializesModels;
 
 class ChangeRequested implements ShouldBroadcast
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+    use Dispatchable;
+    use InteractsWithSockets;
+    use SerializesModels;
 
     public ChangeRequest $changeRequest;
+
     public User $user;
+
     public array $metadata;
 
     /**

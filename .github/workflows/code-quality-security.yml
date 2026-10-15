@@ -73,7 +73,7 @@ jobs:
     - name: Run PHP CS Fixer
       continue-on-error: true
       run: |
-        composer require --dev friendsofphp/php-cs-fixer
+        # GAP-080: use the php-cs-fixer version locked in composer.lock.
         bash scripts/ci/run-json-report-command.sh cs-fixer-report.json php-cs-fixer ./vendor/bin/php-cs-fixer fix --dry-run --diff --format=json
 
     - name: Run PHP Mess Detector
@@ -149,6 +149,30 @@ jobs:
           }
 
           await syncReport('code-quality', body ? `## Code Quality Report\n\n${body}` : '');
+
+    - name: Fail on code style issues in files changed by this PR
+      if: always() && github.event_name == 'pull_request'
+      uses: actions/github-script@v8
+      with:
+        script: |
+          // GAP-080: the codebase is formatted; a PR must not add style issues to the files it touches.
+          const fs = require('fs');
+          if (!fs.existsSync('cs-fixer-report.json')) {
+            core.setFailed('cs-fixer-report.json is missing: php-cs-fixer did not run.');
+            return;
+          }
+          const csFixer = JSON.parse(fs.readFileSync('cs-fixer-report.json', 'utf8'));
+          if (csFixer.status === 'failed') {
+            core.setFailed(`php-cs-fixer did not complete (exit code ${csFixer.exit_code}).`);
+            return;
+          }
+          const changed = new Set((await github.paginate(github.rest.pulls.listFiles, {
+            owner: context.repo.owner, repo: context.repo.repo, pull_number: context.issue.number, per_page: 100,
+          })).map(f => f.filename));
+          const styleFiles = (csFixer.files || []).map(f => f.name).filter(name => changed.has(name));
+          if (styleFiles.length > 0) {
+            core.setFailed(`Code style issues in ${styleFiles.length} file(s) changed by this PR (run ./vendor/bin/php-cs-fixer fix <file>):\n` + styleFiles.join('\n'));
+          }
   security-scan:
     name: Security Vulnerability Scan
     runs-on: ubuntu-latest

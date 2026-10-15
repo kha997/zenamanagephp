@@ -1,15 +1,16 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * ChangeRequestComment Model - Comments on change requests
- * 
+ * ChangeRequestComment Model - Comments on change requests.
+ *
  * @property string $id ULID primary key
  * @property string $change_request_id ID change request (ULID)
  * @property string $user_id ID người comment (ULID)
@@ -21,7 +22,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class ChangeRequestComment extends Model
 {
-
     protected $fillable = [
         'id',
         'change_request_id',
@@ -40,7 +40,7 @@ class ChangeRequestComment extends Model
     ];
 
     /**
-     * Relationship: Comment belongs to change request
+     * Relationship: Comment belongs to change request.
      */
     public function changeRequest(): BelongsTo
     {
@@ -48,7 +48,7 @@ class ChangeRequestComment extends Model
     }
 
     /**
-     * Relationship: Comment belongs to user
+     * Relationship: Comment belongs to user.
      */
     public function user(): BelongsTo
     {
@@ -56,7 +56,7 @@ class ChangeRequestComment extends Model
     }
 
     /**
-     * Relationship: Comment belongs to parent comment
+     * Relationship: Comment belongs to parent comment.
      */
     public function parent(): BelongsTo
     {
@@ -64,7 +64,7 @@ class ChangeRequestComment extends Model
     }
 
     /**
-     * Relationship: Comment has many replies
+     * Relationship: Comment has many replies.
      */
     public function replies(): HasMany
     {

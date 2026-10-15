@@ -2,13 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProjectTemplate extends Model
 {
-    
     protected $fillable = [
         'name',
         'category',
@@ -24,7 +22,7 @@ class ProjectTemplate extends Model
         'estimated_duration',
         'estimated_cost',
         'team_size_min',
-        'team_size_max'
+        'team_size_max',
     ];
 
     protected $casts = [
@@ -36,11 +34,11 @@ class ProjectTemplate extends Model
         'estimated_duration' => 'integer',
         'estimated_cost' => 'decimal:2',
         'team_size_min' => 'integer',
-        'team_size_max' => 'integer'
+        'team_size_max' => 'integer',
     ];
 
     /**
-     * Get templates by category
+     * Get templates by category.
      */
     public function scopeByCategory($query, $category)
     {
@@ -48,7 +46,7 @@ class ProjectTemplate extends Model
     }
 
     /**
-     * Get active templates
+     * Get active templates.
      */
     public function scopeActive($query)
     {
@@ -56,7 +54,7 @@ class ProjectTemplate extends Model
     }
 
     /**
-     * Get default template
+     * Get default template.
      */
     public function scopeDefault($query)
     {
@@ -64,7 +62,7 @@ class ProjectTemplate extends Model
     }
 
     /**
-     * Get template tasks
+     * Get template tasks.
      */
     public function tasks(): HasMany
     {
@@ -72,7 +70,7 @@ class ProjectTemplate extends Model
     }
 
     /**
-     * Get tasks by phase
+     * Get tasks by phase.
      */
     public function getTasksByPhase($phaseKey)
     {
@@ -80,7 +78,7 @@ class ProjectTemplate extends Model
     }
 
     /**
-     * Get milestone tasks
+     * Get milestone tasks.
      */
     public function getMilestoneTasks()
     {
@@ -88,7 +86,7 @@ class ProjectTemplate extends Model
     }
 
     /**
-     * Calculate total estimated duration
+     * Calculate total estimated duration.
      */
     public function getTotalDuration()
     {
@@ -96,7 +94,7 @@ class ProjectTemplate extends Model
     }
 
     /**
-     * Calculate total estimated cost
+     * Calculate total estimated cost.
      */
     public function getTotalCost()
     {
@@ -104,7 +102,7 @@ class ProjectTemplate extends Model
     }
 
     /**
-     * Get critical path
+     * Get critical path.
      */
     public function getCriticalPath()
     {
@@ -112,12 +110,12 @@ class ProjectTemplate extends Model
     }
 
     /**
-     * Get template statistics
+     * Get template statistics.
      */
     public function getStatistics()
     {
         $tasks = $this->tasks;
-        
+
         return [
             'total_tasks' => $tasks->count(),
             'total_duration' => $tasks->sum('duration_days'),
@@ -125,12 +123,12 @@ class ProjectTemplate extends Model
             'milestone_count' => $tasks->where('is_milestone', true)->count(),
             'high_priority_tasks' => $tasks->whereIn('priority', ['high', 'critical'])->count(),
             'phases_count' => $tasks->pluck('phase_key')->unique()->count(),
-            'critical_path_duration' => $this->getCriticalPath()->sum('duration_days')
+            'critical_path_duration' => $this->getCriticalPath()->sum('duration_days'),
         ];
     }
 
     /**
-     * Apply template to project with advanced options
+     * Apply template to project with advanced options.
      */
     public function applyToProject($project, $options = [])
     {
@@ -139,15 +137,15 @@ class ProjectTemplate extends Model
         $includeDependencies = $options['include_dependencies'] ?? true;
         $includeDeliverables = $options['include_deliverables'] ?? true;
 
-        $phases = $selectedPhases ? 
-            array_intersect_key($this->phases, array_flip($selectedPhases)) : 
+        $phases = $selectedPhases ?
+            array_intersect_key($this->phases, array_flip($selectedPhases)) :
             $this->phases;
 
         $result = [
             'phases' => $phases,
             'settings' => $this->default_settings,
             'applied_template' => $this->name,
-            'template_version' => $this->version ?? '1.0'
+            'template_version' => $this->version ?? '1.0',
         ];
 
         if ($includeTasks) {
@@ -155,11 +153,10 @@ class ProjectTemplate extends Model
             if ($selectedPhases) {
                 $tasks = $tasks->whereIn('phase_key', $selectedPhases);
             }
-            
-            
-$result['tasks'] = $tasks->map(function ($task) use ($includeDependencies, $includeDeliverables) {
+
+            $result['tasks'] = $tasks->map(function ($task) use ($includeDependencies, $includeDeliverables) {
                 $taskData = $task->toArray();
-if ($includeDependencies && $task->dependencies) {
+                if ($includeDependencies && $task->dependencies) {
                     $taskData['dependencies'] = $task->dependencies;
                 }
 
@@ -178,7 +175,7 @@ if ($includeDependencies && $task->dependencies) {
     }
 
     /**
-     * Duplicate template
+     * Duplicate template.
      */
     public function duplicate($newName = null)
     {
@@ -199,12 +196,12 @@ if ($includeDependencies && $task->dependencies) {
     }
 
     /**
-     * Validate template completeness
+     * Validate template completeness.
      */
     public function validateCompleteness()
     {
         $errors = [];
-        
+
         $this->validatePhases($errors);
         $this->validateTasks($errors);
         $this->validateOrphanedTasks($errors);
@@ -214,7 +211,7 @@ if ($includeDependencies && $task->dependencies) {
     }
 
     /**
-     * Validate phases
+     * Validate phases.
      */
     private function validatePhases(array &$errors): void
     {
@@ -224,7 +221,7 @@ if ($includeDependencies && $task->dependencies) {
     }
 
     /**
-     * Validate tasks
+     * Validate tasks.
      */
     private function validateTasks(array &$errors): void
     {
@@ -234,7 +231,7 @@ if ($includeDependencies && $task->dependencies) {
     }
 
     /**
-     * Validate orphaned tasks
+     * Validate orphaned tasks.
      */
     private function validateOrphanedTasks(array &$errors): void
     {
@@ -245,7 +242,7 @@ if ($includeDependencies && $task->dependencies) {
     }
 
     /**
-     * Validate circular dependencies
+     * Validate circular dependencies.
      */
     private function validateCircularDependencies(array &$errors): void
     {
@@ -256,7 +253,7 @@ if ($includeDependencies && $task->dependencies) {
     }
 
     /**
-     * Check for circular dependencies
+     * Check for circular dependencies.
      */
     private function checkCircularDependencies()
     {
@@ -276,7 +273,7 @@ if ($includeDependencies && $task->dependencies) {
     }
 
     /**
-     * Check if task has circular dependency
+     * Check if task has circular dependency.
      */
     private function hasCircularDependency($task, &$visited)
     {

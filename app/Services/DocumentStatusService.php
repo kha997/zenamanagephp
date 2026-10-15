@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -166,7 +168,7 @@ class DocumentStatusService
                     $legacy->whereNull('lifecycle_status')
                         ->whereNull('approval_status')
                         ->whereIn('status', $legacyStatuses);
-            });
+                });
         });
     }
 }

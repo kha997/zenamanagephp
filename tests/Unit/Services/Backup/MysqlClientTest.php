@@ -33,7 +33,7 @@ class MysqlClientTest extends TestCase
             $file = $this->optionFileFrom($process->command);
             $seen = [
                 'command' => $process->command,
-                'mode' => fileperms($file) & 0777,
+                'mode' => fileperms($file) & 0o777,
                 'contents' => (string) file_get_contents($file),
                 'file' => $file,
             ];
@@ -53,7 +53,7 @@ class MysqlClientTest extends TestCase
         $this->assertContains('--port=3307', $seen['command']);
         $this->assertContains('--result-file=/tmp/out.sql', $seen['command']);
         $this->assertSame(['zena_prod', 'users'], array_slice($seen['command'], -2));
-        $this->assertSame(0600, $seen['mode']);
+        $this->assertSame(0o600, $seen['mode']);
         $this->assertStringContainsString('user="zena"', $seen['contents']);
 
         // Exact-line assertion: the password must be escaped the same way

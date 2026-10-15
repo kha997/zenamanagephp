@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     /**
      * Run the migrations.
      *
@@ -32,7 +31,7 @@ return new class extends Migration
 
         $isSqlite = Schema::getConnection()->getDriverName() === 'sqlite';
 
-        if (! $isSqlite) {
+        if (!$isSqlite) {
             Schema::table('projects', function (Blueprint $table) {
                 try {
                     $table->dropForeign(['created_by']);

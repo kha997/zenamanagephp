@@ -8,8 +8,11 @@ use Illuminate\Support\Facades\DB;
 class ExistsRule implements Rule
 {
     protected $table;
+
     protected $column;
+
     protected $whereColumn;
+
     protected $whereValue;
 
     /**

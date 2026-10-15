@@ -1,16 +1,18 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories\Src\RBAC\Models;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-use Src\RBAC\Models\UserRoleProject;
-use Src\RBAC\Models\Role;
-use Src\CoreProject\Models\Project;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\Factory;
+use Src\CoreProject\Models\Project;
+use Src\RBAC\Models\Role;
+use Src\RBAC\Models\UserRoleProject;
 
 /**
- * Factory cho UserRoleProject model
- * 
+ * Factory cho UserRoleProject model.
+ *
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Src\RBAC\Models\UserRoleProject>
  */
 class UserRoleProjectFactory extends Factory
@@ -31,7 +33,7 @@ class UserRoleProjectFactory extends Factory
     }
 
     /**
-     * State: Project manager role
+     * State: Project manager role.
      */
     public function projectManager(): static
     {
@@ -42,7 +44,7 @@ class UserRoleProjectFactory extends Factory
     }
 
     /**
-     * State: Team member role
+     * State: Team member role.
      */
     public function teamMember(): static
     {

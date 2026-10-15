@@ -4,28 +4,28 @@ namespace App\Http\Controllers;
 
 use App\Services\MetricsCollectionService;
 use App\Services\StructuredLoggingService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class MonitoringController extends Controller
 {
     /**
-     * Get application metrics
+     * Get application metrics.
      */
     public function metrics(): JsonResponse
     {
         try {
             $metrics = MetricsCollectionService::collectAllMetrics();
-            
+
             // Store metrics for historical tracking
             MetricsCollectionService::storeMetrics($metrics);
-            
+
             // Log metrics collection
             StructuredLoggingService::logEvent('metrics_collected', [
                 'metrics_count' => count($metrics),
                 'timestamp' => now()->toISOString(),
             ]);
-            
+
             return response()->json([
                 'status' => 'success',
                 'data' => $metrics,
@@ -33,7 +33,7 @@ class MonitoringController extends Controller
             ]);
         } catch (\Exception $e) {
             StructuredLoggingService::logError('Failed to collect metrics', $e);
-            
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to collect metrics',
@@ -43,7 +43,7 @@ class MonitoringController extends Controller
     }
 
     /**
-     * Get health status
+     * Get health status.
      */
     public function health(): JsonResponse
     {
@@ -60,20 +60,20 @@ class MonitoringController extends Controller
                     'storage' => $this->checkStorage(),
                 ],
             ];
-            
+
             // Determine overall health status
             $allHealthy = collect($health['checks'])->every(function ($check) {
                 return $check['status'] === 'healthy';
             });
-            
+
             if (!$allHealthy) {
                 $health['status'] = 'degraded';
             }
-            
+
             return response()->json($health);
         } catch (\Exception $e) {
             StructuredLoggingService::logError('Health check failed', $e);
-            
+
             return response()->json([
                 'status' => 'unhealthy',
                 'timestamp' => now()->toISOString(),
@@ -83,7 +83,7 @@ class MonitoringController extends Controller
     }
 
     /**
-     * Get performance metrics
+     * Get performance metrics.
      */
     public function performance(): JsonResponse
     {
@@ -110,14 +110,14 @@ class MonitoringController extends Controller
                     'load_average' => sys_getloadavg(),
                 ],
             ];
-            
+
             return response()->json([
                 'status' => 'success',
                 'data' => $performance,
             ]);
         } catch (\Exception $e) {
             StructuredLoggingService::logError('Performance metrics failed', $e);
-            
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to collect performance metrics',
@@ -127,16 +127,16 @@ class MonitoringController extends Controller
     }
 
     /**
-     * Get historical metrics
+     * Get historical metrics.
      */
     public function historical(Request $request): JsonResponse
     {
         try {
             $hours = $request->get('hours', 24);
             $hours = min($hours, 168); // Max 1 week
-            
+
             $metrics = MetricsCollectionService::getStoredMetrics($hours);
-            
+
             return response()->json([
                 'status' => 'success',
                 'data' => $metrics,
@@ -145,7 +145,7 @@ class MonitoringController extends Controller
             ]);
         } catch (\Exception $e) {
             StructuredLoggingService::logError('Historical metrics failed', $e);
-            
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to get historical metrics',
@@ -155,18 +155,18 @@ class MonitoringController extends Controller
     }
 
     /**
-     * Get logs
+     * Get logs.
      */
     public function logs(Request $request): JsonResponse
     {
         try {
             $level = $request->get('level', 'info');
             $limit = min($request->get('limit', 100), 1000);
-            
+
             // This is a simplified implementation
             // In production, you'd want to use a proper log aggregation service
             $logs = $this->getRecentLogs($level, $limit);
-            
+
             return response()->json([
                 'status' => 'success',
                 'data' => $logs,
@@ -175,7 +175,7 @@ class MonitoringController extends Controller
             ]);
         } catch (\Exception $e) {
             StructuredLoggingService::logError('Log retrieval failed', $e);
-            
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to get logs',
@@ -185,12 +185,13 @@ class MonitoringController extends Controller
     }
 
     /**
-     * Check database health
+     * Check database health.
      */
     protected function checkDatabase(): array
     {
         try {
             \DB::connection()->getPdo();
+
             return [
                 'status' => 'healthy',
                 'message' => 'Database connection successful',
@@ -205,7 +206,7 @@ class MonitoringController extends Controller
     }
 
     /**
-     * Check cache health
+     * Check cache health.
      */
     protected function checkCache(): array
     {
@@ -214,7 +215,7 @@ class MonitoringController extends Controller
             \Cache::put($testKey, 'test', 60);
             $value = \Cache::get($testKey);
             \Cache::forget($testKey);
-            
+
             if ($value === 'test') {
                 return [
                     'status' => 'healthy',
@@ -236,14 +237,14 @@ class MonitoringController extends Controller
     }
 
     /**
-     * Check queue health
+     * Check queue health.
      */
     protected function checkQueue(): array
     {
         try {
             $queue = app('queue');
             $connection = $queue->connection();
-            
+
             return [
                 'status' => 'healthy',
                 'message' => 'Queue connection successful',
@@ -258,18 +259,18 @@ class MonitoringController extends Controller
     }
 
     /**
-     * Check storage health
+     * Check storage health.
      */
     protected function checkStorage(): array
     {
         try {
             $testFile = 'health_check_' . time() . '.txt';
             $testContent = 'test';
-            
+
             \Storage::put($testFile, $testContent);
             $retrieved = \Storage::get($testFile);
             \Storage::delete($testFile);
-            
+
             if ($retrieved === $testContent) {
                 return [
                     'status' => 'healthy',
@@ -291,19 +292,21 @@ class MonitoringController extends Controller
     }
 
     /**
-     * Get CPU usage percentage
+     * Get CPU usage percentage.
      */
     protected function getCpuUsage(): float
     {
         if (function_exists('sys_getloadavg')) {
             $load = sys_getloadavg();
+
             return round($load[0] * 100, 2);
         }
+
         return 0.0;
     }
 
     /**
-     * Get memory usage percentage
+     * Get memory usage percentage.
      */
     protected function getMemoryUsage(): float
     {
@@ -311,30 +314,30 @@ class MonitoringController extends Controller
         if ($memoryLimit === '-1') {
             return 0.0;
         }
-        
+
         $memoryLimitBytes = $this->convertToBytes($memoryLimit);
         $memoryUsage = memory_get_usage(true);
-        
+
         return round(($memoryUsage / $memoryLimitBytes) * 100, 2);
     }
 
     /**
-     * Get disk usage percentage
+     * Get disk usage percentage.
      */
     protected function getDiskUsage(): float
     {
         $total = disk_total_space('/');
         $free = disk_free_space('/');
-        
+
         if ($total && $free) {
             return round((($total - $free) / $total) * 100, 2);
         }
-        
+
         return 0.0;
     }
 
     /**
-     * Convert memory limit string to bytes
+     * Convert memory limit string to bytes.
      */
     protected function convertToBytes(string $value): int
     {
@@ -345,8 +348,10 @@ class MonitoringController extends Controller
         switch ($last) {
             case 'g':
                 $value *= 1024;
+                // no break
             case 'm':
                 $value *= 1024;
+                // no break
             case 'k':
                 $value *= 1024;
         }
@@ -355,7 +360,7 @@ class MonitoringController extends Controller
     }
 
     /**
-     * Get recent logs (simplified implementation)
+     * Get recent logs (simplified implementation).
      */
     protected function getRecentLogs(string $level, int $limit): array
     {

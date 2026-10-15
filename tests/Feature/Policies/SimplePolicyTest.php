@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Policies;
 
-use Tests\TestCase;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class SimplePolicyTest extends TestCase
 {
@@ -18,17 +18,17 @@ class SimplePolicyTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin']);
         $pm = User::factory()->create(['role' => 'pm']);
         $regularUser = User::factory()->create(['role' => 'user']);
-        
+
         $targetUser = User::factory()->create();
-        
+
         // Test basic policy methods exist
         $this->assertTrue(method_exists($superAdmin, 'can'));
-        
+
         // Test that policies are registered
         $this->assertTrue(class_exists('App\Policies\UserPolicy'));
         $this->assertTrue(class_exists('App\Policies\DocumentPolicy'));
         $this->assertTrue(class_exists('App\Policies\ComponentPolicy'));
-        
+
         // Test basic role checking
         $this->assertTrue($superAdmin->role === 'super_admin');
         $this->assertTrue($admin->role === 'admin');
@@ -56,7 +56,7 @@ class SimplePolicyTest extends TestCase
             'app/Policies/InvitationPolicy.php',
             'app/Policies/SidebarConfigPolicy.php',
         ];
-        
+
         foreach ($policyFiles as $file) {
             $this->assertTrue(file_exists(base_path($file)), "Policy file {$file} does not exist");
         }

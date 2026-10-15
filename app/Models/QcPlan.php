@@ -1,21 +1,26 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Traits\TenantScope;
 
 /**
- * Model QcPlan để quản lý kế hoạch kiểm định chất lượng
+ * Model QcPlan để quản lý kế hoạch kiểm định chất lượng.
  */
 class QcPlan extends Model
 {
-    use HasUlids, HasFactory, SoftDeletes, TenantScope;
+    use HasUlids;
+    use HasFactory;
+    use SoftDeletes;
+    use TenantScope;
 
     protected $fillable = [
         'project_id',
@@ -36,7 +41,7 @@ class QcPlan extends Model
     ];
 
     /**
-     * Quan hệ với Project
+     * Quan hệ với Project.
      */
     public function project(): BelongsTo
     {
@@ -44,7 +49,7 @@ class QcPlan extends Model
     }
 
     /**
-     * Quan hệ với Tenant
+     * Quan hệ với Tenant.
      */
     public function tenant(): BelongsTo
     {
@@ -52,7 +57,7 @@ class QcPlan extends Model
     }
 
     /**
-     * Quan hệ với User (người tạo)
+     * Quan hệ với User (người tạo).
      */
     public function creator(): BelongsTo
     {
@@ -60,7 +65,7 @@ class QcPlan extends Model
     }
 
     /**
-     * Quan hệ với QcInspections
+     * Quan hệ với QcInspections.
      */
     public function inspections(): HasMany
     {
@@ -68,7 +73,7 @@ class QcPlan extends Model
     }
 
     /**
-     * Scope để lọc theo project
+     * Scope để lọc theo project.
      */
     public function scopeForProject($query, string $projectId)
     {
@@ -76,7 +81,7 @@ class QcPlan extends Model
     }
 
     /**
-     * Scope để lọc theo status
+     * Scope để lọc theo status.
      */
     public function scopeByStatus($query, string $status)
     {

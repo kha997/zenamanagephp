@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Zena;
 
@@ -6,7 +8,6 @@ use App\Http\Middleware\RoleBasedAccessControlMiddleware;
 use App\Models\DeliverableTemplate;
 use App\Models\DeliverableTemplateVersion;
 use App\Models\Tenant;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;

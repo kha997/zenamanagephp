@@ -17,13 +17,13 @@ class CustomEnsureFrontendRequestsAreStateful
     {
         // Simple implementation - just pass through without complex logic
         // This avoids the complex Pipeline and middleware conflicts
-        
+
         // Configure basic session settings
         config([
             'session.http_only' => true,
             'session.same_site' => 'lax',
         ]);
-        
+
         // For now, just pass through without authentication
         // This allows us to test API routes without middleware conflicts
         return $next($request);

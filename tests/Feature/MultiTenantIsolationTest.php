@@ -1,18 +1,19 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\Tenant;
-use Tests\TestCase;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
 
 /**
- * Test Multi-tenant Isolation và Security
- * 
+ * Test Multi-tenant Isolation và Security.
+ *
  * Kịch bản: Tạo multiple tenants → Test data isolation → Test security boundaries
  */
 class MultiTenantIsolationTest extends TestCase
@@ -20,17 +21,23 @@ class MultiTenantIsolationTest extends TestCase
     use RefreshDatabase;
 
     private $tenantA;
+
     private $tenantB;
+
     private $userA1;
+
     private $userA2;
+
     private $userB1;
+
     private $projectA;
+
     private $projectB;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Tạo Tenant A
         $this->tenantA = Tenant::factory()->create([
             'name' => 'Company A',
@@ -101,7 +108,7 @@ class MultiTenantIsolationTest extends TestCase
     }
 
     /**
-     * Test tenant data isolation - users cannot see other tenant's data
+     * Test tenant data isolation - users cannot see other tenant's data.
      */
     public function test_tenant_data_isolation_users(): void
     {
@@ -130,7 +137,7 @@ class MultiTenantIsolationTest extends TestCase
     }
 
     /**
-     * Test tenant data isolation - projects cannot be accessed across tenants
+     * Test tenant data isolation - projects cannot be accessed across tenants.
      */
     public function test_tenant_data_isolation_projects(): void
     {
@@ -154,7 +161,7 @@ class MultiTenantIsolationTest extends TestCase
     }
 
     /**
-     * Test cross-tenant access prevention
+     * Test cross-tenant access prevention.
      */
     public function test_cross_tenant_access_prevention(): void
     {
@@ -184,7 +191,7 @@ class MultiTenantIsolationTest extends TestCase
     }
 
     /**
-     * Test tenant-scoped queries
+     * Test tenant-scoped queries.
      */
     public function test_tenant_scoped_queries(): void
     {
@@ -249,7 +256,7 @@ class MultiTenantIsolationTest extends TestCase
     }
 
     /**
-     * Test tenant isolation with complex relationships
+     * Test tenant isolation with complex relationships.
      */
     public function test_tenant_isolation_complex_relationships(): void
     {
@@ -317,7 +324,7 @@ class MultiTenantIsolationTest extends TestCase
     }
 
     /**
-     * Test tenant data integrity constraints
+     * Test tenant data integrity constraints.
      */
     public function test_tenant_data_integrity_constraints(): void
     {
@@ -343,7 +350,7 @@ class MultiTenantIsolationTest extends TestCase
     }
 
     /**
-     * Test tenant isolation with bulk operations
+     * Test tenant isolation with bulk operations.
      */
     public function test_tenant_isolation_bulk_operations(): void
     {
@@ -419,7 +426,7 @@ class MultiTenantIsolationTest extends TestCase
     }
 
     /**
-     * Test tenant isolation workflow end-to-end
+     * Test tenant isolation workflow end-to-end.
      */
     public function test_tenant_isolation_workflow_end_to_end(): void
     {

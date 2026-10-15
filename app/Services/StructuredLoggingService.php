@@ -2,38 +2,38 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class StructuredLoggingService
 {
     /**
-     * Log application events with structured data
+     * Log application events with structured data.
      */
     public static function logEvent(string $event, array $data = []): void
     {
         $context = self::getBaseContext();
         $context['event'] = $event;
         $context['data'] = $data;
-        
+
         Log::info('Application event', $context);
     }
 
     /**
-     * Log user actions with structured data
+     * Log user actions with structured data.
      */
     public static function logUserAction(string $action, array $data = []): void
     {
         $context = self::getBaseContext();
         $context['action'] = $action;
         $context['data'] = $data;
-        
+
         Log::info('User action', $context);
     }
 
     /**
-     * Log business events with structured data
+     * Log business events with structured data.
      */
     public static function logBusinessEvent(string $event, string $entityType, string $entityId, array $data = []): void
     {
@@ -42,12 +42,12 @@ class StructuredLoggingService
         $context['entity_type'] = $entityType;
         $context['entity_id'] = $entityId;
         $context['data'] = $data;
-        
+
         Log::info('Business event', $context);
     }
 
     /**
-     * Log performance metrics
+     * Log performance metrics.
      */
     public static function logPerformance(string $operation, float $duration, array $metrics = []): void
     {
@@ -55,31 +55,31 @@ class StructuredLoggingService
         $context['operation'] = $operation;
         $context['duration_ms'] = round($duration * 1000, 2);
         $context['metrics'] = $metrics;
-        
+
         Log::info('Performance metric', $context);
     }
 
     /**
-     * Log security events
+     * Log security events.
      */
     public static function logSecurityEvent(string $event, array $data = []): void
     {
         $context = self::getBaseContext();
         $context['event'] = $event;
         $context['data'] = $data;
-        
+
         Log::warning('Security event', $context);
     }
 
     /**
-     * Log error with structured data
+     * Log error with structured data.
      */
     public static function logError(string $message, \Throwable $exception = null, array $data = []): void
     {
         $context = self::getBaseContext();
         $context['message'] = $message;
         $context['data'] = $data;
-        
+
         if ($exception) {
             $context['exception'] = [
                 'class' => get_class($exception),
@@ -89,12 +89,12 @@ class StructuredLoggingService
                 'trace' => $exception->getTraceAsString(),
             ];
         }
-        
+
         Log::error('Application error', $context);
     }
 
     /**
-     * Log API requests with structured data
+     * Log API requests with structured data.
      */
     public static function logApiRequest(Request $request, int $statusCode, float $duration, array $data = []): void
     {
@@ -106,12 +106,12 @@ class StructuredLoggingService
         $context['ip'] = $request->ip();
         $context['user_agent'] = $request->userAgent();
         $context['data'] = $data;
-        
+
         Log::info('API request', $context);
     }
 
     /**
-     * Log database operations
+     * Log database operations.
      */
     public static function logDatabaseOperation(string $operation, string $table, array $data = []): void
     {
@@ -119,12 +119,12 @@ class StructuredLoggingService
         $context['operation'] = $operation;
         $context['table'] = $table;
         $context['data'] = $data;
-        
+
         Log::debug('Database operation', $context);
     }
 
     /**
-     * Log cache operations
+     * Log cache operations.
      */
     public static function logCacheOperation(string $operation, string $key, bool $hit = null, array $data = []): void
     {
@@ -133,12 +133,12 @@ class StructuredLoggingService
         $context['key'] = $key;
         $context['hit'] = $hit;
         $context['data'] = $data;
-        
+
         Log::debug('Cache operation', $context);
     }
 
     /**
-     * Log external API calls
+     * Log external API calls.
      */
     public static function logExternalApiCall(string $service, string $endpoint, int $statusCode, float $duration, array $data = []): void
     {
@@ -148,12 +148,12 @@ class StructuredLoggingService
         $context['status_code'] = $statusCode;
         $context['duration_ms'] = round($duration * 1000, 2);
         $context['data'] = $data;
-        
+
         Log::info('External API call', $context);
     }
 
     /**
-     * Get base context for all logs
+     * Get base context for all logs.
      */
     protected static function getBaseContext(): array
     {
@@ -203,7 +203,7 @@ class StructuredLoggingService
     }
 
     /**
-     * Log system metrics
+     * Log system metrics.
      */
     public static function logSystemMetrics(): void
     {
@@ -215,34 +215,36 @@ class StructuredLoggingService
             'disk_usage_percent' => self::getDiskUsage(),
             'load_average' => sys_getloadavg(),
         ];
-        
+
         Log::info('System metrics', $context);
     }
 
     /**
-     * Get CPU usage percentage
+     * Get CPU usage percentage.
      */
     protected static function getCpuUsage(): float
     {
         if (function_exists('sys_getloadavg')) {
             $load = sys_getloadavg();
+
             return round($load[0] * 100, 2);
         }
+
         return 0.0;
     }
 
     /**
-     * Get disk usage percentage
+     * Get disk usage percentage.
      */
     protected static function getDiskUsage(): float
     {
         $total = disk_total_space('/');
         $free = disk_free_space('/');
-        
+
         if ($total && $free) {
             return round((($total - $free) / $total) * 100, 2);
         }
-        
+
         return 0.0;
     }
 }

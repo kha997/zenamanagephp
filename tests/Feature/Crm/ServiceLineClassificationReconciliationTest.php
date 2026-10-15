@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Crm;
 
@@ -270,6 +272,7 @@ class ServiceLineClassificationReconciliationTest extends TestCase
 
         putenv('GAP048_SIMULATE_MAPPER_FAILURE=1');
         $_SERVER['GAP048_SIMULATE_MAPPER_FAILURE'] = '1';
+
         try {
             $response = $this->putJson(route('api.zena.crm.opportunities.update', ['id' => $opportunity->id], false), ['service_category' => 'construction'], $headers);
             $this->assertGreaterThanOrEqual(500, $response->getStatusCode(), 'The simulated mapper failure must surface as a server error, not a silent success.');

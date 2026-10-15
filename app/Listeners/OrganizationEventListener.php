@@ -2,12 +2,11 @@
 
 namespace App\Listeners;
 
-use App\Models\Tenant;
+use App\Events\OrganizationCreated;
+use App\Events\OrganizationDeleted;
+use App\Events\OrganizationUpdated;
 use App\Models\Notification;
 use App\Models\User;
-use App\Events\OrganizationCreated;
-use App\Events\OrganizationUpdated;
-use App\Events\OrganizationDeleted;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
@@ -19,15 +18,15 @@ class OrganizationEventListener implements ShouldQueue
     public function handleOrganizationCreated(OrganizationCreated $event)
     {
         $organization = $event->organization;
-        
+
         Log::info('Organization created', [
             'organization_id' => $organization->id,
             'name' => $organization->name,
-            'slug' => $organization->slug
+            'slug' => $organization->slug,
         ]);
 
         // Notify super admin users
-        $superAdmins = User::whereHas('roles', function($query) {
+        $superAdmins = User::whereHas('roles', function ($query) {
             $query->where('name', 'super_admin');
         })->get();
 
@@ -41,10 +40,10 @@ class OrganizationEventListener implements ShouldQueue
                 'data' => json_encode([
                     'organization_id' => $organization->id,
                     'name' => $organization->name,
-                    'slug' => $organization->slug
+                    'slug' => $organization->slug,
                 ]),
                 'priority' => 'normal',
-                'channels' => json_encode(['inapp'])
+                'channels' => json_encode(['inapp']),
             ]);
         }
     }
@@ -52,16 +51,16 @@ class OrganizationEventListener implements ShouldQueue
     public function handleOrganizationUpdated(OrganizationUpdated $event)
     {
         $organization = $event->organization;
-        
+
         Log::info('Organization updated', [
             'organization_id' => $organization->id,
             'name' => $organization->name,
-            'slug' => $organization->slug
+            'slug' => $organization->slug,
         ]);
 
         // Notify organization admin users
         $adminUsers = User::where('tenant_id', $organization->id)
-            ->whereHas('roles', function($query) {
+            ->whereHas('roles', function ($query) {
                 $query->whereIn('name', ['admin', 'super_admin']);
             })->get();
 
@@ -75,10 +74,10 @@ class OrganizationEventListener implements ShouldQueue
                 'data' => json_encode([
                     'organization_id' => $organization->id,
                     'name' => $organization->name,
-                    'slug' => $organization->slug
+                    'slug' => $organization->slug,
                 ]),
                 'priority' => 'normal',
-                'channels' => json_encode(['inapp'])
+                'channels' => json_encode(['inapp']),
             ]);
         }
     }
@@ -86,15 +85,15 @@ class OrganizationEventListener implements ShouldQueue
     public function handleOrganizationDeleted(OrganizationDeleted $event)
     {
         $organization = $event->organization;
-        
+
         Log::info('Organization deleted', [
             'organization_id' => $organization->id,
             'name' => $organization->name,
-            'slug' => $organization->slug
+            'slug' => $organization->slug,
         ]);
 
         // Notify super admin users
-        $superAdmins = User::whereHas('roles', function($query) {
+        $superAdmins = User::whereHas('roles', function ($query) {
             $query->where('name', 'super_admin');
         })->get();
 
@@ -108,10 +107,10 @@ class OrganizationEventListener implements ShouldQueue
                 'data' => json_encode([
                     'organization_id' => $organization->id,
                     'name' => $organization->name,
-                    'slug' => $organization->slug
+                    'slug' => $organization->slug,
                 ]),
                 'priority' => 'high',
-                'channels' => json_encode(['inapp', 'email'])
+                'channels' => json_encode(['inapp', 'email']),
             ]);
         }
     }

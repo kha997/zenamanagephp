@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Crm;
 
@@ -7,7 +9,6 @@ use App\Models\Account;
 use App\Models\Opportunity;
 use App\Models\ProjectServiceLine;
 use App\Models\Tenant;
-use App\Models\User;
 use App\Support\ServiceLine;
 use App\Support\ServiceLineProvenance;
 use Illuminate\Foundation\Testing\RefreshDatabase;

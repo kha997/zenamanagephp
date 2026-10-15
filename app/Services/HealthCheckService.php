@@ -2,17 +2,16 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Storage;
 
 class HealthCheckService
 {
     /**
-     * Perform comprehensive health checks
+     * Perform comprehensive health checks.
      */
     public static function performHealthChecks(): array
     {
@@ -42,7 +41,7 @@ class HealthCheckService
     }
 
     /**
-     * Check database connectivity and performance
+     * Check database connectivity and performance.
      */
     protected static function checkDatabase(): array
     {
@@ -50,15 +49,15 @@ class HealthCheckService
             $start = microtime(true);
             $connection = DB::connection();
             $pdo = $connection->getPdo();
-            
+
             // Test basic connectivity
             $result = DB::select('SELECT 1 as test');
             $connectTime = microtime(true) - $start;
-            
+
             // Test database info
             $dbInfo = DB::select('SELECT VERSION() as version');
             $version = $dbInfo[0]->version ?? 'Unknown';
-            
+
             // Test table existence for key tables
             $tables = ['users', 'tenants', 'projects', 'tasks'];
             $existingTables = [];
@@ -70,7 +69,7 @@ class HealthCheckService
                     // Table doesn't exist or accessible
                 }
             }
-            
+
             return [
                 'status' => 'healthy',
                 'message' => 'Database connection successful',
@@ -97,32 +96,32 @@ class HealthCheckService
     }
 
     /**
-     * Check cache system
+     * Check cache system.
      */
     protected static function checkCache(): array
     {
         try {
             $driver = config('cache.default');
             $store = Cache::getStore();
-            
+
             // Test cache operations
             $testKey = 'health_check_' . time();
             $testValue = 'test_value_' . rand(1000, 9999);
-            
+
             $start = microtime(true);
             Cache::put($testKey, $testValue, 60);
             $putTime = microtime(true) - $start;
-            
+
             $start = microtime(true);
             $retrieved = Cache::get($testKey);
             $getTime = microtime(true) - $start;
-            
+
             $start = microtime(true);
             Cache::forget($testKey);
             $deleteTime = microtime(true) - $start;
-            
+
             $success = $retrieved === $testValue;
-            
+
             return [
                 'status' => $success ? 'healthy' : 'unhealthy',
                 'message' => $success ? 'Cache operations successful' : 'Cache operations failed',
@@ -148,7 +147,7 @@ class HealthCheckService
     }
 
     /**
-     * Check queue system
+     * Check queue system.
      */
     protected static function checkQueue(): array
     {
@@ -156,10 +155,10 @@ class HealthCheckService
             $queue = app('queue');
             $connection = $queue->connection();
             $driver = config('queue.default');
-            
+
             // Test queue connection
             $connection->size(); // This will test the connection
-            
+
             return [
                 'status' => 'healthy',
                 'message' => 'Queue connection successful',
@@ -182,32 +181,32 @@ class HealthCheckService
     }
 
     /**
-     * Check storage system
+     * Check storage system.
      */
     protected static function checkStorage(): array
     {
         try {
             $disk = Storage::disk();
             $driver = config('filesystems.default');
-            
+
             // Test storage operations
             $testFile = 'health_check_' . time() . '.txt';
             $testContent = 'test_content_' . rand(1000, 9999);
-            
+
             $start = microtime(true);
             Storage::put($testFile, $testContent);
             $putTime = microtime(true) - $start;
-            
+
             $start = microtime(true);
             $retrieved = Storage::get($testFile);
             $getTime = microtime(true) - $start;
-            
+
             $start = microtime(true);
             Storage::delete($testFile);
             $deleteTime = microtime(true) - $start;
-            
+
             $success = $retrieved === $testContent;
-            
+
             return [
                 'status' => $success ? 'healthy' : 'unhealthy',
                 'message' => $success ? 'Storage operations successful' : 'Storage operations failed',
@@ -233,7 +232,7 @@ class HealthCheckService
     }
 
     /**
-     * Check Redis connectivity
+     * Check Redis connectivity.
      */
     protected static function checkRedis(): array
     {
@@ -244,21 +243,21 @@ class HealthCheckService
                     'message' => 'Redis not configured as primary cache or queue driver',
                 ];
             }
-            
+
             $redis = Redis::connection();
             $start = microtime(true);
-            
+
             // Test Redis operations
             $testKey = 'health_check_redis_' . time();
             $testValue = 'test_value_' . rand(1000, 9999);
-            
+
             $redis->setex($testKey, 60, $testValue);
             $retrieved = $redis->get($testKey);
             $redis->del($testKey);
-            
+
             $responseTime = microtime(true) - $start;
             $success = $retrieved === $testValue;
-            
+
             return [
                 'status' => $success ? 'healthy' : 'unhealthy',
                 'message' => $success ? 'Redis operations successful' : 'Redis operations failed',
@@ -278,17 +277,17 @@ class HealthCheckService
     }
 
     /**
-     * Check session system
+     * Check session system.
      */
     protected static function checkSession(): array
     {
         try {
             $driver = config('session.driver');
-            
+
             if ($driver === 'file') {
                 $sessionPath = config('session.files');
                 $writable = is_writable($sessionPath);
-                
+
                 return [
                     'status' => $writable ? 'healthy' : 'unhealthy',
                     'message' => $writable ? 'Session directory writable' : 'Session directory not writable',
@@ -299,7 +298,7 @@ class HealthCheckService
                     ],
                 ];
             }
-            
+
             return [
                 'status' => 'healthy',
                 'message' => 'Session driver configured',
@@ -317,14 +316,14 @@ class HealthCheckService
     }
 
     /**
-     * Check mail system
+     * Check mail system.
      */
     protected static function checkMail(): array
     {
         try {
             $driver = config('mail.default');
             $host = config('mail.mailers.' . $driver . '.host');
-            
+
             return [
                 'status' => 'healthy',
                 'message' => 'Mail configuration valid',
@@ -344,7 +343,7 @@ class HealthCheckService
     }
 
     /**
-     * Check filesystem permissions
+     * Check filesystem permissions.
      */
     protected static function checkFilesystem(): array
     {
@@ -355,10 +354,10 @@ class HealthCheckService
                 'logs' => storage_path('logs'),
                 'sessions' => storage_path('framework/sessions'),
             ];
-            
+
             $results = [];
             $allWritable = true;
-            
+
             foreach ($paths as $name => $path) {
                 $writable = is_writable($path);
                 $results[$name] = [
@@ -369,7 +368,7 @@ class HealthCheckService
                     $allWritable = false;
                 }
             }
-            
+
             return [
                 'status' => $allWritable ? 'healthy' : 'unhealthy',
                 'message' => $allWritable ? 'All filesystem paths writable' : 'Some filesystem paths not writable',
@@ -385,7 +384,7 @@ class HealthCheckService
     }
 
     /**
-     * Check memory usage
+     * Check memory usage.
      */
     protected static function checkMemory(): array
     {
@@ -393,17 +392,17 @@ class HealthCheckService
             $memoryLimit = ini_get('memory_limit');
             $memoryUsage = memory_get_usage(true);
             $peakMemory = memory_get_peak_usage(true);
-            
+
             $memoryLimitBytes = self::convertToBytes($memoryLimit);
             $usagePercent = ($memoryUsage / $memoryLimitBytes) * 100;
-            
+
             $status = 'healthy';
             if ($usagePercent > 90) {
                 $status = 'unhealthy';
             } elseif ($usagePercent > 80) {
                 $status = 'warning';
             }
-            
+
             return [
                 'status' => $status,
                 'message' => "Memory usage: {$usagePercent}%",
@@ -424,7 +423,7 @@ class HealthCheckService
     }
 
     /**
-     * Check disk space
+     * Check disk space.
      */
     protected static function checkDiskSpace(): array
     {
@@ -433,14 +432,14 @@ class HealthCheckService
             $free = disk_free_space('/');
             $used = $total - $free;
             $usagePercent = ($used / $total) * 100;
-            
+
             $status = 'healthy';
             if ($usagePercent > 95) {
                 $status = 'unhealthy';
             } elseif ($usagePercent > 90) {
                 $status = 'warning';
             }
-            
+
             return [
                 'status' => $status,
                 'message' => "Disk usage: {$usagePercent}%",
@@ -461,34 +460,34 @@ class HealthCheckService
     }
 
     /**
-     * Determine overall health status
+     * Determine overall health status.
      */
     protected static function determineOverallStatus(array $checks): string
     {
         $statuses = array_column($checks, 'status');
-        
+
         if (in_array('unhealthy', $statuses)) {
             return 'unhealthy';
         }
-        
+
         if (in_array('warning', $statuses)) {
             return 'degraded';
         }
-        
+
         return 'healthy';
     }
 
     /**
-     * Generate health check summary
+     * Generate health check summary.
      */
     protected static function generateSummary(array $checks): array
     {
         $total = count($checks);
-        $healthy = count(array_filter($checks, fn($check) => $check['status'] === 'healthy'));
-        $unhealthy = count(array_filter($checks, fn($check) => $check['status'] === 'unhealthy'));
-        $warning = count(array_filter($checks, fn($check) => $check['status'] === 'warning'));
-        $skipped = count(array_filter($checks, fn($check) => $check['status'] === 'skipped'));
-        
+        $healthy = count(array_filter($checks, fn ($check) => $check['status'] === 'healthy'));
+        $unhealthy = count(array_filter($checks, fn ($check) => $check['status'] === 'unhealthy'));
+        $warning = count(array_filter($checks, fn ($check) => $check['status'] === 'warning'));
+        $skipped = count(array_filter($checks, fn ($check) => $check['status'] === 'skipped'));
+
         return [
             'total_checks' => $total,
             'healthy' => $healthy,
@@ -500,7 +499,7 @@ class HealthCheckService
     }
 
     /**
-     * Convert memory limit string to bytes
+     * Convert memory limit string to bytes.
      */
     protected static function convertToBytes(string $value): int
     {
@@ -511,8 +510,10 @@ class HealthCheckService
         switch ($last) {
             case 'g':
                 $value *= 1024;
+                // no break
             case 'm':
                 $value *= 1024;
+                // no break
             case 'k':
                 $value *= 1024;
         }

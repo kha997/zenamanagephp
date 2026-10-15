@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,9 +9,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class MaintenanceTask extends Model
 {
-    use HasUlids, SoftDeletes;
+    use HasUlids;
+    use SoftDeletes;
 
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [
@@ -25,18 +26,18 @@ class MaintenanceTask extends Model
         'started_at',
         'completed_at',
         'error_message',
-        'metadata'
+        'metadata',
     ];
 
     protected $casts = [
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
         'metadata' => 'array',
-        'deleted_at' => 'datetime'
+        'deleted_at' => 'datetime',
     ];
 
     /**
-     * Get the user who performed the task
+     * Get the user who performed the task.
      */
     public function user(): BelongsTo
     {
@@ -44,7 +45,7 @@ class MaintenanceTask extends Model
     }
 
     /**
-     * Scope for completed tasks
+     * Scope for completed tasks.
      */
     public function scopeCompleted($query)
     {
@@ -52,7 +53,7 @@ class MaintenanceTask extends Model
     }
 
     /**
-     * Scope for failed tasks
+     * Scope for failed tasks.
      */
     public function scopeFailed($query)
     {
@@ -60,7 +61,7 @@ class MaintenanceTask extends Model
     }
 
     /**
-     * Scope for pending tasks
+     * Scope for pending tasks.
      */
     public function scopePending($query)
     {
@@ -68,7 +69,7 @@ class MaintenanceTask extends Model
     }
 
     /**
-     * Scope for high priority tasks
+     * Scope for high priority tasks.
      */
     public function scopeHighPriority($query)
     {
@@ -76,7 +77,7 @@ class MaintenanceTask extends Model
     }
 
     /**
-     * Scope for recent tasks
+     * Scope for recent tasks.
      */
     public function scopeRecent($query, $days = 7)
     {
@@ -84,58 +85,58 @@ class MaintenanceTask extends Model
     }
 
     /**
-     * Get task duration
+     * Get task duration.
      */
     public function getDurationAttribute()
     {
         if ($this->started_at && $this->completed_at) {
             return $this->started_at->diffInSeconds($this->completed_at);
         }
-        
+
         return null;
     }
 
     /**
-     * Mark task as started
+     * Mark task as started.
      */
     public function markAsStarted()
     {
         $this->update([
             'status' => 'running',
-            'started_at' => now()
+            'started_at' => now(),
         ]);
     }
 
     /**
-     * Mark task as completed
+     * Mark task as completed.
      */
     public function markAsCompleted($metadata = null)
     {
         $this->update([
             'status' => 'completed',
             'completed_at' => now(),
-            'metadata' => $metadata
+            'metadata' => $metadata,
         ]);
     }
 
     /**
-     * Mark task as failed
+     * Mark task as failed.
      */
     public function markAsFailed($errorMessage = null)
     {
         $this->update([
             'status' => 'failed',
             'completed_at' => now(),
-            'error_message' => $errorMessage
+            'error_message' => $errorMessage,
         ]);
     }
 
     /**
-     * Get task status badge class
+     * Get task status badge class.
      */
     public function getStatusBadgeClassAttribute()
     {
-        return match($this->status) {
+        return match ($this->status) {
             'completed' => 'badge-success',
             'failed' => 'badge-danger',
             'running' => 'badge-warning',
@@ -145,11 +146,11 @@ class MaintenanceTask extends Model
     }
 
     /**
-     * Get priority badge class
+     * Get priority badge class.
      */
     public function getPriorityBadgeClassAttribute()
     {
-        return match($this->priority) {
+        return match ($this->priority) {
             'high' => 'badge-danger',
             'medium' => 'badge-warning',
             'low' => 'badge-info',
@@ -158,11 +159,11 @@ class MaintenanceTask extends Model
     }
 
     /**
-     * Get level badge class
+     * Get level badge class.
      */
     public function getLevelBadgeClassAttribute()
     {
-        return match($this->level) {
+        return match ($this->level) {
             'error' => 'badge-danger',
             'warning' => 'badge-warning',
             'info' => 'badge-info',

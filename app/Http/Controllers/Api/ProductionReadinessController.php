@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
@@ -44,6 +46,7 @@ class ProductionReadinessController extends Controller
     {
         try {
             $result = DB::select('SELECT 1');
+
             return !empty($result);
         } catch (\Throwable) {
             return false;
@@ -58,6 +61,7 @@ class ProductionReadinessController extends Controller
         try {
             Cache::put($key, $value, 10);
             $read = Cache::get($key);
+
             return $read === $value;
         } catch (\Throwable) {
             return false;
@@ -83,6 +87,7 @@ class ProductionReadinessController extends Controller
             $disk->put($path, $value);
             $written = true;
             $read = $disk->exists($path) ? $disk->get($path) : null;
+
             return $read === $value;
         } catch (\Throwable) {
             return false;

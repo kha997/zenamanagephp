@@ -1,15 +1,17 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories\Src\CoreProject\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Src\CoreProject\Models\Baseline;
 use Src\CoreProject\Models\Project;
-use App\Models\User;
 
 /**
- * Factory cho Baseline model
- * 
+ * Factory cho Baseline model.
+ *
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Src\CoreProject\Models\Baseline>
  */
 class BaselineFactory extends Factory
@@ -20,7 +22,7 @@ class BaselineFactory extends Factory
     {
         $startDate = $this->faker->dateTimeBetween('-6 months', '+1 month');
         $endDate = $this->faker->dateTimeBetween($startDate, '+1 year');
-        
+
         return [
             'project_id' => Project::factory(),
             'type' => $this->faker->randomElement(Baseline::VALID_TYPES),
@@ -34,7 +36,7 @@ class BaselineFactory extends Factory
     }
 
     /**
-     * State: Contract baseline
+     * State: Contract baseline.
      */
     public function contract(): static
     {
@@ -46,7 +48,7 @@ class BaselineFactory extends Factory
     }
 
     /**
-     * State: Execution baseline
+     * State: Execution baseline.
      */
     public function execution(): static
     {

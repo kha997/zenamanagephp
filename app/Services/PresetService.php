@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -35,7 +37,7 @@ class PresetService
     public function applyPreset(string $presetName, string $roleName, ?string $tenantId = null): array
     {
         $presetConfig = $this->getPresetConfig($presetName);
-        
+
         if (!$presetConfig) {
             throw new \InvalidArgumentException("Preset '{$presetName}' not found");
         }
@@ -55,7 +57,7 @@ class PresetService
                 'config' => $presetConfig,
                 'updated_by' => Auth::id(),
             ]);
-            
+
             return [
                 'success' => true,
                 'message' => "Preset '{$presetName}' applied to {$roleName} successfully",

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
 
@@ -11,12 +13,12 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Analytics Controller
- * Handles analytics and reporting functionality
+ * Handles analytics and reporting functionality.
  */
 class AnalyticsController extends Controller
 {
     /**
-     * Get task analytics
+     * Get task analytics.
      */
     public function taskAnalytics(Request $request): JsonResponse
     {
@@ -77,11 +79,11 @@ class AnalyticsController extends Controller
                 ->orderBy('total_tasks', 'desc')
                 ->limit(10)
                 ->with(['user', 'project'])->get()
-                ->map(function($item) {
+                ->map(function ($item) {
                     return [
                         'name' => $item->name,
                         'total_tasks' => $item->total_tasks,
-                        'avg_progress' => round((float)$item->avg_progress, 2)
+                        'avg_progress' => round((float) $item->avg_progress, 2),
                     ];
                 });
 
@@ -96,11 +98,11 @@ class AnalyticsController extends Controller
                 ->groupBy(DB::raw('DATE(created_at)'))
                 ->orderBy('date')
                 ->with(['user', 'project'])->get()
-                ->map(function($item) {
+                ->map(function ($item) {
                     return [
                         'date' => $item->date,
                         'tasks_created' => $item->tasks_created,
-                        'avg_progress' => round((float)$item->avg_progress, 2)
+                        'avg_progress' => round((float) $item->avg_progress, 2),
                     ];
                 });
 
@@ -113,40 +115,39 @@ class AnalyticsController extends Controller
                         'in_progress_tasks' => $inProgressTasks,
                         'pending_tasks' => $pendingTasks,
                         'overdue_tasks' => $overdueTasks,
-                        'completion_rate' => $totalTasks > 0 ? round(($completedTasks / $totalTasks) * 100, 2) : 0
+                        'completion_rate' => $totalTasks > 0 ? round(($completedTasks / $totalTasks) * 100, 2) : 0,
                     ],
                     'time_tracking' => [
                         'total_estimated_hours' => $totalEstimatedHours,
                         'total_actual_hours' => $totalActualHours,
                         'efficiency_rate' => $totalEstimatedHours > 0 ? round(($totalActualHours / $totalEstimatedHours) * 100, 2) : 0,
-                        'average_progress' => round((float)$averageProgress, 2)
+                        'average_progress' => round((float) $averageProgress, 2),
                     ],
                     'distributions' => [
                         'priority' => $priorityStats,
                         'status' => $statusStats,
-                        'project' => $projectStats
+                        'project' => $projectStats,
                     ],
                     'performance' => [
                         'assignees' => $assigneeStats,
-                        'weekly_progress' => $weeklyProgress
+                        'weekly_progress' => $weeklyProgress,
                     ],
                     'date_range' => [
                         'from' => $dateFrom,
-                        'to' => $dateTo
-                    ]
-                ]
+                        'to' => $dateTo,
+                    ],
+                ],
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to get task analytics: ' . $e->getMessage()
+                'message' => 'Failed to get task analytics: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Get project analytics
+     * Get project analytics.
      */
     public function projectAnalytics(Request $request): JsonResponse
     {
@@ -183,11 +184,11 @@ class AnalyticsController extends Controller
                 ->orderBy('total_projects', 'desc')
                 ->limit(10)
                 ->with(['user', 'project'])->get()
-                ->map(function($item) {
+                ->map(function ($item) {
                     return [
                         'name' => $item->name,
                         'total_projects' => $item->total_projects,
-                        'avg_progress' => round((float)$item->avg_progress, 2)
+                        'avg_progress' => round((float) $item->avg_progress, 2),
                     ];
                 });
 
@@ -199,11 +200,11 @@ class AnalyticsController extends Controller
                 ->orderBy('count', 'desc')
                 ->limit(10)
                 ->with(['user', 'project'])->get()
-                ->map(function($item) {
+                ->map(function ($item) {
                     return [
                         'name' => $item->name,
                         'project_count' => $item->count,
-                        'total_budget' => $item->total_budget
+                        'total_budget' => $item->total_budget,
                     ];
                 });
 
@@ -220,12 +221,12 @@ class AnalyticsController extends Controller
                 ->orderBy('year')
                 ->orderBy('month')
                 ->with(['user', 'project'])->get()
-                ->map(function($item) {
+                ->map(function ($item) {
                     return [
                         'year' => $item->year,
                         'month' => $item->month,
                         'projects_created' => $item->projects_created,
-                        'total_budget' => $item->total_budget
+                        'total_budget' => $item->total_budget,
                     ];
                 });
 
@@ -241,11 +242,11 @@ class AnalyticsController extends Controller
                 ->orderBy('year')
                 ->orderBy('month')
                 ->with(['user', 'project'])->get()
-                ->map(function($item) {
+                ->map(function ($item) {
                     return [
                         'year' => $item->year,
                         'month' => $item->month,
-                        'projects_completed' => $item->projects_completed
+                        'projects_completed' => $item->projects_completed,
                     ];
                 });
 
@@ -258,41 +259,40 @@ class AnalyticsController extends Controller
                         'completed_projects' => $completedProjects,
                         'on_hold_projects' => $onHoldProjects,
                         'draft_projects' => $draftProjects,
-                        'completion_rate' => $totalProjects > 0 ? round(($completedProjects / $totalProjects) * 100, 2) : 0
+                        'completion_rate' => $totalProjects > 0 ? round(($completedProjects / $totalProjects) * 100, 2) : 0,
                     ],
                     'budget' => [
                         'total_budget' => $totalBudget,
-                        'average_budget' => round((float)$averageBudget, 2),
-                        'average_progress' => round((float)$averageProgress, 2)
+                        'average_budget' => round((float) $averageBudget, 2),
+                        'average_progress' => round((float) $averageProgress, 2),
                     ],
                     'distributions' => [
-                        'status' => $statusStats
+                        'status' => $statusStats,
                     ],
                     'performance' => [
                         'project_managers' => $pmStats,
-                        'clients' => $clientStats
+                        'clients' => $clientStats,
                     ],
                     'timeline' => [
                         'monthly_creation' => $monthlyStats,
-                        'monthly_completion' => $completionStats
+                        'monthly_completion' => $completionStats,
                     ],
                     'date_range' => [
                         'from' => $dateFrom,
-                        'to' => $dateTo
-                    ]
-                ]
+                        'to' => $dateTo,
+                    ],
+                ],
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to get project analytics: ' . $e->getMessage()
+                'message' => 'Failed to get project analytics: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Get dashboard analytics
+     * Get dashboard analytics.
      */
     public function dashboardAnalytics(Request $request): JsonResponse
     {
@@ -301,7 +301,7 @@ class AnalyticsController extends Controller
             $role = $request->get('role', 'all');
 
             // Get user-specific data if user_id provided
-            $userQuery = $userId ? function($query) use ($userId) {
+            $userQuery = $userId ? function ($query) use ($userId) {
                 $query->where('assigned_to', $userId);
             } : null;
 
@@ -331,14 +331,14 @@ class AnalyticsController extends Controller
                 ->orderBy('updated_at', 'desc')
                 ->limit(10)
                 ->with(['user', 'project'])->get()
-                ->map(function($task) {
+                ->map(function ($task) {
                     return [
                         'id' => $task->id,
                         'name' => $task->name,
                         'status' => $task->status,
                         'project_name' => $task->project->name ?? 'N/A',
                         'assignee_name' => $task->assignee->name ?? 'Unassigned',
-                        'updated_at' => $task->updated_at->format('Y-m-d H:i:s')
+                        'updated_at' => $task->updated_at->format('Y-m-d H:i:s'),
                     ];
                 });
 
@@ -346,7 +346,7 @@ class AnalyticsController extends Controller
                 ->orderBy('updated_at', 'desc')
                 ->limit(10)
                 ->with(['user', 'project'])->get()
-                ->map(function($project) {
+                ->map(function ($project) {
                     return [
                         'id' => $project->id,
                         'name' => $project->name,
@@ -354,7 +354,7 @@ class AnalyticsController extends Controller
                         'client_name' => $project->client->name ?? 'N/A',
                         'pm_name' => $project->pm->name ?? 'N/A',
                         'progress' => $project->progress,
-                        'updated_at' => $project->updated_at->format('Y-m-d H:i:s')
+                        'updated_at' => $project->updated_at->format('Y-m-d H:i:s'),
                     ];
                 });
 
@@ -362,7 +362,7 @@ class AnalyticsController extends Controller
             $performanceMetrics = [
                 'task_completion_rate' => $totalTasks > 0 ? round(($completedTasks / $totalTasks) * 100, 2) : 0,
                 'project_completion_rate' => $totalProjects > 0 ? round(($completedProjects / $totalProjects) * 100, 2) : 0,
-                'overdue_rate' => $totalTasks > 0 ? round(($overdueTasks / $totalTasks) * 100, 2) : 0
+                'overdue_rate' => $totalTasks > 0 ? round(($overdueTasks / $totalTasks) * 100, 2) : 0,
             ];
 
             return response()->json([
@@ -375,30 +375,29 @@ class AnalyticsController extends Controller
                         'overdue_tasks' => $overdueTasks,
                         'total_projects' => $totalProjects,
                         'active_projects' => $activeProjects,
-                        'completed_projects' => $completedProjects
+                        'completed_projects' => $completedProjects,
                     ],
                     'performance' => $performanceMetrics,
                     'recent_activities' => [
                         'tasks' => $recentTasks,
-                        'projects' => $recentProjects
+                        'projects' => $recentProjects,
                     ],
                     'user_context' => [
                         'user_id' => $userId,
-                        'role' => $role
-                    ]
-                ]
+                        'role' => $role,
+                    ],
+                ],
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to get dashboard analytics: ' . $e->getMessage()
+                'message' => 'Failed to get dashboard analytics: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Get productivity metrics
+     * Get productivity metrics.
      */
     public function productivityMetrics(Request $request): JsonResponse
     {
@@ -408,7 +407,7 @@ class AnalyticsController extends Controller
             $userId = $request->get('user_id');
 
             $query = Task::query()->whereBetween('tasks.created_at', [$dateFrom, $dateTo]);
-            
+
             if ($userId) {
                 $query->select(['id', 'name', 'status'])->where('assignee_id', $userId);
             }
@@ -428,7 +427,7 @@ class AnalyticsController extends Controller
                 ->select(['id', 'name', 'status'])->where('status', 'completed')
                 ->whereRaw('updated_at <= due_date')
                 ->count();
-            
+
             $onTimeRate = $tasksCompleted > 0 ? round(($tasksOnTime / $tasksCompleted) * 100, 2) : 0;
 
             // Daily productivity
@@ -442,11 +441,11 @@ class AnalyticsController extends Controller
                 ->groupBy(DB::raw('DATE(updated_at)'))
                 ->orderBy('date')
                 ->with(['user', 'project'])->get()
-                ->map(function($item) {
+                ->map(function ($item) {
                     return [
                         'date' => $item->date,
                         'tasks_completed' => $item->tasks_completed,
-                        'hours_logged' => $item->hours_logged
+                        'hours_logged' => $item->hours_logged,
                     ];
                 });
 
@@ -457,32 +456,31 @@ class AnalyticsController extends Controller
                         'total_estimated_hours' => $totalEstimatedHours,
                         'total_actual_hours' => $totalActualHours,
                         'efficiency_rate' => $totalEstimatedHours > 0 ? round(($totalActualHours / $totalEstimatedHours) * 100, 2) : 0,
-                        'average_task_duration_hours' => round((float)$averageTaskDuration, 2)
+                        'average_task_duration_hours' => round((float) $averageTaskDuration, 2),
                     ],
                     'completion' => [
                         'tasks_completed' => $tasksCompleted,
                         'total_tasks' => $totalTasks,
-                        'completion_rate' => $completionRate
+                        'completion_rate' => $completionRate,
                     ],
                     'quality' => [
                         'tasks_on_time' => $tasksOnTime,
-                        'on_time_rate' => $onTimeRate
+                        'on_time_rate' => $onTimeRate,
                     ],
                     'daily_productivity' => $dailyProductivity,
                     'date_range' => [
                         'from' => $dateFrom,
-                        'to' => $dateTo
+                        'to' => $dateTo,
                     ],
                     'user_context' => [
-                        'user_id' => $userId
-                    ]
-                ]
+                        'user_id' => $userId,
+                    ],
+                ],
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to get productivity metrics: ' . $e->getMessage()
+                'message' => 'Failed to get productivity metrics: ' . $e->getMessage(),
             ], 500);
         }
     }

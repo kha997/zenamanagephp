@@ -1,9 +1,10 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Unit\Services\Crm;
 
 use App\Models\Account;
-use App\Models\EventRecord;
 use App\Models\Opportunity;
 use App\Models\Tenant;
 use App\Services\Crm\OpportunityStageTransitionService;

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
@@ -36,13 +38,12 @@ class RfiController extends ApiBaseController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
 
             /** @var \App\Models\User $user */
-
             $query = $this->rfiQuery();
 
             // Filter by project if specified
@@ -93,13 +94,12 @@ class RfiController extends ApiBaseController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
 
             /** @var \App\Models\User $user */
-
             $validator = Validator::make($request->all(), [
                 'project_id' => 'required|exists:projects,id',
                 'title' => 'required|string|max:255',
@@ -166,13 +166,12 @@ class RfiController extends ApiBaseController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
 
             /** @var \App\Models\User $user */
-
             $rfi = $this->rfiForTenant($id, [
                 'project:id,name',
                 'createdBy:id,name',
@@ -194,13 +193,12 @@ class RfiController extends ApiBaseController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
 
             /** @var \App\Models\User $user */
-
             $rfi = $this->rfiForTenant($id);
 
             $validator = Validator::make($request->all(), [
@@ -221,8 +219,8 @@ class RfiController extends ApiBaseController
             }
 
             $rfi->update($request->only([
-                'title', 'subject', 'question', 'description', 'priority', 'due_date', 
-                'assigned_to', 'location', 'drawing_reference', 'status'
+                'title', 'subject', 'question', 'description', 'priority', 'due_date',
+                'assigned_to', 'location', 'drawing_reference', 'status',
             ]));
 
             $rfi->load(['project:id,name', 'createdBy:id,name', 'assignedTo:id,name']);
@@ -252,13 +250,12 @@ class RfiController extends ApiBaseController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
 
             /** @var \App\Models\User $user */
-
             $rfi = $this->rfiForTenant($id);
 
             $projectId = $rfi->project_id;
@@ -289,13 +286,12 @@ class RfiController extends ApiBaseController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
 
             /** @var \App\Models\User $user */
-
             $rfi = $this->rfiForTenant($id);
 
             $validator = Validator::make($request->all(), [
@@ -341,13 +337,12 @@ class RfiController extends ApiBaseController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
 
             /** @var \App\Models\User $user */
-
             $rfi = $this->rfiForTenant($id);
 
             try {
@@ -369,6 +364,7 @@ class RfiController extends ApiBaseController
                 $this->lifecycleService->respond($rfi, $user->id, $request->input('response'), $request->input('status'));
             } catch (RfiLifecycleTransitionException $e) {
                 $statusCode = str_contains($e->getMessage(), 'active escalation') ? 409 : 400;
+
                 return $this->errorResponse($e->getMessage(), $statusCode);
             }
 
@@ -399,19 +395,19 @@ class RfiController extends ApiBaseController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
 
             /** @var \App\Models\User $user */
-
             $rfi = $this->rfiForTenant($id);
 
             try {
                 $this->lifecycleService->close($rfi, $user->id);
             } catch (RfiLifecycleTransitionException $e) {
                 $statusCode = str_contains($e->getMessage(), 'active escalation') ? 409 : 400;
+
                 return $this->errorResponse($e->getMessage(), $statusCode);
             }
 
@@ -448,7 +444,6 @@ class RfiController extends ApiBaseController
             }
 
             /** @var \App\Models\User $user */
-
             $rfi = $this->rfiForTenant($id);
 
             if ($this->lifecycleService->isTerminal($rfi)) {
@@ -520,7 +515,6 @@ class RfiController extends ApiBaseController
             }
 
             /** @var \App\Models\User $user */
-
             $rfi = $this->rfiForTenant($id);
 
             if (!$this->userIsActive($user)) {
@@ -579,7 +573,6 @@ class RfiController extends ApiBaseController
             }
 
             /** @var \App\Models\User $user */
-
             $rfi = $this->rfiForTenant($id);
 
             try {

@@ -2,8 +2,8 @@
 
 namespace App\Policies;
 
-use App\Models\User;
 use App\Models\Template;
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class TemplatePolicy
@@ -17,7 +17,10 @@ class TemplatePolicy
 
     public function view(User $user, Template $template)
     {
-        if ($user->tenant_id !== $template->tenant_id) return false;
+        if ($user->tenant_id !== $template->tenant_id) {
+            return false;
+        }
+
         return $user->hasRole(['super_admin', 'admin', 'pm', 'designer']);
     }
 
@@ -28,25 +31,37 @@ class TemplatePolicy
 
     public function update(User $user, Template $template)
     {
-        if ($user->tenant_id !== $template->tenant_id) return false;
+        if ($user->tenant_id !== $template->tenant_id) {
+            return false;
+        }
+
         return $user->id === $template->created_by || $user->hasRole(['super_admin', 'admin', 'pm']);
     }
 
     public function delete(User $user, Template $template)
     {
-        if ($user->tenant_id !== $template->tenant_id) return false;
+        if ($user->tenant_id !== $template->tenant_id) {
+            return false;
+        }
+
         return $user->hasRole(['super_admin', 'admin']);
     }
 
     public function use(User $user, Template $template)
     {
-        if ($user->tenant_id !== $template->tenant_id) return false;
+        if ($user->tenant_id !== $template->tenant_id) {
+            return false;
+        }
+
         return $user->hasRole(['super_admin', 'admin', 'pm', 'designer', 'engineer']);
     }
 
     public function publish(User $user, Template $template)
     {
-        if ($user->tenant_id !== $template->tenant_id) return false;
+        if ($user->tenant_id !== $template->tenant_id) {
+            return false;
+        }
+
         return $user->hasRole(['super_admin', 'admin', 'pm']);
     }
 }

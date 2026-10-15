@@ -1,13 +1,13 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Form Request cho Component validation
- * 
- * @package App\Http\Requests
+ * Form Request cho Component validation.
  */
 class ComponentFormRequest extends FormRequest
 {
@@ -65,7 +65,7 @@ class ComponentFormRequest extends FormRequest
             // Kiểm tra parent component thuộc cùng project
             if ($this->parent_component_id && $this->project_id) {
                 $parentComponent = \App\Models\Component::find($this->parent_component_id);
-                if ($parentComponent && $parentComponent->project_id !== (int)$this->project_id) {
+                if ($parentComponent && $parentComponent->project_id !== (int) $this->project_id) {
                     $validator->errors()->add('parent_component_id', 'Component cha phải thuộc cùng dự án.');
                 }
             }

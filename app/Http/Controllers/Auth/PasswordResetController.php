@@ -1,20 +1,22 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Auth\PasswordResetRequest;
 use App\Http\Requests\Auth\PasswordResetConfirmRequest;
+use App\Http\Requests\Auth\PasswordResetRequest;
 use App\Models\User;
 // use App\Services\PasswordPolicyService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 
 class PasswordResetController extends Controller
 {
@@ -26,7 +28,7 @@ class PasswordResetController extends Controller
     // }
 
     /**
-     * Send password reset link
+     * Send password reset link.
      */
     public function sendResetLink(PasswordResetRequest $request): JsonResponse
     {
@@ -38,35 +40,34 @@ class PasswordResetController extends Controller
             if ($status === Password::RESET_LINK_SENT) {
                 Log::info('Password reset link sent', [
                     'email' => $request->email,
-                    'ip' => $request->ip()
+                    'ip' => $request->ip(),
                 ]);
 
                 return response()->json([
                     'message' => 'Password reset link has been sent to your email.',
-                    'status' => 'success'
+                    'status' => 'success',
                 ]);
             }
 
             return response()->json([
                 'message' => 'Unable to send password reset link.',
-                'status' => 'error'
+                'status' => 'error',
             ], 400);
-
         } catch (\Exception $e) {
             Log::error('Password reset link failed', [
                 'email' => $request->email,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'message' => 'An error occurred while sending password reset link.',
-                'status' => 'error'
+                'status' => 'error',
             ], 500);
         }
     }
 
     /**
-     * Reset password
+     * Reset password.
      */
     public function reset(PasswordResetConfirmRequest $request): JsonResponse
     {
@@ -90,14 +91,14 @@ class PasswordResetController extends Controller
                         'password_expires_at' => Carbon::now()->addDays($this->passwordPolicyService->getPolicyConfig()['max_age_days']),
                         'password_failed_attempts' => 0,
                         'password_locked_until' => null,
-                        'remember_token' => Str::random(60)
+                        'remember_token' => Str::random(60),
                     ]);
 
                     // Log password reset
                     Log::info('Password reset completed', [
                         'user_id' => $user->id,
                         'email' => $user->email,
-                        'ip' => request()->ip()
+                        'ip' => request()->ip(),
                     ]);
                 }
             );
@@ -105,45 +106,44 @@ class PasswordResetController extends Controller
             if ($status === Password::PASSWORD_RESET) {
                 return response()->json([
                     'message' => 'Password has been reset successfully.',
-                    'status' => 'success'
+                    'status' => 'success',
                 ]);
             }
 
             return response()->json([
                 'message' => 'Unable to reset password. Please check your token and try again.',
-                'status' => 'error'
+                'status' => 'error',
             ], 400);
-
         } catch (\Exception $e) {
             Log::error('Password reset failed', [
                 'email' => $request->email,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'message' => 'An error occurred while resetting password.',
-                'status' => 'error'
+                'status' => 'error',
             ], 500);
         }
     }
 
     /**
-     * Check if reset token is valid
+     * Check if reset token is valid.
      */
     public function checkToken(Request $request): JsonResponse
     {
         $request->validate([
             'email' => 'required|email',
-            'token' => 'required|string'
+            'token' => 'required|string',
         ]);
 
         try {
             $user = User::where('email', $request->email)->first();
-            
+
             if (!$user) {
                 return response()->json([
                     'valid' => false,
-                    'message' => 'User not found'
+                    'message' => 'User not found',
                 ]);
             }
 
@@ -156,7 +156,7 @@ class PasswordResetController extends Controller
             if (!$tokenRecord) {
                 return response()->json([
                     'valid' => false,
-                    'message' => 'Invalid token'
+                    'message' => 'Invalid token',
                 ]);
             }
 
@@ -164,24 +164,23 @@ class PasswordResetController extends Controller
             if (Carbon::parse($tokenRecord->created_at)->addMinutes(config('auth.passwords.users.expire'))->isPast()) {
                 return response()->json([
                     'valid' => false,
-                    'message' => 'Token has expired'
+                    'message' => 'Token has expired',
                 ]);
             }
 
             return response()->json([
                 'valid' => true,
-                'message' => 'Token is valid'
+                'message' => 'Token is valid',
             ]);
-
         } catch (\Exception $e) {
             Log::error('Token validation failed', [
                 'email' => $request->email,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'valid' => false,
-                'message' => 'Error validating token'
+                'message' => 'Error validating token',
             ], 500);
         }
     }

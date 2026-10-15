@@ -21,29 +21,28 @@ class EmailService
     }
 
     /**
-     * Send invitation email (queued)
+     * Send invitation email (queued).
      */
     public function sendInvitationEmail(Invitation $invitation): bool
     {
         try {
             // Check if queuing is enabled
             $queueEnabled = config('mail.queue.enabled', true);
-            
+
             if ($queueEnabled) {
                 // Dispatch job to queue
                 SendInvitationEmailJob::dispatch($invitation);
-                
+
                 Log::info('Invitation email queued successfully', [
                     'invitation_id' => $invitation->id,
                     'email' => $invitation->email,
                 ]);
-                
+
                 return true;
             } else {
                 // Send immediately (synchronous)
                 return $this->sendInvitationEmailSync($invitation);
             }
-
         } catch (\Exception $e) {
             Log::error('Failed to queue invitation email', [
                 'invitation_id' => $invitation->id,
@@ -56,7 +55,7 @@ class EmailService
     }
 
     /**
-     * Send invitation email synchronously
+     * Send invitation email synchronously.
      */
     public function sendInvitationEmailSync(Invitation $invitation): bool
     {
@@ -93,7 +92,6 @@ class EmailService
             ]);
 
             return true;
-
         } catch (\Exception $e) {
             // Mark as failed
             if (isset($tracking)) {
@@ -112,29 +110,28 @@ class EmailService
     }
 
     /**
-     * Send welcome email (queued)
+     * Send welcome email (queued).
      */
     public function sendWelcomeEmail(User $user): bool
     {
         try {
             // Check if queuing is enabled
             $queueEnabled = config('mail.queue.enabled', true);
-            
+
             if ($queueEnabled) {
                 // Dispatch job to queue
                 SendWelcomeEmailJob::dispatch($user);
-                
+
                 Log::info('Welcome email queued successfully', [
                     'user_id' => $user->id,
                     'email' => $user->email,
                 ]);
-                
+
                 return true;
             } else {
                 // Send immediately (synchronous)
                 return $this->sendWelcomeEmailSync($user);
             }
-
         } catch (\Exception $e) {
             Log::error('Failed to queue welcome email', [
                 'user_id' => $user->id,
@@ -147,7 +144,7 @@ class EmailService
     }
 
     /**
-     * Send welcome email synchronously
+     * Send welcome email synchronously.
      */
     public function sendWelcomeEmailSync(User $user): bool
     {
@@ -159,7 +156,7 @@ class EmailService
                 'recipient_name' => $user->name,
                 'user_id' => $user->id,
                 'organization_id' => $user->organization_id,
-                'subject' => "Welcome to " . ($user->organization->name ?? 'our platform') . "!",
+                'subject' => 'Welcome to ' . ($user->organization->name ?? 'our platform') . '!',
                 'content_hash' => $this->generateUserContentHash($user),
                 'metadata' => [
                     'role' => $user->role,
@@ -183,7 +180,6 @@ class EmailService
             ]);
 
             return true;
-
         } catch (\Exception $e) {
             // Mark as failed
             if (isset($tracking)) {
@@ -202,7 +198,7 @@ class EmailService
     }
 
     /**
-     * Resend invitation email
+     * Resend invitation email.
      */
     public function resendInvitationEmail(Invitation $invitation): bool
     {
@@ -220,13 +216,13 @@ class EmailService
     }
 
     /**
-     * Track email open
+     * Track email open.
      */
     public function trackEmailOpen(string $trackingId, array $details = []): bool
     {
         try {
             $tracking = EmailTracking::where('tracking_id', $trackingId)->first();
-            
+
             if (!$tracking) {
                 return false;
             }
@@ -239,7 +235,6 @@ class EmailService
             ]);
 
             return true;
-
         } catch (\Exception $e) {
             Log::error('Failed to track email open', [
                 'tracking_id' => $trackingId,
@@ -251,13 +246,13 @@ class EmailService
     }
 
     /**
-     * Track email click
+     * Track email click.
      */
     public function trackEmailClick(string $trackingId, string $linkUrl, array $details = []): bool
     {
         try {
             $tracking = EmailTracking::where('tracking_id', $trackingId)->first();
-            
+
             if (!$tracking) {
                 return false;
             }
@@ -276,7 +271,6 @@ class EmailService
             ]);
 
             return true;
-
         } catch (\Exception $e) {
             Log::error('Failed to track email click', [
                 'tracking_id' => $trackingId,
@@ -288,12 +282,12 @@ class EmailService
     }
 
     /**
-     * Get email analytics for organization
+     * Get email analytics for organization.
      */
     public function getEmailAnalytics(int $organizationId, Carbon $from = null, Carbon $to = null): array
     {
-        $from = $from ?? Carbon::now()->subDays(30);
-        $to = $to ?? Carbon::now();
+        $from ??= Carbon::now()->subDays(30);
+        $to ??= Carbon::now();
 
         $trackings = EmailTracking::where('organization_id', $organizationId)
             ->whereBetween('created_at', [$from, $to])
@@ -323,7 +317,7 @@ class EmailService
     }
 
     /**
-     * Generate content hash for invitation
+     * Generate content hash for invitation.
      */
     private function generateContentHash(Invitation $invitation): string
     {
@@ -339,7 +333,7 @@ class EmailService
     }
 
     /**
-     * Generate content hash for user
+     * Generate content hash for user.
      */
     private function generateUserContentHash(User $user): string
     {

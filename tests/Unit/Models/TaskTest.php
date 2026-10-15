@@ -2,37 +2,40 @@
 
 namespace Tests\Unit\Models;
 
-use Tests\TestCase;
-use App\Models\Task;
-use App\Models\User;
-use App\Models\Tenant;
 use App\Models\Project;
+use App\Models\Task;
+use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class TaskTest extends TestCase
 {
     use RefreshDatabase;
 
     protected $tenant;
+
     protected $user;
+
     protected $project;
+
     protected $task;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->tenant = Tenant::factory()->create();
         $this->user = User::factory()->create([
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
         $this->project = Project::factory()->create([
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
         $this->task = Task::factory()->create([
             'project_id' => $this->project->id,
             'assignee_id' => $this->user->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
     }
 
@@ -69,7 +72,7 @@ class TaskTest extends TestCase
     {
         $dependentTask = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Task model sử dụng dependencies field là array, không phải relationship
@@ -149,7 +152,7 @@ class TaskTest extends TestCase
         $completionDate = now();
         $this->task->update([
             'status' => 'done',
-            'end_date' => $completionDate
+            'end_date' => $completionDate,
         ]);
 
         $this->assertEquals($completionDate->format('Y-m-d'), $this->task->end_date->format('Y-m-d'));
@@ -220,7 +223,7 @@ class TaskTest extends TestCase
             'created_by',
             'blocked_at',
             'blocker_note',
-            'blocked_by'
+            'blocked_by',
         ];
 
         $this->assertEquals($fillable, $this->task->getFillable());
@@ -247,7 +250,7 @@ class TaskTest extends TestCase
     {
         $this->task->update([
             'end_date' => now()->subDays(1),
-            'status' => 'in_progress'
+            'status' => 'in_progress',
         ]);
 
         // Task model không có is_overdue attribute, kiểm tra thủ công
@@ -256,7 +259,7 @@ class TaskTest extends TestCase
 
         $this->task->update([
             'end_date' => now()->addDays(1),
-            'status' => 'in_progress'
+            'status' => 'in_progress',
         ]);
 
         $isOverdue = $this->task->end_date && $this->task->end_date->isPast() && $this->task->status !== 'completed';
@@ -278,7 +281,7 @@ class TaskTest extends TestCase
     {
         $this->task->update([
             'estimated_hours' => 40,
-            'actual_hours' => 20
+            'actual_hours' => 20,
         ]);
 
         // Task model có progress_percent từ factory, kiểm tra giá trị hiện tại
@@ -293,7 +296,7 @@ class TaskTest extends TestCase
 
         $this->task->update([
             'start_date' => $startDate,
-            'end_date' => $endDate
+            'end_date' => $endDate,
         ]);
 
         // Task model không có duration_hours attribute, kiểm tra thủ công
@@ -306,7 +309,7 @@ class TaskTest extends TestCase
     {
         $this->task->update([
             'estimated_hours' => 40,
-            'actual_hours' => 15
+            'actual_hours' => 15,
         ]);
 
         // Task model không có remaining_hours attribute, kiểm tra thủ công
@@ -319,7 +322,7 @@ class TaskTest extends TestCase
     {
         $this->task->update([
             'estimated_hours' => 40,
-            'actual_hours' => 50
+            'actual_hours' => 50,
         ]);
 
         $this->assertEquals(10.0, $this->task->actual_hours - $this->task->estimated_hours);
@@ -332,7 +335,7 @@ class TaskTest extends TestCase
 
         $dependentTask = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $this->task->update(['dependencies_json' => [$dependentTask->id]]);

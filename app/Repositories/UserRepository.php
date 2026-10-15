@@ -2,8 +2,8 @@
 
 namespace App\Repositories;
 
-use App\Models\User;
 use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Hash;
@@ -106,7 +106,7 @@ class UserRepository
         Log::info('User created', [
             'user_id' => $user->id,
             'email' => $user->email,
-            'tenant_id' => $user->tenant_id
+            'tenant_id' => $user->tenant_id,
         ]);
 
         return $user->load(['roles', 'tenant']);
@@ -138,7 +138,7 @@ class UserRepository
         Log::info('User updated', [
             'user_id' => $user->id,
             'email' => $user->email,
-            'tenant_id' => $user->tenant_id
+            'tenant_id' => $user->tenant_id,
         ]);
 
         return $user->load(['roles', 'tenant']);
@@ -160,7 +160,7 @@ class UserRepository
         Log::info('User deleted', [
             'user_id' => $id,
             'email' => $user->email,
-            'tenant_id' => $user->tenant_id
+            'tenant_id' => $user->tenant_id,
         ]);
 
         return true;
@@ -182,7 +182,7 @@ class UserRepository
         Log::info('User soft deleted', [
             'user_id' => $id,
             'email' => $user->email,
-            'tenant_id' => $user->tenant_id
+            'tenant_id' => $user->tenant_id,
         ]);
 
         return true;
@@ -204,7 +204,7 @@ class UserRepository
         Log::info('User restored', [
             'user_id' => $id,
             'email' => $user->email,
-            'tenant_id' => $user->tenant_id
+            'tenant_id' => $user->tenant_id,
         ]);
 
         return true;
@@ -267,7 +267,7 @@ class UserRepository
 
         $user->update([
             'last_login_at' => now(),
-            'last_login_ip' => $ip
+            'last_login_ip' => $ip,
         ]);
 
         return true;
@@ -286,12 +286,12 @@ class UserRepository
 
         $user->update([
             'password' => Hash::make($newPassword),
-            'password_updated_at' => now()
+            'password_updated_at' => now(),
         ]);
 
         Log::info('User password changed', [
             'user_id' => $id,
-            'email' => $user->email
+            'email' => $user->email,
         ]);
 
         return true;
@@ -328,7 +328,7 @@ class UserRepository
             'inactive_users' => $query->where('status', 'inactive')->count(),
             'users_with_login' => $query->whereNotNull('last_login_at')->count(),
             'users_without_login' => $query->whereNull('last_login_at')->count(),
-            'recent_logins' => $query->where('last_login_at', '>=', now()->subDays(7))->count()
+            'recent_logins' => $query->where('last_login_at', '>=', now()->subDays(7))->count(),
         ];
     }
 
@@ -364,7 +364,7 @@ class UserRepository
 
         Log::info('Users bulk updated', [
             'count' => $updated,
-            'ids' => $ids
+            'ids' => $ids,
         ]);
 
         return $updated;
@@ -379,7 +379,7 @@ class UserRepository
 
         Log::info('Users bulk deleted', [
             'count' => $deleted,
-            'ids' => $ids
+            'ids' => $ids,
         ]);
 
         return $deleted;
@@ -413,6 +413,7 @@ class UserRepository
     public function hasPermission(string $id, string $permission): bool
     {
         $permissions = $this->getPermissions($id);
+
         return in_array($permission, $permissions);
     }
 
@@ -436,6 +437,7 @@ class UserRepository
     public function hasRole(string $id, string $role): bool
     {
         $roles = $this->getRoles($id);
+
         return in_array($role, $roles);
     }
 }

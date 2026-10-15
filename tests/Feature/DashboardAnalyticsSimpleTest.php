@@ -1,49 +1,55 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Models\Tenant;
+use App\Models\DashboardWidget;
 use App\Models\Project;
 use App\Models\Task;
-use App\Models\DashboardWidget;
+use App\Models\Tenant;
+use App\Models\User;
 use App\Models\UserDashboard;
-use Tests\TestCase;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Hash;
 use Tests\Support\SSOT\FixtureFactory;
+use Tests\TestCase;
 
 /**
- * Test Dashboard & Analytics System (Simplified)
- * 
+ * Test Dashboard & Analytics System (Simplified).
+ *
  * Kịch bản: Test dashboard analytics với dữ liệu có sẵn
  */
 class DashboardAnalyticsSimpleTest extends TestCase
 {
-    use RefreshDatabase, FixtureFactory;
+    use RefreshDatabase;
+    use FixtureFactory;
 
     private $tenant;
+
     private $user;
+
     private $project;
+
     private $task;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Set cache driver to array for testing (lightweight, deterministic)
         config(['cache.default' => 'array']);
-        
+
         // Clear cache properly
         Cache::flush();
-        
+
         // Disable foreign key constraints for testing
         \DB::statement('PRAGMA foreign_keys=OFF;');
-        
+
         // Tạo tenant
         $this->tenant = $this->createTenant([
             'name' => 'Test Company',
@@ -87,7 +93,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
     }
 
     /**
-     * Test dashboard data aggregation
+     * Test dashboard data aggregation.
      */
     public function test_dashboard_data_aggregation(): void
     {
@@ -132,7 +138,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
     }
 
     /**
-     * Test dashboard analytics calculations
+     * Test dashboard analytics calculations.
      */
     public function test_dashboard_analytics_calculations(): void
     {
@@ -181,7 +187,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
     }
 
     /**
-     * Test dashboard metrics calculation
+     * Test dashboard metrics calculation.
      */
     public function test_dashboard_metrics_calculation(): void
     {
@@ -250,7 +256,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
     }
 
     /**
-     * Test dashboard performance metrics
+     * Test dashboard performance metrics.
      */
     public function test_dashboard_performance_metrics(): void
     {
@@ -324,10 +330,13 @@ class DashboardAnalyticsSimpleTest extends TestCase
             ->where('end_date', '<', '2025-09-20 15:00:00')
             ->where('status', '!=', 'completed')
             ->get(['name', 'end_date', 'status']);
-        
-        $this->assertEquals($overdueTasks, $overdueTasksCount, 
-            "Overdue tasks: Expected {$overdueTasks}, Got {$overdueTasksCount}. " . 
-            "Actual: " . $overdueTasksActual->toJson());
+
+        $this->assertEquals(
+            $overdueTasks,
+            $overdueTasksCount,
+            "Overdue tasks: Expected {$overdueTasks}, Got {$overdueTasksCount}. " .
+            'Actual: ' . $overdueTasksActual->toJson()
+        );
 
         // Test completion rate
         $completionRate = ($completedTasksCount / $totalTasks) * 100;
@@ -336,7 +345,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
     }
 
     /**
-     * Test dashboard user activity metrics
+     * Test dashboard user activity metrics.
      */
     public function test_dashboard_user_activity_metrics(): void
     {
@@ -368,7 +377,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
     }
 
     /**
-     * Test dashboard project status distribution
+     * Test dashboard project status distribution.
      */
     public function test_dashboard_project_status_distribution(): void
     {
@@ -383,7 +392,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
 
         foreach ($statuses as $status) {
             $count = $statusCounts[$status];
-            
+
             for ($i = 1; $i <= $count; $i++) {
                 Project::factory()->create([
                     'name' => "{$status} Project {$i}",
@@ -416,7 +425,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
     }
 
     /**
-     * Test dashboard task assignment metrics
+     * Test dashboard task assignment metrics.
      */
     public function test_dashboard_task_assignment_metrics(): void
     {
@@ -438,10 +447,10 @@ class DashboardAnalyticsSimpleTest extends TestCase
             $users[1]->id => 3,
             $users[2]->id => 4,
         ];
-        
+
         foreach ($users as $index => $user) {
             $count = $assignmentCounts[$user->id];
-            
+
             for ($i = 1; $i <= $count; $i++) {
                 Task::create([
                     'tenant_id' => $this->tenant->id,
@@ -472,7 +481,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
     }
 
     /**
-     * Test dashboard multi-tenant isolation
+     * Test dashboard multi-tenant isolation.
      */
     public function test_dashboard_multi_tenant_isolation(): void
     {
@@ -519,7 +528,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
     }
 
     /**
-     * Test dashboard data filtering
+     * Test dashboard data filtering.
      */
     public function test_dashboard_data_filtering(): void
     {
@@ -567,15 +576,18 @@ class DashboardAnalyticsSimpleTest extends TestCase
         $recentProjects = Project::where('tenant_id', $this->tenant->id)
             ->where('created_at', '>=', $yesterday)
             ->count();
-        
+
         // Debug: dump actual data
         $recentProjectsActual = Project::where('tenant_id', $this->tenant->id)
             ->where('created_at', '>=', $yesterday)
             ->get(['name', 'created_at']);
-        
-        $this->assertEquals(3, $recentProjects, 
-            "Recent projects: Expected 3, Got {$recentProjects}. " . 
-            "Actual: " . $recentProjectsActual->toJson()); // Original + Today + Yesterday
+
+        $this->assertEquals(
+            3,
+            $recentProjects,
+            "Recent projects: Expected 3, Got {$recentProjects}. " .
+            'Actual: ' . $recentProjectsActual->toJson()
+        ); // Original + Today + Yesterday
 
         // Test status filtering
         $activeProjects = Project::where('tenant_id', $this->tenant->id)
@@ -590,7 +602,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
     }
 
     /**
-     * Test dashboard widgets functionality
+     * Test dashboard widgets functionality.
      */
     public function test_dashboard_widgets(): void
     {
@@ -658,7 +670,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
     }
 
     /**
-     * Test user dashboards functionality
+     * Test user dashboards functionality.
      */
     public function test_user_dashboards(): void
     {
@@ -717,7 +729,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
     }
 
     /**
-     * Test dashboard caching functionality
+     * Test dashboard caching functionality.
      */
     public function test_dashboard_caching(): void
     {

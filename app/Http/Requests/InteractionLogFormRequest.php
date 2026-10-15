@@ -1,16 +1,15 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests;
-use Illuminate\Support\Facades\Auth;
-
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
 /**
- * Form Request cho InteractionLog validation
- * 
- * @package App\Http\Requests
+ * Form Request cho InteractionLog validation.
  */
 class InteractionLogFormRequest extends FormRequest
 {
@@ -66,7 +65,7 @@ class InteractionLogFormRequest extends FormRequest
             // Kiểm tra linked_task thuộc cùng project
             if ($this->linked_task_id && $this->project_id) {
                 $task = \App\Models\Task::find($this->linked_task_id);
-                if ($task && $task->project_id !== (int)$this->project_id) {
+                if ($task && $task->project_id !== (int) $this->project_id) {
                     $validator->errors()->add('linked_task_id', 'Task liên kết phải thuộc cùng dự án.');
                 }
             }

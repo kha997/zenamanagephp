@@ -4,7 +4,6 @@ namespace App\Services\Performance;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 
 class DatabaseOptimizationService
 {
@@ -15,21 +14,21 @@ class DatabaseOptimizationService
     {
         $optimizationResults = [
             'timestamp' => now()->toISOString(),
-            'optimizations' => []
+            'optimizations' => [],
         ];
 
         // Analyze slow queries
         $optimizationResults['optimizations']['analyze_slow_queries'] = $this->analyzeSlowQueries();
-        
+
         // Optimize indexes
         $optimizationResults['optimizations']['optimize_indexes'] = $this->optimizeIndexes();
-        
+
         // Analyze table sizes
         $optimizationResults['optimizations']['analyze_table_sizes'] = $this->analyzeTableSizes();
-        
+
         // Optimize queries
         $optimizationResults['optimizations']['optimize_queries'] = $this->optimizeQueries();
-        
+
         // Generate database report
         $optimizationResults['report'] = $this->generateDatabaseReport();
 
@@ -45,7 +44,7 @@ class DatabaseOptimizationService
     {
         $analysis = [
             'slow_queries' => [],
-            'recommendations' => []
+            'recommendations' => [],
         ];
 
         try {
@@ -73,7 +72,6 @@ class DatabaseOptimizationService
             if ($queryCacheType === 'OFF') {
                 $analysis['recommendations'][] = 'Enable query cache for better performance';
             }
-
         } catch (\Exception $e) {
             Log::error('Error analyzing slow queries', ['error' => $e->getMessage()]);
         }
@@ -89,35 +87,35 @@ class DatabaseOptimizationService
         $optimizations = [
             'missing_indexes' => [],
             'unused_indexes' => [],
-            'recommendations' => []
+            'recommendations' => [],
         ];
 
         try {
             // Get all tables
-            $tables = DB::select("SHOW TABLES");
+            $tables = DB::select('SHOW TABLES');
             $databaseName = DB::getDatabaseName();
 
             foreach ($tables as $table) {
                 $tableName = $table->{"Tables_in_{$databaseName}"};
-                
+
                 // Check for missing indexes on foreign keys
-                $foreignKeys = DB::select("
+                $foreignKeys = DB::select('
                     SELECT COLUMN_NAME 
                     FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE 
                     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND REFERENCED_TABLE_NAME IS NOT NULL
-                ", [$databaseName, $tableName]);
+                ', [$databaseName, $tableName]);
 
                 foreach ($foreignKeys as $fk) {
                     $columnName = $fk->COLUMN_NAME;
-                    
+
                     // Check if index exists on this column
                     $indexes = DB::select("SHOW INDEX FROM {$tableName} WHERE Column_name = ?", [$columnName]);
-                    
+
                     if (empty($indexes)) {
                         $optimizations['missing_indexes'][] = [
                             'table' => $tableName,
                             'column' => $columnName,
-                            'type' => 'foreign_key'
+                            'type' => 'foreign_key',
                         ];
                     }
                 }
@@ -127,17 +125,17 @@ class DatabaseOptimizationService
                 foreach ($indexes as $index) {
                     if ($index->Key_name !== 'PRIMARY') {
                         // Check if index is used (simplified check)
-                        $usage = DB::select("
+                        $usage = DB::select('
                             SELECT COUNT(*) as usage_count 
                             FROM INFORMATION_SCHEMA.INDEX_STATISTICS 
                             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND INDEX_NAME = ?
-                        ", [$databaseName, $tableName, $index->Key_name]);
+                        ', [$databaseName, $tableName, $index->Key_name]);
 
                         if (empty($usage) || $usage[0]->usage_count === 0) {
                             $optimizations['unused_indexes'][] = [
                                 'table' => $tableName,
                                 'index' => $index->Key_name,
-                                'columns' => $index->Column_name
+                                'columns' => $index->Column_name,
                             ];
                         }
                     }
@@ -152,7 +150,6 @@ class DatabaseOptimizationService
             if (!empty($optimizations['unused_indexes'])) {
                 $optimizations['recommendations'][] = 'Consider removing unused indexes to improve write performance';
             }
-
         } catch (\Exception $e) {
             Log::error('Error optimizing indexes', ['error' => $e->getMessage()]);
         }
@@ -168,12 +165,12 @@ class DatabaseOptimizationService
         $analysis = [
             'table_sizes' => [],
             'largest_tables' => [],
-            'recommendations' => []
+            'recommendations' => [],
         ];
 
         try {
             $databaseName = DB::getDatabaseName();
-            
+
             // Get table sizes
             $tableSizes = DB::select("
                 SELECT 
@@ -194,7 +191,6 @@ class DatabaseOptimizationService
                     $analysis['recommendations'][] = "Consider partitioning or archiving data for table '{$table->TABLE_NAME}'";
                 }
             }
-
         } catch (\Exception $e) {
             Log::error('Error analyzing table sizes', ['error' => $e->getMessage()]);
         }
@@ -209,19 +205,18 @@ class DatabaseOptimizationService
     {
         $optimizations = [
             'query_optimizations' => [],
-            'recommendations' => []
+            'recommendations' => [],
         ];
 
         try {
             // Check for N+1 query patterns
             $optimizations['query_optimizations']['n_plus_one'] = $this->detectNPlusOneQueries();
-            
+
             // Check for missing eager loading
             $optimizations['query_optimizations']['eager_loading'] = $this->checkEagerLoading();
-            
+
             // Check for inefficient queries
             $optimizations['query_optimizations']['inefficient_queries'] = $this->detectInefficientQueries();
-
         } catch (\Exception $e) {
             Log::error('Error optimizing queries', ['error' => $e->getMessage()]);
         }
@@ -241,14 +236,14 @@ class DatabaseOptimizationService
             'User::with("roles")',
             'Project::with("teams.members")',
             'Task::with("assignee")',
-            'Document::with("project")'
+            'Document::with("project")',
         ];
 
         foreach ($commonPatterns as $pattern) {
             $detections[] = [
                 'pattern' => $pattern,
                 'recommendation' => 'Use eager loading to prevent N+1 queries',
-                'example' => 'Use ->with() method to load relationships'
+                'example' => 'Use ->with() method to load relationships',
             ];
         }
 
@@ -264,12 +259,12 @@ class DatabaseOptimizationService
 
         // Check for models that could benefit from eager loading
         $models = ['User', 'Project', 'Task', 'Document', 'Team'];
-        
+
         foreach ($models as $model) {
             $opportunities[] = [
                 'model' => $model,
                 'recommendation' => 'Consider eager loading relationships when querying multiple records',
-                'example' => "{$model}::with(['relationships'])->get()"
+                'example' => "{$model}::with(['relationships'])->get()",
             ];
         }
 
@@ -288,14 +283,14 @@ class DatabaseOptimizationService
             'SELECT * FROM users',
             'WHERE created_at > NOW()',
             'ORDER BY RAND()',
-            'LIKE %search%'
+            'LIKE %search%',
         ];
 
         foreach ($inefficientPatterns as $pattern) {
             $detections[] = [
                 'pattern' => $pattern,
                 'recommendation' => 'Optimize query to use indexes and limit results',
-                'example' => 'Use specific columns, proper indexing, and pagination'
+                'example' => 'Use specific columns, proper indexing, and pagination',
             ];
         }
 
@@ -311,7 +306,7 @@ class DatabaseOptimizationService
             'database_info' => $this->getDatabaseInfo(),
             'performance_metrics' => $this->getPerformanceMetrics(),
             'configuration' => $this->getDatabaseConfiguration(),
-            'recommendations' => $this->getDatabaseRecommendations()
+            'recommendations' => $this->getDatabaseRecommendations(),
         ];
 
         return $report;
@@ -333,7 +328,6 @@ class DatabaseOptimizationService
 
             $charset = DB::select("SHOW VARIABLES LIKE 'character_set_database'");
             $info['charset'] = $charset[0]->Value ?? 'Unknown';
-
         } catch (\Exception $e) {
             Log::error('Error getting database info', ['error' => $e->getMessage()]);
         }
@@ -362,10 +356,9 @@ class DatabaseOptimizationService
             $metrics['slow_queries'] = $slowQueries[0]->Value ?? 0;
 
             // Calculate slow query percentage
-            $totalQueries = (int)$metrics['queries'];
-            $slowQueryCount = (int)$metrics['slow_queries'];
+            $totalQueries = (int) $metrics['queries'];
+            $slowQueryCount = (int) $metrics['slow_queries'];
             $metrics['slow_query_percentage'] = $totalQueries > 0 ? round(($slowQueryCount / $totalQueries) * 100, 2) : 0;
-
         } catch (\Exception $e) {
             Log::error('Error getting performance metrics', ['error' => $e->getMessage()]);
         }
@@ -386,16 +379,15 @@ class DatabaseOptimizationService
                 'query_cache_size',
                 'max_connections',
                 'innodb_log_file_size',
-                'innodb_flush_log_at_trx_commit'
+                'innodb_flush_log_at_trx_commit',
             ];
 
             foreach ($variables as $variable) {
-                $result = DB::select("SHOW VARIABLES LIKE ?", [$variable]);
+                $result = DB::select('SHOW VARIABLES LIKE ?', [$variable]);
                 if (!empty($result)) {
                     $config[$variable] = $result[0]->Value;
                 }
             }
-
         } catch (\Exception $e) {
             Log::error('Error getting database configuration', ['error' => $e->getMessage()]);
         }
@@ -414,11 +406,11 @@ class DatabaseOptimizationService
             // Check buffer pool size
             $bufferPool = DB::select("SHOW VARIABLES LIKE 'innodb_buffer_pool_size'");
             if (!empty($bufferPool)) {
-                $bufferPoolSize = (int)$bufferPool[0]->Value;
+                $bufferPoolSize = (int) $bufferPool[0]->Value;
                 if ($bufferPoolSize < 1073741824) { // Less than 1GB
                     $recommendations[] = [
                         'priority' => 'high',
-                        'recommendation' => 'Increase InnoDB buffer pool size for better performance'
+                        'recommendation' => 'Increase InnoDB buffer pool size for better performance',
                     ];
                 }
             }
@@ -428,22 +420,21 @@ class DatabaseOptimizationService
             if (!empty($queryCache) && $queryCache[0]->Value === 'OFF') {
                 $recommendations[] = [
                     'priority' => 'medium',
-                    'recommendation' => 'Enable query cache for better read performance'
+                    'recommendation' => 'Enable query cache for better read performance',
                 ];
             }
 
             // Check max connections
             $maxConnections = DB::select("SHOW VARIABLES LIKE 'max_connections'");
             if (!empty($maxConnections)) {
-                $maxConn = (int)$maxConnections[0]->Value;
+                $maxConn = (int) $maxConnections[0]->Value;
                 if ($maxConn < 100) {
                     $recommendations[] = [
                         'priority' => 'medium',
-                        'recommendation' => 'Increase max_connections for better concurrency'
+                        'recommendation' => 'Increase max_connections for better concurrency',
                     ];
                 }
             }
-
         } catch (\Exception $e) {
             Log::error('Error getting database recommendations', ['error' => $e->getMessage()]);
         }
@@ -458,10 +449,10 @@ class DatabaseOptimizationService
     {
         $queries = [];
         $lines = explode("\n", $logContent);
-        
+
         $currentQuery = '';
         $queryTime = 0;
-        
+
         foreach ($lines as $line) {
             if (strpos($line, 'Query_time:') !== false) {
                 preg_match('/Query_time: ([\d.]+)/', $line, $matches);
@@ -472,12 +463,12 @@ class DatabaseOptimizationService
                     $queries[] = [
                         'query' => $currentQuery,
                         'time' => $queryTime,
-                        'recommendation' => 'Optimize this query for better performance'
+                        'recommendation' => 'Optimize this query for better performance',
                     ];
                 }
             }
         }
-        
+
         return $queries;
     }
 
@@ -488,26 +479,25 @@ class DatabaseOptimizationService
     {
         $maintenanceResults = [
             'timestamp' => now()->toISOString(),
-            'operations' => []
+            'operations' => [],
         ];
 
         try {
             // Analyze tables
-            $tables = DB::select("SHOW TABLES");
+            $tables = DB::select('SHOW TABLES');
             $databaseName = DB::getDatabaseName();
-            
+
             foreach ($tables as $table) {
                 $tableName = $table->{"Tables_in_{$databaseName}"};
-                
+
                 // Analyze table
                 DB::statement("ANALYZE TABLE {$tableName}");
                 $maintenanceResults['operations'][] = "Analyzed table: {$tableName}";
-                
+
                 // Optimize table
                 DB::statement("OPTIMIZE TABLE {$tableName}");
                 $maintenanceResults['operations'][] = "Optimized table: {$tableName}";
             }
-
         } catch (\Exception $e) {
             Log::error('Error running database maintenance', ['error' => $e->getMessage()]);
             $maintenanceResults['error'] = $e->getMessage();

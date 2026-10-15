@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
@@ -1479,6 +1481,7 @@ class WorkTemplateMvpApiTest extends TestCase
             }, $version['steps'] ?? []);
 
             usort($steps, static fn (array $left, array $right): int => ($left['order'] ?? 0) <=> ($right['order'] ?? 0));
+
             return [
                 'semver' => $version['semver'] ?? null,
                 'is_immutable' => (bool) ($version['is_immutable'] ?? false),

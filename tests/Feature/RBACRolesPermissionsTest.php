@@ -1,19 +1,21 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Models\User;
+use App\Models\Permission;
 use App\Models\Project;
 use App\Models\Role;
-use App\Models\Permission;
 use App\Models\Tenant;
-use Tests\TestCase;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
 
 /**
- * Test RBAC Roles và Permissions System
- * 
+ * Test RBAC Roles và Permissions System.
+ *
  * Kịch bản: Tạo roles → Assign permissions → Test user permissions → Test access control
  */
 class RBACRolesPermissionsTest extends TestCase
@@ -21,16 +23,21 @@ class RBACRolesPermissionsTest extends TestCase
     use RefreshDatabase;
 
     private $tenant;
+
     private $project;
+
     private $projectManager;
+
     private $designer;
+
     private $engineer;
+
     private $clientRep;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Tạo tenant
         $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
@@ -96,7 +103,7 @@ class RBACRolesPermissionsTest extends TestCase
     }
 
     /**
-     * Test tạo roles với different scopes
+     * Test tạo roles với different scopes.
      */
     public function test_can_create_roles_with_different_scopes(): void
     {
@@ -159,7 +166,7 @@ class RBACRolesPermissionsTest extends TestCase
     }
 
     /**
-     * Test tạo permissions với different modules và actions
+     * Test tạo permissions với different modules và actions.
      */
     public function test_can_create_permissions_with_modules_and_actions(): void
     {
@@ -257,7 +264,7 @@ class RBACRolesPermissionsTest extends TestCase
     }
 
     /**
-     * Test assign permissions to roles
+     * Test assign permissions to roles.
      */
     public function test_can_assign_permissions_to_roles(): void
     {
@@ -343,7 +350,7 @@ class RBACRolesPermissionsTest extends TestCase
     }
 
     /**
-     * Test assign roles to users
+     * Test assign roles to users.
      */
     public function test_can_assign_roles_to_users(): void
     {
@@ -394,7 +401,7 @@ class RBACRolesPermissionsTest extends TestCase
     }
 
     /**
-     * Test permission checking logic
+     * Test permission checking logic.
      */
     public function test_permission_checking_logic(): void
     {
@@ -451,13 +458,13 @@ class RBACRolesPermissionsTest extends TestCase
         // User should have view and edit permissions
         $this->assertTrue(in_array('project.view', $userPermissions));
         $this->assertTrue(in_array('project.edit', $userPermissions));
-        
+
         // User should NOT have delete permission
         $this->assertFalse(in_array('project.delete', $userPermissions));
     }
 
     /**
-     * Test role hierarchy và scope inheritance
+     * Test role hierarchy và scope inheritance.
      */
     public function test_role_hierarchy_and_scope_inheritance(): void
     {
@@ -555,7 +562,7 @@ class RBACRolesPermissionsTest extends TestCase
     }
 
     /**
-     * Test RBAC workflow end-to-end
+     * Test RBAC workflow end-to-end.
      */
     public function test_rbac_workflow_end_to_end(): void
     {
@@ -689,7 +696,7 @@ class RBACRolesPermissionsTest extends TestCase
     }
 
     /**
-     * Helper method để get user permissions (simulate)
+     * Helper method để get user permissions (simulate).
      */
     private function getUserPermissions(string $userId): array
     {
@@ -704,7 +711,7 @@ class RBACRolesPermissionsTest extends TestCase
                 ->where('role_permissions.role_id', $roleId)
                 ->pluck('permissions.code')
                 ->toArray();
-            
+
             $permissions = array_merge($permissions, $rolePermissions);
         }
 

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories;
 
@@ -30,7 +32,7 @@ class WidgetFactory extends Factory
             'description' => $this->faker->sentence(),
             'config' => [
                 'title' => $this->faker->sentence(3),
-                'refresh_interval' => $this->faker->numberBetween(30, 300)
+                'refresh_interval' => $this->faker->numberBetween(30, 300),
             ],
             'position' => [
                 'x' => $this->faker->numberBetween(0, 5),
@@ -39,7 +41,7 @@ class WidgetFactory extends Factory
                 'h' => $this->faker->numberBetween(1, 4),
             ],
             'is_active' => true,
-            'metadata' => []
+            'metadata' => [],
         ];
     }
 

@@ -33,18 +33,19 @@ class CleanMockData extends Command
             $this->warn('⚠️  This will delete all mock/test data from the database!');
             if (!$this->confirm('Are you sure you want to proceed?')) {
                 $this->info('❌ Operation cancelled.');
+
                 return;
             }
         }
 
         try {
             $this->info('📊 Counting existing data...');
-            
+
             $taskCount = Task::where('name', 'LIKE', '%Test%')
                 ->orWhere('name', 'LIKE', '%Mock%')
                 ->orWhere('description', 'LIKE', '%test%')
                 ->count();
-                
+
             $projectCount = Project::where('name', 'LIKE', '%Test%')
                 ->orWhere('name', 'LIKE', '%Mock%')
                 ->orWhere('description', 'LIKE', '%test%')
@@ -70,7 +71,6 @@ class CleanMockData extends Command
             } else {
                 $this->info('ℹ️  No mock data found to clean up.');
             }
-
         } catch (\Exception $e) {
             $this->error('❌ Error cleaning mock data: ' . $e->getMessage());
             $this->error('Stack trace: ' . $e->getTraceAsString());

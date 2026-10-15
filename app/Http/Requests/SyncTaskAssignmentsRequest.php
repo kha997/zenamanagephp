@@ -1,18 +1,18 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Form Request để xác thực dữ liệu khi đồng bộ task assignments với compensation records
- * 
- * @package Src\Compensation\Requests
+ * Form Request để xác thực dữ liệu khi đồng bộ task assignments với compensation records.
  */
 class SyncTaskAssignmentsRequest extends FormRequest
 {
     /**
-     * Xác định user có quyền thực hiện request này không
+     * Xác định user có quyền thực hiện request này không.
      */
     public function authorize(): bool
     {
@@ -20,7 +20,7 @@ class SyncTaskAssignmentsRequest extends FormRequest
     }
 
     /**
-     * Các quy tắc validation cho request
+     * Các quy tắc validation cho request.
      */
     public function rules(): array
     {
@@ -28,24 +28,24 @@ class SyncTaskAssignmentsRequest extends FormRequest
             'project_id' => [
                 'required',
                 'integer',
-                'exists:projects,id'
+                'exists:projects,id',
             ],
             'force_update' => [
                 'nullable',
-                'boolean'
-            ]
+                'boolean',
+            ],
         ];
     }
 
     /**
-     * Thông báo lỗi tùy chỉnh
+     * Thông báo lỗi tùy chỉnh.
      */
     public function messages(): array
     {
         return [
             'project_id.required' => 'Project ID là bắt buộc',
             'project_id.exists' => 'Project không tồn tại',
-            'force_update.boolean' => 'Force update phải là true hoặc false'
+            'force_update.boolean' => 'Force update phải là true hoặc false',
         ];
     }
 }

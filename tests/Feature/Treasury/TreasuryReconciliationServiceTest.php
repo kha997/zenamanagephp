@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Treasury;
 
@@ -29,13 +31,21 @@ class TreasuryReconciliationServiceTest extends TestCase
     use TreasuryAccessTestHelpers;
 
     private Tenant $tenant;
+
     private Project $project;
+
     private User $owner;
+
     private TreasuryPostingService $posting;
+
     private TreasuryReconciliationService $reconciliation;
+
     private TreasuryBalanceService $balances;
+
     private TreasuryFinancialParty $investor;
+
     private TreasuryWallet $bank;
+
     private TreasuryWallet $cash;
 
     protected function setUp(): void

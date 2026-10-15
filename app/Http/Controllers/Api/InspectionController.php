@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
@@ -321,7 +323,7 @@ class InspectionController extends ApiBaseController
                 }
             }
 
-            $inspection->update(array_filter($data, fn($value) => $value !== null));
+            $inspection->update(array_filter($data, fn ($value) => $value !== null));
 
             $inspection->load([
                 'qcPlan:id,title,project_id',
@@ -822,6 +824,7 @@ class InspectionController extends ApiBaseController
                 }
 
                 $fieldKey = $item['field_key'] ?? null;
+
                 return is_string($fieldKey) ? Str::after($fieldKey, 'checklist:') : '';
             });
 

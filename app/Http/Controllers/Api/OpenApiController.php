@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -20,17 +19,17 @@ use Illuminate\Http\JsonResponse;
  *         url="https://opensource.org/licenses/MIT"
  *     )
  * )
- * 
+ *
  * @OA\Server(
  *     url="http://localhost:8000",
  *     description="Local Development Server"
  * )
- * 
+ *
  * @OA\Server(
  *     url="https://api.zenamanage.com",
  *     description="Production Server"
  * )
- * 
+ *
  * @OA\SecurityScheme(
  *     securityScheme="sanctum",
  *     type="http",
@@ -38,7 +37,7 @@ use Illuminate\Http\JsonResponse;
  *     bearerFormat="JWT",
  *     description="Laravel Sanctum Token Authentication"
  * )
- * 
+ *
  * @OA\SecurityScheme(
  *     securityScheme="cookie",
  *     type="apiKey",
@@ -46,27 +45,27 @@ use Illuminate\Http\JsonResponse;
  *     name="XSRF-TOKEN",
  *     description="CSRF Token for SPA Authentication"
  * )
- * 
+ *
  * @OA\Tag(
  *     name="Authentication",
  *     description="Authentication and authorization endpoints"
  * )
- * 
+ *
  * @OA\Tag(
  *     name="Admin",
  *     description="Super admin only endpoints"
  * )
- * 
+ *
  * @OA\Tag(
  *     name="App",
  *     description="Tenant-scoped application endpoints"
  * )
- * 
+ *
  * @OA\Tag(
  *     name="Public",
  *     description="Public endpoints (no authentication required)"
  * )
- * 
+ *
  * @OA\Tag(
  *     name="Invitations",
  *     description="User invitation management"
@@ -98,7 +97,7 @@ class OpenApiController extends Controller
             'status' => 'ok',
             'timestamp' => now()->toISOString(),
             'version' => '1.0.0',
-            'environment' => app()->environment()
+            'environment' => app()->environment(),
         ]);
     }
 
@@ -150,8 +149,8 @@ class OpenApiController extends Controller
                 'database' => 'ok',
                 'queue' => 'ok',
                 'storage' => 'ok',
-                'cache' => 'ok'
-            ]
+                'cache' => 'ok',
+            ],
         ]);
     }
 
@@ -184,7 +183,7 @@ class OpenApiController extends Controller
             'execution_time' => '125ms',
             'database_queries' => 12,
             'cache_hits' => 8,
-            'cache_misses' => 2
+            'cache_misses' => 2,
         ]);
     }
 
@@ -214,7 +213,7 @@ class OpenApiController extends Controller
 
         return response()->json([
             'message' => 'All caches cleared successfully',
-            'timestamp' => now()->toISOString()
+            'timestamp' => now()->toISOString(),
         ]);
     }
 }

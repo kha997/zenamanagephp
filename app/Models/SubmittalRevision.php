@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -27,11 +29,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class SubmittalRevision extends Model
 {
-    use HasUlids, TenantScope;
+    use HasUlids;
+    use TenantScope;
 
     protected $table = 'submittal_revisions';
+
     protected $keyType = 'string';
+
     public $incrementing = false;
+
     public $timestamps = false;
 
     protected $fillable = [

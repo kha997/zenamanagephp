@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\Treasury;
 
@@ -62,32 +64,47 @@ class TreasuryExpenseController extends BaseApiController
 
     public function update(Request $request, string $project, string $treasuryExpense): JsonResponse
     {
-        return $this->act($project, 'treasury.create-expense', fn (Project $p) => $this->withExpense($p, $treasuryExpense,
-            fn (TreasuryFinancialDocument $e) => $this->validated($request, fn (array $data) => $this->expenses->updateDraft($p, $this->user(), $e, $data))));
+        return $this->act($project, 'treasury.create-expense', fn (Project $p) => $this->withExpense(
+            $p,
+            $treasuryExpense,
+            fn (TreasuryFinancialDocument $e) => $this->validated($request, fn (array $data) => $this->expenses->updateDraft($p, $this->user(), $e, $data))
+        ));
     }
 
     public function submit(string $project, string $treasuryExpense): JsonResponse
     {
-        return $this->act($project, 'treasury.submit-expense', fn (Project $p) => $this->withExpense($p, $treasuryExpense,
-            fn (TreasuryFinancialDocument $e) => $this->expenses->submit($p, $this->user(), $e)));
+        return $this->act($project, 'treasury.submit-expense', fn (Project $p) => $this->withExpense(
+            $p,
+            $treasuryExpense,
+            fn (TreasuryFinancialDocument $e) => $this->expenses->submit($p, $this->user(), $e)
+        ));
     }
 
     public function approve(Request $request, string $project, string $treasuryExpense): JsonResponse
     {
-        return $this->act($project, 'treasury.approve-expense', fn (Project $p) => $this->withExpense($p, $treasuryExpense,
-            fn (TreasuryFinancialDocument $e) => $this->expenses->approve($p, $this->user(), $e, $request->input('note'))));
+        return $this->act($project, 'treasury.approve-expense', fn (Project $p) => $this->withExpense(
+            $p,
+            $treasuryExpense,
+            fn (TreasuryFinancialDocument $e) => $this->expenses->approve($p, $this->user(), $e, $request->input('note'))
+        ));
     }
 
     public function reject(Request $request, string $project, string $treasuryExpense): JsonResponse
     {
-        return $this->act($project, 'treasury.approve-expense', fn (Project $p) => $this->withExpense($p, $treasuryExpense,
-            fn (TreasuryFinancialDocument $e) => $this->expenses->reject($p, $this->user(), $e, (string) $request->input('note', ''))));
+        return $this->act($project, 'treasury.approve-expense', fn (Project $p) => $this->withExpense(
+            $p,
+            $treasuryExpense,
+            fn (TreasuryFinancialDocument $e) => $this->expenses->reject($p, $this->user(), $e, (string) $request->input('note', ''))
+        ));
     }
 
     public function copy(string $project, string $treasuryExpense): JsonResponse
     {
-        return $this->act($project, 'treasury.create-expense', fn (Project $p) => $this->withExpense($p, $treasuryExpense,
-            fn (TreasuryFinancialDocument $e) => $this->expenses->copyToDraft($p, $this->user(), $e)), 201);
+        return $this->act($project, 'treasury.create-expense', fn (Project $p) => $this->withExpense(
+            $p,
+            $treasuryExpense,
+            fn (TreasuryFinancialDocument $e) => $this->expenses->copyToDraft($p, $this->user(), $e)
+        ), 201);
     }
 
     /**

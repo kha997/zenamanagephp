@@ -4,14 +4,14 @@ namespace App\Http\Controllers\Api\Public;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class HealthController extends Controller
 {
     /**
      * Public liveness check endpoint
-     * No authentication required, throttled for public access
+     * No authentication required, throttled for public access.
      */
     public function liveness(): JsonResponse
     {
@@ -21,7 +21,7 @@ class HealthController extends Controller
                 'database' => $this->checkDatabase(),
                 'cache' => $this->checkCache(),
                 'storage' => $this->checkStorage(),
-                'timestamp' => now()->toISOString()
+                'timestamp' => now()->toISOString(),
             ];
 
             $allHealthy = collect($checks)->except('timestamp')->every(function ($check) {
@@ -36,27 +36,27 @@ class HealthController extends Controller
                 'service' => 'ZenaManage',
                 'version' => '1.0.0',
                 'checks' => $checks,
-                'uptime' => $this->getUptime()
+                'uptime' => $this->getUptime(),
             ], $httpStatus);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'unhealthy',
                 'service' => 'ZenaManage',
                 'version' => '1.0.0',
                 'error' => 'System check failed',
-                'timestamp' => now()->toISOString()
+                'timestamp' => now()->toISOString(),
             ], 503);
         }
     }
 
     /**
-     * Check database connectivity
+     * Check database connectivity.
      */
     private function checkDatabase(): bool
     {
         try {
             DB::connection()->getPdo();
+
             return true;
         } catch (\Exception $e) {
             return false;
@@ -64,13 +64,14 @@ class HealthController extends Controller
     }
 
     /**
-     * Check cache system
+     * Check cache system.
      */
     private function checkCache(): bool
     {
         try {
             Cache::put('health_check', 'ok', 10);
             $value = Cache::get('health_check');
+
             return $value === 'ok';
         } catch (\Exception $e) {
             return false;
@@ -78,12 +79,13 @@ class HealthController extends Controller
     }
 
     /**
-     * Check storage accessibility
+     * Check storage accessibility.
      */
     private function checkStorage(): bool
     {
         try {
             $path = storage_path('app');
+
             return is_dir($path) && is_writable($path);
         } catch (\Exception $e) {
             return false;
@@ -91,17 +93,19 @@ class HealthController extends Controller
     }
 
     /**
-     * Get system uptime
+     * Get system uptime.
      */
     private function getUptime(): string
     {
         try {
             if (function_exists('sys_getloadavg')) {
                 $load = sys_getloadavg();
-                return "Load: " . implode(', ', array_map(function($l) {
+
+                return 'Load: ' . implode(', ', array_map(function ($l) {
                     return number_format($l, 2);
                 }, $load));
             }
+
             return 'Uptime: ' . date('Y-m-d H:i:s');
         } catch (\Exception $e) {
             return 'Uptime: Unknown';

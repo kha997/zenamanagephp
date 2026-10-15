@@ -1,21 +1,22 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
 use App\Models\Project;
+use App\Models\ProjectMilestone;
 use App\Models\Task;
 use App\Models\TaskDependency;
-use App\Models\ProjectMilestone;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\TaskDependencyService;
-use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Carbon;
+use Tests\TestCase;
 
 /**
- * Timeline & Scheduling (Gantt Chart) Test
- * 
+ * Timeline & Scheduling (Gantt Chart) Test.
+ *
  * Tests the timeline and scheduling functionality including:
  * - Task scheduling and timeline management
  * - Gantt chart data generation
@@ -29,26 +30,29 @@ class TimelineSchedulingTest extends TestCase
     use RefreshDatabase;
 
     protected $tenant;
+
     protected $user;
+
     protected $project;
+
     protected $dependencyService;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create test data
         $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
             'slug' => 'test-company',
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
         $this->user = User::factory()->create([
             'name' => 'Project Manager',
             'email' => 'pm@test.com',
             'password' => bcrypt('password'),
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $this->project = Project::factory()->create([
@@ -59,14 +63,14 @@ class TimelineSchedulingTest extends TestCase
             'start_date' => now(),
             'end_date' => now()->addMonths(6),
             'status' => 'active',
-            'budget_total' => 500000.00
+            'budget_total' => 500000.00,
         ]);
 
         $this->dependencyService = new TaskDependencyService();
     }
 
     /**
-     * Test basic task scheduling functionality
+     * Test basic task scheduling functionality.
      */
     public function test_can_schedule_tasks_with_timeline(): void
     {
@@ -81,7 +85,7 @@ class TimelineSchedulingTest extends TestCase
             'status' => 'pending',
             'priority' => 'high',
             'assigned_to' => $this->user->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
         $task2 = Task::create([
@@ -94,7 +98,7 @@ class TimelineSchedulingTest extends TestCase
             'status' => 'pending',
             'priority' => 'high',
             'assigned_to' => $this->user->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
         // Test timeline data
@@ -106,13 +110,13 @@ class TimelineSchedulingTest extends TestCase
         // Test task duration calculation
         $duration1 = $task1->start_date->diffInDays($task1->end_date);
         $duration2 = $task2->start_date->diffInDays($task2->end_date);
-        
+
         $this->assertEquals(10, $duration1);
         $this->assertEquals(14, $duration2);
     }
 
     /**
-     * Test task dependencies and timeline impact
+     * Test task dependencies and timeline impact.
      */
     public function test_can_create_task_dependencies_with_timeline(): void
     {
@@ -125,7 +129,7 @@ class TimelineSchedulingTest extends TestCase
             'end_date' => now()->addDays(5),
             'status' => 'pending',
             'assigned_to' => $this->user->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
         $task2 = Task::create([
@@ -136,7 +140,7 @@ class TimelineSchedulingTest extends TestCase
             'end_date' => now()->addDays(20),
             'status' => 'pending',
             'assigned_to' => $this->user->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
         // Create dependency: Task2 depends on Task1
@@ -153,7 +157,7 @@ class TimelineSchedulingTest extends TestCase
         $this->assertDatabaseHas('task_dependencies', [
             'task_id' => $task2->id,
             'dependency_id' => $task1->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Test timeline validation
@@ -161,7 +165,7 @@ class TimelineSchedulingTest extends TestCase
     }
 
     /**
-     * Test critical path calculation
+     * Test critical path calculation.
      */
     public function test_can_calculate_critical_path(): void
     {
@@ -174,7 +178,7 @@ class TimelineSchedulingTest extends TestCase
             'end_date' => now()->addDays(5),
             'status' => 'pending',
             'assigned_to' => $this->user->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
         $taskB = Task::create([
@@ -185,7 +189,7 @@ class TimelineSchedulingTest extends TestCase
             'end_date' => now()->addDays(10),
             'status' => 'pending',
             'assigned_to' => $this->user->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
         $taskC = Task::create([
@@ -196,7 +200,7 @@ class TimelineSchedulingTest extends TestCase
             'end_date' => now()->addDays(15),
             'status' => 'pending',
             'assigned_to' => $this->user->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
         // Create dependencies
@@ -212,7 +216,7 @@ class TimelineSchedulingTest extends TestCase
     }
 
     /**
-     * Test milestone creation and tracking
+     * Test milestone creation and tracking.
      */
     public function test_can_create_and_track_milestones(): void
     {
@@ -224,7 +228,7 @@ class TimelineSchedulingTest extends TestCase
             'target_date' => now()->addDays(10),
             'status' => 'pending',
             'order' => 1,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
         $milestone2 = ProjectMilestone::create([
@@ -234,7 +238,7 @@ class TimelineSchedulingTest extends TestCase
             'target_date' => now()->addDays(25),
             'status' => 'pending',
             'order' => 2,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
         // Test milestone creation
@@ -242,18 +246,18 @@ class TimelineSchedulingTest extends TestCase
             'id' => $milestone1->id,
             'project_id' => $this->project->id,
             'name' => 'Foundation Complete',
-            'status' => 'pending'
+            'status' => 'pending',
         ]);
 
         // Test milestone completion
         $milestone1->markCompleted($this->user->id);
-        
+
         $this->assertEquals('completed', $milestone1->fresh()->status);
         $this->assertNotNull($milestone1->fresh()->completed_date);
 
         // Test milestone statistics
         $stats = ProjectMilestone::getProjectStatistics($this->project->id);
-        
+
         $this->assertEquals(2, $stats['total']);
         $this->assertEquals(1, $stats['completed']);
         $this->assertEquals(1, $stats['pending']);
@@ -261,26 +265,26 @@ class TimelineSchedulingTest extends TestCase
     }
 
     /**
-     * Test Gantt chart data generation
+     * Test Gantt chart data generation.
      */
     public function test_can_generate_gantt_chart_data(): void
     {
         // Create tasks with different timelines
         $tasks = [];
         $startDate = now();
-        
+
         for ($i = 0; $i < 5; $i++) {
             $tasks[] = Task::create([
                 'tenant_id' => $this->tenant->id,
                 'project_id' => $this->project->id,
-                'name' => "Task " . ($i + 1),
-                'description' => "Description for task " . ($i + 1),
+                'name' => 'Task ' . ($i + 1),
+                'description' => 'Description for task ' . ($i + 1),
                 'start_date' => $startDate->copy()->addDays($i * 5),
                 'end_date' => $startDate->copy()->addDays(($i * 5) + 3),
                 'status' => $i < 2 ? 'completed' : 'pending',
                 'priority' => $i % 2 === 0 ? 'high' : 'medium',
                 'assigned_to' => $this->user->id,
-                'created_by' => $this->user->id
+                'created_by' => $this->user->id,
             ]);
         }
 
@@ -303,7 +307,7 @@ class TimelineSchedulingTest extends TestCase
     }
 
     /**
-     * Test timeline optimization
+     * Test timeline optimization.
      */
     public function test_can_optimize_timeline(): void
     {
@@ -316,7 +320,7 @@ class TimelineSchedulingTest extends TestCase
             'end_date' => now()->addDays(5),
             'status' => 'pending',
             'assigned_to' => $this->user->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
         $task2 = Task::create([
@@ -327,7 +331,7 @@ class TimelineSchedulingTest extends TestCase
             'end_date' => now()->addDays(8),
             'status' => 'pending',
             'assigned_to' => $this->user->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
         // Create dependency to force sequential execution
@@ -343,7 +347,7 @@ class TimelineSchedulingTest extends TestCase
     }
 
     /**
-     * Test blocked tasks detection
+     * Test blocked tasks detection.
      */
     public function test_can_detect_blocked_tasks(): void
     {
@@ -354,7 +358,7 @@ class TimelineSchedulingTest extends TestCase
             'name' => 'Blocking Task',
             'status' => 'pending',
             'assigned_to' => $this->user->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
         $task2 = Task::create([
@@ -363,7 +367,7 @@ class TimelineSchedulingTest extends TestCase
             'name' => 'Blocked Task',
             'status' => 'pending',
             'assigned_to' => $this->user->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
         // Create dependency
@@ -384,7 +388,7 @@ class TimelineSchedulingTest extends TestCase
     }
 
     /**
-     * Test ready tasks detection
+     * Test ready tasks detection.
      */
     public function test_can_detect_ready_tasks(): void
     {
@@ -395,7 +399,7 @@ class TimelineSchedulingTest extends TestCase
             'name' => 'Independent Task',
             'status' => 'pending',
             'assigned_to' => $this->user->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
         $task2 = Task::create([
@@ -404,7 +408,7 @@ class TimelineSchedulingTest extends TestCase
             'name' => 'Dependent Task',
             'status' => 'pending',
             'assigned_to' => $this->user->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
         $task3 = Task::create([
@@ -413,7 +417,7 @@ class TimelineSchedulingTest extends TestCase
             'name' => 'Blocking Task',
             'status' => 'pending',
             'assigned_to' => $this->user->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
         // Create dependency: Task2 depends on Task3
@@ -430,7 +434,7 @@ class TimelineSchedulingTest extends TestCase
     }
 
     /**
-     * Test timeline visualization data
+     * Test timeline visualization data.
      */
     public function test_can_generate_timeline_visualization_data(): void
     {
@@ -443,13 +447,13 @@ class TimelineSchedulingTest extends TestCase
             $tasks[] = Task::create([
                 'tenant_id' => $this->tenant->id,
                 'project_id' => $this->project->id,
-                'name' => "Visualization Task " . ($i + 1),
+                'name' => 'Visualization Task ' . ($i + 1),
                 'start_date' => now()->addDays($i * 2),
                 'end_date' => now()->addDays(($i * 2) + 3),
                 'status' => $statuses[$i % 3],
                 'priority' => $priorities[$i % 4],
                 'assigned_to' => $this->user->id,
-                'created_by' => $this->user->id
+                'created_by' => $this->user->id,
             ]);
         }
 
@@ -476,7 +480,7 @@ class TimelineSchedulingTest extends TestCase
     }
 
     /**
-     * Test multi-tenant timeline isolation
+     * Test multi-tenant timeline isolation.
      */
     public function test_timeline_data_is_tenant_isolated(): void
     {
@@ -484,14 +488,14 @@ class TimelineSchedulingTest extends TestCase
         $tenant2 = Tenant::factory()->create([
             'name' => 'Another Company',
             'slug' => 'another-company',
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
         $project2 = Project::factory()->create([
             'tenant_id' => $tenant2->id,
             'code' => 'TIMELINE-002',
             'name' => 'Another Timeline Project',
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
         // Create tasks in both tenants
@@ -501,7 +505,7 @@ class TimelineSchedulingTest extends TestCase
             'name' => 'Tenant 1 Task',
             'status' => 'pending',
             'assigned_to' => $this->user->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
         $task2 = Task::create([
@@ -510,7 +514,7 @@ class TimelineSchedulingTest extends TestCase
             'name' => 'Tenant 2 Task',
             'status' => 'pending',
             'assigned_to' => $this->user->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
         // Test tenant isolation
@@ -534,7 +538,7 @@ class TimelineSchedulingTest extends TestCase
     }
 
     /**
-     * Helper method to generate Gantt chart data
+     * Helper method to generate Gantt chart data.
      */
     private function generateGanttChartData(string $projectId): array
     {
@@ -550,7 +554,7 @@ class TimelineSchedulingTest extends TestCase
                     'status' => $task->status,
                     'priority' => $task->priority,
                     'progress' => $task->progress_percent ?? 0,
-                    'assignee' => $task->assignee ? $task->assignee->name : null
+                    'assignee' => $task->assignee ? $task->assignee->name : null,
                 ];
             });
 
@@ -562,7 +566,7 @@ class TimelineSchedulingTest extends TestCase
                     'id' => $milestone->id,
                     'name' => $milestone->name,
                     'date' => $milestone->target_date,
-                    'status' => $milestone->status
+                    'status' => $milestone->status,
                 ];
             });
 
@@ -572,18 +576,24 @@ class TimelineSchedulingTest extends TestCase
         ->map(function ($dependency) {
             return [
                 'from' => $dependency->dependency_id,
-                'to' => $dependency->task_id
+                'to' => $dependency->task_id,
             ];
         });
 
         // Calculate timeline range
         $allDates = collect();
         $tasks->each(function ($task) use ($allDates) {
-            if ($task['start']) $allDates->push($task['start']);
-            if ($task['end']) $allDates->push($task['end']);
+            if ($task['start']) {
+                $allDates->push($task['start']);
+            }
+            if ($task['end']) {
+                $allDates->push($task['end']);
+            }
         });
         $milestones->each(function ($milestone) use ($allDates) {
-            if ($milestone['date']) $allDates->push($milestone['date']);
+            if ($milestone['date']) {
+                $allDates->push($milestone['date']);
+            }
         });
 
         $timeline = $allDates->filter()->sort()->unique()->values();
@@ -592,12 +602,12 @@ class TimelineSchedulingTest extends TestCase
             'tasks' => $tasks,
             'milestones' => $milestones,
             'dependencies' => $dependencies,
-            'timeline' => $timeline
+            'timeline' => $timeline,
         ];
     }
 
     /**
-     * Helper method to generate timeline visualization data
+     * Helper method to generate timeline visualization data.
      */
     private function generateTimelineVisualizationData(string $projectId): array
     {
@@ -615,7 +625,7 @@ class TimelineSchedulingTest extends TestCase
                 'start' => $task->start_date,
                 'end' => $task->end_date,
                 'status' => $task->status,
-                'priority' => $task->priority
+                'priority' => $task->priority,
             ];
         });
 
@@ -623,7 +633,7 @@ class TimelineSchedulingTest extends TestCase
             'tasks' => $timeline,
             'timeline' => $timeline->pluck('start')->merge($timeline->pluck('end'))->filter()->sort()->unique()->values(),
             'status_counts' => $statusCounts,
-            'priority_distribution' => $priorityDistribution
+            'priority_distribution' => $priorityDistribution,
         ];
     }
 }

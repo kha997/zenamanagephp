@@ -1,16 +1,18 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use Src\Notification\Models\Notification;
-use Src\Notification\Models\NotificationRule;
-use Src\CoreProject\Models\Project;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Src\CoreProject\Models\Project;
+use Src\Notification\Models\Notification;
+use Src\Notification\Models\NotificationRule;
 
 /**
- * Notification Seeder
- * 
+ * Notification Seeder.
+ *
  * Tạo dữ liệu mẫu cho notifications và notification rules
  */
 class NotificationSeeder extends Seeder

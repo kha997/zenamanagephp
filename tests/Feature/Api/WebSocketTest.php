@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
@@ -13,11 +15,13 @@ use Tests\Traits\AuthenticationTestTrait;
 
 class WebSocketTest extends TestCase
 {
-    use RefreshDatabase, WithFaker, AuthenticationTestTrait;
+    use RefreshDatabase;
+    use WithFaker;
+    use AuthenticationTestTrait;
 
     protected function setUp(): void
     {
-       parent::setUp();
+        parent::setUp();
         Cache::flush();
         $user = $this->createRbacAdminUser();
         $tenant = $this->resolveTenantForUser($user);
@@ -31,7 +35,7 @@ class WebSocketTest extends TestCase
     }
 
     /**
-     * Test WebSocket connection info endpoint
+     * Test WebSocket connection info endpoint.
      */
     public function test_websocket_connection_info()
     {
@@ -45,8 +49,8 @@ class WebSocketTest extends TestCase
                 'channels',
                 'event_types',
                 'online_users',
-                'connection_id'
-            ]
+                'connection_id',
+            ],
         ]);
 
         $data = $response->json('data');
@@ -59,7 +63,7 @@ class WebSocketTest extends TestCase
     }
 
     /**
-     * Test WebSocket stats endpoint
+     * Test WebSocket stats endpoint.
      */
     public function test_websocket_stats()
     {
@@ -78,8 +82,8 @@ class WebSocketTest extends TestCase
                 'online_users',
                 'channels',
                 'event_types',
-                'redis_connected'
-            ]
+                'redis_connected',
+            ],
         ]);
 
         $data = $response->json('data');
@@ -97,7 +101,7 @@ class WebSocketTest extends TestCase
     }
 
     /**
-     * Test WebSocket channels endpoint
+     * Test WebSocket channels endpoint.
      */
     public function test_websocket_channels()
     {
@@ -106,7 +110,7 @@ class WebSocketTest extends TestCase
         $response->assertStatus(200);
         $response->assertJsonStructure([
             'success',
-            'data'
+            'data',
         ]);
 
         $data = $response->json('data');
@@ -122,7 +126,7 @@ class WebSocketTest extends TestCase
     }
 
     /**
-     * Test WebSocket connection test endpoint
+     * Test WebSocket connection test endpoint.
      */
     public function test_websocket_connection_test()
     {
@@ -135,8 +139,8 @@ class WebSocketTest extends TestCase
                 'connection_status',
                 'response_time',
                 'server_info',
-                'test_timestamp'
-            ]
+                'test_timestamp',
+            ],
         ]);
 
         $data = $response->json('data');
@@ -147,7 +151,7 @@ class WebSocketTest extends TestCase
     }
 
     /**
-     * Test marking user online
+     * Test marking user online.
      */
     public function test_mark_user_online()
     {
@@ -157,15 +161,15 @@ class WebSocketTest extends TestCase
             'metadata' => [
                 'browser' => 'Chrome',
                 'os' => 'macOS',
-                'ip_address' => '127.0.0.1'
-            ]
+                'ip_address' => '127.0.0.1',
+            ],
         ]);
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
             'success',
             'message',
-            'user_id'
+            'user_id',
         ]);
 
         $this->assertTrue($response->json('success'));
@@ -174,7 +178,7 @@ class WebSocketTest extends TestCase
     }
 
     /**
-     * Test marking user offline
+     * Test marking user offline.
      */
     public function test_mark_user_offline()
     {
@@ -183,21 +187,21 @@ class WebSocketTest extends TestCase
         // First mark user online
         $this->apiPost('/api/websocket/online', [
             'user_id' => $this->apiFeatureUser->id,
-            'connection_id' => $connectionId
+            'connection_id' => $connectionId,
         ]);
 
         // Then mark user offline
         $response = $this->apiPost('/api/websocket/offline', [
             'user_id' => $this->apiFeatureUser->id,
             'connection_id' => $connectionId,
-            'reason' => 'user_disconnect'
+            'reason' => 'user_disconnect',
         ]);
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
             'success',
             'message',
-            'user_id'
+            'user_id',
         ]);
 
         $this->assertTrue($response->json('success'));
@@ -206,7 +210,7 @@ class WebSocketTest extends TestCase
     }
 
     /**
-     * Test updating user activity
+     * Test updating user activity.
      */
     public function test_update_user_activity()
     {
@@ -215,8 +219,8 @@ class WebSocketTest extends TestCase
             'activity_type' => 'page_view',
             'activity_data' => [
                 'page' => '/dashboard',
-                'duration' => 30
-            ]
+                'duration' => 30,
+            ],
         ]);
 
         $response->assertStatus(200);
@@ -224,7 +228,7 @@ class WebSocketTest extends TestCase
             'success',
             'message',
             'user_id',
-            'activity'
+            'activity',
         ]);
 
         $this->assertTrue($response->json('success'));
@@ -315,7 +319,7 @@ class WebSocketTest extends TestCase
     }
 
     /**
-     * Test broadcasting message
+     * Test broadcasting message.
      */
     public function test_broadcast_message()
     {
@@ -325,9 +329,9 @@ class WebSocketTest extends TestCase
             'data' => [
                 'title' => 'Test Notification',
                 'message' => 'This is a test notification',
-                'type' => 'info'
+                'type' => 'info',
             ],
-            'target_users' => [$this->apiFeatureUser->id]
+            'target_users' => [$this->apiFeatureUser->id],
         ]);
 
         $response->assertStatus(200);
@@ -335,7 +339,7 @@ class WebSocketTest extends TestCase
             'success',
             'message',
             'channel',
-            'event'
+            'event',
         ]);
 
         $this->assertTrue($response->json('success'));
@@ -345,7 +349,7 @@ class WebSocketTest extends TestCase
     }
 
     /**
-     * Test sending notification
+     * Test sending notification.
      */
     public function test_send_notification()
     {
@@ -357,16 +361,16 @@ class WebSocketTest extends TestCase
             'data' => [
                 'task_id' => 123,
                 'project_id' => 456,
-                'due_date' => '2024-01-15'
+                'due_date' => '2024-01-15',
             ],
-            'priority' => 'normal'
+            'priority' => 'normal',
         ]);
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
             'success',
             'message',
-            'user_id'
+            'user_id',
         ]);
 
         $this->assertTrue($response->json('success'));
@@ -375,7 +379,7 @@ class WebSocketTest extends TestCase
     }
 
     /**
-     * Test WebSocket authentication
+     * Test WebSocket authentication.
      */
     public function test_websocket_authentication()
     {
@@ -395,28 +399,28 @@ class WebSocketTest extends TestCase
     }
 
     /**
-     * Test WebSocket error handling
+     * Test WebSocket error handling.
      */
     public function test_websocket_error_handling()
     {
         // Test invalid user ID
         $response = $this->apiPost('/api/websocket/online', [
             'user_id' => '99999',
-            'connection_id' => 'test_connection'
+            'connection_id' => 'test_connection',
         ]);
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
             'success',
             'message',
-            'user_id'
+            'user_id',
         ]);
         $this->assertTrue($response->json('success'));
         $this->assertEquals('99999', (string) $response->json('user_id'));
 
         // Test missing required fields
         $response = $this->apiPost('/api/websocket/broadcast', [
-            'channel' => 'notifications'
+            'channel' => 'notifications',
             // Missing event and data
         ]);
 
@@ -425,8 +429,8 @@ class WebSocketTest extends TestCase
             'message',
             'errors' => [
                 'event',
-                'data'
-            ]
+                'data',
+            ],
         ]);
         $this->assertIsString($response->json('message'));
         $errors = $response->json('errors');
@@ -435,7 +439,7 @@ class WebSocketTest extends TestCase
     }
 
     /**
-     * Test WebSocket performance metrics
+     * Test WebSocket performance metrics.
      */
     public function test_websocket_performance_metrics()
     {

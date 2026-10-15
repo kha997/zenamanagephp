@@ -2,10 +2,10 @@
 
 namespace Database\Factories;
 
-use App\Models\TaskAssignment;
 use App\Models\Task;
-use App\Models\User;
+use App\Models\TaskAssignment;
 use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

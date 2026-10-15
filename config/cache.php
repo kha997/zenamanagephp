@@ -2,39 +2,39 @@
 
 return [
     'default' => env('CACHE_DRIVER', 'file'),
-    
+
     'stores' => [
         'array' => [
             'driver' => 'array',
         ],
-        
+
         'file' => [
             'driver' => 'file',
             'path' => storage_path('framework/cache/data'),
         ],
-        
+
         'redis' => [
             'driver' => 'redis',
             'connection' => 'cache',
             'lock_connection' => 'default',
         ],
-        
+
         'redis_session' => [
             'driver' => 'redis',
             'connection' => 'default',
         ],
-        
+
         'redis_queue' => [
             'driver' => 'redis',
             'connection' => 'default',
         ],
-        
+
         'database' => [
             'driver' => 'database',
             'table' => 'cache',
             'connection' => null,
         ],
-        
+
         'memcached' => [
             'driver' => 'memcached',
             'persistent_id' => env('MEMCACHED_PERSISTENT_ID'),
@@ -54,6 +54,6 @@ return [
             ],
         ],
     ],
-    
+
     'prefix' => env('CACHE_PREFIX', 'zenamanage_cache'),
 ];

@@ -1,19 +1,20 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Models\Project;
 use App\Models\Document;
 use App\Models\DocumentVersion;
+use App\Models\Project;
 use App\Models\Tenant;
-use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 use Tests\Traits\TenantUserFactoryTrait;
 
 /**
- * Test Document Versioning và File Management - Simplified Version
- * 
+ * Test Document Versioning và File Management - Simplified Version.
+ *
  * Kịch bản: Tạo documents → Test versioning → Test file management
  */
 class DocumentVersioningSimpleTest extends TestCase
@@ -22,7 +23,9 @@ class DocumentVersioningSimpleTest extends TestCase
     use TenantUserFactoryTrait;
 
     private $tenant;
+
     private $project;
+
     private $user;
 
     protected function setUp(): void
@@ -53,7 +56,7 @@ class DocumentVersioningSimpleTest extends TestCase
     }
 
     /**
-     * Test tạo document đơn giản
+     * Test tạo document đơn giản.
      */
     public function test_can_create_simple_document(): void
     {
@@ -94,7 +97,7 @@ class DocumentVersioningSimpleTest extends TestCase
     }
 
     /**
-     * Test tạo document version đơn giản
+     * Test tạo document version đơn giản.
      */
     public function test_can_create_document_version(): void
     {
@@ -127,7 +130,7 @@ class DocumentVersioningSimpleTest extends TestCase
             'metadata' => [
                 'file_size' => 1024,
                 'mime_type' => 'application/pdf',
-                'original_name' => 'version-test.pdf'
+                'original_name' => 'version-test.pdf',
             ],
             'created_by' => $this->user->id,
         ]);
@@ -147,7 +150,7 @@ class DocumentVersioningSimpleTest extends TestCase
     }
 
     /**
-     * Test document versioning với multiple versions
+     * Test document versioning với multiple versions.
      */
     public function test_can_create_multiple_document_versions(): void
     {
@@ -234,7 +237,7 @@ class DocumentVersioningSimpleTest extends TestCase
     }
 
     /**
-     * Test document versioning với different storage drivers
+     * Test document versioning với different storage drivers.
      */
     public function test_can_use_different_storage_drivers(): void
     {
@@ -314,7 +317,7 @@ class DocumentVersioningSimpleTest extends TestCase
     }
 
     /**
-     * Test document versioning workflow end-to-end
+     * Test document versioning workflow end-to-end.
      */
     public function test_document_versioning_workflow_end_to_end(): void
     {

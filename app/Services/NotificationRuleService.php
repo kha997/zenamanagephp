@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -11,8 +13,8 @@ use Src\Foundation\Helpers\AuthHelper;
 use Src\Notification\Models\NotificationRule;
 
 /**
- * Service xử lý business logic cho Notification Rules
- * 
+ * Service xử lý business logic cho Notification Rules.
+ *
  * Chức năng chính:
  * - Quản lý quy tắc thông báo
  * - Đánh giá điều kiện thông báo
@@ -22,8 +24,8 @@ use Src\Notification\Models\NotificationRule;
 class NotificationRuleService
 {
     /**
-     * Tạo quy tắc thông báo mới
-     * 
+     * Tạo quy tắc thông báo mới.
+     *
      * @param array $data
      * @return NotificationRule
      */
@@ -31,7 +33,7 @@ class NotificationRuleService
     {
         // Validate channels
         $this->validateChannels($data['channels'] ?? []);
-        
+
         // Validate conditions nếu có
         if (!empty($data['conditions'])) {
             $this->validateConditions($data['conditions']);
@@ -57,15 +59,15 @@ class NotificationRuleService
             'userId' => $rule->user_id,
             'projectId' => $rule->project_id ?? 'system',
             'eventKey' => $rule->event_key,
-            'timestamp' => now()->toISOString()
+            'timestamp' => now()->toISOString(),
         ]);
 
         return $rule;
     }
 
     /**
-     * Cập nhật quy tắc thông báo
-     * 
+     * Cập nhật quy tắc thông báo.
+     *
      * @param string $ruleId
      * @param array $data
      * @param string $userId
@@ -85,7 +87,7 @@ class NotificationRuleService
         if (isset($data['channels'])) {
             $this->validateChannels($data['channels']);
         }
-        
+
         // Validate conditions nếu có update
         if (isset($data['conditions'])) {
             $this->validateConditions($data['conditions']);
@@ -104,15 +106,15 @@ class NotificationRuleService
             'eventKey' => $rule->event_key,
             'oldData' => $oldData,
             'newData' => $rule->fresh()->toArray(),
-            'timestamp' => now()->toISOString()
+            'timestamp' => now()->toISOString(),
         ]);
 
         return $rule;
     }
 
     /**
-     * Xóa quy tắc thông báo
-     * 
+     * Xóa quy tắc thông báo.
+     *
      * @param string $ruleId
      * @param string $userId
      * @return bool
@@ -138,15 +140,15 @@ class NotificationRuleService
             'userId' => $userId,
             'projectId' => $rule->project_id ?? 'system',
             'ruleData' => $ruleData,
-            'timestamp' => now()->toISOString()
+            'timestamp' => now()->toISOString(),
         ]);
 
         return true;
     }
 
     /**
-     * Lấy danh sách quy tắc của user
-     * 
+     * Lấy danh sách quy tắc của user.
+     *
      * @param string $userId
      * @param int|null $projectId
      * @param int $page
@@ -172,8 +174,8 @@ class NotificationRuleService
     }
 
     /**
-     * Bật/tắt quy tắc thông báo
-     * 
+     * Bật/tắt quy tắc thông báo.
+     *
      * @param string $ruleId
      * @param bool $enabled
      * @param string $userId
@@ -200,15 +202,15 @@ class NotificationRuleService
             'userId' => $rule->user_id,
             'projectId' => $rule->project_id ?? 'system',
             'enabled' => $enabled,
-            'timestamp' => now()->toISOString()
+            'timestamp' => now()->toISOString(),
         ]);
 
         return true;
     }
 
     /**
-     * Lấy quy tắc áp dụng cho một event cụ thể
-     * 
+     * Lấy quy tắc áp dụng cho một event cụ thể.
+     *
      * @param string $userId
      * @param string $eventKey
      * @param int|null $projectId
@@ -249,8 +251,8 @@ class NotificationRuleService
     }
 
     /**
-     * Tạo quy tắc mặc định cho user mới
-     * 
+     * Tạo quy tắc mặc định cho user mới.
+     *
      * @param string $userId
      * @return Collection
      */
@@ -262,29 +264,29 @@ class NotificationRuleService
                 'event_key' => 'Task.Assigned',
                 'min_priority' => 'normal',
                 'channels' => ['inapp', 'email'],
-                'description' => 'Thông báo khi được giao task mới'
+                'description' => 'Thông báo khi được giao task mới',
             ],
             [
                 'user_id' => $userId,
                 'event_key' => 'Project.StatusChanged',
                 'min_priority' => 'normal',
                 'channels' => ['inapp'],
-                'description' => 'Thông báo khi trạng thái dự án thay đổi'
+                'description' => 'Thông báo khi trạng thái dự án thay đổi',
             ],
             [
                 'user_id' => $userId,
                 'event_key' => 'ChangeRequest.Approved',
                 'min_priority' => 'normal',
                 'channels' => ['inapp', 'email'],
-                'description' => 'Thông báo khi yêu cầu thay đổi được phê duyệt'
+                'description' => 'Thông báo khi yêu cầu thay đổi được phê duyệt',
             ],
             [
                 'user_id' => $userId,
                 'event_key' => 'Document.Approved',
                 'min_priority' => 'normal',
                 'channels' => ['inapp'],
-                'description' => 'Thông báo khi tài liệu được phê duyệt'
-            ]
+                'description' => 'Thông báo khi tài liệu được phê duyệt',
+            ],
         ];
 
         $rules = collect();
@@ -296,15 +298,15 @@ class NotificationRuleService
     }
 
     /**
-     * Validate channels
-     * 
+     * Validate channels.
+     *
      * @param array $channels
      * @throws InvalidArgumentException
      */
     private function validateChannels(array $channels): void
     {
         $validChannels = ['inapp', 'email', 'webhook'];
-        
+
         foreach ($channels as $channel) {
             if (!in_array($channel, $validChannels)) {
                 throw new InvalidArgumentException("Invalid channel: {$channel}");
@@ -313,8 +315,8 @@ class NotificationRuleService
     }
 
     /**
-     * Validate conditions
-     * 
+     * Validate conditions.
+     *
      * @param array $conditions
      * @throws InvalidArgumentException
      */
@@ -326,7 +328,7 @@ class NotificationRuleService
             if (!isset($condition['field']) || !isset($condition['operator']) || !isset($condition['value'])) {
                 throw new InvalidArgumentException('Invalid condition structure');
             }
-            
+
             $validOperators = ['=', '!=', '>', '<', '>=', '<=', 'in', 'not_in', 'contains'];
             if (!in_array($condition['operator'], $validOperators)) {
                 throw new InvalidArgumentException("Invalid operator: {$condition['operator']}");
@@ -335,8 +337,8 @@ class NotificationRuleService
     }
 
     /**
-     * Chuyển đổi priority thành level số
-     * 
+     * Chuyển đổi priority thành level số.
+     *
      * @param string $priority
      * @return int
      */
@@ -345,7 +347,7 @@ class NotificationRuleService
         $levels = [
             'low' => 1,
             'normal' => 2,
-            'critical' => 3
+            'critical' => 3,
         ];
 
         return $levels[$priority] ?? 2;
@@ -364,6 +366,7 @@ class NotificationRuleService
 
         if (!empty($data['user_id'])) {
             $user = User::find($data['user_id']);
+
             return $user ? (string) $user->tenant_id : null;
         }
 

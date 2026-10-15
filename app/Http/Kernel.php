@@ -117,9 +117,9 @@ class Kernel extends HttpKernel
     {
         return self::CANONICAL_MIDDLEWARE_ALIASES;
     }
-    
+
     /**
-     * Override terminate to handle middleware resolution issues
+     * Override terminate to handle middleware resolution issues.
      */
     public function terminate($request, $response)
     {
@@ -130,14 +130,14 @@ class Kernel extends HttpKernel
             \Log::warning('Middleware resolution error during terminate', [
                 'error' => $e->getMessage(),
                 'request_uri' => $request->getRequestUri(),
-                'method' => $request->getMethod()
+                'method' => $request->getMethod(),
             ]);
         } catch (\Illuminate\Contracts\Container\BindingResolutionException $e) {
             // Log the error but don't break the application
             \Log::warning('Middleware binding resolution error during terminate', [
                 'error' => $e->getMessage(),
                 'request_uri' => $request->getRequestUri(),
-                'method' => $request->getMethod()
+                'method' => $request->getMethod(),
             ]);
         }
     }

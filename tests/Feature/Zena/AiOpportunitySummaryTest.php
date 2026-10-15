@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Zena;
 
@@ -20,7 +22,9 @@ class AiOpportunitySummaryTest extends TestCase
     private const ENDPOINT = 'https://api.anthropic.com/v1/messages';
 
     private Tenant $tenant;
+
     private User $user;
+
     private Opportunity $opportunity;
 
     protected function setUp(): void

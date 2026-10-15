@@ -1,16 +1,18 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories\Src\InteractionLogs\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Src\InteractionLogs\Models\InteractionLog;
 use Src\CoreProject\Models\Project;
 use Src\CoreProject\Models\Task;
-use App\Models\User;
+use Src\InteractionLogs\Models\InteractionLog;
 
 /**
- * Factory cho InteractionLog model
- * 
+ * Factory cho InteractionLog model.
+ *
  * Tạo test data cho interaction logs với các types và visibility levels
  */
 class InteractionLogFactory extends Factory
@@ -18,7 +20,7 @@ class InteractionLogFactory extends Factory
     protected $model = InteractionLog::class;
 
     /**
-     * Define the model's default state
+     * Define the model's default state.
      */
     public function definition(): array
     {
@@ -32,40 +34,40 @@ class InteractionLogFactory extends Factory
                 'Design/Architecture/Layout',
                 'Quality/Testing/Performance',
                 'Communication/Client/Feedback',
-                'Documentation/Technical/Specification'
+                'Documentation/Technical/Specification',
             ]),
             'visibility' => $this->faker->randomElement(['internal', 'client']),
             'client_approved' => $this->faker->boolean(70), // 70% chance of approval
             'created_by' => User::factory(),
             'created_at' => $this->faker->dateTimeBetween('-3 months', 'now'),
-            'updated_at' => now()
+            'updated_at' => now(),
         ];
     }
 
     /**
-     * Client visible interaction log
+     * Client visible interaction log.
      */
     public function clientVisible(): static
     {
         return $this->state(fn (array $attributes) => [
             'visibility' => 'client',
-            'client_approved' => true
+            'client_approved' => true,
         ]);
     }
 
     /**
-     * Internal only interaction log
+     * Internal only interaction log.
      */
     public function internal(): static
     {
         return $this->state(fn (array $attributes) => [
             'visibility' => 'internal',
-            'client_approved' => false
+            'client_approved' => false,
         ]);
     }
 
     /**
-     * Meeting type interaction log
+     * Meeting type interaction log.
      */
     public function meeting(): static
     {
@@ -75,18 +77,18 @@ class InteractionLogFactory extends Factory
                 'client stakeholders',
                 'project team',
                 'technical leads',
-                'quality assurance team'
-            ]) . ' to discuss ' . $this->faker->sentence(5)
+                'quality assurance team',
+            ]) . ' to discuss ' . $this->faker->sentence(5),
         ]);
     }
 
     /**
-     * Task-linked interaction log
+     * Task-linked interaction log.
      */
     public function withTask(): static
     {
         return $this->state(fn (array $attributes) => [
-            'linked_task_id' => Task::factory()
+            'linked_task_id' => Task::factory(),
         ]);
     }
 }

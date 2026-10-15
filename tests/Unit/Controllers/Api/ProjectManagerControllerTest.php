@@ -1,25 +1,30 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Unit\Controllers\Api;
 
-use Tests\TestCase;
 use App\Http\Controllers\Api\ProjectManagerController;
-use App\Models\User;
 use App\Models\Project;
+use App\Models\Role;
 use App\Models\Task;
 use App\Models\Tenant;
-use App\Models\Role;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Tests\TestCase;
 
 class ProjectManagerControllerTest extends TestCase
 {
     use RefreshDatabase;
 
     protected $user;
+
     protected $tenant;
+
     protected $project;
+
     protected $controller;
 
     protected function setUp(): void
@@ -40,14 +45,14 @@ class ProjectManagerControllerTest extends TestCase
         // Create project
         $this->project = Project::factory()->create([
             'tenant_id' => $this->tenant->id,
-            'pm_id' => $this->user->id
+            'pm_id' => $this->user->id,
         ]);
 
         $this->controller = new ProjectManagerController();
     }
 
     /**
-     * Test getStats method with valid project manager
+     * Test getStats method with valid project manager.
      */
     public function test_get_stats_with_valid_project_manager()
     {
@@ -55,23 +60,23 @@ class ProjectManagerControllerTest extends TestCase
         Project::factory()->create([
             'tenant_id' => $this->tenant->id,
             'pm_id' => $this->user->id,
-            'status' => 'active'
+            'status' => 'active',
         ]);
-        
+
         Project::factory()->create([
             'tenant_id' => $this->tenant->id,
             'pm_id' => $this->user->id,
-            'status' => 'completed'
+            'status' => 'completed',
         ]);
-        
+
         Task::factory()->create([
             'project_id' => $this->project->id,
-            'status' => 'pending'
+            'status' => 'pending',
         ]);
-        
+
         Task::factory()->create([
             'project_id' => $this->project->id,
-            'status' => 'completed'
+            'status' => 'completed',
         ]);
 
         Auth::loginUsingId($this->user->id);
@@ -95,7 +100,7 @@ class ProjectManagerControllerTest extends TestCase
     }
 
     /**
-     * Test getStats method without authentication
+     * Test getStats method without authentication.
      */
     public function test_get_stats_without_authentication()
     {
@@ -112,7 +117,7 @@ class ProjectManagerControllerTest extends TestCase
     }
 
     /**
-     * Test getStats method with user without project manager role
+     * Test getStats method with user without project manager role.
      */
     public function test_get_stats_without_project_manager_role()
     {
@@ -135,7 +140,7 @@ class ProjectManagerControllerTest extends TestCase
     }
 
     /**
-     * Test getProjectTimeline method with valid project manager
+     * Test getProjectTimeline method with valid project manager.
      */
     public function test_get_project_timeline_with_valid_project_manager()
     {
@@ -146,7 +151,7 @@ class ProjectManagerControllerTest extends TestCase
             'start_date' => now()->subDays(30),
             'end_date' => now()->addDays(30),
             'status' => 'active',
-            'progress' => 50
+            'progress' => 50,
         ]);
 
         Auth::loginUsingId($this->user->id);
@@ -160,7 +165,7 @@ class ProjectManagerControllerTest extends TestCase
         $this->assertTrue($data['success']);
         $this->assertArrayHasKey('data', $data);
         $this->assertIsArray($data['data']);
-        
+
         if (!empty($data['data'])) {
             $project = $data['data'][0];
             $this->assertArrayHasKey('id', $project);
@@ -174,7 +179,7 @@ class ProjectManagerControllerTest extends TestCase
     }
 
     /**
-     * Test getProjectTimeline method without authentication
+     * Test getProjectTimeline method without authentication.
      */
     public function test_get_project_timeline_without_authentication()
     {
@@ -191,7 +196,7 @@ class ProjectManagerControllerTest extends TestCase
     }
 
     /**
-     * Test getProjectTimeline method with user without project manager role
+     * Test getProjectTimeline method with user without project manager role.
      */
     public function test_get_project_timeline_without_project_manager_role()
     {
@@ -214,7 +219,7 @@ class ProjectManagerControllerTest extends TestCase
     }
 
     /**
-     * Test error handling in getStats method
+     * Test error handling in getStats method.
      */
     public function test_get_stats_error_handling()
     {
@@ -235,7 +240,7 @@ class ProjectManagerControllerTest extends TestCase
     }
 
     /**
-     * Test error handling in getProjectTimeline method
+     * Test error handling in getProjectTimeline method.
      */
     public function test_get_project_timeline_error_handling()
     {
@@ -262,11 +267,11 @@ class ProjectManagerControllerTest extends TestCase
             [
                 'scope' => $scope,
                 'allow_override' => false,
-                'is_active' => true
+                'is_active' => true,
             ]
         );
         $user->roles()->syncWithoutDetaching($role->id);
+
         return $role;
     }
-
 }

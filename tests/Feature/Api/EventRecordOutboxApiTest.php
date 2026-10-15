@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
@@ -17,7 +19,9 @@ class EventRecordOutboxApiTest extends TestCase
     use AuthenticationTestTrait;
 
     protected Tenant $tenant;
+
     protected User $actor;
+
     protected array $headers;
 
     protected function setUp(): void

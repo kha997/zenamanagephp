@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -14,7 +16,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-if (! (app()->environment(['local', 'testing']) && config('app.debug'))) {
+if (!(app()->environment(['local', 'testing']) && config('app.debug'))) {
     return;
 }
 
@@ -48,13 +50,13 @@ Route::post('/login', function (Request $request) {
             'success' => true,
             'message' => 'Đăng nhập thành công!',
             'redirect' => '/dashboard',
-            'user' => $user
+            'user' => $user,
         ]);
     }
 
     return response()->json([
         'success' => false,
-        'message' => 'Email hoặc mật khẩu không đúng'
+        'message' => 'Email hoặc mật khẩu không đúng',
     ], 401);
 });
 
@@ -62,7 +64,7 @@ Route::get('/documents-simple', function () {
     return response()->json([
         'status' => 'success',
         'message' => 'Documents endpoint working',
-        'data' => []
+        'data' => [],
     ]);
 });
 
@@ -80,8 +82,8 @@ Route::post('/v1/upload-document', function (Request $request) {
                 'size' => $request->file('file')->getSize(),
                 'mime' => $request->file('file')->getMimeType(),
                 'is_valid' => $request->file('file')->isValid(),
-                'error' => $request->file('file')->getError()
-            ] : null
+                'error' => $request->file('file')->getError(),
+            ] : null,
         ]);
 
         $title = $request->input('title', 'Untitled Document');
@@ -95,7 +97,7 @@ Route::post('/v1/upload-document', function (Request $request) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'No file uploaded',
-                'code' => 'INVALID_FILE'
+                'code' => 'INVALID_FILE',
             ], 400);
         }
 
@@ -103,7 +105,7 @@ Route::post('/v1/upload-document', function (Request $request) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Invalid upload payload',
-                'code' => 'INVALID_FILE'
+                'code' => 'INVALID_FILE',
             ], 400);
         }
 
@@ -111,7 +113,7 @@ Route::post('/v1/upload-document', function (Request $request) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'File upload failed',
-                'code' => 'INVALID_FILE'
+                'code' => 'INVALID_FILE',
             ], 400);
         }
 
@@ -129,7 +131,7 @@ Route::post('/v1/upload-document', function (Request $request) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Suspicious file type detected',
-                'code' => 'SUSPICIOUS_INPUT'
+                'code' => 'SUSPICIOUS_INPUT',
             ], 400);
         }
 
@@ -137,7 +139,7 @@ Route::post('/v1/upload-document', function (Request $request) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Invalid file payload',
-                'code' => 'INVALID_FILE'
+                'code' => 'INVALID_FILE',
             ], 400);
         }
 
@@ -145,7 +147,7 @@ Route::post('/v1/upload-document', function (Request $request) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'File exceeds size limit',
-                'code' => 'FILE_TOO_LARGE'
+                'code' => 'FILE_TOO_LARGE',
             ], 400);
         }
 
@@ -159,7 +161,7 @@ Route::post('/v1/upload-document', function (Request $request) {
         if (empty($fileName) || $fileName === '') {
             return response()->json([
                 'status' => 'error',
-                'message' => 'File name is empty or invalid'
+                'message' => 'File name is empty or invalid',
             ], 400);
         }
 
@@ -179,17 +181,16 @@ Route::post('/v1/upload-document', function (Request $request) {
                 'file_size' => $fileSize,
                 'file_mime_type' => $fileMimeType,
                 'stored_path' => $storedPath,
-                'uploaded_at' => now()->toISOString()
-            ]
+                'uploaded_at' => now()->toISOString(),
+            ],
         ]);
-
     } catch (\Throwable $e) {
         \Log::warning('Upload failed in debug endpoint', ['error' => $e->getMessage()]);
 
         return response()->json([
             'status' => 'error',
             'message' => 'Invalid file upload request',
-            'code' => 'INVALID_FILE'
+            'code' => 'INVALID_FILE',
         ], 400);
     }
 });
@@ -203,7 +204,7 @@ Route::middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function 
         return response()->json([
             'status' => 'success',
             'message' => 'API is working',
-            'timestamp' => now()
+            'timestamp' => now(),
         ]);
     });
 
@@ -211,7 +212,7 @@ Route::middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function 
         return response()->json([
             'status' => 'success',
             'message' => 'Documents endpoint working',
-            'data' => []
+            'data' => [],
         ]);
     });
 
@@ -219,7 +220,7 @@ Route::middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function 
         return response()->json([
             'status' => 'success',
             'message' => 'Documents endpoint working',
-            'data' => []
+            'data' => [],
         ]);
     });
 
@@ -268,14 +269,13 @@ Route::middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function 
                     'file_size' => $fileSize,
                     'file_mime_type' => $fileMimeType,
                     'stored_path' => $storedPath,
-                    'uploaded_at' => now()->toISOString()
-                ]
+                    'uploaded_at' => now()->toISOString(),
+                ],
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Upload failed: ' . $e->getMessage()
+                'message' => 'Upload failed: ' . $e->getMessage(),
             ], 500);
         }
     });

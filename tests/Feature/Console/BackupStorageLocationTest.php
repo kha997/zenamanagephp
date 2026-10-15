@@ -55,11 +55,11 @@ class BackupStorageLocationTest extends TestCase
     public function test_unwritable_disk_fails_and_deletes_nothing(): void
     {
         $root = storage_path('framework/testing/gap054-readonly');
-        @mkdir($root . '/zena/backups', 0755, true);
+        @mkdir($root . '/zena/backups', 0o755, true);
         $old = $root . '/zena/backups/backup_database_2000-01-01_00-00-00.tar.gz';
         file_put_contents($old, 'old');
         touch($old, time() - 400 * 86400);   // expired: would be pruned if prune ran
-        chmod($root . '/zena/backups', 0555);
+        chmod($root . '/zena/backups', 0o555);
         config([
             'filesystems.disks.gap054-readonly' => ['driver' => 'local', 'root' => $root, 'throw' => false],
             'backup.disk' => 'gap054-readonly',
@@ -70,7 +70,7 @@ class BackupStorageLocationTest extends TestCase
             $this->artisan('backup:run', ['--type' => 'database'])->assertExitCode(1);
             $this->assertFileExists($old, 'a failed store must not prune anything');
         } finally {
-            chmod($root . '/zena/backups', 0755);
+            chmod($root . '/zena/backups', 0o755);
             exec('rm -rf ' . escapeshellarg($root));
         }
     }

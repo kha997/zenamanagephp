@@ -1,14 +1,16 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories\Src\CoreProject\Models;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Src\CoreProject\Models\ComponentKpi;
 use Src\CoreProject\Models\Component;
+use Src\CoreProject\Models\ComponentKpi;
 
 /**
- * Factory cho ComponentKpi model
- * 
+ * Factory cho ComponentKpi model.
+ *
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Src\CoreProject\Models\ComponentKpi>
  */
 class ComponentKpiFactory extends Factory
@@ -29,7 +31,7 @@ class ComponentKpiFactory extends Factory
     }
 
     /**
-     * State: Quality KPI
+     * State: Quality KPI.
      */
     public function quality(): static
     {
@@ -41,7 +43,7 @@ class ComponentKpiFactory extends Factory
     }
 
     /**
-     * State: Budget KPI
+     * State: Budget KPI.
      */
     public function budget(): static
     {

@@ -2,8 +2,8 @@
 
 namespace App\Repositories;
 
-use App\Models\Task;
 use App\Models\Project;
+use App\Models\Task;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -124,7 +124,7 @@ class TaskRepository
             'task_id' => $task->id,
             'name' => $task->name,
             'project_id' => $task->project_id,
-            'assignee_id' => $task->assignee_id
+            'assignee_id' => $task->assignee_id,
         ]);
 
         return $task->load(['project', 'assignee', 'creator', 'dependencies']);
@@ -151,7 +151,7 @@ class TaskRepository
         Log::info('Task updated', [
             'task_id' => $task->id,
             'name' => $task->name,
-            'project_id' => $task->project_id
+            'project_id' => $task->project_id,
         ]);
 
         return $task->load(['project', 'assignee', 'creator', 'dependencies']);
@@ -173,7 +173,7 @@ class TaskRepository
         Log::info('Task deleted', [
             'task_id' => $id,
             'name' => $task->name,
-            'project_id' => $task->project_id
+            'project_id' => $task->project_id,
         ]);
 
         return true;
@@ -195,7 +195,7 @@ class TaskRepository
         Log::info('Task soft deleted', [
             'task_id' => $id,
             'name' => $task->name,
-            'project_id' => $task->project_id
+            'project_id' => $task->project_id,
         ]);
 
         return true;
@@ -217,7 +217,7 @@ class TaskRepository
         Log::info('Task restored', [
             'task_id' => $id,
             'name' => $task->name,
-            'project_id' => $task->project_id
+            'project_id' => $task->project_id,
         ]);
 
         return true;
@@ -302,12 +302,12 @@ class TaskRepository
 
         $task->update([
             'status' => $status,
-            'status_updated_at' => now()
+            'status_updated_at' => now(),
         ]);
 
         Log::info('Task status updated', [
             'task_id' => $id,
-            'status' => $status
+            'status' => $status,
         ]);
 
         return true;
@@ -326,12 +326,12 @@ class TaskRepository
 
         $task->update([
             'assignee_id' => $userId,
-            'assigned_at' => now()
+            'assigned_at' => now(),
         ]);
 
         Log::info('Task assigned to user', [
             'task_id' => $taskId,
-            'user_id' => $userId
+            'user_id' => $userId,
         ]);
 
         return true;
@@ -352,7 +352,7 @@ class TaskRepository
 
         Log::info('Task dependency added', [
             'task_id' => $taskId,
-            'dependency_id' => $dependencyId
+            'dependency_id' => $dependencyId,
         ]);
 
         return true;
@@ -373,7 +373,7 @@ class TaskRepository
 
         Log::info('Task dependency removed', [
             'task_id' => $taskId,
-            'dependency_id' => $dependencyId
+            'dependency_id' => $dependencyId,
         ]);
 
         return true;
@@ -400,7 +400,7 @@ class TaskRepository
                                    ->count(),
             'high_priority_tasks' => $query->where('priority', 'high')->count(),
             'medium_priority_tasks' => $query->where('priority', 'medium')->count(),
-            'low_priority_tasks' => $query->where('priority', 'low')->count()
+            'low_priority_tasks' => $query->where('priority', 'low')->count(),
         ];
     }
 
@@ -436,7 +436,7 @@ class TaskRepository
 
         Log::info('Tasks bulk updated', [
             'count' => $updated,
-            'ids' => $ids
+            'ids' => $ids,
         ]);
 
         return $updated;
@@ -451,7 +451,7 @@ class TaskRepository
 
         Log::info('Tasks bulk deleted', [
             'count' => $deleted,
-            'ids' => $ids
+            'ids' => $ids,
         ]);
 
         return $deleted;
@@ -478,7 +478,7 @@ class TaskRepository
         return [
             'status' => $task->status,
             'progress_percentage' => $progress,
-            'estimated_completion' => $this->calculateEstimatedCompletion($task)
+            'estimated_completion' => $this->calculateEstimatedCompletion($task),
         ];
     }
 
@@ -525,7 +525,7 @@ class TaskRepository
             'type' => 'task_created',
             'date' => $task->created_at,
             'title' => 'Task Created',
-            'description' => 'Task ' . $task->name . ' was created'
+            'description' => 'Task ' . $task->name . ' was created',
         ];
 
         // Add assignment
@@ -534,7 +534,7 @@ class TaskRepository
                 'type' => 'task_assigned',
                 'date' => $task->assigned_at,
                 'title' => 'Task Assigned',
-                'description' => 'Task assigned to user'
+                'description' => 'Task assigned to user',
             ];
         }
 
@@ -544,7 +544,7 @@ class TaskRepository
                 'type' => 'status_changed',
                 'date' => $task->status_updated_at,
                 'title' => 'Status Changed',
-                'description' => 'Status changed to ' . $task->status
+                'description' => 'Status changed to ' . $task->status,
             ];
         }
 
@@ -554,7 +554,7 @@ class TaskRepository
                 'type' => 'task_completed',
                 'date' => $task->completed_at,
                 'title' => 'Task Completed',
-                'description' => 'Task ' . $task->name . ' was completed'
+                'description' => 'Task ' . $task->name . ' was completed',
             ];
         }
 

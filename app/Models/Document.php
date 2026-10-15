@@ -1,8 +1,9 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Models\User;
 use App\Models\Support\DocumentStatusResolver;
 use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Builder;
@@ -14,11 +15,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Models\Project;
 
 /**
- * Model Document để quản lý tài liệu
- * 
+ * Model Document để quản lý tài liệu.
+ *
  * @property string $id
  * @property string $project_id
  * @property string $title
@@ -41,22 +41,25 @@ use App\Models\Project;
  */
 class Document extends Model
 {
-    use HasUlids, HasFactory, TenantScope, SoftDeletes;
+    use HasUlids;
+    use HasFactory;
+    use TenantScope;
+    use SoftDeletes;
 
     protected $table = 'documents';
 
     /**
-     * Kiểu dữ liệu của khóa chính
+     * Kiểu dữ liệu của khóa chính.
      */
     protected $keyType = 'string';
 
     /**
-     * Tắt auto increment cho khóa chính
+     * Tắt auto increment cho khóa chính.
      */
     public $incrementing = false;
 
     /**
-     * Các loại entity có thể liên kết
+     * Các loại entity có thể liên kết.
      */
     public const ENTITY_TYPE_TASK = 'task';
     public const ENTITY_TYPE_COMPONENT = 'component';
@@ -66,7 +69,7 @@ class Document extends Model
     public const ENTITY_TYPE_DESIGN_ITEM = 'design_item';
 
     /**
-     * Danh sách các loại entity hợp lệ
+     * Danh sách các loại entity hợp lệ.
      */
     public const VALID_ENTITY_TYPES = [
         self::ENTITY_TYPE_TASK,
@@ -78,7 +81,7 @@ class Document extends Model
     ];
 
     /**
-     * Các loại visibility
+     * Các loại visibility.
      */
     public const VISIBILITY_INTERNAL = 'internal';
     public const VISIBILITY_CLIENT = 'client';
@@ -153,7 +156,7 @@ class Document extends Model
     ];
 
     /**
-     * Quan hệ với Project
+     * Quan hệ với Project.
      */
     public function project(): BelongsTo
     {
@@ -161,7 +164,7 @@ class Document extends Model
     }
 
     /**
-     * Quan hệ với User (người upload)
+     * Quan hệ với User (người upload).
      */
     public function uploader(): BelongsTo
     {
@@ -169,7 +172,7 @@ class Document extends Model
     }
 
     /**
-     * Quan hệ với User (người tạo)
+     * Quan hệ với User (người tạo).
      */
     public function creator(): BelongsTo
     {
@@ -177,7 +180,7 @@ class Document extends Model
     }
 
     /**
-     * Quan hệ với User (người cập nhật gần nhất)
+     * Quan hệ với User (người cập nhật gần nhất).
      */
     public function updater(): BelongsTo
     {
@@ -205,7 +208,7 @@ class Document extends Model
     }
 
     /**
-     * Quan hệ với Tenant
+     * Quan hệ với Tenant.
      */
     public function tenant(): BelongsTo
     {
@@ -213,7 +216,7 @@ class Document extends Model
     }
 
     /**
-     * Quan hệ với DocumentVersion (tất cả versions)
+     * Quan hệ với DocumentVersion (tất cả versions).
      */
     public function versions(): HasMany
     {
@@ -221,7 +224,7 @@ class Document extends Model
     }
 
     /**
-     * Quan hệ với DocumentVersion (version hiện tại)
+     * Quan hệ với DocumentVersion (version hiện tại).
      */
     public function currentVersion(): HasOne
     {
@@ -296,7 +299,7 @@ class Document extends Model
     }
 
     /**
-     * Quan hệ polymorphic với entity được liên kết
+     * Quan hệ polymorphic với entity được liên kết.
      */
     public function linkedEntity(): MorphTo
     {
@@ -304,7 +307,7 @@ class Document extends Model
     }
 
     /**
-     * Scope để lọc theo dự án
+     * Scope để lọc theo dự án.
      */
     public function scopeForProject(Builder $query, string $projectId): Builder
     {
@@ -312,7 +315,7 @@ class Document extends Model
     }
 
     /**
-     * Scope để lọc theo loại entity
+     * Scope để lọc theo loại entity.
      */
     public function scopeForEntityType(Builder $query, string $entityType): Builder
     {
@@ -320,7 +323,7 @@ class Document extends Model
     }
 
     /**
-     * Scope để lọc theo entity cụ thể
+     * Scope để lọc theo entity cụ thể.
      */
     public function scopeForEntity(Builder $query, string $entityType, string $entityId): Builder
     {
@@ -329,7 +332,7 @@ class Document extends Model
     }
 
     /**
-     * Scope để lọc documents đã được phê duyệt cho client
+     * Scope để lọc documents đã được phê duyệt cho client.
      */
     public function scopeClientApproved(Builder $query): Builder
     {
@@ -338,7 +341,7 @@ class Document extends Model
     }
 
     /**
-     * Scope để lọc theo visibility
+     * Scope để lọc theo visibility.
      */
     public function scopeWithVisibility(Builder $query, string $visibility): Builder
     {
@@ -346,11 +349,12 @@ class Document extends Model
     }
 
     /**
-     * Lấy số version tiếp theo
+     * Lấy số version tiếp theo.
      */
     public function getNextVersionNumber(): int
     {
         $latestVersion = $this->versions()->max('version_number') ?? 0;
+
         return $latestVersion + 1;
     }
 
@@ -363,7 +367,7 @@ class Document extends Model
      */
 
     /**
-     * Lấy version hiện tại
+     * Lấy version hiện tại.
      */
     public function getCurrentVersionNumber(): int
     {
@@ -371,7 +375,7 @@ class Document extends Model
     }
 
     /**
-     * Kiểm tra xem document có versions không
+     * Kiểm tra xem document có versions không.
      */
     public function hasVersions(): bool
     {
@@ -379,7 +383,7 @@ class Document extends Model
     }
 
     /**
-     * Kiểm tra xem document có thể được client xem không
+     * Kiểm tra xem document có thể được client xem không.
      */
     public function isVisibleToClient(): bool
     {
@@ -387,7 +391,7 @@ class Document extends Model
     }
 
     /**
-     * Lấy danh sách tags dưới dạng string
+     * Lấy danh sách tags dưới dạng string.
      */
     public function getTagsAsString(): string
     {
@@ -395,7 +399,7 @@ class Document extends Model
     }
 
     /**
-     * Title attribute (fallback to name)
+     * Title attribute (fallback to name).
      */
     public function getTitleAttribute(): ?string
     {
@@ -403,7 +407,7 @@ class Document extends Model
     }
 
     /**
-     * Document type attribute (metadata preference)
+     * Document type attribute (metadata preference).
      */
     public function getDocumentTypeAttribute(): ?string
     {
@@ -446,7 +450,7 @@ class Document extends Model
     }
 
     /**
-     * File name attribute for API consumers
+     * File name attribute for API consumers.
      */
     public function getFileNameAttribute(): ?string
     {
@@ -462,7 +466,7 @@ class Document extends Model
     }
 
     /**
-     * Change notes accessor (stored in metadata)
+     * Change notes accessor (stored in metadata).
      */
     public function getChangeNotesAttribute(): ?string
     {
@@ -470,7 +474,7 @@ class Document extends Model
     }
 
     /**
-     * Tags attribute derived from metadata
+     * Tags attribute derived from metadata.
      */
     public function getTagsAttribute(): array
     {

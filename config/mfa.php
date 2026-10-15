@@ -11,11 +11,11 @@ return [
     */
 
     'enabled' => env('MFA_ENABLED', true),
-    
+
     'recovery_codes_count' => env('MFA_RECOVERY_CODES_COUNT', 10),
-    
+
     'issuer' => env('MFA_ISSUER', env('APP_NAME', 'ZENA Manage')),
-    
+
     /*
     |--------------------------------------------------------------------------
     | TOTP Configuration
@@ -30,7 +30,7 @@ return [
         'period' => env('MFA_TOTP_PERIOD', 30), // seconds
         'window' => env('MFA_TOTP_WINDOW', 1), // tolerance window
     ],
-    
+
     /*
     |--------------------------------------------------------------------------
     | QR Code Configuration

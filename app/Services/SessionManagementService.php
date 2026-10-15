@@ -8,14 +8,16 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
- * Session Management Service
- * 
+ * Session Management Service.
+ *
  * Handles user sessions, device management, and security monitoring
  */
 class SessionManagementService
 {
     private SecureAuditService $auditService;
+
     private int $sessionLifetime;
+
     private int $maxSessionsPerUser;
 
     public function __construct(SecureAuditService $auditService)
@@ -26,14 +28,14 @@ class SessionManagementService
     }
 
     /**
-     * Create new session for user
+     * Create new session for user.
      */
     public function createSession(User $user, Request $request, string $sessionId = null): array
     {
         try {
             $sessionId = $sessionId ?: Str::uuid();
             $deviceInfo = $this->extractDeviceInfo($request);
-            
+
             // Check if we need to revoke old sessions
             $this->enforceMaxSessions($user);
 
@@ -62,7 +64,7 @@ class SessionManagementService
                 'expires_at' => Carbon::now()->addMinutes($this->sessionLifetime),
                 'metadata' => json_encode($deviceInfo['metadata']),
                 'created_at' => Carbon::now(),
-                'updated_at' => Carbon::now()
+                'updated_at' => Carbon::now(),
             ]);
 
             // Log session creation
@@ -74,7 +76,7 @@ class SessionManagementService
                 newData: [
                     'device_name' => $deviceInfo['device_name'],
                     'ip_address' => $request->ip(),
-                    'browser' => $deviceInfo['browser']
+                    'browser' => $deviceInfo['browser'],
                 ],
                 tenantId: $user->tenant_id
             );
@@ -82,23 +84,23 @@ class SessionManagementService
             return [
                 'success' => true,
                 'session_id' => $sessionId,
-                'expires_at' => Carbon::now()->addMinutes($this->sessionLifetime)
+                'expires_at' => Carbon::now()->addMinutes($this->sessionLifetime),
             ];
-
         } catch (\Exception $e) {
             Log::error('Session creation failed', [
                 'user_id' => $user->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return [
                 'success' => false,
-                'message' => 'Failed to create session'
+                'message' => 'Failed to create session',
             ];
         }
     }
 
     /**
-     * Update session activity
+     * Update session activity.
      */
     public function updateSessionActivity(string $sessionId, Request $request = null): bool
     {
@@ -106,7 +108,7 @@ class SessionManagementService
             $updateData = [
                 'last_activity_at' => Carbon::now(),
                 'expires_at' => Carbon::now()->addMinutes($this->sessionLifetime),
-                'updated_at' => Carbon::now()
+                'updated_at' => Carbon::now(),
             ];
 
             if ($request) {
@@ -118,18 +120,18 @@ class SessionManagementService
                 ->update($updateData);
 
             return true;
-
         } catch (\Exception $e) {
             Log::error('Session activity update failed', [
                 'session_id' => $sessionId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
 
     /**
-     * Revoke session
+     * Revoke session.
      */
     public function revokeSession(string $sessionId, User $user = null): bool
     {
@@ -160,18 +162,18 @@ class SessionManagementService
             }
 
             return true;
-
         } catch (\Exception $e) {
             Log::error('Session revocation failed', [
                 'session_id' => $sessionId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
 
     /**
-     * Revoke all sessions for user
+     * Revoke all sessions for user.
      */
     public function revokeAllSessions(User $user): bool
     {
@@ -195,18 +197,18 @@ class SessionManagementService
             );
 
             return true;
-
         } catch (\Exception $e) {
             Log::error('All sessions revocation failed', [
                 'user_id' => $user->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
 
     /**
-     * Get user sessions
+     * Get user sessions.
      */
     public function getUserSessions(User $user): array
     {
@@ -231,21 +233,21 @@ class SessionManagementService
                     'is_trusted' => $session->is_trusted,
                     'last_activity_at' => $session->last_activity_at,
                     'expires_at' => $session->expires_at,
-                    'created_at' => $session->created_at
+                    'created_at' => $session->created_at,
                 ];
             })->toArray();
-
         } catch (\Exception $e) {
             Log::error('Get user sessions failed', [
                 'user_id' => $user->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return [];
         }
     }
 
     /**
-     * Trust device
+     * Trust device.
      */
     public function trustDevice(string $sessionId, User $user): bool
     {
@@ -266,19 +268,19 @@ class SessionManagementService
             );
 
             return true;
-
         } catch (\Exception $e) {
             Log::error('Device trust failed', [
                 'session_id' => $sessionId,
                 'user_id' => $user->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
 
     /**
-     * Check for suspicious activity
+     * Check for suspicious activity.
      */
     public function checkSuspiciousActivity(User $user, Request $request): array
     {
@@ -301,7 +303,7 @@ class SessionManagementService
 
             // Check for new location (if we have geo data)
             $knownCountries = $recentSessions->pluck('country')->filter()->unique();
-            $isNewLocation = $deviceInfo['country'] && 
+            $isNewLocation = $deviceInfo['country'] &&
                            !$knownCountries->contains($deviceInfo['country']);
 
             $riskLevel = 'low';
@@ -328,24 +330,24 @@ class SessionManagementService
                 'is_new_ip' => $isNewIp,
                 'is_new_device' => $isNewDevice,
                 'is_new_location' => $isNewLocation,
-                'requires_verification' => $riskLevel === 'high'
+                'requires_verification' => $riskLevel === 'high',
             ];
-
         } catch (\Exception $e) {
             Log::error('Suspicious activity check failed', [
                 'user_id' => $user->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return [
                 'risk_level' => 'unknown',
                 'alerts' => [],
-                'requires_verification' => true
+                'requires_verification' => true,
             ];
         }
     }
 
     /**
-     * Clean expired sessions
+     * Clean expired sessions.
      */
     public function cleanExpiredSessions(): int
     {
@@ -355,17 +357,17 @@ class SessionManagementService
                 ->delete();
 
             return $deleted;
-
         } catch (\Exception $e) {
             Log::error('Clean expired sessions failed', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return 0;
         }
     }
 
     /**
-     * Enforce maximum sessions per user
+     * Enforce maximum sessions per user.
      */
     private function enforceMaxSessions(User $user): void
     {
@@ -376,7 +378,7 @@ class SessionManagementService
         if ($sessionCount >= $this->maxSessionsPerUser) {
             // Remove oldest sessions
             $sessionsToRemove = $sessionCount - $this->maxSessionsPerUser + 1;
-            
+
             DB::table('user_sessions')
                 ->where('user_id', $user->id)
                 ->orderBy('last_activity_at', 'asc')
@@ -386,13 +388,13 @@ class SessionManagementService
     }
 
     /**
-     * Extract device information from request
+     * Extract device information from request.
      */
     private function extractDeviceInfo(Request $request): array
     {
         $userAgent = $request->userAgent();
-        
-        // Simple device detection (in production, 
+
+        // Simple device detection (in production,
         if (preg_match('/Mobile|Android|iPhone|iPad/', $userAgent)) {
             $deviceType = 'mobile';
         } elseif (preg_match('/Tablet|iPad/', $userAgent)) {
@@ -430,13 +432,13 @@ class SessionManagementService
             'metadata' => [
                 'user_agent' => $userAgent,
                 'accept_language' => $request->header('Accept-Language'),
-                'accept_encoding' => $request->header('Accept-Encoding')
-            ]
+                'accept_encoding' => $request->header('Accept-Encoding'),
+            ],
         ];
     }
 
     /**
-     * Generate friendly device name
+     * Generate friendly device name.
      */
     private function generateDeviceName(string $deviceType, string $os, string $browser): string
     {

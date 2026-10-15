@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Zena;
 
@@ -7,15 +9,15 @@ use App\Models\Permission as AppPermission;
 use App\Models\Project;
 use App\Models\QcInspection;
 use App\Models\QcPlan;
+use App\Models\Rfi;
 use App\Models\Role as AppRole;
 use App\Models\Submittal;
 use App\Models\Tenant;
 use App\Models\User;
-use App\Models\Rfi;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Testing\TestResponse;
 use Illuminate\Support\Str;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 use Tests\Traits\RouteNameTrait;
 
@@ -24,7 +26,8 @@ use Tests\Traits\RouteNameTrait;
  */
 class ZenaRbacTenantSmokeTest extends TestCase
 {
-    use RefreshDatabase, RouteNameTrait;
+    use RefreshDatabase;
+    use RouteNameTrait;
 
     private const DEFAULT_PASSWORD = 'Secret123!';
 
@@ -193,6 +196,7 @@ class ZenaRbacTenantSmokeTest extends TestCase
             'tenant_id' => $tenant->id,
             'password' => Hash::make(self::DEFAULT_PASSWORD),
         ]);
+
         return [$tenant, $project, $user];
     }
 

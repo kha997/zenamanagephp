@@ -7,7 +7,7 @@ use App\Models\Role;
 trait HasRoles
 {
     /**
-     * Check if user has a specific role
+     * Check if user has a specific role.
      */
     public function hasRole(string|array $roleName): bool
     {
@@ -19,7 +19,7 @@ trait HasRoles
     }
 
     /**
-     * Check if user has any of the given roles
+     * Check if user has any of the given roles.
      */
     public function hasAnyRole(array $roleNames): bool
     {
@@ -27,16 +27,17 @@ trait HasRoles
     }
 
     /**
-     * Check if user has all of the given roles
+     * Check if user has all of the given roles.
      */
     public function hasAllRoles(array $roleNames): bool
     {
         $userRoles = $this->roles()->pluck('name')->toArray();
+
         return count(array_intersect($roleNames, $userRoles)) === count($roleNames);
     }
 
     /**
-     * Check if user is super admin
+     * Check if user is super admin.
      */
     public function isSuperAdmin(): bool
     {
@@ -44,7 +45,7 @@ trait HasRoles
     }
 
     /**
-     * Check if user is admin (but not super admin)
+     * Check if user is admin (but not super admin).
      */
     public function isAdmin(): bool
     {
@@ -52,7 +53,7 @@ trait HasRoles
     }
 
     /**
-     * Check if user has tenant context
+     * Check if user has tenant context.
      */
     public function hasTenant(): bool
     {
@@ -60,7 +61,7 @@ trait HasRoles
     }
 
     /**
-     * Check if user belongs to specific tenant
+     * Check if user belongs to specific tenant.
      */
     public function belongsToTenant(string $tenantId): bool
     {
@@ -68,16 +69,17 @@ trait HasRoles
     }
 
     /**
-     * Get user's primary role (first role)
+     * Get user's primary role (first role).
      */
     public function getPrimaryRole(): ?string
     {
         $role = $this->roles()->first();
+
         return $role ? $role->name : null;
     }
 
     /**
-     * Get all user role names
+     * Get all user role names.
      */
     public function getRoleNames(): array
     {
@@ -108,7 +110,7 @@ trait HasRoles
     }
 
     /**
-     * Check if user can access admin area
+     * Check if user can access admin area.
      */
     public function canAccessAdmin(): bool
     {
@@ -116,7 +118,7 @@ trait HasRoles
     }
 
     /**
-     * Check if user can access app area
+     * Check if user can access app area.
      */
     public function canAccessApp(): bool
     {
@@ -124,13 +126,13 @@ trait HasRoles
     }
 
     /**
-     * Check if user has permission for specific action
+     * Check if user has permission for specific action.
      */
     public function hasPermission(string $permission): bool
     {
         // For now, we'll use role-based permissions
         // This can be extended to use a full permission system later
-        
+
         $rolePermissions = [
             'super_admin' => ['*'], // All permissions
             'admin' => ['manage_users', 'manage_tenants', 'view_reports'],
@@ -144,7 +146,7 @@ trait HasRoles
         ];
 
         $userRoles = $this->getRoleNames();
-        
+
         foreach ($userRoles as $role) {
             if (isset($rolePermissions[$role])) {
                 $permissions = $rolePermissions[$role];
@@ -153,7 +155,7 @@ trait HasRoles
                 }
             }
         }
-        
+
         return false;
     }
 }

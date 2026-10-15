@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -8,8 +10,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Model DashboardWidgetDataCache - Cache dữ liệu widget
- * 
+ * Model DashboardWidgetDataCache - Cache dữ liệu widget.
+ *
  * @property string $id
  * @property string $widget_id ID của widget
  * @property string $user_id ID của user
@@ -21,13 +23,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class DashboardWidgetDataCache extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids;
+    use HasFactory;
 
     protected $table = 'dashboard_widget_data_cache';
-    
+
     protected $keyType = 'string';
+
     public $incrementing = false;
-    
+
     protected $fillable = [
         'widget_id',
         'user_id',
@@ -35,7 +39,7 @@ class DashboardWidgetDataCache extends Model
         'tenant_id',
         'cache_key',
         'data',
-        'expires_at'
+        'expires_at',
     ];
 
     protected $casts = [
@@ -44,7 +48,7 @@ class DashboardWidgetDataCache extends Model
     ];
 
     /**
-     * Relationship: Cache thuộc về widget
+     * Relationship: Cache thuộc về widget.
      */
     public function widget(): BelongsTo
     {
@@ -52,7 +56,7 @@ class DashboardWidgetDataCache extends Model
     }
 
     /**
-     * Relationship: Cache thuộc về user
+     * Relationship: Cache thuộc về user.
      */
     public function user(): BelongsTo
     {
@@ -60,7 +64,7 @@ class DashboardWidgetDataCache extends Model
     }
 
     /**
-     * Relationship: Cache thuộc về project
+     * Relationship: Cache thuộc về project.
      */
     public function project(): BelongsTo
     {
@@ -68,7 +72,7 @@ class DashboardWidgetDataCache extends Model
     }
 
     /**
-     * Relationship: Cache thuộc về tenant
+     * Relationship: Cache thuộc về tenant.
      */
     public function tenant(): BelongsTo
     {
@@ -76,7 +80,7 @@ class DashboardWidgetDataCache extends Model
     }
 
     /**
-     * Scope: Lọc theo widget
+     * Scope: Lọc theo widget.
      */
     public function scopeForWidget($query, string $widgetId)
     {
@@ -84,7 +88,7 @@ class DashboardWidgetDataCache extends Model
     }
 
     /**
-     * Scope: Lọc theo user
+     * Scope: Lọc theo user.
      */
     public function scopeForUser($query, string $userId)
     {
@@ -92,7 +96,7 @@ class DashboardWidgetDataCache extends Model
     }
 
     /**
-     * Scope: Lọc theo project
+     * Scope: Lọc theo project.
      */
     public function scopeForProject($query, string $projectId)
     {
@@ -100,7 +104,7 @@ class DashboardWidgetDataCache extends Model
     }
 
     /**
-     * Scope: Lọc theo tenant
+     * Scope: Lọc theo tenant.
      */
     public function scopeForTenant($query, string $tenantId)
     {
@@ -108,7 +112,7 @@ class DashboardWidgetDataCache extends Model
     }
 
     /**
-     * Scope: Lọc theo cache key
+     * Scope: Lọc theo cache key.
      */
     public function scopeByKey($query, string $cacheKey)
     {
@@ -116,7 +120,7 @@ class DashboardWidgetDataCache extends Model
     }
 
     /**
-     * Scope: Chỉ lấy cache chưa hết hạn
+     * Scope: Chỉ lấy cache chưa hết hạn.
      */
     public function scopeNotExpired($query)
     {
@@ -124,7 +128,7 @@ class DashboardWidgetDataCache extends Model
     }
 
     /**
-     * Scope: Chỉ lấy cache đã hết hạn
+     * Scope: Chỉ lấy cache đã hết hạn.
      */
     public function scopeExpired($query)
     {
@@ -132,7 +136,7 @@ class DashboardWidgetDataCache extends Model
     }
 
     /**
-     * Kiểm tra cache có hết hạn không
+     * Kiểm tra cache có hết hạn không.
      */
     public function isExpired(): bool
     {
@@ -140,7 +144,7 @@ class DashboardWidgetDataCache extends Model
     }
 
     /**
-     * Kiểm tra cache có hợp lệ không (chưa hết hạn)
+     * Kiểm tra cache có hợp lệ không (chưa hết hạn).
      */
     public function isValid(): bool
     {
@@ -148,7 +152,7 @@ class DashboardWidgetDataCache extends Model
     }
 
     /**
-     * Tạo cache key
+     * Tạo cache key.
      */
     public static function generateCacheKey(
         string $widgetId,
@@ -157,20 +161,20 @@ class DashboardWidgetDataCache extends Model
         array $params = []
     ): string {
         $key = "widget:{$widgetId}:user:{$userId}";
-        
+
         if ($projectId) {
             $key .= ":project:{$projectId}";
         }
-        
+
         if (!empty($params)) {
             $key .= ':' . md5(serialize($params));
         }
-        
+
         return $key;
     }
 
     /**
-     * Lấy cache data
+     * Lấy cache data.
      */
     public static function getCacheData(
         string $widgetId,
@@ -179,16 +183,16 @@ class DashboardWidgetDataCache extends Model
         array $params = []
     ): ?array {
         $cacheKey = self::generateCacheKey($widgetId, $userId, $projectId, $params);
-        
+
         $cache = self::byKey($cacheKey)
             ->notExpired()
             ->first();
-        
+
         return $cache ? $cache->data : null;
     }
 
     /**
-     * Lưu cache data
+     * Lưu cache data.
      */
     public static function setCacheData(
         string $widgetId,
@@ -200,10 +204,10 @@ class DashboardWidgetDataCache extends Model
         array $params = []
     ): self {
         $cacheKey = self::generateCacheKey($widgetId, $userId, $projectId, $params);
-        
+
         // Xóa cache cũ nếu có
         self::byKey($cacheKey)->delete();
-        
+
         return self::create([
             'widget_id' => $widgetId,
             'user_id' => $userId,
@@ -211,12 +215,12 @@ class DashboardWidgetDataCache extends Model
             'tenant_id' => $tenantId,
             'cache_key' => $cacheKey,
             'data' => $data,
-            'expires_at' => now()->addMinutes($ttlMinutes)
+            'expires_at' => now()->addMinutes($ttlMinutes),
         ]);
     }
 
     /**
-     * Xóa cache data
+     * Xóa cache data.
      */
     public static function clearCacheData(
         string $widgetId,
@@ -225,12 +229,12 @@ class DashboardWidgetDataCache extends Model
         array $params = []
     ): void {
         $cacheKey = self::generateCacheKey($widgetId, $userId, $projectId, $params);
-        
+
         self::byKey($cacheKey)->delete();
     }
 
     /**
-     * Xóa tất cả cache của user
+     * Xóa tất cả cache của user.
      */
     public static function clearUserCache(string $userId): void
     {
@@ -238,7 +242,7 @@ class DashboardWidgetDataCache extends Model
     }
 
     /**
-     * Xóa tất cả cache của project
+     * Xóa tất cả cache của project.
      */
     public static function clearProjectCache(string $projectId): void
     {
@@ -246,7 +250,7 @@ class DashboardWidgetDataCache extends Model
     }
 
     /**
-     * Xóa tất cả cache đã hết hạn
+     * Xóa tất cả cache đã hết hạn.
      */
     public static function clearExpiredCache(): void
     {

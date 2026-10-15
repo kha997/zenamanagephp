@@ -1,30 +1,29 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
-use App\Models\Project as AppProject;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\View\View;
 
-
-use App\Http\Controllers\Controller; // Thêm import này
+use App\Http\Controllers\Controller;
 use App\Models\DeliverableTemplate;
-use App\Models\User;
+use App\Models\Project as AppProject;
+use App\Models\User; // Thêm import này
 use App\Services\DeliverablePdfExportService;
 use App\Services\DeliverableTemplateVersionService;
 use App\Services\DocumentChecklistService;
 use App\Services\DocumentContext\DocumentContextRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
+use Illuminate\View\View;
 use Src\CoreProject\Models\Project;
 use Src\RBAC\Middleware\RBACMiddleware;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 /**
- * Controller xử lý các hoạt động CRUD cho Project
- * 
- * @package Src\CoreProject\Controllers
+ * Controller xử lý các hoạt động CRUD cho Project.
  */
 class ProjectController extends Controller // Thêm extends Controller
 {
@@ -38,13 +37,13 @@ class ProjectController extends Controller // Thêm extends Controller
 
     // Thay vào đó, áp dụng middleware trong routes
     /**
-     * Lấy danh sách projects
+     * Lấy danh sách projects.
      *
      * @param Request $request
      * @return JsonResponse
      */
     /**
-     * Lấy danh sách projects với proper validation
+     * Lấy danh sách projects với proper validation.
      *
      * @param Request $request
      * @return JsonResponse
@@ -54,7 +53,7 @@ class ProjectController extends Controller // Thêm extends Controller
         $projects = Project::with(['tenant', 'users', 'tasks.assignee'])
             ->whereTenantId(Auth::user()->tenant_id)
             ->paginate(15);
-        
+
         return view('projects.index', compact('projects'));
     }
 
@@ -131,7 +130,7 @@ class ProjectController extends Controller // Thêm extends Controller
     }
 
     /**
-     * Lấy thông tin chi tiết một project
+     * Lấy thông tin chi tiết một project.
      *
      * @param int $projectId
      * @return JsonResponse
@@ -288,7 +287,7 @@ class ProjectController extends Controller // Thêm extends Controller
     }
 
     /**
-     * Xóa project
+     * Xóa project.
      *
      * @param int $projectId
      * @return JsonResponse
@@ -320,7 +319,7 @@ class ProjectController extends Controller // Thêm extends Controller
             event(new \Src\CoreProject\Events\ProjectUpdated($project, $oldData, ['deleted']));
 
             return JSendResponse::success([
-                'message' => 'Dự án đã được xóa thành công.'
+                'message' => 'Dự án đã được xóa thành công.',
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return JSendResponse::error('Dự án không tồn tại.', 404);
@@ -330,7 +329,7 @@ class ProjectController extends Controller // Thêm extends Controller
     }
 
     /**
-     * Tính toán lại progress của project
+     * Tính toán lại progress của project.
      *
      * @param string $projectId
      * @return JsonResponse
@@ -344,7 +343,7 @@ class ProjectController extends Controller // Thêm extends Controller
 
             return JSendResponse::success([
                 'project' => new ProjectResource($project),
-                'message' => 'Tiến độ dự án đã được tính toán lại.'
+                'message' => 'Tiến độ dự án đã được tính toán lại.',
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return JSendResponse::error('Dự án không tồn tại.', 404);
@@ -354,7 +353,7 @@ class ProjectController extends Controller // Thêm extends Controller
     }
 
     /**
-     * Tính toán lại chi phí thực tế của project
+     * Tính toán lại chi phí thực tế của project.
      *
      * @param string $projectId
      * @return JsonResponse
@@ -368,7 +367,7 @@ class ProjectController extends Controller // Thêm extends Controller
 
             return JSendResponse::success([
                 'project' => new ProjectResource($project),
-                'message' => 'Chi phí thực tế đã được tính toán lại.'
+                'message' => 'Chi phí thực tế đã được tính toán lại.',
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return JSendResponse::error('Dự án không tồn tại.', 404);

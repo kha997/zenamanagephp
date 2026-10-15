@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Auth;
 
@@ -16,7 +18,7 @@ class CustomSanctumGuard extends Guard
         foreach (Arr::wrap(config('sanctum.guard', 'web')) as $guard) {
             if ($user = $this->auth->guard($guard)->user()) {
                 return $this->supportsTokens($user)
-                    ? $user->withAccessToken(new TransientToken)
+                    ? $user->withAccessToken(new TransientToken())
                     : $user;
             }
         }
@@ -26,8 +28,8 @@ class CustomSanctumGuard extends Guard
 
             $accessToken = $model::findToken($token);
 
-            if (! $this->isValidAccessToken($accessToken) ||
-                ! $this->supportsTokens($accessToken->tokenable)) {
+            if (!$this->isValidAccessToken($accessToken) ||
+                !$this->supportsTokens($accessToken->tokenable)) {
                 return;
             }
 
@@ -53,6 +55,7 @@ class CustomSanctumGuard extends Guard
             return $tokenable;
         }
     }
+
     /**
      * Strict Bearer token parsing:
      * - Accept only: "Bearer <token>" (case-insensitive, no extra prefix).
@@ -74,5 +77,4 @@ class CustomSanctumGuard extends Guard
 
         return null;
     }
-
 }

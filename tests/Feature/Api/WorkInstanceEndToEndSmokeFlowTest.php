@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
@@ -267,13 +269,13 @@ class WorkInstanceEndToEndSmokeFlowTest extends TestCase
         Storage::disk('local')->put(
             $storagePath,
             <<<'HTML'
-<html><body>
-<h1>{{project.name}}</h1>
-<p>{{wi.id}}</p>
-<p>{{fields.remark}}</p>
-<p>{{fields.handover_note}}</p>
-</body></html>
-HTML
+                <html><body>
+                <h1>{{project.name}}</h1>
+                <p>{{wi.id}}</p>
+                <p>{{fields.remark}}</p>
+                <p>{{fields.handover_note}}</p>
+                </body></html>
+                HTML
         );
 
         $version = DeliverableTemplateVersion::factory()->create([

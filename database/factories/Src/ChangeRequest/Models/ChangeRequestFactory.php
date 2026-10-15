@@ -1,14 +1,16 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories\Src\ChangeRequest\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Src\ChangeRequest\Models\ChangeRequest;
 use Src\CoreProject\Models\Project;
-use App\Models\User;
 
 /**
- * Factory cho ChangeRequest model
+ * Factory cho ChangeRequest model.
  *
  * Tạo test data cho change requests với workflow states
  */
@@ -17,7 +19,7 @@ class ChangeRequestFactory extends Factory
     protected $model = ChangeRequest::class;
 
     /**
-     * Define the model's default state
+     * Define the model's default state.
      */
     public function definition(): array
     {
@@ -36,7 +38,7 @@ class ChangeRequestFactory extends Factory
     }
 
     /**
-     * Draft change request state
+     * Draft change request state.
      */
     public function draft(): static
     {
@@ -49,7 +51,7 @@ class ChangeRequestFactory extends Factory
     }
 
     /**
-     * Approved change request state
+     * Approved change request state.
      */
     public function approved(): static
     {
@@ -61,13 +63,13 @@ class ChangeRequestFactory extends Factory
                 'quality improvement',
                 'client requirements',
                 'technical necessity',
-                'business value'
+                'business value',
             ]),
         ]);
     }
 
     /**
-     * Rejected change request state
+     * Rejected change request state.
      */
     public function rejected(): static
     {

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories;
 
@@ -19,25 +21,23 @@ class InvitationFactory extends Factory
     public function definition(): array
     {
         $tenant = Tenant::query()->inRandomOrder()->first();
-        if (! $tenant instanceof Tenant) {
+        if (!$tenant instanceof Tenant) {
             $tenant = Tenant::factory()->createOne();
         }
         /** @var Tenant $tenant */
-
         $inviter = User::query()
             ->where('tenant_id', $tenant->id)
             ->inRandomOrder()
             ->first();
-        if (! $inviter instanceof User) {
+        if (!$inviter instanceof User) {
             $inviter = User::factory()->createOne(['tenant_id' => $tenant->id]);
         }
         /** @var User $inviter */
-
         $team = Team::query()
             ->where('tenant_id', $tenant->id)
             ->inRandomOrder()
             ->first();
-        if (! $team instanceof Team) {
+        if (!$team instanceof Team) {
             $team = Team::factory()->createOne([
                 'tenant_id' => $tenant->id,
                 'created_by' => $inviter->id,
@@ -45,7 +45,6 @@ class InvitationFactory extends Factory
             ]);
         }
         /** @var Team $team */
-
         $rawToken = Str::random(80);
 
         return [

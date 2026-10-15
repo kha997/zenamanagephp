@@ -13,9 +13,13 @@ use Tests\TestCase;
 class SidebarServiceTest extends TestCase
 {
     protected SidebarService $sidebarService;
+
     protected PermissionService $permissionService;
+
     protected ConditionalDisplayService $conditionalDisplayService;
+
     protected SecurityGuardService $securityGuardService;
+
     protected UserPreferenceService $userPreferenceService;
 
     protected function setUp(): void

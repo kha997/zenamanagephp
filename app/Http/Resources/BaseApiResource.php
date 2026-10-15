@@ -1,16 +1,18 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * Base API Resource với các helper methods chung
+ * Base API Resource với các helper methods chung.
  */
 abstract class BaseApiResource extends JsonResource
 {
     /**
-     * Format ULID for API response
+     * Format ULID for API response.
      *
      * @param string|null $ulid
      * @return string|null
@@ -21,7 +23,7 @@ abstract class BaseApiResource extends JsonResource
     }
 
     /**
-     * Format datetime for API response
+     * Format datetime for API response.
      *
      * @param mixed $datetime
      * @return string|null
@@ -31,12 +33,12 @@ abstract class BaseApiResource extends JsonResource
         if (!$datetime) {
             return null;
         }
-        
+
         return $datetime->toISOString();
     }
 
     /**
-     * Format date for API response
+     * Format date for API response.
      *
      * @param mixed $date
      * @return string|null
@@ -46,12 +48,12 @@ abstract class BaseApiResource extends JsonResource
         if (!$date) {
             return null;
         }
-        
+
         return $date->format('Y-m-d');
     }
 
     /**
-     * Format decimal for API response
+     * Format decimal for API response.
      *
      * @param mixed $decimal
      * @param int $precision
@@ -62,12 +64,12 @@ abstract class BaseApiResource extends JsonResource
         if ($decimal === null) {
             return null;
         }
-        
+
         return round((float) $decimal, $precision);
     }
 
     /**
-     * Include relationship data conditionally
+     * Include relationship data conditionally.
      *
      * @param string $relationship
      * @param string $resourceClass
@@ -79,15 +81,15 @@ abstract class BaseApiResource extends JsonResource
             $this->relationLoaded($relationship),
             function () use ($relationship, $resourceClass) {
                 $relation = $this->$relationship;
-                
+
                 if ($relation === null) {
                     return null;
                 }
-                
+
                 if ($relation instanceof \Illuminate\Database\Eloquent\Collection) {
                     return $resourceClass::collection($relation);
                 }
-                
+
                 return new $resourceClass($relation);
             }
         );

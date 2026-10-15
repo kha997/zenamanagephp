@@ -16,7 +16,7 @@ class BackupRetentionTest extends TestCase
         parent::setUp();
         config(['backup.disk' => null]);
         $this->dir = storage_path('backups');
-        @mkdir($this->dir, 0755, true);
+        @mkdir($this->dir, 0o755, true);
         $this->clean();
     }
 

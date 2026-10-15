@@ -39,7 +39,7 @@ class ApiSecurityMiddlewareGateTest extends TestCase
         $baselineOffenders = [];
 
         foreach ($decoded as $route) {
-            $uri = (string)($route['uri'] ?? '');
+            $uri = (string) ($route['uri'] ?? '');
             if ($uri === '') {
                 continue;
             }
@@ -51,8 +51,8 @@ class ApiSecurityMiddlewareGateTest extends TestCase
             }
 
             $middleware = $this->normalizeMiddleware($route['middleware'] ?? []);
-            $method = (string)($route['method'] ?? '');
-            $action = (string)($route['action'] ?? '');
+            $method = (string) ($route['method'] ?? '');
+            $action = (string) ($route['action'] ?? '');
 
             $hasAuth = $this->hasMiddleware($middleware, [
                 'auth',
@@ -104,7 +104,7 @@ class ApiSecurityMiddlewareGateTest extends TestCase
         $baselineFixture = $this->loadBaselineOffenders();
 
         $baselineCurrent = array_values(array_unique(array_map(
-            static fn (array $v): string => trim((string)$v['method']) . ' ' . $v['uri'],
+            static fn (array $v): string => trim((string) $v['method']) . ' ' . $v['uri'],
             $baselineOffenders
         )));
         sort($baselineCurrent);
@@ -116,7 +116,7 @@ class ApiSecurityMiddlewareGateTest extends TestCase
             $newLines = array_values(array_map(
                 function (string $key) use ($baselineOffenders): string {
                     foreach ($baselineOffenders as $offender) {
-                        $offenderKey = trim((string)$offender['method']) . ' ' . $offender['uri'];
+                        $offenderKey = trim((string) $offender['method']) . ' ' . $offender['uri'];
                         if ($offenderKey === $key) {
                             return "[BASELINE-NEW] {$offender['method']} {$offender['uri']} missing={$offender['missing']} action={$offender['action']} mw={$offender['middleware']}";
                         }
@@ -179,7 +179,7 @@ class ApiSecurityMiddlewareGateTest extends TestCase
         $this->assertIsArray($decoded, 'Baseline fixture must decode to a JSON array.');
         $this->assertSame($decoded, array_values($decoded), 'Baseline fixture must be a JSON list.');
 
-        $items = array_values(array_unique(array_map(static fn ($item): string => trim((string)$item), $decoded)));
+        $items = array_values(array_unique(array_map(static fn ($item): string => trim((string) $item), $decoded)));
         sort($items);
 
         return $items;
@@ -201,10 +201,10 @@ class ApiSecurityMiddlewareGateTest extends TestCase
     private function hasMiddleware(array $middleware, array $aliases): bool
     {
         foreach ($middleware as $entry) {
-            $value = (string)$entry;
+            $value = (string) $entry;
             $normalized = strtolower($value);
-            $classPortion = strtolower((string)strtok($value, ':'));
-            $classBase = strtolower((string)basename(str_replace('\\', '/', $classPortion)));
+            $classPortion = strtolower((string) strtok($value, ':'));
+            $classBase = strtolower((string) basename(str_replace('\\', '/', $classPortion)));
 
             foreach ($aliases as $alias) {
                 $aliasNorm = strtolower($alias);

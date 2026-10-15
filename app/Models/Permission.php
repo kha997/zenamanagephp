@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -8,8 +10,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
- * Model Permission - Quản lý quyền hạn trong hệ thống
- * 
+ * Model Permission - Quản lý quyền hạn trong hệ thống.
+ *
  * @property string $id
  * @property string $code Mã quyền (e.g., task.create)
  * @property string $module Module chứa quyền
@@ -18,21 +20,23 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  */
 class Permission extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids;
+    use HasFactory;
 
     protected $table = 'permissions';
+
     protected $primaryKey = 'id';
-    
+
     /**
-     * Kiểu dữ liệu của khóa chính
+     * Kiểu dữ liệu của khóa chính.
      */
     protected $keyType = 'string';
 
     /**
-     * Tắt auto increment cho khóa chính
+     * Tắt auto increment cho khóa chính.
      */
     public $incrementing = false;
-    
+
     protected $fillable = [
         'code',
         'name',
@@ -42,7 +46,7 @@ class Permission extends Model
     ];
 
     /**
-     * Quan hệ với roles
+     * Quan hệ với roles.
      */
     public function roles(): BelongsToMany
     {
@@ -58,7 +62,7 @@ class Permission extends Model
     }
 
     /**
-     * Tạo permission code từ module và action
+     * Tạo permission code từ module và action.
      */
     public static function generateCode(string $module, string $action): string
     {
@@ -66,7 +70,7 @@ class Permission extends Model
     }
 
     /**
-     * Scope: Lọc theo module
+     * Scope: Lọc theo module.
      */
     public function scopeByModule($query, string $module)
     {
@@ -74,7 +78,7 @@ class Permission extends Model
     }
 
     /**
-     * Scope: Lọc theo action
+     * Scope: Lọc theo action.
      */
     public function scopeByAction($query, string $action)
     {
@@ -82,16 +86,16 @@ class Permission extends Model
     }
 
     /**
-     * Boot method để tự động tạo code
+     * Boot method để tự động tạo code.
      */
     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($permission) {
             if (empty($permission->code)) {
                 $permission->code = self::generateCode(
-                    $permission->module, 
+                    $permission->module,
                     $permission->action
                 );
             }

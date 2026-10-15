@@ -17,7 +17,7 @@ class ComponentController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
@@ -27,7 +27,7 @@ class ComponentController extends Controller
                 'parent:id,name,type',
                 'children:id,name,type,status',
                 'createdBy:id,name,email',
-                'tenant:id,name'
+                'tenant:id,name',
             ]);
 
             // Apply tenant filter
@@ -68,15 +68,15 @@ class ComponentController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $components,
-                'message' => 'Components retrieved successfully'
+                'message' => 'Components retrieved successfully',
             ]);
-
         } catch (\Exception $e) {
             Log::error('Component index error: ' . $e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve components',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -87,7 +87,7 @@ class ComponentController extends Controller
     public function store(Request $request): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
@@ -127,7 +127,6 @@ class ComponentController extends Controller
             ]);
 
             return $this->successResponse($component->load(['project', 'parent', 'children', 'createdBy']), 'Component created successfully', 201);
-
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to create component: ' . $e->getMessage(), 500);
         }
@@ -139,7 +138,7 @@ class ComponentController extends Controller
     public function show(string $id): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
@@ -160,7 +159,7 @@ class ComponentController extends Controller
     public function update(Request $request, string $id): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
@@ -190,11 +189,10 @@ class ComponentController extends Controller
         try {
             $component->update($request->only([
                 'name', 'description', 'type', 'status', 'priority', 'start_date', 'end_date',
-                'estimated_cost', 'actual_cost'
+                'estimated_cost', 'actual_cost',
             ]));
 
             return $this->successResponse($component->load(['project', 'parent', 'children', 'createdBy']), 'Component updated successfully');
-
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to update component: ' . $e->getMessage(), 500);
         }
@@ -206,7 +204,7 @@ class ComponentController extends Controller
     public function destroy(string $id): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
@@ -231,19 +229,18 @@ class ComponentController extends Controller
             $component->delete();
 
             return $this->successResponse(null, 'Component deleted successfully');
-
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to delete component: ' . $e->getMessage(), 500);
         }
     }
 
     /**
-     * Get component hierarchy
+     * Get component hierarchy.
      */
     public function getHierarchy(string $id): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
@@ -258,12 +255,12 @@ class ComponentController extends Controller
     }
 
     /**
-     * Get root components for a project
+     * Get root components for a project.
      */
     public function getRootComponents(Request $request): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }

@@ -1,25 +1,26 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
 use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
+use RuntimeException;
 use Src\ChangeRequest\Events\ChangeRequestApproved;
 use Src\ChangeRequest\Events\ChangeRequestCreated;
 use Src\ChangeRequest\Events\ChangeRequestRejected;
 use Src\ChangeRequest\Events\ChangeRequestStatusChanged;
 use Src\ChangeRequest\Models\ChangeRequest;
 use Src\Foundation\EventBus;
-use RuntimeException;
-use App\Services\TenantContext;
 
 /**
- * Service xử lý business logic cho Change Request
+ * Service xử lý business logic cho Change Request.
  */
 class ChangeRequestService
 {
     /**
-     * Lấy danh sách Change Request theo project với các bộ lọc
+     * Lấy danh sách Change Request theo project với các bộ lọc.
      */
     public function getChangeRequestsByProject(
         int $projectId,
@@ -56,7 +57,7 @@ class ChangeRequestService
     }
 
     /**
-     * Lấy Change Request theo ID
+     * Lấy Change Request theo ID.
      */
     public function getChangeRequestById(int $id): ?ChangeRequest
     {
@@ -64,7 +65,7 @@ class ChangeRequestService
     }
 
     /**
-     * Tạo Change Request mới
+     * Tạo Change Request mới.
      */
     public function createChangeRequest(array $data, string $createdBy): ChangeRequest
     {
@@ -79,8 +80,8 @@ class ChangeRequestService
         }
 
         $data['tenant_id'] = $tenantId;
-        $data['change_type'] = $data['change_type'] ?? 'scope';
-        $data['requested_at'] = $data['requested_at'] ?? Carbon::now();
+        $data['change_type'] ??= 'scope';
+        $data['requested_at'] ??= Carbon::now();
         $data['created_by'] = $createdBy;
         $data['requested_by'] = $createdBy;
         $data['status'] = ChangeRequest::STATUS_DRAFT;
@@ -104,12 +105,12 @@ class ChangeRequestService
     }
 
     /**
-     * Cập nhật Change Request (chỉ khi status = draft)
+     * Cập nhật Change Request (chỉ khi status = draft).
      */
     public function updateChangeRequest(int $id, array $data, string $updatedBy): ?ChangeRequest
     {
         $changeRequest = $this->getChangeRequestById($id);
-        
+
         if (!$changeRequest || !$changeRequest->canBeEdited()) {
             return null;
         }
@@ -127,7 +128,7 @@ class ChangeRequestService
                 [
                     'old_data' => $oldData,
                     'new_data' => $changeRequest->toArray(),
-                    'changed_fields' => array_keys(array_diff_assoc($changeRequest->toArray(), $oldData))
+                    'changed_fields' => array_keys(array_diff_assoc($changeRequest->toArray(), $oldData)),
                 ]
             );
 
@@ -141,19 +142,19 @@ class ChangeRequestService
     }
 
     /**
-     * Submit Change Request để approval
+     * Submit Change Request để approval.
      */
     public function submitForApproval(int $id, string $submittedBy): ?ChangeRequest
     {
         $changeRequest = $this->getChangeRequestById($id);
-        
+
         if (!$changeRequest || !$changeRequest->canBeSubmitted()) {
             return null;
         }
 
         $oldStatus = $changeRequest->status;
         $changeRequest->update([
-            'status' => ChangeRequest::STATUS_AWAITING_APPROVAL
+            'status' => ChangeRequest::STATUS_AWAITING_APPROVAL,
         ]);
 
         // Dispatch event
@@ -164,7 +165,7 @@ class ChangeRequestService
             [
                 'old_status' => $oldStatus,
                 'new_status' => ChangeRequest::STATUS_AWAITING_APPROVAL,
-                'action' => 'submitted_for_approval'
+                'action' => 'submitted_for_approval',
             ]
         );
 
@@ -177,12 +178,12 @@ class ChangeRequestService
     }
 
     /**
-     * Approve Change Request
+     * Approve Change Request.
      */
     public function approveChangeRequest(int $id, string $decidedBy, ?string $decisionNote = null): ?ChangeRequest
     {
         $changeRequest = $this->getChangeRequestById($id);
-        
+
         if (!$changeRequest || !$changeRequest->canBeDecided()) {
             return null;
         }
@@ -191,7 +192,7 @@ class ChangeRequestService
             'status' => ChangeRequest::STATUS_APPROVED,
             'decided_by' => $decidedBy,
             'decided_at' => Carbon::now(),
-            'decision_note' => $decisionNote
+            'decision_note' => $decisionNote,
         ]);
 
         // Dispatch event để các module khác có thể áp dụng thay đổi
@@ -204,7 +205,7 @@ class ChangeRequestService
                 'impact_days' => $changeRequest->impact_days,
                 'impact_cost' => $changeRequest->impact_cost,
                 'impact_kpi' => $changeRequest->impact_kpi,
-                'decision_note' => $decisionNote
+                'decision_note' => $decisionNote,
             ]
         );
 
@@ -217,12 +218,12 @@ class ChangeRequestService
     }
 
     /**
-     * Reject Change Request
+     * Reject Change Request.
      */
     public function rejectChangeRequest(int $id, string $decidedBy, ?string $decisionNote = null): ?ChangeRequest
     {
         $changeRequest = $this->getChangeRequestById($id);
-        
+
         if (!$changeRequest || !$changeRequest->canBeDecided()) {
             return null;
         }
@@ -231,7 +232,7 @@ class ChangeRequestService
             'status' => ChangeRequest::STATUS_REJECTED,
             'decided_by' => $decidedBy,
             'decided_at' => Carbon::now(),
-            'decision_note' => $decisionNote
+            'decision_note' => $decisionNote,
         ]);
 
         // Dispatch event
@@ -241,7 +242,7 @@ class ChangeRequestService
             $decidedBy,
             [
                 'change_request' => $changeRequest->toArray(),
-                'decision_note' => $decisionNote
+                'decision_note' => $decisionNote,
             ]
         );
 
@@ -254,7 +255,7 @@ class ChangeRequestService
     }
 
     /**
-     * Lấy thống kê Change Request theo project
+     * Lấy thống kê Change Request theo project.
      */
     public function getChangeRequestStats(int $projectId): array
     {
@@ -278,11 +279,12 @@ class ChangeRequestService
     }
 
     /**
-     * Tạo mã CR tự động
+     * Tạo mã CR tự động.
      */
     private function generateChangeRequestCode(string $projectId): string
     {
         $count = ChangeRequest::where('project_id', $projectId)->count() + 1;
+
         return sprintf('CR-%03d', $count);
     }
 }

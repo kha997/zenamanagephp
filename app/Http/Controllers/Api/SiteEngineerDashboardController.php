@@ -1,9 +1,11 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
+use App\Http\Controllers\Controller;
 use App\Models\MaterialRequest;
 use App\Models\Ncr;
 use App\Models\Project;
@@ -29,7 +31,7 @@ class SiteEngineerDashboardController extends Controller
     public function getOverview(Request $request): JsonResponse
     {
         $user = Auth::guard('sanctum')->user();
-        
+
         if (!$user) {
             return response()->json([
                 'status' => 'error',
@@ -38,7 +40,7 @@ class SiteEngineerDashboardController extends Controller
         }
 
         $projectId = $request->input('project_id');
-        
+
         // Get Site Engineer's projects
         $projects = $this->accessibleProjectsQuery((string) $user->id, (string) $user->tenant_id);
 
@@ -190,7 +192,7 @@ class SiteEngineerDashboardController extends Controller
     public function getSiteTasks(Request $request): JsonResponse
     {
         $user = Auth::guard('sanctum')->user();
-        
+
         if (!$user) {
             return response()->json([
                 'status' => 'error',
@@ -201,7 +203,7 @@ class SiteEngineerDashboardController extends Controller
         $projectId = $request->input('project_id');
         $status = $request->input('status');
         $priority = $request->input('priority');
-        
+
         $query = Task::where('assigned_to', $user->id)
             ->where('type', 'site');
 
@@ -243,7 +245,7 @@ class SiteEngineerDashboardController extends Controller
     public function getMaterialRequests(Request $request): JsonResponse
     {
         $user = Auth::guard('sanctum')->user();
-        
+
         if (!$user) {
             return response()->json([
                 'status' => 'error',
@@ -253,7 +255,7 @@ class SiteEngineerDashboardController extends Controller
 
         $projectId = $request->input('project_id');
         $status = $request->input('status');
-        
+
         $query = MaterialRequest::query();
 
         if ($projectId) {
@@ -263,7 +265,7 @@ class SiteEngineerDashboardController extends Controller
             $projectIds = Project::whereHas('users', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             })->pluck('id');
-            
+
             $query->whereIn('project_id', $projectIds);
         }
 
@@ -301,7 +303,7 @@ class SiteEngineerDashboardController extends Controller
     public function getSiteRfis(Request $request): JsonResponse
     {
         $user = Auth::guard('sanctum')->user();
-        
+
         if (!$user) {
             return response()->json([
                 'status' => 'error',
@@ -311,7 +313,7 @@ class SiteEngineerDashboardController extends Controller
 
         $projectId = $request->input('project_id');
         $status = $request->input('status');
-        
+
         $query = Rfi::query();
 
         if ($projectId) {
@@ -321,7 +323,7 @@ class SiteEngineerDashboardController extends Controller
             $projectIds = Project::whereHas('users', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             })->pluck('id');
-            
+
             $query->whereIn('project_id', $projectIds);
         }
 
@@ -356,7 +358,7 @@ class SiteEngineerDashboardController extends Controller
     public function getQcInspections(Request $request): JsonResponse
     {
         $user = Auth::guard('sanctum')->user();
-        
+
         if (!$user) {
             return response()->json([
                 'status' => 'error',
@@ -415,7 +417,7 @@ class SiteEngineerDashboardController extends Controller
     public function getSiteSafetyStatus(Request $request): JsonResponse
     {
         $user = Auth::guard('sanctum')->user();
-        
+
         if (!$user) {
             return response()->json([
                 'status' => 'error',
@@ -424,7 +426,7 @@ class SiteEngineerDashboardController extends Controller
         }
 
         $projectId = $request->input('project_id');
-        
+
         // Get site engineer's projects
         $projects = Project::whereHas('users', function ($q) use ($user) {
             $q->where('user_id', $user->id);
@@ -452,7 +454,7 @@ class SiteEngineerDashboardController extends Controller
     public function getDailySiteReport(Request $request): JsonResponse
     {
         $user = Auth::guard('sanctum')->user();
-        
+
         if (!$user) {
             return response()->json([
                 'status' => 'error',
@@ -462,7 +464,7 @@ class SiteEngineerDashboardController extends Controller
 
         $projectId = $request->input('project_id');
         $date = $request->input('date', now()->format('Y-m-d'));
-        
+
         // Get site engineer's projects
         $projects = Project::whereHas('users', function ($q) use ($user) {
             $q->where('user_id', $user->id);

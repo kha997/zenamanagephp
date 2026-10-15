@@ -1,11 +1,13 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Models\Task;
 use App\Models\Project;
-use App\Models\User;
+use App\Models\Task;
 use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Schema;
 
@@ -58,7 +60,7 @@ class TaskFactory extends Factory
 
     private function filterTaskAttributes(array $attributes): array
     {
-        if (! Schema::hasTable('tasks')) {
+        if (!Schema::hasTable('tasks')) {
             return $attributes;
         }
 

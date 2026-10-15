@@ -1,21 +1,26 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Traits\TenantScope;
 
 /**
- * Model QcInspection để quản lý các cuộc kiểm định chất lượng
+ * Model QcInspection để quản lý các cuộc kiểm định chất lượng.
  */
 class QcInspection extends Model
 {
-    use HasUlids, HasFactory, SoftDeletes, TenantScope;
+    use HasUlids;
+    use HasFactory;
+    use SoftDeletes;
+    use TenantScope;
 
     protected $fillable = [
         'qc_plan_id',
@@ -39,7 +44,7 @@ class QcInspection extends Model
     ];
 
     /**
-     * Quan hệ với QcPlan
+     * Quan hệ với QcPlan.
      */
     public function qcPlan(): BelongsTo
     {
@@ -47,7 +52,7 @@ class QcInspection extends Model
     }
 
     /**
-     * Quan hệ với Tenant
+     * Quan hệ với Tenant.
      */
     public function tenant(): BelongsTo
     {
@@ -55,7 +60,7 @@ class QcInspection extends Model
     }
 
     /**
-     * Quan hệ với User (người kiểm định)
+     * Quan hệ với User (người kiểm định).
      */
     public function inspector(): BelongsTo
     {
@@ -84,7 +89,7 @@ class QcInspection extends Model
     }
 
     /**
-     * Quan hệ với NCRs
+     * Quan hệ với NCRs.
      */
     public function ncrs(): HasMany
     {
@@ -92,7 +97,7 @@ class QcInspection extends Model
     }
 
     /**
-     * Get inspection status badge color
+     * Get inspection status badge color.
      */
     public function getStatusBadgeColorAttribute(): string
     {
@@ -106,7 +111,7 @@ class QcInspection extends Model
     }
 
     /**
-     * Check if inspection is overdue
+     * Check if inspection is overdue.
      */
     public function getIsOverdueAttribute(): bool
     {
@@ -114,7 +119,7 @@ class QcInspection extends Model
     }
 
     /**
-     * Scope để lọc theo status
+     * Scope để lọc theo status.
      */
     public function scopeByStatus($query, string $status)
     {
@@ -122,7 +127,7 @@ class QcInspection extends Model
     }
 
     /**
-     * Scope để lọc các inspection quá hạn
+     * Scope để lọc các inspection quá hạn.
      */
     public function scopeOverdue($query)
     {
@@ -131,7 +136,7 @@ class QcInspection extends Model
     }
 
     /**
-     * Scope để lọc theo inspector
+     * Scope để lọc theo inspector.
      */
     public function scopeInspectedBy($query, string $userId)
     {

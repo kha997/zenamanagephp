@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -6,11 +8,11 @@ use App\Models\AuditLog;
 use App\Models\Invitation;
 use App\Models\Team;
 use App\Models\User;
+use App\Notifications\TeamInvitationCreatedNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
-use App\Notifications\TeamInvitationCreatedNotification;
 
 class TeamInvitationService
 {

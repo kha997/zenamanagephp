@@ -5,15 +5,15 @@ namespace App\Traits;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * TenantScope Trait
- * 
+ * TenantScope Trait.
+ *
  * Automatically applies tenant_id scope to all queries
  * for models that belong to a tenant
  */
 trait TenantScope
 {
     /**
-     * Boot the trait
+     * Boot the trait.
      */
     protected static function bootTenantScope(): void
     {
@@ -35,7 +35,7 @@ trait TenantScope
     }
 
     /**
-     * Get the tenant ID for this model
+     * Get the tenant ID for this model.
      */
     public function getTenantId(): ?string
     {
@@ -45,7 +45,7 @@ trait TenantScope
     }
 
     /**
-     * Check if model belongs to a specific tenant
+     * Check if model belongs to a specific tenant.
      */
     public function belongsToTenant(string $tenantId): bool
     {
@@ -53,7 +53,7 @@ trait TenantScope
     }
 
     /**
-     * Scope to get models for a specific tenant
+     * Scope to get models for a specific tenant.
      *
      * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
      * @return \Illuminate\Database\Eloquent\Builder<static>
@@ -64,7 +64,7 @@ trait TenantScope
     }
 
     /**
-     * Scope to get models for current tenant context
+     * Scope to get models for current tenant context.
      *
      * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
      * @return \Illuminate\Database\Eloquent\Builder<static>
@@ -82,11 +82,11 @@ trait TenantScope
         } elseif ($tenantId === null && function_exists('request') && request()->attributes->has('tenant_id')) {
             $tenantId = request()->attributes->get('tenant_id');
         }
-        
+
         if ($tenantId) {
             return $query->where('tenant_id', $tenantId);
         }
-        
+
         return $query;
     }
 }

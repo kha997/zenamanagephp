@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -10,12 +12,12 @@ use Src\CoreProject\Models\Task;
 use Src\CoreProject\Models\TaskAssignment;
 
 /**
- * Task Assignment Service - Business logic for task assignment management
+ * Task Assignment Service - Business logic for task assignment management.
  */
 class TaskAssignmentService
 {
     /**
-     * Get assignments for a task
+     * Get assignments for a task.
      */
     public function getAssignmentsForTask(string $taskId): Collection
     {
@@ -25,7 +27,7 @@ class TaskAssignmentService
     }
 
     /**
-     * Get assignments for a user
+     * Get assignments for a user.
      */
     public function getAssignmentsForUser(string $userId, array $filters = []): Collection
     {
@@ -48,7 +50,7 @@ class TaskAssignmentService
     }
 
     /**
-     * Create a new task assignment
+     * Create a new task assignment.
      */
     public function createAssignment(array $data): TaskAssignment
     {
@@ -86,20 +88,20 @@ class TaskAssignmentService
             DB::commit();
 
             return $assignment->load(['user', 'task']);
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Task assignment creation failed', [
                 'data' => $data,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
+
             throw $e;
         }
     }
 
     /**
-     * Update an existing assignment
+     * Update an existing assignment.
      */
     public function updateAssignment(string $assignmentId, array $data): ?TaskAssignment
     {
@@ -119,21 +121,21 @@ class TaskAssignmentService
             DB::commit();
 
             return $assignment->load(['user', 'task']);
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Task assignment update failed', [
                 'assignment_id' => $assignmentId,
                 'data' => $data,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
+
             throw $e;
         }
     }
 
     /**
-     * Delete an assignment
+     * Delete an assignment.
      */
     public function deleteAssignment(string $assignmentId): bool
     {
@@ -146,19 +148,19 @@ class TaskAssignmentService
             $assignment->delete();
 
             return true;
-
         } catch (\Exception $e) {
             Log::error('Task assignment deletion failed', [
                 'assignment_id' => $assignmentId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
+
             return false;
         }
     }
 
     /**
-     * Assign multiple users to a task
+     * Assign multiple users to a task.
      */
     public function assignMultipleUsers(string $taskId, array $assignments): Collection
     {
@@ -176,21 +178,21 @@ class TaskAssignmentService
             DB::commit();
 
             return $createdAssignments;
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Multiple user assignment failed', [
                 'task_id' => $taskId,
                 'assignments' => $assignments,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
+
             throw $e;
         }
     }
 
     /**
-     * Update all assignments for a task
+     * Update all assignments for a task.
      */
     public function updateTaskAssignments(string $taskId, array $assignments): Collection
     {
@@ -211,21 +213,21 @@ class TaskAssignmentService
             DB::commit();
 
             return $createdAssignments->load(['user', 'task']);
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Task assignments update failed', [
                 'task_id' => $taskId,
                 'assignments' => $assignments,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
+
             throw $e;
         }
     }
 
     /**
-     * Get assignment statistics for a user
+     * Get assignment statistics for a user.
      */
     public function getUserAssignmentStats(string $userId): array
     {
@@ -245,7 +247,7 @@ class TaskAssignmentService
     }
 
     /**
-     * Get assignment statistics for a task
+     * Get assignment statistics for a task.
      */
     public function getTaskAssignmentStats(string $taskId): array
     {
@@ -264,7 +266,7 @@ class TaskAssignmentService
     }
 
     /**
-     * Check if user is assigned to task
+     * Check if user is assigned to task.
      */
     public function isUserAssignedToTask(string $userId, string $taskId): bool
     {
@@ -274,7 +276,7 @@ class TaskAssignmentService
     }
 
     /**
-     * Get user's workload (total split percentage)
+     * Get user's workload (total split percentage).
      */
     public function getUserWorkload(string $userId): float
     {

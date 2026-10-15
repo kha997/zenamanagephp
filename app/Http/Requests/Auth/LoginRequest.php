@@ -1,11 +1,13 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests\Auth;
 
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Form Request để validate dữ liệu đăng nhập
+ * Form Request để validate dữ liệu đăng nhập.
  */
 class LoginRequest extends FormRequest
 {
@@ -24,7 +26,7 @@ class LoginRequest extends FormRequest
     {
         return [
             'email' => ['required', 'email', 'max:255'],
-            'password' => ['required', 'string', 'min:6']
+            'password' => ['required', 'string', 'min:6'],
         ];
     }
 
@@ -37,7 +39,7 @@ class LoginRequest extends FormRequest
             'email.required' => 'Email là bắt buộc',
             'email.email' => 'Email không đúng định dạng',
             'password.required' => 'Mật khẩu là bắt buộc',
-            'password.min' => 'Mật khẩu phải có ít nhất 6 ký tự'
+            'password.min' => 'Mật khẩu phải có ít nhất 6 ký tự',
         ];
     }
 }

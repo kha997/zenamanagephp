@@ -1,31 +1,33 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories\Src\WorkTemplate\Models;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\User;
-use Src\WorkTemplate\Models\TemplateVersion;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Src\WorkTemplate\Models\Template;
+use Src\WorkTemplate\Models\TemplateVersion;
 
 /**
- * Factory cho TemplateVersion model
- * 
+ * Factory cho TemplateVersion model.
+ *
  * Tạo dữ liệu giả cho testing TemplateVersion
  * Hỗ trợ các version khác nhau của template
- * 
+ *
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Src\WorkTemplate\Models\TemplateVersion>
  */
 class TemplateVersionFactory extends Factory
 {
     /**
-     * Model được tạo bởi factory này
+     * Model được tạo bởi factory này.
      *
      * @var string
      */
     protected $model = TemplateVersion::class;
 
     /**
-     * Định nghĩa trạng thái mặc định của model
+     * Định nghĩa trạng thái mặc định của model.
      *
      * @return array<string, mixed>
      */
@@ -41,7 +43,7 @@ class TemplateVersionFactory extends Factory
     }
 
     /**
-     * Tạo version với note cụ thể
+     * Tạo version với note cụ thể.
      */
     public function withNote(string $note): static
     {
@@ -51,7 +53,7 @@ class TemplateVersionFactory extends Factory
     }
 
     /**
-     * Tạo version đầu tiên (version 1)
+     * Tạo version đầu tiên (version 1).
      */
     public function firstVersion(): static
     {
@@ -62,7 +64,7 @@ class TemplateVersionFactory extends Factory
     }
 
     /**
-     * Tạo version với template_id cụ thể
+     * Tạo version với template_id cụ thể.
      */
     public function forTemplate(string $templateId): static
     {
@@ -72,14 +74,14 @@ class TemplateVersionFactory extends Factory
     }
 
     /**
-     * Tạo dữ liệu JSON mẫu cho template version
+     * Tạo dữ liệu JSON mẫu cho template version.
      *
      * @return array
      */
     private function generateSampleJsonBody(): array
     {
         $templateName = $this->faker->words(3, true) . ' Template';
-        
+
         return [
             'template_name' => $templateName,
             'phases' => [

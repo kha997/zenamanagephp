@@ -2,11 +2,10 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     /**
      * Run the migrations.
      */
@@ -17,10 +16,10 @@ return new class extends Migration
             Schema::table('zena_tasks', function (Blueprint $table) {
                 $table->string('deprecated_notice')->nullable()->after('id');
             });
-            
+
             // Add deprecation notice to all existing records
             DB::table('zena_tasks')->update([
-                'deprecated_notice' => 'This table is deprecated. Use tasks table instead.'
+                'deprecated_notice' => 'This table is deprecated. Use tasks table instead.',
             ]);
         }
 
@@ -29,10 +28,10 @@ return new class extends Migration
             Schema::table('zena_task_assignments', function (Blueprint $table) {
                 $table->string('deprecated_notice')->nullable()->after('id');
             });
-            
+
             // Add deprecation notice to all existing records
             DB::table('zena_task_assignments')->update([
-                'deprecated_notice' => 'This table is deprecated. Use task_assignments table instead.'
+                'deprecated_notice' => 'This table is deprecated. Use task_assignments table instead.',
             ]);
         }
     }

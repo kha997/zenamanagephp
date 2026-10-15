@@ -130,7 +130,7 @@ class NotificationRepository
             'notification_id' => $notification->id,
             'user_id' => $notification->user_id,
             'type' => $notification->type,
-            'priority' => $notification->priority
+            'priority' => $notification->priority,
         ]);
 
         return $notification->load(['user', 'tenant']);
@@ -151,7 +151,7 @@ class NotificationRepository
 
         Log::info('Notification updated', [
             'notification_id' => $notification->id,
-            'user_id' => $notification->user_id
+            'user_id' => $notification->user_id,
         ]);
 
         return $notification->load(['user', 'tenant']);
@@ -172,7 +172,7 @@ class NotificationRepository
 
         Log::info('Notification deleted', [
             'notification_id' => $id,
-            'user_id' => $notification->user_id
+            'user_id' => $notification->user_id,
         ]);
 
         return true;
@@ -193,7 +193,7 @@ class NotificationRepository
 
         Log::info('Notification soft deleted', [
             'notification_id' => $id,
-            'user_id' => $notification->user_id
+            'user_id' => $notification->user_id,
         ]);
 
         return true;
@@ -214,7 +214,7 @@ class NotificationRepository
 
         Log::info('Notification restored', [
             'notification_id' => $id,
-            'user_id' => $notification->user_id
+            'user_id' => $notification->user_id,
         ]);
 
         return true;
@@ -287,12 +287,12 @@ class NotificationRepository
 
         $notification->update([
             'read' => true,
-            'read_at' => now()
+            'read_at' => now(),
         ]);
 
         Log::info('Notification marked as read', [
             'notification_id' => $id,
-            'user_id' => $notification->user_id
+            'user_id' => $notification->user_id,
         ]);
 
         return true;
@@ -311,12 +311,12 @@ class NotificationRepository
 
         $notification->update([
             'read' => false,
-            'read_at' => null
+            'read_at' => null,
         ]);
 
         Log::info('Notification marked as unread', [
             'notification_id' => $id,
-            'user_id' => $notification->user_id
+            'user_id' => $notification->user_id,
         ]);
 
         return true;
@@ -331,12 +331,12 @@ class NotificationRepository
                               ->where('read', false)
                               ->update([
                                   'read' => true,
-                                  'read_at' => now()
+                                  'read_at' => now(),
                               ]);
 
         Log::info('All notifications marked as read', [
             'user_id' => $userId,
-            'count' => $updated
+            'count' => $updated,
         ]);
 
         return $updated;
@@ -351,12 +351,12 @@ class NotificationRepository
                               ->where('read', true)
                               ->update([
                                   'read' => false,
-                                  'read_at' => null
+                                  'read_at' => null,
                               ]);
 
         Log::info('All notifications marked as unread', [
             'user_id' => $userId,
-            'count' => $updated
+            'count' => $updated,
         ]);
 
         return $updated;
@@ -382,7 +382,7 @@ class NotificationRepository
             'low_notifications' => $query->where('priority', 'low')->count(),
             'recent_notifications' => $query->where('created_at', '>=', now()->subDays(7))->count(),
             'email_sent_notifications' => $query->where('email_sent', true)->count(),
-            'email_failed_notifications' => $query->where('email_failed', true)->count()
+            'email_failed_notifications' => $query->where('email_failed', true)->count(),
         ];
     }
 
@@ -419,7 +419,7 @@ class NotificationRepository
 
         Log::info('Notifications bulk updated', [
             'count' => $updated,
-            'ids' => $ids
+            'ids' => $ids,
         ]);
 
         return $updated;
@@ -434,7 +434,7 @@ class NotificationRepository
 
         Log::info('Notifications bulk deleted', [
             'count' => $deleted,
-            'ids' => $ids
+            'ids' => $ids,
         ]);
 
         return $deleted;
@@ -448,7 +448,7 @@ class NotificationRepository
         $created = $this->model->insert($notifications);
 
         Log::info('Bulk notifications created', [
-            'count' => count($notifications)
+            'count' => count($notifications),
         ]);
 
         return $created;
@@ -507,7 +507,7 @@ class NotificationRepository
 
         Log::info('Old notifications cleaned up', [
             'count' => $deleted,
-            'days' => $days
+            'days' => $days,
         ]);
 
         return $deleted;
@@ -525,7 +525,7 @@ class NotificationRepository
             $count = $this->model->whereDate('created_at', $date)->count();
             $trends[] = [
                 'date' => $date,
-                'count' => $count
+                'count' => $count,
             ];
         }
 
@@ -553,12 +553,12 @@ class NotificationRepository
 
         $notification->update([
             'status' => $status,
-            'status_updated_at' => now()
+            'status_updated_at' => now(),
         ]);
 
         Log::info('Notification status updated', [
             'notification_id' => $id,
-            'status' => $status
+            'status' => $status,
         ]);
 
         return true;

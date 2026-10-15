@@ -1,20 +1,23 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Events;
 
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
-use Illuminate\Foundation\Events\Dispatchable;
 
 /**
- * ProjectTaskUpdated Event - Broadcast khi task được cập nhật
+ * ProjectTaskUpdated Event - Broadcast khi task được cập nhật.
  */
 class ProjectTaskUpdated implements ShouldBroadcast
 {
-
     public Task $task;
+
     public Project $project;
+
     public string $updatedBy;
+
     public array $changes;
 
     /**
@@ -35,7 +38,7 @@ class ProjectTaskUpdated implements ShouldBroadcast
     {
         return [
             new PrivateChannel('project.' . $this->project->id),
-            new PrivateChannel('tenant.' . $this->project->tenant_id)
+            new PrivateChannel('tenant.' . $this->project->tenant_id),
         ];
     }
 
@@ -54,17 +57,17 @@ class ProjectTaskUpdated implements ShouldBroadcast
                 'priority' => $this->task->priority,
                 'due_date' => $this->task->due_date?->toISOString(),
                 'assigned_to' => $this->task->assigned_to,
-                'progress' => $this->task->progress ?? 0
+                'progress' => $this->task->progress ?? 0,
             ],
             'project' => [
                 'id' => $this->project->id,
                 'name' => $this->project->name,
                 'code' => $this->project->code,
-                'progress' => $this->project->progress
+                'progress' => $this->project->progress,
             ],
             'updated_by' => $this->updatedBy,
             'changes' => $this->changes,
-            'timestamp' => now()->toISOString()
+            'timestamp' => now()->toISOString(),
         ];
     }
 

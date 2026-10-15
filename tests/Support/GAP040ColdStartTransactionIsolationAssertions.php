@@ -31,7 +31,9 @@ trait GAP040ColdStartTransactionIsolationAssertions
      * classes sharing this trait within the same PHPUnit process.
      */
     protected static ?bool $migratedBeforeVerifierSetUp = null;
+
     protected static ?bool $markerVisibleBeforeVerifierSetUp = null;
+
     protected static ?string $lastWrittenMarkerId = null;
 
     /**

@@ -1,24 +1,26 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
+use RuntimeException;
 use Tests\TestCase;
 use Tests\Traits\AuthenticationTestTrait;
-use App\Models\User;
-use App\Models\Tenant;
-use RuntimeException;
 
 class IntegrationTest extends TestCase
 {
     use AuthenticationTestTrait;
-
     use RefreshDatabase;
 
     protected User $user;
+
     protected string $tenantId;
 
     protected function setUp(): void
@@ -31,7 +33,7 @@ class IntegrationTest extends TestCase
     }
 
     /**
-     * Test complete project workflow
+     * Test complete project workflow.
      */
     public function test_complete_project_workflow(): void
     {
@@ -42,11 +44,11 @@ class IntegrationTest extends TestCase
             'start_date' => now()->format('Y-m-d'),
             'end_date' => now()->addMonths(6)->format('Y-m-d'),
             'status' => 'planning',
-            'code' => 'PRJ-' . strtoupper(Str::random(6))
+            'code' => 'PRJ-' . strtoupper(Str::random(6)),
         ]);
         $projectResponse->assertStatus(201);
         $projectId = $projectResponse->json('data.project.id');
-        
+
         // 4. Create tasks
         $taskResponse = $this->apiPost('/api/v1/tasks', [
             'name' => 'Integration Test Task',
@@ -54,28 +56,28 @@ class IntegrationTest extends TestCase
             'project_id' => $projectId,
             'start_date' => now()->format('Y-m-d'),
             'end_date' => now()->addWeeks(2)->format('Y-m-d'),
-            'status' => 'pending'
+            'status' => 'pending',
         ]);
 
         $taskResponse->assertStatus(201);
         $taskId = $taskResponse->json('data.task.id');
-        
+
         // 5. Create change request
         $crResponse = $this->apiPost('/api/v1/change-requests', [
             'title' => 'Integration Test CR',
             'description' => 'Test change request',
             'project_id' => $projectId,
             'impact_days' => 3,
-            'impact_cost' => 10000
+            'impact_cost' => 10000,
         ]);
 
         $crResponse->assertStatus(201);
-        
+
         // 6. Verify data integrity
         $this->assertDatabaseHas('projects', ['id' => $projectId]);
         $this->assertDatabaseHas('tasks', ['id' => $taskId]);
         $this->assertDatabaseHas('change_requests', ['project_id' => $projectId]);
-        
+
         // 7. Test tenant isolation
         $otherTenant = Tenant::factory()->create();
         $otherUser = User::factory()->create([
@@ -92,17 +94,17 @@ class IntegrationTest extends TestCase
         $otherUser->roles()->syncWithoutDetaching($robustRole->id);
         $this->ensureRoleHasTenantPermissions('super_admin');
         $this->ensureRoleHasTenantPermissions('Admin');
-        
+
         $otherLoginResponse = $this->withHeaders([
             'Accept' => 'application/json',
             'X-Tenant-ID' => (string) $otherTenant->id,
         ])->postJson('/api/auth/login', [
             'email' => $otherUser->email,
-            'password' => 'password'
+            'password' => 'password',
         ]);
         $otherLoginResponse->assertStatus(200);
         $otherToken = $this->extractLoginToken($otherLoginResponse);
-        
+
         // Other user should not see the project
         $unauthorizedResponse = $this
             ->flushHeaders()
@@ -113,7 +115,6 @@ class IntegrationTest extends TestCase
                 'Authorization' => 'Bearer ' . $otherToken,
             ])
             ->getJson("/api/v1/projects/{$projectId}");
-
 
         $unauthorizedResponse->assertStatus(404);
         $unauthorizedResponse->assertJsonStructure([

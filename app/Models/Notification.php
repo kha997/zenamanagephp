@@ -1,10 +1,11 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Models\User;
-use Carbon\Carbon;
 use App\Traits\TenantScope;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Model Notification để quản lý thông báo
+ * Model Notification để quản lý thông báo.
  *
  * @property string $id
  * @property string $user_id
@@ -27,28 +28,32 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Notification extends Model
 {
-    use HasUlids, HasFactory, TenantScope;
+    use HasUlids;
+    use HasFactory;
+    use TenantScope;
 
     protected $table = 'notifications';
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     /**
-     * Các mức độ ưu tiên
+     * Các mức độ ưu tiên.
      */
     public const PRIORITY_CRITICAL = 'critical';
     public const PRIORITY_NORMAL = 'normal';
     public const PRIORITY_LOW = 'low';
 
     /**
-     * Các kênh thông báo
+     * Các kênh thông báo.
      */
     public const CHANNEL_INAPP = 'inapp';
     public const CHANNEL_EMAIL = 'email';
     public const CHANNEL_WEBHOOK = 'webhook';
 
     /**
-     * Danh sách các mức độ ưu tiên hợp lệ
+     * Danh sách các mức độ ưu tiên hợp lệ.
      */
     public const VALID_PRIORITIES = [
         self::PRIORITY_CRITICAL,
@@ -57,7 +62,7 @@ class Notification extends Model
     ];
 
     /**
-     * Danh sách các kênh hợp lệ
+     * Danh sách các kênh hợp lệ.
      */
     public const VALID_CHANNELS = [
         self::CHANNEL_INAPP,
@@ -90,11 +95,11 @@ class Notification extends Model
     ];
 
     protected $appends = [
-        'is_expired'
+        'is_expired',
     ];
 
     /**
-     * Quan hệ với User
+     * Quan hệ với User.
      */
     public function user(): BelongsTo
     {
@@ -102,7 +107,7 @@ class Notification extends Model
     }
 
     /**
-     * Quan hệ với Tenant
+     * Quan hệ với Tenant.
      */
     public function tenant(): BelongsTo
     {
@@ -110,7 +115,7 @@ class Notification extends Model
     }
 
     /**
-     * Quan hệ với Project
+     * Quan hệ với Project.
      */
     public function project(): BelongsTo
     {
@@ -118,7 +123,7 @@ class Notification extends Model
     }
 
     /**
-     * Scope để lọc theo user
+     * Scope để lọc theo user.
      */
     public function scopeForUser(Builder $query, string $userId): Builder
     {
@@ -126,7 +131,7 @@ class Notification extends Model
     }
 
     /**
-     * Scope để lọc theo mức độ ưu tiên
+     * Scope để lọc theo mức độ ưu tiên.
      */
     public function scopeWithPriority(Builder $query, string $priority): Builder
     {
@@ -134,7 +139,7 @@ class Notification extends Model
     }
 
     /**
-     * Scope để lọc theo kênh
+     * Scope để lọc theo kênh.
      */
     public function scopeWithChannel(Builder $query, string $channel): Builder
     {
@@ -142,7 +147,7 @@ class Notification extends Model
     }
 
     /**
-     * Scope để lấy thông báo chưa đọc
+     * Scope để lấy thông báo chưa đọc.
      */
     public function scopeUnread(Builder $query): Builder
     {
@@ -150,7 +155,7 @@ class Notification extends Model
     }
 
     /**
-     * Scope để lấy thông báo đã đọc
+     * Scope để lấy thông báo đã đọc.
      */
     public function scopeRead(Builder $query): Builder
     {
@@ -158,7 +163,7 @@ class Notification extends Model
     }
 
     /**
-     * Scope để lấy thông báo critical
+     * Scope để lấy thông báo critical.
      */
     public function scopeCritical(Builder $query): Builder
     {
@@ -166,7 +171,7 @@ class Notification extends Model
     }
 
     /**
-     * Scope để sắp xếp theo mức độ ưu tiên
+     * Scope để sắp xếp theo mức độ ưu tiên.
      */
     public function scopeOrderByPriority(Builder $query): Builder
     {
@@ -180,7 +185,7 @@ class Notification extends Model
     }
 
     /**
-     * Kiểm tra xem thông báo đã được đọc chưa
+     * Kiểm tra xem thông báo đã được đọc chưa.
      */
     public function isRead(): bool
     {
@@ -188,7 +193,7 @@ class Notification extends Model
     }
 
     /**
-     * Kiểm tra xem thông báo có phải critical không
+     * Kiểm tra xem thông báo có phải critical không.
      */
     public function isCritical(): bool
     {
@@ -196,7 +201,7 @@ class Notification extends Model
     }
 
     /**
-     * Đánh dấu thông báo là đã đọc
+     * Đánh dấu thông báo là đã đọc.
      */
     public function markAsRead(): bool
     {
@@ -205,20 +210,22 @@ class Notification extends Model
         }
 
         $this->read_at = now();
+
         return $this->save();
     }
 
     /**
-     * Đánh dấu thông báo là chưa đọc
+     * Đánh dấu thông báo là chưa đọc.
      */
     public function markAsUnread(): bool
     {
         $this->read_at = null;
+
         return $this->save();
     }
 
     /**
-     * Tạo thông báo mới
+     * Tạo thông báo mới.
      */
     public static function createNotification(array $data): self
     {
@@ -233,7 +240,7 @@ class Notification extends Model
     }
 
     /**
-     * Lấy số lượng thông báo chưa đọc của user
+     * Lấy số lượng thông báo chưa đọc của user.
      */
     public static function getUnreadCount(string $userId): int
     {
@@ -241,7 +248,7 @@ class Notification extends Model
     }
 
     /**
-     * Đánh dấu tất cả thông báo của user là đã đọc
+     * Đánh dấu tất cả thông báo của user là đã đọc.
      */
     public static function markAllAsReadForUser(string $userId): int
     {
@@ -251,7 +258,7 @@ class Notification extends Model
     }
 
     /**
-     * Xóa các thông báo cũ (đã đọc và quá 30 ngày)
+     * Xóa các thông báo cũ (đã đọc và quá 30 ngày).
      */
     public static function cleanupOldNotifications(): int
     {
@@ -261,7 +268,7 @@ class Notification extends Model
     }
 
     /**
-     * Xác định xem thông báo đã hết hạn dựa trên metadata.expires_at
+     * Xác định xem thông báo đã hết hạn dựa trên metadata.expires_at.
      */
     public function getIsExpiredAttribute(): bool
     {

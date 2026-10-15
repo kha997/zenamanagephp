@@ -1,8 +1,9 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Src\Compensation\Models\Contract;
 use Src\Compensation\Resources\CompensationPreviewResource;
@@ -13,9 +14,7 @@ use Src\Foundation\Utils\JSendResponse;
 use Src\RBAC\Middleware\RBACMiddleware;
 
 /**
- * Controller xử lý các hoạt động compensation và KPI
- * 
- * @package Src\Compensation\Controllers
+ * Controller xử lý các hoạt động compensation và KPI.
  */
 class CompensationController extends Controller
 {
@@ -25,7 +24,7 @@ class CompensationController extends Controller
     private CompensationService $compensationService;
 
     /**
-     * Constructor - áp dụng RBAC middleware và inject service
+     * Constructor - áp dụng RBAC middleware và inject service.
      */
     public function __construct(CompensationService $compensationService)
     {
@@ -35,7 +34,7 @@ class CompensationController extends Controller
 
     /**
      * Đồng bộ task assignments cho một task
-     * POST /api/v1/projects/{project_id}/tasks/{task_id}/assignments:sync
+     * POST /api/v1/projects/{project_id}/tasks/{task_id}/assignments:sync.
      *
      * @param SyncTaskAssignmentsRequest $request
      * @param string $projectId
@@ -43,8 +42,8 @@ class CompensationController extends Controller
      * @return JsonResponse
      */
     public function syncTaskAssignments(
-        SyncTaskAssignmentsRequest $request, 
-        string $projectId, 
+        SyncTaskAssignmentsRequest $request,
+        string $projectId,
         string $taskId
     ): JsonResponse {
         try {
@@ -75,7 +74,7 @@ class CompensationController extends Controller
 
     /**
      * Preview compensation cho project với contract hiện tại
-     * GET /api/v1/projects/{project_id}/compensation/preview?contract_id=
+     * GET /api/v1/projects/{project_id}/compensation/preview?contract_id=.
      *
      * @param Request $request
      * @param string $projectId
@@ -85,7 +84,7 @@ class CompensationController extends Controller
     {
         try {
             $contractId = $request->get('contract_id');
-            
+
             if (!$contractId) {
                 return JSendResponse::error('Contract ID là bắt buộc', 400);
             }
@@ -117,7 +116,7 @@ class CompensationController extends Controller
 
     /**
      * Áp dụng contract cho compensation (lock values)
-     * POST /api/v1/projects/{project_id}/contracts/{contract_id}/apply
+     * POST /api/v1/projects/{project_id}/contracts/{contract_id}/apply.
      *
      * @param ApplyContractRequest $request
      * @param string $projectId
@@ -125,8 +124,8 @@ class CompensationController extends Controller
      * @return JsonResponse
      */
     public function applyContract(
-        ApplyContractRequest $request, 
-        string $projectId, 
+        ApplyContractRequest $request,
+        string $projectId,
         string $contractId
     ): JsonResponse {
         try {
@@ -162,7 +161,7 @@ class CompensationController extends Controller
 
     /**
      * Lấy danh sách compensation theo project
-     * GET /api/v1/projects/{project_id}/compensation
+     * GET /api/v1/projects/{project_id}/compensation.
      *
      * @param Request $request
      * @param string $projectId
@@ -186,7 +185,7 @@ class CompensationController extends Controller
 
     /**
      * Lấy thông tin chi tiết compensation của một task
-     * GET /api/v1/projects/{project_id}/tasks/{task_id}/compensation
+     * GET /api/v1/projects/{project_id}/tasks/{task_id}/compensation.
      *
      * @param string $projectId
      * @param string $taskId
@@ -217,7 +216,7 @@ class CompensationController extends Controller
 
     /**
      * Cập nhật compensation cho task
-     * PUT /api/v1/projects/{project_id}/tasks/{task_id}/compensation
+     * PUT /api/v1/projects/{project_id}/tasks/{task_id}/compensation.
      *
      * @param Request $request
      * @param string $projectId
@@ -225,15 +224,15 @@ class CompensationController extends Controller
      * @return JsonResponse
      */
     public function updateTaskCompensation(
-        Request $request, 
-        string $projectId, 
+        Request $request,
+        string $projectId,
         string $taskId
     ): JsonResponse {
         try {
             $request->validate([
                 'base_contract_value_percent' => 'required|numeric|min:0|max:100',
                 'effective_contract_value_percent' => 'nullable|numeric|min:0|max:100',
-                'notes' => 'nullable|string|max:1000'
+                'notes' => 'nullable|string|max:1000',
             ]);
 
             // Kiểm tra task tồn tại và thuộc project
@@ -262,7 +261,7 @@ class CompensationController extends Controller
 
     /**
      * Lấy thống kê compensation theo project
-     * GET /api/v1/projects/{project_id}/compensation/stats
+     * GET /api/v1/projects/{project_id}/compensation/stats.
      *
      * @param string $projectId
      * @return JsonResponse
@@ -280,7 +279,7 @@ class CompensationController extends Controller
 
     /**
      * Resolve the current actor ID for audit trails
-     * Uses Auth facade instead of helper globals for better testability
+     * Uses Auth facade instead of helper globals for better testability.
      *
      * @return string|int The actor ID or 'system' as fallback
      */
@@ -296,11 +295,11 @@ class CompensationController extends Controller
             if (config('app.debug')) {
                 \Log::warning('Controller: Unable to resolve actor ID', [
                     'error' => $e->getMessage(),
-                    'controller' => static::class
+                    'controller' => static::class,
                 ]);
             }
         }
-        
+
         // Fallback to 'system' for test environments or when auth is unavailable
         return 'system';
     }

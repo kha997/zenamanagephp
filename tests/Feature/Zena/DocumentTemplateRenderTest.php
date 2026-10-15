@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Zena;
 
@@ -386,7 +388,7 @@ class DocumentTemplateRenderTest extends TestCase
     public function test_quote_render_downloads_pdf_from_custom_template(): void
     {
         $this->app->bind(DeliverablePdfExportService::class, function () {
-            return new class extends DeliverablePdfExportService {
+            return new class () extends DeliverablePdfExportService {
                 public function render(string $html, array $options = [], array $documentMeta = []): string
                 {
                     return '%PDF-1.4 fake-quote-render-bytes:' . $html;

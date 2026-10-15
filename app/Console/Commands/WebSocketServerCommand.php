@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Console\Commands;
 
@@ -9,8 +11,8 @@ use Ratchet\Server\IoServer;
 use Ratchet\WebSocket\WsServer;
 
 /**
- * WebSocket Server Command
- * 
+ * WebSocket Server Command.
+ *
  * Command để chạy WebSocket server cho Dashboard real-time updates
  */
 class WebSocketServerCommand extends Command
@@ -39,12 +41,12 @@ class WebSocketServerCommand extends Command
 
         $this->info("Starting WebSocket server on {$host}:{$port}");
         $this->info("Workers: {$workers}");
-        $this->info("Press Ctrl+C to stop the server");
+        $this->info('Press Ctrl+C to stop the server');
 
         try {
             // Tạo WebSocket handler
             $webSocketHandler = new DashboardWebSocketHandler();
-            
+
             // Tạo server với HTTP và WebSocket support
             $server = IoServer::factory(
                 new HttpServer(
@@ -59,9 +61,9 @@ class WebSocketServerCommand extends Command
 
             // Start server
             $server->run();
-
         } catch (\Exception $e) {
-            $this->error("Failed to start WebSocket server: " . $e->getMessage());
+            $this->error('Failed to start WebSocket server: ' . $e->getMessage());
+
             return 1;
         }
 
@@ -69,7 +71,7 @@ class WebSocketServerCommand extends Command
     }
 
     /**
-     * Setup periodic tasks cho server
+     * Setup periodic tasks cho server.
      */
     private function setupPeriodicTasks(IoServer $server, DashboardWebSocketHandler $handler)
     {
@@ -77,7 +79,7 @@ class WebSocketServerCommand extends Command
         $server->loop->addPeriodicTimer(30, function () use ($handler) {
             $handler->broadcast([
                 'type' => 'ping',
-                'timestamp' => now()->toISOString()
+                'timestamp' => now()->toISOString(),
             ]);
         });
 
@@ -94,7 +96,7 @@ class WebSocketServerCommand extends Command
     }
 
     /**
-     * Broadcast system metrics
+     * Broadcast system metrics.
      */
     private function broadcastSystemMetrics(DashboardWebSocketHandler $handler)
     {
@@ -102,54 +104,56 @@ class WebSocketServerCommand extends Command
             'cpu_usage' => $this->getCpuUsage(),
             'memory_usage' => $this->getMemoryUsage(),
             'disk_usage' => $this->getDiskUsage(),
-            'active_connections' => $handler->getStats()['total_connections']
+            'active_connections' => $handler->getStats()['total_connections'],
         ];
 
         $handler->broadcast([
             'type' => 'system_metrics',
             'metrics' => $metrics,
-            'timestamp' => now()->toISOString()
+            'timestamp' => now()->toISOString(),
         ]);
     }
 
     /**
-     * Get CPU usage
+     * Get CPU usage.
      */
     private function getCpuUsage(): float
     {
         if (function_exists('sys_getloadavg')) {
             $load = sys_getloadavg();
+
             return round($load[0] * 100, 2);
         }
+
         return 0;
     }
 
     /**
-     * Get memory usage
+     * Get memory usage.
      */
     private function getMemoryUsage(): float
     {
         $memory = memory_get_usage(true);
         $memoryLimit = ini_get('memory_limit');
         $memoryLimitBytes = $this->convertToBytes($memoryLimit);
-        
+
         return round(($memory / $memoryLimitBytes) * 100, 2);
     }
 
     /**
-     * Get disk usage
+     * Get disk usage.
      */
     private function getDiskUsage(): float
     {
         $totalSpace = disk_total_space('/');
         $freeSpace = disk_free_space('/');
         $usedSpace = $totalSpace - $freeSpace;
-        
+
         return round(($usedSpace / $totalSpace) * 100, 2);
     }
 
     /**
-     * Convert memory limit string to bytes
+     * Convert memory limit string to bytes.
      */
     private function convertToBytes(string $memoryLimit): int
     {
@@ -160,8 +164,10 @@ class WebSocketServerCommand extends Command
         switch ($last) {
             case 'g':
                 $memoryLimit *= 1024;
+                // no break
             case 'm':
                 $memoryLimit *= 1024;
+                // no break
             case 'k':
                 $memoryLimit *= 1024;
         }

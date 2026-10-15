@@ -35,12 +35,13 @@ class BackupCommand extends Command
             'level' => 'info',
             'priority' => 'high',
             'status' => 'running',
-            'started_at' => now()
+            'started_at' => now(),
         ]);
 
         if (!in_array($type, ['all', 'database', 'files', 'config'], true)) {
             $this->error('Invalid backup type. Available types: all, database, files, config');
             $task->markAsFailed('Invalid backup type');
+
             return 1;
         }
 
@@ -69,16 +70,18 @@ class BackupCommand extends Command
 
             $task->markAsCompleted(['backup_type' => $type]);
             $this->info('Backup completed successfully!');
+
             return 0;
         } catch (\Exception $e) {
             $task->markAsFailed($e->getMessage());
             $this->error('Backup failed: ' . $e->getMessage());
+
             return 1;
         }
     }
 
     /**
-     * Backup database
+     * Backup database.
      */
     private function backupDatabase(string $backupDir)
     {
@@ -112,14 +115,14 @@ class BackupCommand extends Command
     }
 
     /**
-     * Backup application files
+     * Backup application files.
      */
     private function backupFiles(string $backupDir)
     {
         $this->info('Backing up application files...');
 
         $filesDir = $backupDir . '/files';
-        mkdir($filesDir, 0755, true);
+        mkdir($filesDir, 0o755, true);
 
         $excluded = BackupArchiveStore::fromConfig()->localPathsExcludedFromFileBackups();
 
@@ -138,14 +141,14 @@ class BackupCommand extends Command
     }
 
     /**
-     * Backup configuration files
+     * Backup configuration files.
      */
     private function backupConfig(string $backupDir)
     {
         $this->info('Backing up configuration files...');
 
         $configDir = $backupDir . '/config';
-        mkdir($configDir, 0755, true);
+        mkdir($configDir, 0o755, true);
 
         // Never collect .env / .env.*: secrets are kept out-of-band
         // (docs/runbooks/gap-049-host-provisioning.md) — GAP-054.
@@ -157,7 +160,7 @@ class BackupCommand extends Command
             'cache.php',
             'session.php',
             'queue.php',
-            'mail.php'
+            'mail.php',
         ];
 
         foreach ($configFiles as $file) {
@@ -180,23 +183,23 @@ class BackupCommand extends Command
     }
 
     /**
-     * Create backup directory
+     * Create backup directory.
      */
     private function createBackupDirectory(string $type): string
     {
         $backupBaseDir = storage_path('backups');
         if (!is_dir($backupBaseDir)) {
-            mkdir($backupBaseDir, 0755, true);
+            mkdir($backupBaseDir, 0o755, true);
         }
 
         $backupDir = $backupBaseDir . '/backup_' . $type . '_' . date('Y-m-d_H-i-s');
-        mkdir($backupDir, 0755, true);
+        mkdir($backupDir, 0o755, true);
 
         return $backupDir;
     }
 
     /**
-     * Backup directory recursively
+     * Backup directory recursively.
      *
      * @param list<string> $excluded absolute local paths (files or directories) that must never be copied
      */
@@ -206,7 +209,7 @@ class BackupCommand extends Command
             return;
         }
 
-        mkdir($destination, 0755, true);
+        mkdir($destination, 0o755, true);
 
         $excludedRealPaths = array_values(array_filter(array_map(
             static fn (string $path): string|false => realpath($path),
@@ -241,7 +244,7 @@ class BackupCommand extends Command
             $targetPath = $destination . DIRECTORY_SEPARATOR . $iterator->getSubPathName();
 
             if ($item->isDir()) {
-                mkdir($targetPath, 0755, true);
+                mkdir($targetPath, 0o755, true);
             } else {
                 copy($item, $targetPath);
             }
@@ -249,7 +252,7 @@ class BackupCommand extends Command
     }
 
     /**
-     * Create backup manifest
+     * Create backup manifest.
      */
     private function createBackupManifest($backupDir)
     {
@@ -260,19 +263,20 @@ class BackupCommand extends Command
             'php_version' => PHP_VERSION,
             'database_version' => $this->getDatabaseVersion(),
             'files' => $this->getBackupFiles($backupDir),
-            'total_size' => $this->getDirectorySize($backupDir)
+            'total_size' => $this->getDirectorySize($backupDir),
         ];
 
         file_put_contents($backupDir . '/manifest.json', json_encode($manifest, JSON_PRETTY_PRINT));
     }
 
     /**
-     * Get database version
+     * Get database version.
      */
     private function getDatabaseVersion()
     {
         try {
             $version = DB::select('SELECT VERSION() as version')[0]->version;
+
             return $version;
         } catch (\Exception $e) {
             return 'Unknown';
@@ -280,7 +284,7 @@ class BackupCommand extends Command
     }
 
     /**
-     * Get backup files list
+     * Get backup files list.
      */
     private function getBackupFiles($backupDir)
     {
@@ -294,7 +298,7 @@ class BackupCommand extends Command
                 $files[] = [
                     'path' => str_replace($backupDir . '/', '', $file->getPathname()),
                     'size' => $file->getSize(),
-                    'modified' => date('Y-m-d H:i:s', $file->getMTime())
+                    'modified' => date('Y-m-d H:i:s', $file->getMTime()),
                 ];
             }
         }
@@ -303,7 +307,7 @@ class BackupCommand extends Command
     }
 
     /**
-     * Compress backup directory
+     * Compress backup directory.
      */
     private function compressBackup(string $backupDir): string
     {
@@ -328,13 +332,13 @@ class BackupCommand extends Command
     }
 
     /**
-     * Get directory size
+     * Get directory size.
      */
     private function getDirectorySize($path)
     {
         $size = 0;
         $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($path));
-        
+
         foreach ($iterator as $file) {
             if ($file->isFile()) {
                 $size += $file->getSize();
@@ -345,7 +349,7 @@ class BackupCommand extends Command
     }
 
     /**
-     * Remove directory recursively
+     * Remove directory recursively.
      */
     private function removeDirectory($dir)
     {
@@ -388,7 +392,7 @@ class BackupCommand extends Command
     }
 
     /**
-     * Format bytes to human readable format
+     * Format bytes to human readable format.
      */
     private function formatBytes($bytes, $precision = 2)
     {

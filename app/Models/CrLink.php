@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -11,8 +13,8 @@ use Src\CoreProject\Models\Task;
 use Src\DocumentManagement\Models\Document;
 
 /**
- * Model CrLink để quản lý liên kết giữa Change Request và các entity khác
- * 
+ * Model CrLink để quản lý liên kết giữa Change Request và các entity khác.
+ *
  * @property string $id
  * @property string $change_request_id
  * @property string $linked_type
@@ -23,21 +25,24 @@ use Src\DocumentManagement\Models\Document;
  */
 class CrLink extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids;
+    use HasFactory;
 
     protected $table = 'cr_links';
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     /**
-     * Các loại entity có thể liên kết
+     * Các loại entity có thể liên kết.
      */
     public const LINKED_TYPE_TASK = 'task';
     public const LINKED_TYPE_DOCUMENT = 'document';
     public const LINKED_TYPE_COMPONENT = 'component';
 
     /**
-     * Danh sách các loại liên kết hợp lệ
+     * Danh sách các loại liên kết hợp lệ.
      */
     public const VALID_LINKED_TYPES = [
         self::LINKED_TYPE_TASK,
@@ -58,7 +63,7 @@ class CrLink extends Model
     ];
 
     /**
-     * Quan hệ với ChangeRequest
+     * Quan hệ với ChangeRequest.
      */
     public function changeRequest(): BelongsTo
     {
@@ -67,11 +72,11 @@ class CrLink extends Model
 
     /**
      * Quan hệ polymorphic với entity được liên kết
-     * Sử dụng custom logic vì không thể dùng morphTo với ULID
+     * Sử dụng custom logic vì không thể dùng morphTo với ULID.
      */
     public function getLinkedEntityAttribute()
     {
-        return match($this->linked_type) {
+        return match ($this->linked_type) {
             self::LINKED_TYPE_TASK => Task::find($this->linked_id),
             self::LINKED_TYPE_DOCUMENT => Document::find($this->linked_id),
             self::LINKED_TYPE_COMPONENT => Component::find($this->linked_id),
@@ -80,7 +85,7 @@ class CrLink extends Model
     }
 
     /**
-     * Quan hệ với Task (khi linked_type = 'task')
+     * Quan hệ với Task (khi linked_type = 'task').
      */
     public function task(): BelongsTo
     {
@@ -89,7 +94,7 @@ class CrLink extends Model
     }
 
     /**
-     * Quan hệ với Document (khi linked_type = 'document')
+     * Quan hệ với Document (khi linked_type = 'document').
      */
     public function document(): BelongsTo
     {
@@ -98,7 +103,7 @@ class CrLink extends Model
     }
 
     /**
-     * Quan hệ với Component (khi linked_type = 'component')
+     * Quan hệ với Component (khi linked_type = 'component').
      */
     public function component(): BelongsTo
     {
@@ -107,7 +112,7 @@ class CrLink extends Model
     }
 
     /**
-     * Scope để lọc theo Change Request
+     * Scope để lọc theo Change Request.
      */
     public function scopeForChangeRequest($query, string $changeRequestId)
     {
@@ -115,7 +120,7 @@ class CrLink extends Model
     }
 
     /**
-     * Scope để lọc theo loại entity
+     * Scope để lọc theo loại entity.
      */
     public function scopeForLinkedType($query, string $linkedType)
     {
@@ -123,7 +128,7 @@ class CrLink extends Model
     }
 
     /**
-     * Scope để lọc theo entity cụ thể
+     * Scope để lọc theo entity cụ thể.
      */
     public function scopeForLinkedEntity($query, string $linkedType, string $linkedId)
     {
@@ -132,7 +137,7 @@ class CrLink extends Model
     }
 
     /**
-     * Kiểm tra xem loại liên kết có hợp lệ không
+     * Kiểm tra xem loại liên kết có hợp lệ không.
      */
     public static function isValidLinkedType(string $type): bool
     {
@@ -140,7 +145,7 @@ class CrLink extends Model
     }
 
     /**
-     * Tạo liên kết mới
+     * Tạo liên kết mới.
      */
     public static function createLink(
         string $changeRequestId,
@@ -170,7 +175,7 @@ class CrLink extends Model
     }
 
     /**
-     * Xóa liên kết
+     * Xóa liên kết.
      */
     public static function removeLink(
         string $changeRequestId,
@@ -183,7 +188,7 @@ class CrLink extends Model
     }
 
     /**
-     * Lấy tất cả entity được liên kết với CR
+     * Lấy tất cả entity được liên kết với CR.
      */
     public static function getLinkedEntities(string $changeRequestId): array
     {

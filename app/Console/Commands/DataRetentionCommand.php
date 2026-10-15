@@ -2,10 +2,10 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Tenant;
 use App\Services\DataRetentionService;
 use App\Services\StructuredLoggingService;
 use App\Services\TenancyService;
-use App\Models\Tenant;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Schema;
 
@@ -46,6 +46,7 @@ class DataRetentionCommand extends Command
         if (!$hasRetentionScope) {
             if ($this->option('execute')) {
                 $this->warn('Execution requires --tenant, --all-tenants, or --system scope.');
+
                 return Command::SUCCESS;
             }
 
@@ -56,7 +57,7 @@ class DataRetentionCommand extends Command
     }
 
     /**
-     * Execute retention policies
+     * Execute retention policies.
      */
     protected function executeRetentionPolicies(): int
     {
@@ -70,6 +71,7 @@ class DataRetentionCommand extends Command
 
         if ($tenantOption && $allTenants) {
             $this->error('Cannot combine --tenant and --all-tenants flags.');
+
             return Command::INVALID;
         }
 
@@ -115,6 +117,7 @@ class DataRetentionCommand extends Command
 
         if (empty($contexts)) {
             $this->warn('Specify --tenant, --all-tenants, or --system to execute retention policies.');
+
             return Command::SUCCESS;
         }
 
@@ -139,7 +142,7 @@ class DataRetentionCommand extends Command
                 $results = DataRetentionService::executeRetentionPolicies($tenantId, $dryRun, $isSystem, $tenant);
 
                 $this->line('');
-                $this->line("Retention Policy Results ({$contextLabel}) [dry run: " . ($dryRun ? 'yes' : 'no') . "]");
+                $this->line("Retention Policy Results ({$contextLabel}) [dry run: " . ($dryRun ? 'yes' : 'no') . ']');
                 $this->line('========================');
 
                 $successful = 0;
@@ -159,7 +162,7 @@ class DataRetentionCommand extends Command
                         $this->line("  Cutoff date: {$result['cutoff_date']}");
                     } else {
                         $failed++;
-                        $errorMessage = isset($result['error']) ? $result['error'] : 'Unknown error';
+                        $errorMessage = $result['error'] ?? 'Unknown error';
                         $this->line("<fg=red>✗ {$table}</>");
                         $this->line("  Error: {$errorMessage}");
                     }
@@ -167,7 +170,7 @@ class DataRetentionCommand extends Command
                 }
 
                 $this->line("<fg=cyan>Summary:</> {$successful} succeeded, {$failed} failed, {$skipped} skipped.");
-                $this->line("Dry run: " . ($dryRun ? 'yes' : 'no'));
+                $this->line('Dry run: ' . ($dryRun ? 'yes' : 'no'));
                 $this->line('');
 
                 StructuredLoggingService::logEvent('data_retention_executed', [
@@ -238,19 +241,19 @@ class DataRetentionCommand extends Command
     }
 
     /**
-     * Show retention status
+     * Show retention status.
      */
     protected function showRetentionStatus(): int
     {
         $this->info('Data Retention Status:');
-        
+
         try {
             $status = DataRetentionService::getRetentionStatus();
-            
+
             $this->line('');
             $this->line('Retention Policies:');
             $this->line('==================');
-            
+
             foreach ($status as $table => $policy) {
                 $this->line("Table: <fg=cyan>{$table}</>");
                 $this->line("  Retention Period: {$policy['retention_period']}");
@@ -259,52 +262,55 @@ class DataRetentionCommand extends Command
                 $this->line("  Records to Process: {$policy['records_to_process']}");
                 $this->line('');
             }
-            
+
             return Command::SUCCESS;
         } catch (\Exception $e) {
             StructuredLoggingService::logError('Data retention status failed', $e);
-            
+
             $this->error('Failed to get retention status: ' . $e->getMessage());
+
             return Command::FAILURE;
         }
     }
 
     /**
-     * Clean up orphaned records
+     * Clean up orphaned records.
      */
     protected function cleanupOrphanedRecords(): int
     {
         $this->info('Cleaning up orphaned records...');
-        
+
         try {
             $results = DataRetentionService::cleanupOrphanedRecords();
-            
+
             if (empty($results)) {
                 $this->line('<fg=green>No orphaned records found</>');
+
                 return Command::SUCCESS;
             }
-            
+
             $this->line('');
             $this->line('Orphaned Records Cleanup:');
             $this->line('========================');
-            
+
             foreach ($results as $table => $result) {
                 $this->line("<fg=yellow>{$table}</>");
                 $this->line("  Orphaned records: {$result['orphaned_records']}");
                 $this->line("  Action: {$result['action']}");
                 $this->line('');
             }
-            
+
             StructuredLoggingService::logEvent('orphaned_records_cleaned', [
                 'tables_cleaned' => count($results),
                 'total_orphaned' => array_sum(array_column($results, 'orphaned_records')),
             ]);
-            
+
             return Command::SUCCESS;
         } catch (\Exception $e) {
             StructuredLoggingService::logError('Orphaned records cleanup failed', $e);
-            
+
             $this->error('Orphaned records cleanup failed: ' . $e->getMessage());
+
             return Command::FAILURE;
         }
     }

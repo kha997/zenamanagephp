@@ -3,10 +3,10 @@
 namespace App\Providers;
 
 use Illuminate\Cache\RateLimiting\Limit;
-use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
 
 class RouteServiceProvider extends ServiceProvider
 {
@@ -34,23 +34,23 @@ class RouteServiceProvider extends ServiceProvider
                 Route::prefix('api-simple')
                     ->group(base_path('routes/api-simple.php'));
             }
-                
+
             // Main API routes (consolidated)
             Route::middleware('api')
                 ->prefix('api')
                 ->group(base_path('routes/api.php'));
-            
+
             // Debug API routes (local/testing + debug=on)
             if ($this->app->environment(['local', 'testing']) && config('app.debug')) {
                 Route::middleware('api')
                     ->prefix('api')
                     ->group(base_path('routes/debug_api.php'));
             }
-                
+
             // Web routes
             Route::middleware('web')
                 ->group(base_path('routes/web.php'));
-                
+
             // Debug routes (GAP-011: local/testing/development only; routes/debug.php
             // is the sole legal declaration site for `_debug/*`, registered from this
             // single call site only — see docs/owner-decisions/GAP-011/02-design-v4.md)
@@ -70,11 +70,13 @@ class RouteServiceProvider extends ServiceProvider
     {
         RateLimiter::for('zena-login', function (Request $request) {
             $identity = strtolower((string) ($request->input('email') ?? $request->input('username') ?? ''));
+
             return Limit::perMinute(20)->by($request->ip() . '|' . $identity);
         });
 
         RateLimiter::for('dashboards', function (Request $request) {
             $key = $request->ip();
+
             return Limit::perMinute(10)->by($key);
         });
 

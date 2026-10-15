@@ -1,18 +1,18 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Form Request để xác thực dữ liệu khi áp dụng contract cho compensations
- * 
- * @package Src\Compensation\Requests
+ * Form Request để xác thực dữ liệu khi áp dụng contract cho compensations.
  */
 class ApplyContractRequest extends FormRequest
 {
     /**
-     * Xác định user có quyền thực hiện request này không
+     * Xác định user có quyền thực hiện request này không.
      */
     public function authorize(): bool
     {
@@ -20,7 +20,7 @@ class ApplyContractRequest extends FormRequest
     }
 
     /**
-     * Các quy tắc validation cho request
+     * Các quy tắc validation cho request.
      */
     public function rules(): array
     {
@@ -28,31 +28,31 @@ class ApplyContractRequest extends FormRequest
             'project_id' => [
                 'required',
                 'integer',
-                'exists:projects,id'
+                'exists:projects,id',
             ],
             'contract_id' => [
                 'required',
                 'integer',
-                'exists:contracts,id'
+                'exists:contracts,id',
             ],
             'task_ids' => [
                 'nullable',
-                'array'
+                'array',
             ],
             'task_ids.*' => [
                 'integer',
-                'exists:tasks,id'
+                'exists:tasks,id',
             ],
             'confirmation' => [
                 'required',
                 'boolean',
-                'accepted' // Phải là true
-            ]
+                'accepted', // Phải là true
+            ],
         ];
     }
 
     /**
-     * Thông báo lỗi tùy chỉnh
+     * Thông báo lỗi tùy chỉnh.
      */
     public function messages(): array
     {
@@ -64,7 +64,7 @@ class ApplyContractRequest extends FormRequest
             'task_ids.array' => 'Task IDs phải là một mảng',
             'task_ids.*.exists' => 'Task không tồn tại',
             'confirmation.required' => 'Bạn phải xác nhận việc áp dụng contract',
-            'confirmation.accepted' => 'Bạn phải xác nhận việc áp dụng contract'
+            'confirmation.accepted' => 'Bạn phải xác nhận việc áp dụng contract',
         ];
     }
 }

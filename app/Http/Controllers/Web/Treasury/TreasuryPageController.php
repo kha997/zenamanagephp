@@ -1,15 +1,17 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Web\Treasury;
 
 use App\Http\Controllers\Controller;
 use App\Models\Project;
+use App\Models\Treasury\TreasuryFinancialDocument;
 use App\Models\Treasury\TreasuryFinancialParty;
+use App\Models\Treasury\TreasuryReconciliationEntry;
 use App\Models\Treasury\TreasuryWallet;
 use App\Models\User;
 use App\Models\UserRoleProject;
-use App\Models\Treasury\TreasuryFinancialDocument;
-use App\Models\Treasury\TreasuryReconciliationEntry;
 use App\Services\Treasury\TreasuryBalanceService;
 use App\Services\Treasury\TreasuryDuplicateSuspected;
 use App\Services\Treasury\TreasuryExpenseService;
@@ -18,12 +20,12 @@ use App\Services\Treasury\TreasuryReconciliationService;
 use App\Services\Treasury\TreasuryRuleViolation;
 use App\Services\Treasury\TreasurySetupService;
 use Closure;
-use Illuminate\Validation\Rule;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 
 /**
  * GAP-063 S1 — operator pages: treasury project list, financial parties,

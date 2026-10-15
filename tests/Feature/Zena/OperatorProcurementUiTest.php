@@ -1,12 +1,14 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Zena;
 
 use App\Http\Middleware\RoleBasedAccessControlMiddleware;
 use App\Models\Contract;
 use App\Models\Material;
-use App\Models\MaterialRequest;
 use App\Models\MaterialReceipt;
+use App\Models\MaterialRequest;
 use App\Models\Project;
 use App\Models\Tenant;
 use App\Models\User;
@@ -21,10 +23,15 @@ class OperatorProcurementUiTest extends TestCase
     use TenantUserFactoryTrait;
 
     private Tenant $tenant;
+
     private User $user;
+
     private Project $project;
+
     private Contract $contract;
+
     private Vendor $vendor;
+
     private Material $material;
 
     protected function setUp(): void

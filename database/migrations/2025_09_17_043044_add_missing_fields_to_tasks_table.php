@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     /**
      * Run the migrations.
      */
@@ -27,7 +26,7 @@ return new class extends Migration
             $table->string('created_by')->nullable()->after('conditional_tag');
             $table->string('updated_by')->nullable()->after('created_by');
             $table->json('watchers')->nullable()->after('updated_by');
-            
+
             // Add foreign key constraints
             // NOTE: the legacy FK component_id → zena_components was removed.
             // On fresh databases zena_components exists but stays EMPTY (the
@@ -39,7 +38,7 @@ return new class extends Migration
             $table->foreign('parent_id')->references('id')->on('tasks')->onDelete('cascade');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
             $table->foreign('updated_by')->references('id')->on('users')->onDelete('set null');
-            
+
             // Add indexes
             $table->index(['component_id', 'status']);
             $table->index(['assigned_to', 'status']);
@@ -60,7 +59,7 @@ return new class extends Migration
 
         $isSqlite = Schema::getConnection()->getDriverName() === 'sqlite';
 
-        if (! $isSqlite) {
+        if (!$isSqlite) {
             try {
                 Schema::table('tasks', function (Blueprint $table) {
                     $table->dropForeign(['component_id']);

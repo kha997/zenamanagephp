@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
@@ -9,7 +11,6 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Auth\AuthManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 use Src\RBAC\Models\Permission;
 use Src\RBAC\Models\Role;
@@ -32,10 +33,15 @@ class GAP042RbacProductionFidelityTest extends TestCase
     use RefreshDatabase;
 
     protected Tenant $tenantA;
+
     protected Tenant $tenantB;
+
     protected User $userA;
+
     protected User $userB;
+
     protected string $tokenA;
+
     protected string $tokenB;
 
     protected function setUp(): void

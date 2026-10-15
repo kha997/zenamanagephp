@@ -1,18 +1,20 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TaskDependency;
 use App\Models\Tenant;
-use Tests\TestCase;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 /**
- * Test Task Dependencies và Blocking Logic
- * 
+ * Test Task Dependencies và Blocking Logic.
+ *
  * Kịch bản: Tạo tasks với dependencies → Test blocking logic → Test critical path
  */
 class TaskDependenciesTest extends TestCase
@@ -20,15 +22,19 @@ class TaskDependenciesTest extends TestCase
     use RefreshDatabase;
 
     private $tenant;
+
     private $project;
+
     private $projectManager;
+
     private $designer;
+
     private $engineer;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Tạo tenant
         $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
@@ -84,7 +90,7 @@ class TaskDependenciesTest extends TestCase
     }
 
     /**
-     * Test tạo task dependencies
+     * Test tạo task dependencies.
      */
     public function test_can_create_task_dependencies(): void
     {
@@ -134,7 +140,7 @@ class TaskDependenciesTest extends TestCase
     }
 
     /**
-     * Test blocking logic - task cannot start if dependencies not completed
+     * Test blocking logic - task cannot start if dependencies not completed.
      */
     public function test_task_blocking_logic(): void
     {
@@ -190,7 +196,7 @@ class TaskDependenciesTest extends TestCase
     }
 
     /**
-     * Test complex dependency chain
+     * Test complex dependency chain.
      */
     public function test_complex_dependency_chain(): void
     {
@@ -289,7 +295,7 @@ class TaskDependenciesTest extends TestCase
     }
 
     /**
-     * Test multiple dependencies (task depends on multiple tasks)
+     * Test multiple dependencies (task depends on multiple tasks).
      */
     public function test_multiple_dependencies(): void
     {
@@ -368,7 +374,7 @@ class TaskDependenciesTest extends TestCase
     }
 
     /**
-     * Test circular dependency prevention
+     * Test circular dependency prevention.
      */
     public function test_circular_dependency_prevention(): void
     {
@@ -416,7 +422,7 @@ class TaskDependenciesTest extends TestCase
     }
 
     /**
-     * Test dependency removal
+     * Test dependency removal.
      */
     public function test_can_remove_dependency(): void
     {
@@ -474,7 +480,7 @@ class TaskDependenciesTest extends TestCase
     }
 
     /**
-     * Test task dependency workflow end-to-end
+     * Test task dependency workflow end-to-end.
      */
     public function test_task_dependency_workflow_end_to_end(): void
     {

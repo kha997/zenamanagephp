@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
@@ -17,9 +19,13 @@ class RfiLifecycleServiceTest extends TestCase
     use RefreshDatabase;
 
     private RfiLifecycleService $lifecycle;
+
     private RfiEscalationService $escalation;
+
     private User $user;
+
     private Tenant $tenant;
+
     private Project $project;
 
     protected function setUp(): void

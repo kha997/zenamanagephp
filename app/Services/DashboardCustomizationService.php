@@ -13,7 +13,9 @@ use Illuminate\Support\Str;
 class DashboardCustomizationService
 {
     protected $dashboardService;
+
     protected $realTimeService;
+
     protected DashboardWidgetCatalog $widgetCatalog;
 
     public function __construct(
@@ -27,7 +29,7 @@ class DashboardCustomizationService
     }
 
     /**
-     * Get user's customizable dashboard
+     * Get user's customizable dashboard.
      */
     public function getUserCustomizableDashboard(User $user): array
     {
@@ -43,19 +45,20 @@ class DashboardCustomizationService
                 'widget_categories' => $widgetCategories,
                 'layout_templates' => $layoutTemplates,
                 'customization_options' => $this->getCustomizationOptions($user),
-                'permissions' => $this->getCustomizationPermissions($user)
+                'permissions' => $this->getCustomizationPermissions($user),
             ];
         } catch (\Exception $e) {
             Log::error('Failed to get customizable dashboard', [
                 'user_id' => $user->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             throw $e;
         }
     }
 
     /**
-     * Add widget to user dashboard
+     * Add widget to user dashboard.
      */
     public function addWidgetToDashboard(User $user, string $widgetId, array $config = []): array
     {
@@ -77,10 +80,10 @@ class DashboardCustomizationService
 
             // Parse current widgets
             $widgets = $this->ensureArray($dashboard->widgets);
-            
+
             // Generate widget instance ID
             $widgetInstanceId = Str::ulid();
-            
+
             // Normalize widget definition config
             $widgetConfig = $this->ensureArray($widget->config);
 
@@ -94,16 +97,16 @@ class DashboardCustomizationService
                 'position' => $this->calculateNextPosition($widgets),
                 'config' => array_merge($widgetConfig, $config),
                 'is_customizable' => $config['is_customizable'] ?? true,
-                'created_at' => now()->toISOString()
+                'created_at' => now()->toISOString(),
             ];
 
             // Add to layout
             $widgets[] = $widgetInstance;
-            
+
             // Update dashboard
             $dashboard->update([
                 'widgets' => $widgets,
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
 
             DB::commit();
@@ -114,29 +117,29 @@ class DashboardCustomizationService
                 'widget_added',
                 [
                     'widget_instance' => $widgetInstance,
-                    'widget_definition' => $widget->toArray()
+                    'widget_definition' => $widget->toArray(),
                 ]
             );
 
             return [
                 'success' => true,
                 'widget_instance' => $widgetInstance,
-                'message' => 'Widget added successfully'
+                'message' => 'Widget added successfully',
             ];
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Failed to add widget to dashboard', [
                 'user_id' => $user->id,
                 'widget_id' => $widgetId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             throw $e;
         }
     }
 
     /**
-     * Remove widget from user dashboard
+     * Remove widget from user dashboard.
      */
     public function removeWidgetFromDashboard(User $user, string $widgetInstanceId): array
     {
@@ -152,13 +155,14 @@ class DashboardCustomizationService
             }
 
             $widgets = $this->ensureArray($dashboard->widgets);
-            
+
             // Find and remove widget instance
             $widgetInstance = null;
             $widgets = array_filter($widgets, function ($widget) use ($widgetInstanceId, &$widgetInstance) {
                 $entryId = $widget['instance_id'] ?? $widget['id'] ?? null;
                 if ($entryId === $widgetInstanceId) {
                     $widgetInstance = $widget;
+
                     return false;
                 }
 
@@ -172,7 +176,7 @@ class DashboardCustomizationService
             // Update dashboard
             $dashboard->update([
                 'widgets' => array_values($widgets),
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
 
             DB::commit();
@@ -186,22 +190,22 @@ class DashboardCustomizationService
 
             return [
                 'success' => true,
-                'message' => 'Widget removed successfully'
+                'message' => 'Widget removed successfully',
             ];
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Failed to remove widget from dashboard', [
                 'user_id' => $user->id,
                 'widget_instance_id' => $widgetInstanceId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             throw $e;
         }
     }
 
     /**
-     * Update widget configuration
+     * Update widget configuration.
      */
     public function updateWidgetConfig(User $user, string $widgetInstanceId, array $config): array
     {
@@ -217,14 +221,14 @@ class DashboardCustomizationService
             }
 
             $widgets = $this->ensureArray($dashboard->widgets);
-            
+
             // Find and update widget instance
             $updated = false;
             foreach ($widgets as &$widget) {
                 if ($widget['id'] === $widgetInstanceId) {
                     // Validate config changes
                     $this->validateWidgetConfig($widget, $config);
-                    
+
                     // Update config
                     $widget['config'] = array_merge(
                         $this->ensureArray($widget['config'] ?? []),
@@ -243,7 +247,7 @@ class DashboardCustomizationService
             // Update dashboard
             $dashboard->update([
                 'widgets' => $widgets,
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
 
             DB::commit();
@@ -254,28 +258,28 @@ class DashboardCustomizationService
                 'widget_config_updated',
                 [
                     'widget_instance_id' => $widgetInstanceId,
-                    'config' => $config
+                    'config' => $config,
                 ]
             );
 
             return [
                 'success' => true,
-                'message' => 'Widget configuration updated successfully'
+                'message' => 'Widget configuration updated successfully',
             ];
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Failed to update widget config', [
                 'user_id' => $user->id,
                 'widget_instance_id' => $widgetInstanceId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             throw $e;
         }
     }
 
     /**
-     * Update dashboard layout (drag & drop)
+     * Update dashboard layout (drag & drop).
      */
     public function updateDashboardLayout(User $user, array $layout): array
     {
@@ -295,10 +299,10 @@ class DashboardCustomizationService
 
             // Update positions and layout
             $updatedLayout = $this->normalizeLayoutPositions($layout);
-            
+
             $dashboard->update([
                 'layout' => json_encode($updatedLayout),
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
 
             DB::commit();
@@ -313,21 +317,21 @@ class DashboardCustomizationService
             return [
                 'success' => true,
                 'layout' => $updatedLayout,
-                'message' => 'Dashboard layout updated successfully'
+                'message' => 'Dashboard layout updated successfully',
             ];
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Failed to update dashboard layout', [
                 'user_id' => $user->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             throw $e;
         }
     }
 
     /**
-     * Apply layout template
+     * Apply layout template.
      */
     public function applyLayoutTemplate(User $user, string $templateId): array
     {
@@ -352,10 +356,10 @@ class DashboardCustomizationService
 
             // Apply template layout
             $templateLayout = $this->adaptTemplateToUser($template, $user);
-            
+
             $dashboard->update([
                 'layout' => json_encode($templateLayout),
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
 
             DB::commit();
@@ -366,29 +370,29 @@ class DashboardCustomizationService
                 'template_applied',
                 [
                     'template_id' => $templateId,
-                    'layout' => $templateLayout
+                    'layout' => $templateLayout,
                 ]
             );
 
             return [
                 'success' => true,
                 'layout' => $templateLayout,
-                'message' => 'Layout template applied successfully'
+                'message' => 'Layout template applied successfully',
             ];
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Failed to apply layout template', [
                 'user_id' => $user->id,
                 'template_id' => $templateId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             throw $e;
         }
     }
 
     /**
-     * Save user preferences
+     * Save user preferences.
      */
     public function saveUserPreferences(User $user, array $preferences): array
     {
@@ -412,7 +416,7 @@ class DashboardCustomizationService
 
             $dashboard->update([
                 'preferences' => json_encode($mergedPreferences),
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
 
             DB::commit();
@@ -420,21 +424,21 @@ class DashboardCustomizationService
             return [
                 'success' => true,
                 'preferences' => $mergedPreferences,
-                'message' => 'Preferences saved successfully'
+                'message' => 'Preferences saved successfully',
             ];
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Failed to save user preferences', [
                 'user_id' => $user->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             throw $e;
         }
     }
 
     /**
-     * Reset dashboard to default
+     * Reset dashboard to default.
      */
     public function resetDashboardToDefault(User $user): array
     {
@@ -455,7 +459,7 @@ class DashboardCustomizationService
             $dashboard->update([
                 'layout' => json_encode($defaultLayout),
                 'preferences' => json_encode($this->getDefaultPreferences()),
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
 
             DB::commit();
@@ -470,21 +474,21 @@ class DashboardCustomizationService
             return [
                 'success' => true,
                 'layout' => $defaultLayout,
-                'message' => 'Dashboard reset to default successfully'
+                'message' => 'Dashboard reset to default successfully',
             ];
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Failed to reset dashboard', [
                 'user_id' => $user->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             throw $e;
         }
     }
 
     /**
-     * Get available widgets for user
+     * Get available widgets for user.
      */
     public function getAvailableWidgetsForUser(User $user): array
     {
@@ -512,7 +516,7 @@ class DashboardCustomizationService
     }
 
     /**
-     * Get widget categories
+     * Get widget categories.
      */
     public function getWidgetCategories(): array
     {
@@ -520,43 +524,43 @@ class DashboardCustomizationService
             'overview' => [
                 'name' => 'Overview',
                 'description' => 'Project overview and summary widgets',
-                'icon' => 'chart-bar'
+                'icon' => 'chart-bar',
             ],
             'tasks' => [
                 'name' => 'Tasks',
                 'description' => 'Task management and progress widgets',
-                'icon' => 'check-circle'
+                'icon' => 'check-circle',
             ],
             'communication' => [
                 'name' => 'Communication',
                 'description' => 'RFI, submittals, and communication widgets',
-                'icon' => 'chat'
+                'icon' => 'chat',
             ],
             'quality' => [
                 'name' => 'Quality',
                 'description' => 'Quality control and inspection widgets',
-                'icon' => 'shield-check'
+                'icon' => 'shield-check',
             ],
             'financial' => [
                 'name' => 'Financial',
                 'description' => 'Budget and cost tracking widgets',
-                'icon' => 'currency-dollar'
+                'icon' => 'currency-dollar',
             ],
             'safety' => [
                 'name' => 'Safety',
                 'description' => 'Safety incidents and compliance widgets',
-                'icon' => 'exclamation-triangle'
+                'icon' => 'exclamation-triangle',
             ],
             'system' => [
                 'name' => 'System',
                 'description' => 'System health and performance widgets',
-                'icon' => 'cog'
-            ]
+                'icon' => 'cog',
+            ],
         ];
     }
 
     /**
-     * Get layout templates
+     * Get layout templates.
      */
     public function getLayoutTemplates(): array
     {
@@ -573,8 +577,8 @@ class DashboardCustomizationService
                     'rfi_status',
                     'budget_tracking',
                     'schedule_timeline',
-                    'team_performance'
-                ]
+                    'team_performance',
+                ],
             ],
             'site_engineer' => [
                 'id' => 'site_engineer',
@@ -588,8 +592,8 @@ class DashboardCustomizationService
                     'inspection_checklist',
                     'weather_forecast',
                     'equipment_status',
-                    'safety_alerts'
-                ]
+                    'safety_alerts',
+                ],
             ],
             'qc_inspector' => [
                 'id' => 'qc_inspector',
@@ -603,8 +607,8 @@ class DashboardCustomizationService
                     'quality_metrics',
                     'defect_analysis',
                     'corrective_actions',
-                    'compliance_status'
-                ]
+                    'compliance_status',
+                ],
             ],
             'client_rep' => [
                 'id' => 'client_rep',
@@ -618,14 +622,14 @@ class DashboardCustomizationService
                     'milestone_status',
                     'budget_summary',
                     'quality_summary',
-                    'schedule_status'
-                ]
-            ]
+                    'schedule_status',
+                ],
+            ],
         ];
     }
 
     /**
-     * Get customization options
+     * Get customization options.
      */
     public function getCustomizationOptions(User $user): array
     {
@@ -634,26 +638,26 @@ class DashboardCustomizationService
             'layout_grid' => [
                 'columns' => 12,
                 'row_height' => 60,
-                'margin' => [10, 10]
+                'margin' => [10, 10],
             ],
             'themes' => [
                 'light' => 'Light Theme',
                 'dark' => 'Dark Theme',
-                'auto' => 'Auto (System)'
+                'auto' => 'Auto (System)',
             ],
             'refresh_intervals' => [
                 30 => '30 seconds',
                 60 => '1 minute',
                 300 => '5 minutes',
                 900 => '15 minutes',
-                1800 => '30 minutes'
+                1800 => '30 minutes',
             ],
-            'permissions' => $this->getCustomizationPermissions($user)
+            'permissions' => $this->getCustomizationPermissions($user),
         ];
     }
 
     /**
-     * Get customization permissions
+     * Get customization permissions.
      */
     public function getCustomizationPermissions(User $user): array
     {
@@ -664,7 +668,7 @@ class DashboardCustomizationService
             'can_move_widgets' => false,
             'can_configure_widgets' => false,
             'can_apply_templates' => false,
-            'can_reset_dashboard' => false
+            'can_reset_dashboard' => false,
         ];
 
         switch ($user->role) {
@@ -693,7 +697,7 @@ class DashboardCustomizationService
     }
 
     /**
-     * Validate widget permission
+     * Validate widget permission.
      */
     protected function validateWidgetPermission(User $user, DashboardWidget $widget): void
     {
@@ -703,12 +707,12 @@ class DashboardCustomizationService
     }
 
     /**
-     * Check if user can access widget
+     * Check if user can access widget.
      */
     protected function userCanAccessWidget(User $user, DashboardWidget $widget): bool
     {
         $permissions = $this->ensureArray($widget->permissions);
-        
+
         if (empty($permissions)) {
             return true; // No restrictions
         }
@@ -717,7 +721,7 @@ class DashboardCustomizationService
     }
 
     /**
-     * Validate widget configuration
+     * Validate widget configuration.
      */
     protected function validateWidgetConfig(array $widget, array $config): void
     {
@@ -738,7 +742,7 @@ class DashboardCustomizationService
     }
 
     /**
-     * Validate layout structure
+     * Validate layout structure.
      */
     protected function validateLayoutStructure(array $layout): void
     {
@@ -750,7 +754,7 @@ class DashboardCustomizationService
     }
 
     /**
-     * Calculate next position for new widget
+     * Calculate next position for new widget.
      */
     protected function calculateNextPosition(array $layout): array
     {
@@ -764,9 +768,9 @@ class DashboardCustomizationService
                 'small' => ['w' => 3, 'h' => 2],
                 'medium' => ['w' => 6, 'h' => 4],
                 'large' => ['w' => 9, 'h' => 6],
-                'extra-large' => ['w' => 12, 'h' => 8]
+                'extra-large' => ['w' => 12, 'h' => 8],
             ];
-            
+
             $widgetSize = $sizeMap[$size] ?? $sizeMap['medium'];
             $maxX = max($maxX, $pos['x'] + $widgetSize['w']);
             $maxY = max($maxY, $pos['y'] + $widgetSize['h']);
@@ -776,7 +780,7 @@ class DashboardCustomizationService
     }
 
     /**
-     * Normalize layout positions
+     * Normalize layout positions.
      */
     protected function normalizeLayoutPositions(array $layout): array
     {
@@ -786,15 +790,15 @@ class DashboardCustomizationService
         foreach ($layout as $widget) {
             $widget['position'] = ['x' => 0, 'y' => $y];
             $normalized[] = $widget;
-            
+
             $size = $widget['size'] ?? 'medium';
             $sizeMap = [
                 'small' => 2,
                 'medium' => 4,
                 'large' => 6,
-                'extra-large' => 8
+                'extra-large' => 8,
             ];
-            
+
             $y += $sizeMap[$size] ?? 4;
         }
 
@@ -802,35 +806,35 @@ class DashboardCustomizationService
     }
 
     /**
-     * Create user dashboard
+     * Create user dashboard.
      */
     protected function createUserDashboard(User $user): UserDashboard
     {
         $defaultLayout = $this->getDefaultLayoutForRole($user->role);
-        
+
         return UserDashboard::create([
             'user_id' => $user->id,
             'tenant_id' => $user->tenant_id,
             'name' => 'My Dashboard',
             'layout' => json_encode($defaultLayout),
             'is_default' => true,
-            'preferences' => json_encode($this->getDefaultPreferences())
+            'preferences' => json_encode($this->getDefaultPreferences()),
         ]);
     }
 
     /**
-     * Get default layout for role
+     * Get default layout for role.
      */
     protected function getDefaultLayoutForRole(string $role): array
     {
         $templates = $this->getLayoutTemplates();
         $template = $templates[$role] ?? $templates['project_manager'];
-        
-        return $this->adaptTemplateToUser($template, (object)['role' => $role]);
+
+        return $this->adaptTemplateToUser($template, (object) ['role' => $role]);
     }
 
     /**
-     * Adapt template to user
+     * Adapt template to user.
      */
     protected function adaptTemplateToUser(array $template, $user): array
     {
@@ -849,17 +853,17 @@ class DashboardCustomizationService
                     'position' => ['x' => 0, 'y' => $y],
                     'config' => $widget->config ?? [],
                     'is_customizable' => $widget->config['is_customizable'] ?? true,
-                    'created_at' => now()->toISOString()
+                    'created_at' => now()->toISOString(),
                 ];
-                
+
                 $size = $widget->config['default_size'] ?? 'medium';
                 $sizeMap = [
                     'small' => 2,
                     'medium' => 4,
                     'large' => 6,
-                    'extra-large' => 8
+                    'extra-large' => 8,
                 ];
-                
+
                 $y += $sizeMap[$size] ?? 4;
             }
         }
@@ -868,16 +872,17 @@ class DashboardCustomizationService
     }
 
     /**
-     * Get layout template
+     * Get layout template.
      */
     protected function getLayoutTemplate(string $templateId): ?array
     {
         $templates = $this->getLayoutTemplates();
+
         return $templates[$templateId] ?? null;
     }
 
     /**
-     * Validate template permission
+     * Validate template permission.
      */
     protected function validateTemplatePermission(User $user, array $template): void
     {
@@ -887,7 +892,7 @@ class DashboardCustomizationService
     }
 
     /**
-     * Validate preferences
+     * Validate preferences.
      */
     protected function validatePreferences(array $preferences): array
     {
@@ -915,7 +920,7 @@ class DashboardCustomizationService
     }
 
     /**
-     * Get default preferences
+     * Get default preferences.
      */
     protected function getDefaultPreferences(): array
     {
@@ -924,7 +929,7 @@ class DashboardCustomizationService
             'refresh_interval' => 300,
             'compact_mode' => false,
             'show_widget_borders' => true,
-            'enable_animations' => true
+            'enable_animations' => true,
         ];
     }
 

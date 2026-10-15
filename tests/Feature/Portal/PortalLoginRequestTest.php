@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Portal;
 
@@ -14,6 +16,7 @@ class PortalLoginRequestTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenant;
+
     private Account $account;
 
     protected function setUp(): void

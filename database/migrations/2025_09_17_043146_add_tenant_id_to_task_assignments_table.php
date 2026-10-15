@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     /**
      * Run the migrations.
      */
@@ -17,11 +16,11 @@ return new class extends Migration
             $table->decimal('estimated_hours', 8, 2)->nullable()->after('priority');
             $table->string('assigned_by')->nullable()->after('estimated_hours');
             $table->timestamp('due_date')->nullable()->after('assigned_by');
-            
+
             // Add foreign key constraints
             $table->foreign('tenant_id')->references('id')->on('tenants')->onDelete('cascade');
             $table->foreign('assigned_by')->references('id')->on('users')->onDelete('set null');
-            
+
             // Add indexes
             $table->index(['tenant_id', 'status']);
             $table->index(['priority']);
@@ -44,7 +43,7 @@ return new class extends Migration
 
         $isSqlite = Schema::getConnection()->getDriverName() === 'sqlite';
 
-        if (! $isSqlite) {
+        if (!$isSqlite) {
             try {
                 Schema::table('task_assignments', function (Blueprint $table) {
                     $table->dropForeign(['tenant_id']);

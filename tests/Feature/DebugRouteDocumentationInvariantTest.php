@@ -51,7 +51,7 @@ class DebugRouteDocumentationInvariantTest extends TestCase
      * the current runtime source of truth — that document is untouched
      * (see the dedicated architecture test asserting it), but this file's
      * own annotation of it must be corrected to "historical/pre-GAP-011
-     * baseline."
+     * baseline.".
      */
     public function test_current_page_tree_states_current_debug_ownership_accurately(): void
     {

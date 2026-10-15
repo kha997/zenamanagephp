@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
@@ -12,7 +14,7 @@ class DashboardResourceController extends Controller
 {
     public function index(Request $request)
     {
-        if (! $request->user()) {
+        if (!$request->user()) {
             return response()->json(['data' => []]);
         }
 
@@ -27,7 +29,7 @@ class DashboardResourceController extends Controller
     {
         $user = $request->user();
 
-        if (! $this->canView($dashboard, $user)) {
+        if (!$this->canView($dashboard, $user)) {
             abort($user ? 403 : 404);
         }
 
@@ -46,7 +48,7 @@ class DashboardResourceController extends Controller
 
         $user = $request->user();
 
-        if (! $user) {
+        if (!$user) {
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
@@ -64,7 +66,7 @@ class DashboardResourceController extends Controller
 
         $user = $request->user();
 
-        if (! $user) {
+        if (!$user) {
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
@@ -85,7 +87,7 @@ class DashboardResourceController extends Controller
 
         $user = $request->user();
 
-        if (! $user) {
+        if (!$user) {
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
@@ -105,7 +107,7 @@ class DashboardResourceController extends Controller
                 $requireName ? 'required' : 'sometimes',
                 'string',
                 'max:255',
-                'not_regex:/<script>/i'
+                'not_regex:/<script>/i',
             ],
             'description' => ['sometimes', 'nullable', 'string', 'max:1000'],
             'layout' => ['sometimes', 'nullable'],
@@ -138,7 +140,7 @@ class DashboardResourceController extends Controller
 
     private function canView(Dashboard $dashboard, ?Authenticatable $user): bool
     {
-        if (! $user) {
+        if (!$user) {
             return false;
         }
 
@@ -153,7 +155,7 @@ class DashboardResourceController extends Controller
 
         $session = $request->session();
 
-        if (! $session->get('dashboards.csrf_bypass')) {
+        if (!$session->get('dashboards.csrf_bypass')) {
             $session->put('dashboards.csrf_bypass', true);
             abort(419, 'CSRF token mismatch');
         }

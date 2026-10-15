@@ -1,29 +1,34 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
+use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
-use App\Models\User;
-use App\Models\Tenant;
-use Tests\Traits\AuthenticationTrait;
-use Src\WorkTemplate\Models\Template;
-use Src\WorkTemplate\Models\TemplateVersion;
 use Src\CoreProject\Models\Project;
 use Src\WorkTemplate\Models\ProjectPhase;
+use Src\WorkTemplate\Models\Template;
+use Src\WorkTemplate\Models\TemplateVersion;
+use Tests\TestCase;
+use Tests\Traits\AuthenticationTrait;
 
 class TemplateControllerTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use RefreshDatabase;
+    use WithFaker;
     use AuthenticationTrait;
 
     private User $user;
+
     private Tenant $tenant;
+
     private string $token;
 
     /**
-     * Setup method để tạo user và token cho authentication
+     * Setup method để tạo user và token cho authentication.
      */
     protected function setUp(): void
     {
@@ -40,7 +45,7 @@ class TemplateControllerTest extends TestCase
     }
 
     /**
-     * Helper method để thêm Authorization header
+     * Helper method để thêm Authorization header.
      */
     private function authenticatedJson(string $method, string $uri, array $data = [], array $headers = [])
     {
@@ -52,7 +57,7 @@ class TemplateControllerTest extends TestCase
     }
 
     /**
-     * Test GET /api/v1/work-template/templates - Lấy danh sách templates
+     * Test GET /api/v1/work-template/templates - Lấy danh sách templates.
      */
     public function test_can_get_templates_list(): void
     {
@@ -76,13 +81,13 @@ class TemplateControllerTest extends TestCase
                                  'is_active',
                                  'created_at',
                                  'updated_at',
-                                 ]
+                                 ],
                              ],
                              'total',
                              'per_page',
                              'current_page',
-                         ]
-                     ]
+                         ],
+                     ],
                  ]);
 
         $templates = $response->json('data.templates.data');
@@ -90,7 +95,7 @@ class TemplateControllerTest extends TestCase
     }
 
     /**
-     * Test GET /api/v1/work-template/templates với filter category
+     * Test GET /api/v1/work-template/templates với filter category.
      */
     public function test_can_filter_templates_by_category(): void
     {
@@ -108,7 +113,7 @@ class TemplateControllerTest extends TestCase
     }
 
     /**
-     * Test GET /api/v1/work-template/templates/{id} - Lấy chi tiết template
+     * Test GET /api/v1/work-template/templates/{id} - Lấy chi tiết template.
      */
     public function test_can_get_template_detail(): void
     {
@@ -130,8 +135,8 @@ class TemplateControllerTest extends TestCase
                              'versions',
                              'created_at',
                              'updated_at',
-                         ]
-                     ]
+                         ],
+                     ],
                  ]);
 
         $templateData = $response->json('data.template');
@@ -141,7 +146,7 @@ class TemplateControllerTest extends TestCase
     }
 
     /**
-     * Test GET /api/v1/work-template/templates/{id} với template không tồn tại
+     * Test GET /api/v1/work-template/templates/{id} với template không tồn tại.
      */
     public function test_get_template_detail_not_found(): void
     {
@@ -150,12 +155,12 @@ class TemplateControllerTest extends TestCase
         $response->assertStatus(404)
                  ->assertJson([
                      'status' => 'error',
-                     'message' => 'Template không tồn tại'
+                     'message' => 'Template không tồn tại',
                  ]);
     }
 
     /**
-     * Test POST /api/v1/work-template/templates - Tạo template mới
+     * Test POST /api/v1/work-template/templates - Tạo template mới.
      */
     public function test_can_create_new_template(): void
     {
@@ -191,8 +196,8 @@ class TemplateControllerTest extends TestCase
                              'category',
                              'version',
                              'is_active',
-                         ]
-                     ]
+                         ],
+                     ],
                  ]);
 
         // Kiểm tra template được tạo trong database
@@ -205,7 +210,7 @@ class TemplateControllerTest extends TestCase
     }
 
     /**
-     * Test POST /api/v1/work-template/templates với dữ liệu không hợp lệ
+     * Test POST /api/v1/work-template/templates với dữ liệu không hợp lệ.
      */
     public function test_create_template_with_invalid_data(): void
     {
@@ -221,7 +226,7 @@ class TemplateControllerTest extends TestCase
     }
 
     /**
-     * Test PUT /api/v1/work-template/templates/{id} - Cập nhật template
+     * Test PUT /api/v1/work-template/templates/{id} - Cập nhật template.
      */
     public function test_can_update_template(): void
     {
@@ -262,8 +267,8 @@ class TemplateControllerTest extends TestCase
                              'template_name',
                              'category',
                              'version',
-                         ]
-                     ]
+                         ],
+                     ],
                  ]);
 
         // Kiểm tra template được cập nhật
@@ -281,7 +286,7 @@ class TemplateControllerTest extends TestCase
     }
 
     /**
-     * Test DELETE /api/v1/work-template/templates/{id} - Xóa template (soft delete)
+     * Test DELETE /api/v1/work-template/templates/{id} - Xóa template (soft delete).
      */
     public function test_can_delete_template(): void
     {
@@ -292,7 +297,7 @@ class TemplateControllerTest extends TestCase
         $response->assertStatus(200)
                  ->assertJson([
                      'status' => 'success',
-                     'message' => 'Template deleted successfully'
+                     'message' => 'Template deleted successfully',
                  ]);
 
         // Kiểm tra template bị soft delete
@@ -302,7 +307,7 @@ class TemplateControllerTest extends TestCase
     }
 
     /**
-     * Test POST /api/v1/work-template/templates/{id}/apply - Apply template vào project
+     * Test POST /api/v1/work-template/templates/{id}/apply - Apply template vào project.
      */
     public function test_can_apply_template_to_project(): void
     {
@@ -328,7 +333,7 @@ class TemplateControllerTest extends TestCase
                          'tasks_created',
                          'tasks_hidden',
                          'conditional_tags',
-                     ]
+                     ],
                  ]);
 
         // Kiểm tra phases và tasks được tạo
@@ -344,13 +349,13 @@ class TemplateControllerTest extends TestCase
     }
 
     /**
-     * Test POST /api/v1/work-template/templates/{id}/apply với project đã có template
+     * Test POST /api/v1/work-template/templates/{id}/apply với project đã có template.
      */
     public function test_apply_template_to_project_with_existing_template(): void
     {
         $template = Template::factory()->create();
         $project = Project::factory()->create(['tenant_id' => $this->tenant->id]);
-        
+
         // Tạo phases và tasks từ template khác trước đó
         ProjectPhase::factory()->create([
             'project_id' => $project->id,
@@ -365,19 +370,19 @@ class TemplateControllerTest extends TestCase
         $response = $this->authenticatedJson('POST', "/api/templates/{$template->id}/apply", $applyData);
 
         $response->assertStatus(200);
-        
+
         // Kiểm tra apply được thực hiện
         $result = $response->json('data');
         $this->assertEquals('full', $result['mode']);
     }
 
     /**
-     * Test GET /api/v1/work-template/templates/{id}/versions - Lấy danh sách versions
+     * Test GET /api/v1/work-template/templates/{id}/versions - Lấy danh sách versions.
      */
     public function test_can_get_template_versions(): void
     {
         $template = Template::factory()->create();
-        
+
         // Tạo một số versions
         TemplateVersion::factory()->count(3)->create([
             'template_id' => $template->id,
@@ -397,7 +402,7 @@ class TemplateControllerTest extends TestCase
                              'note',
                              'created_by',
                              'created_at',
-                         ]
+                         ],
                      ],
                  ]);
 
@@ -406,7 +411,7 @@ class TemplateControllerTest extends TestCase
     }
 
     /**
-     * Test authentication required
+     * Test authentication required.
      */
     public function test_authentication_required(): void
     {
@@ -414,12 +419,12 @@ class TemplateControllerTest extends TestCase
         app('auth')->forgetGuards();
 
         $response = $this->getJson('/api/v1/work-template/templates');
-        
+
         $response->assertStatus(401);
     }
 
     /**
-     * Test invalid token
+     * Test invalid token.
      */
     public function test_invalid_token(): void
     {
@@ -428,12 +433,12 @@ class TemplateControllerTest extends TestCase
             'X-Tenant-ID' => (string) $this->tenant->id,
             'Accept' => 'application/json',
         ])->getJson('/api/v1/work-template/templates');
-        
+
         $response->assertStatus(401);
     }
 
     /**
-     * Test pagination
+     * Test pagination.
      */
     public function test_templates_pagination(): void
     {
@@ -452,7 +457,7 @@ class TemplateControllerTest extends TestCase
                              'current_page',
                              'last_page',
                          ],
-                     ]
+                     ],
                  ]);
 
         $meta = $response->json('data.templates');
@@ -462,7 +467,7 @@ class TemplateControllerTest extends TestCase
     }
 
     /**
-     * Test search templates
+     * Test search templates.
      */
     public function test_search_templates(): void
     {

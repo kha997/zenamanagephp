@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Route;
 class BreadcrumbService
 {
     /**
-     * Generate breadcrumbs based on current route
+     * Generate breadcrumbs based on current route.
      */
     public static function generate(): array
     {
@@ -23,18 +23,18 @@ class BreadcrumbService
         $breadcrumbs[] = [
             'title' => 'Dashboard',
             'url' => '/app/dashboard',
-            'active' => false
+            'active' => false,
         ];
 
         // Parse route name to generate breadcrumbs
         if ($routeName) {
             $segments = explode('.', $routeName);
-            
+
             // Handle admin routes
             if (isset($segments[0]) && $segments[0] === 'admin') {
                 $breadcrumbs = self::generateAdminBreadcrumbs($segments);
             }
-            
+
             // Handle app routes
             if (isset($segments[0]) && $segments[0] === 'app') {
                 $breadcrumbs = self::generateAppBreadcrumbs($segments);
@@ -45,7 +45,7 @@ class BreadcrumbService
     }
 
     /**
-     * Generate breadcrumbs for admin routes
+     * Generate breadcrumbs for admin routes.
      */
     private static function generateAdminBreadcrumbs(array $segments): array
     {
@@ -53,8 +53,8 @@ class BreadcrumbService
             [
                 'title' => 'Admin',
                 'url' => '/admin',
-                'active' => false
-            ]
+                'active' => false,
+            ],
         ];
 
         if (count($segments) > 1) {
@@ -62,7 +62,7 @@ class BreadcrumbService
             $breadcrumbs[] = [
                 'title' => ucfirst(str_replace('_', ' ', $section)),
                 'url' => "/admin/{$section}",
-                'active' => count($segments) === 2
+                'active' => count($segments) === 2,
             ];
 
             // Handle sub-routes
@@ -71,7 +71,7 @@ class BreadcrumbService
                 $breadcrumbs[] = [
                     'title' => ucfirst(str_replace('_', ' ', $subSection)),
                     'url' => "/admin/{$section}/{$subSection}",
-                    'active' => true
+                    'active' => true,
                 ];
             }
         }
@@ -80,7 +80,7 @@ class BreadcrumbService
     }
 
     /**
-     * Generate breadcrumbs for app routes
+     * Generate breadcrumbs for app routes.
      */
     private static function generateAppBreadcrumbs(array $segments): array
     {
@@ -88,8 +88,8 @@ class BreadcrumbService
             [
                 'title' => 'Dashboard',
                 'url' => '/app/dashboard',
-                'active' => false
-            ]
+                'active' => false,
+            ],
         ];
 
         if (count($segments) > 1) {
@@ -97,7 +97,7 @@ class BreadcrumbService
             $breadcrumbs[] = [
                 'title' => ucfirst(str_replace('_', ' ', $section)),
                 'url' => "/app/{$section}",
-                'active' => count($segments) === 2
+                'active' => count($segments) === 2,
             ];
 
             // Handle sub-routes
@@ -106,7 +106,7 @@ class BreadcrumbService
                 $breadcrumbs[] = [
                     'title' => ucfirst(str_replace('_', ' ', $subSection)),
                     'url' => "/app/{$section}/{$subSection}",
-                    'active' => true
+                    'active' => true,
                 ];
             }
         }
@@ -115,7 +115,7 @@ class BreadcrumbService
     }
 
     /**
-     * Get page title based on current route
+     * Get page title based on current route.
      */
     public static function getPageTitle(): string
     {
@@ -130,22 +130,24 @@ class BreadcrumbService
         }
 
         $segments = explode('.', $routeName);
-        
+
         // Handle admin routes
         if (isset($segments[0]) && $segments[0] === 'admin') {
             if (count($segments) === 1) {
                 return 'Admin Dashboard - ZenaManage';
             }
             $section = ucfirst(str_replace('_', ' ', $segments[1]));
+
             return "{$section} - Admin - ZenaManage";
         }
-        
+
         // Handle app routes
         if (isset($segments[0]) && $segments[0] === 'app') {
             if (count($segments) === 1) {
                 return 'Dashboard - ZenaManage';
             }
             $section = ucfirst(str_replace('_', ' ', $segments[1]));
+
             return "{$section} - ZenaManage";
         }
 
@@ -153,7 +155,7 @@ class BreadcrumbService
     }
 
     /**
-     * Get page description based on current route
+     * Get page description based on current route.
      */
     public static function getPageDescription(): string
     {
@@ -188,7 +190,7 @@ class BreadcrumbService
     }
 
     /**
-     * Get breadcrumb HTML
+     * Get breadcrumb HTML.
      */
     public static function render(): string
     {
@@ -199,7 +201,7 @@ class BreadcrumbService
 
         $html = '<nav class="flex" aria-label="Breadcrumb">';
         $html .= '<ol class="flex items-center space-x-2">';
-        
+
         foreach ($breadcrumbs as $index => $breadcrumb) {
             if ($index > 0) {
                 $html .= '<li class="flex items-center">';
@@ -208,7 +210,7 @@ class BreadcrumbService
                 $html .= '</svg>';
                 $html .= '</li>';
             }
-            
+
             $html .= '<li class="flex items-center">';
             if ($breadcrumb['active']) {
                 $html .= '<span class="text-gray-500 font-medium">' . $breadcrumb['title'] . '</span>';
@@ -217,10 +219,10 @@ class BreadcrumbService
             }
             $html .= '</li>';
         }
-        
+
         $html .= '</ol>';
         $html .= '</nav>';
-        
+
         return $html;
     }
 }

@@ -22,7 +22,7 @@ return [
         'lockout_duration_minutes' => env('PASSWORD_LOCKOUT_DURATION', 30),
         'common_passwords_check' => env('PASSWORD_COMMON_CHECK', true),
     ],
-    
+
     /*
     |--------------------------------------------------------------------------
     | Password Strength Scoring
@@ -41,7 +41,7 @@ return [
         'user_info_penalty' => 20,
         'history_penalty' => 30,
     ],
-    
+
     /*
     |--------------------------------------------------------------------------
     | Common Passwords List

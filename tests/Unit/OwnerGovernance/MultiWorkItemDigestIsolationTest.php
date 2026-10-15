@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Unit\OwnerGovernance;
 
@@ -150,7 +152,7 @@ final class MultiWorkItemDigestIsolationTest extends TestCase
     private function makeTempRepo(): string
     {
         $repo = sys_get_temp_dir() . '/owner-gov-multi-work-' . bin2hex(random_bytes(6));
-        mkdir($repo, 0777, true);
+        mkdir($repo, 0o777, true);
         exec('git -C ' . escapeshellarg($repo) . ' init -q');
         exec('git -C ' . escapeshellarg($repo) . ' config user.email test@example.com');
         exec('git -C ' . escapeshellarg($repo) . ' config user.name Test');
@@ -162,7 +164,7 @@ final class MultiWorkItemDigestIsolationTest extends TestCase
     private function commitFile(string $repo, string $path, string $content, string $message): string
     {
         $fullPath = $repo . '/' . $path;
-        @mkdir(dirname($fullPath), 0777, true);
+        @mkdir(dirname($fullPath), 0o777, true);
         file_put_contents($fullPath, $content);
         exec('git -C ' . escapeshellarg($repo) . ' add ' . escapeshellarg($path));
         exec('git -C ' . escapeshellarg($repo) . ' commit -q -m ' . escapeshellarg($message));

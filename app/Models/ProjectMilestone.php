@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -8,8 +10,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * ProjectMilestone Model - Project milestones management
- * 
+ * ProjectMilestone Model - Project milestones management.
+ *
  * @property string $id ULID primary key
  * @property string $project_id ID dự án
  * @property string $name Tên milestone
@@ -23,13 +25,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class ProjectMilestone extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids;
+    use HasFactory;
 
     protected $table = 'project_milestones';
-    
+
     protected $keyType = 'string';
+
     public $incrementing = false;
-    
+
     protected $fillable = [
         'project_id',
         'name',
@@ -39,23 +43,23 @@ class ProjectMilestone extends Model
         'status',
         'order',
         'metadata',
-        'created_by'
+        'created_by',
     ];
 
     protected $casts = [
         'target_date' => 'date',
         'completed_date' => 'date',
         'metadata' => 'array',
-        'order' => 'integer'
+        'order' => 'integer',
     ];
 
     protected $attributes = [
         'status' => 'pending',
-        'order' => 0
+        'order' => 0,
     ];
 
     /**
-     * Status constants
+     * Status constants.
      */
     public const STATUS_PENDING = 'pending';
     public const STATUS_COMPLETED = 'completed';
@@ -70,7 +74,7 @@ class ProjectMilestone extends Model
     ];
 
     /**
-     * Relationships
+     * Relationships.
      */
     public function project(): BelongsTo
     {
@@ -83,7 +87,7 @@ class ProjectMilestone extends Model
     }
 
     /**
-     * Scopes
+     * Scopes.
      */
     public function scopePending($query)
     {
@@ -111,7 +115,7 @@ class ProjectMilestone extends Model
     }
 
     /**
-     * Boot method để tự động update status
+     * Boot method để tự động update status.
      */
     protected static function boot()
     {
@@ -128,7 +132,7 @@ class ProjectMilestone extends Model
     }
 
     /**
-     * Mark milestone as completed
+     * Mark milestone as completed.
      */
     public function markCompleted(string $userId = null): bool
     {
@@ -147,7 +151,7 @@ class ProjectMilestone extends Model
     }
 
     /**
-     * Mark milestone as cancelled
+     * Mark milestone as cancelled.
      */
     public function markCancelled(string $reason = null): bool
     {
@@ -159,25 +163,25 @@ class ProjectMilestone extends Model
             'status' => self::STATUS_CANCELLED,
             'metadata' => array_merge($this->metadata ?? [], [
                 'cancelled_reason' => $reason,
-                'cancelled_at' => now()->toISOString()
-            ])
+                'cancelled_at' => now()->toISOString(),
+            ]),
         ]);
 
         return true;
     }
 
     /**
-     * Check if milestone is overdue
+     * Check if milestone is overdue.
      */
     public function isOverdue(): bool
     {
-        return $this->target_date && 
-               $this->target_date->isPast() && 
+        return $this->target_date &&
+               $this->target_date->isPast() &&
                $this->status === self::STATUS_PENDING;
     }
 
     /**
-     * Get days until target date
+     * Get days until target date.
      */
     public function getDaysUntilTarget(): ?int
     {
@@ -189,7 +193,7 @@ class ProjectMilestone extends Model
     }
 
     /**
-     * Get completion percentage based on target date
+     * Get completion percentage based on target date.
      */
     public function getCompletionPercentage(): float
     {
@@ -217,7 +221,7 @@ class ProjectMilestone extends Model
     }
 
     /**
-     * Update milestone order
+     * Update milestone order.
      */
     public function updateOrder(int $newOrder): void
     {
@@ -225,7 +229,7 @@ class ProjectMilestone extends Model
     }
 
     /**
-     * Reorder milestones in project
+     * Reorder milestones in project.
      */
     public static function reorderMilestones(string $projectId, array $milestoneIds): void
     {
@@ -237,27 +241,27 @@ class ProjectMilestone extends Model
     }
 
     /**
-     * Get milestone statistics for project
+     * Get milestone statistics for project.
      */
     public static function getProjectStatistics(string $projectId): array
     {
         $milestones = self::byProject($projectId)->get();
-        
+
         return [
             'total' => $milestones->count(),
             'completed' => $milestones->where('status', self::STATUS_COMPLETED)->count(),
             'pending' => $milestones->where('status', self::STATUS_PENDING)->count(),
             'overdue' => $milestones->where('status', self::STATUS_OVERDUE)->count(),
             'cancelled' => $milestones->where('status', self::STATUS_CANCELLED)->count(),
-            'completion_rate' => $milestones->count() > 0 
+            'completion_rate' => $milestones->count() > 0
                 ? round(($milestones->where('status', self::STATUS_COMPLETED)->count() / $milestones->count()) * 100, 2)
                 : 0,
-            'average_delay' => self::calculateAverageDelay($milestones)
+            'average_delay' => self::calculateAverageDelay($milestones),
         ];
     }
 
     /**
-     * Calculate average delay for completed milestones
+     * Calculate average delay for completed milestones.
      */
     private static function calculateAverageDelay($milestones): float
     {
@@ -277,11 +281,11 @@ class ProjectMilestone extends Model
     }
 
     /**
-     * Accessors
+     * Accessors.
      */
     public function getStatusColorAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             self::STATUS_PENDING => 'blue',
             self::STATUS_COMPLETED => 'green',
             self::STATUS_OVERDUE => 'red',
@@ -292,7 +296,7 @@ class ProjectMilestone extends Model
 
     public function getStatusLabelAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             self::STATUS_PENDING => 'Pending',
             self::STATUS_COMPLETED => 'Completed',
             self::STATUS_OVERDUE => 'Overdue',

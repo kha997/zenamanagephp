@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
@@ -12,13 +14,18 @@ use Tests\Traits\AuthenticationTestTrait;
 
 class RateLimitingTest extends TestCase
 {
-    use RefreshDatabase, WithFaker, AuthenticationTestTrait;
+    use RefreshDatabase;
+    use WithFaker;
+    use AuthenticationTestTrait;
 
     private const LOGIN_ENDPOINT = '/api/auth/login';
 
     private ?string $prevCacheDefault = null;
+
     protected string $tenantId;
+
     protected array $loginCredentials = [];
+
     protected array $loginHeaders = [];
 
     protected function setUp(): void
@@ -33,7 +40,7 @@ class RateLimitingTest extends TestCase
         $this->tenantId = $this->apiFeatureTenant->id;
         $this->loginCredentials = [
             'email' => $this->apiFeatureUser->email,
-            'password' => 'password'
+            'password' => 'password',
         ];
         $this->loginHeaders = [
             'Accept' => 'application/json',
@@ -57,7 +64,7 @@ class RateLimitingTest extends TestCase
     }
 
     /**
-     * Test rate limiting on authentication endpoints
+     * Test rate limiting on authentication endpoints.
      */
     public function test_auth_endpoints_rate_limiting()
     {
@@ -66,17 +73,17 @@ class RateLimitingTest extends TestCase
         // Test normal requests within limit
         for ($i = 0; $i < 10; $i++) {
             $response = $this->loginRequest($data);
-            
+
             // Should have rate limit headers
             $this->assertTrue($response->headers->has('X-RateLimit-Limit'));
             $this->assertTrue($response->headers->has('X-RateLimit-Remaining'));
             $this->assertTrue($response->headers->has('X-RateLimit-Reset'));
             $this->assertTrue($response->headers->has('X-RateLimit-Window'));
-            
+
             // Check header values
             $this->assertEquals('10', $response->headers->get('X-RateLimit-Limit'));
             $this->assertEquals('60', $response->headers->get('X-RateLimit-Window'));
-            
+
             // Remaining should decrease
             $remaining = (int) $response->headers->get('X-RateLimit-Remaining');
             $this->assertEquals(9 - $i, $remaining);
@@ -95,7 +102,7 @@ class RateLimitingTest extends TestCase
     }
 
     /**
-     * Test burst limit functionality
+     * Test burst limit functionality.
      */
     public function test_burst_limit_functionality()
     {
@@ -104,7 +111,7 @@ class RateLimitingTest extends TestCase
         // Make requests up to burst limit (20)
         for ($i = 0; $i < 20; $i++) {
             $response = $this->loginRequest($data);
-            
+
             if ($i < 10) {
                 // Normal limit
                 $this->assertNotEquals(429, $response->getStatusCode());
@@ -123,7 +130,7 @@ class RateLimitingTest extends TestCase
     }
 
     /**
-     * Test rate limiting on API endpoints
+     * Test rate limiting on API endpoints.
      */
     public function test_api_endpoints_rate_limiting()
     {
@@ -143,7 +150,7 @@ class RateLimitingTest extends TestCase
     }
 
     /**
-     * Test rate limiting with different IP addresses
+     * Test rate limiting with different IP addresses.
      */
     public function test_rate_limiting_per_ip_address()
     {
@@ -151,7 +158,7 @@ class RateLimitingTest extends TestCase
 
         // Simulate requests from different IPs
         $baseIp = ['REMOTE_ADDR' => '192.168.1.1'];
-        
+
         // Make 20 requests from first IP
         for ($i = 0; $i < 20; $i++) {
             $response = $this->withServerVariables($baseIp)->loginRequest($data);
@@ -164,14 +171,14 @@ class RateLimitingTest extends TestCase
 
         // Switch to different IP
         $newIp = ['REMOTE_ADDR' => '192.168.1.2'];
-        
+
         // Should be able to make requests from different IP
         $response = $this->withServerVariables($newIp)->loginRequest($data);
         $this->assertNotEquals(429, $response->getStatusCode());
     }
 
     /**
-     * Test rate limiting window reset
+     * Test rate limiting window reset.
      */
     public function test_rate_limiting_window_reset()
     {
@@ -197,7 +204,7 @@ class RateLimitingTest extends TestCase
     }
 
     /**
-     * Test rate limiting headers format
+     * Test rate limiting headers format.
      */
     public function test_rate_limiting_headers_format()
     {
@@ -223,7 +230,7 @@ class RateLimitingTest extends TestCase
     }
 
     /**
-     * Test rate limiting error response format
+     * Test rate limiting error response format.
      */
     public function test_rate_limiting_error_response()
     {

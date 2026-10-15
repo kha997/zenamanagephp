@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -27,8 +29,8 @@ class DocumentLifecycleService
             $document = $this->lockDocument($tenantId, $documentId);
             [$lifecycle, $approval] = $this->resolveState($document);
 
-            if (! in_array($lifecycle, [DocumentLifecycleStatus::DRAFT, DocumentLifecycleStatus::IN_REVIEW], true)
-                || ! in_array($approval, [DocumentApprovalStatus::NOT_SUBMITTED, DocumentApprovalStatus::APPROVED], true)) {
+            if (!in_array($lifecycle, [DocumentLifecycleStatus::DRAFT, DocumentLifecycleStatus::IN_REVIEW], true)
+                || !in_array($approval, [DocumentApprovalStatus::NOT_SUBMITTED, DocumentApprovalStatus::APPROVED], true)) {
                 throw DocumentWorkflowException::invalidPublishTransition((string) $document->getRawOriginal('status'));
             }
 
@@ -102,7 +104,7 @@ class DocumentLifecycleService
     private function freshDocument(Document $document): Document
     {
         $fresh = $document->fresh(['currentVersion']);
-        if (! $fresh instanceof Document) {
+        if (!$fresh instanceof Document) {
             throw DocumentWorkflowException::documentNotFound();
         }
 

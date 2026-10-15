@@ -20,67 +20,67 @@ final class MysqlCredentialsHelperTest extends TestCase
     protected function setUp(): void
     {
         $this->dir = sys_get_temp_dir() . '/gap056-' . bin2hex(random_bytes(6));
-        mkdir($this->dir . '/bin', 0700, true);
-        mkdir($this->dir . '/tmp', 0700, true);
+        mkdir($this->dir . '/bin', 0o700, true);
+        mkdir($this->dir . '/tmp', 0o700, true);
 
         // Records argv, and for any --defaults-extra-file=<f> records the
         // file's octal mode and content. Exit code comes from STUB_EXIT.
         $client = <<<'SH'
-#!/usr/bin/env bash
-log="$STUB_LOG"
-printf 'ARGV %s\n' "$(basename "$0") $*" >> "$log"
-for a in "$@"; do
-  case "$a" in
-    --defaults-extra-file=*)
-      f="${a#--defaults-extra-file=}"
-      mode="$(stat -c %a "$f" 2>/dev/null || stat -f %Lp "$f")"
-      printf 'MODE %s\n' "$mode" >> "$log"
-      printf 'FILE %s\n' "$f" >> "$log"
-      sed 's/^/CNF /' "$f" >> "$log"
-      ;;
-  esac
-done
-exit "${STUB_EXIT:-0}"
-SH;
+            #!/usr/bin/env bash
+            log="$STUB_LOG"
+            printf 'ARGV %s\n' "$(basename "$0") $*" >> "$log"
+            for a in "$@"; do
+              case "$a" in
+                --defaults-extra-file=*)
+                  f="${a#--defaults-extra-file=}"
+                  mode="$(stat -c %a "$f" 2>/dev/null || stat -f %Lp "$f")"
+                  printf 'MODE %s\n' "$mode" >> "$log"
+                  printf 'FILE %s\n' "$f" >> "$log"
+                  sed 's/^/CNF /' "$f" >> "$log"
+                  ;;
+              esac
+            done
+            exit "${STUB_EXIT:-0}"
+            SH;
         foreach (['mysql', 'mysqldump'] as $name) {
             file_put_contents($this->dir . "/bin/$name", $client);
-            chmod($this->dir . "/bin/$name", 0755);
+            chmod($this->dir . "/bin/$name", 0o755);
         }
 
         // docker: `cp <src> <ctr>:<dst>` copies into a fake container dir;
         // `exec [-i] <ctr> <client> args` runs the stub client with paths
         // mapped into that dir; `exec <ctr> rm -f <path>` removes it.
         $docker = <<<'SH'
-#!/usr/bin/env bash
-printf 'ARGV docker %s\n' "$*" >> "$STUB_LOG"
-root="$STUB_CONTAINER_ROOT"
-case "$1" in
-  cp) dst="${3#*:}"; mkdir -p "$root$(dirname "$dst")"; cp -p "$2" "$root$dst" ;;
-  exec)
-    shift; [ "$1" = "-i" ] && shift; shift
-    if [ "$1" = "rm" ]; then rm -f "$root${3}"; exit 0; fi
-    client="$1"; shift; args=()
-    for a in "$@"; do
-      case "$a" in --defaults-extra-file=*) args+=("--defaults-extra-file=$root${a#--defaults-extra-file=}");; *) args+=("$a");; esac
-    done
-    exec "$client" "${args[@]}"
-    ;;
-esac
-SH;
+            #!/usr/bin/env bash
+            printf 'ARGV docker %s\n' "$*" >> "$STUB_LOG"
+            root="$STUB_CONTAINER_ROOT"
+            case "$1" in
+              cp) dst="${3#*:}"; mkdir -p "$root$(dirname "$dst")"; cp -p "$2" "$root$dst" ;;
+              exec)
+                shift; [ "$1" = "-i" ] && shift; shift
+                if [ "$1" = "rm" ]; then rm -f "$root${3}"; exit 0; fi
+                client="$1"; shift; args=()
+                for a in "$@"; do
+                  case "$a" in --defaults-extra-file=*) args+=("--defaults-extra-file=$root${a#--defaults-extra-file=}");; *) args+=("$a");; esac
+                done
+                exec "$client" "${args[@]}"
+                ;;
+            esac
+            SH;
         file_put_contents($this->dir . '/bin/docker', $docker);
-        chmod($this->dir . '/bin/docker', 0755);
+        chmod($this->dir . '/bin/docker', 0o755);
 
         // docker-compose ... exec -T <service> sh -c '<script>' sh <client> args:
         // run the in-container script locally with the container's env.
         $compose = <<<'SH'
-#!/usr/bin/env bash
-printf 'ARGV docker-compose %s\n' "$*" >> "$STUB_LOG"
-while [ "$#" -gt 0 ] && [ "$1" != "sh" ]; do shift; done
-shift
-MYSQL_ROOT_PASSWORD="$STUB_CONTAINER_ROOT_PASSWORD" exec sh "$@"
-SH;
+            #!/usr/bin/env bash
+            printf 'ARGV docker-compose %s\n' "$*" >> "$STUB_LOG"
+            while [ "$#" -gt 0 ] && [ "$1" != "sh" ]; do shift; done
+            shift
+            MYSQL_ROOT_PASSWORD="$STUB_CONTAINER_ROOT_PASSWORD" exec sh "$@"
+            SH;
         file_put_contents($this->dir . '/bin/docker-compose', $compose);
-        chmod($this->dir . '/bin/docker-compose', 0755);
+        chmod($this->dir . '/bin/docker-compose', 0o755);
     }
 
     protected function tearDown(): void

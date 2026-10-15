@@ -1,29 +1,31 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use App\Models\User;
-use App\Models\Tenant;
 
 /**
- * Factory cho User model
- * 
+ * Factory cho User model.
+ *
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\User>
  */
 class UserFactory extends Factory
 {
     /**
-     * Model được tạo bởi factory này
+     * Model được tạo bởi factory này.
      *
      * @var string
      */
     protected $model = User::class;
 
     /**
-     * Định nghĩa trạng thái mặc định của model
+     * Định nghĩa trạng thái mặc định của model.
      *
      * @return array<string, mixed>
      */
@@ -46,7 +48,7 @@ class UserFactory extends Factory
     }
 
     /**
-     * Tạo user với email đã xác thực
+     * Tạo user với email đã xác thực.
      */
     public function verified(): static
     {
@@ -56,7 +58,7 @@ class UserFactory extends Factory
     }
 
     /**
-     * Tạo user chưa xác thực email
+     * Tạo user chưa xác thực email.
      */
     public function unverified(): static
     {
@@ -66,7 +68,7 @@ class UserFactory extends Factory
     }
 
     /**
-     * Tạo user không hoạt động
+     * Tạo user không hoạt động.
      */
     public function inactive(): static
     {
@@ -76,7 +78,7 @@ class UserFactory extends Factory
     }
 
     /**
-     * Tạo user với tenant cụ thể (nhận ULID string)
+     * Tạo user với tenant cụ thể (nhận ULID string).
      */
     public function forTenant(string $tenantId): static
     {

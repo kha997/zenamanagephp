@@ -1,9 +1,9 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
-use App\Models\Project;
-use App\Models\Role;
 use App\Models\Task;
 use App\Models\Tenant;
 use App\Models\User;
@@ -22,10 +22,15 @@ class ExportTenantIsolationTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenantA;
+
     private Tenant $tenantB;
+
     private User $userA;
+
     private User $userB;
+
     private User $userBAdmin;
+
     private string $disk;
 
     protected function setUp(): void
@@ -61,7 +66,7 @@ class ExportTenantIsolationTest extends TestCase
     private function createTenant(array $attributes = []): Tenant
     {
         $model = Tenant::factory()->createOne($attributes);
-        if (! $model instanceof Tenant) {
+        if (!$model instanceof Tenant) {
             throw new \LogicException('Tenant factory returned an unexpected model type.');
         }
 
@@ -72,7 +77,7 @@ class ExportTenantIsolationTest extends TestCase
     private function createUser(array $attributes = []): User
     {
         $model = User::factory()->createOne($attributes);
-        if (! $model instanceof User) {
+        if (!$model instanceof User) {
             throw new \LogicException('User factory returned an unexpected model type.');
         }
 
@@ -83,7 +88,7 @@ class ExportTenantIsolationTest extends TestCase
     private function createCoreProject(array $attributes = []): CoreProject
     {
         $model = CoreProject::factory()->createOne($attributes);
-        if (! $model instanceof CoreProject) {
+        if (!$model instanceof CoreProject) {
             throw new \LogicException('Project factory returned an unexpected model type.');
         }
 
@@ -94,7 +99,7 @@ class ExportTenantIsolationTest extends TestCase
     private function createCoreTask(array $attributes = []): Task
     {
         $model = CoreTask::factory()->createOne($attributes);
-        if (! $model instanceof Task) {
+        if (!$model instanceof Task) {
             throw new \LogicException('Task factory returned an unexpected model type.');
         }
 
@@ -105,7 +110,7 @@ class ExportTenantIsolationTest extends TestCase
     private function createCoreComponent(array $attributes = []): \App\Models\Component
     {
         $model = \Src\CoreProject\Models\Component::factory()->createOne($attributes);
-        if (! $model instanceof \App\Models\Component) {
+        if (!$model instanceof \App\Models\Component) {
             throw new \LogicException('Component factory returned an unexpected model type.');
         }
 
@@ -116,7 +121,7 @@ class ExportTenantIsolationTest extends TestCase
     private function createWorkInstance(array $attributes = []): WorkInstance
     {
         $model = WorkInstance::factory()->createOne($attributes);
-        if (! $model instanceof WorkInstance) {
+        if (!$model instanceof WorkInstance) {
             throw new \LogicException('Work instance factory returned an unexpected model type.');
         }
 
@@ -127,7 +132,7 @@ class ExportTenantIsolationTest extends TestCase
     private function createWorkInstanceStep(array $attributes = []): WorkInstanceStep
     {
         $model = WorkInstanceStep::factory()->createOne($attributes);
-        if (! $model instanceof WorkInstanceStep) {
+        if (!$model instanceof WorkInstanceStep) {
             throw new \LogicException('Work instance step factory returned an unexpected model type.');
         }
 
@@ -833,6 +838,7 @@ class ExportTenantIsolationTest extends TestCase
         $queries = DB::getQueryLog();
         $taskHydrationQueries = array_filter($queries, function (array $query): bool {
             $sql = strtolower($query['query']);
+
             return str_contains($sql, 'where `tasks`') || str_contains($sql, 'where `core_project_tasks`');
         });
 
@@ -1084,6 +1090,7 @@ class ExportTenantIsolationTest extends TestCase
 
         $childQueries = collect(DB::getQueryLog())->filter(function (array $query): bool {
             $sql = strtolower($query['query']);
+
             return str_contains($sql, 'from "tasks"') && str_contains($sql, '"project_id" in');
         });
         $this->assertCount(1, $childQueries, 'Project JSON must use one grouped eligible child Task query.');
@@ -1106,7 +1113,6 @@ class ExportTenantIsolationTest extends TestCase
         $this->assertArrayNotHasKey('assignments', $row);
         $this->assertSame((string) $this->tenantA->id, $row['project']['tenant_id']);
         $this->assertStringNotContainsString((string) $this->userB->id, json_encode($row, JSON_THROW_ON_ERROR));
-
     }
 
     /** @test */
@@ -1126,6 +1132,7 @@ class ExportTenantIsolationTest extends TestCase
             $created = $this->createCoreTask(['tenant_id' => $this->tenantA->id, 'project_id' => $projectA->id]);
             $task = CoreTask::query()->with('project')->findOrFail($created->id);
             $task->setRawAttributes(array_merge($task->getAttributes(), $references), true);
+
             return $task;
         };
         $valid = $makeSource([
@@ -1181,6 +1188,7 @@ class ExportTenantIsolationTest extends TestCase
             $created = $this->createCoreTask(['tenant_id' => $this->tenantA->id, 'project_id' => $projectA->id]);
             $task = CoreTask::query()->with('project')->findOrFail($created->id);
             $task->setRawAttributes(array_merge($task->getAttributes(), ['work_instance_id' => $instanceId, 'work_instance_step_id' => $stepId]), true);
+
             return $task;
         };
         $valid = $makeSource((string) $validInstance->getKey(), (string) $validStep->getKey());

@@ -1,17 +1,19 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Models\User;
+use Illuminate\Database\Seeder;
 use Src\Compensation\Models\Contract;
 use Src\Compensation\Models\TaskCompensation;
 use Src\CoreProject\Models\Project;
 use Src\CoreProject\Models\Task;
-use App\Models\User;
-use Illuminate\Database\Seeder;
 
 /**
- * Compensation Seeder
- * 
+ * Compensation Seeder.
+ *
  * Tạo dữ liệu mẫu cho contracts và task compensations
  */
 class CompensationSeeder extends Seeder
@@ -44,7 +46,7 @@ class CompensationSeeder extends Seeder
                     ->forTask($task->id)
                     ->forContract($activeContract->id)
                     ->create([
-                        'created_by' => $users->random()->id
+                        'created_by' => $users->random()->id,
                     ]);
             }
         }

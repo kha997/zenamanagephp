@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Traits;
 
@@ -6,18 +8,16 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 
 /**
- * Trait EventTestTrait
- * 
+ * Trait EventTestTrait.
+ *
  * Provides event testing utilities for Z.E.N.A event-driven architecture
  * Handles event assertions and queue testing
- * 
- * @package Tests\Traits
  */
 trait EventTestTrait
 {
     /**
-     * Assert that an event was dispatched
-     * 
+     * Assert that an event was dispatched.
+     *
      * @param string $eventClass
      * @param callable|null $callback
      * @return void
@@ -28,8 +28,8 @@ trait EventTestTrait
     }
 
     /**
-     * Assert that an event was not dispatched
-     * 
+     * Assert that an event was not dispatched.
+     *
      * @param string $eventClass
      * @return void
      */
@@ -39,8 +39,8 @@ trait EventTestTrait
     }
 
     /**
-     * Assert that a listener is attached to an event
-     * 
+     * Assert that a listener is attached to an event.
+     *
      * @param string $eventClass
      * @param string $listenerClass
      * @return void
@@ -65,8 +65,8 @@ trait EventTestTrait
     }
 
     /**
-     * Fake events for testing
-     * 
+     * Fake events for testing.
+     *
      * @param array $events
      * @return void
      */
@@ -80,8 +80,8 @@ trait EventTestTrait
     }
 
     /**
-     * Fake queues for testing
-     * 
+     * Fake queues for testing.
+     *
      * @return void
      */
     protected function fakeQueues(): void
@@ -90,8 +90,8 @@ trait EventTestTrait
     }
 
     /**
-     * Assert job was pushed to queue
-     * 
+     * Assert job was pushed to queue.
+     *
      * @param string $jobClass
      * @param callable|null $callback
      * @return void
@@ -102,8 +102,8 @@ trait EventTestTrait
     }
 
     /**
-     * Dispatch event and assert listeners were called
-     * 
+     * Dispatch event and assert listeners were called.
+     *
      * @param object $event
      * @param array $expectedListeners
      * @return void

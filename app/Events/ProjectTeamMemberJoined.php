@@ -1,20 +1,23 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Events;
 
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
-use Illuminate\Foundation\Events\Dispatchable;
 
 /**
- * ProjectTeamMemberJoined Event - Broadcast khi team member join project
+ * ProjectTeamMemberJoined Event - Broadcast khi team member join project.
  */
 class ProjectTeamMemberJoined implements ShouldBroadcast
 {
-
     public Project $project;
+
     public User $user;
+
     public string $role;
+
     public string $addedBy;
 
     /**
@@ -35,7 +38,7 @@ class ProjectTeamMemberJoined implements ShouldBroadcast
     {
         return [
             new PrivateChannel('project.' . $this->project->id),
-            new PrivateChannel('tenant.' . $this->project->tenant_id)
+            new PrivateChannel('tenant.' . $this->project->tenant_id),
         ];
     }
 
@@ -49,17 +52,17 @@ class ProjectTeamMemberJoined implements ShouldBroadcast
             'project' => [
                 'id' => $this->project->id,
                 'name' => $this->project->name,
-                'code' => $this->project->code
+                'code' => $this->project->code,
             ],
             'user' => [
                 'id' => $this->user->id,
                 'name' => $this->user->name,
                 'email' => $this->user->email,
-                'avatar' => $this->user->avatar
+                'avatar' => $this->user->avatar,
             ],
             'role' => $this->role,
             'added_by' => $this->addedBy,
-            'timestamp' => now()->toISOString()
+            'timestamp' => now()->toISOString(),
         ];
     }
 

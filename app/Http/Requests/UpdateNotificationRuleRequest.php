@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests;
 
@@ -6,14 +8,12 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Form Request để xác thực dữ liệu khi cập nhật Notification Rule
- * 
- * @package Src\Notification\Requests
+ * Form Request để xác thực dữ liệu khi cập nhật Notification Rule.
  */
 class UpdateNotificationRuleRequest extends FormRequest
 {
     /**
-     * Xác định user có quyền thực hiện request này không
+     * Xác định user có quyền thực hiện request này không.
      */
     public function authorize(): bool
     {
@@ -21,7 +21,7 @@ class UpdateNotificationRuleRequest extends FormRequest
     }
 
     /**
-     * Các quy tắc validation cho request
+     * Các quy tắc validation cho request.
      */
     public function rules(): array
     {
@@ -30,58 +30,58 @@ class UpdateNotificationRuleRequest extends FormRequest
                 'sometimes',
                 'nullable',
                 'integer',
-                'exists:projects,id'
+                'exists:projects,id',
             ],
             'event_key' => [
                 'sometimes',
                 'required',
                 'string',
-                'max:100'
+                'max:100',
             ],
             'min_priority' => [
                 'sometimes',
                 'required',
                 'string',
-                Rule::in(['critical', 'normal', 'low'])
+                Rule::in(['critical', 'normal', 'low']),
             ],
             'channels' => [
                 'sometimes',
                 'required',
                 'array',
-                'min:1'
+                'min:1',
             ],
             'channels.*' => [
                 'required',
                 'string',
-                Rule::in(['inapp', 'email', 'webhook'])
+                Rule::in(['inapp', 'email', 'webhook']),
             ],
             'conditions' => [
                 'sometimes',
                 'nullable',
-                'array'
+                'array',
             ],
             'conditions.*.field' => [
                 'required_with:conditions',
                 'string',
-                'max:100'
+                'max:100',
             ],
             'conditions.*.operator' => [
                 'required_with:conditions',
                 'string',
-                Rule::in(['=', '!=', '>', '<', '>=', '<=', 'contains', 'not_contains', 'in', 'not_in'])
+                Rule::in(['=', '!=', '>', '<', '>=', '<=', 'contains', 'not_contains', 'in', 'not_in']),
             ],
             'conditions.*.value' => [
-                'required_with:conditions'
+                'required_with:conditions',
             ],
             'is_enabled' => [
                 'sometimes',
-                'boolean'
-            ]
+                'boolean',
+            ],
         ];
     }
 
     /**
-     * Các thông báo lỗi tùy chỉnh
+     * Các thông báo lỗi tùy chỉnh.
      */
     public function messages(): array
     {
@@ -97,12 +97,12 @@ class UpdateNotificationRuleRequest extends FormRequest
             'conditions.*.field.required_with' => 'Trường điều kiện là bắt buộc.',
             'conditions.*.operator.required_with' => 'Toán tử điều kiện là bắt buộc.',
             'conditions.*.operator.in' => 'Toán tử phải là một trong: =, !=, >, <, >=, <=, contains, not_contains, in, not_in.',
-            'conditions.*.value.required_with' => 'Giá trị điều kiện là bắt buộc.'
+            'conditions.*.value.required_with' => 'Giá trị điều kiện là bắt buộc.',
         ];
     }
 
     /**
-     * Xử lý sau khi validation thành công
+     * Xử lý sau khi validation thành công.
      */
     public function withValidator($validator): void
     {

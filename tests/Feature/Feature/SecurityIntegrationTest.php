@@ -2,8 +2,8 @@
 
 namespace Tests\Feature\Feature;
 
-use App\Models\User;
 use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -12,20 +12,21 @@ class SecurityIntegrationTest extends TestCase
     use RefreshDatabase;
 
     protected $tenant;
+
     protected $user;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->tenant = Tenant::factory()->create([
             'slug' => 'test-tenant-' . uniqid(),
-            'name' => 'Test Tenant'
+            'name' => 'Test Tenant',
         ]);
-        
+
         $this->user = User::factory()->create([
             'tenant_id' => $this->tenant->id,
-            'email' => 'test@example-' . uniqid() . '.com'
+            'email' => 'test@example-' . uniqid() . '.com',
         ]);
     }
 
@@ -39,7 +40,7 @@ class SecurityIntegrationTest extends TestCase
     {
         $this->user->assignRole('pm');
         $this->actingAs($this->user);
-        
+
         $response = $this->get('/dashboard');
         $this->assertTrue(in_array($response->status(), [200, 301, 302, 404], true));
     }
@@ -48,7 +49,7 @@ class SecurityIntegrationTest extends TestCase
     {
         $this->user->assignRole('pm');
         $this->actingAs($this->user);
-        
+
         $response = $this->get('/dashboard/admin');
         $this->assertTrue(in_array($response->status(), [403, 404], true));
     }
@@ -57,7 +58,7 @@ class SecurityIntegrationTest extends TestCase
     {
         $this->user->assignRole('admin');
         $this->actingAs($this->user);
-        
+
         $response = $this->get('/dashboard/admin');
         $this->assertTrue(in_array($response->status(), [200, 301, 302, 404], true));
     }
@@ -66,19 +67,21 @@ class SecurityIntegrationTest extends TestCase
     {
         $this->user->assignRole('super_admin');
         $this->actingAs($this->user);
-        
+
         $dashboards = [
             '/dashboard',
             '/dashboard/admin',
             '/dashboard/pm',
             '/dashboard/designer',
-            '/dashboard/site'
+            '/dashboard/site',
         ];
-        
+
         foreach ($dashboards as $dashboard) {
             $response = $this->get($dashboard);
-            $this->assertTrue(in_array($response->status(), [200, 301, 302, 404], true), 
-                "Super admin should be able to access {$dashboard}");
+            $this->assertTrue(
+                in_array($response->status(), [200, 301, 302, 404], true),
+                "Super admin should be able to access {$dashboard}"
+            );
         }
     }
 }

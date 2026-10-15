@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -8,8 +10,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * CalendarEvent Model - Calendar events từ external calendars
- * 
+ * CalendarEvent Model - Calendar events từ external calendars.
+ *
  * @property string $id ULID primary key
  * @property string|null $project_id ID dự án
  * @property string|null $task_id ID task
@@ -31,13 +33,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class CalendarEvent extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids;
+    use HasFactory;
 
     protected $table = 'calendar_events';
-    
+
     protected $keyType = 'string';
+
     public $incrementing = false;
-    
+
     protected $fillable = [
         'project_id',
         'task_id',
@@ -55,7 +59,7 @@ class CalendarEvent extends Model
         'recurrence',
         'metadata',
         'is_synced',
-        'last_synced_at'
+        'last_synced_at',
     ];
 
     protected $casts = [
@@ -65,17 +69,17 @@ class CalendarEvent extends Model
         'all_day' => 'boolean',
         'metadata' => 'array',
         'is_synced' => 'boolean',
-        'last_synced_at' => 'datetime'
+        'last_synced_at' => 'datetime',
     ];
 
     protected $attributes = [
         'status' => 'confirmed',
         'all_day' => false,
-        'is_synced' => false
+        'is_synced' => false,
     ];
 
     /**
-     * Status constants
+     * Status constants.
      */
     public const STATUS_CONFIRMED = 'confirmed';
     public const STATUS_TENTATIVE = 'tentative';
@@ -88,7 +92,7 @@ class CalendarEvent extends Model
     ];
 
     /**
-     * Relationships
+     * Relationships.
      */
     public function project(): BelongsTo
     {
@@ -111,7 +115,7 @@ class CalendarEvent extends Model
     }
 
     /**
-     * Scopes
+     * Scopes.
      */
     public function scopeByProject($query, string $projectId)
     {
@@ -142,7 +146,7 @@ class CalendarEvent extends Model
     {
         return $query->whereBetween('start_time', [
             now()->startOfWeek(),
-            now()->endOfWeek()
+            now()->endOfWeek(),
         ]);
     }
 
@@ -150,7 +154,7 @@ class CalendarEvent extends Model
     {
         return $query->whereBetween('start_time', [
             now()->startOfMonth(),
-            now()->endOfMonth()
+            now()->endOfMonth(),
         ]);
     }
 
@@ -165,16 +169,17 @@ class CalendarEvent extends Model
     }
 
     /**
-     * Check if event is happening now
+     * Check if event is happening now.
      */
     public function isHappeningNow(): bool
     {
         $now = now();
+
         return $now->between($this->start_time, $this->end_time);
     }
 
     /**
-     * Check if event is upcoming
+     * Check if event is upcoming.
      */
     public function isUpcoming(): bool
     {
@@ -182,7 +187,7 @@ class CalendarEvent extends Model
     }
 
     /**
-     * Check if event is past
+     * Check if event is past.
      */
     public function isPast(): bool
     {
@@ -190,7 +195,7 @@ class CalendarEvent extends Model
     }
 
     /**
-     * Get event duration in minutes
+     * Get event duration in minutes.
      */
     public function getDurationInMinutes(): int
     {
@@ -198,7 +203,7 @@ class CalendarEvent extends Model
     }
 
     /**
-     * Get event duration in hours
+     * Get event duration in hours.
      */
     public function getDurationInHours(): float
     {
@@ -206,7 +211,7 @@ class CalendarEvent extends Model
     }
 
     /**
-     * Check if event conflicts with another event
+     * Check if event conflicts with another event.
      */
     public function conflictsWith(CalendarEvent $otherEvent): bool
     {
@@ -215,7 +220,7 @@ class CalendarEvent extends Model
     }
 
     /**
-     * Get conflicting events
+     * Get conflicting events.
      */
     public function getConflictingEvents(): \Illuminate\Database\Eloquent\Collection
     {
@@ -227,7 +232,7 @@ class CalendarEvent extends Model
     }
 
     /**
-     * Create event from project milestone
+     * Create event from project milestone.
      */
     public static function createFromMilestone(ProjectMilestone $milestone, CalendarIntegration $integration): self
     {
@@ -244,13 +249,13 @@ class CalendarEvent extends Model
             'metadata' => [
                 'type' => 'milestone',
                 'milestone_id' => $milestone->id,
-                'project_id' => $milestone->project_id
-            ]
+                'project_id' => $milestone->project_id,
+            ],
         ]);
     }
 
     /**
-     * Create event from task
+     * Create event from task.
      */
     public static function createFromTask(Task $task, CalendarIntegration $integration): self
     {
@@ -267,13 +272,13 @@ class CalendarEvent extends Model
             'metadata' => [
                 'type' => 'task',
                 'task_id' => $task->id,
-                'project_id' => $task->project_id
-            ]
+                'project_id' => $task->project_id,
+            ],
         ]);
     }
 
     /**
-     * Get events for project timeline
+     * Get events for project timeline.
      */
     public static function getProjectTimeline(string $projectId, Carbon $startDate, Carbon $endDate): \Illuminate\Database\Eloquent\Collection
     {
@@ -285,13 +290,13 @@ class CalendarEvent extends Model
     }
 
     /**
-     * Get user's calendar overview
+     * Get user's calendar overview.
      */
     public static function getUserCalendarOverview(string $userId, int $days = 30): array
     {
         $startDate = now();
         $endDate = now()->addDays($days);
-        
+
         $events = self::whereHas('calendarIntegration')
         ->whereBetween('start_time', [$startDate, $endDate])
         ->with(['project', 'task', 'milestone', 'calendarIntegration'])
@@ -308,16 +313,16 @@ class CalendarEvent extends Model
             'this_week_events' => $events->where('start_time', '>=', now()->startOfWeek())->where('start_time', '<', now()->endOfWeek()),
             'conflicts' => $events->filter(function ($event) {
                 return $event->getConflictingEvents()->isNotEmpty();
-            })
+            }),
         ];
     }
 
     /**
-     * Accessors
+     * Accessors.
      */
     public function getStatusColorAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             self::STATUS_CONFIRMED => 'green',
             self::STATUS_TENTATIVE => 'yellow',
             self::STATUS_CANCELLED => 'red',
@@ -327,7 +332,7 @@ class CalendarEvent extends Model
 
     public function getStatusLabelAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             self::STATUS_CONFIRMED => 'Confirmed',
             self::STATUS_TENTATIVE => 'Tentative',
             self::STATUS_CANCELLED => 'Cancelled',
@@ -340,20 +345,20 @@ class CalendarEvent extends Model
         if ($this->all_day) {
             return 'All day';
         }
-        
+
         $duration = $this->getDurationInMinutes();
-        
+
         if ($duration < 60) {
             return "{$duration} minutes";
         }
-        
+
         $hours = floor($duration / 60);
         $minutes = $duration % 60;
-        
+
         if ($minutes === 0) {
             return "{$hours} hour" . ($hours > 1 ? 's' : '');
         }
-        
+
         return "{$hours}h {$minutes}m";
     }
 
@@ -362,15 +367,15 @@ class CalendarEvent extends Model
         if ($this->milestone_id) {
             return 'milestone';
         }
-        
+
         if ($this->task_id) {
             return 'task';
         }
-        
+
         if ($this->project_id) {
             return 'project';
         }
-        
+
         return 'external';
     }
 }

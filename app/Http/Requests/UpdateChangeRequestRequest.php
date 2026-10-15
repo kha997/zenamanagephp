@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests;
 
@@ -7,14 +9,12 @@ use Illuminate\Validation\Rule;
 use Src\ChangeRequest\Models\ChangeRequest;
 
 /**
- * Form Request để xác thực dữ liệu khi cập nhật Change Request
- * 
- * @package Src\ChangeRequest\Requests
+ * Form Request để xác thực dữ liệu khi cập nhật Change Request.
  */
 class UpdateChangeRequestRequest extends FormRequest
 {
     /**
-     * Xác định user có quyền thực hiện request này không
+     * Xác định user có quyền thực hiện request này không.
      */
     public function authorize(): bool
     {
@@ -22,7 +22,7 @@ class UpdateChangeRequestRequest extends FormRequest
     }
 
     /**
-     * Các quy tắc validation cho request
+     * Các quy tắc validation cho request.
      */
     public function rules(): array
     {
@@ -31,86 +31,86 @@ class UpdateChangeRequestRequest extends FormRequest
                 'sometimes',
                 'required',
                 'string',
-                'max:255'
+                'max:255',
             ],
             'description' => [
                 'sometimes',
                 'required',
                 'string',
-                'max:5000'
+                'max:5000',
             ],
             'impact_days' => [
                 'sometimes',
                 'nullable',
                 'integer',
                 'min:0',
-                'max:365'
+                'max:365',
             ],
             'impact_cost' => [
                 'sometimes',
                 'nullable',
                 'numeric',
                 'min:0',
-                'max:999999999.99'
+                'max:999999999.99',
             ],
             'impact_kpi' => [
                 'sometimes',
                 'nullable',
-                'array'
+                'array',
             ],
             'impact_kpi.*.metric' => [
                 'required_with:impact_kpi',
                 'string',
-                'max:100'
+                'max:100',
             ],
             'impact_kpi.*.value' => [
                 'required_with:impact_kpi',
-                'numeric'
+                'numeric',
             ],
             'impact_kpi.*.unit' => [
                 'nullable',
                 'string',
-                'max:50'
+                'max:50',
             ],
             'attachments' => [
                 'sometimes',
                 'nullable',
-                'array'
+                'array',
             ],
             'attachments.*' => [
                 'string',
-                'max:500'
+                'max:500',
             ],
             'justification' => [
                 'sometimes',
                 'nullable',
                 'string',
-                'max:2000'
+                'max:2000',
             ],
             'priority' => [
                 'sometimes',
                 'required',
-                Rule::in(ChangeRequest::PRIORITIES)
+                Rule::in(ChangeRequest::PRIORITIES),
             ],
             'tags' => [
                 'sometimes',
                 'nullable',
-                'array'
+                'array',
             ],
             'tags.*' => [
                 'string',
-                'max:50'
+                'max:50',
             ],
             'visibility' => [
                 'sometimes',
                 'required',
-                Rule::in(['internal', 'client'])
-            ]
+                Rule::in(['internal', 'client']),
+            ],
         ];
     }
 
     /**
-     * Thông báo lỗi tùy chỉnh
+     * Thông báo lỗi tùy chỉnh.
      */
     public function messages(): array
     {
@@ -127,19 +127,19 @@ class UpdateChangeRequestRequest extends FormRequest
             'priority.required' => 'Mức độ ưu tiên là bắt buộc',
             'priority.in' => 'Mức độ ưu tiên không hợp lệ',
             'visibility.required' => 'Mức độ hiển thị là bắt buộc',
-            'visibility.in' => 'Mức độ hiển thị không hợp lệ'
+            'visibility.in' => 'Mức độ hiển thị không hợp lệ',
         ];
     }
 
     /**
-     * Chuẩn bị dữ liệu trước khi validation
+     * Chuẩn bị dữ liệu trước khi validation.
      */
     protected function prepareForValidation(): void
     {
         // Chuyển đổi tags thành array nếu là string
         if ($this->has('tags') && is_string($this->tags)) {
             $this->merge([
-                'tags' => array_filter(array_map('trim', explode(',', $this->tags)))
+                'tags' => array_filter(array_map('trim', explode(',', $this->tags))),
             ]);
         }
 

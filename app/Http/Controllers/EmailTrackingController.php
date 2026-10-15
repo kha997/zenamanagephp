@@ -16,7 +16,7 @@ class EmailTrackingController extends Controller
     // }
 
     /**
-     * Track email open (pixel tracking)
+     * Track email open (pixel tracking).
      */
     public function trackOpen(Request $request, string $trackingId): Response
     {
@@ -32,14 +32,13 @@ class EmailTrackingController extends Controller
 
             // Return 1x1 transparent pixel
             $pixel = base64_decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
-            
+
             return response($pixel, 200, [
                 'Content-Type' => 'image/gif',
                 'Cache-Control' => 'no-cache, no-store, must-revalidate',
                 'Pragma' => 'no-cache',
                 'Expires' => '0',
             ]);
-
         } catch (\Exception $e) {
             Log::error('Failed to track email open', [
                 'tracking_id' => $trackingId,
@@ -48,12 +47,13 @@ class EmailTrackingController extends Controller
 
             // Still return pixel to avoid broken images
             $pixel = base64_decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
+
             return response($pixel, 200, ['Content-Type' => 'image/gif']);
         }
     }
 
     /**
-     * Track email click (redirect tracking)
+     * Track email click (redirect tracking).
      */
     public function trackClick(Request $request, string $trackingId, string $linkUrl): Response
     {
@@ -69,7 +69,6 @@ class EmailTrackingController extends Controller
 
             // Redirect to the actual URL
             return redirect($linkUrl);
-
         } catch (\Exception $e) {
             Log::error('Failed to track email click', [
                 'tracking_id' => $trackingId,
@@ -83,7 +82,7 @@ class EmailTrackingController extends Controller
     }
 
     /**
-     * Get email analytics for organization
+     * Get email analytics for organization.
      */
     public function getAnalytics(Request $request): Response
     {
@@ -91,12 +90,12 @@ class EmailTrackingController extends Controller
             $user = $request->get('authenticated_user');
             $organizationId = $user->organization_id ?? 1;
 
-            $from = $request->input('from') ? 
-                \Carbon\Carbon::parse($request->input('from')) : 
+            $from = $request->input('from') ?
+                \Carbon\Carbon::parse($request->input('from')) :
                 \Carbon\Carbon::now()->subDays(30);
-            
-            $to = $request->input('to') ? 
-                \Carbon\Carbon::parse($request->input('to')) : 
+
+            $to = $request->input('to') ?
+                \Carbon\Carbon::parse($request->input('to')) :
                 \Carbon\Carbon::now();
 
             $analytics = $this->emailService->getEmailAnalytics($organizationId, $from, $to);
@@ -107,9 +106,8 @@ class EmailTrackingController extends Controller
                 'period' => [
                     'from' => $from->toDateString(),
                     'to' => $to->toDateString(),
-                ]
+                ],
             ]);
-
         } catch (\Exception $e) {
             Log::error('Failed to get email analytics', [
                 'error' => $e->getMessage(),
@@ -124,7 +122,7 @@ class EmailTrackingController extends Controller
     }
 
     /**
-     * Get detailed email tracking data
+     * Get detailed email tracking data.
      */
     public function getTrackingData(Request $request): Response
     {
@@ -164,9 +162,8 @@ class EmailTrackingController extends Controller
                     'last_page' => $trackings->lastPage(),
                     'per_page' => $trackings->perPage(),
                     'total' => $trackings->total(),
-                ]
+                ],
             ]);
-
         } catch (\Exception $e) {
             Log::error('Failed to get tracking data', [
                 'error' => $e->getMessage(),

@@ -1,26 +1,31 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
+use App\Models\Permission;
+use App\Models\Project;
+use App\Models\Role;
+use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
-use App\Models\User;
-use App\Models\Tenant;
-use App\Models\Project;
-use App\Models\Permission;
-use App\Models\Role;
+use Tests\TestCase;
 
 /**
- * Feature tests for Project management endpoints
+ * Feature tests for Project management endpoints.
  */
 class ProjectTest extends TestCase
 {
     use RefreshDatabase;
 
     private User $user;
+
     private Tenant $tenant;
+
     private string $token;
+
     private Role $projectManagerRole;
 
     protected function setUp(): void
@@ -83,7 +88,7 @@ class ProjectTest extends TestCase
     }
 
     /**
-     * Test creating a new project
+     * Test creating a new project.
      */
     public function test_create_project(): void
     {
@@ -95,7 +100,7 @@ class ProjectTest extends TestCase
             'progress' => 0,
             'budget_total' => 100000,
             'start_date' => '2025-01-01',
-            'end_date' => '2025-12-31'
+            'end_date' => '2025-12-31',
         ];
 
         $response = $this->apiPostTenant($this->user, (string) $this->tenant->id, '/api/projects', $projectData, $this->token);
@@ -116,20 +121,20 @@ class ProjectTest extends TestCase
                         'budget_total',
                         'start_date',
                         'end_date',
-                        'tenant_id'
-                    ]
+                        'tenant_id',
+                    ],
                 ]);
 
         self::assertStringStartsWith('PRJ-', $response->json('data.code'));
 
         $this->assertDatabaseHas('projects', [
             'name' => 'Test Project',
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
     }
 
     /**
-     * Test getting all projects
+     * Test getting all projects.
      */
     public function test_get_projects(): void
     {
@@ -148,16 +153,16 @@ class ProjectTest extends TestCase
                             'description',
                             'status',
                             'progress',
-                            'budget_total'
-                        ]
-                    ]
+                            'budget_total',
+                        ],
+                    ],
                 ]);
 
         $this->assertEquals(3, count($response->json('data')));
     }
 
     /**
-     * Test getting a specific project
+     * Test getting a specific project.
      */
     public function test_get_project(): void
     {
@@ -199,12 +204,12 @@ class ProjectTest extends TestCase
                             ],
                             'status',
                         ],
-                    ]
+                    ],
                 ]);
     }
 
     /**
-     * Test updating a project
+     * Test updating a project.
      */
     public function test_update_project(): void
     {
@@ -227,19 +232,19 @@ class ProjectTest extends TestCase
                         'name' => 'Updated Project Name',
                         'description' => 'Updated project description',
                         'status' => 'completed',
-                        'progress' => 100
-                    ]
+                        'progress' => 100,
+                    ],
                 ]);
 
         $this->assertDatabaseHas('projects', [
             'id' => $project->id,
             'name' => 'Updated Project Name',
-            'status' => 'completed'
+            'status' => 'completed',
         ]);
     }
 
     /**
-     * Test deleting a project
+     * Test deleting a project.
      */
     public function test_delete_project(): void
     {
@@ -249,16 +254,16 @@ class ProjectTest extends TestCase
 
         $response->assertStatus(200)
                 ->assertJson([
-                    'message' => 'Project deleted successfully'
+                    'message' => 'Project deleted successfully',
                 ]);
 
         $this->assertSoftDeleted('projects', [
-            'id' => $project->id
+            'id' => $project->id,
         ]);
     }
 
     /**
-     * Test project validation
+     * Test project validation.
      */
     public function test_create_project_validation(): void
     {
@@ -272,9 +277,9 @@ class ProjectTest extends TestCase
                                 'name',
                                 'start_date',
                                 'end_date',
-                            ]
-                        ]
-                    ]
+                            ],
+                        ],
+                    ],
                 ]);
 
         $response->assertJsonPath('error.details.validation.name.0', 'Tên dự án là bắt buộc.');
@@ -283,7 +288,7 @@ class ProjectTest extends TestCase
     }
 
     /**
-     * Test accessing project without authentication
+     * Test accessing project without authentication.
      */
     public function test_access_project_without_auth(): void
     {
@@ -293,20 +298,20 @@ class ProjectTest extends TestCase
     }
 
     /**
-     * Test accessing project from different tenant
+     * Test accessing project from different tenant.
      */
     public function test_access_project_different_tenant(): void
     {
         $otherTenant = Tenant::factory()->create();
         $otherUser = User::factory()->create(['tenant_id' => $otherTenant->id]);
         $otherToken = $otherUser->createToken('test-token')->plainTextToken;
-        
+
         $project = Project::factory()->create(['tenant_id' => $this->tenant->id]);
 
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $otherToken,
             'X-Tenant-ID' => (string) $otherTenant->id,
-            'Accept' => 'application/json'
+            'Accept' => 'application/json',
         ])->getJson("/api/projects/{$project->id}");
 
         $response->assertStatus(403);

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Unit\Models\Treasury;
 
@@ -97,7 +99,7 @@ class EnforcesRowInvariantsTest extends TestCase
         ]);
 
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage("document_type must be one of");
+        $this->expectExceptionMessage('document_type must be one of');
 
         TreasuryFinancialDocument::create([
             'tenant_id' => $tenant->id,

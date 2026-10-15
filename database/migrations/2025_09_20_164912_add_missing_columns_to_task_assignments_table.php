@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     /**
      * Run the migrations.
      */
@@ -16,15 +15,15 @@ return new class extends Migration
             if (!Schema::hasColumn('task_assignments', 'team_id')) {
                 $table->ulid('team_id')->nullable()->after('user_id');
             }
-            
+
             if (!Schema::hasColumn('task_assignments', 'assignment_type')) {
                 $table->string('assignment_type')->default('user')->after('team_id'); // user, team
             }
-            
+
             if (!Schema::hasColumn('task_assignments', 'created_by')) {
                 $table->ulid('created_by')->nullable()->after('notes');
             }
-            
+
             if (!Schema::hasColumn('task_assignments', 'updated_by')) {
                 $table->ulid('updated_by')->nullable()->after('created_by');
             }
@@ -33,11 +32,11 @@ return new class extends Migration
             if (!$this->foreignKeyExists('task_assignments', 'task_assignments_team_id_foreign')) {
                 $table->foreign('team_id')->references('id')->on('teams')->onDelete('cascade');
             }
-            
+
             if (!$this->foreignKeyExists('task_assignments', 'task_assignments_created_by_foreign')) {
                 $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
             }
-            
+
             if (!$this->foreignKeyExists('task_assignments', 'task_assignments_updated_by_foreign')) {
                 $table->foreign('updated_by')->references('id')->on('users')->onDelete('set null');
             }
@@ -46,11 +45,11 @@ return new class extends Migration
             if (!$this->indexExists('task_assignments', 'task_assignments_team_id_index')) {
                 $table->index('team_id');
             }
-            
+
             if (!$this->indexExists('task_assignments', 'task_assignments_assignment_type_index')) {
                 $table->index('assignment_type');
             }
-            
+
             if (!$this->indexExists('task_assignments', 'task_assignments_created_by_index')) {
                 $table->index('created_by');
             }
@@ -68,7 +67,7 @@ return new class extends Migration
 
         $isSqlite = Schema::getConnection()->getDriverName() === 'sqlite';
 
-        if (! $isSqlite) {
+        if (!$isSqlite) {
             foreach (['team_id', 'created_by', 'updated_by'] as $column) {
                 Schema::table('task_assignments', function (Blueprint $table) use ($column) {
                     try {
@@ -102,14 +101,15 @@ return new class extends Migration
     }
 
     /**
-     * Check if foreign key exists
+     * Check if foreign key exists.
      */
     private function foreignKeyExists(string $table, string $foreignKey): bool
     {
         $driver = DB::getDriverName();
-        
+
         if ($driver === 'sqlite') {
             $foreignKeys = DB::select("PRAGMA foreign_key_list({$table})");
+
             return collect($foreignKeys)->contains('id', $foreignKey);
         } elseif ($driver === 'mysql') {
             $result = DB::select("
@@ -119,27 +119,30 @@ return new class extends Migration
                 AND TABLE_NAME = '{$table}' 
                 AND CONSTRAINT_NAME = '{$foreignKey}'
             ");
+
             return $result[0]->count > 0;
         }
-        
+
         return false;
     }
 
     /**
-     * Check if index exists
+     * Check if index exists.
      */
     private function indexExists(string $table, string $index): bool
     {
         $driver = DB::getDriverName();
-        
+
         if ($driver === 'sqlite') {
             $indexes = DB::select("PRAGMA index_list({$table})");
+
             return collect($indexes)->contains('name', $index);
         } elseif ($driver === 'mysql') {
             $result = DB::select("SHOW INDEX FROM {$table} WHERE Key_name = '{$index}'");
+
             return count($result) > 0;
         }
-        
+
         return false;
     }
 };

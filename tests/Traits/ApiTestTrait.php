@@ -1,16 +1,16 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Traits;
 
 use Illuminate\Testing\TestResponse;
 
 /**
- * Trait ApiTestTrait
- * 
+ * Trait ApiTestTrait.
+ *
  * Provides API testing utilities for JSend response format
  * Handles common API assertions and response validations
- * 
- * @package Tests\Traits
  */
 trait ApiTestTrait
 {
@@ -27,8 +27,8 @@ trait ApiTestTrait
     }
 
     /**
-     * Assert JSend success response
-     * 
+     * Assert JSend success response.
+     *
      * @param TestResponse $response
      * @param array $expectedData
      * @return void
@@ -37,7 +37,7 @@ trait ApiTestTrait
     {
         $response->assertStatus(200)
                 ->assertJson([
-                    'status' => 'success'
+                    'status' => 'success',
                 ]);
 
         if (!empty($expectedData)) {
@@ -46,8 +46,8 @@ trait ApiTestTrait
     }
 
     /**
-     * Assert JSend error response
-     * 
+     * Assert JSend error response.
+     *
      * @param TestResponse $response
      * @param string $expectedMessage
      * @param int $expectedStatus
@@ -57,7 +57,7 @@ trait ApiTestTrait
     {
         $response->assertStatus($expectedStatus)
                 ->assertJson([
-                    'status' => 'error'
+                    'status' => 'error',
                 ]);
 
         if (!empty($expectedMessage)) {
@@ -66,8 +66,8 @@ trait ApiTestTrait
     }
 
     /**
-     * Assert JSend fail response (validation errors)
-     * 
+     * Assert JSend fail response (validation errors).
+     *
      * @param TestResponse $response
      * @param array $expectedErrors
      * @return void
@@ -76,7 +76,7 @@ trait ApiTestTrait
     {
         $response->assertStatus(422)
                 ->assertJson([
-                    'status' => 'fail'
+                    'status' => 'fail',
                 ]);
 
         if (!empty($expectedErrors)) {
@@ -85,8 +85,8 @@ trait ApiTestTrait
     }
 
     /**
-     * Assert unauthorized response
-     * 
+     * Assert unauthorized response.
+     *
      * @param TestResponse $response
      * @return void
      */
@@ -95,13 +95,13 @@ trait ApiTestTrait
         $response->assertStatus(401)
                 ->assertJson([
                     'status' => 'error',
-                    'message' => 'Unauthorized'
+                    'message' => 'Unauthorized',
                 ]);
     }
 
     /**
-     * Assert forbidden response
-     * 
+     * Assert forbidden response.
+     *
      * @param TestResponse $response
      * @return void
      */
@@ -110,13 +110,13 @@ trait ApiTestTrait
         $response->assertStatus(403)
                 ->assertJson([
                     'status' => 'error',
-                    'message' => 'Forbidden'
+                    'message' => 'Forbidden',
                 ]);
     }
 
     /**
-     * Assert not found response
-     * 
+     * Assert not found response.
+     *
      * @param TestResponse $response
      * @return void
      */
@@ -125,13 +125,13 @@ trait ApiTestTrait
         $response->assertStatus(404)
                 ->assertJson([
                     'status' => 'error',
-                    'message' => 'Not Found'
+                    'message' => 'Not Found',
                 ]);
     }
 
     /**
-     * Assert pagination structure in response
-     * 
+     * Assert pagination structure in response.
+     *
      * @param TestResponse $response
      * @return void
      */
@@ -146,8 +146,8 @@ trait ApiTestTrait
                 'total',
                 'last_page',
                 'from',
-                'to'
-            ]
+                'to',
+            ],
         ]);
     }
 
@@ -185,8 +185,8 @@ trait ApiTestTrait
     }
 
     /**
-     * Make authenticated API request
-     * 
+     * Make authenticated API request.
+     *
      * @param string $method
      * @param string $uri
      * @param array $data
@@ -197,7 +197,7 @@ trait ApiTestTrait
     {
         $defaultHeaders = [
             'Accept' => 'application/json',
-            'Content-Type' => 'application/json'
+            'Content-Type' => 'application/json',
         ];
 
         $headers = array_merge($defaultHeaders, $headers);

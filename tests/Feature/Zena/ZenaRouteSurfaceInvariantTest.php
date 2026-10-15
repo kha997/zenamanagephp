@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Zena;
 
@@ -131,6 +133,7 @@ class ZenaRouteSurfaceInvariantTest extends TestCase
 
         if (str_contains($entry, 'RoleBasedAccessControlMiddleware:')) {
             $parts = explode(':', $entry, 2);
+
             return isset($parts[1]) && $parts[1] !== '';
         }
 
@@ -146,6 +149,7 @@ class ZenaRouteSurfaceInvariantTest extends TestCase
         }
 
         $normalized = ltrim($entry, '\\');
+
         return $normalized === 'App\\Http\\Middleware\\RoleBasedAccessControlMiddleware'
             || str_ends_with($normalized, 'RoleBasedAccessControlMiddleware');
     }

@@ -1,34 +1,38 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Accessibility;
 
-use Tests\TestCase;
-use App\Models\User;
-use App\Models\Tenant;
-use App\Models\Role;
 use App\Models\Permission;
+use App\Models\Role;
+use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
+use Tests\TestCase;
 
 class AccessibilityTest extends TestCase
 {
     use RefreshDatabase;
 
     protected $user;
+
     protected $tenant;
+
     protected array $sessionTenantData;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create tenant
         $this->tenant = Tenant::factory()->create();
-        
+
         // Create user
         $this->user = User::factory()->create([
             'tenant_id' => $this->tenant->id,
-            'role' => 'project_manager'
+            'role' => 'project_manager',
         ]);
 
         $this->actingAs($this->user);
@@ -36,150 +40,145 @@ class AccessibilityTest extends TestCase
     }
 
     /**
-     * Test WCAG 2.1 AA compliance for dashboard page
+     * Test WCAG 2.1 AA compliance for dashboard page.
      */
     public function test_dashboard_wcag_2_1_aa_compliance()
     {
         $response = $this->visitAppRoute('/app/dashboard');
 
         $response->assertStatus(200);
-        
+
         $content = $response->getContent();
-        
+
         // Test for proper heading structure (h1, h2, h3 hierarchy)
         $this->assertStringContainsString('<h1', $content, 'Dashboard should have h1 heading');
-        
+
         // If image tags are present, each must carry alt text.
         preg_match_all('/<img\b[^>]*>/i', $content, $imageTags);
         foreach ($imageTags[0] as $imageTag) {
             $this->assertMatchesRegularExpression('/\balt\s*=\s*["\'][^"\']*["\']/i', $imageTag, 'Dashboard images should have alt text');
         }
-        
     }
 
     /**
-     * Test keyboard navigation support
+     * Test keyboard navigation support.
      */
     public function test_keyboard_navigation_support()
     {
         $response = $this->visitAppRoute('/app/dashboard');
 
         $response->assertStatus(200);
-        
+
         $content = $response->getContent();
-        
+
         // Test for tabindex attributes
         $this->assertStringNotContainsString('tabindex="-1"', $content, 'Dashboard should not have negative tabindex');
-        
+
         // Test for proper focus management
         $this->assertStringContainsString('focus', $content, 'Dashboard should have focus management');
-        
+
         // Test for skip links
         $this->assertStringContainsString('skip', $content, 'Dashboard should have skip links');
     }
 
     /**
-     * Test color contrast compliance
+     * Test color contrast compliance.
      */
     public function test_color_contrast_compliance()
     {
         $response = $this->visitAppRoute('/app/dashboard');
 
         $response->assertStatus(200);
-        
+
         $content = $response->getContent();
-        
+
         // Test for proper color contrast classes
         $this->assertStringContainsString('text-', $content, 'Dashboard should use proper text color classes');
         $this->assertStringContainsString('bg-', $content, 'Dashboard should use proper background color classes');
-        
     }
 
     /**
-     * Test screen reader compatibility
+     * Test screen reader compatibility.
      */
     public function test_screen_reader_compatibility()
     {
         $response = $this->visitAppRoute('/app/dashboard');
 
         $response->assertStatus(200);
-        
+
         $content = $response->getContent();
-        
-        
+
         // Test for proper heading structure
         $this->assertStringContainsString('<h1', $content, 'Dashboard should have h1 heading');
         $this->assertStringContainsString('<h2', $content, 'Dashboard should have h2 headings');
     }
 
     /**
-     * Test mobile accessibility
+     * Test mobile accessibility.
      */
     public function test_mobile_accessibility()
     {
         $response = $this->visitAppRoute('/app/dashboard');
 
         $response->assertStatus(200);
-        
+
         $content = $response->getContent();
-        
+
         // Responsive viewport meta is the actual mobile-accessibility requirement
         $this->assertStringContainsString('name="viewport"', $content, 'Dashboard should declare a viewport meta tag');
         $this->assertStringContainsString('width=device-width', $content, 'Dashboard viewport should scale to device width');
     }
 
     /**
-     * Test projects page accessibility
+     * Test projects page accessibility.
      */
     public function test_projects_page_accessibility()
     {
         $response = $this->visitAppRoute('/app/projects');
 
         $response->assertStatus(200);
-        
+
         $content = $response->getContent();
-        
+
         // Test for proper heading structure
         $this->assertStringContainsString('<h1', $content, 'Projects page should have h1 heading');
-        
+
         // Tabular data must use semantic table markup for screen readers
         $this->assertTrue(
             str_contains($content, '<table') || str_contains($content, 'Chưa có dự án'),
             'Projects page should render a semantic table (or an explicit empty state)'
         );
-        
     }
 
     /**
-     * Test tasks page accessibility
+     * Test tasks page accessibility.
      */
     public function test_tasks_page_accessibility()
     {
         $response = $this->visitAppRoute('/app/tasks');
 
         $response->assertStatus(200);
-        
+
         $content = $response->getContent();
-        
+
         // Test for proper heading structure
         $this->assertStringContainsString('<h1', $content, 'Tasks page should have h1 heading');
-        
+
         // Tabular data must use semantic table markup for screen readers
         $this->assertTrue(
             str_contains($content, '<table') || str_contains($content, 'Chưa có công việc'),
             'Tasks page should render a semantic table (or an explicit empty state)'
         );
-        
     }
 
     /**
-     * Test admin dashboard accessibility
+     * Test admin dashboard accessibility.
      */
     public function test_admin_dashboard_accessibility()
     {
         $admin = User::factory()->create([
             'tenant_id' => $this->tenant->id,
-            'role' => 'super_admin'
+            'role' => 'super_admin',
         ]);
 
         $adminRole = Role::firstOrCreate(
@@ -189,7 +188,7 @@ class AccessibilityTest extends TestCase
                 'tenant_id' => $this->tenant->id,
                 'allow_override' => true,
                 'is_active' => true,
-                'description' => 'System super administrator'
+                'description' => 'System super administrator',
             ]
         );
 
@@ -203,7 +202,7 @@ class AccessibilityTest extends TestCase
                 'name' => 'admin',
                 'module' => 'admin',
                 'action' => 'access',
-                'description' => 'Full admin access'
+                'description' => 'Full admin access',
             ]
         );
 
@@ -215,58 +214,58 @@ class AccessibilityTest extends TestCase
             ->get('/admin/dashboard');
 
         $response->assertStatus(200);
-        
+
         $content = $response->getContent();
-        
+
         // Test for proper heading structure
         $this->assertStringContainsString('<h1', $content, 'Admin dashboard should have h1 heading');
-        
+
         // Test for proper navigation
         $this->assertStringContainsString('nav', $content, 'Admin dashboard should have proper navigation');
     }
 
     /**
-     * Test error page accessibility
+     * Test error page accessibility.
      */
     public function test_error_page_accessibility()
     {
         $response = $this->get('/nonexistent-page');
 
         $response->assertStatus(404);
-        
+
         $content = $response->getContent();
-        
+
         // Test for proper heading structure
         $this->assertStringContainsString('<h1', $content, 'Error page should have h1 heading');
-        
+
         // Test for proper error message
         $this->assertStringContainsString('error', $content, 'Error page should have proper error message');
-        
+
         // Test for proper navigation back
         $this->assertStringContainsString('back', $content, 'Error page should have navigation back');
     }
 
     /**
-     * Test login page accessibility
+     * Test login page accessibility.
      */
     public function test_login_page_accessibility()
     {
         $response = $this->get('/login');
 
         $response->assertStatus(200);
-        
+
         $content = $response->getContent();
-        
+
         // Test for proper heading structure
         $this->assertStringContainsString('<h1', $content, 'Login page should have h1 heading');
-        
+
         // Test for proper form labels
         $this->assertStringContainsString('<label', $content, 'Login page should have proper form labels');
-        
+
         // Test for proper input types
         $this->assertStringContainsString('type="email"', $content, 'Login page should have email input type');
         $this->assertStringContainsString('type="password"', $content, 'Login page should have password input type');
-        
+
         // Test for proper button labels
         $this->assertStringContainsString('<button', $content, 'Login page should have proper button labels');
     }

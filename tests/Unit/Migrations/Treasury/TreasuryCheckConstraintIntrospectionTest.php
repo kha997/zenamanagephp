@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Unit\Migrations\Treasury;
 
@@ -46,7 +48,7 @@ class TreasuryCheckConstraintIntrospectionTest extends TestCase
         if (DB::getDriverName() !== 'sqlite') {
             $this->markTestSkipped(
                 'dependency: SQLite-specific schema introspection (sqlite_master). '
-                . 'Current connection driver is "'.DB::getDriverName().'", not sqlite; '
+                . 'Current connection driver is "' . DB::getDriverName() . '", not sqlite; '
                 . 'see test_mysql_check_constraints_are_visible_in_information_schema for the MySQL-path equivalent.'
             );
         }
@@ -60,7 +62,7 @@ class TreasuryCheckConstraintIntrospectionTest extends TestCase
 
             foreach ($checkNames as $name) {
                 $this->assertMatchesRegularExpression(
-                    '/CONSTRAINT ["\']'.preg_quote($name, '/').'["\']\s+CHECK/',
+                    '/CONSTRAINT ["\']' . preg_quote($name, '/') . '["\']\s+CHECK/',
                     $row->sql,
                     "expected a real CHECK constraint named {$name} in {$table}'s CREATE TABLE SQL, found none"
                 );
@@ -75,7 +77,7 @@ class TreasuryCheckConstraintIntrospectionTest extends TestCase
             $this->markTestSkipped(
                 'dependency: SQLite-specific trigger-absence check (confirms the Option B correction '
                 . 'removed the earlier trigger-based substitute). Current connection driver is "'
-                . DB::getDriverName().'", not sqlite.'
+                . DB::getDriverName() . '", not sqlite.'
             );
         }
 
@@ -116,7 +118,7 @@ class TreasuryCheckConstraintIntrospectionTest extends TestCase
         foreach ($this->expectedChecks() as $table => $checkNames) {
             foreach ($checkNames as $name) {
                 $row = DB::connection('mysql')->selectOne(
-                    'SELECT CHECK_CLAUSE FROM information_schema.CHECK_CONSTRAINTS '.
+                    'SELECT CHECK_CLAUSE FROM information_schema.CHECK_CONSTRAINTS ' .
                     'WHERE CONSTRAINT_SCHEMA = DATABASE() AND CONSTRAINT_NAME = ?',
                     [$name]
                 );

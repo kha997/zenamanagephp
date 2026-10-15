@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Auth;
 
@@ -25,7 +27,7 @@ class SimpleJwtGuard implements Guard
         }
 
         $token = $this->getTokenFromRequest();
-        
+
         if ($token) {
             $payload = $this->authService->validateToken($token);
             if ($payload) {
@@ -44,6 +46,7 @@ class SimpleJwtGuard implements Guard
     public function login($user): string
     {
         $this->setUser($user);
+
         return $this->authService->createTokenForUser($user);
     }
 
@@ -54,12 +57,12 @@ class SimpleJwtGuard implements Guard
             if (app()->bound('request')) {
                 $request = app('request');
                 $header = $request->header('Authorization');
-                
+
                 if ($header && str_starts_with($header, 'Bearer ')) {
                     return substr($header, 7);
                 }
             }
-            
+
             // Fallback: return null if no request available
             return null;
         } catch (\Exception $e) {

@@ -5,8 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     private const COPY_COLUMNS = [
         'id',
         'project_id',
@@ -42,6 +41,7 @@ return new class extends Migration
 
         if (Schema::getConnection()->getDriverName() === 'sqlite') {
             $this->rebuildDocumentsTable('projects');
+
             return;
         }
 
@@ -70,6 +70,7 @@ return new class extends Migration
 
         if (Schema::getConnection()->getDriverName() === 'sqlite') {
             $this->rebuildDocumentsTable('zena_projects');
+
             return;
         }
 
@@ -128,76 +129,76 @@ return new class extends Migration
 
         try {
             Schema::create('documents', function (Blueprint $table) use ($projectTable) {
-            $table->ulid('id')->primary();
-            $table->ulid('project_id')->nullable();
-            $table->ulid('uploaded_by');
-            $table->string('name');
-            $table->string('original_name');
-            $table->string('title')->nullable();
-            $table->string('file_path');
-            $table->string('file_type');
-            $table->string('mime_type');
-            $table->bigInteger('file_size');
-            $table->string('file_hash');
-            $table->string('category')->default('general');
-            $table->text('description')->nullable();
-            $table->json('metadata')->nullable();
-            $table->string('status')->default('active');
-            $table->integer('version')->default(1);
-            $table->boolean('is_current_version')->default(true);
-            $table->ulid('parent_document_id')->nullable();
-            $table->timestamps();
-            $table->softDeletes();
-            $table->string('deprecated_notice')->nullable();
-            $table->ulid('tenant_id')->nullable();
-            $table->ulid('created_by')->nullable();
-            $table->ulid('updated_by')->nullable();
+                $table->ulid('id')->primary();
+                $table->ulid('project_id')->nullable();
+                $table->ulid('uploaded_by');
+                $table->string('name');
+                $table->string('original_name');
+                $table->string('title')->nullable();
+                $table->string('file_path');
+                $table->string('file_type');
+                $table->string('mime_type');
+                $table->bigInteger('file_size');
+                $table->string('file_hash');
+                $table->string('category')->default('general');
+                $table->text('description')->nullable();
+                $table->json('metadata')->nullable();
+                $table->string('status')->default('active');
+                $table->integer('version')->default(1);
+                $table->boolean('is_current_version')->default(true);
+                $table->ulid('parent_document_id')->nullable();
+                $table->timestamps();
+                $table->softDeletes();
+                $table->string('deprecated_notice')->nullable();
+                $table->ulid('tenant_id')->nullable();
+                $table->ulid('created_by')->nullable();
+                $table->ulid('updated_by')->nullable();
 
-            $table->foreign('project_id')
-                  ->references('id')
-                  ->on($projectTable)
-                  ->cascadeOnDelete()
-                  ->cascadeOnUpdate();
+                $table->foreign('project_id')
+                      ->references('id')
+                      ->on($projectTable)
+                      ->cascadeOnDelete()
+                      ->cascadeOnUpdate();
 
-            $table->foreign('tenant_id')
-                  ->references('id')
-                  ->on('tenants')
-                  ->cascadeOnDelete()
-                  ->cascadeOnUpdate();
+                $table->foreign('tenant_id')
+                      ->references('id')
+                      ->on('tenants')
+                      ->cascadeOnDelete()
+                      ->cascadeOnUpdate();
 
-            $table->foreign('uploaded_by')
-                  ->references('id')
-                  ->on('users')
-                  ->cascadeOnDelete()
-                  ->cascadeOnUpdate();
+                $table->foreign('uploaded_by')
+                      ->references('id')
+                      ->on('users')
+                      ->cascadeOnDelete()
+                      ->cascadeOnUpdate();
 
-            $table->foreign('parent_document_id')
-                  ->references('id')
-                  ->on('documents')
-                  ->nullOnDelete()
-                  ->cascadeOnUpdate();
+                $table->foreign('parent_document_id')
+                      ->references('id')
+                      ->on('documents')
+                      ->nullOnDelete()
+                      ->cascadeOnUpdate();
 
-            $table->foreign('created_by')
-                  ->references('id')
-                  ->on('users')
-                  ->nullOnDelete();
+                $table->foreign('created_by')
+                      ->references('id')
+                      ->on('users')
+                      ->nullOnDelete();
 
-            $table->foreign('updated_by')
-                  ->references('id')
-                  ->on('users')
-                  ->nullOnDelete();
+                $table->foreign('updated_by')
+                      ->references('id')
+                      ->on('users')
+                      ->nullOnDelete();
 
-            $table->index(['project_id', 'category']);
-            $table->index(['file_hash']);
-            $table->index(['parent_document_id', 'version']);
-            $table->index(['tenant_id', 'id'], 'idx_documents_tenant_id');
-            $table->index(['tenant_id', 'status'], 'documents_tenant_status_index');
-            $table->index(['project_id', 'category', 'status'], 'documents_project_category_status_index');
-            $table->index(['created_at'], 'documents_created_at_index');
-            $table->unique(['file_hash'], 'documents_file_hash_unique');
-            $table->index('created_by', 'documents_created_by_index');
-            $table->index('updated_by', 'documents_updated_by_index');
-        });
+                $table->index(['project_id', 'category']);
+                $table->index(['file_hash']);
+                $table->index(['parent_document_id', 'version']);
+                $table->index(['tenant_id', 'id'], 'idx_documents_tenant_id');
+                $table->index(['tenant_id', 'status'], 'documents_tenant_status_index');
+                $table->index(['project_id', 'category', 'status'], 'documents_project_category_status_index');
+                $table->index(['created_at'], 'documents_created_at_index');
+                $table->unique(['file_hash'], 'documents_file_hash_unique');
+                $table->index('created_by', 'documents_created_by_index');
+                $table->index('updated_by', 'documents_updated_by_index');
+            });
 
             DB::table('documents')->insertUsing(self::COPY_COLUMNS, DB::table($backupTable)->select(self::COPY_COLUMNS));
 

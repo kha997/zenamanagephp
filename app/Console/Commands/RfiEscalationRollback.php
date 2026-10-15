@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Console\Commands;
 
@@ -18,6 +20,7 @@ class RfiEscalationRollback extends Command
 
         if (!$reason) {
             $this->error('--reason is required — rollback must record why it happened');
+
             return self::FAILURE;
         }
 

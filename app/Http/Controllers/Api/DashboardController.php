@@ -1,15 +1,17 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Session;
 
 use App\Http\Controllers\Controller;
 use App\Models\UserDashboard;
 use App\Services\DashboardService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Session;
 
 class DashboardController extends Controller
 {
@@ -26,7 +28,7 @@ class DashboardController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $this->formatDashboard($dashboard)
+            'data' => $this->formatDashboard($dashboard),
         ]);
     }
 
@@ -36,7 +38,7 @@ class DashboardController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $template
+            'data' => $template,
         ]);
     }
 
@@ -46,7 +48,7 @@ class DashboardController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Dashboard reset to default'
+            'message' => 'Dashboard reset to default',
         ]);
     }
 
@@ -56,7 +58,7 @@ class DashboardController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $widgets
+            'data' => $widgets,
         ]);
     }
 
@@ -64,7 +66,7 @@ class DashboardController extends Controller
     {
         $validated = $request->validate([
             'widget_id' => 'required|string|exists:dashboard_widgets,id',
-            'config' => 'sometimes|array'
+            'config' => 'sometimes|array',
         ]);
 
         $result = $this->dashboardService->addWidget(
@@ -102,7 +104,7 @@ class DashboardController extends Controller
     public function updateWidgetConfig(Request $request, string $widgetId): JsonResponse
     {
         $validated = $request->validate([
-            'config' => 'required|array'
+            'config' => 'required|array',
         ]);
 
         $result = $this->dashboardService->updateWidgetConfig($request->user(), $widgetId, $validated['config']);
@@ -119,7 +121,7 @@ class DashboardController extends Controller
     {
         $validated = $request->validate([
             'layout' => 'required|array',
-            'widgets' => 'sometimes|array'
+            'widgets' => 'sometimes|array',
         ]);
 
         $dashboard = $this->dashboardService->updateDashboardLayout(
@@ -131,7 +133,7 @@ class DashboardController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Dashboard layout updated',
-            'layout' => $dashboard->layout
+            'layout' => $dashboard->layout,
         ]);
     }
 
@@ -141,7 +143,7 @@ class DashboardController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $alerts
+            'data' => $alerts,
         ]);
     }
 
@@ -151,7 +153,7 @@ class DashboardController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Alert marked as read'
+            'message' => 'Alert marked as read',
         ]);
     }
 
@@ -161,7 +163,7 @@ class DashboardController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'All alerts marked as read'
+            'message' => 'All alerts marked as read',
         ]);
     }
 
@@ -176,7 +178,7 @@ class DashboardController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $metrics
+            'data' => $metrics,
         ]);
     }
 
@@ -188,7 +190,7 @@ class DashboardController extends Controller
     public function saveUserPreferences(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'preferences' => 'required|array'
+            'preferences' => 'required|array',
         ]);
 
         $result = $this->dashboardService->saveUserPreferences($request->user(), $validated['preferences']);
@@ -196,23 +198,24 @@ class DashboardController extends Controller
         return response()->json([
             'success' => true,
             'message' => $result['message'] ?? 'Preferences saved',
-            'dashboard' => $result['dashboard'] ?? null
+            'dashboard' => $result['dashboard'] ?? null,
         ]);
     }
+
     public function metrics(Request $request): JsonResponse
     {
         $period = $request->get('period', 30);
         $tenantId = Auth::user()->tenant_id;
-        
+
         // Get real metrics from database
         $metrics = [
             'activeProjects' => \App\Models\Project::where('tenant_id', $tenantId)
                 ->where('status', 'active')
                 ->count(),
-            'openTasks' => \App\Models\Task::whereHas('project', function($q) use ($tenantId) {
+            'openTasks' => \App\Models\Task::whereHas('project', function ($q) use ($tenantId) {
                 $q->where('tenant_id', $tenantId);
             })->whereIn('status', ['pending', 'in_progress'])->count(),
-            'overdueTasks' => \App\Models\Task::whereHas('project', function($q) use ($tenantId) {
+            'overdueTasks' => \App\Models\Task::whereHas('project', function ($q) use ($tenantId) {
                 $q->where('tenant_id', $tenantId);
             })->where('due_date', '<', now())->whereNotIn('status', ['completed'])->count(),
             'onSchedule' => \App\Models\Project::where('tenant_id', $tenantId)
@@ -222,51 +225,51 @@ class DashboardController extends Controller
             'projectsChange' => '+2',
             'tasksChange' => '+5',
             'overdueChange' => '-1',
-            'scheduleChange' => '+3'
+            'scheduleChange' => '+3',
         ];
-        
+
         $alerts = [
             [
                 'id' => 1,
                 'message' => 'Project deadline approaching in 2 days',
                 'priority' => 'high',
-                'created_at' => now()->subHours(2)
+                'created_at' => now()->subHours(2),
             ],
             [
                 'id' => 2,
                 'message' => '3 tasks are overdue',
                 'priority' => 'high',
-                'created_at' => now()->subHours(1)
-            ]
+                'created_at' => now()->subHours(1),
+            ],
         ];
-        
+
         $activity = [
             [
                 'id' => 1,
                 'description' => 'John completed task "Design Homepage"',
                 'time' => '2 minutes ago',
-                'user' => 'John Doe'
+                'user' => 'John Doe',
             ],
             [
                 'id' => 2,
                 'description' => 'Sarah created new project "Mobile App"',
                 'time' => '15 minutes ago',
-                'user' => 'Sarah Smith'
-            ]
+                'user' => 'Sarah Smith',
+            ],
         ];
-        
+
         return response()->json([
             'success' => true,
             'metrics' => $metrics,
             'alerts' => $alerts,
             'activity' => $activity,
-            'period' => $period
+            'period' => $period,
         ]);
     }
 
     /**
      * Get comprehensive dashboard data
-     * GET /api/dashboard/data
+     * GET /api/dashboard/data.
      */
     public function getDashboardData(Request $request): JsonResponse
     {
@@ -306,14 +309,14 @@ class DashboardController extends Controller
                         'generated_at' => $generatedAt,
                         'health' => 'stable',
                     ],
-                    'tenant_id' => $request->header('X-Tenant-ID')
-                ]
+                    'tenant_id' => $request->header('X-Tenant-ID'),
+                ],
             ]);
         }
 
         // Temporarily use mock data for testing without authentication
         $tenantId = 1; // Mock tenant ID
-        
+
         try {
             // Get KPIs
             $kpis = [
@@ -337,7 +340,7 @@ class DashboardController extends Controller
                     ->whereDate('updated_at', today())->count(),
                 'teamMembers' => \App\Models\User::where('tenant_id', $tenantId)
                     ->where('is_active', true)->count(),
-                'projects' => \App\Models\Project::where('tenant_id', $tenantId)->count()
+                'projects' => \App\Models\Project::where('tenant_id', $tenantId)->count(),
             ];
 
             // Get alerts
@@ -355,7 +358,7 @@ class DashboardController extends Controller
                         'description' => $activity->description,
                         'user' => $activity->user->name ?? 'System',
                         'created_at' => $activity->created_at->toISOString(),
-                        'metadata' => $activity->metadata ?? []
+                        'metadata' => $activity->metadata ?? [],
                     ];
                 });
 
@@ -365,22 +368,21 @@ class DashboardController extends Controller
                     'kpis' => $kpis,
                     'alerts' => $alerts,
                     'activities' => $activities,
-                    'generated_at' => now()->toISOString()
-                ]
+                    'generated_at' => now()->toISOString(),
+                ],
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'error' => 'Failed to load dashboard data',
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 500);
         }
     }
 
     /**
      * Get widget data
-     * GET /api/dashboard/widget/{widget}
+     * GET /api/dashboard/widget/{widget}.
      */
     public function getWidgetData(Request $request, string $widget): JsonResponse
     {
@@ -393,13 +395,13 @@ class DashboardController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $data
+            'data' => $data,
         ]);
     }
 
     /**
      * Get analytics data
-     * GET /api/dashboard/analytics
+     * GET /api/dashboard/analytics.
      */
     public function getAnalytics(Request $request): JsonResponse
     {
@@ -412,7 +414,7 @@ class DashboardController extends Controller
                 'project_trends' => $this->getProjectTrends($tenantId, $period),
                 'task_completion' => $this->getTaskCompletionTrend($tenantId, $period),
                 'budget_utilization' => $this->getBudgetUtilizationTrend($tenantId, $period),
-                'team_performance' => $this->getTeamPerformance($tenantId, $period)
+                'team_performance' => $this->getTeamPerformance($tenantId, $period),
             ];
 
             return response()->json([
@@ -423,25 +425,24 @@ class DashboardController extends Controller
                         'charts' => $analytics,
                         'metrics' => [
                             'budget_utilization' => $analytics['budget_utilization'],
-                            'team_performance' => $analytics['team_performance']
+                            'team_performance' => $analytics['team_performance'],
                         ],
-                        'trends' => $analytics
+                        'trends' => $analytics,
                     ]
-                )
+                ),
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'error' => 'Failed to load analytics',
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 500);
         }
     }
 
     /**
      * Get notifications
-     * GET /api/dashboard/notifications
+     * GET /api/dashboard/notifications.
      */
     public function getNotifications(Request $request): JsonResponse
     {
@@ -462,7 +463,7 @@ class DashboardController extends Controller
                         'title' => $notification->title,
                         'message' => $notification->message,
                         'created_at' => $notification->created_at->toISOString(),
-                        'metadata' => $notification->metadata ?? []
+                        'metadata' => $notification->metadata ?? [],
                     ];
                 });
 
@@ -472,33 +473,32 @@ class DashboardController extends Controller
                 'success' => true,
                 'data' => [
                     'notifications' => $notificationArray,
-                    'unread_count' => count($notificationArray)
-                ]
+                    'unread_count' => count($notificationArray),
+                ],
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'error' => 'Failed to load notifications',
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 500);
         }
     }
 
     /**
      * Update user preferences
-     * PUT /api/dashboard/preferences
+     * PUT /api/dashboard/preferences.
      */
     public function updatePreferences(Request $request): JsonResponse
     {
         $user = Auth::user();
-        
+
         try {
             $preferences = $request->validate([
                 'dashboard_layout' => 'array',
                 'widget_settings' => 'array',
                 'theme' => 'string|in:light,dark,auto',
-                'notifications' => 'array'
+                'notifications' => 'array',
             ]);
 
             $user->preferences = array_merge($user->preferences ?? [], $preferences);
@@ -506,21 +506,20 @@ class DashboardController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Preferences updated successfully'
+                'message' => 'Preferences updated successfully',
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'error' => 'Failed to update preferences',
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 500);
         }
     }
 
     /**
      * Get user preferences
-     * GET /api/dashboard/preferences
+     * GET /api/dashboard/preferences.
      */
     public function getPreferences(Request $request): JsonResponse
     {
@@ -533,14 +532,14 @@ class DashboardController extends Controller
             'data' => [
                 'theme' => $preferences['theme'] ?? null,
                 'layout' => $preferences['dashboard_layout'] ?? [],
-                'widgets' => $preferences['widget_settings'] ?? []
-            ]
+                'widgets' => $preferences['widget_settings'] ?? [],
+            ],
         ]);
     }
 
     /**
      * Get statistics
-     * GET /api/dashboard/statistics
+     * GET /api/dashboard/statistics.
      */
     public function getStatistics(Request $request): JsonResponse
     {
@@ -557,7 +556,7 @@ class DashboardController extends Controller
                         ->where('status', 'completed')->count(),
                     'overdue' => \App\Models\Project::where('tenant_id', $tenantId)
                         ->where('end_date', '<', now())
-                        ->whereNotIn('status', ['completed', 'cancelled'])->count()
+                        ->whereNotIn('status', ['completed', 'cancelled'])->count(),
                 ],
                 'tasks' => [
                     'total' => \App\Models\Task::where('tenant_id', $tenantId)->count(),
@@ -569,27 +568,26 @@ class DashboardController extends Controller
                         ->where('status', 'completed')->count(),
                     'overdue' => \App\Models\Task::where('tenant_id', $tenantId)
                         ->where('due_date', '<', now())
-                        ->whereNotIn('status', ['completed'])->count()
+                        ->whereNotIn('status', ['completed'])->count(),
                 ],
                 'team' => [
                     'total_users' => \App\Models\User::where('tenant_id', $tenantId)->count(),
                     'active_users' => \App\Models\User::where('tenant_id', $tenantId)
                         ->where('is_active', true)->count(),
                     'online_users' => \App\Models\User::where('tenant_id', $tenantId)
-                        ->where('last_activity_at', '>', now()->subMinutes(15))->count()
-                ]
+                        ->where('last_activity_at', '>', now()->subMinutes(15))->count(),
+                ],
             ];
 
             return response()->json([
                 'success' => true,
-                'data' => $statistics
+                'data' => $statistics,
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'error' => 'Failed to load statistics',
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 500);
         }
     }
@@ -601,7 +599,7 @@ class DashboardController extends Controller
             [
                 'layout' => $dashboard->layout,
                 'preferences' => $dashboard->preferences ?? [],
-                'widgets' => $dashboard->widgets ?? []
+                'widgets' => $dashboard->widgets ?? [],
             ]
         );
     }
@@ -610,75 +608,82 @@ class DashboardController extends Controller
     private function calculateOnTimeRate($tenantId)
     {
         $totalProjects = \App\Models\Project::where('tenant_id', $tenantId)->count();
-        if ($totalProjects === 0) return 0;
-        
+        if ($totalProjects === 0) {
+            return 0;
+        }
+
         $onTimeProjects = \App\Models\Project::where('tenant_id', $tenantId)
             ->where('status', 'completed')
             ->where('end_date', '>=', now())
             ->count();
-            
+
         return round(($onTimeProjects / $totalProjects) * 100, 1);
     }
 
     private function calculateBudgetUsage($tenantId)
     {
         $totalBudget = \App\Models\Project::where('tenant_id', $tenantId)->sum('budget_total');
-        if ($totalBudget === 0) return 0;
-        
+        if ($totalBudget === 0) {
+            return 0;
+        }
+
         $usedBudget = \App\Models\Project::where('tenant_id', $tenantId)->sum('actual_cost');
+
         return round(($usedBudget / $totalBudget) * 100, 1);
     }
 
     private function calculateHealthSnapshot($tenantId)
     {
         $totalProjects = \App\Models\Project::where('tenant_id', $tenantId)->count();
-        if ($totalProjects === 0) return 0;
-        
+        if ($totalProjects === 0) {
+            return 0;
+        }
+
         $healthyProjects = \App\Models\Project::where('tenant_id', $tenantId)
             ->where('status', 'active')
             ->where('end_date', '>=', now())
             ->whereRaw('actual_cost <= budget_total')
             ->count();
-            
+
         return round(($healthyProjects / $totalProjects) * 100, 1);
     }
 
     private function getAlerts($tenantId)
     {
         $alerts = [];
-        
+
         // Overdue projects
         $overdueProjects = \App\Models\Project::where('tenant_id', $tenantId)
             ->where('end_date', '<', now())
             ->whereNotIn('status', ['completed', 'cancelled'])
             ->count();
-            
+
         if ($overdueProjects > 0) {
             $alerts[] = [
                 'id' => 'overdue_projects',
                 'type' => 'warning',
                 'title' => 'Overdue Projects',
                 'message' => "{$overdueProjects} projects are overdue",
-                'action_url' => '/app/projects?filter=overdue'
+                'action_url' => '/app/projects?filter=overdue',
             ];
         }
-        
+
         // Overdue tasks
         $overdueTasks = \App\Models\Task::where('tenant_id', $tenantId)
             ->where('due_date', '<', now())
             ->whereNotIn('status', ['completed'])
             ->count();
-            
+
         if ($overdueTasks > 0) {
             $alerts[] = [
                 'id' => 'overdue_tasks',
                 'type' => 'error',
                 'title' => 'Overdue Tasks',
                 'message' => "{$overdueTasks} tasks are overdue",
-                'action_url' => '/app/tasks?filter=overdue'
+                'action_url' => '/app/tasks?filter=overdue',
             ];
         }
-        
+
         return $alerts;
     }
 
@@ -686,14 +691,14 @@ class DashboardController extends Controller
     {
         $statuses = ['planning', 'active', 'in_progress', 'completed', 'on_hold', 'cancelled'];
         $data = [];
-        
+
         foreach ($statuses as $status) {
             $count = \App\Models\Project::where('tenant_id', $tenantId)
                 ->where('status', $status)
                 ->count();
             $data[] = ['label' => ucfirst(str_replace('_', ' ', $status)), 'value' => $count];
         }
-        
+
         return $data;
     }
 
@@ -708,6 +713,7 @@ class DashboardController extends Controller
                 ->count();
             $data[] = ['date' => $date->format('M d'), 'value' => $completed];
         }
+
         return $data;
     }
 
@@ -718,11 +724,12 @@ class DashboardController extends Controller
             ->get()
             ->map(function ($project) {
                 $usage = $project->actual_cost / $project->budget_total * 100;
+
                 return [
                     'name' => $project->name,
                     'usage' => round($usage, 1),
                     'budget' => $project->budget_total,
-                    'actual' => $project->actual_cost
+                    'actual' => $project->actual_cost,
                 ];
             });
     }
@@ -738,10 +745,10 @@ class DashboardController extends Controller
                     ->where('status', 'completed')
                     ->where('updated_at', '>=', now()->subWeek())
                     ->count();
-                    
+
                 return [
                     'name' => $user->name,
-                    'completed_tasks' => $completedTasks
+                    'completed_tasks' => $completedTasks,
                 ];
             });
     }
@@ -772,7 +779,7 @@ class DashboardController extends Controller
 
     /**
      * Get CSRF token for API calls
-     * GET /api/csrf-token
+     * GET /api/csrf-token.
      */
     public function getCsrfToken(): JsonResponse
     {

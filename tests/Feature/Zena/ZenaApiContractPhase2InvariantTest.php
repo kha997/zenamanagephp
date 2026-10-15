@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Zena;
 
@@ -24,7 +26,9 @@ use Tests\Traits\RouteNameTrait;
  */
 class ZenaApiContractPhase2InvariantTest extends TestCase
 {
-    use RefreshDatabase, ApiTestTrait, RouteNameTrait;
+    use RefreshDatabase;
+    use ApiTestTrait;
+    use RouteNameTrait;
 
     protected array $apiHeaders = [];
 

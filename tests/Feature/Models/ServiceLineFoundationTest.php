@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Models;
 
@@ -8,7 +10,6 @@ use App\Models\OpportunityServiceLine;
 use App\Models\Project;
 use App\Models\ProjectServiceLine;
 use App\Models\Tenant;
-use App\Models\User;
 use App\Support\ServiceLine;
 use App\Support\ServiceLineProvenance;
 use Illuminate\Database\QueryException;
@@ -162,6 +163,7 @@ class ServiceLineFoundationTest extends TestCase
         ]);
 
         app()->instance('tenant', $tenantA);
+
         try {
             $this->assertSame(1, OpportunityServiceLine::query()->count());
             $this->assertSame(ServiceLine::DESIGN, OpportunityServiceLine::query()->first()->service_line);
@@ -214,6 +216,7 @@ class ServiceLineFoundationTest extends TestCase
         $row->provenance = ServiceLineProvenance::INFERRED;
 
         $this->expectException(RuntimeException::class);
+
         try {
             $row->save();
         } finally {
@@ -235,6 +238,7 @@ class ServiceLineFoundationTest extends TestCase
         $row->provenance = ServiceLineProvenance::INFERRED;
 
         $this->expectException(RuntimeException::class);
+
         try {
             $row->save();
         } finally {
@@ -251,8 +255,10 @@ class ServiceLineFoundationTest extends TestCase
         $opportunityOfTenantB = $this->makeOpportunity($tenantB);
 
         app()->instance('tenant', $tenantA);
+
         try {
             $this->expectException(RuntimeException::class);
+
             try {
                 $opportunityOfTenantB->serviceLines()->create([
                     'service_line' => ServiceLine::DESIGN,
@@ -275,8 +281,10 @@ class ServiceLineFoundationTest extends TestCase
         $projectOfTenantB = $this->makeProject($tenantB);
 
         app()->instance('tenant', $tenantA);
+
         try {
             $this->expectException(RuntimeException::class);
+
             try {
                 $projectOfTenantB->serviceLines()->create([
                     'service_line' => ServiceLine::CONSTRUCTION,
@@ -298,6 +306,7 @@ class ServiceLineFoundationTest extends TestCase
         $opportunity = $this->makeOpportunity($tenant);
 
         app()->instance('tenant', $tenant);
+
         try {
             $row = $opportunity->serviceLines()->create([
                 'service_line' => ServiceLine::DESIGN,
@@ -322,6 +331,7 @@ class ServiceLineFoundationTest extends TestCase
         $row->service_line = 'BOGUS';
 
         $this->expectException(InvalidArgumentException::class);
+
         try {
             $row->save();
         } finally {
@@ -342,6 +352,7 @@ class ServiceLineFoundationTest extends TestCase
         $row->provenance = 'BOGUS';
 
         $this->expectException(InvalidArgumentException::class);
+
         try {
             $row->save();
         } finally {
@@ -364,6 +375,7 @@ class ServiceLineFoundationTest extends TestCase
         $row->opportunity_id = (string) $opportunityB->id;
 
         $this->expectException(RuntimeException::class);
+
         try {
             $row->save();
         } finally {
@@ -386,6 +398,7 @@ class ServiceLineFoundationTest extends TestCase
         $row->service_line = 'BOGUS';
 
         $this->expectException(InvalidArgumentException::class);
+
         try {
             $row->save();
         } finally {
@@ -406,6 +419,7 @@ class ServiceLineFoundationTest extends TestCase
         $row->provenance = 'BOGUS';
 
         $this->expectException(InvalidArgumentException::class);
+
         try {
             $row->save();
         } finally {
@@ -428,6 +442,7 @@ class ServiceLineFoundationTest extends TestCase
         $row->project_id = (string) $projectB->id;
 
         $this->expectException(RuntimeException::class);
+
         try {
             $row->save();
         } finally {
@@ -575,6 +590,7 @@ class ServiceLineFoundationTest extends TestCase
         }
 
         app()->instance('tenant', $tenantA);
+
         try {
             try {
                 $opportunityOfTenantB->serviceLines()->create([

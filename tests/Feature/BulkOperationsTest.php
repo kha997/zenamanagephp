@@ -2,19 +2,18 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Models\Tenant;
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\Tenant;
+use App\Models\User;
 use App\Services\BulkOperationsService;
-use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
 
 /**
- * Test Bulk Operations System
- * 
+ * Test Bulk Operations System.
+ *
  * Kịch bản: Test các thao tác hàng loạt cho users, projects, tasks
  * - Bulk create users, projects, tasks
  * - Bulk update users, projects, tasks
@@ -33,21 +32,24 @@ class BulkOperationsTest extends TestCase
     private const STRESS_TESTS_ENV = 'RUN_STRESS_TESTS';
 
     private $tenant;
+
     private $user;
+
     private $project;
+
     private $bulkService;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Set cache driver to array for testing
         config(['cache.default' => 'array']);
         Cache::flush();
-        
+
         // Disable foreign key constraints for testing
         \DB::statement('PRAGMA foreign_keys=OFF;');
-        
+
         // Tạo tenant
         $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
@@ -79,7 +81,7 @@ class BulkOperationsTest extends TestCase
     }
 
     /**
-     * Test bulk create users
+     * Test bulk create users.
      */
     public function test_can_bulk_create_users(): void
     {
@@ -124,7 +126,7 @@ class BulkOperationsTest extends TestCase
     }
 
     /**
-     * Test bulk update users
+     * Test bulk update users.
      */
     public function test_can_bulk_update_users(): void
     {
@@ -147,7 +149,7 @@ class BulkOperationsTest extends TestCase
                 'data' => [
                     'name' => $user->name . ' Updated',
                     'status' => 'inactive',
-                ]
+                ],
             ];
         }
 
@@ -166,7 +168,7 @@ class BulkOperationsTest extends TestCase
     }
 
     /**
-     * Test bulk delete users
+     * Test bulk delete users.
      */
     public function test_can_bulk_delete_users(): void
     {
@@ -182,7 +184,7 @@ class BulkOperationsTest extends TestCase
             ]);
         }
 
-        $userIds = array_map(fn($user) => $user->id, $users);
+        $userIds = array_map(fn ($user) => $user->id, $users);
 
         $results = $this->bulkService->bulkDeleteUsers($userIds);
 
@@ -201,7 +203,7 @@ class BulkOperationsTest extends TestCase
     }
 
     /**
-     * Test bulk create projects
+     * Test bulk create projects.
      */
     public function test_can_bulk_create_projects(): void
     {
@@ -246,7 +248,7 @@ class BulkOperationsTest extends TestCase
     }
 
     /**
-     * Test bulk create tasks
+     * Test bulk create tasks.
      */
     public function test_can_bulk_create_tasks(): void
     {
@@ -292,7 +294,7 @@ class BulkOperationsTest extends TestCase
     }
 
     /**
-     * Test bulk update task status
+     * Test bulk update task status.
      */
     public function test_can_bulk_update_task_status(): void
     {
@@ -311,7 +313,7 @@ class BulkOperationsTest extends TestCase
             ]);
         }
 
-        $taskIds = array_map(fn($task) => $task->id, $tasks);
+        $taskIds = array_map(fn ($task) => $task->id, $tasks);
 
         $results = $this->bulkService->bulkUpdateTaskStatus($taskIds, 'completed');
 
@@ -327,7 +329,7 @@ class BulkOperationsTest extends TestCase
     }
 
     /**
-     * Test bulk operations validation
+     * Test bulk operations validation.
      */
     public function test_bulk_operations_validation(): void
     {
@@ -343,7 +345,7 @@ class BulkOperationsTest extends TestCase
     }
 
     /**
-     * Test bulk operations với invalid data
+     * Test bulk operations với invalid data.
      */
     public function test_bulk_operations_with_invalid_data(): void
     {
@@ -373,7 +375,7 @@ class BulkOperationsTest extends TestCase
     }
 
     /**
-     * Test multi-tenant isolation trong bulk operations
+     * Test multi-tenant isolation trong bulk operations.
      */
     public function test_bulk_operations_tenant_isolation(): void
     {
@@ -413,7 +415,7 @@ class BulkOperationsTest extends TestCase
         foreach ($currentUsers as $user) {
             $updates[] = [
                 'id' => $user->id,
-                'data' => ['status' => 'inactive']
+                'data' => ['status' => 'inactive'],
             ];
         }
 
@@ -435,7 +437,7 @@ class BulkOperationsTest extends TestCase
     }
 
     /**
-     * Test bulk operations với empty data
+     * Test bulk operations với empty data.
      */
     public function test_bulk_operations_with_empty_data(): void
     {
@@ -446,7 +448,7 @@ class BulkOperationsTest extends TestCase
     }
 
     /**
-     * Test bulk operations performance với large dataset
+     * Test bulk operations performance với large dataset.
      *
      * @group slow
      * @group performance
@@ -475,7 +477,7 @@ class BulkOperationsTest extends TestCase
 
         $this->assertEquals($batchSize, $results['success']);
         $this->assertEquals(0, $results['failed']);
-        
+
         // Performance check: make the max threshold configurable via BULK_PERF_MAX_SECONDS.
         $maxSeconds = (float) (getenv('BULK_PERF_MAX_SECONDS') ?: 15.0);
         $this->assertLessThan(
@@ -501,7 +503,7 @@ class BulkOperationsTest extends TestCase
     }
 
     /**
-     * Test bulk operations với database transaction rollback
+     * Test bulk operations với database transaction rollback.
      */
     public function test_bulk_operations_transaction_rollback(): void
     {
@@ -526,7 +528,7 @@ class BulkOperationsTest extends TestCase
     }
 
     /**
-     * Test bulk operations với mixed success/failure
+     * Test bulk operations với mixed success/failure.
      */
     public function test_bulk_operations_mixed_results(): void
     {

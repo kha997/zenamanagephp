@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -13,11 +15,11 @@ class PermissionService
     public function hasPermission(User $user, string $permission): bool
     {
         $cacheKey = "user_permissions_{$user->id}";
-        
+
         $permissions = Cache::remember($cacheKey, 300, function () use ($user) {
             return $this->getUserPermissions($user);
         });
-        
+
         return in_array($permission, $permissions);
     }
 
@@ -31,7 +33,7 @@ class PermissionService
                 return true;
             }
         }
-        
+
         return false;
     }
 
@@ -45,7 +47,7 @@ class PermissionService
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -55,15 +57,15 @@ class PermissionService
     public function getUserPermissions(User $user): array
     {
         $permissions = [];
-        
+
         // Get permissions from user's roles
         $roles = $this->getUserRoles($user);
-        
+
         foreach ($roles as $role) {
             $rolePermissions = $this->getRolePermissions($role);
             $permissions = array_merge($permissions, $rolePermissions);
         }
-        
+
         // Remove duplicates and return
         return array_unique($permissions);
     }
@@ -73,12 +75,11 @@ class PermissionService
      */
     protected function getUserRoles(User $user): array
     {
-        
         // For now, return a default role based on user attributes
         if ($user->email === 'admin@zena.com') {
             return ['super_admin'];
         }
-        
+
         return ['project_manager']; // Default role
     }
 
@@ -135,7 +136,7 @@ class PermissionService
                 'task.read',
             ],
         ];
-        
+
         return $rolePermissions[$role] ?? [];
     }
 
@@ -145,11 +146,11 @@ class PermissionService
     public function canAccessRoute(User $user, string $route): bool
     {
         $routePermissions = $this->getRoutePermissions($route);
-        
+
         if (empty($routePermissions)) {
             return true; // No permissions required
         }
-        
+
         return $this->hasAnyPermission($user, $routePermissions);
     }
 
@@ -182,7 +183,7 @@ class PermissionService
             'admin.sidebar-builder.edit' => ['admin.sidebar.manage'],
             'admin.sidebar-builder.preview' => ['admin.sidebar.manage'],
         ];
-        
+
         return $routePermissionMap[$route] ?? [];
     }
 
@@ -192,6 +193,7 @@ class PermissionService
     public function canPerformAction(User $user, string $model, string $action): bool
     {
         $permission = strtolower($model) . '.' . strtolower($action);
+
         return $this->hasPermission($user, $permission);
     }
 
@@ -201,18 +203,18 @@ class PermissionService
     public function filterSidebarItems(array $items, User $user): array
     {
         $filteredItems = [];
-        
+
         foreach ($items as $item) {
             if ($this->canUserSeeSidebarItem($item, $user)) {
                 // Filter children if it's a group
                 if ($item['type'] === 'group' && isset($item['children'])) {
                     $item['children'] = $this->filterSidebarItems($item['children'], $user);
                 }
-                
+
                 $filteredItems[] = $item;
             }
         }
-        
+
         return $filteredItems;
     }
 
@@ -225,14 +227,14 @@ class PermissionService
         if (!($item['enabled'] ?? true)) {
             return false;
         }
-        
+
         // Check required permissions
         if (isset($item['required_permissions']) && !empty($item['required_permissions'])) {
             if (!$this->hasAllPermissions($user, $item['required_permissions'])) {
                 return false;
             }
         }
-        
+
         // Check route permissions if it's a link
         if ($item['type'] === 'link' && isset($item['to'])) {
             $route = $this->extractRouteFromUrl($item['to']);
@@ -240,7 +242,7 @@ class PermissionService
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -249,8 +251,8 @@ class PermissionService
      */
     protected function extractRouteFromUrl(string $url): ?string
     {
-        // Simple route extraction - in a real app, you'd 
-        
+        // Simple route extraction - in a real app, you'd
+
         return $urlMap[$url] ?? null;
     }
 
@@ -268,7 +270,6 @@ class PermissionService
      */
     public function clearAllCaches(): void
     {
-        
         Cache::flush();
     }
 }

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Architecture;
 
@@ -63,8 +65,8 @@ class LegacyDocumentAdapterImportGuardTest extends TestCase
         $this->assertSame(
             [],
             $unexpected,
-            "New file(s) import LegacyDocumentAdapter under app/: " . implode(', ', $unexpected)
-            . ". Use App\\Models\\Document instead. If you truly need the adapter, add the file to ALLOWED_FILES and update docs/architecture/document-upload-path-inventory.md."
+            'New file(s) import LegacyDocumentAdapter under app/: ' . implode(', ', $unexpected)
+            . '. Use App\\Models\\Document instead. If you truly need the adapter, add the file to ALLOWED_FILES and update docs/architecture/document-upload-path-inventory.md.'
         );
     }
 
@@ -98,7 +100,7 @@ class LegacyDocumentAdapterImportGuardTest extends TestCase
         $this->assertSame(
             [],
             $unexpected,
-            "File(s) under routes/ import LegacyDocumentAdapter: " . implode(', ', $unexpected)
+            'File(s) under routes/ import LegacyDocumentAdapter: ' . implode(', ', $unexpected)
         );
     }
 }

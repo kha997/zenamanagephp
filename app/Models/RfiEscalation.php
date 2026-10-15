@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -29,7 +31,9 @@ class RfiEscalation extends Model
     public const RESOLUTION_TYPE_RFI_CANCELLED = 'rfi_cancelled';
 
     protected $table = 'rfi_escalations';
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [

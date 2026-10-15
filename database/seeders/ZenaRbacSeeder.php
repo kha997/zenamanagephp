@@ -2,21 +2,21 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use App\Models\User;
-use App\Models\ZenaRole;
-use App\Models\ZenaPermission;
+use App\Models\ChangeRequest;
 use App\Models\Project;
-use App\Models\Task;
 use App\Models\Rfi;
 use App\Models\Submittal;
-use App\Models\ChangeRequest;
-use App\Models\ZenaMaterialRequest;
-use App\Models\ZenaPurchaseOrder;
-use App\Models\ZenaInvoice;
-use App\Models\ZenaQcPlan;
-use App\Models\ZenaNcr;
+use App\Models\Task;
+use App\Models\User;
 use App\Models\ZenaDrawing;
+use App\Models\ZenaInvoice;
+use App\Models\ZenaMaterialRequest;
+use App\Models\ZenaNcr;
+use App\Models\ZenaPermission;
+use App\Models\ZenaPurchaseOrder;
+use App\Models\ZenaQcPlan;
+use App\Models\ZenaRole;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 class ZenaRbacSeeder extends Seeder
@@ -380,7 +380,7 @@ class ZenaRbacSeeder extends Seeder
         foreach ($users as $userData) {
             $role = $userData['role'];
             unset($userData['role']);
-            
+
             $user = User::firstOrCreate(
                 ['email' => $userData['email']],
                 $userData
@@ -449,10 +449,10 @@ class ZenaRbacSeeder extends Seeder
                 ['code' => $projectData['code']],
                 $projectData
             );
-            
+
             // Assign PM to project
             $project->users()->syncWithoutDetaching([$pm->id => ['role_on_project' => 'pm']]);
-            
+
             // Assign client to project
             $project->users()->syncWithoutDetaching([$client->id => ['role_on_project' => 'client']]);
         }

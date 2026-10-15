@@ -17,7 +17,7 @@ class LaunchChecklistServiceBackupTest extends TestCase
         config(['backup.disk' => null]);
         $this->backupDir = storage_path('backups');
         if (!is_dir($this->backupDir)) {
-            mkdir($this->backupDir, 0755, true);
+            mkdir($this->backupDir, 0o755, true);
         }
         $this->cleanBackupDir();
     }
@@ -111,7 +111,7 @@ class LaunchChecklistServiceBackupTest extends TestCase
     {
         // Older/interrupted `--type=database` runs (pre cleanup fix) leave a
         // bare backup_TIMESTAMP directory instead of a .tar.gz archive.
-        mkdir($this->backupDir . '/backup_2026-07-17_02-00-00', 0755, true);
+        mkdir($this->backupDir . '/backup_2026-07-17_02-00-00', 0o755, true);
 
         $this->assertTrue($this->callPrivate('checkBackupSystem'));
     }

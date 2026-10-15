@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
@@ -457,16 +459,16 @@ class WorkInstanceDeliverableExportApiTest extends TestCase
         Storage::disk('local')->put(
             $storagePath,
             <<<'HTML'
-<html><body>
-<h1>{{project.name}}</h1>
-<p>{{wi.id}}</p>
-<p>{{fields.remark}}</p>
-<p>{{fields.quantity}}</p>
-<p>{{fields.approved}}</p>
-<p>{{fields.summary}}</p>
-<span class="missing">{{fields.unknown}}</span>
-</body></html>
-HTML
+                <html><body>
+                <h1>{{project.name}}</h1>
+                <p>{{wi.id}}</p>
+                <p>{{fields.remark}}</p>
+                <p>{{fields.quantity}}</p>
+                <p>{{fields.approved}}</p>
+                <p>{{fields.summary}}</p>
+                <span class="missing">{{fields.unknown}}</span>
+                </body></html>
+                HTML
         );
 
         $version = DeliverableTemplateVersion::factory()->create([

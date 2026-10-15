@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Unit\Policies;
 
@@ -16,8 +18,11 @@ class ProjectPolicyTest extends TestCase
     use RefreshDatabase;
 
     private ProjectPolicy $policy;
+
     private Tenant $tenant;
+
     private User $user;
+
     private Project $project;
 
     protected function setUp(): void

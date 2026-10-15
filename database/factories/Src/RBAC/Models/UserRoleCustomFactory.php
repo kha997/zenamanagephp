@@ -1,15 +1,17 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories\Src\RBAC\Models;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-use Src\RBAC\Models\UserRoleCustom;
-use Src\RBAC\Models\Role;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\Factory;
+use Src\RBAC\Models\Role;
+use Src\RBAC\Models\UserRoleCustom;
 
 /**
- * Factory cho UserRoleCustom model
- * 
+ * Factory cho UserRoleCustom model.
+ *
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Src\RBAC\Models\UserRoleCustom>
  */
 class UserRoleCustomFactory extends Factory
@@ -29,7 +31,7 @@ class UserRoleCustomFactory extends Factory
     }
 
     /**
-     * State: Active assignment
+     * State: Active assignment.
      */
     public function active(): static
     {

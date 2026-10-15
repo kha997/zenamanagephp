@@ -2,16 +2,19 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class PerformanceMetric extends Model
 {
-    use HasFactory, HasUlids, SoftDeletes;
+    use HasFactory;
+    use HasUlids;
+    use SoftDeletes;
 
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [
@@ -20,17 +23,17 @@ class PerformanceMetric extends Model
         'metric_value',
         'metric_unit',
         'category',
-        'metadata'
+        'metadata',
     ];
 
     protected $casts = [
         'metric_value' => 'float',
         'metadata' => 'array',
-        'deleted_at' => 'datetime'
+        'deleted_at' => 'datetime',
     ];
 
     /**
-     * Scope for specific metric
+     * Scope for specific metric.
      */
     public function scopeMetric($query, $name)
     {
@@ -38,7 +41,7 @@ class PerformanceMetric extends Model
     }
 
     /**
-     * Scope for specific category
+     * Scope for specific category.
      */
     public function scopeCategory($query, $category)
     {
@@ -46,7 +49,7 @@ class PerformanceMetric extends Model
     }
 
     /**
-     * Scope for recent metrics
+     * Scope for recent metrics.
      */
     public function scopeRecent($query, $hours = 24)
     {
@@ -54,7 +57,7 @@ class PerformanceMetric extends Model
     }
 
     /**
-     * Get average value for a metric
+     * Get average value for a metric.
      */
     public static function getAverage($metricName, $hours = 24)
     {
@@ -64,7 +67,7 @@ class PerformanceMetric extends Model
     }
 
     /**
-     * Get maximum value for a metric
+     * Get maximum value for a metric.
      */
     public static function getMax($metricName, $hours = 24)
     {
@@ -74,7 +77,7 @@ class PerformanceMetric extends Model
     }
 
     /**
-     * Get minimum value for a metric
+     * Get minimum value for a metric.
      */
     public static function getMin($metricName, $hours = 24)
     {
@@ -84,7 +87,7 @@ class PerformanceMetric extends Model
     }
 
     /**
-     * Record a performance metric
+     * Record a performance metric.
      */
     public static function record($name, $value, $unit = null, $category = 'system', $metadata = [])
     {
@@ -93,12 +96,12 @@ class PerformanceMetric extends Model
             'metric_value' => $value,
             'metric_unit' => $unit,
             'category' => $category,
-            'metadata' => $metadata
+            'metadata' => $metadata,
         ]);
     }
 
     /**
-     * Get formatted value
+     * Get formatted value.
      */
     public function getFormattedValueAttribute()
     {
@@ -121,7 +124,7 @@ class PerformanceMetric extends Model
     }
 
     /**
-     * Format bytes to human readable format
+     * Format bytes to human readable format.
      */
     private function formatBytes($bytes, $precision = 2)
     {
@@ -135,7 +138,7 @@ class PerformanceMetric extends Model
     }
 
     /**
-     * Get metric trend (increasing, decreasing, stable)
+     * Get metric trend (increasing, decreasing, stable).
      */
     public function getTrendAttribute()
     {
@@ -163,11 +166,11 @@ class PerformanceMetric extends Model
     }
 
     /**
-     * Get trend icon
+     * Get trend icon.
      */
     public function getTrendIconAttribute()
     {
-        return match($this->trend) {
+        return match ($this->trend) {
             'increasing' => 'fa-arrow-up text-danger',
             'decreasing' => 'fa-arrow-down text-success',
             'stable' => 'fa-minus text-info',

@@ -7,9 +7,13 @@ use Illuminate\Contracts\Validation\Rule;
 class PasswordRule implements Rule
 {
     protected $minLength;
+
     protected $requireUppercase;
+
     protected $requireLowercase;
+
     protected $requireNumbers;
+
     protected $requireSymbols;
 
     /**

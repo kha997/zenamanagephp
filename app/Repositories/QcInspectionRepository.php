@@ -2,9 +2,8 @@
 
 namespace App\Repositories;
 
-use App\Models\QcInspection;
-use App\Models\User;
 use App\Models\Project;
+use App\Models\QcInspection;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Log;
@@ -133,7 +132,7 @@ class QcInspectionRepository
             'qc_inspection_id' => $qcInspection->id,
             'name' => $qcInspection->name,
             'project_id' => $qcInspection->project_id,
-            'inspector_id' => $qcInspection->inspector_id
+            'inspector_id' => $qcInspection->inspector_id,
         ]);
 
         return $qcInspection->load(['project', 'inspector', 'tenant']);
@@ -155,7 +154,7 @@ class QcInspectionRepository
         Log::info('QC Inspection updated', [
             'qc_inspection_id' => $qcInspection->id,
             'name' => $qcInspection->name,
-            'project_id' => $qcInspection->project_id
+            'project_id' => $qcInspection->project_id,
         ]);
 
         return $qcInspection->load(['project', 'inspector', 'tenant']);
@@ -177,7 +176,7 @@ class QcInspectionRepository
         Log::info('QC Inspection deleted', [
             'qc_inspection_id' => $id,
             'name' => $qcInspection->name,
-            'project_id' => $qcInspection->project_id
+            'project_id' => $qcInspection->project_id,
         ]);
 
         return true;
@@ -199,7 +198,7 @@ class QcInspectionRepository
         Log::info('QC Inspection soft deleted', [
             'qc_inspection_id' => $id,
             'name' => $qcInspection->name,
-            'project_id' => $qcInspection->project_id
+            'project_id' => $qcInspection->project_id,
         ]);
 
         return true;
@@ -221,7 +220,7 @@ class QcInspectionRepository
         Log::info('QC Inspection restored', [
             'qc_inspection_id' => $id,
             'name' => $qcInspection->name,
-            'project_id' => $qcInspection->project_id
+            'project_id' => $qcInspection->project_id,
         ]);
 
         return true;
@@ -291,12 +290,12 @@ class QcInspectionRepository
 
         $qcInspection->update([
             'status' => $status,
-            'status_updated_at' => now()
+            'status_updated_at' => now(),
         ]);
 
         Log::info('QC Inspection status updated', [
             'qc_inspection_id' => $id,
-            'status' => $status
+            'status' => $status,
         ]);
 
         return true;
@@ -316,11 +315,11 @@ class QcInspectionRepository
         $qcInspection->update([
             'status' => 'completed',
             'results' => $results,
-            'completed_at' => now()
+            'completed_at' => now(),
         ]);
 
         Log::info('QC Inspection completed', [
-            'qc_inspection_id' => $id
+            'qc_inspection_id' => $id,
         ]);
 
         return true;
@@ -346,7 +345,7 @@ class QcInspectionRepository
             'recent_qc_inspections' => $query->where('created_at', '>=', now()->subDays(7))->count(),
             'overdue_qc_inspections' => $query->where('inspection_date', '<', now())
                                              ->where('status', '!=', 'completed')
-                                             ->count()
+                                             ->count(),
         ];
     }
 
@@ -383,7 +382,7 @@ class QcInspectionRepository
 
         Log::info('QC Inspections bulk updated', [
             'count' => $updated,
-            'ids' => $ids
+            'ids' => $ids,
         ]);
 
         return $updated;
@@ -398,7 +397,7 @@ class QcInspectionRepository
 
         Log::info('QC Inspections bulk deleted', [
             'count' => $deleted,
-            'ids' => $ids
+            'ids' => $ids,
         ]);
 
         return $deleted;
@@ -422,7 +421,7 @@ class QcInspectionRepository
             'type' => 'created',
             'date' => $qcInspection->created_at,
             'title' => 'QC Inspection Created',
-            'description' => 'QC Inspection ' . $qcInspection->name . ' was created'
+            'description' => 'QC Inspection ' . $qcInspection->name . ' was created',
         ];
 
         // Add status changes
@@ -431,7 +430,7 @@ class QcInspectionRepository
                 'type' => 'status_changed',
                 'date' => $qcInspection->status_updated_at,
                 'title' => 'Status Changed',
-                'description' => 'Status changed to ' . $qcInspection->status
+                'description' => 'Status changed to ' . $qcInspection->status,
             ];
         }
 
@@ -441,7 +440,7 @@ class QcInspectionRepository
                 'type' => 'completed',
                 'date' => $qcInspection->completed_at,
                 'title' => 'QC Inspection Completed',
-                'description' => 'QC Inspection was completed'
+                'description' => 'QC Inspection was completed',
             ];
         }
 
@@ -495,11 +494,11 @@ class QcInspectionRepository
         }
 
         $qcInspection->update([
-            'results' => $results
+            'results' => $results,
         ]);
 
         Log::info('QC Inspection results updated', [
-            'qc_inspection_id' => $id
+            'qc_inspection_id' => $id,
         ]);
 
         return true;
@@ -531,11 +530,11 @@ class QcInspectionRepository
         }
 
         $qcInspection->update([
-            'checklist' => $checklist
+            'checklist' => $checklist,
         ]);
 
         Log::info('QC Inspection checklist updated', [
-            'qc_inspection_id' => $id
+            'qc_inspection_id' => $id,
         ]);
 
         return true;
@@ -570,16 +569,16 @@ class QcInspectionRepository
         $attachments[] = [
             'file_path' => $filePath,
             'file_name' => $fileName,
-            'uploaded_at' => now()->toISOString()
+            'uploaded_at' => now()->toISOString(),
         ];
 
         $qcInspection->update([
-            'attachments' => $attachments
+            'attachments' => $attachments,
         ]);
 
         Log::info('Attachment added to QC Inspection', [
             'qc_inspection_id' => $id,
-            'file_name' => $fileName
+            'file_name' => $fileName,
         ]);
 
         return true;
@@ -602,12 +601,12 @@ class QcInspectionRepository
         });
 
         $qcInspection->update([
-            'attachments' => array_values($attachments)
+            'attachments' => array_values($attachments),
         ]);
 
         Log::info('Attachment removed from QC Inspection', [
             'qc_inspection_id' => $id,
-            'file_path' => $filePath
+            'file_path' => $filePath,
         ]);
 
         return true;

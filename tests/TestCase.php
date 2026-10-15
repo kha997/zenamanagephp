@@ -60,7 +60,7 @@ abstract class TestCase extends BaseTestCase
             ?? $outgoingServer['REDIRECT_HTTP_AUTHORIZATION']
             ?? null;
 
-        if (! is_string($authorization)
+        if (!is_string($authorization)
             || preg_match('/^Bearer\s+(.+)$/i', trim($authorization)) !== 1) {
             return false;
         }
@@ -76,8 +76,8 @@ abstract class TestCase extends BaseTestCase
             if ($auth->guard($guard)->hasUser()) {
                 throw new \RuntimeException(sprintf(
                     'GAP-051: Bearer request blocked before dispatch because guard [%s] already has a cached user. '
-                    .'Use actingAsSanctumBearerToken(), which clears cached guards immediately before dispatch, '
-                    .'instead of combining actingAs()/Sanctum::actingAs() state with a hand-written Bearer header.',
+                    . 'Use actingAsSanctumBearerToken(), which clears cached guards immediately before dispatch, '
+                    . 'instead of combining actingAs()/Sanctum::actingAs() state with a hand-written Bearer header.',
                     $guard
                 ));
             }
@@ -95,7 +95,7 @@ abstract class TestCase extends BaseTestCase
     {
         $method = strtoupper($method);
 
-        if (! in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+        if (!in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
             return false;
         }
 
@@ -230,7 +230,7 @@ abstract class TestCase extends BaseTestCase
         $directory = dirname($databasePath);
 
         if (!is_dir($directory)) {
-            mkdir($directory, 0775, true);
+            mkdir($directory, 0o775, true);
         }
 
         if (!file_exists($databasePath)) {
@@ -274,7 +274,6 @@ abstract class TestCase extends BaseTestCase
                 $table->timestamps();
             });
         }
-
     }
 
     /**

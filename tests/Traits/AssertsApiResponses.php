@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Traits;
 
@@ -6,42 +8,42 @@ use Illuminate\Testing\TestResponse;
 
 /**
  * Trait để assert API responses theo JSend format
- * Cung cấp các helper methods để kiểm tra API response structure và content
+ * Cung cấp các helper methods để kiểm tra API response structure và content.
  */
 trait AssertsApiResponses
 {
     /**
-     * Assert response có JSend success format
+     * Assert response có JSend success format.
      */
     protected function assertSuccessResponse(TestResponse $response, int $statusCode = 200): void
     {
         $response->assertStatus($statusCode)
                 ->assertJsonStructure([
                     'status',
-                    'data'
+                    'data',
                 ])
                 ->assertJson([
-                    'status' => 'success'
+                    'status' => 'success',
                 ]);
     }
 
     /**
-     * Assert response có JSend error format
+     * Assert response có JSend error format.
      */
     protected function assertErrorResponse(TestResponse $response, int $statusCode = 400): void
     {
         $response->assertStatus($statusCode)
                 ->assertJsonStructure([
                     'status',
-                    'message'
+                    'message',
                 ])
                 ->assertJson([
-                    'status' => 'error'
+                    'status' => 'error',
                 ]);
     }
 
     /**
-     * Assert validation error response
+     * Assert validation error response.
      */
     protected function assertValidationError(TestResponse $response, array $fields = []): void
     {
@@ -50,22 +52,22 @@ trait AssertsApiResponses
                     'status',
                     'message',
                     'data' => [
-                        'validation_errors'
-                    ]
+                        'validation_errors',
+                    ],
                 ])
                 ->assertJson([
-                    'status' => 'error'
+                    'status' => 'error',
                 ]);
 
         if (!empty($fields)) {
             foreach ($fields as $field) {
-                $response->assertJsonPath("data.validation_errors.{$field}", fn($value) => !empty($value));
+                $response->assertJsonPath("data.validation_errors.{$field}", fn ($value) => !empty($value));
             }
         }
     }
 
     /**
-     * Assert unauthorized response
+     * Assert unauthorized response.
      */
     protected function assertUnauthorized(TestResponse $response): void
     {
@@ -73,7 +75,7 @@ trait AssertsApiResponses
     }
 
     /**
-     * Assert forbidden response
+     * Assert forbidden response.
      */
     protected function assertForbidden(TestResponse $response): void
     {
@@ -81,7 +83,7 @@ trait AssertsApiResponses
     }
 
     /**
-     * Assert not found response
+     * Assert not found response.
      */
     protected function assertNotFound(TestResponse $response): void
     {
@@ -89,12 +91,12 @@ trait AssertsApiResponses
     }
 
     /**
-     * Assert paginated response structure
+     * Assert paginated response structure.
      */
     protected function assertPaginatedResponse(TestResponse $response): void
     {
         $this->assertSuccessResponse($response);
-        
+
         $response->assertJsonStructure([
             'data' => [
                 'data',
@@ -103,25 +105,25 @@ trait AssertsApiResponses
                 'total',
                 'last_page',
                 'from',
-                'to'
-            ]
+                'to',
+            ],
         ]);
     }
 
     /**
-     * Assert response contains specific data
+     * Assert response contains specific data.
      */
     protected function assertResponseContains(TestResponse $response, array $expectedData): void
     {
         $this->assertSuccessResponse($response);
-        
+
         foreach ($expectedData as $key => $value) {
             $response->assertJsonPath("data.{$key}", $value);
         }
     }
 
     /**
-     * Assert response data structure
+     * Assert response data structure.
      */
     protected function assertDataStructure(TestResponse $response, array $structure): void
     {

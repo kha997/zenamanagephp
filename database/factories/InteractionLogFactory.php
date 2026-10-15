@@ -1,28 +1,30 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Src\InteractionLogs\Models\InteractionLog;
 use Src\CoreProject\Models\Project;
 use Src\CoreProject\Models\Task;
-use App\Models\User;
+use Src\InteractionLogs\Models\InteractionLog;
 
 /**
- * Factory cho InteractionLog model
- * 
+ * Factory cho InteractionLog model.
+ *
  * Tạo dữ liệu giả cho testing InteractionLog
  * Hỗ trợ các loại tương tác và mức độ hiển thị khác nhau
  */
 class InteractionLogFactory extends Factory
 {
     /**
-     * Model tương ứng với factory này
+     * Model tương ứng với factory này.
      */
     protected $model = InteractionLog::class;
 
     /**
-     * Định nghĩa trạng thái mặc định của model
+     * Định nghĩa trạng thái mặc định của model.
      */
     public function definition(): array
     {
@@ -36,7 +38,7 @@ class InteractionLogFactory extends Factory
                 'Design/Architecture/Blueprint',
                 'Construction/Foundation/Concrete',
                 'QC/Inspection/Safety',
-                'Client/Feedback/Requirements'
+                'Client/Feedback/Requirements',
             ]),
             'visibility' => $this->faker->randomElement(InteractionLog::VALID_VISIBILITIES),
             'client_approved' => $this->faker->boolean(60),
@@ -45,7 +47,7 @@ class InteractionLogFactory extends Factory
     }
 
     /**
-     * State cho interaction log loại call
+     * State cho interaction log loại call.
      */
     public function call(): static
     {
@@ -56,7 +58,7 @@ class InteractionLogFactory extends Factory
     }
 
     /**
-     * State cho interaction log loại email
+     * State cho interaction log loại email.
      */
     public function email(): static
     {
@@ -67,7 +69,7 @@ class InteractionLogFactory extends Factory
     }
 
     /**
-     * State cho interaction log loại meeting
+     * State cho interaction log loại meeting.
      */
     public function meeting(): static
     {
@@ -78,7 +80,7 @@ class InteractionLogFactory extends Factory
     }
 
     /**
-     * State cho interaction log loại note
+     * State cho interaction log loại note.
      */
     public function note(): static
     {
@@ -89,7 +91,7 @@ class InteractionLogFactory extends Factory
     }
 
     /**
-     * State cho interaction log loại feedback
+     * State cho interaction log loại feedback.
      */
     public function feedback(): static
     {
@@ -100,7 +102,7 @@ class InteractionLogFactory extends Factory
     }
 
     /**
-     * State cho log hiển thị internal
+     * State cho log hiển thị internal.
      */
     public function internal(): static
     {
@@ -111,7 +113,7 @@ class InteractionLogFactory extends Factory
     }
 
     /**
-     * State cho log hiển thị client (đã approve)
+     * State cho log hiển thị client (đã approve).
      */
     public function clientVisible(): static
     {
@@ -122,7 +124,7 @@ class InteractionLogFactory extends Factory
     }
 
     /**
-     * State cho log hiển thị client (chưa approve)
+     * State cho log hiển thị client (chưa approve).
      */
     public function clientPending(): static
     {
@@ -133,7 +135,7 @@ class InteractionLogFactory extends Factory
     }
 
     /**
-     * State cho log với project cụ thể
+     * State cho log với project cụ thể.
      */
     public function forProject(string $projectId): static
     {
@@ -143,7 +145,7 @@ class InteractionLogFactory extends Factory
     }
 
     /**
-     * State cho log với task cụ thể
+     * State cho log với task cụ thể.
      */
     public function forTask(string $taskId): static
     {
@@ -153,7 +155,7 @@ class InteractionLogFactory extends Factory
     }
 
     /**
-     * State cho log với tag path cụ thể
+     * State cho log với tag path cụ thể.
      */
     public function withTagPath(string $tagPath): static
     {
@@ -163,7 +165,7 @@ class InteractionLogFactory extends Factory
     }
 
     /**
-     * State cho log được tạo bởi user cụ thể
+     * State cho log được tạo bởi user cụ thể.
      */
     public function createdBy(string $userId): static
     {

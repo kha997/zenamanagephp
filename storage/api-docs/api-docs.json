@@ -24,6 +24,485 @@
         }
     ],
     "paths": {
+        "/api/v1/legacy-routes/usage": {
+            "get": {
+                "tags": [
+                    "Legacy Route Monitoring"
+                ],
+                "summary": "Get legacy route usage statistics",
+                "description": "Retrieve comprehensive usage statistics for all legacy routes",
+                "operationId": "a7ed59fc0c584d343e862673ad9c2b71",
+                "responses": {
+                    "200": {
+                        "description": "Usage statistics retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "routes": {
+                                                    "properties": {
+                                                        "/dashboard": {
+                                                            "properties": {
+                                                                "legacy_path": {
+                                                                    "type": "string",
+                                                                    "example": "/dashboard"
+                                                                },
+                                                                "total_usage": {
+                                                                    "type": "integer",
+                                                                    "example": 150
+                                                                },
+                                                                "last_7_days_total": {
+                                                                    "type": "integer",
+                                                                    "example": 25
+                                                                },
+                                                                "average_daily": {
+                                                                    "type": "number",
+                                                                    "format": "float",
+                                                                    "example": 3.57
+                                                                },
+                                                                "trend": {
+                                                                    "type": "string",
+                                                                    "example": "decreasing"
+                                                                }
+                                                            },
+                                                            "type": "object"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "summary": {
+                                            "properties": {
+                                                "total_legacy_usage": {
+                                                    "type": "integer",
+                                                    "example": 450
+                                                },
+                                                "last_7_days_total": {
+                                                    "type": "integer",
+                                                    "example": 75
+                                                },
+                                                "average_daily_total": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "example": 10.71
+                                                },
+                                                "highest_usage_route": {
+                                                    "type": "string",
+                                                    "example": "/dashboard"
+                                                },
+                                                "highest_usage_count": {
+                                                    "type": "integer",
+                                                    "example": 150
+                                                },
+                                                "active_routes": {
+                                                    "type": "integer",
+                                                    "example": 3
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient permissions - Admin role required",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/legacy-routes/migration-phase": {
+            "get": {
+                "tags": [
+                    "Legacy Route Monitoring"
+                ],
+                "summary": "Get migration phase statistics",
+                "description": "Retrieve current migration phase statistics for all legacy routes",
+                "operationId": "649da098ee30c39de687b375356438b3",
+                "responses": {
+                    "200": {
+                        "description": "Migration phase statistics retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "current_date": {
+                                                    "type": "string",
+                                                    "example": "2024-12-19"
+                                                },
+                                                "phase_distribution": {
+                                                    "properties": {
+                                                        "announce": {
+                                                            "type": "integer",
+                                                            "example": 0
+                                                        },
+                                                        "redirect": {
+                                                            "type": "integer",
+                                                            "example": 3
+                                                        },
+                                                        "remove": {
+                                                            "type": "integer",
+                                                            "example": 0
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "total_routes": {
+                                                    "type": "integer",
+                                                    "example": 3
+                                                },
+                                                "migration_progress": {
+                                                    "properties": {
+                                                        "completed_announce": {
+                                                            "type": "integer",
+                                                            "example": 3
+                                                        },
+                                                        "completed_redirect": {
+                                                            "type": "integer",
+                                                            "example": 0
+                                                        },
+                                                        "completion_percentage": {
+                                                            "type": "number",
+                                                            "format": "float",
+                                                            "example": 0
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient permissions - Admin role required",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/legacy-routes/report": {
+            "get": {
+                "tags": [
+                    "Legacy Route Monitoring"
+                ],
+                "summary": "Generate comprehensive usage report",
+                "description": "Generate a comprehensive report including usage statistics, migration progress, and recommendations",
+                "operationId": "74b9ac67fb3459e277d49166b33d2ef8",
+                "responses": {
+                    "200": {
+                        "description": "Usage report generated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "report_type": {
+                                                    "type": "string",
+                                                    "example": "legacy_route_usage"
+                                                },
+                                                "generated_at": {
+                                                    "type": "string",
+                                                    "example": "2024-12-19T10:30:00Z"
+                                                },
+                                                "usage_statistics": {
+                                                    "type": "object"
+                                                },
+                                                "migration_phase_statistics": {
+                                                    "type": "object"
+                                                },
+                                                "recommendations": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "type": {
+                                                                "type": "string",
+                                                                "example": "high_usage_warning"
+                                                            },
+                                                            "route": {
+                                                                "type": "string",
+                                                                "example": "/dashboard"
+                                                            },
+                                                            "message": {
+                                                                "type": "string",
+                                                                "example": "Route /dashboard has high usage"
+                                                            },
+                                                            "priority": {
+                                                                "type": "string",
+                                                                "example": "high"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient permissions - Admin role required",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/legacy-routes/record-usage": {
+            "post": {
+                "tags": [
+                    "Legacy Route Monitoring"
+                ],
+                "summary": "Record legacy route usage",
+                "description": "Record usage of a legacy route for monitoring purposes",
+                "operationId": "41598875f0ccffbab42bc6dfa903b445",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "legacy_path": {
+                                        "type": "string",
+                                        "example": "/dashboard"
+                                    },
+                                    "new_path": {
+                                        "type": "string",
+                                        "example": "/app/dashboard"
+                                    },
+                                    "metadata": {
+                                        "properties": {
+                                            "user_agent": {
+                                                "type": "string",
+                                                "example": "Mozilla/5.0..."
+                                            },
+                                            "referer": {
+                                                "type": "string",
+                                                "example": "https://example.com"
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Usage recorded successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Legacy route usage recorded successfully"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/legacy-routes/cleanup": {
+            "post": {
+                "tags": [
+                    "Legacy Route Monitoring"
+                ],
+                "summary": "Clean up old monitoring data",
+                "description": "Clean up old legacy route monitoring data to free up storage",
+                "operationId": "d2d8462e82a981fbd5a67333ccfb5ccb",
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "days_to_keep": {
+                                        "description": "Number of days to keep data",
+                                        "type": "integer",
+                                        "example": 30
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Data cleanup completed successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "cleared_entries": {
+                                                    "type": "integer",
+                                                    "example": 150
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Legacy route monitoring data cleaned successfully"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient permissions - Admin role required",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/v1/public/health": {
             "get": {
                 "tags": [
@@ -600,6 +1079,10 @@
         }
     },
     "tags": [
+        {
+            "name": "Legacy Route Monitoring",
+            "description": "Legacy route usage monitoring and migration management"
+        },
         {
             "name": "Admin",
             "description": "Super admin only endpoints"

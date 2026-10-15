@@ -9,7 +9,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
-        "darkaonline/l5-swagger": "^8.6",
+        "darkaonline/l5-swagger": "^11.2",
         "doctrine/dbal": "^4.5",
         "firebase/php-jwt": "^7.0",
         "google/apiclient": "^2.18",

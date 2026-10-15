@@ -1,11 +1,11 @@
 ---
 work_id: GAP-081
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-15-gap-081-git-blame-ignore-revs-evidence.md
   plan: null
@@ -15,16 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-10-15T15:24:56+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-10-15T18:34:08+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-15, verbatim: 'APPROVE GAP-081 Gate 1'. Bound to reviewed Draft PR #354 head b9e484b77c7bfd4ac085226a44c5c415abac5b46, canonical base 40d19ab10f51c77587127f2ab5c477724f4ab7cf. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-15T15:24:56+07:00"
-  updated_at: "2026-10-15T15:24:56+07:00"
+  updated_at: "2026-10-15T18:34:08+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-081 Gate 1 in-session on 2026-10-15 against Draft PR #354
+head `b9e484b77c7bfd4ac085226a44c5c415abac5b46`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

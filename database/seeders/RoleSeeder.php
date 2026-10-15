@@ -63,6 +63,7 @@ class RoleSeeder extends Seeder
             Permission::firstOrCreate(
                 ['code' => $permData['code']],
                 [
+                    'name' => $permData['code'],
                     'module' => $permData['module'],
                     'action' => $permData['action'],
                     'description' => $permData['description'],

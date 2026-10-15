@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-15T09:16:20+07:00"
-  updated_at: "2026-10-15T12:19:47+07:00"
+  updated_at: "2026-10-15T12:22:02+07:00"
 generated_by: agent
 ---
 
@@ -44,6 +44,17 @@ messages embed the line number of an anonymous migration class
 "Cho sửa 2 dòng baseline (Recommended)" — allowing exactly those two baseline
 lines to change `:8:` to `:10:`, adding or removing no entries; to be disclosed
 in Gate 3.
+
+Second amendment: `composer ssot:lint` failed because five SSOT baselines
+(`scripts/ssot/baselines/hardcoded_api_paths.txt`, `orphan_routes.txt`,
+`raw_model_create.txt`, `raw_model_create_feature.txt`,
+`raw_model_create_zena.txt`) key entries by `file:line`. Asked in-session, the
+Owner selected verbatim: "Cho cập nhật số dòng (Recommended)" — allowing those
+files to be regenerated with the repository tool (`SSOT_UPDATE_BASELINES=1`)
+so that only line numbers change (183 lines), verified equal to the previous
+baselines once line numbers are removed; the two already-stale
+`ContractPdfExportTest.php:52` orphan entries are kept unchanged; to be
+disclosed in Gate 3.
 
 ## Owner Summary
 

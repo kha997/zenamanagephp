@@ -1,1 +1,1 @@
-tests/Feature/Zena/PermissionCanonicalIdentityRegressionTest.php:32:        $existing = Permission::create([
+tests/Feature/Zena/PermissionCanonicalIdentityRegressionTest.php:34:        $existing = Permission::create([

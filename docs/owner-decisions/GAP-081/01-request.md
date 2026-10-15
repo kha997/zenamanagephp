@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-10-15-gap-081-git-blame-ignore-revs-evidence.md
   plan: null
   branch: docs/GAP-081-git-blame-ignore-revs
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/354
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

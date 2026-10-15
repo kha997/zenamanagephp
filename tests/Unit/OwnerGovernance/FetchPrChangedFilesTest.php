@@ -117,6 +117,26 @@ class FetchPrChangedFilesTest extends TestCase
         $this->assertSame($filenames, $decoded);
     }
 
+    // --- Scenario: real `gh api --paginate --jq` output, one array per page (GAP-080) — PASS ---
+
+    public function test_one_json_array_per_page_is_merged_into_one_list(): void
+    {
+        // `gh api --paginate` applies --jq to each page separately, so a
+        // 250-file PR yields three arrays on stdout, not one combined array.
+        $filenames = array_map(fn ($i) => "app/Fixture{$i}.php", range(1, 250));
+        $apiOutput = implode("\n", array_map(
+            fn (array $page) => json_encode($page, JSON_THROW_ON_ERROR),
+            array_chunk($filenames, 100),
+        )) . "\n";
+
+        $fakeGh = $this->makeFakeGh('250', 0, $apiOutput, 0);
+        $result = $this->runScript($fakeGh);
+
+        $this->assertSame(0, $result['exit'], "Expected success, got stderr: {$result['stderr']}");
+        $decoded = json_decode($result['stdout'], true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame($filenames, $decoded, 'Every page must be merged, in order, into one JSON array.');
+    }
+
     // --- Scenario: 101-file PR, 100 design-only + file #101 an app file — the OUTPUT must include #101 ---
 
     public function test_101st_file_beyond_the_old_100_item_cap_is_present_in_output(): void

@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-15T09:16:20+07:00"
-  updated_at: "2026-10-15T12:22:02+07:00"
+  updated_at: "2026-10-15T12:23:54+07:00"
 generated_by: agent
 ---
 
@@ -55,6 +55,16 @@ so that only line numbers change (183 lines), verified equal to the previous
 baselines once line numbers are removed; the two already-stale
 `ContractPdfExportTest.php:52` orphan entries are kept unchanged; to be
 disclosed in Gate 3.
+
+Third amendment: Owner Governance Lint failed on this PR because
+`scripts/ci/fetch-pr-changed-files.sh` miscounted any PR with more than one
+page of changed files (`gh api --paginate --jq` emits one array per page; the
+script counted each page separately and always failed closed). Asked
+in-session, the Owner selected verbatim: "Sửa trong PR này (Recommended)" —
+allowing that script to merge the per-page arrays with `jq -s` before counting
+(still failing closed on errors or a count mismatch), plus one test in
+`tests/Unit/OwnerGovernance/FetchPrChangedFilesTest.php` reproducing real multi-page
+output; to be disclosed in Gate 3.
 
 ## Owner Summary
 

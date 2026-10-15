@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-10-15-gap-080-code-style-evidence.md
   plan: null
   branch: docs/GAP-080-code-style
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/353
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

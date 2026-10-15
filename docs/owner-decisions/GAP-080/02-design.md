@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-15T09:16:20+07:00"
-  updated_at: "2026-10-15T09:23:41+07:00"
+  updated_at: "2026-10-15T12:19:47+07:00"
 generated_by: agent
 ---
 
@@ -33,6 +33,17 @@ generated_by: agent
 Owner approved Option A in-session on 2026-10-15 against reviewed design head
 `d73547192f22837eb19a44fbe421bb897b663ca5`. This authorizes only the bounded implementation defined by this packet;
 it does not authorize Gate 3, merge, release, or deployment.
+
+### Owner amendment (2026-10-15)
+
+During implementation PHPStan reported 2 errors: two `phpstan-baseline.neon`
+messages embed the line number of an anonymous migration class
+(`...add_missing_performance_indexes.php:8::`,
+`...optimize_database_relationships_and_foreign_keys.php:8::`), which became
+`:10::` after the reformat. Asked in-session, the Owner selected verbatim:
+"Cho sửa 2 dòng baseline (Recommended)" — allowing exactly those two baseline
+lines to change `:8:` to `:10:`, adding or removing no entries; to be disclosed
+in Gate 3.
 
 ## Owner Summary
 

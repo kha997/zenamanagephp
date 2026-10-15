@@ -10,7 +10,7 @@
     "require": {
         "php": "^8.2",
         "darkaonline/l5-swagger": "^8.6",
-        "doctrine/dbal": "^3.10",
+        "doctrine/dbal": "^4.5",
         "firebase/php-jwt": "^7.0",
         "google/apiclient": "^2.18",
         "guzzlehttp/guzzle": "^7.2",

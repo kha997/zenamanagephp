@@ -117,6 +117,7 @@ class FetchPrChangedFilesTest extends TestCase
         $this->assertSame($filenames, $decoded);
     }
 
+    
     // --- Scenario: real `gh api --paginate --jq` output, one array per page (GAP-080) — PASS ---
 
     public function test_one_json_array_per_page_is_merged_into_one_list(): void

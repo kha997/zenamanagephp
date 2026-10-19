@@ -69,6 +69,17 @@ Mình đã thử cả 3 phương án trên một bản sao tạm (không commit)
 No change to `vite.config.js`, `tailwind.config.js`, `postcss.config.js`,
 CSS or views. Option A is items 1 and 4 only.
 
+## Owner amendment (2026-10-20T06:51:21+07:00)
+
+Owner selection via AskUserQuestion, verbatim: "Cho sửa 1 dòng (Recommended)".
+
+Authorizes one change outside the allowlist: `.github/workflows/button-tests.yml`. The generated
+`vite.ci.config.mjs` changes `manifest: true` to `manifest: 'manifest.json'`. Vite 5+ writes
+`manifest: true` to `public/build/.vite/manifest.json`. With the old setting,
+`public/build/manifest.json` would be the PWA `public/manifest.json` copied from `publicDir`.
+Laravel's `@vite` would then read that file and browser-tests would fail. A local reproduction
+confirmed both behaviours.
+
 ## Verification
 
 - `npm audit` before and after.

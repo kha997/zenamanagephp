@@ -1,11 +1,11 @@
 ---
 work_id: GAP-084
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-19-gap-084-npm-vulnerabilities-evidence.md
   plan: null
@@ -15,18 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-20T06:43:11+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-20, verbatim: 'APPROVE GAP-084 Gate 1'. Bound to reviewed Draft PR #357 head 307c0caa36ea0dc80aca828f10203621ae56536b, canonical base 2a01adeaeb854bafb081cc04b5541a45c78c2cde. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-20T06:41:42+07:00"
-  updated_at: "2026-10-20T06:41:42+07:00"
+  updated_at: "2026-10-20T06:43:11+07:00"
 generated_by: agent
 ---
 
-## OWNER GATE 1: AWAITING OWNER
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-084 Gate 1 in-session on 2026-10-20 against Draft PR #357
+head `307c0caa36ea0dc80aca828f10203621ae56536b`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

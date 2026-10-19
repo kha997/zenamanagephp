@@ -1,34 +1,38 @@
 ---
 work_id: GAP-084
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-19-gap-084-npm-vulnerabilities-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-10-20-gap-084-npm-vulnerabilities.md
   branch: docs/GAP-084-npm-vulnerabilities
   pr: https://github.com/kha997/zenamanagephp/pull/357
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-20T06:48:39+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-20, verbatim: 'APPROVE GAP-084 Gate 2 Option B'. Reviewed design head: 6b4331eff6eac063f311a08acc3b3a0a1734ab7b. Approves Option B and its exact allowlist (package-lock.json via npm audit fix without --force; package.json/package-lock.json for vite ^8.3.4 and laravel-vite-plugin ^3.2.0; Dockerfile.prod node:18-alpine -> node:22-alpine; docs); tailwindcss 4 excluded; not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-20T06:44:51+07:00"
-  updated_at: "2026-10-20T06:44:51+07:00"
+  updated_at: "2026-10-20T06:48:39+07:00"
 generated_by: agent
 ---
 
 # GAP-084 — npm vulnerabilities: Gate 2 design
 
-## OWNER GATE 2: AWAITING OWNER
+## OWNER GATE 2: APPROVED — OPTION B
+
+Owner approved Option B in-session on 2026-10-20 against reviewed design head
+`6b4331eff6eac063f311a08acc3b3a0a1734ab7b`. This authorizes only the bounded implementation defined by this packet;
+it does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

@@ -601,7 +601,7 @@ jobs:
     - name: Fail on fixable HIGH/CRITICAL image vulnerabilities
       uses: aquasecurity/trivy-action@0.35.0
       with:
-        image-ref: 'zenamanage:test'
+        image-ref: 'alpine:3.10'
         format: 'table'
         exit-code: '1'
         severity: 'CRITICAL,HIGH'

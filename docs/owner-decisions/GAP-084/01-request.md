@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-10-19-gap-084-npm-vulnerabilities-evidence.md
   plan: null
   branch: docs/GAP-084-npm-vulnerabilities
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/357
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

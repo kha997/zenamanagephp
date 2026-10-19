@@ -1,34 +1,38 @@
 ---
 work_id: GAP-083
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-19-gap-083-security-scan-gating-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-10-19-gap-083-security-scan-gating.md
   branch: docs/GAP-083-security-scan-gating
   pr: https://github.com/kha997/zenamanagephp/pull/356
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-19T22:19:57+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-19, verbatim: 'APPROVE GAP-083 Gate 2 Option B'. Reviewed design head: ddd48249e53599e292231d347034725f17207f43. Approves Option B and its exact allowlist (.github/workflows/code-quality-security.yml only: composer audit gate with abandoned=report, removal of the broken PHPStan Security Rules step, npm audit report plus critical-level gate, Trivy gate on fixable CRITICAL/HIGH honouring .trivyignore; documented exception mechanism; docs); not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
-  created_at: "2026-10-19T22:25:00+07:00"
-  updated_at: "2026-10-19T22:25:00+07:00"
+  created_at: "2026-10-19T22:19:00+07:00"
+  updated_at: "2026-10-19T22:19:57+07:00"
 generated_by: agent
 ---
 
 # GAP-083 — Make security scans fail CI: Gate 2 design
 
-## OWNER GATE 2: AWAITING OWNER
+## OWNER GATE 2: APPROVED — OPTION B
+
+Owner approved Option B in-session on 2026-10-19 against reviewed design head
+`ddd48249e53599e292231d347034725f17207f43`. This authorizes only the bounded implementation defined by this packet;
+it does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

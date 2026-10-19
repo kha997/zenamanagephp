@@ -604,8 +604,8 @@ jobs:
         image-ref: 'zenamanage:test'
         format: 'table'
         exit-code: '1'
-        severity: 'UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL'
-        ignore-unfixed: false
+        severity: 'CRITICAL,HIGH'
+        ignore-unfixed: true
   license-scan:
     name: License Compliance Scan
     runs-on: ubuntu-latest

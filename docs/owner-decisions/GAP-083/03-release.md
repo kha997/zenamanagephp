@@ -1,14 +1,14 @@
 ---
 work_id: GAP-083
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-19-gap-083-security-scan-gating-evidence.md
   plan: docs/superpowers/plans/2026-10-19-gap-083-security-scan-gating.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-20T00:18:46+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-19, verbatim: 'APPROVE GAP-083 Gate 3'. Given after the packet was presented at PR head 5a1943b178ab02715b965221176e8258f2be2725 (implementation CI 34/34 green at 2051e9c9); bound to implementation subject 2051e9c959a386ddf8fff27597e9cc33a03f2541 and implementation-tree digest 2e2907957fdf9742f0fd22f4471329fc2ad6fd17b1a71ca058b402a71039b543 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-20T00:16:43+07:00"
-  updated_at: "2026-10-20T00:16:43+07:00"
+  updated_at: "2026-10-20T00:18:46+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-083 at subject 2051e9c9 (tree identical to implementation commit 76e6efe4): .github/workflows/code-quality-security.yml only. security-scan job: composer audit --abandoned=report keeps its exit code; new npm audit --package-lock-only --json report (step summary + security-reports artifact, no PR comment); PHPStan Security Rules step, its summary section and artifact paths removed (its package does not exist); new last step fails on a non-zero composer audit exit or on an npm critical count > 0 (or a missing npm report). docker-security job: new last step re-runs aquasecurity/trivy-action@0.35.0 on zenamanage:test with exit-code 1, severity CRITICAL,HIGH, ignore-unfixed (Trivy reads .trivyignore by default). Red/green proof on PR #356, each temporary commit reverted: 4d1131b3 (phpseclib 3.0.18) -> Security Vulnerability Scan red 'composer audit exited 1'; 86de3448 (minimist 0.0.8) -> red 'npm audit found 1 critical vulnerabilities'; ef021498 (gate pointed at alpine:3.10) -> Docker Security Scan red on CVE-2021-36159 CRITICAL fixed. Deviation disclosed: the designed Trivy proof (widen to every severity, unfixed included) ran on 7bc586ff and stayed green because zenamanage:test (alpine 3.24.2) has 0 findings at every severity, so the alpine:3.10 proof replaced it. Exact-head CI 34/34 green at 2051e9c9; governance and docs lints pass."
@@ -36,13 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "2051e9c959a386ddf8fff27597e9cc33a03f2541"
   verified_at: "2026-10-20T00:16:43+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "2e2907957fdf9742f0fd22f4471329fc2ad6fd17b1a71ca058b402a71039b543"
+  decision_recorded_at: "2026-10-20T00:18:46+07:00"
 ---
 
 # GAP-083 — Gate 3 release decision (cho quét bảo mật làm đỏ CI)
 
-## OWNER GATE 3: AWAITING OWNER
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-19 ("APPROVE GAP-083 Gate 3"), bound to implementation subject
+`2051e9c959a386ddf8fff27597e9cc33a03f2541` and implementation-tree digest `2e2907957fdf9742f0fd22f4471329fc2ad6fd17b1a71ca058b402a71039b543`. No deployment is authorized.
 
 ## Gói quyết định phát hành
 

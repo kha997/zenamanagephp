@@ -11,7 +11,7 @@ COPY composer.json composer.lock ./
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
 # Node.js stage — builds the Laravel Vite assets (public/build)
-FROM node:18-alpine AS node-stage
+FROM node:22-alpine AS node-stage
 
 # Set working directory
 WORKDIR /app

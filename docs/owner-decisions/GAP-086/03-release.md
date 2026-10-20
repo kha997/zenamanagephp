@@ -1,14 +1,14 @@
 ---
 work_id: GAP-086
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-20-gap-086-npm-audit-high-gate-evidence.md
   plan: docs/superpowers/plans/2026-10-20-gap-086-npm-audit-high-gate.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-20T21:08:29+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-20, verbatim: 'APPROVE GAP-086 Gate 3'. Given after the packet was presented at PR head 9745d242e7b0e248a08bc67696f0bf56bb9c6923 (implementation CI 34/34 green at 691e668c); bound to implementation subject 691e668cd8194cb6dbd77bcdd77ce23f418faa1c and implementation-tree digest 9c4fbf0131e4519e2b3c2eefb488796983663b309dd118cbe27c46011c2ceacb (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-20T20:59:32+07:00"
-  updated_at: "2026-10-20T20:59:32+07:00"
+  updated_at: "2026-10-20T21:08:29+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-086 at subject 691e668c. fd1c3000: .github/workflows/code-quality-security.yml, Security Vulnerability Scan final gate step renamed 'Fail on Composer advisories or npm high/critical vulnerabilities'; it counts distinct high/critical GHSA ids from npm-audit.json .vulnerabilities[].via[] objects, minus ids listed in an optional .npm-audit-ignore (one id per line, '# reason'; blank and comment lines skipped), prints the counted advisories and fails when any remain; a missing or unreadable report still fails; the step summary prints .npm-audit-ignore when present. Composer and Trivy gates unchanged; moderate/low npm findings stay report-only; .npm-audit-ignore not created. Proof on the PR: 4016d2a7 (temporary, pins axios 1.18.1) turned Security Vulnerability Scan red listing 7 high GHSA ids; 869751f8 (temporary, those ids in .npm-audit-ignore) turned it green; 691e668c reverts both, its tree is identical to fd1c3000. Local script test: clean report 0, high finding 1, all ignored 0, one of two ignored 1, missing report 1. Exact-head CI 34/34 green at 691e668c."
@@ -36,13 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "691e668cd8194cb6dbd77bcdd77ce23f418faa1c"
   verified_at: "2026-10-20T20:59:32+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "9c4fbf0131e4519e2b3c2eefb488796983663b309dd118cbe27c46011c2ceacb"
+  decision_recorded_at: "2026-10-20T21:08:29+07:00"
 ---
 
 # GAP-086 — Gate 3 release decision (npm audit gate at high)
 
-## OWNER GATE 3: AWAITING OWNER
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-20 ("APPROVE GAP-086 Gate 3"), bound to implementation subject
+`691e668cd8194cb6dbd77bcdd77ce23f418faa1c` and implementation-tree digest `9c4fbf0131e4519e2b3c2eefb488796983663b309dd118cbe27c46011c2ceacb`. No deployment is authorized.
 
 ## Gói quyết định phát hành
 

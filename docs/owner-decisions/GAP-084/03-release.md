@@ -1,14 +1,14 @@
 ---
 work_id: GAP-084
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-19-gap-084-npm-vulnerabilities-evidence.md
   plan: docs/superpowers/plans/2026-10-20-gap-084-npm-vulnerabilities.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-20T15:02:24+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-20, verbatim: 'APPROVE GAP-084 Gate 3'. Given after the re-presented packet (after Owner amendment 2) at PR head 9b4b73833afe6e973d23712c3160b770155e748e; bound to implementation subject d6b1f87b98b1fbead8ab5bebe27b29f05a221500 and implementation-tree digest 733168c43543dcee9e53248f5b562b66e1e0756540c82ece4f59c8a4c51a55c5 (recomputed at recording time, zero drift). Supersedes nothing beyond the earlier approval already recorded as superseded in this packet. Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-20T07:16:56+07:00"
-  updated_at: "2026-10-20T13:54:33+07:00"
+  updated_at: "2026-10-20T15:02:24+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "RE-PRESENTED after Owner amendment 2: the Owner approval of 2026-10-20 (verbatim 'APPROVE GAP-084 Gate 3', bound to subject 1b22ddbd41114e83f5754b27d906beced8c7d357 / digest 9cb285bea59687ef55107205355a566c177e55aef24e323cd17d6d533742caaf) is superseded because d6b1f87b changed the tree (README.md and docs/DEPLOYMENT_GUIDE.md Node minimum 20.19+/22.12+, package.json engines.node, 02-design amendment) in answer to a Codex P2 finding. GAP-084 at subject d6b1f87b (1b22ddbd plus that commit). 30c0eba1: npm audit fix without --force (package-lock.json only): axios 1.18.1 -> 1.20.0, postcss 8.5.16 -> 8.5.31, browserslist 4.29.4, nanoid 3.3.20, socket.io-parser 4.2.7, source-map-js 1.2.2, postcss-selector-parser 6.1.5, baseline-browser-mapping 2.11.30, caniuse-lite, electron-to-chromium, update-browserslist-db; findings 17 -> 10; built CSS byte-identical, app.js differs only by the bundled axios. 09edf3be: vite 4.5.14 -> 8.3.4, laravel-vite-plugin 0.8.1 -> 3.2.0, Dockerfile.prod node:18-alpine -> node:22-alpine; findings 10 -> 7 (0 critical; all in the tailwindcss 3 build chain: tailwindcss, braces, micromatch, chokidar, fast-glob, postcss-nested, postcss-selector-parser); build emits the same 10 manifest entries; app.css rules identical and operator.css rules equivalent after normalising the minifier (vendor prefixes, skew()->skewX(), legacy ::-moz-placeholder copies dropped with ::placeholder kept, -webkit-backdrop-filter added to .transition). 1b22ddbd (Owner amendment 'Cho sửa 1 dòng (Recommended)'): button-tests.yml generated Vite config manifest: true -> 'manifest.json' so the Vite manifest stays at public/build/manifest.json. Dockerfile.prod could not be built locally (no Docker daemon); exact-head CI 34/34 green at 1b22ddbd including browser-tests (Vite 8 build) and staging-smoke (npm ci on Node 20)."
@@ -36,13 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "d6b1f87b98b1fbead8ab5bebe27b29f05a221500"
   verified_at: "2026-10-20T13:54:33+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "733168c43543dcee9e53248f5b562b66e1e0756540c82ece4f59c8a4c51a55c5"
+  decision_recorded_at: "2026-10-20T15:02:24+07:00"
 ---
 
 # GAP-084 — Gate 3 release decision (sửa lỗ hổng npm)
 
-## OWNER GATE 3: AWAITING OWNER (trình lại)
+## OWNER GATE 3: APPROVED
+
+Owner approved the re-presented Gate 3 in-session on 2026-10-20 ("APPROVE GAP-084 Gate 3"), bound to implementation subject
+`d6b1f87b98b1fbead8ab5bebe27b29f05a221500` and implementation-tree digest `733168c43543dcee9e53248f5b562b66e1e0756540c82ece4f59c8a4c51a55c5`. No deployment is authorized.
 
 ## Lịch sử duyệt
 

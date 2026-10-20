@@ -14,7 +14,7 @@
     "pw:install:chromium": "playwright install chromium"
   },
   "dependencies": {
-    "axios": "^1.6.2",
+    "axios": "^1.18.1",
     "laravel-echo": "^2.3.0",
     "lodash": "^4.17.21",
     "playwright": "^1.52.0",

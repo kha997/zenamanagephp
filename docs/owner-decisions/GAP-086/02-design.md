@@ -97,3 +97,19 @@ Request changes / Decline.
 ## What the owner is NOT being asked to decide
 
 Gate 3, merge, release hay deploy.
+
+## Owner amendment (2026-10-20T21:12:09+07:00)
+
+Owner selection via AskUserQuestion, verbatim: "Sửa trong PR này (Recommended)".
+
+This amendment answers a Codex review finding (P2) on PR #359: a bare `GHSA-...` line,
+or one with an empty `#`, was still treated as an exception, although this design
+requires every entry to carry a reason. It authorizes, in the same gate step of
+`.github/workflows/code-quality-security.yml`:
+
+- each non-blank, non-comment line of `.npm-audit-ignore` must be a GHSA id followed
+  by `#` and a non-empty reason; any other line fails the step and is printed with its
+  line number;
+- only valid entries are used as exceptions.
+
+The Gate 3 approval recorded before this amendment is superseded; Gate 3 is re-presented.

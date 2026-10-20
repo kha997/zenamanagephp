@@ -325,7 +325,14 @@ jobs:
         else
           ignored='[]'
           if [ -f .npm-audit-ignore ]; then
-            ignored=$(sed -e 's/#.*//' -e 's/[[:space:]]//g' .npm-audit-ignore | { grep -v '^$' || true; } | jq -R . | jq -sc .)
+            entry='^[[:space:]]*GHSA(-[a-z0-9]{4}){3}[[:space:]]*#[[:space:]]*[^[:space:]]'
+            invalid=$(grep -nvE "^[[:space:]]*(#.*)?\$|${entry}" .npm-audit-ignore || true)
+            if [ -n "${invalid}" ]; then
+              echo "::error::Each .npm-audit-ignore entry must be a GHSA id followed by \"# reason\". Invalid lines:"
+              echo "${invalid}"
+              status=1
+            fi
+            ignored=$({ grep -oE "${entry}" .npm-audit-ignore || true; } | { grep -oE 'GHSA(-[a-z0-9]{4}){3}' || true; } | jq -R . | jq -sc .)
           fi
           blocking=$(jq -r --argjson ignored "${ignored}" '
             [.vulnerabilities[]?.via[]? | objects

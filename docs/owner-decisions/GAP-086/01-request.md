@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-10-20-gap-086-npm-audit-high-gate-evidence.md
   plan: null
   branch: docs/GAP-086-npm-audit-high-gate
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/359
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

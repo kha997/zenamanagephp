@@ -1,0 +1,8 @@
+# GAP-086 TEMPORARY green proof — reverted next
+GHSA-3pq3-5fj3-cg6v  # proof only: axios pinned by the previous temporary commit
+GHSA-542g-h47m-68v8  # proof only: axios pinned by the previous temporary commit
+GHSA-c29m-xwm3-cm6r  # proof only: axios pinned by the previous temporary commit
+GHSA-m8m8-qj5v-23w3  # proof only: axios pinned by the previous temporary commit
+GHSA-mghh-pgcx-3jjj  # proof only: axios pinned by the previous temporary commit
+GHSA-r4gj-5m52-g5wh  # proof only: axios pinned by the previous temporary commit
+GHSA-x97p-jq2g-jp4f  # proof only: axios pinned by the previous temporary commit

@@ -229,6 +229,13 @@ jobs:
           echo '```text'
           jq -r '(.metadata.vulnerabilities | "critical=\(.critical) high=\(.high) moderate=\(.moderate) low=\(.low)"), (.vulnerabilities // {} | to_entries[] | "\(.value.severity)\t\(.key)")' npm-audit.json || true
           echo '```'
+          if [ -f .npm-audit-ignore ]; then
+            echo
+            echo "## npm audit exceptions (.npm-audit-ignore)"
+            echo '```text'
+            cat .npm-audit-ignore
+            echo '```'
+          fi
         } >> "$GITHUB_STEP_SUMMARY"
 
     - name: Run PHP CS Fixer Security Rules
@@ -301,8 +308,9 @@ jobs:
 
           await syncReport('security', body ? `## Security Scan Report\n\n${body}` : '');
 
-    # GAP-083: exceptions go in composer.json config.audit.ignore, each with a reason.
-    - name: Fail on Composer advisories or npm critical vulnerabilities
+    # GAP-083: Composer exceptions go in composer.json config.audit.ignore, each with a reason.
+    # GAP-086: npm exceptions go in .npm-audit-ignore, one GHSA id per line followed by "# reason".
+    - name: Fail on Composer advisories or npm high/critical vulnerabilities
       env:
         COMPOSER_AUDIT_EXIT: ${{ steps.composer-audit.outputs.exit_code }}
       run: |
@@ -311,12 +319,33 @@ jobs:
           echo "::error::composer audit exited ${COMPOSER_AUDIT_EXIT}: security advisories found, or the audit could not run. See composer-audit.json in the security-reports artifact."
           status=1
         fi
-        if ! critical=$(jq -er '.metadata.vulnerabilities.critical' npm-audit.json); then
+        if ! jq -e '.metadata.vulnerabilities' npm-audit.json >/dev/null 2>&1; then
           echo "::error::npm audit did not produce a report. See npm-audit.json in the security-reports artifact."
           status=1
-        elif [ "${critical}" -gt 0 ]; then
-          echo "::error::npm audit found ${critical} critical vulnerabilities. See npm-audit.json in the security-reports artifact."
-          status=1
+        else
+          ignored='[]'
+          if [ -f .npm-audit-ignore ]; then
+            entry='^[[:space:]]*GHSA(-[a-z0-9]{4}){3}[[:space:]]*#[[:space:]]*[^[:space:]]'
+            invalid=$(grep -nvE "^[[:space:]]*(#.*)?\$|${entry}" .npm-audit-ignore || true)
+            if [ -n "${invalid}" ]; then
+              echo "::error::Each .npm-audit-ignore entry must be a GHSA id followed by \"# reason\". Invalid lines:"
+              echo "${invalid}"
+              status=1
+            fi
+            ignored=$({ grep -oE "${entry}" .npm-audit-ignore || true; } | { grep -oE 'GHSA(-[a-z0-9]{4}){3}' || true; } | jq -R . | jq -sc .)
+          fi
+          blocking=$(jq -r --argjson ignored "${ignored}" '
+            [.vulnerabilities[]?.via[]? | objects
+              | select(.severity == "high" or .severity == "critical")
+              | {id: (.url | split("/") | last), severity, name, title}]
+            | unique_by(.id)
+            | map(select(.id as $id | $ignored | index($id) | not))
+            | .[] | "\(.severity)\t\(.id)\t\(.name): \(.title)"' npm-audit.json)
+          if [ -n "${blocking}" ]; then
+            echo "::error::npm audit found high/critical advisories. Fix them, or add the GHSA id with a reason to .npm-audit-ignore:"
+            echo "${blocking}"
+            status=1
+          fi
         fi
         exit "${status}"
   dependency-scan:

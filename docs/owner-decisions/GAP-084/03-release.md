@@ -1,14 +1,14 @@
 ---
 work_id: GAP-084
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-19-gap-084-npm-vulnerabilities-evidence.md
   plan: docs/superpowers/plans/2026-10-20-gap-084-npm-vulnerabilities.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-20T13:50:09+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-20, verbatim: 'APPROVE GAP-084 Gate 3'. Given after the packet was presented at PR head d7a15ff5ae6d14b82723457a6844b0a8caead6c5 (implementation CI 34/34 green at 1b22ddbd); bound to implementation subject 1b22ddbd41114e83f5754b27d906beced8c7d357 and implementation-tree digest 9cb285bea59687ef55107205355a566c177e55aef24e323cd17d6d533742caaf (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-20T07:16:56+07:00"
-  updated_at: "2026-10-20T07:16:56+07:00"
+  updated_at: "2026-10-20T13:50:09+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-084 at subject 1b22ddbd. 30c0eba1: npm audit fix without --force (package-lock.json only): axios 1.18.1 -> 1.20.0, postcss 8.5.16 -> 8.5.31, browserslist 4.29.4, nanoid 3.3.20, socket.io-parser 4.2.7, source-map-js 1.2.2, postcss-selector-parser 6.1.5, baseline-browser-mapping 2.11.30, caniuse-lite, electron-to-chromium, update-browserslist-db; findings 17 -> 10; built CSS byte-identical, app.js differs only by the bundled axios. 09edf3be: vite 4.5.14 -> 8.3.4, laravel-vite-plugin 0.8.1 -> 3.2.0, Dockerfile.prod node:18-alpine -> node:22-alpine; findings 10 -> 7 (0 critical; all in the tailwindcss 3 build chain: tailwindcss, braces, micromatch, chokidar, fast-glob, postcss-nested, postcss-selector-parser); build emits the same 10 manifest entries; app.css rules identical and operator.css rules equivalent after normalising the minifier (vendor prefixes, skew()->skewX(), legacy ::-moz-placeholder copies dropped with ::placeholder kept, -webkit-backdrop-filter added to .transition). 1b22ddbd (Owner amendment 'Cho sửa 1 dòng (Recommended)'): button-tests.yml generated Vite config manifest: true -> 'manifest.json' so the Vite manifest stays at public/build/manifest.json. Dockerfile.prod could not be built locally (no Docker daemon); exact-head CI 34/34 green at 1b22ddbd including browser-tests (Vite 8 build) and staging-smoke (npm ci on Node 20)."
@@ -36,13 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "1b22ddbd41114e83f5754b27d906beced8c7d357"
   verified_at: "2026-10-20T07:16:56+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "9cb285bea59687ef55107205355a566c177e55aef24e323cd17d6d533742caaf"
+  decision_recorded_at: "2026-10-20T13:50:09+07:00"
 ---
 
 # GAP-084 — Gate 3 release decision (sửa lỗ hổng npm)
 
-## OWNER GATE 3: AWAITING OWNER
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-20 ("APPROVE GAP-084 Gate 3"), bound to implementation subject
+`1b22ddbd41114e83f5754b27d906beced8c7d357` and implementation-tree digest `9cb285bea59687ef55107205355a566c177e55aef24e323cd17d6d533742caaf`. No deployment is authorized.
 
 ## Gói quyết định phát hành
 

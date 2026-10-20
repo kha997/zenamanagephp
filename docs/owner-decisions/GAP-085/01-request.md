@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-10-20-gap-085-tailwind-4-evidence.md
   plan: null
   branch: docs/GAP-085-tailwind-4
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/358
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

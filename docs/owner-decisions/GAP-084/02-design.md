@@ -80,6 +80,22 @@ Authorizes one change outside the allowlist: `.github/workflows/button-tests.yml
 Laravel's `@vite` would then read that file and browser-tests would fail. A local reproduction
 confirmed both behaviours.
 
+## Owner amendment 2 (2026-10-20T13:53:50+07:00)
+
+Owner selection via AskUserQuestion, verbatim: "Sửa trong PR này (Recommended)".
+
+This amendment answers a Codex review finding (P2) on PR #357. Vite 8 requires Node
+`^20.19.0 || >=22.12.0`, but the documented minimums were older. It authorizes these
+changes outside the allowlist:
+
+- `README.md`: Node.js 18.0 → 20.19+ / 22.12+.
+- `docs/DEPLOYMENT_GUIDE.md`: Node.js 16+ → 20.19+ / 22.12+.
+- `package.json` (and its root entry in `package-lock.json`): a new
+  `"engines": {"node": "^20.19.0 || >=22.12.0"}`.
+
+The Gate 3 approval bound to the previous digest is superseded. Gate 3 is re-presented
+with the new subject and digest.
+
 ## Verification
 
 - `npm audit` before and after.

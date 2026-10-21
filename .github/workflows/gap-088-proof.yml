@@ -18,6 +18,11 @@ jobs:
       - name: Work around the missing docker/php/php-fpm.conf (pre-existing, CI workspace only)
         if: matrix.dockerfile == 'Dockerfile'
         run: cp docker/php-fpm.conf docker/php/php-fpm.conf
+      - name: Work around missing build packages in Dockerfile.websocket (pre-existing, CI workspace only)
+        if: matrix.dockerfile == 'Dockerfile.websocket'
+        run: |
+          sed -i 's/^    mysql-client \\$/    mysql-client linux-headers $PHPIZE_DEPS \\/' Dockerfile.websocket
+          grep -n 'linux-headers' Dockerfile.websocket
       - name: Build ${{ matrix.dockerfile }}
         run: docker build -f "${{ matrix.dockerfile }}" -t gap088-proof .
       - name: redis extension is loaded

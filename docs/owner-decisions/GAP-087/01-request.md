@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-10-21-gap-087-actions-node24-evidence.md
   plan: null
   branch: docs/GAP-087-actions-node24
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/360
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

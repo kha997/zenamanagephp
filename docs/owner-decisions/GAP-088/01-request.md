@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-10-21-gap-088-pecl-retry-evidence.md
   plan: null
   branch: docs/GAP-088-pecl-retry
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/361
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

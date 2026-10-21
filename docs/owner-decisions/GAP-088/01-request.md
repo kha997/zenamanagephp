@@ -1,11 +1,11 @@
 ---
 work_id: GAP-088
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-21-gap-088-pecl-retry-evidence.md
   plan: null
@@ -15,18 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-21T16:32:43+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-21, verbatim: 'APPROVE GAP-088 Gate 1'. Bound to reviewed Draft PR #361 head 3317247cb21292a6ea93132410438ff26e87e197, canonical base e14bdaa0b0b9439032ee64e81fb23094234cc093. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-21T16:29:51+07:00"
-  updated_at: "2026-10-21T16:29:51+07:00"
+  updated_at: "2026-10-21T16:32:43+07:00"
 generated_by: agent
 ---
 
-## OWNER GATE 1: AWAITING OWNER
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-088 Gate 1 in-session on 2026-10-21 against Draft PR #361
+head `3317247cb21292a6ea93132410438ff26e87e197`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

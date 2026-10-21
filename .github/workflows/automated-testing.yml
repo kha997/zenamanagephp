@@ -100,14 +100,14 @@ jobs:
       run: echo "::group::Upload coverage"
 
     - name: Upload Unit Test Coverage
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v6
       with:
         files: coverage-unit.xml
         flags: unittests
         name: unit-tests
 
     - name: Upload Unit Coverage Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: coverage-unit
         path: coverage-unit.xml
@@ -918,14 +918,14 @@ jobs:
       run: echo "::group::Upload coverage"
 
     - name: Upload Feature Test Coverage
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v6
       with:
         files: coverage-feature.xml
         flags: featuretests
         name: feature-tests
 
     - name: Upload Feature Coverage Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: coverage-feature
         path: coverage-feature.xml
@@ -1233,14 +1233,14 @@ jobs:
       run: echo "::group::Upload coverage"
 
     - name: Upload Integration Test Coverage
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v6
       with:
         files: coverage-integration.xml
         flags: integrationtests
         name: integration-tests
 
     - name: Upload Integration Coverage Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: coverage-integration
         path: coverage-integration.xml
@@ -1420,7 +1420,7 @@ jobs:
         echo "::endgroup::"
 
     - name: Upload Performance Report
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: performance-report-${{ matrix.perf_slug }}
         path: performance-report.txt
@@ -1508,7 +1508,7 @@ jobs:
 
     - name: Upload PHPStan Report
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: phpstan-report
         path: phpstan-report.json
@@ -1543,7 +1543,7 @@ jobs:
 
     - name: Upload CS Fixer Report
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: cs-fixer-report
         path: cs-fixer-report.json
@@ -1605,21 +1605,21 @@ jobs:
 
     - name: Download Unit Test Coverage (non-blocking)
       continue-on-error: true
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: coverage-unit
         path: coverage/
 
     - name: Download Feature Test Coverage (non-blocking)
       continue-on-error: true
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: coverage-feature
         path: coverage/
 
     - name: Download Integration Test Coverage (non-blocking)
       continue-on-error: true
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: coverage-integration
         path: coverage/
@@ -1744,7 +1744,7 @@ jobs:
 
     - name: Upload Combined Coverage Report (non-blocking)
       continue-on-error: true
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: combined-coverage-report
         path: coverage-summary.txt

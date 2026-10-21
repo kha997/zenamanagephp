@@ -72,7 +72,7 @@ jobs:
 
       - name: Upload smoke report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: smoke-report
           path: ${{ github.workspace }}/smoke-report.md
@@ -80,7 +80,7 @@ jobs:
 
       - name: Upload smoke server log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: smoke-server-log
           path: /tmp/smoke_server.log
@@ -88,7 +88,7 @@ jobs:
 
       - name: Upload laravel smoke log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: smoke-laravel-log
           path: storage/logs/laravel.log

@@ -105,7 +105,7 @@ jobs:
           echo "sha256=$(cut -d' ' -f1 "${{ steps.package.outputs.artifact }}.sha256")" >> "$GITHUB_OUTPUT"
 
       - name: Upload release artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-${{ needs.verify-sha.outputs.verified_sha }}
           path: |
@@ -155,7 +155,7 @@ jobs:
           echo "::error::allow_breaking_migrations=true requires breaking_migration_backup_confirmed=true. Take a fresh backup via scripts/deploy/backup.sh per docs/runbooks/gap-049-migration-safety.md, then re-run with confirmation set."
           exit 1
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         if: steps.gate.outputs.ready == 'true'
         with:
           name: release-${{ needs.verify-sha.outputs.verified_sha }}
@@ -375,7 +375,7 @@ jobs:
       - name: Escalate breaking-migration recovery requirement
         if: ${{ always() && steps.recovery.outcome == 'success' && github.event.inputs.allow_breaking_migrations == 'true' && env.SLACK_WEBHOOK_URL != '' }}
         continue-on-error: true
-        uses: slackapi/slack-github-action@v2.1.1
+        uses: slackapi/slack-github-action@v4.0.0
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
@@ -408,7 +408,7 @@ jobs:
       - name: Notify truthful deployment state (never a generic "success" for a skipped/unverified deploy)
         if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
         continue-on-error: true
-        uses: slackapi/slack-github-action@v2.1.1
+        uses: slackapi/slack-github-action@v4.0.0
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:

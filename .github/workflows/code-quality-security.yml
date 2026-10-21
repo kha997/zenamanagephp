@@ -90,7 +90,7 @@ jobs:
 
     - name: Upload Code Quality Reports
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: code-quality-reports
         path: |
@@ -246,7 +246,7 @@ jobs:
 
     - name: Upload Security Reports
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: security-reports
         path: |
@@ -422,7 +422,7 @@ jobs:
 
     - name: Upload Dependency Reports
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: dependency-reports
         path: |
@@ -483,10 +483,10 @@ jobs:
       uses: actions/checkout@v5
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@v4
 
     - name: Build Docker image
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v7
       with:
         context: .
         file: ./Dockerfile.prod
@@ -559,26 +559,26 @@ jobs:
         exit "$status"
 
     - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@0.35.0
+      uses: aquasecurity/trivy-action@v0.36.0
       with:
         image-ref: 'zenamanage:test'
         format: 'sarif'
         output: 'trivy-results.sarif'
 
     - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: 'trivy-results.sarif'
 
     - name: Run Trivy vulnerability scanner (JSON)
-      uses: aquasecurity/trivy-action@0.35.0
+      uses: aquasecurity/trivy-action@v0.36.0
       with:
         image-ref: 'zenamanage:test'
         format: 'json'
         output: 'trivy-results.json'
 
     - name: Upload Trivy JSON results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: trivy-results
         path: trivy-results.json
@@ -628,7 +628,7 @@ jobs:
 
     # GAP-083: Trivy reads .trivyignore by default; exceptions go there, each with a reason comment.
     - name: Fail on fixable HIGH/CRITICAL image vulnerabilities
-      uses: aquasecurity/trivy-action@0.35.0
+      uses: aquasecurity/trivy-action@v0.36.0
       with:
         image-ref: 'zenamanage:test'
         format: 'table'
@@ -686,7 +686,7 @@ jobs:
 
     - name: Upload License Report
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: license-report
         path: |

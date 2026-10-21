@@ -1,11 +1,11 @@
 ---
 work_id: GAP-087
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-21-gap-087-actions-node24-evidence.md
   plan: null
@@ -15,18 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-21T07:47:30+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-21, verbatim: 'APPROVE GAP-087 Gate 1'. Bound to reviewed Draft PR #360 head b2416bb061cb0b9b632000139882a2f29ecc3fe1, canonical base 1928f2ae1c85388ce88661f53855a5aba03a6720. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-21T07:44:54+07:00"
-  updated_at: "2026-10-21T07:44:54+07:00"
+  updated_at: "2026-10-21T07:47:30+07:00"
 generated_by: agent
 ---
 
-## OWNER GATE 1: AWAITING OWNER
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-087 Gate 1 in-session on 2026-10-21 against Draft PR #360
+head `b2416bb061cb0b9b632000139882a2f29ecc3fe1`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

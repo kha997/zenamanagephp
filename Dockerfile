@@ -79,7 +79,7 @@ RUN chmod -R 775 bootstrap/cache
 
 # Copy PHP configuration
 COPY docker/php/php.ini /usr/local/etc/php/php.ini
-COPY docker/php-fpm.conf /usr/local/etc/php-fpm.d/www.conf
+COPY docker/php/php-fpm.conf /usr/local/etc/php-fpm.d/www.conf
 
 # Expose port 9000
 EXPOSE 9000

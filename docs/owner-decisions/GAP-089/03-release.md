@@ -1,14 +1,14 @@
 ---
 work_id: GAP-089
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-21-gap-089-dockerfiles-build-evidence.md
   plan: docs/superpowers/plans/2026-10-21-gap-089-dockerfiles-build.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-21T22:00:11+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-21, verbatim: 'APPROVE GAP-089 Gate 3'. Given after the packet was presented at PR head 319d6bdffd90bbfc79ba2420822935b234ff5558 (implementation CI 35/35 green at b1b280ce); bound to implementation subject b1b280ce4538f634931fbbbbc6f9625d5e443b44 and implementation-tree digest c933ac9e957ee53fd9e25eebcdcd6b26448c8b536422e82b894e9b8f267d83b1 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-21T21:47:09+07:00"
-  updated_at: "2026-10-21T21:47:09+07:00"
+  updated_at: "2026-10-21T22:00:11+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-089 at subject b1b280ce. 1813043a (Gate 2 Option A): Dockerfile installs libicu-dev, runs 'composer install --no-dev --no-scripts --no-autoloader' before COPY . . and 'composer dump-autoload --optimize --no-dev' after it, and copies docker/php-fpm.conf (the path that exists); Dockerfile.websocket deleted, together with the 'Build and push WebSocket image' step and the matching '-websocket' line in the release notes of release-management.yml, and the websocket service of docker-compose.yml (the websocket server cannot start: Ratchet/cboden is not a dependency). New .github/workflows/docker-dev-image.yml (pull_request and push to main, path-filtered on Dockerfile, composer.json, composer.lock, docker/** and itself) builds Dockerfile and checks php -m lists redis and intl and php artisan --version runs. Proof: temporary 6e138900 restored the wrong php-fpm.conf path and Build Dockerfile went red ('/docker/php/php-fpm.conf: not found'); b1b280ce reverts it, its tree identical to 1813043a. Static: actionlint shows no new findings; docker compose -f docker-compose.yml config succeeds (only the pre-existing 'version is obsolete' warning). Exact-head CI 35/35 green at b1b280ce, including Build Dockerfile (image built, redis and intl loaded, artisan boots). Disclosed, out of scope: docker-compose.prod.yml builds a 'production' target that Dockerfile does not have and runs the non-existent websockets:serve; docker-compose.loadbalancer.yml needs Dockerfile.monitoring, which does not exist; docs that mention Dockerfile.websocket are historical records and are not edited."
@@ -36,13 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "b1b280ce4538f634931fbbbbc6f9625d5e443b44"
   verified_at: "2026-10-21T21:47:09+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "c933ac9e957ee53fd9e25eebcdcd6b26448c8b536422e82b894e9b8f267d83b1"
+  decision_recorded_at: "2026-10-21T22:00:11+07:00"
 ---
 
 # GAP-089 — Gate 3 release decision (Dockerfile builds, Dockerfile.websocket retired)
 
-## OWNER GATE 3: AWAITING OWNER
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-21 ("APPROVE GAP-089 Gate 3"), bound to implementation subject
+`b1b280ce4538f634931fbbbbc6f9625d5e443b44` and implementation-tree digest `c933ac9e957ee53fd9e25eebcdcd6b26448c8b536422e82b894e9b8f267d83b1`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

@@ -1,14 +1,14 @@
 ---
 work_id: GAP-087
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-21-gap-087-actions-node24-evidence.md
   plan: docs/superpowers/plans/2026-10-21-gap-087-actions-node24.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-21T14:16:00+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-21, verbatim: 'APPROVE GAP-087 Gate 3'. Given after the packet was presented at PR head 5150c0eaba135f5dc09c3deb4e95aa1a96ab7bbd (implementation CI 34/34 green at f72d44b5); bound to implementation subject f72d44b546555f6686fa454077bcd51919c0e936 and implementation-tree digest c2b30d4303f3567000a99b91de5914dd79a1a68b6290bed25cfbefb7e6f0c5a2 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-21T13:13:41+07:00"
-  updated_at: "2026-10-21T13:13:41+07:00"
+  updated_at: "2026-10-21T14:16:00+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-087 at subject f72d44b5. eb5c2391 (Gate 2 Option A, uses: lines only): actions/upload-artifact v4->v7 (18), actions/download-artifact v4->v8 (6), slackapi/slack-github-action v2.1.1->v4.0.0 (9), docker/build-push-action v5->v7 (8), docker/setup-buildx-action v3->v4 (7), docker/metadata-action v5->v6 (5), docker/login-action v3->v4 (5), github/codeql-action/upload-sarif v3->v4 (2). a31697c0 (Owner amendment 1, 'Sửa trong PR này (Recommended)'): package-lock.json follow-redirects 1.16.0->1.16.1 only, for GHSA-8r9p-f939-6h3c and GHSA-q3jh-wrc6-jgq8 (high, published after GAP-086 merged; the GAP-086 gate turned every branch red); npm audit 0. f72d44b5 (Owner amendment 2, 'Sửa cả hai trong PR này (Recommended)'): codecov/codecov-action v5->v6 (4, including ci-cd.yml) and aquasecurity/trivy-action 0.35.0->v0.36.0 (5), because both composites called a Node 20 action internally (github-script v7.0.1, actions/cache v4.2.4); trivy-action v0.36.0 defaults to Trivy v0.70.0. Static checks: actionlint 1.7.12 shows the same 22 findings as main and none new; every with: key on the 69 changed steps exists in the target action.yml, and every upgraded action declares node24; the 9 Slack payloads parse as objects with js-yaml 5.5.0, the parser Slack v4 uses. Proof: temporary workflow f93ae788 ran docker/metadata-action@v6 (tags pr-360, sha-...) and docker/login-action@v4 (ghcr.io, Login Succeeded), reverted by ef8121a4. Docker Security Scan failed once at ef8121a4 on 'pecl install redis' (No releases available for package pecl.php.net/redis, after a 22 s stall), a network failure upstream of the changed actions; it passed on its one re-run. Exact-head CI 34/34 green at f72d44b5, including Docker Security Scan (setup-buildx v4, build-push v7, upload-sarif v4, Trivy v0.70.0), Test Coverage Report (download-artifact v8) and staging-smoke; the Unit Tests and Docker Security Scan logs no longer end with the Node 20 deprecation warning. Not exercised by PR CI: Slack steps and the release, deployment and production workflows (first real run at the next release; every Slack step has continue-on-error: true)."
@@ -36,13 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "f72d44b546555f6686fa454077bcd51919c0e936"
   verified_at: "2026-10-21T13:13:41+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "c2b30d4303f3567000a99b91de5914dd79a1a68b6290bed25cfbefb7e6f0c5a2"
+  decision_recorded_at: "2026-10-21T14:16:00+07:00"
 ---
 
 # GAP-087 — Gate 3 release decision (GitHub Actions off Node 20)
 
-## OWNER GATE 3: AWAITING OWNER
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-21 ("APPROVE GAP-087 Gate 3"), bound to implementation subject
+`f72d44b546555f6686fa454077bcd51919c0e936` and implementation-tree digest `c2b30d4303f3567000a99b91de5914dd79a1a68b6290bed25cfbefb7e6f0c5a2`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

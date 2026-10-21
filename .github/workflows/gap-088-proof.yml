@@ -15,6 +15,9 @@ jobs:
         dockerfile: [Dockerfile.websocket, Dockerfile]
     steps:
       - uses: actions/checkout@v5
+      - name: Work around the missing docker/php/php-fpm.conf (pre-existing, CI workspace only)
+        if: matrix.dockerfile == 'Dockerfile'
+        run: cp docker/php-fpm.conf docker/php/php-fpm.conf
       - name: Build ${{ matrix.dockerfile }}
         run: docker build -f "${{ matrix.dockerfile }}" -t gap088-proof .
       - name: redis extension is loaded

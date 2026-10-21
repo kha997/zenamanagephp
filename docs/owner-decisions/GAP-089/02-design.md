@@ -127,3 +127,13 @@ Request changes / Decline.
 ## What the owner is NOT being asked to decide
 
 Gate 3, merge, release hay deploy.
+
+## Owner amendment (2026-10-21T22:45:52+07:00)
+
+Owner selection via AskUserQuestion, verbatim: "Bỏ bộ lọc, chạy mọi PR (Recommended)".
+
+This amendment answers a Codex review finding (P2) on PR #362. `Dockerfile` copies the whole repository, runs
+`composer dump-autoload` and boots Artisan. A pull request that touches only `app/**`, `bootstrap/**`, `config/**`
+or `artisan` could break the build while the path-filtered job skipped it. The amendment replaces item 5's `paths`
+filter: `docker-dev-image.yml` now runs on every `pull_request` and on every push to main. The Gate 3 approval
+recorded before this amendment is superseded; Gate 3 is re-presented.

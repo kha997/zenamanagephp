@@ -1,34 +1,38 @@
 ---
 work_id: GAP-089
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-21-gap-089-dockerfiles-build-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-10-21-gap-089-dockerfiles-build.md
   branch: docs/GAP-089-dockerfiles-build
   pr: https://github.com/kha997/zenamanagephp/pull/362
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-21T21:18:48+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-21, verbatim: 'APPROVE GAP-089 Gate 2 Option A'. Reviewed design head: 7b4314a3452d940ed6b263568b860ad34c99190b. Approves Option A and its exact allowlist (Dockerfile: libicu-dev, composer install --no-scripts --no-autoloader before COPY and composer dump-autoload --optimize --no-dev after, docker/php-fpm.conf path; Dockerfile.websocket deleted; release-management.yml WebSocket image step removed; docker-compose.yml websocket service removed; new .github/workflows/docker-dev-image.yml; temporary red proof reverted; docs); not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-21T19:37:36+07:00"
-  updated_at: "2026-10-21T19:37:36+07:00"
+  updated_at: "2026-10-21T21:18:48+07:00"
 generated_by: agent
 ---
 
 # GAP-089 — Dockerfile and Dockerfile.websocket: Gate 2 design
 
-## OWNER GATE 2: AWAITING OWNER
+## OWNER GATE 2: APPROVED — OPTION A
+
+Owner approved Option A in-session on 2026-10-21 against reviewed design head
+`7b4314a3452d940ed6b263568b860ad34c99190b`. This authorizes only the bounded implementation defined by this packet;
+it does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

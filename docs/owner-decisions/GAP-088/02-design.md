@@ -1,34 +1,38 @@
 ---
 work_id: GAP-088
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-21-gap-088-pecl-retry-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-10-21-gap-088-pecl-retry.md
   branch: docs/GAP-088-pecl-retry
   pr: https://github.com/kha997/zenamanagephp/pull/361
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-21T16:34:27+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-21, verbatim: 'APPROVE GAP-088 Gate 2 Option A'. Reviewed design head: c62d2eca7147447f32338f586eb7cd9dcdacb5d9. Approves Option A and its exact allowlist (Dockerfile.prod, Dockerfile.websocket, Dockerfile: pecl install redis replaced by a 5-attempt retry loop around pecl install redis-6.3.0 with 15/30/45/60 s waits, rest of each RUN unchanged; temporary proof workflow and temporary red proof, both reverted; docs); not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-21T16:33:08+07:00"
-  updated_at: "2026-10-21T16:33:08+07:00"
+  updated_at: "2026-10-21T16:34:27+07:00"
 generated_by: agent
 ---
 
 # GAP-088 — Docker builds survive flaky pecl.php.net: Gate 2 design
 
-## OWNER GATE 2: AWAITING OWNER
+## OWNER GATE 2: APPROVED — OPTION A
+
+Owner approved Option A in-session on 2026-10-21 against reviewed design head
+`c62d2eca7147447f32338f586eb7cd9dcdacb5d9`. This authorizes only the bounded implementation defined by this packet;
+it does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

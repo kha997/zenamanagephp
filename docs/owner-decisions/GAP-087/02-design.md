@@ -140,3 +140,16 @@ Request changes / Decline.
 ## What the owner is NOT being asked to decide
 
 Gate 3, merge, release hay deploy.
+
+## Owner amendment (2026-10-21T07:59:31+07:00)
+
+Owner selection via AskUserQuestion, verbatim: "Sửa trong PR này (Recommended)".
+
+On PR #360, the Security Vulnerability Scan turned red on two high advisories published after
+GAP-086 merged: GHSA-8r9p-f939-6h3c and GHSA-q3jh-wrc6-jgq8. Both are in `follow-redirects`
+1.16.0, which axios 1.20.0 pulls in. The GAP-086 gate blocks every branch, main included, until
+they are fixed. This amendment authorizes one change outside the allowlist:
+
+- `package-lock.json`: the `node_modules/follow-redirects` entry only, 1.16.0 → 1.16.1 (version,
+  resolved, integrity). It stays within the range axios declares, and no other entry changes.
+  `npm audit fix` was not used because it also rewrote unrelated bundled entries.

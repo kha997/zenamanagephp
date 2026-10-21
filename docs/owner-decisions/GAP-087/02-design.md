@@ -153,3 +153,23 @@ they are fixed. This amendment authorizes one change outside the allowlist:
 - `package-lock.json`: the `node_modules/follow-redirects` entry only, 1.16.0 → 1.16.1 (version,
   resolved, integrity). It stays within the range axios declares, and no other entry changes.
   `npm audit fix` was not used because it also rewrote unrelated bundled entries.
+
+## Owner amendment 2 (2026-10-21T12:32:26+07:00)
+
+Owner selection via AskUserQuestion, verbatim: "Sửa cả hai trong PR này (Recommended)".
+
+CI on PR #360 was 34/34 green at `ef8121a4`, but two jobs still logged "Node.js 20 is deprecated".
+The warnings come from inside composite actions that the Gate 1 count missed:
+- `codecov/codecov-action@v5` calls `actions/github-script` v7.0.1, a Node 20 action, pinned by SHA.
+  Its v6 calls github-script v8.0.0 (Node 24) and has the same inputs.
+- `aquasecurity/trivy-action@0.35.0` calls `actions/cache` v4.2.4, a Node 20 action. Its v0.36.0 calls
+  cache v5.0.5 (Node 24) and has the same inputs. Its default Trivy scanner moves from v0.69.3 to v0.70.0.
+
+This amendment authorizes, as `uses:` changes only:
+- `codecov/codecov-action@v5` → `@v6` (4 uses: `automated-testing.yml` ×3 and `ci-cd.yml` ×1, which adds
+  `ci-cd.yml` to the file list);
+- `aquasecurity/trivy-action@0.35.0` → `@v0.36.0` (5 uses: `code-quality-security.yml` ×3 and
+  `release-management.yml` ×2).
+
+The Gate 2 approval stands for everything else. Gate 3 will disclose both changes, and any new finding from
+Trivy v0.70.0.

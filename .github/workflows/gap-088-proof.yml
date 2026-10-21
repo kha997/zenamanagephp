@@ -1,0 +1,21 @@
+name: GAP-088 temporary proof
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-other-dockerfiles:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dockerfile: [Dockerfile.websocket, Dockerfile]
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build ${{ matrix.dockerfile }}
+        run: docker build -f "${{ matrix.dockerfile }}" -t gap088-proof .
+      - name: redis extension is loaded
+        run: docker run --rm --entrypoint php gap088-proof -m | tee modules.txt && grep -qx redis modules.txt

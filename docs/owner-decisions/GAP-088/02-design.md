@@ -107,3 +107,23 @@ Request changes / Decline.
 ## What the owner is NOT being asked to decide
 
 Gate 3, merge, release hay deploy.
+
+## Owner amendment (2026-10-21T17:27:54+07:00)
+
+Owner selection via AskUserQuestion, verbatim: "Chấp nhận + GAP riêng (Recommended)".
+
+The temporary proof showed that two of the three Dockerfiles do not build on main, for reasons that predate
+GAP-088:
+- `Dockerfile.websocket`: the `sockets` extension fails (`linux/sock_diag.h` missing). Its `apk add` has
+  neither `linux-headers` nor `$PHPIZE_DEPS`, and PECL needs the latter.
+  - With both added in the CI workspace only, it built and `php -m` listed `redis`.
+- `Dockerfile`:
+  - line 80 copies `docker/php/php-fpm.conf`, which does not exist (the file is `docker/php-fpm.conf`);
+  - with that worked around in the CI workspace, `docker-php-ext-install` (line 32) still fails, before the
+    redis step.
+  - The retry loop in `Dockerfile` therefore cannot be run. It is the same shell as in the other two files,
+    and it was run locally under `dash` (Debian's `/bin/sh`) with a stub `pecl` that fails 0, 2, 4, 5 and
+    9 times.
+
+This amendment accepts that verification for `Dockerfile`, and records both pre-existing breakages for Gate 3.
+Fixing them is left to a separate GAP (GAP-089). No file outside the allowlist changes.

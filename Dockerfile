@@ -40,7 +40,14 @@ RUN docker-php-ext-install \
     intl
 
 # Install Redis extension
-RUN pecl install redis && docker-php-ext-enable redis
+# GAP-088: pinned version, retried because pecl.php.net is sometimes unreachable
+RUN for i in 1 2 3 4 5; do \
+        pecl install redis-6.3.0 && break; \
+        if [ "$i" -eq 5 ]; then echo "pecl install redis-6.3.0 failed (attempt 5/5)" >&2; exit 1; fi; \
+        echo "pecl install redis-6.3.0 failed (attempt $i/5), retrying in $((i * 15))s" >&2; \
+        sleep $((i * 15)); \
+    done \
+    && docker-php-ext-enable redis
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer

@@ -20,10 +20,6 @@ jobs:
   staging-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        copy: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
     env:
       XDEBUG_MODE: off
       PCOV_ENABLED: 0
@@ -74,7 +70,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: smoke-report-${{ matrix.copy }}
+          name: smoke-report
           path: ${{ github.workspace }}/smoke-report.md
           if-no-files-found: warn
 
@@ -82,7 +78,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: smoke-server-log-${{ matrix.copy }}
+          name: smoke-server-log
           path: /tmp/smoke_server.log
           if-no-files-found: warn
 
@@ -90,7 +86,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: smoke-nginx-logs-${{ matrix.copy }}
+          name: smoke-nginx-logs
           path: |
             /tmp/smoke-nginx-error.log
             /tmp/smoke-nginx-access.log
@@ -100,6 +96,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: smoke-laravel-log-${{ matrix.copy }}
+          name: smoke-laravel-log
           path: storage/logs/laravel.log
           if-no-files-found: warn

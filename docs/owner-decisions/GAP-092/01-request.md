@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-10-23-gap-092-smoke-server-evidence.md
   plan: null
   branch: docs/GAP-092-smoke-server
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/365
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

@@ -1,14 +1,14 @@
 ---
 work_id: GAP-090
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-22-gap-090-dusk-flakes-evidence.md
   plan: docs/superpowers/plans/2026-10-22-gap-090-dusk-flakes.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-22T13:44:02+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-22, verbatim: 'APPROVE GAP-090 Gate 3'. Given after the packet at PR head bc40ba62c6a13a798b8d18da03916edd5abf2847 (35/35 checks green); bound to implementation subject b8cfebfaa2ecd08b639f6e50e22ac8d4662795d8 and implementation-tree digest d3dbcfe59df41d5c08a937607f68ccca79d3a30e5208898305cdfdc3ef381f01 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-22T10:34:53+07:00"
-  updated_at: "2026-10-22T10:34:53+07:00"
+  updated_at: "2026-10-22T13:44:02+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-090 at subject b8cfebfaa2ecd08b639f6e50e22ac8d4662795d8 (tree identical to implementation commit 673f0953). 673f0953 (Gate 2 Option A): button-tests.yml job browser-tests serves the app with php-fpm (pool on /tmp/dusk-fpm.sock, pm static 4) behind nginx on 127.0.0.1:8000 instead of php -S and its supervisor loop; the healthcheck, diagnostics and artifacts follow the php-fpm and nginx pid and log files; Dusk runs once (2-attempt loop removed); ProjectCreateTest cancel flow runs window.scrollTo(0, 0) before clicking @project-cancel. Deviation disclosed: the ini overrides (pcov/xdebug off, opcache off, pcre.jit=0, 120 s limits) are passed with -d on the php-fpm command line, not as php_admin_value in the pool, because php-fpm can fail to start workers when a pool sets a value for an ini directive PHP does not know. Proof: temporary 6db41ad0 ran browser-tests as an 8-copy matrix (run 39709457805), each copy first killing all 4 php-fpm workers with SIGSEGV and probing port 8000 (HTTP 200 on the first probe, SIGSEGV logged); 8/8 copies passed Dusk (26 tests) in one attempt, against a measured 12/25 first-attempt failure rate before. One copy took 33 min, with every test about twice as slow, so the slowness is attributed to the runner; others 14-19 min. b8cfebfa reverted the proof. Local: nginx + php-fpm served static files with the right content type and PHP with APP_ENV=testing; SIGSEGV of every worker left the port answering 200. Static: actionlint no findings; lint-mysql-claim-truthfulness passes. Exact-head CI at b8cfebfa: browser-tests green on the first attempt (17 min); Security Vulnerability Scan failed once because registry.npmjs.org returned 503 to npm audit (not this PR; commented on the PR) and was re-run. Pre-existing, not touched: pint concat_space finding in ProjectCreateTest.php."
@@ -37,12 +37,15 @@ technical_evidence:
   verified_at: "2026-10-22T10:34:53+07:00"
 owner_decision_binding:
   implementation_tree_digest: "d3dbcfe59df41d5c08a937607f68ccca79d3a30e5208898305cdfdc3ef381f01"
-  decision_recorded_at: null
+  decision_recorded_at: "2026-10-22T13:44:02+07:00"
 ---
 
 # GAP-090 — Gate 3 release decision (Dusk browser-tests flakes)
 
-## OWNER GATE 3: AWAITING OWNER
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-22 ("APPROVE GAP-090 Gate 3"), bound to implementation subject
+`b8cfebfaa2ecd08b639f6e50e22ac8d4662795d8` and implementation-tree digest `d3dbcfe59df41d5c08a937607f68ccca79d3a30e5208898305cdfdc3ef381f01`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

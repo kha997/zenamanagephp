@@ -112,3 +112,15 @@ Request changes / Decline.
 ## What the owner is NOT being asked to decide
 
 Gate 3, merge, release hay deploy.
+
+## Owner amendment (2026-10-23T00:43:14+07:00)
+
+Owner selection via AskUserQuestion, verbatim: "Sửa tiêu chí chứng minh (Recommended)".
+
+The local fault-tolerance check in Verification said the smoke run "must pass" while every php-fpm worker is killed
+with SIGSEGV. A local run showed this cannot hold when the kill lands on a request in flight. In that run, the second
+`/api/zena/health` call got HTTP 502 and the run failed. The port never refused a connection, the master respawned all
+4 workers at once, and every later request (login, `/me`, projects and the diagnostics probes) returned 200. The
+amended criterion: after every worker is killed, the port must never refuse a connection and every request after the
+kill must return 200. The request in flight at the moment of the kill may fail. The primary evidence is unchanged: the
+16-copy CI matrix must pass on its first attempt. No code change follows from this amendment.

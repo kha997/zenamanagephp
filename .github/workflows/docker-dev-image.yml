@@ -1,0 +1,32 @@
+name: Docker Dev Image
+
+# GAP-089: Dockerfile (used by docker-compose.yml) must keep building. It copies the whole repository and
+# boots Artisan, so it runs on every pull request rather than behind a path filter.
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Dockerfile
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Build image
+        run: docker build -f Dockerfile -t zenamanage-dev:ci .
+
+      - name: Required PHP extensions are loaded
+        run: |
+          docker run --rm --entrypoint php zenamanage-dev:ci -m | tee php-modules.txt
+          for ext in redis intl; do
+            grep -qx "$ext" php-modules.txt || { echo "::error::PHP extension '$ext' is missing from the image"; exit 1; }
+          done
+
+      - name: Artisan boots
+        run: docker run --rm --entrypoint php zenamanage-dev:ci artisan --version

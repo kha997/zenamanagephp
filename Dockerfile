@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y \
     libjpeg62-turbo-dev \
     libmcrypt-dev \
     libgd-dev \
+    libicu-dev \
     jpegoptim optipng pngquant gifsicle \
     vim \
     unzip \
@@ -55,11 +56,12 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Copy composer files
 COPY composer.json composer.lock ./
 
-# Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# Install PHP dependencies (scripts and autoloader run after the code is copied: they need artisan)
+RUN composer install --no-dev --no-scripts --no-autoloader --no-interaction
 
 # Copy application code
 COPY . .
+RUN composer dump-autoload --optimize --no-dev
 
 # Set proper permissions
 RUN chown -R www-data:www-data /var/www/html
@@ -77,7 +79,7 @@ RUN chmod -R 775 bootstrap/cache
 
 # Copy PHP configuration
 COPY docker/php/php.ini /usr/local/etc/php/php.ini
-COPY docker/php/php-fpm.conf /usr/local/etc/php-fpm.d/www.conf
+COPY docker/php-fpm.conf /usr/local/etc/php-fpm.d/www.conf
 
 # Expose port 9000
 EXPOSE 9000

@@ -1,34 +1,38 @@
 ---
 work_id: GAP-092
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-23-gap-092-smoke-server-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-10-23-gap-092-smoke-server.md
   branch: docs/GAP-092-smoke-server
   pr: https://github.com/kha997/zenamanagephp/pull/365
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-23T00:39:35+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-23, verbatim: 'APPROVE GAP-092 Gate 2 Option A'. Reviewed design head: d5c51f11bb6e6d4a116993e89a718f3054729bec. Approves Option A and its exact allowlist (scripts/smoke_staging.sh: SMOKE_SERVER artisan|fpm with start_fpm_server, nginx cleanup, report line; staging-smoke.yml: SMOKE_SERVER fpm, nginx install if missing, single script run without the 3-attempt loop, nginx log uploads; temporary 16-copy matrix proof reverted; docs); not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-23T00:38:06+07:00"
-  updated_at: "2026-10-23T00:38:06+07:00"
+  updated_at: "2026-10-23T00:39:35+07:00"
 generated_by: agent
 ---
 
 # GAP-092 — staging-smoke server: Gate 2 design
 
-## OWNER GATE 2: AWAITING OWNER
+## OWNER GATE 2: APPROVED — OPTION A
+
+Owner approved Option A in-session on 2026-10-23 against reviewed design head
+`d5c51f11bb6e6d4a116993e89a718f3054729bec`. This authorizes only the bounded implementation defined by this packet;
+it does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

@@ -266,6 +266,29 @@ class EvidenceBindingTest extends TestCase
         $this->assertSame(0, \owner_governance_count_blocking_checks($checks));
     }
 
+    public function test_count_failed_checks_counts_only_fail_and_cancel(): void
+    {
+        $checks = [
+            ['name' => 'a', 'bucket' => 'pass'],
+            ['name' => 'b', 'bucket' => 'pending'],
+            ['name' => 'c', 'bucket' => 'fail'],
+            ['name' => 'd', 'bucket' => 'skipping'],
+            ['name' => 'e', 'bucket' => 'cancel'],
+        ];
+
+        $this->assertSame(2, \owner_governance_count_failed_checks($checks), 'Only fail and cancel buckets have already failed; pending must keep waiting.');
+    }
+
+    public function test_count_failed_checks_is_zero_while_checks_are_only_pending(): void
+    {
+        $checks = [
+            ['name' => 'a', 'bucket' => 'pass'],
+            ['name' => 'b', 'bucket' => 'pending'],
+        ];
+
+        $this->assertSame(0, \owner_governance_count_failed_checks($checks));
+    }
+
     // --- Required test 8: `approved` fails when the binding digest differs ---
 
     public function test_approved_packet_with_mismatched_binding_digest_fails_validation(): void

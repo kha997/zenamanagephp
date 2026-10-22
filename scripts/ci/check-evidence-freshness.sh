@@ -177,29 +177,55 @@ fi
 # introducing commit purely from timing, with both concurrent jobs still
 # pending), poll with a bounded wait for the remaining checks to reach a
 # final state before judging them.
+# GAP-091: the bounded wait used to be 5 minutes and treated pending and
+# failed checks alike. A Gate 3 packet commit re-runs the full PR CI
+# (browser-tests alone takes ~20 minutes), so every first run of a Gate 3
+# presentation failed on timing alone and had to be re-run by hand. The wait
+# is now up to 60 minutes, but a check that has already failed or been
+# cancelled fails this step at once — waiting cannot turn it green.
+# OWNER_GOV_LIVE_POLL_ATTEMPTS / OWNER_GOV_LIVE_POLL_INTERVAL exist so tests
+# can drive the loop in seconds; CI never sets them.
 if [ "$gate_status" = "awaiting_owner" ]; then
   self_check_name="Owner Governance Lint"
-  poll_attempts=20   # 20 * 15s = 5 minutes max wait
-  poll_interval=15
-  non_pass_count=""
+  poll_attempts="${OWNER_GOV_LIVE_POLL_ATTEMPTS:-240}"   # 240 * 15s = 60 minutes max wait
+  poll_interval="${OWNER_GOV_LIVE_POLL_INTERVAL:-15}"
+  counts=""
 
-  for _ in $(seq 1 "$poll_attempts"); do
+  for attempt in $(seq 1 "$poll_attempts"); do
     checks_json="$(gh pr checks "$PR_NUMBER" --json name,state,bucket)"
-    non_pass_count="$(printf '%s' "$checks_json" | php -r '
+    # Prints "<failed> <blocking>" on the first line, then one line per
+    # check that is not passing, for the diagnostics below.
+    counts="$(printf '%s' "$checks_json" | php -r '
 require $argv[1] . "/../ssot/owner_governance_lint.php";
 $checks = json_decode(stream_get_contents(STDIN), true);
 $checks = array_values(array_filter($checks, fn($c) => ($c["name"] ?? "") !== $argv[2]));
-echo owner_governance_count_blocking_checks($checks);
+echo owner_governance_count_failed_checks($checks), " ", owner_governance_count_blocking_checks($checks), "\n";
+foreach ($checks as $c) {
+    $bucket = $c["bucket"] ?? "";
+    if ($bucket !== "pass" && $bucket !== "skipping") {
+        echo "  ", $c["name"] ?? "?", " (", $bucket, ")\n";
+    }
+}
 ' "$SCRIPT_DIR" "$self_check_name")"
+    read -r failed_count non_pass_count <<<"$(printf '%s\n' "$counts" | head -n 1)"
 
+    if [ "$failed_count" != "0" ]; then
+      echo "::error::gate_status is 'awaiting_owner' but $failed_count other check(s) on PR #$PR_NUMBER's current head have failed or were cancelled — technical_readiness cannot be 'ready'."
+      printf '%s\n' "$counts" | tail -n +2
+      echo "gate_status must not reach 'awaiting_owner' until every mandatory check on the current head is green."
+      exit 1
+    fi
     if [ "$non_pass_count" = "0" ]; then
       break
     fi
-    sleep "$poll_interval"
+    if [ "$attempt" -lt "$poll_attempts" ]; then
+      sleep "$poll_interval"
+    fi
   done
 
   if [ "$non_pass_count" != "0" ]; then
-    echo "::error::gate_status is 'awaiting_owner' but $non_pass_count other check(s) on PR #$PR_NUMBER's current head are not green (pending or failed) after waiting up to $((poll_attempts * poll_interval))s — technical_readiness cannot be 'ready' yet."
+    echo "::error::gate_status is 'awaiting_owner' but $non_pass_count other check(s) on PR #$PR_NUMBER's current head are still pending after waiting up to $((poll_attempts * poll_interval))s — technical_readiness cannot be 'ready' yet."
+    printf '%s\n' "$counts" | tail -n +2
     echo "gate_status must not reach 'awaiting_owner' until every mandatory check on the current head is green."
     exit 1
   fi

@@ -1,11 +1,11 @@
 ---
 work_id: GAP-091
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-22-gap-091-governance-lint-wait-evidence.md
   plan: null
@@ -15,18 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-22T19:34:13+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-22, verbatim: 'APPROVE GAP-091 Gate 1'. Bound to reviewed Draft PR #364 head a84748da72cdd1c0b9eed3713e9854d2a2bf4000, canonical base 5aae9f70c9289fb25d5e078117b8af5dba1af096. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-22T19:29:37+07:00"
-  updated_at: "2026-10-22T19:29:37+07:00"
+  updated_at: "2026-10-22T19:34:13+07:00"
 generated_by: agent
 ---
 
-## OWNER GATE 1: AWAITING OWNER
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-091 Gate 1 in-session on 2026-10-22 against Draft PR #364
+head `a84748da72cdd1c0b9eed3713e9854d2a2bf4000`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

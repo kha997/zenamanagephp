@@ -23,6 +23,9 @@ jobs:
   owner-governance-lint:
     name: Owner Governance Lint
     runs-on: ubuntu-latest
+    # GAP-091: the evidence-freshness live check may wait up to 60 minutes
+    # for the PR's other checks; cap the job well short of the 6-hour default.
+    timeout-minutes: 75
     env:
       COMPOSER_PROCESS_TIMEOUT: 0
 

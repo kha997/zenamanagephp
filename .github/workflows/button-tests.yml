@@ -326,85 +326,102 @@ jobs:
 
     - name: Start Laravel server
       run: |
+        set -euo pipefail
         php artisan config:clear --env=testing
         php artisan view:clear --env=testing
-        # ensure previous server (if any) is stopped
-        if [ -f /tmp/laravel-serve.pid ]; then
-          kill "$(cat /tmp/laravel-serve.pid)" >/dev/null 2>&1 || true
+        rm -f /tmp/dusk-fpm.pid /tmp/dusk-nginx.pid /tmp/dusk-fpm.sock /tmp/php-fpm.log /tmp/nginx-error.log /tmp/nginx-access.log
+
+        # GAP-090: php-fpm behind nginx instead of PHP's built-in server. php -S is
+        # a single process and segfaulted under sustained Dusk load; while it
+        # respawned, the browser got ERR_CONNECTION_REFUSED. php-fpm's master
+        # keeps the socket open and respawns a dead worker, and nginx keeps port
+        # 8000 listening throughout. Both run as the runner user, with every
+        # pid, socket, temp and log file under /tmp.
+        PHP_FPM="$(command -v php-fpm8.2 || command -v php-fpm)"
+        if ! command -v nginx >/dev/null 2>&1; then
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq nginx
         fi
-        rm -f /tmp/laravel-serve.pid /tmp/laravel-serve.log /tmp/php-server.log || true
 
-        # Laravel repos may not ship server.php; use public front-controller instead
-        # Create a router script that mimics Laravel's server.php (serve static if exists, else front-controller)
-        cat >/tmp/dusk-router.php <<'PHP'
-        <?php
-        // Prefer DOCUMENT_ROOT (set by php -S -t) to avoid relying on cwd/env
-        $public = rtrim($_SERVER['DOCUMENT_ROOT'] ?? '', '/');
-        if ($public === '') {
-            $root = getenv('GITHUB_WORKSPACE') ?: getcwd();
-            $public = rtrim($root, '/') . '/public';
+        cat >/tmp/dusk-fpm.conf <<'FPM'
+        [global]
+        pid = /tmp/dusk-fpm.pid
+        error_log = /tmp/php-fpm.log
+
+        [dusk]
+        listen = /tmp/dusk-fpm.sock
+        listen.mode = 0666
+        pm = static
+        pm.max_children = 4
+        clear_env = no
+        catch_workers_output = yes
+        decorate_workers_output = no
+        env[APP_ENV] = testing
+        env[APP_DEBUG] = true
+        FPM
+
+        cat >/tmp/dusk-nginx.conf <<NGINX
+        pid /tmp/dusk-nginx.pid;
+        error_log /tmp/nginx-error.log;
+        worker_processes 1;
+        events { worker_connections 256; }
+        http {
+          include /etc/nginx/mime.types;
+          default_type application/octet-stream;
+          access_log /tmp/nginx-access.log;
+          client_body_temp_path /tmp/nginx-client-body;
+          proxy_temp_path /tmp/nginx-proxy;
+          fastcgi_temp_path /tmp/nginx-fastcgi;
+          uwsgi_temp_path /tmp/nginx-uwsgi;
+          scgi_temp_path /tmp/nginx-scgi;
+          server {
+            listen 127.0.0.1:8000;
+            root ${GITHUB_WORKSPACE}/public;
+            index index.php;
+            location / {
+              try_files \$uri /index.php?\$query_string;
+            }
+            location ~ \.php\$ {
+              include /etc/nginx/fastcgi_params;
+              fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+              fastcgi_pass unix:/tmp/dusk-fpm.sock;
+              fastcgi_read_timeout 120s;
+            }
+          }
         }
-        $uri = urldecode(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/');
-        if ($uri !== '/' && file_exists($public . $uri)) {
-            return false;
-        }
-        require $public . '/index.php';
-        PHP
+        NGINX
 
-        echo "== router sanity =="
-        ls -la "$GITHUB_WORKSPACE/public/index.php" /tmp/dusk-router.php || true
+        # Same ini overrides the php -S command line used (pcov/xdebug off,
+        # no opcache, no PCRE JIT, 120 s limits).
+        APP_ENV=testing APP_DEBUG=true "$PHP_FPM" \
+          --fpm-config /tmp/dusk-fpm.conf \
+          -d pcov.enabled=0 \
+          -d xdebug.mode=off \
+          -d opcache.enable=0 \
+          -d pcre.jit=0 \
+          -d max_execution_time=120 \
+          -d default_socket_timeout=120
+        nginx -c /tmp/dusk-nginx.conf -e /tmp/nginx-error.log
 
-        # Start PHP built-in server with absolute docroot + router
-        # Force Laravel to load .env.testing (APP_ENV=testing) to match migrate/seed steps.
-        # Also raise execution/socket timeouts to avoid killing the server on slow first boot.
-        # Supervisor loop: php -S segfaults on GH runners under sustained Dusk load —
-        # confirmed 2026-07-22/23 via laravel-serve.log diffing across two otherwise-
-        # unrelated CI runs (one before, one after an unrelated app change touching the
-        # same request path): both crash mid-request with no PHP-level error, at
-        # essentially random points unrelated to which route was being served. This is
-        # PHP's built-in dev server itself (single-process, not meant for sustained
-        # concurrent load), not an application bug — cannot be fixed in app code. One
-        # silent death used to kill the whole Dusk run with ERR_CONNECTION_REFUSED on
-        # every later test; respawning keeps the suite alive. PID file tracks the
-        # supervisor (stays alive across respawns) so existing health checks keep
-        # working. sleep 0.2 (not 1) to shrink the dead-connection window a crashing
-        # request's client can hit; paired with a 2-attempt retry on the Dusk run step
-        # itself for whichever single request still lands in that shorter window.
-        APP_ENV=testing APP_DEBUG=true nohup bash -c '
-          while true; do
-            php \
-              -d pcov.enabled=0 \
-              -d xdebug.mode=off \
-              -d opcache.enable_cli=0 \
-              -d pcre.jit=0 \
-              -d max_execution_time=120 \
-              -d default_socket_timeout=120 \
-              -S 127.0.0.1:8000 -t "$GITHUB_WORKSPACE/public" /tmp/dusk-router.php \
-              >>/tmp/laravel-serve.log 2>&1
-            echo "[supervisor] php -S exited (code $?) at $(date -u +%H:%M:%S) - respawning" >> /tmp/laravel-serve.log
-            sleep 0.2
-          done
-        ' >/dev/null 2>&1 &
-        echo $! > /tmp/laravel-serve.pid
         sleep 1
-        echo "serve pid=$(cat /tmp/laravel-serve.pid)"
-        # quick sanity: server process still alive + port listener
-        kill -0 "$(cat /tmp/laravel-serve.pid)" >/dev/null 2>&1 || (echo "Server process died immediately" && tail -n 200 /tmp/laravel-serve.log || true && exit 1)
+        echo "php-fpm pid=$(cat /tmp/dusk-fpm.pid) nginx pid=$(cat /tmp/dusk-nginx.pid)"
         echo "== check LISTEN 8000 =="
         ss -ltnp | grep ':8000' || true
-        echo "== serve log (tail 80) =="
-        tail -n 80 /tmp/laravel-serve.log || true
-    
+        echo "== php-fpm log =="
+        cat /tmp/php-fpm.log || true
+
     - name: Wait for server healthcheck
       run: |
         for i in $(seq 1 180); do
           # if server process is gone, fail early with diagnostics
-          if [ -f /tmp/laravel-serve.pid ] && ! kill -0 "$(cat /tmp/laravel-serve.pid)" >/dev/null 2>&1; then
-            echo "Server process not running (pid=$(cat /tmp/laravel-serve.pid))"
-            ss -ltnp | grep ':8000' || true
-            tail -n 200 /tmp/laravel-serve.log || true
-            exit 1
-          fi
+          for pidfile in /tmp/dusk-fpm.pid /tmp/dusk-nginx.pid; do
+            if ! kill -0 "$(cat "$pidfile" 2>/dev/null)" >/dev/null 2>&1; then
+              echo "Server process not running ($pidfile)"
+              ss -ltnp | grep ':8000' || true
+              tail -n 200 /tmp/php-fpm.log /tmp/nginx-error.log || true
+              exit 1
+            fi
+          done
 
           set +e
           code="$(curl -sS --connect-timeout 1 --max-time 10 -o /dev/null -w "%{http_code}" http://127.0.0.1:8000)"
@@ -416,7 +433,7 @@ jobs:
             if echo "$code" | grep -qE '^5'; then
               echo "Server reachable but unhealthy (HTTP $code) - failing fast"
               curl -sS --connect-timeout 1 --max-time 10 -i http://127.0.0.1:8000 | sed -n '1,160p' || true
-              tail -n 200 /tmp/laravel-serve.log || true
+              tail -n 200 /tmp/php-fpm.log /tmp/nginx-error.log || true
               exit 1
             fi
             echo "Server reachable (HTTP $code)"
@@ -427,9 +444,9 @@ jobs:
 
           if [ "$i" = "10" ] || [ "$i" = "60" ] || [ "$i" = "120" ]; then
             echo "== debug @ retry $i =="
-            ps aux | grep -E 'artisan serve|php -S' || true
+            ps aux | grep -E 'php-fpm|nginx' || true
             ss -ltnp | grep ':8000' || true
-            tail -n 200 /tmp/laravel-serve.log || true
+            tail -n 200 /tmp/php-fpm.log /tmp/nginx-error.log || true
             echo "== end debug =="
           fi
 
@@ -442,7 +459,7 @@ jobs:
         tail -n 300 storage/logs/*.log || true
         php -v || true
         php artisan --version || true
-        tail -n 200 /tmp/laravel-serve.log || true
+        tail -n 200 /tmp/php-fpm.log /tmp/nginx-error.log || true
         exit 1
 
     - name: Verify Dusk driver path
@@ -480,23 +497,9 @@ jobs:
         echo "ChromeDriver ready at $DRIVER_URL"
 
     - name: Run Browser Tests
-      run: |
-        set +e
-        for attempt in 1 2; do
-          echo "== Dusk attempt ${attempt}/2 =="
-          php artisan dusk tests/Browser/Projects/ tests/Browser/Crm/ --env=testing --without-tty --stop-on-failure
-          code=$?
-          if [ "$code" -eq 0 ]; then
-            exit 0
-          fi
-          echo "== Dusk attempt ${attempt} failed (exit ${code}) =="
-        done
-        # Both attempts failed — a php -S segfault mid-request is confirmed
-        # pre-existing/environmental (see supervisor loop comment above), but a
-        # genuine app regression fails consistently across retries too, so this
-        # exits non-zero rather than silently swallowing a real failure.
-        echo "== Both Dusk attempts failed — treating as a real failure =="
-        exit "$code"
+      # GAP-090: one attempt. The retry loop masked php -S crashes; with
+      # php-fpm + nginx a failure here is treated as real.
+      run: php artisan dusk tests/Browser/Projects/ tests/Browser/Crm/ --env=testing --without-tty --stop-on-failure
 
     - name: Prepare Dusk artifacts (always)
       if: ${{ always() }}
@@ -518,9 +521,8 @@ jobs:
         # Laravel logs (may be empty if LOG_CHANNEL=stderr, but keep anyway)
         cp -R storage/logs /tmp/dusk-artifacts/ 2>/dev/null || true
 
-        # Server logs (depending on how you start the server)
-        cp /tmp/laravel-serve.log /tmp/dusk-artifacts/ 2>/dev/null || true
-        cp /tmp/php-server.log /tmp/dusk-artifacts/ 2>/dev/null || true
+        # Server logs (php-fpm + nginx)
+        cp /tmp/php-fpm.log /tmp/nginx-error.log /tmp/nginx-access.log /tmp/dusk-artifacts/ 2>/dev/null || true
 
         echo "== dusk-artifacts tree =="
         find /tmp/dusk-artifacts -maxdepth 3 -type f -print || true
@@ -536,9 +538,9 @@ jobs:
     - name: Browser test diagnostics
       if: failure()
       run: |
-        tail -n 200 /tmp/laravel-serve.log || true
+        tail -n 200 /tmp/php-fpm.log /tmp/nginx-error.log /tmp/nginx-access.log || true
         tail -n 200 /tmp/chromedriver.log || true
-        ps aux | grep -E 'artisan serve|chromedriver|chrome' || true
+        ps aux | grep -E 'php-fpm|nginx|chromedriver|chrome' || true
     
     - name: Upload Browser Test Results
       uses: actions/upload-artifact@v6

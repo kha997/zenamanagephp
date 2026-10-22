@@ -91,7 +91,12 @@ class ProjectCreateTest extends DuskTestCase
                 ->waitFor('@project-name', 10)
                 ->type('@project-name', 'Cancel Flow Project')
                 ->type('@project-description', 'Cancel flow smoke test')
-                ->click('@project-cancel')
+                // The button sits just below the sticky topbar. If typing scrolled
+                // the page, WebDriver scrolls the button only to the top edge of
+                // the viewport, where the topbar intercepts the click.
+                ->script('window.scrollTo(0, 0)');
+
+            $browser->click('@project-cancel')
                 ->waitForLocation('/app/projects', 10)
                 ->assertPathIs('/app/projects');
         });

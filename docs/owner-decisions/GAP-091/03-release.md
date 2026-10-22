@@ -1,14 +1,14 @@
 ---
 work_id: GAP-091
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-22-gap-091-governance-lint-wait-evidence.md
   plan: docs/superpowers/plans/2026-10-22-gap-091-governance-lint-wait.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-22T22:37:13+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-22, verbatim: 'APPROVE GAP-091 Gate 3'. Given after the packet at PR head 7b18c2d10e921912812996e5dba7a64bc18d23f0 (35/35 checks green) and after the disclosure that the live proof was not clean: Owner Governance Lint's first attempt on 7b18c2d1 waited past browser-tests and failed at its 60-minute limit because GitHub left the already-green RFI Escalation Concurrency check run reported as in_progress; after Automated Testing was re-run, the lint re-run passed. Bound to implementation subject 687477b74d981ef4a7137186f017d2aaa87c8943 and implementation-tree digest d74533fd36a28934cf86fdbf6571fea4560bdaf1c059d366a2251d70a34d58c8 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-22T20:07:17+07:00"
-  updated_at: "2026-10-22T20:07:17+07:00"
+  updated_at: "2026-10-22T22:37:13+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-091 at subject 687477b74d981ef4a7137186f017d2aaa87c8943 (Gate 2 Option A). scripts/ssot/owner_governance_lint.php adds owner_governance_count_failed_checks (fail and cancel buckets); owner_governance_count_blocking_checks is unchanged. scripts/ci/check-evidence-freshness.sh live check (only while gate_status is awaiting_owner) polls gh pr checks up to 240 x 15 s = 60 min, exits 1 at once when another check has failed or been cancelled and lists the non-passing checks, passes when nothing is blocking, and exits 1 if checks are still pending after the last poll; poll count and interval can be overridden by OWNER_GOV_LIVE_POLL_ATTEMPTS and OWNER_GOV_LIVE_POLL_INTERVAL (tests only; CI never sets them). The digest checks and the self-exclusion of Owner Governance Lint are unchanged. owner-governance-lint.yml job gets timeout-minutes: 75. Tests: EvidenceBindingTest gains two unit tests for the new helper; new EvidenceFreshnessLiveCheckTest runs the real script in a throwaway repository with an awaiting_owner Gate 3 fixture and a fake gh (pending then pass exits 0 after 3 polls; a failed check exits 1 on the first poll; a cancelled check exits 1; always pending exits 1 after the last poll; its own check is ignored); EnforcementBoundaryTest asserts the script uses the new helper. Red proof: against the previous script, the failed-check test exits 0 instead of 1, because the old script kept waiting until the failed check turned green. Local: tests/Unit/OwnerGovernance passes except GrandfatherLoaderTest's unreadable-file case, which also fails on main because the local runner is root; it passes in CI. actionlint shows no findings; governance and docs lints pass. Exact-head CI at 687477b7: 35/35 green, and the Unit Tests job ran the new tests. Live green proof: the commit that adds this awaiting_owner packet must pass Owner Governance Lint on its first attempt; the result is reported with the presentation."
@@ -37,12 +37,15 @@ technical_evidence:
   verified_at: "2026-10-22T20:07:17+07:00"
 owner_decision_binding:
   implementation_tree_digest: "d74533fd36a28934cf86fdbf6571fea4560bdaf1c059d366a2251d70a34d58c8"
-  decision_recorded_at: null
+  decision_recorded_at: "2026-10-22T22:37:13+07:00"
 ---
 
 # GAP-091 — Gate 3 release decision (Owner Governance Lint false red)
 
-## OWNER GATE 3: AWAITING OWNER
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-22 ("APPROVE GAP-091 Gate 3"), bound to implementation subject
+`687477b74d981ef4a7137186f017d2aaa87c8943` and implementation-tree digest `d74533fd36a28934cf86fdbf6571fea4560bdaf1c059d366a2251d70a34d58c8`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

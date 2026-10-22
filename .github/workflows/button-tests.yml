@@ -124,6 +124,10 @@ jobs:
   browser-tests:
     runs-on: ubuntu-latest
     needs: feature-tests
+    strategy:
+      fail-fast: false
+      matrix:
+        copy: [1, 2, 3, 4, 5, 6, 7, 8]
     
     services:
       mysql:
@@ -242,7 +246,7 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v6
       with:
-        name: dusk-npm-build-log
+        name: dusk-npm-build-log-${{ matrix.copy }}
         path: /tmp/npm-build.log
         if-no-files-found: ignore
 
@@ -496,6 +500,26 @@ jobs:
         echo "DUSK_DRIVER_URL=$DRIVER_URL" >> "$GITHUB_ENV"
         echo "ChromeDriver ready at $DRIVER_URL"
 
+    - name: TEMPORARY GAP-090 proof — SIGSEGV every php-fpm worker, port 8000 must stay up
+      run: |
+        set -euo pipefail
+        workers="$(pgrep -P "$(cat /tmp/dusk-fpm.pid)" | tr '\n' ' ')"
+        echo "killing php-fpm workers: $workers"
+        kill -SEGV $workers
+        for i in $(seq 1 20); do
+          set +e
+          code="$(curl -sS --connect-timeout 1 --max-time 10 -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/login)"
+          rc=$?
+          set -e
+          echo "probe $i: rc=$rc http=$code"
+          if [ "$rc" -eq 7 ]; then echo "connection refused after SIGSEGV" >&2; exit 1; fi
+          case "$code" in 2*|3*) break ;; esac
+          sleep 0.5
+        done
+        case "$code" in 2*|3*) echo "server answered HTTP $code after the workers were killed" ;; *) exit 1 ;; esac
+        grep -c 'SIGSEGV' /tmp/php-fpm.log
+        tail -n 20 /tmp/php-fpm.log
+
     - name: Run Browser Tests
       # GAP-090: one attempt. The retry loop masked php -S crashes; with
       # php-fpm + nginx a failure here is treated as real.
@@ -531,7 +555,7 @@ jobs:
       if: ${{ always() }}
       uses: actions/upload-artifact@v6
       with:
-        name: dusk-artifacts
+        name: dusk-artifacts-${{ matrix.copy }}
         path: /tmp/dusk-artifacts
         if-no-files-found: error
 
@@ -546,7 +570,7 @@ jobs:
       uses: actions/upload-artifact@v6
       if: always()
       with:
-        name: browser-test-results
+        name: browser-test-results-${{ matrix.copy }}
         path: storage/test-reports/
 
   security-tests:

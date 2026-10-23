@@ -15,11 +15,18 @@ SERVER_LOG="/tmp/smoke_server.log"
 SMOKE_ENV_NAME="${SMOKE_ENV_NAME:-smoke}"
 SMOKE_ENV_FILE="${SMOKE_ENV_FILE:-.env.smoke}"
 SMOKE_DB_PATH="${SMOKE_DB_PATH:-/tmp/zenamanage_smoke.sqlite}"
+# GAP-092: "artisan" (default) serves the app with `php artisan serve`, PHP's
+# single-process built-in server; "fpm" serves it with php-fpm behind nginx.
+# CI uses fpm because the built-in server dies mid-request on GitHub runners.
+SMOKE_SERVER="${SMOKE_SERVER:-artisan}"
+NGINX_ERROR_LOG="/tmp/smoke-nginx-error.log"
+NGINX_ACCESS_LOG="/tmp/smoke-nginx-access.log"
 
 PASS_COUNT=0
 FAIL_COUNT=0
 SKIP_COUNT=0
 PHP_PID=""
+NGINX_PID=""
 TENANT_ID=""
 TOKEN=""
 HAVE_FAILURE=0
@@ -65,6 +72,10 @@ set_failure_classification() {
 }
 
 cleanup() {
+  if [[ -n "${NGINX_PID}" ]]; then
+    kill "${NGINX_PID}" >/dev/null 2>&1 || true
+    wait "${NGINX_PID}" >/dev/null 2>&1 || true
+  fi
   if [[ -n "${PHP_PID}" ]]; then
     kill "${PHP_PID}" >/dev/null 2>&1 || true
     wait "${PHP_PID}" >/dev/null 2>&1 || true
@@ -556,6 +567,7 @@ write_report() {
     echo "- Env file: ${SMOKE_ENV_FILE}"
     echo "- DB path: ${SMOKE_DB_PATH}"
     echo "- Port: ${APP_PORT}"
+    echo "- Server: ${SMOKE_SERVER}"
     echo
     echo "## Resolved Routes"
     echo "- api.zena.api.health: ${RESOLVED_HEALTH_URI:-UNRESOLVED}"
@@ -609,8 +621,97 @@ start_artisan_server() {
   PHP_PID=$!
 }
 
+# The php-fpm master runs in the foreground (-F) as PHP_PID, so the process,
+# listener and readiness checks below work exactly as for artisan serve.
+# A worker that dies is respawned by the master while nginx keeps the port
+# open, so a crash costs at most the request in flight.
+start_fpm_server() {
+  local php_fpm public_dir
+  local -a fpm_cmd
+
+  # Prefer the php-fpm that matches the CLI's PHP version (php-fpm8.2 in CI).
+  php_fpm="$(command -v "php-fpm$(php -r 'echo PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;')" || command -v php-fpm || true)"
+  if [[ -z "$php_fpm" ]]; then
+    echo "Missing required command: php-fpm" >&2
+    return 1
+  fi
+  require_cmd nginx
+  public_dir="${REPO_ROOT}/public"
+
+  cat >/tmp/smoke-fpm.conf <<FPM
+[global]
+error_log = ${SERVER_LOG}
+
+[smoke]
+listen = /tmp/smoke-fpm.sock
+listen.mode = 0666
+pm = static
+pm.max_children = 4
+clear_env = no
+catch_workers_output = yes
+decorate_workers_output = no
+env[APP_ENV] = ${SMOKE_ENV_NAME}
+FPM
+
+  cat >/tmp/smoke-nginx.conf <<NGINX
+daemon off;
+pid /tmp/smoke-nginx.pid;
+error_log ${NGINX_ERROR_LOG};
+worker_processes 1;
+events { worker_connections 256; }
+http {
+  include /etc/nginx/mime.types;
+  default_type application/octet-stream;
+  access_log ${NGINX_ACCESS_LOG};
+  client_body_temp_path /tmp/smoke-nginx-client-body;
+  proxy_temp_path /tmp/smoke-nginx-proxy;
+  fastcgi_temp_path /tmp/smoke-nginx-fastcgi;
+  uwsgi_temp_path /tmp/smoke-nginx-uwsgi;
+  scgi_temp_path /tmp/smoke-nginx-scgi;
+  server {
+    listen ${APP_HOST}:${APP_PORT};
+    root ${public_dir};
+    index index.php;
+    location / {
+      try_files \$uri /index.php?\$query_string;
+    }
+    location ~ \.php\$ {
+      include /etc/nginx/fastcgi_params;
+      fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+      fastcgi_pass unix:/tmp/smoke-fpm.sock;
+      fastcgi_read_timeout 60s;
+    }
+  }
+}
+NGINX
+
+  fpm_cmd=("$php_fpm" -F --fpm-config /tmp/smoke-fpm.conf -d opcache.enable=0)
+  # php-fpm refuses to run as root without -R; only local root runs need it.
+  if [[ "$(id -u)" == "0" ]]; then
+    fpm_cmd+=(-R)
+  fi
+
+  rm -f /tmp/smoke-fpm.sock
+  : > "$SERVER_LOG"
+  : > "$NGINX_ERROR_LOG"
+  : > "$NGINX_ACCESS_LOG"
+  info "Starting local server (php-fpm + nginx)"
+  APP_ENV="${SMOKE_ENV_NAME}" "${fpm_cmd[@]}" >>"${SERVER_LOG}" 2>&1 &
+  PHP_PID=$!
+  nginx -c /tmp/smoke-nginx.conf -e "${NGINX_ERROR_LOG}" >>"${NGINX_ERROR_LOG}" 2>&1 &
+  NGINX_PID=$!
+}
+
 start_server() {
-  start_artisan_server
+  if [[ "$SMOKE_SERVER" == "fpm" ]]; then
+    if ! start_fpm_server; then
+      set_failure_classification "server bootstrap failed before listen"
+      record_fail "start php-fpm + nginx"
+      summary_and_exit
+    fi
+  else
+    start_artisan_server
+  fi
 
   if ! wait_for_process_or_fail; then
     capture_server_exit_code_if_dead
@@ -661,6 +762,12 @@ resolve_required_routes() {
 main() {
   require_cmd php
   require_cmd curl
+
+  if [[ "$SMOKE_SERVER" != "artisan" && "$SMOKE_SERVER" != "fpm" ]]; then
+    set_failure_classification "bootstrap failure"
+    record_fail "SMOKE_SERVER must be artisan or fpm, got '${SMOKE_SERVER}'"
+    summary_and_exit
+  fi
 
   if ! ensure_smoke_env_file; then
     set_failure_classification "bootstrap failure"

@@ -124,3 +124,13 @@ with SIGSEGV. A local run showed this cannot hold when the kill lands on a reque
 amended criterion: after every worker is killed, the port must never refuse a connection and every request after the
 kill must return 200. The request in flight at the moment of the kill may fail. The primary evidence is unchanged: the
 16-copy CI matrix must pass on its first attempt. No code change follows from this amendment.
+
+## Owner amendment 2 (2026-10-23T07:01:33+07:00)
+
+Owner selection via AskUserQuestion, verbatim: "Sửa trong PR này (Recommended)".
+
+This answers a Codex review finding (P2) on PR #365. Step 3 of the implementation plan still said that a run with every
+php-fpm worker killed "passes", which is the criterion superseded by the first amendment. The plan now states the
+amended criterion. This is a documentation-only change, but it changes the implementation tree, so the Gate 3 approval
+recorded at digest `9393febc568665ef7206bb29d91033b8477f5ce11fb9cdbe5da7598dca8d2e25` is superseded and Gate 3 is
+re-presented.

@@ -1,11 +1,11 @@
 ---
 work_id: GAP-093
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-23-gap-093-nightly-matrix-evidence.md
   plan: null
@@ -15,18 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-23T15:28:04+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-23, verbatim: 'APPROVE GAP-093 Gate 1'. Bound to reviewed Draft PR #366 head 4aecbf9de173be7c31468699c9f97fc2a5635359, canonical base b62d5f5beb3d889978614a8419682dcfdcb414cc. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-23T11:17:44+07:00"
-  updated_at: "2026-10-23T11:17:44+07:00"
+  updated_at: "2026-10-23T15:28:04+07:00"
 generated_by: agent
 ---
 
-## OWNER GATE 1: AWAITING OWNER
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-093 Gate 1 in-session on 2026-10-23 against Draft PR #366
+head `4aecbf9de173be7c31468699c9f97fc2a5635359`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

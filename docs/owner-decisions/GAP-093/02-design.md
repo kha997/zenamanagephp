@@ -1,34 +1,38 @@
 ---
 work_id: GAP-093
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-23-gap-093-nightly-matrix-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-10-24-gap-093-nightly-matrix.md
   branch: docs/GAP-093-nightly-server
   pr: https://github.com/kha997/zenamanagephp/pull/366
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-24T22:36:16+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-24, verbatim: 'APPROVE GAP-093 Gate 2 Option A'. Reviewed design head: 46955a6ca4153eaba1f5e93e46f5eb4aa97e1f25. Approves Option A and its exact allowlist (nightly-matrix.yml: env from .env.example, CACHE_DRIVER array and QUEUE_CONNECTION sync, app server and websocket steps removed, readiness reduced to Redis, APP_URL/WEBSOCKET env and server log artifacts removed; scripts/test/nightly_matrix.sh: ssot:lint and test:fast stages removed, redis group with CACHE_DRIVER=redis, report drops app and websocket lines; workflow_dispatch proof; docs); not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-23T15:50:33+07:00"
-  updated_at: "2026-10-23T15:50:33+07:00"
+  updated_at: "2026-10-24T22:36:16+07:00"
 generated_by: agent
 ---
 
 # GAP-093 — Nightly Test Matrix: Gate 2 design
 
-## OWNER GATE 2: AWAITING OWNER
+## OWNER GATE 2: APPROVED — OPTION A
+
+Owner approved Option A in-session on 2026-10-24 against reviewed design head
+`46955a6ca4153eaba1f5e93e46f5eb4aa97e1f25`. This authorizes only the bounded implementation defined by this packet;
+it does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

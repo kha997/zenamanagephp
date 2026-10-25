@@ -1,11 +1,11 @@
 ---
 work_id: GAP-016
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-25-gap-016-enhanced-routes-evidence.md
   plan: null
@@ -15,18 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-25T16:24:20+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-25, verbatim: 'APPROVE GAP-016 Gate 1'. Bound to reviewed Draft PR #368 head c9375edd2df06e28dc3e76b01f4f27f91dec6e03, canonical base 0ac6f6209e3b97c4f1721e3d8e907a14f45797d9. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-25T15:43:32+07:00"
-  updated_at: "2026-10-25T15:43:32+07:00"
+  updated_at: "2026-10-25T16:24:20+07:00"
 generated_by: agent
 ---
 
-## OWNER GATE 1: AWAITING OWNER
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-016 Gate 1 in-session on 2026-10-25 against Draft PR #368
+head `c9375edd2df06e28dc3e76b01f4f27f91dec6e03`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

@@ -22,7 +22,7 @@ use Tests\Traits\AuthenticationTestTrait;
  *   - projects.pm_id                = project manager (broader stakeholder — notified on approve)
  *   - change_request_approvals table = canonical multi-approver owner surface (future expansion)
  *
- * Apply notification: explicitly deferred (no notification sent on apply).
+ * Apply (GAP-012): requested_by and, when different, projects.pm_id are notified that the CR was implemented.
  */
 class ChangeRequestStakeholderNotificationTest extends TestCase
 {
@@ -168,29 +168,84 @@ class ChangeRequestStakeholderNotificationTest extends TestCase
         $this->assertSame($countBefore + 1, Notification::count(), 'Expected only requester notification when PM = requester');
     }
 
-    public function test_apply_does_not_send_any_notification(): void
+    private function makeApprovedCr(Project $project, string $changeNumber): ChangeRequest
     {
-        $cr = ChangeRequest::create([
+        return ChangeRequest::create([
             'tenant_id' => (string) $this->tenant->id,
-            'project_id' => (string) $this->project->id,
-            'title' => 'Apply notification deferred test',
-            'description' => 'Apply must not emit notifications.',
+            'project_id' => (string) $project->id,
+            'title' => 'GAP-012 apply notification CR',
+            'description' => 'Apply must notify the requester and the PM.',
             'change_type' => 'scope',
             'priority' => 'medium',
             'status' => ChangeRequest::STATUS_APPROVED,
             'requested_by' => (string) $this->requester->id,
             'assigned_to' => (string) $this->approver->id,
             'approved_by' => (string) $this->approver->id,
-            'change_number' => 'CR-S3-2A-003',
+            'change_number' => $changeNumber,
             'requested_at' => now(),
         ]);
+    }
 
+    public function test_apply_notifies_requester_and_project_pm(): void
+    {
+        $cr = $this->makeApprovedCr($this->project, 'CR-S3-2A-003');
         $countBefore = Notification::count();
 
         $this->withHeaders($this->approverHeaders)
             ->postJson(route('api.zena.change-requests.apply', ['id' => (string) $cr->id], false))
             ->assertOk();
 
-        $this->assertSame($countBefore, Notification::count(), 'Apply must not create any notifications (explicitly deferred)');
+        $this->assertSame($countBefore + 2, Notification::count(), 'Expected requester + PM notifications');
+        $this->assertDatabaseHas('notifications', [
+            'tenant_id' => (string) $this->tenant->id,
+            'project_id' => (string) $this->project->id,
+            'user_id' => (string) $this->requester->id,
+            'type' => 'change_request_implemented',
+            'event_key' => 'change_request.implemented',
+        ]);
+        $this->assertDatabaseHas('notifications', [
+            'tenant_id' => (string) $this->tenant->id,
+            'project_id' => (string) $this->project->id,
+            'user_id' => (string) $this->pm->id,
+            'type' => 'change_request_implemented_pm',
+            'event_key' => 'change_request.implemented',
+        ]);
+
+        $notification = Notification::query()
+            ->where('user_id', (string) $this->requester->id)
+            ->where('type', 'change_request_implemented')
+            ->firstOrFail();
+        $this->assertSame((string) $cr->id, $notification->data['change_request_id']);
+        $this->assertSame('implemented', $notification->data['change_request_status']);
+    }
+
+    public function test_apply_notifies_only_requester_when_pm_is_requester(): void
+    {
+        $project = Project::factory()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'created_by' => (string) $this->approver->id,
+            'pm_id' => (string) $this->requester->id,
+        ]);
+        $cr = $this->makeApprovedCr($project, 'CR-S3-2A-004');
+        $countBefore = Notification::count();
+
+        $this->withHeaders($this->approverHeaders)
+            ->postJson(route('api.zena.change-requests.apply', ['id' => (string) $cr->id], false))
+            ->assertOk();
+
+        $this->assertSame($countBefore + 1, Notification::count(), 'Expected only the requester notification when PM = requester');
+        $this->assertDatabaseMissing('notifications', ['type' => 'change_request_implemented_pm']);
+    }
+
+    public function test_refused_apply_sends_no_notification(): void
+    {
+        $cr = $this->makeSubmittedCr();
+        $countBefore = Notification::count();
+
+        $this->withHeaders($this->approverHeaders)
+            ->postJson(route('api.zena.change-requests.apply', ['id' => (string) $cr->id], false))
+            ->assertStatus(400);
+
+        $this->assertSame($countBefore, Notification::count(), 'A refused apply must not create notifications');
     }
 }

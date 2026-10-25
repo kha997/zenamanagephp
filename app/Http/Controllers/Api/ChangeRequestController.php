@@ -893,6 +893,32 @@ class ChangeRequestController extends BaseApiController
             $this->createTaskLinkBack($changeRequest, $task);
             $this->createBaselineSnapshot($changeRequest, (string) $user->id);
 
+            $requestedBy = $changeRequest->getAttribute('requested_by');
+            if (is_string($requestedBy) && $requestedBy !== '') {
+                $this->createWorkflowNotification(
+                    $changeRequest,
+                    $requestedBy,
+                    'change_request_implemented',
+                    'Change request implemented',
+                    $changeRequest->title,
+                    'change_request.implemented'
+                );
+            }
+
+            // Notify project PM as a broader stakeholder when different from requester
+            $project = $changeRequest->project ?? Project::query()->find($changeRequest->project_id);
+            $pmId = $project?->pm_id ? (string) $project->pm_id : null;
+            if ($pmId !== null && $pmId !== (string) ($requestedBy ?? '')) {
+                $this->createWorkflowNotification(
+                    $changeRequest,
+                    $pmId,
+                    'change_request_implemented_pm',
+                    'Change request implemented (project update)',
+                    $changeRequest->title,
+                    'change_request.implemented'
+                );
+            }
+
             DB::commit();
 
             $changeRequest->load(['project:id,name', 'requestedBy:id,name', 'approvedBy:id,name']);

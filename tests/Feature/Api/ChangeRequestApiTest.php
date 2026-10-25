@@ -291,9 +291,10 @@ class ChangeRequestApiTest extends TestCase
             'implementation_notes' => $implementationData['implementation_notes'],
         ]);
 
-        $this->assertDatabaseMissing('notifications', [
+        $this->assertDatabaseHas('notifications', [
             'tenant_id' => $this->user->tenant_id,
             'project_id' => $this->project->id,
+            'user_id' => $this->user->id,
             'type' => 'change_request_implemented',
         ]);
 

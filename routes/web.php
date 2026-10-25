@@ -473,12 +473,10 @@ Route::prefix('invitations')->name('invitations.')->group(function () {
         ->middleware(['auth', 'tenant.isolation', 'throttle:invitation-accept'])
         ->name('accept');
     // POST /invitations/accept/{token} - MOVED TO API: /api/v1/invitations/accept/{token}
-    Route::get('/decline/{token}', [App\Http\Controllers\Web\InvitationController::class, 'decline'])->name('decline');
 });
 
 // Legacy invitation redirects (301 Permanent Redirects)
 Route::permanentRedirect('/invite/accept/{token}', '/invitations/accept/{token}');
-Route::permanentRedirect('/invite/decline/{token}', '/invitations/decline/{token}');
 
 // Legacy Redirects (301 Permanent Redirects) - Minimal set
 // Phase 1: Essential routes only
@@ -570,7 +568,6 @@ Route::permanentRedirect('/performance/clear-caches', '/api/v1/admin/perf/clear-
 
 // Phase 3: Invitation routes (standardized naming)
 Route::permanentRedirect('/invite/accept/{token}', '/invitations/accept/{token}');
-Route::permanentRedirect('/invite/decline/{token}', '/invitations/decline/{token}');
 
 // REMOVED: Non-essential legacy routes (see legacy-map.json for removal schedule)
 // /users, /tenants, /documents, /templates, /settings, /profile, /team

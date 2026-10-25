@@ -1,14 +1,14 @@
 ---
 work_id: GAP-017
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-25-gap-017-invitation-dead-ends-evidence.md
   plan: docs/superpowers/plans/2026-10-25-gap-017-invitation-decline.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-25T15:23:31+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-25, verbatim: 'APPROVE GAP-017 Gate 3'. Given after the packet at PR head ad509046edfd827458be08f19a0f04a2f7fe1a73 (all checks green); bound to implementation subject 317e5332af513a79989fccb7cdbc5df95eb4abc7 and implementation-tree digest a59a940128c4536ee16ce8a9f049e28c1b3cfd8de7ec0c75686d871c3e4aff48 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-25T13:49:39+07:00"
-  updated_at: "2026-10-25T13:49:39+07:00"
+  updated_at: "2026-10-25T15:23:31+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-017 at subject 317e5332af513a79989fccb7cdbc5df95eb4abc7 (Gate 2 Option A). routes/web.php: the invitations.decline route (GET /invitations/decline/{token} -> Web\\InvitationController::decline, a method that never existed) is removed, and so is the /invite/decline/{token} permanent redirect, which was declared twice with identical text; both copies are removed. legacy-map.json drops its /invite/decline/{token} entry. Web\\InvitationController, which had no other route, is deleted with the invitations index, create and manage views that only it rendered, and its 32 phpstan-baseline.neon entries. The accept route, the /invite/accept/{token} redirect, the accept view and the invitation API are unchanged. New test tests/Feature/Web/InvitationDeclineRouteRemovedTest.php: on the base all 3 tests fail (500, 301, named route present); after the change 3/3 pass (both URLs 404, invitations.decline gone, invitations.accept present). route:list differs from the base only by the two removed routes. Local: phpunit --filter='Route|Architecture|Legacy|Team' 295 tests OK (7 skipped); --filter=Invitation 8 tests OK; PHPStan no errors; php-cs-fixer 0 files to fix; governance and docs lints pass. Exact-head CI at 317e5332: 35/35 green."
@@ -37,12 +37,15 @@ technical_evidence:
   verified_at: "2026-10-25T13:49:39+07:00"
 owner_decision_binding:
   implementation_tree_digest: "a59a940128c4536ee16ce8a9f049e28c1b3cfd8de7ec0c75686d871c3e4aff48"
-  decision_recorded_at: null
+  decision_recorded_at: "2026-10-25T15:23:31+07:00"
 ---
 
 # GAP-017 — Gate 3 release decision (invitation decline link)
 
-## OWNER GATE 3: AWAITING OWNER
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-25 ("APPROVE GAP-017 Gate 3"), bound to implementation subject
+`317e5332af513a79989fccb7cdbc5df95eb4abc7` and implementation-tree digest `a59a940128c4536ee16ce8a9f049e28c1b3cfd8de7ec0c75686d871c3e4aff48`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

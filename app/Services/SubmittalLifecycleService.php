@@ -8,6 +8,7 @@ use App\Exceptions\SubmittalTransitionConflictException;
 use App\Exceptions\SubmittalTransitionNotAllowedException;
 use App\Models\EventRecord;
 use App\Models\Notification;
+use App\Models\Project;
 use App\Models\Submittal;
 use App\Models\SubmittalRevision;
 use Illuminate\Support\Facades\DB;
@@ -127,6 +128,11 @@ class SubmittalLifecycleService
 
         if ($isResubmit) {
             $this->notifyLastRejector($fresh);
+        } else {
+            $pmId = Project::query()->whereKey($fresh->project_id)->value('pm_id');
+            if ($pmId && (string) $pmId !== (string) ($context['actor_user_id'] ?? '')) {
+                $this->notify($fresh, (string) $pmId, 'submittal_submitted', 'Submittal chờ duyệt: ');
+            }
         }
 
         return $fresh;
@@ -231,7 +237,16 @@ class SubmittalLifecycleService
             ]);
         });
 
-        return $submittal->fresh();
+        $fresh = $submittal->fresh();
+
+        $submitterId = $fresh->submitted_by;
+        if ($submitterId && (string) $submitterId !== (string) ($context['actor_user_id'] ?? '')) {
+            $decision === 'approved'
+                ? $this->notify($fresh, (string) $submitterId, 'submittal_approved', 'Submittal đã được duyệt: ')
+                : $this->notify($fresh, (string) $submitterId, 'submittal_rejected', 'Submittal bị từ chối: ');
+        }
+
+        return $fresh;
     }
 
     /** @param array<string, mixed> $context */
@@ -291,12 +306,29 @@ class SubmittalLifecycleService
             if (!$recipient) {
                 return;
             }
+        } catch (\Throwable $e) {
+            Log::error('submittal.notification_failed', [
+                'submittal_id' => $submittal->id,
+                'error' => $e->getMessage(),
+            ]);
 
+            return;
+        }
+
+        $this->notify($submittal, (string) $recipient, 'submittal_resubmitted', 'Submittal đã được nộp lại: ');
+    }
+
+    /**
+     * Runs after the workflow transaction has committed; a failure is logged and never fails the transition.
+     */
+    private function notify(Submittal $submittal, string $recipientId, string $type, string $titlePrefix): void
+    {
+        try {
             Notification::query()->create([
                 'tenant_id' => (string) $submittal->tenant_id,
-                'user_id' => $recipient,
-                'type' => 'submittal_resubmitted',
-                'title' => 'Submittal đã được nộp lại: ' . $submittal->submittal_number,
+                'user_id' => $recipientId,
+                'type' => $type,
+                'title' => $titlePrefix . $submittal->submittal_number,
                 'body' => $submittal->title,
                 'project_id' => $submittal->project_id,
             ]);

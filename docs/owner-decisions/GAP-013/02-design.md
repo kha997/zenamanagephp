@@ -69,6 +69,15 @@ it does not authorize Gate 3, merge, release, or deployment.
 
 **Not changed:** submittal schema (no reviewer field), RBAC, email, other modules.
 
+## Owner amendment 1 (2026-10-25)
+
+Local verification showed `tests/Feature/Api/SubmittalResubmitLifecycleTest.php::test_resubmit_notification_failure_is_logged_not_swallowed`
+fails: it makes every notification throw and expects `submittal.notification_failed` logged exactly once, but the first
+submit now also attempts the PM notification (the factory project has a different PM), so the error is logged twice.
+The file was outside the allowlist, so the Owner was asked via AskUserQuestion and chose, verbatim: "Cho PM = người nộp
+trong test (Recommended)". Allowlist extended by exactly one line in that test: set the project's `pm_id` to the
+submitter before submitting, so only the resubmit notification is attempted. The assertion is unchanged.
+
 ## Verification
 
 - New tests fail on the base and pass after; all Submittal tests pass; `tests/Feature/Api` passes.

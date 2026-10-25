@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-10-25-gap-013-submittal-notifications-evidence.md
   plan: null
   branch: docs/GAP-013-submittal-notifications
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/371
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

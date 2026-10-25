@@ -223,16 +223,6 @@ if (app()->environment(['local', 'testing'])) {
     })->name('admin-layout-system');
 }
 
-// Enhanced Admin Dashboard Route
-Route::get('/admin-dashboard-enhanced', function () {
-    return view('admin.dashboard-enhanced');
-})->middleware(['auth', 'tenant.isolation', 'rbac:admin'])->name('admin-dashboard-enhanced');
-
-// Enhanced Projects Management Route
-Route::get('/projects-enhanced', function () {
-    return view('app.projects-enhanced');
-})->middleware(['auth', 'tenant.isolation'])->name('projects-enhanced');
-
 // REMOVED: unauthenticated standalone /admin/users — protected equivalent
 // exists in the admin group below (route name admin-users)
 

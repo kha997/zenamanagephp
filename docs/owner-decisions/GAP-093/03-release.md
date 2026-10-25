@@ -1,14 +1,14 @@
 ---
 work_id: GAP-093
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-23-gap-093-nightly-matrix-evidence.md
   plan: docs/superpowers/plans/2026-10-24-gap-093-nightly-matrix.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-25T08:28:32+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-25, verbatim: 'APPROVE GAP-093 Gate 3'. Given after the packet at PR head 9233fd2a825efbb37a8f471c0cd2361fea3347f1 (all checks green); bound to implementation subject 4a7ff2fb607a96208c6a7bff8e9b8842acda81fb and implementation-tree digest 7148f8ca7fc6445ffa4769be398f402214d2ef732798a06d067fcb1b84f477dd (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-24T22:57:35+07:00"
-  updated_at: "2026-10-24T22:57:35+07:00"
+  updated_at: "2026-10-25T08:28:32+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-093 at subject 4a7ff2fb607a96208c6a7bff8e9b8842acda81fb (Gate 2 Option A). nightly-matrix.yml: 'Prepare application env' copies .env.example instead of the missing .env.testing; the job env uses CACHE_DRIVER array and QUEUE_CONNECTION sync (was redis/redis) and drops APP_URL, WEBSOCKET_HOST and WEBSOCKET_PORT; the 'Start local app server' and 'Start websocket server (best effort)' steps are removed; the readiness step becomes 'Wait for Redis' with only the Redis check; the artifact list drops the two server logs. scripts/test/nightly_matrix.sh: the ssot:lint and test:fast stages are removed (CI runs both on every pull request); the redis group runs with CACHE_DRIVER=redis, other groups with the job's cache; the report drops the app and websocket reachability lines, and the now-unused http_reachable helper is removed; the script still exits non-zero when any group fails. Proof: workflow_dispatch run 40107882741 (Nightly Test Matrix #94) on 4a7ff2fb is green, the first green run of this workflow after 91 consecutive failures; groups slow PASS (1 test), load PASS (0 tests), stress PASS (28 tests, 20 skipped), redis PASS (1 test); report artifact uploaded (10 files). Local: the same four groups pass; with Redis stopped the redis group reports FAIL and the script exits 1, so a missing Redis does not pass silently. Investigation recorded in 02-design.md: running the whole suite with the old nightly environment gives 117 errors from the login rate limiter leaking through a shared Redis cache and 35 other failures; these are out of scope under Option A. Static: bash -n passes; actionlint reports no findings. Exact-head CI at 4a7ff2fb: 36/36 green, including the dispatched nightly run."
@@ -37,12 +37,15 @@ technical_evidence:
   verified_at: "2026-10-24T22:57:35+07:00"
 owner_decision_binding:
   implementation_tree_digest: "7148f8ca7fc6445ffa4769be398f402214d2ef732798a06d067fcb1b84f477dd"
-  decision_recorded_at: null
+  decision_recorded_at: "2026-10-25T08:28:32+07:00"
 ---
 
 # GAP-093 — Gate 3 release decision (Nightly Test Matrix)
 
-## OWNER GATE 3: AWAITING OWNER
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-25 ("APPROVE GAP-093 Gate 3"), bound to implementation subject
+`4a7ff2fb607a96208c6a7bff8e9b8842acda81fb` and implementation-tree digest `7148f8ca7fc6445ffa4769be398f402214d2ef732798a06d067fcb1b84f477dd`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

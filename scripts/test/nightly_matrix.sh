@@ -34,23 +34,6 @@ tcp_reachable() {
   ' "$host" "$port"
 }
 
-http_reachable() {
-  local url="$1"
-  php -r '
-    $url = $argv[1] ?? "";
-    if ($url === "") {
-      exit(1);
-    }
-    $opts = ["http" => ["method" => "GET", "timeout" => 1]];
-    $ctx = stream_context_create($opts);
-    $body = @file_get_contents($url, false, $ctx);
-    if ($body === false) {
-      exit(1);
-    }
-    exit(0);
-  ' "$url"
-}
-
 parse_junit_counts() {
   local file="$1"
   php -r '
@@ -113,7 +96,12 @@ run_group() {
   echo "[nightly] running group: ${group}"
   rm -f "$junit_file" "$log_file"
 
-  if env "${env_name}=${env_value}" RUN_REDIS_TESTS=1 php -d pcov.enabled=0 ./vendor/bin/phpunit --group "$group" --log-junit "$junit_file" >"$log_file" 2>&1; then
+  local cache_driver="${CACHE_DRIVER:-array}"
+  if [[ "$group" == "redis" ]]; then
+    cache_driver="redis"
+  fi
+
+  if env "${env_name}=${env_value}" RUN_REDIS_TESTS=1 CACHE_DRIVER="$cache_driver" php -d pcov.enabled=0 ./vendor/bin/phpunit --group "$group" --log-junit "$junit_file" >"$log_file" 2>&1; then
     exit_code=0
   else
     exit_code=$?
@@ -133,9 +121,9 @@ run_group() {
   printf '%s|%s|%s|%s|%s|%s|%s\n' "$group" "$status" "$tests" "$passed" "$failures" "$errors" "$skipped" >> "${OUT_DIR}/summary.tsv"
 }
 
+# GAP-093: ssot:lint and the fast suite are not run here; CI runs both on
+# every pull request. The nightly job only runs the groups CI excludes.
 run_stage "optimize:clear" php artisan optimize:clear
-run_stage "ssot:lint" composer ssot:lint
-run_stage "test:fast" php -d pcov.enabled=0 ./vendor/bin/phpunit --exclude-group slow,load,stress,redis
 
 rm -f "${OUT_DIR}/summary.tsv"
 run_group "slow" "RUN_SLOW_TESTS" "1"
@@ -145,23 +133,10 @@ run_group "redis" "RUN_REDIS_TESTS" "1"
 
 REDIS_HOST_VALUE="${REDIS_HOST:-127.0.0.1}"
 REDIS_PORT_VALUE="${REDIS_PORT:-6379}"
-APP_URL_VALUE="${APP_URL:-http://127.0.0.1:8000}"
-WEBSOCKET_HOST_VALUE="${WEBSOCKET_HOST:-127.0.0.1}"
-WEBSOCKET_PORT_VALUE="${WEBSOCKET_PORT:-8080}"
 
 redis_reachable="no"
 if tcp_reachable "$REDIS_HOST_VALUE" "$REDIS_PORT_VALUE"; then
   redis_reachable="yes"
-fi
-
-app_reachable="no"
-if http_reachable "${APP_URL_VALUE%/}/api/csrf-token"; then
-  app_reachable="yes"
-fi
-
-websocket_reachable="no"
-if tcp_reachable "$WEBSOCKET_HOST_VALUE" "$WEBSOCKET_PORT_VALUE"; then
-  websocket_reachable="yes"
 fi
 
 {
@@ -185,11 +160,6 @@ fi
   echo "- \`REDIS_HOST\`: ${REDIS_HOST_VALUE}"
   echo "- \`REDIS_PORT\`: ${REDIS_PORT_VALUE}"
   echo "- Redis reachable: ${redis_reachable}"
-  echo "- \`APP_URL\`: ${APP_URL_VALUE}"
-  echo "- App URL reachable (\`/api/csrf-token\`): ${app_reachable}"
-  echo "- \`WEBSOCKET_HOST\`: ${WEBSOCKET_HOST_VALUE}"
-  echo "- \`WEBSOCKET_PORT\`: ${WEBSOCKET_PORT_VALUE}"
-  echo "- WebSocket port reachable: ${websocket_reachable}"
   echo ""
   echo "## Notes"
   echo ""

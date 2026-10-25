@@ -11,19 +11,19 @@ permissions:
 env:
   PHP_VERSION: '8.2'
   APP_ENV: testing
-  APP_URL: http://127.0.0.1:8000
   DB_CONNECTION: sqlite
   DB_DATABASE: /tmp/zenamanage_test.sqlite
-  CACHE_DRIVER: redis
-  QUEUE_CONNECTION: redis
+  # GAP-093: in-memory cache and sync queue by default, as the PR test jobs
+  # use; a shared Redis cache made rate limits leak across tests. The redis
+  # group switches to CACHE_DRIVER=redis itself (scripts/test/nightly_matrix.sh).
+  CACHE_DRIVER: array
+  QUEUE_CONNECTION: sync
   REDIS_HOST: 127.0.0.1
   REDIS_PORT: 6379
   RUN_SLOW_TESTS: '1'
   RUN_LOAD_TESTS: '1'
   RUN_STRESS_TESTS: '1'
   RUN_REDIS_TESTS: '1'
-  WEBSOCKET_HOST: 127.0.0.1
-  WEBSOCKET_PORT: 8080
   COMPOSER_PROCESS_TIMEOUT: 0
 
 jobs:
@@ -58,29 +58,17 @@ jobs:
 
       - name: Prepare application env
         run: |
-          cp .env.testing .env
+          # GAP-093: .env.testing is not in the repository; the job env above
+          # supplies the testing values.
+          cp .env.example .env
           php artisan key:generate --force
           touch "${DB_DATABASE}"
           php artisan migrate:fresh --force
 
-      - name: Start local app server
+      # GAP-093: no app server or websocket server is started; no test in the
+      # nightly groups calls the app over HTTP.
+      - name: Wait for Redis
         run: |
-          nohup php artisan serve --host=127.0.0.1 --port=8000 >/tmp/laravel-serve.log 2>&1 &
-          echo $! > /tmp/laravel-serve.pid
-
-      - name: Wait for app and Redis readiness
-        run: |
-          for i in $(seq 1 30); do
-            if curl -fsS "${APP_URL}/api/csrf-token" >/dev/null 2>&1; then
-              break
-            fi
-            if [ "$i" -eq 30 ]; then
-              echo "App server did not become ready in time"
-              exit 1
-            fi
-            sleep 1
-          done
-
           php -r '
             $errno = 0;
             $errstr = "";
@@ -92,15 +80,6 @@ jobs:
             fclose($fp);
             echo "Redis reachable" . PHP_EOL;
           '
-
-      - name: Start websocket server (best effort)
-        run: |
-          if php artisan list --raw | grep -q '^websocket:serve$'; then
-            nohup php artisan websocket:serve --host="${WEBSOCKET_HOST}" --port="${WEBSOCKET_PORT}" --workers=1 >/tmp/websocket.log 2>&1 &
-            echo $! > /tmp/websocket.pid
-          else
-            echo "websocket:serve command not found; continuing"
-          fi
 
       - name: Run nightly matrix
         run: composer test:nightly
@@ -115,6 +94,4 @@ jobs:
             storage/app/nightly/*.xml
             storage/app/nightly/*.log
             storage/app/nightly/summary.tsv
-            /tmp/laravel-serve.log
-            /tmp/websocket.log
           if-no-files-found: warn

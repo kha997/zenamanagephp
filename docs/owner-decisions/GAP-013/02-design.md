@@ -1,34 +1,38 @@
 ---
 work_id: GAP-013
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-25-gap-013-submittal-notifications-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-10-25-gap-013-submittal-notifications.md
   branch: docs/GAP-013-submittal-notifications
   pr: https://github.com/kha997/zenamanagephp/pull/371
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-25T22:22:44+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-25, verbatim: 'APPROVE GAP-013 Gate 2 Option A'. Reviewed design head: a469fe6e97719c8c4061f82d613277f05c29ccc3. Approves Option A and its exact allowlist (SubmittalLifecycleService: first submit notifies the project PM, approve/reject notify submitted_by, no self-notification, after commit with logged failures, shared helper with the unchanged resubmit notification; new tests/Feature/Api/SubmittalNotificationTest.php; docs); not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-25T22:00:23+07:00"
-  updated_at: "2026-10-25T22:00:23+07:00"
+  updated_at: "2026-10-25T22:22:44+07:00"
 generated_by: agent
 ---
 
 # GAP-013 — Submittal notifications: Gate 2 design
 
-## OWNER GATE 2: AWAITING OWNER
+## OWNER GATE 2: APPROVED — OPTION A
+
+Owner approved Option A in-session on 2026-10-25 against reviewed design head
+`a469fe6e97719c8c4061f82d613277f05c29ccc3`. This authorizes only the bounded implementation defined by this packet;
+it does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

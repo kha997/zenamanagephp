@@ -1,34 +1,38 @@
 ---
 work_id: GAP-017
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-25-gap-017-invitation-dead-ends-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-10-25-gap-017-invitation-decline.md
   branch: docs/GAP-017-invitation-decline
   pr: https://github.com/kha997/zenamanagephp/pull/367
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-25T13:23:46+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-25, verbatim: 'APPROVE GAP-017 Gate 2 Option A'. Reviewed design head: d850e69dabd33562d883c8ad20784c2194404017. Approves Option A and its exact allowlist (routes/web.php: remove the invitations.decline route and the /invite/decline redirect; legacy-map.json: remove the /invite/decline entry; delete Web\\InvitationController and the invitations index/create/manage views; remove that controller's phpstan-baseline entries; new regression test; docs); not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-25T13:22:55+07:00"
-  updated_at: "2026-10-25T13:22:55+07:00"
+  updated_at: "2026-10-25T13:23:46+07:00"
 generated_by: agent
 ---
 
 # GAP-017 — Invitation decline link: Gate 2 design
 
-## OWNER GATE 2: AWAITING OWNER
+## OWNER GATE 2: APPROVED — OPTION A
+
+Owner approved Option A in-session on 2026-10-25 against reviewed design head
+`d850e69dabd33562d883c8ad20784c2194404017`. This authorizes only the bounded implementation defined by this packet;
+it does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

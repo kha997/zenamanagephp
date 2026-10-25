@@ -1,14 +1,14 @@
 ---
 work_id: OWN-2026-019
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-25-own-2026-019-reconciliation-record.md
   plan: null
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-25T19:40:10+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-25, verbatim: 'APPROVE OWN-2026-019 Gate 3'. Given after the packet at PR head 62d0dc5f7d9a305a590de9c48cd902e0fb483f3d; bound to subject c593a3ee6d1649df9999913fc129a1c6f5d53ea8 and implementation-tree digest 3c4aa5b8ee8cb56800318408168e6fce3b490b8550b0273bd61c56699aefec41 (recomputed at recording time, zero drift), including the disclosed deviation (squash commit used as the packet-hash comparison point). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-25T17:41:43+07:00"
-  updated_at: "2026-10-25T17:41:43+07:00"
+  updated_at: "2026-10-25T19:40:10+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "Documentation-only subject c593a3ee: diff vs origin/main is exactly the Option-B allowlist (OPERATIONAL_GAP_REGISTER.md and docs/audits/2026-10-25-own-2026-019-reconciliation-record.md) plus OWN-2026-019 Gate-1 evidence and 01/02 packets. Register: 30 RESOLVED rows added (Tier 1 GAP-079; Tier 2 GAP-070, 072, 082, 083, 084, 086; Tier 5 new table GAP-063, 064, 066-069; Tier 6 GAP-077, 078; Tier 7 GAP-071, 073-076, 080, 081, 085, 087-093), each with PR, full squash SHA and the Gate-3 subject and digest copied verbatim from its packet (not recomputed or rebound); GAP-011, GAP-016, GAP-017 updated in place to RESOLVED with previous notes kept and marked; GAP-065 added to Tier 1 as OPEN (Gate 1 awaiting since 2026-10-07, Draft #338). No other register row changed (3 lines removed, all replaced in place). Record: for 32 of 33 released IDs the Gate-3 packet SHA-256 on origin/main equals the same file in the squash commit; for GAP-011 the 2026-08-14 squash commit is not in this clone, so only the main hash is recorded. Deviation from the Gate-2 text: the design said to compare with the subject commit; the squash commit was used because the packet at the subject predates the approval record and most subject commits no longer exist after branch deletion. No GAP-* packet is modified. Local: owner-governance-lint PASS, docs-lint PASS; tests/Unit/OwnerGovernance 195 tests, 1 failure (GrandfatherLoaderTest::test_unreadable_file_throws, which relies on chmod 000 and cannot fail-read as root in this container; unrelated to this diff). Exact-head CI at c593a3ee: 3/3 green (the docs-only path filters run Owner Governance Lint, Build Dockerfile, test-routes-guardrails)."
@@ -37,12 +37,15 @@ technical_evidence:
   verified_at: "2026-10-25T17:41:43+07:00"
 owner_decision_binding:
   implementation_tree_digest: "3c4aa5b8ee8cb56800318408168e6fce3b490b8550b0273bd61c56699aefec41"
-  decision_recorded_at: null
+  decision_recorded_at: "2026-10-25T19:40:10+07:00"
 ---
 
 # OWN-2026-019 — Gate 3 release decision (register reconciliation)
 
-## OWNER GATE 3: AWAITING OWNER
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-25 ("APPROVE OWN-2026-019 Gate 3"), bound to subject
+`c593a3ee6d1649df9999913fc129a1c6f5d53ea8` and implementation-tree digest `3c4aa5b8ee8cb56800318408168e6fce3b490b8550b0273bd61c56699aefec41`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

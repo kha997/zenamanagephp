@@ -1,14 +1,14 @@
 ---
 work_id: GAP-016
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-25-gap-016-enhanced-routes-evidence.md
   plan: docs/superpowers/plans/2026-10-25-gap-016-enhanced-routes.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-25T16:53:02+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-25, verbatim: 'APPROVE GAP-016 Gate 3'. Given after the packet at PR head 7b3ff163c2358f78f748e7173d8b06fff20ecae4; bound to implementation subject 8b88c1f66072bd963ab7b127fb19efbd03b77841 and implementation-tree digest e825cc36fdb7eb72660608e9e12583dbf4cd2f77a639426bedd4d25ec9cec736 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-25T16:49:45+07:00"
-  updated_at: "2026-10-25T16:49:45+07:00"
+  updated_at: "2026-10-25T16:53:02+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-016 at subject 8b88c1f66072bd963ab7b127fb19efbd03b77841 (Gate 2 Option A). routes/web.php: the /admin-dashboard-enhanced closure (view admin.dashboard-enhanced, middleware auth, tenant.isolation, rbac:admin) and the /projects-enhanced closure (view app.projects-enhanced, middleware auth, tenant.isolation) are removed with their two comment lines; both views had been deleted earlier, so a signed-in user (and an admin for the dashboard URL) got HTTP 500. New test tests/Feature/Web/EnhancedRoutesRemovedTest.php: on the base 2/2 fail (500; route names present); after the change 2/2 pass (signed-in admin gets 404 on both URLs; both route names gone). route:list differs from the base only by the two removed routes. Local: phpunit --filter='Route|Architecture|Legacy' 257 tests OK (7 skipped); PHPStan no errors; php-cs-fixer 0 files to fix; governance and docs lints pass. Exact-head CI at 8b88c1f6: 35/35 green."
@@ -37,12 +37,15 @@ technical_evidence:
   verified_at: "2026-10-25T16:49:45+07:00"
 owner_decision_binding:
   implementation_tree_digest: "e825cc36fdb7eb72660608e9e12583dbf4cd2f77a639426bedd4d25ec9cec736"
-  decision_recorded_at: null
+  decision_recorded_at: "2026-10-25T16:53:02+07:00"
 ---
 
 # GAP-016 — Gate 3 release decision (enhanced routes with missing views)
 
-## OWNER GATE 3: AWAITING OWNER
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-25 ("APPROVE GAP-016 Gate 3"), bound to implementation subject
+`8b88c1f66072bd963ab7b127fb19efbd03b77841` and implementation-tree digest `e825cc36fdb7eb72660608e9e12583dbf4cd2f77a639426bedd4d25ec9cec736`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

@@ -72,6 +72,14 @@ cách đang làm ở bước duyệt.
 **Not changed:** submit/approve/reject notifications, email, the notification model, other controllers,
 `docs/roadmap/backlog.yaml` (its S3.2a note is history; the register row is updated in the next reconciliation).
 
+## Owner amendment 1 (2026-10-25)
+
+CI on `0765bfa9` showed a second test encoding the old deferral:
+`tests/Feature/Api/ChangeRequestApiTest.php::test_can_implement_change_request` asserted that apply creates **no**
+`change_request_implemented` notification (line 294). The file was outside the allowlist, so the Owner was asked via
+AskUserQuestion and chose, verbatim: "Sửa test trong PR này (Recommended)". Allowlist extended by exactly that assertion:
+`assertDatabaseMissing` becomes `assertDatabaseHas` with `user_id` = the requester. No other change to that file.
+
 ## Verification
 
 - New tests fail on the base and pass after the change; the whole ChangeRequest test files pass.

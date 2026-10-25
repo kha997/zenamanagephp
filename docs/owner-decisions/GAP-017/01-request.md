@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-10-25-gap-017-invitation-dead-ends-evidence.md
   plan: null
   branch: docs/GAP-017-invitation-decline
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/367
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

@@ -1,14 +1,14 @@
 ---
 work_id: GAP-012
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-25-gap-012-cr-apply-notification-evidence.md
   plan: docs/superpowers/plans/2026-10-25-gap-012-cr-apply-notification.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-25T21:38:09+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-25, verbatim: 'APPROVE GAP-012 Gate 3'. Given after the packet at PR head 3732262837d8edb4b31037e5facb1fdc7e71d999; bound to implementation subject 6b70d927578966809d5bd739abb39ff397299899 and implementation-tree digest 122adcbe77d7e400f27ce410f1aec9a4c0cf79973df33bdc2f27ea5f63e8eee4 (recomputed at recording time, zero drift), including Owner amendment 1. Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-25T21:34:18+07:00"
-  updated_at: "2026-10-25T21:34:18+07:00"
+  updated_at: "2026-10-25T21:38:09+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-012 at subject 6b70d927578966809d5bd739abb39ff397299899 (Gate 2 Option A plus Owner amendment 1). ChangeRequestController::apply(), after the delta task, link-back and baseline snapshot and before DB::commit(), calls createWorkflowNotification() for requested_by (type change_request_implemented, title 'Change request implemented') and for the project pm_id when set and different (type change_request_implemented_pm), event key change_request.implemented; the notification data carries the CR id and status implemented. requested_by is read with getAttribute() and the project with Project::query()->find() so the PHPStan baseline counts for approve() are unchanged. ChangeRequestStakeholderNotificationTest: test_apply_does_not_send_any_notification replaced by test_apply_notifies_requester_and_project_pm, test_apply_notifies_only_requester_when_pm_is_requester and test_refused_apply_sends_no_notification (helper makeApprovedCr); class comment updated. Owner amendment 1 (AskUserQuestion, 'Sửa test trong PR này (Recommended)'): ChangeRequestApiTest::test_can_implement_change_request asserted no change_request_implemented notification; that assertion now expects the requester's notification. History on the branch: 0765bfa9 failed PHPStan (ignore.count exceeded by the copied block) and API Tests (the old ChangeRequestApiTest assertion); cbbd832c fixed PHPStan; 6b70d927 applied amendment 1. Local: new tests fail on the base (2 of 7) and pass after; tests/Feature/Api --exclude-group=slow 793 tests OK; SSOT test lint passes; PHPStan no errors; php-cs-fixer 0 files; governance and docs lints pass. Exact-head CI at 6b70d927: 35/35 green."
@@ -37,12 +37,15 @@ technical_evidence:
   verified_at: "2026-10-25T21:34:18+07:00"
 owner_decision_binding:
   implementation_tree_digest: "122adcbe77d7e400f27ce410f1aec9a4c0cf79973df33bdc2f27ea5f63e8eee4"
-  decision_recorded_at: null
+  decision_recorded_at: "2026-10-25T21:38:09+07:00"
 ---
 
 # GAP-012 — Gate 3 release decision (change request apply notification)
 
-## OWNER GATE 3: AWAITING OWNER
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-25 ("APPROVE GAP-012 Gate 3"), bound to implementation subject
+`6b70d927578966809d5bd739abb39ff397299899` and implementation-tree digest `122adcbe77d7e400f27ce410f1aec9a4c0cf79973df33bdc2f27ea5f63e8eee4`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

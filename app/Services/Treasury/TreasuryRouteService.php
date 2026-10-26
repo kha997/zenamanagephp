@@ -183,7 +183,7 @@ class TreasuryRouteService
             $leg = Leg::query()->create([
                 'tenant_id' => (string) $lockedRoute->tenant_id,
                 'payment_route_id' => (string) $lockedRoute->id,
-                'sequence_no' => ((int) Leg::query()->withoutGlobalScopes()->where('payment_route_id', (string) $lockedRoute->id)->max('sequence_no')) + 1,
+                'sequence_no' => ((int) Leg::query()->withoutGlobalScopes()->where('payment_route_id', (string) $lockedRoute->id)->lockForUpdate()->max('sequence_no')) + 1,
                 'from_wallet_id' => $from === null ? null : (string) $from->id,
                 'to_wallet_id' => (string) $to->id,
                 'amount' => TreasuryBalanceService::fromCents($amount),
@@ -226,7 +226,7 @@ class TreasuryRouteService
             $lockedDocument = $this->lockDocument($document);
             $lockedRoute = $this->lockRoute($route);
             /** @var Leg $lockedLeg */
-            $lockedLeg = Leg::query()->withoutGlobalScopes()->whereKey($leg->id)->firstOrFail();
+            $lockedLeg = Leg::query()->withoutGlobalScopes()->whereKey($leg->id)->lockForUpdate()->firstOrFail();
             if ($lockedLeg->status !== Leg::STATUS_SETTLED) {
                 throw new TreasuryRuleViolation('Chặng này đã được đảo.', 'leg');
             }
@@ -493,6 +493,10 @@ class TreasuryRouteService
     }
 
     /**
+     * Settled legs of the route. Inside a write this is a locking read (the
+     * route row is already held), so a leg committed by a transaction that
+     * held the route before us is seen whatever our snapshot.
+     *
      * @return Collection<int, Leg>
      */
     private function settledLegs(Route $route): Collection
@@ -503,6 +507,7 @@ class TreasuryRouteService
             ->where('payment_route_id', (string) $route->id)
             ->where('status', Leg::STATUS_SETTLED)
             ->orderBy('sequence_no')
+            ->when(DB::transactionLevel() > 0, static fn ($query) => $query->lockForUpdate())
             ->get();
 
         return $legs->values();

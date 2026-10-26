@@ -10,13 +10,18 @@ use App\Models\Project;
 use App\Models\Tenant;
 use App\Models\Treasury\TreasuryFinancialDocument;
 use App\Models\Treasury\TreasuryFinancialParty;
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\Treasury\TreasuryLedgerEntry;
+use App\Models\Treasury\TreasuryPaymentRoute;
+use App\Models\Treasury\TreasuryPaymentRouteLeg;
 use App\Models\Treasury\TreasuryReconciliationEntry;
 use App\Models\Treasury\TreasuryWallet;
 use App\Models\User;
 use App\Services\Treasury\TreasuryBalanceService;
 use App\Services\Treasury\TreasuryExpenseService;
 use App\Services\Treasury\TreasuryPostingService;
+use App\Services\Treasury\TreasuryRouteService;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Group;
 use Symfony\Component\Process\PhpExecutableFinder;
@@ -54,8 +59,8 @@ class TreasuryTransferConcurrencyTest extends TestCase
         try {
             if (DB::connection('mysql')->getPdo()) {
                 foreach (['audit_logs', 'treasury_reconciliation_entries', 'treasury_reconciliations', 'treasury_cost_settlement_allocations', 'treasury_expense_approvals', 'treasury_ledger_entries',
-                    'treasury_financial_documents', 'contract_expenses', 'contracts', 'treasury_wallets',
-                    'treasury_financial_parties', 'projects', 'users', 'tenants'] as $table) {
+                    'treasury_payment_route_legs', 'treasury_payment_routes', 'treasury_financial_documents', 'contract_expenses', 'contracts', 'treasury_wallets',
+                    'treasury_financial_parties', 'projects', 'user_roles', 'role_permissions', 'users', 'tenants'] as $table) {
                     DB::connection('mysql')->table($table)->delete();
                 }
             }
@@ -243,5 +248,113 @@ class TreasuryTransferConcurrencyTest extends TestCase
         $this->assertSame([0, 1], $exitCodes, 'Exactly one reconciliation may succeed. ' . $output);
         $this->assertSame(1, TreasuryReconciliationEntry::on('mysql')->where('ledger_entry_id', $entryId)->where('direction', 'apply')->count(), $output);
         $this->assertSame('posted_reconciled', TreasuryFinancialDocument::on('mysql')->whereKey($funding->id)->value('status'));
+    }
+
+    /**
+     * GAP-094 — two processes each move 70 out of a transit wallet holding
+     * 100 along the same route. The from-wallet lock (class 0) plus the
+     * locking balance read must refuse the second leg.
+     *
+     * @group stress
+     */
+    public function test_two_concurrent_legs_cannot_drain_a_transit_wallet_twice(): void
+    {
+        [$project, $actor, $route, $transit, $site] = $this->routeFixture('100');
+        app(TreasuryRouteService::class)->recordLeg($project, $actor, $route, [
+            'to_wallet_id' => (string) $transit->id, 'amount' => '100', 'occurred_at' => '2026-10-02',
+        ]);
+
+        [$procA, $procB] = $this->raceLegs($project, $actor, $route, (string) $transit->id, (string) $site->id, '70');
+
+        $output = 'A: ' . $procA->getOutput() . $procA->getErrorOutput() . ' B: ' . $procB->getOutput() . $procB->getErrorOutput();
+        $exitCodes = [$procA->getExitCode(), $procB->getExitCode()];
+        sort($exitCodes);
+        $this->assertSame([0, 1], $exitCodes, 'Exactly one leg may leave the transit wallet. ' . $output);
+        $this->assertSame('30.00', app(TreasuryBalanceService::class)->walletBalance($transit->fresh()));
+        $this->assertSame(2, TreasuryPaymentRouteLeg::on('mysql')->where('payment_route_id', $route->id)->count());
+    }
+
+    /**
+     * GAP-094 — two processes each record 70 "from outside" on a route of
+     * 100. Only the route lock (class 6) plus the locking read of its legs
+     * keep the money from outside within the route amount.
+     *
+     * @group stress
+     */
+    public function test_two_concurrent_legs_from_outside_cannot_exceed_the_route_amount(): void
+    {
+        [$project, $actor, $route, $transit] = $this->routeFixture('100');
+
+        [$procA, $procB] = $this->raceLegs($project, $actor, $route, '-', (string) $transit->id, '70');
+
+        $output = 'A: ' . $procA->getOutput() . $procA->getErrorOutput() . ' B: ' . $procB->getOutput() . $procB->getErrorOutput();
+        $exitCodes = [$procA->getExitCode(), $procB->getExitCode()];
+        sort($exitCodes);
+        $this->assertSame([0, 1], $exitCodes, 'Exactly one leg from outside may be recorded. ' . $output);
+        $this->assertSame('70.00', app(TreasuryBalanceService::class)->walletBalance($transit->fresh()));
+        $this->assertSame(1, TreasuryPaymentRouteLeg::on('mysql')->where('payment_route_id', $route->id)->count());
+    }
+
+    /**
+     * A funding route of $amount into a site wallet, an actor holding
+     * treasury.manage_routes for every project, and a transit wallet.
+     *
+     * @return array{0: Project, 1: User, 2: TreasuryPaymentRoute, 3: TreasuryWallet, 4: TreasuryWallet}
+     */
+    private function routeFixture(string $amount): array
+    {
+        $this->skipUnlessMysqlAvailable();
+        $this->originalDefaultConnection = DB::getDefaultConnection();
+        DB::setDefaultConnection('mysql');
+
+        $tenant = Tenant::on('mysql')->create(Tenant::factory()->raw());
+        $actor = User::on('mysql')->create(User::factory()->raw(['tenant_id' => $tenant->id]));
+        $role = Role::on('mysql')->firstOrCreate(['name' => 'gap094-route-race'], ['scope' => 'system']);
+        foreach (['treasury.manage_routes', 'treasury.all_projects'] as $code) {
+            $permission = Permission::on('mysql')->firstOrCreate(
+                ['code' => $code],
+                ['name' => $code, 'module' => 'treasury', 'action' => substr($code, strlen('treasury.'))]
+            );
+            $role->permissions()->syncWithoutDetaching([$permission->id]);
+        }
+        $actor->roles()->syncWithoutDetaching([$role->id]);
+        $project = Project::on('mysql')->create(Project::factory()->raw([
+            'tenant_id' => $tenant->id, 'pm_id' => $actor->id, 'created_by' => $actor->id,
+        ]));
+        $investor = TreasuryFinancialParty::on('mysql')->create(['tenant_id' => $tenant->id, 'party_type' => 'investor', 'name' => 'A']);
+        $transit = TreasuryWallet::on('mysql')->create([
+            'tenant_id' => $tenant->id, 'project_id' => $project->id, 'wallet_type' => 'intermediary_control', 'name' => 'Transit',
+        ]);
+        $site = TreasuryWallet::on('mysql')->create([
+            'tenant_id' => $tenant->id, 'project_id' => $project->id, 'wallet_type' => 'employee_cash', 'name' => 'Site',
+        ]);
+        $route = app(TreasuryRouteService::class)->createRoute($project, $actor, [
+            'document_type' => 'funding', 'source_party_id' => (string) $investor->id,
+            'destination_wallet_id' => (string) $site->id, 'amount' => $amount, 'transaction_date' => '2026-10-01',
+        ]);
+
+        return [$project, $actor, $route, $transit, $site];
+    }
+
+    /**
+     * @return array{0: Process, 1: Process}
+     */
+    private function raceLegs(Project $project, User $actor, TreasuryPaymentRoute $route, string $from, string $to, string $amount): array
+    {
+        $php = (new PhpExecutableFinder())->find();
+        $args = fn (string $hold): array => [
+            $php, 'artisan', 'treasury:concurrency-test-route-leg',
+            (string) $project->id, (string) $actor->id, (string) $route->id, $from, $to, $amount, '--hold=' . $hold,
+        ];
+        $procA = new Process($args('3'), base_path(), ['DB_CONNECTION' => 'mysql']);
+        $procB = new Process($args('0'), base_path(), ['DB_CONNECTION' => 'mysql']);
+
+        $procA->start();
+        usleep(1_500_000);
+        $procB->start();
+        $procA->wait();
+        $procB->wait();
+
+        return [$procA, $procB];
     }
 }

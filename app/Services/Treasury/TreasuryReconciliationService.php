@@ -600,7 +600,7 @@ class TreasuryReconciliationService
             if (!in_array(data_get($doc, 'status'), [Document::STATUS_POSTED_UNRECONCILED, Document::STATUS_POSTED_RECONCILED], true)) {
                 continue;
             }
-            $entryIds = $this->entryIdsOfDocuments([(string) data_get($doc, 'id')]);
+            $entryIds = $this->entryIdsOfDocuments([(string) data_get($doc, 'id')], locking: true);
             $covered = $entryIds !== []
                 && $this->activeApplies($entryIds)->pluck('ledger_entry_id')->map(static fn ($id): string => (string) $id)->unique()->count() === count($entryIds);
             if (data_get($doc, 'posting_path') === Document::POSTING_PATH_VIA_ROUTE) {
@@ -667,10 +667,13 @@ class TreasuryReconciliationService
      * Every ledger entry of the given documents: document-sourced ones and
      * those of the legs of their routes.
      *
+     * With $locking (only once the routes are held, class 6) the reads are
+     * locking reads, so a leg committed after our snapshot still counts.
+     *
      * @param list<string> $documentIds
      * @return list<string>
      */
-    private function entryIdsOfDocuments(array $documentIds): array
+    private function entryIdsOfDocuments(array $documentIds, bool $locking = false): array
     {
         if ($documentIds === []) {
             return [];
@@ -678,6 +681,7 @@ class TreasuryReconciliationService
         $legIds = Leg::query()
             ->withoutGlobalScopes()
             ->whereIn('payment_route_id', Route::query()->withoutGlobalScopes()->whereIn('linked_financial_document_id', $documentIds)->select('id'))
+            ->when($locking, static fn ($query) => $query->sharedLock())
             ->pluck('id')
             ->all();
 
@@ -686,6 +690,7 @@ class TreasuryReconciliationService
             ->where(static fn ($query) => $query
                 ->whereIn('source_financial_document_id', $documentIds)
                 ->when($legIds !== [], static fn ($legs) => $legs->orWhereIn('source_payment_route_leg_id', $legIds)))
+            ->when($locking, static fn ($query) => $query->sharedLock())
             ->pluck('id')
             ->map(static fn ($id): string => (string) $id)
             ->all();

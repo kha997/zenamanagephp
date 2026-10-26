@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-10-26-gap-014b-ncr-notifications-evidence.md
   plan: null
   branch: docs/GAP-014b-ncr-notifications
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/372
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

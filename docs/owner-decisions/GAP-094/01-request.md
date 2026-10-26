@@ -1,11 +1,11 @@
 ---
 work_id: GAP-094
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-26-gap-094-treasury-s4b-routes-readiness.md
   plan: null
@@ -15,18 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-27T05:49:41+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-27, verbatim: 'APPROVE GAP-094 Gate 1'. Bound to reviewed Draft PR #373 head 1daa1d182d1e33e3c6ad5bab35594f13efb8ffb9, canonical base 740b84500a805805bea4f9a81758ea6ea2691a30. This is the recommended split option: this Work ID covers S4b-1 (routes for funding / owner contribution / internal transfer, leg record, reversal and cancel, reconciliation of via-route documents); contract-payment traceability is S4b-2, a later Work ID. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-26T22:49:32+07:00"
-  updated_at: "2026-10-26T22:49:32+07:00"
+  updated_at: "2026-10-27T05:49:41+07:00"
 generated_by: agent
 ---
 
-## OWNER GATE 1: AWAITING OWNER
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-094 Gate 1 in-session on 2026-10-27 (split option: S4b-1 here, S4b-2 later) against Draft
+PR #373 head `1daa1d182d1e33e3c6ad5bab35594f13efb8ffb9`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

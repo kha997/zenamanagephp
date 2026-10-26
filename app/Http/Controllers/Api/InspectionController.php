@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\BaseApiController as ApiBaseController;
 use App\Models\Ncr;
+use App\Models\Notification;
 use App\Models\QcInspection;
 use App\Models\QcPlan;
 use App\Models\WorkInstanceFieldValue;
@@ -17,6 +18,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -677,6 +679,8 @@ class InspectionController extends ApiBaseController
                 'inspection:id,qc_plan_id,title,status,inspection_date',
             ]);
 
+            $this->notifyNcr($ncr, $ncr->getAttribute('assigned_to'), 'ncr_assigned', 'NCR assigned to you: ', 'ncr.assigned', (string) Auth::id());
+
             $this->auditLogger->log(
                 $request,
                 'zena.inspection.ncr.create',
@@ -767,6 +771,14 @@ class InspectionController extends ApiBaseController
             }
 
             $ncrModel->update($update);
+
+            $actorId = (string) Auth::id();
+            if ($targetStatus === 'resolved') {
+                $this->notifyNcr($ncrModel, $ncrModel->getAttribute('created_by'), 'ncr_resolved', 'NCR resolved: ', 'ncr.resolved', $actorId);
+            } elseif ($targetStatus === 'closed') {
+                $this->notifyNcr($ncrModel, $ncrModel->getAttribute('assigned_to'), 'ncr_closed', 'NCR closed: ', 'ncr.closed', $actorId);
+            }
+
             $ncrModel->load([
                 'creator:id,name,email',
                 'assignee:id,name,email',
@@ -966,6 +978,40 @@ class InspectionController extends ApiBaseController
         return array_merge($inspection->toArray(), [
             'generated_checklist' => $this->generatedChecklistPayload($inspection->workInstanceStep),
         ]);
+    }
+
+    /**
+     * Best-effort in-app NCR notification: a failure is logged and never fails the request.
+     */
+    private function notifyNcr(Ncr $ncr, mixed $recipientId, string $type, string $titlePrefix, string $eventKey, string $actorId): void
+    {
+        try {
+            if (!$recipientId || (string) $recipientId === $actorId) {
+                return;
+            }
+
+            Notification::query()->create([
+                'tenant_id' => (string) $ncr->getAttribute('tenant_id'),
+                'user_id' => (string) $recipientId,
+                'type' => $type,
+                'priority' => Notification::PRIORITY_NORMAL,
+                'title' => $titlePrefix . $ncr->getAttribute('title'),
+                'body' => $ncr->getAttribute('ncr_number'),
+                'channel' => Notification::CHANNEL_INAPP,
+                'event_key' => $eventKey,
+                'project_id' => $ncr->getAttribute('project_id'),
+                'data' => [
+                    'ncr_id' => (string) $ncr->getKey(),
+                    'inspection_id' => (string) $ncr->getAttribute('inspection_id'),
+                    'ncr_status' => (string) $ncr->getAttribute('status'),
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('ncr.notification_failed', [
+                'ncr_id' => (string) $ncr->getKey(),
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

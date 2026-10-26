@@ -1,14 +1,14 @@
 ---
 work_id: GAP-014b
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-26-gap-014b-ncr-notifications-evidence.md
   plan: docs/superpowers/plans/2026-10-26-gap-014b-ncr-notifications.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-26T22:13:46+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-26, verbatim: 'APPROVE GAP-014b Gate 3'. Given after the re-presented packet (after Owner amendment 1) at PR head 5201c1218daf7e0a6a2c4765e773b7830baf502e; bound to implementation subject 5e635981c93fd0cae549e9f0fa487dfd3cedbc86 and implementation-tree digest 9029eca08ec6848a226eb3794ca6a963ac45cfd0070f83665ae8ffd347d84416 (recomputed at recording time, zero drift). Supersedes the earlier approval at digest 5a24218c. Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-26T11:21:49+07:00"
-  updated_at: "2026-10-26T22:10:46+07:00"
+  updated_at: "2026-10-26T22:13:46+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "RE-PRESENTED after Owner amendment 1 (AskUserQuestion, 'Sửa trong PR này (Recommended)'): the Owner Gate-3 approval bound to subject 2fde4d3f0e9e75131e6c5fa6eae525ea84a45e5a / digest 5a24218c4c44277af5c102b326f7f73f845b6bf1672ed92fd049de84b541e560 is superseded because 5e635981 changed the tree to answer a Codex P2 finding: an NCR title may be 255 characters, so the prefixed notification title overflowed notifications.title VARCHAR(255) on strict MySQL and the notification was lost; notifyNcr() now cuts the composed title to 255 characters with mb_substr (the NCR keeps its full title). New test test_max_length_ncr_title_is_cut_to_the_notification_title_column fails on 30527f7e and passes after. Local after the fix: InspectionNcrNotificationTest 7/7; tests/Feature/Api --exclude-group=slow 806 OK; tests/Feature/Web + InspectionNcrWorkflowTest 53 OK; PHPStan no errors; php-cs-fixer 0 files; SSOT test lint passes. History (subject 2fde4d3f, Gate 2 Option A): storeNcr() notifies assigned_to (ncr_assigned, ncr.assigned); updateNcrStatus() notifies created_by on resolved (ncr_resolved) and assigned_to on closed (ncr_closed); in_progress sends nothing; no self-notification; failures logged as ncr.notification_failed; NcrEventListener and its 14 phpstan-baseline entries deleted; exact-head CI at 2fde4d3f and 30527f7e: 35/35 green."
@@ -37,12 +37,15 @@ technical_evidence:
   verified_at: "2026-10-26T22:10:46+07:00"
 owner_decision_binding:
   implementation_tree_digest: "9029eca08ec6848a226eb3794ca6a963ac45cfd0070f83665ae8ffd347d84416"
-  decision_recorded_at: null
+  decision_recorded_at: "2026-10-26T22:13:46+07:00"
 ---
 
 # GAP-014b — Gate 3 release decision (NCR notifications)
 
-## OWNER GATE 3: AWAITING OWNER (re-presented)
+## OWNER GATE 3: APPROVED
+
+Owner approved the re-presented Gate 3 in-session on 2026-10-26 ("APPROVE GAP-014b Gate 3"), bound to implementation subject
+`5e635981c93fd0cae549e9f0fa487dfd3cedbc86` and implementation-tree digest `9029eca08ec6848a226eb3794ca6a963ac45cfd0070f83665ae8ffd347d84416`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành (trình lại)
 

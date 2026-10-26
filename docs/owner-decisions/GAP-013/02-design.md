@@ -78,6 +78,16 @@ The file was outside the allowlist, so the Owner was asked via AskUserQuestion a
 trong test (Recommended)". Allowlist extended by exactly one line in that test: set the project's `pm_id` to the
 submitter before submitting, so only the resubmit notification is attempted. The assertion is unchanged.
 
+## Owner amendment 2
+
+After the Gate-3 approval at digest `4fc5ea64…`, Codex (P2, PR #371 review on `8a1c34be`) reported that the PM lookup on
+a first submit ran outside the notification error handling: if it threw after the transaction committed, the API
+returned 500 for a submittal that had been submitted. The fix changes the tree, so the Owner was asked via
+AskUserQuestion and chose, verbatim: "Sửa trong PR này (Recommended)". Change: `notify()` takes a recipient resolver and
+runs it inside its try/catch (with the self-notification check), so the PM lookup, the submitter lookup and the
+last-rejector lookup are all best-effort; new test `test_pm_lookup_failure_is_logged_and_submit_still_succeeds`. The
+earlier Gate-3 approval is superseded; Gate 3 is re-presented.
+
 ## Verification
 
 - New tests fail on the base and pass after; all Submittal tests pass; `tests/Feature/Api` passes.

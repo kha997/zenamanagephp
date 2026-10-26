@@ -129,10 +129,13 @@ class SubmittalLifecycleService
         if ($isResubmit) {
             $this->notifyLastRejector($fresh);
         } else {
-            $pmId = Project::query()->whereKey($fresh->project_id)->value('pm_id');
-            if ($pmId && (string) $pmId !== (string) ($context['actor_user_id'] ?? '')) {
-                $this->notify($fresh, (string) $pmId, 'submittal_submitted', 'Submittal chờ duyệt: ');
-            }
+            $this->notify(
+                $fresh,
+                fn () => Project::query()->whereKey($fresh->project_id)->value('pm_id'),
+                'submittal_submitted',
+                'Submittal chờ duyệt: ',
+                $context['actor_user_id'] ?? null
+            );
         }
 
         return $fresh;
@@ -239,12 +242,13 @@ class SubmittalLifecycleService
 
         $fresh = $submittal->fresh();
 
-        $submitterId = $fresh->submitted_by;
-        if ($submitterId && (string) $submitterId !== (string) ($context['actor_user_id'] ?? '')) {
-            $decision === 'approved'
-                ? $this->notify($fresh, (string) $submitterId, 'submittal_approved', 'Submittal đã được duyệt: ')
-                : $this->notify($fresh, (string) $submitterId, 'submittal_rejected', 'Submittal bị từ chối: ');
-        }
+        $this->notify(
+            $fresh,
+            fn () => $fresh->submitted_by,
+            $decision === 'approved' ? 'submittal_approved' : 'submittal_rejected',
+            $decision === 'approved' ? 'Submittal đã được duyệt: ' : 'Submittal bị từ chối: ',
+            $context['actor_user_id'] ?? null
+        );
 
         return $fresh;
     }
@@ -296,37 +300,40 @@ class SubmittalLifecycleService
 
     private function notifyLastRejector(Submittal $submittal): void
     {
-        try {
-            $recipient = SubmittalRevision::query()
+        $this->notify(
+            $submittal,
+            fn () => SubmittalRevision::query()
                 ->where('submittal_id', $submittal->id)
                 ->where('decision', 'rejected')
                 ->orderByDesc('revision_no')
-                ->value('decided_by');
-
-            if (!$recipient) {
-                return;
-            }
-        } catch (\Throwable $e) {
-            Log::error('submittal.notification_failed', [
-                'submittal_id' => $submittal->id,
-                'error' => $e->getMessage(),
-            ]);
-
-            return;
-        }
-
-        $this->notify($submittal, (string) $recipient, 'submittal_resubmitted', 'Submittal đã được nộp lại: ');
+                ->value('decided_by'),
+            'submittal_resubmitted',
+            'Submittal đã được nộp lại: '
+        );
     }
 
     /**
-     * Runs after the workflow transaction has committed; a failure is logged and never fails the transition.
+     * Runs after the workflow transaction has committed: resolving the recipient and creating the
+     * notification are both best-effort, a failure is logged and never fails the transition.
+     *
+     * @param callable(): mixed $resolveRecipient
      */
-    private function notify(Submittal $submittal, string $recipientId, string $type, string $titlePrefix): void
-    {
+    private function notify(
+        Submittal $submittal,
+        callable $resolveRecipient,
+        string $type,
+        string $titlePrefix,
+        ?string $actorUserId = null
+    ): void {
         try {
+            $recipientId = $resolveRecipient();
+            if (!$recipientId || (string) $recipientId === (string) $actorUserId) {
+                return;
+            }
+
             Notification::query()->create([
                 'tenant_id' => (string) $submittal->tenant_id,
-                'user_id' => $recipientId,
+                'user_id' => (string) $recipientId,
                 'type' => $type,
                 'title' => $titlePrefix . $submittal->submittal_number,
                 'body' => $submittal->title,

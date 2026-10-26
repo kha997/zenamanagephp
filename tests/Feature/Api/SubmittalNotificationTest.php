@@ -11,6 +11,7 @@ use App\Models\Submittal;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 use Tests\Traits\RouteNameTrait;
 
@@ -125,6 +126,27 @@ class SubmittalNotificationTest extends TestCase
         $this->withZenaAuth()->postJson($this->zena('submittals.approve', ['id' => $id]))->assertStatus(200);
 
         $this->assertSame(0, Notification::query()->count());
+    }
+
+    public function test_pm_lookup_failure_is_logged_and_submit_still_succeeds(): void
+    {
+        $id = $this->createDraft();
+
+        Log::spy();
+        DB::listen(function ($query): void {
+            if (str_contains($query->sql, 'pm_id') && str_contains($query->sql, 'projects')) {
+                throw new \RuntimeException('simulated PM lookup failure');
+            }
+        });
+
+        $this->withZenaAuth()->postJson($this->zena('submittals.submit', ['id' => $id]))->assertStatus(200);
+
+        $this->assertSame(Submittal::STATUS_SUBMITTED, Submittal::query()->findOrFail($id)->status);
+        $this->assertSame(0, Notification::query()->count());
+        Log::shouldHaveReceived('error')
+            ->once()
+            ->withArgs(fn (string $message, array $context) => $message === 'submittal.notification_failed'
+                && ($context['submittal_id'] ?? null) === $id);
     }
 
     public function test_refused_transition_sends_nothing(): void

@@ -17,6 +17,7 @@ use App\Services\Treasury\TreasuryDuplicateSuspected;
 use App\Services\Treasury\TreasuryExpenseService;
 use App\Services\Treasury\TreasuryPostingService;
 use App\Services\Treasury\TreasuryReconciliationService;
+use App\Services\Treasury\TreasuryRouteService;
 use App\Services\Treasury\TreasuryRuleViolation;
 use App\Services\Treasury\TreasurySetupService;
 use Closure;
@@ -40,6 +41,7 @@ class TreasuryPageController extends Controller
         private readonly TreasuryBalanceService $balances,
         private readonly TreasuryExpenseService $expenses,
         private readonly TreasuryReconciliationService $reconciliation,
+        private readonly TreasuryRouteService $routes,
     ) {
     }
 
@@ -182,7 +184,10 @@ class TreasuryPageController extends Controller
                 'adjust' => Gate::forUser($user)->allows('treasury.adjust', $model),
                 'reverse' => Gate::forUser($user)->allows('treasury.reverse', $model),
                 'reconcile' => Gate::forUser($user)->allows('treasury.reconcile', $model),
+                'manageRoutes' => Gate::forUser($user)->allows('treasury.manage-routes', $model),
             ],
+            // GAP-094 S4b-1: via-route payments, open ones first.
+            'routes' => $this->routes->routes($model),
             'transferSources' => TreasuryWallet::query()
                 ->where('tenant_id', (string) $model->tenant_id)
                 ->where('project_id', (string) $model->id)

@@ -696,6 +696,12 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/projects/{project}/treasury/wallets/{wallet}/reconcile', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'storeReconciliation'])->middleware('rbac:treasury.reconcile')->name('treasury.projects.wallets.reconcile.store');
     Route::post('/projects/{project}/treasury/reconciliations/{treasuryReconciliation}/undo', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'undoReconciliation'])->middleware('rbac:treasury.reconcile')->name('treasury.projects.reconciliations.undo');
     Route::post('/projects/{project}/treasury/reconciliation-entries/{treasuryReconciliationEntry}/undo', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'undoReconciliationEntry'])->middleware('rbac:treasury.reconcile')->name('treasury.projects.reconciliation-entries.undo');
+    // Project Treasury S4b-1 (GAP-094): via-route payments
+    Route::post('/projects/{project}/treasury/routes', [App\Http\Controllers\Web\Treasury\TreasuryRoutePageController::class, 'store'])->middleware('rbac:treasury.manage_routes')->name('treasury.projects.routes.store');
+    Route::get('/projects/{project}/treasury/routes/{treasuryRoute}', [App\Http\Controllers\Web\Treasury\TreasuryRoutePageController::class, 'show'])->middleware('rbac:treasury.view')->name('treasury.projects.routes.show');
+    Route::post('/projects/{project}/treasury/routes/{treasuryRoute}/legs', [App\Http\Controllers\Web\Treasury\TreasuryRoutePageController::class, 'storeLeg'])->middleware('rbac:treasury.view')->name('treasury.projects.routes.legs.store');
+    Route::post('/projects/{project}/treasury/routes/{treasuryRoute}/cancel', [App\Http\Controllers\Web\Treasury\TreasuryRoutePageController::class, 'cancel'])->middleware('rbac:treasury.manage_routes')->name('treasury.projects.routes.cancel');
+    Route::post('/projects/{project}/treasury/route-legs/{treasuryRouteLeg}/reverse', [App\Http\Controllers\Web\Treasury\TreasuryRoutePageController::class, 'reverseLeg'])->middleware('rbac:treasury.manage_routes')->name('treasury.projects.route-legs.reverse');
 
     Route::get('/contracts', [App\Http\Controllers\Web\ContractPageController::class, 'index'])->middleware('rbac:contract.view')->name('contracts.index');
     Route::get('/contracts/create', [App\Http\Controllers\Web\ContractPageController::class, 'create'])->middleware('rbac:contract.create')->name('contracts.create');

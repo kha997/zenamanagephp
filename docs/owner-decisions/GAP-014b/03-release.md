@@ -1,14 +1,14 @@
 ---
 work_id: GAP-014b
 gate: 3
-gate_status: approved
+gate_status: awaiting_owner
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: approved
+  value: none
   authority: human_owner
-decision_requested: null
+decision_requested: approve_or_correction_or_defer
 references:
   spec: docs/audits/2026-10-26-gap-014b-ncr-notifications-evidence.md
   plan: docs/superpowers/plans/2026-10-26-gap-014b-ncr-notifications.md
@@ -18,56 +18,60 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-10-26T12:49:34+07:00"
-  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-26, verbatim: 'APPROVE GAP-014b Gate 3'. Given after the packet at PR head 341a7274a2a09f1bdf72b1081671940e820aa4e6; bound to implementation subject 2fde4d3f0e9e75131e6c5fa6eae525ea84a45e5a and implementation-tree digest 5a24218c4c44277af5c102b326f7f73f845b6bf1672ed92fd049de84b541e560 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
+  recorded_at: null
+  owner_response_reference: null
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-26T11:21:49+07:00"
-  updated_at: "2026-10-26T12:49:34+07:00"
+  updated_at: "2026-10-26T22:10:46+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "GAP-014b at subject 2fde4d3f0e9e75131e6c5fa6eae525ea84a45e5a (Gate 2 Option A). Api\\InspectionController: storeNcr() calls notifyNcr() for assigned_to (type ncr_assigned, event ncr.assigned); updateNcrStatus() calls it for created_by on resolved (ncr_resolved, ncr.resolved) and for assigned_to on closed (ncr_closed, ncr.closed); in_progress sends nothing. notifyNcr() skips an empty recipient or the actor, creates an in-app Notification (tenant, user, type, priority normal, title prefix + NCR title, body = NCR number, channel inapp, event key, project, data with ncr_id, inspection_id, ncr_status) and catches any Throwable, logging ncr.notification_failed. Attributes are read with getAttribute()/getKey() and the actor with Auth::id() so PHPStan baseline counts are unchanged. app/Listeners/NcrEventListener.php (imports four nonexistent App\\Events\\Ncr* classes, never dispatched or registered, writes non-fillable message/channels) is deleted with its 14 phpstan-baseline.neon entries. New tests/Feature/Api/InspectionNcrNotificationTest.php (6 tests: create notifies assignee; resolved notifies creator and in_progress sends nothing; closed notifies assignee; no self-notification; refused transition sends nothing; notification failure logged and create still succeeds): 4 of 6 fail on the base, 6/6 pass after. Local: tests/Feature/Api --exclude-group=slow 805 OK; tests/Feature/InspectionNcrWorkflowTest + tests/Feature/Web 53 OK; SSOT test lint passes; PHPStan no errors (dynamic-property and misplaced-docblock findings fixed before commit); php-cs-fixer 0 files; governance and docs lints pass. Exact-head CI at 2fde4d3f: 35/35 green."
+mandatory_technical_gate_summary: "RE-PRESENTED after Owner amendment 1 (AskUserQuestion, 'Sửa trong PR này (Recommended)'): the Owner Gate-3 approval bound to subject 2fde4d3f0e9e75131e6c5fa6eae525ea84a45e5a / digest 5a24218c4c44277af5c102b326f7f73f845b6bf1672ed92fd049de84b541e560 is superseded because 5e635981 changed the tree to answer a Codex P2 finding: an NCR title may be 255 characters, so the prefixed notification title overflowed notifications.title VARCHAR(255) on strict MySQL and the notification was lost; notifyNcr() now cuts the composed title to 255 characters with mb_substr (the NCR keeps its full title). New test test_max_length_ncr_title_is_cut_to_the_notification_title_column fails on 30527f7e and passes after. Local after the fix: InspectionNcrNotificationTest 7/7; tests/Feature/Api --exclude-group=slow 806 OK; tests/Feature/Web + InspectionNcrWorkflowTest 53 OK; PHPStan no errors; php-cs-fixer 0 files; SSOT test lint passes. History (subject 2fde4d3f, Gate 2 Option A): storeNcr() notifies assigned_to (ncr_assigned, ncr.assigned); updateNcrStatus() notifies created_by on resolved (ncr_resolved) and assigned_to on closed (ncr_closed); in_progress sends nothing; no self-notification; failures logged as ncr.notification_failed; NcrEventListener and its 14 phpstan-baseline entries deleted; exact-head CI at 2fde4d3f and 30527f7e: 35/35 green."
 technical_evidence:
   base_sha: "681043875ecda4c0cd19a19908c2dfbb41031194"
-  subject_sha: "2fde4d3f0e9e75131e6c5fa6eae525ea84a45e5a"
-  implementation_tree_digest: "5a24218c4c44277af5c102b326f7f73f845b6bf1672ed92fd049de84b541e560"
-  verified_pr_head_sha: "2fde4d3f0e9e75131e6c5fa6eae525ea84a45e5a"
-  verified_at: "2026-10-26T11:21:49+07:00"
+  subject_sha: "5e635981c93fd0cae549e9f0fa487dfd3cedbc86"
+  implementation_tree_digest: "9029eca08ec6848a226eb3794ca6a963ac45cfd0070f83665ae8ffd347d84416"
+  verified_pr_head_sha: "5e635981c93fd0cae549e9f0fa487dfd3cedbc86"
+  verified_at: "2026-10-26T22:10:46+07:00"
 owner_decision_binding:
-  implementation_tree_digest: "5a24218c4c44277af5c102b326f7f73f845b6bf1672ed92fd049de84b541e560"
-  decision_recorded_at: "2026-10-26T12:49:34+07:00"
+  implementation_tree_digest: "9029eca08ec6848a226eb3794ca6a963ac45cfd0070f83665ae8ffd347d84416"
+  decision_recorded_at: null
 ---
 
 # GAP-014b — Gate 3 release decision (NCR notifications)
 
-## OWNER GATE 3: APPROVED
+## OWNER GATE 3: AWAITING OWNER (re-presented)
 
-Owner approved Gate 3 in-session on 2026-10-26 ("APPROVE GAP-014b Gate 3"), bound to implementation subject
-`2fde4d3f0e9e75131e6c5fa6eae525ea84a45e5a` and implementation-tree digest `5a24218c4c44277af5c102b326f7f73f845b6bf1672ed92fd049de84b541e560`. No deployment or release is authorized.
+## Gói quyết định phát hành (trình lại)
 
-## Gói quyết định phát hành
+Owner đã duyệt Gate 3 tại digest `5a24218c…` ("APPROVE GAP-014b Gate 3"). Sau đó Codex báo lỗi P2: title NCR được dài tới
+255 ký tự, cộng tiền tố thì vượt cột `notifications.title` (255), nên trên MySQL strict thông báo bị mất. Owner chọn
+"Sửa trong PR này (Recommended)" (Owner amendment 1). Cây file đổi nên lần duyệt trên **không còn hiệu lực**.
 
 **1. Vấn đề là gì?** Tạo và đổi trạng thái NCR không báo cho ai; listener thông báo NCR có sẵn nhưng không bao giờ chạy
 được (Gate 1).
 
-**2. Sau thay đổi (Gate 2 Phương án A)** — commit `2fde4d3f`:
+**2. Sau thay đổi (Gate 2 Phương án A + Owner amendment 1)** — commit `2fde4d3f`, rồi `5e635981`:
 - Tạo NCR có người được giao: **người được giao** nhận `ncr_assigned`.
 - NCR "đã xử lý": **người tạo** nhận `ncr_resolved`.
 - NCR "đóng": **người được giao** nhận `ncr_closed`.
 - Không tự báo cho người thao tác; lỗi gửi chỉ ghi log. API và trang web đều có.
 - Xoá `NcrEventListener` và 14 mục phpstan-baseline của nó.
+- Tiêu đề thông báo được cắt còn tối đa 255 ký tự (NCR vẫn giữ title đầy đủ).
 
-**3. Bằng chứng** — base `68104387`; subject `2fde4d3f0e9e75131e6c5fa6eae525ea84a45e5a`;
-digest `5a24218c4c44277af5c102b326f7f73f845b6bf1672ed92fd049de84b541e560`.
-- Test mới hỏng 4/6 trên main, qua 6/6 sau khi sửa.
-- Trên máy: 805 test API, 53 test Web + NCR qua; SSOT lint, PHPStan, php-cs-fixer sạch.
-- CI chạy đúng trên `2fde4d3f`: **35/35 xanh**.
+**3. Bằng chứng** — base `68104387`; subject `5e635981c93fd0cae549e9f0fa487dfd3cedbc86`;
+digest `9029eca08ec6848a226eb3794ca6a963ac45cfd0070f83665ae8ffd347d84416`.
+- Test mới hỏng 4/6 trên main, qua 6/6 sau khi sửa (`2fde4d3f`); test title 255 ký tự hỏng trên `30527f7e`, qua sau
+  `5e635981`.
+- Trên máy sau khi sửa: 806 test API, 53 test Web + NCR qua; SSOT lint, PHPStan, php-cs-fixer sạch.
+- CI chạy đúng trên `2fde4d3f` và `30527f7e`: **35/35 xanh**; CI trên head mới sẽ báo trong PR.
 
 **4. Công khai**
 - PHPStan báo lỗi trước khi commit (đọc trực tiếp thuộc tính model, docblock đặt sai chỗ); đã sửa trong code, **không sửa
   baseline** ngoài việc xoá 14 mục của file listener bị xoá.
+- Codex P2 (tiêu đề thông báo vượt 255 ký tự) sửa theo Owner amendment 1 sau lần duyệt Gate 3 trước.
 - Register cập nhật ở đợt đối soát sau.
 
 **5. Ảnh hưởng** — Người được giao biết ngay khi có NCR; người tạo biết khi NCR đã xử lý xong.

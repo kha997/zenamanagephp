@@ -288,6 +288,10 @@ class SubmittalResubmitLifecycleTest extends TestCase
             throw new \RuntimeException('simulated notification failure');
         });
 
+        // GAP-013: the first submit notifies the project PM. Make the submitter the PM so
+        // only the resubmit notification is attempted (no self-notification).
+        $this->project->forceFill(['pm_id' => $this->user->id])->save();
+
         $submittal = $this->makeSubmittedSubmittal();
 
         $this->withZenaAuth()->postJson($this->zena('submittals.reject', ['id' => $submittal->id]), [

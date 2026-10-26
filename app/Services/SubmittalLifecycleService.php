@@ -8,6 +8,7 @@ use App\Exceptions\SubmittalTransitionConflictException;
 use App\Exceptions\SubmittalTransitionNotAllowedException;
 use App\Models\EventRecord;
 use App\Models\Notification;
+use App\Models\Project;
 use App\Models\Submittal;
 use App\Models\SubmittalRevision;
 use Illuminate\Support\Facades\DB;
@@ -127,6 +128,14 @@ class SubmittalLifecycleService
 
         if ($isResubmit) {
             $this->notifyLastRejector($fresh);
+        } else {
+            $this->notify(
+                $fresh,
+                fn () => Project::query()->whereKey($fresh->project_id)->value('pm_id'),
+                'submittal_submitted',
+                'Submittal chờ duyệt: ',
+                $context['actor_user_id'] ?? null
+            );
         }
 
         return $fresh;
@@ -231,7 +240,17 @@ class SubmittalLifecycleService
             ]);
         });
 
-        return $submittal->fresh();
+        $fresh = $submittal->fresh();
+
+        $this->notify(
+            $fresh,
+            fn () => $fresh->submitted_by,
+            $decision === 'approved' ? 'submittal_approved' : 'submittal_rejected',
+            $decision === 'approved' ? 'Submittal đã được duyệt: ' : 'Submittal bị từ chối: ',
+            $context['actor_user_id'] ?? null
+        );
+
+        return $fresh;
     }
 
     /** @param array<string, mixed> $context */
@@ -281,22 +300,42 @@ class SubmittalLifecycleService
 
     private function notifyLastRejector(Submittal $submittal): void
     {
-        try {
-            $recipient = SubmittalRevision::query()
+        $this->notify(
+            $submittal,
+            fn () => SubmittalRevision::query()
                 ->where('submittal_id', $submittal->id)
                 ->where('decision', 'rejected')
                 ->orderByDesc('revision_no')
-                ->value('decided_by');
+                ->value('decided_by'),
+            'submittal_resubmitted',
+            'Submittal đã được nộp lại: '
+        );
+    }
 
-            if (!$recipient) {
+    /**
+     * Runs after the workflow transaction has committed: resolving the recipient and creating the
+     * notification are both best-effort, a failure is logged and never fails the transition.
+     *
+     * @param callable(): mixed $resolveRecipient
+     */
+    private function notify(
+        Submittal $submittal,
+        callable $resolveRecipient,
+        string $type,
+        string $titlePrefix,
+        ?string $actorUserId = null
+    ): void {
+        try {
+            $recipientId = $resolveRecipient();
+            if (!$recipientId || (string) $recipientId === (string) $actorUserId) {
                 return;
             }
 
             Notification::query()->create([
                 'tenant_id' => (string) $submittal->tenant_id,
-                'user_id' => $recipient,
-                'type' => 'submittal_resubmitted',
-                'title' => 'Submittal đã được nộp lại: ' . $submittal->submittal_number,
+                'user_id' => (string) $recipientId,
+                'type' => $type,
+                'title' => $titlePrefix . $submittal->submittal_number,
                 'body' => $submittal->title,
                 'project_id' => $submittal->project_id,
             ]);

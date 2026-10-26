@@ -1,34 +1,38 @@
 ---
 work_id: GAP-014b
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-26-gap-014b-ncr-notifications-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-10-26-gap-014b-ncr-notifications.md
   branch: docs/GAP-014b-ncr-notifications
   pr: https://github.com/kha997/zenamanagephp/pull/372
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-26T10:54:15+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-26, verbatim: 'APPROVE GAP-014b Gate 2 Option A'. Reviewed design head: f8931bf47c9ab21ef920f682a77599ffcd36d3c8. Approves Option A and its exact allowlist (InspectionController: storeNcr notifies the assignee, updateNcrStatus notifies the creator on resolved and the assignee on closed, no self-notification, best-effort with logged failures, one private helper; delete NcrEventListener and its phpstan-baseline entries; new tests/Feature/Api/InspectionNcrNotificationTest.php; docs); not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-26T10:50:05+07:00"
-  updated_at: "2026-10-26T10:50:05+07:00"
+  updated_at: "2026-10-26T10:54:15+07:00"
 generated_by: agent
 ---
 
 # GAP-014b — NCR notifications: Gate 2 design
 
-## OWNER GATE 2: AWAITING OWNER
+## OWNER GATE 2: APPROVED — OPTION A
+
+Owner approved Option A in-session on 2026-10-26 against reviewed design head
+`f8931bf47c9ab21ef920f682a77599ffcd36d3c8`. This authorizes only the bounded implementation defined by this packet;
+it does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

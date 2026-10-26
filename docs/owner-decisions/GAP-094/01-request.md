@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-10-26-gap-094-treasury-s4b-routes-readiness.md
   plan: null
   branch: docs/GAP-094-treasury-s4b-routes
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/373
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

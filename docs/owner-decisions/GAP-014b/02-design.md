@@ -69,6 +69,16 @@ cùng kết quả cho người dùng.
 
 **Not changed:** NCR schema, NCR–CAPA link (GAP-014c), email, other modules.
 
+## Owner amendment 1
+
+After the Gate-3 approval at digest `5a24218c…`, Codex (P2, PR #372 review on `30527f7e`) reported that an NCR title may
+be 255 characters while `notifications.title` is VARCHAR(255), so the prefixed notification title overflows on strict
+MySQL and the notification is lost (only logged). The fix changes the tree, so the Owner was asked via AskUserQuestion and
+chose, verbatim: "Sửa trong PR này (Recommended)". Change: the helper cuts the composed notification title to 255
+characters with `mb_substr` (the NCR keeps its full title); new test
+`test_max_length_ncr_title_is_cut_to_the_notification_title_column`. The earlier Gate-3 approval is superseded; Gate 3 is
+re-presented.
+
 ## Verification
 
 - New tests fail on the base and pass after; `InspectionNcrWorkflowTest` and `tests/Feature/Api` pass.

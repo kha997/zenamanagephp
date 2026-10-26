@@ -995,7 +995,8 @@ class InspectionController extends ApiBaseController
                 'user_id' => (string) $recipientId,
                 'type' => $type,
                 'priority' => Notification::PRIORITY_NORMAL,
-                'title' => $titlePrefix . $ncr->getAttribute('title'),
+                // notifications.title is VARCHAR(255); the NCR title alone may already be 255 characters.
+                'title' => mb_substr($titlePrefix . $ncr->getAttribute('title'), 0, 255),
                 'body' => $ncr->getAttribute('ncr_number'),
                 'channel' => Notification::CHANNEL_INAPP,
                 'event_key' => $eventKey,

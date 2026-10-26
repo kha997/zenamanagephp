@@ -77,9 +77,9 @@ class InspectionNcrNotificationTest extends TestCase
         return route('api.zena.inspections.ncrs.update-status', ['inspection' => (string) $this->inspection->id, 'ncr' => $ncrId], false);
     }
 
-    private function createNcr(?string $assigneeId): string
+    private function createNcr(?string $assigneeId, string $title = 'Rebar spacing non-conformance'): string
     {
-        $payload = ['title' => 'Rebar spacing non-conformance', 'description' => 'Spacing does not match the drawing.'];
+        $payload = ['title' => $title, 'description' => 'Spacing does not match the drawing.'];
         if ($assigneeId !== null) {
             $payload['assigned_to'] = $assigneeId;
         }
@@ -104,6 +104,15 @@ class InspectionNcrNotificationTest extends TestCase
             'event_key' => 'ncr.assigned',
         ]);
         $this->assertSame(1, Notification::query()->count());
+    }
+
+    public function test_max_length_ncr_title_is_cut_to_the_notification_title_column(): void
+    {
+        $this->createNcr((string) $this->assignee->id, str_repeat('Đ', 255));
+
+        $title = (string) Notification::query()->value('title');
+        $this->assertSame(255, mb_strlen($title));
+        $this->assertStringStartsWith('NCR assigned to you: Đ', $title);
     }
 
     public function test_resolved_notifies_the_creator_and_in_progress_sends_nothing(): void

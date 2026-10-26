@@ -1,34 +1,38 @@
 ---
 work_id: GAP-094
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-26-gap-094-treasury-s4b-routes-readiness.md
-  plan: null
+  plan: docs/superpowers/plans/2026-10-27-gap-094-treasury-s4b-routes.md
   branch: docs/GAP-094-treasury-s4b-routes
   pr: https://github.com/kha997/zenamanagephp/pull/373
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-27T05:55:20+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-27, verbatim: 'APPROVE GAP-094 Gate 2 Option A'. Reviewed design head: 53665f97afc8fd8f47ecd129a4645ce4453aa45a. Approves Option A and its exact allowlist (new TreasuryRouteService: create route with a via_route document, one-step settled legs, leg reversal, cancel, completion posting at route completion; via_route reversal in TreasuryPostingService; §12.1 via_route branch in TreasuryReconciliationService; new permission treasury.manage_routes for owner and accountant, PM/SE legs on wallets they hold; API TreasuryRouteController; web route section and page; real-MySQL concurrency tests; docs); no schema change; not S4b-2, Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
-  created_at: "2026-10-27T06:10:00+07:00"
-  updated_at: "2026-10-27T06:10:00+07:00"
+  created_at: "2026-10-27T05:52:00+07:00"
+  updated_at: "2026-10-27T05:55:20+07:00"
 generated_by: agent
 ---
 
 # GAP-094 — Treasury S4b-1 via-route payments: Gate 2 design
 
-## OWNER GATE 2: AWAITING OWNER
+## OWNER GATE 2: APPROVED — OPTION A
+
+Owner approved Option A in-session on 2026-10-27 against reviewed design head
+`53665f97afc8fd8f47ecd129a4645ce4453aa45a`. This authorizes only the bounded implementation defined by this packet;
+it does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

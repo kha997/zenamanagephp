@@ -1,14 +1,14 @@
 ---
 work_id: GAP-013
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-25-gap-013-submittal-notifications-evidence.md
   plan: docs/superpowers/plans/2026-10-25-gap-013-submittal-notifications.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-26T09:54:23+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-26, verbatim: 'APPROVE GAP-013 Gate 3'. Given after the re-presented packet (after Owner amendment 2) at PR head c67bcb69ed004a22dbeede69c4679750cd53a57a; bound to implementation subject 0df6a650ca12f4da535ec7615e090c73c5d1990f and implementation-tree digest bbf4f70012f277c7c942c5381e6b0047f47eaa41eedac4be08af9dfcd255f8f9 (recomputed at recording time, zero drift). Supersedes the earlier approval at digest 4fc5ea64. Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-25T22:54:03+07:00"
-  updated_at: "2026-10-26T09:52:47+07:00"
+  updated_at: "2026-10-26T09:54:23+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "RE-PRESENTED after Owner amendment 2 (AskUserQuestion, 'Sửa trong PR này (Recommended)'): the Owner Gate-3 approval bound to subject 4ec6f6dc10769748e75686ccbf23245d76177cab / digest 4fc5ea64a69d7e63c52f6d48d9eec63804bb9511c2d64dfec6463de491fae32f is superseded because 0df6a650 changed the tree to answer a Codex P2 finding: notify() now takes a recipient resolver and runs it inside its try/catch with the self-notification check, so the PM, submitter and last-rejector lookups are best-effort; new test test_pm_lookup_failure_is_logged_and_submit_still_succeeds returns 500 on 8a1c34be and 200 after. Exact-head CI at 0df6a650: 34/35 green; Owner Governance Lint red only because the packet was bound to the superseded digest, which this re-presented packet resolves. Local after the fix: tests/Feature/Api 799 OK, tests/Feature/Web 50 OK, PHPStan, php-cs-fixer, SSOT lint clean. GAP-013 at subject 0df6a650ca12f4da535ec7615e090c73c5d1990f (Gate 2 Option A plus Owner amendments 1 and 2); history below describes 4ec6f6dc. SubmittalLifecycleService: after the transaction, a first submit notifies the project pm_id (read with Project::query()->whereKey()->value()) when set and different from the actor, type submittal_submitted; decide() (approve/reject) notifies submitted_by when set and different from the actor, type submittal_approved or submittal_rejected; a shared private notify() helper creates the Notification row (tenant, user, type, Vietnamese title with the submittal number, body, project) inside try/catch that logs submittal.notification_failed; notifyLastRejector() keeps its query and now calls notify(), so the resubmit notification is unchanged. New tests/Feature/Api/SubmittalNotificationTest.php (first submit -> PM, approve -> submitter, reject -> submitter, no self-notification, refused transition sends nothing): 3 of 5 fail on the base, 5/5 pass after. Owner amendment 1 (AskUserQuestion, 'Cho PM = người nộp trong test (Recommended)'): SubmittalResubmitLifecycleTest::test_resubmit_notification_failure_is_logged_not_swallowed sets the project pm_id to the submitter before submitting so only the resubmit notification is attempted; its assertion is unchanged. Local: tests/Feature/Api --exclude-group=slow 798 tests OK; tests/Feature/Web 50 OK; SSOT test lint passes; PHPStan no errors (one property.notFound found before commit and fixed); php-cs-fixer 0 files; governance and docs lints pass. Exact-head CI at 4ec6f6dc: 35/35 green."
@@ -37,12 +37,15 @@ technical_evidence:
   verified_at: "2026-10-26T09:52:47+07:00"
 owner_decision_binding:
   implementation_tree_digest: "bbf4f70012f277c7c942c5381e6b0047f47eaa41eedac4be08af9dfcd255f8f9"
-  decision_recorded_at: null
+  decision_recorded_at: "2026-10-26T09:54:23+07:00"
 ---
 
 # GAP-013 — Gate 3 release decision (submittal notifications)
 
-## OWNER GATE 3: AWAITING OWNER
+## OWNER GATE 3: APPROVED
+
+Owner approved the re-presented Gate 3 in-session on 2026-10-26 ("APPROVE GAP-013 Gate 3"), bound to implementation subject
+`0df6a650ca12f4da535ec7615e090c73c5d1990f` and implementation-tree digest `bbf4f70012f277c7c942c5381e6b0047f47eaa41eedac4be08af9dfcd255f8f9`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành (trình lại)
 

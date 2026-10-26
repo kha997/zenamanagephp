@@ -38,7 +38,7 @@ generated_by: agent
 - **NCR "đóng" (closed):** người được giao nhận `ncr_closed`.
 - Không báo cho chính người thao tác. Lỗi gửi chỉ ghi log, không làm hỏng thao tác (giống GAP-013).
 - Áp dụng cho cả API và trang web (trang web gọi cùng hàm).
-- **Xoá `NcrEventListener`** (không chạy được, dùng sự kiện không tồn tại, ghi sai cột) và 22 dòng phpstan-baseline của nó.
+- **Xoá `NcrEventListener`** (không chạy được, dùng sự kiện không tồn tại, ghi sai cột) và 14 mục phpstan-baseline của nó.
 
 **Phương án B:** như A, nhưng **dựng lại 4 lớp sự kiện** và sửa listener để dùng (kiến trúc theo sự kiện). Nhiều code hơn,
 cùng kết quả cho người dùng.

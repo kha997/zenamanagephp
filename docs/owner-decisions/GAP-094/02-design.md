@@ -182,6 +182,15 @@ read-only); API + web; **concurrency on real MySQL**: two processes draining one
 transit wallet, and two "from outside" legs over the route amount — the lock-removal
 mutation must go red.
 
+## Owner amendment 1
+
+During implementation, `TreasuryReconciliationServiceTest::test_route_leg_entries_are_rejected` (S4a) asserted that a
+leg-sourced entry cannot be reconciled, which this design changes (§1 "Reconciliation"). Changing a test outside this
+packet's new files was put to the Owner via AskUserQuestion; the Owner chose, verbatim: "Sửa test trong PR này
+(Recommended)". The test becomes `test_route_leg_entries_are_reconciled_as_part_of_the_route_document` (same fixture;
+the leg entry is listed with the route's document and reconciles). The seeder test's accountant grant count (10 → 11)
+follows from the approved `treasury.manage_routes` grant.
+
 ## Verification required at Gate 3
 
 All Treasury tests green locally and exact-head CI (incl. the MySQL concurrency job);

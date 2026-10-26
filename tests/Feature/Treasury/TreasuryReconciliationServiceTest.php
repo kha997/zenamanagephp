@@ -138,10 +138,10 @@ class TreasuryReconciliationServiceTest extends TestCase
         $this->assertSame(0, RecEntry::query()->count());
     }
 
-    public function test_route_leg_entries_are_rejected(): void
+    public function test_route_leg_entries_are_reconciled_as_part_of_the_route_document(): void
     {
-        // Leg-sourced entries (S4b) cannot be created through the services yet;
-        // insert the v17 rows directly.
+        // GAP-094 Owner amendment 1: S4b-1 reconciles leg-sourced entries; they
+        // belong to the route's linked document. v17 rows inserted directly.
         $doc = $this->fund('100');
         $route = TreasuryPaymentRoute::query()->create([
             'tenant_id' => (string) $this->tenant->id, 'project_id' => (string) $this->project->id,
@@ -159,8 +159,12 @@ class TreasuryReconciliationServiceTest extends TestCase
             'entry_type' => 'route_leg', 'posted_at' => now(), 'original_posting_key' => 'leg:' . $leg->id,
         ]);
 
-        $this->expectRule(fn () => $this->reconcile($this->bank, [(string) $legEntry->id]), 'ledger_entry_ids');
+        $legRow = collect($this->reconciliation->unreconciledEntries($this->bank))->firstWhere('ledger_entry_id', (string) $legEntry->id);
+        $this->assertSame((string) $doc->id, $legRow['document_id'] ?? null);
+
+        $this->reconcile($this->bank, [(string) $legEntry->id]);
         $this->assertCount(1, $this->reconciliation->unreconciledEntries($this->bank));
+        $this->assertSame(Document::STATUS_POSTED_UNRECONCILED, $doc->fresh()?->status, 'The document entry itself is still open.');
     }
 
     public function test_type_reference_and_date_rules(): void

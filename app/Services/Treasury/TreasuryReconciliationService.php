@@ -8,6 +8,8 @@ use App\Models\AuditLog;
 use App\Models\Project;
 use App\Models\Treasury\TreasuryFinancialDocument as Document;
 use App\Models\Treasury\TreasuryLedgerEntry as Entry;
+use App\Models\Treasury\TreasuryPaymentRoute as Route;
+use App\Models\Treasury\TreasuryPaymentRouteLeg as Leg;
 use App\Models\Treasury\TreasuryReconciliation as Reconciliation;
 use App\Models\Treasury\TreasuryReconciliationEntry as RecEntry;
 use App\Models\Treasury\TreasuryWallet;
@@ -29,6 +31,10 @@ use Illuminate\Support\Facades\DB;
  * of an internal transfer reconciled at the same time serialise instead of
  * each missing the other's apply. Balances never change: both posted statuses
  * already count.
+ *
+ * GAP-094: entries of a route leg belong to the route's document; a
+ * `via_route` document is reconciled when its route is completed and every
+ * leg entry has an active apply (§12.1), the route read under lock (class 6).
  */
 class TreasuryReconciliationService
 {
@@ -78,9 +84,6 @@ class TreasuryReconciliationService
                     || (string) data_get($entry, 'tenant_id') !== (string) $wallet->tenant_id
                     || (string) data_get($entry, 'wallet_id') !== (string) $wallet->id) {
                     throw new TreasuryRuleViolation('Có giao dịch không thuộc ví này.', 'ledger_entry_ids');
-                }
-                if (data_get($entry, 'source_financial_document_id') === null) {
-                    throw new TreasuryRuleViolation('Bút toán của tuyến chuyển tiền chưa đối soát được ở bước hiện tại.', 'ledger_entry_ids');
                 }
             }
             if ($this->activeApplies($ids)->isNotEmpty()) {
@@ -262,14 +265,14 @@ class TreasuryReconciliationService
             ->withoutGlobalScopes()
             ->where('tenant_id', (string) $wallet->tenant_id)
             ->where('wallet_id', (string) $wallet->id)
-            ->whereNotNull('source_financial_document_id')
             ->orderBy('posted_at')
             ->orderBy('id')
             ->get();
         $reconciledIds = array_flip($this->activeApplyEntryIds($entries->pluck('id')->map(static fn ($id): string => (string) $id)->all()));
+        $documentIdByEntry = $this->documentIdByEntry($entries);
         $documents = Document::query()
             ->withoutGlobalScopes()
-            ->whereIn('id', $entries->pluck('source_financial_document_id')->unique()->values()->all())
+            ->whereIn('id', array_values(array_unique($documentIdByEntry)))
             ->get()
             ->keyBy(static fn ($doc): string => (string) data_get($doc, 'id'));
 
@@ -278,10 +281,11 @@ class TreasuryReconciliationService
             if (isset($reconciledIds[(string) data_get($entry, 'id')])) {
                 continue;
             }
-            $doc = $documents->get((string) data_get($entry, 'source_financial_document_id'));
+            $documentId = $documentIdByEntry[(string) data_get($entry, 'id')] ?? '';
+            $doc = $documents->get($documentId);
             $rows[] = [
                 'ledger_entry_id' => (string) data_get($entry, 'id'),
-                'document_id' => (string) data_get($entry, 'source_financial_document_id'),
+                'document_id' => $documentId,
                 'transaction_date' => data_get($doc, 'transaction_date')?->toDateString(),
                 'document_type' => (string) data_get($doc, 'document_type'),
                 'document_status' => (string) data_get($doc, 'status'),
@@ -323,9 +327,10 @@ class TreasuryReconciliationService
             ->whereIn('id', $lines->pluck('ledger_entry_id')->unique()->values()->all())
             ->get()
             ->keyBy(static fn ($entry): string => (string) data_get($entry, 'id'));
+        $documentIdByEntry = $this->documentIdByEntry($entries);
         $documents = Document::query()
             ->withoutGlobalScopes()
-            ->whereIn('id', $entries->pluck('source_financial_document_id')->filter()->unique()->values()->all())
+            ->whereIn('id', array_values(array_unique($documentIdByEntry)))
             ->get()
             ->keyBy(static fn ($doc): string => (string) data_get($doc, 'id'));
         $userIds = $lines->pluck('actor_id')->merge($reconciliations->pluck('reconciled_by'))->unique()->values()->all();
@@ -356,13 +361,14 @@ class TreasuryReconciliationService
             $active = false;
             foreach ($lines->where('reconciliation_id', (string) data_get($rec, 'id'))->where('direction', RecEntry::DIRECTION_APPLY) as $line) {
                 $entry = $entries->get((string) data_get($line, 'ledger_entry_id'));
-                $doc = $documents->get((string) data_get($entry, 'source_financial_document_id'));
+                $documentId = $documentIdByEntry[(string) data_get($line, 'ledger_entry_id')] ?? null;
+                $doc = $documentId === null ? null : $documents->get($documentId);
                 $undo = $reverseOf[(string) data_get($line, 'id')] ?? null;
                 $active = $active || $undo === null;
                 $recLines[] = [
                     'id' => (string) data_get($line, 'id'),
                     'ledger_entry_id' => (string) data_get($line, 'ledger_entry_id'),
-                    'document_id' => data_get($entry, 'source_financial_document_id'),
+                    'document_id' => $documentId,
                     'transaction_date' => data_get($doc, 'transaction_date')?->toDateString(),
                     'document_type' => data_get($doc, 'document_type'),
                     'reference' => data_get($doc, 'reference'),
@@ -477,20 +483,11 @@ class TreasuryReconciliationService
      */
     private function lockEntries(array $ids): Collection
     {
-        $documentIds = Entry::query()
+        $documentIds = array_values(array_unique($this->documentIdByEntry(Entry::query()
             ->withoutGlobalScopes()
             ->whereIn('id', $ids)
-            ->whereNotNull('source_financial_document_id')
-            ->pluck('source_financial_document_id')
-            ->unique()
-            ->values()
-            ->all();
-        $allIds = $documentIds === [] ? $ids : array_values(array_unique(array_merge($ids, Entry::query()
-            ->withoutGlobalScopes()
-            ->whereIn('source_financial_document_id', $documentIds)
-            ->pluck('id')
-            ->map(static fn ($id): string => (string) $id)
-            ->all())));
+            ->get(['id', 'source_financial_document_id', 'source_payment_route_leg_id']))));
+        $allIds = array_values(array_unique(array_merge($ids, $this->entryIdsOfDocuments($documentIds))));
         sort($allIds);
 
         return Entry::query()
@@ -567,7 +564,8 @@ class TreasuryReconciliationService
 
     /**
      * Class 5: lock the documents (id ascending) and apply §12.1 / §12.2 to
-     * each `direct` one. `reversed` (terminal) never moves.
+     * each posted document (`via_route` also needs its route completed).
+     * `reversed` (terminal) never moves.
      *
      * @param list<string> $documentIds
      * @return list<array{document_id: string, from: string, to: string}>
@@ -584,22 +582,30 @@ class TreasuryReconciliationService
             ->orderBy('id')
             ->lockForUpdate()
             ->get();
+        // Class 6, after the documents: routes of the via_route ones.
+        $routeStatusByDocument = Route::query()
+            ->withoutGlobalScopes()
+            ->whereIn('linked_financial_document_id', $documents
+                ->filter(static fn ($doc): bool => data_get($doc, 'posting_path') === Document::POSTING_PATH_VIA_ROUTE)
+                ->map(static fn ($doc): string => (string) data_get($doc, 'id'))
+                ->values()
+                ->all())
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->pluck('status', 'linked_financial_document_id');
 
         $moved = [];
         foreach ($documents as $doc) {
             /** @var Document $doc */
-            if (data_get($doc, 'posting_path') !== Document::POSTING_PATH_DIRECT
-                || !in_array(data_get($doc, 'status'), [Document::STATUS_POSTED_UNRECONCILED, Document::STATUS_POSTED_RECONCILED], true)) {
+            if (!in_array(data_get($doc, 'status'), [Document::STATUS_POSTED_UNRECONCILED, Document::STATUS_POSTED_RECONCILED], true)) {
                 continue;
             }
-            $entryIds = Entry::query()
-                ->withoutGlobalScopes()
-                ->where('source_financial_document_id', (string) data_get($doc, 'id'))
-                ->pluck('id')
-                ->map(static fn ($id): string => (string) $id)
-                ->all();
+            $entryIds = $this->entryIdsOfDocuments([(string) data_get($doc, 'id')]);
             $covered = $entryIds !== []
                 && $this->activeApplies($entryIds)->pluck('ledger_entry_id')->map(static fn ($id): string => (string) $id)->unique()->count() === count($entryIds);
+            if (data_get($doc, 'posting_path') === Document::POSTING_PATH_VIA_ROUTE) {
+                $covered = $covered && ($routeStatusByDocument[(string) data_get($doc, 'id')] ?? null) === Route::STATUS_COMPLETED;
+            }
             $target = $covered ? Document::STATUS_POSTED_RECONCILED : Document::STATUS_POSTED_UNRECONCILED;
             $from = (string) data_get($doc, 'status');
             if ($from !== $target) {
@@ -619,15 +625,70 @@ class TreasuryReconciliationService
      */
     private function documentIdsOf(Collection $locked, array $ledgerEntryIds): array
     {
-        $ids = [];
-        foreach ($ledgerEntryIds as $id) {
-            $documentId = data_get($locked->get($id), 'source_financial_document_id');
-            if ($documentId !== null) {
-                $ids[(string) $documentId] = true;
+        $byEntry = $this->documentIdByEntry($locked->only($ledgerEntryIds)->values());
+
+        return array_values(array_unique($byEntry));
+    }
+
+    /**
+     * The financial document each ledger entry belongs to: its own source
+     * document, or for a route leg the route's linked document (GAP-094).
+     *
+     * @param iterable<mixed> $entries
+     * @return array<string, string> document id by ledger-entry id
+     */
+    private function documentIdByEntry(iterable $entries): array
+    {
+        $map = [];
+        $legOf = [];
+        foreach ($entries as $entry) {
+            $id = (string) data_get($entry, 'id');
+            if (data_get($entry, 'source_financial_document_id') !== null) {
+                $map[$id] = (string) data_get($entry, 'source_financial_document_id');
+            } elseif (data_get($entry, 'source_payment_route_leg_id') !== null) {
+                $legOf[$id] = (string) data_get($entry, 'source_payment_route_leg_id');
+            }
+        }
+        if ($legOf !== []) {
+            $routeOfLeg = Leg::query()->withoutGlobalScopes()->whereIn('id', array_values(array_unique($legOf)))->pluck('payment_route_id', 'id');
+            $documentOfRoute = Route::query()->withoutGlobalScopes()->whereIn('id', $routeOfLeg->unique()->values()->all())->pluck('linked_financial_document_id', 'id');
+            foreach ($legOf as $entryId => $legId) {
+                $documentId = $documentOfRoute[(string) ($routeOfLeg[$legId] ?? '')] ?? null;
+                if ($documentId !== null) {
+                    $map[$entryId] = (string) $documentId;
+                }
             }
         }
 
-        return array_keys($ids);
+        return $map;
+    }
+
+    /**
+     * Every ledger entry of the given documents: document-sourced ones and
+     * those of the legs of their routes.
+     *
+     * @param list<string> $documentIds
+     * @return list<string>
+     */
+    private function entryIdsOfDocuments(array $documentIds): array
+    {
+        if ($documentIds === []) {
+            return [];
+        }
+        $legIds = Leg::query()
+            ->withoutGlobalScopes()
+            ->whereIn('payment_route_id', Route::query()->withoutGlobalScopes()->whereIn('linked_financial_document_id', $documentIds)->select('id'))
+            ->pluck('id')
+            ->all();
+
+        return Entry::query()
+            ->withoutGlobalScopes()
+            ->where(static fn ($query) => $query
+                ->whereIn('source_financial_document_id', $documentIds)
+                ->when($legIds !== [], static fn ($legs) => $legs->orWhereIn('source_payment_route_leg_id', $legIds)))
+            ->pluck('id')
+            ->map(static fn ($id): string => (string) $id)
+            ->all();
     }
 
     private function requireProjectWallet(Project $project, TreasuryWallet $wallet): void

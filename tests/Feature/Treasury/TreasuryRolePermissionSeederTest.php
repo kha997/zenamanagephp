@@ -19,14 +19,14 @@ class TreasuryRolePermissionSeederTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_all_sixteen_treasury_codes_are_canonical_permissions(): void
+    public function test_all_seventeen_treasury_codes_are_canonical_permissions(): void
     {
         $codes = array_column(ZenaPermissionsSeeder::CANONICAL_PERMISSIONS, 'code');
 
         foreach (TreasuryRolePermissionSeeder::ALL_CODES as $code) {
             $this->assertContains($code, $codes);
         }
-        $this->assertCount(16, TreasuryRolePermissionSeeder::ALL_CODES);
+        $this->assertCount(17, TreasuryRolePermissionSeeder::ALL_CODES);
         $this->assertContains('treasury.all_projects', TreasuryRolePermissionSeeder::ALL_CODES);
     }
 
@@ -36,7 +36,7 @@ class TreasuryRolePermissionSeederTest extends TestCase
     public static function roleProvider(): array
     {
         $accountant = ['treasury.view', 'treasury.all_projects', 'treasury.manage_parties', 'treasury.manage_wallets',
-            'treasury.approve_expense', 'treasury.reconcile', 'treasury.reverse', 'treasury.adjust',
+            'treasury.approve_expense', 'treasury.reconcile', 'treasury.manage_routes', 'treasury.reverse', 'treasury.adjust',
             'treasury.view_audit', 'treasury.export'];
         $engineer = ['treasury.view', 'treasury.declare_funding', 'treasury.create_transfer',
             'treasury.create_expense', 'treasury.submit_expense'];
@@ -103,7 +103,7 @@ class TreasuryRolePermissionSeederTest extends TestCase
         $this->seedTreasury();
         $this->seedTreasury();
 
-        $this->assertCount(10, $this->treasuryCodesOf($role));
+        $this->assertCount(11, $this->treasuryCodesOf($role));
         $this->assertTrue($role->permissions()->where('code', 'invoice.read')->exists());
     }
 

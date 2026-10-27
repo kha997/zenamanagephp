@@ -20,7 +20,10 @@
         $statusLabels = [
             'posted_unreconciled' => 'Đã ghi sổ — chưa đối soát', 'posted_reconciled' => 'Đã đối soát', 'reversed' => 'Đã đảo',
             'draft' => 'Nháp', 'submitted' => 'Chờ duyệt', 'rejected' => 'Bị từ chối',
+            'approved' => 'Đang trên đường',
         ];
+        $routeStatusLabels = ['planned' => 'Chưa đi', 'partial' => 'Đang trên đường', 'completed' => 'Hoàn tất', 'cancelled' => 'Đã huỷ'];
+        $routeByDocument = collect($routes)->pluck('id', 'document_id');
         $categoryLabels = ['labor' => 'Nhân công', 'subcontractor' => 'Thầu phụ', 'design_outsource' => 'Thiết kế thuê ngoài', 'misc' => 'Khác'];
         $endpoint = fn ($wallet, $party) => $wallet?->name ?? $party?->name ?? '—';
     @endphp
@@ -136,6 +139,72 @@
             </form>
         </x-ui.card>
     @endif
+
+    {{-- GAP-094 S4b-1: money that travels through transit wallets. --}}
+    <x-ui.card title="Tuyến tiền (qua trung gian)">
+        @if ($routes === [])
+            <x-ui.empty-state title="Chưa có tuyến tiền" description="Tiền đi qua TK công ty, người mang tiền… được ghi theo từng chặng ở đây." />
+        @else
+            <x-ui.data-table :headers="['Ngày', 'Loại', 'Số tiền', 'Đã đến ví đích', 'Còn lại', 'Trạng thái', '']">
+                @foreach ($routes as $row)
+                    <tr data-testid="treasury-route-row">
+                        <td class="text-sm">{{ $row['transaction_date'] ? \Illuminate\Support\Carbon::parse($row['transaction_date'])->format('d/m/Y') : '—' }}</td>
+                        <td class="text-sm font-medium">{{ $typeLabels[$row['document_type']] ?? $row['document_type'] }}</td>
+                        <td class="text-sm font-semibold">{{ $money($row['total_amount']) }}</td>
+                        <td class="text-sm text-emerald-700">{{ $money($row['arrived_amount']) }}</td>
+                        <td class="text-sm text-amber-700">{{ $money($row['remaining_amount']) }}</td>
+                        <td class="text-sm">{{ $routeStatusLabels[$row['status']] ?? $row['status'] }}</td>
+                        <td><a href="{{ route('operator.treasury.projects.routes.show', [$project->id, $row['id']]) }}" class="operator-button operator-button-inline">Xem chặng</a></td>
+                    </tr>
+                @endforeach
+            </x-ui.data-table>
+        @endif
+        @if ($can['manageRoutes'] && $wallets->count() >= 2)
+            <form method="POST" action="{{ route('operator.treasury.projects.routes.store', $project->id) }}" class="space-y-5 p-4" data-testid="treasury-route-form">
+                @csrf
+                <p class="text-sm text-slate-600">Tạo tuyến khi tiền chưa đến thẳng ví đích. Tiền nhận / góp vốn chỉ cộng vào tổng "đã nhận" khi tuyến hoàn tất.</p>
+                <div class="operator-form-grid">
+                    <div class="operator-field">
+                        <label for="r_type">Loại <span class="text-rose-600">*</span></label>
+                        <select id="r_type" name="document_type" class="operator-input" required>
+                            <option value="funding" @selected(old('document_type') === 'funding')>Tiền nhận</option>
+                            <option value="owner_contribution" @selected(old('document_type') === 'owner_contribution')>Góp vốn chủ</option>
+                            <option value="internal_transfer" @selected(old('document_type') === 'internal_transfer')>Chuyển nội bộ</option>
+                        </select>
+                    </div>
+                    <div class="operator-field">
+                        <label for="r_party">Nhận từ (tiền nhận / góp vốn)</label>
+                        <select id="r_party" name="source_party_id" class="operator-input">
+                            <option value="">—</option>
+                            @foreach ($parties as $party)
+                                <option value="{{ $party->id }}" @selected(old('source_party_id') === $party->id)>{{ $party->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="operator-field">
+                        <label for="r_source">Từ ví (chuyển nội bộ)</label>
+                        <select id="r_source" name="source_wallet_id" class="operator-input">
+                            <option value="">—</option>
+                            @foreach ($wallets as $wallet)
+                                <option value="{{ $wallet->id }}" @selected(old('source_wallet_id') === $wallet->id)>{{ $wallet->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="operator-field">
+                        <label for="r_destination">Ví đích <span class="text-rose-600">*</span></label>
+                        <select id="r_destination" name="destination_wallet_id" class="operator-input" required>
+                            @foreach ($wallets as $wallet)
+                                <option value="{{ $wallet->id }}" @selected(old('destination_wallet_id') === $wallet->id)>{{ $wallet->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @include('treasury._money-fields', ['prefix' => 'r'])
+                </div>
+                <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="confirm_duplicate" value="1"> Vẫn ghi nếu hệ thống cảnh báo trùng</label>
+                <button type="submit" class="operator-button operator-button-primary">Tạo tuyến</button>
+            </form>
+        @endif
+    </x-ui.card>
 
     @if ($can['adjust'])
         <x-ui.card title="Điều chỉnh số dư">
@@ -322,7 +391,7 @@
                 @foreach ($documents as $doc)
                     <tr data-testid="treasury-document-row">
                         <td class="text-sm">{{ $doc->transaction_date?->format('d/m/Y') ?? '—' }}</td>
-                        <td class="text-sm font-medium">{{ $typeLabels[$doc->document_type] ?? $doc->document_type }}@if (in_array((string) $doc->id, $selfApprovedIds, true)) <span class="ml-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800" data-testid="self-approved-badge">Tự duyệt</span>@endif</td>
+                        <td class="text-sm font-medium">{{ $typeLabels[$doc->document_type] ?? $doc->document_type }}@if (isset($routeByDocument[(string) $doc->id])) <a href="{{ route('operator.treasury.projects.routes.show', [$project->id, $routeByDocument[(string) $doc->id]]) }}" class="ml-1 inline-flex rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-800" data-testid="via-route-badge">Qua trung gian</a>@endif @if (in_array((string) $doc->id, $selfApprovedIds, true)) <span class="ml-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800" data-testid="self-approved-badge">Tự duyệt</span>@endif</td>
                         <td class="text-sm text-slate-600">{{ $endpoint($doc->sourceWallet, $doc->sourceParty) }}</td>
                         <td class="text-sm text-slate-600">{{ $endpoint($doc->destinationWallet, $doc->destinationParty) }}</td>
                         <td class="text-sm font-semibold">{{ $money($doc->amount) }}</td>

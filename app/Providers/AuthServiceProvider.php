@@ -76,6 +76,9 @@ class AuthServiceProvider extends ServiceProvider
         Gate::define('treasury.approve-expense', [TreasuryPolicy::class, 'approveExpense']);
         // GAP-067: Treasury S4a reconciliation.
         Gate::define('treasury.reconcile', [TreasuryPolicy::class, 'reconcile']);
+        // GAP-094: Treasury S4b-1 via-route payments.
+        Gate::define('treasury.manage-routes', [TreasuryPolicy::class, 'manageRoutes']);
+        Gate::define('treasury.record-route-leg', [TreasuryPolicy::class, 'recordRouteLeg']);
 
         // Temporarily disable Spatie Permission to fix cache issues
         // $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->registerPermissions();

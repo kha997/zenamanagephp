@@ -10,13 +10,15 @@ use App\Models\Treasury\TreasuryCostSettlementAllocation as Allocation;
 use App\Models\Treasury\TreasuryFinancialDocument as Document;
 use App\Models\Treasury\TreasuryFinancialParty;
 use App\Models\Treasury\TreasuryLedgerEntry as Entry;
+use App\Models\Treasury\TreasuryPaymentRoute as Route;
 use App\Models\Treasury\TreasuryWallet;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 /**
- * GAP-064 — Treasury S2 ledger engine (direct posting path only).
+ * GAP-064 — Treasury S2 ledger engine (direct posting path; GAP-094 adds the
+ * reversal of completed via-route documents).
  *
  * Restates GAP-037 v17: closed status graph (§2.1a), direct posting matrix
  * (§5a), immutable ledger entries with a unique original_posting_key (§5),
@@ -195,9 +197,7 @@ class TreasuryPostingService
             if (!in_array($locked->status, [Document::STATUS_POSTED_UNRECONCILED, Document::STATUS_POSTED_RECONCILED], true)) {
                 throw new TreasuryRuleViolation('Chỉ đảo được chứng từ đã ghi sổ và chưa bị đảo.');
             }
-            if ($locked->posting_path !== Document::POSTING_PATH_DIRECT) {
-                throw new TreasuryRuleViolation('Chứng từ đi qua trung gian chưa đảo được ở bước hiện tại.');
-            }
+            $viaRoute = $locked->posting_path === Document::POSTING_PATH_VIA_ROUTE;
             if (Document::query()->where('reversed_document_id', (string) $locked->id)->exists()) {
                 throw new TreasuryRuleViolation('Chứng từ này đã có bút toán đảo.');
             }
@@ -219,17 +219,36 @@ class TreasuryPostingService
                 ->lockForUpdate()
                 ->get();
 
-            $entries = Entry::query()
-                ->where('source_financial_document_id', (string) $locked->id)
-                ->orderBy('id')
-                ->get();
             $legs = [];
-            foreach ($entries as $entry) {
-                $legs[] = [
-                    (string) data_get($entry, 'wallet_id'),
-                    data_get($entry, 'direction') === Entry::DIRECTION_CREDIT ? Entry::DIRECTION_DEBIT : Entry::DIRECTION_CREDIT,
-                    'reversal',
-                ];
+            if ($viaRoute) {
+                // GAP-094 / v17 §2.2 #6 and §2.2e: the original's route must be
+                // completed, read under the route lock (class 6, after 5). The
+                // reversal posts directly with the swapped shape (§5a).
+                $route = Route::query()
+                    ->where('linked_financial_document_id', (string) $locked->id)
+                    ->lockForUpdate()
+                    ->first();
+                if ($route === null || data_get($route, 'status') !== Route::STATUS_COMPLETED) {
+                    throw new TreasuryRuleViolation('Chỉ đảo được chứng từ đi qua trung gian khi tuyến đã hoàn tất.');
+                }
+                if ($locked->destination_wallet_id !== null) {
+                    $legs[] = [(string) $locked->destination_wallet_id, Entry::DIRECTION_DEBIT, 'reversal'];
+                }
+                if ($locked->source_wallet_id !== null) {
+                    $legs[] = [(string) $locked->source_wallet_id, Entry::DIRECTION_CREDIT, 'reversal'];
+                }
+            } else {
+                $entries = Entry::query()
+                    ->where('source_financial_document_id', (string) $locked->id)
+                    ->orderBy('id')
+                    ->get();
+                foreach ($entries as $entry) {
+                    $legs[] = [
+                        (string) data_get($entry, 'wallet_id'),
+                        data_get($entry, 'direction') === Entry::DIRECTION_CREDIT ? Entry::DIRECTION_DEBIT : Entry::DIRECTION_CREDIT,
+                        'reversal',
+                    ];
+                }
             }
             $this->postEntries($reversal, $legs);
 
@@ -405,9 +424,12 @@ class TreasuryPostingService
     }
 
     /**
+     * Same type, amount, date, party, wallet and reference as a posted
+     * document, or as a via-route one still on its way (GAP-094).
+     *
      * @param array<string, mixed> $data
      */
-    private function guardDuplicate(Project $project, string $type, array $data, string $sourcePartyId, string $destinationWalletId): void
+    public function guardDuplicate(Project $project, string $type, array $data, string $sourcePartyId, string $destinationWalletId): void
     {
         $reference = trim((string) ($data['reference'] ?? ''));
 
@@ -416,7 +438,11 @@ class TreasuryPostingService
             ->where('tenant_id', (string) $project->tenant_id)
             ->where('project_id', (string) $project->id)
             ->where('document_type', $type)
-            ->whereIn('status', [Document::STATUS_POSTED_UNRECONCILED, Document::STATUS_POSTED_RECONCILED])
+            ->where(static fn ($query) => $query
+                ->whereIn('status', [Document::STATUS_POSTED_UNRECONCILED, Document::STATUS_POSTED_RECONCILED])
+                ->orWhere(static fn ($inTransit) => $inTransit
+                    ->where('status', Document::STATUS_APPROVED)
+                    ->where('posting_path', Document::POSTING_PATH_VIA_ROUTE)))
             ->where('amount', $this->money((string) $data['amount']))
             ->whereDate('transaction_date', (string) $data['transaction_date'])
             ->where('source_party_id', $sourcePartyId)
@@ -433,7 +459,7 @@ class TreasuryPostingService
         }
     }
 
-    private function projectWallet(Project $project, string $walletId, string $field): TreasuryWallet
+    public function projectWallet(Project $project, string $walletId, string $field): TreasuryWallet
     {
         /** @var TreasuryWallet|null $wallet */
         $wallet = TreasuryWallet::query()
@@ -449,7 +475,7 @@ class TreasuryPostingService
         return $wallet;
     }
 
-    private function tenantParty(Project $project, string $partyId, string $field): TreasuryFinancialParty
+    public function tenantParty(Project $project, string $partyId, string $field): TreasuryFinancialParty
     {
         /** @var TreasuryFinancialParty|null $party */
         $party = TreasuryFinancialParty::query()

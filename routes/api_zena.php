@@ -361,6 +361,16 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::post('/reconciliation-entries/{treasuryReconciliationEntry}/undo', [\App\Http\Controllers\Api\Treasury\TreasuryReconciliationController::class, 'undoEntry'])->middleware('rbac:treasury.reconcile')->name('entries.undo');
         });
 
+        // GAP-094 S4b-1: via-route payments (Gate 2 Option A).
+        Route::group(['prefix' => 'projects/{project}/treasury', 'as' => 'treasury.routes.'], function () {
+            Route::get('/routes', [\App\Http\Controllers\Api\Treasury\TreasuryRouteController::class, 'index'])->middleware('rbac:treasury.view')->name('index');
+            Route::post('/routes', [\App\Http\Controllers\Api\Treasury\TreasuryRouteController::class, 'store'])->middleware('rbac:treasury.manage_routes')->name('store');
+            Route::get('/routes/{treasuryRoute}', [\App\Http\Controllers\Api\Treasury\TreasuryRouteController::class, 'show'])->middleware('rbac:treasury.view')->name('show');
+            Route::post('/routes/{treasuryRoute}/legs', [\App\Http\Controllers\Api\Treasury\TreasuryRouteController::class, 'storeLeg'])->middleware('rbac:treasury.view')->name('legs.store');
+            Route::post('/routes/{treasuryRoute}/cancel', [\App\Http\Controllers\Api\Treasury\TreasuryRouteController::class, 'cancel'])->middleware('rbac:treasury.manage_routes')->name('cancel');
+            Route::post('/route-legs/{treasuryRouteLeg}/reverse', [\App\Http\Controllers\Api\Treasury\TreasuryRouteController::class, 'reverseLeg'])->middleware('rbac:treasury.manage_routes')->name('legs.reverse');
+        });
+
         Route::group(['prefix' => 'vendors'], function () {
             Route::get('/', [\App\Http\Controllers\Api\VendorController::class, 'index'])->middleware('rbac:vendor.view')->name('vendors.index');
             Route::post('/', [\App\Http\Controllers\Api\VendorController::class, 'store'])->middleware('rbac:vendor.create')->name('vendors.store');

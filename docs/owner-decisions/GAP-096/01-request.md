@@ -1,11 +1,11 @@
 ---
 work_id: GAP-096
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-27-gap-096-treasury-s5-advances-readiness.md
   plan: null
@@ -15,18 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-27T12:59:21+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-27, verbatim: 'APPROVE GAP-096 Gate 1'. Bound to reviewed Draft PR #375 head dcddd8c140569960351d94d7b1ec8e144cd95977, canonical base c7b8efffa06a4b81ca98134b1870ebde3bd59cc9, including the Owner's in-session answers recorded in this packet (advance request approved like an S3 expense; settlement request allocated to costs and approved; cash return straight into a project wallet only; ageing buckets 30/60/90 days). Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-27T12:55:23+07:00"
-  updated_at: "2026-10-27T12:55:23+07:00"
+  updated_at: "2026-10-27T12:59:21+07:00"
 generated_by: agent
 ---
 
-## OWNER GATE 1: AWAITING OWNER
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-096 Gate 1 in-session on 2026-10-27 against Draft PR #375
+head `dcddd8c140569960351d94d7b1ec8e144cd95977`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

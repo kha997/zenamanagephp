@@ -1,14 +1,14 @@
 ---
 work_id: GAP-094
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-26-gap-094-treasury-s4b-routes-readiness.md
   plan: docs/superpowers/plans/2026-10-27-gap-094-treasury-s4b-routes.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-27T08:11:20+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-27, verbatim: 'APPROVE GAP-094 Gate 3'. Given after the re-presented packet (after Owner amendment 2) at PR head 447b89d6b625bd13f2efc59b0f2996d8b592abd9; bound to implementation subject a664d144cbe7480087fe91c34d8241ced1e83091 and implementation-tree digest 0903dcabdd625d7351ef56b46477b5ef025220604e21c720ebd0fce93a52485c (recomputed at recording time, zero drift). Supersedes the earlier approval at digest f1171331. Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-27T07:27:03+07:00"
-  updated_at: "2026-10-27T08:04:22+07:00"
+  updated_at: "2026-10-27T08:11:20+07:00"
 generated_by: agent
 residual_risk_rating: medium
 mandatory_technical_gate_summary: "RE-PRESENTED after Owner amendment 2 (AskUserQuestion, 'Sửa trong PR này (Recommended)'): the Owner Gate-3 approval bound to subject a97e7ec81be807dabc229018233327d2191f1913 / digest f117133143eae0de9d309f211be49df9fa00867828dba51de3c6ce611837c98a is superseded because a664d144 changed the tree to answer a Codex P2 finding: reverseLeg() could deadlock on MySQL with a concurrent reconciliation of the same route (shared lock on the leg credit entry vs. id-ordered exclusive locks); it now locks every ledger entry of the route id-ascending right after the to-wallet lock and before the balance read; new test test_leg_reversal_locks_the_route_entries_before_the_balance_read is red before the fix and green after. Local after the fix: tests/Feature/Treasury 138 OK, real-MySQL Treasury concurrency job 5/5 OK, PHPStan, php-cs-fixer, SSOT lint clean. Exact-head CI at a664d144: 34/35 green; Owner Governance Lint red only because the packet was bound to the superseded digest, which this re-presented packet resolves. History below describes a97e7ec8. GAP-094 (Treasury S4b-1) at subject a664d144cbe7480087fe91c34d8241ced1e83091 (Gate 2 Option A plus Owner amendments 1 and 2). New TreasuryRouteService: createRoute (funding / owner_contribution / internal_transfer; document via_route + approved, amount frozen; route planned with total = amount, Case B link; S2 validation incl. owner-party rule and duplicate warning, which now also sees routes on their way); recordLeg (one step, settled; wallet-to-wallet debit/credit pair or a lone credit from outside on funding routes only; from-wallet balance guard; money from outside <= route amount; transfer net out of the source <= amount; no leg on completed/cancelled routes; occurred_at not in the future; permission treasury.manage_routes, or treasury.create_transfer when the user holds the from- or to-wallet); completion per v17 4.3 after every leg and leg reversal (destination +amount, transfer source -amount, other wallets 0) posts the document (posted_unreconciled, posted_at); reverseLeg (reason; leg reversed + one compensating entry per original entry; to-wallet must still hold the amount; completed route back to partial; reconciled document regresses); cancelRoute (reason; only while the document is approved and no leg is in force; route cancelled, document rejected). Locks: leg 0 -> shared 4 -> 5 -> 6, settled legs read with a locking read once the route is held; reversal 0 -> 4 -> 5 -> 6; cancel 5 -> 6. TreasuryPostingService reverses a via_route original only when its route is completed (read under the route lock, 5 -> 6) and posts the swapped shape directly. TreasuryReconciliationService accepts leg entries, maps them to the route's document, and reconciles a via_route document when its route is completed and every leg entry has an active apply; leg entries are re-read with locking reads only after the route lock. New permission treasury.manage_routes (owner, accountant); gates treasury.manage-routes, treasury.record-route-leg. API TreasuryRouteController (6 endpoints) and operator pages (route section + create form on the project page, route page, register badge). Owner amendment 1: the S4a test that rejected leg entries now asserts they reconcile with the route's document. Tests: TreasuryRouteServiceTest 16, TreasuryRouteApiTest 3, TreasuryRouteWebTest 3, two real-MySQL races (transit wallet drained twice; money from outside over the route amount) whose lock-removal mutation goes red on both. Local: tests/Feature/Treasury 137 OK; tests/Feature/Api 806 OK; tests/Feature/Web 50 OK; Zena 290 OK; Architecture, Deployment OK; Unit OK except the known root-only GrandfatherLoaderTest; route guard and RouteHygieneTest OK; PHPStan no errors; php-cs-fixer 0 files; SSOT lint, governance and docs lints pass. Exact-head CI at 81697bee: Code Quality Analysis red for import order in the concurrency test, fixed in a97e7ec8; exact-head CI at a97e7ec8: 35/35 green."
@@ -37,12 +37,15 @@ technical_evidence:
   verified_at: "2026-10-27T08:04:22+07:00"
 owner_decision_binding:
   implementation_tree_digest: "0903dcabdd625d7351ef56b46477b5ef025220604e21c720ebd0fce93a52485c"
-  decision_recorded_at: null
+  decision_recorded_at: "2026-10-27T08:11:20+07:00"
 ---
 
 # GAP-094 — Gate 3 release decision (Treasury S4b-1 via-route payments)
 
-## OWNER GATE 3: AWAITING OWNER (re-presented)
+## OWNER GATE 3: APPROVED
+
+Owner approved the re-presented Gate 3 in-session on 2026-10-27 ("APPROVE GAP-094 Gate 3"), bound to implementation subject
+`a664d144cbe7480087fe91c34d8241ced1e83091` and implementation-tree digest `0903dcabdd625d7351ef56b46477b5ef025220604e21c720ebd0fce93a52485c`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành (trình lại)
 

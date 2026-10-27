@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-10-27-gap-095-treasury-s4b2-contract-payment-tracing-readiness.md
   plan: null
   branch: docs/GAP-095-treasury-s4b2-contract-payment-tracing
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/374
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

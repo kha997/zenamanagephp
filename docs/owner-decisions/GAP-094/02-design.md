@@ -191,6 +191,18 @@ packet's new files was put to the Owner via AskUserQuestion; the Owner chose, ve
 the leg entry is listed with the route's document and reconciles). The seeder test's accountant grant count (10 → 11)
 follows from the approved `treasury.manage_routes` grant.
 
+## Owner amendment 2
+
+After the Gate-3 approval at digest `f1171331…`, Codex (P2, PR #373 review on `c697ea9e`) reported that a leg reversal
+could deadlock on MySQL with a concurrent reconciliation of the same route: the reversal held a shared lock on the
+leg's credit entry (balance read) and needed the debit entry (foreign-key check of the compensating entry), while
+reconciliation locked the route's entries id-ascending. The fix changes the tree, so the Owner was asked via
+AskUserQuestion and chose, verbatim: "Sửa trong PR này (Recommended)". Change: `reverseLeg()` locks every ledger entry
+of the route id-ascending (class 4, the set and order reconciliation uses) right after the to-wallet lock and before
+the balance read — the order §3 above already states; new test
+`test_leg_reversal_locks_the_route_entries_before_the_balance_read`. The earlier Gate-3 approval is superseded; Gate 3
+is re-presented.
+
 ## Verification required at Gate 3
 
 All Treasury tests green locally and exact-head CI (incl. the MySQL concurrency job);

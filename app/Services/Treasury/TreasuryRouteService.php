@@ -30,8 +30,9 @@ use Illuminate\Support\Facades\Gate;
  * of the route is back to zero. A wrong leg is reversed, never edited.
  *
  * Lock order (v17 §11 with S2's class 0): leg 0 (from-wallet) → 4 (shared
- * balance read) → 5 (document) → 6 (route); leg reversal 0 (to-wallet) → 4 →
- * 5 → 6; cancel 5 → 6.
+ * balance read) → 5 (document) → 6 (route); leg reversal 0 (to-wallet) → 4
+ * (the route's entries, id ascending, then the shared balance read) → 5 → 6;
+ * cancel 5 → 6.
  */
 class TreasuryRouteService
 {
@@ -222,6 +223,10 @@ class TreasuryRouteService
 
         return DB::transaction(function () use ($actor, $leg, $route, $document, $to, $reason): Leg {
             $this->posting->lockWallet($to);
+            // Class 4 before the shared balance read: the same rows, in the same
+            // id order, that reconciliation locks for this document, so the two
+            // cannot each hold one entry of the leg and wait for the other.
+            $this->lockRouteEntries($route);
             $this->posting->requireBalance($to, (string) $leg->amount, 'leg');
             $lockedDocument = $this->lockDocument($document);
             $lockedRoute = $this->lockRoute($route);
@@ -553,6 +558,21 @@ class TreasuryRouteService
             'posted_at' => $postedAt,
             'original_posting_key' => 'leg:' . $leg->id . ':' . $walletId . ':' . $direction,
         ]);
+    }
+
+    /** Class 4: every ledger entry of the route's legs, id ascending. */
+    private function lockRouteEntries(Route $route): void
+    {
+        $legIds = Leg::query()->withoutGlobalScopes()->where('payment_route_id', (string) $route->id)->pluck('id')->all();
+        if ($legIds === []) {
+            return;
+        }
+        Entry::query()
+            ->withoutGlobalScopes()
+            ->whereIn('source_payment_route_leg_id', $legIds)
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->get(['id']);
     }
 
     /** Class 5. */

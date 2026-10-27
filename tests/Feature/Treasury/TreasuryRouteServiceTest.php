@@ -198,6 +198,30 @@ class TreasuryRouteServiceTest extends TestCase
         $this->assertSame(Document::STATUS_POSTED_UNRECONCILED, $this->documentOf($route)->status, 'A posted document stays posted.');
     }
 
+    public function test_leg_reversal_locks_the_route_entries_before_the_balance_read(): void
+    {
+        // Codex P2 / Owner amendment 2: reconciliation locks every entry of the
+        // route's document id-ascending; leg reversal must take the same rows in
+        // the same order before its shared balance read (no lock-order cycle).
+        $route = $this->fundingRoute('1000');
+        $this->leg($route, null, $this->transit, '1000');
+        $leg = $this->leg($route, $this->transit, $this->siteCash, '400');
+
+        $queries = [];
+        \Illuminate\Support\Facades\DB::listen(static function ($query) use (&$queries): void {
+            $queries[] = $query->sql;
+        });
+        $this->routes->reverseLeg($this->project, $this->owner, $leg, 'nhầm');
+
+        $routeEntries = $this->firstIndex($queries, static fn (string $sql): bool => str_contains($sql, 'from "treasury_ledger_entries"')
+            && str_contains($sql, '"source_payment_route_leg_id" in') && str_contains($sql, 'order by "id"'));
+        $balanceRead = $this->firstIndex($queries, static fn (string $sql): bool => str_contains($sql, 'from "treasury_ledger_entries"')
+            && str_contains($sql, '"wallet_id" ='));
+        $this->assertNotNull($routeEntries, 'The route entries must be locked.');
+        $this->assertNotNull($balanceRead);
+        $this->assertLessThan($balanceRead, $routeEntries);
+    }
+
     public function test_leg_reversal_needs_the_to_wallet_to_still_hold_the_money(): void
     {
         $route = $this->fundingRoute('1000');
@@ -389,6 +413,20 @@ class TreasuryRouteServiceTest extends TestCase
             'amount' => $amount,
             'occurred_at' => '2026-10-02',
         ]);
+    }
+
+    /**
+     * @param list<string> $queries
+     */
+    private function firstIndex(array $queries, callable $match): ?int
+    {
+        foreach ($queries as $index => $sql) {
+            if ($match($sql)) {
+                return $index;
+            }
+        }
+
+        return null;
     }
 
     private function documentOf(Route $route): Document

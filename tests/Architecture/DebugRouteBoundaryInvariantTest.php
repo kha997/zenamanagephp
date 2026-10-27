@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Architecture;
 
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Route;
@@ -24,6 +25,9 @@ use Tests\TestCase;
  */
 final class DebugRouteBoundaryInvariantTest extends TestCase
 {
+    // GAP-065: the HTTP regression tests create a tenant and a user; roll them back.
+    use RefreshDatabase;
+
     private const DEBUG_ROUTE_FILE = 'routes/debug.php';
 
     private const ROUTE_SERVICE_PROVIDER = 'app/Providers/RouteServiceProvider.php';

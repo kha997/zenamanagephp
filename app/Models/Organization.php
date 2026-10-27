@@ -2,13 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
 class Organization extends Model
 {
-
     protected $fillable = [
         'name',
         'slug',
@@ -112,7 +110,8 @@ class Organization extends Model
             return true;
         }
 
-        $domain = substr(strrchr($email, "@"), 1);
+        $domain = substr(strrchr($email, '@'), 1);
+
         return in_array($domain, $this->allowed_domains);
     }
 

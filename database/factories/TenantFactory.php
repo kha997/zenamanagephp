@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories;
 
@@ -7,14 +9,14 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
 /**
- * Factory cho Tenant model
+ * Factory cho Tenant model.
  */
 class TenantFactory extends Factory
 {
     protected $model = Tenant::class;
-    
+
     /**
-     * Define the model's default state
+     * Define the model's default state.
      *
      * @return array<string, mixed>
      */
@@ -29,7 +31,7 @@ class TenantFactory extends Factory
             'slug' => Str::slug($companyName . '-' . Str::ulid()),
             'settings' => json_encode([
                 'timezone' => 'Asia/Ho_Chi_Minh',
-                'currency' => 'VND'
+                'currency' => 'VND',
             ]),
             'is_active' => true,
         ];

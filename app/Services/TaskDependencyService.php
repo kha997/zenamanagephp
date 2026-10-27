@@ -9,7 +9,7 @@ use Illuminate\Support\Collection;
 class TaskDependencyService
 {
     /**
-     * Add a dependency between two tasks
+     * Add a dependency between two tasks.
      */
     public function addDependency(string $taskId, string $dependsOnTaskId, string $tenantId): array
     {
@@ -31,11 +31,11 @@ class TaskDependencyService
             $existsInOtherTenant = Task::where('id', $dependsOnTaskId)
                 ->where('tenant_id', '!=', $tenantId)
                 ->exists();
-                
+
             if ($existsInOtherTenant) {
                 return ['success' => false, 'message' => 'Cannot create dependency across tenants'];
             }
-            
+
             return ['success' => false, 'message' => 'Dependent task not found'];
         }
 
@@ -61,7 +61,7 @@ class TaskDependencyService
 
         // Check for circular dependency using DFS
         $wouldCreateCircular = $this->wouldCreateCircularDependency($taskId, $dependsOnTaskId, $tenantId);
-        
+
         if ($wouldCreateCircular) {
             return ['success' => false, 'message' => 'Circular dependency detected'];
         }
@@ -70,14 +70,14 @@ class TaskDependencyService
         TaskDependency::create([
             'task_id' => $taskId,
             'dependency_id' => $dependsOnTaskId,
-            'tenant_id' => $tenantId
+            'tenant_id' => $tenantId,
         ]);
 
         return ['success' => true, 'message' => 'Dependency added successfully'];
     }
 
     /**
-     * Remove a dependency between two tasks
+     * Remove a dependency between two tasks.
      */
     public function removeDependency(string $taskId, string $dependsOnTaskId, string $tenantId): array
     {
@@ -96,7 +96,7 @@ class TaskDependencyService
     }
 
     /**
-     * Get all dependencies for a task
+     * Get all dependencies for a task.
      */
     public function getDependencies(string $taskId, string $tenantId): Collection
     {
@@ -110,7 +110,7 @@ class TaskDependencyService
     }
 
     /**
-     * Get all tasks that depend on a given task
+     * Get all tasks that depend on a given task.
      */
     public function getDependents(string $taskId, string $tenantId): Collection
     {
@@ -124,7 +124,7 @@ class TaskDependencyService
     }
 
     /**
-     * Validate if a task status update is allowed based on dependencies
+     * Validate if a task status update is allowed based on dependencies.
      */
     public function validateStatusUpdate(string $taskId, string $newStatus, string $tenantId): array
     {
@@ -139,15 +139,15 @@ class TaskDependencyService
         // If completing a task, check if all dependencies are completed
         if (in_array($newStatus, ['completed', 'closed'])) {
             $dependencies = $this->getDependencies($taskId, $tenantId);
-            
+
             $incompleteDependencies = $dependencies->filter(function ($dependency) {
                 return !in_array($dependency->status, ['completed', 'closed']);
             });
 
             if ($incompleteDependencies->isNotEmpty()) {
                 return [
-                    'success' => false, 
-                    'message' => 'Cannot complete task: dependencies are not completed'
+                    'success' => false,
+                    'message' => 'Cannot complete task: dependencies are not completed',
                 ];
             }
         }
@@ -156,7 +156,7 @@ class TaskDependencyService
     }
 
     /**
-     * Get all blocked tasks (tasks that cannot proceed due to incomplete dependencies)
+     * Get all blocked tasks (tasks that cannot proceed due to incomplete dependencies).
      */
     public function getBlockedTasks(string $tenantId): Collection
     {
@@ -168,7 +168,7 @@ class TaskDependencyService
 
         foreach ($allTasks as $task) {
             $dependencies = $this->getDependencies($task->id, $tenantId);
-            
+
             $incompleteDependencies = $dependencies->filter(function ($dependency) {
                 return !in_array($dependency->status, ['completed', 'closed']);
             });
@@ -182,7 +182,7 @@ class TaskDependencyService
     }
 
     /**
-     * Get critical path for a project
+     * Get critical path for a project.
      */
     public function getCriticalPath(string $projectId, string $tenantId): Collection
     {
@@ -221,7 +221,7 @@ class TaskDependencyService
         while (!$queue->isEmpty()) {
             $currentTaskId = $queue->shift();
             $currentTask = $tasks->firstWhere('id', $currentTaskId);
-            
+
             if ($currentTask) {
                 $criticalPath->push($currentTask);
             }
@@ -238,7 +238,7 @@ class TaskDependencyService
     }
 
     /**
-     * Check if adding a dependency would create a circular dependency
+     * Check if adding a dependency would create a circular dependency.
      */
     private function wouldCreateCircularDependency(string $taskId, string $dependsOnTaskId, string $tenantId): bool
     {
@@ -252,13 +252,13 @@ class TaskDependencyService
         // OR if there's a path from taskId to dependsOnTaskId (which would create a cycle when we add the reverse)
         $hasPathFromDependsOnToTask = $this->hasPath($dependsOnTaskId, $taskId, $tenantId);
         $hasPathFromTaskToDependsOn = $this->hasPath($taskId, $dependsOnTaskId, $tenantId);
-        
+
         // If there's already a path from dependsOnTaskId to taskId, adding taskId -> dependsOnTaskId creates a cycle
         return $hasPathFromDependsOnToTask || $hasPathFromTaskToDependsOn;
     }
 
     /**
-     * Check if there's a path from source to target using DFS
+     * Check if there's a path from source to target using DFS.
      */
     private function hasPath(string $sourceTaskId, string $targetTaskId, string $tenantId): bool
     {
@@ -299,7 +299,7 @@ class TaskDependencyService
     }
 
     /**
-     * Get dependency chain depth for a task
+     * Get dependency chain depth for a task.
      */
     public function getDependencyDepth(string $taskId, string $tenantId): int
     {
@@ -315,7 +315,7 @@ class TaskDependencyService
     }
 
     /**
-     * Get all tasks that can be started (no incomplete dependencies)
+     * Get all tasks that can be started (no incomplete dependencies).
      */
     public function getReadyTasks(string $tenantId): Collection
     {
@@ -327,7 +327,7 @@ class TaskDependencyService
 
         foreach ($allTasks as $task) {
             $dependencies = $this->getDependencies($task->id, $tenantId);
-            
+
             $incompleteDependencies = $dependencies->filter(function ($dependency) {
                 return !in_array($dependency->status, ['completed', 'closed']);
             });

@@ -11,17 +11,17 @@ class AuthController extends Controller
     {
         return response()->json(['message' => 'Auth Login API - Coming Soon']);
     }
-    
+
     public function logout()
     {
         return response()->json(['message' => 'Auth Logout API - Coming Soon']);
     }
-    
+
     public function refresh()
     {
         return response()->json(['message' => 'Auth Refresh API - Coming Soon']);
     }
-    
+
     public function me()
     {
         return response()->json(['message' => 'Auth Me API - Coming Soon']);

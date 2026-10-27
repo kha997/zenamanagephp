@@ -31,22 +31,25 @@ class WorkerStatusCommand extends Command
     {
         try {
             $status = $this->getWorkerStatus();
-            
+
             if ($this->option('json')) {
                 $this->line(json_encode($status, JSON_PRETTY_PRINT));
+
                 return 0;
             }
 
             $this->displayStatus($status);
+
             return 0;
         } catch (\Exception $e) {
             $this->error('Failed to get worker status: ' . $e->getMessage());
+
             return 1;
         }
     }
 
     /**
-     * Get worker status
+     * Get worker status.
      */
     private function getWorkerStatus(): array
     {
@@ -72,12 +75,12 @@ class WorkerStatusCommand extends Command
     }
 
     /**
-     * Get queue status
+     * Get queue status.
      */
     private function getQueueStatus(string $queue): array
     {
         $processFile = storage_path('app/workers.json');
-        
+
         if (!file_exists($processFile)) {
             return [
                 'workers' => 0,
@@ -88,8 +91,8 @@ class WorkerStatusCommand extends Command
 
         $data = json_decode(file_get_contents($processFile), true);
         $processes = $data['processes'] ?? [];
-        
-        $queueProcesses = array_filter($processes, function($process) use ($queue) {
+
+        $queueProcesses = array_filter($processes, function ($process) use ($queue) {
             return $process['queue'] === $queue;
         });
 
@@ -108,13 +111,13 @@ class WorkerStatusCommand extends Command
     }
 
     /**
-     * Get queue statistics
+     * Get queue statistics.
      */
     private function getQueueStats(string $queue): array
     {
         try {
             $redis = Redis::connection();
-            
+
             $pendingKey = "queues:{$queue}";
             $failedKey = "queues:{$queue}:failed";
             $processingKey = "queues:{$queue}:processing";
@@ -135,12 +138,13 @@ class WorkerStatusCommand extends Command
     }
 
     /**
-     * Check if process is running
+     * Check if process is running.
      */
     private function isProcessRunning(int $pid): bool
     {
         try {
             $result = Process::run(['ps', '-p', $pid]);
+
             return $result->successful();
         } catch (\Exception $e) {
             return false;
@@ -148,7 +152,7 @@ class WorkerStatusCommand extends Command
     }
 
     /**
-     * Display status
+     * Display status.
      */
     private function displayStatus(array $status): void
     {
@@ -185,7 +189,7 @@ class WorkerStatusCommand extends Command
         if ($this->option('detailed')) {
             $this->newLine();
             $this->info('🔍 Detailed Process Information:');
-            
+
             foreach ($status['queues'] as $queue => $queueStatus) {
                 if (!empty($queueStatus['processes'])) {
                     $this->line("Queue: {$queue}");
@@ -205,7 +209,7 @@ class WorkerStatusCommand extends Command
     }
 
     /**
-     * Get health status
+     * Get health status.
      */
     private function getHealthStatus(array $status): string
     {

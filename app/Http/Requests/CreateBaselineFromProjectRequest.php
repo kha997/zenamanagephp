@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests;
 
@@ -24,21 +26,21 @@ class CreateBaselineFromProjectRequest extends BaseApiRequest
             'type' => [
                 'required',
                 'string',
-                'in:' . Baseline::TYPE_CONTRACT . ',' . Baseline::TYPE_EXECUTION
+                'in:' . Baseline::TYPE_CONTRACT . ',' . Baseline::TYPE_EXECUTION,
             ],
             'note' => [
                 'nullable',
                 'string',
-                'max:2000'
+                'max:2000',
             ],
             'include_actual_costs' => [
                 'nullable',
-                'boolean'
+                'boolean',
             ],
             'include_actual_dates' => [
                 'nullable',
-                'boolean'
-            ]
+                'boolean',
+            ],
         ];
     }
 
@@ -49,7 +51,7 @@ class CreateBaselineFromProjectRequest extends BaseApiRequest
     {
         $this->merge([
             'include_actual_costs' => $this->input('include_actual_costs', true),
-            'include_actual_dates' => $this->input('include_actual_dates', true)
+            'include_actual_dates' => $this->input('include_actual_dates', true),
         ]);
     }
 }

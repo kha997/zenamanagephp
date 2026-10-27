@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -11,8 +13,8 @@ use Mockery;
 use Mockery\MockInterface;
 
 /**
- * Model UserDashboard - Quản lý dashboard của từng user
- * 
+ * Model UserDashboard - Quản lý dashboard của từng user.
+ *
  * @property string $id
  * @property string $user_id ID của user
  * @property string $tenant_id ID của tenant
@@ -25,7 +27,8 @@ use Mockery\MockInterface;
  */
 class UserDashboard extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids;
+    use HasFactory;
 
     /**
      * Mockery instance that drives static expectations during tests.
@@ -33,10 +36,11 @@ class UserDashboard extends Model
     protected static ?MockInterface $staticMock = null;
 
     protected $table = 'user_dashboards';
-    
+
     protected $keyType = 'string';
+
     public $incrementing = false;
-    
+
     protected $fillable = [
         'user_id',
         'tenant_id',
@@ -45,7 +49,7 @@ class UserDashboard extends Model
         'widgets',
         'preferences',
         'is_default',
-        'is_active'
+        'is_active',
     ];
 
     protected $casts = [
@@ -57,7 +61,7 @@ class UserDashboard extends Model
     ];
 
     /**
-     * Relationship: Dashboard thuộc về user
+     * Relationship: Dashboard thuộc về user.
      */
     public function user(): BelongsTo
     {
@@ -65,7 +69,7 @@ class UserDashboard extends Model
     }
 
     /**
-     * Relationship: Dashboard thuộc về tenant
+     * Relationship: Dashboard thuộc về tenant.
      */
     public function tenant(): BelongsTo
     {
@@ -73,7 +77,7 @@ class UserDashboard extends Model
     }
 
     /**
-     * Relationship: Dashboard có nhiều cache data
+     * Relationship: Dashboard có nhiều cache data.
      */
     public function cacheData(): HasMany
     {
@@ -81,7 +85,7 @@ class UserDashboard extends Model
     }
 
     /**
-     * Scope: Lọc theo user
+     * Scope: Lọc theo user.
      */
     public function scopeForUser($query, string $userId)
     {
@@ -89,7 +93,7 @@ class UserDashboard extends Model
     }
 
     /**
-     * Scope: Lọc theo tenant
+     * Scope: Lọc theo tenant.
      */
     public function scopeForTenant($query, string $tenantId)
     {
@@ -97,7 +101,7 @@ class UserDashboard extends Model
     }
 
     /**
-     * Scope: Chỉ lấy dashboard active
+     * Scope: Chỉ lấy dashboard active.
      */
     public function scopeActive($query)
     {
@@ -105,7 +109,7 @@ class UserDashboard extends Model
     }
 
     /**
-     * Scope: Chỉ lấy dashboard mặc định
+     * Scope: Chỉ lấy dashboard mặc định.
      */
     public function scopeDefault($query)
     {
@@ -113,30 +117,30 @@ class UserDashboard extends Model
     }
 
     /**
-     * Thêm widget vào dashboard
+     * Thêm widget vào dashboard.
      */
     public function addWidget(string $widgetId, array $position = [], array $config = [], array $metadata = []): void
     {
         $widgets = $this->widgets ?? [];
-        
+
         $widgets[] = array_merge([
             'id' => $widgetId,
             'widget_id' => $widgetId,
             'position' => $position,
             'config' => $config,
-            'added_at' => now()->toISOString()
+            'added_at' => now()->toISOString(),
         ], $metadata);
 
         $this->update(['widgets' => $widgets]);
     }
 
     /**
-     * Xóa widget khỏi dashboard
+     * Xóa widget khỏi dashboard.
      */
     public function removeWidget(string $widgetId): void
     {
         $widgets = $this->widgets ?? [];
-        
+
         $widgets = array_filter($widgets, function ($widget) use ($widgetId) {
             $widgetIdentifier = $widget['widget_id'] ?? $widget['id'] ?? null;
             if ($widgetIdentifier === $widgetId) {
@@ -154,12 +158,12 @@ class UserDashboard extends Model
     }
 
     /**
-     * Cập nhật vị trí widget
+     * Cập nhật vị trí widget.
      */
     public function updateWidgetPosition(string $widgetId, array $position): void
     {
         $widgets = $this->widgets ?? [];
-        
+
         foreach ($widgets as &$widget) {
             $widgetIdentifier = $widget['instance_id'] ?? $widget['widget_id'] ?? $widget['id'] ?? null;
             if ($widgetIdentifier === $widgetId || ($widget['id'] ?? null) === $widgetId) {
@@ -172,12 +176,12 @@ class UserDashboard extends Model
     }
 
     /**
-     * Cập nhật cấu hình widget
+     * Cập nhật cấu hình widget.
      */
     public function updateWidgetConfig(string $widgetId, array $config): void
     {
         $widgets = $this->widgets ?? [];
-        
+
         foreach ($widgets as &$widget) {
             $widgetIdentifier = $widget['instance_id'] ?? $widget['widget_id'] ?? $widget['id'] ?? null;
             if ($widgetIdentifier === $widgetId || ($widget['id'] ?? null) === $widgetId) {
@@ -190,7 +194,7 @@ class UserDashboard extends Model
     }
 
     /**
-     * Lấy danh sách widget IDs
+     * Lấy danh sách widget IDs.
      */
     public function getWidgetIds(): array
     {
@@ -234,7 +238,7 @@ class UserDashboard extends Model
     }
 
     /**
-     * Lấy cấu hình layout
+     * Lấy cấu hình layout.
      */
     public function getLayoutConfig(): array
     {
@@ -250,7 +254,7 @@ class UserDashboard extends Model
     }
 
     /**
-     * Cập nhật cấu hình layout
+     * Cập nhật cấu hình layout.
      */
     public function updateLayoutConfig(array $config): void
     {
@@ -258,7 +262,7 @@ class UserDashboard extends Model
     }
 
     /**
-     * Lấy preferences của user
+     * Lấy preferences của user.
      */
     public function getPreferences(): array
     {
@@ -266,7 +270,7 @@ class UserDashboard extends Model
     }
 
     /**
-     * Cập nhật preferences
+     * Cập nhật preferences.
      */
     public function updatePreferences(array $preferences): void
     {
@@ -274,7 +278,7 @@ class UserDashboard extends Model
     }
 
     /**
-     * Đặt dashboard làm mặc định
+     * Đặt dashboard làm mặc định.
      */
     public function setAsDefault(): void
     {

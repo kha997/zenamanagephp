@@ -1,20 +1,18 @@
 <?php
 
 namespace App\Listeners;
-use Illuminate\Support\Facades\Auth;
 
-
-use App\Models\Team;
-use App\Models\Notification;
-use App\Models\User;
 use App\Events\TeamCreated;
-use App\Events\TeamUpdated;
 use App\Events\TeamDeleted;
 use App\Events\TeamMemberAdded;
 use App\Events\TeamMemberRemoved;
 use App\Events\TeamRoleChanged;
+use App\Events\TeamUpdated;
+use App\Models\Notification;
+use App\Models\Team;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class TeamEventListener implements ShouldQueue
@@ -27,12 +25,12 @@ class TeamEventListener implements ShouldQueue
     public function handleTeamCreated(TeamCreated $event)
     {
         $team = $event->team;
-        
+
         Log::info('Team created', [
             'team_id' => $team->id,
             'team_name' => $team->name,
             'tenant_id' => $team->tenant_id,
-            'created_by' => $team->created_by
+            'created_by' => $team->created_by,
         ]);
 
         // Notify team creator
@@ -45,10 +43,10 @@ class TeamEventListener implements ShouldQueue
                 'message' => "Team '{$team->name}' has been created successfully",
                 'data' => json_encode([
                     'team_id' => $team->id,
-                    'team_name' => $team->name
+                    'team_name' => $team->name,
                 ]),
                 'priority' => 'normal',
-                'channels' => json_encode(['inapp'])
+                'channels' => json_encode(['inapp']),
             ]);
         }
     }
@@ -59,12 +57,12 @@ class TeamEventListener implements ShouldQueue
     public function handleTeamUpdated(TeamUpdated $event)
     {
         $team = $event->team;
-        
+
         Log::info('Team updated', [
             'team_id' => $team->id,
             'team_name' => $team->name,
             'tenant_id' => $team->tenant_id,
-            'updated_by' => Auth::id()
+            'updated_by' => Auth::id(),
         ]);
 
         // Notify all team members
@@ -78,10 +76,10 @@ class TeamEventListener implements ShouldQueue
                 'message' => "Team '{$team->name}' has been updated",
                 'data' => json_encode([
                     'team_id' => $team->id,
-                    'team_name' => $team->name
+                    'team_name' => $team->name,
                 ]),
                 'priority' => 'normal',
-                'channels' => json_encode(['inapp'])
+                'channels' => json_encode(['inapp']),
             ]);
         }
     }
@@ -92,12 +90,12 @@ class TeamEventListener implements ShouldQueue
     public function handleTeamDeleted(TeamDeleted $event)
     {
         $team = $event->team;
-        
+
         Log::info('Team deleted', [
             'team_id' => $team->id,
             'team_name' => $team->name,
             'tenant_id' => $team->tenant_id,
-            'deleted_by' => Auth::id()
+            'deleted_by' => Auth::id(),
         ]);
 
         // Notify all team members
@@ -111,10 +109,10 @@ class TeamEventListener implements ShouldQueue
                 'message' => "Team '{$team->name}' has been deleted",
                 'data' => json_encode([
                     'team_id' => $team->id,
-                    'team_name' => $team->name
+                    'team_name' => $team->name,
                 ]),
                 'priority' => 'high',
-                'channels' => json_encode(['inapp', 'email'])
+                'channels' => json_encode(['inapp', 'email']),
             ]);
         }
     }
@@ -127,14 +125,14 @@ class TeamEventListener implements ShouldQueue
         $team = $event->team;
         $member = $event->member;
         $role = $event->role;
-        
+
         Log::info('Team member added', [
             'team_id' => $team->id,
             'team_name' => $team->name,
             'member_id' => $member->id,
             'member_name' => $member->name,
             'role' => $role,
-            'tenant_id' => $team->tenant_id
+            'tenant_id' => $team->tenant_id,
         ]);
 
         // Notify the new member
@@ -147,10 +145,10 @@ class TeamEventListener implements ShouldQueue
             'data' => json_encode([
                 'team_id' => $team->id,
                 'team_name' => $team->name,
-                'role' => $role
+                'role' => $role,
             ]),
             'priority' => 'normal',
-            'channels' => json_encode(['inapp', 'email'])
+            'channels' => json_encode(['inapp', 'email']),
         ]);
 
         // Notify team leader
@@ -167,10 +165,10 @@ class TeamEventListener implements ShouldQueue
                     'team_name' => $team->name,
                     'member_id' => $member->id,
                     'member_name' => $member->name,
-                    'role' => $role
+                    'role' => $role,
                 ]),
                 'priority' => 'normal',
-                'channels' => json_encode(['inapp'])
+                'channels' => json_encode(['inapp']),
             ]);
         }
     }
@@ -182,13 +180,13 @@ class TeamEventListener implements ShouldQueue
     {
         $team = $event->team;
         $member = $event->member;
-        
+
         Log::info('Team member removed', [
             'team_id' => $team->id,
             'team_name' => $team->name,
             'member_id' => $member->id,
             'member_name' => $member->name,
-            'tenant_id' => $team->tenant_id
+            'tenant_id' => $team->tenant_id,
         ]);
 
         // Notify the removed member
@@ -200,10 +198,10 @@ class TeamEventListener implements ShouldQueue
             'message' => "You have been removed from team '{$team->name}'",
             'data' => json_encode([
                 'team_id' => $team->id,
-                'team_name' => $team->name
+                'team_name' => $team->name,
             ]),
             'priority' => 'normal',
-            'channels' => json_encode(['inapp', 'email'])
+            'channels' => json_encode(['inapp', 'email']),
         ]);
 
         // Notify team leader
@@ -219,10 +217,10 @@ class TeamEventListener implements ShouldQueue
                     'team_id' => $team->id,
                     'team_name' => $team->name,
                     'member_id' => $member->id,
-                    'member_name' => $member->name
+                    'member_name' => $member->name,
                 ]),
                 'priority' => 'normal',
-                'channels' => json_encode(['inapp'])
+                'channels' => json_encode(['inapp']),
             ]);
         }
     }
@@ -236,7 +234,7 @@ class TeamEventListener implements ShouldQueue
         $member = $event->member;
         $oldRole = $event->oldRole;
         $newRole = $event->newRole;
-        
+
         Log::info('Team role changed', [
             'team_id' => $team->id,
             'team_name' => $team->name,
@@ -244,7 +242,7 @@ class TeamEventListener implements ShouldQueue
             'member_name' => $member->name,
             'old_role' => $oldRole,
             'new_role' => $newRole,
-            'tenant_id' => $team->tenant_id
+            'tenant_id' => $team->tenant_id,
         ]);
 
         // Notify the member whose role changed
@@ -258,10 +256,10 @@ class TeamEventListener implements ShouldQueue
                 'team_id' => $team->id,
                 'team_name' => $team->name,
                 'old_role' => $oldRole,
-                'new_role' => $newRole
+                'new_role' => $newRole,
             ]),
             'priority' => 'normal',
-            'channels' => json_encode(['inapp', 'email'])
+            'channels' => json_encode(['inapp', 'email']),
         ]);
     }
 }

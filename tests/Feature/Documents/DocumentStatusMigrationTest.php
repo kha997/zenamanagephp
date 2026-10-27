@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Documents;
 
@@ -29,7 +31,7 @@ class DocumentStatusMigrationTest extends TestCase
             $driver = DB::connection()->getDriverName();
             self::assertSame('mysql', $driver);
 
-            if (! self::$mysqlDriverReported) {
+            if (!self::$mysqlDriverReported) {
                 fwrite(STDOUT, "GAP-032 migration driver: {$driver}\n");
                 self::$mysqlDriverReported = true;
             }

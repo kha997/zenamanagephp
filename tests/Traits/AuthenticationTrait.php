@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Traits;
 
@@ -11,7 +13,7 @@ use Illuminate\Support\Str;
 use RuntimeException;
 
 /**
- * Trait để hỗ trợ authentication trong tests
+ * Trait để hỗ trợ authentication trong tests.
  */
 trait AuthenticationTrait
 {
@@ -29,8 +31,9 @@ trait AuthenticationTrait
 
         return array_merge($defaultHeaders, $headers);
     }
+
     /**
-     * Tạo user với JWT token cho testing
+     * Tạo user với JWT token cho testing.
      *
      * @param array $attributes
      * @param array $roles
@@ -39,19 +42,19 @@ trait AuthenticationTrait
     protected function createAuthenticatedUser(array $attributes = [], array $roles = []): User
     {
         $tenant = Tenant::factory()->create();
-        
+
         $user = User::factory()->create(array_merge([
             'tenant_id' => $tenant->id,
-            'password' => Hash::make('password')
+            'password' => Hash::make('password'),
         ], $attributes));
-        
+
         $this->assignApiRoles($user, $roles);
-        
+
         return $user;
     }
 
     /**
-     * Tạo và authenticate user trong một bước
+     * Tạo và authenticate user trong một bước.
      *
      * @param array $attributes
      * @param array $roles
@@ -63,7 +66,7 @@ trait AuthenticationTrait
         $user = $this->createAuthenticatedUser($attributes, $selectedRoles);
         $tenant = $this->resolveTenantForUser($user);
         $this->apiAs($user, $tenant);
-        
+
         return $user;
     }
 
@@ -151,7 +154,7 @@ trait AuthenticationTrait
 
     protected function createRbacAdminUser(?Tenant $tenant = null, array $attributes = []): User
     {
-        $tenant = $tenant ?? Tenant::factory()->create();
+        $tenant ??= Tenant::factory()->create();
 
         $user = $this->createTenantUser($tenant, array_merge([
             'name' => 'System Admin',

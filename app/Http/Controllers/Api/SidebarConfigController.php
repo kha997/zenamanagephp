@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
@@ -62,7 +64,7 @@ class SidebarConfigController extends Controller
         // Security validation
         $user = Auth::user();
         $securityErrors = $this->securityGuardService->validateSidebarConfig($validated['config'], $user);
-        
+
         if (!empty($securityErrors)) {
             return response()->json([
                 'success' => false,
@@ -117,7 +119,7 @@ class SidebarConfigController extends Controller
         // Security validation
         $user = Auth::user();
         $securityErrors = $this->securityGuardService->validateSidebarConfig($validated['config'], $user);
-        
+
         if (!empty($securityErrors)) {
             return response()->json([
                 'success' => false,
@@ -178,6 +180,7 @@ class SidebarConfigController extends Controller
         // If no config found, return default
         if (!$config) {
             $defaultConfig = SidebarConfig::getDefaultForRole($role);
+
             return response()->json([
                 'success' => true,
                 'data' => [

@@ -1,14 +1,13 @@
 <?php
 
 namespace App\Http\Requests;
-use Illuminate\Support\Facades\Auth;
-
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
 
 /**
- * Task Bulk Create Request
- * 
+ * Task Bulk Create Request.
+ *
  * Validates bulk task creation with consistent rules
  */
 class TaskBulkCreateRequest extends FormRequest

@@ -15,7 +15,8 @@ use Tests\Traits\AuthenticationTrait;
  */
 final class AdminClearCacheFailsClosedTest extends TestCase
 {
-    use RefreshDatabase, AuthenticationTrait;
+    use RefreshDatabase;
+    use AuthenticationTrait;
 
     public function test_clear_cache_endpoint_refuses_and_leaves_other_tenants_state_intact(): void
     {

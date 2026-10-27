@@ -2,20 +2,19 @@
 
 namespace Tests\Integration;
 
-use Tests\TestCase;
-use App\Models\User;
-use App\Models\UserDashboard;
-use App\Models\DashboardWidget;
+use App\Models\DashboardAlert;
 use App\Models\DashboardMetric;
 use App\Models\DashboardMetricValue;
-use App\Models\DashboardAlert;
+use App\Models\DashboardWidget;
 use App\Models\Project;
-use App\Models\Task;
 use App\Models\Rfi;
+use App\Models\Task;
+use App\Models\User;
+use App\Models\UserDashboard;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Tests\TestCase;
 use Tests\Traits\AuthenticationTrait;
 
 /**
@@ -23,10 +22,13 @@ use Tests\Traits\AuthenticationTrait;
  */
 class SystemIntegrationTest extends TestCase
 {
-    use RefreshDatabase, AuthenticationTrait;
+    use RefreshDatabase;
+    use AuthenticationTrait;
 
     protected $user;
+
     protected $project;
+
     protected $tenant;
 
     protected function setUp(): void
@@ -49,7 +51,7 @@ class SystemIntegrationTest extends TestCase
             'name' => 'Test Project',
             'status' => 'active',
         ]);
-        
+
         // Create comprehensive test data
         $this->createComprehensiveTestData();
 
@@ -64,7 +66,7 @@ class SystemIntegrationTest extends TestCase
             'is_default' => true,
             'is_active' => true,
         ]);
-        
+
         // Authenticate user
         $this->apiAs($this->user, $this->tenant);
     }
@@ -73,13 +75,13 @@ class SystemIntegrationTest extends TestCase
     {
         // Create all widget types
         $this->createAllWidgetTypes();
-        
+
         // Create all metric types
         $this->createAllMetricTypes();
-        
+
         // Create comprehensive project data
         $this->createComprehensiveProjectData();
-        
+
         // Create alerts for all types
         $this->createAllAlertTypes();
     }
@@ -96,7 +98,7 @@ class SystemIntegrationTest extends TestCase
             'config' => json_encode(['default_size' => 'large']),
             'permissions' => json_encode(['project_manager', 'site_engineer']),
             'is_active' => true,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         DashboardWidget::create([
@@ -108,7 +110,7 @@ class SystemIntegrationTest extends TestCase
             'config' => json_encode(['default_size' => 'medium']),
             'permissions' => json_encode(['project_manager', 'client_rep']),
             'is_active' => true,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Chart widgets
@@ -121,7 +123,7 @@ class SystemIntegrationTest extends TestCase
             'config' => json_encode(['default_size' => 'large', 'chart_type' => 'line']),
             'permissions' => json_encode(['project_manager', 'site_engineer']),
             'is_active' => true,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         DashboardWidget::create([
@@ -133,7 +135,7 @@ class SystemIntegrationTest extends TestCase
             'config' => json_encode(['default_size' => 'medium', 'chart_type' => 'pie']),
             'permissions' => json_encode(['project_manager', 'client_rep']),
             'is_active' => true,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Table widgets
@@ -146,7 +148,7 @@ class SystemIntegrationTest extends TestCase
             'config' => json_encode(['default_size' => 'large', 'columns' => ['subject', 'status', 'priority']]),
             'permissions' => json_encode(['project_manager', 'design_lead']),
             'is_active' => true,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         DashboardWidget::create([
@@ -158,7 +160,7 @@ class SystemIntegrationTest extends TestCase
             'config' => json_encode(['default_size' => 'large', 'columns' => ['title', 'status', 'due_date']]),
             'permissions' => json_encode(['project_manager', 'site_engineer']),
             'is_active' => true,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Alert widgets
@@ -171,7 +173,7 @@ class SystemIntegrationTest extends TestCase
             'config' => json_encode(['default_size' => 'medium', 'alert_types' => ['system', 'security']]),
             'permissions' => json_encode(['system_admin']),
             'is_active' => true,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         DashboardWidget::create([
@@ -183,7 +185,7 @@ class SystemIntegrationTest extends TestCase
             'config' => json_encode(['default_size' => 'medium', 'alert_types' => ['project', 'budget', 'schedule']]),
             'permissions' => json_encode(['project_manager', 'site_engineer']),
             'is_active' => true,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Timeline widgets
@@ -196,7 +198,7 @@ class SystemIntegrationTest extends TestCase
             'config' => json_encode(['default_size' => 'large', 'timeline_type' => 'gantt']),
             'permissions' => json_encode(['project_manager', 'site_engineer']),
             'is_active' => true,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         DashboardWidget::create([
@@ -208,7 +210,7 @@ class SystemIntegrationTest extends TestCase
             'config' => json_encode(['default_size' => 'medium', 'timeline_type' => 'milestone']),
             'permissions' => json_encode(['project_manager', 'client_rep']),
             'is_active' => true,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Progress widgets
@@ -221,7 +223,7 @@ class SystemIntegrationTest extends TestCase
             'config' => json_encode(['default_size' => 'medium', 'progress_type' => 'circular']),
             'permissions' => json_encode(['project_manager', 'site_engineer', 'client_rep']),
             'is_active' => true,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         DashboardWidget::create([
@@ -233,7 +235,7 @@ class SystemIntegrationTest extends TestCase
             'config' => json_encode(['default_size' => 'medium', 'progress_type' => 'linear']),
             'permissions' => json_encode(['project_manager', 'site_engineer']),
             'is_active' => true,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
     }
 
@@ -248,7 +250,7 @@ class SystemIntegrationTest extends TestCase
             'type' => 'gauge',
             'is_active' => true,
             'permissions' => json_encode(['project_manager', 'site_engineer', 'client_rep']),
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         DashboardMetricValue::create([
@@ -267,7 +269,7 @@ class SystemIntegrationTest extends TestCase
             'type' => 'gauge',
             'is_active' => true,
             'permissions' => json_encode(['project_manager', 'client_rep']),
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Counter metrics
@@ -279,7 +281,7 @@ class SystemIntegrationTest extends TestCase
             'type' => 'counter',
             'is_active' => true,
             'permissions' => json_encode(['project_manager', 'site_engineer']),
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         DashboardMetric::create([
@@ -290,7 +292,7 @@ class SystemIntegrationTest extends TestCase
             'type' => 'counter',
             'is_active' => true,
             'permissions' => json_encode(['project_manager', 'design_lead']),
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Histogram metrics
@@ -302,7 +304,7 @@ class SystemIntegrationTest extends TestCase
             'type' => 'histogram',
             'is_active' => true,
             'permissions' => json_encode(['project_manager', 'site_engineer']),
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         DashboardMetric::create([
@@ -313,7 +315,7 @@ class SystemIntegrationTest extends TestCase
             'type' => 'histogram',
             'is_active' => true,
             'permissions' => json_encode(['project_manager', 'client_rep']),
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Summary metrics
@@ -325,7 +327,7 @@ class SystemIntegrationTest extends TestCase
             'type' => 'summary',
             'is_active' => true,
             'permissions' => json_encode(['project_manager', 'site_engineer', 'client_rep']),
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
     }
 
@@ -334,7 +336,7 @@ class SystemIntegrationTest extends TestCase
         // Create tasks with different statuses
         $taskStatuses = ['pending', 'in_progress', 'completed', 'cancelled'];
         $priorities = ['low', 'medium', 'high', 'urgent'];
-        
+
         for ($i = 1; $i <= 50; $i++) {
             Task::create([
                 'title' => "Task {$i}",
@@ -344,14 +346,14 @@ class SystemIntegrationTest extends TestCase
                 'due_date' => now()->addDays(rand(1, 30)),
                 'assigned_to' => $this->user->id,
                 'project_id' => $this->project->id,
-                'tenant_id' => $this->tenant->id
+                'tenant_id' => $this->tenant->id,
             ]);
         }
 
         // Create RFIs with different statuses
         $rfiStatuses = ['open', 'answered', 'closed'];
         $disciplines = ['construction', 'electrical', 'mechanical', 'plumbing', 'hvac'];
-        
+
         for ($i = 1; $i <= 25; $i++) {
             RFI::create([
                 'title' => "RFI {$i}",
@@ -366,7 +368,7 @@ class SystemIntegrationTest extends TestCase
                 'asked_by' => $this->user->id,
                 'created_by' => $this->user->id,
                 'project_id' => $this->project->id,
-                'tenant_id' => $this->tenant->id
+                'tenant_id' => $this->tenant->id,
             ]);
         }
     }
@@ -375,7 +377,7 @@ class SystemIntegrationTest extends TestCase
     {
         $alertTypes = ['project', 'budget', 'schedule', 'quality', 'safety', 'system'];
         $severities = ['low', 'medium', 'high', 'critical'];
-        
+
         for ($i = 1; $i <= 20; $i++) {
             DashboardAlert::create([
                 'user_id' => $this->user->id,
@@ -385,7 +387,7 @@ class SystemIntegrationTest extends TestCase
                 'severity' => $severities[array_rand($severities)],
                 'is_read' => rand(0, 1) == 1,
                 'triggered_at' => now()->subDays(rand(0, 30)),
-                'context' => json_encode(['project_id' => $this->project->id])
+                'context' => json_encode(['project_id' => $this->project->id]),
             ]);
         }
     }
@@ -407,17 +409,17 @@ class SystemIntegrationTest extends TestCase
 
         // Step 2: Add multiple widgets of different types
         $widgets = DashboardWidget::where('permissions', 'like', '%project_manager%')->take(5)->get();
-        
+
         $addedWidgets = [];
         foreach ($widgets as $widget) {
             $addResponse = $this->postJson('/api/v1/dashboard/widgets', [
                 'widget_id' => $widget->id,
                 'config' => [
                     'title' => "Custom {$widget->name}",
-                    'size' => 'medium'
-                ]
+                    'size' => 'medium',
+                ],
             ]);
-            
+
             $addResponse->assertStatus(200);
             $addedWidgets[] = $addResponse->json('data.widget_instance');
         }
@@ -429,10 +431,10 @@ class SystemIntegrationTest extends TestCase
             $updateResponse = $this->putJson("/api/v1/dashboard/widgets/{$widgetInstance['id']}/config", [
                 'config' => [
                     'title' => "Updated Widget {$index}",
-                    'size' => 'large'
-                ]
+                    'size' => 'large',
+                ],
             ]);
-            
+
             $updateResponse->assertStatus(200);
         }
 
@@ -445,7 +447,7 @@ class SystemIntegrationTest extends TestCase
         foreach ($layout as $index => $widgetInstance) {
             $layout[$index]['position'] = [
                 'x' => ($index % 3) * 4,
-                'y' => intval($index / 3) * 4
+                'y' => intval($index / 3) * 4,
             ];
         }
 
@@ -453,16 +455,16 @@ class SystemIntegrationTest extends TestCase
             'layout' => $layout,
             'widgets' => $layout,
         ]);
-        
+
         $layoutResponse->assertStatus(200);
 
         // Step 5: Test all widget data endpoints
         foreach ($addedWidgets as $widgetInstance) {
             $widget = DashboardWidget::find($widgetInstance['widget_id']);
-            
+
             $dataResponse = $this->getJson("/api/v1/dashboard/widgets/{$widget->id}/data");
             $dataResponse->assertStatus(200);
-            
+
             $data = $dataResponse->json('data');
             $this->assertIsArray($data);
         }
@@ -470,7 +472,7 @@ class SystemIntegrationTest extends TestCase
         // Step 6: Test metrics endpoints
         $metricsResponse = $this->getJson('/api/v1/dashboard/metrics');
         $metricsResponse->assertStatus(200);
-        
+
         $metrics = $metricsResponse->json('data');
         $this->assertIsArray($metrics);
         $this->assertGreaterThan(0, count($metrics));
@@ -478,18 +480,18 @@ class SystemIntegrationTest extends TestCase
         // Step 7: Test alerts management
         $alertsResponse = $this->getJson('/api/v1/dashboard/alerts');
         $alertsResponse->assertStatus(200);
-        
+
         $alerts = $alertsResponse->json('data');
         $this->assertIsArray($alerts);
 
         // Mark some alerts as read
-        $unreadAlerts = array_filter($alerts, function($alert) {
+        $unreadAlerts = array_filter($alerts, function ($alert) {
             return !$alert['is_read'];
         });
 
         if (count($unreadAlerts) > 0) {
             $firstAlert = array_values($unreadAlerts)[0];
-            
+
             $markReadResponse = $this->putJson("/api/v1/dashboard/alerts/{$firstAlert['id']}/read");
             $markReadResponse->assertStatus(200);
         }
@@ -497,7 +499,7 @@ class SystemIntegrationTest extends TestCase
         // Step 8: Test customization features
         $customizationResponse = $this->getJson('/api/v1/dashboard/customization/');
         $customizationResponse->assertStatus(200);
-        
+
         $customizationData = $customizationResponse->json('data');
         $this->assertArrayHasKey('available_widgets', $customizationData);
         $this->assertArrayHasKey('customization_options', $customizationData);
@@ -508,31 +510,31 @@ class SystemIntegrationTest extends TestCase
                 'theme' => 'dark',
                 'refresh_interval' => 60,
                 'compact_mode' => true,
-                'show_widget_borders' => false
-            ]
+                'show_widget_borders' => false,
+            ],
         ]);
-        
+
         $preferencesResponse->assertStatus(200);
 
         // Step 10: Test export/import
         $exportResponse = $this->getJson('/api/v1/dashboard/customization/export');
         $exportResponse->assertStatus(200);
-        
+
         $exportData = $exportResponse->json('data');
         $this->assertArrayHasKey('version', $exportData);
         $this->assertArrayHasKey('dashboard', $exportData);
 
         // Step 11: Test project context switching
         $switchProjectResponse = $this->postJson('/api/v1/dashboard/role-based/switch-project', [
-            'project_id' => $this->project->id
+            'project_id' => $this->project->id,
         ]);
-        
+
         $switchProjectResponse->assertStatus(200);
 
         // Step 12: Verify final dashboard state
         $finalDashboardResponse = $this->getJson('/api/v1/dashboard');
         $finalDashboardResponse->assertStatus(200);
-        
+
         $finalDashboard = $finalDashboardResponse->json('data');
         $this->assertCount(5, $finalDashboard['layout']);
         $this->assertEquals('dark', $finalDashboard['preferences']['theme']);
@@ -542,42 +544,42 @@ class SystemIntegrationTest extends TestCase
     public function it_can_handle_all_widget_types()
     {
         $widgetTypes = ['card', 'chart', 'table', 'alert', 'timeline', 'progress'];
-        
+
         foreach ($widgetTypes as $type) {
             $widget = DashboardWidget::where('type', $type)
                 ->get()
                 ->first(fn (DashboardWidget $candidate) => $candidate->isAvailableForRole($this->user->role));
-            
+
             if ($widget) {
                 // Add widget
                 $addResponse = $this->postJson('/api/v1/dashboard/widgets', [
                     'widget_id' => $widget->id,
                     'config' => [
                         'title' => "Test {$type} Widget",
-                        'size' => 'medium'
-                    ]
+                        'size' => 'medium',
+                    ],
                 ]);
-                
+
                 $addResponse->assertStatus(200);
-                
+
                 // Get widget data
                 $dataResponse = $this->getJson("/api/v1/dashboard/widgets/{$widget->id}/data");
                 $dataResponse->assertStatus(200);
-                
+
                 $data = $dataResponse->json('data');
                 $this->assertIsArray($data);
-                
+
                 // Update widget config
                 $widgetInstance = $addResponse->json('data.widget_instance');
                 $updateResponse = $this->putJson("/api/v1/dashboard/widgets/{$widgetInstance['id']}/config", [
                     'config' => [
                         'title' => "Updated {$type} Widget",
-                        'size' => 'large'
-                    ]
+                        'size' => 'large',
+                    ],
                 ]);
-                
+
                 $updateResponse->assertStatus(200);
-                
+
                 // Remove widget
                 $removeResponse = $this->deleteJson("/api/v1/dashboard/widgets/{$widgetInstance['id']}");
                 $removeResponse->assertStatus(200);
@@ -617,7 +619,7 @@ class SystemIntegrationTest extends TestCase
         // Test metrics endpoint
         $metricsResponse = $this->getJson('/api/v1/dashboard/metrics');
         $metricsResponse->assertStatus(200);
-        
+
         $metrics = $metricsResponse->json('data');
         $this->assertIsArray($metrics);
 
@@ -644,7 +646,7 @@ class SystemIntegrationTest extends TestCase
     public function it_can_handle_all_alert_types()
     {
         $alertTypes = ['project', 'budget', 'schedule', 'quality', 'safety', 'system'];
-        
+
         foreach ($alertTypes as $type) {
             // Create alert
             $alert = DashboardAlert::create([
@@ -655,16 +657,16 @@ class SystemIntegrationTest extends TestCase
                 'severity' => 'medium',
                 'is_read' => false,
                 'triggered_at' => now(),
-                'context' => json_encode(['test' => true])
+                'context' => json_encode(['test' => true]),
             ]);
 
             // Test alert retrieval
             $alertsResponse = $this->getJson('/api/v1/dashboard/alerts');
             $alertsResponse->assertStatus(200);
-            
+
             $alerts = $alertsResponse->json('data');
             $alertFound = false;
-            
+
             foreach ($alerts as $alertData) {
                 if ($alertData['id'] === $alert->id) {
                     $alertFound = true;
@@ -672,13 +674,13 @@ class SystemIntegrationTest extends TestCase
                     break;
                 }
             }
-            
+
             $this->assertTrue($alertFound, "Alert of type {$type} not found");
-            
+
             // Mark alert as read
             $markReadResponse = $this->putJson("/api/v1/dashboard/alerts/{$alert->id}/read");
             $markReadResponse->assertStatus(200);
-            
+
             // Verify alert is marked as read
             $alert->refresh();
             $this->assertTrue($alert->is_read);
@@ -697,7 +699,7 @@ class SystemIntegrationTest extends TestCase
                 'email' => "{$role}@example.com",
                 'password' => Hash::make('password'),
                 'role' => $role,
-                'tenant_id' => $this->tenant->id
+                'tenant_id' => $this->tenant->id,
             ]);
 
             // GAP-051: grant the canonical RBAC role RoleBasedAccessControlMiddleware's
@@ -737,21 +739,21 @@ class SystemIntegrationTest extends TestCase
             // Test role-based metrics
             $metricsResponse = $this->getJson('/api/v1/dashboard/role-based/metrics');
             $metricsResponse->assertStatus(200);
-            
+
             $metrics = $metricsResponse->json('data.metrics');
             $this->assertIsArray($metrics);
 
             // Test role-based alerts
             $alertsResponse = $this->getJson('/api/v1/dashboard/role-based/alerts');
             $alertsResponse->assertStatus(200);
-            
+
             $alerts = $alertsResponse->json('data.alerts');
             $this->assertIsArray($alerts);
 
             // Test permissions
             $permissionsResponse = $this->getJson('/api/v1/dashboard/role-based/permissions');
             $permissionsResponse->assertStatus(200);
-            
+
             $permissions = $permissionsResponse->json('data.permissions');
             $this->assertIsArray($permissions);
             $this->assertArrayHasKey('dashboard', $permissions);
@@ -764,17 +766,17 @@ class SystemIntegrationTest extends TestCase
     {
         $concurrentRequests = 10;
         $responses = [];
-        
+
         // Make concurrent requests
         for ($i = 0; $i < $concurrentRequests; $i++) {
             $responses[] = $this->getJson('/api/v1/dashboard/role-based');
         }
-        
+
         // Verify all requests succeeded
         foreach ($responses as $response) {
             $response->assertStatus(200);
         }
-        
+
         // Verify data consistency
         $firstResponse = $responses[0]->json('data');
         foreach (array_slice($responses, 1) as $response) {
@@ -796,7 +798,7 @@ class SystemIntegrationTest extends TestCase
                 'due_date' => now()->addDays(rand(1, 30)),
                 'assigned_to' => $this->user->id,
                 'project_id' => $this->project->id,
-                'tenant_id' => $this->tenant->id
+                'tenant_id' => $this->tenant->id,
             ]);
         }
 
@@ -815,31 +817,31 @@ class SystemIntegrationTest extends TestCase
                 'asked_by' => $this->user->id,
                 'created_by' => $this->user->id,
                 'project_id' => $this->project->id,
-                'tenant_id' => $this->tenant->id
+                'tenant_id' => $this->tenant->id,
             ]);
         }
 
         // Test dashboard performance with large datasets
         $startTime = microtime(true);
-        
+
         $response = $this->getJson('/api/v1/dashboard/role-based');
-        
+
         $endTime = microtime(true);
         $executionTime = ($endTime - $startTime) * 1000; // Convert to milliseconds
-        
+
         $response->assertStatus(200);
         $this->assertLessThan(2000, $executionTime, 'Dashboard should load in less than 2000ms with large datasets');
-        
+
         // Test widget data performance
         $widget = DashboardWidget::where('code', 'project_overview')->first();
-        
+
         $startTime = microtime(true);
-        
+
         $dataResponse = $this->getJson("/api/v1/dashboard/widgets/{$widget->id}/data");
-        
+
         $endTime = microtime(true);
         $executionTime = ($endTime - $startTime) * 1000;
-        
+
         $dataResponse->assertStatus(200);
         $this->assertLessThan(1000, $executionTime, 'Widget data should load in less than 1000ms with large datasets');
     }
@@ -865,7 +867,7 @@ class SystemIntegrationTest extends TestCase
         });
 
         $response = $this->postJson('/api/v1/dashboard/widgets', [
-            'widget_id' => $widget->id
+            'widget_id' => $widget->id,
         ]);
 
         $response->assertStatus(500);
@@ -877,22 +879,22 @@ class SystemIntegrationTest extends TestCase
     public function it_can_handle_memory_usage()
     {
         $startMemory = memory_get_usage();
-        
+
         // Perform multiple operations
         for ($i = 0; $i < 10; $i++) {
             $response = $this->getJson('/api/v1/dashboard/role-based');
             $response->assertStatus(200);
-            
+
             $widgetsResponse = $this->getJson('/api/v1/dashboard/widgets');
             $widgetsResponse->assertStatus(200);
-            
+
             $metricsResponse = $this->getJson('/api/v1/dashboard/metrics');
             $metricsResponse->assertStatus(200);
         }
-        
+
         $endMemory = memory_get_usage();
         $memoryUsed = ($endMemory - $startMemory) / 1024 / 1024; // Convert to MB
-        
+
         $this->assertLessThan(100, $memoryUsed, 'Memory usage should be less than 100MB for 10 operations');
     }
 
@@ -901,28 +903,28 @@ class SystemIntegrationTest extends TestCase
     {
         // Test error handling and recovery
         $widget = DashboardWidget::first();
-        
+
         // Test with invalid widget ID
         $invalidResponse = $this->postJson('/api/v1/dashboard/widgets', [
-            'widget_id' => 'invalid-widget-id'
+            'widget_id' => 'invalid-widget-id',
         ]);
         $invalidResponse->assertStatus(422);
-        
+
         // Test with valid widget ID (should work)
         $validResponse = $this->postJson('/api/v1/dashboard/widgets', [
-            'widget_id' => $widget->id
+            'widget_id' => $widget->id,
         ]);
         $validResponse->assertStatus(200);
-        
+
         // Test with invalid project context
         $invalidProjectResponse = $this->postJson('/api/v1/dashboard/role-based/switch-project', [
-            'project_id' => 'invalid-project-id'
+            'project_id' => 'invalid-project-id',
         ]);
         $invalidProjectResponse->assertStatus(422);
-        
+
         // Test with valid project context (should work)
         $validProjectResponse = $this->postJson('/api/v1/dashboard/role-based/switch-project', [
-            'project_id' => $this->project->id
+            'project_id' => $this->project->id,
         ]);
         $validProjectResponse->assertStatus(200);
     }

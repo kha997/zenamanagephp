@@ -1,15 +1,17 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use App\Models\Role;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * User Role Assignment Seeder
- * 
+ * User Role Assignment Seeder.
+ *
  * Gán roles cho users
  * Sử dụng ULID cho tất cả foreign keys
  */
@@ -22,17 +24,17 @@ class UserRoleSeeder extends Seeder
     {
         $adminUser = User::where('email', 'admin@zena.local')->first();
         $adminRole = Role::where('name', 'System Admin')->first();
-        
+
         if ($adminUser && $adminRole) {
             // Gán system admin role cho admin user bằng updateOrInsert()
             DB::table('user_roles')->updateOrInsert(
                 [
                     'user_id' => $adminUser->id,
-                    'role_id' => $adminRole->id
+                    'role_id' => $adminRole->id,
                 ],
                 [
                     'created_at' => now(),
-                    'updated_at' => now()
+                    'updated_at' => now(),
                 ]
             );
         }
@@ -40,17 +42,17 @@ class UserRoleSeeder extends Seeder
         // Gán roles cho các users khác
         $otherUsers = User::where('email', '!=', 'admin@zena.local')->take(5)->get();
         $memberRole = Role::where('name', 'Project Member')->first();
-        
+
         if ($memberRole) {
             foreach ($otherUsers as $user) {
                 DB::table('user_roles')->updateOrInsert(
                     [
                         'user_id' => $user->id,
-                        'role_id' => $memberRole->id
+                        'role_id' => $memberRole->id,
                     ],
                     [
                         'created_at' => now(),
-                        'updated_at' => now()
+                        'updated_at' => now(),
                     ]
                 );
             }

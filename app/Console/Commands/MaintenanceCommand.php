@@ -41,6 +41,7 @@ class MaintenanceCommand extends Command
                 $this->error('Refusing cache maintenance: there is no maintenance-owned cache namespace. '
                     . 'The application cache holds rate-limit counters, OIDC login state and scheduler locks, '
                     . 'so it is never flushed by maintenance (GAP-054).');
+
                 return 1;
             case 'database':
                 $this->optimizeDatabase();
@@ -56,15 +57,17 @@ class MaintenanceCommand extends Command
                 break;
             default:
                 $this->error('Invalid task specified. Available tasks: all, cache, database, logs, metrics, backup');
+
                 return 1;
         }
 
         $this->info('Maintenance completed successfully!');
+
         return 0;
     }
 
     /**
-     * Run all maintenance tasks
+     * Run all maintenance tasks.
      */
     private function runAllTasks()
     {
@@ -79,7 +82,7 @@ class MaintenanceCommand extends Command
     }
 
     /**
-     * Optimize database
+     * Optimize database.
      */
     private function optimizeDatabase()
     {
@@ -122,7 +125,7 @@ class MaintenanceCommand extends Command
     }
 
     /**
-     * Cleanup old logs
+     * Cleanup old logs.
      */
     private function cleanupLogs()
     {
@@ -138,7 +141,7 @@ class MaintenanceCommand extends Command
             $this->completeMaintenanceTask($task, [
                 'deleted_logs' => $deletedLogs,
                 'deleted_tasks' => $deletedTasks,
-                'deleted_metrics' => $deletedMetrics
+                'deleted_metrics' => $deletedMetrics,
             ]);
 
             $this->info("✓ Cleaned up {$deletedLogs} logs, {$deletedTasks} tasks, {$deletedMetrics} metrics");
@@ -149,7 +152,7 @@ class MaintenanceCommand extends Command
     }
 
     /**
-     * Collect system metrics
+     * Collect system metrics.
      */
     private function collectMetrics()
     {
@@ -183,11 +186,11 @@ class MaintenanceCommand extends Command
 
             if ($driver === 'mysql') {
                 try {
-                    $dbSize = DB::select("
+                    $dbSize = DB::select('
                         SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS size_mb
                         FROM information_schema.tables 
                         WHERE table_schema = DATABASE()
-                    ")[0]->size_mb ?? 0;
+                    ')[0]->size_mb ?? 0;
 
                     PerformanceMetric::record('database_size', $dbSize, 'MB', 'database');
                     $recordedMetrics[] = 'database_size';
@@ -235,7 +238,7 @@ class MaintenanceCommand extends Command
     }
 
     /**
-     * Create system backup
+     * Create system backup.
      */
     private function createBackup()
     {
@@ -248,7 +251,7 @@ class MaintenanceCommand extends Command
             $path = storage_path('backups/' . $filename);
 
             if (!file_exists(dirname($path))) {
-                mkdir(dirname($path), 0755, true);
+                mkdir(dirname($path), 0o755, true);
             }
 
             $driver = DB::connection()->getDriverName();
@@ -279,10 +282,10 @@ class MaintenanceCommand extends Command
                 'filename' => $filename,
                 'file_size' => $fileSize,
                 'backup_path' => $path,
-                'driver' => $driver
+                'driver' => $driver,
             ]);
 
-            $this->info("✓ Backup created successfully: {$filename} (" . $this->formatBytes($fileSize) . ")");
+            $this->info("✓ Backup created successfully: {$filename} (" . $this->formatBytes($fileSize) . ')');
         } catch (\Exception $e) {
             $this->failMaintenanceTask($task, $e->getMessage());
             $this->error('✗ Failed to create backup: ' . $e->getMessage());
@@ -293,6 +296,7 @@ class MaintenanceCommand extends Command
     {
         if (!Schema::hasTable('maintenance_tasks')) {
             $this->warn("maintenance_tasks table is missing; skipping log for {$name}");
+
             return null;
         }
 
@@ -340,7 +344,7 @@ class MaintenanceCommand extends Command
     }
 
     /**
-     * Convert memory limit string to bytes
+     * Convert memory limit string to bytes.
      */
     private function convertToBytes($val)
     {
@@ -351,8 +355,10 @@ class MaintenanceCommand extends Command
         switch ($last) {
             case 'g':
                 $val *= 1024;
+                // no break
             case 'm':
                 $val *= 1024;
+                // no break
             case 'k':
                 $val *= 1024;
         }
@@ -361,7 +367,7 @@ class MaintenanceCommand extends Command
     }
 
     /**
-     * Format bytes to human readable format
+     * Format bytes to human readable format.
      */
     private function formatBytes($bytes, $precision = 2)
     {

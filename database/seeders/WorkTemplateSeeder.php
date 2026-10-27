@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Seeders;
 
@@ -6,8 +8,8 @@ use Illuminate\Database\Seeder;
 use Src\CoreProject\Models\WorkTemplate;
 
 /**
- * Seeder cho WorkTemplate model
- * 
+ * Seeder cho WorkTemplate model.
+ *
  * Tạo dữ liệu mẫu cho work templates
  */
 class WorkTemplateSeeder extends Seeder
@@ -24,7 +26,7 @@ class WorkTemplateSeeder extends Seeder
     }
 
     /**
-     * Tạo design templates
+     * Tạo design templates.
      */
     private function createDesignTemplates(): void
     {
@@ -39,30 +41,30 @@ class WorkTemplateSeeder extends Seeder
                         'description' => 'Khảo sát địa hình, hiện trạng công trình',
                         'estimated_hours' => 16,
                         'priority' => 'high',
-                        'tags' => ['survey', 'site-analysis']
+                        'tags' => ['survey', 'site-analysis'],
                     ],
                     [
                         'name' => 'Phác thảo ý tưởng thiết kế',
                         'description' => 'Tạo các phác thảo ban đầu cho thiết kế',
                         'estimated_hours' => 24,
                         'priority' => 'normal',
-                        'tags' => ['concept', 'sketching']
+                        'tags' => ['concept', 'sketching'],
                     ],
                     [
                         'name' => 'Thiết kế sơ bộ',
                         'description' => 'Hoàn thiện thiết kế sơ bộ với các bản vẽ cơ bản',
                         'estimated_hours' => 40,
                         'priority' => 'high',
-                        'tags' => ['preliminary-design', 'drawings']
+                        'tags' => ['preliminary-design', 'drawings'],
                     ],
                     [
                         'name' => 'Thiết kế chi tiết',
                         'description' => 'Hoàn thiện thiết kế chi tiết và bản vẽ thi công',
                         'estimated_hours' => 80,
                         'priority' => 'high',
-                        'tags' => ['detailed-design', 'construction-drawings']
-                    ]
-                ]
+                        'tags' => ['detailed-design', 'construction-drawings'],
+                    ],
+                ],
             ],
             'version' => 1,
             'is_active' => true,
@@ -79,21 +81,21 @@ class WorkTemplateSeeder extends Seeder
                         'description' => 'Tư vấn và xác định phong cách thiết kế',
                         'estimated_hours' => 8,
                         'priority' => 'normal',
-                        'tags' => ['consultation', 'style']
+                        'tags' => ['consultation', 'style'],
                     ],
                     [
                         'name' => 'Thiết kế layout',
                         'description' => 'Thiết kế bố trí không gian nội thất',
                         'estimated_hours' => 20,
                         'priority' => 'high',
-                        'tags' => ['layout', 'space-planning']
+                        'tags' => ['layout', 'space-planning'],
                     ],
                     [
                         'name' => 'Chọn vật liệu và màu sắc',
                         'description' => 'Lựa chọn vật liệu, màu sắc cho nội thất',
                         'estimated_hours' => 12,
                         'priority' => 'normal',
-                        'tags' => ['materials', 'colors']
+                        'tags' => ['materials', 'colors'],
                     ],
                     [
                         'name' => 'Render 3D',
@@ -101,9 +103,9 @@ class WorkTemplateSeeder extends Seeder
                         'estimated_hours' => 32,
                         'priority' => 'normal',
                         'tags' => ['3d-rendering', 'visualization'],
-                        'conditional_tag' => 'premium_package'
-                    ]
-                ]
+                        'conditional_tag' => 'premium_package',
+                    ],
+                ],
             ],
             'version' => 1,
             'is_active' => true,
@@ -111,7 +113,7 @@ class WorkTemplateSeeder extends Seeder
     }
 
     /**
-     * Tạo construction templates
+     * Tạo construction templates.
      */
     private function createConstructionTemplates(): void
     {
@@ -126,37 +128,37 @@ class WorkTemplateSeeder extends Seeder
                         'description' => 'San lấp, chuẩn bị mặt bằng thi công',
                         'estimated_hours' => 40,
                         'priority' => 'high',
-                        'tags' => ['site-preparation', 'earthwork']
+                        'tags' => ['site-preparation', 'earthwork'],
                     ],
                     [
                         'name' => 'Đào móng',
                         'description' => 'Đào hố móng theo thiết kế',
                         'estimated_hours' => 32,
                         'priority' => 'high',
-                        'tags' => ['foundation', 'excavation']
+                        'tags' => ['foundation', 'excavation'],
                     ],
                     [
                         'name' => 'Đổ bê tông móng',
                         'description' => 'Thi công bê tông móng',
                         'estimated_hours' => 24,
                         'priority' => 'critical',
-                        'tags' => ['foundation', 'concrete']
+                        'tags' => ['foundation', 'concrete'],
                     ],
                     [
                         'name' => 'Xây tường',
                         'description' => 'Thi công xây tường gạch',
                         'estimated_hours' => 80,
                         'priority' => 'high',
-                        'tags' => ['walls', 'masonry']
+                        'tags' => ['walls', 'masonry'],
                     ],
                     [
                         'name' => 'Lắp đặt mái',
                         'description' => 'Thi công kết cấu mái và lợp mái',
                         'estimated_hours' => 48,
                         'priority' => 'high',
-                        'tags' => ['roof', 'structure']
-                    ]
-                ]
+                        'tags' => ['roof', 'structure'],
+                    ],
+                ],
             ],
             'version' => 1,
             'is_active' => true,
@@ -164,7 +166,7 @@ class WorkTemplateSeeder extends Seeder
     }
 
     /**
-     * Tạo QC templates
+     * Tạo QC templates.
      */
     private function createQcTemplates(): void
     {
@@ -179,30 +181,30 @@ class WorkTemplateSeeder extends Seeder
                         'description' => 'Kiểm tra chất lượng vật liệu trước khi sử dụng',
                         'estimated_hours' => 8,
                         'priority' => 'high',
-                        'tags' => ['material-inspection', 'quality-control']
+                        'tags' => ['material-inspection', 'quality-control'],
                     ],
                     [
                         'name' => 'Kiểm tra quá trình thi công',
                         'description' => 'Giám sát và kiểm tra trong quá trình thi công',
                         'estimated_hours' => 40,
                         'priority' => 'critical',
-                        'tags' => ['process-inspection', 'supervision']
+                        'tags' => ['process-inspection', 'supervision'],
                     ],
                     [
                         'name' => 'Kiểm tra sản phẩm hoàn thành',
                         'description' => 'Kiểm tra chất lượng sản phẩm sau khi hoàn thành',
                         'estimated_hours' => 16,
                         'priority' => 'high',
-                        'tags' => ['final-inspection', 'quality-assurance']
+                        'tags' => ['final-inspection', 'quality-assurance'],
                     ],
                     [
                         'name' => 'Lập báo cáo chất lượng',
                         'description' => 'Tổng hợp và lập báo cáo chất lượng',
                         'estimated_hours' => 8,
                         'priority' => 'normal',
-                        'tags' => ['reporting', 'documentation']
-                    ]
-                ]
+                        'tags' => ['reporting', 'documentation'],
+                    ],
+                ],
             ],
             'version' => 1,
             'is_active' => true,
@@ -210,7 +212,7 @@ class WorkTemplateSeeder extends Seeder
     }
 
     /**
-     * Tạo inspection templates
+     * Tạo inspection templates.
      */
     private function createInspectionTemplates(): void
     {
@@ -225,30 +227,30 @@ class WorkTemplateSeeder extends Seeder
                         'description' => 'Chuẩn bị đầy đủ hồ sơ cho quá trình nghiệm thu',
                         'estimated_hours' => 16,
                         'priority' => 'high',
-                        'tags' => ['documentation', 'preparation']
+                        'tags' => ['documentation', 'preparation'],
                     ],
                     [
                         'name' => 'Nghiệm thu từng hạng mục',
                         'description' => 'Nghiệm thu chi tiết từng hạng mục công trình',
                         'estimated_hours' => 32,
                         'priority' => 'critical',
-                        'tags' => ['detailed-inspection', 'item-by-item']
+                        'tags' => ['detailed-inspection', 'item-by-item'],
                     ],
                     [
                         'name' => 'Nghiệm thu tổng thể',
                         'description' => 'Nghiệm thu tổng thể toàn bộ công trình',
                         'estimated_hours' => 24,
                         'priority' => 'critical',
-                        'tags' => ['overall-inspection', 'final-acceptance']
+                        'tags' => ['overall-inspection', 'final-acceptance'],
                     ],
                     [
                         'name' => 'Bàn giao công trình',
                         'description' => 'Thực hiện bàn giao công trình cho chủ đầu tư',
                         'estimated_hours' => 8,
                         'priority' => 'high',
-                        'tags' => ['handover', 'delivery']
-                    ]
-                ]
+                        'tags' => ['handover', 'delivery'],
+                    ],
+                ],
             ],
             'version' => 1,
             'is_active' => true,

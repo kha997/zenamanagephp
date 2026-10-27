@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Exceptions\Dashboard\UnsupportedDashboardRole;
 use App\Exceptions\Dashboard\ForbiddenDashboardProject;
+use App\Exceptions\Dashboard\UnsupportedDashboardRole;
+use App\Http\Controllers\Controller;
 use App\Services\DashboardRoleBasedService;
 use App\Services\ErrorEnvelopeService;
 use Illuminate\Http\JsonResponse;
@@ -23,21 +23,21 @@ class DashboardRoleBasedController extends Controller
     }
 
     /**
-     * Get role-based dashboard
+     * Get role-based dashboard.
      */
     public function getRoleBasedDashboard(Request $request): JsonResponse
     {
         try {
             $validator = Validator::make($request->all(), [
                 'project_id' => 'sometimes|string|exists:projects,id',
-                'refresh_cache' => 'sometimes|boolean'
+                'refresh_cache' => 'sometimes|boolean',
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -54,10 +54,9 @@ class DashboardRoleBasedController extends Controller
                     'user_role' => $user->role,
                     'project_context' => $projectId ? 'project_specific' : 'all_projects',
                     'cache_refreshed' => $refreshCache,
-                    'generated_at' => now()->toISOString()
-                ]
+                    'generated_at' => now()->toISOString(),
+                ],
             ]);
-
         } catch (UnsupportedDashboardRole $e) {
             return ErrorEnvelopeService::error(
                 'DASHBOARD.ROLE_UNSUPPORTED',
@@ -78,7 +77,7 @@ class DashboardRoleBasedController extends Controller
             Log::error('Failed to get role-based dashboard', [
                 'user_id' => Auth::id(),
                 'project_id' => $request->get('project_id'),
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return ErrorEnvelopeService::error(
@@ -92,7 +91,7 @@ class DashboardRoleBasedController extends Controller
     }
 
     /**
-     * Get role-specific widgets
+     * Get role-specific widgets.
      */
     public function getRoleWidgets(Request $request): JsonResponse
     {
@@ -100,14 +99,14 @@ class DashboardRoleBasedController extends Controller
             $validator = Validator::make($request->all(), [
                 'project_id' => 'sometimes|string|exists:projects,id',
                 'category' => 'sometimes|string',
-                'include_data' => 'sometimes|boolean'
+                'include_data' => 'sometimes|boolean',
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -132,10 +131,9 @@ class DashboardRoleBasedController extends Controller
                 'data' => [
                     'widgets' => array_values($widgets),
                     'role_config' => $roleConfig,
-                    'total_count' => count($widgets)
-                ]
+                    'total_count' => count($widgets),
+                ],
             ]);
-
         } catch (UnsupportedDashboardRole $e) {
             return ErrorEnvelopeService::error(
                 'DASHBOARD.ROLE_UNSUPPORTED',
@@ -156,7 +154,7 @@ class DashboardRoleBasedController extends Controller
             Log::error('Failed to get role widgets', [
                 'user_id' => Auth::id(),
                 'project_id' => $request->get('project_id'),
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return ErrorEnvelopeService::error(
@@ -170,7 +168,7 @@ class DashboardRoleBasedController extends Controller
     }
 
     /**
-     * Get role-specific metrics
+     * Get role-specific metrics.
      */
     public function getRoleMetrics(Request $request): JsonResponse
     {
@@ -178,14 +176,14 @@ class DashboardRoleBasedController extends Controller
             $validator = Validator::make($request->all(), [
                 'project_id' => 'sometimes|string|exists:projects,id',
                 'time_range' => 'sometimes|string|in:1d,7d,30d,90d,1y',
-                'include_trends' => 'sometimes|boolean'
+                'include_trends' => 'sometimes|boolean',
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -201,6 +199,7 @@ class DashboardRoleBasedController extends Controller
                 if (!$includeTrends) {
                     unset($metric['trend']);
                 }
+
                 return $metric;
             }, $metrics);
 
@@ -209,27 +208,26 @@ class DashboardRoleBasedController extends Controller
                 'data' => [
                     'metrics' => $metrics,
                     'time_range' => $timeRange,
-                    'total_count' => count($metrics)
-                ]
+                    'total_count' => count($metrics),
+                ],
             ]);
-
         } catch (\Exception $e) {
             Log::error('Failed to get role metrics', [
                 'user_id' => Auth::id(),
                 'project_id' => $request->get('project_id'),
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to load role metrics',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
 
     /**
-     * Get role-specific alerts
+     * Get role-specific alerts.
      */
     public function getRoleAlerts(Request $request): JsonResponse
     {
@@ -238,14 +236,14 @@ class DashboardRoleBasedController extends Controller
                 'project_id' => 'sometimes|string|exists:projects,id',
                 'severity' => 'sometimes|string|in:low,medium,high,critical',
                 'unread_only' => 'sometimes|boolean',
-                'limit' => 'sometimes|integer|min:1|max:100'
+                'limit' => 'sometimes|integer|min:1|max:100',
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -282,28 +280,27 @@ class DashboardRoleBasedController extends Controller
                     'filters' => [
                         'severity' => $severity,
                         'unread_only' => $unreadOnly,
-                        'project_id' => $projectId
-                    ]
-                ]
+                        'project_id' => $projectId,
+                    ],
+                ],
             ]);
-
         } catch (\Exception $e) {
             Log::error('Failed to get role alerts', [
                 'user_id' => Auth::id(),
                 'project_id' => $request->get('project_id'),
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to load role alerts',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
 
     /**
-     * Get role permissions
+     * Get role permissions.
      */
     public function getRolePermissions(): JsonResponse
     {
@@ -316,26 +313,25 @@ class DashboardRoleBasedController extends Controller
                 'data' => [
                     'permissions' => $permissions,
                     'user_role' => $user->role,
-                    'role_name' => $this->roleBasedService->getRoleConfiguration($user->role)['name']
-                ]
+                    'role_name' => $this->roleBasedService->getRoleConfiguration($user->role)['name'],
+                ],
             ]);
-
         } catch (\Exception $e) {
             Log::error('Failed to get role permissions', [
                 'user_id' => Auth::id(),
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to load role permissions',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
 
     /**
-     * Get role configuration
+     * Get role configuration.
      */
     public function getRoleConfiguration(): JsonResponse
     {
@@ -348,39 +344,38 @@ class DashboardRoleBasedController extends Controller
                 'data' => [
                     'role_config' => $roleConfig,
                     'user_role' => $user->role,
-                    'tenant_id' => $user->tenant_id
-                ]
+                    'tenant_id' => $user->tenant_id,
+                ],
             ]);
-
         } catch (\Exception $e) {
             Log::error('Failed to get role configuration', [
                 'user_id' => Auth::id(),
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to load role configuration',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
 
     /**
-     * Get project context for user
+     * Get project context for user.
      */
     public function getProjectContext(Request $request): JsonResponse
     {
         try {
             $validator = Validator::make($request->all(), [
-                'project_id' => 'required|string|exists:projects,id'
+                'project_id' => 'required|string|exists:projects,id',
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -391,26 +386,25 @@ class DashboardRoleBasedController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => $projectContext
+                'data' => $projectContext,
             ]);
-
         } catch (\Exception $e) {
             Log::error('Failed to get project context', [
                 'user_id' => Auth::id(),
                 'project_id' => $request->get('project_id'),
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to load project context',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
 
     /**
-     * Get available projects for user role
+     * Get available projects for user role.
      */
     public function getAvailableProjects(): JsonResponse
     {
@@ -425,7 +419,7 @@ class DashboardRoleBasedController extends Controller
                 case 'system_admin':
                     // System admin sees all projects
                     break;
-                
+
                 case 'project_manager':
                 case 'design_lead':
                 case 'site_engineer':
@@ -448,26 +442,25 @@ class DashboardRoleBasedController extends Controller
                 'data' => [
                     'projects' => $projects,
                     'total_count' => $projects->count(),
-                    'role_access' => $roleConfig['project_access']
-                ]
+                    'role_access' => $roleConfig['project_access'],
+                ],
             ]);
-
         } catch (\Exception $e) {
             Log::error('Failed to get available projects', [
                 'user_id' => Auth::id(),
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to load available projects',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
 
     /**
-     * Get role-based dashboard summary
+     * Get role-based dashboard summary.
      */
     public function getDashboardSummary(Request $request): JsonResponse
     {
@@ -476,14 +469,14 @@ class DashboardRoleBasedController extends Controller
                 'project_id' => 'sometimes|string|exists:projects,id',
                 'include_widgets' => 'sometimes|boolean',
                 'include_metrics' => 'sometimes|boolean',
-                'include_alerts' => 'sometimes|boolean'
+                'include_alerts' => 'sometimes|boolean',
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -498,10 +491,10 @@ class DashboardRoleBasedController extends Controller
                     'id' => $user->id,
                     'name' => $user->name,
                     'role' => $user->role,
-                    'tenant_id' => $user->tenant_id
+                    'tenant_id' => $user->tenant_id,
                 ],
                 'project_context' => $projectId ? 'project_specific' : 'all_projects',
-                'generated_at' => now()->toISOString()
+                'generated_at' => now()->toISOString(),
             ];
 
             if ($includeWidgets) {
@@ -509,7 +502,7 @@ class DashboardRoleBasedController extends Controller
                 $summary['widgets'] = [
                     'total_widgets' => count($roleConfig['default_widgets']),
                     'categories' => $roleConfig['widget_categories'],
-                    'customization_level' => $roleConfig['customization_level']
+                    'customization_level' => $roleConfig['customization_level'],
                 ];
             }
 
@@ -517,7 +510,7 @@ class DashboardRoleBasedController extends Controller
                 $metrics = $this->roleBasedService->getRoleBasedMetrics($user, $projectId);
                 $summary['metrics'] = [
                     'total_metrics' => count($metrics),
-                    'priority_metrics' => array_column($metrics, 'metric')
+                    'priority_metrics' => array_column($metrics, 'metric'),
                 ];
             }
 
@@ -528,32 +521,31 @@ class DashboardRoleBasedController extends Controller
                     'unread_alerts' => count(array_filter($alerts, function ($alert) {
                         return !$alert['is_read'];
                     })),
-                    'severity_breakdown' => $this->getSeverityBreakdown($alerts)
+                    'severity_breakdown' => $this->getSeverityBreakdown($alerts),
                 ];
             }
 
             return response()->json([
                 'success' => true,
-                'data' => $summary
+                'data' => $summary,
             ]);
-
         } catch (\Exception $e) {
             Log::error('Failed to get dashboard summary', [
                 'user_id' => Auth::id(),
                 'project_id' => $request->get('project_id'),
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to load dashboard summary',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
 
     /**
-     * Get severity breakdown for alerts
+     * Get severity breakdown for alerts.
      */
     protected function getSeverityBreakdown(array $alerts): array
     {
@@ -561,7 +553,7 @@ class DashboardRoleBasedController extends Controller
             'low' => 0,
             'medium' => 0,
             'high' => 0,
-            'critical' => 0
+            'critical' => 0,
         ];
 
         foreach ($alerts as $alert) {
@@ -575,20 +567,20 @@ class DashboardRoleBasedController extends Controller
     }
 
     /**
-     * Switch project context
+     * Switch project context.
      */
     public function switchProjectContext(Request $request): JsonResponse
     {
         try {
             $validator = Validator::make($request->all(), [
-                'project_id' => 'required|string|exists:projects,id'
+                'project_id' => 'required|string|exists:projects,id',
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -603,7 +595,7 @@ class DashboardRoleBasedController extends Controller
             if (!$project) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Project not found or access denied'
+                    'message' => 'Project not found or access denied',
                 ], 404);
             }
 
@@ -620,7 +612,7 @@ class DashboardRoleBasedController extends Controller
             if (!$hasAccess) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'You do not have access to this project'
+                    'message' => 'You do not have access to this project',
                 ], 403);
             }
 
@@ -632,22 +624,21 @@ class DashboardRoleBasedController extends Controller
                 'data' => [
                     'dashboard' => $dashboard,
                     'project_context' => $projectId,
-                    'switched_at' => now()->toISOString()
+                    'switched_at' => now()->toISOString(),
                 ],
-                'message' => 'Project context switched successfully'
+                'message' => 'Project context switched successfully',
             ]);
-
         } catch (\Exception $e) {
             Log::error('Failed to switch project context', [
                 'user_id' => Auth::id(),
                 'project_id' => $request->get('project_id'),
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to switch project context',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }

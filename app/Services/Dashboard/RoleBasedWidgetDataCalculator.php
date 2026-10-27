@@ -74,6 +74,7 @@ final class RoleBasedWidgetDataCalculator
         }
 
         $tasks = $query->get();
+
         return [
             'total_tasks' => $tasks->count(),
             'completed_tasks' => $tasks->where('status', 'completed')->count(),
@@ -106,6 +107,7 @@ final class RoleBasedWidgetDataCalculator
         }
 
         $rfis = $query->get();
+
         return [
             'total_rfis' => $rfis->count(),
             'open_rfis' => $rfis->where('status', 'open')->count(),
@@ -134,6 +136,7 @@ final class RoleBasedWidgetDataCalculator
         $projects = $query->get();
         $totalBudget = $projects->sum('budget');
         $totalSpent = $projects->sum('spent_amount');
+
         return [
             'total_budget' => $totalBudget,
             'total_spent' => $totalSpent,
@@ -202,6 +205,7 @@ final class RoleBasedWidgetDataCalculator
     private function averageResponseTime(Collection $rfis): float
     {
         $times = $rfis->where('status', 'closed')->map(fn ($rfi) => $rfi->answered_at ? $rfi->answered_at->diffInHours($rfi->created_at) : 0)->filter()->values();
+
         return $times->count() > 0 ? $times->avg() : 0;
     }
 
@@ -254,6 +258,7 @@ final class RoleBasedWidgetDataCalculator
                 ];
             }
         }
+
         return $alerts;
     }
 }

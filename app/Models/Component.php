@@ -1,23 +1,25 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Event;
 
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
-use Illuminate\Database\Eloquent\Factories\HasFactory; // Thêm import
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsTo; // Thêm import
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
+use Src\CoreProject\Events\ComponentCostUpdated;
+use Src\CoreProject\Events\ComponentProgressUpdated;
 use Src\Foundation\EventBus;
 use Src\Foundation\Helpers\AuthHelper;
-use Src\CoreProject\Events\ComponentProgressUpdated;
-use Src\CoreProject\Events\ComponentCostUpdated;
 
 /**
- * Model Component - Quản lý thành phần dự án
- * 
+ * Model Component - Quản lý thành phần dự án.
+ *
  * @property string $id ULID của component (primary key)
  * @property string $project_id ID dự án (ULID)
  * @property string|null $parent_component_id ID component cha (ULID)
@@ -28,14 +30,16 @@ use Src\CoreProject\Events\ComponentCostUpdated;
  */
 class Component extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids;
+    use HasFactory;
 
     protected $table = 'components';
-    
+
     // Cấu hình ULID primary key
     protected $keyType = 'string';
+
     public $incrementing = false;
-    
+
     protected $fillable = [
         'tenant_id',
         'project_id',
@@ -53,7 +57,7 @@ class Component extends Model
         'budget',
         'dependencies',
         'metadata',
-        'created_by'
+        'created_by',
     ];
 
     protected $casts = [
@@ -64,7 +68,7 @@ class Component extends Model
         'progress_percent' => 'float',
         'planned_cost' => 'float',
         'actual_cost' => 'float',
-        'budget' => 'float'
+        'budget' => 'float',
     ];
 
     protected $attributes = [
@@ -74,11 +78,11 @@ class Component extends Model
         'progress_percent' => 0.0,
         'planned_cost' => 0.0,
         'actual_cost' => 0.0,
-        'budget' => 0.0
+        'budget' => 0.0,
     ];
 
     /**
-     * Override update to fire ComponentProgressUpdated for manual progress/as cost changes
+     * Override update to fire ComponentProgressUpdated for manual progress/as cost changes.
      */
     public function update(array $attributes = [], array $options = []): bool
     {
@@ -146,7 +150,7 @@ class Component extends Model
     }
 
     /**
-     * Relationship: Component thuộc về tenant
+     * Relationship: Component thuộc về tenant.
      */
     public function tenant(): BelongsTo
     {
@@ -154,7 +158,7 @@ class Component extends Model
     }
 
     /**
-     * Relationship: Component thuộc về project
+     * Relationship: Component thuộc về project.
      */
     public function project(): BelongsTo
     {
@@ -162,7 +166,7 @@ class Component extends Model
     }
 
     /**
-     * Relationship: Component được tạo bởi user
+     * Relationship: Component được tạo bởi user.
      */
     public function creator(): BelongsTo
     {
@@ -170,7 +174,7 @@ class Component extends Model
     }
 
     /**
-     * Relationship: Component có thể có parent
+     * Relationship: Component có thể có parent.
      */
     public function parent(): BelongsTo
     {
@@ -178,7 +182,7 @@ class Component extends Model
     }
 
     /**
-     * Relationship: Component có nhiều children
+     * Relationship: Component có nhiều children.
      */
     public function children(): HasMany
     {
@@ -186,7 +190,7 @@ class Component extends Model
     }
 
     /**
-     * Relationship alias for children components
+     * Relationship alias for children components.
      */
     public function childComponents(): HasMany
     {
@@ -194,7 +198,7 @@ class Component extends Model
     }
 
     /**
-     * Relationship: Component có nhiều tasks
+     * Relationship: Component có nhiều tasks.
      */
     public function tasks(): HasMany
     {
@@ -207,7 +211,7 @@ class Component extends Model
     }
 
     /**
-     * Relationship với ComponentKpis
+     * Relationship với ComponentKpis.
      */
     public function kpis(): HasMany
     {
@@ -215,7 +219,7 @@ class Component extends Model
     }
 
     /**
-     * Lấy KPI theo code
+     * Lấy KPI theo code.
      */
     public function getKpi(string $kpiCode): ?ComponentKpi
     {
@@ -223,7 +227,7 @@ class Component extends Model
     }
 
     /**
-     * Cập nhật KPI
+     * Cập nhật KPI.
      */
     public function updateKpi(string $kpiCode, float $value, ?string $unit = null, ?string $description = null): ComponentKpi
     {
@@ -238,13 +242,13 @@ class Component extends Model
     }
 
     /**
-     * Cập nhật tiến độ và trigger recalculation
+     * Cập nhật tiến độ và trigger recalculation.
      */
     public function updateProgress(float $newProgress): void
     {
         $oldProgress = $this->progress_percent;
         $this->update(['progress_percent' => $newProgress]);
-        
+
         // Dispatch event với payload chuẩn
         EventBus::dispatch('Project.Component.ProgressUpdated', [
             'entityId' => $this->id,
@@ -253,21 +257,21 @@ class Component extends Model
             'changedFields' => [
                 'progress_percent' => [
                     'old' => $oldProgress,
-                    'new' => $newProgress
-                ]
+                    'new' => $newProgress,
+                ],
             ],
-            'componentId' => $this->id // Backward compatibility
+            'componentId' => $this->id, // Backward compatibility
         ]);
     }
-    
+
     /**
-     * Cập nhật chi phí thực tế và trigger recalculation
+     * Cập nhật chi phí thực tế và trigger recalculation.
      */
     public function updateActualCost(float $newCost): void
     {
         $oldCost = $this->actual_cost;
         $this->update(['actual_cost' => $newCost]);
-        
+
         // Dispatch event với payload chuẩn
         EventBus::dispatch('Project.Component.CostUpdated', [
             'entityId' => $this->id,
@@ -276,20 +280,20 @@ class Component extends Model
             'changedFields' => [
                 'actual_cost' => [
                     'old' => $oldCost,
-                    'new' => $newCost
-                ]
+                    'new' => $newCost,
+                ],
             ],
-            'componentId' => $this->id // Backward compatibility
+            'componentId' => $this->id, // Backward compatibility
         ]);
     }
 
     /**
-     * Tính toán lại từ children components
+     * Tính toán lại từ children components.
      */
     public function recalculateFromChildren(): void
     {
         $children = $this->children;
-        
+
         if ($children->isEmpty()) {
             return;
         }
@@ -306,9 +310,9 @@ class Component extends Model
 
         // Recalculate actual cost
         $this->actual_cost = $children->sum('actual_cost');
-        
+
         $this->save();
-        
+
         // Continue up the chain
         if ($this->parent) {
             $this->parent->recalculateFromChildren();
@@ -319,7 +323,7 @@ class Component extends Model
     }
 
     /**
-     * Scope: Lọc theo project
+     * Scope: Lọc theo project.
      */
     public function scopeForProject($query, int $projectId)
     {
@@ -327,7 +331,7 @@ class Component extends Model
     }
 
     /**
-     * Scope: Chỉ lấy root components
+     * Scope: Chỉ lấy root components.
      */
     public function scopeRootComponents($query)
     {
@@ -335,16 +339,16 @@ class Component extends Model
     }
 
     /**
-     * Tạo factory instance mới cho model
+     * Tạo factory instance mới cho model.
      */
     protected static function newFactory()
     {
         return \Database\Factories\ComponentFactory::new();
     }
-    
+
     /**
-     * Lấy ID của actor hiện tại một cách an toàn
-     * 
+     * Lấy ID của actor hiện tại một cách an toàn.
+     *
      * @return string ID của user hiện tại hoặc 'system' nếu không có auth context
      */
     private function resolveActorId(): string
@@ -354,8 +358,9 @@ class Component extends Model
         } catch (\Exception $e) {
             Log::warning('Cannot resolve actor ID in Component context', [
                 'component_id' => $this->id ?? 'unknown',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return 'system';
         }
     }

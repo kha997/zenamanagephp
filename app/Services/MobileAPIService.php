@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -6,7 +8,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 /**
- * MobileAPIService - Service cho mobile-optimized APIs
+ * MobileAPIService - Service cho mobile-optimized APIs.
  */
 class MobileAPIService
 {
@@ -22,12 +24,12 @@ class MobileAPIService
             'image_optimization' => config('mobile.image_optimization', true),
             'compression' => config('mobile.compression', true),
             'offline_support' => config('mobile.offline_support', true),
-            'push_notifications' => config('mobile.push_notifications', true)
+            'push_notifications' => config('mobile.push_notifications', true),
         ];
     }
 
     /**
-     * Optimize data for mobile consumption
+     * Optimize data for mobile consumption.
      */
     public function optimizeForMobile(array $data, array $options = []): array
     {
@@ -36,7 +38,7 @@ class MobileAPIService
             'optimize_images' => $this->mobileConfig['image_optimization'],
             'include_metadata' => true,
             'exclude_fields' => [],
-            'include_relations' => []
+            'include_relations' => [],
         ], $options);
 
         // Remove unnecessary fields
@@ -63,15 +65,15 @@ class MobileAPIService
     }
 
     /**
-     * Get paginated data optimized for mobile
+     * Get paginated data optimized for mobile.
      */
     public function getPaginatedData(callable $callback, int $page = 1, int $perPage = null, array $options = []): array
     {
-        $perPage = $perPage ?? $this->mobileConfig['default_page_size'];
+        $perPage ??= $this->mobileConfig['default_page_size'];
         $perPage = min($perPage, $this->mobileConfig['max_page_size']);
 
         $cacheKey = 'mobile_paginated_' . md5(serialize(func_get_args()));
-        
+
         return Cache::remember($cacheKey, $this->mobileConfig['cache_ttl'], function () use ($callback, $page, $perPage, $options) {
             $result = $callback($page, $perPage, $options);
 
@@ -84,32 +86,32 @@ class MobileAPIService
                     'per_page' => $perPage,
                     'total' => $total,
                     'last_page' => $perPage > 0 ? ceil($total / $perPage) : 0,
-                    'has_more' => $perPage > 0 ? $page < ceil($total / $perPage) : false
+                    'has_more' => $perPage > 0 ? $page < ceil($total / $perPage) : false,
                 ],
                 'mobile_optimized' => true,
-                'cached_at' => now()->toISOString()
+                'cached_at' => now()->toISOString(),
             ];
         });
     }
 
     /**
-     * Get mobile dashboard data
+     * Get mobile dashboard data.
      */
     public function getMobileDashboard(string $userId): array
     {
         $cacheKey = "mobile_dashboard_{$userId}";
-        
+
         return Cache::remember($cacheKey, $this->mobileConfig['cache_ttl'], function () use ($userId) {
             return [
                 'widgets' => [],
                 'last_updated' => now()->toISOString(),
-                'user_id' => $userId
+                'user_id' => $userId,
             ];
         });
     }
 
     /**
-     * Get offline data for mobile
+     * Get offline data for mobile.
      */
     public function getOfflineData(string $userId, array $types = []): array
     {
@@ -119,23 +121,23 @@ class MobileAPIService
 
         $defaultTypes = ['projects', 'tasks', 'users', 'calendar'];
         $types = empty($types) ? $defaultTypes : $types;
-        
+
         $offlineData = [];
-        
+
         foreach ($types as $type) {
             $offlineData[$type] = $this->getOfflineDataByType($userId, $type);
         }
-        
+
         return [
             'offline_data' => $offlineData,
             'generated_at' => now()->toISOString(),
             'expires_at' => now()->addHours(24)->toISOString(),
-            'version' => '1.0'
+            'version' => '1.0',
         ];
     }
 
     /**
-     * Send push notification
+     * Send push notification.
      */
     public function sendPushNotification(string $userId, array $notification): array
     {
@@ -146,7 +148,7 @@ class MobileAPIService
         try {
             // Get user's device tokens
             $deviceTokens = $this->getUserDeviceTokens($userId);
-            
+
             if (empty($deviceTokens)) {
                 return ['error' => 'No device tokens found'];
             }
@@ -160,27 +162,26 @@ class MobileAPIService
             return [
                 'success' => true,
                 'sent_to' => count($deviceTokens),
-                'results' => $results
+                'results' => $results,
             ];
-
         } catch (\Exception $e) {
             Log::error('Failed to send push notification', [
                 'user_id' => $userId,
                 'notification' => $notification,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return ['error' => $e->getMessage()];
         }
     }
 
     /**
-     * Get mobile search results
+     * Get mobile search results.
      */
     public function getMobileSearch(string $query, string $userId, array $filters = []): array
     {
-        $cacheKey = "mobile_search_" . md5($query . $userId . serialize($filters));
-        
+        $cacheKey = 'mobile_search_' . md5($query . $userId . serialize($filters));
+
         return Cache::remember($cacheKey, 300, function () use ($query, $filters) {
             $results = $this->performMobileSearch($query, $filters);
 
@@ -189,24 +190,24 @@ class MobileAPIService
                 'results' => $results,
                 'total_results' => array_sum(array_map('count', $results)),
                 'mobile_optimized' => true,
-                'searched_at' => now()->toISOString()
+                'searched_at' => now()->toISOString(),
             ];
         });
     }
 
     /**
-     * Get mobile analytics
+     * Get mobile analytics.
      */
     public function getMobileAnalytics(string $userId, string $period = 'week'): array
     {
         $cacheKey = "mobile_analytics_{$userId}_{$period}";
-        
+
         return Cache::remember($cacheKey, 3600, function () use ($userId, $period) {
             return [
                 'user_id' => $userId,
                 'period' => $period,
                 'metrics' => [],
-                'generated_at' => now()->toISOString()
+                'generated_at' => now()->toISOString(),
             ];
         });
     }
@@ -220,18 +221,18 @@ class MobileAPIService
     }
 
     /**
-     * Helper Methods
+     * Helper Methods.
      */
     private function excludeFields(array $data, array $fields): array
     {
-            if (isset($data['data']) && is_array($data['data'])) {
-                $data['data'] = array_map(function ($item) use ($fields) {
-                    return array_diff_key($item, array_flip($fields));
-                }, $data['data']);
-            } else {
-                $data = array_diff_key($data, array_flip($fields));
-            }
-        
+        if (isset($data['data']) && is_array($data['data'])) {
+            $data['data'] = array_map(function ($item) use ($fields) {
+                return array_diff_key($item, array_flip($fields));
+            }, $data['data']);
+        } else {
+            $data = array_diff_key($data, array_flip($fields));
+        }
+
         return $data;
     }
 
@@ -246,10 +247,11 @@ class MobileAPIService
                 if (isset($item['image']) && $item['image']) {
                     $item['image'] = $this->optimizeImageUrl($item['image']);
                 }
+
                 return $item;
             }, $data['data']);
         }
-        
+
         return $data;
     }
 
@@ -260,10 +262,11 @@ class MobileAPIService
             'w' => 300,  // width
             'h' => 300,  // height
             'q' => 80,   // quality
-            'f' => 'webp' // format
+            'f' => 'webp', // format
         ];
-        
+
         $separator = strpos($url, '?') !== false ? '&' : '?';
+
         return $url . $separator . http_build_query($params);
     }
 
@@ -273,7 +276,7 @@ class MobileAPIService
         $data = array_filter($data, function ($value) {
             return $value !== null && $value !== '';
         });
-        
+
         return $data;
     }
 
@@ -282,7 +285,7 @@ class MobileAPIService
         return array_merge($data, [
             'mobile_optimized' => true,
             'optimized_at' => now()->toISOString(),
-            'version' => '1.0'
+            'version' => '1.0',
         ]);
     }
 
@@ -294,7 +297,7 @@ class MobileAPIService
             'name' => 'User Name',
             'avatar' => null,
             'role' => 'user',
-            'last_active' => now()->toISOString()
+            'last_active' => now()->toISOString(),
         ];
     }
 
@@ -305,7 +308,7 @@ class MobileAPIService
             'total' => 0,
             'active' => 0,
             'completed' => 0,
-            'recent' => []
+            'recent' => [],
         ];
     }
 
@@ -317,7 +320,7 @@ class MobileAPIService
             'pending' => 0,
             'in_progress' => 0,
             'completed' => 0,
-            'overdue' => 0
+            'overdue' => 0,
         ];
     }
 
@@ -326,7 +329,7 @@ class MobileAPIService
         // Implementation for notifications summary
         return [
             'unread' => 0,
-            'recent' => []
+            'recent' => [],
         ];
     }
 
@@ -335,7 +338,7 @@ class MobileAPIService
         // Implementation for calendar summary
         return [
             'today_events' => [],
-            'upcoming_events' => []
+            'upcoming_events' => [],
         ];
     }
 
@@ -345,7 +348,7 @@ class MobileAPIService
             ['action' => 'create_project', 'label' => 'New Project', 'icon' => 'plus'],
             ['action' => 'create_task', 'label' => 'New Task', 'icon' => 'check'],
             ['action' => 'upload_document', 'label' => 'Upload File', 'icon' => 'upload'],
-            ['action' => 'view_calendar', 'label' => 'Calendar', 'icon' => 'calendar']
+            ['action' => 'view_calendar', 'label' => 'Calendar', 'icon' => 'calendar'],
         ];
     }
 
@@ -355,7 +358,7 @@ class MobileAPIService
             'projects_created' => 0,
             'tasks_completed' => 0,
             'documents_uploaded' => 0,
-            'hours_logged' => 0
+            'hours_logged' => 0,
         ];
     }
 

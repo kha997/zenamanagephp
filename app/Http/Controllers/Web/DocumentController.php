@@ -1,27 +1,27 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
 
+use App\Enums\DocumentApprovalStatus;
 use App\Http\Controllers\Controller;
+use App\Models\Document;
+use App\Services\DocumentCreationService;
+use App\Services\DocumentStatusService;
+use App\Services\DocumentVersionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\View\View;
 use Illuminate\Validation\Rule;
-use App\Enums\DocumentApprovalStatus;
-use App\Models\Document;
-use App\Services\DocumentCreationService;
-use App\Services\DocumentStatusService;
-use App\Services\DocumentVersionService;
+use Illuminate\View\View;
 use Src\CoreProject\Models\Project;
 use Src\Foundation\Services\FileStorageService;
 
 /**
- * Web Document Controller for document management interface
- * 
- * @package App\Http\Controllers\Web
+ * Web Document Controller for document management interface.
  */
 class DocumentController extends Controller
 {
@@ -77,7 +77,7 @@ class DocumentController extends Controller
             return view('documents.create', [
                 'projects' => collect(),
                 'projectId' => null,
-                'error' => 'Không thể tải form tạo document: ' . $e->getMessage()
+                'error' => 'Không thể tải form tạo document: ' . $e->getMessage(),
             ]);
         }
     }
@@ -171,12 +171,12 @@ class DocumentController extends Controller
             $document = Document::with(['project', 'uploader'])
                 ->whereHas('project', fn ($projectQuery) => $projectQuery->where('tenant_id', (string) Auth::user()?->tenant_id))
                 ->findOrFail($documentId);
-            
+
             return view('documents.show', compact('document'));
         } catch (\Exception $e) {
             return view('documents.show', [
                 'document' => null,
-                'error' => 'Không thể tải document: ' . $e->getMessage()
+                'error' => 'Không thể tải document: ' . $e->getMessage(),
             ]);
         }
     }
@@ -188,14 +188,14 @@ class DocumentController extends Controller
     {
         try {
             $document = Document::findOrFail($documentId);
-            
+
             // Check if file exists
             if (!Storage::exists($document->file_path)) {
                 return redirect()
                     ->back()
                     ->withErrors(['error' => 'File không tồn tại trên server.']);
             }
-            
+
             return Storage::download($document->file_path, $document->original_name);
         } catch (\Exception $e) {
             return redirect()
@@ -268,7 +268,6 @@ class DocumentController extends Controller
         return \App\Models\User::query()->where('tenant_id', $tenantId)->whereIn('id', $decisionUserIds)->pluck('name', 'id');
     }
 
-
     /**
      * Remove the specified document.
      */
@@ -276,15 +275,15 @@ class DocumentController extends Controller
     {
         try {
             $document = Document::findOrFail($documentId);
-            
+
             // Delete file from storage
             if (Storage::exists($document->file_path)) {
                 Storage::delete($document->file_path);
             }
-            
+
             // Delete document record
             $document->delete();
-            
+
             return redirect()
                 ->route('documents.index')
                 ->with('success', 'Document đã được xóa thành công!');

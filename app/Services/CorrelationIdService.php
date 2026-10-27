@@ -1,17 +1,16 @@
 <?php
 
 namespace App\Services;
-use Illuminate\Support\Facades\Auth;
-
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class CorrelationIdService
 {
     /**
-     * Generate a unique correlation ID
+     * Generate a unique correlation ID.
      */
     public static function generate(): string
     {
@@ -19,11 +18,11 @@ class CorrelationIdService
     }
 
     /**
-     * Get correlation ID from request headers or generate new one
+     * Get correlation ID from request headers or generate new one.
      */
     public static function getOrGenerate(Request $request): string
     {
-        $correlationId = $request->header('X-Correlation-ID') 
+        $correlationId = $request->header('X-Correlation-ID')
             ?? $request->header('X-Request-ID')
             ?? $request->header('X-Trace-ID')
             ?? self::generate();
@@ -32,7 +31,7 @@ class CorrelationIdService
     }
 
     /**
-     * Set correlation ID in request
+     * Set correlation ID in request.
      */
     public static function setInRequest(Request $request, string $correlationId): void
     {
@@ -40,7 +39,7 @@ class CorrelationIdService
     }
 
     /**
-     * Add correlation ID to log context
+     * Add correlation ID to log context.
      */
     public static function addToLogContext(string $correlationId): void
     {
@@ -48,7 +47,7 @@ class CorrelationIdService
     }
 
     /**
-     * Get correlation ID from current request context
+     * Get correlation ID from current request context.
      */
     public static function getCurrent(): ?string
     {
@@ -61,11 +60,12 @@ class CorrelationIdService
             // Request not available in this context (e.g., CLI)
             return null;
         }
+
         return null;
     }
 
     /**
-     * Create structured log entry with correlation ID
+     * Create structured log entry with correlation ID.
      */
     public static function log(string $level, string $message, array $context = []): void
     {
@@ -73,12 +73,12 @@ class CorrelationIdService
         if ($correlationId) {
             $context['correlation_id'] = $correlationId;
         }
-        
+
         Log::log($level, $message, $context);
     }
 
     /**
-     * Log request start
+     * Log request start.
      */
     public static function logRequestStart(Request $request, string $correlationId): void
     {
@@ -93,7 +93,7 @@ class CorrelationIdService
     }
 
     /**
-     * Log request end
+     * Log request end.
      */
     public static function logRequestEnd(Request $request, int $statusCode, float $duration, string $correlationId): void
     {
@@ -109,7 +109,7 @@ class CorrelationIdService
     }
 
     /**
-     * Log error with correlation ID
+     * Log error with correlation ID.
      */
     public static function logError(\Throwable $exception, Request $request = null): void
     {

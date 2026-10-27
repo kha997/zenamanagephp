@@ -22,29 +22,30 @@ class TenantScope
             if ($request->expectsJson()) {
                 return response()->json(['message' => 'Unauthenticated.'], 401);
             }
+
             return redirect()->route('login');
         }
-        
+
         $user = Auth::user();
-        
+
         // Check if user has tenant context
         if (!$user->hasTenant()) {
             if ($request->expectsJson()) {
                 return response()->json([
                     'message' => 'Access denied. Tenant access required.',
-                    'error' => 'NO_TENANT_CONTEXT'
+                    'error' => 'NO_TENANT_CONTEXT',
                 ], 403);
             }
-            
+
             abort(403, 'Access denied. Tenant access required.');
         }
-        
+
         // Set tenant context for the request
         app()->instance('tenant', $user->tenant);
-        
+
         // Add tenant context to request
         $request->merge(['tenant_id' => $user->tenant_id]);
-        
+
         return $next($request);
     }
 }

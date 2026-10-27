@@ -1,20 +1,22 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Buttons;
 
+use App\Models\Permission;
 use App\Models\Project;
+use App\Models\Role;
 use App\Models\Task;
 use App\Models\Tenant;
 use App\Models\User;
-use App\Models\Role;
-use App\Models\Permission;
-use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Tests\TestCase;
 
 /**
- * Button CRUD Test
- * 
+ * Button CRUD Test.
+ *
  * Tests Create, Read, Update, Delete operations for all interactive elements
  */
 class ButtonCRUDTest extends TestCase
@@ -22,18 +24,20 @@ class ButtonCRUDTest extends TestCase
     use RefreshDatabase;
 
     protected $tenant;
+
     protected $user;
+
     protected $project;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create test tenant
         $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
             'slug' => 'test-company-' . uniqid(),
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
         // Create test user
@@ -41,7 +45,7 @@ class ButtonCRUDTest extends TestCase
             'name' => 'Test User',
             'email' => 'test@test-' . uniqid() . '.com',
             'password' => Hash::make('password'),
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $projectRole = Role::firstOrCreate(
@@ -51,7 +55,7 @@ class ButtonCRUDTest extends TestCase
                 'tenant_id' => $this->tenant->id,
                 'allow_override' => false,
                 'is_active' => true,
-                'description' => 'Test project manager'
+                'description' => 'Test project manager',
             ]
         );
 
@@ -65,7 +69,7 @@ class ButtonCRUDTest extends TestCase
                 [
                     'name' => 'project.create',
                     'module' => 'project',
-                    'action' => 'create'
+                    'action' => 'create',
                 ]
             ),
             Permission::firstOrCreate(
@@ -73,7 +77,7 @@ class ButtonCRUDTest extends TestCase
                 [
                     'name' => 'project.write',
                     'module' => 'project',
-                    'action' => 'write'
+                    'action' => 'write',
                 ]
             ),
             Permission::firstOrCreate(
@@ -81,7 +85,7 @@ class ButtonCRUDTest extends TestCase
                 [
                     'name' => 'project.view',
                     'module' => 'project',
-                    'action' => 'view'
+                    'action' => 'view',
                 ]
             ),
             Permission::firstOrCreate(
@@ -89,7 +93,7 @@ class ButtonCRUDTest extends TestCase
                 [
                     'name' => 'project.update',
                     'module' => 'project',
-                    'action' => 'update'
+                    'action' => 'update',
                 ]
             ),
             Permission::firstOrCreate(
@@ -97,7 +101,7 @@ class ButtonCRUDTest extends TestCase
                 [
                     'name' => 'project.delete',
                     'module' => 'project',
-                    'action' => 'delete'
+                    'action' => 'delete',
                 ]
             ),
             Permission::firstOrCreate(
@@ -105,7 +109,7 @@ class ButtonCRUDTest extends TestCase
                 [
                     'name' => 'task.create',
                     'module' => 'task',
-                    'action' => 'create'
+                    'action' => 'create',
                 ]
             ),
             Permission::firstOrCreate(
@@ -113,7 +117,7 @@ class ButtonCRUDTest extends TestCase
                 [
                     'name' => 'task.view',
                     'module' => 'task',
-                    'action' => 'view'
+                    'action' => 'view',
                 ]
             ),
             Permission::firstOrCreate(
@@ -121,7 +125,7 @@ class ButtonCRUDTest extends TestCase
                 [
                     'name' => 'task.update',
                     'module' => 'task',
-                    'action' => 'update'
+                    'action' => 'update',
                 ]
             ),
             Permission::firstOrCreate(
@@ -129,9 +133,9 @@ class ButtonCRUDTest extends TestCase
                 [
                     'name' => 'task.delete',
                     'module' => 'task',
-                    'action' => 'delete'
+                    'action' => 'delete',
                 ]
-            )
+            ),
         ];
 
         foreach ($permissions as $permission) {
@@ -149,7 +153,7 @@ class ButtonCRUDTest extends TestCase
             'name' => 'Test Project',
             'description' => 'Test project for CRUD operations',
             'status' => 'active',
-            'budget_total' => 100000.00
+            'budget_total' => 100000.00,
         ]);
     }
 
@@ -161,7 +165,7 @@ class ButtonCRUDTest extends TestCase
     }
 
     /**
-     * Test project creation
+     * Test project creation.
      */
     public function test_can_create_project(): void
     {
@@ -174,31 +178,31 @@ class ButtonCRUDTest extends TestCase
             'description' => 'A new test project',
             'code' => $projectCode,
             'status' => 'active',
-            'budget_total' => 75000.00
+            'budget_total' => 75000.00,
         ]);
 
         $response->assertRedirect('/projects');
-        
+
         $this->assertDatabaseMissing('projects', [
             'code' => $projectCode,
         ]);
     }
 
     /**
-     * Test project reading
+     * Test project reading.
      */
     public function test_can_read_project(): void
     {
         $this->actingAs($this->user);
 
         $response = $this->get('/projects/' . $this->project->id);
-        
+
         $response->assertStatus(200);
         $response->assertSee($this->project->name);
     }
 
     /**
-     * Test project updating
+     * Test project updating.
      */
     public function test_can_update_project(): void
     {
@@ -210,19 +214,19 @@ class ButtonCRUDTest extends TestCase
             'description' => 'Updated description',
             'code' => $this->project->code,
             'status' => 'active',
-            'budget_total' => 120000.00
+            'budget_total' => 120000.00,
         ]);
 
         $response->assertStatus(200);
-        
+
         $this->assertDatabaseHas('projects', [
             'id' => $this->project->id,
-            'name' => 'Updated Project'
+            'name' => 'Updated Project',
         ]);
     }
 
     /**
-     * Test project deletion
+     * Test project deletion.
      */
     public function test_can_delete_project(): void
     {
@@ -230,16 +234,16 @@ class ButtonCRUDTest extends TestCase
         $this->get('/projects/' . $this->project->id);
 
         $response = $this->delete('/projects/' . $this->project->id);
-        
+
         $response->assertStatus(200);
-        
+
         $this->assertSoftDeleted('projects', [
-            'id' => $this->project->id
+            'id' => $this->project->id,
         ]);
     }
 
     /**
-     * Test task creation
+     * Test task creation.
      */
     public function test_can_create_task(): void
     {
@@ -257,15 +261,15 @@ class ButtonCRUDTest extends TestCase
         ]);
 
         $response->assertStatus(201);
-        
+
         $this->assertDatabaseHas('tasks', [
             'name' => 'New Task',
-            'project_id' => $this->project->id
+            'project_id' => $this->project->id,
         ]);
     }
 
     /**
-     * Test task reading
+     * Test task reading.
      */
     public function test_can_read_task(): void
     {
@@ -276,19 +280,19 @@ class ButtonCRUDTest extends TestCase
             'description' => 'Test task description',
             'status' => 'pending',
             'priority' => 'medium',
-            'estimated_hours' => 8.0
+            'estimated_hours' => 8.0,
         ]);
 
         $this->actingAs($this->user, 'sanctum');
 
         $response = $this->withHeaders($this->tenantHeaders())->getJson('/api/zena/tasks/' . $task->id);
-        
+
         $response->assertStatus(200);
         $response->assertJsonPath('data.id', $task->id);
     }
 
     /**
-     * Test task updating
+     * Test task updating.
      */
     public function test_can_update_task(): void
     {
@@ -299,7 +303,7 @@ class ButtonCRUDTest extends TestCase
             'description' => 'Test task description',
             'status' => 'pending',
             'priority' => 'medium',
-            'estimated_hours' => 8.0
+            'estimated_hours' => 8.0,
         ]);
 
         $this->actingAs($this->user, 'sanctum');
@@ -309,7 +313,7 @@ class ButtonCRUDTest extends TestCase
             'description' => 'Updated task description',
             'status' => 'in_progress',
             'priority' => 'high',
-            'estimated_hours' => 12.0
+            'estimated_hours' => 12.0,
         ]);
 
         $response->assertStatus(200);
@@ -318,12 +322,12 @@ class ButtonCRUDTest extends TestCase
         $this->assertDatabaseHas('tasks', [
             'id' => $task->id,
             'name' => 'Updated Task',
-            'status' => 'in_progress'
+            'status' => 'in_progress',
         ]);
     }
 
     /**
-     * Test task deletion
+     * Test task deletion.
      */
     public function test_can_delete_task(): void
     {
@@ -334,22 +338,22 @@ class ButtonCRUDTest extends TestCase
             'description' => 'Test task description',
             'status' => 'pending',
             'priority' => 'medium',
-            'estimated_hours' => 8.0
+            'estimated_hours' => 8.0,
         ]);
 
         $this->actingAs($this->user, 'sanctum');
 
         $response = $this->withHeaders($this->tenantHeaders())->deleteJson('/api/zena/tasks/' . $task->id);
-        
+
         $response->assertStatus(200);
 
         $this->assertDatabaseMissing('tasks', [
-            'id' => $task->id
+            'id' => $task->id,
         ]);
     }
 
     /**
-     * Test form validation
+     * Test form validation.
      */
     public function test_form_validation(): void
     {
@@ -361,7 +365,7 @@ class ButtonCRUDTest extends TestCase
             'description' => 'Test description',
             'code' => 'INVALID', // Invalid code format
             'status' => 'invalid_status', // Invalid status
-            'budget_total' => -1000 // Negative budget
+            'budget_total' => -1000, // Negative budget
         ]);
 
         $response->assertStatus(422);
@@ -369,7 +373,7 @@ class ButtonCRUDTest extends TestCase
     }
 
     /**
-     * Test CSRF protection
+     * Test CSRF protection.
      */
     public function test_csrf_protection(): void
     {
@@ -382,16 +386,16 @@ class ButtonCRUDTest extends TestCase
             'description' => 'Test description',
             'code' => 'TEST-' . uniqid(),
             'status' => 'active',
-            'budget_total' => 50000.00
+            'budget_total' => 50000.00,
         ], [
-            'X-CSRF-TOKEN' => 'invalid_token'
+            'X-CSRF-TOKEN' => 'invalid_token',
         ]);
 
         $response->assertRedirect('/projects'); // Legacy stub returns redirect in testing
     }
 
     /**
-     * Test idempotency for safe operations
+     * Test idempotency for safe operations.
      */
     public function test_idempotency(): void
     {
@@ -400,12 +404,12 @@ class ButtonCRUDTest extends TestCase
         // Test multiple GET requests (should be idempotent)
         $response1 = $this->get('/projects/' . $this->project->id);
         $response2 = $this->get('/projects/' . $this->project->id);
-        
+
         $this->assertEquals($response1->getContent(), $response2->getContent());
     }
 
     /**
-     * Test bulk operations
+     * Test bulk operations.
      */
     public function test_bulk_operations(): void
     {
@@ -421,7 +425,7 @@ class ButtonCRUDTest extends TestCase
                 'description' => "Bulk task description {$i}",
                 'status' => 'pending',
                 'priority' => 'medium',
-                'estimated_hours' => 8.0
+                'estimated_hours' => 8.0,
             ]);
             $tasks[] = $task;
         }
@@ -429,7 +433,7 @@ class ButtonCRUDTest extends TestCase
         // Test bulk status update
         $response = $this->withHeaders($this->tenantHeaders())->postJson('/api/tasks/bulk/status-change', [
             'task_ids' => array_column($tasks, 'id'),
-            'status' => 'completed'
+            'status' => 'completed',
         ]);
 
         $response->assertStatus(200);
@@ -438,13 +442,13 @@ class ButtonCRUDTest extends TestCase
         foreach ($tasks as $task) {
             $this->assertDatabaseHas('tasks', [
                 'id' => $task->id,
-                'status' => 'pending'
+                'status' => 'pending',
             ]);
         }
     }
 
     /**
-     * Test error handling
+     * Test error handling.
      */
     public function test_error_handling(): void
     {
@@ -460,7 +464,7 @@ class ButtonCRUDTest extends TestCase
 
         // Test 404 for non-existent project update
         $response = $this->put('/projects/999999', [
-            'name' => 'Non-existent Project'
+            'name' => 'Non-existent Project',
         ]);
         $response->assertStatus(404);
     }

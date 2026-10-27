@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\Api;
 
-use App\Models\Role;
-use App\Models\User;
 use App\Models\Project;
+use App\Models\Role;
 use App\Models\Submittal;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -17,8 +17,11 @@ class SubmittalShowApiTest extends TestCase
     use RouteNameTrait;
 
     private User $user;
+
     private Project $project;
+
     private string $token;
+
     private array $zenaAuthHeaders = [];
 
     protected function setUp(): void

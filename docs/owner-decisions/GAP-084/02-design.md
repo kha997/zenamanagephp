@@ -1,0 +1,127 @@
+---
+work_id: GAP-084
+gate: 2
+gate_status: approved
+owner_decision:
+  value: approved
+  authority: human_owner
+decision_requested: null
+references:
+  spec: docs/audits/2026-10-19-gap-084-npm-vulnerabilities-evidence.md
+  plan: docs/superpowers/plans/2026-10-20-gap-084-npm-vulnerabilities.md
+  branch: docs/GAP-084-npm-vulnerabilities
+  pr: https://github.com/kha997/zenamanagephp/pull/357
+  release: null
+decision_provenance:
+  trust_level: claimed_repo_record
+  recorded_by: agent
+  recorded_at: "2026-10-20T06:48:39+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-20, verbatim: 'APPROVE GAP-084 Gate 2 Option B'. Reviewed design head: 6b4331eff6eac063f311a08acc3b3a0a1734ab7b. Approves Option B and its exact allowlist (package-lock.json via npm audit fix without --force; package.json/package-lock.json for vite ^8.3.4 and laravel-vite-plugin ^3.2.0; Dockerfile.prod node:18-alpine -> node:22-alpine; docs); tailwindcss 4 excluded; not Gate 3, merge, release, or deployment."
+  reconciliation_required: false
+supersedes: null
+superseded_by: null
+timestamps:
+  created_at: "2026-10-20T06:44:51+07:00"
+  updated_at: "2026-10-20T06:48:39+07:00"
+generated_by: agent
+---
+
+# GAP-084 — npm vulnerabilities: Gate 2 design
+
+## OWNER GATE 2: APPROVED — OPTION B
+
+Owner approved Option B in-session on 2026-10-20 against reviewed design head
+`6b4331eff6eac063f311a08acc3b3a0a1734ab7b`. This authorizes only the bounded implementation defined by this packet;
+it does not authorize Gate 3, merge, release, or deployment.
+
+## Owner Summary
+
+Mình đã thử cả 3 phương án trên một bản sao tạm (không commit).
+
+| Phương án | Thay đổi | Lỗ hổng còn lại | Kết quả build |
+|---|---|---|---|
+| A | chỉ cập nhật `package-lock.json` | 10 (6 high) | CSS giống hệt từng byte |
+| **B (khuyến nghị)** | A + vite 8 + laravel-vite-plugin 3 + Node 22 trong `Dockerfile.prod` | 7 (5 high) | build được; CSS chỉ khác do bộ nén mới |
+| C | B + tailwindcss 4 | **0** | build được, nhưng giao diện **có thay đổi** (xem dưới) |
+
+- **7 lỗ hổng còn lại của B** đều nằm trong tailwind 3 và các gói nó kéo theo
+  (braces, micromatch…). Chúng chỉ chạy lúc build, đọc file cấu hình của chính
+  mình, nên rủi ro thực tế thấp. Một số gói trong đó chưa có bản vá.
+- **Lý do C chưa nên làm ngay:**
+  - Tailwind 4 bỏ các lớp kiểu `bg-opacity-*` (dùng ở 13 file, ví dụ nền mờ
+    của hộp thoại).
+  - Nó cũng đổi mặc định của `shadow-sm`, `rounded-sm`, `ring`… (85 view có
+    dùng). Các trang dùng layout Operator, app, portal hoặc universal-frame
+    sẽ khác giao diện. Cần sửa template và kiểm tra bằng mắt.
+  - Mình đề xuất tách C thành một Work ID riêng.
+
+## Design: Option B (exact allowlist)
+
+1. **`package-lock.json`**: `npm audit fix` without `--force`. This is in-range only.
+   axios, postcss, browserslist, nanoid, source-map-js, socket.io-parser and
+   the other packages listed in Gate 3 are updated.
+2. **`package.json` + `package-lock.json`**: `vite` `^4.5.0` → `^8.3.4`,
+   `laravel-vite-plugin` `^0.8.1` → `^3.2.0`, via `npm install -D`.
+3. **`Dockerfile.prod`**: `FROM node:18-alpine` → `FROM node:22-alpine`.
+   vite 8 needs Node ≥ 20.19.
+4. **Docs**: plan, this packet, 03-release.
+
+No change to `vite.config.js`, `tailwind.config.js`, `postcss.config.js`,
+CSS or views. Option A is items 1 and 4 only.
+
+## Owner amendment (2026-10-20T06:51:21+07:00)
+
+Owner selection via AskUserQuestion, verbatim: "Cho sửa 1 dòng (Recommended)".
+
+Authorizes one change outside the allowlist: `.github/workflows/button-tests.yml`. The generated
+`vite.ci.config.mjs` changes `manifest: true` to `manifest: 'manifest.json'`. Vite 5+ writes
+`manifest: true` to `public/build/.vite/manifest.json`. With the old setting,
+`public/build/manifest.json` would be the PWA `public/manifest.json` copied from `publicDir`.
+Laravel's `@vite` would then read that file and browser-tests would fail. A local reproduction
+confirmed both behaviours.
+
+## Owner amendment 2 (2026-10-20T13:53:50+07:00)
+
+Owner selection via AskUserQuestion, verbatim: "Sửa trong PR này (Recommended)".
+
+This amendment answers a Codex review finding (P2) on PR #357. Vite 8 requires Node
+`^20.19.0 || >=22.12.0`, but the documented minimums were older. It authorizes these
+changes outside the allowlist:
+
+- `README.md`: Node.js 18.0 → 20.19+ / 22.12+.
+- `docs/DEPLOYMENT_GUIDE.md`: Node.js 16+ → 20.19+ / 22.12+.
+- `package.json` (and its root entry in `package-lock.json`): a new
+  `"engines": {"node": "^20.19.0 || >=22.12.0"}`.
+
+The Gate 3 approval bound to the previous digest is superseded. Gate 3 is re-presented
+with the new subject and digest.
+
+## Verification
+
+- `npm audit` before and after.
+- `npm run build` before and after:
+  - every entry in `manifest.json` is still produced (10 inputs);
+  - the CSS rule set is unchanged after normalising the minifier output.
+- Option A: CSS output byte-identical.
+- `docker build -f Dockerfile.prod` node stage builds, if the environment allows; otherwise exact-head
+  CI (staging-smoke runs `npm ci` on Node 20).
+- Governance and docs lints; exact-head CI green.
+
+## Rollback
+
+Revert the squash commit.
+
+## Out of scope
+
+- tailwindcss 4 and its template migration (proposed as a separate Work ID).
+- The Vite "native config loader" warning: vite 8 only warns about it, and nothing changes in behaviour.
+- PHP packages; deployment.
+
+## Decision Needed
+
+Owner chọn: `APPROVE GAP-084 Gate 2 Option B` (khuyến nghị) / Option A /
+Option C / Request changes / Decline.
+
+## What the owner is NOT being asked to decide
+
+Gate 3, merge, release hay deploy.

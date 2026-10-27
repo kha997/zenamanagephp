@@ -84,7 +84,7 @@ final class MysqlClient
         }
 
         try {
-            chmod($path, 0600);
+            chmod($path, 0o600);
             $contents = "[client]\n"
                 . 'user=' . $this->quote((string) ($config['username'] ?? '')) . "\n"
                 . 'password=' . $this->quote((string) ($config['password'] ?? '')) . "\n";

@@ -8,14 +8,16 @@ use Illuminate\Support\Str;
 use PragmaRX\Google2FA\Google2FA;
 
 /**
- * Multi-Factor Authentication Service
- * 
+ * Multi-Factor Authentication Service.
+ *
  * Handles TOTP-based MFA and recovery codes
  */
 class MFAService
 {
     private Google2FA $google2fa;
+
     private SecureAuditService $auditService;
+
     private int $recoveryCodesCount;
 
     public function __construct(SecureAuditService $auditService)
@@ -26,7 +28,7 @@ class MFAService
     }
 
     /**
-     * Generate MFA secret for user
+     * Generate MFA secret for user.
      */
     public function generateSecret(User $user): array
     {
@@ -40,7 +42,7 @@ class MFAService
 
             // Store secret temporarily (not enabled yet)
             $user->update([
-                'mfa_secret' => encrypt($secret)
+                'mfa_secret' => encrypt($secret),
             ]);
 
             // Log action
@@ -57,34 +59,34 @@ class MFAService
                 'success' => true,
                 'secret' => $secret,
                 'qr_code_url' => $qrCodeUrl,
-                'manual_entry_key' => $secret
+                'manual_entry_key' => $secret,
             ];
-
         } catch (\Exception $e) {
             Log::error('MFA secret generation failed', [
                 'user_id' => $user->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return [
                 'success' => false,
-                'message' => 'Failed to generate MFA secret'
+                'message' => 'Failed to generate MFA secret',
             ];
         }
     }
 
     /**
-     * Enable MFA for user
+     * Enable MFA for user.
      */
     public function enableMFA(User $user, string $code): array
     {
         try {
             $secret = decrypt($user->mfa_secret);
-            
+
             // Verify the code
             if (!$this->google2fa->verifyKey($secret, $code)) {
                 return [
                     'success' => false,
-                    'message' => 'Invalid verification code'
+                    'message' => 'Invalid verification code',
                 ];
             }
 
@@ -96,7 +98,7 @@ class MFAService
                 'mfa_enabled' => true,
                 'mfa_enabled_at' => Carbon::now(),
                 'mfa_recovery_codes' => json_encode(array_map('hash', $recoveryCodes)),
-                'mfa_backup_codes_used' => 0
+                'mfa_backup_codes_used' => 0,
             ]);
 
             // Log action
@@ -112,34 +114,34 @@ class MFAService
             return [
                 'success' => true,
                 'message' => 'MFA enabled successfully',
-                'recovery_codes' => $recoveryCodes
+                'recovery_codes' => $recoveryCodes,
             ];
-
         } catch (\Exception $e) {
             Log::error('MFA enable failed', [
                 'user_id' => $user->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return [
                 'success' => false,
-                'message' => 'Failed to enable MFA'
+                'message' => 'Failed to enable MFA',
             ];
         }
     }
 
     /**
-     * Disable MFA for user
+     * Disable MFA for user.
      */
     public function disableMFA(User $user, string $code): array
     {
         try {
             $secret = decrypt($user->mfa_secret);
-            
+
             // Verify the code
             if (!$this->google2fa->verifyKey($secret, $code)) {
                 return [
                     'success' => false,
-                    'message' => 'Invalid verification code'
+                    'message' => 'Invalid verification code',
                 ];
             }
 
@@ -149,7 +151,7 @@ class MFAService
                 'mfa_secret' => null,
                 'mfa_recovery_codes' => null,
                 'mfa_enabled_at' => null,
-                'mfa_backup_codes_used' => 0
+                'mfa_backup_codes_used' => 0,
             ]);
 
             // Log action
@@ -165,23 +167,23 @@ class MFAService
 
             return [
                 'success' => true,
-                'message' => 'MFA disabled successfully'
+                'message' => 'MFA disabled successfully',
             ];
-
         } catch (\Exception $e) {
             Log::error('MFA disable failed', [
                 'user_id' => $user->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return [
                 'success' => false,
-                'message' => 'Failed to disable MFA'
+                'message' => 'Failed to disable MFA',
             ];
         }
     }
 
     /**
-     * Verify MFA code
+     * Verify MFA code.
      */
     public function verifyCode(User $user, string $code): array
     {
@@ -189,12 +191,12 @@ class MFAService
             if (!$user->mfa_enabled || !$user->mfa_secret) {
                 return [
                     'success' => false,
-                    'message' => 'MFA is not enabled for this user'
+                    'message' => 'MFA is not enabled for this user',
                 ];
             }
 
             $secret = decrypt($user->mfa_secret);
-            
+
             // Verify TOTP code
             if ($this->google2fa->verifyKey($secret, $code)) {
                 // Log successful verification
@@ -208,7 +210,7 @@ class MFAService
 
                 return [
                     'success' => true,
-                    'message' => 'MFA verification successful'
+                    'message' => 'MFA verification successful',
                 ];
             }
 
@@ -223,23 +225,23 @@ class MFAService
 
             return [
                 'success' => false,
-                'message' => 'Invalid MFA code'
+                'message' => 'Invalid MFA code',
             ];
-
         } catch (\Exception $e) {
             Log::error('MFA verification failed', [
                 'user_id' => $user->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return [
                 'success' => false,
-                'message' => 'MFA verification failed'
+                'message' => 'MFA verification failed',
             ];
         }
     }
 
     /**
-     * Verify recovery code
+     * Verify recovery code.
      */
     public function verifyRecoveryCode(User $user, string $code): array
     {
@@ -247,7 +249,7 @@ class MFAService
             if (!$user->mfa_enabled || !$user->mfa_recovery_codes) {
                 return [
                     'success' => false,
-                    'message' => 'No recovery codes available'
+                    'message' => 'No recovery codes available',
                 ];
             }
 
@@ -256,7 +258,7 @@ class MFAService
 
             // Check if code exists and hasn't been used
             $codeIndex = array_search($hashedCode, $recoveryCodes);
-            
+
             if ($codeIndex === false) {
                 // Log failed recovery attempt
                 $this->auditService->logAction(
@@ -269,7 +271,7 @@ class MFAService
 
                 return [
                     'success' => false,
-                    'message' => 'Invalid recovery code'
+                    'message' => 'Invalid recovery code',
                 ];
             }
 
@@ -280,7 +282,7 @@ class MFAService
             // Update user
             $user->update([
                 'mfa_recovery_codes' => json_encode($recoveryCodes),
-                'mfa_backup_codes_used' => $user->mfa_backup_codes_used + 1
+                'mfa_backup_codes_used' => $user->mfa_backup_codes_used + 1,
             ]);
 
             // Log successful recovery
@@ -296,34 +298,34 @@ class MFAService
             return [
                 'success' => true,
                 'message' => 'Recovery code verified successfully',
-                'remaining_codes' => count($recoveryCodes)
+                'remaining_codes' => count($recoveryCodes),
             ];
-
         } catch (\Exception $e) {
             Log::error('MFA recovery code verification failed', [
                 'user_id' => $user->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return [
                 'success' => false,
-                'message' => 'Recovery code verification failed'
+                'message' => 'Recovery code verification failed',
             ];
         }
     }
 
     /**
-     * Regenerate recovery codes
+     * Regenerate recovery codes.
      */
     public function regenerateRecoveryCodes(User $user, string $code): array
     {
         try {
             $secret = decrypt($user->mfa_secret);
-            
+
             // Verify the code
             if (!$this->google2fa->verifyKey($secret, $code)) {
                 return [
                     'success' => false,
-                    'message' => 'Invalid verification code'
+                    'message' => 'Invalid verification code',
                 ];
             }
 
@@ -333,7 +335,7 @@ class MFAService
             // Update user
             $user->update([
                 'mfa_recovery_codes' => json_encode(array_map('hash', $recoveryCodes)),
-                'mfa_backup_codes_used' => 0
+                'mfa_backup_codes_used' => 0,
             ]);
 
             // Log action
@@ -348,23 +350,23 @@ class MFAService
             return [
                 'success' => true,
                 'message' => 'Recovery codes regenerated successfully',
-                'recovery_codes' => $recoveryCodes
+                'recovery_codes' => $recoveryCodes,
             ];
-
         } catch (\Exception $e) {
             Log::error('MFA recovery codes regeneration failed', [
                 'user_id' => $user->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return [
                 'success' => false,
-                'message' => 'Failed to regenerate recovery codes'
+                'message' => 'Failed to regenerate recovery codes',
             ];
         }
     }
 
     /**
-     * Check if user has MFA enabled
+     * Check if user has MFA enabled.
      */
     public function isMFAEnabled(User $user): bool
     {
@@ -372,23 +374,23 @@ class MFAService
     }
 
     /**
-     * Get MFA status for user
+     * Get MFA status for user.
      */
     public function getMFAStatus(User $user): array
     {
-        $recoveryCodes = $user->mfa_recovery_codes ? 
+        $recoveryCodes = $user->mfa_recovery_codes ?
             json_decode($user->mfa_recovery_codes, true) : [];
 
         return [
             'mfa_enabled' => $user->mfa_enabled,
             'mfa_enabled_at' => $user->mfa_enabled_at,
             'recovery_codes_count' => count($recoveryCodes),
-            'backup_codes_used' => $user->mfa_backup_codes_used
+            'backup_codes_used' => $user->mfa_backup_codes_used,
         ];
     }
 
     /**
-     * Generate recovery codes
+     * Generate recovery codes.
      */
     private function generateRecoveryCodes(): array
     {
@@ -396,6 +398,7 @@ class MFAService
         for ($i = 0; $i < $this->recoveryCodesCount; $i++) {
             $codes[] = strtoupper(Str::random(8));
         }
+
         return $codes;
     }
 }

@@ -1,47 +1,51 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Models\Project;
 use App\Models\Component;
+use App\Models\Project;
 use App\Models\Task;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
-use Illuminate\Support\Facades\DB;
 
 /**
- * Financial Management & Budget Tracking Test
- * 
+ * Financial Management & Budget Tracking Test.
+ *
  * Tests the financial management and budget tracking functionality
  * including budget planning, cost tracking, variance analysis, and reporting.
  */
 class FinancialManagementTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use RefreshDatabase;
+    use WithFaker;
 
     protected $tenant;
+
     protected $user;
+
     protected $project;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create test data
         $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
             'slug' => 'test-company',
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
         $this->user = User::factory()->create([
             'name' => 'Finance Manager',
             'email' => 'finance@test.com',
             'password' => bcrypt('password'),
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $this->project = Project::factory()->create([
@@ -52,29 +56,29 @@ class FinancialManagementTest extends TestCase
             'start_date' => now(),
             'end_date' => now()->addMonths(6),
             'status' => 'active',
-            'budget_total' => 100000.00
+            'budget_total' => 100000.00,
         ]);
     }
 
     /**
-     * Test basic budget management functionality
+     * Test basic budget management functionality.
      */
     public function test_can_manage_project_budget(): void
     {
         // Test budget creation
         $this->assertEquals(100000.00, $this->project->budget_total);
-        
+
         // Test budget update
         $this->project->update(['budget_total' => 150000.00]);
         $this->assertEquals(150000.00, $this->project->fresh()->budget_total);
-        
+
         // Test budget validation
         $this->project->update(['budget_total' => -1000.00]);
         $this->assertEquals(-1000.00, $this->project->fresh()->budget_total); // System allows negative budgets
     }
 
     /**
-     * Test component cost tracking
+     * Test component cost tracking.
      */
     public function test_can_track_component_costs(): void
     {
@@ -86,7 +90,7 @@ class FinancialManagementTest extends TestCase
             'description' => 'Foundation construction',
             'planned_cost' => 25000.00,
             'actual_cost' => 23000.00,
-            'status' => 'completed'
+            'status' => 'completed',
         ]);
 
         $component2 = Component::create([
@@ -96,7 +100,7 @@ class FinancialManagementTest extends TestCase
             'description' => 'Structural construction',
             'planned_cost' => 50000.00,
             'actual_cost' => 52000.00,
-            'status' => 'in_progress'
+            'status' => 'in_progress',
         ]);
 
         // Test cost tracking
@@ -108,13 +112,13 @@ class FinancialManagementTest extends TestCase
         // Test cost variance
         $variance1 = $component1->actual_cost - $component1->planned_cost;
         $variance2 = $component2->actual_cost - $component2->planned_cost;
-        
+
         $this->assertEquals(-2000.00, $variance1); // Under budget
         $this->assertEquals(2000.00, $variance2); // Over budget
     }
 
     /**
-     * Test task cost tracking
+     * Test task cost tracking.
      */
     public function test_can_track_task_costs(): void
     {
@@ -128,7 +132,7 @@ class FinancialManagementTest extends TestCase
             'actual_cost' => 4800.00,
             'status' => 'completed',
             'assigned_to' => $this->user->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
         $task2 = Task::create([
@@ -140,7 +144,7 @@ class FinancialManagementTest extends TestCase
             'actual_cost' => 8500.00,
             'status' => 'in_progress',
             'assigned_to' => $this->user->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
         // Test cost tracking
@@ -152,13 +156,13 @@ class FinancialManagementTest extends TestCase
         // Test cost variance
         $variance1 = $task1->actual_cost - $task1->estimated_cost;
         $variance2 = $task2->actual_cost - $task2->estimated_cost;
-        
+
         $this->assertEquals(-200.00, $variance1); // Under budget
         $this->assertEquals(500.00, $variance2); // Over budget
     }
 
     /**
-     * Test budget variance analysis
+     * Test budget variance analysis.
      */
     public function test_can_analyze_budget_variance(): void
     {
@@ -169,7 +173,7 @@ class FinancialManagementTest extends TestCase
             'name' => 'Under Budget Component',
             'planned_cost' => 10000.00,
             'actual_cost' => 9000.00,
-            'status' => 'completed'
+            'status' => 'completed',
         ]);
 
         Component::create([
@@ -178,7 +182,7 @@ class FinancialManagementTest extends TestCase
             'name' => 'Over Budget Component',
             'planned_cost' => 15000.00,
             'actual_cost' => 16000.00,
-            'status' => 'completed'
+            'status' => 'completed',
         ]);
 
         Component::create([
@@ -187,7 +191,7 @@ class FinancialManagementTest extends TestCase
             'name' => 'On Budget Component',
             'planned_cost' => 20000.00,
             'actual_cost' => 20000.00,
-            'status' => 'completed'
+            'status' => 'completed',
         ]);
 
         // Calculate total planned vs actual costs
@@ -203,7 +207,7 @@ class FinancialManagementTest extends TestCase
     }
 
     /**
-     * Test budget utilization tracking
+     * Test budget utilization tracking.
      */
     public function test_can_track_budget_utilization(): void
     {
@@ -217,7 +221,7 @@ class FinancialManagementTest extends TestCase
             'name' => 'Component 1',
             'planned_cost' => 30000.00,
             'actual_cost' => 28000.00,
-            'status' => 'completed'
+            'status' => 'completed',
         ]);
 
         Component::create([
@@ -226,7 +230,7 @@ class FinancialManagementTest extends TestCase
             'name' => 'Component 2',
             'planned_cost' => 40000.00,
             'actual_cost' => 42000.00,
-            'status' => 'in_progress'
+            'status' => 'in_progress',
         ]);
 
         // Calculate budget utilization
@@ -240,7 +244,7 @@ class FinancialManagementTest extends TestCase
     }
 
     /**
-     * Test financial reporting capabilities
+     * Test financial reporting capabilities.
      */
     public function test_can_generate_financial_reports(): void
     {
@@ -250,7 +254,7 @@ class FinancialManagementTest extends TestCase
             'code' => 'PROJ-002',
             'name' => 'Profitable Project',
             'budget_total' => 50000.00,
-            'status' => 'completed'
+            'status' => 'completed',
         ]);
 
         $project2 = Project::factory()->create([
@@ -258,7 +262,7 @@ class FinancialManagementTest extends TestCase
             'code' => 'PROJ-003',
             'name' => 'Over Budget Project',
             'budget_total' => 30000.00,
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
         // Add components to projects
@@ -268,7 +272,7 @@ class FinancialManagementTest extends TestCase
             'name' => 'Work Package 1',
             'planned_cost' => 45000.00,
             'actual_cost' => 42000.00,
-            'status' => 'completed'
+            'status' => 'completed',
         ]);
 
         Component::create([
@@ -277,14 +281,14 @@ class FinancialManagementTest extends TestCase
             'name' => 'Work Package 2',
             'planned_cost' => 25000.00,
             'actual_cost' => 32000.00,
-            'status' => 'in_progress'
+            'status' => 'in_progress',
         ]);
 
         // Generate financial summary
         $testProjects = collect([$project1, $project2]);
         $totalBudget = $testProjects->sum('budget_total');
         $totalActualCost = 0;
-        
+
         foreach ($testProjects as $project) {
             $totalActualCost += $project->components()->sum('actual_cost');
         }
@@ -299,7 +303,7 @@ class FinancialManagementTest extends TestCase
     }
 
     /**
-     * Test budget alerts and notifications
+     * Test budget alerts and notifications.
      */
     public function test_can_detect_budget_alerts(): void
     {
@@ -313,13 +317,13 @@ class FinancialManagementTest extends TestCase
             'name' => 'Expensive Component',
             'planned_cost' => 60000.00,
             'actual_cost' => 75000.00,
-            'status' => 'in_progress'
+            'status' => 'in_progress',
         ]);
 
         // Check for budget alerts
         $totalActualCost = $this->project->components()->sum('actual_cost');
         $budgetUtilization = ($totalActualCost / $this->project->budget_total) * 100;
-        
+
         $alerts = [];
         if ($budgetUtilization > 80) {
             $alerts[] = 'Budget utilization exceeds 80%';
@@ -339,12 +343,12 @@ class FinancialManagementTest extends TestCase
             'name' => 'Additional Component',
             'planned_cost' => 20000.00,
             'actual_cost' => 30000.00,
-            'status' => 'in_progress'
+            'status' => 'in_progress',
         ]);
 
         $totalActualCost = $this->project->components()->sum('actual_cost');
         $budgetUtilization = ($totalActualCost / $this->project->budget_total) * 100;
-        
+
         $alerts = [];
         if ($budgetUtilization > 80) {
             $alerts[] = 'Budget utilization exceeds 80%';
@@ -361,7 +365,7 @@ class FinancialManagementTest extends TestCase
     }
 
     /**
-     * Test multi-tenant financial isolation
+     * Test multi-tenant financial isolation.
      */
     public function test_financial_data_is_tenant_isolated(): void
     {
@@ -369,14 +373,14 @@ class FinancialManagementTest extends TestCase
         $tenant2 = Tenant::factory()->create([
             'name' => 'Another Company',
             'slug' => 'another-company',
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
         $project2 = Project::factory()->create([
             'tenant_id' => $tenant2->id,
             'code' => 'PROJ-004',
             'name' => 'Another Project',
-            'budget_total' => 200000.00
+            'budget_total' => 200000.00,
         ]);
 
         // Verify tenant isolation
@@ -397,7 +401,7 @@ class FinancialManagementTest extends TestCase
     }
 
     /**
-     * Test cost recalculation functionality
+     * Test cost recalculation functionality.
      */
     public function test_can_recalculate_project_costs(): void
     {
@@ -408,7 +412,7 @@ class FinancialManagementTest extends TestCase
             'name' => 'Component 1',
             'planned_cost' => 10000.00,
             'actual_cost' => 9500.00,
-            'status' => 'completed'
+            'status' => 'completed',
         ]);
 
         $component2 = Component::create([
@@ -417,7 +421,7 @@ class FinancialManagementTest extends TestCase
             'name' => 'Component 2',
             'planned_cost' => 15000.00,
             'actual_cost' => 16000.00,
-            'status' => 'in_progress'
+            'status' => 'in_progress',
         ]);
 
         // Update component costs

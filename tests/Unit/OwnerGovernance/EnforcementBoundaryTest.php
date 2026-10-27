@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Unit\OwnerGovernance;
 
@@ -75,6 +77,7 @@ class EnforcementBoundaryTest extends TestCase
         $content = file_get_contents($this->repoRoot() . '/scripts/ci/check-evidence-freshness.sh');
         $this->assertStringContainsString('owner_governance_compute_implementation_tree_digest', $content);
         $this->assertStringContainsString('owner_governance_count_blocking_checks', $content);
+        $this->assertStringContainsString('owner_governance_count_failed_checks', $content);
         $this->assertStringContainsString('owner_decision_binding', $content);
         $this->assertStringNotContainsString('owner_governance_compute_evidence_digest', $content, 'The old, self-referential CI-check digest function must not be referenced anymore.');
     }

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
@@ -26,8 +28,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class WorkTemplateController extends BaseApiController
@@ -36,8 +38,7 @@ class WorkTemplateController extends BaseApiController
         private ZenaAuditLogger $auditLogger,
         private WorkTemplatePackageService $templatePackageService,
         private WorkTemplateCrudService $crudService
-    )
-    {
+    ) {
     }
 
     public function index(Request $request): JsonResponse
@@ -981,9 +982,9 @@ class WorkTemplateController extends BaseApiController
             $content['rules'] = $request->input('rules', []);
         }
 
-        $content['steps'] = $content['steps'] ?? [];
-        $content['approvals'] = $content['approvals'] ?? [];
-        $content['rules'] = $content['rules'] ?? [];
+        $content['steps'] ??= [];
+        $content['approvals'] ??= [];
+        $content['rules'] ??= [];
 
         return $content;
     }
@@ -1493,11 +1494,11 @@ class WorkTemplateController extends BaseApiController
 
     private function isValidSelectorShape(array $selector): bool
     {
-        return (
+        return
             (isset($selector['role']) && is_string($selector['role']))
             || (isset($selector['project_role']) && is_string($selector['project_role']))
             || (isset($selector['user_id']) && is_string($selector['user_id']))
-        );
+        ;
     }
 
     /**

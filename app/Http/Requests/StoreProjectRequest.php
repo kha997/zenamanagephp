@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests;
 
@@ -19,7 +21,7 @@ class StoreProjectRequest extends FormRequest
             'start_date' => 'required|date|after_or_equal:today',
             'end_date' => 'required|date|after:start_date',
             'budget' => 'nullable|numeric|min:0',
-            'status' => 'required|in:planning,active,on_hold,completed,cancelled'
+            'status' => 'required|in:planning,active,on_hold,completed,cancelled',
         ];
     }
 }

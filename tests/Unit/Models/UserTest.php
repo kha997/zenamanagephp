@@ -2,28 +2,28 @@
 
 namespace Tests\Unit\Models;
 
-use Tests\TestCase;
-use App\Models\User;
 use App\Models\Notification;
 use App\Models\Project;
 use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Hash;
+use Tests\TestCase;
 
 class UserTest extends TestCase
 {
     use RefreshDatabase;
 
     protected $tenant;
+
     protected $user;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->tenant = Tenant::factory()->create();
         $this->user = User::factory()->create([
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
     }
 
@@ -54,13 +54,13 @@ class UserTest extends TestCase
     public function it_has_many_tasks()
     {
         $project = \Src\CoreProject\Models\Project::factory()->create([
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $task = \App\Models\Task::factory()->create([
             'project_id' => $project->id,
             'assigned_to' => $this->user->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $this->assertTrue($this->user->tasks->contains($task));
@@ -70,18 +70,18 @@ class UserTest extends TestCase
     public function it_has_many_task_assignments()
     {
         $project = \Src\CoreProject\Models\Project::factory()->create([
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $task = \App\Models\Task::factory()->create([
             'project_id' => $project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $assignment = \App\Models\TaskAssignment::factory()->create([
             'task_id' => $task->id,
             'user_id' => $this->user->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $this->assertTrue($this->user->taskAssignments->contains($assignment));
@@ -104,7 +104,7 @@ class UserTest extends TestCase
             'first_name' => 'John',
             'last_name' => 'Doe',
             'department' => 'Engineering',
-            'job_title' => 'Senior Developer'
+            'job_title' => 'Senior Developer',
         ]);
 
         $this->assertEquals('John', $this->user->first_name);
@@ -119,13 +119,13 @@ class UserTest extends TestCase
         // Create user without email verification
         $unverifiedUser = User::factory()->create([
             'tenant_id' => $this->tenant->id,
-            'email_verified_at' => null
+            'email_verified_at' => null,
         ]);
-        
+
         $this->assertFalse($unverifiedUser->hasVerifiedEmail());
 
         $unverifiedUser->markEmailAsVerified();
-        
+
         $this->assertTrue($unverifiedUser->hasVerifiedEmail());
         $this->assertNotNull($unverifiedUser->email_verified_at);
     }
@@ -214,7 +214,7 @@ class UserTest extends TestCase
     public function it_can_get_full_name()
     {
         $this->user->update(['name' => 'John Doe']);
-        
+
         $this->assertEquals('John Doe', $this->user->name);
     }
 
@@ -222,7 +222,7 @@ class UserTest extends TestCase
     public function it_can_get_initials()
     {
         $this->user->update(['name' => 'John Doe']);
-        
+
         // Test initials if method exists
         $this->assertTrue(true); // Placeholder test
     }

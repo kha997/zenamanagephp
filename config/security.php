@@ -40,18 +40,18 @@ return [
         'default_limits' => [
             'ip' => ['requests' => 100, 'minutes' => 15],
             'user' => ['requests' => 200, 'minutes' => 15],
-            'endpoint' => ['requests' => 50, 'minutes' => 15]
+            'endpoint' => ['requests' => 50, 'minutes' => 15],
         ],
         'auth_limits' => [
             'ip' => ['requests' => 10, 'minutes' => 15],
             'user' => ['requests' => 5, 'minutes' => 15],
-            'endpoint' => ['requests' => 5, 'minutes' => 15]
+            'endpoint' => ['requests' => 5, 'minutes' => 15],
         ],
         'api_limits' => [
             'ip' => ['requests' => 1000, 'minutes' => 60],
             'user' => ['requests' => 2000, 'minutes' => 60],
-            'endpoint' => ['requests' => 500, 'minutes' => 60]
-        ]
+            'endpoint' => ['requests' => 500, 'minutes' => 60],
+        ],
     ],
 
     /*
@@ -81,15 +81,15 @@ return [
         'max_size' => env('UPLOAD_MAX_SIZE', 10 * 1024 * 1024), // 10MB
         'allowed_mime_types' => [
             'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-            'application/pdf', 'application/msword', 
+            'application/pdf', 'application/msword',
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'application/vnd.ms-excel', 
+            'application/vnd.ms-excel',
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'text/plain', 'text/csv', 'application/zip', 'application/x-rar-compressed'
+            'text/plain', 'text/csv', 'application/zip', 'application/x-rar-compressed',
         ],
         'allowed_extensions' => [
-            'jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 
-            'xls', 'xlsx', 'txt', 'csv', 'zip', 'rar'
+            'jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx',
+            'xls', 'xlsx', 'txt', 'csv', 'zip', 'rar',
         ],
         'scan_viruses' => env('UPLOAD_SCAN_VIRUSES', false),
         'validate_content' => env('UPLOAD_VALIDATE_CONTENT', true),

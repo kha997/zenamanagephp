@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests;
 
@@ -6,9 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Form Request cho Task validation
- * 
- * @package App\Http\Requests
+ * Form Request cho Task validation.
  */
 class TaskFormRequest extends FormRequest
 {
@@ -84,7 +84,7 @@ class TaskFormRequest extends FormRequest
             // Kiểm tra component thuộc cùng project
             if ($this->component_id && $this->project_id) {
                 $component = \App\Models\Component::find($this->component_id);
-                if ($component && $component->project_id !== (int)$this->project_id) {
+                if ($component && $component->project_id !== (int) $this->project_id) {
                     $validator->errors()->add('component_id', 'Component phải thuộc cùng dự án.');
                 }
             }

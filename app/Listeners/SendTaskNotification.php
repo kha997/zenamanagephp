@@ -3,13 +3,12 @@
 namespace App\Listeners;
 
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
 
 class SendTaskNotification implements ShouldQueue
 {
-
     private NotificationRuleService $notificationService;
+
     private AuditService $auditService;
 
     /**
@@ -28,7 +27,7 @@ class SendTaskNotification implements ShouldQueue
     {
         try {
             $task = $event->task;
-            
+
             // Prepare event data for notification rules
             $eventData = [
                 'task_id' => $task->id,
@@ -44,10 +43,10 @@ class SendTaskNotification implements ShouldQueue
                 'end_date' => $task->end_date?->format('Y-m-d'),
                 'priority' => $task->priority ?? 'medium',
             ];
-            
+
             // Evaluate and trigger notification rules
             $this->notificationService->evaluateRules('task_created', $eventData);
-            
+
             // Log the notification
             $this->auditService->logSystemEvent('task_notification_sent', [
                 'task_id' => $task->id,
@@ -55,18 +54,17 @@ class SendTaskNotification implements ShouldQueue
                 'event_type' => 'task_created',
                 'user_id' => $event->user->id,
             ]);
-            
-            Log::info("Task notification sent", [
+
+            Log::info('Task notification sent', [
                 'task_id' => $task->id,
                 'event_type' => 'task_created',
             ]);
-            
         } catch (\Exception $e) {
-            Log::error("Failed to send task notification", [
+            Log::error('Failed to send task notification', [
                 'task_id' => $event->task->id,
                 'error' => $e->getMessage(),
             ]);
-            
+
             // Don't fail the job, just log the error
             $this->release(30); // Retry in 30 seconds
         }
@@ -77,7 +75,7 @@ class SendTaskNotification implements ShouldQueue
      */
     public function failed(TaskCreated $event, $exception): void
     {
-        Log::error("SendTaskNotification listener failed", [
+        Log::error('SendTaskNotification listener failed', [
             'task_id' => $event->task->id,
             'error' => $exception->getMessage(),
         ]);

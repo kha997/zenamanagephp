@@ -67,26 +67,6 @@ services:
     networks:
       - zenamanage-network
 
-  # WebSocket Server
-  websocket:
-    build:
-      context: .
-      dockerfile: Dockerfile.websocket
-    container_name: zenamanage-websocket
-    restart: unless-stopped
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./:/var/www/html
-    environment:
-      - WEBSOCKET_HOST=0.0.0.0
-      - WEBSOCKET_PORT=8080
-    depends_on:
-      - app
-      - redis
-    networks:
-      - zenamanage-network
-
   # Queue Worker
   queue:
     build:

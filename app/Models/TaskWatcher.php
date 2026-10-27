@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -9,11 +11,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TaskWatcher extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids;
+    use HasFactory;
 
     protected $table = 'task_watchers';
-    
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [
@@ -22,7 +26,7 @@ class TaskWatcher extends Model
     ];
 
     /**
-     * RELATIONSHIPS
+     * RELATIONSHIPS.
      */
 
     /**
@@ -42,11 +46,11 @@ class TaskWatcher extends Model
     }
 
     /**
-     * SCOPES
+     * SCOPES.
      */
 
     /**
-     * Scope: Filter by task
+     * Scope: Filter by task.
      */
     public function scopeForTask($query, string $taskId)
     {
@@ -54,7 +58,7 @@ class TaskWatcher extends Model
     }
 
     /**
-     * Scope: Filter by user
+     * Scope: Filter by user.
      */
     public function scopeForUser($query, string $userId)
     {

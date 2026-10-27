@@ -1,14 +1,15 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Seeders;
 
 use App\Models\Project;
-use App\Models\Tenant;
 use Illuminate\Database\Seeder;
 
 /**
- * Project Seeder
- * 
+ * Project Seeder.
+ *
  * Tạo dữ liệu mẫu cho projects
  */
 class ProjectSeeder extends Seeder

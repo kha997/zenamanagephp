@@ -30,6 +30,7 @@ class EmailMonitoringCommand extends Command
     protected $description = 'Monitor email system health and send alerts';
 
     protected $emailService;
+
     protected $queueService;
 
     public function __construct(EmailService $emailService, QueueManagementService $queueService)
@@ -53,7 +54,7 @@ class EmailMonitoringCommand extends Command
         try {
             // Get system health
             $health = $this->checkSystemHealth();
-            
+
             // Display health status
             $this->displayHealthStatus($health);
 
@@ -82,12 +83,13 @@ class EmailMonitoringCommand extends Command
             Log::error('Email monitoring failed', [
                 'error' => $e->getMessage(),
             ]);
+
             return 1;
         }
     }
 
     /**
-     * Check system health
+     * Check system health.
      */
     private function checkSystemHealth(): array
     {
@@ -103,7 +105,7 @@ class EmailMonitoringCommand extends Command
     }
 
     /**
-     * Get email statistics
+     * Get email statistics.
      */
     private function getEmailStats(): array
     {
@@ -138,7 +140,7 @@ class EmailMonitoringCommand extends Command
     }
 
     /**
-     * Calculate delivery rate
+     * Calculate delivery rate.
      */
     private function calculateDeliveryRate(Carbon $since): float
     {
@@ -154,7 +156,7 @@ class EmailMonitoringCommand extends Command
     }
 
     /**
-     * Calculate failure rate
+     * Calculate failure rate.
      */
     private function calculateFailureRate(Carbon $since): float
     {
@@ -170,7 +172,7 @@ class EmailMonitoringCommand extends Command
     }
 
     /**
-     * Get system metrics
+     * Get system metrics.
      */
     private function getSystemMetrics(): array
     {
@@ -185,7 +187,7 @@ class EmailMonitoringCommand extends Command
     }
 
     /**
-     * Check for alerts
+     * Check for alerts.
      */
     private function checkForAlerts(array $health, int $alertThreshold): array
     {
@@ -226,7 +228,7 @@ class EmailMonitoringCommand extends Command
     }
 
     /**
-     * Send alerts
+     * Send alerts.
      */
     private function sendAlerts(array $alerts): void
     {
@@ -243,18 +245,18 @@ class EmailMonitoringCommand extends Command
     }
 
     /**
-     * Send email alert
+     * Send email alert.
      */
     private function sendEmailAlert(string $email, array $alerts): void
     {
         try {
             $subject = 'ZenaManage Email System Alert';
             $message = "Email system alerts detected:\n\n";
-            
+
             foreach ($alerts as $alert) {
                 $message .= "• {$alert}\n";
             }
-            
+
             $message .= "\nTime: " . now()->toDateTimeString();
             $message .= "\nSystem: " . config('app.name');
 
@@ -264,7 +266,7 @@ class EmailMonitoringCommand extends Command
 
             $this->info("Email alert sent to: {$email}");
         } catch (\Exception $e) {
-            $this->error("Failed to send email alert: " . $e->getMessage());
+            $this->error('Failed to send email alert: ' . $e->getMessage());
             Log::error('Failed to send email alert', [
                 'email' => $email,
                 'error' => $e->getMessage(),
@@ -273,19 +275,19 @@ class EmailMonitoringCommand extends Command
     }
 
     /**
-     * Send Slack alert
+     * Send Slack alert.
      */
     private function sendSlackAlert(string $webhook, array $alerts): void
     {
         try {
             $message = "🚨 *ZenaManage Email System Alert*\n\n";
-            
+
             foreach ($alerts as $alert) {
                 $message .= "• {$alert}\n";
             }
-            
-            $message .= "\n_Time: " . now()->toDateTimeString() . "_";
-            $message .= "\n_System: " . config('app.name') . "_";
+
+            $message .= "\n_Time: " . now()->toDateTimeString() . '_';
+            $message .= "\n_System: " . config('app.name') . '_';
 
             $payload = [
                 'text' => $message,
@@ -297,7 +299,7 @@ class EmailMonitoringCommand extends Command
 
             $this->info('Slack alert sent successfully');
         } catch (\Exception $e) {
-            $this->error("Failed to send Slack alert: " . $e->getMessage());
+            $this->error('Failed to send Slack alert: ' . $e->getMessage());
             Log::error('Failed to send Slack alert', [
                 'webhook' => $webhook,
                 'error' => $e->getMessage(),
@@ -306,7 +308,7 @@ class EmailMonitoringCommand extends Command
     }
 
     /**
-     * Display health status
+     * Display health status.
      */
     private function displayHealthStatus(array $health): void
     {
@@ -343,7 +345,7 @@ class EmailMonitoringCommand extends Command
         $this->info('💚 Queue Health:');
         $statusColor = $health['queue_health']['status'] === 'healthy' ? 'green' : 'red';
         $this->line("Status: <fg={$statusColor}>{$health['queue_health']['status']}</>");
-        
+
         if (!empty($health['queue_health']['issues'])) {
             $this->warn('Issues:');
             foreach ($health['queue_health']['issues'] as $issue) {
@@ -370,7 +372,7 @@ class EmailMonitoringCommand extends Command
     }
 
     /**
-     * Log monitoring results
+     * Log monitoring results.
      */
     private function logMonitoringResults(array $health, array $alerts): void
     {

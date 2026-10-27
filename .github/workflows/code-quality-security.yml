@@ -19,6 +19,11 @@ env:
   PHP_VERSION: '8.2'
   REPORT_SUMMARY_LIMIT: '20'
 
+# GAP-075: one run per PR at a time, so report comments reflect the latest head.
+concurrency:
+  group: code-quality-security-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
   pull-requests: write
@@ -68,7 +73,7 @@ jobs:
     - name: Run PHP CS Fixer
       continue-on-error: true
       run: |
-        composer require --dev friendsofphp/php-cs-fixer
+        # GAP-080: use the php-cs-fixer version locked in composer.lock.
         bash scripts/ci/run-json-report-command.sh cs-fixer-report.json php-cs-fixer ./vendor/bin/php-cs-fixer fix --dry-run --diff --format=json
 
     - name: Run PHP Mess Detector
@@ -85,7 +90,7 @@ jobs:
 
     - name: Upload Code Quality Reports
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: code-quality-reports
         path: |
@@ -96,35 +101,78 @@ jobs:
           phpcpd-report.txt
 
     - name: Comment Code Quality on PR
-      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+      if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
       continue-on-error: true
       uses: actions/github-script@v8
       with:
         script: |
+          // GAP-075: one marked comment per report; posted only on problems, deleted when clean.
+          async function syncReport(key, body) {
+            const marker = `<!-- zena-ci:${key} -->`;
+            const params = { owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number };
+            const comments = await github.paginate(github.rest.issues.listComments, { ...params, per_page: 100 });
+            const existing = comments.find(c => c.user?.type === 'Bot' && (c.body || '').startsWith(marker));
+            if (!body) {
+              if (existing) {
+                await github.rest.issues.deleteComment({ owner: params.owner, repo: params.repo, comment_id: existing.id });
+              }
+              return;
+            }
+            const full = `${marker}\n${body}`;
+            if (!existing) {
+              await github.rest.issues.createComment({ ...params, body: full });
+            } else if (existing.body !== full) {
+              await github.rest.issues.updateComment({ owner: params.owner, repo: params.repo, comment_id: existing.id, body: full });
+            }
+          }
           const fs = require('fs');
           const phpstan = JSON.parse(fs.readFileSync('phpstan-report.json', 'utf8'));
           const csFixer = JSON.parse(fs.readFileSync('cs-fixer-report.json', 'utf8'));
-          
-          let comment = '## Code Quality Report\n\n';
-          const phpstanErrors = phpstan.totals?.errors ?? phpstan.totals?.file_errors ?? phpstan.totals?.errors ?? 0;
-          
-          if (phpstanErrors > 0) {
-            comment += `### PHPStan Issues: ${phpstanErrors} errors\n`;
-          }
-          
-          if (csFixer.files && csFixer.files.length > 0) {
-            comment += `\n### Code Style Issues: ${csFixer.files.length} files need fixing\n`;
-          } else if (csFixer.status && csFixer.status !== 'ok_without_json_output') {
-            comment += `\n### Code Style Issues\n- php-cs-fixer exited with status: ${csFixer.status}\n`;
-          }
-          
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: comment
-          });
+          const changed = new Set((await github.paginate(github.rest.pulls.listFiles, {
+            owner: context.repo.owner, repo: context.repo.repo, pull_number: context.issue.number, per_page: 100,
+          })).map(f => f.filename));
 
+          let body = '';
+          const phpstanErrors = (phpstan.totals?.errors ?? 0) + (phpstan.totals?.file_errors ?? 0);
+          if (phpstanErrors > 0) {
+            body += `### PHPStan Issues: ${phpstanErrors} errors\n`;
+          } else if (phpstan.status === 'failed') {
+            body += `### PHPStan did not complete (exit code ${phpstan.exit_code})\n`;
+          }
+          if (csFixer.status === 'failed') {
+            body += `\n### php-cs-fixer did not complete (exit code ${csFixer.exit_code})\n`;
+          }
+          const styleFiles = (csFixer.files || []).map(f => f.name).filter(name => changed.has(name));
+          if (styleFiles.length > 0) {
+            body += `\n### Code Style Issues in files changed by this PR: ${styleFiles.length}\n`;
+            styleFiles.slice(0, 20).forEach(name => { body += `- ${name}\n`; });
+          }
+
+          await syncReport('code-quality', body ? `## Code Quality Report\n\n${body}` : '');
+
+    - name: Fail on code style issues in files changed by this PR
+      if: always() && github.event_name == 'pull_request'
+      uses: actions/github-script@v8
+      with:
+        script: |
+          // GAP-080: the codebase is formatted; a PR must not add style issues to the files it touches.
+          const fs = require('fs');
+          if (!fs.existsSync('cs-fixer-report.json')) {
+            core.setFailed('cs-fixer-report.json is missing: php-cs-fixer did not run.');
+            return;
+          }
+          const csFixer = JSON.parse(fs.readFileSync('cs-fixer-report.json', 'utf8'));
+          if (csFixer.status === 'failed') {
+            core.setFailed(`php-cs-fixer did not complete (exit code ${csFixer.exit_code}).`);
+            return;
+          }
+          const changed = new Set((await github.paginate(github.rest.pulls.listFiles, {
+            owner: context.repo.owner, repo: context.repo.repo, pull_number: context.issue.number, per_page: 100,
+          })).map(f => f.filename));
+          const styleFiles = (csFixer.files || []).map(f => f.name).filter(name => changed.has(name));
+          if (styleFiles.length > 0) {
+            core.setFailed(`Code style issues in ${styleFiles.length} file(s) changed by this PR (run ./vendor/bin/php-cs-fixer fix <file>):\n` + styleFiles.join('\n'));
+          }
   security-scan:
     name: Security Vulnerability Scan
     runs-on: ubuntu-latest
@@ -150,20 +198,23 @@ jobs:
     - name: Install Composer dependencies
       run: composer install --prefer-dist --no-progress --no-suggest
 
+    # GAP-083: the exit code is kept for the gate step at the end of this job.
     - name: Run Composer Security Audit
-      run: composer audit --format=json > composer-audit.json || true
+      id: composer-audit
+      run: |
+        set +e
+        composer audit --abandoned=report --format=json > composer-audit.json
+        echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+
+    # GAP-083: npm exits 1 whenever any finding exists; the gate step reads the JSON instead.
+    - name: Run npm audit
+      run: npm audit --package-lock-only --json > npm-audit.json || true
 
     - name: Run PHP Security Checker
       continue-on-error: true
       run: |
         composer require --dev enlightn/security-checker
         bash scripts/ci/run-json-report-command.sh security-checker.json security-checker ./vendor/bin/security-checker security:check --format=json
-
-    - name: Run PHPStan Security Rules
-      continue-on-error: true
-      run: |
-        composer require --dev phpstan/phpstan-security-rules
-        bash scripts/ci/run-json-report-command.sh phpstan-security.json phpstan-security ./vendor/bin/phpstan analyse --level=8 --error-format=json
 
     - name: Summarize Security Scans
       if: always()
@@ -174,10 +225,17 @@ jobs:
           php scripts/ci/print-json-report-summary.php security-checker.json "security-checker" "${REPORT_SUMMARY_LIMIT}" || true
           echo '```'
           echo
-          echo "## PHPStan Security"
+          echo "## npm audit"
           echo '```text'
-          php scripts/ci/print-phpstan-summary.php phpstan-security.json "${REPORT_SUMMARY_LIMIT}" || true
+          jq -r '(.metadata.vulnerabilities | "critical=\(.critical) high=\(.high) moderate=\(.moderate) low=\(.low)"), (.vulnerabilities // {} | to_entries[] | "\(.value.severity)\t\(.key)")' npm-audit.json || true
           echo '```'
+          if [ -f .npm-audit-ignore ]; then
+            echo
+            echo "## npm audit exceptions (.npm-audit-ignore)"
+            echo '```text'
+            cat .npm-audit-ignore
+            echo '```'
+          fi
         } >> "$GITHUB_STEP_SUMMARY"
 
     - name: Run PHP CS Fixer Security Rules
@@ -188,59 +246,108 @@ jobs:
 
     - name: Upload Security Reports
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: security-reports
         path: |
           composer-audit.json
+          npm-audit.json
           security-checker.json
           security-checker.stderr.log
-          phpstan-security.json
-          phpstan-security.stderr.log
           cs-fixer-security.json
 
     - name: Comment Security Issues on PR
-      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+      if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
       continue-on-error: true
       uses: actions/github-script@v8
       with:
         script: |
+          // GAP-075: one marked comment per report; posted only on problems, deleted when clean.
+          async function syncReport(key, body) {
+            const marker = `<!-- zena-ci:${key} -->`;
+            const params = { owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number };
+            const comments = await github.paginate(github.rest.issues.listComments, { ...params, per_page: 100 });
+            const existing = comments.find(c => c.user?.type === 'Bot' && (c.body || '').startsWith(marker));
+            if (!body) {
+              if (existing) {
+                await github.rest.issues.deleteComment({ owner: params.owner, repo: params.repo, comment_id: existing.id });
+              }
+              return;
+            }
+            const full = `${marker}\n${body}`;
+            if (!existing) {
+              await github.rest.issues.createComment({ ...params, body: full });
+            } else if (existing.body !== full) {
+              await github.rest.issues.updateComment({ owner: params.owner, repo: params.repo, comment_id: existing.id, body: full });
+            }
+          }
           const fs = require('fs');
           const composerAudit = JSON.parse(fs.readFileSync('composer-audit.json', 'utf8'));
           const securityChecker = JSON.parse(fs.readFileSync('security-checker.json', 'utf8'));
-          
-          let comment = '## Security Scan Report\n\n';
+
+          let body = '';
           const advisories = composerAudit.advisories
             ? Array.isArray(composerAudit.advisories)
               ? composerAudit.advisories
               : Object.values(composerAudit.advisories).flat()
             : [];
-          
-          if (advisories.length > 0) {
-            comment += `### Composer Security Issues: ${advisories.length} vulnerabilities found\n`;
-            advisories.slice(0, 5).forEach(advisory => {
-              comment += `- ${advisory.packageName}: ${advisory.title}\n`;
-            });
-          }
-          
-          if (securityChecker.vulnerabilities && securityChecker.vulnerabilities.length > 0) {
-            comment += `\n### Security Checker Issues: ${securityChecker.vulnerabilities.length} vulnerabilities found\n`;
-            securityChecker.vulnerabilities.slice(0, 5).forEach(vuln => {
-              comment += `- ${vuln.package}: ${vuln.title}\n`;
-            });
-          }
-          
-          if (advisories.length === 0 && (!securityChecker.vulnerabilities || securityChecker.vulnerabilities.length === 0)) {
-            comment += '✅ No security vulnerabilities found!';
-          }
-          
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: comment
-          });
 
+          if (advisories.length > 0) {
+            body += `### Composer Security Issues: ${advisories.length} vulnerabilities found\n`;
+            advisories.slice(0, 5).forEach(advisory => {
+              body += `- ${advisory.packageName}: ${advisory.title}\n`;
+            });
+          }
+
+          if (securityChecker.vulnerabilities && securityChecker.vulnerabilities.length > 0) {
+            body += `\n### Security Checker Issues: ${securityChecker.vulnerabilities.length} vulnerabilities found\n`;
+            securityChecker.vulnerabilities.slice(0, 5).forEach(vuln => {
+              body += `- ${vuln.package}: ${vuln.title}\n`;
+            });
+          }
+
+          await syncReport('security', body ? `## Security Scan Report\n\n${body}` : '');
+
+    # GAP-083: Composer exceptions go in composer.json config.audit.ignore, each with a reason.
+    # GAP-086: npm exceptions go in .npm-audit-ignore, one GHSA id per line followed by "# reason".
+    - name: Fail on Composer advisories or npm high/critical vulnerabilities
+      env:
+        COMPOSER_AUDIT_EXIT: ${{ steps.composer-audit.outputs.exit_code }}
+      run: |
+        status=0
+        if [ "${COMPOSER_AUDIT_EXIT}" != "0" ]; then
+          echo "::error::composer audit exited ${COMPOSER_AUDIT_EXIT}: security advisories found, or the audit could not run. See composer-audit.json in the security-reports artifact."
+          status=1
+        fi
+        if ! jq -e '.metadata.vulnerabilities' npm-audit.json >/dev/null 2>&1; then
+          echo "::error::npm audit did not produce a report. See npm-audit.json in the security-reports artifact."
+          status=1
+        else
+          ignored='[]'
+          if [ -f .npm-audit-ignore ]; then
+            entry='^[[:space:]]*GHSA(-[a-z0-9]{4}){3}[[:space:]]*#[[:space:]]*[^[:space:]]'
+            invalid=$(grep -nvE "^[[:space:]]*(#.*)?\$|${entry}" .npm-audit-ignore || true)
+            if [ -n "${invalid}" ]; then
+              echo "::error::Each .npm-audit-ignore entry must be a GHSA id followed by \"# reason\". Invalid lines:"
+              echo "${invalid}"
+              status=1
+            fi
+            ignored=$({ grep -oE "${entry}" .npm-audit-ignore || true; } | { grep -oE 'GHSA(-[a-z0-9]{4}){3}' || true; } | jq -R . | jq -sc .)
+          fi
+          blocking=$(jq -r --argjson ignored "${ignored}" '
+            [.vulnerabilities[]?.via[]? | objects
+              | select(.severity == "high" or .severity == "critical")
+              | {id: (.url | split("/") | last), severity, name, title}]
+            | unique_by(.id)
+            | map(select(.id as $id | $ignored | index($id) | not))
+            | .[] | "\(.severity)\t\(.id)\t\(.name): \(.title)"' npm-audit.json)
+          if [ -n "${blocking}" ]; then
+            echo "::error::npm audit found high/critical advisories. Fix them, or add the GHSA id with a reason to .npm-audit-ignore:"
+            echo "${blocking}"
+            status=1
+          fi
+        fi
+        exit "${status}"
   dependency-scan:
     name: Dependency Vulnerability Scan
     runs-on: ubuntu-latest
@@ -270,6 +377,19 @@ jobs:
       continue-on-error: true
       run: |
         bash scripts/ci/run-json-report-command.sh composer-outdated.json composer-outdated composer outdated --format=json
+
+    - name: Compare outdated packages with the base branch
+      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+      continue-on-error: true
+      env:
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      run: |
+        composer outdated --locked --no-plugins --format=json > outdated-locked-head.json || true
+        git fetch --no-tags --depth=1 origin "$BASE_SHA"
+        mkdir -p "$RUNNER_TEMP/base-composer"
+        git show "$BASE_SHA:composer.json" > "$RUNNER_TEMP/base-composer/composer.json"
+        git show "$BASE_SHA:composer.lock" > "$RUNNER_TEMP/base-composer/composer.lock"
+        composer outdated --locked --no-plugins --format=json --working-dir="$RUNNER_TEMP/base-composer" > outdated-locked-base.json || true
 
     - name: Run Composer Require Checker
       continue-on-error: true
@@ -302,7 +422,7 @@ jobs:
 
     - name: Upload Dependency Reports
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: dependency-reports
         path: |
@@ -312,32 +432,48 @@ jobs:
           composer-require-checker.stderr.log
 
     - name: Comment Dependency Issues on PR
-      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+      if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
       continue-on-error: true
       uses: actions/github-script@v8
       with:
         script: |
-          const fs = require('fs');
-          const outdated = JSON.parse(fs.readFileSync('composer-outdated.json', 'utf8'));
-          
-          let comment = '## Dependency Scan Report\n\n';
-          
-          if (outdated.installed && outdated.installed.length > 0) {
-            comment += `### Outdated Packages: ${outdated.installed.length} packages need updates\n`;
-            outdated.installed.slice(0, 10).forEach(pkg => {
-              comment += `- ${pkg.name}: ${pkg.version} → ${pkg.latest}\n`;
-            });
-          } else {
-            comment += '✅ All packages are up to date!';
+          // GAP-075: one marked comment per report; posted only on problems, deleted when clean.
+          async function syncReport(key, body) {
+            const marker = `<!-- zena-ci:${key} -->`;
+            const params = { owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number };
+            const comments = await github.paginate(github.rest.issues.listComments, { ...params, per_page: 100 });
+            const existing = comments.find(c => c.user?.type === 'Bot' && (c.body || '').startsWith(marker));
+            if (!body) {
+              if (existing) {
+                await github.rest.issues.deleteComment({ owner: params.owner, repo: params.repo, comment_id: existing.id });
+              }
+              return;
+            }
+            const full = `${marker}\n${body}`;
+            if (!existing) {
+              await github.rest.issues.createComment({ ...params, body: full });
+            } else if (existing.body !== full) {
+              await github.rest.issues.updateComment({ owner: params.owner, repo: params.repo, comment_id: existing.id, body: full });
+            }
           }
-          
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: comment
-          });
+          const fs = require('fs');
+          const read = file => {
+            try { return JSON.parse(fs.readFileSync(file, 'utf8')).locked || []; } catch (e) { return null; }
+          };
+          const head = read('outdated-locked-head.json');
+          const base = read('outdated-locked-base.json');
 
+          let body = '';
+          if (head !== null && base !== null && head.length > base.length) {
+            const baseNames = new Set(base.map(pkg => pkg.name));
+            const added = head.filter(pkg => !baseNames.has(pkg.name));
+            body += `### Outdated packages: ${head.length} (main: ${base.length})\n`;
+            added.slice(0, 20).forEach(pkg => {
+              body += `- ${pkg.name}: ${pkg.version} → ${pkg.latest}\n`;
+            });
+          }
+
+          await syncReport('dependency', body ? `## Dependency Scan Report\n\n${body}` : '');
   docker-security:
     name: Docker Security Scan
     runs-on: ubuntu-latest
@@ -347,10 +483,10 @@ jobs:
       uses: actions/checkout@v5
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@v4
 
     - name: Build Docker image
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v7
       with:
         context: .
         file: ./Dockerfile.prod
@@ -359,74 +495,146 @@ jobs:
         load: true
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        # Rebuild the OS-package layers every run so fixed Alpine packages are scanned (GAP-071)
+        no-cache-filters: production
     - name: Verify image present
       run: docker image inspect zenamanage:test
 
+    - name: Smoke test image (PHP extensions, php-fpm config)
+      run: |
+        modules="$(docker run --rm zenamanage:test php -m)"
+        missing=0
+        for ext in pdo_mysql mbstring xml zip intl gd 'Zend OPcache' bcmath sockets redis; do
+          if ! printf '%s\n' "$modules" | grep -qixF "$ext"; then
+            echo "::error::PHP extension missing from image: $ext"
+            missing=1
+          fi
+        done
+        [ "$missing" -eq 0 ]
+        docker run --rm zenamanage:test php-fpm -t
+        docker run --rm zenamanage:test nginx -t
+
+    - name: Smoke test image (PHP runtime settings)
+      run: |
+        startup="$(docker run --rm zenamanage:test php -d display_startup_errors=1 -d log_errors=0 -d error_log= -r 'echo "php started\n";' 2>&1)"
+        printf '%s\n' "$startup"
+        if printf '%s\n' "$startup" | grep -qiE 'warning|unable to load|deprecated'; then
+          echo "::error::PHP reports startup warnings (see output above)"
+          exit 1
+        fi
+        docker run --rm zenamanage:test php -r '
+          $fail = [];
+          foreach (["proc_open", "exec", "curl_exec", "curl_multi_exec", "shell_exec", "parse_ini_file"] as $fn) {
+              if (!function_exists($fn)) { $fail[] = "$fn is disabled"; }
+          }
+          if (!extension_loaded("Zend OPcache")) { $fail[] = "Zend OPcache not loaded"; }
+          if (ini_get("opcache.save_comments") !== "1") { $fail[] = "opcache.save_comments is not 1"; }
+          if ($fail) { fwrite(STDERR, implode("\n", $fail) . "\n"); exit(1); }
+          echo "PHP runtime settings OK\n";'
+
+    - name: Smoke test image (container serves HTTP)
+      run: |
+        app_key="base64:$(openssl rand -base64 32)"
+        docker run -d --name zenamanage-smoke -p 8080:80 \
+          -e APP_KEY="$app_key" -e APP_ENV=production -e APP_DEBUG=false \
+          -e DB_CONNECTION=sqlite -e DB_DATABASE=/tmp/smoke.sqlite \
+          -e CACHE_STORE=file -e SESSION_DRIVER=file -e QUEUE_CONNECTION=sync \
+          zenamanage:test
+        ok=0
+        for i in $(seq 1 30); do
+          if curl -fsS --max-time 5 -o /dev/null http://127.0.0.1:8080/api/health; then ok=1; break; fi
+          sleep 2
+        done
+        status=0
+        if [ "$ok" -ne 1 ]; then
+          echo "::error::/api/health did not return 200 within 60s"
+          status=1
+        fi
+        curl -fsS --max-time 5 -o /dev/null http://127.0.0.1:8080/robots.txt || { echo "::error::/robots.txt did not return 200"; status=1; }
+        if [ "$status" -ne 0 ]; then
+          docker logs zenamanage-smoke || true
+          docker exec zenamanage-smoke sh -c 'tail -n 50 /var/log/supervisor/*.log' || true
+        fi
+        docker rm -f zenamanage-smoke >/dev/null
+        exit "$status"
+
     - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@0.35.0
+      uses: aquasecurity/trivy-action@v0.36.0
       with:
         image-ref: 'zenamanage:test'
         format: 'sarif'
         output: 'trivy-results.sarif'
 
     - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: 'trivy-results.sarif'
 
     - name: Run Trivy vulnerability scanner (JSON)
-      uses: aquasecurity/trivy-action@0.35.0
+      uses: aquasecurity/trivy-action@v0.36.0
       with:
         image-ref: 'zenamanage:test'
         format: 'json'
         output: 'trivy-results.json'
 
     - name: Upload Trivy JSON results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: trivy-results
         path: trivy-results.json
 
     - name: Comment Docker Security Issues on PR
-      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+      if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
       continue-on-error: true
       uses: actions/github-script@v8
       with:
         script: |
+          // GAP-075: one marked comment per report; posted only on problems, deleted when clean.
+          async function syncReport(key, body) {
+            const marker = `<!-- zena-ci:${key} -->`;
+            const params = { owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number };
+            const comments = await github.paginate(github.rest.issues.listComments, { ...params, per_page: 100 });
+            const existing = comments.find(c => c.user?.type === 'Bot' && (c.body || '').startsWith(marker));
+            if (!body) {
+              if (existing) {
+                await github.rest.issues.deleteComment({ owner: params.owner, repo: params.repo, comment_id: existing.id });
+              }
+              return;
+            }
+            const full = `${marker}\n${body}`;
+            if (!existing) {
+              await github.rest.issues.createComment({ ...params, body: full });
+            } else if (existing.body !== full) {
+              await github.rest.issues.updateComment({ owner: params.owner, repo: params.repo, comment_id: existing.id, body: full });
+            }
+          }
           const fs = require('fs');
           const trivyResults = JSON.parse(fs.readFileSync('trivy-results.json', 'utf8'));
-          
-          let comment = '## Docker Security Scan Report\n\n';
-          
-          if (trivyResults.Results && trivyResults.Results.length > 0) {
-            let totalVulns = 0;
-            trivyResults.Results.forEach(result => {
-              if (result.Vulnerabilities) {
-                totalVulns += result.Vulnerabilities.length;
-              }
-            });
-            
-            comment += `### Vulnerabilities Found: ${totalVulns} total\n`;
-            
-            trivyResults.Results.forEach(result => {
-              if (result.Vulnerabilities && result.Vulnerabilities.length > 0) {
-                comment += `\n#### ${result.Target}\n`;
-                result.Vulnerabilities.slice(0, 5).forEach(vuln => {
-                  comment += `- ${vuln.VulnerabilityID}: ${vuln.Title} (${vuln.Severity})\n`;
-                });
-              }
-            });
-          } else {
-            comment += '✅ No vulnerabilities found in Docker image!';
-          }
-          
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: comment
-          });
 
+          let body = '';
+          const withVulns = (trivyResults.Results || []).filter(r => r.Vulnerabilities && r.Vulnerabilities.length > 0);
+          const totalVulns = withVulns.reduce((n, r) => n + r.Vulnerabilities.length, 0);
+          if (totalVulns > 0) {
+            body += `### Vulnerabilities Found: ${totalVulns} total\n`;
+            withVulns.forEach(result => {
+              body += `\n#### ${result.Target}\n`;
+              result.Vulnerabilities.slice(0, 5).forEach(vuln => {
+                body += `- ${vuln.VulnerabilityID}: ${vuln.Title} (${vuln.Severity})\n`;
+              });
+            });
+          }
+
+          await syncReport('docker', body ? `## Docker Security Scan Report\n\n${body}` : '');
+
+    # GAP-083: Trivy reads .trivyignore by default; exceptions go there, each with a reason comment.
+    - name: Fail on fixable HIGH/CRITICAL image vulnerabilities
+      uses: aquasecurity/trivy-action@v0.36.0
+      with:
+        image-ref: 'zenamanage:test'
+        format: 'table'
+        exit-code: '1'
+        severity: 'CRITICAL,HIGH'
+        ignore-unfixed: true
   license-scan:
     name: License Compliance Scan
     runs-on: ubuntu-latest
@@ -478,7 +686,7 @@ jobs:
 
     - name: Upload License Report
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: license-report
         path: |
@@ -487,29 +695,38 @@ jobs:
           composer-license-check.stderr.log
 
     - name: Comment License Issues on PR
-      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+      if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
       continue-on-error: true
       uses: actions/github-script@v8
       with:
         script: |
+          // GAP-075: one marked comment per report; posted only on problems, deleted when clean.
+          async function syncReport(key, body) {
+            const marker = `<!-- zena-ci:${key} -->`;
+            const params = { owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number };
+            const comments = await github.paginate(github.rest.issues.listComments, { ...params, per_page: 100 });
+            const existing = comments.find(c => c.user?.type === 'Bot' && (c.body || '').startsWith(marker));
+            if (!body) {
+              if (existing) {
+                await github.rest.issues.deleteComment({ owner: params.owner, repo: params.repo, comment_id: existing.id });
+              }
+              return;
+            }
+            const full = `${marker}\n${body}`;
+            if (!existing) {
+              await github.rest.issues.createComment({ ...params, body: full });
+            } else if (existing.body !== full) {
+              await github.rest.issues.updateComment({ owner: params.owner, repo: params.repo, comment_id: existing.id, body: full });
+            }
+          }
           const fs = require('fs');
           const summary = fs.existsSync('composer-license-check.txt')
             ? fs.readFileSync('composer-license-check.txt', 'utf8').trim()
             : '';
-          
-          let comment = '## License Compliance Report\n\n';
 
+          let body = '';
           if (summary.length > 0) {
-            comment += '```text\n';
-            comment += summary.split('\n').slice(0, 20).join('\n');
-            comment += '\n```';
-          } else {
-            comment += '✅ All packages comply with license requirements!';
+            body += '```text\n' + summary.split('\n').slice(0, 20).join('\n') + '\n```';
           }
-          
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: comment
-          });
+
+          await syncReport('license', body ? `## License Compliance Report\n\n${body}` : '');

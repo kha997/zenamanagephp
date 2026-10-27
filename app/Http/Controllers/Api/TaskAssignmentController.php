@@ -17,7 +17,7 @@ class TaskAssignmentController extends BaseApiController
     public function index(Request $request): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
@@ -55,7 +55,7 @@ class TaskAssignmentController extends BaseApiController
     public function store(Request $request, string $taskId): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
@@ -92,9 +92,9 @@ class TaskAssignmentController extends BaseApiController
         // Check total split percentage
         $currentTotal = TaskAssignment::where('task_id', $taskId)
             ->sum('split_percent');
-        
+
         $newPercentage = $request->input('split_percent', 100);
-        
+
         if ($currentTotal + $newPercentage > 100) {
             return $this->errorResponse(
                 'Total split percentage cannot exceed 100%. Current total: ' . $currentTotal . '%',
@@ -115,7 +115,6 @@ class TaskAssignmentController extends BaseApiController
             ]);
 
             return $this->successResponse($assignment->load(['task', 'user']), 'Assignment created successfully', 201);
-
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to create assignment: ' . $e->getMessage(), 500);
         }
@@ -127,7 +126,7 @@ class TaskAssignmentController extends BaseApiController
     public function show(string $id): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
@@ -148,7 +147,7 @@ class TaskAssignmentController extends BaseApiController
     public function update(Request $request, string $assignmentId): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
@@ -175,9 +174,9 @@ class TaskAssignmentController extends BaseApiController
             $currentTotal = TaskAssignment::where('task_id', $assignment->task_id)
                 ->where('id', '!=', $assignmentId)
                 ->sum('split_percent');
-            
+
             $newPercentage = $request->input('split_percent');
-            
+
             if ($currentTotal + $newPercentage > 100) {
                 return $this->errorResponse(
                     'Total split percentage cannot exceed 100%. Current total: ' . $currentTotal . '%',
@@ -188,11 +187,10 @@ class TaskAssignmentController extends BaseApiController
 
         try {
             $assignment->update($request->only([
-                'role', 'split_percent', 'notes', 'status'
+                'role', 'split_percent', 'notes', 'status',
             ]));
 
             return $this->successResponse($assignment->load(['task', 'user']), 'Assignment updated successfully');
-
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to update assignment: ' . $e->getMessage(), 500);
         }
@@ -204,7 +202,7 @@ class TaskAssignmentController extends BaseApiController
     public function destroy(string $assignmentId): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
@@ -219,19 +217,18 @@ class TaskAssignmentController extends BaseApiController
             $assignment->delete();
 
             return $this->successResponse(null, 'Assignment deleted successfully');
-
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to delete assignment: ' . $e->getMessage(), 500);
         }
     }
 
     /**
-     * Get assignments for a specific task
+     * Get assignments for a specific task.
      */
     public function getTaskAssignments(string $taskId): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
@@ -250,12 +247,12 @@ class TaskAssignmentController extends BaseApiController
     }
 
     /**
-     * Get assignments for a specific user
+     * Get assignments for a specific user.
      */
     public function getUserAssignments(string $userId): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
@@ -269,7 +266,7 @@ class TaskAssignmentController extends BaseApiController
     }
 
     /**
-     * Get minimal assignment statistics for a specific user
+     * Get minimal assignment statistics for a specific user.
      */
     public function getUserStats(string $userId): JsonResponse
     {
@@ -292,12 +289,12 @@ class TaskAssignmentController extends BaseApiController
     }
 
     /**
-     * Accept assignment
+     * Accept assignment.
      */
     public function acceptAssignment(string $id): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
@@ -317,19 +314,18 @@ class TaskAssignmentController extends BaseApiController
             $assignment->update(['status' => 'accepted']);
 
             return $this->successResponse($assignment->load(['task', 'user']), 'Assignment accepted successfully');
-
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to accept assignment: ' . $e->getMessage(), 500);
         }
     }
 
     /**
-     * Reject assignment
+     * Reject assignment.
      */
     public function rejectAssignment(string $id): JsonResponse
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
@@ -349,7 +345,6 @@ class TaskAssignmentController extends BaseApiController
             $assignment->update(['status' => 'rejected']);
 
             return $this->successResponse($assignment->load(['task', 'user']), 'Assignment rejected successfully');
-
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to reject assignment: ' . $e->getMessage(), 500);
         }

@@ -1,71 +1,74 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
-use App\Models\User;
 use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Src\Notification\Services\NotificationService;
+use Tests\TestCase;
 
 class WebSocketTest extends TestCase
 {
     use RefreshDatabase;
 
     protected $user;
+
     protected $tenant;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->tenant = Tenant::factory()->create();
         $this->user = User::factory()->create([
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
     }
 
     /**
-     * Test WebSocket notification broadcasting
+     * Test WebSocket notification broadcasting.
      */
     public function test_websocket_notification_broadcasting(): void
     {
         $notificationService = app(NotificationService::class);
-        
+
         $notification = $notificationService->create([
             'user_id' => $this->user->id,
             'tenant_id' => $this->tenant->id,
             'title' => 'Test WebSocket Notification',
             'body' => 'This is a test notification for WebSocket',
             'priority' => 'normal',
-            'channel' => 'inapp'
+            'channel' => 'inapp',
         ]);
-        
+
         // Verify notification was created
         $this->assertDatabaseHas('notifications', [
             'user_id' => $this->user->id,
-            'title' => 'Test WebSocket Notification'
+            'title' => 'Test WebSocket Notification',
         ]);
-        
+
         $this->assertNotNull($notification->id);
     }
 
     /**
-     * Test real-time project updates
+     * Test real-time project updates.
      */
     public function test_realtime_project_updates(): void
     {
         $project = \Src\CoreProject\Models\Project::factory()->create([
             'tenant_id' => $this->tenant->id,
-            'progress' => 50.0
+            'progress' => 50.0,
         ]);
-        
+
         // Update project progress
         $project->update(['progress' => 75.0]);
-        
+
         // Verify project was updated
         $this->assertEquals(75.0, $project->fresh()->progress);
-        
+
         // In a real scenario, this would trigger a WebSocket broadcast
         // We can test the event dispatching mechanism
         $this->assertTrue(true); // Placeholder for WebSocket integration test

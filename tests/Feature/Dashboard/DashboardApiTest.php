@@ -2,48 +2,50 @@
 
 namespace Tests\Feature\Dashboard;
 
+use App\Contracts\Dashboard\WidgetDataResolver;
+use App\Models\DashboardAlert;
+use App\Models\DashboardMetric;
+use App\Models\DashboardWidget;
+use App\Models\Project;
+use App\Models\Rfi;
+use App\Models\Role;
+use App\Models\Task;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
+use Mockery;
 use Tests\TestCase;
 use Tests\Traits\AuthenticationTrait;
-use Illuminate\Support\Facades\Hash;
-use App\Models\User;
-use App\Models\UserDashboard;
-use App\Models\DashboardWidget;
-use App\Models\DashboardMetric;
-use App\Models\DashboardAlert;
-use App\Models\Project;
-use App\Models\Task;
-use App\Models\Role;
-use App\Contracts\Dashboard\WidgetDataResolver;
-use Mockery;
-use App\Models\Rfi;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 
 class DashboardApiTest extends TestCase
 {
-    use RefreshDatabase, AuthenticationTrait;
+    use RefreshDatabase;
+    use AuthenticationTrait;
 
     protected $user;
+
     protected $project;
+
     protected $tenant;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create test tenant
         $this->tenant = \App\Models\Tenant::factory()->create([
             'name' => 'Test Tenant',
             'domain' => 'test.com',
-            'is_active' => true
+            'is_active' => true,
         ]);
-        
+
         // Create test user
         $this->user = $this->createTenantUser($this->tenant, [
             'name' => 'Test User',
             'email' => 'test@example.com',
-            'role' => 'project_manager'
+            'role' => 'project_manager',
         ]);
-        
+
         // Create test project
         $this->project = Project::factory()->create([
             'name' => 'Test Project',
@@ -55,16 +57,16 @@ class DashboardApiTest extends TestCase
             'tenant_id' => $this->tenant->id,
             'pm_id' => $this->user->id,
         ]);
-        
+
         // Create test widgets
         $this->createTestWidgets();
-        
+
         // Create test metrics
         $this->createTestMetrics();
-        
+
         // Create test data
         $this->createTestData();
-        
+
         // Authenticate user
         $this->apiAs($this->user, $this->tenant);
     }
@@ -80,7 +82,7 @@ class DashboardApiTest extends TestCase
             'config' => json_encode(['default_size' => 'large']),
             'permissions' => json_encode(['project_manager', 'site_engineer']),
             'is_active' => true,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         DashboardWidget::create([
@@ -92,7 +94,7 @@ class DashboardApiTest extends TestCase
             'config' => json_encode(['default_size' => 'medium']),
             'permissions' => json_encode(['project_manager', 'site_engineer']),
             'is_active' => true,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         DashboardWidget::create([
@@ -104,7 +106,7 @@ class DashboardApiTest extends TestCase
             'config' => json_encode(['default_size' => 'medium']),
             'permissions' => json_encode(['project_manager', 'design_lead']),
             'is_active' => true,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
     }
 
@@ -118,7 +120,7 @@ class DashboardApiTest extends TestCase
             'type' => 'gauge',
             'is_active' => true,
             'permissions' => json_encode(['project_manager', 'site_engineer', 'client_rep']),
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         DashboardMetric::create([
@@ -129,7 +131,7 @@ class DashboardApiTest extends TestCase
             'type' => 'gauge',
             'is_active' => true,
             'permissions' => json_encode(['project_manager', 'client_rep']),
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
     }
 
@@ -144,7 +146,7 @@ class DashboardApiTest extends TestCase
             'due_date' => now()->addDays(7),
             'assigned_to' => $this->user->id,
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         Task::create([
@@ -155,7 +157,7 @@ class DashboardApiTest extends TestCase
             'due_date' => now()->subDays(1),
             'assigned_to' => $this->user->id,
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Create test RFIs
@@ -172,7 +174,7 @@ class DashboardApiTest extends TestCase
             'due_date' => now()->addDays(3),
             'discipline' => 'construction',
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Create test alerts
@@ -184,7 +186,7 @@ class DashboardApiTest extends TestCase
             'severity' => 'low',
             'is_read' => false,
             'triggered_at' => now(),
-            'context' => json_encode(['project_id' => $this->project->id])
+            'context' => json_encode(['project_id' => $this->project->id]),
         ]);
     }
 
@@ -203,8 +205,8 @@ class DashboardApiTest extends TestCase
                         'preferences',
                         'is_default',
                         'created_at',
-                        'updated_at'
-                    ]
+                        'updated_at',
+                    ],
                 ]);
     }
 
@@ -225,9 +227,9 @@ class DashboardApiTest extends TestCase
                             'description',
                             'config',
                             'permissions',
-                            'is_active'
-                        ]
-                    ]
+                            'is_active',
+                        ],
+                    ],
                 ]);
     }
 
@@ -235,13 +237,13 @@ class DashboardApiTest extends TestCase
     public function it_can_get_widget_data()
     {
         $widget = DashboardWidget::where('code', 'project_overview')->first();
-        
+
         $response = $this->getJson("/api/v1/dashboard/widgets/{$widget->id}/data");
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
                     'success',
-                    'data'
+                    'data',
                 ]);
     }
 
@@ -249,13 +251,13 @@ class DashboardApiTest extends TestCase
     public function it_can_add_widget_to_dashboard()
     {
         $widget = DashboardWidget::where('code', 'project_overview')->first();
-        
+
         $response = $this->postJson('/api/v1/dashboard/widgets', [
             'widget_id' => $widget->id,
             'config' => [
                 'title' => 'Custom Project Overview',
-                'size' => 'large'
-            ]
+                'size' => 'large',
+            ],
         ]);
 
         $response->assertStatus(200)
@@ -270,8 +272,8 @@ class DashboardApiTest extends TestCase
                         'position',
                         'config',
                         'is_customizable',
-                        'created_at'
-                    ]
+                        'created_at',
+                    ],
                 ]);
     }
 
@@ -281,18 +283,18 @@ class DashboardApiTest extends TestCase
         // First add a widget
         $widget = DashboardWidget::where('code', 'project_overview')->first();
         $addResponse = $this->postJson('/api/v1/dashboard/widgets', [
-            'widget_id' => $widget->id
+            'widget_id' => $widget->id,
         ]);
-        
+
         $widgetInstanceId = $addResponse->json('data.widget_instance.id');
 
         // Then remove it
         $response = $this->deleteJson("/api/v1/dashboard/widgets/{$widgetInstanceId}");
-        
+
         $response->assertStatus(200)
                 ->assertJsonStructure([
                     'success',
-                    'message'
+                    'message',
                 ]);
     }
 
@@ -302,23 +304,23 @@ class DashboardApiTest extends TestCase
         // First add a widget
         $widget = DashboardWidget::where('code', 'project_overview')->first();
         $addResponse = $this->postJson('/api/v1/dashboard/widgets', [
-            'widget_id' => $widget->id
+            'widget_id' => $widget->id,
         ]);
-        
+
         $widgetInstanceId = $addResponse->json('data.widget_instance.id');
 
         // Update configuration
         $response = $this->putJson("/api/v1/dashboard/widgets/{$widgetInstanceId}/config", [
             'config' => [
                 'title' => 'Updated Title',
-                'size' => 'extra-large'
-            ]
+                'size' => 'extra-large',
+            ],
         ]);
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
                     'success',
-                    'message'
+                    'message',
                 ]);
     }
 
@@ -328,7 +330,7 @@ class DashboardApiTest extends TestCase
         // Add multiple widgets first
         $widget1 = DashboardWidget::where('code', 'project_overview')->first();
         $widget2 = DashboardWidget::where('code', 'task_progress')->first();
-        
+
         $this->postJson('/api/v1/dashboard/widgets', ['widget_id' => $widget1->id]);
         $this->postJson('/api/v1/dashboard/widgets', ['widget_id' => $widget2->id]);
 
@@ -341,13 +343,13 @@ class DashboardApiTest extends TestCase
         $layout[1]['position'] = ['x' => 6, 'y' => 0];
 
         $response = $this->putJson('/api/v1/dashboard/layout', [
-            'layout' => $layout
+            'layout' => $layout,
         ]);
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
                     'success',
-                    'message'
+                    'message',
                 ]);
     }
 
@@ -367,9 +369,9 @@ class DashboardApiTest extends TestCase
                             'message',
                             'is_read',
                             'triggered_at',
-                            'context'
-                        ]
-                    ]
+                            'context',
+                        ],
+                    ],
                 ]);
     }
 
@@ -377,13 +379,13 @@ class DashboardApiTest extends TestCase
     public function it_can_mark_alert_as_read()
     {
         $alert = DashboardAlert::where('user_id', $this->user->id)->first();
-        
+
         $response = $this->putJson("/api/v1/dashboard/alerts/{$alert->id}/read");
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
                     'success',
-                    'message'
+                    'message',
                 ]);
     }
 
@@ -395,7 +397,7 @@ class DashboardApiTest extends TestCase
         $response->assertStatus(200)
                 ->assertJsonStructure([
                     'success',
-                    'message'
+                    'message',
                 ]);
     }
 
@@ -416,9 +418,9 @@ class DashboardApiTest extends TestCase
                             'unit',
                             'value',
                             'display_config',
-                            'recorded_at'
-                        ]
-                    ]
+                            'recorded_at',
+                        ],
+                    ],
                 ]);
     }
 
@@ -429,17 +431,17 @@ class DashboardApiTest extends TestCase
             'theme' => 'dark',
             'refresh_interval' => 60,
             'compact_mode' => true,
-            'show_widget_borders' => false
+            'show_widget_borders' => false,
         ];
 
         $response = $this->postJson('/api/v1/dashboard/preferences', [
-            'preferences' => $preferences
+            'preferences' => $preferences,
         ]);
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
                     'success',
-                    'message'
+                    'message',
                 ]);
     }
 
@@ -455,7 +457,7 @@ class DashboardApiTest extends TestCase
         $response->assertStatus(200)
                 ->assertJsonStructure([
                     'success',
-                    'message'
+                    'message',
                 ]);
     }
 
@@ -474,13 +476,13 @@ class DashboardApiTest extends TestCase
                         'alerts',
                         'permissions',
                         'role_config',
-                        'project_context'
+                        'project_context',
                     ],
                     'meta' => [
                         'user_role',
                         'project_context',
-                        'generated_at'
-                    ]
+                        'generated_at',
+                    ],
                 ]);
     }
 
@@ -495,8 +497,8 @@ class DashboardApiTest extends TestCase
                     'data' => [
                         'widgets',
                         'role_config',
-                        'total_count'
-                    ]
+                        'total_count',
+                    ],
                 ]);
     }
 
@@ -616,7 +618,7 @@ class DashboardApiTest extends TestCase
             $entry = collect($response->json('data.widgets'))->firstWhere('widget.code', $code);
             self::assertNotNull($entry, $role);
             self::assertSame(in_array($code, $supported, true) ? 'ready' : 'degraded', $entry['state'], $role);
-            if (! in_array($code, $supported, true)) {
+            if (!in_array($code, $supported, true)) {
                 self::assertSame('DASHBOARD.WIDGET_UNSUPPORTED', $entry['error']['code'], $role);
             }
         }
@@ -635,7 +637,7 @@ class DashboardApiTest extends TestCase
         $resolver->shouldReceive('resolve')->never();
         $this->app->instance(WidgetDataResolver::class, $resolver);
 
-        $response = $this->getJson('/api/v1/dashboard/role-based/widgets?include_data=1&project_id='.$foreignProject->id);
+        $response = $this->getJson('/api/v1/dashboard/role-based/widgets?include_data=1&project_id=' . $foreignProject->id);
 
         $response->assertStatus(403)
             ->assertJsonPath('error.code', 'DASHBOARD.PROJECT_FORBIDDEN');
@@ -678,8 +680,8 @@ class DashboardApiTest extends TestCase
                     'data' => [
                         'metrics',
                         'time_range',
-                        'total_count'
-                    ]
+                        'total_count',
+                    ],
                 ]);
     }
 
@@ -694,8 +696,8 @@ class DashboardApiTest extends TestCase
                     'data' => [
                         'alerts',
                         'total_count',
-                        'filters'
-                    ]
+                        'filters',
+                    ],
                 ]);
     }
 
@@ -710,8 +712,8 @@ class DashboardApiTest extends TestCase
                     'data' => [
                         'permissions',
                         'user_role',
-                        'role_name'
-                    ]
+                        'role_name',
+                    ],
                 ]);
     }
 
@@ -726,8 +728,8 @@ class DashboardApiTest extends TestCase
                     'data' => [
                         'role_config',
                         'user_role',
-                        'tenant_id'
-                    ]
+                        'tenant_id',
+                    ],
                 ]);
     }
 
@@ -742,8 +744,8 @@ class DashboardApiTest extends TestCase
                     'data' => [
                         'projects',
                         'total_count',
-                        'role_access'
-                    ]
+                        'role_access',
+                    ],
                 ]);
     }
 
@@ -758,8 +760,8 @@ class DashboardApiTest extends TestCase
                     'data' => [
                         'user_info',
                         'project_context',
-                        'generated_at'
-                    ]
+                        'generated_at',
+                    ],
                 ]);
     }
 
@@ -767,7 +769,7 @@ class DashboardApiTest extends TestCase
     public function it_can_switch_project_context()
     {
         $response = $this->postJson('/api/v1/dashboard/role-based/switch-project', [
-            'project_id' => $this->project->id
+            'project_id' => $this->project->id,
         ]);
 
         $response->assertStatus(200)
@@ -776,9 +778,9 @@ class DashboardApiTest extends TestCase
                     'data' => [
                         'dashboard',
                         'project_context',
-                        'switched_at'
+                        'switched_at',
                     ],
-                    'message'
+                    'message',
                 ]);
     }
 
@@ -796,8 +798,8 @@ class DashboardApiTest extends TestCase
                         'widget_categories',
                         'layout_templates',
                         'customization_options',
-                        'permissions'
-                    ]
+                        'permissions',
+                    ],
                 ]);
     }
 
@@ -811,8 +813,8 @@ class DashboardApiTest extends TestCase
                     'success',
                     'data' => [
                         'widgets',
-                        'categories'
-                    ]
+                        'categories',
+                    ],
                 ]);
     }
 
@@ -826,8 +828,8 @@ class DashboardApiTest extends TestCase
                     'success',
                     'data' => [
                         'templates',
-                        'permissions'
-                    ]
+                        'permissions',
+                    ],
                 ]);
     }
 
@@ -844,8 +846,8 @@ class DashboardApiTest extends TestCase
                         'layout_grid',
                         'themes',
                         'refresh_intervals',
-                        'permissions'
-                    ]
+                        'permissions',
+                    ],
                 ]);
     }
 
@@ -853,20 +855,20 @@ class DashboardApiTest extends TestCase
     public function it_can_add_widget_via_customization()
     {
         $widget = DashboardWidget::where('code', 'project_overview')->first();
-        
+
         $response = $this->postJson('/api/v1/dashboard/customization/widgets', [
             'widget_id' => $widget->id,
             'config' => [
                 'title' => 'Custom Project Overview',
-                'size' => 'large'
-            ]
+                'size' => 'large',
+            ],
         ]);
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
                     'success',
                     'widget_instance',
-                    'message'
+                    'message',
                 ]);
     }
 
@@ -876,9 +878,9 @@ class DashboardApiTest extends TestCase
         // First add a widget
         $widget = DashboardWidget::where('code', 'project_overview')->first();
         $addResponse = $this->postJson('/api/v1/dashboard/customization/widgets', [
-            'widget_id' => $widget->id
+            'widget_id' => $widget->id,
         ]);
-        
+
         $widgetInstanceId = $addResponse->json('widget_instance.id');
 
         // Then remove it
@@ -887,7 +889,7 @@ class DashboardApiTest extends TestCase
         $response->assertStatus(200)
                 ->assertJsonStructure([
                     'success',
-                    'message'
+                    'message',
                 ]);
     }
 
@@ -897,23 +899,23 @@ class DashboardApiTest extends TestCase
         // First add a widget
         $widget = DashboardWidget::where('code', 'project_overview')->first();
         $addResponse = $this->postJson('/api/v1/dashboard/customization/widgets', [
-            'widget_id' => $widget->id
+            'widget_id' => $widget->id,
         ]);
-        
+
         $widgetInstanceId = $addResponse->json('widget_instance.id');
 
         // Update configuration
         $response = $this->putJson("/api/v1/dashboard/customization/widgets/{$widgetInstanceId}/config", [
             'config' => [
                 'title' => 'Updated Title',
-                'size' => 'extra-large'
-            ]
+                'size' => 'extra-large',
+            ],
         ]);
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
                     'success',
-                    'message'
+                    'message',
                 ]);
     }
 
@@ -923,7 +925,7 @@ class DashboardApiTest extends TestCase
         // Add multiple widgets first
         $widget1 = DashboardWidget::where('code', 'project_overview')->first();
         $widget2 = DashboardWidget::where('code', 'task_progress')->first();
-        
+
         $this->postJson('/api/v1/dashboard/customization/widgets', ['widget_id' => $widget1->id]);
         $this->postJson('/api/v1/dashboard/customization/widgets', ['widget_id' => $widget2->id]);
 
@@ -936,14 +938,14 @@ class DashboardApiTest extends TestCase
         $layout[1]['position'] = ['x' => 6, 'y' => 0];
 
         $response = $this->putJson('/api/v1/dashboard/customization/layout', [
-            'layout' => $layout
+            'layout' => $layout,
         ]);
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
                     'success',
                     'layout',
-                    'message'
+                    'message',
                 ]);
     }
 
@@ -951,14 +953,14 @@ class DashboardApiTest extends TestCase
     public function it_can_apply_layout_template()
     {
         $response = $this->postJson('/api/v1/dashboard/customization/apply-template', [
-            'template_id' => 'project_manager'
+            'template_id' => 'project_manager',
         ]);
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
                     'success',
                     'layout',
-                    'message'
+                    'message',
                 ]);
     }
 
@@ -969,18 +971,18 @@ class DashboardApiTest extends TestCase
             'theme' => 'dark',
             'refresh_interval' => 60,
             'compact_mode' => true,
-            'show_widget_borders' => false
+            'show_widget_borders' => false,
         ];
 
         $response = $this->postJson('/api/v1/dashboard/customization/preferences', [
-            'preferences' => $preferences
+            'preferences' => $preferences,
         ]);
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
                     'success',
                     'preferences',
-                    'message'
+                    'message',
                 ]);
     }
 
@@ -997,8 +999,8 @@ class DashboardApiTest extends TestCase
                         'exported_at',
                         'user_role',
                         'dashboard',
-                        'widgets'
-                    ]
+                        'widgets',
+                    ],
                 ]);
     }
 
@@ -1012,20 +1014,20 @@ class DashboardApiTest extends TestCase
             'dashboard' => [
                 'name' => 'Imported Dashboard',
                 'layout' => [],
-                'preferences' => ['theme' => 'dark']
+                'preferences' => ['theme' => 'dark'],
             ],
-            'widgets' => []
+            'widgets' => [],
         ];
 
         $response = $this->postJson('/api/v1/dashboard/customization/import', [
-            'dashboard_config' => $dashboardConfig
+            'dashboard_config' => $dashboardConfig,
         ]);
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
                     'success',
                     'message',
-                    'data'
+                    'data',
                 ]);
     }
 
@@ -1042,7 +1044,7 @@ class DashboardApiTest extends TestCase
                 ->assertJsonStructure([
                     'success',
                     'layout',
-                    'message'
+                    'message',
                 ]);
     }
 
@@ -1055,20 +1057,20 @@ class DashboardApiTest extends TestCase
             'email' => 'qc@example.com',
             'password' => Hash::make('password'),
             'role' => 'qc_inspector',
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $this->apiAs($qcUser, $this->tenant);
 
         $widget = DashboardWidget::where('code', 'project_overview')->first();
-        
+
         $response = $this->postJson('/api/v1/dashboard/customization/widgets', [
-            'widget_id' => $widget->id
+            'widget_id' => $widget->id,
         ]);
         $response->assertStatus(404)
                 ->assertJsonStructure([
                     'success',
-                    'message'
+                    'message',
                 ]);
     }
 
@@ -1076,14 +1078,14 @@ class DashboardApiTest extends TestCase
     public function it_handles_invalid_project_context()
     {
         $response = $this->postJson('/api/v1/dashboard/role-based/switch-project', [
-            'project_id' => 'invalid-project-id'
+            'project_id' => 'invalid-project-id',
         ]);
 
         $response->assertStatus(422)
                 ->assertJsonStructure([
                     'success',
                     'message',
-                    'errors'
+                    'errors',
                 ]);
     }
 
@@ -1096,19 +1098,19 @@ class DashboardApiTest extends TestCase
             'email' => 'unauthorized@example.com',
             'password' => Hash::make('password'),
             'role' => 'client_rep',
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $this->apiAs($unauthorizedUser, $this->tenant);
 
         $response = $this->postJson('/api/v1/dashboard/role-based/switch-project', [
-            'project_id' => $this->project->id
+            'project_id' => $this->project->id,
         ]);
 
         $response->assertStatus(403)
                 ->assertJsonStructure([
                     'success',
-                    'message'
+                    'message',
                 ]);
     }
 
@@ -1116,14 +1118,14 @@ class DashboardApiTest extends TestCase
     public function it_handles_missing_widget()
     {
         $response = $this->postJson('/api/v1/dashboard/customization/widgets', [
-            'widget_id' => 'non-existent-widget-id'
+            'widget_id' => 'non-existent-widget-id',
         ]);
 
         $response->assertStatus(422)
                 ->assertJsonStructure([
                     'success',
                     'message',
-                    'errors'
+                    'errors',
                 ]);
     }
 
@@ -1131,13 +1133,13 @@ class DashboardApiTest extends TestCase
     public function it_handles_invalid_layout_template()
     {
         $response = $this->postJson('/api/v1/dashboard/customization/apply-template', [
-            'template_id' => 'non-existent-template'
+            'template_id' => 'non-existent-template',
         ]);
 
         $response->assertStatus(500)
                 ->assertJsonStructure([
                     'success',
-                    'message'
+                    'message',
                 ]);
     }
 
@@ -1146,15 +1148,15 @@ class DashboardApiTest extends TestCase
     {
         $response = $this->postJson('/api/v1/dashboard/customization/import', [
             'dashboard_config' => [
-                'version' => 'invalid-version'
-            ]
+                'version' => 'invalid-version',
+            ],
         ]);
 
         $response->assertStatus(422)
                 ->assertJsonStructure([
                     'success',
                     'message',
-                    'errors'
+                    'errors',
                 ]);
     }
 
@@ -1177,15 +1179,15 @@ class DashboardApiTest extends TestCase
         \DB::shouldReceive('beginTransaction')->andThrow(new \Exception('Database error'));
 
         $widget = DashboardWidget::where('code', 'project_overview')->first();
-        
+
         $response = $this->postJson('/api/v1/dashboard/customization/widgets', [
-            'widget_id' => $widget->id
+            'widget_id' => $widget->id,
         ]);
 
         $response->assertStatus(500)
                 ->assertJsonStructure([
                     'success',
-                    'message'
+                    'message',
                 ]);
     }
 }

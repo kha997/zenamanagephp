@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
@@ -26,10 +28,15 @@ class GAP042Gate3Round2CorrectionsTest extends TestCase
     use RefreshDatabase;
 
     protected Tenant $tenantA;
+
     protected Tenant $tenantB;
+
     protected User $userA;
+
     protected User $userB;
+
     protected string $tokenA;
+
     protected string $tokenB;
 
     /** @var array<int, array{event: string, payload: array}> */

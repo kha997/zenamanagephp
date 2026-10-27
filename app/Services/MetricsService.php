@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -10,7 +12,7 @@ use Illuminate\Support\Facades\Redis;
 class MetricsService
 {
     /**
-     * Collect application metrics
+     * Collect application metrics.
      */
     public function collectMetrics(): array
     {
@@ -26,7 +28,7 @@ class MetricsService
     }
 
     /**
-     * Get application metrics
+     * Get application metrics.
      */
     private function getApplicationMetrics(): array
     {
@@ -41,16 +43,16 @@ class MetricsService
     }
 
     /**
-     * Get database metrics
+     * Get database metrics.
      */
     private function getDatabaseMetrics(): array
     {
         try {
             $startTime = microtime(true);
-            
+
             // Basic connection test
             DB::connection()->getPdo();
-            
+
             // Get database size
             $size = DB::select("
                 SELECT 
@@ -61,10 +63,10 @@ class MetricsService
 
             // Get connection count
             $connections = DB::select("SHOW STATUS LIKE 'Threads_connected'")[0]->Value ?? 0;
-            
+
             // Get slow queries
             $slowQueries = DB::select("SHOW STATUS LIKE 'Slow_queries'")[0]->Value ?? 0;
-            
+
             // Get query count
             $queries = DB::select("SHOW STATUS LIKE 'Queries'")[0]->Value ?? 0;
 
@@ -91,19 +93,19 @@ class MetricsService
     }
 
     /**
-     * Get cache metrics
+     * Get cache metrics.
      */
     private function getCacheMetrics(): array
     {
         try {
             $startTime = microtime(true);
-            
+
             // Test Redis connection
             Redis::ping();
-            
+
             // Get Redis info
             $info = Redis::info();
-            
+
             $responseTime = round((microtime(true) - $startTime) * 1000, 2);
 
             return [
@@ -129,20 +131,20 @@ class MetricsService
     }
 
     /**
-     * Get queue metrics
+     * Get queue metrics.
      */
     private function getQueueMetrics(): array
     {
         try {
             $startTime = microtime(true);
-            
+
             $queue = app('queue');
             $connection = $queue->connection();
-            
+
             // Get queue sizes
             $defaultSize = $connection->size();
             $failedSize = $connection->size('failed');
-            
+
             $responseTime = round((microtime(true) - $startTime) * 1000, 2);
 
             return [
@@ -165,13 +167,13 @@ class MetricsService
     }
 
     /**
-     * Get storage metrics
+     * Get storage metrics.
      */
     private function getStorageMetrics(): array
     {
         try {
             $startTime = microtime(true);
-            
+
             $totalSpace = disk_total_space(storage_path());
             $freeSpace = disk_free_space(storage_path());
             $usedSpace = $totalSpace - $freeSpace;
@@ -200,25 +202,25 @@ class MetricsService
     }
 
     /**
-     * Get business metrics
+     * Get business metrics.
      */
     private function getBusinessMetrics(): array
     {
         try {
             $startTime = microtime(true);
-            
+
             // Get user metrics
             $totalUsers = DB::table('users')->count();
             $activeUsers = DB::table('users')
                 ->where('last_login_at', '>=', Carbon::now()->subDays(30))
                 ->count();
-            
+
             // Get project metrics
             $totalProjects = DB::table('projects')->count();
             $activeProjects = DB::table('projects')
                 ->where('status', 'active')
                 ->count();
-            
+
             // Get task metrics
             $totalTasks = DB::table('tasks')->count();
             $completedTasks = DB::table('tasks')
@@ -227,7 +229,7 @@ class MetricsService
             $pendingTasks = DB::table('tasks')
                 ->where('status', 'pending')
                 ->count();
-            
+
             // Get document metrics
             $totalDocuments = DB::table('documents')->count();
             $totalDocumentSize = DB::table('documents')
@@ -269,7 +271,7 @@ class MetricsService
     }
 
     /**
-     * Export metrics in Prometheus format
+     * Export metrics in Prometheus format.
      */
     public function exportPrometheusMetrics(): string
     {
@@ -370,12 +372,12 @@ class MetricsService
     }
 
     /**
-     * Get metrics summary for dashboard
+     * Get metrics summary for dashboard.
      */
     public function getMetricsSummary(): array
     {
         $metrics = $this->collectMetrics();
-        
+
         return [
             'overall_status' => $this->determineOverallStatus($metrics),
             'timestamp' => $metrics['timestamp'],
@@ -408,34 +410,34 @@ class MetricsService
     }
 
     /**
-     * Determine overall system status
+     * Determine overall system status.
      */
     private function determineOverallStatus(array $metrics): string
     {
         $criticalServices = ['database', 'cache', 'storage'];
         $unhealthyCritical = 0;
-        
+
         foreach ($criticalServices as $service) {
             if ($metrics[$service]['status'] !== 'healthy') {
                 $unhealthyCritical++;
             }
         }
-        
+
         if ($unhealthyCritical > 0) {
             return 'unhealthy';
         }
-        
+
         $unhealthyServices = 0;
         foreach ($metrics as $key => $metric) {
             if (is_array($metric) && isset($metric['status']) && $metric['status'] !== 'healthy') {
                 $unhealthyServices++;
             }
         }
-        
+
         if ($unhealthyServices > 0) {
             return 'degraded';
         }
-        
+
         return 'healthy';
     }
 

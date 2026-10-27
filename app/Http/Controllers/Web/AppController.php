@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers\Web;
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
 use App\Models\EventRecord;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
-use App\Services\NotificationService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Http\Controllers\Controller;
 
 class AppController extends Controller
 {
@@ -116,32 +115,32 @@ class AppController extends Controller
             'tasksByDate' => $tasks->groupBy(fn (Task $task) => substr((string) $task->end_date, 0, 10)),
         ]);
     }
-    
+
     public function documents()
     {
         return view('layouts.app-layout');
     }
-    
+
     public function team()
     {
         return view('layouts.app-layout');
     }
-    
+
     public function teamUsers()
     {
         return view('layouts.app-layout');
     }
-    
+
     public function templates()
     {
         return view('layouts.app-layout');
     }
-    
+
     public function settings()
     {
         return view('layouts.app-layout');
     }
-    
+
     public function profile()
     {
         return view('layouts.app-layout');

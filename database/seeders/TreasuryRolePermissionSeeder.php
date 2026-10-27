@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Seeders;
 
@@ -29,6 +31,7 @@ class TreasuryRolePermissionSeeder extends Seeder
         'treasury.approve_expense',
         'treasury.self_approve_expense',
         'treasury.reconcile',
+        'treasury.manage_routes',
         'treasury.reverse',
         'treasury.adjust',
         'treasury.view_audit',
@@ -43,6 +46,7 @@ class TreasuryRolePermissionSeeder extends Seeder
         'treasury.manage_wallets',
         'treasury.approve_expense',
         'treasury.reconcile',
+        'treasury.manage_routes',
         'treasury.reverse',
         'treasury.adjust',
         'treasury.view_audit',

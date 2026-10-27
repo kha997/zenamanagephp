@@ -8,7 +8,7 @@ use Illuminate\Http\JsonResponse;
 class ProjectTemplateController extends Controller
 {
     /**
-     * Get all templates
+     * Get all templates.
      */
     public function index(): JsonResponse
     {
@@ -19,12 +19,12 @@ class ProjectTemplateController extends Controller
 
         return response()->json([
             'success' => true,
-            'templates' => $templates
+            'templates' => $templates,
         ]);
     }
 
     /**
-     * Get templates by category
+     * Get templates by category.
      */
     public function getByCategory(string $category): JsonResponse
     {
@@ -34,30 +34,30 @@ class ProjectTemplateController extends Controller
 
         return response()->json([
             'success' => true,
-            'templates' => $templates
+            'templates' => $templates,
         ]);
     }
 
     /**
-     * Get template details
+     * Get template details.
      */
     public function show(ProjectTemplate $template): JsonResponse
     {
         return response()->json([
             'success' => true,
-            'template' => $template
+            'template' => $template,
         ]);
     }
 
     /**
-     * Apply template to project
+     * Apply template to project.
      */
     public function apply(Request $request): JsonResponse
     {
         $request->validate([
             'template_id' => 'required|exists:project_templates,id',
             'selected_phases' => 'array',
-            'project_id' => 'required|integer'
+            'project_id' => 'required|integer',
         ]);
 
         $template = ProjectTemplate::findOrFail($request->template_id);
@@ -68,12 +68,12 @@ class ProjectTemplateController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Template applied successfully',
-            'data' => $appliedData
+            'data' => $appliedData,
         ]);
     }
 
     /**
-     * Create new template
+     * Create new template.
      */
     public function store(Request $request): JsonResponse
     {
@@ -82,7 +82,7 @@ class ProjectTemplateController extends Controller
             'category' => 'required|string|in:residential,commercial,industrial,mixed-use,custom',
             'description' => 'nullable|string',
             'phases' => 'required|array',
-            'default_settings' => 'nullable|array'
+            'default_settings' => 'nullable|array',
         ]);
 
         $template = ProjectTemplate::create($request->all());
@@ -90,12 +90,12 @@ class ProjectTemplateController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Template created successfully',
-            'template' => $template
+            'template' => $template,
         ]);
     }
 
     /**
-     * Update template
+     * Update template.
      */
     public function update(Request $request, ProjectTemplate $template): JsonResponse
     {
@@ -104,7 +104,7 @@ class ProjectTemplateController extends Controller
             'category' => 'sometimes|string|in:residential,commercial,industrial,mixed-use,custom',
             'description' => 'nullable|string',
             'phases' => 'sometimes|array',
-            'default_settings' => 'nullable|array'
+            'default_settings' => 'nullable|array',
         ]);
 
         $template->update($request->all());
@@ -112,12 +112,12 @@ class ProjectTemplateController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Template updated successfully',
-            'template' => $template
+            'template' => $template,
         ]);
     }
 
     /**
-     * Delete template
+     * Delete template.
      */
     public function destroy(ProjectTemplate $template): JsonResponse
     {
@@ -125,7 +125,7 @@ class ProjectTemplateController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Template deleted successfully'
+            'message' => 'Template deleted successfully',
         ]);
     }
 }

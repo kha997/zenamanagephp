@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models\Treasury\Concerns;
 
@@ -75,6 +77,7 @@ trait EnforcesRowInvariants
             }
             if ($setCount !== 1) {
                 $list = implode(', ', $group);
+
                 throw new \InvalidArgumentException("exactly one of [{$list}] must be set, got {$setCount}");
             }
         }
@@ -91,6 +94,7 @@ trait EnforcesRowInvariants
             $value = $this->getAttribute($column);
             if ($value !== null && !in_array($value, $values, true)) {
                 $list = implode(', ', $values);
+
                 throw new \InvalidArgumentException("{$column} must be one of [{$list}], got {$value}");
             }
         }

@@ -1,15 +1,17 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\WebSocketService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 /**
- * WebSocket Management Controller
- * 
+ * WebSocket Management Controller.
+ *
  * Provides endpoints for:
  * - WebSocket connection management
  * - Real-time event broadcasting
@@ -26,7 +28,7 @@ class WebSocketController extends Controller
     }
 
     /**
-     * Get WebSocket connection info
+     * Get WebSocket connection info.
      */
     public function getConnectionInfo(): JsonResponse
     {
@@ -38,7 +40,7 @@ class WebSocketController extends Controller
                 'online_users' => $this->webSocketService->getOnlineUsersCount(),
                 'connection_id' => uniqid('ws_conn_', true),
             ];
-            
+
             return response()->json([
                 'success' => true,
                 'data' => $info,
@@ -55,7 +57,7 @@ class WebSocketController extends Controller
     }
 
     /**
-     * Mark user as online
+     * Mark user as online.
      */
     public function markOnline(Request $request): JsonResponse
     {
@@ -69,13 +71,13 @@ class WebSocketController extends Controller
             $userId = $request->input('user_id');
             $activity = $request->input('activity', 'online');
             $tenantId = $this->resolveTenantId($request);
-            
+
             $success = $this->webSocketService->markUserOnline($userId, $tenantId);
-            
+
             if ($activity !== 'online') {
                 $this->webSocketService->updateUserActivity($userId, $activity, [], $tenantId);
             }
-            
+
             if ($success) {
                 return response()->json([
                     'success' => true,
@@ -100,7 +102,7 @@ class WebSocketController extends Controller
     }
 
     /**
-     * Mark user as offline
+     * Mark user as offline.
      */
     public function markOffline(Request $request): JsonResponse
     {
@@ -111,9 +113,9 @@ class WebSocketController extends Controller
         try {
             $userId = $request->input('user_id');
             $tenantId = $request->header('X-Tenant-ID');
-            
+
             $success = $this->webSocketService->markUserOffline($userId, $tenantId);
-            
+
             if ($success) {
                 return response()->json([
                     'success' => true,
@@ -138,7 +140,7 @@ class WebSocketController extends Controller
     }
 
     /**
-     * Update user activity
+     * Update user activity.
      */
     public function updateActivity(Request $request): JsonResponse
     {
@@ -155,9 +157,9 @@ class WebSocketController extends Controller
             $activity = $request->input('activity') ?? $request->input('activity_type');
             $metadata = $request->input('metadata', $request->input('activity_data', []));
             $tenantId = $this->resolveTenantId($request);
-            
+
             $success = $this->webSocketService->updateUserActivity($userId, $activity, $metadata, $tenantId);
-            
+
             if ($success) {
                 return response()->json([
                     'success' => true,
@@ -183,7 +185,7 @@ class WebSocketController extends Controller
     }
 
     /**
-     * Broadcast message
+     * Broadcast message.
      */
     public function broadcast(Request $request): JsonResponse
     {
@@ -201,7 +203,7 @@ class WebSocketController extends Controller
             $data = $request->input('data');
             $targetUsers = $request->input('target_users');
             $tenantId = $request->header('X-Tenant-ID');
-            
+
             // Validate event type
             if (!$this->webSocketService->isValidEvent($channel, $event)) {
                 return response()->json([
@@ -210,9 +212,9 @@ class WebSocketController extends Controller
                     'code' => 'WEBSOCKET_INVALID_EVENT',
                 ], 400);
             }
-            
+
             $success = false;
-            
+
             if ($targetUsers && !empty($targetUsers)) {
                 // Broadcast to specific users
                 $success = $this->webSocketService->broadcastToUsers($targetUsers, $event, $data, $tenantId);
@@ -220,7 +222,7 @@ class WebSocketController extends Controller
                 // Broadcast to channel
                 $success = $this->webSocketService->broadcast($channel, $event, $data, $tenantId);
             }
-            
+
             if ($success) {
                 return response()->json([
                     'success' => true,
@@ -246,7 +248,7 @@ class WebSocketController extends Controller
     }
 
     /**
-     * Send notification
+     * Send notification.
      */
     public function sendNotification(Request $request): JsonResponse
     {
@@ -269,9 +271,9 @@ class WebSocketController extends Controller
                 'type' => $request->input('type'),
             ];
             $tenantId = $request->header('X-Tenant-ID');
-            
+
             $success = $this->webSocketService->sendNotification($userId, $notification, $tenantId);
-            
+
             if ($success) {
                 return response()->json([
                     'success' => true,
@@ -296,13 +298,13 @@ class WebSocketController extends Controller
     }
 
     /**
-     * Get WebSocket statistics
+     * Get WebSocket statistics.
      */
     public function getStats(): JsonResponse
     {
         try {
             $stats = $this->webSocketService->getStats();
-            
+
             return response()->json([
                 'success' => true,
                 'data' => $stats,
@@ -319,20 +321,20 @@ class WebSocketController extends Controller
     }
 
     /**
-     * Get available channels and events
+     * Get available channels and events.
      */
     public function getChannels(): JsonResponse
     {
         try {
             $channels = [];
-            
+
             foreach ($this->webSocketService->getChannels() as $key => $channel) {
                 $channels[$key] = [
                     'name' => $channel,
                     'events' => $this->webSocketService->getEventTypes($key),
                 ];
             }
-            
+
             return response()->json([
                 'success' => true,
                 'data' => $channels,
@@ -348,7 +350,7 @@ class WebSocketController extends Controller
     }
 
     /**
-     * Test WebSocket connection
+     * Test WebSocket connection.
      */
     public function testConnection(): JsonResponse
     {
@@ -374,7 +376,7 @@ class WebSocketController extends Controller
                 ],
                 'test_timestamp' => now()->toISOString(),
             ];
-            
+
             if ($success) {
                 return response()->json([
                     'success' => true,

@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
-use App\Models\User;
 
 class AuthController extends Controller
 {
     /**
-     * Handle login request
+     * Handle login request.
      */
     public function login(Request $request)
     {
@@ -59,23 +59,22 @@ class AuthController extends Controller
                 'superadmin@zena.com' => [
                     'name' => 'Super Admin',
                     'password' => 'password123',
-                    'role' => 'super_admin'
+                    'role' => 'super_admin',
                 ],
                 'pm@zena.com' => [
                     'name' => 'Project Manager',
                     'password' => 'password123',
-                    'role' => 'project_manager'
+                    'role' => 'project_manager',
                 ],
                 'user@zena.com' => [
                     'name' => 'Regular User',
                     'password' => 'password123',
-                    'role' => 'user'
+                    'role' => 'user',
                 ],
             ];
 
             if (isset($demoUsers[$credentials['email']]) &&
                 $demoUsers[$credentials['email']]['password'] === $credentials['password']) {
-
                 // Create or get user from database
                 $user = User::firstOrCreate(
                     ['email' => $credentials['email']],
@@ -110,21 +109,22 @@ class AuthController extends Controller
     }
 
     /**
-     * Handle logout request
+     * Handle logout request.
      */
     public function logout(Request $request)
     {
         Auth::logout();
-        
+
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        
+
         return redirect('/login')->with('success', 'You have been logged out successfully.');
     }
 
     protected function throttleKey(Request $request): string
     {
         $email = (string) ($request->input('email') ?? $request->input('username'));
+
         return Str::lower($email) . '|' . $request->ip();
     }
 }

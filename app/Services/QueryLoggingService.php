@@ -1,23 +1,28 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
 use App\Models\QueryLog;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\Request;
 
 /**
- * Query Logging Service
- * 
+ * Query Logging Service.
+ *
  * Logs and monitors database query performance
  */
 class QueryLoggingService
 {
     private bool $enabled = true;
+
     private float $slowQueryThreshold = 1000; // milliseconds
+
     private array $queryLog = [];
+
     private int $maxLogEntries = 1000;
 
     public function __construct()
@@ -28,7 +33,7 @@ class QueryLoggingService
     }
 
     /**
-     * Start query logging
+     * Start query logging.
      */
     public function startLogging(): void
     {
@@ -41,7 +46,7 @@ class QueryLoggingService
     }
 
     /**
-     * Stop query logging and save logs
+     * Stop query logging and save logs.
      */
     public function stopLogging(Request $request = null): void
     {
@@ -51,12 +56,12 @@ class QueryLoggingService
 
         $queries = DB::getQueryLog();
         $this->processQueries($queries, $request);
-        
+
         DB::flushQueryLog();
     }
 
     /**
-     * Log a single query
+     * Log a single query.
      */
     public function logQuery(string $sql, array $bindings = [], float $executionTime = 0, string $connection = 'mysql'): void
     {
@@ -91,7 +96,7 @@ class QueryLoggingService
     }
 
     /**
-     * Process queries from Laravel query log
+     * Process queries from Laravel query log.
      */
     private function processQueries(array $queries, Request $request = null): void
     {
@@ -129,7 +134,7 @@ class QueryLoggingService
     }
 
     /**
-     * Save query logs to database
+     * Save query logs to database.
      */
     private function saveQueryLogs(): void
     {
@@ -140,23 +145,22 @@ class QueryLoggingService
         try {
             // Batch insert for better performance
             $chunks = array_chunk($this->queryLog, 100);
-            
+
             foreach ($chunks as $chunk) {
                 QueryLog::insert($chunk);
             }
 
             $this->queryLog = [];
-
         } catch (\Exception $e) {
             Log::error('Failed to save query logs', [
                 'error' => $e->getMessage(),
-                'count' => count($this->queryLog)
+                'count' => count($this->queryLog),
             ]);
         }
     }
 
     /**
-     * Log slow query to application log
+     * Log slow query to application log.
      */
     private function logSlowQuery(array $queryData): void
     {
@@ -165,29 +169,29 @@ class QueryLoggingService
             'execution_time' => $queryData['execution_time'],
             'user_id' => $queryData['user_id'],
             'query_type' => $queryData['query_type'],
-            'memory_usage' => $queryData['memory_usage']
+            'memory_usage' => $queryData['memory_usage'],
         ]);
     }
 
     /**
-     * Generate hash for query
+     * Generate hash for query.
      */
     private function generateQueryHash(string $sql, array $bindings): string
     {
         // Normalize SQL by removing variable values
         $normalizedSql = preg_replace('/\?/', '?', $sql);
         $normalizedSql = preg_replace('/\b\d+\b/', '?', $normalizedSql);
-        
+
         return hash('sha256', $normalizedSql . serialize($bindings));
     }
 
     /**
-     * Get query type from SQL
+     * Get query type from SQL.
      */
     private function getQueryType(string $sql): string
     {
         $sql = trim(strtoupper($sql));
-        
+
         if (str_starts_with($sql, 'SELECT')) {
             return 'SELECT';
         } elseif (str_starts_with($sql, 'INSERT')) {
@@ -197,12 +201,12 @@ class QueryLoggingService
         } elseif (str_starts_with($sql, 'DELETE')) {
             return 'DELETE';
         }
-        
+
         return 'OTHER';
     }
 
     /**
-     * Get query performance statistics
+     * Get query performance statistics.
      */
     public function getPerformanceStats($startDate = null, $endDate = null): array
     {
@@ -210,7 +214,7 @@ class QueryLoggingService
     }
 
     /**
-     * Get top slow queries
+     * Get top slow queries.
      */
     public function getTopSlowQueries(int $limit = 10): \Illuminate\Database\Eloquent\Collection
     {
@@ -218,7 +222,7 @@ class QueryLoggingService
     }
 
     /**
-     * Get query frequency analysis
+     * Get query frequency analysis.
      */
     public function getQueryFrequencyAnalysis(int $limit = 20): \Illuminate\Database\Eloquent\Collection
     {
@@ -226,7 +230,7 @@ class QueryLoggingService
     }
 
     /**
-     * Clean up old query logs
+     * Clean up old query logs.
      */
     public function cleanupOldLogs(int $days = 30): int
     {
@@ -234,13 +238,13 @@ class QueryLoggingService
     }
 
     /**
-     * Get database performance metrics
+     * Get database performance metrics.
      */
     public function getDatabaseMetrics(): array
     {
         try {
             $metrics = [];
-            
+
             // Get MySQL status variables
             $statusVars = [
                 'Threads_connected',
@@ -253,7 +257,7 @@ class QueryLoggingService
                 'Qcache_hits',
                 'Qcache_inserts',
                 'Created_tmp_tables',
-                'Created_tmp_disk_tables'
+                'Created_tmp_disk_tables',
             ];
 
             foreach ($statusVars as $var) {
@@ -265,23 +269,22 @@ class QueryLoggingService
 
             // Calculate hit rates
             if (isset($metrics['Qcache_hits']) && isset($metrics['Qcache_inserts'])) {
-                $total = (int)$metrics['Qcache_hits'] + (int)$metrics['Qcache_inserts'];
+                $total = (int) $metrics['Qcache_hits'] + (int) $metrics['Qcache_inserts'];
                 $metrics['query_cache_hit_rate'] = $total > 0 ? round(($metrics['Qcache_hits'] / $total) * 100, 2) : 0;
             }
 
             return $metrics;
-
         } catch (\Exception $e) {
             Log::error('Failed to get database metrics', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return [];
         }
     }
 
     /**
-     * Enable/disable query logging
+     * Enable/disable query logging.
      */
     public function setEnabled(bool $enabled): void
     {
@@ -289,7 +292,7 @@ class QueryLoggingService
     }
 
     /**
-     * Set slow query threshold
+     * Set slow query threshold.
      */
     public function setSlowQueryThreshold(float $threshold): void
     {
@@ -297,7 +300,7 @@ class QueryLoggingService
     }
 
     /**
-     * Get current configuration
+     * Get current configuration.
      */
     public function getConfiguration(): array
     {
@@ -305,7 +308,7 @@ class QueryLoggingService
             'enabled' => $this->enabled,
             'slow_query_threshold' => $this->slowQueryThreshold,
             'max_log_entries' => $this->maxLogEntries,
-            'current_log_count' => count($this->queryLog)
+            'current_log_count' => count($this->queryLog),
         ];
     }
 }

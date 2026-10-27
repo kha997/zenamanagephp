@@ -4,11 +4,10 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     public function up(): void
     {
-        if (! Schema::hasTable('cr_links')) {
+        if (!Schema::hasTable('cr_links')) {
             Schema::create('cr_links', function (Blueprint $table) {
                 $table->ulid('id')->primary();
                 $table->string('change_request_id');
@@ -23,7 +22,7 @@ return new class extends Migration
             });
         }
 
-        if (! Schema::hasTable('baselines')) {
+        if (!Schema::hasTable('baselines')) {
             Schema::create('baselines', function (Blueprint $table) {
                 $table->ulid('id')->primary();
                 $table->string('project_id');
@@ -45,7 +44,7 @@ return new class extends Migration
             });
         }
 
-        if (! Schema::hasTable('baseline_history')) {
+        if (!Schema::hasTable('baseline_history')) {
             Schema::create('baseline_history', function (Blueprint $table) {
                 $table->id();
                 $table->ulid('baseline_id');

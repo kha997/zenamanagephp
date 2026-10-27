@@ -45,7 +45,7 @@ class StartProductionWorkers extends Command
         $maxTime = $this->option('max-time');
         $sleep = $this->option('sleep');
 
-        $this->info("Configuration:");
+        $this->info('Configuration:');
         $this->table(['Setting', 'Value'], [
             ['Mode', $daemon ? 'Daemon' : 'Foreground'],
             ['Workers per Queue', $workers],
@@ -58,13 +58,14 @@ class StartProductionWorkers extends Command
 
         if (!$this->confirm('Start workers with these settings?')) {
             $this->info('Operation cancelled.');
+
             return 0;
         }
 
         try {
             $this->startWorkers($daemon, $workers, $timeout, $tries, $maxJobs, $maxTime, $sleep);
             $this->info('✅ Production workers started successfully!');
-            
+
             if ($daemon) {
                 $this->info('Workers are running in the background.');
                 $this->info('Use "php artisan workers:status" to check status.');
@@ -78,18 +79,19 @@ class StartProductionWorkers extends Command
                 'error' => $e->getMessage(),
                 'settings' => compact('daemon', 'workers', 'timeout', 'tries', 'maxJobs', 'maxTime', 'sleep'),
             ]);
+
             return 1;
         }
     }
 
     /**
-     * Start queue workers
+     * Start queue workers.
      */
     private function startWorkers(bool $daemon, int $workers, int $timeout, int $tries, int $maxJobs, int $maxTime, int $sleep): void
     {
         $queues = [
             'emails-high' => 'High Priority Emails',
-            'emails-medium' => 'Medium Priority Emails', 
+            'emails-medium' => 'Medium Priority Emails',
             'emails-low' => 'Low Priority Emails',
             'emails-welcome' => 'Welcome Emails',
         ];
@@ -98,7 +100,7 @@ class StartProductionWorkers extends Command
 
         foreach ($queues as $queue => $description) {
             $this->info("Starting {$workers} workers for {$description}...");
-            
+
             for ($i = 1; $i <= $workers; $i++) {
                 $command = [
                     'php', 'artisan', 'queue:work',
@@ -139,7 +141,7 @@ class StartProductionWorkers extends Command
     }
 
     /**
-     * Save process information
+     * Save process information.
      */
     private function saveProcessInfo(array $processes): void
     {

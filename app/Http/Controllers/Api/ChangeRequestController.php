@@ -1,9 +1,10 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
-use App\Http\Controllers\Api\BaseApiController;
 use App\Models\AuditLog;
 use App\Models\Baseline;
 use App\Models\BaselineHistory;
@@ -84,7 +85,7 @@ class ChangeRequestController extends BaseApiController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
@@ -146,7 +147,7 @@ class ChangeRequestController extends BaseApiController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
@@ -216,7 +217,7 @@ class ChangeRequestController extends BaseApiController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
@@ -465,7 +466,7 @@ class ChangeRequestController extends BaseApiController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
@@ -510,7 +511,7 @@ class ChangeRequestController extends BaseApiController
             $changeRequest->update($request->only([
                 'title', 'description', 'change_type', 'impact_analysis',
                 'cost_impact', 'schedule_impact_days', 'priority',
-                'justification', 'alternatives_considered'
+                'justification', 'alternatives_considered',
             ]));
 
             $changeRequest->load(['project:id,name', 'requestedBy:id,name', 'approvedBy:id,name']);
@@ -528,7 +529,7 @@ class ChangeRequestController extends BaseApiController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
@@ -568,7 +569,7 @@ class ChangeRequestController extends BaseApiController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
@@ -639,7 +640,7 @@ class ChangeRequestController extends BaseApiController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
@@ -747,6 +748,7 @@ class ChangeRequestController extends BaseApiController
             return $this->successResponse($changeRequest, 'Change request approved successfully');
         } catch (\Exception $e) {
             DB::rollBack();
+
             return $this->serverError('Failed to approve change request: ' . $e->getMessage());
         }
     }
@@ -758,7 +760,7 @@ class ChangeRequestController extends BaseApiController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
@@ -841,7 +843,7 @@ class ChangeRequestController extends BaseApiController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
@@ -891,6 +893,32 @@ class ChangeRequestController extends BaseApiController
             $this->createTaskLinkBack($changeRequest, $task);
             $this->createBaselineSnapshot($changeRequest, (string) $user->id);
 
+            $requestedBy = $changeRequest->getAttribute('requested_by');
+            if (is_string($requestedBy) && $requestedBy !== '') {
+                $this->createWorkflowNotification(
+                    $changeRequest,
+                    $requestedBy,
+                    'change_request_implemented',
+                    'Change request implemented',
+                    $changeRequest->title,
+                    'change_request.implemented'
+                );
+            }
+
+            // Notify project PM as a broader stakeholder when different from requester
+            $project = $changeRequest->project ?? Project::query()->find($changeRequest->project_id);
+            $pmId = $project?->pm_id ? (string) $project->pm_id : null;
+            if ($pmId !== null && $pmId !== (string) ($requestedBy ?? '')) {
+                $this->createWorkflowNotification(
+                    $changeRequest,
+                    $pmId,
+                    'change_request_implemented_pm',
+                    'Change request implemented (project update)',
+                    $changeRequest->title,
+                    'change_request.implemented'
+                );
+            }
+
             DB::commit();
 
             $changeRequest->load(['project:id,name', 'requestedBy:id,name', 'approvedBy:id,name']);
@@ -909,6 +937,7 @@ class ChangeRequestController extends BaseApiController
             return $this->successResponse($changeRequest, 'Change request applied successfully');
         } catch (\Exception $e) {
             DB::rollBack();
+
             return $this->serverError('Failed to apply change request: ' . $e->getMessage());
         }
     }
@@ -920,7 +949,7 @@ class ChangeRequestController extends BaseApiController
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->unauthorized('Authentication required');
             }
@@ -980,15 +1009,15 @@ class ChangeRequestController extends BaseApiController
             ->whereKey($projectId)
             ->first();
         $projectCode = $project ? strtoupper(substr($project->name, 0, 3)) : 'PRJ';
-        
+
         $lastChangeRequest = ChangeRequest::where('tenant_id', $tenantId)
             ->where('project_id', $projectId)
             ->orderBy('created_at', 'desc')
             ->first();
-        
+
         $sequence = $lastChangeRequest ? (int) substr($lastChangeRequest->change_number, -4) + 1 : 1;
         $sequenceString = (string) $sequence;
-        
+
         return $projectCode . '-CR-' . str_pad($sequenceString, 4, '0', STR_PAD_LEFT);
     }
 
@@ -1003,6 +1032,7 @@ class ChangeRequestController extends BaseApiController
         }
 
         $costImpact = $changeRequest->approved_cost ?? $changeRequest->cost_impact ?? 0;
+
         return round(($costImpact / $project->budget) * 100, 2);
     }
 
@@ -1018,7 +1048,7 @@ class ChangeRequestController extends BaseApiController
 
         $totalDays = $project->start_date->diffInDays($project->end_date);
         $scheduleImpact = $changeRequest->approved_schedule_days ?? $changeRequest->schedule_impact_days ?? 0;
-        
+
         return $totalDays > 0 ? round(($scheduleImpact / $totalDays) * 100, 2) : 0;
     }
 

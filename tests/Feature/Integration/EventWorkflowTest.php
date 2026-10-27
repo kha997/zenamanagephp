@@ -1,27 +1,28 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Integration;
 
-use Tests\TestCase;
+use App\Models\ChangeRequest;
+use App\Models\Component;
+use App\Models\Project;
+use App\Models\Task;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
-use App\Models\User;
-use App\Models\Project;
-use App\Models\Component;
-use App\Models\Task;
-use App\Models\ChangeRequest;
+use Src\ChangeRequest\Events\ChangeRequestApproved;
 use Src\CoreProject\Events\ComponentProgressUpdated;
 use Src\CoreProject\Events\ProjectCreated;
-use Src\ChangeRequest\Events\ChangeRequestApproved;
-use Src\Notification\Events\NotificationTriggered;
 use Src\Foundation\Events\EventLogged;
 use Src\Foundation\Listeners\EventLogListener;
+use Src\Notification\Events\NotificationTriggered;
+use Tests\TestCase;
 
 /**
- * Integration Tests cho Event-driven Workflows
- * 
+ * Integration Tests cho Event-driven Workflows.
+ *
  * Kiểm tra tính tích hợp giữa các modules thông qua Event system
  * và đảm bảo các workflows hoạt động đúng theo business logic
  */
@@ -30,7 +31,9 @@ class EventWorkflowTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+
     private Project $project;
+
     private Component $component;
 
     protected function setUp(): void
@@ -46,19 +49,19 @@ class EventWorkflowTest extends TestCase
         $this->project = Project::factory()->create([
             'tenant_id' => $this->user->tenant_id,
             'progress' => 0,
-            'actual_cost' => 0
+            'actual_cost' => 0,
         ]);
         $this->component = Component::factory()->create([
             'project_id' => $this->project->id,
             'progress_percent' => 0,
             'planned_cost' => 10000,
-            'actual_cost' => 0
+            'actual_cost' => 0,
         ]);
     }
 
     /**
      * Test Project Creation Workflow
-     * Kiểm tra khi tạo project, các events và listeners được trigger đúng
+     * Kiểm tra khi tạo project, các events và listeners được trigger đúng.
      */
     public function test_project_creation_workflow(): void
     {
@@ -97,7 +100,7 @@ class EventWorkflowTest extends TestCase
 
     /**
      * Test Component Progress Update Workflow
-     * Kiểm tra khi cập nhật progress component, project progress được tính lại
+     * Kiểm tra khi cập nhật progress component, project progress được tính lại.
      */
     public function test_component_progress_update_workflow(): void
     {
@@ -106,24 +109,24 @@ class EventWorkflowTest extends TestCase
             'project_id' => $this->project->id,
             'progress_percent' => 0,
             'planned_cost' => 5000,
-            'actual_cost' => 0
+            'actual_cost' => 0,
         ]);
 
         // Unfake events để listeners thực sự chạy
         Event::fake([
-            EventLogged::class // Chỉ fake EventLogged để tránh spam logs
+            EventLogged::class, // Chỉ fake EventLogged để tránh spam logs
         ]);
 
         // Cập nhật progress của component đầu tiên
         $this->component->update([
             'progress_percent' => 50,
-            'actual_cost' => 3000
+            'actual_cost' => 3000,
         ]);
 
         // Cập nhật progress của component thứ hai
         $component2->update([
             'progress_percent' => 80,
-            'actual_cost' => 2000
+            'actual_cost' => 2000,
         ]);
 
         // Refresh project để lấy dữ liệu mới nhất
@@ -142,7 +145,7 @@ class EventWorkflowTest extends TestCase
 
     /**
      * Test Change Request Approval Workflow
-     * Kiểm tra khi CR được approve, các modules liên quan được update
+     * Kiểm tra khi CR được approve, các modules liên quan được update.
      */
     public function test_change_request_approval_workflow(): void
     {
@@ -155,7 +158,7 @@ class EventWorkflowTest extends TestCase
             'impact_days' => 10,
             'impact_cost' => 5000,
             'impact_kpi' => ['quality' => '+10%'],
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
         // Approve Change Request
@@ -163,7 +166,7 @@ class EventWorkflowTest extends TestCase
             'status' => 'approved',
             'decided_by' => $this->user->id,
             'decided_at' => now(),
-            'decision_note' => 'Approved for quality improvement'
+            'decision_note' => 'Approved for quality improvement',
         ]);
 
         $impactKpi = $changeRequest->impact_kpi;
@@ -174,7 +177,7 @@ class EventWorkflowTest extends TestCase
         $impactData = [
             'days' => 10,
             'cost' => 5000,
-            'kpi' => $impactKpi ?: []
+            'kpi' => $impactKpi ?: [],
         ];
 
         event(new ChangeRequestApproved(
@@ -213,7 +216,7 @@ class EventWorkflowTest extends TestCase
 
     /**
      * Test Multi-module Communication Workflow
-     * Kiểm tra communication giữa nhiều modules thông qua events
+     * Kiểm tra communication giữa nhiều modules thông qua events.
      */
     public function test_multi_module_communication_workflow(): void
     {
@@ -223,22 +226,22 @@ class EventWorkflowTest extends TestCase
         $task = Task::factory()->create([
             'project_id' => $this->project->id,
             'component_id' => $this->component->id,
-            'status' => 'pending'
+            'status' => 'pending',
         ]);
 
         // Unfake events để test real communication
         Event::fake([
             EventLogged::class,
-            NotificationTriggered::class
+            NotificationTriggered::class,
         ]);
 
         // Simulate task completion workflow
         $task->update(['status' => 'completed']);
-        
+
         // Update component progress based on task completion
         $this->component->update([
             'progress_percent' => 100,
-            'actual_cost' => $this->component->planned_cost
+            'actual_cost' => $this->component->planned_cost,
         ]);
 
         // Refresh models
@@ -254,7 +257,7 @@ class EventWorkflowTest extends TestCase
 
     /**
      * Test Event Auditing Integration
-     * Kiểm tra tất cả events được log đúng cách cho auditing
+     * Kiểm tra tất cả events được log đúng cách cho auditing.
      */
     public function test_event_auditing_integration(): void
     {
@@ -268,16 +271,16 @@ class EventWorkflowTest extends TestCase
 
         // Không fake EventLogged để test thực sự
         Event::fake([
-            NotificationTriggered::class // Chỉ fake notification để tránh spam
+            NotificationTriggered::class, // Chỉ fake notification để tránh spam
         ]);
 
         // Thực hiện một series các actions
         $this->component->update(['progress_percent' => 25]);
         $this->component->update(['actual_cost' => 2500]);
-        
+
         $task = Task::factory()->create([
             'project_id' => $this->project->id,
-            'status' => 'in_progress'
+            'status' => 'in_progress',
         ]);
 
         (new EventLogListener())->handle('Testing.Task.Created', [
@@ -285,7 +288,7 @@ class EventWorkflowTest extends TestCase
             'project_id' => $this->project->id,
             'actor_id' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
-            'timestamp' => now()->format('Y-m-d H:i:s')
+            'timestamp' => now()->format('Y-m-d H:i:s'),
         ]);
 
         // Verify EventLogged events được dispatch
@@ -294,7 +297,7 @@ class EventWorkflowTest extends TestCase
 
     /**
      * Test Error Handling in Event Workflows
-     * Kiểm tra xử lý lỗi trong event workflows
+     * Kiểm tra xử lý lỗi trong event workflows.
      */
     public function test_error_handling_in_event_workflows(): void
     {
@@ -304,10 +307,10 @@ class EventWorkflowTest extends TestCase
         try {
             $this->component->update([
                 'progress_percent' => 150, // Invalid: > 100
-                'actual_cost' => -1000 // Invalid: negative
+                'actual_cost' => -1000, // Invalid: negative
             ]);
+
             throw new \RuntimeException('validation failure');
-            
             $this->fail('Expected validation exception was not thrown');
         } catch (\Exception $e) {
             // Verify error được handle đúng cách
@@ -316,7 +319,7 @@ class EventWorkflowTest extends TestCase
 
         $this->component->update([
             'progress_percent' => 0,
-            'actual_cost' => 0
+            'actual_cost' => 0,
         ]);
 
         // Verify project data không bị corrupt

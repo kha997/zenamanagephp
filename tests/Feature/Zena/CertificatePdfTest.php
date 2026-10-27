@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Zena;
 
@@ -8,7 +10,6 @@ use App\Models\Boq;
 use App\Models\BoqLineItem;
 use App\Models\Contract;
 use App\Models\PaymentCertificate;
-use App\Models\PaymentCertificateLine;
 use App\Models\Project;
 use App\Models\Tenant;
 use App\Models\User;
@@ -23,10 +24,15 @@ class CertificatePdfTest extends TestCase
     use TenantUserFactoryTrait;
 
     private Tenant $tenant;
+
     private User $user;
+
     private Project $project;
+
     private Contract $contract;
+
     private Boq $boq;
+
     private BoqLineItem $line1;
 
     protected function setUp(): void
@@ -152,7 +158,7 @@ class CertificatePdfTest extends TestCase
     public function test_approved_certificate_returns_pdf(): void
     {
         $this->app->bind(DeliverablePdfExportService::class, function () {
-            return new class extends DeliverablePdfExportService {
+            return new class () extends DeliverablePdfExportService {
                 public function render(string $html, array $options = [], array $documentMeta = []): string
                 {
                     return '%PDF-1.4 fake-cert-pdf-bytes';
@@ -255,7 +261,7 @@ class CertificatePdfTest extends TestCase
     public function test_engine_unavailable_redirects_with_error(): void
     {
         $this->app->bind(DeliverablePdfExportService::class, function () {
-            return new class extends DeliverablePdfExportService {
+            return new class () extends DeliverablePdfExportService {
                 public function render(string $html, array $options = [], array $documentMeta = []): string
                 {
                     throw new DeliverablePdfExportUnavailableException();

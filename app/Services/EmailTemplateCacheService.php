@@ -10,7 +10,9 @@ use Illuminate\Support\Facades\View;
 class EmailTemplateCacheService
 {
     protected $cacheEnabled;
+
     protected $cacheTtl;
+
     protected $cacheDriver;
 
     public function __construct()
@@ -21,7 +23,7 @@ class EmailTemplateCacheService
     }
 
     /**
-     * Get cached email template
+     * Get cached email template.
      */
     public function getCachedTemplate(string $templateName, array $data = []): ?string
     {
@@ -30,7 +32,7 @@ class EmailTemplateCacheService
         }
 
         $cacheKey = $this->generateCacheKey($templateName, $data);
-        
+
         try {
             return Cache::store($this->cacheDriver)->get($cacheKey);
         } catch (\Exception $e) {
@@ -39,12 +41,13 @@ class EmailTemplateCacheService
                 'cache_key' => $cacheKey,
                 'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
 
     /**
-     * Cache email template
+     * Cache email template.
      */
     public function cacheTemplate(string $templateName, array $data, string $renderedContent): void
     {
@@ -53,10 +56,10 @@ class EmailTemplateCacheService
         }
 
         $cacheKey = $this->generateCacheKey($templateName, $data);
-        
+
         try {
             Cache::store($this->cacheDriver)->put($cacheKey, $renderedContent, $this->cacheTtl);
-            
+
             Log::debug('Email template cached successfully', [
                 'template' => $templateName,
                 'cache_key' => $cacheKey,
@@ -72,7 +75,7 @@ class EmailTemplateCacheService
     }
 
     /**
-     * Render email template with caching
+     * Render email template with caching.
      */
     public function renderTemplate(string $templateName, array $data = []): string
     {
@@ -92,7 +95,7 @@ class EmailTemplateCacheService
     }
 
     /**
-     * Clear template cache
+     * Clear template cache.
      */
     public function clearCache(string $templateName = null): void
     {
@@ -118,7 +121,7 @@ class EmailTemplateCacheService
     }
 
     /**
-     * Get cache statistics
+     * Get cache statistics.
      */
     public function getCacheStats(): array
     {
@@ -135,9 +138,9 @@ class EmailTemplateCacheService
             if ($this->cacheEnabled) {
                 $pattern = 'email_template_*';
                 $keys = $this->getCacheKeys($pattern);
-                
+
                 $stats['total_cached'] = count($keys);
-                
+
                 foreach ($keys as $key) {
                     $templateInfo = $this->parseCacheKey($key);
                     if ($templateInfo) {
@@ -154,7 +157,7 @@ class EmailTemplateCacheService
             Log::error('Failed to get cache statistics', [
                 'error' => $e->getMessage(),
             ]);
-            
+
             return [
                 'enabled' => $this->cacheEnabled,
                 'driver' => $this->cacheDriver,
@@ -165,7 +168,7 @@ class EmailTemplateCacheService
     }
 
     /**
-     * Warm up cache for common templates
+     * Warm up cache for common templates.
      */
     public function warmUpCache(): void
     {
@@ -199,24 +202,24 @@ class EmailTemplateCacheService
     }
 
     /**
-     * Generate cache key
+     * Generate cache key.
      */
     private function generateCacheKey(string $templateName, array $data): string
     {
         $dataHash = hash('sha256', json_encode($data));
         $timestamp = now()->format('Y-m-d-H');
-        
+
         return "email_template_{$templateName}_{$dataHash}_{$timestamp}";
     }
 
     /**
-     * Render Blade template
+     * Render Blade template.
      */
     private function renderBladeTemplate(string $templateName, array $data): string
     {
         try {
             $viewPath = "emails.{$templateName}";
-            
+
             if (!View::exists($viewPath)) {
                 throw new \Exception("Email template '{$viewPath}' not found");
             }
@@ -227,25 +230,25 @@ class EmailTemplateCacheService
                 'template' => $templateName,
                 'error' => $e->getMessage(),
             ]);
-            
+
             throw $e;
         }
     }
 
     /**
-     * Clear cache by pattern
+     * Clear cache by pattern.
      */
     private function clearCacheByPattern(string $pattern): void
     {
         $keys = $this->getCacheKeys($pattern);
-        
+
         foreach ($keys as $key) {
             Cache::store($this->cacheDriver)->forget($key);
         }
     }
 
     /**
-     * Get cache keys by pattern
+     * Get cache keys by pattern.
      */
     private function getCacheKeys(string $pattern): array
     {
@@ -264,22 +267,23 @@ class EmailTemplateCacheService
                 'driver' => $this->cacheDriver,
                 'error' => $e->getMessage(),
             ]);
+
             return [];
         }
     }
 
     /**
-     * Get file cache keys
+     * Get file cache keys.
      */
     private function getFileCacheKeys(string $pattern): array
     {
         try {
             $cachePath = storage_path('framework/cache/data');
             $keys = [];
-            
+
             if (File::exists($cachePath)) {
                 $files = File::allFiles($cachePath);
-                
+
                 foreach ($files as $file) {
                     $filename = $file->getFilename();
                     if (fnmatch($pattern, $filename)) {
@@ -287,19 +291,20 @@ class EmailTemplateCacheService
                     }
                 }
             }
-            
+
             return $keys;
         } catch (\Exception $e) {
             Log::warning('Failed to get file cache keys', [
                 'pattern' => $pattern,
                 'error' => $e->getMessage(),
             ]);
+
             return [];
         }
     }
 
     /**
-     * Parse cache key to extract template info
+     * Parse cache key to extract template info.
      */
     private function parseCacheKey(string $key): ?array
     {
@@ -312,6 +317,7 @@ class EmailTemplateCacheService
                     'timestamp' => $parts[4] ?? null,
                 ];
             }
+
             return null;
         } catch (\Exception $e) {
             return null;

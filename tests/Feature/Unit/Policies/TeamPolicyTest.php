@@ -4,9 +4,9 @@ namespace Tests\Feature\Unit\Policies;
 
 use App\Models\Permission;
 use App\Models\Role;
-use App\Models\User;
 use App\Models\Team;
 use App\Models\Tenant;
+use App\Models\User;
 use App\Policies\TeamPolicy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -26,8 +26,11 @@ class TeamPolicyTest extends TestCase
     use RefreshDatabase;
 
     protected $policy;
+
     protected $tenant;
+
     protected $user;
+
     protected $team;
 
     protected function setUp(): void
@@ -38,17 +41,17 @@ class TeamPolicyTest extends TestCase
 
         $this->tenant = Tenant::factory()->create([
             'slug' => 'test-tenant-' . uniqid(),
-            'name' => 'Test Tenant'
+            'name' => 'Test Tenant',
         ]);
 
         $this->user = User::factory()->create([
             'tenant_id' => $this->tenant->id,
-            'email' => 'test@example-' . uniqid() . '.com'
+            'email' => 'test@example-' . uniqid() . '.com',
         ]);
 
         $this->team = Team::factory()->create([
             'tenant_id' => $this->tenant->id,
-            'name' => 'Test Team'
+            'name' => 'Test Team',
         ]);
     }
 

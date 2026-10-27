@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
@@ -12,20 +14,20 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Real-time Controller
- * 
+ * Real-time Controller.
+ *
  * Handles real-time features including activity feeds, notifications, and WebSocket authentication
  */
 class RealTimeController extends BaseApiController
 {
     /**
-     * Get project activity feed
+     * Get project activity feed.
      */
     public function getProjectActivityFeed(Request $request, string $projectId): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->errorResponse('Unauthorized', 401);
             }
@@ -48,26 +50,26 @@ class RealTimeController extends BaseApiController
             return $this->successResponse([
                 'project_id' => $projectId,
                 'activities' => $activities,
-                'has_more' => count($activities) === $limit
+                'has_more' => count($activities) === $limit,
             ]);
-
         } catch (\Exception $e) {
             Log::error('Error getting project activity feed', [
                 'project_id' => $projectId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return $this->errorResponse('Failed to get activity feed', 500);
         }
     }
 
     /**
-     * Get notification history
+     * Get notification history.
      */
     public function getNotificationHistory(Request $request, string $projectId): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->errorResponse('Unauthorized', 401);
             }
@@ -85,26 +87,26 @@ class RealTimeController extends BaseApiController
             return $this->successResponse([
                 'project_id' => $projectId,
                 'notifications' => $notifications,
-                'has_more' => $notifications->count() === $limit
+                'has_more' => $notifications->count() === $limit,
             ]);
-
         } catch (\Exception $e) {
             Log::error('Error getting notification history', [
                 'project_id' => $projectId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return $this->errorResponse('Failed to get notification history', 500);
         }
     }
 
     /**
-     * Get activity statistics
+     * Get activity statistics.
      */
     public function getActivityStatistics(Request $request, string $projectId): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->errorResponse('Unauthorized', 401);
             }
@@ -129,28 +131,28 @@ class RealTimeController extends BaseApiController
                     ->where('status', '!=', 'completed')->count(),
                 'recent_activities' => $this->getRecentActivityCount($projectId, 24), // Last 24 hours
                 'notifications_sent' => Notification::where('project_id', $projectId)
-                    ->where('created_at', '>=', now()->subDay())->count()
+                    ->where('created_at', '>=', now()->subDay())->count(),
             ];
 
             return $this->successResponse($stats);
-
         } catch (\Exception $e) {
             Log::error('Error getting activity statistics', [
                 'project_id' => $projectId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return $this->errorResponse('Failed to get activity statistics', 500);
         }
     }
 
     /**
-     * Get user recent activities
+     * Get user recent activities.
      */
     public function getUserRecentActivities(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->errorResponse('Unauthorized', 401);
             }
@@ -163,26 +165,26 @@ class RealTimeController extends BaseApiController
             return $this->successResponse([
                 'user_id' => $user->id,
                 'activities' => $activities,
-                'period_hours' => $hours
+                'period_hours' => $hours,
             ]);
-
         } catch (\Exception $e) {
             Log::error('Error getting user recent activities', [
                 'user_id' => $user->id ?? 'unknown',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return $this->errorResponse('Failed to get recent activities', 500);
         }
     }
 
     /**
-     * Get user notification preferences
+     * Get user notification preferences.
      */
     public function getNotificationPreferences(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->errorResponse('Unauthorized', 401);
             }
@@ -195,31 +197,31 @@ class RealTimeController extends BaseApiController
                 'task_assignments' => true,
                 'deadline_reminders' => true,
                 'system_alerts' => true,
-                'frequency' => 'immediate' // immediate, daily, weekly
+                'frequency' => 'immediate', // immediate, daily, weekly
             ]);
 
             return $this->successResponse([
                 'user_id' => $user->id,
-                'preferences' => $preferences
+                'preferences' => $preferences,
             ]);
-
         } catch (\Exception $e) {
             Log::error('Error getting notification preferences', [
                 'user_id' => $user->id ?? 'unknown',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return $this->errorResponse('Failed to get notification preferences', 500);
         }
     }
 
     /**
-     * Update user notification preferences
+     * Update user notification preferences.
      */
     public function updateNotificationPreferences(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->errorResponse('Unauthorized', 401);
             }
@@ -232,38 +234,38 @@ class RealTimeController extends BaseApiController
                 'task_assignments' => 'boolean',
                 'deadline_reminders' => 'boolean',
                 'system_alerts' => 'boolean',
-                'frequency' => 'in:immediate,daily,weekly'
+                'frequency' => 'in:immediate,daily,weekly',
             ]);
 
             $preferences = $request->only([
-                'email', 'push', 'sms', 'project_updates', 
-                'task_assignments', 'deadline_reminders', 'system_alerts', 'frequency'
+                'email', 'push', 'sms', 'project_updates',
+                'task_assignments', 'deadline_reminders', 'system_alerts', 'frequency',
             ]);
 
             Cache::put("notification_preferences_{$user->id}", $preferences, 86400); // 24 hours
 
             return $this->successResponse([
                 'user_id' => $user->id,
-                'preferences' => $preferences
+                'preferences' => $preferences,
             ], 'Notification preferences updated successfully');
-
         } catch (\Exception $e) {
             Log::error('Error updating notification preferences', [
                 'user_id' => $user->id ?? 'unknown',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return $this->errorResponse('Failed to update notification preferences', 500);
         }
     }
 
     /**
-     * Send custom notification
+     * Send custom notification.
      */
     public function sendCustomNotification(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->errorResponse('Unauthorized', 401);
             }
@@ -274,7 +276,7 @@ class RealTimeController extends BaseApiController
                 'message' => 'required|string|max:1000',
                 'type' => 'required|in:info,warning,error,success',
                 'priority' => 'in:low,medium,high,urgent',
-                'project_id' => 'nullable|string'
+                'project_id' => 'nullable|string',
             ]);
 
             $notification = Notification::create([
@@ -284,7 +286,7 @@ class RealTimeController extends BaseApiController
                 'title' => $request->input('title'),
                 'message' => $request->input('message'),
                 'priority' => $request->input('priority', 'medium'),
-                'created_by' => $user->id
+                'created_by' => $user->id,
             ]);
 
             // Broadcast the notification
@@ -293,25 +295,25 @@ class RealTimeController extends BaseApiController
             return $this->successResponse([
                 'notification_id' => $notification->id,
                 'recipient_id' => $notification->user_id,
-                'title' => $notification->title
+                'title' => $notification->title,
             ], 'Custom notification sent successfully');
-
         } catch (\Exception $e) {
             Log::error('Error sending custom notification', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return $this->errorResponse('Failed to send notification', 500);
         }
     }
 
     /**
-     * Get WebSocket authentication token
+     * Get WebSocket authentication token.
      */
     public function getWebSocketAuth(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->errorResponse('Unauthorized', 401);
             }
@@ -321,7 +323,7 @@ class RealTimeController extends BaseApiController
                 'user_id' => $user->id,
                 'tenant_id' => $user->tenant_id,
                 'expires_at' => now()->addMinutes(30)->timestamp,
-                'nonce' => uniqid()
+                'nonce' => uniqid(),
             ]));
 
             Cache::put("websocket_auth_{$token}", $user->id, 1800); // 30 minutes
@@ -329,26 +331,26 @@ class RealTimeController extends BaseApiController
             return $this->successResponse([
                 'token' => $token,
                 'expires_in' => 1800, // 30 minutes
-                'websocket_url' => config('websocket.url', 'ws://localhost:6001')
+                'websocket_url' => config('websocket.url', 'ws://localhost:6001'),
             ]);
-
         } catch (\Exception $e) {
             Log::error('Error generating WebSocket auth token', [
                 'user_id' => $user->id ?? 'unknown',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return $this->errorResponse('Failed to generate WebSocket token', 500);
         }
     }
 
     /**
-     * Get connection status
+     * Get connection status.
      */
     public function getConnectionStatus(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return $this->errorResponse('Unauthorized', 401);
             }
@@ -357,22 +359,22 @@ class RealTimeController extends BaseApiController
                 'websocket' => $this->checkWebSocketStatus($user->id),
                 'sse' => $this->checkSSEStatus($user->id),
                 'redis' => $this->checkRedisStatus(),
-                'last_seen' => Cache::get("user_last_seen_{$user->id}", null)
+                'last_seen' => Cache::get("user_last_seen_{$user->id}", null),
             ];
 
             return $this->successResponse($status);
-
         } catch (\Exception $e) {
             Log::error('Error getting connection status', [
                 'user_id' => $user->id ?? 'unknown',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return $this->errorResponse('Failed to get connection status', 500);
         }
     }
 
     /**
-     * Get project activities (mock implementation)
+     * Get project activities (mock implementation).
      */
     private function getProjectActivities(string $projectId, int $limit, int $offset): array
     {
@@ -384,20 +386,20 @@ class RealTimeController extends BaseApiController
                 'type' => 'task_created',
                 'description' => 'New task created: "Design Review"',
                 'user' => 'John Doe',
-                'timestamp' => now()->subMinutes(5)->toISOString()
+                'timestamp' => now()->subMinutes(5)->toISOString(),
             ],
             [
                 'id' => '2',
                 'type' => 'task_completed',
                 'description' => 'Task completed: "Site Survey"',
                 'user' => 'Jane Smith',
-                'timestamp' => now()->subMinutes(15)->toISOString()
-            ]
+                'timestamp' => now()->subMinutes(15)->toISOString(),
+            ],
         ];
     }
 
     /**
-     * Get recent activity count
+     * Get recent activity count.
      */
     private function getRecentActivityCount(string $projectId, int $hours): int
     {
@@ -406,7 +408,7 @@ class RealTimeController extends BaseApiController
     }
 
     /**
-     * Get user activities (mock implementation)
+     * Get user activities (mock implementation).
      */
     private function getUserActivities(string $userId, int $limit, int $hours): array
     {
@@ -416,19 +418,19 @@ class RealTimeController extends BaseApiController
                 'id' => '1',
                 'type' => 'login',
                 'description' => 'Logged into system',
-                'timestamp' => now()->subMinutes(10)->toISOString()
+                'timestamp' => now()->subMinutes(10)->toISOString(),
             ],
             [
                 'id' => '2',
                 'type' => 'task_viewed',
                 'description' => 'Viewed task: "Design Review"',
-                'timestamp' => now()->subMinutes(20)->toISOString()
-            ]
+                'timestamp' => now()->subMinutes(20)->toISOString(),
+            ],
         ];
     }
 
     /**
-     * Broadcast notification
+     * Broadcast notification.
      */
     private function broadcastNotification(Notification $notification): void
     {
@@ -445,19 +447,19 @@ class RealTimeController extends BaseApiController
                         'message' => $notification->message,
                         'priority' => $notification->priority,
                         'created_at' => $notification->created_at->toISOString(),
-                    ]
-                ]
+                    ],
+                ],
             ]));
         } catch (\Exception $e) {
             Log::error('Error broadcasting notification', [
                 'notification_id' => $notification->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
 
     /**
-     * Check WebSocket status
+     * Check WebSocket status.
      */
     private function checkWebSocketStatus(string $userId): bool
     {
@@ -466,7 +468,7 @@ class RealTimeController extends BaseApiController
     }
 
     /**
-     * Check SSE status
+     * Check SSE status.
      */
     private function checkSSEStatus(string $userId): bool
     {
@@ -475,12 +477,13 @@ class RealTimeController extends BaseApiController
     }
 
     /**
-     * Check Redis status
+     * Check Redis status.
      */
     private function checkRedisStatus(): bool
     {
         try {
             Cache::store('redis')->get('test');
+
             return true;
         } catch (\Exception $e) {
             return false;

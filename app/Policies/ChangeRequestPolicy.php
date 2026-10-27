@@ -2,8 +2,8 @@
 
 namespace App\Policies;
 
-use App\Models\User;
 use App\Models\ChangeRequest;
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class ChangeRequestPolicy
@@ -51,7 +51,7 @@ class ChangeRequestPolicy
         }
 
         // Only creator or management can update
-        return $user->id === $changeRequest->created_by || 
+        return $user->id === $changeRequest->created_by ||
                $user->hasRole(['super_admin', 'admin', 'pm']);
     }
 
@@ -66,7 +66,7 @@ class ChangeRequestPolicy
         }
 
         // Only creator or super_admin can delete
-        return $user->id === $changeRequest->created_by || 
+        return $user->id === $changeRequest->created_by ||
                $user->hasRole(['super_admin']);
     }
 

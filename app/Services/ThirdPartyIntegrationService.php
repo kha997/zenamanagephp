@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -7,12 +9,12 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
- * ThirdPartyIntegrationService - Service cho third-party API integrations
+ * ThirdPartyIntegrationService - Service cho third-party API integrations.
  */
 class ThirdPartyIntegrationService
 {
     /**
-     * Slack Integration
+     * Slack Integration.
      */
     public function sendSlackNotification(string $webhookUrl, array $data): bool
     {
@@ -26,44 +28,43 @@ class ThirdPartyIntegrationService
                             [
                                 'title' => 'Project',
                                 'value' => $data['project_name'] ?? 'Unknown',
-                                'short' => true
+                                'short' => true,
                             ],
                             [
                                 'title' => 'Status',
                                 'value' => $data['status'] ?? 'Unknown',
-                                'short' => true
+                                'short' => true,
                             ],
                             [
                                 'title' => 'Progress',
                                 'value' => ($data['progress'] ?? 0) . '%',
-                                'short' => true
+                                'short' => true,
                             ],
                             [
                                 'title' => 'Updated By',
                                 'value' => $data['updated_by'] ?? 'System',
-                                'short' => true
-                            ]
+                                'short' => true,
+                            ],
                         ],
                         'footer' => 'ZenaManage',
-                        'ts' => time()
-                    ]
-                ]
+                        'ts' => time(),
+                    ],
+                ],
             ]);
 
             return $response->successful();
-            
         } catch (\Exception $e) {
             Log::error('Failed to send Slack notification', [
                 'error' => $e->getMessage(),
-                'data' => $data
+                'data' => $data,
             ]);
-            
+
             return false;
         }
     }
 
     /**
-     * Microsoft Teams Integration
+     * Microsoft Teams Integration.
      */
     public function sendTeamsNotification(string $webhookUrl, array $data): bool
     {
@@ -80,39 +81,38 @@ class ThirdPartyIntegrationService
                         'facts' => [
                             [
                                 'name' => 'Status',
-                                'value' => $data['status'] ?? 'Unknown'
+                                'value' => $data['status'] ?? 'Unknown',
                             ],
                             [
                                 'name' => 'Progress',
-                                'value' => ($data['progress'] ?? 0) . '%'
+                                'value' => ($data['progress'] ?? 0) . '%',
                             ],
                             [
                                 'name' => 'Updated By',
-                                'value' => $data['updated_by'] ?? 'System'
+                                'value' => $data['updated_by'] ?? 'System',
                             ],
                             [
                                 'name' => 'Timestamp',
-                                'value' => now()->format('Y-m-d H:i:s')
-                            ]
-                        ]
-                    ]
-                ]
+                                'value' => now()->format('Y-m-d H:i:s'),
+                            ],
+                        ],
+                    ],
+                ],
             ]);
 
             return $response->successful();
-            
         } catch (\Exception $e) {
             Log::error('Failed to send Teams notification', [
                 'error' => $e->getMessage(),
-                'data' => $data
+                'data' => $data,
             ]);
-            
+
             return false;
         }
     }
 
     /**
-     * Discord Integration
+     * Discord Integration.
      */
     public function sendDiscordNotification(string $webhookUrl, array $data): bool
     {
@@ -128,41 +128,40 @@ class ThirdPartyIntegrationService
                             [
                                 'name' => 'Status',
                                 'value' => $data['status'] ?? 'Unknown',
-                                'inline' => true
+                                'inline' => true,
                             ],
                             [
                                 'name' => 'Progress',
                                 'value' => ($data['progress'] ?? 0) . '%',
-                                'inline' => true
+                                'inline' => true,
                             ],
                             [
                                 'name' => 'Updated By',
                                 'value' => $data['updated_by'] ?? 'System',
-                                'inline' => true
-                            ]
+                                'inline' => true,
+                            ],
                         ],
                         'footer' => [
-                            'text' => 'ZenaManage'
+                            'text' => 'ZenaManage',
                         ],
-                        'timestamp' => now()->toISOString()
-                    ]
-                ]
+                        'timestamp' => now()->toISOString(),
+                    ],
+                ],
             ]);
 
             return $response->successful();
-            
         } catch (\Exception $e) {
             Log::error('Failed to send Discord notification', [
                 'error' => $e->getMessage(),
-                'data' => $data
+                'data' => $data,
             ]);
-            
+
             return false;
         }
     }
 
     /**
-     * GitHub Integration
+     * GitHub Integration.
      */
     public function createGitHubIssue(string $token, string $repo, array $issueData): array
     {
@@ -172,37 +171,36 @@ class ThirdPartyIntegrationService
                     'title' => $issueData['title'],
                     'body' => $issueData['body'],
                     'labels' => $issueData['labels'] ?? [],
-                    'assignees' => $issueData['assignees'] ?? []
+                    'assignees' => $issueData['assignees'] ?? [],
                 ]);
 
             if ($response->successful()) {
                 return [
                     'success' => true,
-                    'issue' => $response->json()
+                    'issue' => $response->json(),
                 ];
             }
 
             return [
                 'success' => false,
-                'error' => $response->body()
+                'error' => $response->body(),
             ];
-            
         } catch (\Exception $e) {
             Log::error('Failed to create GitHub issue', [
                 'error' => $e->getMessage(),
                 'repo' => $repo,
-                'issue_data' => $issueData
+                'issue_data' => $issueData,
             ]);
-            
+
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
 
     /**
-     * Jira Integration
+     * Jira Integration.
      */
     public function createJiraIssue(string $baseUrl, string $username, string $apiToken, array $issueData): array
     {
@@ -211,7 +209,7 @@ class ThirdPartyIntegrationService
                 ->post("{$baseUrl}/rest/api/3/issue", [
                     'fields' => [
                         'project' => [
-                            'key' => $issueData['project_key']
+                            'key' => $issueData['project_key'],
                         ],
                         'summary' => $issueData['summary'],
                         'description' => [
@@ -223,91 +221,89 @@ class ThirdPartyIntegrationService
                                     'content' => [
                                         [
                                             'type' => 'text',
-                                            'text' => $issueData['description']
-                                        ]
-                                    ]
-                                ]
-                            ]
+                                            'text' => $issueData['description'],
+                                        ],
+                                    ],
+                                ],
+                            ],
                         ],
                         'issuetype' => [
-                            'name' => $issueData['issue_type'] ?? 'Task'
+                            'name' => $issueData['issue_type'] ?? 'Task',
                         ],
                         'priority' => [
-                            'name' => $issueData['priority'] ?? 'Medium'
-                        ]
-                    ]
+                            'name' => $issueData['priority'] ?? 'Medium',
+                        ],
+                    ],
                 ]);
 
             if ($response->successful()) {
                 return [
                     'success' => true,
-                    'issue' => $response->json()
+                    'issue' => $response->json(),
                 ];
             }
 
             return [
                 'success' => false,
-                'error' => $response->body()
+                'error' => $response->body(),
             ];
-            
         } catch (\Exception $e) {
             Log::error('Failed to create Jira issue', [
                 'error' => $e->getMessage(),
                 'base_url' => $baseUrl,
-                'issue_data' => $issueData
+                'issue_data' => $issueData,
             ]);
-            
+
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
 
     /**
-     * Trello Integration
+     * Trello Integration.
      */
     public function createTrelloCard(string $apiKey, string $token, string $listId, array $cardData): array
     {
         try {
-            $response = Http::post("https://api.trello.com/1/cards", [
+            $response = Http::post('https://api.trello.com/1/cards', [
                 'key' => $apiKey,
                 'token' => $token,
                 'idList' => $listId,
                 'name' => $cardData['name'],
                 'desc' => $cardData['description'] ?? '',
                 'due' => $cardData['due_date'] ?? null,
-                'labels' => $cardData['labels'] ?? []
+                'labels' => $cardData['labels'] ?? [],
             ]);
 
             if ($response->successful()) {
                 return [
                     'success' => true,
-                    'card' => $response->json()
+                    'card' => $response->json(),
                 ];
             }
 
             return [
                 'success' => false,
-                'error' => $response->body()
+                'error' => $response->body(),
             ];
-            
         } catch (\Exception $e) {
             Log::error('Failed to create Trello card', [
                 'error' => $e->getMessage(),
                 'list_id' => $listId,
-                'card_data' => $cardData
+                'card_data' => $cardData,
             ]);
-            
+
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
 
     /**
-     * Asana Integration
+     * Asana Integration.
      */
     public function createAsanaTask(string $accessToken, string $projectId, array $taskData): array
     {
@@ -319,77 +315,76 @@ class ThirdPartyIntegrationService
                         'notes' => $taskData['notes'] ?? '',
                         'projects' => [$projectId],
                         'due_on' => $taskData['due_date'] ?? null,
-                        'assignee' => $taskData['assignee'] ?? null
-                    ]
+                        'assignee' => $taskData['assignee'] ?? null,
+                    ],
                 ]);
 
             if ($response->successful()) {
                 return [
                     'success' => true,
-                    'task' => $response->json()
+                    'task' => $response->json(),
                 ];
             }
 
             return [
                 'success' => false,
-                'error' => $response->body()
+                'error' => $response->body(),
             ];
-            
         } catch (\Exception $e) {
             Log::error('Failed to create Asana task', [
                 'error' => $e->getMessage(),
                 'project_id' => $projectId,
-                'task_data' => $taskData
+                'task_data' => $taskData,
             ]);
-            
+
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
 
     /**
-     * Zapier Integration
+     * Zapier Integration.
      */
     public function triggerZapierWebhook(string $webhookUrl, array $data): bool
     {
         try {
             $response = Http::post($webhookUrl, $data);
+
             return $response->successful();
-            
         } catch (\Exception $e) {
             Log::error('Failed to trigger Zapier webhook', [
                 'error' => $e->getMessage(),
-                'data' => $data
+                'data' => $data,
             ]);
-            
+
             return false;
         }
     }
 
     /**
-     * Webhook Integration
+     * Webhook Integration.
      */
     public function sendWebhook(string $url, array $data, array $headers = []): bool
     {
         try {
             $response = Http::withHeaders($headers)->post($url, $data);
+
             return $response->successful();
-            
         } catch (\Exception $e) {
             Log::error('Failed to send webhook', [
                 'error' => $e->getMessage(),
                 'url' => $url,
-                'data' => $data
+                'data' => $data,
             ]);
-            
+
             return false;
         }
     }
 
     /**
-     * Email Integration (SendGrid, Mailgun, etc.)
+     * Email Integration (SendGrid, Mailgun, etc.).
      */
     public function sendEmailViaProvider(string $provider, array $config, array $emailData): bool
     {
@@ -404,20 +399,19 @@ class ThirdPartyIntegrationService
                 default:
                     return false;
             }
-            
         } catch (\Exception $e) {
             Log::error('Failed to send email via provider', [
                 'error' => $e->getMessage(),
                 'provider' => $provider,
-                'email_data' => $emailData
+                'email_data' => $emailData,
             ]);
-            
+
             return false;
         }
     }
 
     /**
-     * Send via SendGrid
+     * Send via SendGrid.
      */
     private function sendViaSendGrid(array $config, array $emailData): bool
     {
@@ -426,27 +420,27 @@ class ThirdPartyIntegrationService
                 'personalizations' => [
                     [
                         'to' => [
-                            ['email' => $emailData['to']]
+                            ['email' => $emailData['to']],
                         ],
-                        'subject' => $emailData['subject']
-                    ]
+                        'subject' => $emailData['subject'],
+                    ],
                 ],
                 'from' => [
-                    'email' => $emailData['from']
+                    'email' => $emailData['from'],
                 ],
                 'content' => [
                     [
                         'type' => 'text/html',
-                        'value' => $emailData['body']
-                    ]
-                ]
+                        'value' => $emailData['body'],
+                    ],
+                ],
             ]);
 
         return $response->successful();
     }
 
     /**
-     * Send via Mailgun
+     * Send via Mailgun.
      */
     private function sendViaMailgun(array $config, array $emailData): bool
     {
@@ -455,14 +449,14 @@ class ThirdPartyIntegrationService
                 'from' => $emailData['from'],
                 'to' => $emailData['to'],
                 'subject' => $emailData['subject'],
-                'html' => $emailData['body']
+                'html' => $emailData['body'],
             ]);
 
         return $response->successful();
     }
 
     /**
-     * Send via AWS SES
+     * Send via AWS SES.
      */
     private function sendViaSES(array $config, array $emailData): bool
     {
@@ -472,13 +466,13 @@ class ThirdPartyIntegrationService
     }
 
     /**
-     * Get weather data
+     * Get weather data.
      */
     public function getWeatherData(string $apiKey, string $city): array
     {
         try {
             $cacheKey = "weather_{$city}_" . now()->format('Y-m-d-H');
-            
+
             return Cache::remember($cacheKey, 3600, function () use ($city) {
                 return [
                     'success' => true,
@@ -486,31 +480,30 @@ class ThirdPartyIntegrationService
                         'city' => $city,
                         'temperature' => null,
                         'condition' => null,
-                    ]
+                    ],
                 ];
             });
-            
         } catch (\Exception $e) {
             Log::error('Failed to get weather data', [
                 'error' => $e->getMessage(),
-                'city' => $city
+                'city' => $city,
             ]);
-            
+
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
 
     /**
-     * Get currency exchange rates
+     * Get currency exchange rates.
      */
     public function getCurrencyRates(string $apiKey, string $baseCurrency = 'USD'): array
     {
         try {
             $cacheKey = "currency_rates_{$baseCurrency}_" . now()->format('Y-m-d');
-            
+
             return Cache::remember($cacheKey, 86400, function () use ($baseCurrency) {
                 return [
                     'success' => true,
@@ -520,22 +513,21 @@ class ThirdPartyIntegrationService
                     ],
                 ];
             });
-            
         } catch (\Exception $e) {
             Log::error('Failed to get currency rates', [
                 'error' => $e->getMessage(),
-                'base_currency' => $baseCurrency
+                'base_currency' => $baseCurrency,
             ]);
-            
+
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
 
     /**
-     * Convert hex color to decimal
+     * Convert hex color to decimal.
      */
     private function hexToDecimal(string $hex): int
     {
@@ -543,7 +535,7 @@ class ThirdPartyIntegrationService
     }
 
     /**
-     * Test webhook connectivity
+     * Test webhook connectivity.
      */
     public function testWebhook(string $url, array $headers = []): array
     {
@@ -553,22 +545,21 @@ class ThirdPartyIntegrationService
                 ->post($url, [
                     'test' => true,
                     'timestamp' => now()->toISOString(),
-                    'message' => 'Test webhook from ZenaManage'
+                    'message' => 'Test webhook from ZenaManage',
                 ]);
 
             return [
                 'success' => $response->successful(),
                 'status_code' => $response->status(),
                 'response_time' => $response->transferStats?->getTransferTime() ?? 0,
-                'error' => $response->successful() ? null : $response->body()
+                'error' => $response->successful() ? null : $response->body(),
             ];
-            
         } catch (\Exception $e) {
             return [
                 'success' => false,
                 'status_code' => 0,
                 'response_time' => 0,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }

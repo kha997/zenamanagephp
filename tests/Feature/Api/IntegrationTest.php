@@ -2,28 +2,32 @@
 
 namespace Tests\Feature\Api;
 
-use Tests\TestCase;
+use App\Models\ChangeRequest;
+use App\Models\Notification;
 use App\Models\Project;
-use App\Models\User;
-use App\Models\Task;
 use App\Models\Rfi;
 use App\Models\Submittal;
-use App\Models\ChangeRequest;
-use App\Models\ZenaDocument;
-use App\Models\Notification;
+use App\Models\Task;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Tests\TestCase;
 use Tests\Traits\AuthenticationTestTrait;
 use Tests\Traits\RouteNameTrait;
 
 class IntegrationTest extends TestCase
 {
-    use RefreshDatabase, WithFaker, AuthenticationTestTrait, RouteNameTrait;
+    use RefreshDatabase;
+    use WithFaker;
+    use AuthenticationTestTrait;
+    use RouteNameTrait;
 
     protected User $user;
+
     protected Project $project;
+
     protected Project $appProject;
 
     protected function setUp(): void
@@ -49,7 +53,7 @@ class IntegrationTest extends TestCase
     }
 
     /**
-     * Test complete project workflow
+     * Test complete project workflow.
      */
     public function test_complete_project_workflow()
     {
@@ -62,7 +66,7 @@ class IntegrationTest extends TestCase
             'end_date' => '2024-12-31',
             'budget' => 1000000,
             'client_name' => 'Test Client',
-            'location' => 'Test Location'
+            'location' => 'Test Location',
         ];
 
         $response = $this->apiPost($this->zena('projects.store'), $projectData);
@@ -79,7 +83,7 @@ class IntegrationTest extends TestCase
             'status' => 'pending',
             'priority' => 'high',
             'start_date' => '2024-01-01',
-            'end_date' => '2024-01-31'
+            'end_date' => '2024-01-31',
         ];
 
         $response = $this->apiPost($this->zena('tasks.store'), $taskData);
@@ -94,7 +98,7 @@ class IntegrationTest extends TestCase
             'description' => 'Test RFI for integration testing',
             'rfi_number' => 'RFI-001',
             'priority' => 'medium',
-            'location' => 'Building A'
+            'location' => 'Building A',
         ];
 
         $response = $this->apiPost($this->zena('rfis.store'), $rfiData);
@@ -109,7 +113,7 @@ class IntegrationTest extends TestCase
             'description' => 'Test submittal for integration testing',
             'submittal_number' => 'SUB-001',
             'submittal_type' => 'shop_drawing',
-            'specification_section' => 'Section 1'
+            'specification_section' => 'Section 1',
         ];
 
         $response = $this->apiPost($this->zena('submittals.store'), $submittalData);
@@ -128,7 +132,7 @@ class IntegrationTest extends TestCase
             'justification' => 'Required for project success',
             'cost_impact' => 50000,
             'schedule_impact_days' => 10,
-            'priority' => 'high'
+            'priority' => 'high',
         ];
 
         $response = $this->apiPost($this->zena('change-requests.store'), $changeRequestData);
@@ -146,7 +150,7 @@ class IntegrationTest extends TestCase
             'title' => 'Integration Test Document',
             'description' => 'Test document for integration testing',
             'document_type' => 'drawing',
-            'file' => $file
+            'file' => $file,
         ];
 
         $response = $this->apiPost($this->zena('documents.store'), $documentData);
@@ -160,7 +164,7 @@ class IntegrationTest extends TestCase
             'type' => 'task_assigned',
             'title' => 'Integration Test Notification',
             'message' => 'Test notification for integration testing',
-            'priority' => 'normal'
+            'priority' => 'normal',
         ];
 
         $response = $this->apiPost($this->zena('notifications.store'), $notificationData);
@@ -179,7 +183,7 @@ class IntegrationTest extends TestCase
     }
 
     /**
-     * Test RFI workflow integration
+     * Test RFI workflow integration.
      */
     public function test_rfi_workflow_integration()
     {
@@ -188,32 +192,32 @@ class IntegrationTest extends TestCase
             'tenant_id' => $this->user->tenant_id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
-            'status' => 'pending'
+            'status' => 'pending',
         ]);
 
         // Assign RFI
         $response = $this->apiPost($this->zena('rfis.assign', ['id' => $rfi->id]), [
             'assigned_to' => $this->user->id,
-            'assignment_notes' => 'Please review this RFI'
+            'assignment_notes' => 'Please review this RFI',
         ]);
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('rfis', [
             'id' => $rfi->id,
-            'status' => 'in_progress'
+            'status' => 'in_progress',
         ]);
 
         // Respond to RFI
         $response = $this->apiPost($this->zena('rfis.respond', ['id' => $rfi->id]), [
             'response' => 'This is the response to the RFI',
             'response_notes' => 'Additional notes',
-            'status' => 'answered'
+            'status' => 'answered',
         ]);
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('rfis', [
             'id' => $rfi->id,
-            'status' => 'answered'
+            'status' => 'answered',
         ]);
 
         // Close RFI
@@ -222,12 +226,12 @@ class IntegrationTest extends TestCase
         $response->assertStatus(200);
         $this->assertDatabaseHas('rfis', [
             'id' => $rfi->id,
-            'status' => 'closed'
+            'status' => 'closed',
         ]);
     }
 
     /**
-     * Test Submittal workflow integration
+     * Test Submittal workflow integration.
      */
     public function test_submittal_workflow_integration()
     {
@@ -236,7 +240,7 @@ class IntegrationTest extends TestCase
             'tenant_id' => $this->user->tenant_id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
-            'status' => 'draft'
+            'status' => 'draft',
         ]);
 
         // Submit Submittal
@@ -245,24 +249,24 @@ class IntegrationTest extends TestCase
         $response->assertStatus(200);
         $this->assertDatabaseHas('submittals', [
             'id' => $submittal->id,
-            'status' => 'submitted'
+            'status' => 'submitted',
         ]);
 
         // Review Submittal
         $response = $this->apiPost($this->zena('submittals.review', ['id' => $submittal->id]), [
             'review_notes' => 'This submittal looks good',
-            'status' => 'approved'
+            'status' => 'approved',
         ]);
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('submittals', [
             'id' => $submittal->id,
-            'status' => 'approved'
+            'status' => 'approved',
         ]);
     }
 
     /**
-     * Test Change Request workflow integration
+     * Test Change Request workflow integration.
      */
     public function test_change_request_workflow_integration()
     {
@@ -271,7 +275,7 @@ class IntegrationTest extends TestCase
             'tenant_id' => $this->user->tenant_id,
             'project_id' => $this->project->id,
             'requested_by' => $this->user->id,
-            'status' => 'draft'
+            'status' => 'draft',
         ]);
 
         // Submit Change Request
@@ -280,36 +284,36 @@ class IntegrationTest extends TestCase
         $response->assertStatus(200);
         $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,
-            'status' => 'submitted'
+            'status' => 'submitted',
         ]);
 
         // Approve Change Request
         $response = $this->apiPost($this->zena('change-requests.approve', ['id' => $changeRequest->id]), [
             'approved_cost' => 75000,
             'approved_schedule_days' => 0,
-            'approval_comments' => 'Approved with modifications'
+            'approval_comments' => 'Approved with modifications',
         ]);
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,
-            'status' => 'approved'
+            'status' => 'approved',
         ]);
 
         // Implement Change Request
         $response = $this->apiPost($this->zena('change-requests.apply', ['id' => $changeRequest->id]), [
-            'implementation_notes' => 'Change has been implemented successfully'
+            'implementation_notes' => 'Change has been implemented successfully',
         ]);
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,
-            'status' => 'implemented'
+            'status' => 'implemented',
         ]);
     }
 
     /**
-     * Test Task Dependencies integration
+     * Test Task Dependencies integration.
      */
     public function test_task_dependencies_integration()
     {
@@ -318,19 +322,19 @@ class IntegrationTest extends TestCase
             'tenant_id' => $this->user->tenant_id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
-            'status' => 'pending'
+            'status' => 'pending',
         ]);
 
         $task2 = Task::factory()->create([
             'tenant_id' => $this->user->tenant_id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
-            'status' => 'pending'
+            'status' => 'pending',
         ]);
 
         // Add dependency
         $response = $this->apiPost($this->zena('tasks.add-dependency', ['id' => $task2->id]), [
-            'dependency_id' => $task1->id
+            'dependency_id' => $task1->id,
         ]);
 
         $response->assertStatus(200);
@@ -342,21 +346,21 @@ class IntegrationTest extends TestCase
 
         // Complete task1
         $response = $this->apiPatch($this->zena('tasks.update-status', ['id' => $task1->id]), [
-            'status' => 'done'
+            'status' => 'done',
         ]);
 
         $response->assertStatus(200);
 
         // Start task2
         $response = $this->apiPatch($this->zena('tasks.update-status', ['id' => $task2->id]), [
-            'status' => 'in_progress'
+            'status' => 'in_progress',
         ]);
 
         $response->assertStatus(200);
     }
 
     /**
-     * Test Document Versioning integration
+     * Test Document Versioning integration.
      */
     public function test_document_versioning_integration()
     {
@@ -370,7 +374,7 @@ class IntegrationTest extends TestCase
             'title' => 'Original Document',
             'description' => 'Original document description',
             'document_type' => 'drawing',
-            'file' => $file
+            'file' => $file,
         ];
 
         $response = $this->apiPost($this->zena('documents.store'), $documentData);
@@ -386,7 +390,7 @@ class IntegrationTest extends TestCase
         $response = $this->apiPost($this->namedRoute('v1.documents.versions.store', ['id' => $document['id']]), [
             'file' => $newFile,
             'version' => 2,
-            'change_notes' => 'Updated with new specifications'
+            'change_notes' => 'Updated with new specifications',
         ]);
 
         $response->assertStatus(201);
@@ -401,7 +405,7 @@ class IntegrationTest extends TestCase
     }
 
     /**
-     * Test Notification integration
+     * Test Notification integration.
      */
     public function test_notification_integration()
     {
@@ -426,7 +430,7 @@ class IntegrationTest extends TestCase
     }
 
     /**
-     * Test cross-module data consistency
+     * Test cross-module data consistency.
      */
     public function test_cross_module_data_consistency()
     {
@@ -440,25 +444,25 @@ class IntegrationTest extends TestCase
         $task = Task::factory()->create([
             'project_id' => $project->id,
             'tenant_id' => $this->user->tenant_id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
         $rfi = Rfi::factory()->create([
             'project_id' => $project->id,
             'tenant_id' => $this->user->tenant_id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
         $submittal = Submittal::factory()->create([
             'project_id' => $project->id,
             'tenant_id' => $this->user->tenant_id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
         $changeRequest = ChangeRequest::factory()->create([
             'project_id' => $project->id,
             'tenant_id' => $this->user->tenant_id,
-            'requested_by' => $this->user->id
+            'requested_by' => $this->user->id,
         ]);
 
         // Verify all entities reference the same project

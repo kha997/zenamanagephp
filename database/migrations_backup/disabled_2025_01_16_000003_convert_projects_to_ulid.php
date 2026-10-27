@@ -1,16 +1,17 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Chuyển đổi bảng projects và các bảng liên quan sang sử dụng ULID thay vì auto-increment ID
- * Bao gồm: projects, components, work_templates, tasks, task_assignments
+ * Bao gồm: projects, components, work_templates, tasks, task_assignments.
  */
-return new class extends Migration
-{
+return new class () extends Migration {
     /**
      * Run the migrations.
      */
@@ -18,22 +19,22 @@ return new class extends Migration
     {
         // 1. Chuyển đổi bảng projects
         $this->convertProjectsToUlid();
-        
+
         // 2. Chuyển đổi bảng components
         $this->convertComponentsToUlid();
-        
+
         // 3. Chuyển đổi bảng work_templates
         $this->convertWorkTemplatesToUlid();
-        
+
         // 4. Chuyển đổi bảng tasks
         $this->convertTasksToUlid();
-        
+
         // 5. Chuyển đổi bảng task_assignments
         $this->convertTaskAssignmentsToUlid();
     }
 
     /**
-     * Chuyển đổi bảng projects sang ULID
+     * Chuyển đổi bảng projects sang ULID.
      */
     private function convertProjectsToUlid(): void
     {
@@ -55,21 +56,21 @@ return new class extends Migration
             $table->ulid('created_by')->nullable();
             $table->ulid('updated_by')->nullable();
             $table->timestamps();
-            
+
             // Foreign keys
             $table->foreign('tenant_id')->references('id')->on('tenants')->onDelete('cascade');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
             $table->foreign('updated_by')->references('id')->on('users')->onDelete('set null');
-            
+
             // Indexes
             $table->index(['tenant_id', 'status']);
             $table->index(['start_date', 'end_date']);
-            
+
             $table->engine = 'InnoDB';
             $table->charset = 'utf8mb4';
             $table->collation = 'utf8mb4_unicode_ci';
         });
-        
+
         // Copy dữ liệu từ bảng cũ (sử dụng ULID có sẵn hoặc tạo mới)
         if (Schema::hasTable('projects')) {
             DB::statement('
@@ -90,13 +91,13 @@ return new class extends Migration
                 FROM projects
             ');
         }
-        
+
         Schema::dropIfExists('projects');
         Schema::rename('projects_new', 'projects');
     }
 
     /**
-     * Chuyển đổi bảng components sang ULID
+     * Chuyển đổi bảng components sang ULID.
      */
     private function convertComponentsToUlid(): void
     {
@@ -115,20 +116,20 @@ return new class extends Migration
             $table->ulid('created_by')->nullable();
             $table->ulid('updated_by')->nullable();
             $table->timestamps();
-            
+
             $table->foreign('project_id')->references('id')->on('projects')->onDelete('cascade');
             $table->foreign('parent_component_id')->references('id')->on('components_new')->onDelete('cascade');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
             $table->foreign('updated_by')->references('id')->on('users')->onDelete('set null');
-            
+
             $table->index(['project_id', 'parent_component_id']);
             $table->index(['progress_percent']);
-            
+
             $table->engine = 'InnoDB';
             $table->charset = 'utf8mb4';
             $table->collation = 'utf8mb4_unicode_ci';
         });
-        
+
         if (Schema::hasTable('components')) {
             DB::statement('
                 INSERT INTO components_new (id, project_id, parent_component_id, name, description, progress_percent, planned_cost, actual_cost, tags, visibility, client_approved, created_by, updated_by, created_at, updated_at)
@@ -149,13 +150,13 @@ return new class extends Migration
                 FROM components
             ');
         }
-        
+
         Schema::dropIfExists('components');
         Schema::rename('components_new', 'components');
     }
 
     /**
-     * Chuyển đổi bảng work_templates sang ULID
+     * Chuyển đổi bảng work_templates sang ULID.
      */
     private function convertWorkTemplatesToUlid(): void
     {
@@ -171,18 +172,18 @@ return new class extends Migration
             $table->ulid('created_by')->nullable();
             $table->ulid('updated_by')->nullable();
             $table->timestamps();
-            
+
             $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
             $table->foreign('updated_by')->references('id')->on('users')->onDelete('set null');
-            
+
             $table->index(['category', 'is_active']);
             $table->index(['name', 'version']);
-            
+
             $table->engine = 'InnoDB';
             $table->charset = 'utf8mb4';
             $table->collation = 'utf8mb4_unicode_ci';
         });
-        
+
         if (Schema::hasTable('work_templates')) {
             DB::statement('
                 INSERT INTO work_templates_new (id, name, description, category, template_data, version, is_active, tags, created_by, updated_by, created_at, updated_at)
@@ -201,13 +202,13 @@ return new class extends Migration
                 FROM work_templates
             ');
         }
-        
+
         Schema::dropIfExists('work_templates');
         Schema::rename('work_templates_new', 'work_templates');
     }
 
     /**
-     * Chuyển đổi bảng tasks sang ULID
+     * Chuyển đổi bảng tasks sang ULID.
      */
     private function convertTasksToUlid(): void
     {
@@ -234,22 +235,22 @@ return new class extends Migration
             $table->ulid('created_by')->nullable();
             $table->ulid('updated_by')->nullable();
             $table->timestamps();
-            
+
             $table->foreign('project_id')->references('id')->on('projects')->onDelete('cascade');
             $table->foreign('component_id')->references('id')->on('components')->onDelete('set null');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
             $table->foreign('updated_by')->references('id')->on('users')->onDelete('set null');
-            
+
             $table->index(['project_id', 'status']);
             $table->index(['start_date', 'end_date']);
             $table->index(['component_id', 'phase_id']);
             $table->index(['conditional_tag', 'is_hidden']);
-            
+
             $table->engine = 'InnoDB';
             $table->charset = 'utf8mb4';
             $table->collation = 'utf8mb4_unicode_ci';
         });
-        
+
         if (Schema::hasTable('tasks')) {
             DB::statement('
                 INSERT INTO tasks_new (id, project_id, component_id, phase_id, name, description, start_date, end_date, status, priority, dependencies, conditional_tag, is_hidden, estimated_hours, actual_hours, progress_percent, tags, visibility, client_approved, created_by, updated_by, created_at, updated_at)
@@ -270,13 +271,13 @@ return new class extends Migration
                 FROM tasks
             ');
         }
-        
+
         Schema::dropIfExists('tasks');
         Schema::rename('tasks_new', 'tasks');
     }
 
     /**
-     * Chuyển đổi bảng task_assignments sang ULID
+     * Chuyển đổi bảng task_assignments sang ULID.
      */
     private function convertTaskAssignmentsToUlid(): void
     {
@@ -287,18 +288,18 @@ return new class extends Migration
             $table->decimal('split_percentage', 5, 2)->default(100);
             $table->enum('role', ['assignee', 'reviewer', 'observer'])->default('assignee');
             $table->timestamps();
-            
+
             $table->foreign('task_id')->references('id')->on('tasks')->onDelete('cascade');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
-            
+
             $table->unique(['task_id', 'user_id']);
             $table->index(['user_id', 'role']);
-            
+
             $table->engine = 'InnoDB';
             $table->charset = 'utf8mb4';
             $table->collation = 'utf8mb4_unicode_ci';
         });
-        
+
         if (Schema::hasTable('task_assignments')) {
             DB::statement('
                 INSERT INTO task_assignments_new (id, task_id, user_id, split_percentage, role, created_at, updated_at)
@@ -316,7 +317,7 @@ return new class extends Migration
                 FROM task_assignments
             ');
         }
-        
+
         Schema::dropIfExists('task_assignments');
         Schema::rename('task_assignments_new', 'task_assignments');
     }
@@ -328,7 +329,7 @@ return new class extends Migration
     {
         // Rollback theo thứ tự ngược lại
         // Lưu ý: Việc rollback sẽ mất dữ liệu ULID
-        
+
         // 1. Rollback task_assignments
         Schema::create('task_assignments_old', function (Blueprint $table) {
             $table->id();
@@ -337,11 +338,11 @@ return new class extends Migration
             $table->decimal('split_percentage', 5, 2)->default(100);
             $table->enum('role', ['assignee', 'reviewer', 'observer'])->default('assignee');
             $table->timestamps();
-            
+
             $table->unique(['task_id', 'user_id']);
             $table->index(['user_id', 'role']);
         });
-        
+
         // Copy data back (losing ULID references)
         DB::statement('
             INSERT INTO task_assignments_old (task_id, user_id, split_percentage, role, created_at, updated_at)
@@ -351,10 +352,10 @@ return new class extends Migration
                 split_percentage, role, created_at, updated_at
             FROM task_assignments
         ');
-        
+
         Schema::dropIfExists('task_assignments');
         Schema::rename('task_assignments_old', 'task_assignments');
-        
+
         // Tương tự cho các bảng khác...
         // (Code rollback cho tasks, work_templates, components, projects)
     }

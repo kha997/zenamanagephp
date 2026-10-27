@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -38,8 +40,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class DesignItem extends Model
 {
     use HasUlids;
+
     /** @use HasFactory<\Database\Factories\DesignItemFactory> */
     use HasFactory;
+
     use TenantScope;
 
     public const TYPE_CONCEPT = 'concept';

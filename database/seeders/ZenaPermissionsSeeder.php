@@ -1,11 +1,13 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Seeders;
 
 use App\Models\Permission;
 use App\Models\Role;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Schema;
 
 class ZenaPermissionsSeeder extends Seeder
 {
@@ -267,6 +269,7 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'treasury.approve_expense', 'module' => 'treasury', 'action' => 'approve_expense', 'description' => 'Approve or reject treasury expenses'],
         ['code' => 'treasury.self_approve_expense', 'module' => 'treasury', 'action' => 'self_approve_expense', 'description' => 'Approve treasury expenses created by oneself (audited)'],
         ['code' => 'treasury.reconcile', 'module' => 'treasury', 'action' => 'reconcile', 'description' => 'Reconcile posted treasury transactions'],
+        ['code' => 'treasury.manage_routes', 'module' => 'treasury', 'action' => 'manage_routes', 'description' => 'Create and cancel via-route payments, record any leg, reverse legs'],
         ['code' => 'treasury.reverse', 'module' => 'treasury', 'action' => 'reverse', 'description' => 'Reverse posted treasury transactions'],
         ['code' => 'treasury.adjust', 'module' => 'treasury', 'action' => 'adjust', 'description' => 'Post treasury adjustments'],
         ['code' => 'treasury.view_audit', 'module' => 'treasury', 'action' => 'view_audit', 'description' => 'View treasury audit trail'],
@@ -285,6 +288,7 @@ class ZenaPermissionsSeeder extends Seeder
 
         if ($lookupColumn === null) {
             $this->command?->warn('Skipping ZenaPermissionsSeeder: permissions table lacks code/name column.');
+
             return;
         }
 

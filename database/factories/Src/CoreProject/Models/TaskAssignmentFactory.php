@@ -1,15 +1,17 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories\Src\CoreProject\Models;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-use Src\CoreProject\Models\TaskAssignment;
-use Src\CoreProject\Models\Task;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\Factory;
+use Src\CoreProject\Models\Task;
+use Src\CoreProject\Models\TaskAssignment;
 
 /**
- * Factory cho TaskAssignment model
- * 
+ * Factory cho TaskAssignment model.
+ *
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Src\CoreProject\Models\TaskAssignment>
  */
 class TaskAssignmentFactory extends Factory
@@ -29,7 +31,7 @@ class TaskAssignmentFactory extends Factory
     }
 
     /**
-     * State: Full assignment (100%)
+     * State: Full assignment (100%).
      */
     public function fullAssignment(): static
     {
@@ -40,7 +42,7 @@ class TaskAssignmentFactory extends Factory
     }
 
     /**
-     * State: Lead role
+     * State: Lead role.
      */
     public function lead(): static
     {

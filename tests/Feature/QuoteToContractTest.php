@@ -1,12 +1,14 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\RoleBasedAccessControlMiddleware;
 use App\Models\Account;
 use App\Models\Boq;
 use App\Models\BoqLineItem;
 use App\Models\Contract;
-use App\Http\Middleware\RoleBasedAccessControlMiddleware;
 use App\Models\Opportunity;
 use App\Models\Quote;
 use App\Models\QuoteLineItem;

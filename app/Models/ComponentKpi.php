@@ -1,15 +1,16 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Model ComponentKpi
- * Quản lý các KPI của component
- * 
+ * Quản lý các KPI của component.
+ *
  * @property string $id
  * @property string $component_id
  * @property string $kpi_code
@@ -24,11 +25,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class ComponentKpi extends Model
 {
-
     protected $table = 'component_kpis';
-    
+
     // Cấu hình ULID primary key
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [
@@ -50,7 +51,7 @@ class ComponentKpi extends Model
     ];
 
     /**
-     * Relationship với Component
+     * Relationship với Component.
      */
     public function component(): BelongsTo
     {

@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     /**
      * Run the migrations.
      */
@@ -16,7 +15,7 @@ return new class extends Migration
             if (!Schema::hasColumn('users', 'organization_id')) {
                 $table->unsignedBigInteger('organization_id')->nullable();
             }
-            
+
             // User profile fields
             if (!Schema::hasColumn('users', 'first_name')) {
                 $table->string('first_name')->nullable();
@@ -36,7 +35,7 @@ return new class extends Migration
             if (!Schema::hasColumn('users', 'department')) {
                 $table->string('department')->nullable();
             }
-            
+
             // Status and verification
             if (!Schema::hasColumn('users', 'status')) {
                 $table->enum('status', ['active', 'inactive', 'pending', 'suspended'])->default('pending');
@@ -50,7 +49,7 @@ return new class extends Migration
             if (!Schema::hasColumn('users', 'password_changed_at')) {
                 $table->timestamp('password_changed_at')->nullable();
             }
-            
+
             // Invitation tracking
             if (!Schema::hasColumn('users', 'invitation_id')) {
                 $table->unsignedBigInteger('invitation_id')->nullable();
@@ -61,7 +60,7 @@ return new class extends Migration
             if (!Schema::hasColumn('users', 'joined_at')) {
                 $table->timestamp('joined_at')->nullable();
             }
-            
+
             // Preferences
             if (!Schema::hasColumn('users', 'timezone')) {
                 $table->string('timezone')->default('UTC');
@@ -72,13 +71,14 @@ return new class extends Migration
             if (!Schema::hasColumn('users', 'preferences')) {
                 $table->json('preferences')->nullable();
             }
-            
+
             // Indexes (skip if they already exist)
             try {
                 $table->index(['organization_id', 'status']);
             } catch (\Exception $e) {
                 // Index already exists
             }
+
             try {
                 $table->index('email_verified_at');
             } catch (\Exception $e) {

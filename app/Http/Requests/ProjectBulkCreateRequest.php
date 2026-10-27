@@ -1,14 +1,13 @@
 <?php
 
 namespace App\Http\Requests;
-use Illuminate\Support\Facades\Auth;
-
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
 
 /**
- * Project Bulk Create Request
- * 
+ * Project Bulk Create Request.
+ *
  * Validates bulk project creation with consistent rules
  */
 class ProjectBulkCreateRequest extends FormRequest

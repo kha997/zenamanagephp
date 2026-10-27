@@ -1,22 +1,23 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use App\Models\User;
 use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Src\WorkTemplate\Models\Template;
 use Src\WorkTemplate\Models\TemplateVersion;
-use Database\Factories\TemplateFactory;
+use Tests\TestCase;
 
 class TemplateTest extends TestCase
 {
     use RefreshDatabase;
 
     /**
-     * Test template creation với valid data
+     * Test template creation với valid data.
      */
     public function test_can_create_template_with_valid_data(): void
     {
@@ -54,12 +55,12 @@ class TemplateTest extends TestCase
     }
 
     /**
-     * Test validateJsonStructure method với valid JSON
+     * Test validateJsonStructure method với valid JSON.
      */
     public function test_validate_json_structure_with_valid_data(): void
     {
         $template = new Template();
-        
+
         $validJson = [
             'template_name' => 'Valid Template',
             'phases' => [
@@ -81,12 +82,12 @@ class TemplateTest extends TestCase
     }
 
     /**
-     * Test validateJsonStructure method với invalid JSON
+     * Test validateJsonStructure method với invalid JSON.
      */
     public function test_validate_json_structure_with_invalid_data(): void
     {
         $template = new Template();
-        
+
         // Test thiếu template_name
         $invalidJson1 = [
             'phases' => [
@@ -141,7 +142,7 @@ class TemplateTest extends TestCase
     }
 
     /**
-     * Test createNewVersion method
+     * Test createNewVersion method.
      */
     public function test_create_new_version(): void
     {
@@ -198,12 +199,12 @@ class TemplateTest extends TestCase
     }
 
     /**
-     * Test getTotalTasksAttribute accessor
+     * Test getTotalTasksAttribute accessor.
      */
     public function test_get_total_tasks_attribute(): void
     {
         $template = Template::factory()->withComplexStructure()->create();
-        
+
         $expectedTotal = 0;
         foreach ($template->json_body['phases'] as $phase) {
             $expectedTotal += count($phase['tasks']);
@@ -213,7 +214,7 @@ class TemplateTest extends TestCase
     }
 
     /**
-     * Test getEstimatedDurationAttribute accessor
+     * Test getEstimatedDurationAttribute accessor.
      */
     public function test_get_estimated_duration_attribute(): void
     {
@@ -238,7 +239,7 @@ class TemplateTest extends TestCase
         ];
 
         $template = Template::factory()->create(['json_body' => $jsonBody]);
-        
+
         // Phase 1: max(5, 3) = 5 days
         // Phase 2: max(8, 2) = 8 days
         // Total: 5 + 8 = 13 days
@@ -246,7 +247,7 @@ class TemplateTest extends TestCase
     }
 
     /**
-     * Test active scope
+     * Test active scope.
      */
     public function test_active_scope(): void
     {
@@ -255,13 +256,13 @@ class TemplateTest extends TestCase
         Template::factory()->inactive()->create();
 
         $activeTemplates = Template::active()->get();
-        
+
         $this->assertCount(2, $activeTemplates);
-        $this->assertTrue($activeTemplates->every(fn($template) => $template->is_active));
+        $this->assertTrue($activeTemplates->every(fn ($template) => $template->is_active));
     }
 
     /**
-     * Test byCategory scope
+     * Test byCategory scope.
      */
     public function test_by_category_scope(): void
     {
@@ -270,13 +271,13 @@ class TemplateTest extends TestCase
         Template::factory()->withCategory('Construction')->create();
 
         $designTemplates = Template::byCategory('Design')->get();
-        
+
         $this->assertCount(2, $designTemplates);
-        $this->assertTrue($designTemplates->every(fn($template) => $template->category === 'Design'));
+        $this->assertTrue($designTemplates->every(fn ($template) => $template->category === 'Design'));
     }
 
     /**
-     * Test relationships
+     * Test relationships.
      */
     public function test_template_relationships(): void
     {
@@ -284,16 +285,16 @@ class TemplateTest extends TestCase
 
         // Test versions relationship
         $this->assertInstanceOf(\Illuminate\Database\Eloquent\Relations\HasMany::class, $template->versions());
-        
+
         // Test projectPhases relationship
         $this->assertInstanceOf(\Illuminate\Database\Eloquent\Relations\HasMany::class, $template->projectPhases());
-        
+
         // Test projectTasks relationship
         $this->assertInstanceOf(\Illuminate\Database\Eloquent\Relations\HasMany::class, $template->projectTasks());
     }
 
     /**
-     * Test template với empty phases
+     * Test template với empty phases.
      */
     public function test_template_with_empty_phases(): void
     {
@@ -303,18 +304,18 @@ class TemplateTest extends TestCase
         ];
 
         $template = Template::factory()->create(['json_body' => $jsonBody]);
-        
+
         $this->assertEquals(0, $template->total_tasks);
         $this->assertEquals(0, $template->estimated_duration);
     }
 
     /**
-     * Test template constants
+     * Test template constants.
      */
     public function test_template_categories_constant(): void
     {
         $expectedCategories = ['Design', 'Construction', 'QC', 'Inspection'];
-        
+
         $this->assertEquals($expectedCategories, Template::CATEGORIES);
     }
 }

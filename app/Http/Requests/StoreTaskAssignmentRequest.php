@@ -1,15 +1,16 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests;
 
-use App\Http\Requests\BaseApiRequest;
 use Src\CoreProject\Models\Task;
 use Src\CoreProject\Models\TaskAssignment;
 
 class StoreTaskAssignmentRequest extends BaseApiRequest
 {
     /**
-     * Xác định user có quyền thực hiện request này không
+     * Xác định user có quyền thực hiện request này không.
      */
     public function authorize(): bool
     {
@@ -17,7 +18,7 @@ class StoreTaskAssignmentRequest extends BaseApiRequest
     }
 
     /**
-     * Các quy tắc validation
+     * Các quy tắc validation.
      */
     public function rules(): array
     {
@@ -25,30 +26,30 @@ class StoreTaskAssignmentRequest extends BaseApiRequest
             'task_id' => [
                 'required',
                 'integer',
-                'exists:tasks,id'
+                'exists:tasks,id',
             ],
             'user_id' => [
                 'required',
                 'integer',
-                'exists:users,id'
+                'exists:users,id',
             ],
             'split_percent' => [
                 'required',
                 'numeric',
                 'min:0.01',
                 'max:100',
-                'decimal:0,2'
+                'decimal:0,2',
             ],
             'role' => [
                 'required',
                 'string',
-                'in:' . implode(',', array_keys(TaskAssignment::ROLES))
-            ]
+                'in:' . implode(',', array_keys(TaskAssignment::ROLES)),
+            ],
         ];
     }
 
     /**
-     * Validation bổ sung sau khi validation cơ bản
+     * Validation bổ sung sau khi validation cơ bản.
      */
     public function withValidator($validator)
     {
@@ -56,22 +57,22 @@ class StoreTaskAssignmentRequest extends BaseApiRequest
             $taskId = $this->input('task_id');
             $userId = $this->input('user_id');
             $splitPercentage = $this->input('split_percent', 0);
-            
+
             // Kiểm tra user đã được assign cho task này chưa
             $existingAssignment = TaskAssignment::where('task_id', $taskId)
                 ->where('user_id', $userId)
                 ->first();
-                
+
             if ($existingAssignment) {
                 $validator->errors()->add(
                     'user_id',
                     'User đã được phân công cho task này.'
                 );
             }
-            
+
             // Kiểm tra tổng phần trăm không vượt quá 100%
             $this->validateSplitPercentage($validator, $taskId, $splitPercentage);
-            
+
             // Kiểm tra user có quyền truy cập project của task không
             if ($taskId && $userId) {
                 $task = Task::find($taskId);

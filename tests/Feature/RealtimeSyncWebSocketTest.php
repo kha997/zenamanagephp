@@ -1,26 +1,26 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Models\Project;
-use App\Models\Task;
-use App\Models\Rfi;
 use App\Models\ChangeRequest;
+use App\Models\Project;
+use App\Models\Rfi;
+use App\Models\Task;
 use App\Models\Tenant;
+use App\Models\User;
 use App\Services\DashboardRealTimeService;
 use App\Services\WebSocketService;
-use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
+use Tests\TestCase;
 
 /**
- * Test Realtime Sync & WebSocket Events
- * 
+ * Test Realtime Sync & WebSocket Events.
+ *
  * Kịch bản: Test real-time notifications, WebSocket events, và data synchronization
  *
  * @group performance
@@ -30,16 +30,21 @@ class RealtimeSyncWebSocketTest extends TestCase
     use RefreshDatabase;
 
     private $tenant;
+
     private $project;
+
     private $user1;
+
     private $user2;
+
     private $dashboardRealTimeService;
+
     private $webSocketService;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Tạo tenant
         $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
@@ -88,13 +93,13 @@ class RealtimeSyncWebSocketTest extends TestCase
     }
 
     /**
-     * Test WebSocket connection và authentication
+     * Test WebSocket connection và authentication.
      */
     public function test_websocket_connection_and_authentication(): void
     {
         // Test WebSocket server configuration
         $config = config('websocket');
-        
+
         $this->assertNotNull($config);
         $this->assertEquals('0.0.0.0', $config['host']);
         $this->assertEquals(8080, $config['port']);
@@ -121,7 +126,7 @@ class RealtimeSyncWebSocketTest extends TestCase
     }
 
     /**
-     * Test dashboard real-time updates
+     * Test dashboard real-time updates.
      */
     public function test_dashboard_realtime_updates(): void
     {
@@ -155,7 +160,7 @@ class RealtimeSyncWebSocketTest extends TestCase
     }
 
     /**
-     * Test alert broadcasting
+     * Test alert broadcasting.
      */
     public function test_alert_broadcasting(): void
     {
@@ -184,7 +189,7 @@ class RealtimeSyncWebSocketTest extends TestCase
     }
 
     /**
-     * Test metric updates broadcasting
+     * Test metric updates broadcasting.
      */
     public function test_metric_updates_broadcasting(): void
     {
@@ -214,7 +219,7 @@ class RealtimeSyncWebSocketTest extends TestCase
     }
 
     /**
-     * Test project updates broadcasting
+     * Test project updates broadcasting.
      */
     public function test_project_updates_broadcasting(): void
     {
@@ -247,7 +252,7 @@ class RealtimeSyncWebSocketTest extends TestCase
     }
 
     /**
-     * Test system notifications broadcasting
+     * Test system notifications broadcasting.
      */
     public function test_system_notifications_broadcasting(): void
     {
@@ -281,7 +286,7 @@ class RealtimeSyncWebSocketTest extends TestCase
     }
 
     /**
-     * Test widget refresh triggering
+     * Test widget refresh triggering.
      */
     public function test_widget_refresh_triggering(): void
     {
@@ -303,7 +308,7 @@ class RealtimeSyncWebSocketTest extends TestCase
     }
 
     /**
-     * Test WebSocket service broadcasting
+     * Test WebSocket service broadcasting.
      */
     public function test_websocket_service_broadcasting(): void
     {
@@ -334,7 +339,7 @@ class RealtimeSyncWebSocketTest extends TestCase
     }
 
     /**
-     * Test cache busting và data consistency
+     * Test cache busting và data consistency.
      */
     public function test_cache_busting_and_data_consistency(): void
     {
@@ -345,7 +350,7 @@ class RealtimeSyncWebSocketTest extends TestCase
             'tasks' => 15,
             'last_updated' => now()->subMinutes(5)->toISOString(),
         ];
-        
+
         Cache::put($cacheKey, $initialData, 300);
 
         // Verify cache exists
@@ -354,7 +359,7 @@ class RealtimeSyncWebSocketTest extends TestCase
 
         // Simulate cache busting
         Cache::forget($cacheKey);
-        
+
         // Verify cache is cleared
         $this->assertFalse(Cache::has($cacheKey));
 
@@ -364,7 +369,7 @@ class RealtimeSyncWebSocketTest extends TestCase
             'tasks' => 18,
             'last_updated' => now()->toISOString(),
         ];
-        
+
         Cache::put($cacheKey, $newData, 300);
 
         // Verify new data
@@ -374,7 +379,7 @@ class RealtimeSyncWebSocketTest extends TestCase
     }
 
     /**
-     * Test notification events
+     * Test notification events.
      */
     public function test_notification_events(): void
     {
@@ -431,7 +436,7 @@ class RealtimeSyncWebSocketTest extends TestCase
     }
 
     /**
-     * Test data consistency
+     * Test data consistency.
      */
     public function test_data_consistency(): void
     {
@@ -457,13 +462,13 @@ class RealtimeSyncWebSocketTest extends TestCase
         // Test cache consistency
         $cacheKey = "project_count_{$this->tenant->id}";
         Cache::put($cacheKey, $newProjectCount, 300);
-        
+
         $cachedCount = Cache::get($cacheKey);
         $this->assertEquals($newProjectCount, $cachedCount);
     }
 
     /**
-     * Test performance optimization
+     * Test performance optimization.
      */
     public function test_performance_optimization(): void
     {
@@ -488,34 +493,34 @@ class RealtimeSyncWebSocketTest extends TestCase
         $bulkProjectCount = Project::where('tenant_id', $this->tenant->id)
             ->where('name', 'like', 'Bulk Project%')
             ->count();
-        
+
         $this->assertEquals(10, $bulkProjectCount);
 
         // Test cache performance
         $startTime = microtime(true);
-        
+
         // Cache frequently accessed data
         $projectStats = [
             'total_projects' => Project::where('tenant_id', $this->tenant->id)->count(),
             'active_projects' => Project::where('tenant_id', $this->tenant->id)->where('status', 'active')->count(),
             'completed_projects' => Project::where('tenant_id', $this->tenant->id)->where('status', 'completed')->count(),
         ];
-        
+
         Cache::put("project_stats_{$this->tenant->id}", $projectStats, 300);
-        
+
         $endTime = microtime(true);
         $executionTime = $endTime - $startTime;
-        
+
         // Verify performance (should be fast)
         $this->assertLessThan(1.0, $executionTime); // Less than 1 second
-        
+
         // Verify cached data
         $cachedStats = Cache::get("project_stats_{$this->tenant->id}");
         $this->assertEquals($projectStats, $cachedStats);
     }
 
     /**
-     * Test real-time statistics
+     * Test real-time statistics.
      */
     public function test_realtime_statistics(): void
     {
@@ -544,7 +549,7 @@ class RealtimeSyncWebSocketTest extends TestCase
     }
 
     /**
-     * Test event listeners setup
+     * Test event listeners setup.
      */
     public function test_event_listeners_setup(): void
     {
@@ -562,13 +567,13 @@ class RealtimeSyncWebSocketTest extends TestCase
     }
 
     /**
-     * Test WebSocket server health check
+     * Test WebSocket server health check.
      */
     public function test_websocket_server_health_check(): void
     {
         // Test WebSocket server configuration
         $config = config('websocket');
-        
+
         // Test monitoring configuration
         $monitoring = $config['monitoring'];
         $this->assertTrue($monitoring['enabled']);

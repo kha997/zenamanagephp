@@ -1,18 +1,18 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Form Request để xác thực khi phê duyệt hoặc từ chối Change Request
- * 
- * @package Src\ChangeRequest\Requests
+ * Form Request để xác thực khi phê duyệt hoặc từ chối Change Request.
  */
 class DecideChangeRequestRequest extends FormRequest
 {
     /**
-     * Xác định user có quyền thực hiện request này không
+     * Xác định user có quyền thực hiện request này không.
      */
     public function authorize(): bool
     {
@@ -20,7 +20,7 @@ class DecideChangeRequestRequest extends FormRequest
     }
 
     /**
-     * Các quy tắc validation cho request
+     * Các quy tắc validation cho request.
      */
     public function rules(): array
     {
@@ -28,18 +28,18 @@ class DecideChangeRequestRequest extends FormRequest
             'decision_note' => [
                 'nullable',
                 'string',
-                'max:1000'
-            ]
+                'max:1000',
+            ],
         ];
     }
 
     /**
-     * Thông báo lỗi tùy chỉnh
+     * Thông báo lỗi tùy chỉnh.
      */
     public function messages(): array
     {
         return [
-            'decision_note.max' => 'Ghi chú quyết định không được vượt quá 1000 ký tự'
+            'decision_note.max' => 'Ghi chú quyết định không được vượt quá 1000 ký tự',
         ];
     }
 }

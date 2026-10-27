@@ -1,25 +1,26 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\TaskResource;
 use Illuminate\Http\JsonResponse;
 use Src\CoreProject\Models\Task;
-use App\Http\Resources\TaskResource;
 use Src\Foundation\Utils\JSendResponse;
 use Src\RBAC\Middleware\RBACMiddleware;
 
 /**
- * Controller xử lý các hoạt động CRUD cho Task với TaskService và ConditionalTagService
- * 
- * @package Src\CoreProject\Controllers
+ * Controller xử lý các hoạt động CRUD cho Task với TaskService và ConditionalTagService.
  */
 class TaskController
 {
     private TaskService $taskService;
+
     private ConditionalTagService $conditionalTagService;
 
     /**
-     * Constructor - inject services
+     * Constructor - inject services.
      */
     public function __construct(
         TaskService $taskService,
@@ -32,7 +33,7 @@ class TaskController
     }
 
     /**
-     * Lấy danh sách tasks của một project với filtering và pagination
+     * Lấy danh sách tasks của một project với filtering và pagination.
      *
      * @param Request $request
      * @param string $projectId
@@ -49,7 +50,7 @@ class TaskController
             'assigned_to' => 'nullable|integer|exists:users,id',
             'sort_by' => ['nullable', Rule::in(['name', 'created_at', 'start_date', 'end_date'])],
             'sort_order' => ['nullable', Rule::in(['asc', 'desc'])],
-            'per_page' => 'nullable|integer|min:1|max:100'
+            'per_page' => 'nullable|integer|min:1|max:100',
         ]);
 
         try {
@@ -112,8 +113,8 @@ class TaskController
                     'current_page' => $tasks->currentPage(),
                     'last_page' => $tasks->lastPage(),
                     'per_page' => $tasks->perPage(),
-                    'total' => $tasks->total()
-                ]
+                    'total' => $tasks->total(),
+                ],
             ]);
         } catch (QueryException $e) {
             return response()->json(['message' => 'Bad query'], 400);
@@ -123,7 +124,7 @@ class TaskController
     }
 
     /**
-     * Tạo task mới sử dụng TaskService
+     * Tạo task mới sử dụng TaskService.
      *
      * @param StoreTaskRequest $request
      * @param string $projectId
@@ -143,7 +144,7 @@ class TaskController
 
             return JSendResponse::success([
                 'task' => new TaskResource($task),
-                'message' => 'Task đã được tạo thành công'
+                'message' => 'Task đã được tạo thành công',
             ]);
         } catch (InvalidArgumentException $e) {
             return JSendResponse::error($e->getMessage(), 400);
@@ -153,7 +154,7 @@ class TaskController
     }
 
     /**
-     * Lấy thông tin chi tiết của một task
+     * Lấy thông tin chi tiết của một task.
      *
      * @param string $projectId
      * @param string $taskId
@@ -168,7 +169,7 @@ class TaskController
                 ->firstOrFail();
 
             return JSendResponse::success([
-                'task' => new TaskResource($task)
+                'task' => new TaskResource($task),
             ]);
         } catch (ModelNotFoundException $e) {
             return JSendResponse::error('Task không tồn tại', 404);
@@ -178,7 +179,7 @@ class TaskController
     }
 
     /**
-     * Cập nhật task sử dụng TaskService
+     * Cập nhật task sử dụng TaskService.
      *
      * @param UpdateTaskRequest $request
      * @param string $projectId
@@ -202,7 +203,7 @@ class TaskController
 
             return JSendResponse::success([
                 'task' => new TaskResource($updatedTask),
-                'message' => 'Task đã được cập nhật thành công'
+                'message' => 'Task đã được cập nhật thành công',
             ]);
         } catch (ModelNotFoundException $e) {
             return JSendResponse::error('Task không tồn tại', 404);
@@ -214,7 +215,7 @@ class TaskController
     }
 
     /**
-     * Xóa task với validation dependencies
+     * Xóa task với validation dependencies.
      *
      * @param string $projectId
      * @param string $taskId
@@ -244,7 +245,7 @@ class TaskController
             $task->delete();
 
             return JSendResponse::success([
-                'message' => 'Task đã được xóa thành công'
+                'message' => 'Task đã được xóa thành công',
             ]);
         } catch (ModelNotFoundException $e) {
             return JSendResponse::error('Task không tồn tại', 404);
@@ -254,7 +255,7 @@ class TaskController
     }
 
     /**
-     * Lấy dependency graph của project sử dụng TaskService
+     * Lấy dependency graph của project sử dụng TaskService.
      *
      * @param string $projectId
      * @return JsonResponse
@@ -272,7 +273,7 @@ class TaskController
                     'id' => $task->id,
                     'name' => $task->name,
                     'status' => $task->status,
-                    'dependencies' => $task->dependencies_json ?? []
+                    'dependencies' => $task->dependencies_json ?? [],
                 ];
             });
 
@@ -281,7 +282,7 @@ class TaskController
 
             return JSendResponse::success([
                 'graph' => $graph,
-                'critical_path' => $criticalPath
+                'critical_path' => $criticalPath,
             ]);
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể lấy dependency graph: ' . $e->getMessage());
@@ -289,7 +290,7 @@ class TaskController
     }
 
     /**
-     * Toggle visibility của task sử dụng ConditionalTagService
+     * Toggle visibility của task sử dụng ConditionalTagService.
      *
      * @param string $projectId
      * @param string $taskId
@@ -307,7 +308,7 @@ class TaskController
 
             return JSendResponse::success([
                 'task' => new TaskResource($task),
-                'message' => $task->is_hidden ? 'Task đã được ẩn' : 'Task đã được hiển thị'
+                'message' => $task->is_hidden ? 'Task đã được ẩn' : 'Task đã được hiển thị',
             ]);
         } catch (ModelNotFoundException $e) {
             return JSendResponse::error('Task không tồn tại', 404);
@@ -317,7 +318,7 @@ class TaskController
     }
 
     /**
-     * Process conditional tags cho tất cả tasks trong project
+     * Process conditional tags cho tất cả tasks trong project.
      *
      * @param string $projectId
      * @return JsonResponse
@@ -329,7 +330,7 @@ class TaskController
 
             return JSendResponse::success([
                 'results' => $results,
-                'message' => "Đã xử lý {$results['processed']} conditional tags"
+                'message' => "Đã xử lý {$results['processed']} conditional tags",
             ]);
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể xử lý conditional tags: ' . $e->getMessage());
@@ -337,7 +338,7 @@ class TaskController
     }
 
     /**
-     * Lấy danh sách available conditional tags
+     * Lấy danh sách available conditional tags.
      *
      * @param string $projectId
      * @return JsonResponse
@@ -349,7 +350,7 @@ class TaskController
             $tags = $this->conditionalTagService->getAvailableConditionalTags($project);
 
             return JSendResponse::success([
-                'conditional_tags' => $tags
+                'conditional_tags' => $tags,
             ]);
         } catch (ModelNotFoundException $e) {
             return JSendResponse::error('Project không tồn tại', 404);
@@ -359,7 +360,7 @@ class TaskController
     }
 
     /**
-     * Lấy danh sách tasks sẵn sàng để bắt đầu
+     * Lấy danh sách tasks sẵn sàng để bắt đầu.
      *
      * @param string $projectId
      * @return JsonResponse
@@ -371,7 +372,7 @@ class TaskController
 
             return JSendResponse::success([
                 'ready_tasks' => TaskResource::collection($readyTasks),
-                'count' => $readyTasks->count()
+                'count' => $readyTasks->count(),
             ]);
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể lấy ready tasks: ' . $e->getMessage());
@@ -379,7 +380,7 @@ class TaskController
     }
 
     /**
-     * Validate dependencies cho task
+     * Validate dependencies cho task.
      *
      * @param Request $request
      * @param string $projectId
@@ -395,12 +396,12 @@ class TaskController
 
             return JSendResponse::success([
                 'valid' => true,
-                'message' => 'Dependencies hợp lệ'
+                'message' => 'Dependencies hợp lệ',
             ]);
         } catch (InvalidArgumentException $e) {
             return JSendResponse::success([
                 'valid' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ]);
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể validate dependencies: ' . $e->getMessage());
@@ -408,7 +409,7 @@ class TaskController
     }
 
     /**
-     * Tính toán lại schedule cho task
+     * Tính toán lại schedule cho task.
      *
      * @param string $projectId
      * @param string $taskId
@@ -427,7 +428,7 @@ class TaskController
 
             return JSendResponse::success([
                 'task' => new TaskResource($task),
-                'message' => 'Schedule đã được tính toán lại'
+                'message' => 'Schedule đã được tính toán lại',
             ]);
         } catch (ModelNotFoundException $e) {
             return JSendResponse::error('Task không tồn tại', 404);
@@ -437,7 +438,7 @@ class TaskController
     }
 
     /**
-     * Cập nhật trạng thái task
+     * Cập nhật trạng thái task.
      *
      * @param Request $request
      * @param string $projectId
@@ -452,7 +453,7 @@ class TaskController
                 ->firstOrFail();
 
             $request->validate([
-                'status' => 'required|string|in:' . implode(',', array_keys(Task::STATUSES))
+                'status' => 'required|string|in:' . implode(',', array_keys(Task::STATUSES)),
             ]);
 
             $updatedTask = $this->taskService->updateTaskStatus($task->ulid, $request->status);
@@ -460,7 +461,7 @@ class TaskController
 
             return JSendResponse::success([
                 'task' => new TaskResource($updatedTask),
-                'message' => 'Trạng thái task đã được cập nhật thành công'
+                'message' => 'Trạng thái task đã được cập nhật thành công',
             ]);
         } catch (ModelNotFoundException $e) {
             return JSendResponse::error('Task không tồn tại', 404);
@@ -472,7 +473,7 @@ class TaskController
     }
 
     /**
-     * Gán user cho task
+     * Gán user cho task.
      *
      * @param Request $request
      * @param string $projectId
@@ -489,13 +490,13 @@ class TaskController
             $request->validate([
                 'user_id' => 'required|integer|exists:users,id',
                 'split_percent' => 'nullable|numeric|min:0|max:100',
-                'role' => 'nullable|string|in:assignee,reviewer,observer'
+                'role' => 'nullable|string|in:assignee,reviewer,observer',
             ]);
 
             // Kiểm tra tổng split_percent không vượt quá 100%
             $currentTotal = $task->assignments()->sum('split_percent');
             $newPercentage = $request->split_percent ?? 100;
-            
+
             if ($currentTotal + $newPercentage > 100) {
                 return JSendResponse::error(
                     'Tổng phần trăm phân chia không được vượt quá 100%. Hiện tại: ' . $currentTotal . '%',
@@ -507,14 +508,14 @@ class TaskController
             $assignment = $task->assignments()->create([
                 'user_id' => $request->user_id,
                 'split_percent' => $newPercentage,
-                'role' => $request->role ?? 'assignee'
+                'role' => $request->role ?? 'assignee',
             ]);
 
             $assignment->load(['user', 'task']);
 
             return JSendResponse::success([
                 'assignment' => new TaskAssignmentResource($assignment),
-                'message' => 'User đã được gán cho task thành công'
+                'message' => 'User đã được gán cho task thành công',
             ]);
         } catch (ModelNotFoundException $e) {
             return JSendResponse::error('Task không tồn tại', 404);
@@ -524,7 +525,7 @@ class TaskController
     }
 
     /**
-     * Cập nhật dependencies cho task
+     * Cập nhật dependencies cho task.
      *
      * @param Request $request
      * @param string $projectId
@@ -551,18 +552,18 @@ class TaskController
                             $fail('Task phụ thuộc phải thuộc cùng dự án.');
                         }
                     },
-                ]
+                ],
             ]);
 
             $task->update([
-                'dependencies_json' => $request->dependencies
+                'dependencies_json' => $request->dependencies,
             ]);
 
             $task->load(['component', 'assignments.user', 'project']);
 
             return JSendResponse::success([
                 'task' => new TaskResource($task),
-                'message' => 'Phụ thuộc công việc đã được cập nhật'
+                'message' => 'Phụ thuộc công việc đã được cập nhật',
             ]);
         } catch (ModelNotFoundException $e) {
             return JSendResponse::error('Task không tồn tại', 404);

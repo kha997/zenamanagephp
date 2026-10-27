@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Unit\OwnerGovernance;
 
@@ -48,27 +50,27 @@ class FetchPrChangedFilesTest extends TestCase
         int $apiExit
     ): string {
         $dir = sys_get_temp_dir() . '/fake-gh-' . bin2hex(random_bytes(6));
-        mkdir($dir, 0777, true);
+        mkdir($dir, 0o777, true);
         $this->tempDirs[] = $dir;
 
         $changedFilesStdoutLiteral = escapeshellarg($changedFilesStdout);
         $apiStdoutLiteral = escapeshellarg($apiStdout);
 
         $script = <<<SH
-#!/usr/bin/env bash
-if [ "\$1" = "pr" ] && [ "\$2" = "view" ]; then
-    printf '%s' {$changedFilesStdoutLiteral}
-    exit {$changedFilesExit}
-fi
-if [ "\$1" = "api" ]; then
-    printf '%s' {$apiStdoutLiteral}
-    exit {$apiExit}
-fi
-echo "fake gh: unrecognized invocation: \$*" >&2
-exit 99
-SH;
+            #!/usr/bin/env bash
+            if [ "\$1" = "pr" ] && [ "\$2" = "view" ]; then
+                printf '%s' {$changedFilesStdoutLiteral}
+                exit {$changedFilesExit}
+            fi
+            if [ "\$1" = "api" ]; then
+                printf '%s' {$apiStdoutLiteral}
+                exit {$apiExit}
+            fi
+            echo "fake gh: unrecognized invocation: \$*" >&2
+            exit 99
+            SH;
         file_put_contents($dir . '/gh', $script);
-        chmod($dir . '/gh', 0755);
+        chmod($dir . '/gh', 0o755);
 
         return $dir;
     }
@@ -115,6 +117,26 @@ SH;
         $this->assertSame($filenames, $decoded);
     }
 
+    // --- Scenario: real `gh api --paginate --jq` output, one array per page (GAP-080) — PASS ---
+
+    public function test_one_json_array_per_page_is_merged_into_one_list(): void
+    {
+        // `gh api --paginate` applies --jq to each page separately, so a
+        // 250-file PR yields three arrays on stdout, not one combined array.
+        $filenames = array_map(fn ($i) => "app/Fixture{$i}.php", range(1, 250));
+        $apiOutput = implode("\n", array_map(
+            fn (array $page) => json_encode($page, JSON_THROW_ON_ERROR),
+            array_chunk($filenames, 100),
+        )) . "\n";
+
+        $fakeGh = $this->makeFakeGh('250', 0, $apiOutput, 0);
+        $result = $this->runScript($fakeGh);
+
+        $this->assertSame(0, $result['exit'], "Expected success, got stderr: {$result['stderr']}");
+        $decoded = json_decode($result['stdout'], true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame($filenames, $decoded, 'Every page must be merged, in order, into one JSON array.');
+    }
+
     // --- Scenario: 101-file PR, 100 design-only + file #101 an app file — the OUTPUT must include #101 ---
 
     public function test_101st_file_beyond_the_old_100_item_cap_is_present_in_output(): void
@@ -129,7 +151,7 @@ SH;
         $this->assertSame(0, $result['exit']);
         $decoded = json_decode($result['stdout'], true, 512, JSON_THROW_ON_ERROR);
         $this->assertCount(101, $decoded);
-        $this->assertContains('app/Http/Controllers/Api/ExportController.php', $decoded, "File #101 (beyond the old GraphQL files(first: 100) cap) must be present — the whole point of this correction is that this file is never silently dropped.");
+        $this->assertContains('app/Http/Controllers/Api/ExportController.php', $decoded, 'File #101 (beyond the old GraphQL files(first: 100) cap) must be present — the whole point of this correction is that this file is never silently dropped.');
     }
 
     // --- Scenario: fetched count != authoritative changedFiles total — FAIL CLOSED ---

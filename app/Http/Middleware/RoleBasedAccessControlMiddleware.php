@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
@@ -11,8 +13,8 @@ use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Role-Based Access Control Middleware
- * 
+ * Role-Based Access Control Middleware.
+ *
  * Ensures users have the required roles/permissions to access specific endpoints.
  * Supports both role-based and permission-based access control.
  */
@@ -28,7 +30,7 @@ class RoleBasedAccessControlMiddleware
     public function handle(Request $request, Closure $next, ?string $roleOrPermission = null, ?string $projectParam = null): Response
     {
         $user = Auth::user();
-        
+
         if (!$user) {
             if ($request->expectsJson()) {
                 return ErrorEnvelopeService::authenticationError(
@@ -39,7 +41,7 @@ class RoleBasedAccessControlMiddleware
 
             return redirect()->guest(route('login'))->with('error', 'Vui lòng đăng nhập để tiếp tục.');
         }
-        
+
         $headerTenantId = trim((string) $request->header('X-Tenant-ID'));
         $tenantId = $request->attributes->get('tenant_id');
         if (!$tenantId && app()->bound('current_tenant_id')) {
@@ -60,7 +62,7 @@ class RoleBasedAccessControlMiddleware
 
             $tenantId = $headerTenantId;
         }
-        
+
         $normalizedPath = $this->normalizeApiPath($request->path());
         $request->attributes->set('rbac_normalized_path', $normalizedPath);
 
@@ -71,10 +73,9 @@ class RoleBasedAccessControlMiddleware
             return $this->handleGeneralAccess($user, $request, $next);
         }
 
-
         // Check if user has required role or permission
         $hasAccess = $this->checkAccess($user, $roleOrPermission, $request, $projectParam);
-        
+
         if (!$hasAccess) {
             Log::warning('Access denied', [
                 'user_id' => $user->id,
@@ -83,9 +84,9 @@ class RoleBasedAccessControlMiddleware
                 'required_role_permission' => $roleOrPermission,
                 'route' => $request->route()?->getName(),
                 'method' => $request->method(),
-                'ip' => $request->ip()
+                'ip' => $request->ip(),
             ]);
-            
+
             return $this->deny(
                 $request,
                 'E403.AUTHORIZATION',
@@ -95,16 +96,16 @@ class RoleBasedAccessControlMiddleware
                 ErrorEnvelopeService::getCurrentRequestId()
             );
         }
-        
+
         // Add access context to request
         $request->attributes->set('required_role_permission', $roleOrPermission);
         $request->attributes->set('access_granted', true);
-        
+
         return $next($request);
     }
-    
+
     /**
-     * Check if user has required access
+     * Check if user has required access.
      */
     private function checkAccess($user, string $roleOrPermission, Request $request, ?string $projectParam = null): bool
     {
@@ -112,32 +113,33 @@ class RoleBasedAccessControlMiddleware
         if ($user->isSuperAdmin()) {
             return true;
         }
-        
+
         // Check for specific roles
         if ($this->isRole($roleOrPermission)) {
             return $this->checkRole($user, $roleOrPermission);
         }
-        
+
         // Check for specific permissions
         if ($this->isPermission($roleOrPermission)) {
             return $this->checkPermission($user, $roleOrPermission, $request, $projectParam);
         }
-        
+
         // Default: deny access
         return false;
     }
-    
+
     /**
-     * Check if the string is a role
+     * Check if the string is a role.
      */
     private function isRole(string $roleOrPermission): bool
     {
         $roles = ['project_manager', 'team_member', 'client', 'viewer'];
+
         return in_array($roleOrPermission, $roles);
     }
-    
+
     /**
-     * Check if the string is a permission
+     * Check if the string is a permission.
      */
     private function isPermission(string $roleOrPermission): bool
     {
@@ -152,20 +154,20 @@ class RoleBasedAccessControlMiddleware
 
         return $exists;
     }
-    
+
     /**
-     * Check if user has required role
+     * Check if user has required role.
      */
     private function checkRole($user, string $role): bool
     {
         // Get user's roles (you might need to implement this based on your role system)
         $userRoles = $this->getUserRoles($user);
-        
+
         return in_array($role, $userRoles);
     }
-    
+
     /**
-     * Check if user has required permission
+     * Check if user has required permission.
      */
     private function checkPermission($user, string $permission, Request $request, ?string $projectParam = null): bool
     {
@@ -181,18 +183,18 @@ class RoleBasedAccessControlMiddleware
     }
 
     /**
-     * Get user's roles
+     * Get user's roles.
      */
     private function getUserRoles($user): array
     {
         // This is a simplified implementation
         // You might want to implement a proper role system
         $roles = [];
-        
+
         if ($user->isSuperAdmin() || $user->hasRole('admin') || $user->role === 'admin') {
             $roles[] = 'admin';
         }
-        
+
         // Add more role logic based on your system
         if ($user->hasRole('project_manager')) {
             $roles[] = 'project_manager';
@@ -201,51 +203,51 @@ class RoleBasedAccessControlMiddleware
         if ($user->role === 'pm') {
             $roles[] = 'project_manager';
         }
-        
+
         if ($user->hasRole('team_member')) {
             $roles[] = 'team_member';
         }
-        
+
         return $roles;
     }
-    
+
     /**
-     * Check if permission is project-specific
+     * Check if permission is project-specific.
      */
     private function isProjectSpecificPermission(string $permission): bool
     {
         $projectSpecificPermissions = [
             'edit_project', 'delete_project', 'view_project',
             'create_task', 'edit_task', 'delete_task', 'view_task',
-            'manage_documents', 'view_documents'
+            'manage_documents', 'view_documents',
         ];
-        
+
         return in_array($permission, $projectSpecificPermissions);
     }
-    
+
     /**
-     * Check project access
+     * Check project access.
      */
     private function checkProjectAccess($user, Request $request, string $projectParam): bool
     {
         $projectId = $request->route($projectParam) ?? $request->input($projectParam);
-        
+
         if (!$projectId) {
             return false;
         }
-        
+
         // Check if user has access to this project
         $project = \App\Models\Project::where('id', $projectId)
             ->where('tenant_id', $user->tenant_id)
             ->first();
-        
+
         if (!$project) {
             return false;
         }
-        
+
         // Add project context to request
         $request->attributes->set('project', $project);
-        
+
         return true;
     }
 
@@ -274,7 +276,7 @@ class RoleBasedAccessControlMiddleware
                 'user_id' => $user->id ?? null,
                 'email' => $user->email ?? null,
                 'tenant_id' => $user->tenant_id ?? null,
-                'roles' => method_exists($user, 'getRoleNames') ? $user->getRoleNames() : []
+                'roles' => method_exists($user, 'getRoleNames') ? $user->getRoleNames() : [],
             ]);
 
             return $this->deny(

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Documents;
 
@@ -19,8 +21,11 @@ class DocumentStatusFilterTest extends TestCase
     use RefreshDatabase;
 
     private DocumentStatusService $service;
+
     private Tenant $tenant;
+
     private User $actor;
+
     /** @var array<string, Document> */
     private array $documents = [];
 
@@ -29,11 +34,11 @@ class DocumentStatusFilterTest extends TestCase
         parent::setUp();
 
         Schema::table('documents', function (Blueprint $table): void {
-            if (! Schema::hasColumn('documents', 'lifecycle_status')) {
+            if (!Schema::hasColumn('documents', 'lifecycle_status')) {
                 $table->string('lifecycle_status')->nullable();
             }
 
-            if (! Schema::hasColumn('documents', 'approval_status')) {
+            if (!Schema::hasColumn('documents', 'approval_status')) {
                 $table->string('approval_status')->nullable();
             }
         });

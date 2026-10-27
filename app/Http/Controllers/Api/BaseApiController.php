@@ -1,32 +1,34 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * Base API Controller implementing JSend specification
- * 
- * JSend is a specification for a simple, no-frills, JSON based format 
+ * Base API Controller implementing JSend specification.
+ *
+ * JSend is a specification for a simple, no-frills, JSON based format
  * for application-level communication.
  */
 abstract class BaseApiController extends Controller
 {
     /**
-     * Default pagination limit
+     * Default pagination limit.
      */
     protected int $defaultLimit = 15;
-    
+
     /**
-     * Maximum pagination limit
+     * Maximum pagination limit.
      */
     protected int $maxLimit = 100;
 
     /**
-     * Return a success response
+     * Return a success response.
      *
      * @param mixed $data The data to return
      * @param string|null $message Optional success message
@@ -80,7 +82,7 @@ abstract class BaseApiController extends Controller
     }
 
     /**
-     * Return an error response
+     * Return an error response.
      *
      * @param string $message Error message
      * @param int $statusCode HTTP status code
@@ -91,18 +93,18 @@ abstract class BaseApiController extends Controller
     {
         $response = [
             'status' => 'error',
-            'message' => $message
+            'message' => $message,
         ];
-        
+
         if ($data !== null) {
             $response['data'] = $data;
         }
-        
+
         return response()->json($response, $statusCode);
     }
 
     /**
-     * Return a fail response (client error)
+     * Return a fail response (client error).
      *
      * @param mixed $data Error data (usually validation errors)
      * @param string|null $message Optional fail message
@@ -113,18 +115,18 @@ abstract class BaseApiController extends Controller
     {
         $response = [
             'status' => 'fail',
-            'data' => $data
+            'data' => $data,
         ];
-        
+
         if ($message !== null) {
             $response['message'] = $message;
         }
-        
+
         return response()->json($response, $statusCode);
     }
 
     /**
-     * Return validation error response
+     * Return validation error response.
      */
     protected function validationError($errors, ?string $message = 'Validation failed'): JsonResponse
     {
@@ -132,7 +134,7 @@ abstract class BaseApiController extends Controller
     }
 
     /**
-     * Return not found response
+     * Return not found response.
      */
     protected function notFound(string $message = 'Resource not found'): JsonResponse
     {
@@ -140,7 +142,7 @@ abstract class BaseApiController extends Controller
     }
 
     /**
-     * Return unauthorized response
+     * Return unauthorized response.
      */
     protected function unauthorized(string $message = 'Unauthorized'): JsonResponse
     {
@@ -148,7 +150,7 @@ abstract class BaseApiController extends Controller
     }
 
     /**
-     * Return forbidden response
+     * Return forbidden response.
      */
     protected function forbidden(string $message = 'Forbidden'): JsonResponse
     {
@@ -156,7 +158,7 @@ abstract class BaseApiController extends Controller
     }
 
     /**
-     * Return server error response
+     * Return server error response.
      */
     protected function serverError(string $message = 'Internal server error'): JsonResponse
     {
@@ -164,7 +166,7 @@ abstract class BaseApiController extends Controller
     }
 
     /**
-     * Return a paginated response
+     * Return a paginated response.
      *
      * @param LengthAwarePaginator $paginator
      * @param string|null $message
@@ -179,7 +181,7 @@ abstract class BaseApiController extends Controller
     }
 
     /**
-     * Get pagination parameters from request
+     * Get pagination parameters from request.
      *
      * @param Request $request
      * @return array
@@ -188,20 +190,20 @@ abstract class BaseApiController extends Controller
     {
         $limit = (int) $request->get('limit', $this->defaultLimit);
         $page = (int) $request->get('page', 1);
-        
+
         // Ensure limit is within bounds
         $limit = min(max($limit, 1), $this->maxLimit);
         $page = max($page, 1);
-        
+
         return [
             'limit' => $limit,
             'page' => $page,
-            'offset' => ($page - 1) * $limit
+            'offset' => ($page - 1) * $limit,
         ];
     }
 
     /**
-     * Get sorting parameters from request
+     * Get sorting parameters from request.
      *
      * @param Request $request
      * @param array $allowedFields
@@ -210,32 +212,32 @@ abstract class BaseApiController extends Controller
      * @return array
      */
     protected function getSortingParams(
-        Request $request, 
-        array $allowedFields = ['id'], 
-        string $defaultField = 'id', 
+        Request $request,
+        array $allowedFields = ['id'],
+        string $defaultField = 'id',
         string $defaultDirection = 'desc'
     ): array {
         $sortBy = $request->get('sort_by', $defaultField);
         $sortDirection = $request->get('sort_direction', $defaultDirection);
-        
+
         // Validate sort field
         if (!in_array($sortBy, $allowedFields)) {
             $sortBy = $defaultField;
         }
-        
+
         // Validate sort direction
         if (!in_array(strtolower($sortDirection), ['asc', 'desc'])) {
             $sortDirection = $defaultDirection;
         }
-        
+
         return [
             'sort_by' => $sortBy,
-            'sort_direction' => strtolower($sortDirection)
+            'sort_direction' => strtolower($sortDirection),
         ];
     }
 
     /**
-     * Get filtering parameters from request
+     * Get filtering parameters from request.
      *
      * @param Request $request
      * @param array $allowedFilters
@@ -244,18 +246,18 @@ abstract class BaseApiController extends Controller
     protected function getFilterParams(Request $request, array $allowedFilters = []): array
     {
         $filters = [];
-        
+
         foreach ($allowedFilters as $filter) {
             if ($request->has($filter) && $request->get($filter) !== null) {
                 $filters[$filter] = $request->get($filter);
             }
         }
-        
+
         return $filters;
     }
 
     /**
-     * Validate resource ownership for tenant isolation
+     * Validate resource ownership for tenant isolation.
      *
      * @param mixed $resource
      * @param Request $request
@@ -264,21 +266,21 @@ abstract class BaseApiController extends Controller
     protected function validateTenantAccess($resource, Request $request): bool
     {
         $user = $request->user('api');
-        
+
         if (!$user || !$user->tenant_id) {
             return false;
         }
-        
+
         // Check if resource has tenant_id property
         if (property_exists($resource, 'tenant_id')) {
             return $resource->tenant_id === $user->tenant_id;
         }
-        
+
         // For resources that belong to a project, check project's tenant
         if (property_exists($resource, 'project') && $resource->project) {
             return $resource->project->tenant_id === $user->tenant_id;
         }
-        
+
         return true; // Default to allow if no tenant check needed
     }
 }

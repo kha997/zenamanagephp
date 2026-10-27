@@ -23,7 +23,6 @@ class Handler extends ExceptionHandler
      * @var array<class-string<\Throwable>, \Psr\Log\LogLevel::*>
      */
     protected $levels = [
-        
     ];
 
     /**
@@ -32,7 +31,6 @@ class Handler extends ExceptionHandler
      * @var array<int, class-string<\Throwable>>
      */
     protected $dontReport = [
-        
     ];
 
     /**
@@ -151,7 +149,7 @@ class Handler extends ExceptionHandler
 
             if ($request->expectsJson()) {
                 return response()->json([
-                    'message' => 'CSRF token mismatch.'
+                    'message' => 'CSRF token mismatch.',
                 ], 419);
             }
 

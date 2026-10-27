@@ -2,13 +2,12 @@
 
 namespace App\Models;
 
-use App\Models\Document;
+use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use App\Traits\TenantScope;
 use Illuminate\Support\Str;
 
 /**
@@ -47,9 +46,11 @@ use Illuminate\Support\Str;
  */
 class Submittal extends Model
 {
-    use HasFactory, TenantScope;
+    use HasFactory;
+    use TenantScope;
 
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected static function booted(): void
@@ -103,11 +104,11 @@ class Submittal extends Model
 
     /** @var array<string, list<string>> */
     public const TRANSITIONS = [
-        self::STATUS_DRAFT     => [self::STATUS_SUBMITTED],
+        self::STATUS_DRAFT => [self::STATUS_SUBMITTED],
         self::STATUS_SUBMITTED => [self::STATUS_APPROVED, self::STATUS_REJECTED],
-        self::STATUS_REJECTED  => [self::STATUS_REVISING],
-        self::STATUS_REVISING  => [self::STATUS_SUBMITTED],
-        self::STATUS_APPROVED  => [],
+        self::STATUS_REJECTED => [self::STATUS_REVISING],
+        self::STATUS_REVISING => [self::STATUS_SUBMITTED],
+        self::STATUS_APPROVED => [],
     ];
 
     public static function canTransition(string $from, string $to): bool

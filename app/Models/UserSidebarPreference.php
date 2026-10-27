@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -10,7 +12,8 @@ use Illuminate\Support\Facades\Validator;
 
 class UserSidebarPreference extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids;
+    use HasFactory;
 
     protected $table = 'user_sidebar_preferences';
 
@@ -82,17 +85,17 @@ class UserSidebarPreference extends Model
     public function pinItem(string $itemId): void
     {
         $preferences = $this->preferences ?? self::getDefaultPreferences();
-        
+
         if (!in_array($itemId, $preferences['pinned_items'])) {
             $preferences['pinned_items'][] = $itemId;
         }
-        
+
         // Remove from hidden items if it was hidden
         $preferences['hidden_items'] = array_filter(
             $preferences['hidden_items'],
-            fn($id) => $id !== $itemId
+            fn ($id) => $id !== $itemId
         );
-        
+
         $this->update(['preferences' => $preferences]);
     }
 
@@ -102,12 +105,12 @@ class UserSidebarPreference extends Model
     public function unpinItem(string $itemId): void
     {
         $preferences = $this->preferences ?? self::getDefaultPreferences();
-        
+
         $preferences['pinned_items'] = array_filter(
             $preferences['pinned_items'],
-            fn($id) => $id !== $itemId
+            fn ($id) => $id !== $itemId
         );
-        
+
         $this->update(['preferences' => $preferences]);
     }
 
@@ -117,17 +120,17 @@ class UserSidebarPreference extends Model
     public function hideItem(string $itemId): void
     {
         $preferences = $this->preferences ?? self::getDefaultPreferences();
-        
+
         if (!in_array($itemId, $preferences['hidden_items'])) {
             $preferences['hidden_items'][] = $itemId;
         }
-        
+
         // Remove from pinned items if it was pinned
         $preferences['pinned_items'] = array_filter(
             $preferences['pinned_items'],
-            fn($id) => $id !== $itemId
+            fn ($id) => $id !== $itemId
         );
-        
+
         $this->update(['preferences' => $preferences]);
     }
 
@@ -137,12 +140,12 @@ class UserSidebarPreference extends Model
     public function showItem(string $itemId): void
     {
         $preferences = $this->preferences ?? self::getDefaultPreferences();
-        
+
         $preferences['hidden_items'] = array_filter(
             $preferences['hidden_items'],
-            fn($id) => $id !== $itemId
+            fn ($id) => $id !== $itemId
         );
-        
+
         $this->update(['preferences' => $preferences]);
     }
 
@@ -153,7 +156,7 @@ class UserSidebarPreference extends Model
     {
         $preferences = $this->preferences ?? self::getDefaultPreferences();
         $preferences['custom_order'] = $itemIds;
-        
+
         $this->update(['preferences' => $preferences]);
     }
 
@@ -164,7 +167,7 @@ class UserSidebarPreference extends Model
     {
         $preferences = $this->preferences ?? self::getDefaultPreferences();
         $preferences['theme'] = $theme;
-        
+
         $this->update(['preferences' => $preferences]);
     }
 
@@ -175,7 +178,7 @@ class UserSidebarPreference extends Model
     {
         $preferences = $this->preferences ?? self::getDefaultPreferences();
         $preferences['compact_mode'] = !$preferences['compact_mode'];
-        
+
         $this->update(['preferences' => $preferences]);
     }
 
@@ -186,7 +189,7 @@ class UserSidebarPreference extends Model
     {
         $preferences = $this->preferences ?? self::getDefaultPreferences();
         $preferences['show_badges'] = !$preferences['show_badges'];
-        
+
         $this->update(['preferences' => $preferences]);
     }
 
@@ -197,7 +200,7 @@ class UserSidebarPreference extends Model
     {
         $preferences = $this->preferences ?? self::getDefaultPreferences();
         $preferences['auto_expand_groups'] = !$preferences['auto_expand_groups'];
-        
+
         $this->update(['preferences' => $preferences]);
     }
 
@@ -207,6 +210,7 @@ class UserSidebarPreference extends Model
     public function isItemPinned(string $itemId): bool
     {
         $preferences = $this->preferences ?? self::getDefaultPreferences();
+
         return in_array($itemId, $preferences['pinned_items'] ?? []);
     }
 
@@ -216,6 +220,7 @@ class UserSidebarPreference extends Model
     public function isItemHidden(string $itemId): bool
     {
         $preferences = $this->preferences ?? self::getDefaultPreferences();
+
         return in_array($itemId, $preferences['hidden_items'] ?? []);
     }
 
@@ -225,6 +230,7 @@ class UserSidebarPreference extends Model
     public function getCustomOrder(): array
     {
         $preferences = $this->preferences ?? self::getDefaultPreferences();
+
         return $preferences['custom_order'] ?? [];
     }
 
@@ -234,6 +240,7 @@ class UserSidebarPreference extends Model
     public function getTheme(): string
     {
         $preferences = $this->preferences ?? self::getDefaultPreferences();
+
         return $preferences['theme'] ?? 'auto';
     }
 
@@ -243,6 +250,7 @@ class UserSidebarPreference extends Model
     public function isCompactMode(): bool
     {
         $preferences = $this->preferences ?? self::getDefaultPreferences();
+
         return $preferences['compact_mode'] ?? false;
     }
 
@@ -252,6 +260,7 @@ class UserSidebarPreference extends Model
     public function shouldShowBadges(): bool
     {
         $preferences = $this->preferences ?? self::getDefaultPreferences();
+
         return $preferences['show_badges'] ?? true;
     }
 
@@ -261,6 +270,7 @@ class UserSidebarPreference extends Model
     public function shouldAutoExpandGroups(): bool
     {
         $preferences = $this->preferences ?? self::getDefaultPreferences();
+
         return $preferences['auto_expand_groups'] ?? false;
     }
 

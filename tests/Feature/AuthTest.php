@@ -1,19 +1,21 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Tenant;
-use Tests\TestCase;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use Tests\TestCase;
 use Tests\Traits\AuthenticationTestTrait;
 
 /**
- * Feature tests for Authentication endpoints
+ * Feature tests for Authentication endpoints.
  */
 class AuthTest extends TestCase
 {
@@ -21,7 +23,7 @@ class AuthTest extends TestCase
     use AuthenticationTestTrait;
 
     /**
-     * Test user registration
+     * Test user registration.
      */
     public function test_user_registration(): void
     {
@@ -33,7 +35,7 @@ class AuthTest extends TestCase
             'company_name' => 'Test Company',
             'company_domain' => 'test-company.local',
             'company_phone' => '0123456789',
-            'company_address' => '123 Main St'
+            'company_address' => '123 Main St',
         ];
 
         $response = $this->postJson('/api/auth/register', $userData);
@@ -45,22 +47,22 @@ class AuthTest extends TestCase
                             'id',
                             'name',
                             'email',
-                            'tenant_id'
+                            'tenant_id',
                         ],
-                        'token'
-                    ]
+                        'token',
+                    ],
                 ]);
 
         $tenantId = $response->json('data.tenant.id');
 
         $this->assertDatabaseHas('users', [
             'email' => 'john@example.com',
-            'tenant_id' => $tenantId
+            'tenant_id' => $tenantId,
         ]);
     }
 
     /**
-     * Test user login
+     * Test user login.
      */
     public function test_user_login(): void
     {
@@ -68,12 +70,12 @@ class AuthTest extends TestCase
         $user = User::factory()->create([
             'tenant_id' => $tenant->id,
             'email' => 'john@example.com',
-            'password' => Hash::make('password123')
+            'password' => Hash::make('password123'),
         ]);
 
         $loginData = [
             'email' => 'john@example.com',
-            'password' => 'password123'
+            'password' => 'password123',
         ];
 
         $response = $this->postJson('/api/auth/login', $loginData);
@@ -85,20 +87,20 @@ class AuthTest extends TestCase
                         'id',
                         'name',
                         'email',
-                        'tenant_id'
+                        'tenant_id',
                     ],
-                    'token'
+                    'token',
                 ]);
     }
 
     /**
-     * Test user login with invalid credentials
+     * Test user login with invalid credentials.
      */
     public function test_user_login_invalid_credentials(): void
     {
         $loginData = [
             'email' => 'john@example.com',
-            'password' => 'wrongpassword'
+            'password' => 'wrongpassword',
         ];
 
         $response = $this->postJson('/api/auth/login', $loginData);
@@ -109,7 +111,7 @@ class AuthTest extends TestCase
     }
 
     /**
-     * Test user logout
+     * Test user logout.
      */
     public function test_user_logout(): void
     {
@@ -138,12 +140,12 @@ class AuthTest extends TestCase
 
         $response->assertStatus(200)
                 ->assertJson([
-                    'message' => 'Logged out successfully'
+                    'message' => 'Logged out successfully',
                 ]);
     }
 
     /**
-     * Test getting authenticated user
+     * Test getting authenticated user.
      */
     public function test_get_authenticated_user(): void
     {
@@ -179,13 +181,13 @@ class AuthTest extends TestCase
                         'id',
                         'name',
                         'email',
-                        'tenant_id'
-                    ]
+                        'tenant_id',
+                    ],
                 ]);
     }
 
     /**
-     * Test accessing protected route without authentication
+     * Test accessing protected route without authentication.
      */
     public function test_access_protected_route_without_auth(): void
     {
@@ -195,14 +197,14 @@ class AuthTest extends TestCase
     }
 
     /**
-     * Test password reset request
+     * Test password reset request.
      */
     public function test_password_reset_request(): void
     {
         $tenant = Tenant::factory()->create();
         $user = User::factory()->create([
             'tenant_id' => $tenant->id,
-            'email' => 'john@example.com'
+            'email' => 'john@example.com',
         ]);
 
         Password::shouldReceive('sendResetLink')
@@ -210,23 +212,23 @@ class AuthTest extends TestCase
                 ->andReturn(Password::RESET_LINK_SENT);
 
         $response = $this->postJson('/api/auth/password/reset', [
-            'email' => 'john@example.com'
+            'email' => 'john@example.com',
         ]);
 
         $response->assertStatus(200)
                 ->assertJson([
                     'message' => 'Password reset link has been sent to your email.',
-                    'status' => 'success'
+                    'status' => 'success',
                 ]);
     }
 
     /**
-     * Test password reset with invalid email
+     * Test password reset with invalid email.
      */
     public function test_password_reset_invalid_email(): void
     {
         $response = $this->postJson('/api/auth/password/reset', [
-            'email' => 'nonexistent@example.com'
+            'email' => 'nonexistent@example.com',
         ]);
 
         $response->assertStatus(422)

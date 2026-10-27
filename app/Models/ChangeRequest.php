@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -11,8 +13,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Model ChangeRequest để quản lý các yêu cầu thay đổi
- * 
+ * Model ChangeRequest để quản lý các yêu cầu thay đổi.
+ *
  * @property string $project_id
  * @property string $code
  * @property string $title
@@ -30,14 +32,18 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class ChangeRequest extends Model
 {
-    use HasUlids, HasFactory, TenantScope;
+    use HasUlids;
+    use HasFactory;
+    use TenantScope;
 
     protected $table = 'change_requests';
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     /**
-     * Các trạng thái của change request
+     * Các trạng thái của change request.
      */
     public const STATUS_DRAFT = 'draft';
     public const STATUS_SUBMITTED = 'submitted';
@@ -46,7 +52,7 @@ class ChangeRequest extends Model
     public const STATUS_IMPLEMENTED = 'implemented';
 
     /**
-     * Danh sách các trạng thái hợp lệ
+     * Danh sách các trạng thái hợp lệ.
      */
     public const VALID_STATUSES = [
         self::STATUS_DRAFT,
@@ -57,7 +63,7 @@ class ChangeRequest extends Model
     ];
 
     /**
-     * Các mức độ ưu tiên change request
+     * Các mức độ ưu tiên change request.
      */
     public const PRIORITY_LOW = 'low';
     public const PRIORITY_MEDIUM = 'medium';
@@ -72,7 +78,7 @@ class ChangeRequest extends Model
     ];
 
     /**
-     * Các trạng thái có thể chuyển đổi
+     * Các trạng thái có thể chuyển đổi.
      */
     public const STATUS_TRANSITIONS = [
         self::STATUS_DRAFT => [self::STATUS_SUBMITTED],
@@ -142,7 +148,7 @@ class ChangeRequest extends Model
     ];
 
     /**
-     * Quan hệ với Tenant
+     * Quan hệ với Tenant.
      */
     public function tenant(): BelongsTo
     {
@@ -150,7 +156,7 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Quan hệ với Project
+     * Quan hệ với Project.
      */
     public function project(): BelongsTo
     {
@@ -158,7 +164,7 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Quan hệ với Task
+     * Quan hệ với Task.
      */
     public function task(): BelongsTo
     {
@@ -166,7 +172,7 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Quan hệ với User (người yêu cầu)
+     * Quan hệ với User (người yêu cầu).
      */
     public function requester(): BelongsTo
     {
@@ -182,7 +188,7 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Quan hệ với User (người được assign)
+     * Quan hệ với User (người được assign).
      */
     public function assignee(): BelongsTo
     {
@@ -190,7 +196,7 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Quan hệ với User (người approve)
+     * Quan hệ với User (người approve).
      */
     public function approver(): BelongsTo
     {
@@ -198,7 +204,7 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Alias for requester
+     * Alias for requester.
      */
     public function requestedBy(): BelongsTo
     {
@@ -206,7 +212,7 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Alias for approver
+     * Alias for approver.
      */
     public function approvedBy(): BelongsTo
     {
@@ -214,7 +220,7 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Quan hệ với User (người reject)
+     * Quan hệ với User (người reject).
      */
     public function rejector(): BelongsTo
     {
@@ -222,7 +228,7 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Scope để lọc theo trạng thái
+     * Scope để lọc theo trạng thái.
      */
     public function scopeWithStatus(Builder $query, string $status): Builder
     {
@@ -230,7 +236,7 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Scope để lọc theo dự án
+     * Scope để lọc theo dự án.
      */
     public function scopeForProject(Builder $query, string $projectId): Builder
     {
@@ -238,7 +244,7 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Scope để lấy các CR đang chờ approval
+     * Scope để lấy các CR đang chờ approval.
      */
     public function scopePendingApproval(Builder $query): Builder
     {
@@ -246,7 +252,7 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Scope để lấy các CR đã được approve
+     * Scope để lấy các CR đã được approve.
      */
     public function scopeApproved(Builder $query): Builder
     {
@@ -254,7 +260,7 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Scope để lấy các CR bị reject
+     * Scope để lấy các CR bị reject.
      */
     public function scopeRejected(Builder $query): Builder
     {
@@ -262,7 +268,7 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Kiểm tra xem có thể chuyển sang trạng thái mới không
+     * Kiểm tra xem có thể chuyển sang trạng thái mới không.
      */
     public function canTransitionTo(string $newStatus): bool
     {
@@ -270,7 +276,7 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Chuyển sang trạng thái submitted
+     * Chuyển sang trạng thái submitted.
      */
     public function submitForApproval(): bool
     {
@@ -285,7 +291,7 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Approve change request
+     * Approve change request.
      */
     public function approve(string $approverId, ?string $note = null): bool
     {
@@ -297,14 +303,14 @@ class ChangeRequest extends Model
         $this->approved_by = $approverId;
         $this->approved_at = now();
         $this->approval_notes = $note;
-        
+
         $result = $this->save();
 
         return $result;
     }
 
     /**
-     * Reject change request
+     * Reject change request.
      */
     public function reject(string $rejectorId, ?string $reason = null): bool
     {
@@ -316,14 +322,14 @@ class ChangeRequest extends Model
         $this->rejected_by = $rejectorId;
         $this->rejected_at = now();
         $this->rejection_reason = $reason;
-        
+
         $result = $this->save();
 
         return $result;
     }
 
     /**
-     * Kiểm tra xem CR có đang pending không
+     * Kiểm tra xem CR có đang pending không.
      */
     public function isPending(): bool
     {
@@ -331,7 +337,7 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Kiểm tra xem CR có được approve không
+     * Kiểm tra xem CR có được approve không.
      */
     public function isApproved(): bool
     {
@@ -339,7 +345,7 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Kiểm tra xem CR đã được implement chưa
+     * Kiểm tra xem CR đã được implement chưa.
      */
     public function isImplemented(): bool
     {
@@ -347,7 +353,7 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Kiểm tra xem CR có bị reject không
+     * Kiểm tra xem CR có bị reject không.
      */
     public function isRejected(): bool
     {
@@ -355,7 +361,7 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Kiểm tra xem CR có đang ở draft không
+     * Kiểm tra xem CR có đang ở draft không.
      */
     public function isDraft(): bool
     {
@@ -363,20 +369,20 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Tạo mã CR tự động
+     * Tạo mã CR tự động.
      */
     public static function generateCode(string $projectId): string
     {
         $project = Project::find($projectId);
         $count = static::where('project_id', $projectId)->count() + 1;
-        
+
         $projectCode = $project ? strtoupper(substr($project->name, 0, 3)) : 'PRJ';
-        
+
         return sprintf('%s-CR-%04d', $projectCode, $count);
     }
 
     /**
-     * Tính tổng impact cost của tất cả CR đã approve trong project
+     * Tính tổng impact cost của tất cả CR đã approve trong project.
      */
     public static function getTotalApprovedImpactCost(string $projectId): float
     {
@@ -386,7 +392,7 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Tính tổng impact days của tất cả CR đã approve trong project
+     * Tính tổng impact days của tất cả CR đã approve trong project.
      */
     public static function getTotalApprovedImpactDays(string $projectId): int
     {
@@ -396,7 +402,7 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Quan hệ với CrLink (các liên kết)
+     * Quan hệ với CrLink (các liên kết).
      */
     public function links(): HasMany
     {
@@ -404,7 +410,7 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Quan hệ với Task thông qua CrLink
+     * Quan hệ với Task thông qua CrLink.
      */
     public function linkedTasks()
     {
@@ -412,7 +418,7 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Quan hệ với Document thông qua CrLink
+     * Quan hệ với Document thông qua CrLink.
      */
     public function linkedDocuments()
     {
@@ -420,7 +426,7 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Quan hệ với Component thông qua CrLink
+     * Quan hệ với Component thông qua CrLink.
      */
     public function linkedComponents()
     {
@@ -428,7 +434,7 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Lấy tất cả entity được liên kết
+     * Lấy tất cả entity được liên kết.
      */
     public function getLinkedEntities(): array
     {

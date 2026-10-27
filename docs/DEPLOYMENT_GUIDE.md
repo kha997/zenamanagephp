@@ -28,7 +28,7 @@
 - **PHP**: 8.0+
 - **MySQL**: 8.0+
 - **Nginx**: 1.18+
-- **Node.js**: 16+
+- **Node.js**: 20.19+ hoặc 22.12+ (Vite 8 yêu cầu)
 - **Redis**: 6.0+
 - **Docker**: 20.10+ (nếu sử dụng Docker)
 

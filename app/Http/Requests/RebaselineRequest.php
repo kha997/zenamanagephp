@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests;
 
@@ -24,23 +26,23 @@ class RebaselineRequest extends BaseApiRequest
             'reason' => [
                 'required',
                 'string',
-                'max:1000'
+                'max:1000',
             ],
             'new_start_date' => [
                 'nullable',
-                'date'
+                'date',
             ],
             'new_end_date' => [
                 'nullable',
                 'date',
-                'after_or_equal:new_start_date'
+                'after_or_equal:new_start_date',
             ],
             'new_cost' => [
                 'nullable',
                 'numeric',
                 'min:0',
-                'max:999999999999.99'
-            ]
+                'max:999999999999.99',
+            ],
         ];
     }
 
@@ -51,8 +53,8 @@ class RebaselineRequest extends BaseApiRequest
     {
         $validator->after(function ($validator) {
             // Kiểm tra ít nhất một trường mới phải được cung cấp
-            if (!$this->input('new_start_date') && 
-                !$this->input('new_end_date') && 
+            if (!$this->input('new_start_date') &&
+                !$this->input('new_end_date') &&
                 !$this->input('new_cost')) {
                 $validator->errors()->add('general', 'Phải cung cấp ít nhất một thông tin mới để thực hiện re-baseline.');
             }
@@ -61,7 +63,7 @@ class RebaselineRequest extends BaseApiRequest
             if ($this->input('new_start_date') && $this->input('new_end_date')) {
                 $startDate = Carbon::parse($this->input('new_start_date'));
                 $endDate = Carbon::parse($this->input('new_end_date'));
-                
+
                 if ($startDate->diffInYears($endDate) > 10) {
                     $validator->errors()->add('new_end_date', 'Thời gian dự án không được vượt quá 10 năm.');
                 }
@@ -75,7 +77,7 @@ class RebaselineRequest extends BaseApiRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'approval_required' => $this->input('approval_required', false)
+            'approval_required' => $this->input('approval_required', false),
         ]);
     }
 }

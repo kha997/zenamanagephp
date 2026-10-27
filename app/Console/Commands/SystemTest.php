@@ -63,35 +63,38 @@ class SystemTest extends Command
         $this->newLine();
         if ($passed === $total) {
             $this->info("🎉 All tests passed! ({$passed}/{$total})");
+
             return 0;
         } else {
             $this->error("❌ Some tests failed! ({$passed}/{$total})");
+
             return 1;
         }
     }
 
     /**
-     * Test database connection
+     * Test database connection.
      */
     private function testDatabase(): array
     {
         $this->info('🗄️ Testing Database Connection...');
-        
+
         try {
             DB::connection()->getPdo();
             $tables = DB::select('SHOW TABLES');
             $tableCount = count($tables);
-            
-            $this->line("  ✅ Database connected successfully");
+
+            $this->line('  ✅ Database connected successfully');
             $this->line("  📊 Found {$tableCount} tables");
-            
+
             return [
                 'name' => 'Database Connection',
                 'passed' => true,
                 'details' => "Connected to database with {$tableCount} tables",
             ];
         } catch (\Exception $e) {
-            $this->line("  ❌ Database connection failed: " . $e->getMessage());
+            $this->line('  ❌ Database connection failed: ' . $e->getMessage());
+
             return [
                 'name' => 'Database Connection',
                 'passed' => false,
@@ -101,26 +104,27 @@ class SystemTest extends Command
     }
 
     /**
-     * Test Redis connection
+     * Test Redis connection.
      */
     private function testRedis(): array
     {
         $this->info('🔴 Testing Redis Connection...');
-        
+
         try {
             Redis::ping();
             $info = Redis::info();
-            
-            $this->line("  ✅ Redis connected successfully");
-            $this->line("  📊 Redis version: " . ($info['redis_version'] ?? 'Unknown'));
-            
+
+            $this->line('  ✅ Redis connected successfully');
+            $this->line('  📊 Redis version: ' . ($info['redis_version'] ?? 'Unknown'));
+
             return [
                 'name' => 'Redis Connection',
                 'passed' => true,
                 'details' => 'Redis connected successfully',
             ];
         } catch (\Exception $e) {
-            $this->line("  ❌ Redis connection failed: " . $e->getMessage());
+            $this->line('  ❌ Redis connection failed: ' . $e->getMessage());
+
             return [
                 'name' => 'Redis Connection',
                 'passed' => false,
@@ -130,29 +134,31 @@ class SystemTest extends Command
     }
 
     /**
-     * Test cache system
+     * Test cache system.
      */
     private function testCache(): array
     {
         $this->info('💾 Testing Cache System...');
-        
+
         try {
             $key = 'test_cache_' . time();
             $value = 'test_value_' . rand(1000, 9999);
-            
+
             Cache::put($key, $value, 60);
             $retrieved = Cache::get($key);
             Cache::forget($key);
-            
+
             if ($retrieved === $value) {
-                $this->line("  ✅ Cache system working correctly");
+                $this->line('  ✅ Cache system working correctly');
+
                 return [
                     'name' => 'Cache System',
                     'passed' => true,
                     'details' => 'Cache read/write operations successful',
                 ];
             } else {
-                $this->line("  ❌ Cache system failed: Value mismatch");
+                $this->line('  ❌ Cache system failed: Value mismatch');
+
                 return [
                     'name' => 'Cache System',
                     'passed' => false,
@@ -160,7 +166,8 @@ class SystemTest extends Command
                 ];
             }
         } catch (\Exception $e) {
-            $this->line("  ❌ Cache system failed: " . $e->getMessage());
+            $this->line('  ❌ Cache system failed: ' . $e->getMessage());
+
             return [
                 'name' => 'Cache System',
                 'passed' => false,
@@ -170,14 +177,15 @@ class SystemTest extends Command
     }
 
     /**
-     * Test mail system
+     * Test mail system.
      */
     private function testMail(?string $testEmail): array
     {
         $this->info('📧 Testing Mail System...');
-        
+
         if (!$testEmail) {
-            $this->line("  ⚠️ No test email provided, skipping mail test");
+            $this->line('  ⚠️ No test email provided, skipping mail test');
+
             return [
                 'name' => 'Mail System',
                 'passed' => true,
@@ -188,20 +196,22 @@ class SystemTest extends Command
         try {
             Artisan::call('email:test', [
                 'email' => $testEmail,
-                '--sync' => true
+                '--sync' => true,
             ]);
 
             $output = Artisan::output();
-            
+
             if (strpos($output, '✅') !== false) {
-                $this->line("  ✅ Mail system working correctly");
+                $this->line('  ✅ Mail system working correctly');
+
                 return [
                     'name' => 'Mail System',
                     'passed' => true,
                     'details' => 'Test email sent successfully',
                 ];
             } else {
-                $this->line("  ❌ Mail system failed");
+                $this->line('  ❌ Mail system failed');
+
                 return [
                     'name' => 'Mail System',
                     'passed' => false,
@@ -209,7 +219,8 @@ class SystemTest extends Command
                 ];
             }
         } catch (\Exception $e) {
-            $this->line("  ❌ Mail system failed: " . $e->getMessage());
+            $this->line('  ❌ Mail system failed: ' . $e->getMessage());
+
             return [
                 'name' => 'Mail System',
                 'passed' => false,
@@ -219,12 +230,12 @@ class SystemTest extends Command
     }
 
     /**
-     * Test queue system
+     * Test queue system.
      */
     private function testQueue(): array
     {
         $this->info('🚀 Testing Queue System...');
-        
+
         try {
             $queues = ['emails-high', 'emails-medium', 'emails-low', 'emails-welcome'];
             $totalPending = 0;
@@ -237,17 +248,18 @@ class SystemTest extends Command
                 $totalFailed += $failed;
             }
 
-            $this->line("  ✅ Queue system accessible");
+            $this->line('  ✅ Queue system accessible');
             $this->line("  📊 Total pending jobs: {$totalPending}");
             $this->line("  📊 Total failed jobs: {$totalFailed}");
-            
+
             return [
                 'name' => 'Queue System',
                 'passed' => true,
                 'details' => "Queue system accessible with {$totalPending} pending jobs",
             ];
         } catch (\Exception $e) {
-            $this->line("  ❌ Queue system failed: " . $e->getMessage());
+            $this->line('  ❌ Queue system failed: ' . $e->getMessage());
+
             return [
                 'name' => 'Queue System',
                 'passed' => false,
@@ -257,25 +269,27 @@ class SystemTest extends Command
     }
 
     /**
-     * Test email templates
+     * Test email templates.
      */
     private function testEmailTemplates(): array
     {
         $this->info('📧 Testing Email Templates...');
-        
+
         try {
             Artisan::call('email:warm-cache');
             $output = Artisan::output();
-            
+
             if (strpos($output, 'cached successfully') !== false) {
-                $this->line("  ✅ Email templates working correctly");
+                $this->line('  ✅ Email templates working correctly');
+
                 return [
                     'name' => 'Email Templates',
                     'passed' => true,
                     'details' => 'Email templates cached successfully',
                 ];
             } else {
-                $this->line("  ❌ Email templates failed");
+                $this->line('  ❌ Email templates failed');
+
                 return [
                     'name' => 'Email Templates',
                     'passed' => false,
@@ -283,7 +297,8 @@ class SystemTest extends Command
                 ];
             }
         } catch (\Exception $e) {
-            $this->line("  ❌ Email templates failed: " . $e->getMessage());
+            $this->line('  ❌ Email templates failed: ' . $e->getMessage());
+
             return [
                 'name' => 'Email Templates',
                 'passed' => false,
@@ -293,25 +308,27 @@ class SystemTest extends Command
     }
 
     /**
-     * Test monitoring system
+     * Test monitoring system.
      */
     private function testMonitoring(): array
     {
         $this->info('📊 Testing Monitoring System...');
-        
+
         try {
             Artisan::call('email:monitor');
             $output = Artisan::output();
-            
+
             if (strpos($output, 'Email System Health Status') !== false) {
-                $this->line("  ✅ Monitoring system working correctly");
+                $this->line('  ✅ Monitoring system working correctly');
+
                 return [
                     'name' => 'Monitoring System',
                     'passed' => true,
                     'details' => 'Monitoring system accessible',
                 ];
             } else {
-                $this->line("  ❌ Monitoring system failed");
+                $this->line('  ❌ Monitoring system failed');
+
                 return [
                     'name' => 'Monitoring System',
                     'passed' => false,
@@ -319,7 +336,8 @@ class SystemTest extends Command
                 ];
             }
         } catch (\Exception $e) {
-            $this->line("  ❌ Monitoring system failed: " . $e->getMessage());
+            $this->line('  ❌ Monitoring system failed: ' . $e->getMessage());
+
             return [
                 'name' => 'Monitoring System',
                 'passed' => false,
@@ -329,25 +347,27 @@ class SystemTest extends Command
     }
 
     /**
-     * Test workers
+     * Test workers.
      */
     private function testWorkers(): array
     {
         $this->info('👷 Testing Workers...');
-        
+
         try {
             Artisan::call('workers:status');
             $output = Artisan::output();
-            
+
             if (strpos($output, 'Queue Workers Status') !== false) {
-                $this->line("  ✅ Workers status accessible");
+                $this->line('  ✅ Workers status accessible');
+
                 return [
                     'name' => 'Workers',
                     'passed' => true,
                     'details' => 'Workers status accessible',
                 ];
             } else {
-                $this->line("  ❌ Workers test failed");
+                $this->line('  ❌ Workers test failed');
+
                 return [
                     'name' => 'Workers',
                     'passed' => false,
@@ -355,7 +375,8 @@ class SystemTest extends Command
                 ];
             }
         } catch (\Exception $e) {
-            $this->line("  ❌ Workers test failed: " . $e->getMessage());
+            $this->line('  ❌ Workers test failed: ' . $e->getMessage());
+
             return [
                 'name' => 'Workers',
                 'passed' => false,
@@ -365,34 +386,35 @@ class SystemTest extends Command
     }
 
     /**
-     * Test performance
+     * Test performance.
      */
     private function testPerformance(): array
     {
         $this->info('⚡ Testing Performance...');
-        
+
         try {
             $startTime = microtime(true);
-            
+
             // Test database query performance
             $users = DB::table('users')->count();
             $invitations = DB::table('invitations')->count();
-            
+
             $endTime = microtime(true);
             $executionTime = round(($endTime - $startTime) * 1000, 2);
-            
-            $this->line("  ✅ Performance test completed");
+
+            $this->line('  ✅ Performance test completed');
             $this->line("  📊 Database query time: {$executionTime}ms");
             $this->line("  📊 Users count: {$users}");
             $this->line("  📊 Invitations count: {$invitations}");
-            
+
             return [
                 'name' => 'Performance',
                 'passed' => true,
                 'details' => "Database queries completed in {$executionTime}ms",
             ];
         } catch (\Exception $e) {
-            $this->line("  ❌ Performance test failed: " . $e->getMessage());
+            $this->line('  ❌ Performance test failed: ' . $e->getMessage());
+
             return [
                 'name' => 'Performance',
                 'passed' => false,
@@ -402,7 +424,7 @@ class SystemTest extends Command
     }
 
     /**
-     * Display test results
+     * Display test results.
      */
     private function displayResults(array $results): void
     {

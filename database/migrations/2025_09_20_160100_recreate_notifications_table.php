@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     /**
      * Run the migrations.
      */
@@ -13,7 +12,7 @@ return new class extends Migration
     {
         // Drop existing notifications table and recreate
         Schema::dropIfExists('notifications');
-        
+
         Schema::create('notifications', function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->ulid('user_id');

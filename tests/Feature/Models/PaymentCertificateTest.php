@@ -1,12 +1,14 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Models;
 
-use App\Models\PaymentCertificate;
-use App\Models\PaymentCertificateLine;
 use App\Models\Boq;
 use App\Models\BoqLineItem;
 use App\Models\Contract;
+use App\Models\PaymentCertificate;
+use App\Models\PaymentCertificateLine;
 use App\Models\Project;
 use App\Models\Tenant;
 use App\Models\User;
@@ -21,10 +23,15 @@ class PaymentCertificateTest extends TestCase
     use TenantUserFactoryTrait;
 
     private Tenant $tenant;
+
     private User $user;
+
     private Project $project;
+
     private Contract $contract;
+
     private Boq $boq;
+
     private BoqLineItem $line;
 
     protected function setUp(): void

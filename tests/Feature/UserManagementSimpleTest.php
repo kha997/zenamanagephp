@@ -1,34 +1,38 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\Tenant;
-use Tests\TestCase;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Tests\Support\SSOT\FixtureFactory;
+use Tests\TestCase;
 
 /**
- * Test User Management & Authentication System (Simplified)
- * 
+ * Test User Management & Authentication System (Simplified).
+ *
  * Kịch bản: Test đăng nhập, đăng ký, quản lý user, và authentication features
  */
 class UserManagementSimpleTest extends TestCase
 {
-    use RefreshDatabase, FixtureFactory;
+    use RefreshDatabase;
+    use FixtureFactory;
 
     private $tenant;
+
     private $user;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Disable foreign key constraints for testing
         \DB::statement('PRAGMA foreign_keys=OFF;');
-        
+
         // Tạo tenant
         $this->tenant = $this->createTenant([
             'name' => 'Test Company',
@@ -51,7 +55,7 @@ class UserManagementSimpleTest extends TestCase
     }
 
     /**
-     * Test user creation
+     * Test user creation.
      */
     public function test_can_create_user(): void
     {
@@ -80,7 +84,7 @@ class UserManagementSimpleTest extends TestCase
     }
 
     /**
-     * Test user update
+     * Test user update.
      */
     public function test_can_update_user(): void
     {
@@ -101,7 +105,7 @@ class UserManagementSimpleTest extends TestCase
     }
 
     /**
-     * Test password update
+     * Test password update.
      */
     public function test_can_update_user_password(): void
     {
@@ -115,7 +119,7 @@ class UserManagementSimpleTest extends TestCase
     }
 
     /**
-     * Test user status toggle
+     * Test user status toggle.
      */
     public function test_can_toggle_user_status(): void
     {
@@ -129,7 +133,7 @@ class UserManagementSimpleTest extends TestCase
     }
 
     /**
-     * Test user profile data
+     * Test user profile data.
      */
     public function test_can_manage_user_profile_data(): void
     {
@@ -157,7 +161,7 @@ class UserManagementSimpleTest extends TestCase
     }
 
     /**
-     * Test user tenant relationship
+     * Test user tenant relationship.
      */
     public function test_user_tenant_relationship(): void
     {
@@ -166,7 +170,7 @@ class UserManagementSimpleTest extends TestCase
     }
 
     /**
-     * Test user last login tracking
+     * Test user last login tracking.
      */
     public function test_can_track_last_login(): void
     {
@@ -179,7 +183,7 @@ class UserManagementSimpleTest extends TestCase
     }
 
     /**
-     * Test user API token generation
+     * Test user API token generation.
      */
     public function test_can_generate_api_token(): void
     {
@@ -193,7 +197,7 @@ class UserManagementSimpleTest extends TestCase
     }
 
     /**
-     * Test user bulk operations
+     * Test user bulk operations.
      */
     public function test_can_perform_bulk_user_operations(): void
     {
@@ -229,7 +233,7 @@ class UserManagementSimpleTest extends TestCase
     }
 
     /**
-     * Test user email validation
+     * Test user email validation.
      */
     public function test_user_email_validation(): void
     {
@@ -252,7 +256,7 @@ class UserManagementSimpleTest extends TestCase
     }
 
     /**
-     * Test user password strength
+     * Test user password strength.
      */
     public function test_user_password_strength(): void
     {
@@ -270,18 +274,18 @@ class UserManagementSimpleTest extends TestCase
     }
 
     /**
-     * Test user search functionality
+     * Test user search functionality.
      */
     public function test_can_search_users(): void
     {
         $baselineTenantUsers = User::where('tenant_id', $this->tenant->id)->count();
-        $johnNeedle = 'JohnSearch'.Str::lower(Str::random(8));
-        $janeNeedle = 'jane-search-'.Str::lower(Str::random(8));
+        $johnNeedle = 'JohnSearch' . Str::lower(Str::random(8));
+        $janeNeedle = 'jane-search-' . Str::lower(Str::random(8));
 
         // Create additional users for search testing
         User::factory()->create([
             'name' => $johnNeedle,
-            'email' => $johnNeedle.'@example.com',
+            'email' => $johnNeedle . '@example.com',
             'password' => Hash::make('password123'),
             'tenant_id' => $this->tenant->id,
             'is_active' => true,
@@ -289,7 +293,7 @@ class UserManagementSimpleTest extends TestCase
 
         User::factory()->create([
             'name' => 'Jane Smith',
-            'email' => $janeNeedle.'@example.com',
+            'email' => $janeNeedle . '@example.com',
             'password' => Hash::make('password123'),
             'tenant_id' => $this->tenant->id,
             'is_active' => true,
@@ -297,17 +301,17 @@ class UserManagementSimpleTest extends TestCase
 
         // Search by name (tenant-scoped to avoid seed-data collisions)
         $johnUsers = User::where('tenant_id', $this->tenant->id)
-            ->where('name', 'like', '%'.$johnNeedle.'%')
+            ->where('name', 'like', '%' . $johnNeedle . '%')
             ->get();
         $this->assertCount(1, $johnUsers);
         $this->assertEquals($johnNeedle, $johnUsers->first()->name);
 
         // Search by email
         $janeUsers = User::where('tenant_id', $this->tenant->id)
-            ->where('email', 'like', '%'.$janeNeedle.'%')
+            ->where('email', 'like', '%' . $janeNeedle . '%')
             ->get();
         $this->assertCount(1, $janeUsers);
-        $this->assertEquals($janeNeedle.'@example.com', $janeUsers->first()->email);
+        $this->assertEquals($janeNeedle . '@example.com', $janeUsers->first()->email);
 
         // Search by tenant
         $tenantUsers = User::where('tenant_id', $this->tenant->id)->get();
@@ -315,7 +319,7 @@ class UserManagementSimpleTest extends TestCase
     }
 
     /**
-     * Test user pagination
+     * Test user pagination.
      */
     public function test_can_paginate_users(): void
     {
@@ -359,7 +363,7 @@ class UserManagementSimpleTest extends TestCase
     }
 
     /**
-     * Test user filtering
+     * Test user filtering.
      */
     public function test_can_filter_users(): void
     {

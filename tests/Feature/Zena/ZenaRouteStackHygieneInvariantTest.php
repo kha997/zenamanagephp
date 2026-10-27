@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Zena;
 
@@ -63,7 +65,6 @@ class ZenaRouteStackHygieneInvariantTest extends TestCase
             if (!in_array('api', $middleware, true)) {
                 $errors[] = "{$uri} no longer resolves through the api middleware group stack ({$routes[$uri]->uri()}); actual: " . implode(', ', $middleware);
             }
-
         }
 
         $loginUri = 'api/zena/auth/login';
@@ -112,7 +113,7 @@ class ZenaRouteStackHygieneInvariantTest extends TestCase
 
     private function normalizeMiddleware(RoutingRoute $route): array
     {
-        return array_values(array_filter(array_map(fn (?string $entry) => trim((string) $entry), $route->gatherMiddleware()), fn (string $entry) => $entry !== '',));
+        return array_values(array_filter(array_map(fn (?string $entry) => trim((string) $entry), $route->gatherMiddleware()), fn (string $entry) => $entry !== '', ));
     }
 
     private function isDisallowedSessionMiddleware(string $entry): bool

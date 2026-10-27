@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
 
@@ -6,11 +8,11 @@ use App\Http\Controllers\Api\MaterialRequestController as ApiMaterialRequestCont
 use App\Http\Controllers\Controller;
 use App\Models\MaterialRequest;
 use App\Models\Project;
-use Illuminate\Contracts\View\View;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Throwable;
 

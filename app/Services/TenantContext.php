@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -9,7 +11,7 @@ final class TenantContext
 {
     public static function id(?Request $request = null): ?string
     {
-        $request = $request ?? request();
+        $request ??= request();
 
         $tenantId = null;
 

@@ -1,14 +1,16 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * Task API Resource
- * 
+ * Task API Resource.
+ *
  * Transforms Task model for JSON responses according to JSend specification
- * 
+ *
  * @property \App\Models\Task $resource
  */
 class TaskResource extends JsonResource
@@ -33,19 +35,19 @@ class TaskResource extends JsonResource
             'dependencies' => $this->dependencies_json ?? [],
             'conditional_tag' => $this->conditional_tag,
             'is_hidden' => (bool) $this->is_hidden,
-            
+
             // Computed fields
             'duration_days' => $this->getDurationDays(),
             'is_overdue' => $this->isOverdue(),
             'can_start' => $this->canStart(),
             'dependency_status' => $this->getDependencyStatus(),
-            
+
             // Relationships - conditional loading
             'project' => new ProjectResource($this->whenLoaded('project')),
             'component' => new ComponentResource($this->whenLoaded('component')),
             'assignments' => TaskAssignmentResource::collection($this->whenLoaded('assignments')),
             'interaction_logs' => InteractionLogResource::collection($this->whenLoaded('interactionLogs')),
-            
+
             // Timestamps
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),

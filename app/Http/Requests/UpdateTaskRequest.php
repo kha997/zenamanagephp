@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests;
 
@@ -24,7 +26,7 @@ class UpdateTaskRequest extends BaseApiRequest
     {
         $taskId = $this->route('task');
         $task = Task::find($taskId);
-        
+
         return [
             'component_id' => [
                 'nullable',
@@ -35,11 +37,11 @@ class UpdateTaskRequest extends BaseApiRequest
                     if ($component && $task && $component->project_id !== $task->project_id) {
                         $fail('Component phải thuộc cùng dự án với task.');
                     }
-                }
+                },
             ],
             'phase_id' => [
                 'nullable',
-                'integer'
+                'integer',
             ],
             'name' => [
                 'sometimes',
@@ -48,35 +50,35 @@ class UpdateTaskRequest extends BaseApiRequest
                 'max:255',
                 Rule::unique('tasks')
                     ->ignore($taskId)
-                    ->where('project_id', $task ? $task->project_id : null)
+                    ->where('project_id', $task ? $task->project_id : null),
             ],
             'description' => [
                 'nullable',
                 'string',
-                'max:2000'
+                'max:2000',
             ],
             'start_date' => [
                 'nullable',
-                'date'
+                'date',
             ],
             'end_date' => [
                 'nullable',
                 'date',
-                'after_or_equal:start_date'
+                'after_or_equal:start_date',
             ],
             'status' => [
                 'nullable',
                 'string',
-                Rule::in(array_keys(Task::STATUSES))
+                Rule::in(array_keys(Task::STATUSES)),
             ],
             'priority' => [
                 'nullable',
                 'string',
-                Rule::in(array_keys(Task::PRIORITIES))
+                Rule::in(array_keys(Task::PRIORITIES)),
             ],
             'dependencies' => [
                 'nullable',
-                'array'
+                'array',
             ],
             'dependencies.*' => [
                 'integer',
@@ -87,22 +89,22 @@ class UpdateTaskRequest extends BaseApiRequest
                     if ($dependentTask && $task && $dependentTask->project_id !== $task->project_id) {
                         $fail('Task phụ thuộc phải thuộc cùng dự án.');
                     }
-                }
+                },
             ],
             'conditional_tag' => [
                 'nullable',
                 'string',
-                'max:100'
+                'max:100',
             ],
             'is_hidden' => [
                 'nullable',
-                'boolean'
+                'boolean',
             ],
             'estimated_hours' => [
                 'nullable',
                 'numeric',
                 'min:0',
-                'max:9999.99'
+                'max:9999.99',
             ],
             'actual_hours' => [
                 'nullable',
@@ -116,36 +118,36 @@ class UpdateTaskRequest extends BaseApiRequest
                         // Chỉ warning, không fail validation
                         session()->flash('warning', 'Số giờ thực tế vượt quá 50% so với ước tính.');
                     }
-                }
+                },
             ],
             'progress_percent' => [
                 'nullable',
                 'numeric',
                 'min:0',
-                'max:100'
+                'max:100',
             ],
             'tags' => [
                 'nullable',
-                'array'
+                'array',
             ],
             'tags.*' => [
                 'string',
-                'max:50'
+                'max:50',
             ],
             'visibility' => [
                 'nullable',
                 'string',
-                'in:internal,client'
+                'in:internal,client',
             ],
             'client_approved' => [
                 'nullable',
-                'boolean'
-            ]
+                'boolean',
+            ],
         ];
     }
 
     /**
-     * Validation sau khi rules cơ bản đã pass
+     * Validation sau khi rules cơ bản đã pass.
      */
     public function withValidator($validator)
     {
@@ -159,13 +161,13 @@ class UpdateTaskRequest extends BaseApiRequest
     }
 
     /**
-     * Kiểm tra vòng lặp trong dependencies
+     * Kiểm tra vòng lặp trong dependencies.
      */
     private function validateDependencyCycle($validator): void
     {
         $dependencies = $this->input('dependencies');
         $taskId = $this->route('task');
-        
+
         if (!$dependencies) {
             return;
         }
@@ -180,7 +182,7 @@ class UpdateTaskRequest extends BaseApiRequest
     }
 
     /**
-     * Kiểm tra logic ngày tháng
+     * Kiểm tra logic ngày tháng.
      */
     private function validateDateLogic($validator): void
     {
@@ -191,11 +193,11 @@ class UpdateTaskRequest extends BaseApiRequest
 
         if ($task && ($startDate || $endDate)) {
             $project = $task->project;
-            
+
             if ($project) {
                 $finalStartDate = $startDate ?? $task->start_date;
                 $finalEndDate = $endDate ?? $task->end_date;
-                
+
                 if ($project->start_date && $finalStartDate && $finalStartDate < $project->start_date) {
                     $validator->errors()->add('start_date', 'Ngày bắt đầu task không được trước ngày bắt đầu dự án.');
                 }
@@ -207,38 +209,38 @@ class UpdateTaskRequest extends BaseApiRequest
     }
 
     /**
-     * Kiểm tra chuyển đổi trạng thái hợp lệ
+     * Kiểm tra chuyển đổi trạng thái hợp lệ.
      */
     private function validateStatusTransition($validator): void
     {
         $newStatus = $this->input('status');
         $taskId = $this->route('task');
         $task = Task::find($taskId);
-        
+
         if (!$newStatus || !$task) {
             return;
         }
 
         $currentStatus = $task->status;
-        
+
         // Định nghĩa các chuyển đổi trạng thái hợp lệ
         $validTransitions = [
             'pending' => ['in_progress', 'cancelled'],
             'in_progress' => ['completed', 'on_hold', 'cancelled'],
             'on_hold' => ['in_progress', 'cancelled'],
             'completed' => ['in_progress'], // Có thể reopen
-            'cancelled' => ['pending'] // Có thể reactive
+            'cancelled' => ['pending'], // Có thể reactive
         ];
 
-        if ($currentStatus !== $newStatus && 
-            (!isset($validTransitions[$currentStatus]) || 
+        if ($currentStatus !== $newStatus &&
+            (!isset($validTransitions[$currentStatus]) ||
              !in_array($newStatus, $validTransitions[$currentStatus]))) {
             $validator->errors()->add('status', "Không thể chuyển từ trạng thái '{$currentStatus}' sang '{$newStatus}'.");
         }
     }
 
     /**
-     * Kiểm tra tính nhất quán của progress
+     * Kiểm tra tính nhất quán của progress.
      */
     private function validateProgressConsistency($validator): void
     {
@@ -246,7 +248,7 @@ class UpdateTaskRequest extends BaseApiRequest
         $status = $this->input('status');
         $taskId = $this->route('task');
         $task = Task::find($taskId);
-        
+
         if (!$task) {
             return;
         }
@@ -258,18 +260,18 @@ class UpdateTaskRequest extends BaseApiRequest
         if ($finalStatus === 'completed' && $finalProgress < 100) {
             $validator->errors()->add('progress_percent', 'Task hoàn thành phải có tiến độ 100%.');
         }
-        
+
         if ($finalStatus === 'pending' && $finalProgress > 0) {
             $validator->errors()->add('progress_percent', 'Task chờ thực hiện không thể có tiến độ > 0%.');
         }
-        
+
         if ($finalProgress == 100 && !in_array($finalStatus, ['completed', 'cancelled'])) {
             $validator->errors()->add('status', 'Task có tiến độ 100% phải ở trạng thái hoàn thành.');
         }
     }
 
     /**
-     * Kiểm tra xem dependency có tạo vòng lặp không
+     * Kiểm tra xem dependency có tạo vòng lặp không.
      */
     private function wouldCreateCycle(int $taskId, int $dependencyId, array $allDependencies): bool
     {
@@ -284,7 +286,7 @@ class UpdateTaskRequest extends BaseApiRequest
     }
 
     /**
-     * Kiểm tra vòng lặp đệ quy
+     * Kiểm tra vòng lặp đệ quy.
      */
     private function checkCycleRecursive(array $dependencies, array $targetIds, array $visited): bool
     {
@@ -292,11 +294,11 @@ class UpdateTaskRequest extends BaseApiRequest
             if (in_array($depId, $targetIds)) {
                 return true; // Tìm thấy vòng lặp
             }
-            
+
             if (in_array($depId, $visited)) {
                 continue; // Đã kiểm tra rồi
             }
-            
+
             $visited[] = $depId;
             $task = Task::find($depId);
             if ($task && $task->dependencies_json) {
@@ -305,7 +307,7 @@ class UpdateTaskRequest extends BaseApiRequest
                 }
             }
         }
-        
+
         return false;
     }
 }

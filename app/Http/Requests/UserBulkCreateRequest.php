@@ -1,14 +1,13 @@
 <?php
 
 namespace App\Http\Requests;
-use Illuminate\Support\Facades\Auth;
-
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
 
 /**
- * User Bulk Create Request
- * 
+ * User Bulk Create Request.
+ *
  * Validates bulk user creation with consistent rules
  */
 class UserBulkCreateRequest extends FormRequest

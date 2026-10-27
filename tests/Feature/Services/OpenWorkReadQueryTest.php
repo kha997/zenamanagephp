@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Services;
 
@@ -16,6 +18,7 @@ class OpenWorkReadQueryTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenant;
+
     private Project $project;
 
     protected function setUp(): void

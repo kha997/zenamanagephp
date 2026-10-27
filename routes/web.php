@@ -1,17 +1,17 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Illuminate\Http\Request;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Admin\MaintenanceController;
 use App\Http\Controllers\Api\DashboardResourceController;
 use App\Http\Controllers\Api\UploadController;
 use App\Http\Controllers\Api\WebSocketAuthController;
 use App\Http\Controllers\Api\WidgetController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DashboardController;
 use App\Models\Project;
 use App\Models\Team;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -36,11 +36,11 @@ Route::middleware(['legacy.gone', 'legacy.redirect', 'legacy.route'])->group(fun
     Route::get('/dashboard', function () {
         return redirect('/app/dashboard');
     })->name('legacy.dashboard');
-    
+
     Route::get('/projects', function () {
         return redirect('/app/projects');
     })->name('legacy.projects');
-    
+
     Route::get('/tasks', function () {
         return redirect('/app/tasks');
     })->name('legacy.tasks');
@@ -77,7 +77,7 @@ if (app()->environment(['local', 'testing'])) {
     Route::get('/password/reset', function () {
         return redirect('/login')->with('info', 'Enter your email to reset the password.');
     })->name('password.reset');
- 
+
     Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout.post');
@@ -94,7 +94,7 @@ Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function ()
     // App\Services\BusinessKpiService, consumed by operator.crm.reports
     // (Web\CrmReportController). The dead classes remain on disk (unrouted,
     // no consumer) pending a cleanup pass with file-delete permission.
-    
+
     // Alert Routes
     Route::middleware($universalFrameHardeningStack)->group(function () {
         Route::get('/alerts', [App\Http\Controllers\AlertController::class, 'index'])->name('api.alerts.index');
@@ -104,14 +104,14 @@ Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function ()
         Route::post('/alerts/dismiss-all', [App\Http\Controllers\AlertController::class, 'dismissAll'])->name('api.alerts.dismiss-all');
         Route::post('/alerts/create', [App\Http\Controllers\AlertController::class, 'create'])->name('api.alerts.create');
     });
-    
+
     // Activity Routes
     Route::middleware($universalFrameHardeningStack)->group(function () {
         Route::get('/activities', [App\Http\Controllers\ActivityController::class, 'index'])->name('api.activities.index');
         Route::get('/activities/by-type', [App\Http\Controllers\ActivityController::class, 'byType'])->name('api.activities.by-type');
         Route::get('/activities/stats', [App\Http\Controllers\ActivityController::class, 'stats'])->name('api.activities.stats');
     });
-    
+
     // Smart Tools Routes
     // Search: dùng operator search thật tại route operator.search.index
     // (mock SearchService/SearchController đã xóa)
@@ -125,7 +125,7 @@ Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function ()
         Route::delete('/filters/saved-views/{viewId}', [App\Http\Controllers\FilterController::class, 'deleteView'])->name('api.filters.delete-view');
         Route::post('/filters/apply', [App\Http\Controllers\FilterController::class, 'applyFilters'])->name('api.filters.apply');
     });
-    
+
     // Analysis Routes
     Route::middleware($universalFrameHardeningStack)->group(function () {
         Route::post('/analysis', [App\Http\Controllers\AnalysisController::class, 'index'])->name('api.analysis.index');
@@ -134,23 +134,23 @@ Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function ()
         Route::get('/analysis/{context}/charts', [App\Http\Controllers\AnalysisController::class, 'charts'])->name('api.analysis.charts');
         Route::get('/analysis/{context}/insights', [App\Http\Controllers\AnalysisController::class, 'insights'])->name('api.analysis.insights');
     });
-    
+
     // Export: dùng operator report export thật tại route operator.reports.export
     // (mock ExportService/ExportController đã xóa)
 });
 
-    // Accessibility API Routes (moved to /api/v1/accessibility)
-    Route::prefix('api/v1/accessibility')->middleware(['auth', 'tenant.isolation', 'rbac', 'input.sanitization', 'error.envelope'])->group(function () {
-        Route::get('/preferences', [App\Http\Controllers\AccessibilityController::class, 'preferences'])->name('api.accessibility.preferences');
-        Route::post('/preferences', [App\Http\Controllers\AccessibilityController::class, 'savePreferences'])->name('api.accessibility.save-preferences');
-        Route::post('/preferences/reset', [App\Http\Controllers\AccessibilityController::class, 'resetPreferences'])->name('api.accessibility.reset-preferences');
-        Route::get('/compliance-report', [App\Http\Controllers\AccessibilityController::class, 'complianceReport'])->name('api.accessibility.compliance-report');
-        Route::post('/audit-page', [App\Http\Controllers\AccessibilityController::class, 'auditPage'])->name('api.accessibility.audit-page');
-        Route::get('/statistics', [App\Http\Controllers\AccessibilityController::class, 'statistics'])->name('api.accessibility.statistics');
-        Route::post('/check-color-contrast', [App\Http\Controllers\AccessibilityController::class, 'checkColorContrast'])->name('api.accessibility.check-color-contrast');
-        Route::post('/generate-report', [App\Http\Controllers\AccessibilityController::class, 'generateReport'])->name('api.accessibility.generate-report');
-        Route::get('/help', [App\Http\Controllers\AccessibilityController::class, 'help'])->name('api.accessibility.help');
-    });
+// Accessibility API Routes (moved to /api/v1/accessibility)
+Route::prefix('api/v1/accessibility')->middleware(['auth', 'tenant.isolation', 'rbac', 'input.sanitization', 'error.envelope'])->group(function () {
+    Route::get('/preferences', [App\Http\Controllers\AccessibilityController::class, 'preferences'])->name('api.accessibility.preferences');
+    Route::post('/preferences', [App\Http\Controllers\AccessibilityController::class, 'savePreferences'])->name('api.accessibility.save-preferences');
+    Route::post('/preferences/reset', [App\Http\Controllers\AccessibilityController::class, 'resetPreferences'])->name('api.accessibility.reset-preferences');
+    Route::get('/compliance-report', [App\Http\Controllers\AccessibilityController::class, 'complianceReport'])->name('api.accessibility.compliance-report');
+    Route::post('/audit-page', [App\Http\Controllers\AccessibilityController::class, 'auditPage'])->name('api.accessibility.audit-page');
+    Route::get('/statistics', [App\Http\Controllers\AccessibilityController::class, 'statistics'])->name('api.accessibility.statistics');
+    Route::post('/check-color-contrast', [App\Http\Controllers\AccessibilityController::class, 'checkColorContrast'])->name('api.accessibility.check-color-contrast');
+    Route::post('/generate-report', [App\Http\Controllers\AccessibilityController::class, 'generateReport'])->name('api.accessibility.generate-report');
+    Route::get('/help', [App\Http\Controllers\AccessibilityController::class, 'help'])->name('api.accessibility.help');
+});
 
 // Performance Optimization API Routes (moved to /api/v1/performance)
 Route::prefix('api/v1/performance')->middleware(['auth', 'tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'])->group(function () {
@@ -185,7 +185,7 @@ Route::prefix('api/v1/final-integration')->middleware(['auth', 'tenant.isolation
 // further below — earlier duplicate closure definitions were removed.
 
 // Admin Routes (System-wide with auth + rbac:admin middleware)
-Route::get('/admin/dashboard', function() {
+Route::get('/admin/dashboard', function () {
     return view('admin.dashboard');
 })->middleware(['auth', 'tenant.isolation', 'rbac:admin'])->name('admin-dashboard');
 
@@ -210,77 +210,67 @@ if (app()->environment(['local', 'testing'])) {
 
 // Test/demo view routes — local and testing environments only
 if (app()->environment(['local', 'testing'])) {
-    Route::get('/test-tailwind', function() {
+    Route::get('/test-tailwind', function () {
         return view('test-tailwind');
     })->name('test-tailwind');
 
-    Route::get('/test-css-inline', function() {
+    Route::get('/test-css-inline', function () {
         return view('test-css-inline');
     })->name('test-css-inline');
 
-    Route::get('/admin-layout-system', function() {
+    Route::get('/admin-layout-system', function () {
         return view('admin.dashboard-layout-system-standalone');
     })->name('admin-layout-system');
 }
-
-// Enhanced Admin Dashboard Route
-Route::get('/admin-dashboard-enhanced', function() {
-    return view('admin.dashboard-enhanced');
-})->middleware(['auth', 'tenant.isolation', 'rbac:admin'])->name('admin-dashboard-enhanced');
-
-// Enhanced Projects Management Route
-Route::get('/projects-enhanced', function() {
-    return view('app.projects-enhanced');
-})->middleware(['auth', 'tenant.isolation'])->name('projects-enhanced');
 
 // REMOVED: unauthenticated standalone /admin/users — protected equivalent
 // exists in the admin group below (route name admin-users)
 
 // MOVED: Debug Login Route moved to /_debug namespace
 
-
-        // Admin Routes - System-wide with auth + rbac:admin middleware
-        Route::prefix('admin')->name('admin-')->middleware(['auth', 'tenant.isolation', 'rbac:admin'])->group(function () {
-    Route::get('/', function() {
+// Admin Routes - System-wide with auth + rbac:admin middleware
+Route::prefix('admin')->name('admin-')->middleware(['auth', 'tenant.isolation', 'rbac:admin'])->group(function () {
+    Route::get('/', function () {
         return view('admin.dashboard-css-inline');
     })->name('dashboard');
-    Route::get('/dashboard', function() {
+    Route::get('/dashboard', function () {
         return view('admin.dashboard');
     })->name('dashboard.page');
-    Route::get('/users', function() {
+    Route::get('/users', function () {
         return view('admin.users');
     })->name('users');
-        Route::get('/tenants', function() {
-            return view('admin.tenants');
-        })->name('tenants');
-    Route::get('/security', function() {
+    Route::get('/tenants', function () {
+        return view('admin.tenants');
+    })->name('tenants');
+    Route::get('/security', function () {
         return '<h1>Security</h1><p>Security settings here.</p>';
     })->name('security');
-    Route::get('/alerts', function() {
+    Route::get('/alerts', function () {
         return '<h1>Alerts</h1><p>System alerts here.</p>';
     })->name('alerts');
-    Route::get('/activities', function() {
-            Route::post('/alerts/resolve', [App\Http\Controllers\AlertController::class, 'resolve'])->name('api.alerts.resolve');
-            Route::post('/activities/create', [App\Http\Controllers\ActivityController::class, 'create'])->name('api.activities.create');
-            Route::post('/activities/clear-old', [App\Http\Controllers\ActivityController::class, 'clearOld'])->name('api.activities.clear-old');
+    Route::get('/activities', function () {
+        Route::post('/alerts/resolve', [App\Http\Controllers\AlertController::class, 'resolve'])->name('api.alerts.resolve');
+        Route::post('/activities/create', [App\Http\Controllers\ActivityController::class, 'create'])->name('api.activities.create');
+        Route::post('/activities/clear-old', [App\Http\Controllers\ActivityController::class, 'clearOld'])->name('api.activities.clear-old');
+
         return '<h1>Activities</h1><p>Activity logs here.</p>';
     })->name('activities');
-    Route::get('/analytics', function() {
+    Route::get('/analytics', function () {
         return '<h1>Analytics</h1><p>Analytics dashboard here.</p>';
     })->name('analytics');
-    Route::get('/projects', function() {
+    Route::get('/projects', function () {
         return view('admin.projects');
     })->name('projects');
-    Route::get('/tasks', function() {
+    Route::get('/tasks', function () {
         return '<h1>Tasks</h1><p>Task management here.</p>';
     })->name('tasks');
-    Route::get('/settings', function() {
+    Route::get('/settings', function () {
         return '<h1>Settings</h1><p>System settings here.</p>';
     })->name('settings');
-    Route::get('/maintenance', function() {
+    Route::get('/maintenance', function () {
         return '<h1>Maintenance</h1><p>System maintenance here.</p>';
     })->name('maintenance');
-    Route::get('/sidebar-builder', function() {
+    Route::get('/sidebar-builder', function () {
         return '<h1>Sidebar Builder</h1><p>Build custom sidebars here.</p>';
     })->name('sidebar-builder');
 });
@@ -291,86 +281,86 @@ Route::get('/projects-enhanced', function() {
 
 // MOVED: Test API Routes moved to /_debug namespace
 
-        // App Routes - MOVED TO DEBUG GATE FOR SECURITY
-        // Dashboard routes temporarily moved to debug namespace due to auth middleware issue
-    // MOVED: Test routes moved to /_debug namespace
-    
-        // API Routes for Projects (must come before web routes to avoid conflicts)
-        // Route::prefix('api/v1/app')->group(function () {
-        //     // Enhanced Projects API endpoints (must come before generic routes)
-        //     Route::get('/projects/metrics', [App\Http\Controllers\Api\App\ProjectController::class, 'metrics'])->middleware('auth:sanctum');
-        //     Route::get('/projects/alerts', [App\Http\Controllers\Api\App\ProjectController::class, 'alerts'])->middleware('auth:sanctum');
-        //     Route::get('/projects/now-panel', [App\Http\Controllers\Api\App\ProjectController::class, 'nowPanel'])->middleware('auth:sanctum');
-        //     Route::get('/projects/filters', [App\Http\Controllers\Api\App\ProjectController::class, 'filters'])->middleware('auth:sanctum');
-        //     Route::get('/projects/insights', [App\Http\Controllers\Api\App\ProjectController::class, 'insights'])->middleware('auth:sanctum');
-        //     Route::get('/projects/activity', [App\Http\Controllers\Api\App\ProjectController::class, 'activity'])->middleware('auth:sanctum');
-            
-        //     // Generic project routes
-        //     // Route::get('/projects', [App\Http\Controllers\Api\App\ProjectController::class, 'index']); // Temporarily commented out for debugging
-        //     // Route::post('/projects', [App\Http\Controllers\Api\App\ProjectController::class, 'store']); // Temporarily commented out for debugging
-            
-        //     // Individual project routes (must come after specific routes)
-        //     Route::get('/projects/{id}', [App\Http\Controllers\Api\App\ProjectController::class, 'show'])->middleware('auth:sanctum');
-        //     Route::put('/projects/{id}', [App\Http\Controllers\Api\App\ProjectController::class, 'update'])->middleware('auth:sanctum');
-        //     Route::delete('/projects/{id}', [App\Http\Controllers\Api\App\ProjectController::class, 'destroy'])->middleware('auth:sanctum');
-        //     Route::get('/projects/{id}/documents', [App\Http\Controllers\Api\App\ProjectController::class, 'documents'])->middleware('auth:sanctum');
-        //     Route::get('/projects/{id}/history', [App\Http\Controllers\Api\App\ProjectController::class, 'history'])->middleware('auth:sanctum');
-        //     Route::get('/projects/{id}/design', [App\Http\Controllers\Api\App\ProjectController::class, 'design'])->middleware('auth:sanctum');
-        //     Route::get('/projects/{id}/construction', [App\Http\Controllers\Api\App\ProjectController::class, 'construction'])->middleware('auth:sanctum');
-            
-        //     // Tasks API endpoints
-        //     Route::get('/tasks', [App\Http\Controllers\Api\App\TaskController::class, 'index'])->middleware('auth:sanctum');
-        //     Route::post('/tasks', [App\Http\Controllers\Api\App\TaskController::class, 'store'])->middleware('auth:sanctum');
-        //     Route::get('/tasks/{id}', [App\Http\Controllers\Api\App\TaskController::class, 'show'])->middleware('auth:sanctum');
-        //     Route::put('/tasks/{id}', [App\Http\Controllers\Api\App\TaskController::class, 'update'])->middleware('auth:sanctum');
-        //     Route::delete('/tasks/{id}', [App\Http\Controllers\Api\App\TaskController::class, 'destroy'])->middleware('auth:sanctum');
-        //     Route::patch('/tasks/{id}/move', [App\Http\Controllers\Api\App\TaskController::class, 'move'])->middleware('auth:sanctum');
-        //     Route::patch('/tasks/{id}/archive', [App\Http\Controllers\Api\App\TaskController::class, 'archive'])->middleware('auth:sanctum');
-            
-        //     // Calendar API endpoints
-        //     Route::get('/calendar', [App\Http\Controllers\Api\App\CalendarController::class, 'index'])->middleware('auth:sanctum');
-        //     Route::post('/calendar', [App\Http\Controllers\Api\App\CalendarController::class, 'store'])->middleware('auth:sanctum');
-        //     Route::put('/calendar/{id}', [App\Http\Controllers\Api\App\CalendarController::class, 'update'])->middleware('auth:sanctum');
-        //     Route::delete('/calendar/{id}', [App\Http\Controllers\Api\App\CalendarController::class, 'destroy'])->middleware('auth:sanctum');
-        //     Route::get('/calendar/upcoming', [App\Http\Controllers\Api\App\CalendarController::class, 'upcoming'])->middleware('auth:sanctum');
-        // });
+// App Routes - MOVED TO DEBUG GATE FOR SECURITY
+// Dashboard routes temporarily moved to debug namespace due to auth middleware issue
+// MOVED: Test routes moved to /_debug namespace
 
-    // Public API Routes (no authentication required)
-    // Route::prefix('api/v1/public')->middleware(['throttle:public'])->group(function () {
-    //     Route::get('/health', [App\Http\Controllers\Api\Public\HealthController::class, 'liveness']);
-    // });
+// API Routes for Projects (must come before web routes to avoid conflicts)
+// Route::prefix('api/v1/app')->group(function () {
+//     // Enhanced Projects API endpoints (must come before generic routes)
+//     Route::get('/projects/metrics', [App\Http\Controllers\Api\App\ProjectController::class, 'metrics'])->middleware('auth:sanctum');
+//     Route::get('/projects/alerts', [App\Http\Controllers\Api\App\ProjectController::class, 'alerts'])->middleware('auth:sanctum');
+//     Route::get('/projects/now-panel', [App\Http\Controllers\Api\App\ProjectController::class, 'nowPanel'])->middleware('auth:sanctum');
+//     Route::get('/projects/filters', [App\Http\Controllers\Api\App\ProjectController::class, 'filters'])->middleware('auth:sanctum');
+//     Route::get('/projects/insights', [App\Http\Controllers\Api\App\ProjectController::class, 'insights'])->middleware('auth:sanctum');
+//     Route::get('/projects/activity', [App\Http\Controllers\Api\App\ProjectController::class, 'activity'])->middleware('auth:sanctum');
 
-    // Admin Performance API Routes (requires authentication + admin ability)
-    // Route::prefix('api/v1/admin/perf')->group(function () {
-    //     Route::get('/metrics', [App\Http\Controllers\Api\Admin\PerformanceController::class, 'metrics'])->middleware('auth:sanctum');
-    //     Route::get('/health', [App\Http\Controllers\Api\Admin\PerformanceController::class, 'health'])->middleware('auth:sanctum');
-    //     Route::post('/clear-caches', [App\Http\Controllers\Api\Admin\PerformanceController::class, 'clearCaches'])->middleware('auth:sanctum');
-    // });
-    
-    // Admin Secrets Management API Routes
-    // Route::prefix('api/v1/admin/secrets')->group(function () {
-    //     Route::post('/rotate', [App\Http\Controllers\Api\Admin\SecretsController::class, 'rotate'])->middleware(['auth:sanctum', 'ability:admin', 'rate.limit:secrets']);
-    //     Route::get('/status', [App\Http\Controllers\Api\Admin\SecretsController::class, 'status'])->middleware(['auth:sanctum', 'ability:admin', 'rate.limit:secrets']);
-    //     Route::post('/schedule', [App\Http\Controllers\Api\Admin\SecretsController::class, 'schedule'])->middleware(['auth:sanctum', 'ability:admin', 'rate.limit:secrets']);
-    // });
+//     // Generic project routes
+//     // Route::get('/projects', [App\Http\Controllers\Api\App\ProjectController::class, 'index']); // Temporarily commented out for debugging
+//     // Route::post('/projects', [App\Http\Controllers\Api\App\ProjectController::class, 'store']); // Temporarily commented out for debugging
 
-    // App Routes (tenant-scoped, auth + tenant isolation enforced)
-    Route::prefix('app')->name('app.')->middleware(['auth', 'tenant.isolation'])->group(function () {
-        Route::get('/dashboard', [App\Http\Controllers\Web\AppController::class, 'dashboard'])->name('dashboard');
+//     // Individual project routes (must come after specific routes)
+//     Route::get('/projects/{id}', [App\Http\Controllers\Api\App\ProjectController::class, 'show'])->middleware('auth:sanctum');
+//     Route::put('/projects/{id}', [App\Http\Controllers\Api\App\ProjectController::class, 'update'])->middleware('auth:sanctum');
+//     Route::delete('/projects/{id}', [App\Http\Controllers\Api\App\ProjectController::class, 'destroy'])->middleware('auth:sanctum');
+//     Route::get('/projects/{id}/documents', [App\Http\Controllers\Api\App\ProjectController::class, 'documents'])->middleware('auth:sanctum');
+//     Route::get('/projects/{id}/history', [App\Http\Controllers\Api\App\ProjectController::class, 'history'])->middleware('auth:sanctum');
+//     Route::get('/projects/{id}/design', [App\Http\Controllers\Api\App\ProjectController::class, 'design'])->middleware('auth:sanctum');
+//     Route::get('/projects/{id}/construction', [App\Http\Controllers\Api\App\ProjectController::class, 'construction'])->middleware('auth:sanctum');
 
-        Route::get('/projects', [App\Http\Controllers\Web\AppController::class, 'projects'])->name('projects');
-        Route::get('/projects/create', [App\Http\Controllers\Web\ProjectController::class, 'create'])->name('projects.create');
-        // Web store/update delegate sang Api\ProjectController (business logic ở API)
-        Route::post('/projects', [App\Http\Controllers\Web\ProjectController::class, 'store'])->middleware('rbac:project.create')->name('projects.store');
-        Route::get('/projects/{project}', [App\Http\Controllers\Web\ProjectController::class, 'show'])->name('projects.show');
-        Route::get('/projects/{project}/edit', [App\Http\Controllers\Web\ProjectController::class, 'edit'])->name('projects.edit');
-        Route::put('/projects/{project}', [App\Http\Controllers\Web\ProjectController::class, 'update'])->middleware('rbac:project.update')->name('projects.update');
-        Route::post('/projects/{project}/baseline', [App\Http\Controllers\Web\ProjectController::class, 'storeBaseline'])->middleware('rbac:project.update')->name('projects.baseline.store');
-        // DELETE /projects/{project} - MOVED TO API: /api/v1/projects/{project}
+//     // Tasks API endpoints
+//     Route::get('/tasks', [App\Http\Controllers\Api\App\TaskController::class, 'index'])->middleware('auth:sanctum');
+//     Route::post('/tasks', [App\Http\Controllers\Api\App\TaskController::class, 'store'])->middleware('auth:sanctum');
+//     Route::get('/tasks/{id}', [App\Http\Controllers\Api\App\TaskController::class, 'show'])->middleware('auth:sanctum');
+//     Route::put('/tasks/{id}', [App\Http\Controllers\Api\App\TaskController::class, 'update'])->middleware('auth:sanctum');
+//     Route::delete('/tasks/{id}', [App\Http\Controllers\Api\App\TaskController::class, 'destroy'])->middleware('auth:sanctum');
+//     Route::patch('/tasks/{id}/move', [App\Http\Controllers\Api\App\TaskController::class, 'move'])->middleware('auth:sanctum');
+//     Route::patch('/tasks/{id}/archive', [App\Http\Controllers\Api\App\TaskController::class, 'archive'])->middleware('auth:sanctum');
 
-        Route::get('/projects/{project}/work-templates', [App\Http\Controllers\Web\WorkTemplateApplyController::class, 'templates'])->middleware('rbac:template.view')->name('projects.work-templates.index');
-        Route::post('/projects/{project}/work-templates/preview', [App\Http\Controllers\Web\WorkTemplateApplyController::class, 'preview'])->middleware('rbac:template.apply')->name('projects.work-templates.preview');
-        Route::post('/projects/{project}/work-templates/apply', [App\Http\Controllers\Web\WorkTemplateApplyController::class, 'apply'])->middleware('rbac:template.apply')->name('projects.work-templates.apply');
+//     // Calendar API endpoints
+//     Route::get('/calendar', [App\Http\Controllers\Api\App\CalendarController::class, 'index'])->middleware('auth:sanctum');
+//     Route::post('/calendar', [App\Http\Controllers\Api\App\CalendarController::class, 'store'])->middleware('auth:sanctum');
+//     Route::put('/calendar/{id}', [App\Http\Controllers\Api\App\CalendarController::class, 'update'])->middleware('auth:sanctum');
+//     Route::delete('/calendar/{id}', [App\Http\Controllers\Api\App\CalendarController::class, 'destroy'])->middleware('auth:sanctum');
+//     Route::get('/calendar/upcoming', [App\Http\Controllers\Api\App\CalendarController::class, 'upcoming'])->middleware('auth:sanctum');
+// });
+
+// Public API Routes (no authentication required)
+// Route::prefix('api/v1/public')->middleware(['throttle:public'])->group(function () {
+//     Route::get('/health', [App\Http\Controllers\Api\Public\HealthController::class, 'liveness']);
+// });
+
+// Admin Performance API Routes (requires authentication + admin ability)
+// Route::prefix('api/v1/admin/perf')->group(function () {
+//     Route::get('/metrics', [App\Http\Controllers\Api\Admin\PerformanceController::class, 'metrics'])->middleware('auth:sanctum');
+//     Route::get('/health', [App\Http\Controllers\Api\Admin\PerformanceController::class, 'health'])->middleware('auth:sanctum');
+//     Route::post('/clear-caches', [App\Http\Controllers\Api\Admin\PerformanceController::class, 'clearCaches'])->middleware('auth:sanctum');
+// });
+
+// Admin Secrets Management API Routes
+// Route::prefix('api/v1/admin/secrets')->group(function () {
+//     Route::post('/rotate', [App\Http\Controllers\Api\Admin\SecretsController::class, 'rotate'])->middleware(['auth:sanctum', 'ability:admin', 'rate.limit:secrets']);
+//     Route::get('/status', [App\Http\Controllers\Api\Admin\SecretsController::class, 'status'])->middleware(['auth:sanctum', 'ability:admin', 'rate.limit:secrets']);
+//     Route::post('/schedule', [App\Http\Controllers\Api\Admin\SecretsController::class, 'schedule'])->middleware(['auth:sanctum', 'ability:admin', 'rate.limit:secrets']);
+// });
+
+// App Routes (tenant-scoped, auth + tenant isolation enforced)
+Route::prefix('app')->name('app.')->middleware(['auth', 'tenant.isolation'])->group(function () {
+    Route::get('/dashboard', [App\Http\Controllers\Web\AppController::class, 'dashboard'])->name('dashboard');
+
+    Route::get('/projects', [App\Http\Controllers\Web\AppController::class, 'projects'])->name('projects');
+    Route::get('/projects/create', [App\Http\Controllers\Web\ProjectController::class, 'create'])->name('projects.create');
+    // Web store/update delegate sang Api\ProjectController (business logic ở API)
+    Route::post('/projects', [App\Http\Controllers\Web\ProjectController::class, 'store'])->middleware('rbac:project.create')->name('projects.store');
+    Route::get('/projects/{project}', [App\Http\Controllers\Web\ProjectController::class, 'show'])->name('projects.show');
+    Route::get('/projects/{project}/edit', [App\Http\Controllers\Web\ProjectController::class, 'edit'])->name('projects.edit');
+    Route::put('/projects/{project}', [App\Http\Controllers\Web\ProjectController::class, 'update'])->middleware('rbac:project.update')->name('projects.update');
+    Route::post('/projects/{project}/baseline', [App\Http\Controllers\Web\ProjectController::class, 'storeBaseline'])->middleware('rbac:project.update')->name('projects.baseline.store');
+    // DELETE /projects/{project} - MOVED TO API: /api/v1/projects/{project}
+
+    Route::get('/projects/{project}/work-templates', [App\Http\Controllers\Web\WorkTemplateApplyController::class, 'templates'])->middleware('rbac:template.view')->name('projects.work-templates.index');
+    Route::post('/projects/{project}/work-templates/preview', [App\Http\Controllers\Web\WorkTemplateApplyController::class, 'preview'])->middleware('rbac:template.apply')->name('projects.work-templates.preview');
+    Route::post('/projects/{project}/work-templates/apply', [App\Http\Controllers\Web\WorkTemplateApplyController::class, 'apply'])->middleware('rbac:template.apply')->name('projects.work-templates.apply');
 
     // Project sub-resources
     // (route projects.documents + projects.history đã gỡ 21/07: method controller
@@ -382,7 +372,7 @@ Route::get('/projects-enhanced', function() {
     Route::get('/projects/{project}/construction', function ($project) {
         return view('projects.construction-project', compact('project'));
     })->name('projects.construction');
-    
+
     // Calendar
     Route::get('/calendar', [App\Http\Controllers\Web\AppController::class, 'calendar'])->name('calendar');
 
@@ -400,17 +390,17 @@ Route::get('/projects-enhanced', function() {
     Route::post('/tasks/{task}/block', [App\Http\Controllers\Web\TaskController::class, 'block'])->middleware('rbac:task.update')->name('tasks.block');
     Route::post('/tasks/{task}/unblock', [App\Http\Controllers\Web\TaskController::class, 'unblock'])->middleware('rbac:task.update')->name('tasks.unblock');
     // DELETE /tasks/{task} - MOVED TO API: /api/v1/tasks/{task}
-    
+
     // Task actions (PATCH for state changes)
     // REMOVED: Business actions moved to API
     // Route::patch('/tasks/{task}/move', ...) - MOVED TO API
     // Route::patch('/tasks/{task}/archive', ...) - MOVED TO API
-    
+
     // Task sub-resources
     Route::get('/tasks/{task}/documents', [App\Http\Controllers\Web\TaskController::class, 'documents'])->name('tasks.documents');
     // POST /tasks/{task}/documents - MOVED TO API: /api/v1/tasks/{task}/documents
     Route::get('/tasks/{task}/history', [App\Http\Controllers\Web\TaskController::class, 'history'])->name('tasks.history');
-    
+
     // Documents Routes
     Route::get('/documents', [App\Http\Controllers\Web\DocumentController::class, 'index'])->name('documents');
     Route::get('/documents/create', [App\Http\Controllers\Web\DocumentController::class, 'create'])->name('documents.create');
@@ -425,20 +415,20 @@ Route::get('/projects-enhanced', function() {
     Route::post('/documents/{document}/reactivate', [App\Http\Controllers\Web\DocumentWorkflowController::class, 'reactivate'])->middleware('rbac:document.update')->name('documents.workflow.reactivate');
     Route::post('/documents/{document}/approver', [App\Http\Controllers\Web\DocumentWorkflowController::class, 'assignApprover'])->middleware('rbac:document.update')->name('documents.approver.assign');
 
-        // Team Routes
-        Route::get('/team', function () {
-            return view('app.team', [
-                'users' => App\Models\User::query()
-                    ->where('tenant_id', (string) auth()->user()?->tenant_id)
-                    ->orderBy('name')
-                    ->get(['id', 'tenant_id', 'name', 'email', 'role', 'is_active', 'created_at']),
-            ]);
-        })->middleware('can:viewAny,' . Team::class)->name('team.index');
+    // Team Routes
+    Route::get('/team', function () {
+        return view('app.team', [
+            'users' => App\Models\User::query()
+                ->where('tenant_id', (string) auth()->user()?->tenant_id)
+                ->orderBy('name')
+                ->get(['id', 'tenant_id', 'name', 'email', 'role', 'is_active', 'created_at']),
+        ]);
+    })->middleware('can:viewAny,' . Team::class)->name('team.index');
     Route::get('/team/users', [App\Http\Controllers\App\TeamUsersController::class, 'index'])->name('team.users.index');
     Route::get('/team/invite', function () {
         return view('team.invite');
     })->name('team.invite');
-    
+
     // (Route /templates* đã gỡ 22/07: trang demo giả hoàn toàn chết — card
     // hardcode, nút không nối gì; templates.create/templates.show trỏ view
     // còn không tồn tại. Không liên quan App\Models\Template thật/WorkTemplate.)
@@ -456,7 +446,7 @@ Route::get('/projects-enhanced', function() {
     Route::get('/settings/notifications', function () {
         return redirect()->route('app.settings');
     })->name('settings.notifications');
-    
+
     // Profile Routes
     Route::get('/profile', function () {
         return view('app.profile');
@@ -473,12 +463,10 @@ Route::prefix('invitations')->name('invitations.')->group(function () {
         ->middleware(['auth', 'tenant.isolation', 'throttle:invitation-accept'])
         ->name('accept');
     // POST /invitations/accept/{token} - MOVED TO API: /api/v1/invitations/accept/{token}
-    Route::get('/decline/{token}', [App\Http\Controllers\Web\InvitationController::class, 'decline'])->name('decline');
 });
 
 // Legacy invitation redirects (301 Permanent Redirects)
 Route::permanentRedirect('/invite/accept/{token}', '/invitations/accept/{token}');
-Route::permanentRedirect('/invite/decline/{token}', '/invitations/decline/{token}');
 
 // Legacy Redirects (301 Permanent Redirects) - Minimal set
 // Phase 1: Essential routes only
@@ -508,7 +496,7 @@ Route::post('/projects', function (Request $request) {
 
     return response()->json([
         'message' => 'Project created',
-        'project' => $project
+        'project' => $project,
     ], 201);
 })->middleware($projectRouteMiddleware)->name('web.projects.store');
 
@@ -521,7 +509,7 @@ Route::get('/projects/{project}', function (Project $project) {
         'id' => $project->id,
         'name' => $project->name,
         'description' => $project->description,
-        'status' => $project->status
+        'status' => $project->status,
     ]);
 })->middleware(['auth', 'tenant.isolation', 'rbac:project.view'])->name('web.projects.show');
 
@@ -531,7 +519,7 @@ Route::put('/projects/{project}', function (Request $request, Project $project) 
 
     return response()->json([
         'message' => 'Project updated',
-        'project' => $project->fresh()
+        'project' => $project->fresh(),
     ], 200);
 })->middleware(['auth', 'tenant.isolation', 'rbac:project.update'])->name('web.projects.update');
 
@@ -539,7 +527,7 @@ Route::delete('/projects/{project}', function (Project $project) {
     $project->delete();
 
     return response()->json([
-        'message' => 'Project deleted'
+        'message' => 'Project deleted',
     ], 200);
 })->middleware(['auth', 'tenant.isolation', 'rbac:project.delete'])->name('web.projects.destroy');
 
@@ -570,7 +558,6 @@ Route::permanentRedirect('/performance/clear-caches', '/api/v1/admin/perf/clear-
 
 // Phase 3: Invitation routes (standardized naming)
 Route::permanentRedirect('/invite/accept/{token}', '/invitations/accept/{token}');
-Route::permanentRedirect('/invite/decline/{token}', '/invitations/decline/{token}');
 
 // REMOVED: Non-essential legacy routes (see legacy-map.json for removal schedule)
 // /users, /tenants, /documents, /templates, /settings, /profile, /team
@@ -693,10 +680,41 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/treasury/parties/{party}/update', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'updateParty'])->middleware('rbac:treasury.manage_parties')->name('treasury.parties.update');
     Route::post('/treasury/parties/{party}/delete', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'destroyParty'])->middleware('rbac:treasury.manage_parties')->name('treasury.parties.destroy');
     Route::get('/projects/{project}/treasury', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'project'])->middleware('rbac:treasury.view')->name('treasury.projects.show');
+    Route::post('/projects/{project}/treasury/funding', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'storeFunding'])->middleware('rbac:treasury.declare_funding')->name('treasury.projects.funding.store');
+    Route::post('/projects/{project}/treasury/transfers', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'storeTransfer'])->middleware('rbac:treasury.create_transfer')->name('treasury.projects.transfers.store');
+    Route::post('/projects/{project}/treasury/adjustments', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'storeAdjustment'])->middleware('rbac:treasury.adjust')->name('treasury.projects.adjustments.store');
+    Route::post('/projects/{project}/treasury/documents/{treasuryDocument}/reverse', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'reverseDocument'])->middleware('rbac:treasury.reverse')->name('treasury.projects.documents.reverse');
+    Route::post('/projects/{project}/treasury/documents/{treasuryDocument}/replacement', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'linkReplacement'])->middleware('rbac:treasury.reverse')->name('treasury.projects.documents.replacement');
+    Route::post('/projects/{project}/treasury/expenses', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'storeExpense'])->middleware('rbac:treasury.create_expense')->name('treasury.projects.expenses.store');
+    Route::post('/projects/{project}/treasury/expenses/{treasuryExpense}/{action}', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'expenseAction'])->middleware('rbac:treasury.view')->whereIn('action', ['submit', 'approve', 'reject', 'copy'])->name('treasury.projects.expenses.action');
     Route::post('/projects/{project}/treasury/wallets', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'storeWallet'])->middleware('rbac:treasury.manage_wallets')->name('treasury.projects.wallets.store');
     Route::get('/projects/{project}/treasury/wallets/{wallet}/edit', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'editWallet'])->middleware('rbac:treasury.manage_wallets')->name('treasury.projects.wallets.edit');
     Route::post('/projects/{project}/treasury/wallets/{wallet}/update', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'updateWallet'])->middleware('rbac:treasury.manage_wallets')->name('treasury.projects.wallets.update');
     Route::post('/projects/{project}/treasury/wallets/{wallet}/delete', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'destroyWallet'])->middleware('rbac:treasury.manage_wallets')->name('treasury.projects.wallets.destroy');
+    // Project Treasury S4a (GAP-067): reconciliation
+    Route::get('/projects/{project}/treasury/wallets/{wallet}/reconcile', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'reconcileWallet'])->middleware('rbac:treasury.view')->name('treasury.projects.wallets.reconcile');
+    Route::post('/projects/{project}/treasury/wallets/{wallet}/reconcile', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'storeReconciliation'])->middleware('rbac:treasury.reconcile')->name('treasury.projects.wallets.reconcile.store');
+    Route::post('/projects/{project}/treasury/reconciliations/{treasuryReconciliation}/undo', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'undoReconciliation'])->middleware('rbac:treasury.reconcile')->name('treasury.projects.reconciliations.undo');
+    Route::post('/projects/{project}/treasury/reconciliation-entries/{treasuryReconciliationEntry}/undo', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'undoReconciliationEntry'])->middleware('rbac:treasury.reconcile')->name('treasury.projects.reconciliation-entries.undo');
+    // Project Treasury S4b-1 (GAP-094): via-route payments
+    Route::post('/projects/{project}/treasury/routes', [App\Http\Controllers\Web\Treasury\TreasuryRoutePageController::class, 'store'])->middleware('rbac:treasury.manage_routes')->name('treasury.projects.routes.store');
+    Route::get('/projects/{project}/treasury/routes/{treasuryRoute}', [App\Http\Controllers\Web\Treasury\TreasuryRoutePageController::class, 'show'])->middleware('rbac:treasury.view')->name('treasury.projects.routes.show');
+    Route::post('/projects/{project}/treasury/routes/{treasuryRoute}/legs', [App\Http\Controllers\Web\Treasury\TreasuryRoutePageController::class, 'storeLeg'])->middleware('rbac:treasury.view')->name('treasury.projects.routes.legs.store');
+    Route::post('/projects/{project}/treasury/routes/{treasuryRoute}/cancel', [App\Http\Controllers\Web\Treasury\TreasuryRoutePageController::class, 'cancel'])->middleware('rbac:treasury.manage_routes')->name('treasury.projects.routes.cancel');
+    Route::post('/projects/{project}/treasury/route-legs/{treasuryRouteLeg}/reverse', [App\Http\Controllers\Web\Treasury\TreasuryRoutePageController::class, 'reverseLeg'])->middleware('rbac:treasury.manage_routes')->name('treasury.projects.route-legs.reverse');
+    Route::post('/projects/{project}/treasury/contract-payments/{contractPayment}/routes', [App\Http\Controllers\Web\Treasury\TreasuryRoutePageController::class, 'storeContractPaymentRoute'])->middleware('rbac:treasury.manage_routes')->name('treasury.projects.contract-payments.routes.store');
+    // Project Treasury S6 (GAP-097): reports, timeline and CSV exports
+    Route::get('/projects/{project}/treasury/reports', [App\Http\Controllers\Web\Treasury\TreasuryReportPageController::class, 'index'])->middleware('rbac:treasury.view')->name('treasury.projects.reports.index');
+    Route::get('/projects/{project}/treasury/reports/{report}/export', [App\Http\Controllers\Web\Treasury\TreasuryReportPageController::class, 'export'])->middleware('rbac:treasury.export')->name('treasury.projects.reports.export');
+    Route::get('/projects/{project}/treasury/timeline', [App\Http\Controllers\Web\Treasury\TreasuryReportPageController::class, 'timeline'])->middleware('rbac:treasury.view')->name('treasury.projects.timeline');
+    // Project Treasury S5 (GAP-096): advances and settlements
+    Route::post('/projects/{project}/treasury/advances', [App\Http\Controllers\Web\Treasury\TreasuryAdvancePageController::class, 'store'])->middleware('rbac:treasury.create_expense')->name('treasury.projects.advances.store');
+    Route::get('/projects/{project}/treasury/advances/{treasuryAdvance}', [App\Http\Controllers\Web\Treasury\TreasuryAdvancePageController::class, 'show'])->middleware('rbac:treasury.view')->name('treasury.projects.advances.show');
+    Route::post('/projects/{project}/treasury/advances/{treasuryAdvance}/settlement-request', [App\Http\Controllers\Web\Treasury\TreasuryAdvancePageController::class, 'requestSettlement'])->middleware('rbac:treasury.submit_expense')->name('treasury.projects.advances.settlement-request.store');
+    Route::post('/projects/{project}/treasury/advances/{treasuryAdvance}/settlement-request/{action}', [App\Http\Controllers\Web\Treasury\TreasuryAdvancePageController::class, 'settlementAction'])->middleware('rbac:treasury.view')->whereIn('action', ['withdraw', 'approve', 'reject'])->name('treasury.projects.advances.settlement-request.action');
+    Route::post('/projects/{project}/treasury/advances/{treasuryAdvance}/returns', [App\Http\Controllers\Web\Treasury\TreasuryAdvancePageController::class, 'storeReturn'])->middleware('rbac:treasury.reverse')->name('treasury.projects.advances.returns.store');
+    Route::post('/projects/{project}/treasury/advances/{treasuryAdvance}/{action}', [App\Http\Controllers\Web\Treasury\TreasuryAdvancePageController::class, 'action'])->middleware('rbac:treasury.view')->whereIn('action', ['submit', 'approve', 'reject', 'copy'])->name('treasury.projects.advances.action');
+    Route::post('/projects/{project}/treasury/advance-settlements/{treasuryAdvanceSettlement}/remove', [App\Http\Controllers\Web\Treasury\TreasuryAdvancePageController::class, 'removeSettlement'])->middleware('rbac:treasury.reverse')->name('treasury.projects.advance-settlements.remove');
 
     Route::get('/contracts', [App\Http\Controllers\Web\ContractPageController::class, 'index'])->middleware('rbac:contract.view')->name('contracts.index');
     Route::get('/contracts/create', [App\Http\Controllers\Web\ContractPageController::class, 'create'])->middleware('rbac:contract.create')->name('contracts.create');

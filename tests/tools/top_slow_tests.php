@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 $junitPath = $argv[1] ?? 'storage/logs/junit.xml';
 $limit = isset($argv[2]) ? (int) $argv[2] : 30;

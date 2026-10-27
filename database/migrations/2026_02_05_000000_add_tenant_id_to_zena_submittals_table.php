@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     public function up(): void
     {
         if (!Schema::hasTable('zena_submittals') || Schema::hasColumn('zena_submittals', 'tenant_id')) {
@@ -27,7 +26,7 @@ return new class extends Migration
 
         $isSqlite = Schema::getConnection()->getDriverName() === 'sqlite';
 
-        if (! $isSqlite) {
+        if (!$isSqlite) {
             Schema::table('zena_submittals', function (Blueprint $table) {
                 try {
                     $table->dropForeign(['tenant_id']);

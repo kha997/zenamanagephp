@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Console\Commands;
 
@@ -29,21 +31,25 @@ class RfiConfirmLegacyEscalation extends Command
 
         if (!in_array($lifecycle, ['open', 'in_progress', 'answered', 'closed', 'cancelled'], true)) {
             $this->error('--lifecycle must be one of: open, in_progress, answered, closed, cancelled');
+
             return self::FAILURE;
         }
 
         if (!in_array($escalationState, ['unresolved', 'resolved', 'none'], true)) {
             $this->error('--escalation must be one of: unresolved, resolved, none');
+
             return self::FAILURE;
         }
 
         if (!$confirmedBy) {
             $this->error('--confirmed-by is required');
+
             return self::FAILURE;
         }
 
         if (!$reason) {
             $this->error('--reason is required — the confirmation must record why this state was chosen, not just what was chosen');
+
             return self::FAILURE;
         }
 
@@ -51,6 +57,7 @@ class RfiConfirmLegacyEscalation extends Command
 
         if (!$rfi) {
             $this->error("RFI {$rfiId} not found");
+
             return self::FAILURE;
         }
 

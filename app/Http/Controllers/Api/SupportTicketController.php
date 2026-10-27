@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
@@ -135,7 +137,7 @@ class SupportTicketController extends Controller
 
             if (!$assignedTo) {
                 return ErrorEnvelopeService::validationError([
-                    'assigned_to' => ['Assigned user not found in tenant']
+                    'assigned_to' => ['Assigned user not found in tenant'],
                 ], ErrorEnvelopeService::getCurrentRequestId());
             }
         }

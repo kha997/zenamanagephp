@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
 
@@ -9,7 +11,7 @@ use Illuminate\View\View;
 
 /**
  * "Hôm nay" — trang tổng hợp read-only theo vai trò.
- * Spec: docs/superpowers/specs/2026-07-31-today-workspace-mvp-design.md
+ * Spec: docs/superpowers/specs/2026-07-31-today-workspace-mvp-design.md.
  */
 class TodayController extends Controller
 {

@@ -1,17 +1,17 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Listeners;
 
 use App\Models\ProjectActivity;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Queue\InteractsWithQueue;
 
 /**
- * LogProjectActivity Listener - Log activities khi có events
+ * LogProjectActivity Listener - Log activities khi có events.
  */
 class LogProjectActivity implements ShouldQueue
 {
-
     /**
      * Handle the event.
      */

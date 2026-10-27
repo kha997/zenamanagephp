@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Unit\OwnerGovernance;
 
@@ -45,7 +47,7 @@ class GateOrderingDesignOnlyExemptionTest extends TestCase
     private function makeTempRoot(): string
     {
         $dir = sys_get_temp_dir() . '/own-2026-005-gate-ordering-test-' . bin2hex(random_bytes(6));
-        mkdir($dir, 0777, true);
+        mkdir($dir, 0o777, true);
         $this->tempRoots[] = $dir;
 
         return $dir;
@@ -54,7 +56,7 @@ class GateOrderingDesignOnlyExemptionTest extends TestCase
     private function writeFile(string $repoRoot, string $relPath, string $content): string
     {
         $full = $repoRoot . '/' . $relPath;
-        @mkdir(dirname($full), 0777, true);
+        @mkdir(dirname($full), 0o777, true);
         file_put_contents($full, $content);
 
         return $relPath;
@@ -68,49 +70,49 @@ class GateOrderingDesignOnlyExemptionTest extends TestCase
         $trustLevel = $ownerDecisionValue === 'none' ? 'claimed_repo_record' : 'claimed_repo_record';
 
         return <<<YAML
----
-work_id: {$workId}
-gate: 2
-gate_status: {$gateStatus}
-owner_decision:
-  value: {$ownerDecisionValue}
-  authority: human_owner
-decision_requested: {$decisionRequested}
-references:
-  spec: null
-  plan: null
-  branch: null
-  pr: null
-  release: null
-decision_provenance:
-  trust_level: {$trustLevel}
-  recorded_by: {$recordedBy}
-  recorded_at: {$recordedAt}
-  owner_response_reference: null
-  reconciliation_required: false
-supersedes: null
-superseded_by: null
-timestamps:
-  created_at: "2026-08-07T08:00:00+07:00"
-  updated_at: "2026-08-07T08:00:00+07:00"
-generated_by: agent
----
+            ---
+            work_id: {$workId}
+            gate: 2
+            gate_status: {$gateStatus}
+            owner_decision:
+              value: {$ownerDecisionValue}
+              authority: human_owner
+            decision_requested: {$decisionRequested}
+            references:
+              spec: null
+              plan: null
+              branch: null
+              pr: null
+              release: null
+            decision_provenance:
+              trust_level: {$trustLevel}
+              recorded_by: {$recordedBy}
+              recorded_at: {$recordedAt}
+              owner_response_reference: null
+              reconciliation_required: false
+            supersedes: null
+            superseded_by: null
+            timestamps:
+              created_at: "2026-08-07T08:00:00+07:00"
+              updated_at: "2026-08-07T08:00:00+07:00"
+            generated_by: agent
+            ---
 
-## Fixture Gate 2 packet for OWN-2026-005 regression tests.
-YAML;
+            ## Fixture Gate 2 packet for OWN-2026-005 regression tests.
+            YAML;
     }
 
     private function specFrontmatter(string $workId, string $gate2RecordPath): string
     {
         return <<<MD
----
-work_id: {$workId}
-owner_governance_version: 1
-owner_gate_2_record: {$gate2RecordPath}
----
+            ---
+            work_id: {$workId}
+            owner_governance_version: 1
+            owner_gate_2_record: {$gate2RecordPath}
+            ---
 
-# Fixture design spec for OWN-2026-005 regression tests.
-MD;
+            # Fixture design spec for OWN-2026-005 regression tests.
+            MD;
     }
 
     // --- Scenario 1: Packet awaiting_owner + spec same work_id, only design docs changed: PASS ---

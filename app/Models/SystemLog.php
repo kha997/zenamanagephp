@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -10,10 +12,15 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class SystemLog extends Model
 {
-    use HasUlids, HasFactory, TenantScope, SoftDeletes;
+    use HasUlids;
+    use HasFactory;
+    use TenantScope;
+    use SoftDeletes;
 
     protected $table = 'system_logs';
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [
@@ -21,7 +28,7 @@ class SystemLog extends Model
         'user_id',
         'level',
         'message',
-        'context'
+        'context',
     ];
 
     protected $casts = [

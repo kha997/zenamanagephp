@@ -4,37 +4,40 @@ namespace Tests\Feature\Api;
 
 use App\Models\AuditLog;
 use App\Models\Baseline;
+use App\Models\ChangeRequest;
 use App\Models\Component;
 use App\Models\CrLink;
 use App\Models\Document;
-use App\Models\Task;
-use Tests\TestCase;
 use App\Models\Notification;
-use App\Models\User;
-use App\Models\Role;
 use App\Models\Project;
-use App\Models\ChangeRequest;
+use App\Models\Role;
+use App\Models\Task;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Tests\TestCase;
 use Tests\Traits\RouteNameTrait;
 use Tests\Traits\SchemaAwareChangeRequestAssertions;
 
 class ChangeRequestApiTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use RefreshDatabase;
+    use WithFaker;
     use SchemaAwareChangeRequestAssertions;
     use RouteNameTrait;
 
     protected $user;
+
     protected $project;
+
     protected $token;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->user = User::factory()->create();
         $this->project = Project::factory()->create([
             'created_by' => $this->user->id,
@@ -63,7 +66,7 @@ class ChangeRequestApiTest extends TestCase
     }
 
     /**
-     * Test Change Request index endpoint
+     * Test Change Request index endpoint.
      */
     public function test_can_get_change_request_list()
     {
@@ -86,22 +89,22 @@ class ChangeRequestApiTest extends TestCase
                             'change_type',
                             'status',
                             'priority',
-                            'created_at'
-                        ]
+                            'created_at',
+                        ],
                     ],
                     'meta' => [
                         'pagination' => [
                             'page',
                             'per_page',
                             'total',
-                            'last_page'
-                        ]
-                    ]
+                            'last_page',
+                        ],
+                    ],
                 ]);
     }
 
     /**
-     * Test Change Request creation
+     * Test Change Request creation.
      */
     public function test_can_create_change_request()
     {
@@ -114,7 +117,7 @@ class ChangeRequestApiTest extends TestCase
             'justification' => 'Required for project success',
             'alternatives_considered' => 'Alternative 1, Alternative 2',
             'impact_analysis' => 'Minimal impact on schedule',
-            'priority' => 'medium'
+            'priority' => 'medium',
         ];
 
         $response = $this->withHeaders($this->getAuthHeaders())
@@ -128,18 +131,18 @@ class ChangeRequestApiTest extends TestCase
                         'title',
                         'change_type',
                         'status',
-                        'priority'
-                    ]
+                        'priority',
+                    ],
                 ]);
 
         $this->assertDatabaseHas('change_requests', [
             'title' => 'Test Change Request',
-            'project_id' => $this->project->id
+            'project_id' => $this->project->id,
         ]);
     }
 
     /**
-     * Test Change Request submission
+     * Test Change Request submission.
      */
     public function test_can_submit_change_request()
     {
@@ -152,7 +155,7 @@ class ChangeRequestApiTest extends TestCase
             'requested_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
             'assigned_to' => $approver->id,
-            'status' => 'draft'
+            'status' => 'draft',
         ]);
 
         $response = $this->withHeaders($this->getAuthHeaders())
@@ -164,7 +167,7 @@ class ChangeRequestApiTest extends TestCase
 
         $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,
-            'status' => 'submitted'
+            'status' => 'submitted',
         ]);
 
         $this->assertDatabaseHas('notifications', [
@@ -176,7 +179,7 @@ class ChangeRequestApiTest extends TestCase
     }
 
     /**
-     * Test Change Request approval
+     * Test Change Request approval.
      */
     public function test_can_approve_change_request()
     {
@@ -188,12 +191,12 @@ class ChangeRequestApiTest extends TestCase
             'project_id' => $this->project->id,
             'requested_by' => $requester->id,
             'tenant_id' => $this->user->tenant_id,
-            'status' => 'submitted'
+            'status' => 'submitted',
         ]);
 
         $approvalData = [
             'approved_cost' => 15000.00,
-            'approval_comments' => 'Approved with modifications'
+            'approval_comments' => 'Approved with modifications',
         ];
 
         $response = $this->withHeaders($this->getAuthHeaders())
@@ -206,7 +209,7 @@ class ChangeRequestApiTest extends TestCase
         $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,
             'status' => 'approved',
-            'approved_by' => $this->user->id
+            'approved_by' => $this->user->id,
         ]);
 
         $this->assertDatabaseHas('notifications', [
@@ -218,7 +221,7 @@ class ChangeRequestApiTest extends TestCase
     }
 
     /**
-     * Test Change Request rejection
+     * Test Change Request rejection.
      */
     public function test_can_reject_change_request()
     {
@@ -230,12 +233,12 @@ class ChangeRequestApiTest extends TestCase
             'project_id' => $this->project->id,
             'requested_by' => $requester->id,
             'tenant_id' => $this->user->tenant_id,
-            'status' => 'submitted'
+            'status' => 'submitted',
         ]);
 
         $rejectionData = [
             'rejection_reason' => 'Cost impact too high',
-            'rejection_comments' => 'Please revise the proposal'
+            'rejection_comments' => 'Please revise the proposal',
         ];
 
         $response = $this->withHeaders($this->getAuthHeaders())
@@ -248,7 +251,7 @@ class ChangeRequestApiTest extends TestCase
         $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,
             'status' => 'rejected',
-            'rejection_reason' => 'Cost impact too high'
+            'rejection_reason' => 'Cost impact too high',
         ]);
 
         $this->assertDatabaseHas('notifications', [
@@ -260,7 +263,7 @@ class ChangeRequestApiTest extends TestCase
     }
 
     /**
-     * Test Change Request implementation
+     * Test Change Request implementation.
      */
     public function test_can_implement_change_request()
     {
@@ -268,11 +271,11 @@ class ChangeRequestApiTest extends TestCase
             'project_id' => $this->project->id,
             'requested_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
-            'status' => 'approved'
+            'status' => 'approved',
         ]);
 
         $implementationData = [
-            'implementation_notes' => 'Change has been implemented successfully'
+            'implementation_notes' => 'Change has been implemented successfully',
         ];
 
         $response = $this->withHeaders($this->getAuthHeaders())
@@ -288,9 +291,10 @@ class ChangeRequestApiTest extends TestCase
             'implementation_notes' => $implementationData['implementation_notes'],
         ]);
 
-        $this->assertDatabaseMissing('notifications', [
+        $this->assertDatabaseHas('notifications', [
             'tenant_id' => $this->user->tenant_id,
             'project_id' => $this->project->id,
+            'user_id' => $this->user->id,
             'type' => 'change_request_implemented',
         ]);
 
@@ -456,20 +460,20 @@ class ChangeRequestApiTest extends TestCase
     }
 
     /**
-     * Test Change Request update
+     * Test Change Request update.
      */
     public function test_can_update_change_request()
     {
         $changeRequest = ChangeRequest::factory()->create([
             'project_id' => $this->project->id,
             'requested_by' => $this->user->id,
-            'tenant_id' => $this->user->tenant_id
+            'tenant_id' => $this->user->tenant_id,
         ]);
 
         $updateData = [
             'title' => 'Updated Change Request Title',
             'description' => 'Updated description',
-            'priority' => 'high'
+            'priority' => 'high',
         ];
 
         $response = $this->withHeaders($this->getAuthHeaders())
@@ -482,25 +486,25 @@ class ChangeRequestApiTest extends TestCase
                         'id',
                         'title',
                         'description',
-                        'priority'
-                    ]
+                        'priority',
+                    ],
                 ]);
 
         $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,
-            'title' => 'Updated Change Request Title'
+            'title' => 'Updated Change Request Title',
         ]);
     }
 
     /**
-     * Test Change Request deletion
+     * Test Change Request deletion.
      */
     public function test_can_delete_change_request()
     {
         $changeRequest = ChangeRequest::factory()->create([
             'project_id' => $this->project->id,
             'requested_by' => $this->user->id,
-            'tenant_id' => $this->user->tenant_id
+            'tenant_id' => $this->user->tenant_id,
         ]);
 
         $response = $this->withHeaders($this->getAuthHeaders())
@@ -509,12 +513,12 @@ class ChangeRequestApiTest extends TestCase
         $response->assertStatus(200);
 
         $this->assertDatabaseMissing('change_requests', [
-            'id' => $changeRequest->id
+            'id' => $changeRequest->id,
         ]);
     }
 
     /**
-     * Test Change Request validation
+     * Test Change Request validation.
      */
     public function test_change_request_creation_requires_valid_data()
     {
@@ -530,7 +534,7 @@ class ChangeRequestApiTest extends TestCase
     }
 
     /**
-     * Test Change Request impact level calculation
+     * Test Change Request impact level calculation.
      */
     public function test_change_request_impact_level_calculation()
     {
@@ -548,8 +552,8 @@ class ChangeRequestApiTest extends TestCase
                     'status',
                     'data' => [
                         'id',
-                        'impact_level'
-                    ]
+                        'impact_level',
+                    ],
                 ]);
 
         $impactLevel = $response->json('data.impact_level');
@@ -557,7 +561,7 @@ class ChangeRequestApiTest extends TestCase
     }
 
     /**
-     * Test unauthorized access
+     * Test unauthorized access.
      */
     public function test_unauthorized_access_returns_401()
     {
@@ -566,7 +570,7 @@ class ChangeRequestApiTest extends TestCase
     }
 
     /**
-     * Generate JWT token for testing
+     * Generate JWT token for testing.
      */
     private function generateJwtToken(User $user): string
     {

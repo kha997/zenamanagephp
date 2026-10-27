@@ -3,10 +3,8 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\DB;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     /**
      * Run the migrations.
      */
@@ -14,7 +12,7 @@ return new class extends Migration
     {
         // Drop and recreate the project_milestones table with correct ULID schema
         Schema::dropIfExists('project_milestones');
-        
+
         Schema::create('project_milestones', function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->ulid('project_id');
@@ -31,7 +29,7 @@ return new class extends Migration
             // Foreign keys
             $table->foreign('project_id')->references('id')->on('projects')->onDelete('cascade');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
-            
+
             // Indexes
             $table->index(['project_id', 'status']);
             $table->index(['project_id', 'order']);

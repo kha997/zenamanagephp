@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 return [
     // The Tenant.name value this integration is restricted to (see docs/superpowers/specs/2026-07-09-zena-ops-roadmap-design.md, Phase 2).

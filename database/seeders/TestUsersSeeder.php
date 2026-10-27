@@ -2,11 +2,11 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use App\Models\Role;
+use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class TestUsersSeeder extends Seeder
 {
@@ -19,6 +19,7 @@ class TestUsersSeeder extends Seeder
         $defaultTenant = DB::table('tenants')->first();
         if (!$defaultTenant) {
             $this->command->error('No tenant found. Please run TenantSeeder first.');
+
             return;
         }
 
@@ -91,10 +92,10 @@ class TestUsersSeeder extends Seeder
         foreach ($testUsers as $userData) {
             $roleName = $userData['role_name'];
             unset($userData['role_name']); // Remove role_name from user data
-            
+
             // Check if user already exists
             $existingUser = User::where('email', $userData['email'])->first();
-            
+
             if (!$existingUser) {
                 // Create user with tenant_id
                 $userData['tenant_id'] = $defaultTenant->id;
@@ -118,7 +119,7 @@ class TestUsersSeeder extends Seeder
                     ->where('user_id', $user->id)
                     ->where('role_id', $role->id)
                     ->first();
-                
+
                 if (!$existingRole) {
                     DB::table('user_roles')->insert([
                         'user_id' => $user->id,

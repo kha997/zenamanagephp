@@ -7,11 +7,14 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 
 class TaskUpdated implements ShouldBroadcast
 {
-
     public Task $task;
+
     public User $user;
+
     public array $oldData;
+
     public array $changes;
+
     public array $metadata;
 
     /**

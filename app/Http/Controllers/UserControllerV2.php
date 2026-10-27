@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
@@ -6,18 +8,15 @@ use App\Models\User;
 use App\Services\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
 /**
- * User Controller V2 - Sử dụng SimpleJwtAuth middleware
- * 
- * @package App\Http\Controllers
+ * User Controller V2 - Sử dụng SimpleJwtAuth middleware.
  */
 class UserControllerV2 extends Controller
 {
     /**
-     * Constructor - áp dụng SimpleJwtAuth middleware
+     * Constructor - áp dụng SimpleJwtAuth middleware.
      */
     public function __construct()
     {
@@ -26,7 +25,7 @@ class UserControllerV2 extends Controller
 
     /**
      * Lấy danh sách users
-     * GET /api/v1/users-v2
+     * GET /api/v1/users-v2.
      *
      * @param Request $request
      * @return JsonResponse
@@ -71,10 +70,9 @@ class UserControllerV2 extends Controller
                     'current_page' => $users->currentPage(),
                     'last_page' => $users->lastPage(),
                     'per_page' => $users->perPage(),
-                    'total' => $users->total()
-                ]
+                    'total' => $users->total(),
+                ],
             ]);
-
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể lấy danh sách users: ' . $e->getMessage(), 500);
         }
@@ -82,7 +80,7 @@ class UserControllerV2 extends Controller
 
     /**
      * Tạo user mới
-     * POST /api/v1/users-v2
+     * POST /api/v1/users-v2.
      *
      * @param Request $request
      * @return JsonResponse
@@ -111,14 +109,13 @@ class UserControllerV2 extends Controller
                 'email' => $request->input('email'),
                 'password' => bcrypt($request->input('password')),
                 'tenant_id' => $storeTenantId,
-                'status' => 'active'
+                'status' => 'active',
             ]);
 
             return JSendResponse::success([
                 'user' => $user->load('tenant'),
-                'message' => 'User đã được tạo thành công'
+                'message' => 'User đã được tạo thành công',
             ], 201);
-
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể tạo user: ' . $e->getMessage(), 500);
         }
@@ -126,7 +123,7 @@ class UserControllerV2 extends Controller
 
     /**
      * Lấy thông tin chi tiết user
-     * GET /api/v1/users-v2/{id}
+     * GET /api/v1/users-v2/{id}.
      *
      * @param Request $request
      * @param string $id
@@ -144,9 +141,8 @@ class UserControllerV2 extends Controller
             }
 
             return JSendResponse::success([
-                'user' => $user
+                'user' => $user,
             ]);
-
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể lấy thông tin user: ' . $e->getMessage(), 500);
         }
@@ -154,7 +150,7 @@ class UserControllerV2 extends Controller
 
     /**
      * Cập nhật thông tin user
-     * PUT/PATCH /api/v1/users-v2/{id}
+     * PUT/PATCH /api/v1/users-v2/{id}.
      *
      * @param Request $request
      * @param string $id
@@ -175,7 +171,7 @@ class UserControllerV2 extends Controller
                 'name' => 'sometimes|required|string|max:255',
                 'email' => 'sometimes|required|email|unique:users,email,' . $id,
                 'password' => 'sometimes|required|string|min:8|confirmed',
-                'status' => 'sometimes|required|in:active,inactive,suspended'
+                'status' => 'sometimes|required|in:active,inactive,suspended',
             ]);
 
             if ($validator->fails()) {
@@ -183,7 +179,7 @@ class UserControllerV2 extends Controller
             }
 
             $updateData = $request->only(['name', 'email', 'status']);
-            
+
             if ($request->has('password')) {
                 $updateData['password'] = bcrypt($request->input('password'));
             }
@@ -192,9 +188,8 @@ class UserControllerV2 extends Controller
 
             return JSendResponse::success([
                 'user' => $user->fresh(['tenant']),
-                'message' => 'User đã được cập nhật thành công'
+                'message' => 'User đã được cập nhật thành công',
             ]);
-
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể cập nhật user: ' . $e->getMessage(), 500);
         }
@@ -202,7 +197,7 @@ class UserControllerV2 extends Controller
 
     /**
      * Xóa user
-     * DELETE /api/v1/users-v2/{id}
+     * DELETE /api/v1/users-v2/{id}.
      *
      * @param Request $request
      * @param string $id
@@ -228,9 +223,8 @@ class UserControllerV2 extends Controller
             $user->delete();
 
             return JSendResponse::success([
-                'message' => 'User đã được xóa thành công'
+                'message' => 'User đã được xóa thành công',
             ]);
-
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể xóa user: ' . $e->getMessage(), 500);
         }
@@ -238,7 +232,7 @@ class UserControllerV2 extends Controller
 
     /**
      * Lấy profile của user hiện tại
-     * GET /api/v1/users-v2/profile
+     * GET /api/v1/users-v2/profile.
      *
      * @param Request $request
      * @return JsonResponse
@@ -252,9 +246,8 @@ class UserControllerV2 extends Controller
             }
 
             return JSendResponse::success([
-                'user' => $user->load('tenant')
+                'user' => $user->load('tenant'),
             ]);
-
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể lấy profile: ' . $e->getMessage(), 500);
         }

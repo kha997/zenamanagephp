@@ -1,37 +1,42 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
-use Tests\TestCase;
-use Tests\Traits\AuthenticationTrait;
-use Tests\Traits\ApiTestTrait;
-use App\Models\User;
-use App\Models\Tenant;
-use Src\CoreProject\Models\Project;
-use Src\DocumentManagement\Models\Document;
-use Src\DocumentManagement\Models\DocumentVersion;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Src\CoreProject\Models\Project;
+use Src\DocumentManagement\Models\Document;
+use Tests\TestCase;
+use Tests\Traits\ApiTestTrait;
+use Tests\Traits\AuthenticationTrait;
 
 class DocumentApiTest extends TestCase
 {
-    use RefreshDatabase, WithFaker, AuthenticationTrait, ApiTestTrait;
+    use RefreshDatabase;
+    use WithFaker;
+    use AuthenticationTrait;
+    use ApiTestTrait;
 
     protected $tenant;
+
     protected $user;
+
     protected $project;
 
     /**
-     * Setup method
+     * Setup method.
      */
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         Storage::fake('local');
 
         $this->tenant = Tenant::factory()->create([
@@ -56,13 +61,12 @@ class DocumentApiTest extends TestCase
         $this->withHeaders($headers);
 
         $this->project = Project::factory()->create([
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
-
     }
 
     /**
-     * Test upload document
+     * Test upload document.
      */
     public function test_can_upload_document()
     {
@@ -75,7 +79,7 @@ class DocumentApiTest extends TestCase
             'linked_entity_type' => 'project',
             'linked_entity_id' => $this->project->id,
             'file' => $file,
-            'comment' => 'Initial upload'
+            'comment' => 'Initial upload',
         ]);
 
         $response->assertStatus(201)
@@ -88,19 +92,18 @@ class DocumentApiTest extends TestCase
                          'document_type',
                          'version',
                          'created_at',
-                         'updated_at'
-                     ]
+                         'updated_at',
+                     ],
                  ]);
 
         $this->assertDatabaseHas('documents', [
             'name' => 'Test Document',
-            'project_id' => $this->project->id
+            'project_id' => $this->project->id,
         ]);
-
     }
 
     /**
-     * Test get all documents
+     * Test get all documents.
      */
     public function test_can_get_all_documents()
     {
@@ -119,8 +122,8 @@ class DocumentApiTest extends TestCase
                              'name',
                              'project_id',
                              'created_at',
-                             'updated_at'
-                         ]
+                             'updated_at',
+                         ],
                      ],
                      'meta' => [
                          'pagination' => [
@@ -128,13 +131,13 @@ class DocumentApiTest extends TestCase
                              'per_page',
                              'total',
                              'last_page',
-                         ]
-                     ]
+                         ],
+                     ],
                  ]);
     }
 
     /**
-     * Test upload new version
+     * Test upload new version.
      */
     public function test_can_upload_new_version()
     {
@@ -145,7 +148,7 @@ class DocumentApiTest extends TestCase
         $response = $this->apiPostMultipart("/api/v1/documents/{$documentId}/versions", [
             'file' => $file,
             'comment' => 'Updated version',
-            'version' => 2
+            'version' => 2,
         ]);
 
         $response->assertStatus(201)
@@ -159,14 +162,13 @@ class DocumentApiTest extends TestCase
                          'mime_type',
                          'file_name',
                          'created_at',
-                         'updated_at'
-                     ]
+                         'updated_at',
+                     ],
                  ]);
-
     }
 
     /**
-     * Test revert to previous version
+     * Test revert to previous version.
      */
     public function test_can_revert_to_previous_version()
     {
@@ -177,22 +179,22 @@ class DocumentApiTest extends TestCase
         $this->apiPostMultipart("/api/v1/documents/{$documentId}/versions", [
             'file' => $file,
             'comment' => 'Second version',
-            'version' => 2
+            'version' => 2,
         ])->assertStatus(201);
 
         $response = $this->apiPost('/api/v1/documents/non-existent-document/revert', [ // SSOT_ALLOW_ORPHAN(reason=NEGATIVE_PROBE_UNSUPPORTED_ENDPOINT)
             'version_number' => 1,
-            'comment' => 'Reverting to first version'
+            'comment' => 'Reverting to first version',
         ]);
 
         $response->assertStatus(404)
                  ->assertJsonStructure([
-                     'message'
+                     'message',
                  ]);
     }
 
     /**
-     * Test download document
+     * Test download document.
      */
     public function test_can_download_document()
     {
@@ -212,7 +214,7 @@ class DocumentApiTest extends TestCase
     }
 
     /**
-     * Test validation errors
+     * Test validation errors.
      */
     public function test_upload_document_validation_errors()
     {
@@ -221,6 +223,7 @@ class DocumentApiTest extends TestCase
         $response->assertStatus(422)
                  ->assertJsonValidationErrors(['title', 'project_id', 'file']);
     }
+
     private function createValidPdfUploadedFile(string $name = 'test-document.pdf', int $paddingBytes = 0): UploadedFile
     {
         $padding = max(0, $paddingBytes);
@@ -280,7 +283,7 @@ class DocumentApiTest extends TestCase
             'linked_entity_type' => 'project',
             'linked_entity_id' => $this->project->id,
             'file' => $file,
-            'comment' => 'Automated upload'
+            'comment' => 'Automated upload',
         ]);
 
         $response->assertStatus(201);

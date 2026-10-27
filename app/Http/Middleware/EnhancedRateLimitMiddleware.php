@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
@@ -9,8 +11,8 @@ use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Enhanced Rate Limiting Middleware
- * 
+ * Enhanced Rate Limiting Middleware.
+ *
  * Provides sophisticated rate limiting with:
  * - Multiple rate limit tiers (per endpoint, per user, per IP)
  * - Sliding window algorithm
@@ -21,7 +23,7 @@ use Symfony\Component\HttpFoundation\Response;
 class EnhancedRateLimitMiddleware
 {
     /**
-     * Rate limit configurations
+     * Rate limit configurations.
      */
     private array $config = [
         'default' => [
@@ -58,34 +60,34 @@ class EnhancedRateLimitMiddleware
     {
         $config = $this->getConfig($type);
         $identifier = $this->getIdentifier($request);
-        
+
         // Check rate limit
         $rateLimitResult = $this->checkRateLimit($identifier, $config, $request, $type);
-        
+
         if (!$rateLimitResult['allowed']) {
             return $this->rateLimitExceededResponse($rateLimitResult, $request);
         }
-        
+
         // Log successful request
         $this->logRequest($request, $rateLimitResult);
-        
+
         // Add rate limit headers to response
         $response = $next($request);
         $this->addRateLimitHeaders($response, $rateLimitResult);
-        
+
         return $response;
     }
-    
+
     /**
-     * Get configuration for rate limit type
+     * Get configuration for rate limit type.
      */
     private function getConfig(string $type): array
     {
         return $this->config[$type] ?? $this->config['default'];
     }
-    
+
     /**
-     * Get unique identifier for rate limiting
+     * Get unique identifier for rate limiting.
      */
     private function getIdentifier(Request $request): string
     {
@@ -93,13 +95,13 @@ class EnhancedRateLimitMiddleware
         if ($request->user()) {
             return 'user:' . $request->user()->id;
         }
-        
+
         // Fall back to IP address
         return 'ip:' . $request->ip();
     }
-    
+
     /**
-     * Check rate limit using sliding window algorithm
+     * Check rate limit using sliding window algorithm.
      */
     private function checkRateLimit(string $identifier, array $config, Request $request, string $type): array
     {
@@ -107,32 +109,32 @@ class EnhancedRateLimitMiddleware
         $windowSize = $config['window_size'];
         $maxRequests = $config['requests_per_minute'];
         $burstLimit = $config['burst_limit'];
-        
+
         // Get current window data
         $windowKey = "rate_limit:{$identifier}:{$type}";
         $currentWindow = Cache::get($windowKey, []);
-        
+
         // Clean old entries (older than window size)
-        $currentWindow = array_filter($currentWindow, function($timestamp) use ($now, $windowSize) {
+        $currentWindow = array_filter($currentWindow, function ($timestamp) use ($now, $windowSize) {
             return ($now - $timestamp) < $windowSize;
         });
-        
+
         // Count current requests in window
         $currentRequests = count($currentWindow);
-        
+
         // Check if we're within limits
         $allowed = $currentRequests < $maxRequests;
-        
+
         // Check burst limit (allows temporary spikes)
         $burstAllowed = $currentRequests < $burstLimit;
-        
+
         if ($allowed || $burstAllowed) {
             // Add current request timestamp
             $currentWindow[] = $now;
-            
+
             // Store updated window
             Cache::put($windowKey, $currentWindow, $windowSize + 10); // Extra 10 seconds buffer
-            
+
             return [
                 'allowed' => true,
                 'current_requests' => $currentRequests + 1,
@@ -144,7 +146,7 @@ class EnhancedRateLimitMiddleware
                 'is_burst' => !$allowed && $burstAllowed,
             ];
         }
-        
+
         return [
             'allowed' => false,
             'current_requests' => $currentRequests,
@@ -156,9 +158,9 @@ class EnhancedRateLimitMiddleware
             'is_burst' => false,
         ];
     }
-    
+
     /**
-     * Return rate limit exceeded response
+     * Return rate limit exceeded response.
      */
     private function rateLimitExceededResponse(array $rateLimitResult, Request $request): Response
     {
@@ -171,9 +173,9 @@ class EnhancedRateLimitMiddleware
             'user_id' => $request->user()?->id,
             'rate_limit_result' => $rateLimitResult,
         ]);
-        
+
         $retryAfter = $rateLimitResult['reset_time'] - time();
-        
+
         $response = response()->json([
             'success' => false,
             'error' => 'Rate limit exceeded',
@@ -185,16 +187,16 @@ class EnhancedRateLimitMiddleware
                 'max_requests' => $rateLimitResult['max_requests'],
                 'window_size' => $rateLimitResult['window_size'],
                 'reset_time' => $rateLimitResult['reset_time'],
-            ]
+            ],
         ], 429)->header('Retry-After', $retryAfter);
 
         $this->addRateLimitHeaders($response, $rateLimitResult);
 
         return $response;
     }
-    
+
     /**
-     * Add rate limit headers to response
+     * Add rate limit headers to response.
      */
     private function addRateLimitHeaders(Response $response, array $rateLimitResult): void
     {
@@ -202,14 +204,14 @@ class EnhancedRateLimitMiddleware
         $response->headers->set('X-RateLimit-Remaining', (string) $rateLimitResult['remaining']);
         $response->headers->set('X-RateLimit-Reset', (string) $rateLimitResult['reset_time']);
         $response->headers->set('X-RateLimit-Window', (string) $rateLimitResult['window_size']);
-        
+
         if ($rateLimitResult['is_burst']) {
             $response->headers->set('X-RateLimit-Burst', 'true');
         }
     }
-    
+
     /**
-     * Log request for monitoring
+     * Log request for monitoring.
      */
     private function logRequest(Request $request, array $rateLimitResult): void
     {

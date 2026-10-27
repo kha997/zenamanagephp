@@ -3,45 +3,46 @@
 namespace Tests\Unit\Dashboard;
 
 use App\Exceptions\Dashboard\UnsupportedDashboardRole;
-use Tests\TestCase;
-use App\Services\DashboardRoleBasedService;
-use App\Models\User;
-use App\Models\UserDashboard;
-use App\Models\DashboardWidget;
-use App\Models\DashboardMetric;
 use App\Models\DashboardAlert;
+use App\Models\DashboardMetric;
+use App\Models\DashboardWidget;
 use App\Models\Project;
-use App\Models\Task;
 use App\Models\Rfi;
-use App\Models\Inspection;
-use App\Models\NCR;
 use App\Models\Role;
+use App\Models\Task;
+use App\Models\User;
 use App\Models\UserRoleProject;
+use App\Services\DashboardRoleBasedService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Mockery;
 use Tests\Support\SSOT\FixtureFactory;
+use Tests\TestCase;
 
 class DashboardRoleBasedServiceTest extends TestCase
 {
-    use RefreshDatabase, FixtureFactory;
+    use RefreshDatabase;
+    use FixtureFactory;
 
     protected $roleBasedService;
+
     protected $user;
+
     protected $project;
+
     protected $tenant;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create test tenant
         $this->tenant = $this->createTenant([
             'name' => 'Test Tenant',
             'domain' => 'test.com',
-            'is_active' => true
+            'is_active' => true,
         ]);
-        
+
         // Create test user
         $this->user = $this->createTenantUserWithRbac($this->tenant, 'project_manager', 'project_manager', [], [
             'name' => 'Test User',
@@ -50,7 +51,7 @@ class DashboardRoleBasedServiceTest extends TestCase
             'role' => 'project_manager',
             'tenant_id' => $this->tenant->id,
         ]);
-        
+
         // Create test project
         $this->project = $this->createProjectForTenant($this->tenant, $this->user, [
             'name' => 'Test Project',
@@ -62,9 +63,9 @@ class DashboardRoleBasedServiceTest extends TestCase
             'tenant_id' => $this->tenant->id,
         ]);
         $this->assignProjectRole();
-        
+
         $this->roleBasedService = $this->app->make(DashboardRoleBasedService::class);
-        
+
         $this->createTestData();
     }
 
@@ -80,7 +81,7 @@ class DashboardRoleBasedServiceTest extends TestCase
             'config' => json_encode(['default_size' => 'large']),
             'permissions' => json_encode(['project_manager']),
             'is_active' => true,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         DashboardWidget::create([
@@ -92,7 +93,7 @@ class DashboardRoleBasedServiceTest extends TestCase
             'config' => json_encode(['default_size' => 'medium']),
             'permissions' => json_encode(['project_manager', 'site_engineer']),
             'is_active' => true,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Create test metrics
@@ -104,7 +105,7 @@ class DashboardRoleBasedServiceTest extends TestCase
             'type' => 'gauge',
             'is_active' => true,
             'permissions' => json_encode(['project_manager']),
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Create test tasks
@@ -116,7 +117,7 @@ class DashboardRoleBasedServiceTest extends TestCase
             'due_date' => now()->addDays(7),
             'assigned_to' => $this->user->id,
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         Task::create([
@@ -127,7 +128,7 @@ class DashboardRoleBasedServiceTest extends TestCase
             'due_date' => now()->subDays(1),
             'assigned_to' => $this->user->id,
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Create test RFIs
@@ -144,7 +145,7 @@ class DashboardRoleBasedServiceTest extends TestCase
             'due_date' => now()->addDays(3),
             'discipline' => 'construction',
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
     }
 
@@ -155,14 +156,14 @@ class DashboardRoleBasedServiceTest extends TestCase
             [
                 'scope' => 'project',
                 'allow_override' => true,
-                'is_active' => true
+                'is_active' => true,
             ]
         );
 
         UserRoleProject::create([
             'project_id' => $this->project->id,
             'user_id' => $this->user->id,
-            'role_id' => $role->id
+            'role_id' => $role->id,
         ]);
     }
 
@@ -211,12 +212,12 @@ class DashboardRoleBasedServiceTest extends TestCase
 
         $this->assertIsArray($widgets);
         $this->assertCount(2, $widgets); // project_overview and task_progress
-        
+
         // Check widget structure
         $this->assertArrayHasKey('widget', $widgets[0]);
         $this->assertArrayHasKey('data', $widgets[0]);
         $this->assertArrayHasKey('permissions', $widgets[0]);
-        
+
         // Check that widgets are filtered by role
         $widgetCodes = array_column(array_column($widgets, 'widget'), 'code');
         $this->assertContains('project_overview', $widgetCodes);
@@ -232,7 +233,7 @@ class DashboardRoleBasedServiceTest extends TestCase
             'email' => 'qc@example.com',
             'password' => bcrypt('password'),
             'role' => 'qc_inspector',
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
         $this->project->update(['pm_id' => $qcUser->id]);
 
@@ -256,7 +257,7 @@ class DashboardRoleBasedServiceTest extends TestCase
         $this->assertArrayHasKey('total_budget', $data);
         $this->assertArrayHasKey('spent_budget', $data);
         $this->assertArrayHasKey('recent_projects', $data);
-        
+
         $this->assertEquals(1, $data['total_projects']);
         $this->assertEquals(1, $data['active_projects']);
         $this->assertEquals(0, $data['completed_projects']);
@@ -275,7 +276,7 @@ class DashboardRoleBasedServiceTest extends TestCase
         $this->assertArrayHasKey('overdue_tasks', $data);
         $this->assertArrayHasKey('completion_rate', $data);
         $this->assertArrayHasKey('recent_tasks', $data);
-        
+
         $this->assertEquals(2, $data['total_tasks']);
         $this->assertEquals(1, $data['completed_tasks']);
         $this->assertEquals(1, $data['in_progress_tasks']);
@@ -296,7 +297,7 @@ class DashboardRoleBasedServiceTest extends TestCase
         $this->assertArrayHasKey('overdue_rfis', $data);
         $this->assertArrayHasKey('average_response_time', $data);
         $this->assertArrayHasKey('recent_rfis', $data);
-        
+
         $this->assertEquals(1, $data['total_rfis']);
         $this->assertEquals(1, $data['open_rfis']);
         $this->assertEquals(0, $data['answered_rfis']);
@@ -317,7 +318,7 @@ class DashboardRoleBasedServiceTest extends TestCase
         $this->assertArrayHasKey('monthly_spending', $data);
         $this->assertArrayHasKey('top_expense_categories', $data);
         $this->assertArrayHasKey('budget_alerts', $data);
-        
+
         $this->assertEquals(100000, $data['total_budget']);
         $this->assertEquals(0, $data['total_spent']);
         $this->assertEquals(100000, $data['remaining_budget']);
@@ -331,13 +332,13 @@ class DashboardRoleBasedServiceTest extends TestCase
 
         $this->assertIsArray($metrics);
         $this->assertCount(1, $metrics); // Only project_progress metric
-        
+
         $metric = $metrics[0];
         $this->assertArrayHasKey('metric', $metric);
         $this->assertArrayHasKey('value', $metric);
         $this->assertArrayHasKey('trend', $metric);
         $this->assertArrayHasKey('target', $metric);
-        
+
         $this->assertEquals('project_progress', $metric['metric']['code']);
     }
 
@@ -354,7 +355,7 @@ class DashboardRoleBasedServiceTest extends TestCase
             'severity' => 'medium',
             'is_read' => false,
             'triggered_at' => now(),
-            'context' => json_encode(['project_id' => $this->project->id])
+            'context' => json_encode(['project_id' => $this->project->id]),
         ]);
 
         DashboardAlert::create([
@@ -366,14 +367,14 @@ class DashboardRoleBasedServiceTest extends TestCase
             'severity' => 'high',
             'is_read' => false,
             'triggered_at' => now(),
-            'context' => json_encode(['project_id' => $this->project->id])
+            'context' => json_encode(['project_id' => $this->project->id]),
         ]);
 
         $alerts = $this->roleBasedService->getRoleBasedAlerts($this->user, $this->project->id);
 
         $this->assertIsArray($alerts);
         $this->assertCount(2, $alerts);
-        
+
         // Check alert structure
         $this->assertArrayHasKey('id', $alerts[0]);
         $this->assertArrayHasKey('type', $alerts[0]);
@@ -395,7 +396,7 @@ class DashboardRoleBasedServiceTest extends TestCase
         $this->assertArrayHasKey('users', $permissions);
         $this->assertArrayHasKey('reports', $permissions);
         $this->assertArrayHasKey('settings', $permissions);
-        
+
         // Check specific permissions
         $this->assertContains('view', $permissions['dashboard']);
         $this->assertContains('edit', $permissions['dashboard']);
@@ -408,20 +409,20 @@ class DashboardRoleBasedServiceTest extends TestCase
     public function it_can_check_widget_permissions()
     {
         $widget = DashboardWidget::where('code', 'project_overview')->first();
-        
+
         // Project Manager should have access
         $canAccess = $this->roleBasedService->userCanAccessWidget($this->user, $widget);
         $this->assertTrue($canAccess);
-        
+
         // Create QC Inspector user
         $qcUser = User::create([
             'name' => 'QC Inspector',
             'email' => 'qc@example.com',
             'password' => bcrypt('password'),
             'role' => 'qc_inspector',
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
-        
+
         // QC Inspector should not have access
         $canAccess = $this->roleBasedService->userCanAccessWidget($qcUser, $widget);
         $this->assertFalse($canAccess);
@@ -439,7 +440,7 @@ class DashboardRoleBasedServiceTest extends TestCase
         $this->assertArrayHasKey('can_delete', $permissions);
         $this->assertArrayHasKey('can_configure', $permissions);
         $this->assertArrayHasKey('can_share', $permissions);
-        
+
         $this->assertTrue($permissions['can_view']);
         $this->assertTrue($permissions['can_edit']);
         $this->assertTrue($permissions['can_configure']);
@@ -453,7 +454,7 @@ class DashboardRoleBasedServiceTest extends TestCase
         $this->assertIsArray($context);
         $this->assertArrayHasKey('current_project', $context);
         $this->assertArrayHasKey('available_projects', $context);
-        
+
         $this->assertNotNull($context['current_project']);
         $this->assertEquals($this->project->id, $context['current_project']['id']);
         $this->assertEquals($this->project->name, $context['current_project']['name']);
@@ -468,7 +469,7 @@ class DashboardRoleBasedServiceTest extends TestCase
         $this->assertIsArray($context);
         $this->assertArrayHasKey('current_project', $context);
         $this->assertArrayHasKey('available_projects', $context);
-        
+
         $this->assertNull($context['current_project']);
         $this->assertIsArray($context['available_projects']);
     }
@@ -477,19 +478,19 @@ class DashboardRoleBasedServiceTest extends TestCase
     public function it_handles_different_user_roles_correctly()
     {
         $roles = ['system_admin', 'project_manager', 'design_lead', 'site_engineer', 'qc_inspector', 'client_rep', 'subcontractor_lead'];
-        
+
         foreach ($roles as $role) {
             $user = User::create([
                 'name' => "Test {$role}",
                 'email' => "{$role}@example.com",
                 'password' => bcrypt('password'),
                 'role' => $role,
-                'tenant_id' => $this->tenant->id
+                'tenant_id' => $this->tenant->id,
             ]);
-            
+
             $roleConfig = $this->roleBasedService->getRoleConfiguration($role);
             $permissions = $this->roleBasedService->getRolePermissions($role);
-            
+
             $this->assertIsArray($roleConfig);
             $this->assertIsArray($permissions);
             $this->assertArrayHasKey('name', $roleConfig);
@@ -509,23 +510,23 @@ class DashboardRoleBasedServiceTest extends TestCase
             'spent_amount' => 120000, // Over budget
             'tenant_id' => $this->tenant->id,
         ]);
-        
+
         $project2 = $this->createProjectForTenant($this->tenant, $this->user, [
             'name' => 'Project 2',
             'budget' => 200000,
             'spent_amount' => 150000, // Under budget
             'tenant_id' => $this->tenant->id,
         ]);
-        
+
         $projects = collect([$project1, $project2]);
         $variance = $this->roleBasedService->calculateBudgetVariance($projects);
-        
+
         $this->assertIsArray($variance);
         $this->assertArrayHasKey('total_variance', $variance);
         $this->assertArrayHasKey('average_variance_percentage', $variance);
         $this->assertArrayHasKey('projects_over_budget', $variance);
         $this->assertArrayHasKey('projects_under_budget', $variance);
-        
+
         $this->assertEquals(-30000, $variance['total_variance']); // 120k + 150k - 100k - 200k
         $this->assertEquals(1, $variance['projects_over_budget']);
         $this->assertEquals(1, $variance['projects_under_budget']);
@@ -547,9 +548,9 @@ class DashboardRoleBasedServiceTest extends TestCase
             'created_at' => now()->subHours(24),
             'answered_at' => now()->subHours(12), // 12 hours response time
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
-        
+
         $rfi2 = Rfi::create([
             'subject' => 'RFI 2',
             'title' => 'RFI 2 Title',
@@ -562,12 +563,12 @@ class DashboardRoleBasedServiceTest extends TestCase
             'created_at' => now()->subHours(48),
             'answered_at' => now()->subHours(24), // 24 hours response time
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
-        
+
         $rfis = collect([$rfi1, $rfi2]);
         $avgResponseTime = $this->roleBasedService->calculateAverageResponseTime($rfis);
-        
+
         $this->assertEquals(18, $avgResponseTime); // (12 + 24) / 2 = 18 hours
     }
 
@@ -581,13 +582,13 @@ class DashboardRoleBasedServiceTest extends TestCase
             'spent_amount' => 95000, // 95% utilization
             'tenant_id' => $this->tenant->id,
         ]);
-        
+
         $projects = collect([$project]);
         $alerts = $this->roleBasedService->getBudgetAlerts($projects);
-        
+
         $this->assertIsArray($alerts);
         $this->assertCount(1, $alerts);
-        
+
         $alert = $alerts[0];
         $this->assertEquals('budget_warning', $alert['type']);
         $this->assertEquals('medium', $alert['severity']);

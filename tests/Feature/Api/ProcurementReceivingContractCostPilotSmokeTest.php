@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
@@ -17,7 +19,9 @@ class ProcurementReceivingContractCostPilotSmokeTest extends TestCase
     use TenantUserFactoryTrait;
 
     private Tenant $tenant;
+
     private User $operator;
+
     private Project $project;
 
     protected function setUp(): void

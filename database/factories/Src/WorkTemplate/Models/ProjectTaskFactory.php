@@ -1,33 +1,35 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories\Src\WorkTemplate\Models;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
-use Src\WorkTemplate\Models\ProjectTask;
 use Src\CoreProject\Models\Project;
 use Src\WorkTemplate\Models\ProjectPhase;
+use Src\WorkTemplate\Models\ProjectTask;
 use Src\WorkTemplate\Models\Template;
 
 /**
- * Factory cho ProjectTask model
- * 
+ * Factory cho ProjectTask model.
+ *
  * Tạo dữ liệu giả cho testing ProjectTask
  * Hỗ trợ các trạng thái, conditional tags và cấu hình khác nhau
- * 
+ *
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Src\WorkTemplate\Models\ProjectTask>
  */
 class ProjectTaskFactory extends Factory
 {
     /**
-     * Model được tạo bởi factory này
+     * Model được tạo bởi factory này.
      *
      * @var string
      */
     protected $model = ProjectTask::class;
 
     /**
-     * Định nghĩa trạng thái mặc định của model
+     * Định nghĩa trạng thái mặc định của model.
      *
      * @return array<string, mixed>
      */
@@ -58,8 +60,8 @@ class ProjectTaskFactory extends Factory
     }
 
     /**
-     * State cho task với conditional tag
-     * 
+     * State cho task với conditional tag.
+     *
      * @param string $tag Conditional tag
      * @param bool $isHidden Có ẩn task không
      * @return static
@@ -73,16 +75,16 @@ class ProjectTaskFactory extends Factory
     }
 
     /**
-     * State cho task được tạo từ template
-     * 
+     * State cho task được tạo từ template.
+     *
      * @param Template|null $template Template để liên kết
      * @return static
      */
     public function fromTemplate(Template $template = null): static
     {
         return $this->state(function (array $attributes) use ($template) {
-            $template = $template ?? Template::factory()->create();
-            
+            $template ??= Template::factory()->create();
+
             return [
                 'template_id' => $template->id,
                 'template_task_id' => $this->faker->uuid(),
@@ -91,8 +93,8 @@ class ProjectTaskFactory extends Factory
     }
 
     /**
-     * State cho task với status cụ thể
-     * 
+     * State cho task với status cụ thể.
+     *
      * @param string $status Status của task
      * @return static
      */
@@ -104,8 +106,8 @@ class ProjectTaskFactory extends Factory
     }
 
     /**
-     * State cho task completed
-     * 
+     * State cho task completed.
+     *
      * @return static
      */
     public function completed(): static
@@ -117,8 +119,8 @@ class ProjectTaskFactory extends Factory
     }
 
     /**
-     * State cho task in progress
-     * 
+     * State cho task in progress.
+     *
      * @return static
      */
     public function inProgress(): static
@@ -130,8 +132,8 @@ class ProjectTaskFactory extends Factory
     }
 
     /**
-     * State cho task pending
-     * 
+     * State cho task pending.
+     *
      * @return static
      */
     public function pending(): static
@@ -143,8 +145,8 @@ class ProjectTaskFactory extends Factory
     }
 
     /**
-     * State cho task thuộc project cụ thể
-     * 
+     * State cho task thuộc project cụ thể.
+     *
      * @param Project $project Project để liên kết
      * @return static
      */
@@ -156,8 +158,8 @@ class ProjectTaskFactory extends Factory
     }
 
     /**
-     * State cho task thuộc phase cụ thể
-     * 
+     * State cho task thuộc phase cụ thể.
+     *
      * @param ProjectPhase $phase Phase để liên kết
      * @return static
      */
@@ -170,8 +172,8 @@ class ProjectTaskFactory extends Factory
     }
 
     /**
-     * State cho task ẩn (hidden)
-     * 
+     * State cho task ẩn (hidden).
+     *
      * @return static
      */
     public function hidden(): static
@@ -182,8 +184,8 @@ class ProjectTaskFactory extends Factory
     }
 
     /**
-     * State cho task visible
-     * 
+     * State cho task visible.
+     *
      * @return static
      */
     public function visible(): static
@@ -194,8 +196,8 @@ class ProjectTaskFactory extends Factory
     }
 
     /**
-     * State cho task với duration cụ thể
-     * 
+     * State cho task với duration cụ thể.
+     *
      * @param int $days Số ngày duration
      * @return static
      */
@@ -207,8 +209,8 @@ class ProjectTaskFactory extends Factory
     }
 
     /**
-     * State cho task với progress cụ thể
-     * 
+     * State cho task với progress cụ thể.
+     *
      * @param float $progress Progress percent (0-100)
      * @return static
      */

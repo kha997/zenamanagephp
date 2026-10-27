@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 return [
     /*
@@ -16,7 +18,7 @@ return [
         'namespace' => env('METRICS_NAMESPACE', 'zenamanage'),
         'redis_connection' => env('METRICS_REDIS_CONNECTION', 'default'),
         'storage_adapter' => env('METRICS_STORAGE_ADAPTER', 'redis'),
-        
+
         'collectors' => [
             'http_requests' => [
                 'enabled' => true,
@@ -24,7 +26,7 @@ return [
                 'help' => 'Total number of HTTP requests',
                 'labels' => ['method', 'route', 'status_code'],
             ],
-            
+
             'http_duration' => [
                 'enabled' => true,
                 'name' => 'http_request_duration_seconds',
@@ -32,28 +34,28 @@ return [
                 'labels' => ['method', 'route'],
                 'buckets' => [0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0],
             ],
-            
+
             'database_queries' => [
                 'enabled' => true,
                 'name' => 'database_queries_total',
                 'help' => 'Total number of database queries',
                 'labels' => ['connection', 'type'],
             ],
-            
+
             'websocket_connections' => [
                 'enabled' => true,
                 'name' => 'websocket_connections_active',
                 'help' => 'Number of active WebSocket connections',
                 'labels' => ['server'],
             ],
-            
+
             'queue_jobs' => [
                 'enabled' => true,
                 'name' => 'queue_jobs_total',
                 'help' => 'Total number of queue jobs processed',
                 'labels' => ['queue', 'status'],
             ],
-            
+
             'memory_usage' => [
                 'enabled' => true,
                 'name' => 'memory_usage_bytes',
@@ -91,7 +93,7 @@ return [
             'disk_usage' => 0.90, // 90%
             'cpu_usage' => 0.80, // 80%
         ],
-        
+
         'channels' => [
             'slack' => [
                 'enabled' => env('ALERTS_SLACK_ENABLED', false),

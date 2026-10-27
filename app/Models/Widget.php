@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -27,10 +29,15 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class Widget extends Model
 {
-    use HasUlids, HasFactory, TenantScope, SoftDeletes;
+    use HasUlids;
+    use HasFactory;
+    use TenantScope;
+    use SoftDeletes;
 
     protected $table = 'widgets';
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [
@@ -43,14 +50,14 @@ class Widget extends Model
         'config',
         'position',
         'is_active',
-        'metadata'
+        'metadata',
     ];
 
     protected $casts = [
         'config' => 'array',
         'position' => 'array',
         'is_active' => 'boolean',
-        'metadata' => 'array'
+        'metadata' => 'array',
     ];
 
     public function dashboard(): BelongsTo

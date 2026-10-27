@@ -1,16 +1,18 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories\Src\Compensation\Models;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-use Src\Compensation\Models\TaskCompensation;
-use Src\Compensation\Models\Contract;
-use Src\CoreProject\Models\Task;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\Factory;
+use Src\Compensation\Models\Contract;
+use Src\Compensation\Models\TaskCompensation;
+use Src\CoreProject\Models\Task;
 
 /**
- * Factory cho TaskCompensation model
- * 
+ * Factory cho TaskCompensation model.
+ *
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Src\Compensation\Models\TaskCompensation>
  */
 class TaskCompensationFactory extends Factory
@@ -36,7 +38,7 @@ class TaskCompensationFactory extends Factory
     }
 
     /**
-     * State: Hourly compensation
+     * State: Hourly compensation.
      */
     public function hourly(): static
     {
@@ -48,7 +50,7 @@ class TaskCompensationFactory extends Factory
     }
 
     /**
-     * State: Fixed compensation
+     * State: Fixed compensation.
      */
     public function fixed(): static
     {
@@ -60,7 +62,7 @@ class TaskCompensationFactory extends Factory
     }
 
     /**
-     * State: Paid compensation
+     * State: Paid compensation.
      */
     public function paid(): static
     {

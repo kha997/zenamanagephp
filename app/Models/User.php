@@ -1,7 +1,10 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Traits\HasRoles;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,12 +14,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use App\Traits\HasRoles;
-use App\Models\NotificationRule;
 
 /**
- * Model User - Quản lý người dùng với RBAC và Multi-tenancy
- * 
+ * Model User - Quản lý người dùng với RBAC và Multi-tenancy.
+ *
  * @property string $id ULID primary key
  * @property string $tenant_id ID công ty (ULID)
  * @property string $name Tên người dùng
@@ -33,12 +34,18 @@ use App\Models\NotificationRule;
  */
 class User extends Authenticatable
 {
-    use HasUlids, HasFactory, HasApiTokens, SoftDeletes, HasRoles, Notifiable;
+    use HasUlids;
+    use HasFactory;
+    use HasApiTokens;
+    use SoftDeletes;
+    use HasRoles;
+    use Notifiable;
 
     /**
-     * Cấu hình ULID primary key
+     * Cấu hình ULID primary key.
      */
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [
@@ -84,11 +91,11 @@ class User extends Authenticatable
     ];
 
     protected $attributes = [
-        'is_active' => true
+        'is_active' => true,
     ];
 
     /**
-     * Relationship: User có nhiều Z.E.N.A roles
+     * Relationship: User có nhiều Z.E.N.A roles.
      */
     public function roles(): BelongsToMany
     {
@@ -98,7 +105,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Relationship: User có nhiều system roles (RBAC)
+     * Relationship: User có nhiều system roles (RBAC).
      */
     public function systemRoles(): BelongsToMany
     {
@@ -107,7 +114,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Relationship: User thuộc về một tenant
+     * Relationship: User thuộc về một tenant.
      */
     public function tenant(): BelongsTo
     {
@@ -115,7 +122,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Relationship: User có nhiều Z.E.N.A notifications
+     * Relationship: User có nhiều Z.E.N.A notifications.
      */
     public function zenaNotifications(): HasMany
     {
@@ -135,7 +142,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Relationship: User belongs to many teams
+     * Relationship: User belongs to many teams.
      */
     public function teams(): BelongsToMany
     {
@@ -145,7 +152,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Relationship: User has many task assignments
+     * Relationship: User has many task assignments.
      */
     public function taskAssignments(): HasMany
     {
@@ -153,7 +160,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Relationship: User has many assigned tasks
+     * Relationship: User has many assigned tasks.
      */
     public function tasks(): HasMany
     {
@@ -161,7 +168,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Relationship: User has many created tasks
+     * Relationship: User has many created tasks.
      */
     public function createdTasks(): HasMany
     {
@@ -169,7 +176,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Relationship: User manages many projects
+     * Relationship: User manages many projects.
      */
     public function projects(): HasMany
     {
@@ -209,7 +216,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Kiểm tra user có active không
+     * Kiểm tra user có active không.
      */
     public function isActive(): bool
     {
@@ -217,7 +224,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Scope: Chỉ lấy users active
+     * Scope: Chỉ lấy users active.
      */
     public function scopeActive($query)
     {
@@ -249,7 +256,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user is admin (super_admin, admin, project_manager)
+     * Check if user is admin (super_admin, admin, project_manager).
      */
     public function isAdmin(): bool
     {
@@ -257,7 +264,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user can manage invitations
+     * Check if user can manage invitations.
      */
     public function canManageInvitations(): bool
     {
@@ -268,5 +275,4 @@ class User extends Authenticatable
     {
         return $this->hasMany(NotificationRule::class);
     }
-
 }

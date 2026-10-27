@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
@@ -19,9 +21,13 @@ class BusinessKpiServiceTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenant;
+
     private User $userA;
+
     private User $userB;
+
     private Account $account;
+
     private BusinessKpiService $service;
 
     protected function setUp(): void

@@ -17,7 +17,7 @@ class SimpleAuthMiddleware
     {
         // Simple authentication check - for debugging purposes
         // In production, this should be replaced with proper Sanctum authentication
-        
+
         // For now, just pass through without authentication
         // This allows us to test API routes without authentication issues
         return $next($request);

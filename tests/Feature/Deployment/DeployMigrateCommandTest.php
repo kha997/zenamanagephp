@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Deployment;
 
@@ -9,13 +11,14 @@ use Tests\TestCase;
 class DeployMigrateCommandTest extends TestCase
 {
     private string $fixtureDir;
+
     private string $manifestPath;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->fixtureDir = storage_path('framework/testing/gap049-migrations-' . uniqid());
-        File::makeDirectory($this->fixtureDir, 0755, true);
+        File::makeDirectory($this->fixtureDir, 0o755, true);
         $this->manifestPath = $this->fixtureDir . '/classifications.json';
     }
 
@@ -41,22 +44,24 @@ class DeployMigrateCommandTest extends TestCase
      */
     private function writeObservableMigrationFixture(string $name, string $tableName): void
     {
-        File::put($this->fixtureDir . "/{$name}.php", <<<PHP
-<?php
-return new class extends \\Illuminate\\Database\\Migrations\\Migration {
-    public function up(): void
-    {
-        \\Illuminate\\Support\\Facades\\Schema::create('{$tableName}', function (\\Illuminate\\Database\\Schema\\Blueprint \$table) {
-            \$table->id();
-        });
-    }
+        File::put(
+            $this->fixtureDir . "/{$name}.php",
+            <<<PHP
+                <?php
+                return new class extends \\Illuminate\\Database\\Migrations\\Migration {
+                    public function up(): void
+                    {
+                        \\Illuminate\\Support\\Facades\\Schema::create('{$tableName}', function (\\Illuminate\\Database\\Schema\\Blueprint \$table) {
+                            \$table->id();
+                        });
+                    }
 
-    public function down(): void
-    {
-        \\Illuminate\\Support\\Facades\\Schema::dropIfExists('{$tableName}');
-    }
-};
-PHP
+                    public function down(): void
+                    {
+                        \\Illuminate\\Support\\Facades\\Schema::dropIfExists('{$tableName}');
+                    }
+                };
+                PHP
         );
     }
 

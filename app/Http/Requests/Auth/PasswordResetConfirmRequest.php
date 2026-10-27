@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests\Auth;
 
@@ -32,8 +34,8 @@ class PasswordResetConfirmRequest extends FormRequest
                     ->numbers()
                     ->symbols()
                     ->uncompromised(),
-                'confirmed'
-            ]
+                'confirmed',
+            ],
         ];
     }
 
@@ -54,7 +56,7 @@ class PasswordResetConfirmRequest extends FormRequest
             'password.numbers' => 'Password must contain at least one number.',
             'password.symbols' => 'Password must contain at least one special character.',
             'password.uncompromised' => 'This password has been compromised in a data breach.',
-            'password.confirmed' => 'Password confirmation does not match.'
+            'password.confirmed' => 'Password confirmation does not match.',
         ];
     }
 }

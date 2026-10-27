@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Buttons;
 
@@ -8,14 +10,14 @@ use App\Models\Role;
 use App\Models\Task;
 use App\Models\Tenant;
 use App\Models\User;
-use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Tests\TestCase;
 use Tests\Traits\AuthenticationTestTrait;
 
 /**
- * Button Authorization Test
- * 
+ * Button Authorization Test.
+ *
  * Tests role-based access control for all interactive elements
  */
 class ButtonAuthorizationTest extends TestCase
@@ -24,25 +26,27 @@ class ButtonAuthorizationTest extends TestCase
     use AuthenticationTestTrait;
 
     protected $tenant;
+
     protected $users = [];
+
     protected string $tenantId;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create test tenant
         $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
             'slug' => 'test-company-' . uniqid(),
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
         $this->tenantId = (string) $this->tenant->id;
 
         // Create users for each role
         $roles = ['super_admin', 'admin', 'pm', 'designer', 'engineer', 'guest'];
-        
+
         foreach ($roles as $role) {
             $this->users[$role] = User::factory()->create([
                 'name' => ucfirst($role) . ' User',
@@ -80,7 +84,7 @@ class ButtonAuthorizationTest extends TestCase
             'name' => 'Test Project',
             'description' => 'Test project for authorization',
             'status' => 'active',
-            'budget_total' => 100000.00
+            'budget_total' => 100000.00,
         ]);
 
         $this->seedSuperAdminRbac();
@@ -95,7 +99,7 @@ class ButtonAuthorizationTest extends TestCase
                 'tenant_id' => $this->tenant->id,
                 'allow_override' => true,
                 'is_active' => true,
-                'description' => 'System super administrator'
+                'description' => 'System super administrator',
             ]
         );
 
@@ -109,7 +113,7 @@ class ButtonAuthorizationTest extends TestCase
                 'name' => 'admin',
                 'module' => 'admin',
                 'action' => 'access',
-                'description' => 'Full admin area access'
+                'description' => 'Full admin area access',
             ]
         );
 
@@ -138,7 +142,7 @@ class ButtonAuthorizationTest extends TestCase
                 'name' => 'project.view',
                 'module' => 'project',
                 'action' => 'view',
-                'description' => 'View tenant projects'
+                'description' => 'View tenant projects',
             ]
         );
 
@@ -148,7 +152,7 @@ class ButtonAuthorizationTest extends TestCase
                 'name' => 'project.create',
                 'module' => 'project',
                 'action' => 'create',
-                'description' => 'Create tenant projects'
+                'description' => 'Create tenant projects',
             ]
         );
 
@@ -158,7 +162,7 @@ class ButtonAuthorizationTest extends TestCase
                 'name' => 'project.delete',
                 'module' => 'project',
                 'action' => 'delete',
-                'description' => 'Delete tenant projects'
+                'description' => 'Delete tenant projects',
             ]
         );
 
@@ -168,7 +172,7 @@ class ButtonAuthorizationTest extends TestCase
                 'name' => 'task.update',
                 'module' => 'task',
                 'action' => 'update',
-                'description' => 'Update tenant tasks'
+                'description' => 'Update tenant tasks',
             ]
         );
 
@@ -180,7 +184,7 @@ class ButtonAuthorizationTest extends TestCase
     }
 
     /**
-     * Test super_admin access to all functions
+     * Test super_admin access to all functions.
      */
     public function test_super_admin_has_full_access(): void
     {
@@ -204,7 +208,7 @@ class ButtonAuthorizationTest extends TestCase
     }
 
     /**
-     * Test admin access to tenant functions
+     * Test admin access to tenant functions.
      */
     public function test_admin_has_tenant_access(): void
     {
@@ -228,7 +232,7 @@ class ButtonAuthorizationTest extends TestCase
     }
 
     /**
-     * Test project manager access
+     * Test project manager access.
      */
     public function test_pm_has_project_access(): void
     {
@@ -252,7 +256,7 @@ class ButtonAuthorizationTest extends TestCase
     }
 
     /**
-     * Test designer access
+     * Test designer access.
      */
     public function test_designer_has_limited_access(): void
     {
@@ -276,7 +280,7 @@ class ButtonAuthorizationTest extends TestCase
     }
 
     /**
-     * Test engineer access
+     * Test engineer access.
      */
     public function test_engineer_has_limited_access(): void
     {
@@ -300,7 +304,7 @@ class ButtonAuthorizationTest extends TestCase
     }
 
     /**
-     * Test guest access (read-only)
+     * Test guest access (read-only).
      */
     public function test_guest_has_read_only_access(): void
     {
@@ -324,7 +328,7 @@ class ButtonAuthorizationTest extends TestCase
     }
 
     /**
-     * Test tenant isolation
+     * Test tenant isolation.
      */
     public function test_tenant_isolation(): void
     {
@@ -332,14 +336,14 @@ class ButtonAuthorizationTest extends TestCase
         $otherTenant = Tenant::factory()->create([
             'name' => 'Other Company',
             'slug' => 'other-company-' . uniqid(),
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
         $otherUser = User::factory()->create([
             'name' => 'Other User',
             'email' => 'other@test-' . uniqid() . '.com',
             'password' => Hash::make('password'),
-            'tenant_id' => $otherTenant->id
+            'tenant_id' => $otherTenant->id,
         ]);
 
         $this->actingAs($this->users['pm']);
@@ -347,7 +351,7 @@ class ButtonAuthorizationTest extends TestCase
         // Test that user can only access their tenant's data
         $response = $this->getFollowingRedirects('/projects');
         $response->assertStatus(200);
-        
+
         // Verify no cross-tenant data access
         $projects = $response->viewData('projects') ?? [];
         foreach ($projects as $project) {
@@ -356,41 +360,41 @@ class ButtonAuthorizationTest extends TestCase
     }
 
     /**
-     * Test CRUD operation permissions
+     * Test CRUD operation permissions.
      */
     public function test_crud_operation_permissions(): void
     {
         // Test project creation permissions
         $this->actingAs($this->users['pm']);
         $this->get('/projects/create');
-        
+
         $response = $this->post('/projects', [
             'name' => 'New Project',
             'description' => 'Test project',
             'code' => 'NEW-' . uniqid(),
             'status' => 'active',
-            'budget_total' => 50000.00
+            'budget_total' => 50000.00,
         ]);
-        
+
         $response->assertRedirect('/projects');
 
         // Test project creation with designer (should be denied)
         $this->actingAs($this->users['designer']);
         $this->get('/projects/create');
-        
+
         $response = $this->post('/projects', [
             'name' => 'New Project 2',
             'description' => 'Test project 2',
             'code' => 'NEW2-' . uniqid(),
             'status' => 'active',
-            'budget_total' => 50000.00
+            'budget_total' => 50000.00,
         ]);
-        
+
         $response->assertRedirect('/projects');
     }
 
     /**
-     * Test API authorization
+     * Test API authorization.
      */
     public function test_api_authorization(): void
     {
@@ -402,17 +406,17 @@ class ButtonAuthorizationTest extends TestCase
 
         // Test unauthorized API access
         $this->actingAs($this->users['guest']);
-        
+
         $response = $this->withHeaders($this->tenantHeaders())->postJson('/api/v1/projects', [
             'name' => 'Unauthorized Project',
-            'description' => 'Should be denied'
+            'description' => 'Should be denied',
         ]);
-        
+
         $response->assertStatus(403);
     }
 
     /**
-     * Test bulk operation permissions
+     * Test bulk operation permissions.
      */
     public function test_bulk_operation_permissions(): void
     {
@@ -421,19 +425,19 @@ class ButtonAuthorizationTest extends TestCase
         // Test authorized bulk operation
         $response = $this->withHeaders($this->tenantHeaders())->postJson('/api/tasks/bulk/status-change', [
             'task_ids' => [],
-            'status' => 'completed'
+            'status' => 'completed',
         ]);
-        
+
         $response->assertStatus(200);
 
         // Test unauthorized bulk operation
         $this->actingAs($this->users['guest']);
-        
+
         $response = $this->withHeaders($this->tenantHeaders())->postJson('/api/tasks/bulk/status-change', [
             'task_ids' => [],
-            'status' => 'completed'
+            'status' => 'completed',
         ]);
-        
+
         $response->assertStatus(403);
     }
 

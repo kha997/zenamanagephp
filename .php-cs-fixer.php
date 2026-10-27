@@ -136,6 +136,12 @@ return $config
         'unary_operator_spaces' => true,
         'visibility_required' => true,
         'whitespace_after_comma_in_array' => true,
+
+        // GAP-080: these rewrite string contents, docblocks or class references,
+        // not just layout, so they stay off.
+        'no_trailing_whitespace_in_string' => false,
+        'phpdoc_to_comment' => false,
+        'self_accessor' => false,
     ])
     ->setFinder($finder)
     ->setUsingCache(true)

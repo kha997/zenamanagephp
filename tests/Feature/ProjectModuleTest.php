@@ -1,31 +1,34 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use App\Models\User;
-use App\Models\Tenant;
 use App\Models\Project;
 use App\Models\ProjectMilestone;
+use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class ProjectModuleTest extends TestCase
 {
     use RefreshDatabase;
 
     private User $user;
+
     private Tenant $tenant;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->tenant = Tenant::factory()->create();
         $this->user = User::factory()->create(['tenant_id' => $this->tenant->id]);
     }
 
     /**
-     * Test Project model creation and relationships
+     * Test Project model creation and relationships.
      */
     public function test_project_model_creation(): void
     {
@@ -38,7 +41,7 @@ class ProjectModuleTest extends TestCase
             'progress' => 0,
             'start_date' => now(),
             'end_date' => now()->addDays(30),
-            'budget_total' => 100000
+            'budget_total' => 100000,
         ]);
 
         $this->assertNotNull($project);
@@ -50,7 +53,7 @@ class ProjectModuleTest extends TestCase
     }
 
     /**
-     * Test Project milestone creation
+     * Test Project milestone creation.
      */
     public function test_project_milestone_creation(): void
     {
@@ -63,13 +66,13 @@ class ProjectModuleTest extends TestCase
             'progress' => 0,
             'start_date' => now(),
             'end_date' => now()->addDays(30),
-            'budget_total' => 100000
+            'budget_total' => 100000,
         ]);
 
         $milestone = ProjectMilestone::create([
             'project_id' => $project->id,
             'name' => 'First Milestone',
-            'status' => 'pending'
+            'status' => 'pending',
         ]);
 
         $this->assertNotNull($milestone);
@@ -80,7 +83,7 @@ class ProjectModuleTest extends TestCase
     }
 
     /**
-     * Test Project milestone status update
+     * Test Project milestone status update.
      */
     public function test_project_milestone_status_update(): void
     {
@@ -93,13 +96,13 @@ class ProjectModuleTest extends TestCase
             'progress' => 0,
             'start_date' => now(),
             'end_date' => now()->addDays(30),
-            'budget_total' => 100000
+            'budget_total' => 100000,
         ]);
 
         $milestone = ProjectMilestone::create([
             'project_id' => $project->id,
             'name' => 'Test Milestone',
-            'status' => 'pending'
+            'status' => 'pending',
         ]);
 
         // Test mark as completed
@@ -113,7 +116,7 @@ class ProjectModuleTest extends TestCase
     }
 
     /**
-     * Test Project progress calculation
+     * Test Project progress calculation.
      */
     public function test_project_progress_calculation(): void
     {
@@ -126,20 +129,20 @@ class ProjectModuleTest extends TestCase
             'progress' => 0,
             'start_date' => now(),
             'end_date' => now()->addDays(30),
-            'budget_total' => 100000
+            'budget_total' => 100000,
         ]);
 
         // Create milestones
         ProjectMilestone::create([
             'project_id' => $project->id,
             'name' => 'Milestone 1',
-            'status' => 'completed'
+            'status' => 'completed',
         ]);
 
         ProjectMilestone::create([
             'project_id' => $project->id,
             'name' => 'Milestone 2',
-            'status' => 'pending'
+            'status' => 'pending',
         ]);
 
         // Test progress calculation
@@ -148,7 +151,7 @@ class ProjectModuleTest extends TestCase
     }
 
     /**
-     * Test Project scopes
+     * Test Project scopes.
      */
     public function test_project_scopes(): void
     {
@@ -160,7 +163,7 @@ class ProjectModuleTest extends TestCase
             'status' => 'active',
             'start_date' => now(),
             'end_date' => now()->addDays(30),
-            'budget_total' => 100000
+            'budget_total' => 100000,
         ]);
 
         $completedProject = Project::factory()->create([
@@ -170,7 +173,7 @@ class ProjectModuleTest extends TestCase
             'status' => 'completed',
             'start_date' => now()->subDays(30),
             'end_date' => now()->subDays(1),
-            'budget_total' => 100000
+            'budget_total' => 100000,
         ]);
 
         // Test active scope

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Console\Commands;
 
@@ -22,6 +24,7 @@ class QueueCanaryCommand extends Command
     {
         if (config('queue.default') === 'sync') {
             $this->error('QUEUE_CONNECTION=sync cannot produce a valid queue canary result — refusing to run.');
+
             return 2;
         }
 
@@ -36,12 +39,14 @@ class QueueCanaryCommand extends Command
             if (Cache::get($job->markerKey()) === true) {
                 $this->info("Queue canary completed by a real worker (probe {$probeId}).");
                 Cache::forget($job->markerKey());
+
                 return 0;
             }
             usleep(200_000);
         }
 
         $this->error("Queue canary timed out after {$timeout}s — no worker processed probe {$probeId}.");
+
         return 1;
     }
 }

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests;
 
@@ -8,9 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
 /**
- * Form Request cho Project validation
- * 
- * @package App\Http\Requests
+ * Form Request cho Project validation.
  */
 class ProjectFormRequest extends FormRequest
 {
@@ -28,7 +28,7 @@ class ProjectFormRequest extends FormRequest
     public function rules(): array
     {
         $projectId = $this->route('project');
-        
+
         return [
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],

@@ -1,10 +1,11 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Services;
 
 use App\Exceptions\DocumentApproverAssignmentException;
 use App\Models\Document;
-use App\Models\DocumentApproverAssignment;
 use App\Models\Project;
 use App\Models\Tenant;
 use App\Models\User;
@@ -19,10 +20,15 @@ class DocumentApproverAssignmentServiceTest extends TestCase
     use TenantUserFactoryTrait;
 
     private DocumentApproverAssignmentService $service;
+
     private Tenant $tenant;
+
     private Project $project;
+
     private Document $document;
+
     private User $actor;
+
     private User $eligibleApprover;
 
     protected function setUp(): void
@@ -73,12 +79,14 @@ class DocumentApproverAssignmentServiceTest extends TestCase
         $outsider = User::factory()->create(['tenant_id' => $otherTenant->id]);
 
         $this->expectException(DocumentApproverAssignmentException::class);
+
         try {
             $this->service->assign($this->tenant->id, $this->document->id, $this->actor->id, $outsider->id);
         } catch (DocumentApproverAssignmentException $e) {
             self::assertSame('APPROVER_TENANT_MISMATCH', $e->reasonCode);
             self::assertNull($this->document->fresh()->approver_id);
             self::assertDatabaseCount('document_approver_assignments', 0);
+
             throw $e;
         }
     }
@@ -96,10 +104,12 @@ class DocumentApproverAssignmentServiceTest extends TestCase
         ]);
 
         $this->expectException(DocumentApproverAssignmentException::class);
+
         try {
             $this->service->assign($this->tenant->id, $this->document->id, $this->actor->id, $ineligible->id);
         } catch (DocumentApproverAssignmentException $e) {
             self::assertSame('APPROVER_LACKS_PERMISSION', $e->reasonCode);
+
             throw $e;
         }
     }
@@ -123,10 +133,12 @@ class DocumentApproverAssignmentServiceTest extends TestCase
         $otherTenant = Tenant::factory()->create();
 
         $this->expectException(DocumentApproverAssignmentException::class);
+
         try {
             $this->service->assign($otherTenant->id, $this->document->id, $this->actor->id, $this->eligibleApprover->id);
         } catch (DocumentApproverAssignmentException $e) {
             self::assertSame('DOCUMENT_NOT_FOUND', $e->reasonCode);
+
             throw $e;
         }
     }
@@ -170,11 +182,13 @@ class DocumentApproverAssignmentServiceTest extends TestCase
         // $this->eligibleApprover is a member of $this->project (per setUp()), NOT $otherProject.
 
         $this->expectException(DocumentApproverAssignmentException::class);
+
         try {
             $this->service->assign($this->tenant->id, $otherProjectDocument->id, $this->actor->id, $this->eligibleApprover->id);
         } catch (DocumentApproverAssignmentException $e) {
             self::assertSame('APPROVER_NOT_PROJECT_MEMBER', $e->reasonCode);
             self::assertDatabaseCount('document_approver_assignments', 0);
+
             throw $e;
         }
     }
@@ -192,10 +206,12 @@ class DocumentApproverAssignmentServiceTest extends TestCase
         ]);
 
         $this->expectException(DocumentApproverAssignmentException::class);
+
         try {
             $this->service->assign($this->tenant->id, $this->document->id, $this->actor->id, $memberWithoutPermission->id);
         } catch (DocumentApproverAssignmentException $e) {
             self::assertSame('APPROVER_LACKS_PERMISSION', $e->reasonCode);
+
             throw $e;
         }
     }
@@ -210,12 +226,14 @@ class DocumentApproverAssignmentServiceTest extends TestCase
 
         // Then a reassignment attempt to someone not on $this->project fails the same way.
         $this->expectException(DocumentApproverAssignmentException::class);
+
         try {
             $this->service->assign($this->tenant->id, $this->document->id, $this->actor->id, $notAMember->id);
         } catch (DocumentApproverAssignmentException $e) {
             self::assertSame('APPROVER_NOT_PROJECT_MEMBER', $e->reasonCode);
             // Confirm the FIRST assignment is untouched by the failed second attempt.
             self::assertSame($this->eligibleApprover->id, $this->document->fresh()->approver_id);
+
             throw $e;
         }
     }

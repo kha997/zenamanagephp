@@ -1,16 +1,18 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Models\User;
+use Illuminate\Database\Seeder;
 use Src\CoreProject\Models\Baseline;
 use Src\CoreProject\Models\BaselineHistory;
 use Src\CoreProject\Models\Project;
-use App\Models\User;
-use Illuminate\Database\Seeder;
 
 /**
- * Baseline Seeder
- * 
+ * Baseline Seeder.
+ *
  * Tạo dữ liệu mẫu cho baselines và baseline history
  */
 class BaselineSeeder extends Seeder
@@ -29,7 +31,7 @@ class BaselineSeeder extends Seeder
                 ->forProject($project->id)
                 ->contract()
                 ->create([
-                    'created_by' => $users->random()->id
+                    'created_by' => $users->random()->id,
                 ]);
 
             // Tạo execution baseline
@@ -37,21 +39,21 @@ class BaselineSeeder extends Seeder
                 ->forProject($project->id)
                 ->execution()
                 ->create([
-                    'created_by' => $users->random()->id
+                    'created_by' => $users->random()->id,
                 ]);
 
             // Tạo baseline history cho contract baseline
             BaselineHistory::factory(2)
                 ->forBaseline($contractBaseline->id)
                 ->create([
-                    'created_by' => $users->random()->id
+                    'created_by' => $users->random()->id,
                 ]);
 
             // Tạo baseline history cho execution baseline
             BaselineHistory::factory(3)
                 ->forBaseline($executionBaseline->id)
                 ->create([
-                    'created_by' => $users->random()->id
+                    'created_by' => $users->random()->id,
                 ]);
         }
     }

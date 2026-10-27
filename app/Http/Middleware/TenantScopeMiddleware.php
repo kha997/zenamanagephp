@@ -35,7 +35,7 @@ class TenantScopeMiddleware
 
         // Set tenant context for the request
         $request->attributes->set('tenant_id', $user->tenant_id);
-        
+
         // Add tenant scope to the request for easy access
         app()->instance('current_tenant_id', $user->tenant_id);
 

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -26,13 +28,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class KnowledgeArticle extends Model
 {
-    use HasUlids, TenantScope;
+    use HasUlids;
+    use TenantScope;
 
     /** @use HasFactory<\Database\Factories\KnowledgeArticleFactory> */
     use HasFactory;
 
     protected $table = 'knowledge_articles';
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     public const TYPE_SOP = 'sop';

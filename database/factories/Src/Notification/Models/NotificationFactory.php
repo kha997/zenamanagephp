@@ -1,14 +1,16 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories\Src\Notification\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Src\Notification\Models\Notification;
-use App\Models\User;
 
 /**
- * Factory cho Notification model
- * 
+ * Factory cho Notification model.
+ *
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Src\Notification\Models\Notification>
  */
 class NotificationFactory extends Factory
@@ -33,7 +35,7 @@ class NotificationFactory extends Factory
     }
 
     /**
-     * State: Critical notification
+     * State: Critical notification.
      */
     public function critical(): static
     {
@@ -43,7 +45,7 @@ class NotificationFactory extends Factory
     }
 
     /**
-     * State: Unread notification
+     * State: Unread notification.
      */
     public function unread(): static
     {
@@ -53,7 +55,7 @@ class NotificationFactory extends Factory
     }
 
     /**
-     * State: Email notification
+     * State: Email notification.
      */
     public function email(): static
     {
@@ -63,7 +65,7 @@ class NotificationFactory extends Factory
     }
 
     /**
-     * State: For specific user
+     * State: For specific user.
      */
     public function forUser(string $userId): static
     {

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests;
 
@@ -6,7 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
 /**
- * Base API Request với validation messages tiếng Việt
+ * Base API Request với validation messages tiếng Việt.
  */
 abstract class BaseApiRequest extends FormRequest
 {
@@ -24,20 +26,21 @@ abstract class BaseApiRequest extends FormRequest
      * @param Validator $validator
      * @throws HttpResponseException
      */
-    protected function failedValidation(\Illuminate\Contracts\Validation\Validator $validator): void {
+    protected function failedValidation(\Illuminate\Contracts\Validation\Validator $validator): void
+    {
         throw new HttpResponseException(
             response()->json([
                 'status' => 'fail',
                 'message' => 'Dữ liệu không hợp lệ',
                 'data' => [
-                    'validation_errors' => $validator->errors()->toArray()
-                ]
+                    'validation_errors' => $validator->errors()->toArray(),
+                ],
             ], 422)
         );
     }
 
     /**
-     * Get custom validation messages in Vietnamese
+     * Get custom validation messages in Vietnamese.
      *
      * @return array
      */
@@ -81,7 +84,7 @@ abstract class BaseApiRequest extends FormRequest
     }
 
     /**
-     * Get custom attribute names in Vietnamese
+     * Get custom attribute names in Vietnamese.
      *
      * @return array
      */

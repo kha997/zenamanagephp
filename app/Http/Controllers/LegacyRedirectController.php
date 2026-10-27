@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Auth;
 class LegacyRedirectController extends Controller
 {
     /**
-     * Handle legacy dashboard redirects
+     * Handle legacy dashboard redirects.
      */
     public function dashboard(Request $request)
     {
@@ -17,7 +17,7 @@ class LegacyRedirectController extends Controller
         }
 
         $user = Auth::user();
-        
+
         if ($user->isSuperAdmin()) {
             return redirect('/admin');
         } else {
@@ -26,7 +26,7 @@ class LegacyRedirectController extends Controller
     }
 
     /**
-     * Handle legacy role-based dashboard redirects
+     * Handle legacy role-based dashboard redirects.
      */
     public function roleDashboard(Request $request, $role)
     {
@@ -35,13 +35,13 @@ class LegacyRedirectController extends Controller
         }
 
         $user = Auth::user();
-        
+
         // Redirect to new app dashboard with role context
         return redirect("/app/dashboard?role={$role}");
     }
 
     /**
-     * Handle legacy project routes
+     * Handle legacy project routes.
      */
     public function projects(Request $request)
     {
@@ -50,7 +50,7 @@ class LegacyRedirectController extends Controller
         }
 
         $user = Auth::user();
-        
+
         if ($user->canAccessApp()) {
             return redirect('/app/projects');
         } else {
@@ -59,7 +59,7 @@ class LegacyRedirectController extends Controller
     }
 
     /**
-     * Handle legacy task routes
+     * Handle legacy task routes.
      */
     public function tasks(Request $request)
     {
@@ -68,7 +68,7 @@ class LegacyRedirectController extends Controller
         }
 
         $user = Auth::user();
-        
+
         if ($user->canAccessApp()) {
             return redirect('/app/tasks');
         } else {
@@ -77,7 +77,7 @@ class LegacyRedirectController extends Controller
     }
 
     /**
-     * Handle legacy user routes
+     * Handle legacy user routes.
      */
     public function users(Request $request)
     {
@@ -86,7 +86,7 @@ class LegacyRedirectController extends Controller
         }
 
         $user = Auth::user();
-        
+
         if ($user->isSuperAdmin()) {
             return redirect('/admin/users');
         } else {
@@ -95,7 +95,7 @@ class LegacyRedirectController extends Controller
     }
 
     /**
-     * Handle legacy tenant routes
+     * Handle legacy tenant routes.
      */
     public function tenants(Request $request)
     {
@@ -104,7 +104,7 @@ class LegacyRedirectController extends Controller
         }
 
         $user = Auth::user();
-        
+
         if ($user->isSuperAdmin()) {
             return redirect('/admin/tenants');
         } else {
@@ -113,7 +113,7 @@ class LegacyRedirectController extends Controller
     }
 
     /**
-     * Handle legacy document routes
+     * Handle legacy document routes.
      */
     public function documents(Request $request)
     {
@@ -122,7 +122,7 @@ class LegacyRedirectController extends Controller
         }
 
         $user = Auth::user();
-        
+
         if ($user->canAccessApp()) {
             return redirect('/app/documents');
         } else {
@@ -131,7 +131,7 @@ class LegacyRedirectController extends Controller
     }
 
     /**
-     * Handle legacy template routes
+     * Handle legacy template routes.
      */
     public function templates(Request $request)
     {
@@ -140,7 +140,7 @@ class LegacyRedirectController extends Controller
         }
 
         $user = Auth::user();
-        
+
         if ($user->canAccessApp()) {
             return redirect('/app/templates');
         } else {
@@ -149,7 +149,7 @@ class LegacyRedirectController extends Controller
     }
 
     /**
-     * Handle legacy settings routes
+     * Handle legacy settings routes.
      */
     public function settings(Request $request)
     {
@@ -158,7 +158,7 @@ class LegacyRedirectController extends Controller
         }
 
         $user = Auth::user();
-        
+
         if ($user->isSuperAdmin()) {
             return redirect('/admin/settings');
         } else {
@@ -167,7 +167,7 @@ class LegacyRedirectController extends Controller
     }
 
     /**
-     * Handle legacy profile routes
+     * Handle legacy profile routes.
      */
     public function profile(Request $request)
     {
@@ -179,7 +179,7 @@ class LegacyRedirectController extends Controller
     }
 
     /**
-     * Handle legacy calendar routes
+     * Handle legacy calendar routes.
      */
     public function calendar(Request $request)
     {
@@ -188,7 +188,7 @@ class LegacyRedirectController extends Controller
         }
 
         $user = Auth::user();
-        
+
         if ($user->canAccessApp()) {
             return redirect('/calendar');
         } else {
@@ -197,7 +197,7 @@ class LegacyRedirectController extends Controller
     }
 
     /**
-     * Handle legacy team routes
+     * Handle legacy team routes.
      */
     public function team(Request $request)
     {
@@ -206,7 +206,7 @@ class LegacyRedirectController extends Controller
         }
 
         $user = Auth::user();
-        
+
         if ($user->canAccessApp()) {
             return redirect('/app/team');
         } else {
@@ -215,7 +215,7 @@ class LegacyRedirectController extends Controller
     }
 
     /**
-     * Handle legacy admin routes
+     * Handle legacy admin routes.
      */
     public function admin(Request $request)
     {
@@ -224,7 +224,7 @@ class LegacyRedirectController extends Controller
         }
 
         $user = Auth::user();
-        
+
         if ($user->isSuperAdmin()) {
             return redirect('/admin');
         } else {
@@ -233,7 +233,7 @@ class LegacyRedirectController extends Controller
     }
 
     /**
-     * Handle legacy debug routes (only in local environment)
+     * Handle legacy debug routes (only in local environment).
      */
     public function debug(Request $request, $path = '')
     {

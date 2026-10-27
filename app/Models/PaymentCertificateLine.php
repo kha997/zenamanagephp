@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -20,12 +22,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class PaymentCertificateLine extends Model
 {
     use HasUlids;
+
     /** @use HasFactory<\Database\Factories\PaymentCertificateLineFactory> */
     use HasFactory;
+
     use TenantScope;
 
     protected $table = 'payment_certificate_lines';
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [

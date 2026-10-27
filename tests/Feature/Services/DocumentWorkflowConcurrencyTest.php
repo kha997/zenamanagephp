@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Services;
 
@@ -23,7 +25,6 @@ use Tests\Traits\TenantUserFactoryTrait;
  * Real row-lock evidence only: every race uses two independently bootstrapped
  * PHP processes/PDO connections released from the same barrier. SQLite and
  * sequential in-process calls are deliberately not accepted as substitutes.
- *
  */
 #[Group('stress')]
 class DocumentWorkflowConcurrencyTest extends TestCase
@@ -417,7 +418,7 @@ class DocumentWorkflowConcurrencyTest extends TestCase
     {
         $lockToken = bin2hex(random_bytes(8));
         $barrier = sys_get_temp_dir() . '/gap032-' . $lockToken;
-        if (! mkdir($barrier, 0700) && ! is_dir($barrier)) {
+        if (!mkdir($barrier, 0o700) && !is_dir($barrier)) {
             self::fail("Unable to create process barrier {$barrier}.");
         }
         $this->barriers[] = $barrier;
@@ -440,7 +441,7 @@ class DocumentWorkflowConcurrencyTest extends TestCase
             $process->start();
         }
         $deadline = microtime(true) + 15;
-        while ((! file_exists($barrier . '/left.ready') || ! file_exists($barrier . '/right.ready')) && microtime(true) < $deadline) {
+        while ((!file_exists($barrier . '/left.ready') || !file_exists($barrier . '/right.ready')) && microtime(true) < $deadline) {
             usleep(10_000);
         }
         self::assertFileExists($barrier . '/left.ready', $this->processDump($processes));
@@ -508,8 +509,7 @@ class DocumentWorkflowConcurrencyTest extends TestCase
         string $loserOperation,
         string $documentId,
         array $results,
-    ): void
-    {
+    ): void {
         $winnerEvidence = $winner['contention_evidence'] ?? null;
         $loserEvidence = $loser['contention_evidence'] ?? null;
 
@@ -728,299 +728,299 @@ class DocumentWorkflowConcurrencyTest extends TestCase
     private function workerScript(): string
     {
         return <<<'PHP'
-require getcwd() . '/vendor/autoload.php';
-$app = require getcwd() . '/bootstrap/app.php';
-$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
-[$operation, $tenantId, $documentId, $actorId, $payload, $barrier, $label, $lockRole, $barrierToken] = array_slice($argv, 1);
-file_put_contents($barrier . '/' . $label . '.ready', 'ready');
-$deadline = microtime(true) + 20;
-while (!file_exists($barrier . '/release') && microtime(true) < $deadline) { usleep(10000); }
-if (!file_exists($barrier . '/release')) {
-    echo 'GAP032_RESULT=' . json_encode(['operation' => $operation, 'status' => 'error', 'reason' => 'BARRIER_TIMEOUT']) . PHP_EOL;
-    exit(3);
-}
-$contentionEvidence = null;
-$governedOperationStarted = null;
-$loserConnectionId = null;
-try {
-    if ($lockRole === 'leader') {
-        Illuminate\Support\Facades\DB::beginTransaction();
-        $leaderConnection = Illuminate\Support\Facades\DB::selectOne('SELECT CONNECTION_ID() AS connection_id');
-        $leaderConnectionId = (int) ($leaderConnection->connection_id ?? 0);
-        $lockedDocument = Illuminate\Support\Facades\DB::table('documents')
-            ->where('tenant_id', $tenantId)
-            ->where('id', $documentId)
-            ->lockForUpdate()
-            ->first();
-        if ($lockedDocument === null) {
-            throw new RuntimeException('Controlled leader could not find the document.');
-        }
-        file_put_contents($barrier . '/leader.locked', 'locked');
-        $deadline = microtime(true) + 10;
-        while (!file_exists($barrier . '/loser.connection') && microtime(true) < $deadline) { usleep(10000); }
-        if (!file_exists($barrier . '/loser.connection')) {
-            throw new RuntimeException('Controlled loser did not publish its MySQL connection ID.');
-        }
-        $loserConnectionId = (int) trim((string) file_get_contents($barrier . '/loser.connection'));
-        $waitingDataLock = null;
-        $lastTransactionObservation = null;
-        $lastDataLockObservation = null;
-        $lastObservationFlags = null;
-        $observationDeadline = microtime(true) + 10;
-        while (microtime(true) < $observationDeadline) {
-            $candidate = Illuminate\Support\Facades\DB::selectOne(
-                "SELECT trx_state, trx_mysql_thread_id, trx_wait_started, trx_query
-                 FROM information_schema.innodb_trx
-                 WHERE trx_mysql_thread_id = ? AND trx_state = 'LOCK WAIT'",
-                [$loserConnectionId]
-            );
-            $lockCandidate = Illuminate\Support\Facades\DB::selectOne(
-                "SELECT
-                    requesting_thread.PROCESSLIST_ID AS waiting_connection_id,
-                    blocking_thread.PROCESSLIST_ID AS blocking_connection_id,
-                    requested_lock.OBJECT_SCHEMA AS object_schema,
-                    requested_lock.OBJECT_NAME AS object_name,
-                    requested_lock.INDEX_NAME AS index_name,
-                    requested_lock.LOCK_TYPE AS lock_type,
-                    requested_lock.LOCK_MODE AS lock_mode,
-                    requested_lock.LOCK_STATUS AS lock_status,
-                    requested_lock.LOCK_DATA AS lock_data,
-                    requesting_thread.PROCESSLIST_INFO AS processlist_info
-                 FROM performance_schema.data_lock_waits AS lock_wait
-                 JOIN performance_schema.data_locks AS requested_lock
-                   ON requested_lock.ENGINE_LOCK_ID = lock_wait.REQUESTING_ENGINE_LOCK_ID
-                 JOIN performance_schema.threads AS requesting_thread
-                   ON requesting_thread.THREAD_ID = lock_wait.REQUESTING_THREAD_ID
-                 JOIN performance_schema.threads AS blocking_thread
-                   ON blocking_thread.THREAD_ID = lock_wait.BLOCKING_THREAD_ID
-                 WHERE requesting_thread.PROCESSLIST_ID = ?
-                   AND blocking_thread.PROCESSLIST_ID = ?
-                   AND requested_lock.OBJECT_SCHEMA = DATABASE()
-                   AND requested_lock.OBJECT_NAME = 'documents'
-                 LIMIT 1",
-                [$loserConnectionId, $leaderConnectionId]
-            );
-            $candidateQuery = is_string($candidate->trx_query ?? null) ? $candidate->trx_query : '';
-            $query = $candidateQuery;
-            $observedQuerySource = 'information_schema.innodb_trx.trx_query';
-            if ($query === '' && is_string($lockCandidate->processlist_info ?? null)) {
-                $query = $lockCandidate->processlist_info;
-                $observedQuerySource = 'performance_schema.threads.PROCESSLIST_INFO';
+            require getcwd() . '/vendor/autoload.php';
+            $app = require getcwd() . '/bootstrap/app.php';
+            $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+            [$operation, $tenantId, $documentId, $actorId, $payload, $barrier, $label, $lockRole, $barrierToken] = array_slice($argv, 1);
+            file_put_contents($barrier . '/' . $label . '.ready', 'ready');
+            $deadline = microtime(true) + 20;
+            while (!file_exists($barrier . '/release') && microtime(true) < $deadline) { usleep(10000); }
+            if (!file_exists($barrier . '/release')) {
+                echo 'GAP032_RESULT=' . json_encode(['operation' => $operation, 'status' => 'error', 'reason' => 'BARRIER_TIMEOUT']) . PHP_EOL;
+                exit(3);
             }
-            $normalizedQuery = strtolower((string) preg_replace('/\s+/', ' ', trim($query)));
-            $queryTargetsDocuments = preg_match('/\bfrom\s+`?documents`?(?:\s|$)/', $normalizedQuery) === 1;
-            $queryUsesForUpdate = str_contains($normalizedQuery, 'for update');
-            $queryHasEqualityPredicate = static function (string $column) use ($normalizedQuery): bool {
-                $pattern = '/(?:\bwhere\b|\band\b)\s*\(*\s*(?:`?documents`?\s*\.\s*)?`?'
-                    . preg_quote($column, '/')
-                    . '`?\s*=\s*(?:\?|\'(?:\'\'|[^\'])*\'|"(?:[^"]|"")*"|[a-z0-9_-]+)/i';
+            $contentionEvidence = null;
+            $governedOperationStarted = null;
+            $loserConnectionId = null;
+            try {
+                if ($lockRole === 'leader') {
+                    Illuminate\Support\Facades\DB::beginTransaction();
+                    $leaderConnection = Illuminate\Support\Facades\DB::selectOne('SELECT CONNECTION_ID() AS connection_id');
+                    $leaderConnectionId = (int) ($leaderConnection->connection_id ?? 0);
+                    $lockedDocument = Illuminate\Support\Facades\DB::table('documents')
+                        ->where('tenant_id', $tenantId)
+                        ->where('id', $documentId)
+                        ->lockForUpdate()
+                        ->first();
+                    if ($lockedDocument === null) {
+                        throw new RuntimeException('Controlled leader could not find the document.');
+                    }
+                    file_put_contents($barrier . '/leader.locked', 'locked');
+                    $deadline = microtime(true) + 10;
+                    while (!file_exists($barrier . '/loser.connection') && microtime(true) < $deadline) { usleep(10000); }
+                    if (!file_exists($barrier . '/loser.connection')) {
+                        throw new RuntimeException('Controlled loser did not publish its MySQL connection ID.');
+                    }
+                    $loserConnectionId = (int) trim((string) file_get_contents($barrier . '/loser.connection'));
+                    $waitingDataLock = null;
+                    $lastTransactionObservation = null;
+                    $lastDataLockObservation = null;
+                    $lastObservationFlags = null;
+                    $observationDeadline = microtime(true) + 10;
+                    while (microtime(true) < $observationDeadline) {
+                        $candidate = Illuminate\Support\Facades\DB::selectOne(
+                            "SELECT trx_state, trx_mysql_thread_id, trx_wait_started, trx_query
+                             FROM information_schema.innodb_trx
+                             WHERE trx_mysql_thread_id = ? AND trx_state = 'LOCK WAIT'",
+                            [$loserConnectionId]
+                        );
+                        $lockCandidate = Illuminate\Support\Facades\DB::selectOne(
+                            "SELECT
+                                requesting_thread.PROCESSLIST_ID AS waiting_connection_id,
+                                blocking_thread.PROCESSLIST_ID AS blocking_connection_id,
+                                requested_lock.OBJECT_SCHEMA AS object_schema,
+                                requested_lock.OBJECT_NAME AS object_name,
+                                requested_lock.INDEX_NAME AS index_name,
+                                requested_lock.LOCK_TYPE AS lock_type,
+                                requested_lock.LOCK_MODE AS lock_mode,
+                                requested_lock.LOCK_STATUS AS lock_status,
+                                requested_lock.LOCK_DATA AS lock_data,
+                                requesting_thread.PROCESSLIST_INFO AS processlist_info
+                             FROM performance_schema.data_lock_waits AS lock_wait
+                             JOIN performance_schema.data_locks AS requested_lock
+                               ON requested_lock.ENGINE_LOCK_ID = lock_wait.REQUESTING_ENGINE_LOCK_ID
+                             JOIN performance_schema.threads AS requesting_thread
+                               ON requesting_thread.THREAD_ID = lock_wait.REQUESTING_THREAD_ID
+                             JOIN performance_schema.threads AS blocking_thread
+                               ON blocking_thread.THREAD_ID = lock_wait.BLOCKING_THREAD_ID
+                             WHERE requesting_thread.PROCESSLIST_ID = ?
+                               AND blocking_thread.PROCESSLIST_ID = ?
+                               AND requested_lock.OBJECT_SCHEMA = DATABASE()
+                               AND requested_lock.OBJECT_NAME = 'documents'
+                             LIMIT 1",
+                            [$loserConnectionId, $leaderConnectionId]
+                        );
+                        $candidateQuery = is_string($candidate->trx_query ?? null) ? $candidate->trx_query : '';
+                        $query = $candidateQuery;
+                        $observedQuerySource = 'information_schema.innodb_trx.trx_query';
+                        if ($query === '' && is_string($lockCandidate->processlist_info ?? null)) {
+                            $query = $lockCandidate->processlist_info;
+                            $observedQuerySource = 'performance_schema.threads.PROCESSLIST_INFO';
+                        }
+                        $normalizedQuery = strtolower((string) preg_replace('/\s+/', ' ', trim($query)));
+                        $queryTargetsDocuments = preg_match('/\bfrom\s+`?documents`?(?:\s|$)/', $normalizedQuery) === 1;
+                        $queryUsesForUpdate = str_contains($normalizedQuery, 'for update');
+                        $queryHasEqualityPredicate = static function (string $column) use ($normalizedQuery): bool {
+                            $pattern = '/(?:\bwhere\b|\band\b)\s*\(*\s*(?:`?documents`?\s*\.\s*)?`?'
+                                . preg_quote($column, '/')
+                                . '`?\s*=\s*(?:\?|\'(?:\'\'|[^\'])*\'|"(?:[^"]|"")*"|[a-z0-9_-]+)/i';
 
-                return preg_match($pattern, $normalizedQuery) === 1;
-            };
-            $queryHasTenantPredicate = $queryHasEqualityPredicate('tenant_id');
-            $queryHasDocumentIdPredicate = $queryHasEqualityPredicate('id');
-            $syntheticQueryMarkerPresent = str_contains($normalizedQuery, 'gap032_lock_');
-            $rawLockData = (string) ($lockCandidate->lock_data ?? '');
-            $decodedPrimaryLockKey = preg_match("/^'((?:''|[^'])*)'$/D", trim($rawLockData), $lockDataMatch) === 1
-                ? str_replace("''", "'", $lockDataMatch[1])
-                : null;
-            $documentLockIdentityMatched = $lockCandidate !== null
-                && (string) ($lockCandidate->index_name ?? '') === 'PRIMARY'
-                && (string) ($lockCandidate->lock_type ?? '') === 'RECORD'
-                && (string) ($lockCandidate->lock_status ?? '') === 'WAITING'
-                && $decodedPrimaryLockKey === $documentId;
-            $lastTransactionObservation = $candidate === null ? null : [
-                'trx_state' => (string) ($candidate->trx_state ?? ''),
-                'trx_mysql_thread_id' => (int) ($candidate->trx_mysql_thread_id ?? 0),
-                'trx_wait_started' => (string) ($candidate->trx_wait_started ?? ''),
-                'trx_query' => $candidateQuery,
-            ];
-            $lastDataLockObservation = $lockCandidate === null ? null : [
-                'waiting_connection_id' => (int) ($lockCandidate->waiting_connection_id ?? 0),
-                'blocking_connection_id' => (int) ($lockCandidate->blocking_connection_id ?? 0),
-                'object_schema' => (string) ($lockCandidate->object_schema ?? ''),
-                'object_name' => (string) ($lockCandidate->object_name ?? ''),
-                'index_name' => (string) ($lockCandidate->index_name ?? ''),
-                'lock_type' => (string) ($lockCandidate->lock_type ?? ''),
-                'lock_mode' => (string) ($lockCandidate->lock_mode ?? ''),
-                'lock_status' => (string) ($lockCandidate->lock_status ?? ''),
-                'lock_data' => (string) ($lockCandidate->lock_data ?? ''),
-                'processlist_info' => (string) ($lockCandidate->processlist_info ?? ''),
-            ];
-            $lastObservationFlags = [
-                'query_targets_documents' => $queryTargetsDocuments,
-                'query_uses_for_update' => $queryUsesForUpdate,
-                'query_has_tenant_predicate' => $queryHasTenantPredicate,
-                'query_has_document_id_predicate' => $queryHasDocumentIdPredicate,
-                'synthetic_query_marker_present' => $syntheticQueryMarkerPresent,
-                'document_lock_identity_matched' => $documentLockIdentityMatched,
-            ];
+                            return preg_match($pattern, $normalizedQuery) === 1;
+                        };
+                        $queryHasTenantPredicate = $queryHasEqualityPredicate('tenant_id');
+                        $queryHasDocumentIdPredicate = $queryHasEqualityPredicate('id');
+                        $syntheticQueryMarkerPresent = str_contains($normalizedQuery, 'gap032_lock_');
+                        $rawLockData = (string) ($lockCandidate->lock_data ?? '');
+                        $decodedPrimaryLockKey = preg_match("/^'((?:''|[^'])*)'$/D", trim($rawLockData), $lockDataMatch) === 1
+                            ? str_replace("''", "'", $lockDataMatch[1])
+                            : null;
+                        $documentLockIdentityMatched = $lockCandidate !== null
+                            && (string) ($lockCandidate->index_name ?? '') === 'PRIMARY'
+                            && (string) ($lockCandidate->lock_type ?? '') === 'RECORD'
+                            && (string) ($lockCandidate->lock_status ?? '') === 'WAITING'
+                            && $decodedPrimaryLockKey === $documentId;
+                        $lastTransactionObservation = $candidate === null ? null : [
+                            'trx_state' => (string) ($candidate->trx_state ?? ''),
+                            'trx_mysql_thread_id' => (int) ($candidate->trx_mysql_thread_id ?? 0),
+                            'trx_wait_started' => (string) ($candidate->trx_wait_started ?? ''),
+                            'trx_query' => $candidateQuery,
+                        ];
+                        $lastDataLockObservation = $lockCandidate === null ? null : [
+                            'waiting_connection_id' => (int) ($lockCandidate->waiting_connection_id ?? 0),
+                            'blocking_connection_id' => (int) ($lockCandidate->blocking_connection_id ?? 0),
+                            'object_schema' => (string) ($lockCandidate->object_schema ?? ''),
+                            'object_name' => (string) ($lockCandidate->object_name ?? ''),
+                            'index_name' => (string) ($lockCandidate->index_name ?? ''),
+                            'lock_type' => (string) ($lockCandidate->lock_type ?? ''),
+                            'lock_mode' => (string) ($lockCandidate->lock_mode ?? ''),
+                            'lock_status' => (string) ($lockCandidate->lock_status ?? ''),
+                            'lock_data' => (string) ($lockCandidate->lock_data ?? ''),
+                            'processlist_info' => (string) ($lockCandidate->processlist_info ?? ''),
+                        ];
+                        $lastObservationFlags = [
+                            'query_targets_documents' => $queryTargetsDocuments,
+                            'query_uses_for_update' => $queryUsesForUpdate,
+                            'query_has_tenant_predicate' => $queryHasTenantPredicate,
+                            'query_has_document_id_predicate' => $queryHasDocumentIdPredicate,
+                            'synthetic_query_marker_present' => $syntheticQueryMarkerPresent,
+                            'document_lock_identity_matched' => $documentLockIdentityMatched,
+                        ];
 
-            if ($queryTargetsDocuments
-                && $queryUsesForUpdate
-                && $queryHasTenantPredicate
-                && $queryHasDocumentIdPredicate
-                && !$syntheticQueryMarkerPresent
-                && $documentLockIdentityMatched) {
-                $waitingDataLock = $lockCandidate;
-                break;
+                        if ($queryTargetsDocuments
+                            && $queryUsesForUpdate
+                            && $queryHasTenantPredicate
+                            && $queryHasDocumentIdPredicate
+                            && !$syntheticQueryMarkerPresent
+                            && $documentLockIdentityMatched) {
+                            $waitingDataLock = $lockCandidate;
+                            break;
+                        }
+                        usleep(10000);
+                    }
+                    if ($waitingDataLock === null) {
+                        throw new RuntimeException(
+                            'Controlled loser never entered an observable InnoDB LOCK WAIT on the governed documents lock. Diagnostic: '
+                            . json_encode([
+                                'transaction' => $lastTransactionObservation,
+                                'data_lock' => $lastDataLockObservation,
+                                'flags' => $lastObservationFlags,
+                            ], JSON_THROW_ON_ERROR)
+                        );
+                    }
+                    $observedQuery = $query;
+                    $normalizedObservedQuery = strtolower((string) preg_replace('/\s+/', ' ', trim($observedQuery)));
+                    $contentionEvidence = [
+                        'role' => 'leader',
+                        'lock_wait_observed' => true,
+                        'governed_query_observed' => true,
+                        'observer_connection_id' => $leaderConnectionId,
+                        'waiting_connection_id' => (int) ($waitingDataLock->waiting_connection_id ?? 0),
+                        'data_lock_waiting_connection_id' => (int) ($waitingDataLock->waiting_connection_id ?? 0),
+                        'blocking_connection_id' => (int) ($waitingDataLock->blocking_connection_id ?? 0),
+                        'lock_wait_source' => 'performance_schema.data_lock_waits',
+                        'lock_wait_observed_at' => gmdate(DATE_ATOM),
+                        'observed_query_source' => $observedQuerySource,
+                        'query_targets_documents' => preg_match('/\bfrom\s+`?documents`?(?:\s|$)/', $normalizedObservedQuery) === 1,
+                        'query_uses_for_update' => str_contains($normalizedObservedQuery, 'for update'),
+                        'query_has_tenant_predicate' => $queryHasTenantPredicate,
+                        'query_has_document_id_predicate' => $queryHasDocumentIdPredicate,
+                        'synthetic_query_marker_present' => str_contains($normalizedObservedQuery, 'gap032_lock_'),
+                        'document_lock_identity_matched' => $documentLockIdentityMatched,
+                        'object_name' => (string) ($waitingDataLock->object_name ?? ''),
+                        'index_name' => (string) ($waitingDataLock->index_name ?? ''),
+                        'lock_status' => (string) ($waitingDataLock->lock_status ?? ''),
+                        'lock_type' => (string) ($waitingDataLock->lock_type ?? ''),
+                        'lock_mode' => (string) ($waitingDataLock->lock_mode ?? ''),
+                        'lock_data' => (string) ($waitingDataLock->lock_data ?? ''),
+                        'observed_query' => $observedQuery,
+                    ];
+                    $observationPath = $barrier . '/lock-wait.observed';
+                    $observationTemp = $observationPath . '.' . $barrierToken . '.tmp';
+                    if (file_put_contents($observationTemp, json_encode($contentionEvidence, JSON_THROW_ON_ERROR), LOCK_EX) === false
+                        || !rename($observationTemp, $observationPath)) {
+                        throw new RuntimeException('Controlled leader could not atomically publish lock-wait evidence.');
+                    }
+                } elseif ($lockRole === 'loser') {
+                    $deadline = microtime(true) + 10;
+                    while (!file_exists($barrier . '/leader.locked') && microtime(true) < $deadline) { usleep(10000); }
+                    if (!file_exists($barrier . '/leader.locked')) {
+                        throw new RuntimeException('Controlled leader did not acquire the row lock.');
+                    }
+                    $loserConnection = Illuminate\Support\Facades\DB::selectOne('SELECT CONNECTION_ID() AS connection_id');
+                    $loserConnectionId = (int) ($loserConnection->connection_id ?? 0);
+                    $connectionPath = $barrier . '/loser.connection';
+                    $connectionTemp = $connectionPath . '.' . $label . '.' . $barrierToken . '.tmp';
+                    if (file_put_contents($connectionTemp, (string) $loserConnectionId, LOCK_EX) === false
+                        || !rename($connectionTemp, $connectionPath)) {
+                        throw new RuntimeException('Controlled loser could not atomically publish its MySQL connection ID.');
+                    }
+                    $governedOperationStarted = hrtime(true);
+                }
+
+                if ($operation === 'submit') {
+                    $document = $app->make(App\Services\DocumentWorkflowService::class)->submit($tenantId, $documentId, $actorId);
+                    $result = ['operation' => $operation, 'status' => 'ok', 'approval' => $document->getRawOriginal('approval_status')];
+                } elseif ($operation === 'decide') {
+                    $document = $app->make(App\Services\DocumentWorkflowService::class)->decide(
+                        $tenantId,
+                        $documentId,
+                        $actorId,
+                        App\Enums\DocumentDecision::from($payload),
+                        null
+                    );
+                    $result = ['operation' => $operation, 'status' => 'ok', 'approval' => $document->getRawOriginal('approval_status')];
+                } else {
+                    $user = App\Models\User::query()->withoutGlobalScopes()->findOrFail($actorId);
+                    Illuminate\Support\Facades\Auth::login($user);
+                    $app->instance('current_tenant_id', $tenantId);
+                    if ($operation === 'generic-update') {
+                        $request = Illuminate\Http\Request::create('/', 'PATCH', ['status' => $payload]);
+                        $response = $app->make(App\Http\Controllers\Api\SimpleDocumentController::class)->update($request, $documentId);
+                    } elseif ($operation === 'version') {
+                        $path = tempnam(sys_get_temp_dir(), 'gap032-version-');
+                        file_put_contents($path, "%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n");
+                        $upload = new Illuminate\Http\UploadedFile($path, $label . '.pdf', 'application/pdf', null, true);
+                        $request = Illuminate\Http\Request::create('/', 'POST', [], [], ['file' => $upload]);
+                        $response = $app->make(App\Http\Controllers\Api\SimpleDocumentController::class)->createVersion($request, $documentId);
+                    } else {
+                        throw new RuntimeException('Unknown operation ' . $operation);
+                    }
+                    $statusCode = $response->getStatusCode();
+                    $result = [
+                        'operation' => $operation,
+                        'status' => $statusCode >= 400 ? 'domain' : 'ok',
+                        'reason' => $statusCode >= 400 ? 'HTTP_' . $statusCode : null,
+                        'http_status' => $statusCode,
+                        'body' => json_decode($response->getContent(), true),
+                    ];
+                }
+                if ($lockRole === 'loser') {
+                    $observationPath = $barrier . '/lock-wait.observed';
+                    if (!file_exists($observationPath)) {
+                        throw new RuntimeException('Governed controller operation completed without leader-side InnoDB LOCK WAIT evidence.');
+                    }
+                    $observedEvidence = json_decode(
+                        (string) file_get_contents($observationPath),
+                        true,
+                        512,
+                        JSON_THROW_ON_ERROR
+                    );
+                    $contentionEvidence = [
+                        'role' => 'loser',
+                        'lock_wait_observed' => ($observedEvidence['lock_wait_observed'] ?? false) === true
+                            && ($observedEvidence['governed_query_observed'] ?? false) === true
+                            && ($observedEvidence['document_lock_identity_matched'] ?? false) === true
+                            && ($observedEvidence['waiting_connection_id'] ?? null) === $loserConnectionId,
+                        'connection_id' => $loserConnectionId,
+                        'governed_operation' => $operation,
+                        'governed_operation_microseconds' => $governedOperationStarted === null
+                            ? 0
+                            : (int) ((hrtime(true) - $governedOperationStarted) / 1000),
+                        'governed_operation_completed_after_observation' => true,
+                    ];
+                }
+                if ($contentionEvidence !== null) {
+                    $result['contention_evidence'] = $contentionEvidence;
+                }
+                if ($lockRole === 'leader') {
+                    Illuminate\Support\Facades\DB::commit();
+                }
+                echo 'GAP032_RESULT=' . json_encode($result) . PHP_EOL;
+                exit(($result['status'] ?? null) === 'ok' ? 0 : 2);
+            } catch (App\Exceptions\DocumentWorkflowException $exception) {
+                if (Illuminate\Support\Facades\DB::transactionLevel() > 0) {
+                    Illuminate\Support\Facades\DB::rollBack();
+                }
+                echo 'GAP032_RESULT=' . json_encode([
+                    'operation' => $operation,
+                    'status' => 'domain',
+                    'reason' => $exception->reasonCode,
+                    'message' => $exception->getMessage(),
+                ]) . PHP_EOL;
+                exit(2);
+            } catch (Throwable $exception) {
+                if (Illuminate\Support\Facades\DB::transactionLevel() > 0) {
+                    Illuminate\Support\Facades\DB::rollBack();
+                }
+                echo 'GAP032_RESULT=' . json_encode([
+                    'operation' => $operation,
+                    'status' => 'error',
+                    'reason' => get_class($exception),
+                    'message' => $exception->getMessage(),
+                ]) . PHP_EOL;
+                exit(3);
             }
-            usleep(10000);
-        }
-        if ($waitingDataLock === null) {
-            throw new RuntimeException(
-                'Controlled loser never entered an observable InnoDB LOCK WAIT on the governed documents lock. Diagnostic: '
-                . json_encode([
-                    'transaction' => $lastTransactionObservation,
-                    'data_lock' => $lastDataLockObservation,
-                    'flags' => $lastObservationFlags,
-                ], JSON_THROW_ON_ERROR)
-            );
-        }
-        $observedQuery = $query;
-        $normalizedObservedQuery = strtolower((string) preg_replace('/\s+/', ' ', trim($observedQuery)));
-        $contentionEvidence = [
-            'role' => 'leader',
-            'lock_wait_observed' => true,
-            'governed_query_observed' => true,
-            'observer_connection_id' => $leaderConnectionId,
-            'waiting_connection_id' => (int) ($waitingDataLock->waiting_connection_id ?? 0),
-            'data_lock_waiting_connection_id' => (int) ($waitingDataLock->waiting_connection_id ?? 0),
-            'blocking_connection_id' => (int) ($waitingDataLock->blocking_connection_id ?? 0),
-            'lock_wait_source' => 'performance_schema.data_lock_waits',
-            'lock_wait_observed_at' => gmdate(DATE_ATOM),
-            'observed_query_source' => $observedQuerySource,
-            'query_targets_documents' => preg_match('/\bfrom\s+`?documents`?(?:\s|$)/', $normalizedObservedQuery) === 1,
-            'query_uses_for_update' => str_contains($normalizedObservedQuery, 'for update'),
-            'query_has_tenant_predicate' => $queryHasTenantPredicate,
-            'query_has_document_id_predicate' => $queryHasDocumentIdPredicate,
-            'synthetic_query_marker_present' => str_contains($normalizedObservedQuery, 'gap032_lock_'),
-            'document_lock_identity_matched' => $documentLockIdentityMatched,
-            'object_name' => (string) ($waitingDataLock->object_name ?? ''),
-            'index_name' => (string) ($waitingDataLock->index_name ?? ''),
-            'lock_status' => (string) ($waitingDataLock->lock_status ?? ''),
-            'lock_type' => (string) ($waitingDataLock->lock_type ?? ''),
-            'lock_mode' => (string) ($waitingDataLock->lock_mode ?? ''),
-            'lock_data' => (string) ($waitingDataLock->lock_data ?? ''),
-            'observed_query' => $observedQuery,
-        ];
-        $observationPath = $barrier . '/lock-wait.observed';
-        $observationTemp = $observationPath . '.' . $barrierToken . '.tmp';
-        if (file_put_contents($observationTemp, json_encode($contentionEvidence, JSON_THROW_ON_ERROR), LOCK_EX) === false
-            || !rename($observationTemp, $observationPath)) {
-            throw new RuntimeException('Controlled leader could not atomically publish lock-wait evidence.');
-        }
-    } elseif ($lockRole === 'loser') {
-        $deadline = microtime(true) + 10;
-        while (!file_exists($barrier . '/leader.locked') && microtime(true) < $deadline) { usleep(10000); }
-        if (!file_exists($barrier . '/leader.locked')) {
-            throw new RuntimeException('Controlled leader did not acquire the row lock.');
-        }
-        $loserConnection = Illuminate\Support\Facades\DB::selectOne('SELECT CONNECTION_ID() AS connection_id');
-        $loserConnectionId = (int) ($loserConnection->connection_id ?? 0);
-        $connectionPath = $barrier . '/loser.connection';
-        $connectionTemp = $connectionPath . '.' . $label . '.' . $barrierToken . '.tmp';
-        if (file_put_contents($connectionTemp, (string) $loserConnectionId, LOCK_EX) === false
-            || !rename($connectionTemp, $connectionPath)) {
-            throw new RuntimeException('Controlled loser could not atomically publish its MySQL connection ID.');
-        }
-        $governedOperationStarted = hrtime(true);
-    }
-
-    if ($operation === 'submit') {
-        $document = $app->make(App\Services\DocumentWorkflowService::class)->submit($tenantId, $documentId, $actorId);
-        $result = ['operation' => $operation, 'status' => 'ok', 'approval' => $document->getRawOriginal('approval_status')];
-    } elseif ($operation === 'decide') {
-        $document = $app->make(App\Services\DocumentWorkflowService::class)->decide(
-            $tenantId,
-            $documentId,
-            $actorId,
-            App\Enums\DocumentDecision::from($payload),
-            null
-        );
-        $result = ['operation' => $operation, 'status' => 'ok', 'approval' => $document->getRawOriginal('approval_status')];
-    } else {
-        $user = App\Models\User::query()->withoutGlobalScopes()->findOrFail($actorId);
-        Illuminate\Support\Facades\Auth::login($user);
-        $app->instance('current_tenant_id', $tenantId);
-        if ($operation === 'generic-update') {
-            $request = Illuminate\Http\Request::create('/', 'PATCH', ['status' => $payload]);
-            $response = $app->make(App\Http\Controllers\Api\SimpleDocumentController::class)->update($request, $documentId);
-        } elseif ($operation === 'version') {
-            $path = tempnam(sys_get_temp_dir(), 'gap032-version-');
-            file_put_contents($path, "%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n");
-            $upload = new Illuminate\Http\UploadedFile($path, $label . '.pdf', 'application/pdf', null, true);
-            $request = Illuminate\Http\Request::create('/', 'POST', [], [], ['file' => $upload]);
-            $response = $app->make(App\Http\Controllers\Api\SimpleDocumentController::class)->createVersion($request, $documentId);
-        } else {
-            throw new RuntimeException('Unknown operation ' . $operation);
-        }
-        $statusCode = $response->getStatusCode();
-        $result = [
-            'operation' => $operation,
-            'status' => $statusCode >= 400 ? 'domain' : 'ok',
-            'reason' => $statusCode >= 400 ? 'HTTP_' . $statusCode : null,
-            'http_status' => $statusCode,
-            'body' => json_decode($response->getContent(), true),
-        ];
-    }
-    if ($lockRole === 'loser') {
-        $observationPath = $barrier . '/lock-wait.observed';
-        if (!file_exists($observationPath)) {
-            throw new RuntimeException('Governed controller operation completed without leader-side InnoDB LOCK WAIT evidence.');
-        }
-        $observedEvidence = json_decode(
-            (string) file_get_contents($observationPath),
-            true,
-            512,
-            JSON_THROW_ON_ERROR
-        );
-        $contentionEvidence = [
-            'role' => 'loser',
-            'lock_wait_observed' => ($observedEvidence['lock_wait_observed'] ?? false) === true
-                && ($observedEvidence['governed_query_observed'] ?? false) === true
-                && ($observedEvidence['document_lock_identity_matched'] ?? false) === true
-                && ($observedEvidence['waiting_connection_id'] ?? null) === $loserConnectionId,
-            'connection_id' => $loserConnectionId,
-            'governed_operation' => $operation,
-            'governed_operation_microseconds' => $governedOperationStarted === null
-                ? 0
-                : (int) ((hrtime(true) - $governedOperationStarted) / 1000),
-            'governed_operation_completed_after_observation' => true,
-        ];
-    }
-    if ($contentionEvidence !== null) {
-        $result['contention_evidence'] = $contentionEvidence;
-    }
-    if ($lockRole === 'leader') {
-        Illuminate\Support\Facades\DB::commit();
-    }
-    echo 'GAP032_RESULT=' . json_encode($result) . PHP_EOL;
-    exit(($result['status'] ?? null) === 'ok' ? 0 : 2);
-} catch (App\Exceptions\DocumentWorkflowException $exception) {
-    if (Illuminate\Support\Facades\DB::transactionLevel() > 0) {
-        Illuminate\Support\Facades\DB::rollBack();
-    }
-    echo 'GAP032_RESULT=' . json_encode([
-        'operation' => $operation,
-        'status' => 'domain',
-        'reason' => $exception->reasonCode,
-        'message' => $exception->getMessage(),
-    ]) . PHP_EOL;
-    exit(2);
-} catch (Throwable $exception) {
-    if (Illuminate\Support\Facades\DB::transactionLevel() > 0) {
-        Illuminate\Support\Facades\DB::rollBack();
-    }
-    echo 'GAP032_RESULT=' . json_encode([
-        'operation' => $operation,
-        'status' => 'error',
-        'reason' => get_class($exception),
-        'message' => $exception->getMessage(),
-    ]) . PHP_EOL;
-    exit(3);
-}
-PHP;
+            PHP;
     }
 
     protected function tearDown(): void

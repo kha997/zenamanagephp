@@ -1,26 +1,28 @@
 <?php
 
 namespace App\Services;
-use Illuminate\Support\Facades\Auth;
-
 
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 /**
- * Import/Export Service
- * 
+ * Import/Export Service.
+ *
  * Handles data import/export operations for various entities
  */
 class ImportExportService
 {
     private SecureAuditService $auditService;
+
     private BulkOperationsService $bulkOperationsService;
+
     private int $maxImportRows;
+
     private array $allowedFileTypes;
 
     public function __construct(
@@ -40,34 +42,34 @@ class ImportExportService
     */
 
     /**
-     * Export users to Excel
+     * Export users to Excel.
      */
     public function exportUsers(array $filters = [], string $format = 'xlsx'): string
     {
         $query = User::query();
-        
+
         // Apply filters
         if (isset($filters['tenant_id'])) {
             $query->where('tenant_id', $filters['tenant_id']);
         }
-        
+
         if (isset($filters['status'])) {
             $query->where('is_active', $filters['status'] === 'active');
         }
-        
+
         if (isset($filters['date_from'])) {
             $query->where('created_at', '>=', $filters['date_from']);
         }
-        
+
         if (isset($filters['date_to'])) {
             $query->where('created_at', '<=', $filters['date_to']);
         }
 
         $users = $query->get();
-        
+
         $filename = $this->generateExportFilename('users', $format);
         $filepath = $this->exportToExcel($users, $filename, $this->getUserExportColumns());
-        
+
         // Log export
         $this->auditService->logAction(
             userId: Auth::id() ?? 'system',
@@ -77,7 +79,7 @@ class ImportExportService
                 'format' => $format,
                 'count' => $users->count(),
                 'filters' => $filters,
-                'filename' => $filename
+                'filename' => $filename,
             ]
         );
 
@@ -85,26 +87,26 @@ class ImportExportService
     }
 
     /**
-     * Export projects to Excel
+     * Export projects to Excel.
      */
     public function exportProjects(array $filters = [], string $format = 'xlsx'): string
     {
         $query = Project::query();
-        
+
         // Apply filters
         if (isset($filters['tenant_id'])) {
             $query->where('tenant_id', $filters['tenant_id']);
         }
-        
+
         if (isset($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
         $projects = $query->get();
-        
+
         $filename = $this->generateExportFilename('projects', $format);
         $filepath = $this->exportToExcel($projects, $filename, $this->getProjectExportColumns());
-        
+
         // Log export
         $this->auditService->logAction(
             userId: Auth::id() ?? 'system',
@@ -114,7 +116,7 @@ class ImportExportService
                 'format' => $format,
                 'count' => $projects->count(),
                 'filters' => $filters,
-                'filename' => $filename
+                'filename' => $filename,
             ]
         );
 
@@ -122,30 +124,30 @@ class ImportExportService
     }
 
     /**
-     * Export tasks to Excel
+     * Export tasks to Excel.
      */
     public function exportTasks(array $filters = [], string $format = 'xlsx'): string
     {
         $query = Task::query();
-        
+
         // Apply filters
         if (isset($filters['project_id'])) {
             $query->where('project_id', $filters['project_id']);
         }
-        
+
         if (isset($filters['status'])) {
             $query->where('status', $filters['status']);
         }
-        
+
         if (isset($filters['assignee_id'])) {
             $query->where('assignee_id', $filters['assignee_id']);
         }
 
         $tasks = $query->get();
-        
+
         $filename = $this->generateExportFilename('tasks', $format);
         $filepath = $this->exportToExcel($tasks, $filename, $this->getTaskExportColumns());
-        
+
         // Log export
         $this->auditService->logAction(
             userId: Auth::id() ?? 'system',
@@ -155,7 +157,7 @@ class ImportExportService
                 'format' => $format,
                 'count' => $tasks->count(),
                 'filters' => $filters,
-                'filename' => $filename
+                'filename' => $filename,
             ]
         );
 
@@ -163,19 +165,19 @@ class ImportExportService
     }
 
     /**
-     * Export data to Excel file
+     * Export data to Excel file.
      */
     private function exportToExcel(Collection $data, string $filename, array $columns): string
     {
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        
+
         // Set headers
         $headerRow = 1;
         foreach ($columns as $index => $column) {
             $sheet->setCellValueByColumnAndRow($index + 1, $headerRow, $column['title']);
         }
-        
+
         // Set data
         $row = 2;
         foreach ($data as $item) {
@@ -185,23 +187,23 @@ class ImportExportService
             }
             $row++;
         }
-        
+
         // Auto-size columns
         foreach ($columns as $index => $column) {
             $sheet->getColumnDimensionByColumn($index + 1)->setAutoSize(true);
         }
-        
+
         // Save file
         $writer = new Xlsx($spreadsheet);
         $filepath = storage_path('app/exports/' . $filename);
-        
+
         // Ensure directory exists
         if (!file_exists(dirname($filepath))) {
-            mkdir(dirname($filepath), 0755, true);
+            mkdir(dirname($filepath), 0o755, true);
         }
-        
+
         $writer->save($filepath);
-        
+
         return $filepath;
     }
 
@@ -212,25 +214,25 @@ class ImportExportService
     */
 
     /**
-     * Import users from Excel/CSV
+     * Import users from Excel/CSV.
      */
     public function importUsers(string $filepath, array $options = []): array
     {
         $data = $this->parseImportFile($filepath);
         $this->validateImportData($data, 'users');
-        
+
         $results = [
             'total' => count($data),
             'success' => 0,
             'failed' => 0,
             'errors' => [],
-            'imported_users' => []
+            'imported_users' => [],
         ];
 
         try {
             // Use bulk operations service
             $bulkResults = $this->bulkOperationsService->bulkCreateUsers($data, $options['tenant_id'] ?? null);
-            
+
             $results['success'] = $bulkResults['success'];
             $results['failed'] = $bulkResults['failed'];
             $results['errors'] = $bulkResults['errors'];
@@ -246,13 +248,12 @@ class ImportExportService
                     'total' => $results['total'],
                     'success' => $results['success'],
                     'failed' => $results['failed'],
-                    'options' => $options
+                    'options' => $options,
                 ]
             );
-
         } catch (\Exception $e) {
             $results['errors'][] = [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
 
@@ -260,25 +261,25 @@ class ImportExportService
     }
 
     /**
-     * Import projects from Excel/CSV
+     * Import projects from Excel/CSV.
      */
     public function importProjects(string $filepath, array $options = []): array
     {
         $data = $this->parseImportFile($filepath);
         $this->validateImportData($data, 'projects');
-        
+
         $results = [
             'total' => count($data),
             'success' => 0,
             'failed' => 0,
             'errors' => [],
-            'imported_projects' => []
+            'imported_projects' => [],
         ];
 
         try {
             // Use bulk operations service
             $bulkResults = $this->bulkOperationsService->bulkCreateProjects($data, $options['tenant_id'] ?? null);
-            
+
             $results['success'] = $bulkResults['success'];
             $results['failed'] = $bulkResults['failed'];
             $results['errors'] = $bulkResults['errors'];
@@ -294,13 +295,12 @@ class ImportExportService
                     'total' => $results['total'],
                     'success' => $results['success'],
                     'failed' => $results['failed'],
-                    'options' => $options
+                    'options' => $options,
                 ]
             );
-
         } catch (\Exception $e) {
             $results['errors'][] = [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
 
@@ -308,25 +308,25 @@ class ImportExportService
     }
 
     /**
-     * Import tasks from Excel/CSV
+     * Import tasks from Excel/CSV.
      */
     public function importTasks(string $filepath, string $projectId, array $options = []): array
     {
         $data = $this->parseImportFile($filepath);
         $this->validateImportData($data, 'tasks');
-        
+
         $results = [
             'total' => count($data),
             'success' => 0,
             'failed' => 0,
             'errors' => [],
-            'imported_tasks' => []
+            'imported_tasks' => [],
         ];
 
         try {
             // Use bulk operations service
             $bulkResults = $this->bulkOperationsService->bulkCreateTasks($data, $projectId, $options['tenant_id'] ?? null);
-            
+
             $results['success'] = $bulkResults['success'];
             $results['failed'] = $bulkResults['failed'];
             $results['errors'] = $bulkResults['errors'];
@@ -344,13 +344,12 @@ class ImportExportService
                     'total' => $results['total'],
                     'success' => $results['success'],
                     'failed' => $results['failed'],
-                    'options' => $options
+                    'options' => $options,
                 ]
             );
-
         } catch (\Exception $e) {
             $results['errors'][] = [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
 
@@ -358,12 +357,12 @@ class ImportExportService
     }
 
     /**
-     * Parse import file (Excel/CSV)
+     * Parse import file (Excel/CSV).
      */
     private function parseImportFile(string $filepath): array
     {
         $extension = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
-        
+
         if (!in_array($extension, $this->allowedFileTypes)) {
             throw new \Exception('Unsupported file type. Allowed: ' . implode(', ', $this->allowedFileTypes));
         }
@@ -402,7 +401,7 @@ class ImportExportService
     }
 
     /**
-     * Validate import data
+     * Validate import data.
      */
     private function validateImportData(array $data, string $type): void
     {
@@ -414,7 +413,7 @@ class ImportExportService
         $requiredFields = [
             'users' => ['name', 'email'],
             'projects' => ['name', 'description'],
-            'tasks' => ['title', 'description']
+            'tasks' => ['title', 'description'],
         ];
 
         if (!isset($requiredFields[$type])) {
@@ -422,11 +421,11 @@ class ImportExportService
         }
 
         $required = $requiredFields[$type];
-        
+
         foreach ($data as $index => $row) {
             foreach ($required as $field) {
                 if (empty($row[$field])) {
-                    throw new \Exception("Row " . ($index + 1) . ": Required field '{$field}' is missing");
+                    throw new \Exception('Row ' . ($index + 1) . ": Required field '{$field}' is missing");
                 }
             }
         }
@@ -439,30 +438,31 @@ class ImportExportService
     */
 
     /**
-     * Generate export filename
+     * Generate export filename.
      */
     private function generateExportFilename(string $type, string $format): string
     {
         $timestamp = Carbon::now()->format('Y-m-d_H-i-s');
+
         return "{$type}_export_{$timestamp}.{$format}";
     }
 
     /**
-     * Get column value for export
+     * Get column value for export.
      */
     private function getColumnValue($item, array $column): mixed
     {
         $value = data_get($item, $column['field']);
-        
+
         if (isset($column['formatter']) && is_callable($column['formatter'])) {
             return $column['formatter']($value, $item);
         }
-        
+
         return $value;
     }
 
     /**
-     * Get user export columns
+     * Get user export columns.
      */
     private function getUserExportColumns(): array
     {
@@ -471,14 +471,14 @@ class ImportExportService
             ['field' => 'name', 'title' => 'Name'],
             ['field' => 'email', 'title' => 'Email'],
             ['field' => 'phone', 'title' => 'Phone'],
-            ['field' => 'is_active', 'title' => 'Status', 'formatter' => fn($value) => $value ? 'Active' : 'Inactive'],
-            ['field' => 'created_at', 'title' => 'Created At', 'formatter' => fn($value) => $value ? Carbon::parse($value)->format('Y-m-d H:i:s') : ''],
-            ['field' => 'last_login_at', 'title' => 'Last Login', 'formatter' => fn($value) => $value ? Carbon::parse($value)->format('Y-m-d H:i:s') : 'Never'],
+            ['field' => 'is_active', 'title' => 'Status', 'formatter' => fn ($value) => $value ? 'Active' : 'Inactive'],
+            ['field' => 'created_at', 'title' => 'Created At', 'formatter' => fn ($value) => $value ? Carbon::parse($value)->format('Y-m-d H:i:s') : ''],
+            ['field' => 'last_login_at', 'title' => 'Last Login', 'formatter' => fn ($value) => $value ? Carbon::parse($value)->format('Y-m-d H:i:s') : 'Never'],
         ];
     }
 
     /**
-     * Get project export columns
+     * Get project export columns.
      */
     private function getProjectExportColumns(): array
     {
@@ -489,12 +489,12 @@ class ImportExportService
             ['field' => 'status', 'title' => 'Status'],
             ['field' => 'start_date', 'title' => 'Start Date'],
             ['field' => 'end_date', 'title' => 'End Date'],
-            ['field' => 'created_at', 'title' => 'Created At', 'formatter' => fn($value) => $value ? Carbon::parse($value)->format('Y-m-d H:i:s') : ''],
+            ['field' => 'created_at', 'title' => 'Created At', 'formatter' => fn ($value) => $value ? Carbon::parse($value)->format('Y-m-d H:i:s') : ''],
         ];
     }
 
     /**
-     * Get task export columns
+     * Get task export columns.
      */
     private function getTaskExportColumns(): array
     {
@@ -506,16 +506,16 @@ class ImportExportService
             ['field' => 'priority', 'title' => 'Priority'],
             ['field' => 'due_date', 'title' => 'Due Date'],
             ['field' => 'assignee_id', 'title' => 'Assignee ID'],
-            ['field' => 'created_at', 'title' => 'Created At', 'formatter' => fn($value) => $value ? Carbon::parse($value)->format('Y-m-d H:i:s') : ''],
+            ['field' => 'created_at', 'title' => 'Created At', 'formatter' => fn ($value) => $value ? Carbon::parse($value)->format('Y-m-d H:i:s') : ''],
         ];
     }
 
     /**
-     * Get import template
+     * Get import template.
      */
     public function getImportTemplate(string $type): string
     {
-        $columns = match($type) {
+        $columns = match ($type) {
             'users' => $this->getUserExportColumns(),
             'projects' => $this->getProjectExportColumns(),
             'tasks' => $this->getTaskExportColumns(),
@@ -524,12 +524,12 @@ class ImportExportService
 
         $filename = "{$type}_import_template.xlsx";
         $filepath = $this->exportToExcel(collect([]), $filename, $columns);
-        
+
         return $filepath;
     }
 
     /**
-     * Clean up old export files
+     * Clean up old export files.
      */
     public function cleanupOldExports(int $daysOld = 7): int
     {
@@ -539,7 +539,7 @@ class ImportExportService
 
         if (is_dir($exportDir)) {
             $files = glob($exportDir . '/*');
-            
+
             foreach ($files as $file) {
                 if (is_file($file) && filemtime($file) < $cutoffTime->timestamp) {
                     unlink($file);

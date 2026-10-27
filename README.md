@@ -62,7 +62,7 @@ ZenaManage is a comprehensive multi-tenant project management system built with 
 - PHP 8.2 or higher
 - MySQL 8.0 or higher
 - Redis 6.0 or higher
-- Node.js 18.0 or higher
+- Node.js 20.19+ or 22.12+ (required by Vite 8)
 - Composer (latest)
 - NPM (latest)
 

@@ -1,10 +1,11 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
 use App\Models\AuditLog;
 use App\Models\Tenant;
-use App\Models\WorkTemplate;
 use App\Models\WorkTemplateVersion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Feature\Api\Concerns\InteractsWithWorkTemplateV2;

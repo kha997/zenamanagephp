@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
@@ -11,8 +13,8 @@ use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Tenant Isolation Middleware
- * 
+ * Tenant Isolation Middleware.
+ *
  * Ensures that all database queries are properly scoped to the authenticated user's tenant.
  * This is critical for multi-tenant security.
  */
@@ -57,7 +59,7 @@ class TenantIsolationMiddleware
                 'user_id' => $user->id,
                 'token_prefix' => substr((string) $request->bearerToken(), 0, 5),
                 'method' => $request->method(),
-                'request_type' => $request->is('api/*') ? 'api' : 'web'
+                'request_type' => $request->is('api/*') ? 'api' : 'web',
             ];
 
             Log::info('Tenant mismatch debug', $context);
@@ -97,10 +99,9 @@ class TenantIsolationMiddleware
             'tenant_id' => $tenantId,
             'route' => $request->route()?->getName(),
             'method' => $request->method(),
-            'ip' => $request->ip()
+            'ip' => $request->ip(),
         ]);
 
         return $next($request);
     }
-
 }

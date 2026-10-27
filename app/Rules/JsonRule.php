@@ -7,7 +7,9 @@ use Illuminate\Contracts\Validation\Rule;
 class JsonRule implements Rule
 {
     protected $schema;
+
     protected $requiredFields;
+
     protected $allowedFields;
 
     /**

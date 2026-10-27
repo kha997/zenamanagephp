@@ -2,9 +2,8 @@
 
 namespace App\Repositories;
 
-use App\Models\QcPlan;
-use App\Models\User;
 use App\Models\Project;
+use App\Models\QcPlan;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Log;
@@ -147,7 +146,7 @@ class QcPlanRepository
             'qc_plan_id' => $qcPlan->id,
             'name' => $qcPlan->name,
             'project_id' => $qcPlan->project_id,
-            'created_by' => $qcPlan->created_by
+            'created_by' => $qcPlan->created_by,
         ]);
 
         return $qcPlan->load(['project', 'creator', 'assignee', 'tenant']);
@@ -169,7 +168,7 @@ class QcPlanRepository
         Log::info('QC Plan updated', [
             'qc_plan_id' => $qcPlan->id,
             'name' => $qcPlan->name,
-            'project_id' => $qcPlan->project_id
+            'project_id' => $qcPlan->project_id,
         ]);
 
         return $qcPlan->load(['project', 'creator', 'assignee', 'tenant']);
@@ -191,7 +190,7 @@ class QcPlanRepository
         Log::info('QC Plan deleted', [
             'qc_plan_id' => $id,
             'name' => $qcPlan->name,
-            'project_id' => $qcPlan->project_id
+            'project_id' => $qcPlan->project_id,
         ]);
 
         return true;
@@ -213,7 +212,7 @@ class QcPlanRepository
         Log::info('QC Plan soft deleted', [
             'qc_plan_id' => $id,
             'name' => $qcPlan->name,
-            'project_id' => $qcPlan->project_id
+            'project_id' => $qcPlan->project_id,
         ]);
 
         return true;
@@ -235,7 +234,7 @@ class QcPlanRepository
         Log::info('QC Plan restored', [
             'qc_plan_id' => $id,
             'name' => $qcPlan->name,
-            'project_id' => $qcPlan->project_id
+            'project_id' => $qcPlan->project_id,
         ]);
 
         return true;
@@ -295,12 +294,12 @@ class QcPlanRepository
 
         $qcPlan->update([
             'status' => $status,
-            'status_updated_at' => now()
+            'status_updated_at' => now(),
         ]);
 
         Log::info('QC Plan status updated', [
             'qc_plan_id' => $id,
-            'status' => $status
+            'status' => $status,
         ]);
 
         return true;
@@ -319,12 +318,12 @@ class QcPlanRepository
 
         $qcPlan->update([
             'assigned_to' => $assigneeId,
-            'assigned_at' => now()
+            'assigned_at' => now(),
         ]);
 
         Log::info('QC Plan assigned', [
             'qc_plan_id' => $id,
-            'assigned_to' => $assigneeId
+            'assigned_to' => $assigneeId,
         ]);
 
         return true;
@@ -350,7 +349,7 @@ class QcPlanRepository
             'recent_qc_plans' => $query->where('created_at', '>=', now()->subDays(7))->count(),
             'overdue_qc_plans' => $query->where('due_date', '<', now())
                                        ->where('status', '!=', 'completed')
-                                       ->count()
+                                       ->count(),
         ];
     }
 
@@ -387,7 +386,7 @@ class QcPlanRepository
 
         Log::info('QC Plans bulk updated', [
             'count' => $updated,
-            'ids' => $ids
+            'ids' => $ids,
         ]);
 
         return $updated;
@@ -402,7 +401,7 @@ class QcPlanRepository
 
         Log::info('QC Plans bulk deleted', [
             'count' => $deleted,
-            'ids' => $ids
+            'ids' => $ids,
         ]);
 
         return $deleted;
@@ -426,7 +425,7 @@ class QcPlanRepository
             'type' => 'created',
             'date' => $qcPlan->created_at,
             'title' => 'QC Plan Created',
-            'description' => 'QC Plan ' . $qcPlan->name . ' was created'
+            'description' => 'QC Plan ' . $qcPlan->name . ' was created',
         ];
 
         // Add assignment
@@ -435,7 +434,7 @@ class QcPlanRepository
                 'type' => 'assigned',
                 'date' => $qcPlan->assigned_at,
                 'title' => 'QC Plan Assigned',
-                'description' => 'QC Plan assigned to user'
+                'description' => 'QC Plan assigned to user',
             ];
         }
 
@@ -445,7 +444,7 @@ class QcPlanRepository
                 'type' => 'status_changed',
                 'date' => $qcPlan->status_updated_at,
                 'title' => 'Status Changed',
-                'description' => 'Status changed to ' . $qcPlan->status
+                'description' => 'Status changed to ' . $qcPlan->status,
             ];
         }
 
@@ -455,7 +454,7 @@ class QcPlanRepository
                 'type' => 'completed',
                 'date' => $qcPlan->completed_at,
                 'title' => 'QC Plan Completed',
-                'description' => 'QC Plan was completed'
+                'description' => 'QC Plan was completed',
             ];
         }
 
@@ -522,7 +521,7 @@ class QcPlanRepository
         return [
             'status' => $qcPlan->status,
             'progress_percentage' => $progress,
-            'estimated_completion' => $qcPlan->due_date?->toDateString()
+            'estimated_completion' => $qcPlan->due_date?->toDateString(),
         ];
     }
 
@@ -552,11 +551,11 @@ class QcPlanRepository
         }
 
         $qcPlan->update([
-            'checklist' => $checklist
+            'checklist' => $checklist,
         ]);
 
         Log::info('QC Plan checklist updated', [
-            'qc_plan_id' => $id
+            'qc_plan_id' => $id,
         ]);
 
         return true;
@@ -588,11 +587,11 @@ class QcPlanRepository
         }
 
         $qcPlan->update([
-            'requirements' => $requirements
+            'requirements' => $requirements,
         ]);
 
         Log::info('QC Plan requirements updated', [
-            'qc_plan_id' => $id
+            'qc_plan_id' => $id,
         ]);
 
         return true;
@@ -624,11 +623,11 @@ class QcPlanRepository
         }
 
         $qcPlan->update([
-            'standards' => $standards
+            'standards' => $standards,
         ]);
 
         Log::info('QC Plan standards updated', [
-            'qc_plan_id' => $id
+            'qc_plan_id' => $id,
         ]);
 
         return true;

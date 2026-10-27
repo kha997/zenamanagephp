@@ -1,9 +1,10 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
 use App\Models\Project;
-use App\Models\Role;
 use App\Models\Task;
 use App\Models\Tenant;
 use App\Models\User;
@@ -21,7 +22,9 @@ class LegacyCsvExportSafetyTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenant;
+
     private User $user;
+
     private string $disk;
 
     protected function setUp(): void
@@ -49,7 +52,7 @@ class LegacyCsvExportSafetyTest extends TestCase
     private function createTenant(array $attributes = []): Tenant
     {
         $model = Tenant::factory()->createOne($attributes);
-        if (! $model instanceof Tenant) {
+        if (!$model instanceof Tenant) {
             throw new \LogicException('Tenant factory returned an unexpected model type.');
         }
 
@@ -60,7 +63,7 @@ class LegacyCsvExportSafetyTest extends TestCase
     private function createUser(array $attributes = []): User
     {
         $model = User::factory()->createOne($attributes);
-        if (! $model instanceof User) {
+        if (!$model instanceof User) {
             throw new \LogicException('User factory returned an unexpected model type.');
         }
 
@@ -71,7 +74,7 @@ class LegacyCsvExportSafetyTest extends TestCase
     private function createCoreProject(array $attributes = []): CoreProject
     {
         $model = CoreProject::factory()->createOne($attributes);
-        if (! $model instanceof CoreProject) {
+        if (!$model instanceof CoreProject) {
             throw new \LogicException('Project factory returned ' . get_debug_type($model) . '.');
         }
 
@@ -82,7 +85,7 @@ class LegacyCsvExportSafetyTest extends TestCase
     private function createCoreTask(array $attributes = []): Task
     {
         $model = CoreTask::factory()->createOne($attributes);
-        if (! $model instanceof Task) {
+        if (!$model instanceof Task) {
             throw new \LogicException('Task factory returned ' . get_debug_type($model) . '.');
         }
 
@@ -128,7 +131,7 @@ class LegacyCsvExportSafetyTest extends TestCase
     {
         $exportsPath = storage_path('app/exports');
 
-        if (! File::exists($exportsPath)) {
+        if (!File::exists($exportsPath)) {
             return;
         }
 
@@ -150,6 +153,7 @@ class LegacyCsvExportSafetyTest extends TestCase
         }
 
         fclose($stream);
+
         return $rows;
     }
 
@@ -558,6 +562,7 @@ class LegacyCsvExportSafetyTest extends TestCase
         $queries = DB::getQueryLog();
         $taskHydrationQueries = array_filter($queries, function (array $query): bool {
             $sql = strtolower($query['query']);
+
             return str_contains($sql, 'where `tasks`')
                 || str_contains($sql, 'where `core_project_tasks`');
         });
@@ -785,23 +790,24 @@ class LegacyCsvExportSafetyTest extends TestCase
 
         $builder = Mockery::mock(\Illuminate\Database\Eloquent\Builder::class);
         $withExpectation = $builder->shouldReceive('with');
-        if (! $withExpectation instanceof \Mockery\CompositeExpectation) {
+        if (!$withExpectation instanceof \Mockery\CompositeExpectation) {
             throw new \LogicException('Expected a concrete Mockery expectation.');
         }
         $withExpectation->__call('andReturnSelf', []);
 
         $withCountExpectation = $builder->shouldReceive('withCount');
-        if (! $withCountExpectation instanceof \Mockery\CompositeExpectation) {
+        if (!$withCountExpectation instanceof \Mockery\CompositeExpectation) {
             throw new \LogicException('Expected a concrete Mockery expectation.');
         }
         $withCountExpectation->__call('andReturnSelf', []);
 
         $chunkExpectation = $builder->shouldReceive('chunkById');
-        if (! $chunkExpectation instanceof \Mockery\CompositeExpectation) {
+        if (!$chunkExpectation instanceof \Mockery\CompositeExpectation) {
             throw new \LogicException('Expected a concrete Mockery expectation.');
         }
         $chunkExpectation->__call('andReturnUsing', [function ($size, $callback) use ($task) {
             $callback(collect([$task]));
+
             throw new \RuntimeException('Simulated mid-generation failure');
         }]);
 
@@ -899,7 +905,7 @@ class LegacyCsvExportSafetyTest extends TestCase
         $rows = $this->parseCsv($payload);
 
         $this->assertSame('Hợp đồng xây dựng', $rows[1][1]);
-        $this->assertSame("Giá trị: =SUM(A1:A2)", $rows[1][2]);
+        $this->assertSame('Giá trị: =SUM(A1:A2)', $rows[1][2]);
     }
 
     /** @test */
@@ -1350,6 +1356,7 @@ class LegacyCsvExportSafetyTest extends TestCase
         $queries = DB::getQueryLog();
         $taskHydrationQueries = array_filter($queries, function (array $query): bool {
             $sql = strtolower($query['query']);
+
             return str_contains($sql, 'where `tasks`')
                 || str_contains($sql, 'where `core_project_tasks`');
         });
@@ -1381,6 +1388,7 @@ class LegacyCsvExportSafetyTest extends TestCase
         $queries = DB::getQueryLog();
         $taskHydrationQueries = array_filter($queries, function (array $query): bool {
             $sql = strtolower($query['query']);
+
             return str_contains($sql, 'where `tasks`')
                 || str_contains($sql, 'where `core_project_tasks`');
         });

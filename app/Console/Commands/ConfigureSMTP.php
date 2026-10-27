@@ -58,7 +58,7 @@ class ConfigureSMTP extends Command
 
         $this->newLine();
         $this->info('✅ SMTP configuration completed!');
-        
+
         // Test configuration
         if ($this->confirm('Would you like to test the SMTP configuration?')) {
             $this->testSMTPConfiguration();
@@ -68,7 +68,7 @@ class ConfigureSMTP extends Command
     }
 
     /**
-     * Interactive configuration
+     * Interactive configuration.
      */
     private function interactiveConfiguration(): bool
     {
@@ -100,22 +100,36 @@ class ConfigureSMTP extends Command
     }
 
     /**
-     * Command line configuration
+     * Command line configuration.
      */
     private function commandLineConfiguration(): bool
     {
         $provider = $this->option('provider') ?: 'gmail';
-        
+
         $config = $this->getProviderConfig($provider);
 
         // Override with command line options
-        if ($this->option('host')) $config['host'] = $this->option('host');
-        if ($this->option('port')) $config['port'] = $this->option('port');
-        if ($this->option('encryption')) $config['encryption'] = $this->option('encryption');
-        if ($this->option('username')) $config['username'] = $this->option('username');
-        if ($this->option('password-stdin')) $config['password'] = $this->readPasswordFromStdin();
-        if ($this->option('from-address')) $config['from_address'] = $this->option('from-address');
-        if ($this->option('from-name')) $config['from_name'] = $this->option('from-name');
+        if ($this->option('host')) {
+            $config['host'] = $this->option('host');
+        }
+        if ($this->option('port')) {
+            $config['port'] = $this->option('port');
+        }
+        if ($this->option('encryption')) {
+            $config['encryption'] = $this->option('encryption');
+        }
+        if ($this->option('username')) {
+            $config['username'] = $this->option('username');
+        }
+        if ($this->option('password-stdin')) {
+            $config['password'] = $this->readPasswordFromStdin();
+        }
+        if ($this->option('from-address')) {
+            $config['from_address'] = $this->option('from-address');
+        }
+        if ($this->option('from-name')) {
+            $config['from_name'] = $this->option('from-name');
+        }
 
         return $this->updateEnvironmentFile($config);
     }
@@ -133,7 +147,7 @@ class ConfigureSMTP extends Command
     }
 
     /**
-     * Get provider configuration
+     * Get provider configuration.
      */
     private function getProviderConfig(string $provider): array
     {
@@ -169,7 +183,7 @@ class ConfigureSMTP extends Command
     }
 
     /**
-     * Update environment file
+     * Update environment file.
      */
     private function updateEnvironmentFile(array $config): bool
     {
@@ -177,6 +191,7 @@ class ConfigureSMTP extends Command
 
         if (!File::exists($envPath)) {
             $this->error('Environment file not found. Please create .env file first.');
+
             return false;
         }
 
@@ -193,7 +208,7 @@ class ConfigureSMTP extends Command
         $envContent = $this->updateEnvValue($envContent, 'MAIL_FROM_NAME', (string) ($config['from_name'] ?? ''));
 
         // Write to a sibling temp file and rename, keeping the original mode.
-        $mode = fileperms($envPath) & 0777;
+        $mode = fileperms($envPath) & 0o777;
         $tmp = $envPath . '.tmp-' . bin2hex(random_bytes(4));
         File::put($tmp, $envContent);
         chmod($tmp, $mode);
@@ -222,23 +237,24 @@ class ConfigureSMTP extends Command
     }
 
     /**
-     * Test SMTP configuration
+     * Test SMTP configuration.
      */
     private function testSMTPConfiguration(): void
     {
         $this->info('🧪 Testing SMTP Configuration...');
-        
+
         $testEmail = $this->ask('Enter test email address');
-        
+
         if (!$testEmail) {
             $this->warn('No test email provided. Skipping test.');
+
             return;
         }
 
         try {
             Artisan::call('email:test', [
                 'email' => $testEmail,
-                '--sync' => true
+                '--sync' => true,
             ]);
 
             $output = Artisan::output();

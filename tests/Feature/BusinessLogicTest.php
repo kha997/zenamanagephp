@@ -1,22 +1,23 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Models\User;
+use App\Models\Component;
 use App\Models\Project;
 use App\Models\Task;
-use App\Models\Component;
-use App\Models\Tenant;
-use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\SSOT\FixtureFactory;
+use Tests\TestCase;
 
 /**
- * Test chức năng nghiệp vụ cơ bản của hệ thống
+ * Test chức năng nghiệp vụ cơ bản của hệ thống.
  */
 class BusinessLogicTest extends TestCase
 {
-    use RefreshDatabase, FixtureFactory;
+    use RefreshDatabase;
+    use FixtureFactory;
 
     private function createCoreFixtureSet(): array
     {
@@ -51,7 +52,7 @@ class BusinessLogicTest extends TestCase
     }
 
     /**
-     * Test tạo và quản lý project cơ bản
+     * Test tạo và quản lý project cơ bản.
      */
     public function test_can_create_and_manage_project(): void
     {
@@ -66,7 +67,7 @@ class BusinessLogicTest extends TestCase
 
         // Cập nhật project
         $project->update(['status' => 'active']);
-        
+
         $this->assertDatabaseHas('projects', [
             'id' => $project->id,
             'status' => 'active',
@@ -74,7 +75,7 @@ class BusinessLogicTest extends TestCase
     }
 
     /**
-     * Test tạo và quản lý task
+     * Test tạo và quản lý task.
      */
     public function test_can_create_and_manage_task(): void
     {
@@ -102,7 +103,7 @@ class BusinessLogicTest extends TestCase
 
         // Cập nhật task
         $task->update(['status' => 'in_progress']);
-        
+
         $this->assertDatabaseHas('tasks', [
             'id' => $task->id,
             'status' => 'in_progress',
@@ -110,7 +111,7 @@ class BusinessLogicTest extends TestCase
     }
 
     /**
-     * Test tạo và quản lý component
+     * Test tạo và quản lý component.
      */
     public function test_can_create_and_manage_component(): void
     {
@@ -138,7 +139,7 @@ class BusinessLogicTest extends TestCase
 
         // Cập nhật component
         $component->update(['status' => 'completed']);
-        
+
         $this->assertDatabaseHas('components', [
             'id' => $component->id,
             'status' => 'completed',
@@ -146,7 +147,7 @@ class BusinessLogicTest extends TestCase
     }
 
     /**
-     * Test quan hệ giữa các entities
+     * Test quan hệ giữa các entities.
      */
     public function test_entity_relationships(): void
     {
@@ -181,13 +182,13 @@ class BusinessLogicTest extends TestCase
         $this->assertNotNull($project->tenant_id, 'Project should have tenant_id');
         $this->assertNotNull($task->tenant_id, 'Task should have tenant_id');
         $this->assertNotNull($component->tenant_id, 'Component should have tenant_id');
-        
+
         // Load relationships
         $user->load('tenant');
         $project->load('tenant');
         $task->load('tenant', 'project');
         $component->load('tenant', 'project');
-        
+
         $this->assertEquals($tenant->id, $user->tenant->id);
         $this->assertEquals($tenant->id, $project->tenant->id);
         $this->assertEquals($tenant->id, $task->tenant->id);

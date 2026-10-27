@@ -1,33 +1,37 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Traits;
 
 use App\Models\Tenant;
 use App\Models\User;
-use Src\RBAC\Models\Role;
-use Src\RBAC\Models\Permission;
-use Src\RBAC\Services\AuthService;
 use Illuminate\Foundation\Testing\WithFaker;
+use Src\RBAC\Models\Permission;
+use Src\RBAC\Models\Role;
+use Src\RBAC\Services\AuthService;
 
 /**
- * Trait AuthenticationTestTrait
- * 
+ * Trait AuthenticationTestTrait.
+ *
  * Provides authentication utilities for testing JWT-based API endpoints
  * Handles user creation, role assignment, and JWT token generation
- * 
- * @package Tests\Traits
  */
 trait AuthenticationTestTrait
 {
-    use AuthenticationTrait, ApiTestTrait, WithFaker;
+    use AuthenticationTrait;
+    use ApiTestTrait;
+    use WithFaker;
 
     protected ?User $apiFeatureUser = null;
+
     protected ?Tenant $apiFeatureTenant = null;
+
     protected ?string $apiFeatureToken = null;
 
     /**
-     * Create a test user with specified roles and permissions
-     * 
+     * Create a test user with specified roles and permissions.
+     *
      * @param array $roles Array of role names to assign
      * @param array $permissions Array of permission codes to assign
      * @param array $attributes Additional user attributes
@@ -57,9 +61,9 @@ trait AuthenticationTestTrait
             $permission = Permission::firstOrCreate([
                 'code' => $permissionCode,
                 'module' => explode('.', $permissionCode)[0],
-                'action' => explode('.', $permissionCode)[1] ?? 'access'
+                'action' => explode('.', $permissionCode)[1] ?? 'access',
             ]);
-            
+
             // Create a temporary role for this permission if needed
             $tempRole = Role::firstOrCreate([
                 'name' => 'temp_' . $permissionCode,
@@ -75,8 +79,8 @@ trait AuthenticationTestTrait
     }
 
     /**
-     * Create an admin user with full permissions
-     * 
+     * Create an admin user with full permissions.
+     *
      * @return User
      */
     protected function createAdminUser(): User
@@ -85,13 +89,13 @@ trait AuthenticationTestTrait
             'project.create', 'project.update', 'project.delete',
             'component.create', 'component.update', 'component.delete',
             'task.create', 'task.update', 'task.delete',
-            'user.manage', 'role.manage'
+            'user.manage', 'role.manage',
         ]);
     }
 
     /**
-     * Create a project manager user
-     * 
+     * Create a project manager user.
+     *
      * @return User
      */
     protected function createProjectManagerUser(): User
@@ -99,62 +103,65 @@ trait AuthenticationTestTrait
         return $this->createTestUser(['project_manager'], [
             'project.view', 'project.update',
             'component.create', 'component.update',
-            'task.create', 'task.update', 'task.assign'
+            'task.create', 'task.update', 'task.assign',
         ]);
     }
 
     /**
-     * Create a regular user with basic permissions
-     * 
+     * Create a regular user with basic permissions.
+     *
      * @return User
      */
     protected function createRegularUser(): User
     {
         return $this->createTestUser(['user'], [
-            'project.view', 'task.view', 'task.update'
+            'project.view', 'task.view', 'task.update',
         ]);
     }
 
     /**
-     * Generate JWT token for a user
-     * 
+     * Generate JWT token for a user.
+     *
      * @param User $user
      * @return string
      */
     protected function generateJwtToken(User $user): string
     {
         $authService = app(AuthService::class);
+
         return $authService->createTokenForUser($user);
     }
 
     /**
-     * Get authorization headers with JWT token
-     * 
+     * Get authorization headers with JWT token.
+     *
      * @param User $user
      * @return array
      */
     protected function getAuthHeaders(User $user): array
     {
         $token = $this->generateJwtToken($user);
+
         return [
             'Authorization' => 'Bearer ' . $token,
             'Accept' => 'application/json',
-            'Content-Type' => 'application/json'
+            'Content-Type' => 'application/json',
         ];
     }
 
     /**
-     * Act as an existing user instance for subsequent requests
-     * 
+     * Act as an existing user instance for subsequent requests.
+     *
      * @param User $user
      * @return $this
      */
     protected function actingAsExistingUser(User $user)
     {
         $token = $this->generateJwtToken($user);
+
         return $this->withHeaders([
             'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json'
+            'Accept' => 'application/json',
         ]);
     }
 
@@ -179,8 +186,8 @@ trait AuthenticationTestTrait
     }
 
     /**
-     * Build headers that only include tenant context (no authentication)
-     * 
+     * Build headers that only include tenant context (no authentication).
+     *
      * @param array $headers
      * @return array
      */
@@ -203,8 +210,8 @@ trait AuthenticationTestTrait
     }
 
     /**
-     * Assert JWT token is valid and contains expected claims
-     * 
+     * Assert JWT token is valid and contains expected claims.
+     *
      * @param string $token
      * @param array $expectedClaims
      * @return void
@@ -213,29 +220,30 @@ trait AuthenticationTestTrait
     {
         $authService = app(AuthService::class);
         $payload = $authService->validateToken($token);
-        
+
         $this->assertNotNull($payload);
         $this->assertNotNull($payload['user_id'] ?? $payload['sub']); // User ID
         $this->assertNotNull($payload['iat']); // Issued at
         $this->assertNotNull($payload['exp']); // Expires at
-        
+
         foreach ($expectedClaims as $claim => $value) {
             $this->assertEquals($value, $payload[$claim]);
         }
     }
 
     /**
-     * Decode JWT token payload
-     * 
+     * Decode JWT token payload.
+     *
      * @param string $token
      * @return array|null
      */
     protected function decodeJwtToken(string $token): ?array
     {
         $authService = app(AuthService::class);
+
         return $authService->validateToken($token);
     }
-    
+
     /**
      * Authenticate as a tenant administrator for API requests.
      *
@@ -245,7 +253,7 @@ trait AuthenticationTestTrait
      */
     protected function apiActingAsTenantAdmin(array $attributes = [], ?Tenant $tenant = null): User
     {
-        $tenant = $tenant ?? Tenant::factory()->create();
+        $tenant ??= Tenant::factory()->create();
         // Persona "tenant admin": cấp thêm các mã project.* canonical
         // (ZenaPermissionsSeeder taxonomy) bên cạnh default legacy của trait.
         $user = $this->createTenantUser($tenant, $attributes, null, [

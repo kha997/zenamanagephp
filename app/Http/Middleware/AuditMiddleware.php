@@ -4,8 +4,8 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class AuditMiddleware
 {
@@ -19,16 +19,16 @@ class AuditMiddleware
     public function handle(Request $request, Closure $next)
     {
         $startTime = microtime(true);
-        
+
         // Log request details
         $this->logRequest($request);
-        
+
         // Process the request
         $response = $next($request);
-        
+
         // Log response details
         $this->logResponse($request, $response, $startTime);
-        
+
         return $response;
     }
 
@@ -38,7 +38,7 @@ class AuditMiddleware
     protected function logRequest(Request $request): void
     {
         $user = Auth::user();
-        
+
         Log::channel('audit')->info('Request', [
             'method' => $request->method(),
             'url' => $request->fullUrl(),
@@ -48,7 +48,7 @@ class AuditMiddleware
             'tenant_id' => $user ? $user->tenant_id : null,
             'timestamp' => now()->toISOString(),
             'headers' => $this->getSafeHeaders($request),
-            'input' => $this->getSafeInput($request)
+            'input' => $this->getSafeInput($request),
         ]);
     }
 
@@ -59,7 +59,7 @@ class AuditMiddleware
     {
         $user = Auth::user();
         $duration = round((microtime(true) - $startTime) * 1000, 2); // Convert to milliseconds
-        
+
         Log::channel('audit')->info('Response', [
             'method' => $request->method(),
             'url' => $request->fullUrl(),
@@ -68,7 +68,7 @@ class AuditMiddleware
             'user_id' => $user ? $user->id : null,
             'tenant_id' => $user ? $user->tenant_id : null,
             'timestamp' => now()->toISOString(),
-            'response_size' => strlen($response->getContent())
+            'response_size' => strlen($response->getContent()),
         ]);
     }
 
@@ -78,14 +78,14 @@ class AuditMiddleware
     protected function getSafeHeaders(Request $request): array
     {
         $headers = $request->headers->all();
-        
+
         // Remove sensitive headers
         $sensitiveHeaders = ['authorization', 'cookie', 'x-api-key', 'x-auth-token'];
-        
+
         foreach ($sensitiveHeaders as $header) {
             unset($headers[$header]);
         }
-        
+
         return $headers;
     }
 
@@ -95,14 +95,14 @@ class AuditMiddleware
     protected function getSafeInput(Request $request): array
     {
         $input = $request->all();
-        
+
         // Remove sensitive fields
         $sensitiveFields = ['password', 'password_confirmation', 'token', 'secret', 'api_key'];
-        
+
         foreach ($sensitiveFields as $field) {
             unset($input[$field]);
         }
-        
+
         return $input;
     }
 }

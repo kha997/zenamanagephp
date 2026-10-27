@@ -18,11 +18,17 @@ class PaymentCertificateSummaryServiceTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenant;
+
     private Project $project;
+
     private Contract $contract;
+
     private Boq $boq;
+
     private BoqLineItem $lineA;  // 100 units @ 200,000
+
     private BoqLineItem $lineB;  // 50 units @ 1,000,000
+
     private PaymentCertificateSummaryService $service;
 
     protected function setUp(): void

@@ -1,18 +1,18 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Form Request để xác thực khi submit Change Request để chờ phê duyệt
- * 
- * @package Src\ChangeRequest\Requests
+ * Form Request để xác thực khi submit Change Request để chờ phê duyệt.
  */
 class SubmitChangeRequestRequest extends FormRequest
 {
     /**
-     * Xác định user có quyền thực hiện request này không
+     * Xác định user có quyền thực hiện request này không.
      */
     public function authorize(): bool
     {
@@ -20,7 +20,7 @@ class SubmitChangeRequestRequest extends FormRequest
     }
 
     /**
-     * Các quy tắc validation cho request
+     * Các quy tắc validation cho request.
      */
     public function rules(): array
     {
@@ -28,19 +28,19 @@ class SubmitChangeRequestRequest extends FormRequest
             'confirmation' => [
                 'required',
                 'boolean',
-                'accepted' // Phải là true
-            ]
+                'accepted', // Phải là true
+            ],
         ];
     }
 
     /**
-     * Thông báo lỗi tùy chỉnh
+     * Thông báo lỗi tùy chỉnh.
      */
     public function messages(): array
     {
         return [
             'confirmation.required' => 'Bạn phải xác nhận việc submit change request',
-            'confirmation.accepted' => 'Bạn phải xác nhận việc submit change request'
+            'confirmation.accepted' => 'Bạn phải xác nhận việc submit change request',
         ];
     }
 }

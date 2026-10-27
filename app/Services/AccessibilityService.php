@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 class AccessibilityService
 {
@@ -15,8 +15,8 @@ class AccessibilityService
      */
     public function getUserPreferences(?int $userId = null): array
     {
-        $userId = $userId ?? Auth::id();
-        
+        $userId ??= Auth::id();
+
         return Cache::get("user.{$userId}.accessibility_preferences", [
             'high_contrast' => false,
             'reduced_motion' => false,
@@ -28,7 +28,7 @@ class AccessibilityService
             'aria_labels' => true,
         ]);
     }
-    
+
     /**
      * Save user accessibility preferences.
      *
@@ -38,14 +38,14 @@ class AccessibilityService
      */
     public function saveUserPreferences(array $preferences, ?int $userId = null): bool
     {
-        $userId = $userId ?? Auth::id();
-        
+        $userId ??= Auth::id();
+
         // Validate preferences
         $validPreferences = $this->validatePreferences($preferences);
-        
+
         return Cache::put("user.{$userId}.accessibility_preferences", $validPreferences, 60 * 24 * 30); // 30 days
     }
-    
+
     /**
      * Validate accessibility preferences.
      *
@@ -64,16 +64,16 @@ class AccessibilityService
             'skip_links' => true,
             'aria_labels' => true,
         ];
-        
+
         $validatedPreferences = [];
-        
+
         foreach ($defaultPreferences as $key => $defaultValue) {
             $validatedPreferences[$key] = isset($preferences[$key]) ? (bool) $preferences[$key] : $defaultValue;
         }
-        
+
         return $validatedPreferences;
     }
-    
+
     /**
      * Get accessibility compliance report.
      *
@@ -88,63 +88,63 @@ class AccessibilityService
                 'color_contrast' => [
                     'status' => 'pass',
                     'score' => 100,
-                    'details' => 'All text meets WCAG AA contrast requirements (4.5:1)'
+                    'details' => 'All text meets WCAG AA contrast requirements (4.5:1)',
                 ],
                 'keyboard_navigation' => [
                     'status' => 'pass',
                     'score' => 100,
-                    'details' => 'All interactive elements are keyboard accessible'
+                    'details' => 'All interactive elements are keyboard accessible',
                 ],
                 'screen_reader' => [
                     'status' => 'pass',
                     'score' => 95,
-                    'details' => 'Proper ARIA labels and roles implemented'
+                    'details' => 'Proper ARIA labels and roles implemented',
                 ],
                 'focus_management' => [
                     'status' => 'pass',
                     'score' => 100,
-                    'details' => 'Focus indicators and management implemented'
+                    'details' => 'Focus indicators and management implemented',
                 ],
                 'skip_links' => [
                     'status' => 'pass',
                     'score' => 100,
-                    'details' => 'Skip links provided for main content areas'
+                    'details' => 'Skip links provided for main content areas',
                 ],
                 'alt_text' => [
                     'status' => 'pass',
                     'score' => 90,
-                    'details' => 'Images have appropriate alt text'
+                    'details' => 'Images have appropriate alt text',
                 ],
                 'form_labels' => [
                     'status' => 'pass',
                     'score' => 100,
-                    'details' => 'All form elements have proper labels'
+                    'details' => 'All form elements have proper labels',
                 ],
                 'heading_structure' => [
                     'status' => 'pass',
                     'score' => 100,
-                    'details' => 'Proper heading hierarchy maintained'
+                    'details' => 'Proper heading hierarchy maintained',
                 ],
                 'live_regions' => [
                     'status' => 'pass',
                     'score' => 100,
-                    'details' => 'Live regions for dynamic content updates'
+                    'details' => 'Live regions for dynamic content updates',
                 ],
                 'error_handling' => [
                     'status' => 'pass',
                     'score' => 95,
-                    'details' => 'Error messages are accessible and descriptive'
-                ]
+                    'details' => 'Error messages are accessible and descriptive',
+                ],
             ],
             'recommendations' => [
                 'Consider implementing WCAG AAA compliance for enhanced accessibility',
                 'Add more descriptive error messages for form validation',
-                'Implement voice navigation support for advanced users'
+                'Implement voice navigation support for advanced users',
             ],
-            'last_updated' => now()->toDateTimeString()
+            'last_updated' => now()->toDateTimeString(),
         ];
     }
-    
+
     /**
      * Generate accessibility audit for a specific page.
      *
@@ -155,7 +155,7 @@ class AccessibilityService
     {
         // In a real implementation, this would use a web accessibility testing tool
         // For now, return a mock audit result
-        
+
         return [
             'page_url' => $pageUrl,
             'audit_date' => now()->toDateTimeString(),
@@ -167,7 +167,7 @@ class AccessibilityService
                     'message' => 'Some images may benefit from more descriptive alt text',
                     'element' => 'img',
                     'line' => 45,
-                    'suggestion' => 'Add more descriptive alt text for better context'
+                    'suggestion' => 'Add more descriptive alt text for better context',
                 ],
                 [
                     'type' => 'info',
@@ -175,8 +175,8 @@ class AccessibilityService
                     'message' => 'Consider adding more keyboard shortcuts',
                     'element' => 'global',
                     'line' => null,
-                    'suggestion' => 'Add Alt+H for help, Alt+M for menu'
-                ]
+                    'suggestion' => 'Add Alt+H for help, Alt+M for menu',
+                ],
             ],
             'passed_checks' => [
                 'Color contrast meets WCAG AA standards',
@@ -184,16 +184,16 @@ class AccessibilityService
                 'Proper heading structure maintained',
                 'Form labels are properly associated',
                 'Focus indicators are visible',
-                'Skip links are present and functional'
+                'Skip links are present and functional',
             ],
             'recommendations' => [
                 'Test with actual screen readers',
                 'Conduct user testing with disabled users',
-                'Implement automated accessibility testing in CI/CD'
-            ]
+                'Implement automated accessibility testing in CI/CD',
+            ],
         ];
     }
-    
+
     /**
      * Get accessibility statistics.
      *
@@ -218,7 +218,7 @@ class AccessibilityService
                 '2025-06' => 95,
                 '2025-07' => 95,
                 '2025-08' => 95,
-                '2025-09' => 95
+                '2025-09' => 95,
             ],
             'most_used_features' => [
                 'keyboard_navigation' => 89,
@@ -226,11 +226,11 @@ class AccessibilityService
                 'skip_links' => 65,
                 'high_contrast' => 34,
                 'large_text' => 28,
-                'screen_reader_optimized' => 18
-            ]
+                'screen_reader_optimized' => 18,
+            ],
         ];
     }
-    
+
     /**
      * Check if a color combination meets WCAG contrast requirements.
      *
@@ -244,23 +244,23 @@ class AccessibilityService
         // Convert hex to RGB
         $fgRgb = $this->hexToRgb($foregroundColor);
         $bgRgb = $this->hexToRgb($backgroundColor);
-        
+
         // Calculate relative luminance
         $fgLuminance = $this->getRelativeLuminance($fgRgb);
         $bgLuminance = $this->getRelativeLuminance($bgRgb);
-        
+
         // Calculate contrast ratio
         $contrastRatio = ($fgLuminance + 0.05) / ($bgLuminance + 0.05);
         if ($bgLuminance > $fgLuminance) {
             $contrastRatio = ($bgLuminance + 0.05) / ($fgLuminance + 0.05);
         }
-        
+
         // Check compliance
         $aaCompliant = $contrastRatio >= 4.5;
         $aaaCompliant = $contrastRatio >= 7.0;
-        
+
         $compliant = $level === 'AAA' ? $aaaCompliant : $aaCompliant;
-        
+
         return [
             'foreground_color' => $foregroundColor,
             'background_color' => $backgroundColor,
@@ -269,10 +269,10 @@ class AccessibilityService
             'aaa_compliant' => $aaaCompliant,
             'compliant' => $compliant,
             'level' => $level,
-            'recommendation' => $compliant ? 'Meets WCAG ' . $level . ' requirements' : 'Does not meet WCAG ' . $level . ' requirements'
+            'recommendation' => $compliant ? 'Meets WCAG ' . $level . ' requirements' : 'Does not meet WCAG ' . $level . ' requirements',
         ];
     }
-    
+
     /**
      * Convert hex color to RGB array.
      *
@@ -282,18 +282,18 @@ class AccessibilityService
     private function hexToRgb(string $hex): array
     {
         $hex = ltrim($hex, '#');
-        
+
         if (strlen($hex) === 3) {
             $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
         }
-        
+
         return [
             'r' => hexdec(substr($hex, 0, 2)),
             'g' => hexdec(substr($hex, 2, 2)),
-            'b' => hexdec(substr($hex, 4, 2))
+            'b' => hexdec(substr($hex, 4, 2)),
         ];
     }
-    
+
     /**
      * Calculate relative luminance of RGB color.
      *
@@ -305,14 +305,14 @@ class AccessibilityService
         $r = $rgb['r'] / 255;
         $g = $rgb['g'] / 255;
         $b = $rgb['b'] / 255;
-        
+
         $r = $r <= 0.03928 ? $r / 12.92 : pow(($r + 0.055) / 1.055, 2.4);
         $g = $g <= 0.03928 ? $g / 12.92 : pow(($g + 0.055) / 1.055, 2.4);
         $b = $b <= 0.03928 ? $b / 12.92 : pow(($b + 0.055) / 1.055, 2.4);
-        
+
         return 0.2126 * $r + 0.7152 * $g + 0.0722 * $b;
     }
-    
+
     /**
      * Generate accessibility report for export.
      *
@@ -331,14 +331,14 @@ class AccessibilityService
                 'Implement automated accessibility testing',
                 'Conduct regular user testing with disabled users',
                 'Provide accessibility training for developers',
-                'Monitor accessibility metrics in production'
-            ]
+                'Monitor accessibility metrics in production',
+            ],
         ];
-        
+
         return [
             'data' => $report,
             'format' => $format,
-            'filename' => 'accessibility-report-' . now()->format('Y-m-d-H-i-s') . '.' . $format
+            'filename' => 'accessibility-report-' . now()->format('Y-m-d-H-i-s') . '.' . $format,
         ];
     }
 }

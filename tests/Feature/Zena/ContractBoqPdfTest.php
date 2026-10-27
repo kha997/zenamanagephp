@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Zena;
 
@@ -21,9 +23,13 @@ class ContractBoqPdfTest extends TestCase
     use TenantUserFactoryTrait;
 
     private Tenant $tenant;
+
     private User $user;
+
     private Project $project;
+
     private Contract $contract;
+
     private Boq $boq;
 
     protected function setUp(): void
@@ -117,7 +123,7 @@ class ContractBoqPdfTest extends TestCase
     public function test_boq_pdf_endpoint_returns_pdf(): void
     {
         $this->app->bind(DeliverablePdfExportService::class, function () {
-            return new class extends DeliverablePdfExportService {
+            return new class () extends DeliverablePdfExportService {
                 public function render(string $html, array $options = [], array $documentMeta = []): string
                 {
                     return '%PDF-1.4 fake-boq-pdf-bytes';
@@ -190,7 +196,7 @@ class ContractBoqPdfTest extends TestCase
     public function test_engine_unavailable_redirects_with_error(): void
     {
         $this->app->bind(DeliverablePdfExportService::class, function () {
-            return new class extends DeliverablePdfExportService {
+            return new class () extends DeliverablePdfExportService {
                 public function render(string $html, array $options = [], array $documentMeta = []): string
                 {
                     throw new DeliverablePdfExportUnavailableException();

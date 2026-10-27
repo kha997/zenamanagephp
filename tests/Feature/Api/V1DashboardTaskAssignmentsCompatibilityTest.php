@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
@@ -20,11 +22,17 @@ class V1DashboardTaskAssignmentsCompatibilityTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenant;
+
     private User $user;
+
     private User $otherUser;
+
     private Project $project;
+
     private Task $task;
+
     private Task $otherTask;
+
     private string $assignmentId;
 
     protected function setUp(): void

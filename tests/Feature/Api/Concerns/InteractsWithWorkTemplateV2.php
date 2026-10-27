@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api\Concerns;
 
@@ -9,11 +11,11 @@ use App\Models\WorkTemplate;
 use App\Models\WorkTemplateChecklistItem;
 use App\Models\WorkTemplatePhase;
 use App\Models\WorkTemplateRequiredDocument;
+use App\Models\WorkTemplateStep;
 use App\Models\WorkTemplateTask;
 use App\Models\WorkTemplateTaskAssignment;
 use App\Models\WorkTemplateTrigger;
 use App\Models\WorkTemplateVersion;
-use App\Models\WorkTemplateStep;
 use Tests\Traits\RouteNameTrait;
 use Tests\Traits\TenantUserFactoryTrait;
 

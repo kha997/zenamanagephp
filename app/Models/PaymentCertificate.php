@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -31,8 +33,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class PaymentCertificate extends Model
 {
     use HasUlids;
+
     /** @use HasFactory<\Database\Factories\PaymentCertificateFactory> */
     use HasFactory;
+
     use TenantScope;
 
     public const STATUS_DRAFT = 'draft';
@@ -47,7 +51,9 @@ class PaymentCertificate extends Model
     ];
 
     protected $table = 'payment_certificates';
+
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [

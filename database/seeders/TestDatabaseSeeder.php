@@ -1,27 +1,27 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use Src\RBAC\Models\Role;
-use Src\RBAC\Models\Permission;
-use App\Models\User;
 use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
+use Src\RBAC\Models\Permission;
+use Src\RBAC\Models\Role;
 
 /**
- * Class TestDatabaseSeeder
- * 
+ * Class TestDatabaseSeeder.
+ *
  * Seeds test database with essential data for testing
  * Creates roles, permissions, and test users
- * 
- * @package Database\Seeders
  */
 class TestDatabaseSeeder extends Seeder
 {
     /**
      * Run the database seeds.
-     * 
+     *
      * @return void
      */
     public function run(): void
@@ -30,26 +30,26 @@ class TestDatabaseSeeder extends Seeder
         $tenant = Tenant::firstOrCreate([
             'id' => 1,
             'name' => 'Test Tenant',
-            'domain' => 'test.zena.local'
+            'domain' => 'test.zena.local',
         ]);
 
         // Create system roles
         $adminRole = Role::firstOrCreate([
             'name' => 'admin',
             'scope' => 'system',
-            'description' => 'System Administrator'
+            'description' => 'System Administrator',
         ]);
 
         $pmRole = Role::firstOrCreate([
             'name' => 'project_manager',
             'scope' => 'system',
-            'description' => 'Project Manager'
+            'description' => 'Project Manager',
         ]);
 
         $userRole = Role::firstOrCreate([
             'name' => 'user',
             'scope' => 'system',
-            'description' => 'Regular User'
+            'description' => 'Regular User',
         ]);
 
         // Create permissions
@@ -74,7 +74,7 @@ class TestDatabaseSeeder extends Seeder
                 'code' => $permissionCode,
                 'module' => $parts[0],
                 'action' => $parts[1],
-                'description' => ucfirst(str_replace('.', ' ', $permissionCode))
+                'description' => ucfirst(str_replace('.', ' ', $permissionCode)),
             ]);
         }
 
@@ -85,40 +85,40 @@ class TestDatabaseSeeder extends Seeder
         $pmPermissions = Permission::whereIn('code', [
             'project.view', 'project.update',
             'component.create', 'component.view', 'component.update',
-            'task.create', 'task.view', 'task.update', 'task.assign'
+            'task.create', 'task.view', 'task.update', 'task.assign',
         ])->get();
         $pmRole->permissions()->sync($pmPermissions->pluck('id'));
 
         $userPermissions = Permission::whereIn('code', [
-            'project.view', 'task.view', 'task.update'
+            'project.view', 'task.view', 'task.update',
         ])->get();
         $userRole->permissions()->sync($userPermissions->pluck('id'));
 
         // Create test users
         $adminUser = User::firstOrCreate([
-            'email' => $this->buildTestEmail('admin')
+            'email' => $this->buildTestEmail('admin'),
         ], [
             'name' => 'Test Admin',
             'tenant_id' => $tenant->id,
-            'password' => bcrypt('password')
+            'password' => bcrypt('password'),
         ]);
         $adminUser->systemRoles()->sync([$adminRole->id]);
 
         $pmUser = User::firstOrCreate([
-            'email' => $this->buildTestEmail('pm')
+            'email' => $this->buildTestEmail('pm'),
         ], [
             'name' => 'Test Project Manager',
             'tenant_id' => $tenant->id,
-            'password' => bcrypt('password')
+            'password' => bcrypt('password'),
         ]);
         $pmUser->systemRoles()->sync([$pmRole->id]);
 
         $regularUser = User::firstOrCreate([
-            'email' => $this->buildTestEmail('user')
+            'email' => $this->buildTestEmail('user'),
         ], [
             'name' => 'Test User',
             'tenant_id' => $tenant->id,
-            'password' => bcrypt('password')
+            'password' => bcrypt('password'),
         ]);
         $regularUser->systemRoles()->sync([$userRole->id]);
     }

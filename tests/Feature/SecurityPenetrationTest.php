@@ -2,51 +2,50 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
-use App\Models\User;
-use App\Models\Tenant;
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
+use Tests\TestCase;
 
 /**
- * Security Penetration Test Suite
- * 
+ * Security Penetration Test Suite.
+ *
  * Comprehensive security testing for penetration testing
  */
 class SecurityPenetrationTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use RefreshDatabase;
+    use WithFaker;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create test tenant
         $this->tenant = Tenant::factory()->create();
-        
+
         // Create test user
         $this->user = User::factory()->create([
             'tenant_id' => $this->tenant->id,
             'email_verified' => true,
-            'password' => Hash::make('TestPassword123!')
+            'password' => Hash::make('TestPassword123!'),
         ]);
-        
+
         // Create test project
         $this->project = Project::factory()->create([
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
-        
+
         // Create test task
         $this->task = Task::factory()->create([
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
     }
 
@@ -57,19 +56,19 @@ class SecurityPenetrationTest extends TestCase
     */
 
     /**
-     * Test brute force attack protection
+     * Test brute force attack protection.
      */
     public function test_brute_force_protection()
     {
         $wrongPassword = 'WrongPassword123!';
-        
+
         // Attempt multiple failed logins
         for ($i = 0; $i < 15; $i++) {
             $response = $this->postJson('/api/v1/auth/login', [
                 'email' => $this->user->email,
-                'password' => $wrongPassword
+                'password' => $wrongPassword,
             ]);
-            
+
             if ($i < 10) {
                 $response->assertStatus(401);
             } else {
@@ -80,7 +79,7 @@ class SecurityPenetrationTest extends TestCase
     }
 
     /**
-     * Test SQL injection in login
+     * Test SQL injection in login.
      */
     public function test_sql_injection_login()
     {
@@ -96,7 +95,7 @@ class SecurityPenetrationTest extends TestCase
         foreach ($maliciousInputs as $input) {
             $response = $this->postJson('/api/v1/auth/login', [
                 'email' => $input,
-                'password' => $input
+                'password' => $input,
             ]);
 
             // Input must be safely rejected: no server error, no successful auth.
@@ -108,7 +107,7 @@ class SecurityPenetrationTest extends TestCase
     }
 
     /**
-     * Test XSS in login form
+     * Test XSS in login form.
      */
     public function test_xss_login()
     {
@@ -123,7 +122,7 @@ class SecurityPenetrationTest extends TestCase
         foreach ($xssPayloads as $payload) {
             $response = $this->postJson('/api/v1/auth/login', [
                 'email' => $payload,
-                'password' => $payload
+                'password' => $payload,
             ]);
 
             // Input must be safely rejected: no server error, no successful auth.
@@ -135,7 +134,7 @@ class SecurityPenetrationTest extends TestCase
     }
 
     /**
-     * Test JWT token manipulation
+     * Test JWT token manipulation.
      */
     public function test_jwt_token_manipulation()
     {
@@ -144,7 +143,7 @@ class SecurityPenetrationTest extends TestCase
             'X-Tenant-ID' => (string) $this->tenant->id,
         ])->postJson('/api/v1/auth/login', [
             'email' => $this->user->email,
-            'password' => 'TestPassword123!'
+            'password' => 'TestPassword123!',
         ]);
         $loginResponse->assertStatus(200);
 
@@ -161,7 +160,7 @@ class SecurityPenetrationTest extends TestCase
 
         foreach ($manipulatedTokens as $manipulatedToken) {
             $response = $this->withHeaders([
-                'Authorization' => 'Bearer ' . $manipulatedToken
+                'Authorization' => 'Bearer ' . $manipulatedToken,
             ])->getJson('/api/v1/dashboard');
 
             $this->assertContains($response->status(), [401, 403]);
@@ -175,13 +174,13 @@ class SecurityPenetrationTest extends TestCase
     */
 
     /**
-     * Test horizontal privilege escalation
+     * Test horizontal privilege escalation.
      */
     public function test_horizontal_privilege_escalation()
     {
         // Create another user in same tenant
         $otherUser = User::factory()->create([
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Login as first user
@@ -189,7 +188,7 @@ class SecurityPenetrationTest extends TestCase
             'X-Tenant-ID' => (string) $this->tenant->id,
         ])->postJson('/api/v1/auth/login', [
             'email' => $this->user->email,
-            'password' => 'TestPassword123!'
+            'password' => 'TestPassword123!',
         ]);
         $loginResponse->assertStatus(200);
 
@@ -207,14 +206,14 @@ class SecurityPenetrationTest extends TestCase
     }
 
     /**
-     * Test vertical privilege escalation
+     * Test vertical privilege escalation.
      */
     public function test_vertical_privilege_escalation()
     {
         // Login as regular user
         $loginResponse = $this->postJson('/api/v1/auth/login', [
             'email' => $this->user->email,
-            'password' => 'TestPassword123!'
+            'password' => 'TestPassword123!',
         ]);
 
         $token = $loginResponse->json('data.token');
@@ -228,7 +227,7 @@ class SecurityPenetrationTest extends TestCase
 
         foreach ($adminEndpoints as $endpoint) {
             $response = $this->withHeaders([
-                'Authorization' => 'Bearer ' . $token
+                'Authorization' => 'Bearer ' . $token,
             ])->getJson($endpoint);
 
             $this->assertContains($response->status(), [401, 403, 404]);
@@ -236,7 +235,7 @@ class SecurityPenetrationTest extends TestCase
     }
 
     /**
-     * Test tenant isolation
+     * Test tenant isolation.
      */
     public function test_tenant_isolation()
     {
@@ -261,7 +260,7 @@ class SecurityPenetrationTest extends TestCase
     */
 
     /**
-     * Test command injection
+     * Test command injection.
      */
     public function test_command_injection()
     {
@@ -309,7 +308,7 @@ class SecurityPenetrationTest extends TestCase
     }
 
     /**
-     * Test LDAP injection
+     * Test LDAP injection.
      */
     public function test_ldap_injection()
     {
@@ -325,7 +324,7 @@ class SecurityPenetrationTest extends TestCase
             $response = $this->postJson(route('users.store', [], false), [
                 'name' => $input,
                 'email' => 'test@example.com',
-                'password' => 'TestPassword123!'
+                'password' => 'TestPassword123!',
             ]);
 
             // Payload must never be accepted; route-specific handling may vary by stack.
@@ -334,7 +333,7 @@ class SecurityPenetrationTest extends TestCase
     }
 
     /**
-     * Test NoSQL injection
+     * Test NoSQL injection.
      */
     public function test_nosql_injection()
     {
@@ -350,7 +349,7 @@ class SecurityPenetrationTest extends TestCase
             $response = $this->postJson(route('users.store', [], false), [
                 'name' => $input,
                 'email' => 'test@example.com',
-                'password' => 'TestPassword123!'
+                'password' => 'TestPassword123!',
             ]);
 
             // Payload must never be accepted; route-specific handling may vary by stack.
@@ -365,7 +364,7 @@ class SecurityPenetrationTest extends TestCase
     */
 
     /**
-     * Test malicious file upload
+     * Test malicious file upload.
      */
     public function test_malicious_file_upload()
     {
@@ -379,43 +378,43 @@ class SecurityPenetrationTest extends TestCase
 
         foreach ($maliciousFiles as $filename => $content) {
             $file = $this->createTestFile($filename, $content);
-            
+
             $response = $this->postJson('/api/v1/nonexistent-endpoint', [ // SSOT_ALLOW_ORPHAN(reason=NEGATIVE_PROBE_NONEXISTENT_ENDPOINT)
                 'title' => 'Test Document',
                 'description' => 'Test Description',
                 'document_type' => 'other',
                 'project_id' => $this->project->id,
-                'file' => $file
+                'file' => $file,
             ]);
 
             $response->assertStatus(404);
             $response->assertJsonStructure(['message']);
-}
+        }
     }
 
     /**
-     * Test file size limit
+     * Test file size limit.
      */
     public function test_file_size_limit()
     {
         // Create a large file (11MB)
         $largeContent = str_repeat('A', 11 * 1024 * 1024);
         $file = $this->createTestFile('large.txt', $largeContent);
-        
+
         $response = $this->postJson('/api/v1/nonexistent-endpoint', [ // SSOT_ALLOW_ORPHAN(reason=NEGATIVE_PROBE_NONEXISTENT_ENDPOINT)
                 'title' => 'Large Document',
             'description' => 'Large Description',
             'document_type' => 'other',
             'project_id' => $this->project->id,
-            'file' => $file
+            'file' => $file,
         ]);
 
         $response->assertStatus(404);
         $response->assertJsonStructure(['message']);
-}
+    }
 
     /**
-     * Test file type validation
+     * Test file type validation.
      */
     public function test_file_type_validation()
     {
@@ -428,18 +427,18 @@ class SecurityPenetrationTest extends TestCase
 
         foreach ($invalidFiles as $filename => $content) {
             $file = $this->createTestFile($filename, $content);
-            
+
             $response = $this->postJson('/api/v1/nonexistent-endpoint', [ // SSOT_ALLOW_ORPHAN(reason=NEGATIVE_PROBE_NONEXISTENT_ENDPOINT)
                 'title' => 'Test Document',
                 'description' => 'Test Description',
                 'document_type' => 'other',
                 'project_id' => $this->project->id,
-                'file' => $file
+                'file' => $file,
             ]);
 
             $response->assertStatus(404);
             $response->assertJsonStructure(['message']);
-}
+        }
     }
 
     /*
@@ -449,7 +448,7 @@ class SecurityPenetrationTest extends TestCase
     */
 
     /**
-     * Test session fixation
+     * Test session fixation.
      */
     public function test_session_fixation()
     {
@@ -466,7 +465,7 @@ class SecurityPenetrationTest extends TestCase
         // Attempt login with the existing session to ensure session fixation defense rotates id.
         $loginResponse = $this->withCookie($sessionCookieName, $initialSessionId)->post('/login', [
             'email' => $this->user->email,
-            'password' => 'TestPassword123!'
+            'password' => 'TestPassword123!',
         ]);
         $newSessionCookie = collect($loginResponse->headers->getCookies())
             ->first(fn ($cookie) => $cookie->getName() === $sessionCookieName);
@@ -479,7 +478,7 @@ class SecurityPenetrationTest extends TestCase
     }
 
     /**
-     * Test session hijacking
+     * Test session hijacking.
      */
     public function test_session_hijacking()
     {
@@ -496,7 +495,7 @@ class SecurityPenetrationTest extends TestCase
         // Login and capture rotated authenticated session cookie.
         $loginResponse = $this->withCookie($sessionCookieName, $initialSessionId)->post('/login', [
             'email' => $this->user->email,
-            'password' => 'TestPassword123!'
+            'password' => 'TestPassword123!',
         ]);
         $newSessionCookie = collect($loginResponse->headers->getCookies())
             ->first(fn ($cookie) => $cookie->getName() === $sessionCookieName);
@@ -507,7 +506,7 @@ class SecurityPenetrationTest extends TestCase
         // Simulate session hijacking by replaying authenticated cookie from a different client fingerprint.
         $response = $this->withHeaders([
             'X-Forwarded-For' => '192.168.1.100',
-            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         ])->withCookie($sessionCookieName, $sessionCookieValue)
             ->get('/app/dashboard');
 
@@ -522,7 +521,7 @@ class SecurityPenetrationTest extends TestCase
     */
 
     /**
-     * Test CSRF protection
+     * Test CSRF protection.
      */
     public function test_csrf_protection()
     {
@@ -544,7 +543,7 @@ class SecurityPenetrationTest extends TestCase
     */
 
     /**
-     * Test rate limiting on sensitive endpoints
+     * Test rate limiting on sensitive endpoints.
      */
     public function test_rate_limiting()
     {
@@ -588,7 +587,7 @@ class SecurityPenetrationTest extends TestCase
     */
 
     /**
-     * Test information disclosure in error messages
+     * Test information disclosure in error messages.
      */
     public function test_information_disclosure()
     {
@@ -601,7 +600,7 @@ class SecurityPenetrationTest extends TestCase
     }
 
     /**
-     * Test directory traversal
+     * Test directory traversal.
      */
     public function test_directory_traversal()
     {
@@ -627,14 +626,14 @@ class SecurityPenetrationTest extends TestCase
     */
 
     /**
-     * Create test file for upload testing
+     * Create test file for upload testing.
      */
     private function createTestFile(string $filename, string $content)
     {
         $tempFile = tmpfile();
         fwrite($tempFile, $content);
         $tempPath = stream_get_meta_data($tempFile)['uri'];
-        
+
         return new \Illuminate\Http\UploadedFile(
             $tempPath,
             $filename,
@@ -645,7 +644,7 @@ class SecurityPenetrationTest extends TestCase
     }
 
     /**
-     * Test security headers
+     * Test security headers.
      */
     public function test_security_headers()
     {
@@ -659,17 +658,18 @@ class SecurityPenetrationTest extends TestCase
     }
 
     /**
-     * Test HTTPS enforcement
+     * Test HTTPS enforcement.
      */
     public function test_https_enforcement()
     {
         // Simulate HTTP request
         $response = $this->getJson('/api/v1/auth/me', [
-            'HTTP_X_FORWARDED_PROTO' => 'http'
+            'HTTP_X_FORWARDED_PROTO' => 'http',
         ]);
 
         if (app()->environment('production')) {
             $this->assertContains($response->status(), [301, 302]);
+
             return;
         }
 

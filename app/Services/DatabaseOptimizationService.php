@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -7,14 +9,14 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Database Query Optimization Service
- * 
+ * Database Query Optimization Service.
+ *
  * Provides methods to optimize database queries for better performance
  */
 class DatabaseOptimizationService
 {
     /**
-     * Optimize task queries with proper eager loading
+     * Optimize task queries with proper eager loading.
      */
     public function optimizeTaskQuery(Builder $query, array $filters = []): Builder
     {
@@ -24,7 +26,7 @@ class DatabaseOptimizationService
             'assignee:id,name,email',
             'creator:id,name,email',
             'component:id,name,type',
-            'assignments.user:id,name,email'
+            'assignments.user:id,name,email',
         ]);
 
         // Apply filters with proper indexing
@@ -73,7 +75,7 @@ class DatabaseOptimizationService
     }
 
     /**
-     * Optimize project queries with proper eager loading
+     * Optimize project queries with proper eager loading.
      */
     public function optimizeProjectQuery(Builder $query, array $filters = []): Builder
     {
@@ -83,7 +85,7 @@ class DatabaseOptimizationService
             'pm:id,name,email',
             'tenant:id,name',
             'tasks:id,project_id,name,status,priority',
-            'documents:id,project_id,name,type,status'
+            'documents:id,project_id,name,type,status',
         ]);
 
         // Apply filters
@@ -129,14 +131,14 @@ class DatabaseOptimizationService
     }
 
     /**
-     * Optimize user queries with proper eager loading
+     * Optimize user queries with proper eager loading.
      */
     public function optimizeUserQuery(Builder $query, array $filters = []): Builder
     {
         // Eager load relationships
         $query->with([
             'tenant:id,name',
-            'organization:id,name'
+            'organization:id,name',
         ]);
 
         // Apply filters
@@ -172,7 +174,7 @@ class DatabaseOptimizationService
     }
 
     /**
-     * Optimize document queries with proper eager loading
+     * Optimize document queries with proper eager loading.
      */
     public function optimizeDocumentQuery(Builder $query, array $filters = []): Builder
     {
@@ -182,7 +184,7 @@ class DatabaseOptimizationService
             'task:id,name,status',
             'component:id,name,type',
             'uploadedBy:id,name,email',
-            'tenant:id,name'
+            'tenant:id,name',
         ]);
 
         // Apply filters
@@ -218,74 +220,72 @@ class DatabaseOptimizationService
     }
 
     /**
-     * Execute optimized query with performance monitoring
+     * Execute optimized query with performance monitoring.
      */
     public function executeOptimizedQuery(Builder $query, string $queryName = 'optimized_query'): mixed
     {
         $startTime = microtime(true);
-        
+
         try {
             $result = $query->get();
-            
+
             $executionTime = microtime(true) - $startTime;
-            
+
             // Log slow queries
             if ($executionTime > 1.0) {
                 Log::warning("Slow query detected: {$queryName}", [
                     'execution_time' => $executionTime,
                     'query' => $query->toSql(),
-                    'bindings' => $query->getBindings()
+                    'bindings' => $query->getBindings(),
                 ]);
             }
-            
+
             return $result;
-            
         } catch (\Exception $e) {
             Log::error("Query execution failed: {$queryName}", [
                 'error' => $e->getMessage(),
                 'query' => $query->toSql(),
-                'bindings' => $query->getBindings()
+                'bindings' => $query->getBindings(),
             ]);
-            
+
             throw $e;
         }
     }
 
     /**
-     * Get query execution plan for analysis
+     * Get query execution plan for analysis.
      */
     public function getQueryExecutionPlan(Builder $query): array
     {
         try {
             $sql = $query->toSql();
             $bindings = $query->getBindings();
-            
+
             // Replace bindings in SQL for analysis
             $fullSql = $sql;
             foreach ($bindings as $binding) {
                 $fullSql = preg_replace('/\?/', "'{$binding}'", $fullSql, 1);
             }
-            
+
             $explainResult = DB::select("EXPLAIN {$fullSql}");
-            
+
             return [
                 'sql' => $fullSql,
                 'execution_plan' => $explainResult,
-                'bindings' => $bindings
+                'bindings' => $bindings,
             ];
-            
         } catch (\Exception $e) {
             Log::error('Failed to get query execution plan', [
                 'error' => $e->getMessage(),
-                'query' => $query->toSql()
+                'query' => $query->toSql(),
             ]);
-            
+
             return [];
         }
     }
 
     /**
-     * Optimize pagination queries
+     * Optimize pagination queries.
      */
     public function optimizePaginationQuery(Builder $query, int $perPage = 15): Builder
     {
@@ -294,12 +294,12 @@ class DatabaseOptimizationService
             // Add proper ordering for cursor pagination
             $query->orderBy('id', 'asc');
         }
-        
+
         return $query;
     }
 
     /**
-     * Cache frequently accessed data
+     * Cache frequently accessed data.
      */
     public function cacheFrequentData(string $key, callable $callback, int $ttl = 3600): mixed
     {

@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\App\ProjectController;
 
 /*
 |--------------------------------------------------------------------------
@@ -18,7 +17,7 @@ Route::get('/test', function () {
     return response()->json([
         'status' => 'success',
         'message' => 'Simple test route working',
-        'timestamp' => now()->toISOString()
+        'timestamp' => now()->toISOString(),
     ]);
 });
 
@@ -27,7 +26,7 @@ Route::get('/test-new-middleware', function () {
     return response()->json([
         'status' => 'success',
         'message' => 'New test middleware working',
-        'timestamp' => now()->toISOString()
+        'timestamp' => now()->toISOString(),
     ]);
 }); // Temporarily removed middleware for debugging
 
@@ -36,7 +35,7 @@ Route::get('/test-auth', function () {
     return response()->json([
         'status' => 'success',
         'message' => 'Auth middleware working',
-        'timestamp' => now()->toISOString()
+        'timestamp' => now()->toISOString(),
     ]);
 }); // Temporarily removed middleware for debugging
 
@@ -47,7 +46,7 @@ Route::middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function 
             'status' => 'success',
             'data' => [],
             'message' => 'Projects route working without middleware',
-            'timestamp' => now()->toISOString()
+            'timestamp' => now()->toISOString(),
         ]);
     });
 
@@ -57,7 +56,7 @@ Route::middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function 
             'status' => 'success',
             'data' => [],
             'message' => 'Projects route working with custom middleware',
-            'timestamp' => now()->toISOString()
+            'timestamp' => now()->toISOString(),
         ]);
     })->middleware('simple.auth.test');
 
@@ -67,7 +66,7 @@ Route::middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function 
             'status' => 'success',
             'data' => [],
             'message' => 'Projects route working with auth middleware',
-            'timestamp' => now()->toISOString()
+            'timestamp' => now()->toISOString(),
         ]);
     })->middleware('auth:sanctum');
 });

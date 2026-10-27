@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models\Treasury;
 
@@ -22,6 +24,7 @@ class TreasuryWallet extends Model
 {
     /** @use HasFactory<\Database\Factories\Treasury\TreasuryWalletFactory> */
     use HasFactory;
+
     use HasUlids;
     use TenantScope;
 

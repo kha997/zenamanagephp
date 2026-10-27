@@ -8,15 +8,18 @@ use Firebase\JWT\Key;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * Refresh Token Service
- * 
+ * Refresh Token Service.
+ *
  * Manages refresh token rotation and blacklisting for enhanced security
  */
 class RefreshTokenService
 {
     private string $jwtSecret;
+
     private int $refreshTtl;
+
     private bool $rotationEnabled;
+
     private bool $blacklistEnabled;
 
     public function __construct()
@@ -28,7 +31,7 @@ class RefreshTokenService
     }
 
     /**
-     * Generate refresh token for user
+     * Generate refresh token for user.
      */
     public function generateRefreshToken(User $user): string
     {
@@ -46,7 +49,7 @@ class RefreshTokenService
     }
 
     /**
-     * Validate refresh token and return user
+     * Validate refresh token and return user.
      */
     public function validateRefreshToken(string $token): ?User
     {
@@ -57,7 +60,7 @@ class RefreshTokenService
             }
 
             $payload = JWT::decode($token, new Key($this->jwtSecret, 'HS256'));
-            
+
             // Verify token type
             if ($payload->type !== 'refresh') {
                 return null;
@@ -69,14 +72,13 @@ class RefreshTokenService
             }
 
             return User::find($payload->user_id);
-
         } catch (\Exception $e) {
             return null;
         }
     }
 
     /**
-     * Rotate refresh token (generate new one and blacklist old)
+     * Rotate refresh token (generate new one and blacklist old).
      */
     public function rotateRefreshToken(string $oldToken, User $user): string
     {
@@ -94,7 +96,7 @@ class RefreshTokenService
     }
 
     /**
-     * Blacklist a token
+     * Blacklist a token.
      */
     public function blacklistToken(string $token): void
     {
@@ -105,10 +107,9 @@ class RefreshTokenService
         try {
             $payload = JWT::decode($token, new Key($this->jwtSecret, 'HS256'));
             $jti = $payload->jti ?? $token; // Use JTI or token as identifier
-            
+
             // Store in cache with TTL
             Cache::put("blacklist_token_{$jti}", true, $this->refreshTtl);
-            
         } catch (\Exception $e) {
             // If token is invalid, still blacklist it
             Cache::put("blacklist_token_{$token}", true, $this->refreshTtl);
@@ -116,7 +117,7 @@ class RefreshTokenService
     }
 
     /**
-     * Check if token is blacklisted
+     * Check if token is blacklisted.
      */
     public function isTokenBlacklisted(string $token): bool
     {
@@ -127,16 +128,15 @@ class RefreshTokenService
         try {
             $payload = JWT::decode($token, new Key($this->jwtSecret, 'HS256'));
             $jti = $payload->jti ?? $token;
-            
+
             return Cache::has("blacklist_token_{$jti}");
-            
         } catch (\Exception $e) {
             return Cache::has("blacklist_token_{$token}");
         }
     }
 
     /**
-     * Blacklist all tokens for a user
+     * Blacklist all tokens for a user.
      */
     public function blacklistUserTokens(User $user): void
     {
@@ -149,7 +149,7 @@ class RefreshTokenService
     }
 
     /**
-     * Check if user tokens are blacklisted
+     * Check if user tokens are blacklisted.
      */
     public function isUserBlacklisted(User $user): bool
     {
@@ -161,7 +161,7 @@ class RefreshTokenService
     }
 
     /**
-     * Clean expired blacklist entries
+     * Clean expired blacklist entries.
      */
     public function cleanExpiredBlacklist(): void
     {

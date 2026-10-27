@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -10,12 +12,12 @@ use Illuminate\Support\Facades\Log;
  * - File signature (magic bytes) validation
  * - MIME type verification
  * - Extension validation
- * - Malicious content detection
+ * - Malicious content detection.
  */
 class EnhancedMimeValidationService
 {
     /**
-     * File signatures (magic bytes) for common file types
+     * File signatures (magic bytes) for common file types.
      */
     private array $fileSignatures = [
         'pdf' => ['%PDF'],
@@ -36,7 +38,7 @@ class EnhancedMimeValidationService
     ];
 
     /**
-     * MIME type mappings
+     * MIME type mappings.
      */
     private array $mimeTypes = [
         'pdf' => ['application/pdf'],
@@ -57,7 +59,7 @@ class EnhancedMimeValidationService
     ];
 
     /**
-     * Dangerous file patterns to detect malicious content
+     * Dangerous file patterns to detect malicious content.
      */
     private array $dangerousPatterns = [
         'php' => ['<?php', '<?=', '<? '],
@@ -67,7 +69,7 @@ class EnhancedMimeValidationService
     ];
 
     /**
-     * Validate file with enhanced MIME checking
+     * Validate file with enhanced MIME checking.
      */
     public function validateFile(UploadedFile $file): array
     {
@@ -80,7 +82,7 @@ class EnhancedMimeValidationService
                 'extension' => strtolower($file->getClientOriginalExtension()),
                 'reported_mime' => $file->getMimeType(),
                 'size' => $file->getSize(),
-            ]
+            ],
         ];
 
         try {
@@ -129,13 +131,12 @@ class EnhancedMimeValidationService
             // Add file info
             $results['file_info']['detected_mime'] = $signatureCheck['detected_mime'] ?? null;
             $results['file_info']['signature_match'] = $signatureCheck['signature_match'] ?? false;
-
         } catch (\Exception $e) {
             $results['is_valid'] = false;
             $results['errors'][] = 'Validation error: ' . $e->getMessage();
             Log::error('MIME validation error', [
                 'file' => $file->getClientOriginalName(),
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
 
@@ -143,7 +144,7 @@ class EnhancedMimeValidationService
     }
 
     /**
-     * Validate file extension
+     * Validate file extension.
      */
     private function validateExtension(UploadedFile $file): array
     {
@@ -153,7 +154,7 @@ class EnhancedMimeValidationService
         if (!in_array($extension, $allowedExtensions, true)) {
             return [
                 'valid' => false,
-                'error' => "File extension '{$extension}' is not allowed"
+                'error' => "File extension '{$extension}' is not allowed",
             ];
         }
 
@@ -161,7 +162,7 @@ class EnhancedMimeValidationService
     }
 
     /**
-     * Validate MIME type consistency
+     * Validate MIME type consistency.
      */
     private function validateMimeType(UploadedFile $file): array
     {
@@ -172,14 +173,14 @@ class EnhancedMimeValidationService
         if (empty($expectedMimes)) {
             return [
                 'valid' => false,
-                'error' => "Unknown file extension '{$extension}'"
+                'error' => "Unknown file extension '{$extension}'",
             ];
         }
 
         if (!in_array($reportedMime, $expectedMimes, true)) {
             return [
                 'valid' => false,
-                'error' => "MIME type '{$reportedMime}' does not match extension '{$extension}'"
+                'error' => "MIME type '{$reportedMime}' does not match extension '{$extension}'",
             ];
         }
 
@@ -187,7 +188,7 @@ class EnhancedMimeValidationService
     }
 
     /**
-     * Validate file signature (magic bytes)
+     * Validate file signature (magic bytes).
      */
     private function validateFileSignature(UploadedFile $file): array
     {
@@ -197,7 +198,7 @@ class EnhancedMimeValidationService
         if (empty($signatures)) {
             return [
                 'valid' => false,
-                'error' => "No signature defined for extension '{$extension}'"
+                'error' => "No signature defined for extension '{$extension}'",
             ];
         }
 
@@ -206,7 +207,7 @@ class EnhancedMimeValidationService
         if (!$handle) {
             return [
                 'valid' => false,
-                'error' => 'Cannot read file for signature validation'
+                'error' => 'Cannot read file for signature validation',
             ];
         }
 
@@ -216,7 +217,7 @@ class EnhancedMimeValidationService
         if ($header === false) {
             return [
                 'valid' => false,
-                'error' => 'Failed to read file header'
+                'error' => 'Failed to read file header',
             ];
         }
 
@@ -226,19 +227,19 @@ class EnhancedMimeValidationService
                 return [
                     'valid' => true,
                     'signature_match' => true,
-                    'detected_mime' => $this->mimeTypes[$extension][0] ?? null
+                    'detected_mime' => $this->mimeTypes[$extension][0] ?? null,
                 ];
             }
         }
 
         return [
             'valid' => false,
-            'error' => "File signature does not match extension '{$extension}'"
+            'error' => "File signature does not match extension '{$extension}'",
         ];
     }
 
     /**
-     * Check if file header matches signature
+     * Check if file header matches signature.
      */
     private function checkSignature(string $header, string $signature): bool
     {
@@ -249,6 +250,7 @@ class EnhancedMimeValidationService
             foreach ($hexBytes as $byte) {
                 $hexString .= chr(hexdec($byte));
             }
+
             return strpos($header, $hexString) === 0;
         }
 
@@ -257,7 +259,7 @@ class EnhancedMimeValidationService
     }
 
     /**
-     * Validate for malicious content
+     * Validate for malicious content.
      */
     private function validateSecurity(UploadedFile $file): array
     {
@@ -281,7 +283,7 @@ class EnhancedMimeValidationService
                 if (strpos($contentLower, strtolower($pattern)) !== false) {
                     return [
                         'valid' => false,
-                        'error' => "File contains potentially malicious {$type} content"
+                        'error' => "File contains potentially malicious {$type} content",
                     ];
                 }
             }
@@ -291,7 +293,7 @@ class EnhancedMimeValidationService
     }
 
     /**
-     * Validate for double extensions
+     * Validate for double extensions.
      */
     private function validateDoubleExtensions(UploadedFile $file): array
     {
@@ -301,12 +303,12 @@ class EnhancedMimeValidationService
         if (count($parts) > 2) {
             // Check if any part before the last is a dangerous extension
             $dangerousExtensions = ['php', 'phtml', 'php3', 'php4', 'php5', 'js', 'jsp', 'asp', 'aspx'];
-            
+
             for ($i = 0; $i < count($parts) - 1; $i++) {
                 if (in_array(strtolower($parts[$i]), $dangerousExtensions, true)) {
                     return [
                         'valid' => false,
-                        'error' => 'File has suspicious double extension'
+                        'error' => 'File has suspicious double extension',
                     ];
                 }
             }
@@ -316,7 +318,7 @@ class EnhancedMimeValidationService
     }
 
     /**
-     * Validate file size
+     * Validate file size.
      */
     private function validateFileSize(UploadedFile $file): array
     {
@@ -326,14 +328,14 @@ class EnhancedMimeValidationService
         if ($fileSize > $maxSize) {
             return [
                 'valid' => false,
-                'error' => "File size ({$fileSize} bytes) exceeds maximum allowed size ({$maxSize} bytes)"
+                'error' => "File size ({$fileSize} bytes) exceeds maximum allowed size ({$maxSize} bytes)",
             ];
         }
 
         if ($fileSize === 0) {
             return [
                 'valid' => false,
-                'error' => 'File is empty'
+                'error' => 'File is empty',
             ];
         }
 
@@ -341,7 +343,7 @@ class EnhancedMimeValidationService
     }
 
     /**
-     * Get allowed file types
+     * Get allowed file types.
      */
     public function getAllowedFileTypes(): array
     {
@@ -349,7 +351,7 @@ class EnhancedMimeValidationService
     }
 
     /**
-     * Get MIME types for extension
+     * Get MIME types for extension.
      */
     public function getMimeTypesForExtension(string $extension): array
     {

@@ -3,13 +3,12 @@
 namespace App\Listeners;
 
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
 
 class UpdateProjectProgress implements ShouldQueue
 {
-
     private CalculationService $calculationService;
+
     private AuditService $auditService;
 
     /**
@@ -28,15 +27,15 @@ class UpdateProjectProgress implements ShouldQueue
     {
         try {
             $task = $event->task;
-            
+
             // Update project progress
             $this->calculationService->calculateProjectProgress($task->project_id);
-            
+
             // Update component progress if task belongs to a component
             if ($task->component_id) {
                 $this->calculationService->calculateComponentProgress($task->component_id);
             }
-            
+
             // Log the calculation update
             $this->auditService->logSystemEvent('project_progress_updated', [
                 'task_id' => $task->id,
@@ -45,18 +44,17 @@ class UpdateProjectProgress implements ShouldQueue
                 'triggered_by' => 'task_completed',
                 'user_id' => $event->user->id,
             ]);
-            
-            Log::info("Project progress updated after task completion", [
+
+            Log::info('Project progress updated after task completion', [
                 'task_id' => $task->id,
                 'project_id' => $task->project_id,
             ]);
-            
         } catch (\Exception $e) {
-            Log::error("Failed to update project progress after task completion", [
+            Log::error('Failed to update project progress after task completion', [
                 'task_id' => $event->task->id,
                 'error' => $e->getMessage(),
             ]);
-            
+
             // Don't fail the job, just log the error
             $this->release(30); // Retry in 30 seconds
         }
@@ -67,7 +65,7 @@ class UpdateProjectProgress implements ShouldQueue
      */
     public function failed(TaskCompleted $event, $exception): void
     {
-        Log::error("UpdateProjectProgress listener failed", [
+        Log::error('UpdateProjectProgress listener failed', [
             'task_id' => $event->task->id,
             'error' => $exception->getMessage(),
         ]);

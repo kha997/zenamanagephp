@@ -2,9 +2,9 @@
 
 namespace App\Repositories;
 
+use App\Models\Project;
 use App\Models\Team;
 use App\Models\User;
-use App\Models\Project;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Log;
@@ -102,7 +102,7 @@ class TeamRepository
             'team_id' => $team->id,
             'name' => $team->name,
             'tenant_id' => $team->tenant_id,
-            'leader_id' => $team->leader_id
+            'leader_id' => $team->leader_id,
         ]);
 
         return $team->load(['leader', 'tenant', 'members', 'projects']);
@@ -129,7 +129,7 @@ class TeamRepository
         Log::info('Team updated', [
             'team_id' => $team->id,
             'name' => $team->name,
-            'tenant_id' => $team->tenant_id
+            'tenant_id' => $team->tenant_id,
         ]);
 
         return $team->load(['leader', 'tenant', 'members', 'projects']);
@@ -151,7 +151,7 @@ class TeamRepository
         Log::info('Team deleted', [
             'team_id' => $id,
             'name' => $team->name,
-            'tenant_id' => $team->tenant_id
+            'tenant_id' => $team->tenant_id,
         ]);
 
         return true;
@@ -173,7 +173,7 @@ class TeamRepository
         Log::info('Team soft deleted', [
             'team_id' => $id,
             'name' => $team->name,
-            'tenant_id' => $team->tenant_id
+            'tenant_id' => $team->tenant_id,
         ]);
 
         return true;
@@ -195,7 +195,7 @@ class TeamRepository
         Log::info('Team restored', [
             'team_id' => $id,
             'name' => $team->name,
-            'tenant_id' => $team->tenant_id
+            'tenant_id' => $team->tenant_id,
         ]);
 
         return true;
@@ -233,13 +233,13 @@ class TeamRepository
         }
 
         $team->members()->syncWithoutDetaching([
-            $userId => ['role' => $role, 'joined_at' => now()]
+            $userId => ['role' => $role, 'joined_at' => now()],
         ]);
 
         Log::info('Member added to team', [
             'team_id' => $teamId,
             'user_id' => $userId,
-            'role' => $role
+            'role' => $role,
         ]);
 
         return true;
@@ -260,7 +260,7 @@ class TeamRepository
 
         Log::info('Member removed from team', [
             'team_id' => $teamId,
-            'user_id' => $userId
+            'user_id' => $userId,
         ]);
 
         return true;
@@ -279,13 +279,13 @@ class TeamRepository
 
         $team->members()->updateExistingPivot($userId, [
             'role' => $role,
-            'updated_at' => now()
+            'updated_at' => now(),
         ]);
 
         Log::info('Member role updated', [
             'team_id' => $teamId,
             'user_id' => $userId,
-            'role' => $role
+            'role' => $role,
         ]);
 
         return true;
@@ -331,13 +331,13 @@ class TeamRepository
         }
 
         $team->projects()->syncWithoutDetaching([
-            $projectId => ['role' => $role, 'assigned_at' => now()]
+            $projectId => ['role' => $role, 'assigned_at' => now()],
         ]);
 
         Log::info('Team assigned to project', [
             'team_id' => $teamId,
             'project_id' => $projectId,
-            'role' => $role
+            'role' => $role,
         ]);
 
         return true;
@@ -358,7 +358,7 @@ class TeamRepository
 
         Log::info('Team removed from project', [
             'team_id' => $teamId,
-            'project_id' => $projectId
+            'project_id' => $projectId,
         ]);
 
         return true;
@@ -377,12 +377,12 @@ class TeamRepository
 
         $team->update([
             'status' => $status,
-            'status_updated_at' => now()
+            'status_updated_at' => now(),
         ]);
 
         Log::info('Team status updated', [
             'team_id' => $id,
-            'status' => $status
+            'status' => $status,
         ]);
 
         return true;
@@ -407,7 +407,7 @@ class TeamRepository
             'teams_without_projects' => $query->whereDoesntHave('projects')->count(),
             'average_members_per_team' => $query->withCount('members')->avg('members_count'),
             'largest_team_size' => $query->withCount('members')->max('members_count'),
-            'smallest_team_size' => $query->withCount('members')->min('members_count')
+            'smallest_team_size' => $query->withCount('members')->min('members_count'),
         ];
     }
 
@@ -443,7 +443,7 @@ class TeamRepository
 
         Log::info('Teams bulk updated', [
             'count' => $updated,
-            'ids' => $ids
+            'ids' => $ids,
         ]);
 
         return $updated;
@@ -458,7 +458,7 @@ class TeamRepository
 
         Log::info('Teams bulk deleted', [
             'count' => $deleted,
-            'ids' => $ids
+            'ids' => $ids,
         ]);
 
         return $deleted;
@@ -495,7 +495,7 @@ class TeamRepository
             'overdue_tasks' => $overdueTasks,
             'completion_rate' => $completionRate,
             'active_projects' => $team->projects->where('status', 'active')->count(),
-            'completed_projects' => $team->projects->where('status', 'completed')->count()
+            'completed_projects' => $team->projects->where('status', 'completed')->count(),
         ];
     }
 
@@ -517,7 +517,7 @@ class TeamRepository
             'type' => 'team_created',
             'date' => $team->created_at,
             'title' => 'Team Created',
-            'description' => 'Team ' . $team->name . ' was created'
+            'description' => 'Team ' . $team->name . ' was created',
         ];
 
         // Add project assignments
@@ -526,7 +526,7 @@ class TeamRepository
                 'type' => 'project_assigned',
                 'date' => $project->pivot->assigned_at ?? $project->created_at,
                 'title' => 'Project Assigned',
-                'description' => 'Assigned to project ' . $project->name
+                'description' => 'Assigned to project ' . $project->name,
             ];
         }
 
@@ -536,7 +536,7 @@ class TeamRepository
                 'type' => 'status_changed',
                 'date' => $team->status_updated_at,
                 'title' => 'Status Changed',
-                'description' => 'Status changed to ' . $team->status
+                'description' => 'Status changed to ' . $team->status,
             ];
         }
 

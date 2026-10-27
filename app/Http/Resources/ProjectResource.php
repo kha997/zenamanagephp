@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Resources;
 
@@ -18,14 +20,14 @@ class ProjectResource extends JsonResource
                 'start' => $this->start_date?->toISOString(),
                 'end' => $this->end_date?->toISOString(),
                 'created' => $this->created_at->toISOString(),
-                'updated' => $this->updated_at->toISOString()
+                'updated' => $this->updated_at->toISOString(),
             ],
             'team' => UserResource::collection($this->whenLoaded('users')),
             'tasks_count' => $this->whenCounted('tasks'),
             'links' => [
                 'self' => route('api.projects.show', $this->id),
-                'tasks' => route('api.projects.tasks.index', $this->id)
-            ]
+                'tasks' => route('api.projects.tasks.index', $this->id),
+            ],
         ];
     }
 }

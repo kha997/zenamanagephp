@@ -7,6 +7,7 @@ use Illuminate\Contracts\Validation\Rule;
 class CustomRule implements Rule
 {
     protected $callback;
+
     protected $message;
 
     /**

@@ -8,8 +8,11 @@ use Illuminate\Support\Facades\DB;
 class UniqueRule implements Rule
 {
     protected $table;
+
     protected $column;
+
     protected $ignoreId;
+
     protected $ignoreColumn;
 
     /**

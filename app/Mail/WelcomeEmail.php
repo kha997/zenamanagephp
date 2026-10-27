@@ -2,17 +2,18 @@
 
 namespace App\Mail;
 
-use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 
 class WelcomeEmail extends Mailable
 {
-
     public $user;
+
     public $organizationName;
+
     public $roleDisplayName;
+
     public $dashboardUrl;
 
     /**
@@ -63,7 +64,7 @@ class WelcomeEmail extends Mailable
     }
 
     /**
-     * Get role display name
+     * Get role display name.
      */
     private function getRoleDisplayName(string $role): string
     {

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
@@ -18,8 +20,11 @@ class RfiEscalationServiceTest extends TestCase
     use RefreshDatabase;
 
     protected RfiEscalationService $service;
+
     protected Rfi $rfi;
+
     protected User $escalator;
+
     protected User $target;
 
     protected function setUp(): void

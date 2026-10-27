@@ -1,20 +1,25 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Traits\TenantScope;
 
 /**
- * Model Ncr để quản lý Non-Conformance Reports
+ * Model Ncr để quản lý Non-Conformance Reports.
  */
 class Ncr extends Model
 {
-    use HasUlids, HasFactory, SoftDeletes, TenantScope;
+    use HasUlids;
+    use HasFactory;
+    use SoftDeletes;
+    use TenantScope;
 
     protected $fillable = [
         'project_id',
@@ -43,7 +48,7 @@ class Ncr extends Model
     ];
 
     /**
-     * Quan hệ với Project
+     * Quan hệ với Project.
      */
     public function project(): BelongsTo
     {
@@ -51,7 +56,7 @@ class Ncr extends Model
     }
 
     /**
-     * Quan hệ với Tenant
+     * Quan hệ với Tenant.
      */
     public function tenant(): BelongsTo
     {
@@ -59,7 +64,7 @@ class Ncr extends Model
     }
 
     /**
-     * Quan hệ với QcInspection
+     * Quan hệ với QcInspection.
      */
     public function inspection(): BelongsTo
     {
@@ -67,7 +72,7 @@ class Ncr extends Model
     }
 
     /**
-     * Quan hệ với User (người tạo)
+     * Quan hệ với User (người tạo).
      */
     public function creator(): BelongsTo
     {
@@ -75,7 +80,7 @@ class Ncr extends Model
     }
 
     /**
-     * Quan hệ với User (người được giao)
+     * Quan hệ với User (người được giao).
      */
     public function assignee(): BelongsTo
     {
@@ -83,7 +88,7 @@ class Ncr extends Model
     }
 
     /**
-     * Get NCR status badge color
+     * Get NCR status badge color.
      */
     public function getStatusBadgeColorAttribute(): string
     {
@@ -98,7 +103,7 @@ class Ncr extends Model
     }
 
     /**
-     * Get NCR severity badge color
+     * Get NCR severity badge color.
      */
     public function getSeverityBadgeColorAttribute(): string
     {
@@ -112,7 +117,7 @@ class Ncr extends Model
     }
 
     /**
-     * Check if NCR is overdue
+     * Check if NCR is overdue.
      */
     public function getIsOverdueAttribute(): bool
     {
@@ -120,7 +125,7 @@ class Ncr extends Model
     }
 
     /**
-     * Scope để lọc theo project
+     * Scope để lọc theo project.
      */
     public function scopeForProject($query, string $projectId)
     {
@@ -128,7 +133,7 @@ class Ncr extends Model
     }
 
     /**
-     * Scope để lọc theo status
+     * Scope để lọc theo status.
      */
     public function scopeByStatus($query, string $status)
     {
@@ -136,7 +141,7 @@ class Ncr extends Model
     }
 
     /**
-     * Scope để lọc theo severity
+     * Scope để lọc theo severity.
      */
     public function scopeBySeverity($query, string $severity)
     {
@@ -144,7 +149,7 @@ class Ncr extends Model
     }
 
     /**
-     * Scope để lọc các NCR quá hạn
+     * Scope để lọc các NCR quá hạn.
      */
     public function scopeOverdue($query)
     {
@@ -153,7 +158,7 @@ class Ncr extends Model
     }
 
     /**
-     * Scope để lọc theo assignee
+     * Scope để lọc theo assignee.
      */
     public function scopeAssignedTo($query, string $userId)
     {

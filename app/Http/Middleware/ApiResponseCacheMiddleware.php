@@ -1,16 +1,18 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Services\AdvancedCacheService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use App\Services\AdvancedCacheService;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * API Response Caching Middleware
- * 
+ * API Response Caching Middleware.
+ *
  * Automatically caches API responses based on:
  * - Request method and URL
  * - User authentication status
@@ -46,7 +48,7 @@ class ApiResponseCacheMiddleware
 
         // Try to get cached response
         $cachedResponse = $this->cacheService->get($cacheKey);
-        
+
         if ($cachedResponse !== null) {
             return $this->createResponseFromCache($cachedResponse);
         }
@@ -63,7 +65,7 @@ class ApiResponseCacheMiddleware
     }
 
     /**
-     * Check if caching should be skipped
+     * Check if caching should be skipped.
      */
     private function shouldSkipCache(Request $request): bool
     {
@@ -95,7 +97,7 @@ class ApiResponseCacheMiddleware
     }
 
     /**
-     * Check if endpoint requires authentication
+     * Check if endpoint requires authentication.
      */
     private function requiresAuthentication(Request $request): bool
     {
@@ -118,7 +120,7 @@ class ApiResponseCacheMiddleware
     }
 
     /**
-     * Generate cache key for request
+     * Generate cache key for request.
      */
     private function generateCacheKey(Request $request): string
     {
@@ -147,7 +149,7 @@ class ApiResponseCacheMiddleware
     }
 
     /**
-     * Cache the response
+     * Cache the response.
      */
     private function cacheResponse(string $cacheKey, Response $response, int $ttl): void
     {
@@ -168,7 +170,6 @@ class ApiResponseCacheMiddleware
             $response->headers->set('X-Cache', 'MISS');
             $response->headers->set('X-Cache-Key', $cacheKey);
             $response->headers->set('X-Cache-TTL', $ttl);
-
         } catch (\Exception $e) {
             Log::warning('Failed to cache API response', [
                 'key' => $cacheKey,
@@ -178,7 +179,7 @@ class ApiResponseCacheMiddleware
     }
 
     /**
-     * Create response from cached data
+     * Create response from cached data.
      */
     private function createResponseFromCache(array $cachedData): Response
     {

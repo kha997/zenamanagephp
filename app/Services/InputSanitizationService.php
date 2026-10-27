@@ -1,18 +1,20 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
 use Illuminate\Support\Str;
 
 /**
- * Input Sanitization Service
- * 
+ * Input Sanitization Service.
+ *
  * Provides comprehensive input sanitization for security purposes
  */
 class InputSanitizationService
 {
     private mixed $htmlPurifier = null;
-    
+
     public function __construct()
     {
         if (class_exists('HTMLPurifier_Config') && class_exists('HTMLPurifier')) {
@@ -27,7 +29,7 @@ class InputSanitizationService
     }
 
     /**
-     * Sanitize string input
+     * Sanitize string input.
      */
     public function sanitizeString(?string $input, bool $allowHtml = false): ?string
     {
@@ -37,10 +39,10 @@ class InputSanitizationService
 
         // Remove null bytes
         $input = str_replace("\0", '', $input);
-        
+
         // Trim whitespace
         $input = trim($input);
-        
+
         if ($allowHtml) {
             if ($this->htmlPurifier !== null) {
                 // Use HTMLPurifier for HTML content when available.
@@ -50,21 +52,21 @@ class InputSanitizationService
             // Fallback in environments without HTMLPurifier.
             return strip_tags($input);
         }
-        
+
         // Escape HTML entities for plain text
         return htmlspecialchars($input, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
 
     /**
-     * Sanitize array input recursively
+     * Sanitize array input recursively.
      */
     public function sanitizeArray(array $input, bool $allowHtml = false): array
     {
         $sanitized = [];
-        
+
         foreach ($input as $key => $value) {
             $sanitizedKey = is_string($key) ? $this->sanitizeString($key, false) : $key;
-            
+
             if (is_array($value)) {
                 $sanitized[$sanitizedKey] = $this->sanitizeArray($value, $allowHtml);
             } elseif (is_string($value)) {
@@ -73,12 +75,12 @@ class InputSanitizationService
                 $sanitized[$sanitizedKey] = $value;
             }
         }
-        
+
         return $sanitized;
     }
 
     /**
-     * Sanitize email input
+     * Sanitize email input.
      */
     public function sanitizeEmail(?string $email): ?string
     {
@@ -87,15 +89,15 @@ class InputSanitizationService
         }
 
         $email = $this->sanitizeString($email, false);
-        
+
         // Additional email-specific sanitization
         $email = filter_var($email, FILTER_SANITIZE_EMAIL);
-        
+
         return $email;
     }
 
     /**
-     * Sanitize URL input
+     * Sanitize URL input.
      */
     public function sanitizeUrl(?string $url): ?string
     {
@@ -104,15 +106,15 @@ class InputSanitizationService
         }
 
         $url = $this->sanitizeString($url, false);
-        
+
         // Additional URL-specific sanitization
         $url = filter_var($url, FILTER_SANITIZE_URL);
-        
+
         return $url;
     }
 
     /**
-     * Sanitize integer input
+     * Sanitize integer input.
      */
     public function sanitizeInteger($input): ?int
     {
@@ -123,15 +125,15 @@ class InputSanitizationService
         // Convert to string first, then sanitize
         $input = (string) $input;
         $input = $this->sanitizeString($input, false);
-        
+
         // Remove non-numeric characters except minus sign
         $input = preg_replace('/[^0-9\-]/', '', $input);
-        
+
         return is_numeric($input) ? (int) $input : null;
     }
 
     /**
-     * Sanitize float input
+     * Sanitize float input.
      */
     public function sanitizeFloat($input): ?float
     {
@@ -142,15 +144,15 @@ class InputSanitizationService
         // Convert to string first, then sanitize
         $input = (string) $input;
         $input = $this->sanitizeString($input, false);
-        
+
         // Remove non-numeric characters except minus sign and decimal point
         $input = preg_replace('/[^0-9\-\.]/', '', $input);
-        
+
         return is_numeric($input) ? (float) $input : null;
     }
 
     /**
-     * Sanitize boolean input
+     * Sanitize boolean input.
      */
     public function sanitizeBoolean($input): ?bool
     {
@@ -164,12 +166,12 @@ class InputSanitizationService
 
         $input = (string) $input;
         $input = strtolower(trim($input));
-        
+
         return in_array($input, ['true', '1', 'yes', 'on'], true);
     }
 
     /**
-     * Sanitize file name
+     * Sanitize file name.
      */
     public function sanitizeFileName(?string $fileName): ?string
     {
@@ -179,21 +181,21 @@ class InputSanitizationService
 
         // Remove path traversal attempts
         $fileName = str_replace(['../', '..\\', '/', '\\'], '', $fileName);
-        
+
         // Remove null bytes
         $fileName = str_replace("\0", '', $fileName);
-        
+
         // Remove control characters
         $fileName = preg_replace('/[\x00-\x1F\x7F]/', '', $fileName);
-        
+
         // Limit length
         $fileName = Str::limit($fileName, 255, '');
-        
+
         return $fileName;
     }
 
     /**
-     * Sanitize SQL input (basic protection)
+     * Sanitize SQL input (basic protection).
      */
     public function sanitizeSqlInput(?string $input): ?string
     {
@@ -202,7 +204,7 @@ class InputSanitizationService
         }
 
         $input = $this->sanitizeString($input, false);
-        
+
         // Remove common SQL injection patterns
         $patterns = [
             '/(\bunion\b.*\bselect\b)/i',
@@ -219,16 +221,16 @@ class InputSanitizationService
             '/(\bonload\b)/i',
             '/(\bonerror\b)/i',
         ];
-        
+
         foreach ($patterns as $pattern) {
             $input = preg_replace($pattern, '', $input);
         }
-        
+
         return $input;
     }
 
     /**
-     * Sanitize JSON input
+     * Sanitize JSON input.
      */
     public function sanitizeJson(?string $json): ?string
     {
@@ -237,19 +239,19 @@ class InputSanitizationService
         }
 
         $json = $this->sanitizeString($json, false);
-        
+
         // Validate JSON
         $decoded = json_decode($json, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
             return null;
         }
-        
+
         // Re-encode to ensure clean JSON
         return json_encode($decoded, JSON_UNESCAPED_UNICODE);
     }
 
     /**
-     * Sanitize phone number
+     * Sanitize phone number.
      */
     public function sanitizePhoneNumber(?string $phone): ?string
     {
@@ -258,20 +260,20 @@ class InputSanitizationService
         }
 
         $phone = $this->sanitizeString($phone, false);
-        
+
         // Remove all non-numeric characters except + at the beginning
         $phone = preg_replace('/[^0-9\+]/', '', $phone);
-        
+
         // Ensure + is only at the beginning
         if (strpos($phone, '+') !== 0 && strpos($phone, '+') !== false) {
             $phone = str_replace('+', '', $phone);
         }
-        
+
         return $phone;
     }
 
     /**
-     * Sanitize textarea content (allows basic HTML)
+     * Sanitize textarea content (allows basic HTML).
      */
     public function sanitizeTextarea(?string $content): ?string
     {
@@ -283,7 +285,7 @@ class InputSanitizationService
     }
 
     /**
-     * Sanitize search query
+     * Sanitize search query.
      */
     public function sanitizeSearchQuery(?string $query): ?string
     {
@@ -292,26 +294,26 @@ class InputSanitizationService
         }
 
         $query = $this->sanitizeString($query, false);
-        
+
         // Remove SQL injection patterns
         $query = $this->sanitizeSqlInput($query);
-        
+
         // Limit length
         $query = Str::limit($query, 500, '');
-        
+
         return $query;
     }
 
     /**
-     * Get sanitized request data
+     * Get sanitized request data.
      */
     public function sanitizeRequest(array $data, array $rules = []): array
     {
         $sanitized = [];
-        
+
         foreach ($data as $key => $value) {
             $rule = $rules[$key] ?? 'string';
-            
+
             switch ($rule) {
                 case 'email':
                     $sanitized[$key] = $this->sanitizeEmail($value);
@@ -354,7 +356,7 @@ class InputSanitizationService
                     break;
             }
         }
-        
+
         return $sanitized;
     }
 }

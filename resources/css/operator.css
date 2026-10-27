@@ -1,7 +1,7 @@
 /* Z.E.N.A Operator Design Tokens — single source of truth for the Operator (procurement) zone */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import "./tailwind-v3-compat.css";
+@config "../../tailwind.config.js";
 
 :root {
     --sidebar-width: 264px;

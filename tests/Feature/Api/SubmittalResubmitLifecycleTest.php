@@ -1,10 +1,12 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
 use App\Models\Notification;
-use App\Models\Role;
 use App\Models\Project;
+use App\Models\Role;
 use App\Models\Submittal;
 use App\Models\Tenant;
 use App\Models\User;
@@ -22,8 +24,11 @@ class SubmittalResubmitLifecycleTest extends TestCase
     use RouteNameTrait;
 
     protected User $user;
+
     protected Project $project;
+
     protected string $token;
+
     protected array $zenaAuthHeaders = [];
 
     protected function setUp(): void
@@ -282,6 +287,10 @@ class SubmittalResubmitLifecycleTest extends TestCase
         \App\Models\Notification::creating(function () {
             throw new \RuntimeException('simulated notification failure');
         });
+
+        // GAP-013: the first submit notifies the project PM. Make the submitter the PM so
+        // only the resubmit notification is attempted (no self-notification).
+        $this->project->forceFill(['pm_id' => $this->user->id])->save();
 
         $submittal = $this->makeSubmittedSubmittal();
 

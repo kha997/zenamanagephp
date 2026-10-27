@@ -4,12 +4,11 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class MetricsCollectionService
 {
     /**
-     * Collect application metrics
+     * Collect application metrics.
      */
     public static function collectApplicationMetrics(): array
     {
@@ -26,14 +25,14 @@ class MetricsCollectionService
     }
 
     /**
-     * Collect database metrics
+     * Collect database metrics.
      */
     public static function collectDatabaseMetrics(): array
     {
         try {
             $connection = DB::connection();
             $pdo = $connection->getPdo();
-            
+
             return [
                 'connection_status' => 'connected',
                 'driver' => $connection->getDriverName(),
@@ -51,14 +50,14 @@ class MetricsCollectionService
     }
 
     /**
-     * Collect cache metrics
+     * Collect cache metrics.
      */
     public static function collectCacheMetrics(): array
     {
         try {
             $store = Cache::getStore();
             $driver = config('cache.default');
-            
+
             $metrics = [
                 'driver' => $driver,
                 'store_class' => get_class($store),
@@ -67,19 +66,19 @@ class MetricsCollectionService
             // Test cache operations
             $testKey = 'metrics_test_' . time();
             $testValue = 'test_value';
-            
+
             $start = microtime(true);
             Cache::put($testKey, $testValue, 60);
             $putTime = microtime(true) - $start;
-            
+
             $start = microtime(true);
             $retrieved = Cache::get($testKey);
             $getTime = microtime(true) - $start;
-            
+
             $start = microtime(true);
             Cache::forget($testKey);
             $deleteTime = microtime(true) - $start;
-            
+
             $metrics['operations'] = [
                 'put_time_ms' => round($putTime * 1000, 2),
                 'get_time_ms' => round($getTime * 1000, 2),
@@ -97,14 +96,14 @@ class MetricsCollectionService
     }
 
     /**
-     * Collect queue metrics
+     * Collect queue metrics.
      */
     public static function collectQueueMetrics(): array
     {
         try {
             $queue = app('queue');
             $connection = $queue->connection();
-            
+
             return [
                 'driver' => config('queue.default'),
                 'connection_class' => get_class($connection),
@@ -120,7 +119,7 @@ class MetricsCollectionService
     }
 
     /**
-     * Collect system metrics
+     * Collect system metrics.
      */
     public static function collectSystemMetrics(): array
     {
@@ -134,7 +133,7 @@ class MetricsCollectionService
     }
 
     /**
-     * Collect all metrics
+     * Collect all metrics.
      */
     public static function collectAllMetrics(): array
     {
@@ -148,19 +147,21 @@ class MetricsCollectionService
     }
 
     /**
-     * Get CPU usage percentage
+     * Get CPU usage percentage.
      */
     protected static function getCpuUsage(): float
     {
         if (function_exists('sys_getloadavg')) {
             $load = sys_getloadavg();
+
             return round($load[0] * 100, 2);
         }
+
         return 0.0;
     }
 
     /**
-     * Get memory usage percentage
+     * Get memory usage percentage.
      */
     protected static function getMemoryUsage(): float
     {
@@ -168,43 +169,45 @@ class MetricsCollectionService
         if ($memoryLimit === '-1') {
             return 0.0; // No limit
         }
-        
+
         $memoryLimitBytes = self::convertToBytes($memoryLimit);
         $memoryUsage = memory_get_usage(true);
-        
+
         return round(($memoryUsage / $memoryLimitBytes) * 100, 2);
     }
 
     /**
-     * Get disk usage percentage
+     * Get disk usage percentage.
      */
     protected static function getDiskUsage(): float
     {
         $total = disk_total_space('/');
         $free = disk_free_space('/');
-        
+
         if ($total && $free) {
             return round((($total - $free) / $total) * 100, 2);
         }
-        
+
         return 0.0;
     }
 
     /**
-     * Get process count
+     * Get process count.
      */
     protected static function getProcessCount(): int
     {
         if (function_exists('exec')) {
             $output = [];
             exec('ps aux | wc -l', $output);
+
             return (int) ($output[0] ?? 0) - 1; // Subtract header line
         }
+
         return 0;
     }
 
     /**
-     * Convert memory limit string to bytes
+     * Convert memory limit string to bytes.
      */
     protected static function convertToBytes(string $value): int
     {
@@ -215,8 +218,10 @@ class MetricsCollectionService
         switch ($last) {
             case 'g':
                 $value *= 1024;
+                // no break
             case 'm':
                 $value *= 1024;
+                // no break
             case 'k':
                 $value *= 1024;
         }
@@ -225,7 +230,7 @@ class MetricsCollectionService
     }
 
     /**
-     * Store metrics in cache for monitoring
+     * Store metrics in cache for monitoring.
      */
     public static function storeMetrics(array $metrics): void
     {
@@ -234,23 +239,23 @@ class MetricsCollectionService
     }
 
     /**
-     * Get stored metrics
+     * Get stored metrics.
      */
     public static function getStoredMetrics(int $hours = 24): array
     {
         $metrics = [];
         $now = now();
-        
+
         for ($i = 0; $i < $hours; $i++) {
             $time = $now->copy()->subHours($i);
             $key = 'metrics_' . $time->format('Y-m-d-H-i');
             $metric = Cache::get($key);
-            
+
             if ($metric) {
                 $metrics[] = $metric;
             }
         }
-        
+
         return $metrics;
     }
 }

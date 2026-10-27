@@ -1,15 +1,17 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories\Src\CoreProject\Models;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-use Src\CoreProject\Models\BaselineHistory;
-use Src\CoreProject\Models\Baseline;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\Factory;
+use Src\CoreProject\Models\Baseline;
+use Src\CoreProject\Models\BaselineHistory;
 
 /**
- * Factory cho BaselineHistory model
- * 
+ * Factory cho BaselineHistory model.
+ *
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Src\CoreProject\Models\BaselineHistory>
  */
 class BaselineHistoryFactory extends Factory
@@ -35,7 +37,7 @@ class BaselineHistoryFactory extends Factory
     }
 
     /**
-     * State: Created action
+     * State: Created action.
      */
     public function created(): static
     {
@@ -46,7 +48,7 @@ class BaselineHistoryFactory extends Factory
     }
 
     /**
-     * State: Updated action
+     * State: Updated action.
      */
     public function updated(): static
     {

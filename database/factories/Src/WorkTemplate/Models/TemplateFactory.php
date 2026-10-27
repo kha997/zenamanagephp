@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories\Src\WorkTemplate\Models;
 
@@ -6,28 +8,28 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Src\WorkTemplate\Models\Template;
 
 /**
- * Factory cho Template model
- * 
+ * Factory cho Template model.
+ *
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Src\WorkTemplate\Models\Template>
  */
 class TemplateFactory extends Factory
 {
     /**
-     * Model được tạo bởi factory này
+     * Model được tạo bởi factory này.
      *
      * @var string
      */
     protected $model = Template::class;
 
     /**
-     * Định nghĩa trạng thái mặc định của model
+     * Định nghĩa trạng thái mặc định của model.
      *
      * @return array<string, mixed>
      */
     public function definition(): array
     {
         $templateName = $this->faker->words(3, true) . ' Template';
-        
+
         return [
             'template_name' => $templateName,
             'category' => $this->faker->randomElement(Template::CATEGORIES),
@@ -40,7 +42,7 @@ class TemplateFactory extends Factory
     }
 
     /**
-     * Tạo template không hoạt động
+     * Tạo template không hoạt động.
      */
     public function inactive(): static
     {
@@ -50,7 +52,7 @@ class TemplateFactory extends Factory
     }
 
     /**
-     * Tạo template với category cụ thể
+     * Tạo template với category cụ thể.
      */
     public function withCategory(string $category): static
     {
@@ -61,7 +63,7 @@ class TemplateFactory extends Factory
     }
 
     /**
-     * Tạo template với version cụ thể
+     * Tạo template với version cụ thể.
      */
     public function withVersion(int $version): static
     {
@@ -71,7 +73,7 @@ class TemplateFactory extends Factory
     }
 
     /**
-     * Tạo template với JSON body tùy chỉnh
+     * Tạo template với JSON body tùy chỉnh.
      */
     public function withJsonBody(array $jsonBody): static
     {
@@ -81,20 +83,20 @@ class TemplateFactory extends Factory
     }
 
     /**
-     * Tạo template với phases rỗng
+     * Tạo template với phases rỗng.
      */
     public function withEmptyPhases(): static
     {
         return $this->state(fn (array $attributes) => [
             'json_body' => [
                 'template_name' => $attributes['template_name'],
-                'phases' => []
+                'phases' => [],
             ],
         ]);
     }
 
     /**
-     * Tạo template với cấu trúc phức tạp cho testing
+     * Tạo template với cấu trúc phức tạp cho testing.
      */
     public function withComplexStructure(): static
     {
@@ -179,17 +181,17 @@ class TemplateFactory extends Factory
     }
 
     /**
-     * Tạo sample JSON body cho template
+     * Tạo sample JSON body cho template.
      */
     private function generateSampleJsonBody(string $templateName, string $category = null): array
     {
         $phases = [];
         $phaseCount = $this->faker->numberBetween(2, 4);
-        
+
         for ($i = 1; $i <= $phaseCount; $i++) {
             $tasks = [];
             $taskCount = $this->faker->numberBetween(2, 5);
-            
+
             for ($j = 1; $j <= $taskCount; $j++) {
                 $tasks[] = [
                     'name' => $this->faker->words(3, true),
@@ -199,16 +201,16 @@ class TemplateFactory extends Factory
                     'conditional_tag' => $this->faker->optional(0.3)->randomElement(['design_required', 'testing_required', 'inspection_required']),
                 ];
             }
-            
+
             $phases[] = [
                 'name' => 'Phase ' . $i,
-                'tasks' => $tasks
+                'tasks' => $tasks,
             ];
         }
-        
+
         return [
             'template_name' => $templateName,
-            'phases' => $phases
+            'phases' => $phases,
         ];
     }
 }

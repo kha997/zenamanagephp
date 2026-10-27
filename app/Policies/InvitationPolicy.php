@@ -2,8 +2,8 @@
 
 namespace App\Policies;
 
-use App\Models\User;
 use App\Models\Invitation;
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class InvitationPolicy
@@ -26,7 +26,10 @@ class InvitationPolicy
 
     public function view(User $user, Invitation $invitation)
     {
-        if ($user->tenant_id !== $invitation->tenant_id) return false;
+        if ($user->tenant_id !== $invitation->tenant_id) {
+            return false;
+        }
+
         return $user->hasRole(['super_admin', 'admin', 'pm']) || $this->isInvitationOwner($user, $invitation);
     }
 
@@ -37,25 +40,37 @@ class InvitationPolicy
 
     public function update(User $user, Invitation $invitation)
     {
-        if ($user->tenant_id !== $invitation->tenant_id) return false;
+        if ($user->tenant_id !== $invitation->tenant_id) {
+            return false;
+        }
+
         return $this->isInvitationOwner($user, $invitation) || $user->hasRole(['super_admin', 'admin', 'pm']);
     }
 
     public function delete(User $user, Invitation $invitation)
     {
-        if ($user->tenant_id !== $invitation->tenant_id) return false;
+        if ($user->tenant_id !== $invitation->tenant_id) {
+            return false;
+        }
+
         return $this->isInvitationOwner($user, $invitation) || $user->hasRole(['super_admin', 'admin']);
     }
 
     public function accept(User $user, Invitation $invitation)
     {
-        if ($user->tenant_id !== $invitation->tenant_id) return false;
+        if ($user->tenant_id !== $invitation->tenant_id) {
+            return false;
+        }
+
         return $user->email === $invitation->email;
     }
 
     public function resend(User $user, Invitation $invitation)
     {
-        if ($user->tenant_id !== $invitation->tenant_id) return false;
+        if ($user->tenant_id !== $invitation->tenant_id) {
+            return false;
+        }
+
         return $this->isInvitationOwner($user, $invitation) || $user->hasRole(['super_admin', 'admin', 'pm']);
     }
 }

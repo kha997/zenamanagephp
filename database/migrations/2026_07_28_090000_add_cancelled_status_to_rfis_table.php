@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     /**
      * Add 'cancelled' to the rfis.status enum so RfiLifecycleService::cancel()
      * can persist a terminal cancelled state. SQLite (used in tests) has no

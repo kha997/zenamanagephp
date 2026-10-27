@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -7,7 +9,7 @@ use Illuminate\Support\Facades\Redis;
 
 /**
  * Service quản lý caching strategy cho toàn bộ hệ thống
- * Sử dụng Redis làm cache driver chính với các TTL khác nhau
+ * Sử dụng Redis làm cache driver chính với các TTL khác nhau.
  */
 class CacheService
 {
@@ -18,8 +20,8 @@ class CacheService
     public const TTL_VERY_LONG = 86400; // 24 hours - for rarely changing data
 
     /**
-     * Cache project data với hierarchical invalidation
-     * 
+     * Cache project data với hierarchical invalidation.
+     *
      * @param int $projectId
      * @param callable $callback
      * @param int $ttl
@@ -28,13 +30,13 @@ class CacheService
     public function cacheProject(int $projectId, callable $callback, int $ttl = self::TTL_MEDIUM)
     {
         $key = "project:{$projectId}";
-        
+
         return Cache::remember($key, $ttl, $callback);
     }
 
     /**
-     * Cache project components với nested structure
-     * 
+     * Cache project components với nested structure.
+     *
      * @param int $projectId
      * @param callable $callback
      * @return mixed
@@ -42,13 +44,13 @@ class CacheService
     public function cacheProjectComponents(int $projectId, callable $callback)
     {
         $key = "project:{$projectId}:components";
-        
+
         return Cache::remember($key, self::TTL_MEDIUM, $callback);
     }
 
     /**
-     * Cache user permissions cho RBAC system
-     * 
+     * Cache user permissions cho RBAC system.
+     *
      * @param int $userId
      * @param int|null $projectId
      * @param callable $callback
@@ -56,16 +58,16 @@ class CacheService
      */
     public function cacheUserPermissions(int $userId, ?int $projectId, callable $callback)
     {
-        $key = $projectId 
+        $key = $projectId
             ? "user:{$userId}:project:{$projectId}:permissions"
             : "user:{$userId}:permissions";
-            
+
         return Cache::remember($key, self::TTL_LONG, $callback);
     }
 
     /**
-     * Cache dashboard statistics
-     * 
+     * Cache dashboard statistics.
+     *
      * @param int $userId
      * @param callable $callback
      * @return mixed
@@ -73,13 +75,13 @@ class CacheService
     public function cacheDashboardStats(int $userId, callable $callback)
     {
         $key = "user:{$userId}:dashboard:stats";
-        
+
         return Cache::remember($key, self::TTL_SHORT, $callback);
     }
 
     /**
-     * Cache notification counts
-     * 
+     * Cache notification counts.
+     *
      * @param int $userId
      * @param callable $callback
      * @return mixed
@@ -87,13 +89,13 @@ class CacheService
     public function cacheNotificationCounts(int $userId, callable $callback)
     {
         $key = "user:{$userId}:notifications:count";
-        
+
         return Cache::remember($key, self::TTL_SHORT, $callback);
     }
 
     /**
-     * Invalidate all caches related to a project
-     * 
+     * Invalidate all caches related to a project.
+     *
      * @param int $projectId
      * @return void
      */
@@ -101,7 +103,7 @@ class CacheService
     {
         $patterns = [
             "project:{$projectId}*",
-            "*:project:{$projectId}:*"
+            "*:project:{$projectId}:*",
         ];
 
         foreach ($patterns as $pattern) {
@@ -110,8 +112,8 @@ class CacheService
     }
 
     /**
-     * Invalidate user-related caches
-     * 
+     * Invalidate user-related caches.
+     *
      * @param int $userId
      * @return void
      */
@@ -121,8 +123,8 @@ class CacheService
     }
 
     /**
-     * Invalidate caches by pattern using Redis SCAN
-     * 
+     * Invalidate caches by pattern using Redis SCAN.
+     *
      * @param string $pattern
      * @return void
      */
@@ -130,12 +132,12 @@ class CacheService
     {
         $redis = Redis::connection();
         $cursor = 0;
-        
+
         do {
             $result = $redis->scan($cursor, ['match' => $pattern, 'count' => 100]);
             $cursor = $result[0];
             $keys = $result[1];
-            
+
             if (!empty($keys)) {
                 $redis->del($keys);
             }
@@ -143,8 +145,8 @@ class CacheService
     }
 
     /**
-     * Warm up critical caches
-     * 
+     * Warm up critical caches.
+     *
      * @param int $userId
      * @return void
      */
@@ -162,14 +164,14 @@ class CacheService
     }
 
     /**
-     * Get cache statistics
-     * 
+     * Get cache statistics.
+     *
      * @return array
      */
     public function getStats(): array
     {
         $redis = Redis::connection();
-        
+
         return [
             'memory_usage' => $redis->info('memory')['used_memory_human'] ?? 'N/A',
             'connected_clients' => $redis->info('clients')['connected_clients'] ?? 0,

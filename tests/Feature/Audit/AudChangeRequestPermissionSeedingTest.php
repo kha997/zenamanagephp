@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Audit;
 
@@ -21,28 +23,16 @@ class AudChangeRequestPermissionSeedingTest extends TestCase
     {
         Artisan::call('db:seed', ['--force' => true]);
 
-        // AUD-28 (new, separate finding — not part of AUD-22's original scope):
-        // RoleSeeder.php has the identical "firstOrCreate without a name key" bug
-        // for 'project.read' and 'user.manage', and neither PermissionSeeder.php
-        // nor ZenaPermissionsSeeder.php's canonical lists ever touch those two
-        // codes afterward, so they stay NULL. 'user.manage' is confirmed dead
-        // (only referenced as a hardcoded string in
-        // app/Http/Controllers/Admin/SimpleSidebarBuilderController.php:126, not
-        // by any real RBAC check). Fixing RoleSeeder.php is out of scope for this
-        // task (see Global Constraints) — allowlisting these two so this test
-        // still catches any *other* NULL-name permission as a real regression,
-        // without pretending the RoleSeeder bug doesn't exist.
-        $knownPreExistingExceptions = ['project.read', 'user.manage'];
-
+        // AUD-28 (fixed in GAP-079): RoleSeeder used to create 'project.read'
+        // and 'user.manage' without a name, leaving them NULL after seeding.
         $withoutName = Permission::whereNull('name')
-            ->whereNotIn('code', $knownPreExistingExceptions)
             ->pluck('code')
             ->all();
 
         $this->assertSame(
             [],
             $withoutName,
-            'No permission row should have a NULL name column after seeding (excluding the known RoleSeeder.php bug tracked as AUD-28).'
+            'No permission row should have a NULL name column after seeding.'
         );
     }
 

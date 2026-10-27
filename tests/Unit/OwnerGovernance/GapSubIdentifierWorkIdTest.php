@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Unit\OwnerGovernance;
 
@@ -228,7 +230,7 @@ class GapSubIdentifierWorkIdTest extends TestCase
     public static function authoritativeValidBodies(): array
     {
         return [
-            'bare declaration' => ["Work ID: OWN-2026-004", 'OWN-2026-004'],
+            'bare declaration' => ['Work ID: OWN-2026-004', 'OWN-2026-004'],
             'realistic PR #242 body with a later GAP-010b disclaimer line' => [
                 "Work ID: OWN-2026-004\nGate 1: APPROVED\nGate 2: APPROVED\nGate 3: AWAITING OWNER\nGAP-010b implementation authorized: NO",
                 'OWN-2026-004',
@@ -254,13 +256,13 @@ class GapSubIdentifierWorkIdTest extends TestCase
             'no first-line declaration, valid ID only appears later in prose' => [
                 "Gate 1: APPROVED\nGAP-010b implementation authorized: NO\nOWN-2026-004 appears later in prose",
             ],
-            'invalid candidate: double-letter suffix' => ["Work ID: GAP-010bb"],
-            'invalid candidate: four-digit' => ["Work ID: GAP-0010"],
-            'invalid candidate: hyphenated suffix' => ["Work ID: GAP-010-b"],
-            'empty candidate' => ["Work ID:"],
+            'invalid candidate: double-letter suffix' => ['Work ID: GAP-010bb'],
+            'invalid candidate: four-digit' => ['Work ID: GAP-0010'],
+            'invalid candidate: hyphenated suffix' => ['Work ID: GAP-010-b'],
+            'empty candidate' => ['Work ID:'],
             'declaration not on the first non-empty line' => ["Title line\nWork ID: OWN-2026-004"],
             'multiple competing declarations' => ["Work ID: OWN-2026-004\nWork ID: GAP-010b"],
-            'valid candidate followed by extra characters' => ["Work ID: OWN-2026-004-extra"],
+            'valid candidate followed by extra characters' => ['Work ID: OWN-2026-004-extra'],
         ];
     }
 

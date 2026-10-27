@@ -1,13 +1,15 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Document;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use App\Models\Document;
 
 class DocumentController extends Controller
 {
@@ -18,7 +20,7 @@ class DocumentController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user) {
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
@@ -29,7 +31,7 @@ class DocumentController extends Controller
                 'component:id,name,type',
                 'uploadedBy:id,name,email',
                 'approvedBy:id,name,email',
-                'tenant:id,name'
+                'tenant:id,name',
             ]);
 
             // Apply tenant filter
@@ -82,15 +84,15 @@ class DocumentController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $documents,
-                'message' => 'Documents retrieved successfully'
+                'message' => 'Documents retrieved successfully',
             ]);
-
         } catch (\Exception $e) {
             Log::error('Document index error: ' . $e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve documents',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -102,7 +104,7 @@ class DocumentController extends Controller
     {
         $authService = new AuthService();
         $user = $authService->getCurrentUser();
-        
+
         if (!$user) {
             return $this->error('Unauthorized', 401);
         }
@@ -124,7 +126,7 @@ class DocumentController extends Controller
 
         try {
             $file = $request->file('file');
-            
+
             // Use FileStorageService with enhanced validation
             $fileStorageService = new \Src\Foundation\Services\FileStorageService();
             $uploadResult = $fileStorageService->uploadFile(
@@ -156,7 +158,6 @@ class DocumentController extends Controller
             ]);
 
             return $this->successResponse($document->load(['project', 'uploadedBy']), 'Document uploaded successfully', 201);
-
         } catch (\Exception $e) {
             return $this->error('Failed to upload document: ' . $e->getMessage(), 500);
         }
@@ -169,7 +170,7 @@ class DocumentController extends Controller
     {
         $authService = new AuthService();
         $user = $authService->getCurrentUser();
-        
+
         if (!$user) {
             return $this->error('Unauthorized', 401);
         }
@@ -191,7 +192,7 @@ class DocumentController extends Controller
     {
         $authService = new AuthService();
         $user = $authService->getCurrentUser();
-        
+
         if (!$user) {
             return $this->error('Unauthorized', 401);
         }
@@ -218,11 +219,10 @@ class DocumentController extends Controller
 
         try {
             $document->update($request->only([
-                'title', 'description', 'document_type', 'version', 'tags', 'status'
+                'title', 'description', 'document_type', 'version', 'tags', 'status',
             ]));
 
             return $this->successResponse($document->load(['project', 'uploadedBy']), 'Document updated successfully');
-
         } catch (\Exception $e) {
             return $this->error('Failed to update document: ' . $e->getMessage(), 500);
         }
@@ -235,7 +235,7 @@ class DocumentController extends Controller
     {
         $authService = new AuthService();
         $user = $authService->getCurrentUser();
-        
+
         if (!$user) {
             return $this->error('Unauthorized', 401);
         }
@@ -255,20 +255,19 @@ class DocumentController extends Controller
             $document->delete();
 
             return $this->successResponse(null, 'Document deleted successfully');
-
         } catch (\Exception $e) {
             return $this->error('Failed to delete document: ' . $e->getMessage(), 500);
         }
     }
 
     /**
-     * Download document
+     * Download document.
      */
     public function download(string $id): JsonResponse
     {
         $authService = new AuthService();
         $user = $authService->getCurrentUser();
-        
+
         if (!$user) {
             return $this->error('Unauthorized', 401);
         }
@@ -285,22 +284,21 @@ class DocumentController extends Controller
 
         try {
             $filePath = Storage::disk('local')->path($document->file_path);
-            
-            return response()->download($filePath, $document->original_name);
 
+            return response()->download($filePath, $document->original_name);
         } catch (\Exception $e) {
             return $this->error('Failed to download document: ' . $e->getMessage(), 500);
         }
     }
 
     /**
-     * Create new version of document
+     * Create new version of document.
      */
     public function createVersion(Request $request, string $id): JsonResponse
     {
         $authService = new AuthService();
         $user = $authService->getCurrentUser();
-        
+
         if (!$user) {
             return $this->error('Unauthorized', 401);
         }
@@ -323,11 +321,11 @@ class DocumentController extends Controller
 
         try {
             $file = $request->file('file');
-            
+
             // Generate unique filename
             $filename = $this->generateUniqueFilename($file);
             $path = 'documents/' . $document->project_id . '/' . $filename;
-            
+
             // Store file
             $storedPath = Storage::disk(config('filesystems.default', 'local'))->putFileAs(
                 'documents/' . $document->project_id,
@@ -359,20 +357,19 @@ class DocumentController extends Controller
             ]);
 
             return $this->successResponse($newVersion->load(['project', 'uploadedBy']), 'Document version created successfully', 201);
-
         } catch (\Exception $e) {
             return $this->error('Failed to create document version: ' . $e->getMessage(), 500);
         }
     }
 
     /**
-     * Get document versions
+     * Get document versions.
      */
     public function getVersions(string $id): JsonResponse
     {
         $authService = new AuthService();
         $user = $authService->getCurrentUser();
-        
+
         if (!$user) {
             return $this->error('Unauthorized', 401);
         }
@@ -393,14 +390,14 @@ class DocumentController extends Controller
     }
 
     /**
-     * Generate unique filename
+     * Generate unique filename.
      */
     private function generateUniqueFilename(UploadedFile $file): string
     {
         $extension = $file->getClientOriginalExtension();
         $basename = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
         $basename = preg_replace('/[^a-zA-Z0-9_-]/', '_', $basename);
-        
+
         return $basename . '_' . time() . '_' . str_random(8) . '.' . $extension;
     }
 }

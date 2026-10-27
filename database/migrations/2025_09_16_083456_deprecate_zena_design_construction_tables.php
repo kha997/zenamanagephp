@@ -2,11 +2,10 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     /**
      * Run the migrations.
      */
@@ -17,10 +16,10 @@ return new class extends Migration
             Schema::table('zena_documents', function (Blueprint $table) {
                 $table->string('deprecated_notice')->nullable()->after('id');
             });
-            
+
             // Add deprecation notice to all existing records
             DB::table('zena_documents')->update([
-                'deprecated_notice' => 'This table is deprecated. Use documents table instead.'
+                'deprecated_notice' => 'This table is deprecated. Use documents table instead.',
             ]);
         }
 
@@ -29,10 +28,10 @@ return new class extends Migration
             Schema::table('zena_components', function (Blueprint $table) {
                 $table->string('deprecated_notice')->nullable()->after('id');
             });
-            
+
             // Add deprecation notice to all existing records
             DB::table('zena_components')->update([
-                'deprecated_notice' => 'This table is deprecated. Use components table instead.'
+                'deprecated_notice' => 'This table is deprecated. Use components table instead.',
             ]);
         }
 
@@ -41,10 +40,10 @@ return new class extends Migration
             Schema::table('zena_projects', function (Blueprint $table) {
                 $table->string('deprecated_notice')->nullable()->after('id');
             });
-            
+
             // Add deprecation notice to all existing records
             DB::table('zena_projects')->update([
-                'deprecated_notice' => 'This table is deprecated. Use projects table instead.'
+                'deprecated_notice' => 'This table is deprecated. Use projects table instead.',
             ]);
         }
 
@@ -53,10 +52,10 @@ return new class extends Migration
             Schema::table('zena_drawings', function (Blueprint $table) {
                 $table->string('deprecated_notice')->nullable()->after('id');
             });
-            
+
             // Add deprecation notice to all existing records
             DB::table('zena_drawings')->update([
-                'deprecated_notice' => 'This table is deprecated. Use documents table with type=drawing instead.'
+                'deprecated_notice' => 'This table is deprecated. Use documents table with type=drawing instead.',
             ]);
         }
 
@@ -65,10 +64,10 @@ return new class extends Migration
             Schema::table('zena_rfis', function (Blueprint $table) {
                 $table->string('deprecated_notice')->nullable()->after('id');
             });
-            
+
             // Add deprecation notice to all existing records
             DB::table('zena_rfis')->update([
-                'deprecated_notice' => 'This table is deprecated. Use unified RFI model instead.'
+                'deprecated_notice' => 'This table is deprecated. Use unified RFI model instead.',
             ]);
         }
 
@@ -77,10 +76,10 @@ return new class extends Migration
             Schema::table('zena_submittals', function (Blueprint $table) {
                 $table->string('deprecated_notice')->nullable()->after('id');
             });
-            
+
             // Add deprecation notice to all existing records
             DB::table('zena_submittals')->update([
-                'deprecated_notice' => 'This table is deprecated. Use unified Submittal model instead.'
+                'deprecated_notice' => 'This table is deprecated. Use unified Submittal model instead.',
             ]);
         }
 
@@ -89,10 +88,10 @@ return new class extends Migration
             Schema::table('zena_change_requests', function (Blueprint $table) {
                 $table->string('deprecated_notice')->nullable()->after('id');
             });
-            
+
             // Add deprecation notice to all existing records
             DB::table('zena_change_requests')->update([
-                'deprecated_notice' => 'This table is deprecated. Use unified ChangeRequest model instead.'
+                'deprecated_notice' => 'This table is deprecated. Use unified ChangeRequest model instead.',
             ]);
         }
     }
@@ -105,12 +104,12 @@ return new class extends Migration
         // Remove deprecation notices
         $tables = [
             'zena_documents',
-            'zena_components', 
+            'zena_components',
             'zena_projects',
             'zena_drawings',
             'zena_rfis',
             'zena_submittals',
-            'zena_change_requests'
+            'zena_change_requests',
         ];
 
         foreach ($tables as $table) {

@@ -5,17 +5,18 @@ namespace App\Jobs;
 use App\Mail\WelcomeEmail;
 use App\Models\EmailTracking;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class SendWelcomeEmailJob implements ShouldQueue
 {
-
     public $user;
+
     public $tries = 3;
+
     public $timeout = 60;
+
     public $backoff = [30, 60, 120];
 
     /**
@@ -39,6 +40,7 @@ class SendWelcomeEmailJob implements ShouldQueue
                     'user_id' => $this->user->id,
                     'status' => $this->user->status,
                 ]);
+
                 return;
             }
 
@@ -47,8 +49,9 @@ class SendWelcomeEmailJob implements ShouldQueue
                 Log::warning('Welcome email job delayed - rate limit exceeded', [
                     'user_id' => $this->user->id,
                 ]);
-                
+
                 $this->release(60);
+
                 return;
             }
 
@@ -70,7 +73,6 @@ class SendWelcomeEmailJob implements ShouldQueue
                 'email' => $this->user->email,
                 'tracking_id' => $tracking->tracking_id,
             ]);
-
         } catch (\Exception $e) {
             // Mark as failed
             if (isset($tracking)) {
@@ -103,12 +105,12 @@ class SendWelcomeEmailJob implements ShouldQueue
     }
 
     /**
-     * Check rate limits
+     * Check rate limits.
      */
     private function checkRateLimits(): bool
     {
         $rateLimits = config('mail.rate_limits', []);
-        
+
         if (!$rateLimits['enabled'] ?? true) {
             return true;
         }
@@ -131,7 +133,7 @@ class SendWelcomeEmailJob implements ShouldQueue
     }
 
     /**
-     * Create email tracking record
+     * Create email tracking record.
      */
     private function createEmailTracking(): EmailTracking
     {
@@ -155,13 +157,13 @@ class SendWelcomeEmailJob implements ShouldQueue
     }
 
     /**
-     * Get cached email template
+     * Get cached email template.
      */
     private function getCachedEmailTemplate(): WelcomeEmail
     {
         $cacheKey = "email_template_welcome_{$this->user->id}";
         $cacheEnabled = config('mail.template_cache.enabled', true);
-        
+
         if ($cacheEnabled) {
             $cached = Cache::get($cacheKey);
             if ($cached) {
@@ -171,7 +173,7 @@ class SendWelcomeEmailJob implements ShouldQueue
 
         // Create new email template
         $emailTemplate = new WelcomeEmail($this->user);
-        
+
         // Cache the template
         if ($cacheEnabled) {
             $ttl = config('mail.template_cache.ttl', 3600);
@@ -182,7 +184,7 @@ class SendWelcomeEmailJob implements ShouldQueue
     }
 
     /**
-     * Generate content hash for tracking
+     * Generate content hash for tracking.
      */
     private function generateContentHash(): string
     {

@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use App\Models\Role;
 use App\Models\Permission;
+use App\Models\Role;
+use Illuminate\Database\Seeder;
 
 class RolePermissionSeeder extends Seeder
 {
@@ -61,13 +61,13 @@ class RolePermissionSeeder extends Seeder
                 'name' => 'super_admin',
                 'scope' => 'system',
                 'description' => 'Full system access',
-                'permissions' => Permission::all()->pluck('code')->toArray()
+                'permissions' => Permission::all()->pluck('code')->toArray(),
             ],
             [
                 'name' => 'admin',
                 'scope' => 'system',
                 'description' => 'Administrative access',
-                'permissions' => Permission::all()->pluck('code')->toArray()
+                'permissions' => Permission::all()->pluck('code')->toArray(),
             ],
             [
                 'name' => 'project_manager',
@@ -78,8 +78,8 @@ class RolePermissionSeeder extends Seeder
                     'project.manage_team', 'project.view_budget', 'project.view_files', 'project.upload_files',
                     'task.read', 'task.create', 'task.update', 'task.delete', 'task.assign', 'task.comment',
                     'task.attach_files', 'task.change_status', 'task.view_time_tracking', 'task.edit_time_tracking',
-                    'user.read'
-                ]
+                    'user.read',
+                ],
             ],
             [
                 'name' => 'designer',
@@ -88,8 +88,8 @@ class RolePermissionSeeder extends Seeder
                 'permissions' => [
                     'project.read', 'project.view_files', 'project.upload_files',
                     'task.read', 'task.create', 'task.update', 'task.comment', 'task.attach_files',
-                    'task.change_status', 'task.view_time_tracking', 'task.edit_time_tracking'
-                ]
+                    'task.change_status', 'task.view_time_tracking', 'task.edit_time_tracking',
+                ],
             ],
             [
                 'name' => 'site_engineer',
@@ -98,8 +98,8 @@ class RolePermissionSeeder extends Seeder
                 'permissions' => [
                     'project.read', 'project.view_files', 'project.upload_files',
                     'task.read', 'task.create', 'task.update', 'task.comment', 'task.attach_files',
-                    'task.change_status', 'task.view_time_tracking', 'task.edit_time_tracking'
-                ]
+                    'task.change_status', 'task.view_time_tracking', 'task.edit_time_tracking',
+                ],
             ],
             [
                 'name' => 'qc',
@@ -108,8 +108,8 @@ class RolePermissionSeeder extends Seeder
                 'permissions' => [
                     'project.read', 'project.view_files', 'project.upload_files',
                     'task.read', 'task.create', 'task.update', 'task.comment', 'task.attach_files',
-                    'task.change_status', 'task.view_time_tracking', 'task.edit_time_tracking'
-                ]
+                    'task.change_status', 'task.view_time_tracking', 'task.edit_time_tracking',
+                ],
             ],
             [
                 'name' => 'procurement',
@@ -118,8 +118,8 @@ class RolePermissionSeeder extends Seeder
                 'permissions' => [
                     'project.read', 'project.view_budget', 'project.view_files', 'project.upload_files',
                     'task.read', 'task.create', 'task.update', 'task.comment', 'task.attach_files',
-                    'task.change_status', 'task.view_time_tracking', 'task.edit_time_tracking'
-                ]
+                    'task.change_status', 'task.view_time_tracking', 'task.edit_time_tracking',
+                ],
             ],
             [
                 'name' => 'finance',
@@ -127,8 +127,8 @@ class RolePermissionSeeder extends Seeder
                 'description' => 'Financial management',
                 'permissions' => [
                     'project.read', 'project.view_budget', 'project.edit_budget', 'project.view_files',
-                    'task.read', 'task.view_time_tracking', 'task.edit_time_tracking'
-                ]
+                    'task.read', 'task.view_time_tracking', 'task.edit_time_tracking',
+                ],
             ],
             [
                 'name' => 'client',
@@ -136,9 +136,9 @@ class RolePermissionSeeder extends Seeder
                 'description' => 'Client access',
                 'permissions' => [
                     'project.read', 'project.view_budget', 'project.view_files',
-                    'task.read', 'task.comment'
-                ]
-            ]
+                    'task.read', 'task.comment',
+                ],
+            ],
         ];
 
         foreach ($roles as $roleData) {

@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y \
     libjpeg62-turbo-dev \
     libmcrypt-dev \
     libgd-dev \
+    libicu-dev \
     jpegoptim optipng pngquant gifsicle \
     vim \
     unzip \
@@ -40,7 +41,14 @@ RUN docker-php-ext-install \
     intl
 
 # Install Redis extension
-RUN pecl install redis && docker-php-ext-enable redis
+# GAP-088: pinned version, retried because pecl.php.net is sometimes unreachable
+RUN for i in 1 2 3 4 5; do \
+        pecl install redis-6.3.0 && break; \
+        if [ "$i" -eq 5 ]; then echo "pecl install redis-6.3.0 failed (attempt 5/5)" >&2; exit 1; fi; \
+        echo "pecl install redis-6.3.0 failed (attempt $i/5), retrying in $((i * 15))s" >&2; \
+        sleep $((i * 15)); \
+    done \
+    && docker-php-ext-enable redis
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -48,11 +56,12 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Copy composer files
 COPY composer.json composer.lock ./
 
-# Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# Install PHP dependencies (scripts and autoloader run after the code is copied: they need artisan)
+RUN composer install --no-dev --no-scripts --no-autoloader --no-interaction
 
 # Copy application code
 COPY . .
+RUN composer dump-autoload --optimize --no-dev
 
 # Set proper permissions
 RUN chown -R www-data:www-data /var/www/html
@@ -70,7 +79,7 @@ RUN chmod -R 775 bootstrap/cache
 
 # Copy PHP configuration
 COPY docker/php/php.ini /usr/local/etc/php/php.ini
-COPY docker/php/php-fpm.conf /usr/local/etc/php-fpm.d/www.conf
+COPY docker/php-fpm.conf /usr/local/etc/php-fpm.d/www.conf
 
 # Expose port 9000
 EXPOSE 9000

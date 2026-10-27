@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
 
@@ -13,6 +15,7 @@ use App\Models\Rfi;
 use App\Models\Submittal;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
+
 class ProcurementDashboardController extends Controller
 {
     public function __invoke(): View

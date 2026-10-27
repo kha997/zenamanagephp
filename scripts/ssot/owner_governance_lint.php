@@ -714,6 +714,22 @@ function owner_governance_count_blocking_checks(array $checks): int
     ));
 }
 
+/**
+ * Counts checks that have already finished without passing — GitHub CLI's
+ * `fail` and `cancel` buckets. GAP-091: the evidence-freshness live check
+ * waits while checks are only pending, but fails at once when this is
+ * nonzero, since waiting longer cannot turn a failed check green.
+ *
+ * @param array<int, array{name: string, state?: string, bucket?: string}> $checks
+ */
+function owner_governance_count_failed_checks(array $checks): int
+{
+    return count(array_filter(
+        $checks,
+        fn ($c) => in_array($c['bucket'] ?? '', ['fail', 'cancel'], true)
+    ));
+}
+
 // --- CLI entrypoint ---
 // Guards against running when this file is require/require_once'd as a library
 // (OwnerGovernanceLintFixtureTest.php, and check-evidence-freshness.sh's `php -r`

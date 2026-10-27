@@ -13,7 +13,7 @@ use App\Services\EventBusService;
 trait DispatchesEvents
 {
     /**
-     * Dispatch task created event
+     * Dispatch task created event.
      */
     protected function dispatchTaskCreated($task, $user, array $metadata = []): void
     {
@@ -21,7 +21,7 @@ trait DispatchesEvents
     }
 
     /**
-     * Dispatch task completed event
+     * Dispatch task completed event.
      */
     protected function dispatchTaskCompleted($task, $user, array $metadata = []): void
     {
@@ -29,7 +29,7 @@ trait DispatchesEvents
     }
 
     /**
-     * Dispatch task updated event
+     * Dispatch task updated event.
      */
     protected function dispatchTaskUpdated($task, $user, array $oldData = [], array $changes = [], array $metadata = []): void
     {
@@ -37,7 +37,7 @@ trait DispatchesEvents
     }
 
     /**
-     * Dispatch component created event
+     * Dispatch component created event.
      */
     protected function dispatchComponentCreated($component, $user, array $metadata = []): void
     {
@@ -45,7 +45,7 @@ trait DispatchesEvents
     }
 
     /**
-     * Dispatch change requested event
+     * Dispatch change requested event.
      */
     protected function dispatchChangeRequested($changeRequest, $user, array $metadata = []): void
     {
@@ -53,7 +53,7 @@ trait DispatchesEvents
     }
 
     /**
-     * Dispatch document uploaded event
+     * Dispatch document uploaded event.
      */
     protected function dispatchDocumentUploaded($document, $user, array $metadata = []): void
     {
@@ -61,7 +61,7 @@ trait DispatchesEvents
     }
 
     /**
-     * Dispatch event asynchronously
+     * Dispatch event asynchronously.
      */
     protected function dispatchAsync(string $eventClass, ...$args): void
     {
@@ -69,7 +69,7 @@ trait DispatchesEvents
     }
 
     /**
-     * Dispatch multiple events in batch
+     * Dispatch multiple events in batch.
      */
     protected function dispatchBatch(array $events): void
     {

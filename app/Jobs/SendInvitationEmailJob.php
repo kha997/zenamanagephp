@@ -6,17 +6,18 @@ use App\Mail\InvitationEmail;
 use App\Models\EmailTracking;
 use Carbon\Carbon;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class SendInvitationEmailJob implements ShouldQueue
 {
-
     public $invitation;
+
     public $tries = 3;
+
     public $timeout = 60;
+
     public $backoff = [30, 60, 120]; // Retry delays in seconds
 
     /**
@@ -25,7 +26,7 @@ class SendInvitationEmailJob implements ShouldQueue
     public function __construct(Invitation $invitation)
     {
         $this->invitation = $invitation;
-        
+
         // Set queue name based on priority
         $this->onQueue($this->getQueueName());
     }
@@ -42,6 +43,7 @@ class SendInvitationEmailJob implements ShouldQueue
                     'invitation_id' => $this->invitation->id,
                     'status' => $this->invitation->status,
                 ]);
+
                 return;
             }
 
@@ -50,9 +52,10 @@ class SendInvitationEmailJob implements ShouldQueue
                 Log::warning('Invitation email job delayed - rate limit exceeded', [
                     'invitation_id' => $this->invitation->id,
                 ]);
-                
+
                 // Delay the job for 1 minute
                 $this->release(60);
+
                 return;
             }
 
@@ -80,7 +83,6 @@ class SendInvitationEmailJob implements ShouldQueue
                 'tracking_id' => $tracking->tracking_id,
                 'queue' => $this->queue,
             ]);
-
         } catch (\Exception $e) {
             // Mark as failed
             if (isset($tracking)) {
@@ -120,33 +122,33 @@ class SendInvitationEmailJob implements ShouldQueue
     }
 
     /**
-     * Get queue name based on invitation priority
+     * Get queue name based on invitation priority.
      */
     private function getQueueName(): string
     {
         $role = $this->invitation->role;
-        
+
         // High priority for admin roles
         if (in_array($role, ['super_admin', 'admin', 'project_manager'])) {
             return 'emails-high';
         }
-        
+
         // Medium priority for regular roles
         if (in_array($role, ['designer', 'site_engineer', 'qc_engineer'])) {
             return 'emails-medium';
         }
-        
+
         // Low priority for other roles
         return 'emails-low';
     }
 
     /**
-     * Check rate limits
+     * Check rate limits.
      */
     private function checkRateLimits(): bool
     {
         $rateLimits = config('mail.rate_limits', []);
-        
+
         if (!$rateLimits['enabled'] ?? true) {
             return true;
         }
@@ -189,7 +191,7 @@ class SendInvitationEmailJob implements ShouldQueue
     }
 
     /**
-     * Create email tracking record
+     * Create email tracking record.
      */
     private function createEmailTracking(): EmailTracking
     {
@@ -214,13 +216,13 @@ class SendInvitationEmailJob implements ShouldQueue
     }
 
     /**
-     * Get cached email template
+     * Get cached email template.
      */
     private function getCachedEmailTemplate(): InvitationEmail
     {
         $cacheKey = "email_template_invitation_{$this->invitation->id}";
         $cacheEnabled = config('mail.template_cache.enabled', true);
-        
+
         if ($cacheEnabled) {
             $cached = Cache::get($cacheKey);
             if ($cached) {
@@ -230,7 +232,7 @@ class SendInvitationEmailJob implements ShouldQueue
 
         // Create new email template
         $emailTemplate = new InvitationEmail($this->invitation);
-        
+
         // Cache the template
         if ($cacheEnabled) {
             $ttl = config('mail.template_cache.ttl', 3600);
@@ -241,7 +243,7 @@ class SendInvitationEmailJob implements ShouldQueue
     }
 
     /**
-     * Generate content hash for tracking
+     * Generate content hash for tracking.
      */
     private function generateContentHash(): string
     {

@@ -3,15 +3,15 @@
 namespace App\Http\Controllers\Api\App;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class TaskController extends Controller
 {
     /**
-     * Display a listing of tasks
+     * Display a listing of tasks.
      */
     public function index(Request $request): JsonResponse
     {
@@ -28,7 +28,7 @@ class TaskController extends Controller
                     'status' => 'in_progress',
                     'due_date' => '2024-01-15',
                     'created_at' => '2024-01-10T00:00:00Z',
-                    'updated_at' => '2024-01-10T00:00:00Z'
+                    'updated_at' => '2024-01-10T00:00:00Z',
                 ],
                 [
                     'id' => 2,
@@ -40,13 +40,13 @@ class TaskController extends Controller
                     'status' => 'completed',
                     'due_date' => '2024-01-12',
                     'created_at' => '2024-01-08T00:00:00Z',
-                    'updated_at' => '2024-01-12T00:00:00Z'
-                ]
+                    'updated_at' => '2024-01-12T00:00:00Z',
+                ],
             ];
 
             $this->logAudit('tasks.index', 'Listed tasks', [
                 'user_id' => Auth::id(),
-                'filters' => $request->all()
+                'filters' => $request->all(),
             ]);
 
             return response()->json([
@@ -55,22 +55,21 @@ class TaskController extends Controller
                 'meta' => [
                     'total' => count($tasks),
                     'per_page' => 15,
-                    'current_page' => 1
-                ]
+                    'current_page' => 1,
+                ],
             ]);
-
         } catch (\Exception $e) {
             Log::error('TaskController@index error: ' . $e->getMessage());
-            
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to retrieve tasks'
+                'message' => 'Failed to retrieve tasks',
             ], 500);
         }
     }
 
     /**
-     * Store a newly created task
+     * Store a newly created task.
      */
     public function store(Request $request): JsonResponse
     {
@@ -82,48 +81,46 @@ class TaskController extends Controller
                 'assignee_id' => 'nullable|integer',
                 'priority' => 'required|in:low,medium,high',
                 'status' => 'required|in:pending,in_progress,completed,cancelled',
-                'due_date' => 'nullable|date'
+                'due_date' => 'nullable|date',
             ]);
 
             // Mock task creation - replace with actual database operation
             $task = array_merge($validated, [
                 'id' => rand(1000, 9999),
                 'created_at' => now()->toISOString(),
-                'updated_at' => now()->toISOString()
+                'updated_at' => now()->toISOString(),
             ]);
 
             $this->logAudit('tasks.create', 'Created task', [
                 'user_id' => Auth::id(),
                 'task_id' => $task['id'],
                 'task_title' => $task['title'],
-                'project_id' => $task['project_id']
+                'project_id' => $task['project_id'],
             ]);
 
             return response()->json([
                 'status' => 'success',
                 'data' => $task,
-                'message' => 'Task created successfully'
+                'message' => 'Task created successfully',
             ], 201);
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
-                'errors' => $e->errors()
+                'errors' => $e->errors(),
             ], 422);
-
         } catch (\Exception $e) {
             Log::error('TaskController@store error: ' . $e->getMessage());
-            
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to create task'
+                'message' => 'Failed to create task',
             ], 500);
         }
     }
 
     /**
-     * Display the specified task
+     * Display the specified task.
      */
     public function show(string $id): JsonResponse
     {
@@ -139,31 +136,30 @@ class TaskController extends Controller
                 'status' => 'in_progress',
                 'due_date' => '2024-01-15',
                 'created_at' => '2024-01-10T00:00:00Z',
-                'updated_at' => '2024-01-10T00:00:00Z'
+                'updated_at' => '2024-01-10T00:00:00Z',
             ];
 
             $this->logAudit('tasks.show', 'Viewed task', [
                 'user_id' => Auth::id(),
-                'task_id' => $id
+                'task_id' => $id,
             ]);
 
-                return response()->json([
-                'status' => 'success',
-                'data' => $task
+            return response()->json([
+            'status' => 'success',
+            'data' => $task,
             ]);
-
         } catch (\Exception $e) {
             Log::error('TaskController@show error: ' . $e->getMessage());
-            
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to retrieve task'
+                'message' => 'Failed to retrieve task',
             ], 500);
         }
     }
 
     /**
-     * Update the specified task
+     * Update the specified task.
      */
     public function update(Request $request, string $id): JsonResponse
     {
@@ -175,7 +171,7 @@ class TaskController extends Controller
                 'assignee_id' => 'nullable|integer',
                 'priority' => 'sometimes|in:low,medium,high',
                 'status' => 'sometimes|in:pending,in_progress,completed,cancelled',
-                'due_date' => 'nullable|date'
+                'due_date' => 'nullable|date',
             ]);
 
             // Mock task update - replace with actual database operation
@@ -188,42 +184,40 @@ class TaskController extends Controller
                 'priority' => 'high',
                 'status' => 'in_progress',
                 'due_date' => '2024-01-15',
-                'created_at' => '2024-01-10T00:00:00Z'
+                'created_at' => '2024-01-10T00:00:00Z',
             ], $validated, [
-                'updated_at' => now()->toISOString()
+                'updated_at' => now()->toISOString(),
             ]);
 
             $this->logAudit('tasks.update', 'Updated task', [
                 'user_id' => Auth::id(),
                 'task_id' => $id,
-                'changes' => $validated
+                'changes' => $validated,
             ]);
 
             return response()->json([
                 'status' => 'success',
                 'data' => $task,
-                'message' => 'Task updated successfully'
+                'message' => 'Task updated successfully',
             ]);
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
-                'errors' => $e->errors()
+                'errors' => $e->errors(),
             ], 422);
-
         } catch (\Exception $e) {
             Log::error('TaskController@update error: ' . $e->getMessage());
-            
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to update task'
+                'message' => 'Failed to update task',
             ], 500);
         }
     }
 
     /**
-     * Remove the specified task
+     * Remove the specified task.
      */
     public function destroy(string $id): JsonResponse
     {
@@ -231,26 +225,25 @@ class TaskController extends Controller
             // Mock task deletion - replace with actual database operation
             $this->logAudit('tasks.delete', 'Deleted task', [
                 'user_id' => Auth::id(),
-                'task_id' => $id
+                'task_id' => $id,
             ]);
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Task deleted successfully'
+                'message' => 'Task deleted successfully',
             ]);
-
         } catch (\Exception $e) {
             Log::error('TaskController@destroy error: ' . $e->getMessage());
-            
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to delete task'
+                'message' => 'Failed to delete task',
             ], 500);
         }
     }
-    
+
     /**
-     * Move task to different project or status
+     * Move task to different project or status.
      */
     public function move(Request $request, string $id): JsonResponse
     {
@@ -259,7 +252,7 @@ class TaskController extends Controller
                 'project_id' => 'sometimes|integer',
                 'status' => 'sometimes|in:pending,in_progress,completed,cancelled',
                 'position' => 'sometimes|integer',
-            'reason' => 'nullable|string|max:500'
+            'reason' => 'nullable|string|max:500',
         ]);
 
             // Mock task move - replace with actual database operation
@@ -273,48 +266,46 @@ class TaskController extends Controller
                 'status' => $validated['status'] ?? 'in_progress',
                 'due_date' => '2024-01-15',
                 'created_at' => '2024-01-10T00:00:00Z',
-                'updated_at' => now()->toISOString()
+                'updated_at' => now()->toISOString(),
             ];
 
             $this->logAudit('tasks.move', 'Moved task', [
                 'user_id' => Auth::id(),
                 'task_id' => $id,
                 'changes' => $validated,
-                'reason' => $validated['reason'] ?? null
+                'reason' => $validated['reason'] ?? null,
             ]);
 
             return response()->json([
                 'status' => 'success',
                 'data' => $task,
-                'message' => 'Task moved successfully'
+                'message' => 'Task moved successfully',
             ]);
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
-                'errors' => $e->errors()
+                'errors' => $e->errors(),
             ], 422);
-
         } catch (\Exception $e) {
             Log::error('TaskController@move error: ' . $e->getMessage());
-            
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to move task'
+                'message' => 'Failed to move task',
             ], 500);
         }
     }
 
     /**
-     * Archive task
+     * Archive task.
      */
     public function archive(Request $request, string $id): JsonResponse
     {
         try {
             $validated = $request->validate([
                 'reason' => 'nullable|string|max:500',
-                'permanent' => 'boolean'
+                'permanent' => 'boolean',
             ]);
 
             // Mock task archive - replace with actual database operation
@@ -330,41 +321,39 @@ class TaskController extends Controller
                 'created_at' => '2024-01-10T00:00:00Z',
                 'updated_at' => now()->toISOString(),
                 'archived_at' => now()->toISOString(),
-                'archived_by' => Auth::id()
+                'archived_by' => Auth::id(),
             ];
 
             $this->logAudit('tasks.archive', 'Archived task', [
                 'user_id' => Auth::id(),
                 'task_id' => $id,
                 'reason' => $validated['reason'] ?? null,
-                'permanent' => $validated['permanent'] ?? false
+                'permanent' => $validated['permanent'] ?? false,
             ]);
 
             return response()->json([
                 'status' => 'success',
                 'data' => $task,
-                'message' => 'Task archived successfully'
+                'message' => 'Task archived successfully',
             ]);
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
-                'errors' => $e->errors()
+                'errors' => $e->errors(),
             ], 422);
-
         } catch (\Exception $e) {
             Log::error('TaskController@archive error: ' . $e->getMessage());
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to archive task'
+                'message' => 'Failed to archive task',
             ], 500);
         }
     }
-    
+
     /**
-     * Log audit trail
+     * Log audit trail.
      */
     private function logAudit(string $action, string $description, array $context = []): void
     {
@@ -373,7 +362,7 @@ class TaskController extends Controller
             'description' => $description,
             'timestamp' => now()->toISOString(),
             'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent()
+            'user_agent' => request()->userAgent(),
         ], $context));
     }
 }

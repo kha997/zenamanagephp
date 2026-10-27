@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Deployment;
 
@@ -14,7 +16,7 @@ class ReleaseToolingTest extends TestCase
     {
         parent::setUp();
         $this->root = storage_path('framework/testing/gap049-release-' . uniqid());
-        File::makeDirectory($this->root . '/shared/storage', 0755, true);
+        File::makeDirectory($this->root . '/shared/storage', 0o755, true);
         File::put($this->root . '/shared/.env', "APP_ENV=production\n");
     }
 
@@ -28,12 +30,13 @@ class ReleaseToolingTest extends TestCase
     {
         $process = new Process(array_merge(['bash', base_path("scripts/deploy/{$script}")], $args));
         $process->run();
+
         return $process;
     }
 
     private function makeRelease(string $sha): void
     {
-        File::makeDirectory($this->root . "/releases/{$sha}", 0755, true);
+        File::makeDirectory($this->root . "/releases/{$sha}", 0o755, true);
         File::put($this->root . "/releases/{$sha}/marker.txt", $sha);
     }
 

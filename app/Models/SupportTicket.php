@@ -13,7 +13,10 @@ use Illuminate\Support\Str;
 
 class SupportTicket extends Model
 {
-    use HasFactory, HasUlids, SoftDeletes, TenantScope;
+    use HasFactory;
+    use HasUlids;
+    use SoftDeletes;
+    use TenantScope;
 
     protected $fillable = [
         'tenant_id',
@@ -29,7 +32,7 @@ class SupportTicket extends Model
         'closed_at',
         'closed_by',
         'attachments',
-        'metadata'
+        'metadata',
     ];
 
     protected $casts = [
@@ -40,11 +43,11 @@ class SupportTicket extends Model
         'due_date' => 'datetime',
         'closed_at' => 'datetime',
         'attachments' => 'array',
-        'metadata' => 'array'
+        'metadata' => 'array',
     ];
 
     /**
-     * Get the user who created the ticket
+     * Get the user who created the ticket.
      */
     public function user(): BelongsTo
     {
@@ -52,7 +55,7 @@ class SupportTicket extends Model
     }
 
     /**
-     * Get the user assigned to the ticket
+     * Get the user assigned to the ticket.
      */
     public function assignedTo(): BelongsTo
     {
@@ -60,7 +63,7 @@ class SupportTicket extends Model
     }
 
     /**
-     * Get the user who closed the ticket
+     * Get the user who closed the ticket.
      */
     public function closedBy(): BelongsTo
     {
@@ -68,7 +71,7 @@ class SupportTicket extends Model
     }
 
     /**
-     * Get the messages for the ticket
+     * Get the messages for the ticket.
      */
     public function messages(): HasMany
     {
@@ -76,7 +79,7 @@ class SupportTicket extends Model
     }
 
     /**
-     * Scope for open tickets
+     * Scope for open tickets.
      */
     public function scopeOpen($query)
     {
@@ -84,7 +87,7 @@ class SupportTicket extends Model
     }
 
     /**
-     * Scope for in progress tickets
+     * Scope for in progress tickets.
      */
     public function scopeInProgress($query)
     {
@@ -92,7 +95,7 @@ class SupportTicket extends Model
     }
 
     /**
-     * Scope for resolved tickets
+     * Scope for resolved tickets.
      */
     public function scopeResolved($query)
     {
@@ -100,7 +103,7 @@ class SupportTicket extends Model
     }
 
     /**
-     * Scope for closed tickets
+     * Scope for closed tickets.
      */
     public function scopeClosed($query)
     {
@@ -108,7 +111,7 @@ class SupportTicket extends Model
     }
 
     /**
-     * Scope for urgent tickets
+     * Scope for urgent tickets.
      */
     public function scopeUrgent($query)
     {
@@ -116,7 +119,7 @@ class SupportTicket extends Model
     }
 
     /**
-     * Scope for high priority tickets
+     * Scope for high priority tickets.
      */
     public function scopeHighPriority($query)
     {
@@ -124,7 +127,7 @@ class SupportTicket extends Model
     }
 
     /**
-     * Scope for overdue tickets
+     * Scope for overdue tickets.
      */
     public function scopeOverdue($query)
     {
@@ -133,7 +136,7 @@ class SupportTicket extends Model
     }
 
     /**
-     * Scope for assigned tickets
+     * Scope for assigned tickets.
      */
     public function scopeAssigned($query)
     {
@@ -141,7 +144,7 @@ class SupportTicket extends Model
     }
 
     /**
-     * Scope for unassigned tickets
+     * Scope for unassigned tickets.
      */
     public function scopeUnassigned($query)
     {
@@ -149,7 +152,7 @@ class SupportTicket extends Model
     }
 
     /**
-     * Scope for tickets assigned to user
+     * Scope for tickets assigned to user.
      */
     public function scopeAssignedTo($query, $userId)
     {
@@ -157,7 +160,7 @@ class SupportTicket extends Model
     }
 
     /**
-     * Scope for tickets created by user
+     * Scope for tickets created by user.
      */
     public function scopeCreatedBy($query, $userId)
     {
@@ -165,7 +168,7 @@ class SupportTicket extends Model
     }
 
     /**
-     * Get ticket age in days
+     * Get ticket age in days.
      */
     public function getAgeAttribute()
     {
@@ -173,19 +176,19 @@ class SupportTicket extends Model
     }
 
     /**
-     * Get resolution time in hours
+     * Get resolution time in hours.
      */
     public function getResolutionTimeAttribute()
     {
         if ($this->closed_at) {
             return $this->created_at->diffInHours($this->closed_at);
         }
-        
+
         return null;
     }
 
     /**
-     * Check if ticket is overdue
+     * Check if ticket is overdue.
      */
     public function getIsOverdueAttribute()
     {
@@ -193,11 +196,11 @@ class SupportTicket extends Model
     }
 
     /**
-     * Get status badge class
+     * Get status badge class.
      */
     public function getStatusBadgeClassAttribute()
     {
-        return match($this->status) {
+        return match ($this->status) {
             'open' => 'badge-warning',
             'in_progress' => 'badge-info',
             'pending_customer' => 'badge-secondary',
@@ -208,11 +211,11 @@ class SupportTicket extends Model
     }
 
     /**
-     * Get priority badge class
+     * Get priority badge class.
      */
     public function getPriorityBadgeClassAttribute()
     {
-        return match($this->priority) {
+        return match ($this->priority) {
             'urgent' => 'badge-danger',
             'high' => 'badge-warning',
             'medium' => 'badge-info',
@@ -222,11 +225,11 @@ class SupportTicket extends Model
     }
 
     /**
-     * Get category badge class
+     * Get category badge class.
      */
     public function getCategoryBadgeClassAttribute()
     {
-        return match($this->category) {
+        return match ($this->category) {
             'technical' => 'badge-danger',
             'billing' => 'badge-warning',
             'feature_request' => 'badge-info',
@@ -237,11 +240,11 @@ class SupportTicket extends Model
     }
 
     /**
-     * Get status label
+     * Get status label.
      */
     public function getStatusLabelAttribute()
     {
-        return match($this->status) {
+        return match ($this->status) {
             'open' => 'Open',
             'in_progress' => 'In Progress',
             'pending_customer' => 'Pending Customer',
@@ -252,11 +255,11 @@ class SupportTicket extends Model
     }
 
     /**
-     * Get priority label
+     * Get priority label.
      */
     public function getPriorityLabelAttribute()
     {
-        return match($this->priority) {
+        return match ($this->priority) {
             'urgent' => 'Urgent',
             'high' => 'High',
             'medium' => 'Medium',
@@ -266,11 +269,11 @@ class SupportTicket extends Model
     }
 
     /**
-     * Get category label
+     * Get category label.
      */
     public function getCategoryLabelAttribute()
     {
-        return match($this->category) {
+        return match ($this->category) {
             'technical' => 'Technical Issue',
             'billing' => 'Billing Question',
             'feature_request' => 'Feature Request',
@@ -281,7 +284,7 @@ class SupportTicket extends Model
     }
 
     /**
-     * Mark ticket as read
+     * Mark ticket as read.
      */
     public function markAsRead()
     {
@@ -289,7 +292,7 @@ class SupportTicket extends Model
     }
 
     /**
-     * Check if ticket has unread messages
+     * Check if ticket has unread messages.
      */
     public function hasUnreadMessages()
     {
@@ -303,7 +306,7 @@ class SupportTicket extends Model
     }
 
     /**
-     * Get unread message count
+     * Get unread message count.
      */
     public function getUnreadMessageCountAttribute()
     {
@@ -317,7 +320,7 @@ class SupportTicket extends Model
     }
 
     /**
-     * Get latest message
+     * Get latest message.
      */
     public function getLatestMessageAttribute()
     {
@@ -325,7 +328,7 @@ class SupportTicket extends Model
     }
 
     /**
-     * Get ticket activity summary
+     * Get ticket activity summary.
      */
     public function getActivitySummaryAttribute()
     {
@@ -338,7 +341,7 @@ class SupportTicket extends Model
     }
 
     /**
-     * Get SLA status
+     * Get SLA status.
      */
     public function getSlaStatusAttribute()
     {
@@ -351,7 +354,7 @@ class SupportTicket extends Model
         }
 
         $hoursUntilDue = $this->due_date ? now()->diffInHours($this->due_date, false) : null;
-        
+
         if ($hoursUntilDue !== null) {
             if ($hoursUntilDue < 0) {
                 return 'breach';
@@ -364,11 +367,11 @@ class SupportTicket extends Model
     }
 
     /**
-     * Get SLA status badge class
+     * Get SLA status badge class.
      */
     public function getSlaStatusBadgeClassAttribute()
     {
-        return match($this->sla_status) {
+        return match ($this->sla_status) {
             'completed' => 'badge-success',
             'on_track' => 'badge-success',
             'warning' => 'badge-warning',
@@ -378,11 +381,11 @@ class SupportTicket extends Model
     }
 
     /**
-     * Get SLA status label
+     * Get SLA status label.
      */
     public function getSlaStatusLabelAttribute()
     {
-        return match($this->sla_status) {
+        return match ($this->sla_status) {
             'completed' => 'Completed',
             'on_track' => 'On Track',
             'warning' => 'Warning',
@@ -392,7 +395,7 @@ class SupportTicket extends Model
     }
 
     /**
-     * Boot the model
+     * Boot the model.
      */
     protected static function boot()
     {
@@ -414,7 +417,7 @@ class SupportTicket extends Model
     }
 
     /**
-     * Generate unique ticket number
+     * Generate unique ticket number.
      */
     public static function generateTicketNumber(?string $tenantId = null): string
     {

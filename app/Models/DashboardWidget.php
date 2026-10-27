@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -9,8 +11,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Model DashboardWidget - Quản lý các widget có sẵn trong hệ thống
- * 
+ * Model DashboardWidget - Quản lý các widget có sẵn trong hệ thống.
+ *
  * @property string $id
  * @property string $name Tên widget
  * @property string $type Loại widget (chart, table, card, metric, alert)
@@ -23,13 +25,15 @@ use Illuminate\Support\Facades\DB;
  */
 class DashboardWidget extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids;
+    use HasFactory;
 
     protected $table = 'dashboard_widgets';
-    
+
     protected $keyType = 'string';
+
     public $incrementing = false;
-    
+
     protected $fillable = [
         'name',
         'code',
@@ -40,7 +44,7 @@ class DashboardWidget extends Model
         'permissions',
         'is_active',
         'description',
-        'tenant_id'
+        'tenant_id',
     ];
 
     protected $casts = [
@@ -51,7 +55,7 @@ class DashboardWidget extends Model
     ];
 
     /**
-     * Các loại widget hợp lệ
+     * Các loại widget hợp lệ.
      */
     public const TYPE_CHART = 'chart';
     public const TYPE_TABLE = 'table';
@@ -68,7 +72,7 @@ class DashboardWidget extends Model
     ];
 
     /**
-     * Các danh mục widget hợp lệ
+     * Các danh mục widget hợp lệ.
      */
     public const CATEGORY_OVERVIEW = 'overview';
     public const CATEGORY_PROGRESS = 'progress';
@@ -89,7 +93,7 @@ class DashboardWidget extends Model
     ];
 
     /**
-     * Relationship: Widget có nhiều cache data
+     * Relationship: Widget có nhiều cache data.
      */
     public function cacheData(): HasMany
     {
@@ -97,7 +101,7 @@ class DashboardWidget extends Model
     }
 
     /**
-     * Scope: Lọc theo type
+     * Scope: Lọc theo type.
      */
     public function scopeByType($query, string $type)
     {
@@ -105,7 +109,7 @@ class DashboardWidget extends Model
     }
 
     /**
-     * Scope: Lọc theo category
+     * Scope: Lọc theo category.
      */
     public function scopeByCategory($query, string $category)
     {
@@ -113,7 +117,7 @@ class DashboardWidget extends Model
     }
 
     /**
-     * Scope: Chỉ lấy widget active
+     * Scope: Chỉ lấy widget active.
      */
     public function scopeActive($query)
     {
@@ -121,7 +125,7 @@ class DashboardWidget extends Model
     }
 
     /**
-     * Scope: Lọc theo role permissions
+     * Scope: Lọc theo role permissions.
      */
     public function scopeForRole($query, string $role)
     {
@@ -147,11 +151,12 @@ class DashboardWidget extends Model
     private function sqlitePermissionPattern(string $role): string
     {
         $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $role);
+
         return '%"' . $escaped . '"%';
     }
 
     /**
-     * Kiểm tra widget có phù hợp với role không
+     * Kiểm tra widget có phù hợp với role không.
      */
     public function isAvailableForRole(string $role): bool
     {
@@ -180,7 +185,7 @@ class DashboardWidget extends Model
     }
 
     /**
-     * Lấy cấu hình hiển thị cho widget
+     * Lấy cấu hình hiển thị cho widget.
      */
     public function getDisplayConfig(): array
     {
@@ -188,7 +193,7 @@ class DashboardWidget extends Model
     }
 
     /**
-     * Lấy cấu hình dữ liệu cho widget
+     * Lấy cấu hình dữ liệu cho widget.
      */
     public function getDataSourceConfig(): array
     {

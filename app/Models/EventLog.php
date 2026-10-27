@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -8,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * EventLog model đại diện cho dòng log từ EventLogListener
+ * EventLog model đại diện cho dòng log từ EventLogListener.
  *
  * @property string $id
  * @property string|null $event_name
@@ -24,10 +26,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class EventLog extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids;
+    use HasFactory;
 
     protected $table = 'event_logs';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [

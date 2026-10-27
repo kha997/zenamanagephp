@@ -2,10 +2,10 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\User;
 
 class SessionAuthMiddleware
 {
@@ -21,10 +21,10 @@ class SessionAuthMiddleware
         // Check if user is logged in via session but not in Auth facade
         if (session()->has('user') && !Auth::check()) {
             $userData = session('user');
-            
+
             // Try to find user in database first
             $user = User::where('email', $userData['email'])->first();
-            
+
             if (!$user) {
                 // Create user if not exists (for demo users)
                 $user = User::create([
@@ -33,7 +33,7 @@ class SessionAuthMiddleware
                     'password' => bcrypt('password123'), // Default password for demo users
                     'is_active' => true,
                 ]);
-                
+
                 // Assign role if not exists
                 if (!$user->hasRole($userData['role'])) {
                     $role = \App\Models\Role::where('name', $userData['role'])->first();
@@ -42,7 +42,7 @@ class SessionAuthMiddleware
                     }
                 }
             }
-            
+
             // Set the user in Auth facade
             Auth::setUser($user);
         }

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Factories;
 
@@ -27,10 +29,10 @@ class EventLogFactory extends Factory
             'actor_id' => null,
             'entity_id' => null,
             'payload' => [
-                'message' => $this->faker->sentence()
+                'message' => $this->faker->sentence(),
             ],
             'event_data' => [
-                'details' => $this->faker->sentence()
+                'details' => $this->faker->sentence(),
             ],
             'changed_fields' => ['field' => $this->faker->word()],
             'source_module' => 'Testing',

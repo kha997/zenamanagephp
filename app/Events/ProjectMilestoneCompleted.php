@@ -1,19 +1,21 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Events;
 
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
-use Illuminate\Foundation\Events\Dispatchable;
 
 /**
- * ProjectMilestoneCompleted Event - Broadcast khi milestone được hoàn thành
+ * ProjectMilestoneCompleted Event - Broadcast khi milestone được hoàn thành.
  */
 class ProjectMilestoneCompleted implements ShouldBroadcast
 {
-
     public ProjectMilestone $milestone;
+
     public Project $project;
+
     public string $completedBy;
 
     /**
@@ -33,7 +35,7 @@ class ProjectMilestoneCompleted implements ShouldBroadcast
     {
         return [
             new PrivateChannel('project.' . $this->project->id),
-            new PrivateChannel('tenant.' . $this->project->tenant_id)
+            new PrivateChannel('tenant.' . $this->project->tenant_id),
         ];
     }
 
@@ -51,16 +53,16 @@ class ProjectMilestoneCompleted implements ShouldBroadcast
                 'target_date' => $this->milestone->target_date?->toISOString(),
                 'completed_date' => $this->milestone->completed_date?->toISOString(),
                 'status' => $this->milestone->status,
-                'order' => $this->milestone->order
+                'order' => $this->milestone->order,
             ],
             'project' => [
                 'id' => $this->project->id,
                 'name' => $this->project->name,
                 'code' => $this->project->code,
-                'progress' => $this->project->progress
+                'progress' => $this->project->progress,
             ],
             'completed_by' => $this->completedBy,
-            'timestamp' => now()->toISOString()
+            'timestamp' => now()->toISOString(),
         ];
     }
 

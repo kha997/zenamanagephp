@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Unit\Policies;
 
-use App\Models\User;
 use App\Models\Component;
 use App\Models\Tenant;
+use App\Models\User;
 use App\Policies\ComponentPolicy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -14,29 +14,32 @@ class ComponentPolicyTest extends TestCase
     use RefreshDatabase;
 
     protected $policy;
+
     protected $tenant;
+
     protected $user;
+
     protected $component;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->policy = new ComponentPolicy();
-        
+
         $this->tenant = Tenant::factory()->create([
             'slug' => 'test-tenant-' . uniqid(),
-            'name' => 'Test Tenant'
+            'name' => 'Test Tenant',
         ]);
-        
+
         $this->user = User::factory()->create([
             'tenant_id' => $this->tenant->id,
-            'email' => 'test@example-' . uniqid() . '.com'
+            'email' => 'test@example-' . uniqid() . '.com',
         ]);
-        
+
         $this->component = Component::factory()->create([
             'tenant_id' => $this->tenant->id,
-            'name' => 'Test Component'
+            'name' => 'Test Component',
         ]);
     }
 
@@ -50,7 +53,7 @@ class ComponentPolicyTest extends TestCase
     {
         $otherTenant = Tenant::factory()->create(['slug' => 'other-tenant-' . uniqid()]);
         $otherComponent = Component::factory()->create(['tenant_id' => $otherTenant->id]);
-        
+
         $this->user->assignRole('pm');
         $this->assertFalse($this->policy->view($this->user, $otherComponent));
     }

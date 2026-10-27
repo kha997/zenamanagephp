@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Traits;
 
@@ -7,20 +9,18 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Trait DatabaseTestTrait
- * 
+ * Trait DatabaseTestTrait.
+ *
  * Provides database utilities for testing
  * Handles database setup, cleanup, and assertions
- * 
- * @package Tests\Traits
  */
 trait DatabaseTestTrait
 {
     use RefreshDatabase;
 
     /**
-     * Setup test database with fresh migrations and seeders
-     * 
+     * Setup test database with fresh migrations and seeders.
+     *
      * @return void
      */
     protected function setupTestDatabase(): void
@@ -30,8 +30,8 @@ trait DatabaseTestTrait
     }
 
     /**
-     * Assert that a table exists in the database
-     * 
+     * Assert that a table exists in the database.
+     *
      * @param string $table
      * @return void
      */
@@ -44,8 +44,8 @@ trait DatabaseTestTrait
     }
 
     /**
-     * Assert that a column exists in a table
-     * 
+     * Assert that a column exists in a table.
+     *
      * @param string $table
      * @param string $column
      * @return void
@@ -59,8 +59,8 @@ trait DatabaseTestTrait
     }
 
     /**
-     * Assert database has record matching conditions
-     * 
+     * Assert database has record matching conditions.
+     *
      * @param string $table
      * @param array $conditions
      * @return void
@@ -71,8 +71,8 @@ trait DatabaseTestTrait
     }
 
     /**
-     * Assert database missing record matching conditions
-     * 
+     * Assert database missing record matching conditions.
+     *
      * @param string $table
      * @param array $conditions
      * @return void
@@ -83,8 +83,8 @@ trait DatabaseTestTrait
     }
 
     /**
-     * Get record count from table with optional conditions
-     * 
+     * Get record count from table with optional conditions.
+     *
      * @param string $table
      * @param array $conditions
      * @return int
@@ -92,34 +92,34 @@ trait DatabaseTestTrait
     protected function getRecordCount(string $table, array $conditions = []): int
     {
         $query = DB::table($table);
-        
+
         foreach ($conditions as $column => $value) {
             $query->where($column, $value);
         }
-        
+
         return $query->count();
     }
 
     /**
-     * Truncate specified tables
-     * 
+     * Truncate specified tables.
+     *
      * @param array $tables
      * @return void
      */
     protected function truncateTables(array $tables): void
     {
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-        
+
         foreach ($tables as $table) {
             DB::table($table)->truncate();
         }
-        
+
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
     }
 
     /**
-     * Execute raw SQL and return results
-     * 
+     * Execute raw SQL and return results.
+     *
      * @param string $sql
      * @param array $bindings
      * @return array

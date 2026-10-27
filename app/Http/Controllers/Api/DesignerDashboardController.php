@@ -1,9 +1,11 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
+use App\Http\Controllers\Controller;
 use App\Models\Rfi;
 use App\Models\Submittal;
 use App\Models\Task;

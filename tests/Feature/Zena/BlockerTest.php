@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Zena;
 
@@ -18,9 +20,13 @@ class BlockerTest extends TestCase
     use TenantUserFactoryTrait;
 
     private Tenant $tenant;
+
     private User $user;
+
     private Project $project;
+
     private Task $task;
+
     private DesignItem $item;
 
     protected function setUp(): void

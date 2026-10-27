@@ -8,13 +8,14 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Security Monitoring Service
- * 
+ * Security Monitoring Service.
+ *
  * Monitors and alerts on security events
  */
 class SecurityMonitoringService
 {
     private SecureAuditService $auditService;
+
     private array $alertThresholds;
 
     public function __construct(SecureAuditService $auditService)
@@ -24,18 +25,18 @@ class SecurityMonitoringService
             'failed_logins_per_hour' => 10,
             'suspicious_requests_per_hour' => 20,
             'file_uploads_per_hour' => 50,
-            'admin_actions_per_hour' => 100
+            'admin_actions_per_hour' => 100,
         ]);
     }
 
     /**
-     * Monitor failed login attempts
+     * Monitor failed login attempts.
      */
     public function monitorFailedLogins(string $ip, string $email = null): void
     {
         $key = "failed_logins:{$ip}";
         $count = Cache::get($key, 0) + 1;
-        
+
         Cache::put($key, $count, 3600); // 1 hour
 
         // Log failed login
@@ -47,7 +48,7 @@ class SecurityMonitoringService
             newData: [
                 'ip_address' => $ip,
                 'email' => $email,
-                'attempt_count' => $count
+                'attempt_count' => $count,
             ]
         );
 
@@ -57,19 +58,19 @@ class SecurityMonitoringService
                 'ip' => $ip,
                 'email' => $email,
                 'count' => $count,
-                'threshold' => $this->alertThresholds['failed_logins_per_hour']
+                'threshold' => $this->alertThresholds['failed_logins_per_hour'],
             ]);
         }
     }
 
     /**
-     * Monitor suspicious requests
+     * Monitor suspicious requests.
      */
     public function monitorSuspiciousRequest(string $ip, string $path, array $details = []): void
     {
         $key = "suspicious_requests:{$ip}";
         $count = Cache::get($key, 0) + 1;
-        
+
         Cache::put($key, $count, 3600); // 1 hour
 
         // Log suspicious request
@@ -81,7 +82,7 @@ class SecurityMonitoringService
             newData: array_merge([
                 'ip_address' => $ip,
                 'path' => $path,
-                'attempt_count' => $count
+                'attempt_count' => $count,
             ], $details)
         );
 
@@ -92,19 +93,19 @@ class SecurityMonitoringService
                 'path' => $path,
                 'count' => $count,
                 'threshold' => $this->alertThresholds['suspicious_requests_per_hour'],
-                'details' => $details
+                'details' => $details,
             ]);
         }
     }
 
     /**
-     * Monitor file uploads
+     * Monitor file uploads.
      */
     public function monitorFileUpload(string $userId, string $filename, bool $successful = true): void
     {
         $key = "file_uploads:{$userId}";
         $count = Cache::get($key, 0) + 1;
-        
+
         Cache::put($key, $count, 3600); // 1 hour
 
         // Log file upload
@@ -116,7 +117,7 @@ class SecurityMonitoringService
             newData: [
                 'filename' => $filename,
                 'upload_count' => $count,
-                'successful' => $successful
+                'successful' => $successful,
             ]
         );
 
@@ -126,19 +127,19 @@ class SecurityMonitoringService
                 'user_id' => $userId,
                 'filename' => $filename,
                 'count' => $count,
-                'threshold' => $this->alertThresholds['file_uploads_per_hour']
+                'threshold' => $this->alertThresholds['file_uploads_per_hour'],
             ]);
         }
     }
 
     /**
-     * Monitor admin actions
+     * Monitor admin actions.
      */
     public function monitorAdminAction(string $userId, string $action, array $details = []): void
     {
         $key = "admin_actions:{$userId}";
         $count = Cache::get($key, 0) + 1;
-        
+
         Cache::put($key, $count, 3600); // 1 hour
 
         // Log admin action
@@ -149,7 +150,7 @@ class SecurityMonitoringService
             entityId: $userId,
             newData: array_merge([
                 'action' => $action,
-                'action_count' => $count
+                'action_count' => $count,
             ], $details)
         );
 
@@ -160,18 +161,20 @@ class SecurityMonitoringService
                 'action' => $action,
                 'count' => $count,
                 'threshold' => $this->alertThresholds['admin_actions_per_hour'],
-                'details' => $details
+                'details' => $details,
             ]);
         }
     }
 
     /**
-     * Monitor unusual login patterns
+     * Monitor unusual login patterns.
      */
     public function monitorUnusualLogin(string $userId, array $loginData): void
     {
         $user = \App\Models\User::find($userId);
-        if (!$user) return;
+        if (!$user) {
+            return;
+        }
 
         $unusualPatterns = [];
 
@@ -206,27 +209,27 @@ class SecurityMonitoringService
                 'user_id' => $userId,
                 'user_email' => $user->email,
                 'patterns' => $unusualPatterns,
-                'login_data' => $loginData
+                'login_data' => $loginData,
             ]);
         }
     }
 
     /**
-     * Generate security report
+     * Generate security report.
      */
     public function generateSecurityReport(int $days = 7): array
     {
         $startDate = Carbon::now()->subDays($days);
-        
+
         $report = [
             'period' => [
                 'start' => $startDate,
                 'end' => Carbon::now(),
-                'days' => $days
+                'days' => $days,
             ],
             'summary' => [],
             'alerts' => [],
-            'recommendations' => []
+            'recommendations' => [],
         ];
 
         // Failed logins
@@ -268,7 +271,7 @@ class SecurityMonitoringService
     }
 
     /**
-     * Trigger security alert
+     * Trigger security alert.
      */
     private function triggerAlert(string $alertType, array $data): void
     {
@@ -276,7 +279,7 @@ class SecurityMonitoringService
             'type' => $alertType,
             'severity' => $this->getAlertSeverity($alertType),
             'timestamp' => Carbon::now(),
-            'data' => $data
+            'data' => $data,
         ];
 
         // Log alert
@@ -285,7 +288,7 @@ class SecurityMonitoringService
         // Store in cache for dashboard
         $alerts = Cache::get('security_alerts', []);
         $alerts[] = $alert;
-        
+
         // Keep only last 100 alerts
         $alerts = array_slice($alerts, -100);
         Cache::put('security_alerts', $alerts, 86400); // 24 hours
@@ -295,7 +298,7 @@ class SecurityMonitoringService
     }
 
     /**
-     * Get alert severity
+     * Get alert severity.
      */
     private function getAlertSeverity(string $alertType): string
     {
@@ -304,14 +307,14 @@ class SecurityMonitoringService
             'suspicious_requests_threshold' => 'high',
             'file_uploads_threshold' => 'low',
             'admin_actions_threshold' => 'medium',
-            'unusual_login_pattern' => 'high'
+            'unusual_login_pattern' => 'high',
         ];
 
         return $severityMap[$alertType] ?? 'low';
     }
 
     /**
-     * Send alert notification
+     * Send alert notification.
      */
     private function sendAlertNotification(array $alert): void
     {
@@ -321,7 +324,7 @@ class SecurityMonitoringService
     }
 
     /**
-     * Generate security recommendations
+     * Generate security recommendations.
      */
     private function generateRecommendations(array $summary): array
     {
@@ -331,7 +334,7 @@ class SecurityMonitoringService
             $recommendations[] = [
                 'type' => 'security',
                 'priority' => 'high',
-                'message' => 'High number of failed login attempts detected. Consider implementing additional security measures.'
+                'message' => 'High number of failed login attempts detected. Consider implementing additional security measures.',
             ];
         }
 
@@ -339,7 +342,7 @@ class SecurityMonitoringService
             $recommendations[] = [
                 'type' => 'security',
                 'priority' => 'high',
-                'message' => 'Multiple suspicious requests detected. Review and strengthen input validation.'
+                'message' => 'Multiple suspicious requests detected. Review and strengthen input validation.',
             ];
         }
 
@@ -347,7 +350,7 @@ class SecurityMonitoringService
             $recommendations[] = [
                 'type' => 'performance',
                 'priority' => 'medium',
-                'message' => 'High file upload activity. Monitor storage usage and consider implementing quotas.'
+                'message' => 'High file upload activity. Monitor storage usage and consider implementing quotas.',
             ];
         }
 

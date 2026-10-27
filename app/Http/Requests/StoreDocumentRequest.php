@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Requests;
 
@@ -6,14 +8,12 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Form Request để xác thực dữ liệu khi tạo Document mới
- * 
- * @package Src\DocumentManagement\Requests
+ * Form Request để xác thực dữ liệu khi tạo Document mới.
  */
 class StoreDocumentRequest extends FormRequest
 {
     /**
-     * Xác định user có quyền thực hiện request này không
+     * Xác định user có quyền thực hiện request này không.
      */
     public function authorize(): bool
     {
@@ -21,7 +21,7 @@ class StoreDocumentRequest extends FormRequest
     }
 
     /**
-     * Các quy tắc validation cho request
+     * Các quy tắc validation cho request.
      */
     public function rules(): array
     {
@@ -29,55 +29,55 @@ class StoreDocumentRequest extends FormRequest
             'project_id' => [
                 'required',
                 'integer',
-                'exists:projects,id'
+                'exists:projects,id',
             ],
             'title' => [
                 'required',
                 'string',
-                'max:255'
+                'max:255',
             ],
             'description' => [
                 'nullable',
                 'string',
-                'max:2000'
+                'max:2000',
             ],
             'linked_entity_type' => [
                 'nullable',
-                Rule::in(['task', 'diary', 'cr'])
+                Rule::in(['task', 'diary', 'cr']),
             ],
             'linked_entity_id' => [
                 'nullable',
                 'integer',
-                'required_with:linked_entity_type'
+                'required_with:linked_entity_type',
             ],
             'tags' => [
                 'nullable',
-                'array'
+                'array',
             ],
             'tags.*' => [
                 'string',
-                'max:50'
+                'max:50',
             ],
             'visibility' => [
                 'required',
-                Rule::in(['internal', 'client'])
+                Rule::in(['internal', 'client']),
             ],
             'file' => [
                 'required',
                 'file',
                 'max:10240', // 10MB
-                'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,jpg,jpeg,png,gif,zip,rar'
+                'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,jpg,jpeg,png,gif,zip,rar',
             ],
             'comment' => [
                 'nullable',
                 'string',
-                'max:500'
-            ]
+                'max:500',
+            ],
         ];
     }
 
     /**
-     * Custom error messages
+     * Custom error messages.
      */
     public function messages(): array
     {
@@ -90,19 +90,19 @@ class StoreDocumentRequest extends FormRequest
             'visibility.in' => 'Visibility must be either internal or client',
             'file.required' => 'File is required',
             'file.max' => 'File size cannot exceed 10MB',
-            'file.mimes' => 'File type not supported'
+            'file.mimes' => 'File type not supported',
         ];
     }
 
     /**
-     * Prepare data for validation
+     * Prepare data for validation.
      */
     protected function prepareForValidation(): void
     {
         // Convert tags string to array if needed
         if ($this->has('tags') && is_string($this->tags)) {
             $this->merge([
-                'tags' => array_filter(array_map('trim', explode(',', $this->tags)))
+                'tags' => array_filter(array_map('trim', explode(',', $this->tags))),
             ]);
         }
     }

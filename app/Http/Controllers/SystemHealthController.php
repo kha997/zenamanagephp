@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 class SystemHealthController extends Controller
 {
     /**
-     * Get comprehensive system health status
+     * Get comprehensive system health status.
      */
     public function index()
     {
@@ -21,21 +21,21 @@ class SystemHealthController extends Controller
             'services' => [],
             'metrics' => [],
             'alerts' => [],
-            'recommendations' => []
+            'recommendations' => [],
         ];
 
         // Check database health
         $health['services']['database'] = $this->checkDatabaseHealth();
-        
+
         // Check Redis health
         $health['services']['redis'] = $this->checkRedisHealth();
-        
+
         // Check storage health
         $health['services']['storage'] = $this->checkStorageHealth();
-        
+
         // Check queue health
         $health['services']['queue'] = $this->checkQueueHealth();
-        
+
         // Check WebSocket health
         $health['services']['websocket'] = $this->checkWebSocketHealth();
 
@@ -55,7 +55,7 @@ class SystemHealthController extends Controller
     }
 
     /**
-     * Check database health
+     * Check database health.
      */
     private function checkDatabaseHealth()
     {
@@ -66,13 +66,13 @@ class SystemHealthController extends Controller
 
             // Get connection count
             $connections = DB::select("SHOW STATUS LIKE 'Threads_connected'")[0]->Value ?? 0;
-            
+
             // Get database size
-            $size = DB::select("
+            $size = DB::select('
                 SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS size_mb
                 FROM information_schema.tables 
                 WHERE table_schema = DATABASE()
-            ")[0]->size_mb ?? 0;
+            ')[0]->size_mb ?? 0;
 
             // Check for slow queries
             $slowQueries = DB::select("SHOW STATUS LIKE 'Slow_queries'")[0]->Value ?? 0;
@@ -83,19 +83,19 @@ class SystemHealthController extends Controller
                 'connections' => (int) $connections,
                 'size_mb' => $size,
                 'slow_queries' => (int) $slowQueries,
-                'last_check' => now()->toISOString()
+                'last_check' => now()->toISOString(),
             ];
         } catch (\Exception $e) {
             return [
                 'status' => 'unhealthy',
                 'error' => $e->getMessage(),
-                'last_check' => now()->toISOString()
+                'last_check' => now()->toISOString(),
             ];
         }
     }
 
     /**
-     * Check Redis health
+     * Check Redis health.
      */
     private function checkRedisHealth()
     {
@@ -115,19 +115,19 @@ class SystemHealthController extends Controller
                 'connected_clients' => $info['connected_clients'] ?? 0,
                 'keyspace_hits' => $info['keyspace_hits'] ?? 0,
                 'keyspace_misses' => $info['keyspace_misses'] ?? 0,
-                'last_check' => now()->toISOString()
+                'last_check' => now()->toISOString(),
             ];
         } catch (\Exception $e) {
             return [
                 'status' => 'unhealthy',
                 'error' => $e->getMessage(),
-                'last_check' => now()->toISOString()
+                'last_check' => now()->toISOString(),
             ];
         }
     }
 
     /**
-     * Check storage health
+     * Check storage health.
      */
     private function checkStorageHealth()
     {
@@ -142,7 +142,7 @@ class SystemHealthController extends Controller
                 'storage/logs' => storage_path('logs'),
                 'storage/app' => storage_path('app'),
                 'storage/framework' => storage_path('framework'),
-                'public/uploads' => public_path('uploads')
+                'public/uploads' => public_path('uploads'),
             ];
 
             $directoryStatus = [];
@@ -150,7 +150,7 @@ class SystemHealthController extends Controller
                 $directoryStatus[$name] = [
                     'exists' => is_dir($path),
                     'writable' => is_writable($path),
-                    'size' => $this->getDirectorySize($path)
+                    'size' => $this->getDirectorySize($path),
                 ];
             }
 
@@ -161,19 +161,19 @@ class SystemHealthController extends Controller
                 'free_space' => $this->formatBytes($freeSpace),
                 'usage_percentage' => $usagePercentage,
                 'directories' => $directoryStatus,
-                'last_check' => now()->toISOString()
+                'last_check' => now()->toISOString(),
             ];
         } catch (\Exception $e) {
             return [
                 'status' => 'unhealthy',
                 'error' => $e->getMessage(),
-                'last_check' => now()->toISOString()
+                'last_check' => now()->toISOString(),
             ];
         }
     }
 
     /**
-     * Check queue health
+     * Check queue health.
      */
     private function checkQueueHealth()
     {
@@ -186,19 +186,19 @@ class SystemHealthController extends Controller
                 'status' => 'healthy',
                 'pending_jobs' => $pendingJobs,
                 'failed_jobs' => $failedJobs,
-                'last_check' => now()->toISOString()
+                'last_check' => now()->toISOString(),
             ];
         } catch (\Exception $e) {
             return [
                 'status' => 'unhealthy',
                 'error' => $e->getMessage(),
-                'last_check' => now()->toISOString()
+                'last_check' => now()->toISOString(),
             ];
         }
     }
 
     /**
-     * Check WebSocket health
+     * Check WebSocket health.
      */
     private function checkWebSocketHealth()
     {
@@ -206,32 +206,33 @@ class SystemHealthController extends Controller
             // Check WebSocket server status
             $websocketPort = config('websocket.port', 6001);
             $connection = @fsockopen('localhost', $websocketPort, $errno, $errstr, 5);
-            
+
             if ($connection) {
                 fclose($connection);
+
                 return [
                     'status' => 'healthy',
                     'port' => $websocketPort,
-                    'last_check' => now()->toISOString()
+                    'last_check' => now()->toISOString(),
                 ];
             } else {
                 return [
                     'status' => 'unhealthy',
                     'error' => "Cannot connect to WebSocket server on port {$websocketPort}",
-                    'last_check' => now()->toISOString()
+                    'last_check' => now()->toISOString(),
                 ];
             }
         } catch (\Exception $e) {
             return [
                 'status' => 'unhealthy',
                 'error' => $e->getMessage(),
-                'last_check' => now()->toISOString()
+                'last_check' => now()->toISOString(),
             ];
         }
     }
 
     /**
-     * Get system metrics
+     * Get system metrics.
      */
     private function getSystemMetrics()
     {
@@ -248,7 +249,7 @@ class SystemHealthController extends Controller
             'usage_formatted' => $this->formatBytes($memoryUsage),
             'limit_bytes' => $memoryLimitBytes,
             'limit_formatted' => $this->formatBytes($memoryLimitBytes),
-            'percentage' => round($memoryPercentage, 2)
+            'percentage' => round($memoryPercentage, 2),
         ];
 
         // CPU usage (approximation)
@@ -256,7 +257,7 @@ class SystemHealthController extends Controller
         $metrics['cpu'] = [
             'load_average_1min' => $loadAverage[0] ?? 0,
             'load_average_5min' => $loadAverage[1] ?? 0,
-            'load_average_15min' => $loadAverage[2] ?? 0
+            'load_average_15min' => $loadAverage[2] ?? 0,
         ];
 
         // PHP version and extensions
@@ -266,7 +267,7 @@ class SystemHealthController extends Controller
             'memory_limit' => ini_get('memory_limit'),
             'max_execution_time' => ini_get('max_execution_time'),
             'upload_max_filesize' => ini_get('upload_max_filesize'),
-            'post_max_size' => ini_get('post_max_size')
+            'post_max_size' => ini_get('post_max_size'),
         ];
 
         // Laravel application info
@@ -276,14 +277,14 @@ class SystemHealthController extends Controller
             'debug_mode' => config('app.debug'),
             'cache_driver' => config('cache.default'),
             'session_driver' => config('session.driver'),
-            'queue_driver' => config('queue.default')
+            'queue_driver' => config('queue.default'),
         ];
 
         return $metrics;
     }
 
     /**
-     * Check for alerts
+     * Check for alerts.
      */
     private function checkAlerts()
     {
@@ -298,7 +299,7 @@ class SystemHealthController extends Controller
             $alerts[] = [
                 'type' => 'error',
                 'message' => "High error rate: {$recentErrors} errors in the last hour",
-                'severity' => 'high'
+                'severity' => 'high',
             ];
         }
 
@@ -308,13 +309,13 @@ class SystemHealthController extends Controller
             $alerts[] = [
                 'type' => 'storage',
                 'message' => "Critical disk usage: {$diskUsage['usage_percentage']}%",
-                'severity' => 'critical'
+                'severity' => 'critical',
             ];
         } elseif ($diskUsage['usage_percentage'] > 80) {
             $alerts[] = [
                 'type' => 'storage',
                 'message' => "High disk usage: {$diskUsage['usage_percentage']}%",
-                'severity' => 'warning'
+                'severity' => 'warning',
             ];
         }
 
@@ -324,13 +325,13 @@ class SystemHealthController extends Controller
             $alerts[] = [
                 'type' => 'memory',
                 'message' => "Critical memory usage: {$memoryUsage['percentage']}%",
-                'severity' => 'critical'
+                'severity' => 'critical',
             ];
         } elseif ($memoryUsage['percentage'] > 80) {
             $alerts[] = [
                 'type' => 'memory',
                 'message' => "High memory usage: {$memoryUsage['percentage']}%",
-                'severity' => 'warning'
+                'severity' => 'warning',
             ];
         }
 
@@ -338,7 +339,7 @@ class SystemHealthController extends Controller
     }
 
     /**
-     * Generate recommendations
+     * Generate recommendations.
      */
     private function generateRecommendations($health)
     {
@@ -349,7 +350,7 @@ class SystemHealthController extends Controller
             $recommendations[] = [
                 'category' => 'database',
                 'message' => 'Consider optimizing slow queries',
-                'priority' => 'medium'
+                'priority' => 'medium',
             ];
         }
 
@@ -358,7 +359,7 @@ class SystemHealthController extends Controller
             $recommendations[] = [
                 'category' => 'storage',
                 'message' => 'Consider cleaning up old files and logs',
-                'priority' => 'high'
+                'priority' => 'high',
             ];
         }
 
@@ -367,7 +368,7 @@ class SystemHealthController extends Controller
             $recommendations[] = [
                 'category' => 'performance',
                 'message' => 'Consider increasing memory limit or optimizing memory usage',
-                'priority' => 'high'
+                'priority' => 'high',
             ];
         }
 
@@ -375,7 +376,7 @@ class SystemHealthController extends Controller
     }
 
     /**
-     * Determine overall system status
+     * Determine overall system status.
      */
     private function determineOverallStatus($health)
     {
@@ -410,7 +411,7 @@ class SystemHealthController extends Controller
     }
 
     /**
-     * Get directory size
+     * Get directory size.
      */
     private function getDirectorySize($path)
     {
@@ -420,7 +421,7 @@ class SystemHealthController extends Controller
 
         $size = 0;
         $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($path));
-        
+
         foreach ($iterator as $file) {
             if ($file->isFile()) {
                 $size += $file->getSize();
@@ -431,7 +432,7 @@ class SystemHealthController extends Controller
     }
 
     /**
-     * Convert memory limit string to bytes
+     * Convert memory limit string to bytes.
      */
     private function convertToBytes($val)
     {
@@ -442,8 +443,10 @@ class SystemHealthController extends Controller
         switch ($last) {
             case 'g':
                 $val *= 1024;
+                // no break
             case 'm':
                 $val *= 1024;
+                // no break
             case 'k':
                 $val *= 1024;
         }
@@ -452,7 +455,7 @@ class SystemHealthController extends Controller
     }
 
     /**
-     * Format bytes to human readable format
+     * Format bytes to human readable format.
      */
     private function formatBytes($bytes, $precision = 2)
     {
@@ -466,7 +469,7 @@ class SystemHealthController extends Controller
     }
 
     /**
-     * Get performance metrics for dashboard
+     * Get performance metrics for dashboard.
      */
     public function getPerformanceMetrics()
     {
@@ -484,7 +487,7 @@ class SystemHealthController extends Controller
                 'min' => $values->min('metric_value'),
                 'trend' => $this->calculateTrend($values->take(10)->pluck('metric_value')->toArray()),
                 'unit' => $values->first()->metric_unit,
-                'category' => $values->first()->category
+                'category' => $values->first()->category,
             ];
         }
 
@@ -492,7 +495,7 @@ class SystemHealthController extends Controller
     }
 
     /**
-     * Calculate trend for metrics
+     * Calculate trend for metrics.
      */
     private function calculateTrend($values)
     {

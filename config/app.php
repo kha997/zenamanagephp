@@ -1,7 +1,8 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 return [
-
     /*
     |--------------------------------------------------------------------------
     | Application Name
@@ -147,7 +148,6 @@ return [
     */
 
     'providers' => [
-
         /*
          * Laravel Framework Service Providers...
          */
@@ -187,14 +187,14 @@ return [
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
         App\Providers\CustomServiceProvider::class,
-        
+
         /*
          * Z.E.N.A Custom Service Providers
          */
         App\Foundation\Providers\EventServiceProvider::class,
         // ... Z.E.N.A Event System
         Src\Foundation\Providers\EventBusServiceProvider::class,
-        
+
         /*
          * Custom Module Service Providers...
          */
@@ -207,7 +207,6 @@ return [
         Src\ChangeRequest\Providers\ChangeRequestServiceProvider::class,
         Src\DocumentManagement\Providers\DocumentManagementServiceProvider::class, // Thêm dòng này
         // Thêm các service providers khác của modules ở đây
-
     ],
 
     /*
@@ -222,7 +221,6 @@ return [
     */
 
     'aliases' => [
-
         'App' => Illuminate\Support\Facades\App::class,
         'Arr' => Illuminate\Support\Arr::class,
         'Artisan' => Illuminate\Support\Facades\Artisan::class,
@@ -261,7 +259,5 @@ return [
         'URL' => Illuminate\Support\Facades\URL::class,
         'Validator' => Illuminate\Support\Facades\Validator::class,
         'View' => Illuminate\Support\Facades\View::class,
-
     ],
-
 ];

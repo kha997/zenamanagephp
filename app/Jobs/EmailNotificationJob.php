@@ -9,19 +9,26 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class EmailNotificationJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     public $timeout = 120;
+
     public $tries = 3;
+
     public $backoff = [30, 60, 120];
 
     protected $notificationId;
+
     protected $userId;
+
     protected $emailData;
 
     /**
@@ -47,8 +54,9 @@ class EmailNotificationJob implements ShouldQueue
             if (!$notification || !$user) {
                 Log::warning('EmailNotificationJob: Notification or user not found', [
                     'notification_id' => $this->notificationId,
-                    'user_id' => $this->userId
+                    'user_id' => $this->userId,
                 ]);
+
                 return;
             }
 
@@ -56,8 +64,9 @@ class EmailNotificationJob implements ShouldQueue
             if (!$this->shouldSendEmail($user, $notification)) {
                 Log::info('EmailNotificationJob: Email notifications disabled for user', [
                     'user_id' => $this->userId,
-                    'notification_id' => $this->notificationId
+                    'notification_id' => $this->notificationId,
                 ]);
+
                 return;
             }
 
@@ -68,7 +77,7 @@ class EmailNotificationJob implements ShouldQueue
                 'subject' => $notification->title,
                 'message' => $notification->message,
                 'priority' => $notification->priority,
-                'type' => $notification->type
+                'type' => $notification->type,
             ], $this->emailData);
 
             // Send email based on notification type
@@ -77,22 +86,21 @@ class EmailNotificationJob implements ShouldQueue
             // Mark notification as sent
             $notification->update([
                 'email_sent_at' => now(),
-                'email_sent' => true
+                'email_sent' => true,
             ]);
 
             Log::info('EmailNotificationJob: Email sent successfully', [
                 'user_id' => $this->userId,
                 'notification_id' => $this->notificationId,
-                'type' => $notification->type
+                'type' => $notification->type,
             ]);
-
         } catch (\Exception $e) {
             Log::error('EmailNotificationJob: Failed to send email', [
                 'error' => $e->getMessage(),
                 'notification_id' => $this->notificationId,
-                'user_id' => $this->userId
+                'user_id' => $this->userId,
             ]);
-            
+
             throw $e;
         }
     }
@@ -104,7 +112,7 @@ class EmailNotificationJob implements ShouldQueue
     {
         // Check user email preferences
         $emailPreferences = $user->email_preferences ?? [];
-        
+
         // Check if email notifications are enabled
         if (!($emailPreferences['enabled'] ?? true)) {
             return false;
@@ -113,7 +121,7 @@ class EmailNotificationJob implements ShouldQueue
         // Check priority preferences
         $priority = $notification->priority;
         $allowedPriorities = $emailPreferences['priorities'] ?? ['critical', 'normal'];
-        
+
         if (!in_array($priority, $allowedPriorities)) {
             return false;
         }
@@ -121,7 +129,7 @@ class EmailNotificationJob implements ShouldQueue
         // Check type preferences
         $type = $notification->type;
         $allowedTypes = $emailPreferences['types'] ?? ['task', 'project', 'document', 'system'];
-        
+
         if (!in_array($type, $allowedTypes)) {
             return false;
         }
@@ -135,7 +143,7 @@ class EmailNotificationJob implements ShouldQueue
     protected function sendEmailByType(User $user, array $emailData): void
     {
         $type = $emailData['type'];
-        
+
         switch ($type) {
             case 'task':
                 $this->sendTaskNotificationEmail($user, $emailData);
@@ -236,7 +244,7 @@ class EmailNotificationJob implements ShouldQueue
         Log::error('EmailNotificationJob: Job failed permanently', [
             'error' => $exception->getMessage(),
             'notification_id' => $this->notificationId,
-            'user_id' => $this->userId
+            'user_id' => $this->userId,
         ]);
 
         // Mark notification as failed
@@ -245,7 +253,7 @@ class EmailNotificationJob implements ShouldQueue
             $notification->update([
                 'email_failed_at' => now(),
                 'email_failed' => true,
-                'email_error' => $exception->getMessage()
+                'email_error' => $exception->getMessage(),
             ]);
         }
     }
@@ -258,7 +266,7 @@ class EmailNotificationJob implements ShouldQueue
         return [
             'email-notification',
             'user:' . $this->userId,
-            'notification:' . $this->notificationId
+            'notification:' . $this->notificationId,
         ];
     }
 }

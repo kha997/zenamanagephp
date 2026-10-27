@@ -1,14 +1,16 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Legacy;
 
+use App\Models\Permission;
+use App\Models\Tenant;
+use App\Services\LegacyRouteMonitoringService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
-use App\Models\Permission;
-use App\Models\Tenant;
-use App\Services\LegacyRouteMonitoringService;
 use Tests\Traits\AuthenticationTrait;
 
 class LegacyRouteRollbackTest extends TestCase
@@ -17,7 +19,9 @@ class LegacyRouteRollbackTest extends TestCase
     use AuthenticationTrait;
 
     protected $user;
+
     protected $tenant;
+
     protected $monitoringService;
 
     public static function setUpBeforeClass(): void
@@ -45,22 +49,22 @@ class LegacyRouteRollbackTest extends TestCase
                 'name' => 'admin',
                 'module' => 'system',
                 'action' => '*',
-                'description' => 'System administrator access'
+                'description' => 'System administrator access',
             ]
         );
 
         $this->tenant = Tenant::factory()->create();
         $this->user = $this->createTenantUser($this->tenant, [
-            'role' => 'admin'
+            'role' => 'admin',
         ], null, ['admin']);
         $this->user->assignRole('super_admin');
         $this->user->assignRole('admin');
-        
+
         $this->monitoringService = app(LegacyRouteMonitoringService::class);
     }
 
     /**
-     * Test emergency rollback procedure
+     * Test emergency rollback procedure.
      */
     public function test_emergency_rollback_procedure()
     {
@@ -69,7 +73,7 @@ class LegacyRouteRollbackTest extends TestCase
         // Record some usage before rollback
         $this->monitoringService->recordUsage('/dashboard', '/app/dashboard', [
             'user_agent' => 'Test Agent',
-            'ip' => '127.0.0.1'
+            'ip' => '127.0.0.1',
         ]);
 
         // Verify usage was recorded
@@ -90,7 +94,7 @@ class LegacyRouteRollbackTest extends TestCase
     }
 
     /**
-     * Test phased rollback procedure
+     * Test phased rollback procedure.
      */
     public function test_phased_rollback_procedure()
     {
@@ -115,7 +119,7 @@ class LegacyRouteRollbackTest extends TestCase
     }
 
     /**
-     * Test rollback monitoring endpoints
+     * Test rollback monitoring endpoints.
      */
     public function test_rollback_monitoring_endpoints()
     {
@@ -128,8 +132,8 @@ class LegacyRouteRollbackTest extends TestCase
             'success',
             'data' => [
                 'routes',
-                'summary'
-            ]
+                'summary',
+            ],
         ]);
 
         // Test migration phase endpoint
@@ -141,8 +145,8 @@ class LegacyRouteRollbackTest extends TestCase
                 'current_date',
                 'phase_distribution',
                 'total_routes',
-                'migration_progress'
-            ]
+                'migration_progress',
+            ],
         ]);
 
         // Test report generation endpoint
@@ -155,13 +159,13 @@ class LegacyRouteRollbackTest extends TestCase
                 'generated_at',
                 'usage_statistics',
                 'migration_phase_statistics',
-                'recommendations'
-            ]
+                'recommendations',
+            ],
         ]);
     }
 
     /**
-     * Test rollback data cleanup
+     * Test rollback data cleanup.
      */
     public function test_rollback_data_cleanup()
     {
@@ -183,7 +187,7 @@ class LegacyRouteRollbackTest extends TestCase
 
         // Test cleanup endpoint
         $response = $this->postJson('/api/legacy-routes/cleanup', [
-            'days_to_keep' => 0
+            'days_to_keep' => 0,
         ]);
 
         $response->assertStatus(200);
@@ -191,8 +195,8 @@ class LegacyRouteRollbackTest extends TestCase
             'success',
             'data' => [
                 'cleared_entries',
-                'days_kept'
-            ]
+                'days_kept',
+            ],
         ]);
 
         // Verify data was cleared
@@ -202,7 +206,7 @@ class LegacyRouteRollbackTest extends TestCase
     }
 
     /**
-     * Test rollback authorization
+     * Test rollback authorization.
      */
     public function test_rollback_authorization()
     {
@@ -212,7 +216,7 @@ class LegacyRouteRollbackTest extends TestCase
 
         // Test with non-admin user
         $member = $this->createTenantUser($this->tenant, [
-            'role' => 'member'
+            'role' => 'member',
         ], ['member']);
 
         $this->apiAs($member, $this->tenant);
@@ -224,13 +228,13 @@ class LegacyRouteRollbackTest extends TestCase
                 'id',
                 'code',
                 'message',
-                'details'
-            ]
+                'details',
+            ],
         ]);
     }
 
     /**
-     * Test rollback error handling
+     * Test rollback error handling.
      */
     public function test_rollback_error_handling()
     {
@@ -238,7 +242,7 @@ class LegacyRouteRollbackTest extends TestCase
 
         // Test invalid cleanup request
         $response = $this->postJson('/api/legacy-routes/cleanup', [
-            'days_to_keep' => 'invalid'
+            'days_to_keep' => 'invalid',
         ]);
 
         $response->assertStatus(422);
@@ -247,13 +251,13 @@ class LegacyRouteRollbackTest extends TestCase
                 'id',
                 'code',
                 'message',
-                'details'
-            ]
+                'details',
+            ],
         ]);
     }
 
     /**
-     * Test rollback performance
+     * Test rollback performance.
      */
     /** @group performance */
     public function test_rollback_performance()
@@ -267,23 +271,26 @@ class LegacyRouteRollbackTest extends TestCase
 
         // Test cleanup performance
         $startTime = microtime(true);
-        
+
         $response = $this->postJson('/api/legacy-routes/cleanup', [
-            'days_to_keep' => 0
+            'days_to_keep' => 0,
         ]);
-        
+
         $endTime = microtime(true);
         $executionTime = ($endTime - $startTime) * 1000;
 
         $response->assertStatus(200);
-        
+
         // Performance assertion: cleanup should complete within 1 second
-        $this->assertLessThan(1000, $executionTime, 
-            "Rollback cleanup should complete within 1 second, took {$executionTime}ms");
+        $this->assertLessThan(
+            1000,
+            $executionTime,
+            "Rollback cleanup should complete within 1 second, took {$executionTime}ms"
+        );
     }
 
     /**
-     * Test rollback data integrity
+     * Test rollback data integrity.
      */
     public function test_rollback_data_integrity()
     {
@@ -293,7 +300,7 @@ class LegacyRouteRollbackTest extends TestCase
         $metadata = [
             'user_agent' => 'Test Agent',
             'ip' => '127.0.0.1',
-            'referer' => 'https://example.com'
+            'referer' => 'https://example.com',
         ];
 
         $this->monitoringService->recordUsage('/dashboard', '/app/dashboard', $metadata);
@@ -311,7 +318,7 @@ class LegacyRouteRollbackTest extends TestCase
     }
 
     /**
-     * Test rollback recommendations
+     * Test rollback recommendations.
      */
     public function test_rollback_recommendations()
     {
@@ -324,50 +331,50 @@ class LegacyRouteRollbackTest extends TestCase
 
         // Generate report with recommendations
         $report = $this->monitoringService->generateUsageReport();
-        
+
         $this->assertArrayHasKey('recommendations', $report);
         $this->assertIsArray($report['recommendations']);
-        
+
         // Check for high usage warning
         $highUsageWarning = collect($report['recommendations'])
-            ->first(fn($rec) => $rec['type'] === 'high_usage_warning');
-        
+            ->first(fn ($rec) => $rec['type'] === 'high_usage_warning');
+
         $this->assertNotNull($highUsageWarning);
         $this->assertEquals('high', $highUsageWarning['priority']);
     }
 
     /**
-     * Test rollback monitoring service methods
+     * Test rollback monitoring service methods.
      */
     public function test_rollback_monitoring_service_methods()
     {
         // Test recordUsage method
         $this->monitoringService->recordUsage('/dashboard', '/app/dashboard');
-        
+
         // Test getUsageStats method
         $stats = $this->monitoringService->getUsageStats('/dashboard');
         $this->assertIsArray($stats);
         $this->assertArrayHasKey('legacy_path', $stats);
         $this->assertArrayHasKey('total_usage', $stats);
-        
+
         // Test getAllUsageStats method
         $allStats = $this->monitoringService->getAllUsageStats();
         $this->assertIsArray($allStats);
         $this->assertArrayHasKey('routes', $allStats);
         $this->assertArrayHasKey('summary', $allStats);
-        
+
         // Test getMigrationPhaseStats method
         $phaseStats = $this->monitoringService->getMigrationPhaseStats();
         $this->assertIsArray($phaseStats);
         $this->assertArrayHasKey('current_date', $phaseStats);
         $this->assertArrayHasKey('phase_distribution', $phaseStats);
-        
+
         // Test generateUsageReport method
         $report = $this->monitoringService->generateUsageReport();
         $this->assertIsArray($report);
         $this->assertArrayHasKey('report_type', $report);
         $this->assertArrayHasKey('generated_at', $report);
-        
+
         // Test clearOldData method
         $cleared = $this->monitoringService->clearOldData(0);
         $this->assertIsInt($cleared);

@@ -3,10 +3,8 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\DB;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     /**
      * Run the migrations.
      */
@@ -14,7 +12,7 @@ return new class extends Migration
     {
         // Drop all existing foreign key constraints
         $this->dropForeignKeys();
-        
+
         // Recreate correct foreign key constraints
         $this->createForeignKeys();
     }
@@ -28,7 +26,7 @@ return new class extends Migration
     }
 
     /**
-     * Drop all foreign key constraints
+     * Drop all foreign key constraints.
      */
     private function dropForeignKeys(): void
     {
@@ -53,7 +51,7 @@ return new class extends Migration
     }
 
     /**
-     * Create correct foreign key constraints
+     * Create correct foreign key constraints.
      */
     private function createForeignKeys(): void
     {

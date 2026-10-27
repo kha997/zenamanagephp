@@ -11,9 +11,9 @@ return [
     */
 
     'secret' => env('JWT_SECRET', env('APP_KEY')),
-    
+
     'algo' => env('JWT_ALGO', 'HS256'),
-    
+
     /*
     |--------------------------------------------------------------------------
     | Token TTL (Time To Live)
@@ -24,7 +24,7 @@ return [
     |
     */
     'ttl' => env('JWT_TTL', 3600),
-    
+
     /*
     |--------------------------------------------------------------------------
     | Refresh Token TTL
@@ -35,7 +35,7 @@ return [
     |
     */
     'refresh_ttl' => env('JWT_REFRESH_TTL', 1209600),
-    
+
     /*
     |--------------------------------------------------------------------------
     | Token Rotation
@@ -46,7 +46,7 @@ return [
     |
     */
     'rotation_enabled' => env('JWT_ROTATION_ENABLED', true),
-    
+
     /*
     |--------------------------------------------------------------------------
     | Token Blacklist
@@ -57,7 +57,7 @@ return [
     |
     */
     'blacklist_enabled' => env('JWT_BLACKLIST_ENABLED', true),
-    
+
     /*
     |--------------------------------------------------------------------------
     | Issuer and Audience

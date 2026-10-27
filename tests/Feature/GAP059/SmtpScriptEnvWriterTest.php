@@ -20,11 +20,11 @@ final class SmtpScriptEnvWriterTest extends TestCase
     protected function setUp(): void
     {
         $this->dir = sys_get_temp_dir() . '/gap059-sh-' . bin2hex(random_bytes(6));
-        mkdir($this->dir . '/bin', 0700, true);
+        mkdir($this->dir . '/bin', 0o700, true);
         foreach (['awk', 'sed'] as $tool) {
             $real = trim((string) shell_exec('command -v ' . $tool));
             file_put_contents($this->dir . "/bin/$tool", "#!/usr/bin/env bash\nprintf 'ARGV %s\\n' \"\$*\" >> \"\$STUB_LOG\"\nexec " . escapeshellarg($real) . " \"\$@\"\n");
-            chmod($this->dir . "/bin/$tool", 0755);
+            chmod($this->dir . "/bin/$tool", 0o755);
         }
         $this->script = (string) file_get_contents(dirname(__DIR__, 3) . '/scripts/configure-production-smtp.sh');
     }
@@ -39,7 +39,7 @@ final class SmtpScriptEnvWriterTest extends TestCase
         $this->assertSame(1, preg_match('/^update_env_var\(\) \{\n.*?^\}\n/ms', $this->script, $m));
         $env = $this->dir . '/.env';
         file_put_contents($env, "APP_NAME=Zena\nMONITORING_ALERT_EMAIL=old\n");
-        chmod($env, 0640);
+        chmod($env, 0o640);
 
         $values = [
             'MONITORING_ALERT_EMAIL' => 'ops&alerts/team@example.test',

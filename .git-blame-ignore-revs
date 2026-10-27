@@ -1,0 +1,6 @@
+# Commits that only reformat code; git blame skips them.
+# GitHub applies this file automatically. Locally:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# GAP-080: php-cs-fixer applied repo-wide (squash of PR #353)
+40d19ab10f51c77587127f2ab5c477724f4ab7cf

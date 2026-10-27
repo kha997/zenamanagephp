@@ -6,19 +6,20 @@ use App\Auth\CustomSanctumGuard;
 use App\Contracts\Dashboard\WidgetDataResolver;
 use App\Models\EventRecord;
 use App\Observers\EventRecordObserver;
-use App\Services\DocumentContext\ContractContextProvider;
+use App\Services\Dashboard\DashboardWidgetDataResolver;
+use App\Services\Dashboard\RoleBasedWidgetDataCalculator;
+use App\Services\Dashboard\RoleBasedWidgetProvider;
 use App\Services\DocumentContext\CertificateContextProvider;
+use App\Services\DocumentContext\ContractContextProvider;
 use App\Services\DocumentContext\DocumentContextRegistry;
 use App\Services\DocumentContext\ProjectContextProvider;
 use App\Services\DocumentContext\QuoteContextProvider;
 use App\Services\PaymentCertificateSummaryService;
-use App\Services\Dashboard\DashboardWidgetDataResolver;
-use App\Services\Dashboard\RoleBasedWidgetProvider;
-use App\Services\Dashboard\RoleBasedWidgetDataCalculator;
 use Illuminate\Auth\RequestGuard;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
+
 class AppServiceProvider extends ServiceProvider
 {
     /**

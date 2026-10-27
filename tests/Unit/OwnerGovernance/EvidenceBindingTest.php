@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Unit\OwnerGovernance;
 
@@ -34,7 +36,7 @@ class EvidenceBindingTest extends TestCase
     private function makeTempRepo(): string
     {
         $dir = sys_get_temp_dir() . '/owner-gov-evidence-test-' . bin2hex(random_bytes(6));
-        mkdir($dir, 0777, true);
+        mkdir($dir, 0o777, true);
         exec('git -C ' . escapeshellarg($dir) . ' init -q');
         exec('git -C ' . escapeshellarg($dir) . ' config user.email test@example.com');
         exec('git -C ' . escapeshellarg($dir) . ' config user.name "Test"');
@@ -46,7 +48,7 @@ class EvidenceBindingTest extends TestCase
     private function commitFile(string $repo, string $relPath, string $content, string $message): string
     {
         $full = $repo . '/' . $relPath;
-        @mkdir(dirname($full), 0777, true);
+        @mkdir(dirname($full), 0o777, true);
         file_put_contents($full, $content);
         exec('git -C ' . escapeshellarg($repo) . ' add ' . escapeshellarg($relPath));
         exec('git -C ' . escapeshellarg($repo) . ' commit -q -m ' . escapeshellarg($message));
@@ -264,6 +266,29 @@ class EvidenceBindingTest extends TestCase
         $this->assertSame(0, \owner_governance_count_blocking_checks($checks));
     }
 
+    public function test_count_failed_checks_counts_only_fail_and_cancel(): void
+    {
+        $checks = [
+            ['name' => 'a', 'bucket' => 'pass'],
+            ['name' => 'b', 'bucket' => 'pending'],
+            ['name' => 'c', 'bucket' => 'fail'],
+            ['name' => 'd', 'bucket' => 'skipping'],
+            ['name' => 'e', 'bucket' => 'cancel'],
+        ];
+
+        $this->assertSame(2, \owner_governance_count_failed_checks($checks), 'Only fail and cancel buckets have already failed; pending must keep waiting.');
+    }
+
+    public function test_count_failed_checks_is_zero_while_checks_are_only_pending(): void
+    {
+        $checks = [
+            ['name' => 'a', 'bucket' => 'pass'],
+            ['name' => 'b', 'bucket' => 'pending'],
+        ];
+
+        $this->assertSame(0, \owner_governance_count_failed_checks($checks));
+    }
+
     // --- Required test 8: `approved` fails when the binding digest differs ---
 
     public function test_approved_packet_with_mismatched_binding_digest_fails_validation(): void
@@ -411,40 +436,40 @@ class EvidenceBindingTest extends TestCase
         string $subjectSha = 'aaaa000000000000000000000000000000000000',
     ): string {
         $decisionProvenance = $ownerDecisionValue !== 'none'
-            ? "decision_provenance: {trust_level: claimed_repo_record, recorded_by: \"test\", recorded_at: \"2026-08-05T00:00:00+07:00\", owner_response_reference: \"test\", reconciliation_required: false}"
-            : "decision_provenance: {trust_level: claimed_repo_record, recorded_by: null, recorded_at: null, owner_response_reference: null, reconciliation_required: false}";
+            ? 'decision_provenance: {trust_level: claimed_repo_record, recorded_by: "test", recorded_at: "2026-08-05T00:00:00+07:00", owner_response_reference: "test", reconciliation_required: false}'
+            : 'decision_provenance: {trust_level: claimed_repo_record, recorded_by: null, recorded_at: null, owner_response_reference: null, reconciliation_required: false}';
 
         $bindingYaml = $bindingDigest !== null
             ? "owner_decision_binding: {implementation_tree_digest: \"{$bindingDigest}\", decision_recorded_at: \"2026-08-05T00:00:00+07:00\"}"
-            : "owner_decision_binding: {implementation_tree_digest: null, decision_recorded_at: null}";
+            : 'owner_decision_binding: {implementation_tree_digest: null, decision_recorded_at: null}';
 
         $decisionRequested = $gateStatus === 'awaiting_owner' ? '"approve_or_correction_or_defer"' : 'null';
 
         return <<<YAML
----
-work_id: OWN-2026-001
-gate: 3
-gate_status: {$gateStatus}
-technical_readiness: {value: ready, generated_by: engineering_evidence}
-owner_decision: {value: {$ownerDecisionValue}, authority: human_owner}
-decision_requested: {$decisionRequested}
-references: {spec: null, plan: null, branch: null, pr: null, release: null}
-{$decisionProvenance}
-supersedes: null
-superseded_by: null
-timestamps: {created_at: "2026-08-05T00:00:00+07:00", updated_at: "2026-08-05T00:00:00+07:00"}
-generated_by: agent
-residual_risk_rating: low
-mandatory_technical_gate_summary: "test fixture"
-technical_evidence:
-  subject_sha: "{$subjectSha}"
-  implementation_tree_digest: "{$evidenceDigest}"
-  verified_pr_head_sha: "{$subjectSha}"
-  verified_at: "2026-08-05T00:00:00+07:00"
-{$bindingYaml}
----
+            ---
+            work_id: OWN-2026-001
+            gate: 3
+            gate_status: {$gateStatus}
+            technical_readiness: {value: ready, generated_by: engineering_evidence}
+            owner_decision: {value: {$ownerDecisionValue}, authority: human_owner}
+            decision_requested: {$decisionRequested}
+            references: {spec: null, plan: null, branch: null, pr: null, release: null}
+            {$decisionProvenance}
+            supersedes: null
+            superseded_by: null
+            timestamps: {created_at: "2026-08-05T00:00:00+07:00", updated_at: "2026-08-05T00:00:00+07:00"}
+            generated_by: agent
+            residual_risk_rating: low
+            mandatory_technical_gate_summary: "test fixture"
+            technical_evidence:
+              subject_sha: "{$subjectSha}"
+              implementation_tree_digest: "{$evidenceDigest}"
+              verified_pr_head_sha: "{$subjectSha}"
+              verified_at: "2026-08-05T00:00:00+07:00"
+            {$bindingYaml}
+            ---
 
-## Test fixture body — no forbidden placeholder tokens here.
-YAML;
+            ## Test fixture body — no forbidden placeholder tokens here.
+            YAML;
     }
 }

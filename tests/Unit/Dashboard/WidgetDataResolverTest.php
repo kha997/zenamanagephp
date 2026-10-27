@@ -4,26 +4,30 @@ namespace Tests\Unit\Dashboard;
 
 use App\Contracts\Dashboard\WidgetDataProvider;
 use App\Models\DashboardWidget;
+use App\Models\User;
 use App\Services\Dashboard\DashboardWidgetDataResolver;
 use App\Services\Dashboard\RoleBasedWidgetDataCalculator;
 use App\Services\Dashboard\RoleBasedWidgetProvider;
 use App\Services\Dashboard\WidgetDataContext;
 use App\Services\Dashboard\WidgetDataResult;
-use App\Models\User;
 use Tests\TestCase;
 
 class WidgetDataResolverTest extends TestCase
 {
     public function test_unsupported_widget_degrades_without_invoking_a_provider(): void
     {
-        $provider = new class implements WidgetDataProvider {
+        $provider = new class () implements WidgetDataProvider {
             public bool $invoked = false;
 
-            public function supports(string $widgetCode): bool { return false; }
+            public function supports(string $widgetCode): bool
+            {
+                return false;
+            }
 
             public function provide(DashboardWidget $widget, WidgetDataContext $context): WidgetDataResult
             {
                 $this->invoked = true;
+
                 return WidgetDataResult::ready([]);
             }
         };
@@ -40,8 +44,11 @@ class WidgetDataResolverTest extends TestCase
 
     public function test_provider_failure_becomes_safe_degraded_result(): void
     {
-        $provider = new class implements WidgetDataProvider {
-            public function supports(string $widgetCode): bool { return $widgetCode === 'supported_code'; }
+        $provider = new class () implements WidgetDataProvider {
+            public function supports(string $widgetCode): bool
+            {
+                return $widgetCode === 'supported_code';
+            }
 
             public function provide(DashboardWidget $widget, WidgetDataContext $context): WidgetDataResult
             {

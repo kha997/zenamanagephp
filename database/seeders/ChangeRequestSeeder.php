@@ -1,19 +1,21 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use Src\ChangeRequest\Models\ChangeRequest;
-use Src\ChangeRequest\Models\CrLink;
-use Src\CoreProject\Models\Project;
-use Src\CoreProject\Models\Task;
-use Src\CoreProject\Models\Component;
-use Src\DocumentManagement\Models\Document;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Src\ChangeRequest\Models\ChangeRequest;
+use Src\ChangeRequest\Models\CrLink;
+use Src\CoreProject\Models\Component;
+use Src\CoreProject\Models\Project;
+use Src\CoreProject\Models\Task;
+use Src\DocumentManagement\Models\Document;
 
 /**
- * ChangeRequest Seeder
- * 
+ * ChangeRequest Seeder.
+ *
  * Tạo dữ liệu mẫu cho change requests và cr links
  */
 class ChangeRequestSeeder extends Seeder
@@ -35,14 +37,14 @@ class ChangeRequestSeeder extends Seeder
                 ->forProject($project->id)
                 ->draft()
                 ->create([
-                    'created_by' => $users->random()->id
+                    'created_by' => $users->random()->id,
                 ]);
 
             $awaitingCr = ChangeRequest::factory()
                 ->forProject($project->id)
                 ->awaitingApproval()
                 ->create([
-                    'created_by' => $users->random()->id
+                    'created_by' => $users->random()->id,
                 ]);
 
             $approvedCr = ChangeRequest::factory()
@@ -51,7 +53,7 @@ class ChangeRequestSeeder extends Seeder
                 ->create([
                     'created_by' => $users->random()->id,
                     'decided_by' => $users->random()->id,
-                    'decided_at' => now()->subDays(rand(1, 7))
+                    'decided_at' => now()->subDays(rand(1, 7)),
                 ]);
 
             $rejectedCr = ChangeRequest::factory()
@@ -60,7 +62,7 @@ class ChangeRequestSeeder extends Seeder
                 ->create([
                     'created_by' => $users->random()->id,
                     'decided_by' => $users->random()->id,
-                    'decided_at' => now()->subDays(rand(1, 5))
+                    'decided_at' => now()->subDays(rand(1, 5)),
                 ]);
 
             // Tạo CrLinks cho approved change request

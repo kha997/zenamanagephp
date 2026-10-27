@@ -2,18 +2,16 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
-use App\Models\User;
 use App\Models\Dashboard;
-use App\Models\Widget;
-use App\Models\SupportTicket;
-use App\Models\MaintenanceTask;
 use App\Models\PerformanceMetric;
 use App\Models\Tenant;
+use App\Models\User;
+use App\Models\Widget;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
 use Tests\Traits\RouteNameTrait;
 
 /**
@@ -21,15 +19,18 @@ use Tests\Traits\RouteNameTrait;
  */
 class QualityAssuranceTest extends TestCase
 {
-    use RefreshDatabase, WithFaker, RouteNameTrait;
+    use RefreshDatabase;
+    use WithFaker;
+    use RouteNameTrait;
 
     protected $user;
+
     protected $admin;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $tenant = Tenant::factory()->create();
 
         $this->user = User::factory()->create([
@@ -46,7 +47,7 @@ class QualityAssuranceTest extends TestCase
     }
 
     /**
-     * Test data integrity
+     * Test data integrity.
      */
     public function test_data_integrity()
     {
@@ -68,7 +69,7 @@ class QualityAssuranceTest extends TestCase
     }
 
     /**
-     * Test API consistency
+     * Test API consistency.
      */
     public function test_api_consistency()
     {
@@ -79,7 +80,7 @@ class QualityAssuranceTest extends TestCase
             'name' => 'Test Dashboard',
             'description' => 'Test description',
             'layout' => 'grid',
-            'is_public' => false
+            'is_public' => false,
         ]);
 
         $response->assertStatus(201);
@@ -90,7 +91,7 @@ class QualityAssuranceTest extends TestCase
             'layout',
             'is_public',
             'created_at',
-            'updated_at'
+            'updated_at',
         ]);
 
         $dashboardId = $response->json('id');
@@ -105,7 +106,7 @@ class QualityAssuranceTest extends TestCase
             'layout',
             'is_public',
             'created_at',
-            'updated_at'
+            'updated_at',
         ]);
 
         // Verify data consistency
@@ -114,7 +115,7 @@ class QualityAssuranceTest extends TestCase
     }
 
     /**
-     * Test error handling
+     * Test error handling.
      */
     public function test_error_handling()
     {
@@ -127,7 +128,7 @@ class QualityAssuranceTest extends TestCase
         // Test 422 error (validation)
         $response = $this->post($this->namedRoute('api.legacy.dashboards.store'), [
             'name' => '', // Empty name should fail validation
-            'description' => 'Test'
+            'description' => 'Test',
         ]);
         $response->assertStatus(422);
 
@@ -136,13 +137,13 @@ class QualityAssuranceTest extends TestCase
             'tenant_id' => $this->user->tenant_id,
         ]);
         $dashboard = Dashboard::factory()->create(['user_id' => $otherUser->id]);
-        
+
         $response = $this->get($this->namedRoute('api.legacy.dashboards.show', ['dashboard' => $dashboard->id]));
         $response->assertStatus(403);
     }
 
     /**
-     * Test validation rules
+     * Test validation rules.
      */
     public function test_validation_rules()
     {
@@ -156,7 +157,7 @@ class QualityAssuranceTest extends TestCase
         // Test field length limits
         $response = $this->post($this->namedRoute('api.legacy.dashboards.store'), [
             'name' => str_repeat('a', 1000), // Too long
-            'description' => 'Test'
+            'description' => 'Test',
         ]);
         $response->assertStatus(422);
         $response->assertJsonValidationErrors(['name']);
@@ -164,14 +165,14 @@ class QualityAssuranceTest extends TestCase
         // Test data types
         $response = $this->post($this->namedRoute('api.legacy.dashboards.store'), [
             'name' => 123, // Should be string
-            'description' => 'Test'
+            'description' => 'Test',
         ]);
         $response->assertStatus(422);
         $response->assertJsonValidationErrors(['name']);
     }
 
     /**
-     * Test concurrent access
+     * Test concurrent access.
      */
     public function test_concurrent_access()
     {
@@ -181,11 +182,11 @@ class QualityAssuranceTest extends TestCase
 
         // Simulate concurrent updates
         $response1 = $this->put($this->namedRoute('api.legacy.dashboards.update', ['dashboard' => $dashboard->id]), [
-            'name' => 'Updated Name 1'
+            'name' => 'Updated Name 1',
         ]);
 
         $response2 = $this->put($this->namedRoute('api.legacy.dashboards.update', ['dashboard' => $dashboard->id]), [
-            'name' => 'Updated Name 2'
+            'name' => 'Updated Name 2',
         ]);
 
         // At least one should succeed
@@ -195,7 +196,7 @@ class QualityAssuranceTest extends TestCase
     }
 
     /**
-     * Test system recovery
+     * Test system recovery.
      */
     public function test_system_recovery()
     {
@@ -205,7 +206,7 @@ class QualityAssuranceTest extends TestCase
         try {
             Dashboard::create([
                 'name' => null, // This should fail
-                'user_id' => $this->user->id
+                'user_id' => $this->user->id,
             ]);
         } catch (\Exception $e) {
             // Expected to fail
@@ -217,7 +218,7 @@ class QualityAssuranceTest extends TestCase
     }
 
     /**
-     * Test maintenance commands
+     * Test maintenance commands.
      */
     public function test_maintenance_commands()
     {
@@ -234,7 +235,7 @@ class QualityAssuranceTest extends TestCase
     }
 
     /**
-     * Test backup functionality
+     * Test backup functionality.
      */
     public function test_backup_functionality()
     {
@@ -246,12 +247,12 @@ class QualityAssuranceTest extends TestCase
 
         // Verify backup task was created
         $this->assertDatabaseHas('maintenance_tasks', [
-            'task' => 'System backup'
+            'task' => 'System backup',
         ]);
     }
 
     /**
-     * Test performance metrics
+     * Test performance metrics.
      */
     public function test_performance_metrics()
     {
@@ -262,7 +263,7 @@ class QualityAssuranceTest extends TestCase
             'metric_name' => 'response_time',
             'metric_value' => 150,
             'metric_unit' => 'milliseconds',
-            'category' => 'performance'
+            'category' => 'performance',
         ]);
 
         // Test metrics endpoint
@@ -272,12 +273,12 @@ class QualityAssuranceTest extends TestCase
             'memory',
             'cpu',
             'php',
-            'application'
+            'application',
         ]);
     }
 
     /**
-     * Test support ticket workflow
+     * Test support ticket workflow.
      */
     public function test_support_ticket_workflow()
     {
@@ -288,7 +289,7 @@ class QualityAssuranceTest extends TestCase
             'subject' => 'Test Support Ticket',
             'description' => 'This is a test support ticket',
             'category' => 'technical',
-            'priority' => 'medium'
+            'priority' => 'medium',
         ]);
 
         $response->assertStatus(201);
@@ -297,7 +298,7 @@ class QualityAssuranceTest extends TestCase
         // Add message to ticket
         $response = $this->post($this->namedRoute('api.support.tickets.messages.store', ['ticket' => $ticketId]), [
             'message' => 'This is a test message',
-            'is_internal' => false
+            'is_internal' => false,
         ]);
 
         $response->assertStatus(201);
@@ -306,14 +307,14 @@ class QualityAssuranceTest extends TestCase
         $this->actingAs($this->admin);
         $response = $this->put($this->namedRoute('api.support.tickets.update', ['ticket' => $ticketId]), [
             'status' => 'resolved',
-            'assigned_to' => $this->admin->id
+            'assigned_to' => $this->admin->id,
         ]);
 
         $response->assertStatus(200);
     }
 
     /**
-     * Test complete user workflow
+     * Test complete user workflow.
      */
     public function test_complete_user_workflow()
     {
@@ -324,7 +325,7 @@ class QualityAssuranceTest extends TestCase
             'name' => 'My Dashboard',
             'description' => 'My personal dashboard',
             'layout' => 'grid',
-            'is_public' => false
+            'is_public' => false,
         ]);
         $dashboardResponse->assertStatus(201);
         $dashboardId = $dashboardResponse->json('id');
@@ -335,7 +336,7 @@ class QualityAssuranceTest extends TestCase
             'type' => 'chart',
             'title' => 'Sales Chart',
             'config' => ['chart_type' => 'line'],
-            'position' => ['x' => 0, 'y' => 0, 'w' => 6, 'h' => 4]
+            'position' => ['x' => 0, 'y' => 0, 'w' => 6, 'h' => 4],
         ]);
         $widgetResponse->assertStatus(201);
 
@@ -343,7 +344,7 @@ class QualityAssuranceTest extends TestCase
         $widgetId = $widgetResponse->json('id');
         $updateResponse = $this->put($this->namedRoute('api.legacy.widgets.update', ['widget' => $widgetId]), [
             'title' => 'Updated Sales Chart',
-            'config' => ['chart_type' => 'bar']
+            'config' => ['chart_type' => 'bar'],
         ]);
         $updateResponse->assertStatus(200);
 
@@ -357,7 +358,7 @@ class QualityAssuranceTest extends TestCase
     }
 
     /**
-     * Test system under stress
+     * Test system under stress.
      */
     public function test_system_under_stress()
     {
@@ -372,9 +373,9 @@ class QualityAssuranceTest extends TestCase
                 'name' => "Stress Test Dashboard {$i}",
                 'description' => "Stress test description {$i}",
                 'layout' => 'grid',
-                'is_public' => false
+                'is_public' => false,
             ]);
-            
+
             if ($response->status() === 201) {
                 $dashboards[] = $response->json('id');
             }
@@ -394,7 +395,7 @@ class QualityAssuranceTest extends TestCase
     }
 
     /**
-     * Test memory management
+     * Test memory management.
      */
     public function test_memory_management()
     {
@@ -434,7 +435,7 @@ class QualityAssuranceTest extends TestCase
     }
 
     /**
-     * Test database performance
+     * Test database performance.
      */
     public function test_database_performance()
     {
@@ -442,7 +443,7 @@ class QualityAssuranceTest extends TestCase
 
         // Create test data
         $dashboards = Dashboard::factory()->count(50)->create(['user_id' => $this->user->id]);
-        
+
         foreach ($dashboards as $dashboard) {
             Widget::factory()->count(5)->create(['dashboard_id' => $dashboard->id]);
         }
@@ -451,15 +452,15 @@ class QualityAssuranceTest extends TestCase
         $startTime = microtime(true);
         $dashboards = Dashboard::with('widgets')->where('user_id', $this->user->id)->get();
         $endTime = microtime(true);
-        
+
         $queryTime = ($endTime - $startTime) * 1000;
-        
+
         $this->assertLessThan(200, $queryTime);
         $this->assertCount(50, $dashboards);
     }
 
     /**
-     * Test API response times
+     * Test API response times.
      */
     public function test_api_response_times()
     {
@@ -469,9 +470,9 @@ class QualityAssuranceTest extends TestCase
         $startTime = microtime(true);
         $response = $this->get($this->namedRoute('api.legacy.dashboards.index'));
         $endTime = microtime(true);
-        
+
         $responseTime = ($endTime - $startTime) * 1000;
-        
+
         $response->assertStatus(200);
         $this->assertLessThan(500, $responseTime);
 
@@ -479,9 +480,9 @@ class QualityAssuranceTest extends TestCase
         $startTime = microtime(true);
         $response = $this->get('/api/dashboard/widgets');
         $endTime = microtime(true);
-        
+
         $responseTime = ($endTime - $startTime) * 1000;
-        
+
         $response->assertStatus(200);
         $this->assertLessThan(300, $responseTime);
     }

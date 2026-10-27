@@ -1,8 +1,12 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Policies;
 
 use App\Models\Project;
+use App\Models\Treasury\TreasuryFinancialParty;
+use App\Models\Treasury\TreasuryWallet;
 use App\Models\User;
 use App\Models\UserRoleProject;
 
@@ -24,6 +28,96 @@ class TreasuryPolicy
     public function manageWallets(User $user, Project $project): bool
     {
         return $this->projectAbility($user, $project, 'treasury.manage_wallets');
+    }
+
+    public function declareFunding(User $user, Project $project): bool
+    {
+        return $this->projectAbility($user, $project, 'treasury.declare_funding');
+    }
+
+    public function createTransfer(User $user, Project $project): bool
+    {
+        return $this->projectAbility($user, $project, 'treasury.create_transfer');
+    }
+
+    public function createExpense(User $user, Project $project): bool
+    {
+        return $this->projectAbility($user, $project, 'treasury.create_expense');
+    }
+
+    public function submitExpense(User $user, Project $project): bool
+    {
+        return $this->projectAbility($user, $project, 'treasury.submit_expense');
+    }
+
+    public function approveExpense(User $user, Project $project): bool
+    {
+        return $this->projectAbility($user, $project, 'treasury.approve_expense');
+    }
+
+    public function adjust(User $user, Project $project): bool
+    {
+        return $this->projectAbility($user, $project, 'treasury.adjust');
+    }
+
+    public function reverse(User $user, Project $project): bool
+    {
+        return $this->projectAbility($user, $project, 'treasury.reverse');
+    }
+
+    /** GAP-067 S4a: reconcile and undo reconciliation of the project's wallets. */
+    public function reconcile(User $user, Project $project): bool
+    {
+        return $this->projectAbility($user, $project, 'treasury.reconcile');
+    }
+
+    /** GAP-094 S4b: create/cancel via-route payments, record any leg, reverse legs. */
+    public function manageRoutes(User $user, Project $project): bool
+    {
+        return $this->projectAbility($user, $project, 'treasury.manage_routes');
+    }
+
+    /**
+     * GAP-094 Owner answer 2 (2026-10-08): owner and accountant record any leg;
+     * PM / site engineer only a leg leaving or entering a wallet they hold.
+     */
+    public function recordRouteLeg(User $user, Project $project, ?TreasuryWallet $from, TreasuryWallet $to): bool
+    {
+        if ($this->manageRoutes($user, $project)) {
+            return true;
+        }
+
+        return $this->createTransfer($user, $project)
+            && (($from !== null && $this->holdsWallet($user, $from)) || $this->holdsWallet($user, $to));
+    }
+
+    /**
+     * GAP-064 Owner answer 2: holders of treasury.manage_wallets (owner X)
+     * may move money out of any wallet of the project; everyone else only
+     * out of a wallet whose custodian party is linked to their own user.
+     */
+    public function transferFromWallet(User $user, TreasuryWallet $wallet): bool
+    {
+        if ((string) $user->tenant_id !== (string) $wallet->tenant_id) {
+            return false;
+        }
+
+        if ($user->hasPermission('treasury.manage_wallets')) {
+            return true;
+        }
+
+        return $this->holdsWallet($user, $wallet);
+    }
+
+    /** The wallet's custodian party is linked to this user (same tenant). */
+    private function holdsWallet(User $user, TreasuryWallet $wallet): bool
+    {
+        return (string) $user->tenant_id === (string) $wallet->tenant_id
+            && $wallet->custodian_party_id !== null
+            && TreasuryFinancialParty::query()
+                ->whereKey($wallet->custodian_party_id)
+                ->where('linked_user_id', (string) $user->id)
+                ->exists();
     }
 
     public function viewParties(User $user): bool

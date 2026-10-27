@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -11,12 +13,14 @@ use Illuminate\Validation\ValidationException;
 
 class SidebarConfig extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids;
+    use HasFactory;
 
     protected $table = 'sidebar_configs';
 
     // ULID primary key configuration
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [
@@ -40,7 +44,7 @@ class SidebarConfig extends Model
     ];
 
     /**
-     * Valid role names
+     * Valid role names.
      */
     public const VALID_ROLES = [
         'super_admin',

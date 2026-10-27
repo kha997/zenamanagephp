@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services\Deployment;
 
@@ -40,6 +42,7 @@ class MigrationClassificationService
         foreach ($files as $file) {
             $result[$file] = $this->manifest[$file] ?? null;
         }
+
         return $result;
     }
 

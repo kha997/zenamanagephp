@@ -1,32 +1,34 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
 use App\Models\DashboardAlert;
 use App\Models\DashboardMetric;
+use App\Models\DashboardMetricValue;
 use App\Models\DashboardWidget;
 use App\Models\DashboardWidgetDataCache;
 use App\Models\Project;
 use App\Models\User;
 use App\Models\UserDashboard;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Str;
-use InvalidArgumentException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use App\Models\DashboardMetricValue;
+use Illuminate\Support\Str;
+use InvalidArgumentException;
 
 /**
- * Dashboard Service
- * 
+ * Dashboard Service.
+ *
  * Service xử lý logic business cho dashboard system
  */
 class DashboardService
 {
     /**
-     * Lấy dashboard của user
+     * Lấy dashboard của user.
      */
     public function getUserDashboard(User|string|int|array $user): ?UserDashboard
     {
@@ -46,12 +48,12 @@ class DashboardService
     }
 
     /**
-     * Lấy danh sách widgets có sẵn cho user
+     * Lấy danh sách widgets có sẵn cho user.
      */
     public function getAvailableWidgetsForUser(User $user): array
     {
         $userRole = $this->getUserRole($user);
-        
+
         $widgets = DashboardWidget::active()
             ->forRole($userRole)
             ->get()
@@ -63,7 +65,7 @@ class DashboardService
                     'category' => $widget->category,
                     'description' => $widget->description,
                     'display_config' => $widget->getDisplayConfig(),
-                    'data_source' => $widget->getDataSourceConfig()
+                    'data_source' => $widget->getDataSourceConfig(),
                 ];
             });
 
@@ -71,12 +73,12 @@ class DashboardService
     }
 
     /**
-     * Lấy dữ liệu cho widget
+     * Lấy dữ liệu cho widget.
      */
     public function getWidgetData(string $widgetId, User $user, ?string $projectId = null, array $params = []): array
     {
         $widget = DashboardWidget::findOrFail($widgetId);
-        
+
         // Kiểm tra quyền truy cập
         if (!$widget->isAvailableForRole($this->getUserRole($user))) {
             throw new \Exception('Widget not available for user role');
@@ -85,7 +87,7 @@ class DashboardService
         // Kiểm tra cache trước
         $cacheKey = DashboardWidgetDataCache::generateCacheKey($widgetId, $user->id, $projectId, $params);
         $cachedData = DashboardWidgetDataCache::getCacheData($widgetId, $user->id, $projectId, $params);
-        
+
         if ($cachedData) {
             return $cachedData;
         }
@@ -112,7 +114,7 @@ class DashboardService
     }
 
     /**
-     * Cập nhật layout của dashboard
+     * Cập nhật layout của dashboard.
      */
     public function updateDashboardLayout(User|string|int|array $user, array $layoutConfig, array $widgets = [])
     {
@@ -125,22 +127,22 @@ class DashboardService
 
         $dashboard->update([
             'layout_config' => $layoutConfig,
-            'widgets' => $widgets
+            'widgets' => $widgets,
         ]);
 
         return $dashboard;
     }
 
     /**
-     * Thêm widget vào dashboard
+     * Thêm widget vào dashboard.
      */
     public function addWidgetToDashboard(string $userId, string $widgetId, array $position = [], array $config = []): UserDashboard
     {
         $dashboard = $this->getUserDashboard($userId);
-        
+
         // Kiểm tra widget có tồn tại không
         $widget = DashboardWidget::findOrFail($widgetId);
-        
+
         // Kiểm tra widget đã có trong dashboard chưa
         if (in_array($widgetId, $dashboard->getWidgetIds())) {
             throw new \Exception('Widget already exists in dashboard');
@@ -152,7 +154,7 @@ class DashboardService
     }
 
     /**
-     * Xóa widget khỏi dashboard
+     * Xóa widget khỏi dashboard.
      */
     public function removeWidgetFromDashboard(string $userId, string $widgetId): UserDashboard
     {
@@ -163,7 +165,7 @@ class DashboardService
     }
 
     /**
-     * Cập nhật cấu hình widget
+     * Cập nhật cấu hình widget.
      */
     public function updateWidgetConfig(User|string|int|array $user, string $widgetId, array $config)
     {
@@ -179,7 +181,7 @@ class DashboardService
     }
 
     /**
-     * Lấy alerts của user
+     * Lấy alerts của user.
      */
     public function getUserAlerts(User|string|int|array $user, ?string $projectId = null, ?string $type = null, ?string $category = null, bool $unreadOnly = false): array
     {
@@ -208,7 +210,7 @@ class DashboardService
     }
 
     /**
-     * Đánh dấu alert đã đọc
+     * Đánh dấu alert đã đọc.
      */
     public function markAlertAsRead(User|string|int|array $user, string $alertId): array
     {
@@ -224,7 +226,7 @@ class DashboardService
     }
 
     /**
-     * Đánh dấu tất cả alerts đã đọc
+     * Đánh dấu tất cả alerts đã đọc.
      */
     public function markAllAlertsAsRead(User|string|int|array $user, ?string $projectId = null): array
     {
@@ -237,14 +239,14 @@ class DashboardService
         }
 
         $query->update([
-            'is_read' => true
+            'is_read' => true,
         ]);
 
         return ['success' => true];
     }
 
     /**
-     * Lấy metrics cho dashboard
+     * Lấy metrics cho dashboard.
      */
     public function getDashboardMetrics(User $user, ?string $projectId = null, ?string $category = null, string $timeRange = '7d'): array
     {
@@ -282,7 +284,7 @@ class DashboardService
                 'unit' => $metric->unit,
                 'value' => $value->value,
                 'display_config' => $metric->getDisplayConfig(),
-                'recorded_at' => $value->recorded_at
+                'recorded_at' => $value->recorded_at,
             ];
         }
 
@@ -305,33 +307,33 @@ class DashboardService
     }
 
     /**
-     * Lấy dashboard template cho role
+     * Lấy dashboard template cho role.
      */
     public function getDashboardTemplateForRole(User $user): array
     {
         $role = $this->getUserRole($user);
-        
+
         // Trả về template mặc định cho role
         return $this->getDefaultTemplateForRole($role);
     }
 
     /**
-     * Reset dashboard về mặc định
+     * Reset dashboard về mặc định.
      */
     public function resetDashboardToDefault(User|string|int|array $user): UserDashboard
     {
         $user = $this->resolveUser($user);
         $role = $this->getUserRole($user);
-        
+
         // Xóa dashboard hiện tại
         UserDashboard::forUser($user->id)->delete();
-        
+
         // Tạo dashboard mới từ template
         return $this->createDefaultDashboard($user);
     }
 
     /**
-     * Lưu preferences của user
+     * Lưu preferences của user.
      */
     public function saveUserPreferences(User|string|int|array $user, array $preferences): array
     {
@@ -340,7 +342,7 @@ class DashboardService
 
         return [
             'success' => true,
-            'dashboard' => $dashboard
+            'dashboard' => $dashboard,
         ];
     }
 
@@ -356,7 +358,7 @@ class DashboardService
     }
 
     /**
-     * Compatibility helper: available widgets for a user
+     * Compatibility helper: available widgets for a user.
      */
     public function getAvailableWidgets(User $user): array
     {
@@ -394,7 +396,7 @@ class DashboardService
     }
 
     /**
-     * Compatibility helper: add widget via legacy signature
+     * Compatibility helper: add widget via legacy signature.
      */
     public function addWidget(User|string|int|array $user, string $widgetId, array $config = []): array
     {
@@ -405,7 +407,7 @@ class DashboardService
         } catch (ModelNotFoundException $exception) {
             return [
                 'success' => false,
-                'message' => 'Widget not found'
+                'message' => 'Widget not found',
             ];
         }
 
@@ -414,6 +416,7 @@ class DashboardService
         }
 
         DB::beginTransaction();
+
         try {
             $dashboard = $this->getUserDashboard($user);
             $layout = $this->normalizeWidgetLayout($dashboard);
@@ -435,7 +438,7 @@ class DashboardService
                 'config' => $widgetConfig,
                 'is_customizable' => $widgetConfig['is_customizable'] ?? true,
                 'added_at' => now()->toISOString(),
-                'created_at' => now()->toISOString()
+                'created_at' => now()->toISOString(),
             ];
 
             $layout[] = $widgetInstance;
@@ -445,16 +448,17 @@ class DashboardService
 
             return [
                 'success' => true,
-                'widget_instance' => $widgetInstance
+                'widget_instance' => $widgetInstance,
             ];
         } catch (\Throwable $exception) {
             DB::rollBack();
+
             throw $exception;
         }
     }
 
     /**
-     * Compatibility helper: remove widget instance
+     * Compatibility helper: remove widget instance.
      */
     public function removeWidget(User|string|int|array $user, string $widgetInstanceId): array
     {
@@ -474,7 +478,7 @@ class DashboardService
         if ($foundIndex === null) {
             return [
                 'success' => false,
-                'message' => 'Widget instance not found'
+                'message' => 'Widget instance not found',
             ];
         }
 
@@ -485,7 +489,7 @@ class DashboardService
     }
 
     /**
-     * Compatibility helper: reset dashboard to default and clear custom widgets
+     * Compatibility helper: reset dashboard to default and clear custom widgets.
      */
     public function resetDashboard(User|string|int|array $user): array
     {
@@ -494,14 +498,14 @@ class DashboardService
         $dashboard = $this->resetDashboardToDefault($user);
         $dashboard->update([
             'widgets' => [],
-            'preferences' => array_merge($dashboard->preferences ?? [], ['theme' => 'light'])
+            'preferences' => array_merge($dashboard->preferences ?? [], ['theme' => 'light']),
         ]);
 
         return ['success' => true];
     }
 
     /**
-     * Normalize layout array for compatibility helpers
+     * Normalize layout array for compatibility helpers.
      */
     private function normalizeWidgetLayout(UserDashboard $dashboard): array
     {
@@ -509,7 +513,7 @@ class DashboardService
     }
 
     /**
-     * Persist layout array to dashboard
+     * Persist layout array to dashboard.
      */
     private function persistWidgetLayout(UserDashboard $dashboard, array $layout): void
     {
@@ -517,7 +521,7 @@ class DashboardService
     }
 
     /**
-     * Calculate default position for new widget instance
+     * Calculate default position for new widget instance.
      */
     private function calculateDefaultPosition(array $layout, UserDashboard $dashboard): array
     {
@@ -529,12 +533,12 @@ class DashboardService
             'x' => $index % $columns,
             'y' => (int) floor($index / $columns),
             'w' => 1,
-            'h' => 1
+            'h' => 1,
         ];
     }
 
     /**
-     * Update widget entry by instance id (compatibility helper)
+     * Update widget entry by instance id (compatibility helper).
      */
     private function updateWidgetInstanceConfig(User $user, string $widgetInstanceId, array $config): array
     {
@@ -568,7 +572,7 @@ class DashboardService
         if (!$updated) {
             return [
                 'success' => false,
-                'message' => 'Widget instance not found'
+                'message' => 'Widget instance not found',
             ];
         }
 
@@ -578,7 +582,7 @@ class DashboardService
     }
 
     /**
-     * Update layout entries (compatibility helper)
+     * Update layout entries (compatibility helper).
      */
     private function updateDashboardLayoutEntries(User $user, array $layout): array
     {
@@ -587,12 +591,12 @@ class DashboardService
 
         return [
             'success' => true,
-            'layout' => array_values($layout)
+            'layout' => array_values($layout),
         ];
     }
 
     /**
-     * Fallback data builder for project overview widgets
+     * Fallback data builder for project overview widgets.
      */
     private function buildProjectOverviewData(User $user, ?string $projectId): array
     {
@@ -606,12 +610,12 @@ class DashboardService
 
         return [
             'total_projects' => $totalProjects,
-            'active_projects' => $activeProjects
+            'active_projects' => $activeProjects,
         ];
     }
 
     /**
-     * Tạo dashboard mặc định cho user
+     * Tạo dashboard mặc định cho user.
      */
     private function createDefaultDashboard(User $user): UserDashboard
     {
@@ -625,12 +629,12 @@ class DashboardService
             'layout_config' => $template['layout'],
             'widgets' => [],
             'is_default' => true,
-            'is_active' => true
+            'is_active' => true,
         ]);
     }
 
     /**
-     * Lấy role của user
+     * Lấy role của user.
      */
     private function getUserRole(User $user): string
     {
@@ -639,32 +643,32 @@ class DashboardService
     }
 
     /**
-     * Lấy dữ liệu từ data source của widget
+     * Lấy dữ liệu từ data source của widget.
      */
     private function fetchWidgetData(DashboardWidget $widget, User $user, ?string $projectId, array $params): array
     {
         $dataSource = $widget->getDataSourceConfig();
-        
+
         switch ($dataSource['type'] ?? 'static') {
             case 'static':
                 return $dataSource['data'] ?? [];
-                
+
             case 'query':
                 return $this->executeQuery($dataSource['query'], $user, $projectId, $params);
-                
+
             case 'metric':
                 return $this->getMetricData($dataSource['metric_code'], $user, $projectId);
-                
+
             case 'api':
                 return $this->callExternalApi($dataSource['endpoint'], $user, $projectId, $params);
-                
+
             default:
                 return [];
         }
     }
 
     /**
-     * Thực thi query để lấy dữ liệu
+     * Thực thi query để lấy dữ liệu.
      */
     private function executeQuery(string $query, User $user, ?string $projectId, array $params): array
     {
@@ -672,7 +676,7 @@ class DashboardService
         $query = str_replace('{user_id}', $user->id, $query);
         $query = str_replace('{tenant_id}', $user->tenant_id, $query);
         $query = str_replace('{project_id}', $projectId ?? '', $query);
-        
+
         try {
             return DB::select($query);
         } catch (\Exception $e) {
@@ -681,29 +685,29 @@ class DashboardService
     }
 
     /**
-     * Lấy dữ liệu metric
+     * Lấy dữ liệu metric.
      */
     private function getMetricData(string $metricCode, User $user, ?string $projectId): array
     {
         $metric = DashboardMetric::byCode($metricCode)->first();
-        
+
         if (!$metric) {
             return [];
         }
 
-        $value = $projectId 
+        $value = $projectId
             ? $metric->getLatestValueForProject($projectId)
             : $metric->getLatestValueForTenant($user->tenant_id);
 
         return [
             'value' => $value ? $value->value : 0,
             'unit' => $metric->unit,
-            'recorded_at' => $value ? $value->recorded_at : null
+            'recorded_at' => $value ? $value->recorded_at : null,
         ];
     }
 
     /**
-     * Gọi external API
+     * Gọi external API.
      */
     private function callExternalApi(string $endpoint, User $user, ?string $projectId, array $params): array
     {
@@ -738,7 +742,7 @@ class DashboardService
     }
 
     /**
-     * Lấy template mặc định cho role
+     * Lấy template mặc định cho role.
      */
     private function getDefaultTemplateForRole(string $role): array
     {
@@ -747,43 +751,42 @@ class DashboardService
                 'layout' => [
                     'columns' => 4,
                     'rows' => 3,
-                    'gap' => 16
+                    'gap' => 16,
                 ],
                 'widgets' => [
                     [
                         'id' => 'system_overview',
                         'position' => ['x' => 0, 'y' => 0, 'w' => 2, 'h' => 1],
-                        'config' => []
+                        'config' => [],
                     ],
                     [
                         'id' => 'user_management',
                         'position' => ['x' => 2, 'y' => 0, 'w' => 2, 'h' => 1],
-                        'config' => []
-                    ]
-                ]
+                        'config' => [],
+                    ],
+                ],
             ],
             'project_manager' => [
                 'layout' => [
                     'columns' => 4,
                     'rows' => 3,
-                    'gap' => 16
+                    'gap' => 16,
                 ],
                 'widgets' => [
                     [
                         'id' => 'project_overview',
                         'position' => ['x' => 0, 'y' => 0, 'w' => 2, 'h' => 1],
-                        'config' => []
+                        'config' => [],
                     ],
                     [
                         'id' => 'task_management',
                         'position' => ['x' => 2, 'y' => 0, 'w' => 2, 'h' => 1],
-                        'config' => []
-                    ]
-                ]
-            ]
+                        'config' => [],
+                    ],
+                ],
+            ],
         ];
 
         return $templates[$role] ?? $templates['project_manager'];
     }
-
 }

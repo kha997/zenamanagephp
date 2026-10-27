@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
+use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Services\ZenaAuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Sanctum\PersonalAccessToken;
-use App\Services\ZenaAuditLogger;
 
 class AuthController extends Controller
 {
@@ -30,6 +30,7 @@ class AuthController extends Controller
         $key = 'login:' . $request->ip();
         if (RateLimiter::tooManyAttempts($key, 5)) {
             $seconds = RateLimiter::availableIn($key);
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Too many login attempts. Please try again in ' . $seconds . ' seconds.',
@@ -43,6 +44,7 @@ class AuthController extends Controller
 
         if ($validator->fails()) {
             RateLimiter::hit($key, 900); // 15 minutes
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validation failed',
@@ -55,6 +57,7 @@ class AuthController extends Controller
 
         if (!Auth::attempt($credentials, $remember)) {
             RateLimiter::hit($key, 900); // 15 minutes
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Invalid credentials',
@@ -62,10 +65,11 @@ class AuthController extends Controller
         }
 
         $user = Auth::user();
-        
+
         // Check if user is active
         if (!$user->is_active) {
             Auth::logout();
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Account is deactivated',
@@ -131,7 +135,7 @@ class AuthController extends Controller
     public function logout(Request $request): JsonResponse
     {
         $user = $request->user('sanctum') ?? Auth::guard('sanctum')->user();
-        
+
         if (!$user) {
             return response()->json([
                 'status' => 'error',
@@ -161,6 +165,7 @@ class AuthController extends Controller
 
         if ($currentAccessToken instanceof PersonalAccessToken) {
             $currentAccessToken->delete();
+
             return;
         }
 
@@ -168,6 +173,7 @@ class AuthController extends Controller
 
         if ($bearer) {
             PersonalAccessToken::findToken($bearer)?->delete();
+
             return;
         }
 
@@ -181,14 +187,14 @@ class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         $user = Auth::guard('sanctum')->user();
-        
+
         if (!$user) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized',
             ], 401);
         }
-        
+
         // Get user roles and permissions
         $rolesWithPermissions = $user->roles()->with('permissions')->get();
         $roles = $rolesWithPermissions->pluck('name')->toArray();
@@ -221,17 +227,17 @@ class AuthController extends Controller
     public function refresh(Request $request): JsonResponse
     {
         $user = Auth::guard('sanctum')->user();
-        
+
         if (!$user) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized',
             ], 401);
         }
-        
+
         // Revoke current token
         $user->currentAccessToken()->delete();
-        
+
         // Create new token
         $token = $user->createToken('auth-token', ['*'], now()->addHours(2))->plainTextToken;
 
@@ -248,14 +254,14 @@ class AuthController extends Controller
     public function getDashboardUrl(Request $request): JsonResponse
     {
         $user = Auth::guard('sanctum')->user();
-        
+
         if (!$user) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized',
             ], 401);
         }
-        
+
         $roles = $user->roles()->pluck('name')->toArray();
 
         $dashboardUrl = $this->getDashboardUrlByRole($roles);
@@ -300,7 +306,7 @@ class AuthController extends Controller
     {
         $permission = $request->input('permission');
         $user = Auth::guard('sanctum')->user();
-        
+
         if (!$user) {
             return response()->json([
                 'status' => 'error',
@@ -324,14 +330,14 @@ class AuthController extends Controller
     public function getNotifications(Request $request): JsonResponse
     {
         $user = Auth::guard('sanctum')->user();
-        
+
         if (!$user) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized',
             ], 401);
         }
-        
+
         $limit = $request->input('limit', 10);
         $unreadOnly = $request->boolean('unread_only', false);
 
@@ -355,16 +361,16 @@ class AuthController extends Controller
     public function markNotificationAsRead(Request $request, string $notificationId): JsonResponse
     {
         $user = Auth::guard('sanctum')->user();
-        
+
         if (!$user) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized',
             ], 401);
         }
-        
+
         $notification = $user->zenaNotifications()->findOrFail($notificationId);
-        
+
         $notification->markAsRead();
 
         return $this->zenaSuccessResponse(null, 'Notification marked as read');

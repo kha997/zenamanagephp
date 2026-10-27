@@ -3,21 +3,20 @@
 namespace App\Http\Controllers\Api\V1\App;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
     /**
      * Get dashboard metrics - cached for 60 seconds
-     * GET /api/v1/app/dashboard/metrics
+     * GET /api/v1/app/dashboard/metrics.
      */
     public function metrics(Request $request)
     {
         $user = Auth::user();
-        
+
         // Simple test data first
         return response()->json([
             'kpis' => [
@@ -26,14 +25,14 @@ class DashboardController extends Controller
                     'label' => 'Active Users',
                     'url' => '/app/team/users?filter=active',
                     'icon' => 'fas fa-users',
-                    'color' => 'blue'
+                    'color' => 'blue',
                 ],
                 'active_projects' => [
                     'value' => 8,
                     'label' => 'Active Projects',
                     'url' => '/app/projects?filter=active',
                     'icon' => 'fas fa-project-diagram',
-                    'color' => 'green'
+                    'color' => 'green',
                 ],
                 'total_tasks' => [
                     'completed' => 45,
@@ -41,15 +40,15 @@ class DashboardController extends Controller
                     'label' => 'Tasks',
                     'url' => '/app/tasks',
                     'icon' => 'fas fa-tasks',
-                    'color' => 'purple'
+                    'color' => 'purple',
                 ],
                 'documents' => [
                     'value' => 156,
                     'label' => 'Documents This Week',
                     'url' => '/app/documents?filter=this_week',
                     'icon' => 'fas fa-file-alt',
-                    'color' => 'orange'
-                ]
+                    'color' => 'orange',
+                ],
             ],
             'alerts' => [
                 [
@@ -60,9 +59,9 @@ class DashboardController extends Controller
                     'cta' => [
                         'text' => 'View Tasks',
                         'url' => '/app/tasks?filter=overdue',
-                        'action' => 'resolve'
+                        'action' => 'resolve',
                     ],
-                    'dismissible' => false
+                    'dismissible' => false,
                 ],
                 [
                     'id' => 'urgent_projects',
@@ -72,10 +71,10 @@ class DashboardController extends Controller
                     'cta' => [
                         'text' => 'Review Projects',
                         'url' => '/app/projects?filter=urgent',
-                        'action' => 'acknowledge'
+                        'action' => 'acknowledge',
                     ],
-                    'dismissible' => true
-                ]
+                    'dismissible' => true,
+                ],
             ],
             'now_panel' => [
                 [
@@ -86,8 +85,8 @@ class DashboardController extends Controller
                     'cta' => [
                         'text' => 'Review Now',
                         'url' => '/app/projects?filter=pending_review',
-                        'action' => 'review'
-                    ]
+                        'action' => 'review',
+                    ],
                 ],
                 [
                     'id' => 'update_status',
@@ -97,9 +96,9 @@ class DashboardController extends Controller
                     'cta' => [
                         'text' => 'Update Status',
                         'url' => '/app/tasks?filter=my_tasks',
-                        'action' => 'update'
-                    ]
-                ]
+                        'action' => 'update',
+                    ],
+                ],
             ],
             'work_queue' => [
                 'my_work' => [
@@ -111,7 +110,7 @@ class DashboardController extends Controller
                             'priority' => 'high',
                             'due_date' => '2025-09-25',
                             'status' => 'in_progress',
-                            'focus_time' => 0
+                            'focus_time' => 0,
                         ],
                         [
                             'id' => 2,
@@ -120,10 +119,10 @@ class DashboardController extends Controller
                             'priority' => 'medium',
                             'due_date' => '2025-09-28',
                             'status' => 'pending',
-                            'focus_time' => 0
-                        ]
+                            'focus_time' => 0,
+                        ],
                     ],
-                    'total' => 2
+                    'total' => 2,
                 ],
                 'team_work' => [
                     'tasks' => [
@@ -134,11 +133,11 @@ class DashboardController extends Controller
                             'project' => 'Project Gamma',
                             'priority' => 'high',
                             'due_date' => '2025-09-26',
-                            'status' => 'in_progress'
-                        ]
+                            'status' => 'in_progress',
+                        ],
                     ],
-                    'total' => 1
-                ]
+                    'total' => 1,
+                ],
             ],
             'insights' => [
                 [
@@ -151,9 +150,9 @@ class DashboardController extends Controller
                         ['date' => 'Sep 18', 'value' => 15],
                         ['date' => 'Sep 19', 'value' => 18],
                         ['date' => 'Sep 20', 'value' => 22],
-                        ['date' => 'Sep 21', 'value' => 25]
+                        ['date' => 'Sep 21', 'value' => 25],
                     ],
-                    'url' => '/app/reports/task-completion'
+                    'url' => '/app/reports/task-completion',
                 ],
                 [
                     'title' => 'Project Status',
@@ -161,10 +160,10 @@ class DashboardController extends Controller
                     'data' => [
                         ['label' => 'Active', 'value' => 8],
                         ['label' => 'Completed', 'value' => 12],
-                        ['label' => 'On Hold', 'value' => 3]
+                        ['label' => 'On Hold', 'value' => 3],
                     ],
-                    'url' => '/app/reports/project-status'
-                ]
+                    'url' => '/app/reports/project-status',
+                ],
             ],
             'activity' => [
                 [
@@ -173,7 +172,7 @@ class DashboardController extends Controller
                     'description' => 'Task "Design Review" completed',
                     'user' => 'John Doe',
                     'created_at' => '2025-09-22T14:30:00Z',
-                    'metadata' => []
+                    'metadata' => [],
                 ],
                 [
                     'id' => 2,
@@ -181,67 +180,67 @@ class DashboardController extends Controller
                     'description' => 'New document uploaded: "Project Plan.pdf"',
                     'user' => 'Jane Smith',
                     'created_at' => '2025-09-22T13:30:00Z',
-                    'metadata' => []
-                ]
+                    'metadata' => [],
+                ],
             ],
             'shortcuts' => [
                 [
                     'title' => 'New Project',
                     'url' => '/app/projects/create',
                     'icon' => 'fas fa-plus',
-                    'color' => 'green'
+                    'color' => 'green',
                 ],
                 [
                     'title' => 'New Task',
                     'url' => '/app/tasks/create',
                     'icon' => 'fas fa-tasks',
-                    'color' => 'blue'
+                    'color' => 'blue',
                 ],
                 [
                     'title' => 'Upload Document',
                     'url' => '/app/documents/upload',
                     'icon' => 'fas fa-upload',
-                    'color' => 'purple'
+                    'color' => 'purple',
                 ],
                 [
                     'title' => 'Team Chat',
                     'url' => '/app/team/chat',
                     'icon' => 'fas fa-comments',
-                    'color' => 'orange'
-                ]
+                    'color' => 'orange',
+                ],
             ],
             'focus_mode' => [
                 'is_active' => false,
                 'current_task' => null,
                 'started_at' => null,
-                'focus_time_today' => 0
+                'focus_time_today' => 0,
             ],
             'generated_at' => now()->toISOString(),
-            'cache_ttl' => 60
+            'cache_ttl' => 60,
         ]);
     }
 
     /**
-     * Get 4 mandatory KPIs
+     * Get 4 mandatory KPIs.
      */
     private function getKPIs($user)
     {
         $tenantId = $user->tenant_id;
-        
+
         return [
             'total_users' => [
                 'value' => \App\Models\User::where('tenant_id', $tenantId)->where('is_active', true)->count(),
                 'label' => 'Active Users',
                 'url' => '/app/team/users?filter=active',
                 'icon' => 'fas fa-users',
-                'color' => 'blue'
+                'color' => 'blue',
             ],
             'active_projects' => [
                 'value' => \App\Models\Project::where('tenant_id', $tenantId)->whereIn('status', ['active', 'in_progress'])->count(),
                 'label' => 'Active Projects',
                 'url' => '/app/projects?filter=active',
                 'icon' => 'fas fa-project-diagram',
-                'color' => 'green'
+                'color' => 'green',
             ],
             'total_tasks' => [
                 'completed' => \App\Models\Task::where('tenant_id', $tenantId)->where('status', 'completed')->count(),
@@ -249,31 +248,31 @@ class DashboardController extends Controller
                 'label' => 'Tasks',
                 'url' => '/app/tasks',
                 'icon' => 'fas fa-tasks',
-                'color' => 'purple'
+                'color' => 'purple',
             ],
             'documents' => [
                 'value' => \App\Models\Document::where('tenant_id', $tenantId)->where('created_at', '>=', Carbon::now()->subWeek())->count(),
                 'label' => 'Documents This Week',
                 'url' => '/app/documents?filter=this_week',
                 'icon' => 'fas fa-file-alt',
-                'color' => 'orange'
-            ]
+                'color' => 'orange',
+            ],
         ];
     }
 
     /**
-     * Get critical alerts (max 3)
+     * Get critical alerts (max 3).
      */
     private function getCriticalAlerts($user)
     {
         $alerts = [];
-        
+
         // Check for overdue tasks (using created_at as proxy for due_date)
         $overdueTasks = \App\Models\Task::where('tenant_id', $user->tenant_id)
             ->where('created_at', '<', now()->subDays(7))
             ->whereIn('status', ['pending', 'in_progress'])
             ->count();
-            
+
         if ($overdueTasks > 0) {
             $alerts[] = [
                 'id' => 'overdue_tasks',
@@ -283,18 +282,18 @@ class DashboardController extends Controller
                 'cta' => [
                     'text' => 'View Tasks',
                     'url' => '/app/tasks?filter=overdue',
-                    'action' => 'resolve'
+                    'action' => 'resolve',
                 ],
-                'dismissible' => false
+                'dismissible' => false,
             ];
         }
-        
+
         // Check for project deadlines (using created_at as proxy)
         $urgentProjects = \App\Models\Project::where('tenant_id', $user->tenant_id)
             ->where('created_at', '<=', Carbon::now()->subDays(30))
             ->whereIn('status', ['active', 'in_progress'])
             ->count();
-            
+
         if ($urgentProjects > 0) {
             $alerts[] = [
                 'id' => 'urgent_projects',
@@ -304,12 +303,12 @@ class DashboardController extends Controller
                 'cta' => [
                     'text' => 'Review Projects',
                     'url' => '/app/projects?filter=urgent',
-                    'action' => 'acknowledge'
+                    'action' => 'acknowledge',
                 ],
-                'dismissible' => true
+                'dismissible' => true,
             ];
         }
-        
+
         // Check for system maintenance
         $alerts[] = [
             'id' => 'system_maintenance',
@@ -319,21 +318,21 @@ class DashboardController extends Controller
             'cta' => [
                 'text' => 'Learn More',
                 'url' => '/app/settings/maintenance',
-                'action' => 'acknowledge'
+                'action' => 'acknowledge',
             ],
-            'dismissible' => true
+            'dismissible' => true,
         ];
-        
+
         return array_slice($alerts, 0, 3); // Max 3 alerts
     }
 
     /**
-     * Get Now Panel tasks (3-5 items based on role)
+     * Get Now Panel tasks (3-5 items based on role).
      */
     private function getNowPanelTasks($user)
     {
         $tasks = [];
-        
+
         // Role-based tasks
         if ($user->hasRole('project_manager')) {
             $tasks[] = [
@@ -344,11 +343,11 @@ class DashboardController extends Controller
                 'cta' => [
                     'text' => 'Review Now',
                     'url' => '/app/projects?filter=pending_review',
-                    'action' => 'review'
-                ]
+                    'action' => 'review',
+                ],
             ];
         }
-        
+
         if ($user->hasRole('designer')) {
             $tasks[] = [
                 'id' => 'design_review',
@@ -358,11 +357,11 @@ class DashboardController extends Controller
                 'cta' => [
                     'text' => 'Start Review',
                     'url' => '/app/projects/alpha/design',
-                    'action' => 'start'
-                ]
+                    'action' => 'start',
+                ],
             ];
         }
-        
+
         // Common tasks for all users
         $tasks[] = [
             'id' => 'update_status',
@@ -372,10 +371,10 @@ class DashboardController extends Controller
             'cta' => [
                 'text' => 'Update Status',
                 'url' => '/app/tasks?filter=my_tasks',
-                'action' => 'update'
-            ]
+                'action' => 'update',
+            ],
         ];
-        
+
         $tasks[] = [
             'id' => 'upload_documents',
             'title' => 'Upload Project Documents',
@@ -384,20 +383,20 @@ class DashboardController extends Controller
             'cta' => [
                 'text' => 'Upload Now',
                 'url' => '/app/documents/upload',
-                'action' => 'upload'
-            ]
+                'action' => 'upload',
+            ],
         ];
-        
+
         return array_slice($tasks, 0, 5); // Max 5 tasks
     }
 
     /**
-     * Get Work Queue (My Work / Team)
+     * Get Work Queue (My Work / Team).
      */
     private function getWorkQueue($user)
     {
         $tenantId = $user->tenant_id;
-        
+
         return [
             'my_work' => [
                 'tasks' => \App\Models\Task::where('tenant_id', $tenantId)
@@ -415,13 +414,13 @@ class DashboardController extends Controller
                             'priority' => $task->priority,
                             'due_date' => $task->created_at,
                             'status' => $task->status,
-                            'focus_time' => $task->focus_time ?? 0
+                            'focus_time' => $task->focus_time ?? 0,
                         ];
                     }),
                 'total' => \App\Models\Task::where('tenant_id', $tenantId)
                     ->where('assigned_to', $user->id)
                     ->whereIn('status', ['pending', 'in_progress'])
-                    ->count()
+                    ->count(),
             ],
             'team_work' => [
                 'tasks' => \App\Models\Task::where('tenant_id', $tenantId)
@@ -438,52 +437,52 @@ class DashboardController extends Controller
                             'project' => $task->project->name ?? 'No Project',
                             'priority' => $task->priority,
                             'due_date' => $task->created_at,
-                            'status' => $task->status
+                            'status' => $task->status,
                         ];
                     }),
                 'total' => \App\Models\Task::where('tenant_id', $tenantId)
                     ->whereIn('status', ['pending', 'in_progress'])
-                    ->count()
-            ]
+                    ->count(),
+            ],
         ];
     }
 
     /**
-     * Get Insights (2-4 mini charts)
+     * Get Insights (2-4 mini charts).
      */
     private function getInsights($user)
     {
         $tenantId = $user->tenant_id;
-        
+
         return [
             'task_completion_trend' => [
                 'title' => 'Task Completion Trend',
                 'type' => 'line',
                 'data' => $this->getTaskCompletionTrend($tenantId),
-                'url' => '/app/reports/task-completion'
+                'url' => '/app/reports/task-completion',
             ],
             'project_status_distribution' => [
                 'title' => 'Project Status',
                 'type' => 'doughnut',
                 'data' => $this->getProjectStatusDistribution($tenantId),
-                'url' => '/app/reports/project-status'
+                'url' => '/app/reports/project-status',
             ],
             'team_productivity' => [
                 'title' => 'Team Productivity',
                 'type' => 'bar',
                 'data' => $this->getTeamProductivity($tenantId),
-                'url' => '/app/reports/team-productivity'
-            ]
+                'url' => '/app/reports/team-productivity',
+            ],
         ];
     }
 
     /**
-     * Get Recent Activity (10 records)
+     * Get Recent Activity (10 records).
      */
     private function getRecentActivity($user)
     {
         $tenantId = $user->tenant_id;
-        
+
         return \App\Models\Activity::where('tenant_id', $tenantId)
             ->orderBy('created_at', 'desc')
             ->limit(10)
@@ -495,13 +494,13 @@ class DashboardController extends Controller
                     'description' => $activity->description,
                     'user' => $activity->user->name ?? 'System',
                     'created_at' => $activity->created_at,
-                    'metadata' => $activity->metadata
+                    'metadata' => $activity->metadata,
                 ];
             });
     }
 
     /**
-     * Get Shortcuts (max 8)
+     * Get Shortcuts (max 8).
      */
     private function getShortcuts($user)
     {
@@ -510,55 +509,55 @@ class DashboardController extends Controller
                 'title' => 'New Project',
                 'url' => '/app/projects/create',
                 'icon' => 'fas fa-plus',
-                'color' => 'green'
+                'color' => 'green',
             ],
             [
                 'title' => 'New Task',
                 'url' => '/app/tasks/create',
                 'icon' => 'fas fa-tasks',
-                'color' => 'blue'
+                'color' => 'blue',
             ],
             [
                 'title' => 'Upload Document',
                 'url' => '/app/documents/upload',
                 'icon' => 'fas fa-upload',
-                'color' => 'purple'
+                'color' => 'purple',
             ],
             [
                 'title' => 'Team Chat',
                 'url' => '/app/team/chat',
                 'icon' => 'fas fa-comments',
-                'color' => 'orange'
-            ]
+                'color' => 'orange',
+            ],
         ];
-        
+
         // Add role-specific shortcuts
         if ($user->hasRole('project_manager')) {
             $shortcuts[] = [
                 'title' => 'Project Reports',
                 'url' => '/app/reports/projects',
                 'icon' => 'fas fa-chart-bar',
-                'color' => 'indigo'
+                'color' => 'indigo',
             ];
         }
-        
+
         return array_slice($shortcuts, 0, 8); // Max 8 shortcuts
     }
 
     /**
-     * Get Focus Mode status
+     * Get Focus Mode status.
      */
     private function getFocusMode($user)
     {
         $focusSession = \App\Models\FocusSession::where('user_id', $user->id)
             ->where('status', 'active')
             ->first();
-            
+
         return [
             'is_active' => $focusSession ? true : false,
             'current_task' => $focusSession ? $focusSession->task : null,
             'started_at' => $focusSession ? $focusSession->started_at : null,
-            'focus_time_today' => $this->getFocusTimeToday($user->id)
+            'focus_time_today' => $this->getFocusTimeToday($user->id),
         ];
     }
 
@@ -575,6 +574,7 @@ class DashboardController extends Controller
                 ->count();
             $data[] = ['date' => $date->format('M d'), 'value' => $completed];
         }
+
         return $data;
     }
 
@@ -582,14 +582,14 @@ class DashboardController extends Controller
     {
         $statuses = ['planning', 'active', 'in_progress', 'completed', 'on_hold'];
         $data = [];
-        
+
         foreach ($statuses as $status) {
             $count = \App\Models\Project::where('tenant_id', $tenantId)
                 ->where('status', $status)
                 ->count();
             $data[] = ['label' => ucfirst($status), 'value' => $count];
         }
-        
+
         return $data;
     }
 
@@ -604,10 +604,10 @@ class DashboardController extends Controller
                     ->where('status', 'completed')
                     ->where('updated_at', '>=', Carbon::now()->subWeek())
                     ->count();
-                    
+
                 return [
                     'name' => $user->name,
-                    'completed_tasks' => $completedTasks
+                    'completed_tasks' => $completedTasks,
                 ];
             });
     }

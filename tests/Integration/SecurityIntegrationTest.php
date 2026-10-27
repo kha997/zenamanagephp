@@ -2,42 +2,43 @@
 
 namespace Tests\Integration;
 
-use Tests\TestCase;
-use App\Models\User;
-use App\Models\UserDashboard;
-use App\Models\DashboardWidget;
-use App\Models\DashboardMetric;
 use App\Models\DashboardAlert;
-use App\Models\Tenant;
+use App\Models\DashboardMetric;
+use App\Models\DashboardWidget;
 use App\Models\Project;
 use App\Models\Task;
-use App\Models\Rfi;
+use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\Support\SSOT\FixtureFactory;
+use Tests\TestCase;
 use Tests\Traits\AuthenticationTrait;
 
 class SecurityIntegrationTest extends TestCase
 {
-    use RefreshDatabase, AuthenticationTrait, FixtureFactory;
+    use RefreshDatabase;
+    use AuthenticationTrait;
+    use FixtureFactory;
 
     protected $user;
+
     protected $project;
+
     protected $tenant;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create test tenant
         $this->tenant = $this->createTenant([
             'name' => 'Test Tenant',
             'domain' => 'test.com',
-            'is_active' => true
+            'is_active' => true,
         ]);
-        
+
         // Create test user
         $this->user = $this->createTenantUserWithRbac($this->tenant, 'project_manager', 'project_manager', [], [
             'name' => 'Test User',
@@ -46,7 +47,7 @@ class SecurityIntegrationTest extends TestCase
             'role' => 'project_manager',
             'tenant_id' => $this->tenant->id,
         ]);
-        
+
         // Create test project
         $this->project = $this->createProjectForTenant($this->tenant, $this->user, [
             'name' => 'Test Project',
@@ -57,7 +58,7 @@ class SecurityIntegrationTest extends TestCase
             'end_date' => now()->addMonths(6),
             'tenant_id' => $this->tenant->id,
         ]);
-        
+
         // Create test data
         $this->createTestData();
     }
@@ -74,7 +75,7 @@ class SecurityIntegrationTest extends TestCase
             'config' => json_encode(['default_size' => 'large']),
             'permissions' => json_encode(['project_manager']),
             'is_active' => true,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         DashboardWidget::create([
@@ -86,7 +87,7 @@ class SecurityIntegrationTest extends TestCase
             'config' => json_encode(['default_size' => 'medium']),
             'permissions' => json_encode(['qc_inspector']),
             'is_active' => true,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Create metrics
@@ -98,7 +99,7 @@ class SecurityIntegrationTest extends TestCase
             'type' => 'gauge',
             'is_active' => true,
             'permissions' => json_encode(['project_manager']),
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Create tasks
@@ -110,7 +111,7 @@ class SecurityIntegrationTest extends TestCase
             'due_date' => now()->addDays(7),
             'assigned_to' => $this->user->id,
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Create RFIs
@@ -132,7 +133,7 @@ class SecurityIntegrationTest extends TestCase
             'severity' => 'medium',
             'is_read' => false,
             'triggered_at' => now(),
-            'context' => json_encode(['project_id' => $this->project->id])
+            'context' => json_encode(['project_id' => $this->project->id]),
         ]);
     }
 
@@ -151,7 +152,7 @@ class SecurityIntegrationTest extends TestCase
 
         foreach ($endpoints as $endpoint) {
             [$method, $path] = explode(' ', $endpoint);
-            
+
             $response = $this->json($method, $path);
             $response->assertStatus(401);
         }
@@ -166,18 +167,18 @@ class SecurityIntegrationTest extends TestCase
             'email' => 'qc@example.com',
             'password' => Hash::make('password'),
             'role' => 'qc_inspector',
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $this->apiAs($qcUser, $this->tenant);
 
         // QC Inspector should not be able to access project_manager widget
         $projectManagerWidget = DashboardWidget::where('code', 'project_overview')->first();
-        
+
         $response = $this->postJson('/api/v1/dashboard/widgets', [
-            'widget_id' => $projectManagerWidget->id
+            'widget_id' => $projectManagerWidget->id,
         ]);
-        
+
         $response->assertStatus(403);
         $response->assertJsonPath('error.code', 'E403.AUTHORIZATION');
         $response->assertJsonStructure([
@@ -190,11 +191,11 @@ class SecurityIntegrationTest extends TestCase
 
         // QC Inspector should be able to access qc_inspector widget
         $qcWidget = DashboardWidget::where('code', 'qc_inspector_widget')->first();
-        
+
         $response = $this->postJson('/api/v1/dashboard/widgets', [
-            'widget_id' => $qcWidget->id
+            'widget_id' => $qcWidget->id,
         ]);
-        
+
         $response->assertStatus(200);
     }
 
@@ -208,7 +209,7 @@ class SecurityIntegrationTest extends TestCase
             'name' => 'Client Representative',
             'email' => 'client@example.com',
             'role' => 'client_rep',
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
             ],
             ['client'],
             ['dashboard.view']
@@ -219,10 +220,10 @@ class SecurityIntegrationTest extends TestCase
         // Client Rep should not see project_manager specific metrics
         $response = $this->getJson('/api/v1/dashboard/metrics');
         $response->assertStatus(200);
-        
+
         $metrics = $response->json('data');
         $this->assertIsArray($metrics);
-        
+
         // Verify metrics are filtered by permissions
         foreach ($metrics as $metric) {
             $permissions = json_decode($metric['permissions'], true) ?? [];
@@ -237,7 +238,7 @@ class SecurityIntegrationTest extends TestCase
         $otherTenant = \App\Models\Tenant::factory()->create([
             'name' => 'Other Tenant',
             'domain' => 'other.com',
-            'is_active' => true
+            'is_active' => true,
         ]);
 
         $otherProject = Project::factory()->create([
@@ -247,16 +248,16 @@ class SecurityIntegrationTest extends TestCase
             'budget' => 50000,
             'start_date' => now(),
             'end_date' => now()->addMonths(3),
-            'tenant_id' => $otherTenant->id
+            'tenant_id' => $otherTenant->id,
         ]);
 
         $this->apiAs($this->user, $this->tenant);
 
         // User should not be able to access other tenant's project
         $response = $this->postJson('/api/v1/dashboard/role-based/switch-project', [
-            'project_id' => $otherProject->id
+            'project_id' => $otherProject->id,
         ]);
-        
+
         $response->assertStatus(404);
         $response->assertJsonPath('error.code', 'E404.NOT_FOUND');
         $this->assertStringContains('not found', $response->json('message'));
@@ -320,7 +321,7 @@ class SecurityIntegrationTest extends TestCase
 
         // Reject control: obvious XSS payload must be blocked
         $maliciousInput = '<script>alert("XSS")</script>';
-        
+
         $response = $this->postJson('/api/v1/dashboard/widgets', [
             'widget_id' => $widget->id,
             'config' => [
@@ -356,9 +357,9 @@ class SecurityIntegrationTest extends TestCase
 
         // Test SQL injection in widget ID
         $maliciousWidgetId = "1'; DROP TABLE users; --";
-        
+
         $response = $this->postJson('/api/v1/dashboard/widgets', [
-            'widget_id' => $maliciousWidgetId
+            'widget_id' => $maliciousWidgetId,
         ]);
 
         $statusCode = $response->getStatusCode();
@@ -370,7 +371,7 @@ class SecurityIntegrationTest extends TestCase
         } else {
             $response->assertJsonPath('error.code', 'E422.VALIDATION');
         }
-        
+
         // Verify users table still exists
         $userCount = User::count();
         $this->assertGreaterThan(0, $userCount);
@@ -432,11 +433,11 @@ class SecurityIntegrationTest extends TestCase
         $widget = DashboardWidget::first();
 
         $response = $this->postJson('/api/v1/dashboard/widgets', [
-            'widget_id' => $widget->id
+            'widget_id' => $widget->id,
         ], [
-            'X-CSRF-TOKEN' => 'invalid-token'
+            'X-CSRF-TOKEN' => 'invalid-token',
         ]);
-        
+
         // Should still work as we're using API routes with Sanctum
         $response->assertStatus(200);
     }
@@ -449,13 +450,14 @@ class SecurityIntegrationTest extends TestCase
         // Make many requests quickly
         for ($i = 0; $i < 100; $i++) {
             $response = $this->getJson('/api/v1/dashboard/role-based');
-            
+
             if ($response->status() === 429) {
                 $this->assertTrue(true, 'Rate limiting is working');
+
                 return;
             }
         }
-        
+
         // If we get here, rate limiting might not be configured
         $this->assertTrue(true, 'Rate limiting test completed');
     }
@@ -473,12 +475,12 @@ class SecurityIntegrationTest extends TestCase
             'config' => [
                 'title' => 'Sensitive Data',
                 'size' => 'medium',
-                'sensitive_field' => 'confidential-information'
-            ]
+                'sensitive_field' => 'confidential-information',
+            ],
         ]);
-        
+
         $response->assertStatus(200);
-        
+
         // Verify data is stored (not necessarily encrypted in this test)
         $widgetInstance = $response->json('data.widget_instance');
         $this->assertArrayHasKey('config', $widgetInstance);
@@ -492,7 +494,7 @@ class SecurityIntegrationTest extends TestCase
         // Test session handling
         $response = $this->getJson('/api/v1/dashboard/role-based');
         $response->assertStatus(200);
-        
+
         // Verify session is maintained
         $response2 = $this->getJson('/api/v1/dashboard/widgets');
         $response2->assertStatus(200);
@@ -505,7 +507,7 @@ class SecurityIntegrationTest extends TestCase
 
         // Test file upload validation (if applicable)
         $maliciousFile = 'malicious.php';
-        
+
         // This would test file upload security if file uploads were implemented
         $this->assertTrue(true, 'File upload security test placeholder');
     }
@@ -515,9 +517,9 @@ class SecurityIntegrationTest extends TestCase
     {
         // Test API key validation
         $response = $this->getJson('/api/v1/dashboard', [
-            'Authorization' => 'Bearer invalid-token'
+            'Authorization' => 'Bearer invalid-token',
         ]);
-        
+
         $response->assertStatus(401);
     }
 
@@ -527,9 +529,9 @@ class SecurityIntegrationTest extends TestCase
         // Test CORS headers
         $response = $this->options('/api/v1/dashboard/role-based', [], [
             'Origin' => 'https://malicious-site.com',
-            'Access-Control-Request-Method' => 'GET'
+            'Access-Control-Request-Method' => 'GET',
         ]);
-        
+
         // CORS should be properly configured
         $this->assertTrue(true, 'CORS security test placeholder');
     }
@@ -548,10 +550,10 @@ class SecurityIntegrationTest extends TestCase
 
         $response = $this->getJson('/api/v1/dashboard/role-based');
         $response->assertStatus(200);
-        
+
         // Check for security headers
         $headers = $response->headers;
-        
+
         // These would be set by the web server (Nginx)
         $this->assertTrue(true, 'Security headers test placeholder');
     }
@@ -565,11 +567,11 @@ class SecurityIntegrationTest extends TestCase
 
         // Perform action that should be logged
         $response = $this->postJson('/api/v1/dashboard/widgets', [
-            'widget_id' => $widget->id
+            'widget_id' => $widget->id,
         ]);
-        
+
         $response->assertStatus(200);
-        
+
         // Verify audit logging (would need audit log implementation)
         $this->assertTrue(true, 'Audit logging test placeholder');
     }
@@ -583,10 +585,10 @@ class SecurityIntegrationTest extends TestCase
         $response = $this->postJson('/api/v1/dashboard/widgets', [
             'widget_id' => 'invalid-id',
             'config' => [
-                'size' => 'invalid-size'
-            ]
+                'size' => 'invalid-size',
+            ],
         ]);
-        
+
         $response->assertStatus(422);
         $this->assertArrayHasKey('errors', $response->json());
     }
@@ -600,16 +602,16 @@ class SecurityIntegrationTest extends TestCase
             'email' => 'low@example.com',
             'password' => Hash::make('password'),
             'role' => 'client_rep',
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         $this->apiAs($lowPrivilegeUser, $this->tenant);
 
         // Try to access high-privilege operations
         $response = $this->postJson('/api/v1/dashboard/customization/widgets', [
-            'widget_id' => 'any-widget-id'
+            'widget_id' => 'any-widget-id',
         ]);
-        
+
         $response->assertStatus(403);
         $response->assertJsonPath('error.code', 'RBAC_ACCESS_DENIED');
         $errorMessage = strtolower((string) $response->json('error.message'));
@@ -655,7 +657,6 @@ class SecurityIntegrationTest extends TestCase
         if ($crossTenantResponse->status() === 404 && !is_null($crossTenantResponse->json('error.code'))) {
             $crossTenantResponse->assertJsonPath('error.code', 'E404.NOT_FOUND');
         }
-
     }
 
     /** @test */
@@ -665,11 +666,11 @@ class SecurityIntegrationTest extends TestCase
 
         // Test NoSQL injection
         $maliciousInput = '{"$ne": null}';
-        
+
         $response = $this->getJson('/api/v1/dashboard/alerts?' . http_build_query([
-            'filter' => $maliciousInput
+            'filter' => $maliciousInput,
         ]));
-        
+
         $response->assertStatus(400);
         $response->assertJsonPath('error.code', 'SUSPICIOUS_INPUT');
     }
@@ -680,13 +681,13 @@ class SecurityIntegrationTest extends TestCase
         // Test without authentication
         $response = $this->getJson('/api/v1/dashboard/role-based');
         $response->assertStatus(401);
-        
+
         // Test with invalid token
         $response = $this->getJson('/api/v1/dashboard/role-based', [
-            'Authorization' => 'Bearer invalid-token'
+            'Authorization' => 'Bearer invalid-token',
         ]);
         $response->assertStatus(401);
-        
+
         // Test with expired token (would need token expiration)
         $this->assertTrue(true, 'Token expiration test placeholder');
     }
@@ -713,9 +714,9 @@ class SecurityIntegrationTest extends TestCase
         $response = $this->getJson('/api/v1/dashboard/role-based/permissions');
         $response->assertStatus(200);
         $response->assertJsonPath('data.user_role', 'client_rep');
-        
+
         $permissions = $response->json('data.permissions');
-        
+
         // Verify limited permissions
         $this->assertNotContains('delete', $permissions['dashboard']);
         $this->assertNotContains('admin', $permissions['dashboard']);

@@ -18,7 +18,8 @@ class SecurityHeadersMiddleware
         $response = $next($request);
 
         // Content Security Policy (CSP)
-        $response->headers->set('Content-Security-Policy', 
+        $response->headers->set(
+            'Content-Security-Policy',
             "default-src 'self'; " .
             "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " .
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " .

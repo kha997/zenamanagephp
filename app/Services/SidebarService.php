@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -10,8 +12,11 @@ use Illuminate\Support\Facades\Cache;
 class SidebarService
 {
     protected PermissionService $permissionService;
+
     protected ConditionalDisplayService $conditionalDisplayService;
+
     protected SecurityGuardService $securityGuardService;
+
     protected UserPreferenceService $userPreferenceService;
 
     public function __construct(
@@ -25,9 +30,10 @@ class SidebarService
         $this->securityGuardService = $securityGuardService;
         $this->userPreferenceService = $userPreferenceService;
     }
+
     /**
      * Get sidebar configuration for a user with 3-layer priority.
-     * 
+     *
      * Priority order:
      * 1. User preferences (highest priority)
      * 2. Tenant-specific role override
@@ -35,14 +41,14 @@ class SidebarService
      */
     public function getSidebarForUser(?User $user = null): array
     {
-        $user = $user ?? Auth::user();
-        
+        $user ??= Auth::user();
+
         if (!$user) {
             return $this->getDefaultSidebar();
         }
 
         $cacheKey = "sidebar_user_{$user->id}_{$user->tenant_id}";
-        
+
         return Cache::remember($cacheKey, 300, function () use ($user) {
             return $this->buildSidebarConfig($user);
         });
@@ -54,7 +60,7 @@ class SidebarService
     public function getSidebarForRole(string $roleName, ?string $tenantId = null): array
     {
         $cacheKey = "sidebar_role_{$roleName}_{$tenantId}";
-        
+
         return Cache::remember($cacheKey, 600, function () use ($roleName, $tenantId) {
             return $this->buildRoleSidebarConfig($roleName, $tenantId);
         });
@@ -67,41 +73,41 @@ class SidebarService
     {
         $userRole = $this->getUserRole($user);
         $tenantId = $user->tenant_id;
-        
+
         // Layer 1: User preferences (highest priority)
         $userPrefs = $this->getUserPreferences($user);
-        
+
         // Layer 2: Tenant-specific role override
         $tenantConfig = $this->getTenantConfig($userRole, $tenantId);
-        
+
         // Layer 3: Default system configuration (lowest priority)
         $defaultConfig = SidebarConfig::getDefaultForRole($userRole);
-        
+
         // Merge configurations with priority
         $mergedConfig = $this->mergeConfigurations($userPrefs, $tenantConfig, $defaultConfig);
-        
+
         // Apply permission filtering
         $filteredConfig = $this->applyPermissionFiltering($mergedConfig, $user);
-        
+
         // Apply conditional display rules
         $finalConfig = $this->conditionalDisplayService->applyConditionalDisplay($filteredConfig, $user);
-        
+
         // Security validation and fallback
         if (!$this->securityGuardService->isSafeToUse($finalConfig, $user)) {
             $this->securityGuardService->logSecurityEvent('Unsafe sidebar config detected, using fallback', [
                 'user_id' => $user->id,
                 'config' => $finalConfig,
             ]);
-            
+
             return $this->securityGuardService->getFallbackSidebar($user);
         }
-        
+
         // Apply user preferences (highest priority)
         $finalConfig = $this->userPreferenceService->applyUserPreferences($finalConfig, $user);
-        
+
         // Sanitize config
         $finalConfig = $this->securityGuardService->sanitizeConfig($finalConfig);
-        
+
         return $finalConfig;
     }
 
@@ -112,13 +118,13 @@ class SidebarService
     {
         // Layer 1: Tenant-specific role override
         $tenantConfig = $this->getTenantConfig($roleName, $tenantId);
-        
+
         // Layer 2: Default system configuration
         $defaultConfig = SidebarConfig::getDefaultForRole($roleName);
-        
+
         // Merge configurations
         $mergedConfig = $this->mergeConfigurations([], $tenantConfig, $defaultConfig);
-        
+
         return $mergedConfig;
     }
 
@@ -127,12 +133,11 @@ class SidebarService
      */
     protected function getUserRole(User $user): string
     {
-        
         // For now, return a default role based on user attributes
         if ($user->email === 'admin@zena.com') {
             return 'super_admin';
         }
-        
+
         return 'project_manager'; // Default role
     }
 
@@ -141,7 +146,6 @@ class SidebarService
      */
     protected function getUserPreferences(User $user): array
     {
-        
         // This would come from a user_preferences table or similar
         return [];
     }
@@ -170,17 +174,17 @@ class SidebarService
     {
         // Start with default configuration
         $merged = $defaultConfig;
-        
+
         // Apply tenant overrides
         if (!empty($tenantConfig)) {
             $merged = $this->mergeConfig($merged, $tenantConfig);
         }
-        
+
         // Apply user preferences (highest priority)
         if (!empty($userPrefs)) {
             $merged = $this->mergeConfig($merged, $userPrefs);
         }
-        
+
         return $merged;
     }
 
@@ -190,12 +194,12 @@ class SidebarService
     protected function mergeConfig(array $base, array $override): array
     {
         $result = $base;
-        
+
         // Merge items array
         if (isset($override['items'])) {
             $result['items'] = $this->mergeItems($result['items'] ?? [], $override['items']);
         }
-        
+
         return $result;
     }
 
@@ -206,27 +210,28 @@ class SidebarService
     {
         $result = [];
         $processedIds = [];
-        
+
         // Process override items first (higher priority)
         foreach ($overrideItems as $item) {
             $result[] = $item;
             $processedIds[] = $item['id'];
         }
-        
+
         // Add base items that weren't overridden
         foreach ($baseItems as $item) {
             if (!in_array($item['id'], $processedIds)) {
                 $result[] = $item;
             }
         }
-        
+
         // Sort by order
         usort($result, function ($a, $b) {
             $orderA = $a['order'] ?? 9999;
             $orderB = $b['order'] ?? 9999;
+
             return $orderA <=> $orderB;
         });
-        
+
         return $result;
     }
 
@@ -240,6 +245,7 @@ class SidebarService
         }
 
         $config['items'] = $this->permissionService->filterSidebarItems($config['items'], $user);
+
         return $config;
     }
 
@@ -287,7 +293,6 @@ class SidebarService
      */
     public function clearAllCaches(): void
     {
-        
         Cache::flush();
     }
 }

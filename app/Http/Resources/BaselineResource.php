@@ -1,14 +1,16 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * Baseline API Resource
- * 
+ * Baseline API Resource.
+ *
  * Transforms Baseline model for JSON responses according to JSend specification
- * 
+ *
  * @property \App\Models\Baseline $resource
  */
 class BaselineResource extends JsonResource
@@ -31,16 +33,16 @@ class BaselineResource extends JsonResource
             'version' => $this->version,
             'note' => $this->note,
             'created_by' => $this->created_by,
-            
+
             // Computed fields
             'duration_days' => $this->getDurationDays(),
             'is_current_version' => $this->isCurrentVersion(),
             'variance_from_actual' => $this->getVarianceFromActual(),
-            
+
             // Relationships - conditional loading
             'project' => new ProjectResource($this->whenLoaded('project')),
             'creator' => new UserResource($this->whenLoaded('creator')),
-            
+
             // Timestamps
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),

@@ -2,11 +2,10 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     /**
      * Run the migrations.
      *
@@ -67,13 +66,13 @@ return new class extends Migration
     }
 
     /**
-     * Check if index exists
+     * Check if index exists.
      */
     private function indexExists(string $table, string $index): bool
     {
         try {
             $driver = DB::getDriverName();
-            
+
             if ($driver === 'sqlite') {
                 $indexes = DB::select("PRAGMA index_list({$table})");
                 foreach ($indexes as $idx) {
@@ -81,6 +80,7 @@ return new class extends Migration
                         return true;
                     }
                 }
+
                 return false;
             } else {
                 $indexes = DB::select("SHOW INDEX FROM {$table}");
@@ -89,6 +89,7 @@ return new class extends Migration
                         return true;
                     }
                 }
+
                 return false;
             }
         } catch (\Throwable $e) {
@@ -97,13 +98,13 @@ return new class extends Migration
     }
 
     /**
-     * Check if foreign key exists
+     * Check if foreign key exists.
      */
     private function foreignKeyExists(string $table, string $foreignKey): bool
     {
         try {
             $driver = DB::getDriverName();
-            
+
             if ($driver === 'sqlite') {
                 $foreignKeys = DB::select("PRAGMA foreign_key_list({$table})");
                 foreach ($foreignKeys as $fk) {
@@ -111,6 +112,7 @@ return new class extends Migration
                         return true;
                     }
                 }
+
                 return false;
             } else {
                 $foreignKeys = DB::select("
@@ -119,6 +121,7 @@ return new class extends Migration
                     WHERE TABLE_NAME = '{$table}' 
                     AND CONSTRAINT_NAME = '{$foreignKey}'
                 ");
+
                 return !empty($foreignKeys);
             }
         } catch (\Throwable $e) {
@@ -139,7 +142,7 @@ return new class extends Migration
 
         $isSqlite = Schema::getConnection()->getDriverName() === 'sqlite';
 
-        if (! $isSqlite) {
+        if (!$isSqlite) {
             foreach (['tenant_id', 'created_by'] as $column) {
                 Schema::table('components', function (Blueprint $table) use ($column) {
                     try {

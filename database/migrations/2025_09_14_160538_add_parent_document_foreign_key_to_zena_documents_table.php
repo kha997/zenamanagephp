@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     /**
      * Run the migrations.
      *
@@ -25,11 +24,11 @@ return new class extends Migration
      */
     public function down()
     {
-        if (! Schema::hasTable('zena_documents')) {
+        if (!Schema::hasTable('zena_documents')) {
             return;
         }
 
-        if (! Schema::hasColumn('zena_documents', 'parent_document_id')) {
+        if (!Schema::hasColumn('zena_documents', 'parent_document_id')) {
             return;
         }
 

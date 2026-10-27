@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Unit\OwnerGovernance;
 
@@ -34,7 +36,7 @@ class GateOrderingFrontmatterGrandfatherTest extends TestCase
     private function makeTempRoot(): string
     {
         $dir = sys_get_temp_dir() . '/gap-047-frontmatter-grandfather-test-' . bin2hex(random_bytes(6));
-        mkdir($dir, 0777, true);
+        mkdir($dir, 0o777, true);
         $this->tempRoots[] = $dir;
 
         return $dir;
@@ -43,7 +45,7 @@ class GateOrderingFrontmatterGrandfatherTest extends TestCase
     private function writeFile(string $repoRoot, string $relPath, string $content): string
     {
         $full = $repoRoot . '/' . $relPath;
-        @mkdir(dirname($full), 0777, true);
+        @mkdir(dirname($full), 0o777, true);
         file_put_contents($full, $content);
 
         return $relPath;

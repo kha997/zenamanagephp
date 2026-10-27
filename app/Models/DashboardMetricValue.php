@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -9,8 +11,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use JsonException;
 
 /**
- * Model DashboardMetricValue - Lưu trữ giá trị metrics theo thời gian
- * 
+ * Model DashboardMetricValue - Lưu trữ giá trị metrics theo thời gian.
+ *
  * @property string $id
  * @property string $metric_id ID của metric
  * @property string|null $project_id ID của project
@@ -21,13 +23,15 @@ use JsonException;
  */
 class DashboardMetricValue extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids;
+    use HasFactory;
 
     protected $table = 'dashboard_metric_values';
-    
+
     protected $keyType = 'string';
+
     public $incrementing = false;
-    
+
     protected $fillable = [
         'metric_id',
         'project_id',
@@ -36,7 +40,7 @@ class DashboardMetricValue extends Model
         'metadata',
         'recorded_at',
         'timestamp',
-        'context'
+        'context',
     ];
 
     protected $casts = [
@@ -76,7 +80,7 @@ class DashboardMetricValue extends Model
     }
 
     /**
-     * Relationship: Giá trị thuộc về metric
+     * Relationship: Giá trị thuộc về metric.
      */
     public function metric(): BelongsTo
     {
@@ -84,7 +88,7 @@ class DashboardMetricValue extends Model
     }
 
     /**
-     * Relationship: Giá trị thuộc về project
+     * Relationship: Giá trị thuộc về project.
      */
     public function project(): BelongsTo
     {
@@ -92,7 +96,7 @@ class DashboardMetricValue extends Model
     }
 
     /**
-     * Relationship: Giá trị thuộc về tenant
+     * Relationship: Giá trị thuộc về tenant.
      */
     public function tenant(): BelongsTo
     {
@@ -100,7 +104,7 @@ class DashboardMetricValue extends Model
     }
 
     /**
-     * Scope: Lọc theo metric
+     * Scope: Lọc theo metric.
      */
     public function scopeForMetric($query, string $metricId)
     {
@@ -108,7 +112,7 @@ class DashboardMetricValue extends Model
     }
 
     /**
-     * Scope: Lọc theo project
+     * Scope: Lọc theo project.
      */
     public function scopeForProject($query, string $projectId)
     {
@@ -116,7 +120,7 @@ class DashboardMetricValue extends Model
     }
 
     /**
-     * Scope: Lọc theo tenant
+     * Scope: Lọc theo tenant.
      */
     public function scopeForTenant($query, string $tenantId)
     {
@@ -124,7 +128,7 @@ class DashboardMetricValue extends Model
     }
 
     /**
-     * Scope: Lọc theo khoảng thời gian
+     * Scope: Lọc theo khoảng thời gian.
      */
     public function scopeInDateRange($query, $startDate, $endDate)
     {
@@ -132,7 +136,7 @@ class DashboardMetricValue extends Model
     }
 
     /**
-     * Scope: Lấy giá trị mới nhất
+     * Scope: Lấy giá trị mới nhất.
      */
     public function scopeLatest($query)
     {
@@ -140,7 +144,7 @@ class DashboardMetricValue extends Model
     }
 
     /**
-     * Scope: Lấy giá trị cũ nhất
+     * Scope: Lấy giá trị cũ nhất.
      */
     public function scopeOldest($query)
     {

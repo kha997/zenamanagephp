@@ -95,13 +95,6 @@
             "reason": "Standardize naming convention",
             "traffic_level": "medium",
             "removal_410_date": "2025-05-21"
-          },
-          {
-            "legacy": "/invite/decline/{token}",
-            "target": "/invitations/decline/{token}",
-            "reason": "Standardize naming convention",
-            "traffic_level": "low",
-            "removal_410_date": "2025-05-21"
           }
         ]
       }

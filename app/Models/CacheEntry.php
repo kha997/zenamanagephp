@@ -6,7 +6,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Carbon\Carbon;
 
 class CacheEntry extends Model
 {
@@ -25,7 +24,7 @@ class CacheEntry extends Model
     ];
 
     /**
-     * Scope for expired entries
+     * Scope for expired entries.
      */
     public function scopeExpired($query)
     {
@@ -33,7 +32,7 @@ class CacheEntry extends Model
     }
 
     /**
-     * Scope for valid entries
+     * Scope for valid entries.
      */
     public function scopeValid($query)
     {
@@ -41,7 +40,7 @@ class CacheEntry extends Model
     }
 
     /**
-     * Scope for entries with specific tags
+     * Scope for entries with specific tags.
      */
     public function scopeWithTags($query, array $tags)
     {
@@ -49,7 +48,7 @@ class CacheEntry extends Model
     }
 
     /**
-     * Check if entry is expired
+     * Check if entry is expired.
      */
     public function isExpired(): bool
     {
@@ -57,7 +56,7 @@ class CacheEntry extends Model
     }
 
     /**
-     * Get time until expiration
+     * Get time until expiration.
      */
     public function getTimeUntilExpiration(): int
     {
@@ -65,7 +64,7 @@ class CacheEntry extends Model
     }
 
     /**
-     * Clean up expired entries
+     * Clean up expired entries.
      */
     public static function cleanupExpired(): int
     {

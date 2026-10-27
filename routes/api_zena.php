@@ -1,7 +1,7 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -10,7 +10,6 @@ use App\Http\Controllers\Api\AuthController;
 */
 
 Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
-
     // Main API info route
     Route::get('/', function () {
         return response()->json([
@@ -40,7 +39,7 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
                         'GET /api/zena/pm/dashboard' => 'PM Dashboard',
                         'GET /api/zena/designer/dashboard' => 'Designer Dashboard',
                         'GET /api/zena/site-engineer/dashboard' => 'Site Engineer Dashboard',
-                    ]
+                    ],
                 ],
                 'timestamp' => now(),
             ],
@@ -64,7 +63,6 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
     })->name('api.health');
 
     Route::middleware(['auth:sanctum', 'tenant.isolation', 'input.sanitization', 'error.envelope'])->group(function () {
-
         Route::prefix('auth')->group(function () {
             Route::post('/logout', [AuthController::class, 'logout'])->middleware('rbac:auth.logout')->name('auth.logout');
             Route::get('/me', [AuthController::class, 'me'])->middleware('rbac:auth.me')->name('auth.me');
@@ -89,6 +87,7 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
         Route::get('/minimal-auth-test', function () {
             try {
                 $user = auth()->user();
+
                 return response()->json([
                     'success' => true,
                     'status' => 'success',
@@ -110,6 +109,7 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
         Route::get('/sanctum-auth-test', function () {
             try {
                 $user = auth('sanctum')->user();
+
                 return response()->json([
                     'success' => true,
                     'status' => 'success',
@@ -158,8 +158,8 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
                             'roles' => $roles,
                             'permissions' => $permissions,
                             'last_login_at' => $user->last_login_at,
-                        ]
-                    ]
+                        ],
+                    ],
                 ]);
             } catch (\Exception $e) {
                 return response()->json([
@@ -328,6 +328,80 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::delete('/{wallet}', [\App\Http\Controllers\Api\Treasury\TreasuryWalletController::class, 'destroy'])->middleware('rbac:treasury.manage_wallets')->name('destroy');
         });
 
+        // Project Treasury S2 (GAP-064): ledger documents, balances, posting
+        Route::group(['prefix' => 'projects/{project}/treasury', 'as' => 'treasury.documents.'], function () {
+            Route::get('/documents', [\App\Http\Controllers\Api\Treasury\TreasuryDocumentController::class, 'index'])->middleware('rbac:treasury.view')->name('index');
+            Route::get('/documents/{treasuryDocument}', [\App\Http\Controllers\Api\Treasury\TreasuryDocumentController::class, 'show'])->middleware('rbac:treasury.view')->name('show');
+            Route::get('/balances', [\App\Http\Controllers\Api\Treasury\TreasuryDocumentController::class, 'balances'])->middleware('rbac:treasury.view')->name('balances');
+            Route::post('/funding', [\App\Http\Controllers\Api\Treasury\TreasuryDocumentController::class, 'funding'])->middleware('rbac:treasury.declare_funding')->name('funding');
+            Route::post('/transfers', [\App\Http\Controllers\Api\Treasury\TreasuryDocumentController::class, 'transfer'])->middleware('rbac:treasury.create_transfer')->name('transfers');
+            Route::post('/adjustments', [\App\Http\Controllers\Api\Treasury\TreasuryDocumentController::class, 'adjust'])->middleware('rbac:treasury.adjust')->name('adjustments');
+            Route::post('/documents/{treasuryDocument}/reverse', [\App\Http\Controllers\Api\Treasury\TreasuryDocumentController::class, 'reverse'])->middleware('rbac:treasury.reverse')->name('reverse');
+            Route::post('/documents/{treasuryDocument}/replacement', [\App\Http\Controllers\Api\Treasury\TreasuryDocumentController::class, 'replacement'])->middleware('rbac:treasury.reverse')->name('replacement');
+        });
+
+        // Project Treasury S3 (GAP-066): expenses & approvals
+        Route::group(['prefix' => 'projects/{project}/treasury', 'as' => 'treasury.expenses.'], function () {
+            Route::get('/expenses', [\App\Http\Controllers\Api\Treasury\TreasuryExpenseController::class, 'index'])->middleware('rbac:treasury.view')->name('index');
+            Route::get('/payables', [\App\Http\Controllers\Api\Treasury\TreasuryExpenseController::class, 'payables'])->middleware('rbac:treasury.view')->name('payables');
+            Route::post('/expenses', [\App\Http\Controllers\Api\Treasury\TreasuryExpenseController::class, 'store'])->middleware('rbac:treasury.create_expense')->name('store');
+            Route::put('/expenses/{treasuryExpense}', [\App\Http\Controllers\Api\Treasury\TreasuryExpenseController::class, 'update'])->middleware('rbac:treasury.create_expense')->name('update');
+            Route::post('/expenses/{treasuryExpense}/submit', [\App\Http\Controllers\Api\Treasury\TreasuryExpenseController::class, 'submit'])->middleware('rbac:treasury.submit_expense')->name('submit');
+            Route::post('/expenses/{treasuryExpense}/approve', [\App\Http\Controllers\Api\Treasury\TreasuryExpenseController::class, 'approve'])->middleware('rbac:treasury.approve_expense')->name('approve');
+            Route::post('/expenses/{treasuryExpense}/reject', [\App\Http\Controllers\Api\Treasury\TreasuryExpenseController::class, 'reject'])->middleware('rbac:treasury.approve_expense')->name('reject');
+            Route::post('/expenses/{treasuryExpense}/copy', [\App\Http\Controllers\Api\Treasury\TreasuryExpenseController::class, 'copy'])->middleware('rbac:treasury.create_expense')->name('copy');
+        });
+
+        // GAP-097 S6: dashboard, register, timeline, reports (Gate 2 Option A).
+        Route::group(['as' => 'treasury.reports.'], function () {
+            Route::get('/treasury/overview', [\App\Http\Controllers\Api\Treasury\TreasuryReportController::class, 'overview'])->middleware('rbac:treasury.view')->name('overview');
+            Route::get('/projects/{project}/treasury/dashboard', [\App\Http\Controllers\Api\Treasury\TreasuryReportController::class, 'dashboard'])->middleware('rbac:treasury.view')->name('dashboard');
+            Route::get('/projects/{project}/treasury/register', [\App\Http\Controllers\Api\Treasury\TreasuryReportController::class, 'register'])->middleware('rbac:treasury.view')->name('register');
+            Route::get('/projects/{project}/treasury/timeline', [\App\Http\Controllers\Api\Treasury\TreasuryReportController::class, 'timeline'])->middleware('rbac:treasury.view')->name('timeline');
+            Route::get('/projects/{project}/treasury/reports/{report}', [\App\Http\Controllers\Api\Treasury\TreasuryReportController::class, 'report'])->middleware('rbac:treasury.view')->name('show');
+        });
+
+        // GAP-096 S5: advances and settlements (Gate 2 Option A).
+        Route::group(['prefix' => 'projects/{project}/treasury', 'as' => 'treasury.advances.'], function () {
+            Route::get('/advances', [\App\Http\Controllers\Api\Treasury\TreasuryAdvanceController::class, 'index'])->middleware('rbac:treasury.view')->name('index');
+            Route::get('/advance-ageing', [\App\Http\Controllers\Api\Treasury\TreasuryAdvanceController::class, 'ageing'])->middleware('rbac:treasury.view')->name('ageing');
+            Route::post('/advances', [\App\Http\Controllers\Api\Treasury\TreasuryAdvanceController::class, 'store'])->middleware('rbac:treasury.create_expense')->name('store');
+            Route::get('/advances/{treasuryAdvance}', [\App\Http\Controllers\Api\Treasury\TreasuryAdvanceController::class, 'show'])->middleware('rbac:treasury.view')->name('show');
+            Route::put('/advances/{treasuryAdvance}', [\App\Http\Controllers\Api\Treasury\TreasuryAdvanceController::class, 'update'])->middleware('rbac:treasury.create_expense')->name('update');
+            Route::post('/advances/{treasuryAdvance}/submit', [\App\Http\Controllers\Api\Treasury\TreasuryAdvanceController::class, 'submit'])->middleware('rbac:treasury.submit_expense')->name('submit');
+            Route::post('/advances/{treasuryAdvance}/approve', [\App\Http\Controllers\Api\Treasury\TreasuryAdvanceController::class, 'approve'])->middleware('rbac:treasury.approve_expense')->name('approve');
+            Route::post('/advances/{treasuryAdvance}/reject', [\App\Http\Controllers\Api\Treasury\TreasuryAdvanceController::class, 'reject'])->middleware('rbac:treasury.approve_expense')->name('reject');
+            Route::post('/advances/{treasuryAdvance}/copy', [\App\Http\Controllers\Api\Treasury\TreasuryAdvanceController::class, 'copy'])->middleware('rbac:treasury.create_expense')->name('copy');
+            Route::post('/advances/{treasuryAdvance}/settlement-request', [\App\Http\Controllers\Api\Treasury\TreasuryAdvanceController::class, 'requestSettlement'])->middleware('rbac:treasury.submit_expense')->name('settlement-request.store');
+            Route::post('/advances/{treasuryAdvance}/settlement-request/withdraw', [\App\Http\Controllers\Api\Treasury\TreasuryAdvanceController::class, 'withdrawSettlement'])->middleware('rbac:treasury.submit_expense')->name('settlement-request.withdraw');
+            Route::post('/advances/{treasuryAdvance}/settlement-request/approve', [\App\Http\Controllers\Api\Treasury\TreasuryAdvanceController::class, 'approveSettlement'])->middleware('rbac:treasury.approve_expense')->name('settlement-request.approve');
+            Route::post('/advances/{treasuryAdvance}/settlement-request/reject', [\App\Http\Controllers\Api\Treasury\TreasuryAdvanceController::class, 'rejectSettlement'])->middleware('rbac:treasury.approve_expense')->name('settlement-request.reject');
+            Route::post('/advances/{treasuryAdvance}/returns', [\App\Http\Controllers\Api\Treasury\TreasuryAdvanceController::class, 'storeReturn'])->middleware('rbac:treasury.reverse')->name('returns.store');
+            Route::post('/advance-settlements/{treasuryAdvanceSettlement}/remove', [\App\Http\Controllers\Api\Treasury\TreasuryAdvanceController::class, 'removeSettlement'])->middleware('rbac:treasury.reverse')->name('settlements.remove');
+        });
+
+        // Project Treasury S4a (GAP-067): reconciliation
+        Route::group(['prefix' => 'projects/{project}/treasury', 'as' => 'treasury.reconciliation.'], function () {
+            Route::get('/wallets/{wallet}/reconciliation', [\App\Http\Controllers\Api\Treasury\TreasuryReconciliationController::class, 'wallet'])->middleware('rbac:treasury.view')->name('wallet');
+            Route::post('/wallets/{wallet}/reconciliations', [\App\Http\Controllers\Api\Treasury\TreasuryReconciliationController::class, 'store'])->middleware('rbac:treasury.reconcile')->name('store');
+            Route::get('/reconciliations', [\App\Http\Controllers\Api\Treasury\TreasuryReconciliationController::class, 'index'])->middleware('rbac:treasury.view')->name('index');
+            Route::post('/reconciliations/{treasuryReconciliation}/undo', [\App\Http\Controllers\Api\Treasury\TreasuryReconciliationController::class, 'undo'])->middleware('rbac:treasury.reconcile')->name('undo');
+            Route::post('/reconciliation-entries/{treasuryReconciliationEntry}/undo', [\App\Http\Controllers\Api\Treasury\TreasuryReconciliationController::class, 'undoEntry'])->middleware('rbac:treasury.reconcile')->name('entries.undo');
+        });
+
+        // GAP-094 S4b-1: via-route payments (Gate 2 Option A).
+        Route::group(['prefix' => 'projects/{project}/treasury', 'as' => 'treasury.routes.'], function () {
+            Route::get('/routes', [\App\Http\Controllers\Api\Treasury\TreasuryRouteController::class, 'index'])->middleware('rbac:treasury.view')->name('index');
+            Route::post('/routes', [\App\Http\Controllers\Api\Treasury\TreasuryRouteController::class, 'store'])->middleware('rbac:treasury.manage_routes')->name('store');
+            Route::get('/routes/{treasuryRoute}', [\App\Http\Controllers\Api\Treasury\TreasuryRouteController::class, 'show'])->middleware('rbac:treasury.view')->name('show');
+            Route::post('/routes/{treasuryRoute}/legs', [\App\Http\Controllers\Api\Treasury\TreasuryRouteController::class, 'storeLeg'])->middleware('rbac:treasury.view')->name('legs.store');
+            Route::post('/routes/{treasuryRoute}/cancel', [\App\Http\Controllers\Api\Treasury\TreasuryRouteController::class, 'cancel'])->middleware('rbac:treasury.manage_routes')->name('cancel');
+            Route::post('/route-legs/{treasuryRouteLeg}/reverse', [\App\Http\Controllers\Api\Treasury\TreasuryRouteController::class, 'reverseLeg'])->middleware('rbac:treasury.manage_routes')->name('legs.reverse');
+            // GAP-095 S4b-2: paid contract payments and their tracing routes.
+            Route::get('/contract-payments', [\App\Http\Controllers\Api\Treasury\TreasuryRouteController::class, 'contractPayments'])->middleware('rbac:treasury.view')->name('contract-payments.index');
+            Route::post('/contract-payments/{contractPayment}/routes', [\App\Http\Controllers\Api\Treasury\TreasuryRouteController::class, 'storeContractPaymentRoute'])->middleware('rbac:treasury.manage_routes')->name('contract-payments.routes.store');
+        });
+
         Route::group(['prefix' => 'vendors'], function () {
             Route::get('/', [\App\Http\Controllers\Api\VendorController::class, 'index'])->middleware('rbac:vendor.view')->name('vendors.index');
             Route::post('/', [\App\Http\Controllers\Api\VendorController::class, 'store'])->middleware('rbac:vendor.create')->name('vendors.store');
@@ -429,7 +503,6 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
                 Route::put('/{line}', [\App\Http\Controllers\Api\MaterialReceiptLineController::class, 'update'])->middleware('rbac:material-receipt-line.create')->name('material-receipts.lines.update');
             });
         });
-
 
         // Change Requests routes
         Route::group(['prefix' => 'change-requests'], function () {

@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     /**
      * Run the migrations.
      */
@@ -21,11 +20,11 @@ return new class extends Migration
                 // Foreign keys
                 $table->foreign('task_id')->references('id')->on('tasks')->onDelete('cascade');
                 $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
-                
+
                 // Indexes
                 $table->index(['task_id', 'user_id']);
                 $table->index(['user_id', 'task_id']);
-                
+
                 // Unique constraint to prevent duplicates
                 $table->unique(['task_id', 'user_id'], 'unique_task_watcher');
             });

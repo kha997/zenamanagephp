@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
@@ -6,7 +8,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * PerformanceMonitoringMiddleware - Middleware cho performance monitoring
+ * PerformanceMonitoringMiddleware - Middleware cho performance monitoring.
  */
 class PerformanceMonitoringMiddleware
 {
@@ -34,7 +36,7 @@ class PerformanceMonitoringMiddleware
 
         // Add performance headers
         $response = $metrics['result'] ?? $next($request);
-        
+
         if ($response instanceof Response) {
             $response->headers->set('X-Response-Time', $metrics['execution_time'] . 'ms');
             $response->headers->set('X-Memory-Usage', $metrics['memory_used']);

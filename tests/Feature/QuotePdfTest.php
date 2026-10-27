@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
@@ -140,7 +142,7 @@ class QuotePdfTest extends TestCase
     public function test_pdf_endpoint_returns_pdf(): void
     {
         $this->app->bind(DeliverablePdfExportService::class, function () {
-            return new class extends DeliverablePdfExportService {
+            return new class () extends DeliverablePdfExportService {
                 public function render(string $html, array $options = [], array $documentMeta = []): string
                 {
                     return '%PDF-1.4 fake-quote-pdf-bytes';
@@ -182,7 +184,7 @@ class QuotePdfTest extends TestCase
     public function test_engine_unavailable_redirects_with_error(): void
     {
         $this->app->bind(DeliverablePdfExportService::class, function () {
-            return new class extends DeliverablePdfExportService {
+            return new class () extends DeliverablePdfExportService {
                 public function render(string $html, array $options = [], array $documentMeta = []): string
                 {
                     throw new DeliverablePdfExportUnavailableException();

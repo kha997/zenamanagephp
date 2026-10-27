@@ -12,18 +12,18 @@ use Illuminate\View\View;
 class EmailConfigController extends Controller
 {
     /**
-     * Display email configuration page
+     * Display email configuration page.
      */
     public function index(): View
     {
         $providers = $this->getAvailableProviders();
         $currentConfig = $this->getCurrentConfig();
-        
+
         return view('admin.email-config', compact('providers', 'currentConfig'));
     }
 
     /**
-     * Update email configuration
+     * Update email configuration.
      */
     public function update(Request $request): JsonResponse
     {
@@ -43,7 +43,7 @@ class EmailConfigController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -57,29 +57,28 @@ class EmailConfigController extends Controller
             // Test email if provided
             if ($request->test_email) {
                 $testResult = $this->sendTestEmail($request->test_email, $request->all());
-                
+
                 return response()->json([
                     'success' => true,
                     'message' => 'Email configuration updated successfully!',
-                    'test_result' => $testResult
+                    'test_result' => $testResult,
                 ]);
             }
 
             return response()->json([
                 'success' => true,
-                'message' => 'Email configuration updated successfully!'
+                'message' => 'Email configuration updated successfully!',
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update email configuration: ' . $e->getMessage()
+                'message' => 'Failed to update email configuration: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Test email configuration
+     * Test email configuration.
      */
     public function test(Request $request): JsonResponse
     {
@@ -97,29 +96,28 @@ class EmailConfigController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
         try {
             $result = $this->sendTestEmail($request->test_email, $request->all());
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Test email sent successfully!',
-                'result' => $result
+                'result' => $result,
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to send test email: ' . $e->getMessage()
+                'message' => 'Failed to send test email: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Get email statistics
+     * Get email statistics.
      */
     public function statistics(): JsonResponse
     {
@@ -133,19 +131,18 @@ class EmailConfigController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => $stats
+                'data' => $stats,
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to get email statistics: ' . $e->getMessage()
+                'message' => 'Failed to get email statistics: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Clear email template cache
+     * Clear email template cache.
      */
     public function clearCache(): JsonResponse
     {
@@ -154,19 +151,18 @@ class EmailConfigController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Email template cache cleared successfully!'
+                'message' => 'Email template cache cleared successfully!',
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to clear cache: ' . $e->getMessage()
+                'message' => 'Failed to clear cache: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Get available email providers
+     * Get available email providers.
      */
     private function getAvailableProviders(): array
     {
@@ -175,49 +171,49 @@ class EmailConfigController extends Controller
                 'name' => 'SMTP',
                 'description' => 'Standard SMTP server',
                 'icon' => 'fas fa-server',
-                'color' => 'blue'
+                'color' => 'blue',
             ],
             'gmail' => [
                 'name' => 'Gmail',
                 'description' => 'Google Gmail SMTP',
                 'icon' => 'fab fa-google',
-                'color' => 'red'
+                'color' => 'red',
             ],
             'sendgrid' => [
                 'name' => 'SendGrid',
                 'description' => 'SendGrid Email API',
                 'icon' => 'fas fa-paper-plane',
-                'color' => 'green'
+                'color' => 'green',
             ],
             'mailgun' => [
                 'name' => 'Mailgun',
                 'description' => 'Mailgun Email Service',
                 'icon' => 'fas fa-envelope',
-                'color' => 'purple'
+                'color' => 'purple',
             ],
             'outlook' => [
                 'name' => 'Outlook',
                 'description' => 'Microsoft Outlook SMTP',
                 'icon' => 'fab fa-microsoft',
-                'color' => 'blue'
+                'color' => 'blue',
             ],
             'ses' => [
                 'name' => 'Amazon SES',
                 'description' => 'Amazon Simple Email Service',
                 'icon' => 'fab fa-aws',
-                'color' => 'orange'
+                'color' => 'orange',
             ],
             'postmark' => [
                 'name' => 'Postmark',
                 'description' => 'Postmark Email Service',
                 'icon' => 'fas fa-stamp',
-                'color' => 'indigo'
+                'color' => 'indigo',
             ],
         ];
     }
 
     /**
-     * Get current email configuration
+     * Get current email configuration.
      */
     private function getCurrentConfig(): array
     {
@@ -235,7 +231,7 @@ class EmailConfigController extends Controller
     }
 
     /**
-     * Update email configuration
+     * Update email configuration.
      */
     private function updateConfig(array $config): void
     {
@@ -264,7 +260,7 @@ class EmailConfigController extends Controller
     }
 
     /**
-     * Send test email
+     * Send test email.
      */
     private function sendTestEmail(string $email, array $config): array
     {
@@ -285,20 +281,19 @@ class EmailConfigController extends Controller
             return [
                 'success' => true,
                 'message' => 'Test email sent successfully',
-                'sent_at' => now()->toISOString()
+                'sent_at' => now()->toISOString(),
             ];
-
         } catch (\Exception $e) {
             return [
                 'success' => false,
                 'message' => $e->getMessage(),
-                'error_type' => class_basename($e)
+                'error_type' => class_basename($e),
             ];
         }
     }
 
     /**
-     * Get queue status
+     * Get queue status.
      */
     private function getQueueStatus(): array
     {
@@ -312,7 +307,7 @@ class EmailConfigController extends Controller
     }
 
     /**
-     * Get cache status
+     * Get cache status.
      */
     private function getCacheStatus(): array
     {
@@ -325,13 +320,13 @@ class EmailConfigController extends Controller
     }
 
     /**
-     * Get provider information
+     * Get provider information.
      */
     private function getProviderInfo(): array
     {
         $provider = config('mail.default', 'smtp');
         $providers = $this->getAvailableProviders();
-        
+
         return [
             'current' => $provider,
             'info' => $providers[$provider] ?? $providers['smtp'],
@@ -342,7 +337,7 @@ class EmailConfigController extends Controller
     }
 
     /**
-     * Get rate limits
+     * Get rate limits.
      */
     private function getRateLimits(): array
     {
@@ -355,13 +350,14 @@ class EmailConfigController extends Controller
     }
 
     /**
-     * Get cached templates count
+     * Get cached templates count.
      */
     private function getCachedTemplatesCount(): int
     {
         try {
             $cacheKey = 'email_templates_*';
             $keys = Cache::getRedis()->keys($cacheKey);
+
             return count($keys);
         } catch (\Exception $e) {
             return 0;
@@ -369,7 +365,7 @@ class EmailConfigController extends Controller
     }
 
     /**
-     * Clear template cache
+     * Clear template cache.
      */
     private function clearTemplateCache(): void
     {

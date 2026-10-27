@@ -1,9 +1,11 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Policies;
 
-use App\Models\User;
 use App\Models\Project;
+use App\Models\User;
 
 class ProjectPolicy
 {
@@ -14,7 +16,7 @@ class ProjectPolicy
 
     public function view(User $user, Project $project): bool
     {
-        return $user->tenant_id === $project->tenant_id && 
+        return $user->tenant_id === $project->tenant_id &&
                $user->hasPermission('project.view');
     }
 
@@ -25,7 +27,7 @@ class ProjectPolicy
 
     public function update(User $user, Project $project): bool
     {
-        return $user->tenant_id === $project->tenant_id && 
+        return $user->tenant_id === $project->tenant_id &&
                $user->hasPermission('project.update');
     }
 }

@@ -50,8 +50,16 @@ if [ "$expected_count" -eq 0 ]; then
   exit 1
 fi
 
-if ! fetched_json="$(gh api --paginate "repos/${GH_REPO}/pulls/${PR_NUMBER}/files" --jq '[.[].filename]' 2>"$err_file")"; then
+if ! pages_json="$(gh api --paginate "repos/${GH_REPO}/pulls/${PR_NUMBER}/files" --jq '[.[].filename]' 2>"$err_file")"; then
   echo "::error::fetch-pr-changed-files: the paginated REST fetch for PR #${PR_NUMBER}'s changed files failed ($(cat "$err_file")). Failing closed." >&2
+  exit 1
+fi
+
+# GAP-080: `gh api --paginate` applies --jq to EACH page, so a PR with more
+# than one page yields one JSON array per page. Merge them into one array
+# (a single page passes through unchanged); invalid JSON fails here.
+if ! fetched_json="$(printf '%s' "$pages_json" | jq -cs 'if length == 0 then [] elif all(.[]; type == "array") then add else error("expected one JSON array per page") end' 2>"$err_file")"; then
+  echo "::error::fetch-pr-changed-files: the paginated REST fetch for PR #${PR_NUMBER} did not return valid JSON ($(cat "$err_file")). Failing closed." >&2
   exit 1
 fi
 

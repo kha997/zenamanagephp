@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -167,7 +169,7 @@ class WorkInstanceExportBundleService
     private function temporaryZipPath(string $instanceId): string
     {
         $directory = storage_path('app/tmp');
-        if (!is_dir($directory) && !mkdir($directory, 0777, true) && !is_dir($directory)) {
+        if (!is_dir($directory) && !mkdir($directory, 0o777, true) && !is_dir($directory)) {
             throw new RuntimeException('Failed to prepare temporary export directory.');
         }
 

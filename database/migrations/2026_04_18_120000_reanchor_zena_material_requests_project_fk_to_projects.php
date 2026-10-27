@@ -1,12 +1,13 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     public function up(): void
     {
         if (!Schema::hasTable('zena_material_requests')) {
@@ -15,6 +16,7 @@ return new class extends Migration
 
         if ($this->usesSqlite()) {
             $this->rebuildTable('projects');
+
             return;
         }
 
@@ -35,6 +37,7 @@ return new class extends Migration
 
         if ($this->usesSqlite()) {
             $this->rebuildTable('zena_projects');
+
             return;
         }
 

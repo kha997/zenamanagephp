@@ -1,17 +1,18 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Models\Project;
 use App\Models\Document;
+use App\Models\Project;
 use App\Models\Tenant;
-use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 use Tests\Traits\TenantUserFactoryTrait;
 
 /**
- * Test Document Versioning (Simplified Debug)
+ * Test Document Versioning (Simplified Debug).
  */
 class DocumentVersioningDebugTest extends TestCase
 {
@@ -19,7 +20,9 @@ class DocumentVersioningDebugTest extends TestCase
     use TenantUserFactoryTrait;
 
     private $tenant;
+
     private $project;
+
     private $user;
 
     protected function setUp(): void
@@ -50,7 +53,7 @@ class DocumentVersioningDebugTest extends TestCase
     }
 
     /**
-     * Test tạo document đơn giản
+     * Test tạo document đơn giản.
      */
     public function test_can_create_simple_document(): void
     {
@@ -94,7 +97,7 @@ class DocumentVersioningDebugTest extends TestCase
     }
 
     /**
-     * Test document relationships
+     * Test document relationships.
      */
     public function test_document_relationships(): void
     {
@@ -130,7 +133,7 @@ class DocumentVersioningDebugTest extends TestCase
     }
 
     /**
-     * Test document versioning
+     * Test document versioning.
      */
     public function test_document_versioning(): void
     {
@@ -170,7 +173,7 @@ class DocumentVersioningDebugTest extends TestCase
     }
 
     /**
-     * Test document metadata
+     * Test document metadata.
      */
     public function test_document_metadata(): void
     {

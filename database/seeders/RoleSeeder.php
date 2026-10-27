@@ -1,14 +1,16 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Models\Role;
 use App\Models\Permission;
+use App\Models\Role;
 use Illuminate\Database\Seeder;
 
 /**
- * Role và Permission Seeder
- * 
+ * Role và Permission Seeder.
+ *
  * Tạo dữ liệu mẫu cho hệ thống RBAC
  * Sử dụng ULID cho tất cả các bảng
  */
@@ -26,7 +28,7 @@ class RoleSeeder extends Seeder
                 'scope' => 'system',
                 'allow_override' => true,
                 'description' => 'Quản trị viên hệ thống',
-                'is_active' => true
+                'is_active' => true,
             ]
         );
 
@@ -36,7 +38,7 @@ class RoleSeeder extends Seeder
                 'scope' => 'system',
                 'allow_override' => true,
                 'description' => 'Quản lý dự án',
-                'is_active' => true
+                'is_active' => true,
             ]
         );
 
@@ -46,7 +48,7 @@ class RoleSeeder extends Seeder
                 'scope' => 'system',
                 'allow_override' => false,
                 'description' => 'Thành viên dự án',
-                'is_active' => true
+                'is_active' => true,
             ]
         );
 
@@ -63,10 +65,11 @@ class RoleSeeder extends Seeder
             Permission::firstOrCreate(
                 ['code' => $permData['code']],
                 [
+                    'name' => $permData['code'],
                     'module' => $permData['module'],
                     'action' => $permData['action'],
                     'description' => $permData['description'],
-                    'is_active' => true
+                    'is_active' => true,
                 ]
             );
         }

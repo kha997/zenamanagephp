@@ -17,7 +17,7 @@ class CustomAuthenticateSession
     {
         // Simple implementation - just pass through without complex logic
         // This avoids the complex session authentication logic
-        
+
         // For now, just pass through without authentication
         // This allows us to test API routes without middleware conflicts
         return $next($request);

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
@@ -34,8 +36,8 @@ class DocumentWorkflowService
 
             $materialized = $document->getRawOriginal('lifecycle_status') !== null
                 && $document->getRawOriginal('approval_status') !== null;
-            if (! $materialized
-                || ! in_array($lifecycle, [DocumentLifecycleStatus::DRAFT, DocumentLifecycleStatus::IN_REVIEW], true)
+            if (!$materialized
+                || !in_array($lifecycle, [DocumentLifecycleStatus::DRAFT, DocumentLifecycleStatus::IN_REVIEW], true)
                 || $approval !== DocumentApprovalStatus::NOT_SUBMITTED) {
                 throw DocumentWorkflowException::invalidSubmitTransition((string) $document->getRawOriginal('status'));
             }
@@ -156,7 +158,7 @@ class DocumentWorkflowService
             $document = $this->lockDocument($tenantId, $documentId);
             $approval = $this->statusService->approval($document);
 
-            if (! in_array($approval, [DocumentApprovalStatus::APPROVED, DocumentApprovalStatus::REJECTED], true)) {
+            if (!in_array($approval, [DocumentApprovalStatus::APPROVED, DocumentApprovalStatus::REJECTED], true)) {
                 throw DocumentWorkflowException::invalidReopenTransition((string) $document->getRawOriginal('status'));
             }
 
@@ -309,7 +311,7 @@ class DocumentWorkflowService
             ->where('tenant_id', $tenantId)
             ->whereNull('deleted_at')
             ->exists();
-        if ($row === null || ! $parentBelongsToTenant) {
+        if ($row === null || !$parentBelongsToTenant) {
             throw DocumentWorkflowException::invalidCurrentVersion();
         }
 
@@ -330,8 +332,7 @@ class DocumentWorkflowService
         string $actorId,
         ?string $note,
         array $context,
-    ): ?DocumentApprovalEvent
-    {
+    ): ?DocumentApprovalEvent {
         $query = DB::table('document_approval_events')
             ->where('tenant_id', $tenantId)
             ->where('document_id', $document->id)
@@ -352,7 +353,7 @@ class DocumentWorkflowService
         }
 
         $row = $matches->first();
-        if (! is_object($row)) {
+        if (!is_object($row)) {
             return null;
         }
 
@@ -370,7 +371,7 @@ class DocumentWorkflowService
             return $context;
         }
 
-        if (! is_string($context)) {
+        if (!is_string($context)) {
             return null;
         }
 
@@ -457,7 +458,7 @@ class DocumentWorkflowService
     private function freshDocument(Document $document): Document
     {
         $fresh = $document->fresh(['currentVersion']);
-        if (! $fresh instanceof Document) {
+        if (!$fresh instanceof Document) {
             throw DocumentWorkflowException::documentNotFound();
         }
 

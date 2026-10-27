@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -9,8 +11,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Request;
 
 /**
- * ProjectActivity Model - Activity feed cho projects
- * 
+ * ProjectActivity Model - Activity feed cho projects.
+ *
  * @property string $id ULID primary key
  * @property string $project_id ID dự án
  * @property string $user_id ID người thực hiện
@@ -24,13 +26,15 @@ use Illuminate\Support\Facades\Request;
  */
 class ProjectActivity extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids;
+    use HasFactory;
 
     protected $table = 'project_activities';
-    
+
     protected $keyType = 'string';
+
     public $incrementing = false;
-    
+
     protected $fillable = [
         'project_id',
         'user_id',
@@ -40,15 +44,15 @@ class ProjectActivity extends Model
         'description',
         'metadata',
         'ip_address',
-        'user_agent'
+        'user_agent',
     ];
 
     protected $casts = [
-        'metadata' => 'array'
+        'metadata' => 'array',
     ];
 
     /**
-     * Action constants
+     * Action constants.
      */
     public const ACTION_CREATED = 'created';
     public const ACTION_UPDATED = 'updated';
@@ -79,7 +83,7 @@ class ProjectActivity extends Model
     ];
 
     /**
-     * Entity type constants
+     * Entity type constants.
      */
     public const ENTITY_PROJECT = 'Project';
     public const ENTITY_TASK = 'Task';
@@ -98,7 +102,7 @@ class ProjectActivity extends Model
     ];
 
     /**
-     * Relationships
+     * Relationships.
      */
     public function project(): BelongsTo
     {
@@ -111,7 +115,7 @@ class ProjectActivity extends Model
     }
 
     /**
-     * Scopes
+     * Scopes.
      */
     public function scopeByProject($query, string $projectId)
     {
@@ -139,7 +143,7 @@ class ProjectActivity extends Model
     }
 
     /**
-     * Create activity log
+     * Create activity log.
      */
     public static function log(
         string $projectId,
@@ -159,12 +163,12 @@ class ProjectActivity extends Model
             'description' => $description,
             'metadata' => $metadata,
             'ip_address' => Request::ip(),
-            'user_agent' => Request::userAgent()
+            'user_agent' => Request::userAgent(),
         ]);
     }
 
     /**
-     * Log project creation
+     * Log project creation.
      */
     public static function logProjectCreated(Project $project, string $userId): self
     {
@@ -178,13 +182,13 @@ class ProjectActivity extends Model
             [
                 'project_name' => $project->name,
                 'project_code' => $project->code,
-                'status' => $project->status
+                'status' => $project->status,
             ]
         );
     }
 
     /**
-     * Log project update
+     * Log project update.
      */
     public static function logProjectUpdated(Project $project, string $userId, array $changes): self
     {
@@ -202,13 +206,13 @@ class ProjectActivity extends Model
             $project->id,
             [
                 'project_name' => $project->name,
-                'changes' => $changes
+                'changes' => $changes,
             ]
         );
     }
 
     /**
-     * Log milestone completion
+     * Log milestone completion.
      */
     public static function logMilestoneCompleted(ProjectMilestone $milestone, string $userId): self
     {
@@ -222,13 +226,13 @@ class ProjectActivity extends Model
             [
                 'milestone_name' => $milestone->name,
                 'target_date' => $milestone->target_date?->toISOString(),
-                'completed_date' => $milestone->completed_date?->toISOString()
+                'completed_date' => $milestone->completed_date?->toISOString(),
             ]
         );
     }
 
     /**
-     * Log task update
+     * Log task update.
      */
     public static function logTaskUpdated(Task $task, string $userId, array $changes): self
     {
@@ -246,13 +250,13 @@ class ProjectActivity extends Model
             $task->id,
             [
                 'task_name' => $task->name,
-                'changes' => $changes
+                'changes' => $changes,
             ]
         );
     }
 
     /**
-     * Log team member joined
+     * Log team member joined.
      */
     public static function logTeamMemberJoined(Project $project, User $user, string $role, string $addedBy): self
     {
@@ -266,13 +270,13 @@ class ProjectActivity extends Model
             [
                 'user_name' => $user->name,
                 'user_email' => $user->email,
-                'role' => $role
+                'role' => $role,
             ]
         );
     }
 
     /**
-     * Log document upload
+     * Log document upload.
      */
     public static function logDocumentUploaded(Document $document, string $userId): self
     {
@@ -286,13 +290,13 @@ class ProjectActivity extends Model
             [
                 'document_title' => $document->title,
                 'document_type' => $document->document_type,
-                'file_size' => $document->file_size
+                'file_size' => $document->file_size,
             ]
         );
     }
 
     /**
-     * Get activity feed for project
+     * Get activity feed for project.
      */
     public static function getProjectFeed(string $projectId, int $limit = 50): \Illuminate\Database\Eloquent\Collection
     {
@@ -304,7 +308,7 @@ class ProjectActivity extends Model
     }
 
     /**
-     * Get recent activities for user
+     * Get recent activities for user.
      */
     public static function getUserRecentActivities(string $userId, int $limit = 20): \Illuminate\Database\Eloquent\Collection
     {
@@ -316,7 +320,7 @@ class ProjectActivity extends Model
     }
 
     /**
-     * Get activity statistics
+     * Get activity statistics.
      */
     public static function getActivityStatistics(string $projectId, int $days = 30): array
     {
@@ -334,16 +338,16 @@ class ProjectActivity extends Model
             'most_active_users' => $activities->groupBy('user_id')
                                              ->map->count()
                                              ->sortDesc()
-                                             ->take(5)
+                                             ->take(5),
         ];
     }
 
     /**
-     * Accessors
+     * Accessors.
      */
     public function getActionLabelAttribute(): string
     {
-        return match($this->action) {
+        return match ($this->action) {
             self::ACTION_CREATED => 'Created',
             self::ACTION_UPDATED => 'Updated',
             self::ACTION_DELETED => 'Deleted',
@@ -362,7 +366,7 @@ class ProjectActivity extends Model
 
     public function getActionColorAttribute(): string
     {
-        return match($this->action) {
+        return match ($this->action) {
             self::ACTION_CREATED => 'green',
             self::ACTION_UPDATED => 'blue',
             self::ACTION_DELETED => 'red',

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Models;
 
@@ -121,7 +123,7 @@ class DocumentApprovalEvent extends Model
 
     private function validateCreation(): void
     {
-        if (! in_array($this->event, self::EVENTS, true)) {
+        if (!in_array($this->event, self::EVENTS, true)) {
             throw new LogicException('Unsupported document approval event.');
         }
 
@@ -161,7 +163,7 @@ class DocumentApprovalEvent extends Model
             ->where('document_id', $document->id)
             ->exists();
 
-        if (! $versionBelongsToDocument) {
+        if (!$versionBelongsToDocument) {
             throw new LogicException('Document approval event version does not belong to the tenant document.');
         }
     }

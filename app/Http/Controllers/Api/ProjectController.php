@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
@@ -11,13 +13,13 @@ use App\Services\ProjectService;
 use App\Services\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 /**
  * ProjectController - API Controller cho Project management
- * Sử dụng unified Project model và ProjectService
+ * Sử dụng unified Project model và ProjectService.
  */
 class ProjectController extends Controller
 {
@@ -26,44 +28,44 @@ class ProjectController extends Controller
     public function __construct(
         private ProjectService $projectService,
         private ProjectRepository $projectRepository
-    ) {}
+    ) {
+    }
 
     /**
-     * Get all projects with pagination and filtering
+     * Get all projects with pagination and filtering.
      */
     public function index(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();
             $filters = $request->all();
-            $perPage = (int)($filters['per_page'] ?? 15);
+            $perPage = (int) ($filters['per_page'] ?? 15);
             unset($filters['per_page']);
-            
+
             // Apply tenant isolation
             $filters['tenant_id'] = $user->tenant_id;
             $filters['user_id'] = $user->id; // For access control
-            
+
             $projects = $this->projectRepository->getAll($filters, $perPage);
-            
+
             return $this->zenaSuccessResponse($projects);
-            
         } catch (\Exception $e) {
             Log::error('Failed to get projects', [
                 'error' => $e->getMessage(),
                 'user_id' => Auth::id(),
-                'filters' => $request->all()
+                'filters' => $request->all(),
             ]);
-            
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to retrieve projects',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Get a specific project by ID
+     * Get a specific project by ID.
      */
     public function show(Request $request, string $id): JsonResponse
     {
@@ -73,19 +75,19 @@ class ProjectController extends Controller
             if ($tenantId === null) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Project not found'
+                    'message' => 'Project not found',
                 ], 404);
             }
 
             $user = Auth::user();
             $project = $this->projectRepository->getProjectById($id, [
-                'client', 'projectManager', 'teamMembers', 'tasks', 'documents'
+                'client', 'projectManager', 'teamMembers', 'tasks', 'documents',
             ], $tenantId);
 
             if (!$project) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Project not found'
+                    'message' => 'Project not found',
                 ], 404);
             }
 
@@ -94,7 +96,7 @@ class ProjectController extends Controller
             if ($routeTenantId !== '' && $routeTenantId !== $project->tenant_id) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Project not found'
+                    'message' => 'Project not found',
                 ], 404);
             }
 
@@ -102,245 +104,241 @@ class ProjectController extends Controller
             if ($project->tenant_id !== $user->tenant_id) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Access denied to this project'
+                    'message' => 'Access denied to this project',
                 ], 403);
             }
-            
+
             // Check user access
-            if (!$user->hasRole(['SuperAdmin', 'Admin']) && 
+            if (!$user->hasRole(['SuperAdmin', 'Admin']) &&
                 !$project->teamMembers()->where('user_id', $user->id)->exists()) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Access denied to this project'
+                    'message' => 'Access denied to this project',
                 ], 403);
             }
-            
+
             // Get project metrics
             $metrics = $this->projectService->getProjectMetrics($project->id, $user->id, $user->tenant_id);
-            
+
             return $this->zenaSuccessResponse([
                 'project' => $project,
                 'metrics' => $metrics,
             ]);
-            
         } catch (\Exception $e) {
             Log::error('Failed to get project', [
                 'error' => $e->getMessage(),
                 'project_id' => $id,
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
-            
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to retrieve project',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Create a new project
+     * Create a new project.
      */
     public function store(ProjectFormRequest $request): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             // Check permission
             if (!$user->hasPermission('project.create')) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Insufficient permissions to create projects'
+                    'message' => 'Insufficient permissions to create projects',
                 ], 403);
             }
-            
+
             $data = $request->validated();
             $data['tenant_id'] = $user->tenant_id;
-            
+
             $project = $this->projectService->createProject($data, $user->id, $user->tenant_id);
-            
+
             return $this->zenaSuccessResponse(
                 $project,
                 'Project created successfully',
                 201
             );
-            
         } catch (\Exception $e) {
             Log::error('Failed to create project', [
                 'error' => $e->getMessage(),
                 'user_id' => Auth::id(),
-                'data' => $request->all()
+                'data' => $request->all(),
             ]);
-            
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to create project',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Update an existing project
+     * Update an existing project.
      */
     public function update(ProjectFormRequest $request, string $id): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             /** @var Project|null $project */
             $project = Project::query()->find($id);
-            
+
             if (!$project) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Project not found'
+                    'message' => 'Project not found',
                 ], 404);
             }
-            
+
             // Check tenant isolation
             if ($project->tenant_id !== $user->tenant_id) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Access denied to this project'
+                    'message' => 'Access denied to this project',
                 ], 403);
             }
-            
+
             // Check permission
             if (!$user->hasPermission('project.update')) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Insufficient permissions to update projects'
+                    'message' => 'Insufficient permissions to update projects',
                 ], 403);
             }
-            
+
             $data = $request->validated();
             $project = $this->projectService->updateProject($project, $data, $user->id);
-            
+
             return $this->zenaSuccessResponse(
                 $project->load(['client', 'projectManager', 'teamMembers']),
                 'Project updated successfully'
             );
-            
         } catch (\Exception $e) {
             Log::error('Failed to update project', [
                 'error' => $e->getMessage(),
                 'project_id' => $id,
                 'user_id' => Auth::id(),
-                'data' => $request->all()
+                'data' => $request->all(),
             ]);
-            
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to update project',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Delete a project (soft delete)
+     * Delete a project (soft delete).
      */
     public function destroy(string $id): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             /** @var Project|null $project */
             $project = Project::query()->find($id);
-            
+
             if (!$project) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Project not found'
+                    'message' => 'Project not found',
                 ], 404);
             }
-            
+
             // Check tenant isolation
             if ($project->tenant_id !== $user->tenant_id) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Access denied to this project'
+                    'message' => 'Access denied to this project',
                 ], 403);
             }
-            
+
             // Check permission
             if (!$user->hasPermission('project.delete')) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Insufficient permissions to delete projects'
+                    'message' => 'Insufficient permissions to delete projects',
                 ], 403);
             }
-            
+
             $this->projectService->deleteProject($project, $user->id);
-            
+
             return $this->zenaSuccessResponse(null, 'Project deleted successfully');
-            
         } catch (\Exception $e) {
             Log::error('Failed to delete project', [
                 'error' => $e->getMessage(),
                 'project_id' => $id,
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
-            
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to delete project',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Update project status
+     * Update project status.
      */
     public function updateStatus(Request $request, string $id): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             $request->validate([
                 'status' => 'required|in:' . implode(',', Project::VALID_STATUSES),
-                'reason' => 'nullable|string|max:500'
+                'reason' => 'nullable|string|max:500',
             ]);
-            
+
             /** @var Project|null $project */
             $project = Project::query()->find($id);
-            
+
             if (!$project) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Project not found'
+                    'message' => 'Project not found',
                 ], 404);
             }
-            
+
             // Check tenant isolation
             if ($project->tenant_id !== $user->tenant_id) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Access denied to this project'
+                    'message' => 'Access denied to this project',
                 ], 403);
             }
-            
+
             // Check permission
             if (!$user->hasPermission('project.update')) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Insufficient permissions to update project status'
+                    'message' => 'Insufficient permissions to update project status',
                 ], 403);
             }
-            
+
             $project = $this->projectService->updateProjectStatus(
-                $project, 
-                $request->input('status'), 
+                $project,
+                $request->input('status'),
                 $user->id,
                 $request->input('reason')
             );
-            
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Project status updated successfully',
-                'data' => $project
+                'data' => $project,
             ]);
         } catch (ValidationException $e) {
             throw $e;
@@ -349,195 +347,191 @@ class ProjectController extends Controller
                 'error' => $e->getMessage(),
                 'project_id' => $id,
                 'user_id' => Auth::id(),
-                'new_status' => $request->input('status')
+                'new_status' => $request->input('status'),
             ]);
-            
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to update project status',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Get project statistics
+     * Get project statistics.
      */
     public function statistics(): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             $statistics = $this->projectRepository->getProjectStatistics($user->tenant_id);
-            
+
             return response()->json([
                 'status' => 'success',
-                'data' => $statistics
+                'data' => $statistics,
             ]);
-            
         } catch (\Exception $e) {
             Log::error('Failed to get project statistics', [
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
-            
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to retrieve project statistics',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Get projects for dropdown
+     * Get projects for dropdown.
      */
     public function dropdown(): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             $projects = $this->projectRepository->getProjectsForDropdown($user->tenant_id);
-            
+
             return response()->json([
                 'status' => 'success',
-                'data' => $projects
+                'data' => $projects,
             ]);
-            
         } catch (\Exception $e) {
             Log::error('Failed to get projects for dropdown', [
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
-            
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to retrieve projects',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Recalculate project progress
+     * Recalculate project progress.
      */
     public function recalculateProgress(Request $request, string $id): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             /** @var Project|null $project */
             $project = Project::query()->where('tenant_id', $user->tenant_id)->find($id);
-            
+
             if (!$project) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Project not found'
+                    'message' => 'Project not found',
                 ], 404);
             }
-            
+
             // Check permission
             if (!$user->hasPermission('project.update')) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Insufficient permissions to recalculate progress'
+                    'message' => 'Insufficient permissions to recalculate progress',
                 ], 403);
             }
-            
+
             $oldProgress = $project->getAttribute('progress');
             $project->recalculateProgress();
             $freshProject = $project->fresh();
             $newProgress = $freshProject?->getAttribute('progress');
-            
+
             Log::info('Project progress recalculated', [
                 'project_id' => $project->id,
                 'user_id' => $user->id,
                 'old_progress' => $oldProgress,
-                'new_progress' => $newProgress
+                'new_progress' => $newProgress,
             ]);
-            
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Project progress recalculated successfully',
                 'data' => [
                     'old_progress' => $oldProgress,
-                    'new_progress' => $newProgress
-                ]
+                    'new_progress' => $newProgress,
+                ],
             ]);
-            
         } catch (\Exception $e) {
             Log::error('Failed to recalculate project progress', [
                 'error' => $e->getMessage(),
                 'project_id' => $id,
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
-            
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to recalculate project progress',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Recalculate project actual cost
+     * Recalculate project actual cost.
      */
     public function recalculateActualCost(Request $request, string $id): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             /** @var Project|null $project */
             $project = Project::query()->where('tenant_id', $user->tenant_id)->find($id);
-            
+
             if (!$project) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Project not found'
+                    'message' => 'Project not found',
                 ], 404);
             }
-            
+
             // Check permission
             if (!$user->hasPermission('project.update')) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Insufficient permissions to recalculate actual cost'
+                    'message' => 'Insufficient permissions to recalculate actual cost',
                 ], 403);
             }
-            
+
             $oldActualCost = $project->getAttribute('budget_actual');
             $project->recalculateActualCost();
             $freshProject = $project->fresh();
             $newActualCost = $freshProject?->getAttribute('budget_actual');
-            
+
             Log::info('Project actual cost recalculated', [
                 'project_id' => $project->id,
                 'user_id' => $user->id,
                 'old_actual_cost' => $oldActualCost,
                 'new_actual_cost' => $newActualCost,
             ]);
-            
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Project actual cost recalculated successfully',
                 'data' => [
                     'old_actual_cost' => $oldActualCost,
                     'new_actual_cost' => $newActualCost,
-                ]
+                ],
             ]);
-            
         } catch (\Exception $e) {
             Log::error('Failed to recalculate project actual cost', [
                 'error' => $e->getMessage(),
                 'project_id' => $id,
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
-            
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to recalculate project actual cost',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

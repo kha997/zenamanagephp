@@ -1,31 +1,29 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Events;
+
 use Illuminate\Support\Facades\Auth;
-
-
-use Illuminate\Foundation\Events\Dispatchable;
 
 /**
  * Event được dispatch khi tạo project mới
- * Tuân thủ Z.E.N.A architecture với event-driven design
+ * Tuân thủ Z.E.N.A architecture với event-driven design.
  */
 class ProjectCreated
 {
-
     /**
-     * Constructor
+     * Constructor.
      *
      * @param Project $project Project vừa được tạo
      */
     public function __construct(
         public Project $project
     ) {
-        
     }
 
     /**
-     * Lấy tên event theo convention Domain.Entity.Action
+     * Lấy tên event theo convention Domain.Entity.Action.
      *
      * @return string
      */
@@ -35,7 +33,7 @@ class ProjectCreated
     }
 
     /**
-     * Lấy payload đầy đủ của event
+     * Lấy payload đầy đủ của event.
      *
      * @return array
      */
@@ -49,7 +47,7 @@ class ProjectCreated
             'projectName' => $this->project->name,
             'projectData' => $this->project->toArray(),
             'changedFields' => ['created'],
-            'timestamp' => now()->format('Y-m-d H:i:s')
+            'timestamp' => now()->format('Y-m-d H:i:s'),
         ];
     }
 }

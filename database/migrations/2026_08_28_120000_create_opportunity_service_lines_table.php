@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -10,8 +12,7 @@ use Illuminate\Support\Facades\Schema;
  * Additive-only: creates a new, explicit, non-polymorphic membership
  * table for the Opportunity side. No existing table/column is touched.
  */
-return new class extends Migration
-{
+return new class () extends Migration {
     public function up(): void
     {
         Schema::create('opportunity_service_lines', function (Blueprint $table) {

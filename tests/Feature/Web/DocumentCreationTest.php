@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Web;
 
@@ -18,7 +20,9 @@ class DocumentCreationTest extends TestCase
     use TenantUserFactoryTrait;
 
     private Tenant $tenant;
+
     private User $creator;
+
     private Project $project;
 
     protected function setUp(): void

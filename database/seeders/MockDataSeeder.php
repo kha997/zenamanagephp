@@ -2,12 +2,11 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
-use Src\CoreProject\Models\Project;
-use Src\CoreProject\Models\Task;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Database\Seeder;
+use Src\CoreProject\Models\Project;
+use Src\CoreProject\Models\Task;
 
 class MockDataSeeder extends Seeder
 {
@@ -35,26 +34,26 @@ class MockDataSeeder extends Seeder
     }
 
     /**
-     * Clear existing test data
+     * Clear existing test data.
      */
     private function clearExistingData(): void
     {
         $this->command->info('🧹 Clearing existing test data...');
-        
+
         // Delete tasks first (foreign key constraints)
         Task::where('name', 'LIKE', '%Test%')->delete();
         Task::where('name', 'LIKE', '%Mock%')->delete();
-        
+
         // Delete projects
         Project::where('name', 'LIKE', '%Test%')->delete();
         Project::where('name', 'LIKE', '%Mock%')->delete();
-        
+
         // Delete users (be careful with this)
         // User::where('name', 'LIKE', '%Test%')->delete();
     }
 
     /**
-     * Create test users
+     * Create test users.
      */
     private function createUsers()
     {
@@ -66,43 +65,43 @@ class MockDataSeeder extends Seeder
                 'email' => 'john.smith@test.com',
                 'job_title' => 'Project Manager',
                 'department' => 'Engineering',
-                'is_active' => true
+                'is_active' => true,
             ],
             [
                 'name' => 'Sarah Wilson',
                 'email' => 'sarah.wilson@test.com',
                 'job_title' => 'Senior Developer',
                 'department' => 'Engineering',
-                'is_active' => true
+                'is_active' => true,
             ],
             [
                 'name' => 'Mike Johnson',
                 'email' => 'mike.johnson@test.com',
                 'job_title' => 'UI/UX Designer',
                 'department' => 'Design',
-                'is_active' => true
+                'is_active' => true,
             ],
             [
                 'name' => 'Alex Lee',
                 'email' => 'alex.lee@test.com',
                 'job_title' => 'Backend Developer',
                 'department' => 'Engineering',
-                'is_active' => true
+                'is_active' => true,
             ],
             [
                 'name' => 'Emma Davis',
                 'email' => 'emma.davis@test.com',
                 'job_title' => 'QA Tester',
                 'department' => 'Quality Assurance',
-                'is_active' => true
+                'is_active' => true,
             ],
             [
                 'name' => 'David Brown',
                 'email' => 'david.brown@test.com',
                 'job_title' => 'Business Analyst',
                 'department' => 'Business',
-                'is_active' => true
-            ]
+                'is_active' => true,
+            ],
         ]);
 
         $createdUsers = collect();
@@ -117,7 +116,7 @@ class MockDataSeeder extends Seeder
                 'is_active' => $userData['is_active'],
                 'email_verified_at' => now(),
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
             $createdUsers->push($user);
         }
@@ -126,7 +125,7 @@ class MockDataSeeder extends Seeder
     }
 
     /**
-     * Create test projects
+     * Create test projects.
      */
     private function createProjects($users)
     {
@@ -142,7 +141,7 @@ class MockDataSeeder extends Seeder
                 'end_date' => Carbon::now()->addMonths(4),
                 'budget_planned' => 150000,
                 'budget_actual' => 45000,
-                'progress' => 30
+                'progress' => 30,
             ],
             [
                 'name' => 'Mobile App Development',
@@ -153,7 +152,7 @@ class MockDataSeeder extends Seeder
                 'end_date' => Carbon::now()->addMonths(3),
                 'budget_planned' => 80000,
                 'budget_actual' => 20000,
-                'progress' => 25
+                'progress' => 25,
             ],
             [
                 'name' => 'Data Analytics Dashboard',
@@ -164,7 +163,7 @@ class MockDataSeeder extends Seeder
                 'end_date' => Carbon::now()->addMonths(2),
                 'budget_planned' => 60000,
                 'budget_actual' => 0,
-                'progress' => 0
+                'progress' => 0,
             ],
             [
                 'name' => 'API Integration Project',
@@ -175,7 +174,7 @@ class MockDataSeeder extends Seeder
                 'end_date' => Carbon::now()->addMonths(1),
                 'budget_planned' => 40000,
                 'budget_actual' => 15000,
-                'progress' => 40
+                'progress' => 40,
             ],
             [
                 'name' => 'Security Audit & Compliance',
@@ -186,8 +185,8 @@ class MockDataSeeder extends Seeder
                 'end_date' => Carbon::now()->subWeek(),
                 'budget_planned' => 25000,
                 'budget_actual' => 25000,
-                'progress' => 100
-            ]
+                'progress' => 100,
+            ],
         ]);
 
         $createdProjects = collect();
@@ -207,7 +206,7 @@ class MockDataSeeder extends Seeder
                 'pm_id' => $users->first()->id,
                 'created_by' => $users->first()->id,
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
             $createdProjects->push($project);
         }
@@ -216,7 +215,7 @@ class MockDataSeeder extends Seeder
     }
 
     /**
-     * Create test tasks
+     * Create test tasks.
      */
     private function createTasks($projects, $users)
     {
@@ -236,7 +235,7 @@ class MockDataSeeder extends Seeder
                 'estimated_hours' => 40,
                 'actual_hours' => 25,
                 'progress_percent' => 62,
-                'tags' => 'design,architecture,system'
+                'tags' => 'design,architecture,system',
             ],
             [
                 'name' => 'Database Schema Design',
@@ -250,7 +249,7 @@ class MockDataSeeder extends Seeder
                 'estimated_hours' => 32,
                 'actual_hours' => 30,
                 'progress_percent' => 100,
-                'tags' => 'database,schema,backend'
+                'tags' => 'database,schema,backend',
             ],
             [
                 'name' => 'Frontend Development',
@@ -264,7 +263,7 @@ class MockDataSeeder extends Seeder
                 'estimated_hours' => 80,
                 'actual_hours' => 0,
                 'progress_percent' => 0,
-                'tags' => 'frontend,react,ui'
+                'tags' => 'frontend,react,ui',
             ],
             [
                 'name' => 'Payment Integration',
@@ -278,7 +277,7 @@ class MockDataSeeder extends Seeder
                 'estimated_hours' => 24,
                 'actual_hours' => 12,
                 'progress_percent' => 50,
-                'tags' => 'payment,integration,backend'
+                'tags' => 'payment,integration,backend',
             ],
             [
                 'name' => 'Testing & QA',
@@ -292,7 +291,7 @@ class MockDataSeeder extends Seeder
                 'estimated_hours' => 48,
                 'actual_hours' => 0,
                 'progress_percent' => 0,
-                'tags' => 'testing,qa,quality'
+                'tags' => 'testing,qa,quality',
             ],
 
             // Mobile App Development Tasks
@@ -308,7 +307,7 @@ class MockDataSeeder extends Seeder
                 'estimated_hours' => 16,
                 'actual_hours' => 18,
                 'progress_percent' => 100,
-                'tags' => 'mobile,wireframe,design'
+                'tags' => 'mobile,wireframe,design',
             ],
             [
                 'name' => 'React Native Setup',
@@ -322,7 +321,7 @@ class MockDataSeeder extends Seeder
                 'estimated_hours' => 20,
                 'actual_hours' => 15,
                 'progress_percent' => 75,
-                'tags' => 'react-native,setup,mobile'
+                'tags' => 'react-native,setup,mobile',
             ],
             [
                 'name' => 'API Integration',
@@ -336,7 +335,7 @@ class MockDataSeeder extends Seeder
                 'estimated_hours' => 30,
                 'actual_hours' => 0,
                 'progress_percent' => 0,
-                'tags' => 'api,integration,mobile'
+                'tags' => 'api,integration,mobile',
             ],
 
             // Data Analytics Dashboard Tasks
@@ -352,7 +351,7 @@ class MockDataSeeder extends Seeder
                 'estimated_hours' => 24,
                 'actual_hours' => 8,
                 'progress_percent' => 33,
-                'tags' => 'analysis,requirements,business'
+                'tags' => 'analysis,requirements,business',
             ],
             [
                 'name' => 'Data Pipeline Design',
@@ -366,7 +365,7 @@ class MockDataSeeder extends Seeder
                 'estimated_hours' => 40,
                 'actual_hours' => 0,
                 'progress_percent' => 0,
-                'tags' => 'data,pipeline,etl'
+                'tags' => 'data,pipeline,etl',
             ],
 
             // API Integration Project Tasks
@@ -382,7 +381,7 @@ class MockDataSeeder extends Seeder
                 'estimated_hours' => 35,
                 'actual_hours' => 38,
                 'progress_percent' => 100,
-                'tags' => 'microservices,architecture,backend'
+                'tags' => 'microservices,architecture,backend',
             ],
             [
                 'name' => 'Third-party API Integration',
@@ -396,7 +395,7 @@ class MockDataSeeder extends Seeder
                 'estimated_hours' => 25,
                 'actual_hours' => 12,
                 'progress_percent' => 48,
-                'tags' => 'api,integration,external'
+                'tags' => 'api,integration,external',
             ],
 
             // Security Audit Tasks
@@ -412,7 +411,7 @@ class MockDataSeeder extends Seeder
                 'estimated_hours' => 40,
                 'actual_hours' => 42,
                 'progress_percent' => 100,
-                'tags' => 'security,vulnerability,assessment'
+                'tags' => 'security,vulnerability,assessment',
             ],
             [
                 'name' => 'Compliance Implementation',
@@ -426,8 +425,8 @@ class MockDataSeeder extends Seeder
                 'estimated_hours' => 30,
                 'actual_hours' => 32,
                 'progress_percent' => 100,
-                'tags' => 'compliance,security,implementation'
-            ]
+                'tags' => 'compliance,security,implementation',
+            ],
         ]);
 
         $createdTasks = collect();
@@ -447,7 +446,7 @@ class MockDataSeeder extends Seeder
                 'progress_percent' => $taskData['progress_percent'],
                 'tags' => $taskData['tags'],
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
             $createdTasks->push($task);
         }

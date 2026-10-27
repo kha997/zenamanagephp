@@ -1,11 +1,13 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Unit\Models;
 
 use App\Exceptions\RfiEscalationIntegrityException;
+use App\Models\Project;
 use App\Models\Rfi;
 use App\Models\RfiEscalation;
-use App\Models\Project;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;

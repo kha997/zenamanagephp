@@ -7,6 +7,7 @@ namespace App\Services\Treasury;
 use App\Models\Project;
 use App\Models\Treasury\TreasuryFinancialDocument as Document;
 use App\Models\Treasury\TreasuryLedgerEntry as Entry;
+use App\Models\Treasury\TreasuryPaymentRoute;
 use App\Models\Treasury\TreasuryWallet;
 use Illuminate\Support\Facades\DB;
 
@@ -49,7 +50,7 @@ class TreasuryBalanceService
     }
 
     /**
-     * @return array{wallets: array<string, string>, held_total: string, investor_funding: string, owner_contribution: string, expenses: string, self_approved_expenses: string}
+     * @return array{wallets: array<string, string>, held_total: string, investor_funding: string, owner_contribution: string, expenses: string, self_approved_expenses: string, contract_payments_arrived: string}
      */
     public function projectSummary(Project $project): array
     {
@@ -71,6 +72,8 @@ class TreasuryBalanceService
             // GAP-066: posted expenses, and the self-approved part reported separately.
             'expenses' => $this->postedTotal($project, Document::TYPE_EXPENSE),
             'self_approved_expenses' => $this->selfApprovedExpenseTotal($project),
+            // GAP-095: paid contract payments traced into their destination wallet.
+            'contract_payments_arrived' => $this->arrivedContractPaymentTotal($project),
         ];
     }
 
@@ -123,6 +126,20 @@ class TreasuryBalanceService
             ->whereIn('id', $documentIds)
             ->whereIn('status', [Document::STATUS_POSTED_UNRECONCILED, Document::STATUS_POSTED_RECONCILED])
             ->selectRaw('ROUND(COALESCE(SUM(amount), 0) * 100) as total_cents')
+            ->value('total_cents');
+
+        return self::fromCents((int) round((float) $total));
+    }
+
+    private function arrivedContractPaymentTotal(Project $project): string
+    {
+        $total = TreasuryPaymentRoute::query()
+            ->withoutGlobalScopes()
+            ->where('tenant_id', (string) $project->tenant_id)
+            ->where('project_id', (string) $project->id)
+            ->whereNotNull('linked_contract_payment_id')
+            ->where('status', TreasuryPaymentRoute::STATUS_COMPLETED)
+            ->selectRaw('ROUND(COALESCE(SUM(total_allocated_amount), 0) * 100) as total_cents')
             ->value('total_cents');
 
         return self::fromCents((int) round((float) $total));

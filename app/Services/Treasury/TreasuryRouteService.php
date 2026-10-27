@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Services\Treasury;
 
 use App\Models\AuditLog;
+use App\Models\Contract;
+use App\Models\ContractPayment;
 use App\Models\Project;
 use App\Models\Treasury\TreasuryFinancialDocument as Document;
 use App\Models\Treasury\TreasuryLedgerEntry as Entry;
@@ -33,6 +35,14 @@ use Illuminate\Support\Facades\Gate;
  * balance read) → 5 (document) → 6 (route); leg reversal 0 (to-wallet) → 4
  * (the route's entries, id ascending, then the shared balance read) → 5 → 6;
  * cancel 5 → 6.
+ *
+ * GAP-095 (S4b-2, Gate 2 Option A): a route may instead trace a paid contract
+ * payment (v17 §4.1 Case A, architecture B2-T). It has no financial document:
+ * the payment stays the only record of "the client paid". Its routes together
+ * never exceed the payment amount, checked under the `contract_payments` row
+ * lock (class 1); a leg settles only while the payment is still paid (§4.2a).
+ * Order: create 1 → 6; leg 0 → 1 → 4 → 6; leg reversal 0 → 1 → 4 → 6; cancel
+ * 1 → 6.
  */
 class TreasuryRouteService
 {
@@ -119,6 +129,142 @@ class TreasuryRouteService
     }
 
     /**
+     * GAP-095: trace (part of) a paid contract payment of the project into an
+     * expected destination wallet (v17 §4.1 Case A). No financial document.
+     *
+     * @param array{expected_destination_wallet_id: string, amount: string|float|int} $data
+     */
+    public function createContractPaymentRoute(Project $project, User $actor, ContractPayment $payment, array $data, bool $confirmDuplicate = false): Route
+    {
+        $this->requireProjectPayment($project, $payment);
+        $destination = $this->posting->projectWallet($project, (string) $data['expected_destination_wallet_id'], 'expected_destination_wallet_id');
+        $amount = TreasuryBalanceService::toCents((string) $data['amount']);
+        if ($amount <= 0) {
+            throw new TreasuryRuleViolation('Số tiền phải lớn hơn 0.', 'amount');
+        }
+        if (!$confirmDuplicate && $payment->paid_at !== null) {
+            // Option A: the same money may already have been declared as funding.
+            /** @var Document|null $declared */
+            $declared = Document::query()
+                ->withoutGlobalScopes()
+                ->where('tenant_id', (string) $project->tenant_id)
+                ->where('project_id', (string) $project->id)
+                ->whereIn('document_type', [Document::TYPE_FUNDING, Document::TYPE_OWNER_CONTRIBUTION])
+                ->where(static fn ($query) => $query
+                    ->whereIn('status', [Document::STATUS_POSTED_UNRECONCILED, Document::STATUS_POSTED_RECONCILED])
+                    ->orWhere(static fn ($inTransit) => $inTransit
+                        ->where('status', Document::STATUS_APPROVED)
+                        ->where('posting_path', Document::POSTING_PATH_VIA_ROUTE)))
+                ->where('amount', TreasuryBalanceService::fromCents(TreasuryBalanceService::toCents((string) $payment->amount)))
+                ->whereDate('transaction_date', $payment->paid_at->toDateString())
+                ->first();
+            if ($declared !== null) {
+                throw new TreasuryDuplicateSuspected($declared, 'Dự án đã có khoản tiền nhận cùng số tiền, cùng ngày với đợt thanh toán này. Nếu đó chính là đợt này, đừng truy vết thêm (sẽ bị cộng hai lần).');
+            }
+        }
+
+        return DB::transaction(function () use ($project, $actor, $payment, $destination, $amount): Route {
+            $locked = $this->lockPayment($payment);
+            $this->requirePaid($locked);
+            $allocated = $this->allocatedCents((string) $locked->id);
+            if ($allocated + $amount > TreasuryBalanceService::toCents((string) $locked->amount)) {
+                throw new TreasuryRuleViolation('Tổng truy vết vượt số tiền của đợt thanh toán (còn ' . TreasuryBalanceService::fromCents(TreasuryBalanceService::toCents((string) $locked->amount) - $allocated) . ').', 'amount');
+            }
+
+            /** @var Route $route */
+            $route = Route::query()->create([
+                'tenant_id' => (string) $project->tenant_id,
+                'project_id' => (string) $project->id,
+                'total_allocated_amount' => TreasuryBalanceService::fromCents($amount),
+                'status' => Route::STATUS_PLANNED,
+                'linked_contract_payment_id' => (string) $locked->id,
+                'expected_destination_wallet_id' => (string) $destination->id,
+            ]);
+            $this->audit($actor, null, $route, 'treasury.route.created', ['contract_payment_id' => (string) $locked->id]);
+
+            return $route;
+        });
+    }
+
+    /**
+     * GAP-095 reminder list: paid contract payments of the project (and any
+     * payment that already has routes), with traced / arrived / remaining.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function contractPayments(Project $project): array
+    {
+        $contracts = Contract::query()
+            ->withoutGlobalScopes()
+            ->where('tenant_id', (string) $project->tenant_id)
+            ->where('project_id', (string) $project->id)
+            ->get(['id', 'code', 'title'])
+            ->keyBy(static fn ($contract): string => (string) data_get($contract, 'id'));
+        $routes = Route::query()
+            ->withoutGlobalScopes()
+            ->where('tenant_id', (string) $project->tenant_id)
+            ->where('project_id', (string) $project->id)
+            ->whereNotNull('linked_contract_payment_id')
+            ->where('status', '!=', Route::STATUS_CANCELLED)
+            ->get(['linked_contract_payment_id', 'total_allocated_amount', 'status']);
+        $tracedIds = $routes->pluck('linked_contract_payment_id')->map(static fn ($id): string => (string) $id)->unique()->values()->all();
+        $payments = ContractPayment::query()
+            ->withoutGlobalScopes()
+            ->where('tenant_id', (string) $project->tenant_id)
+            ->whereIn('contract_id', $contracts->keys()->all())
+            ->where(static fn ($query) => $query->where('status', ContractPayment::STATUS_PAID)->orWhereIn('id', $tracedIds))
+            ->orderByDesc('paid_at')
+            ->orderBy('id')
+            ->limit(500)
+            ->get();
+
+        $rows = [];
+        foreach ($payments as $payment) {
+            /** @var ContractPayment $payment */
+            $own = $routes->where('linked_contract_payment_id', (string) $payment->id);
+            $traced = $own->sum(static fn ($route): int => TreasuryBalanceService::toCents((string) data_get($route, 'total_allocated_amount')));
+            $arrived = $own->where('status', Route::STATUS_COMPLETED)->sum(static fn ($route): int => TreasuryBalanceService::toCents((string) data_get($route, 'total_allocated_amount')));
+            $amount = TreasuryBalanceService::toCents((string) $payment->amount);
+            $paid = $payment->status === ContractPayment::STATUS_PAID && $payment->paid_at !== null;
+            $contract = $contracts->get((string) $payment->contract_id);
+            $rows[] = [
+                'id' => (string) $payment->id,
+                'contract_id' => (string) $payment->contract_id,
+                'contract_code' => data_get($contract, 'code'),
+                'contract_title' => data_get($contract, 'title'),
+                'name' => $payment->name,
+                'status' => $payment->status,
+                'paid_at' => $payment->paid_at?->toDateString(),
+                'amount' => TreasuryBalanceService::fromCents($amount),
+                'traced_amount' => TreasuryBalanceService::fromCents($traced),
+                'arrived_amount' => TreasuryBalanceService::fromCents($arrived),
+                'remaining_amount' => TreasuryBalanceService::fromCents(max(0, $amount - $traced)),
+                'flags' => array_values(array_filter([
+                    $paid && $traced < $amount ? 'not_fully_traced' : null,
+                    !$paid ? 'no_longer_paid' : null,
+                    $traced > $amount ? 'over_traced' : null,
+                ])),
+            ];
+        }
+
+        return $rows;
+    }
+
+    /** A contract payment of one of the project's contracts, or null. */
+    public function projectPayment(Project $project, string $id): ?ContractPayment
+    {
+        /** @var ContractPayment|null $payment */
+        $payment = ContractPayment::query()
+            ->withoutGlobalScopes()
+            ->where('tenant_id', (string) $project->tenant_id)
+            ->whereKey($id)
+            ->whereIn('contract_id', Contract::query()->withoutGlobalScopes()->where('project_id', (string) $project->id)->select('id'))
+            ->first();
+
+        return $payment;
+    }
+
+    /**
      * Record one leg, settled at once. `from_wallet_id` empty = money entering
      * from outside (funding / owner contribution routes only).
      *
@@ -135,7 +281,7 @@ class TreasuryRouteService
         if ($from !== null && (string) $from->id === (string) $to->id) {
             throw new TreasuryRuleViolation('Ví đi và ví đến phải khác nhau.', 'to_wallet_id');
         }
-        if ($from === null && $document->document_type === Document::TYPE_INTERNAL_TRANSFER) {
+        if ($from === null && $document?->document_type === Document::TYPE_INTERNAL_TRANSFER) {
             throw new TreasuryRuleViolation('Chuyển nội bộ không có chặng "từ bên ngoài".', 'from_wallet_id');
         }
         if (!Gate::forUser($actor)->allows('treasury.record-route-leg', [$project, $from, $to])) {
@@ -156,9 +302,15 @@ class TreasuryRouteService
         return DB::transaction(function () use ($actor, $route, $document, $from, $to, $amount, $occurredAt): Leg {
             if ($from !== null) {
                 $this->posting->lockWallet($from);
+            }
+            // GAP-095 / v17 §4.2a: a contract-payment leg settles only while the payment is paid (class 1).
+            if ($route->linked_contract_payment_id !== null) {
+                $this->requirePaid($this->lockPayment($this->paymentOf($route)));
+            }
+            if ($from !== null) {
                 $this->posting->requireBalance($from, TreasuryBalanceService::fromCents($amount), 'amount');
             }
-            $lockedDocument = $this->lockDocument($document);
+            $lockedDocument = $document === null ? null : $this->lockDocument($document);
             $lockedRoute = $this->lockRoute($route);
             if (in_array($lockedRoute->status, [Route::STATUS_COMPLETED, Route::STATUS_CANCELLED], true)) {
                 throw new TreasuryRuleViolation('Tuyến đã hoàn tất hoặc đã huỷ, không ghi thêm chặng.', 'route');
@@ -173,7 +325,7 @@ class TreasuryRouteService
                     throw new TreasuryRuleViolation('Tổng tiền "từ bên ngoài" vượt số tiền của tuyến.', 'amount');
                 }
             }
-            if ($from !== null && (string) $from->id === (string) $lockedDocument->source_wallet_id) {
+            if ($from !== null && $lockedDocument !== null && (string) $from->id === (string) $lockedDocument->source_wallet_id) {
                 $net = $this->netByWallet($legs)[(string) $from->id] ?? 0;
                 if ($net - $amount < -$total) {
                     throw new TreasuryRuleViolation('Tiền ra khỏi ví nguồn vượt số tiền của tuyến.', 'amount');
@@ -223,19 +375,23 @@ class TreasuryRouteService
 
         return DB::transaction(function () use ($actor, $leg, $route, $document, $to, $reason): Leg {
             $this->posting->lockWallet($to);
+            if ($route->linked_contract_payment_id !== null) {
+                // Class 1 before 4, as every Case A write (a reversal is a correction: no paid check).
+                $this->lockPayment($this->paymentOf($route));
+            }
             // Class 4 before the shared balance read: the same rows, in the same
             // id order, that reconciliation locks for this document, so the two
             // cannot each hold one entry of the leg and wait for the other.
             $this->lockRouteEntries($route);
             $this->posting->requireBalance($to, (string) $leg->amount, 'leg');
-            $lockedDocument = $this->lockDocument($document);
+            $lockedDocument = $document === null ? null : $this->lockDocument($document);
             $lockedRoute = $this->lockRoute($route);
             /** @var Leg $lockedLeg */
             $lockedLeg = Leg::query()->withoutGlobalScopes()->whereKey($leg->id)->lockForUpdate()->firstOrFail();
             if ($lockedLeg->status !== Leg::STATUS_SETTLED) {
                 throw new TreasuryRuleViolation('Chặng này đã được đảo.', 'leg');
             }
-            if (in_array($lockedDocument->status, [Document::STATUS_REVERSED, Document::STATUS_REJECTED], true)) {
+            if ($lockedDocument !== null && in_array($lockedDocument->status, [Document::STATUS_REVERSED, Document::STATUS_REJECTED], true)) {
                 throw new TreasuryRuleViolation('Chứng từ của tuyến đã đảo hoặc đã huỷ.', 'leg');
             }
 
@@ -280,13 +436,19 @@ class TreasuryRouteService
         $document = $this->documentOf($route);
 
         return DB::transaction(function () use ($actor, $route, $document, $reason): Route {
-            $lockedDocument = $this->lockDocument($document);
+            if ($route->linked_contract_payment_id !== null) {
+                $this->lockPayment($this->paymentOf($route));
+            }
+            $lockedDocument = $document === null ? null : $this->lockDocument($document);
             $lockedRoute = $this->lockRoute($route);
             if ($lockedRoute->status === Route::STATUS_CANCELLED) {
                 throw new TreasuryRuleViolation('Tuyến đã huỷ.', 'route');
             }
-            if ($lockedDocument->status !== Document::STATUS_APPROVED) {
+            if ($lockedDocument !== null && $lockedDocument->status !== Document::STATUS_APPROVED) {
                 throw new TreasuryRuleViolation('Tuyến đã hoàn tất ít nhất một lần, không huỷ được; hãy đảo chứng từ.', 'route');
+            }
+            if ($lockedDocument === null && $lockedRoute->status === Route::STATUS_COMPLETED) {
+                throw new TreasuryRuleViolation('Tuyến đã hoàn tất, không huỷ được; hãy đảo các chặng.', 'route');
             }
             if ($this->settledLegs($lockedRoute)->isNotEmpty()) {
                 throw new TreasuryRuleViolation('Còn chặng đang có hiệu lực; hãy đảo các chặng trước khi huỷ.', 'route');
@@ -294,8 +456,10 @@ class TreasuryRouteService
 
             $lockedRoute->status = Route::STATUS_CANCELLED;
             $lockedRoute->save();
-            $lockedDocument->status = Document::STATUS_REJECTED;
-            $lockedDocument->save();
+            if ($lockedDocument !== null) {
+                $lockedDocument->status = Document::STATUS_REJECTED;
+                $lockedDocument->save();
+            }
             $this->audit($actor, $lockedDocument, $lockedRoute, 'treasury.route.cancelled', ['reason' => $reason]);
 
             return $lockedRoute;
@@ -324,11 +488,21 @@ class TreasuryRouteService
             ->whereIn('id', $routes->pluck('linked_financial_document_id')->filter()->all())
             ->get()
             ->keyBy(static fn ($doc): string => (string) data_get($doc, 'id'));
+        $payments = ContractPayment::query()
+            ->withoutGlobalScopes()
+            ->whereIn('id', $routes->pluck('linked_contract_payment_id')->filter()->all())
+            ->get()
+            ->keyBy(static fn ($payment): string => (string) data_get($payment, 'id'));
 
         $rows = [];
         foreach ($routes as $route) {
             /** @var Route $route */
-            $rows[] = $this->summaryRow($route, $documents->get((string) $route->linked_financial_document_id), $this->settledLegs($route));
+            $rows[] = $this->summaryRow(
+                $route,
+                $documents->get((string) $route->linked_financial_document_id),
+                $this->settledLegs($route),
+                $payments->get((string) $route->linked_contract_payment_id)
+            );
         }
 
         return $rows;
@@ -348,8 +522,9 @@ class TreasuryRouteService
             ->get();
         $settled = $this->settledLegs($route);
         $document = Document::query()->withoutGlobalScopes()->whereKey((string) $route->linked_financial_document_id)->first();
+        $payment = ContractPayment::query()->withoutGlobalScopes()->whereKey((string) $route->linked_contract_payment_id)->first();
         $walletIds = $legs->pluck('from_wallet_id')->merge($legs->pluck('to_wallet_id'))
-            ->merge([data_get($document, 'source_wallet_id'), data_get($document, 'destination_wallet_id')])
+            ->merge([data_get($document, 'source_wallet_id'), data_get($document, 'destination_wallet_id'), $route->expected_destination_wallet_id])
             ->filter()->map(static fn ($id): string => (string) $id)->unique()->values()->all();
         $names = TreasuryWallet::query()->withoutGlobalScopes()->whereIn('id', $walletIds)->pluck('name', 'id');
 
@@ -363,7 +538,7 @@ class TreasuryRouteService
             ];
         }
 
-        return $this->summaryRow($route, $document, $settled) + [
+        return $this->summaryRow($route, $document, $settled, $payment) + [
             'legs' => $legs->map(static fn ($leg): array => [
                 'id' => (string) data_get($leg, 'id'),
                 'sequence_no' => (int) data_get($leg, 'sequence_no'),
@@ -418,12 +593,12 @@ class TreasuryRouteService
      * posts as `posted_unreconciled`.
      *
      * @param Collection<int, Leg> $settled
-     * @return array{route_status: array{from: string, to: string}, document_status: array{from: string, to: string}}
+     * @return array{route_status: array{from: string, to: string}, document_status: array{from: ?string, to: ?string}}
      */
-    private function refreshStatuses(Route $route, Document $document, Collection $settled): array
+    private function refreshStatuses(Route $route, ?Document $document, Collection $settled): array
     {
         $routeFrom = $route->status;
-        $documentFrom = $document->status;
+        $documentFrom = $document?->status;
         if ($this->isComplete($document, $route, $settled)) {
             $route->status = Route::STATUS_COMPLETED;
         } else {
@@ -431,7 +606,9 @@ class TreasuryRouteService
         }
         $route->save();
 
-        if ($document->status === Document::STATUS_APPROVED && $route->status === Route::STATUS_COMPLETED) {
+        if ($document === null) {
+            // GAP-095: a contract-payment route has no document to post.
+        } elseif ($document->status === Document::STATUS_APPROVED && $route->status === Route::STATUS_COMPLETED) {
             $document->status = Document::STATUS_POSTED_UNRECONCILED;
             $document->posted_at = Carbon::now();
             $document->save();
@@ -442,7 +619,7 @@ class TreasuryRouteService
 
         return [
             'route_status' => ['from' => $routeFrom, 'to' => $route->status],
-            'document_status' => ['from' => $documentFrom, 'to' => $document->status],
+            'document_status' => ['from' => $documentFrom, 'to' => $document?->status],
         ];
     }
 
@@ -451,14 +628,15 @@ class TreasuryRouteService
      *
      * @param Collection<int, Leg> $settled
      */
-    private function isComplete(Document $document, Route $route, Collection $settled): bool
+    private function isComplete(?Document $document, Route $route, Collection $settled): bool
     {
         if ($settled->isEmpty()) {
             return false;
         }
         $total = TreasuryBalanceService::toCents((string) $route->total_allocated_amount);
-        $destination = (string) $document->destination_wallet_id;
-        $source = $document->source_wallet_id === null ? null : (string) $document->source_wallet_id;
+        // Case A (GAP-095): the expected destination; Case B: the document's endpoints.
+        $destination = (string) ($document !== null ? $document->destination_wallet_id : $route->expected_destination_wallet_id);
+        $source = $document?->source_wallet_id === null ? null : (string) $document->source_wallet_id;
 
         $net = $this->netByWallet($settled);
         foreach ($net as $walletId => $custody) {
@@ -522,10 +700,10 @@ class TreasuryRouteService
      * @param Collection<int, Leg> $settled
      * @return array<string, mixed>
      */
-    private function summaryRow(Route $route, mixed $document, Collection $settled): array
+    private function summaryRow(Route $route, mixed $document, Collection $settled, mixed $payment = null): array
     {
         $total = TreasuryBalanceService::toCents((string) $route->total_allocated_amount);
-        $destination = (string) data_get($document, 'destination_wallet_id');
+        $destination = (string) ($route->expected_destination_wallet_id ?? data_get($document, 'destination_wallet_id'));
         $arrived = $this->netByWallet($settled)[$destination] ?? 0;
 
         return [
@@ -534,15 +712,19 @@ class TreasuryRouteService
             'total_amount' => TreasuryBalanceService::fromCents($total),
             'arrived_amount' => TreasuryBalanceService::fromCents($arrived),
             'remaining_amount' => TreasuryBalanceService::fromCents($total - $arrived),
-            'document_id' => (string) $route->linked_financial_document_id,
+            'document_id' => $route->linked_financial_document_id,
             'document_type' => (string) data_get($document, 'document_type'),
             'document_status' => (string) data_get($document, 'status'),
-            'transaction_date' => data_get($document, 'transaction_date')?->toDateString(),
+            'transaction_date' => data_get($document, 'transaction_date')?->toDateString() ?? data_get($payment, 'paid_at')?->toDateString(),
             'reference' => data_get($document, 'reference'),
             'description' => data_get($document, 'description'),
             'source_wallet_id' => data_get($document, 'source_wallet_id'),
             'source_party_id' => data_get($document, 'source_party_id'),
             'destination_wallet_id' => $destination,
+            // GAP-095: the traced contract payment (Case A routes only).
+            'contract_payment_id' => $route->linked_contract_payment_id,
+            'contract_payment_name' => data_get($payment, 'name'),
+            'contract_payment_status' => data_get($payment, 'status'),
         ];
     }
 
@@ -593,16 +775,61 @@ class TreasuryRouteService
         return $locked;
     }
 
-    private function documentOf(Route $route): Document
+    /** The route's document; null for a contract-payment route (GAP-095). */
+    private function documentOf(Route $route): ?Document
     {
         if ($route->linked_financial_document_id === null) {
-            throw new TreasuryRuleViolation('Tuyến này không gắn với chứng từ ngân quỹ.', 'route');
+            return null;
         }
 
         /** @var Document $document */
         $document = Document::query()->withoutGlobalScopes()->whereKey((string) $route->linked_financial_document_id)->firstOrFail();
 
         return $document;
+    }
+
+    private function paymentOf(Route $route): ContractPayment
+    {
+        /** @var ContractPayment $payment */
+        $payment = ContractPayment::query()->withoutGlobalScopes()->whereKey((string) $route->linked_contract_payment_id)->firstOrFail();
+
+        return $payment;
+    }
+
+    /** Class 1: the contract payment row. */
+    private function lockPayment(ContractPayment $payment): ContractPayment
+    {
+        /** @var ContractPayment $locked */
+        $locked = ContractPayment::query()->withoutGlobalScopes()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
+
+        return $locked;
+    }
+
+    /** v17 §4.2a: both, not either. */
+    private function requirePaid(ContractPayment $payment): void
+    {
+        if ($payment->status !== ContractPayment::STATUS_PAID || $payment->paid_at === null) {
+            throw new TreasuryRuleViolation('Đợt thanh toán hợp đồng không còn ở trạng thái "đã thanh toán".', 'contract_payment');
+        }
+    }
+
+    /** Cents already allocated to non-cancelled routes of the payment (read under its class-1 lock). */
+    private function allocatedCents(string $paymentId): int
+    {
+        return (int) Route::query()
+            ->withoutGlobalScopes()
+            ->where('linked_contract_payment_id', $paymentId)
+            ->where('status', '!=', Route::STATUS_CANCELLED)
+            ->lockForUpdate()
+            ->get(['total_allocated_amount'])
+            ->sum(static fn ($route): int => TreasuryBalanceService::toCents((string) data_get($route, 'total_allocated_amount')));
+    }
+
+    private function requireProjectPayment(Project $project, ContractPayment $payment): void
+    {
+        if ($this->projectPayment($project, (string) $payment->id) === null) {
+            throw new TreasuryRuleViolation('Đợt thanh toán không thuộc hợp đồng của dự án này.', 'contract_payment');
+        }
     }
 
     private function routeOfLeg(Leg $leg): Route
@@ -646,21 +873,22 @@ class TreasuryRouteService
     /**
      * @param array<string, mixed> $extra
      */
-    private function audit(User $actor, Document $document, Route $route, string $action, array $extra): void
+    private function audit(User $actor, ?Document $document, Route $route, string $action, array $extra): void
     {
         AuditLog::query()->create([
             'user_id' => (string) $actor->id,
-            'tenant_id' => (string) $document->tenant_id,
-            'project_id' => (string) $document->project_id,
+            'tenant_id' => (string) $route->tenant_id,
+            'project_id' => (string) $route->project_id,
             'action' => $action,
             'entity_type' => 'treasury_payment_route',
             'entity_id' => (string) $route->id,
             'new_data' => array_merge([
-                'document_id' => (string) $document->id,
-                'document_type' => $document->document_type,
-                'amount' => (string) $document->amount,
-                'transaction_date' => $document->transaction_date?->toDateString(),
-                'reference' => $document->reference,
+                'document_id' => $document?->id === null ? null : (string) $document->id,
+                'document_type' => $document?->document_type,
+                'contract_payment_id' => $route->linked_contract_payment_id,
+                'amount' => (string) $route->total_allocated_amount,
+                'transaction_date' => $document?->transaction_date?->toDateString(),
+                'reference' => $document?->reference,
             ], $extra),
         ]);
     }

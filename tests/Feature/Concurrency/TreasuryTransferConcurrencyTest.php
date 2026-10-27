@@ -6,6 +6,7 @@ namespace Tests\Feature\Concurrency;
 
 use App\Models\Contract;
 use App\Models\ContractExpense;
+use App\Models\ContractPayment;
 use App\Models\Permission;
 use App\Models\Project;
 use App\Models\Role;
@@ -59,7 +60,7 @@ class TreasuryTransferConcurrencyTest extends TestCase
         try {
             if (DB::connection('mysql')->getPdo()) {
                 foreach (['audit_logs', 'treasury_reconciliation_entries', 'treasury_reconciliations', 'treasury_cost_settlement_allocations', 'treasury_expense_approvals', 'treasury_ledger_entries',
-                    'treasury_payment_route_legs', 'treasury_payment_routes', 'treasury_financial_documents', 'contract_expenses', 'contracts', 'treasury_wallets',
+                    'treasury_payment_route_legs', 'treasury_payment_routes', 'treasury_financial_documents', 'contract_expenses', 'contract_payments', 'contracts', 'treasury_wallets',
                     'treasury_financial_parties', 'projects', 'user_roles', 'role_permissions', 'users', 'tenants'] as $table) {
                     DB::connection('mysql')->table($table)->delete();
                 }
@@ -293,6 +294,44 @@ class TreasuryTransferConcurrencyTest extends TestCase
         $this->assertSame([0, 1], $exitCodes, 'Exactly one leg from outside may be recorded. ' . $output);
         $this->assertSame('70.00', app(TreasuryBalanceService::class)->walletBalance($transit->fresh()));
         $this->assertSame(1, TreasuryPaymentRouteLeg::on('mysql')->where('payment_route_id', $route->id)->count());
+    }
+
+    /**
+     * GAP-095 — two processes each trace 70 of a paid contract payment of 100.
+     * Only the contract_payments row lock (v17 §11 class 1) plus the locking
+     * read of its routes keep the routes within the payment amount.
+     *
+     * @group stress
+     */
+    public function test_two_concurrent_traces_cannot_exceed_the_contract_payment(): void
+    {
+        [$project, $actor, , , $site] = $this->routeFixture('1');
+        $contract = Contract::on('mysql')->create(Contract::factory()->raw([
+            'tenant_id' => $project->tenant_id, 'project_id' => $project->id, 'created_by' => $actor->id,
+        ]));
+        $payment = ContractPayment::on('mysql')->create([
+            'tenant_id' => $project->tenant_id, 'contract_id' => $contract->id, 'name' => 'Đợt 1',
+            'amount' => '100', 'status' => 'paid', 'paid_at' => '2026-10-05',
+        ]);
+
+        $php = (new PhpExecutableFinder())->find();
+        $args = fn (string $hold): array => [
+            $php, 'artisan', 'treasury:concurrency-test-trace-payment',
+            (string) $project->id, (string) $actor->id, (string) $payment->id, (string) $site->id, '70', '--hold=' . $hold,
+        ];
+        $procA = new Process($args('3'), base_path(), ['DB_CONNECTION' => 'mysql']);
+        $procB = new Process($args('0'), base_path(), ['DB_CONNECTION' => 'mysql']);
+        $procA->start();
+        usleep(1_500_000);
+        $procB->start();
+        $procA->wait();
+        $procB->wait();
+
+        $output = 'A: ' . $procA->getOutput() . $procA->getErrorOutput() . ' B: ' . $procB->getOutput() . $procB->getErrorOutput();
+        $exitCodes = [$procA->getExitCode(), $procB->getExitCode()];
+        sort($exitCodes);
+        $this->assertSame([0, 1], $exitCodes, 'Exactly one trace may be created. ' . $output);
+        $this->assertSame(1, TreasuryPaymentRoute::on('mysql')->where('linked_contract_payment_id', $payment->id)->count(), $output);
     }
 
     /**

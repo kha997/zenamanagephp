@@ -19,6 +19,7 @@ use Illuminate\Validation\Rule;
 
 /**
  * GAP-094 S4b-1 — via-route payments: list, detail, create, legs, leg reversal, cancel.
+ * GAP-095 S4b-2 — paid contract payments: reminder list and tracing routes.
  */
 class TreasuryRouteController extends BaseApiController
 {
@@ -61,6 +62,49 @@ class TreasuryRouteController extends BaseApiController
         }
 
         return $this->successResponse($this->routes->detail($routeModel), 'Treasury route retrieved successfully');
+    }
+
+    /** GAP-095: paid contract payments of the project with traced / arrived / remaining. */
+    public function contractPayments(string $project): JsonResponse
+    {
+        $model = $this->findProject($project);
+        if ($model === null) {
+            return $this->notFound('Project not found');
+        }
+        $this->authorize('treasury.view-project', $model);
+
+        return $this->successResponse($this->routes->contractPayments($model), 'Treasury contract payments retrieved successfully');
+    }
+
+    /** GAP-095: trace (part of) a paid contract payment through a new route. */
+    public function storeContractPaymentRoute(Request $request, string $project, string $contractPayment): JsonResponse
+    {
+        $model = $this->findProject($project);
+        if ($model === null) {
+            return $this->notFound('Project not found');
+        }
+        $this->authorize('treasury.manage-routes', $model);
+        $payment = $this->routes->projectPayment($model, $contractPayment);
+        if ($payment === null) {
+            return $this->notFound('Contract payment not found');
+        }
+        $validator = Validator::make($request->all(), [
+            'expected_destination_wallet_id' => ['required', 'string'],
+            'amount' => self::AMOUNT_RULES,
+        ]);
+        if ($validator->fails()) {
+            return $this->validationError($validator->errors());
+        }
+
+        try {
+            $route = $this->routes->createContractPaymentRoute($model, $this->user(), $payment, $validator->validated(), $request->boolean('confirm_duplicate'));
+        } catch (TreasuryDuplicateSuspected $e) {
+            return $this->errorResponse($e->getMessage(), 409, ['code' => 'DUPLICATE_SUSPECTED', 'existing_document_id' => (string) $e->existing->id]);
+        } catch (TreasuryRuleViolation $e) {
+            return $this->validationError([$e->field ?? 'route' => [$e->getMessage()]]);
+        }
+
+        return $this->successResponse($this->routes->detail($route), 'Treasury contract payment route created', 201);
     }
 
     public function store(Request $request, string $project): JsonResponse

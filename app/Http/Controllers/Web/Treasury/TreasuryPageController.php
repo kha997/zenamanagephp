@@ -188,6 +188,8 @@ class TreasuryPageController extends Controller
             ],
             // GAP-094 S4b-1: via-route payments, open ones first.
             'routes' => $this->routes->routes($model),
+            // GAP-095 S4b-2: paid contract payments to trace (reminder list).
+            'contractPayments' => $this->routes->contractPayments($model),
             'transferSources' => TreasuryWallet::query()
                 ->where('tenant_id', (string) $model->tenant_id)
                 ->where('project_id', (string) $model->id)

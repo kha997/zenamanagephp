@@ -16,7 +16,7 @@
     @endphp
 
     <x-ui.page-header
-        title="Tuyến tiền — {{ $typeLabels[$route['document_type']] ?? $route['document_type'] }} {{ $money($route['total_amount']) }}"
+        title="Tuyến tiền — {{ $route['contract_payment_id'] !== null ? 'Thanh toán HĐ: ' . $route['contract_payment_name'] : ($typeLabels[$route['document_type']] ?? $route['document_type']) }} {{ $money($route['total_amount']) }}"
         description="{{ $project->name }}. Ghi một chặng mỗi lần tiền đi qua một chỗ; tuyến tự hoàn tất khi ví đích nhận đủ và các ví trung gian về 0."
     >
         <x-ui.button-link :href="route('operator.treasury.projects.show', $project->id)" variant="secondary">Quay lại ngân quỹ</x-ui.button-link>
@@ -27,7 +27,11 @@
     <x-ui.card title="Tình trạng">
         <div class="operator-form-grid p-4" data-testid="treasury-route-summary">
             <x-ui.field-value label="Trạng thái tuyến" :value="$routeStatusLabels[$route['status']] ?? $route['status']" />
-            <x-ui.field-value label="Chứng từ" :value="$documentStatusLabels[$route['document_status']] ?? $route['document_status']" />
+            @if ($route['contract_payment_id'] !== null)
+                <x-ui.field-value label="Đợt thanh toán hợp đồng" :value="$route['contract_payment_name'] . ($route['contract_payment_status'] === 'paid' ? ' (đã thanh toán)' : ' (không còn đã thanh toán)')" />
+            @else
+                <x-ui.field-value label="Chứng từ" :value="$documentStatusLabels[$route['document_status']] ?? $route['document_status']" />
+            @endif
             <x-ui.field-value label="Đã đến ví đích" :value="$money($route['arrived_amount'])" />
             <x-ui.field-value label="Còn lại" :value="$money($route['remaining_amount'])" />
             <x-ui.field-value label="Tham chiếu" :value="$route['reference'] ?? '—'" />
@@ -116,7 +120,7 @@
         </x-ui.card>
     @endif
 
-    @if ($canManageRoutes && $route['document_status'] === 'approved' && $route['status'] !== 'cancelled')
+    @if ($canManageRoutes && $open && ($route['document_status'] === 'approved' || $route['contract_payment_id'] !== null))
         <x-ui.card title="Huỷ tuyến">
             <form method="POST" action="{{ route('operator.treasury.projects.routes.cancel', [$project->id, $route['id']]) }}" class="space-y-3 p-4" data-testid="treasury-route-cancel-form">
                 @csrf

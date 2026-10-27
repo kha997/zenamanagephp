@@ -24,6 +24,7 @@ use Illuminate\Validation\Rule;
  * GAP-094 S4b-1 — operator pages for via-route payments: create a route
  * (from the project Treasury page), the route page with its legs, record a
  * leg, reverse a leg, cancel. Rules live in TreasuryRouteService.
+ * GAP-095: trace a paid contract payment from the project page.
  */
 class TreasuryRoutePageController extends Controller
 {
@@ -83,6 +84,29 @@ class TreasuryRoutePageController extends Controller
         }
 
         return redirect()->route('operator.treasury.projects.routes.show', [$model->id, $route->id])->with('success', 'Đã tạo tuyến tiền. Ghi từng chặng khi tiền đi qua.');
+    }
+
+    /** GAP-095: trace (part of) a paid contract payment from the project page. */
+    public function storeContractPaymentRoute(Request $request, string $project, string $contractPayment): RedirectResponse
+    {
+        $model = $this->findProject($project);
+        $this->authorize('treasury.manage-routes', $model);
+        $payment = $this->routes->projectPayment($model, $contractPayment);
+        abort_if($payment === null, 404);
+        $data = $request->validate([
+            'expected_destination_wallet_id' => ['required', 'string'],
+            'amount' => self::AMOUNT_RULES,
+        ]);
+
+        try {
+            $route = $this->routes->createContractPaymentRoute($model, $this->user(), $payment, $data, $request->boolean('confirm_duplicate'));
+        } catch (TreasuryDuplicateSuspected $e) {
+            return back()->withInput()->with('treasury_duplicate', $e->getMessage());
+        } catch (TreasuryRuleViolation $e) {
+            return back()->withInput()->withErrors([$e->field ?? 'route' => $e->getMessage()]);
+        }
+
+        return redirect()->route('operator.treasury.projects.routes.show', [$model->id, $route->id])->with('success', 'Đã tạo tuyến truy vết đợt thanh toán. Ghi từng chặng khi tiền đi qua.');
     }
 
     public function storeLeg(Request $request, string $project, string $treasuryRoute): RedirectResponse

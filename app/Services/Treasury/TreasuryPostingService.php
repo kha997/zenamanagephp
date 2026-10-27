@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Services\Treasury;
 
 use App\Models\AuditLog;
+use App\Models\Contract;
+use App\Models\ContractPayment;
 use App\Models\Project;
 use App\Models\Treasury\TreasuryCostSettlementAllocation as Allocation;
 use App\Models\Treasury\TreasuryFinancialDocument as Document;
@@ -456,6 +458,21 @@ class TreasuryPostingService
 
         if ($existing !== null) {
             throw new TreasuryDuplicateSuspected($existing);
+        }
+
+        // GAP-095 Option A: money already recorded as a paid contract payment
+        // of the project (same amount, paid that day) is traced, not declared.
+        /** @var ContractPayment|null $payment */
+        $payment = ContractPayment::query()
+            ->withoutGlobalScopes()
+            ->where('tenant_id', (string) $project->tenant_id)
+            ->whereIn('contract_id', Contract::query()->withoutGlobalScopes()->where('project_id', (string) $project->id)->select('id'))
+            ->where('status', ContractPayment::STATUS_PAID)
+            ->where('amount', $this->money((string) $data['amount']))
+            ->whereDate('paid_at', (string) $data['transaction_date'])
+            ->first();
+        if ($payment !== null) {
+            throw new TreasuryDuplicateSuspected($payment, 'Khoản này có thể là đợt thanh toán hợp đồng "' . $payment->name . '" đã thanh toán cùng ngày, cùng số tiền. Hãy dùng "Truy vết" ở đợt thanh toán thay vì khai tiền nhận.');
         }
     }
 

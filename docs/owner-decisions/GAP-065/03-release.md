@@ -1,14 +1,14 @@
 ---
 work_id: GAP-065
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-07-gap-065-architecture-test-db-leak-evidence.md
   plan: docs/superpowers/plans/2026-10-27-gap-065-architecture-test-db-leak.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-27T23:57:19+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-27, verbatim: 'APPROVE GAP-065 Gate 3'. Given on the packet at PR head 275d5d73235bc0e9eb6342678f3a591dffb8a375; bound to implementation subject 70030d89cb035f7c36f83308d07c380b7b5cf859 and implementation-tree digest 39e823c9e14c39f45f0d7261c96556d7f2e9381d112492ae616037c6dd96224c (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-27T23:29:19+07:00"
-  updated_at: "2026-10-27T23:29:19+07:00"
+  updated_at: "2026-10-27T23:57:19+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-065 at subject 70030d89cb035f7c36f83308d07c380b7b5cf859 (Gate 2 Option A). tests/Architecture/DebugRouteBoundaryInvariantTest.php now uses RefreshDatabase (import, trait use and a one-line comment naming GAP-065); no test body, assertion or name changed; no application code changed. Red before on this branch: VendorApiTest + tests/Architecture + ProductionBootstrapCommandTest = 35 tests, 1 error, 2 failures (all ProductionBootstrapCommandTest). Green after: the same command 35/35 OK; the class alone 11/11 OK. Local: Architecture, Feature/Api, Web, Zena, Deployment, Treasury and Unit suites 2318 passed, only the known root-only GrandfatherLoaderTest failing; PHPStan no errors; php-cs-fixer 0 files; SSOT test lint, governance and docs lints pass. Exact-head CI at d410c6e9 (70030d89 plus this packet only): 35/35 green."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "70030d89cb035f7c36f83308d07c380b7b5cf859"
   verified_at: "2026-10-27T23:29:19+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "39e823c9e14c39f45f0d7261c96556d7f2e9381d112492ae616037c6dd96224c"
+  decision_recorded_at: "2026-10-27T23:57:19+07:00"
 ---
 
 # GAP-065 — Gate 3 release decision (Architecture test DB leak)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-27 ("APPROVE GAP-065 Gate 3"), bound to implementation subject
+`70030d89cb035f7c36f83308d07c380b7b5cf859` and implementation-tree digest `39e823c9e14c39f45f0d7261c96556d7f2e9381d112492ae616037c6dd96224c`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

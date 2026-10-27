@@ -1,11 +1,11 @@
 ---
 work_id: GAP-065
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-07-gap-065-architecture-test-db-leak-evidence.md
   plan: null
@@ -14,17 +14,22 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-27T23:21:37+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-27, verbatim: 'APPROVE GAP-065 Gate 1'. Bound to reviewed Draft PR #338 head c30166b18be262da199e72bbcee7d36a6bc764a1, canonical base 2b336bced728c5bc0c77ec185ac946e8a10964bf (leak re-checked on that base). Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-07T08:56:01+07:00"
-  updated_at: "2026-10-27T23:20:38+07:00"
+  updated_at: "2026-10-27T23:21:37+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-065 Gate 1 in-session on 2026-10-27 against Draft PR #338
+head `c30166b18be262da199e72bbcee7d36a6bc764a1`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

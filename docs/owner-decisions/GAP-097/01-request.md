@@ -1,11 +1,11 @@
 ---
 work_id: GAP-097
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-27-gap-097-treasury-s6-dashboard-reports-readiness.md
   plan: null
@@ -15,18 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-27T18:15:21+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-27, verbatim: 'APPROVE GAP-097 Gate 1'. Bound to reviewed Draft PR #376 head cdd6383544f1f6c8f2104ed12d76f420c09559d9, canonical base 129f3f390704a23447229a72cf5d057c9d0174c6, including the Owner's in-session answers recorded in this packet (only reports whose data exists; CSV export; fixed thresholds 30 days unreconciled funding and 90 days outstanding advance; per-project dashboard plus an all-projects table). Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-27T18:13:36+07:00"
-  updated_at: "2026-10-27T18:13:36+07:00"
+  updated_at: "2026-10-27T18:15:21+07:00"
 generated_by: agent
 ---
 
-## OWNER GATE 1: AWAITING OWNER
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-097 Gate 1 in-session on 2026-10-27 against Draft PR #376
+head `cdd6383544f1f6c8f2104ed12d76f420c09559d9`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

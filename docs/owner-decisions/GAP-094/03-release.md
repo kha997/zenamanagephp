@@ -1,14 +1,14 @@
 ---
 work_id: GAP-094
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-26-gap-094-treasury-s4b-routes-readiness.md
   plan: docs/superpowers/plans/2026-10-27-gap-094-treasury-s4b-routes.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-27T07:30:51+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-27, verbatim: 'APPROVE GAP-094 Gate 3'. Given after the packet at PR head dbe8a8e78e3714dd3a0c17355e38318eaecdb32e; bound to implementation subject a97e7ec81be807dabc229018233327d2191f1913 and implementation-tree digest f117133143eae0de9d309f211be49df9fa00867828dba51de3c6ce611837c98a (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-27T07:27:03+07:00"
-  updated_at: "2026-10-27T07:27:03+07:00"
+  updated_at: "2026-10-27T07:30:51+07:00"
 generated_by: agent
 residual_risk_rating: medium
 mandatory_technical_gate_summary: "GAP-094 (Treasury S4b-1) at subject a97e7ec81be807dabc229018233327d2191f1913 (Gate 2 Option A plus Owner amendment 1). New TreasuryRouteService: createRoute (funding / owner_contribution / internal_transfer; document via_route + approved, amount frozen; route planned with total = amount, Case B link; S2 validation incl. owner-party rule and duplicate warning, which now also sees routes on their way); recordLeg (one step, settled; wallet-to-wallet debit/credit pair or a lone credit from outside on funding routes only; from-wallet balance guard; money from outside <= route amount; transfer net out of the source <= amount; no leg on completed/cancelled routes; occurred_at not in the future; permission treasury.manage_routes, or treasury.create_transfer when the user holds the from- or to-wallet); completion per v17 4.3 after every leg and leg reversal (destination +amount, transfer source -amount, other wallets 0) posts the document (posted_unreconciled, posted_at); reverseLeg (reason; leg reversed + one compensating entry per original entry; to-wallet must still hold the amount; completed route back to partial; reconciled document regresses); cancelRoute (reason; only while the document is approved and no leg is in force; route cancelled, document rejected). Locks: leg 0 -> shared 4 -> 5 -> 6, settled legs read with a locking read once the route is held; reversal 0 -> 4 -> 5 -> 6; cancel 5 -> 6. TreasuryPostingService reverses a via_route original only when its route is completed (read under the route lock, 5 -> 6) and posts the swapped shape directly. TreasuryReconciliationService accepts leg entries, maps them to the route's document, and reconciles a via_route document when its route is completed and every leg entry has an active apply; leg entries are re-read with locking reads only after the route lock. New permission treasury.manage_routes (owner, accountant); gates treasury.manage-routes, treasury.record-route-leg. API TreasuryRouteController (6 endpoints) and operator pages (route section + create form on the project page, route page, register badge). Owner amendment 1: the S4a test that rejected leg entries now asserts they reconcile with the route's document. Tests: TreasuryRouteServiceTest 16, TreasuryRouteApiTest 3, TreasuryRouteWebTest 3, two real-MySQL races (transit wallet drained twice; money from outside over the route amount) whose lock-removal mutation goes red on both. Local: tests/Feature/Treasury 137 OK; tests/Feature/Api 806 OK; tests/Feature/Web 50 OK; Zena 290 OK; Architecture, Deployment OK; Unit OK except the known root-only GrandfatherLoaderTest; route guard and RouteHygieneTest OK; PHPStan no errors; php-cs-fixer 0 files; SSOT lint, governance and docs lints pass. Exact-head CI at 81697bee: Code Quality Analysis red for import order in the concurrency test, fixed in a97e7ec8; exact-head CI at a97e7ec8: 35/35 green."
@@ -37,12 +37,15 @@ technical_evidence:
   verified_at: "2026-10-27T07:27:03+07:00"
 owner_decision_binding:
   implementation_tree_digest: "f117133143eae0de9d309f211be49df9fa00867828dba51de3c6ce611837c98a"
-  decision_recorded_at: null
+  decision_recorded_at: "2026-10-27T07:30:51+07:00"
 ---
 
 # GAP-094 — Gate 3 release decision (Treasury S4b-1 via-route payments)
 
-## OWNER GATE 3: AWAITING OWNER
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-27 ("APPROVE GAP-094 Gate 3"), bound to implementation subject
+`a97e7ec81be807dabc229018233327d2191f1913` and implementation-tree digest `f117133143eae0de9d309f211be49df9fa00867828dba51de3c6ce611837c98a`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

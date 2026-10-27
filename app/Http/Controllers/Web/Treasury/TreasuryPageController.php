@@ -140,7 +140,7 @@ class TreasuryPageController extends Controller
             ->get();
         // GAP-067 S4a: register status filter (ledger facts only); GAP-097 S6: the other register filters.
         $statusFilter = in_array((string) $request->query('status'), TreasuryReportService::LEDGER_STATUSES, true) ? (string) $request->query('status') : null;
-        $registerFilters = $this->registerFilters($request) + ['status' => $statusFilter];
+        $registerFilters = TreasuryReportService::registerFilters($request->query()) + ['status' => $statusFilter];
         $register = $this->reports->register($model, $registerFilters);
 
         return view('treasury.project', [
@@ -547,26 +547,6 @@ class TreasuryPageController extends Controller
             ->firstOrFail();
 
         return $party;
-    }
-
-    /**
-     * GAP-097: the register filters a request may set (status is handled apart).
-     *
-     * @return array<string, string>
-     */
-    public static function registerFilters(Request $request): array
-    {
-        $filters = [];
-        foreach (['date_from', 'date_to', 'type', 'wallet_id', 'party_id', 'created_by', 'approved_by', 'self_approved', 'reconciled'] as $key) {
-            $value = trim((string) $request->query($key, ''));
-            if ($key === 'date_from' || $key === 'date_to') {
-                $value = preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1 ? $value : '';
-            }
-            $filters[$key] = $value;
-        }
-        $filters['type'] = array_key_exists($filters['type'], TreasuryReportService::TYPE_LABELS) ? $filters['type'] : '';
-
-        return $filters;
     }
 
     private function findProject(string $id): Project

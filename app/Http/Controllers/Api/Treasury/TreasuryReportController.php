@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\Treasury;
 
 use App\Http\Controllers\Api\BaseApiController;
-use App\Http\Controllers\Web\Treasury\TreasuryPageController;
 use App\Models\Project;
 use App\Models\User;
 use App\Models\UserRoleProject;
@@ -49,7 +48,7 @@ class TreasuryReportController extends BaseApiController
         }
         $this->authorize('treasury.view-project', $model);
         $status = (string) $request->query('status', '');
-        $filters = TreasuryPageController::registerFilters($request) + ['status' => in_array($status, TreasuryReportService::LEDGER_STATUSES, true) ? $status : ''];
+        $filters = TreasuryReportService::registerFilters($request->query()) + ['status' => in_array($status, TreasuryReportService::LEDGER_STATUSES, true) ? $status : ''];
 
         return $this->listSuccessResponse($this->reports->register($model, $filters, min(max(1, (int) $request->query('per_page', '50')), 100)), 'Treasury register retrieved successfully');
     }

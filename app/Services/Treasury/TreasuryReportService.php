@@ -78,6 +78,27 @@ class TreasuryReportService
     }
 
     /**
+     * The register filters a request may set, cleaned (status is handled apart).
+     *
+     * @param array<string, mixed> $input
+     * @return array<string, string>
+     */
+    public static function registerFilters(array $input): array
+    {
+        $filters = [];
+        foreach (['date_from', 'date_to', 'type', 'wallet_id', 'party_id', 'created_by', 'approved_by', 'self_approved', 'reconciled'] as $key) {
+            $value = is_scalar($input[$key] ?? null) ? trim((string) $input[$key]) : '';
+            if ($key === 'date_from' || $key === 'date_to') {
+                $value = preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1 ? $value : '';
+            }
+            $filters[$key] = $value;
+        }
+        $filters['type'] = array_key_exists($filters['type'], self::TYPE_LABELS) ? $filters['type'] : '';
+
+        return $filters;
+    }
+
+    /**
      * Ledger documents of the project, filtered (spec §10.2, data that exists).
      *
      * @param array<string, mixed> $filters date_from, date_to, type, status, wallet_id, party_id, created_by, approved_by, self_approved, reconciled

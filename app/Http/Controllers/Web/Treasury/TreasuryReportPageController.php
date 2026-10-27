@@ -66,7 +66,7 @@ class TreasuryReportPageController extends Controller
         abort_unless($this->user()->hasPermission('treasury.export'), 403);
         if ($report === 'register') {
             $status = (string) $request->query('status', '');
-            $data = $this->reports->registerReport($model, TreasuryPageController::registerFilters($request)
+            $data = $this->reports->registerReport($model, TreasuryReportService::registerFilters($request->query())
                 + ['status' => in_array($status, TreasuryReportService::LEDGER_STATUSES, true) ? $status : '']);
         } else {
             abort_unless(array_key_exists($report, TreasuryReportService::REPORTS), 404);

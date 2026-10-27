@@ -1,14 +1,14 @@
 ---
 work_id: GAP-095
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-27-gap-095-treasury-s4b2-contract-payment-tracing-readiness.md
   plan: docs/superpowers/plans/2026-10-27-gap-095-treasury-s4b2-contract-payment-tracing.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-27T11:40:33+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-27, verbatim: 'APPROVE GAP-095 Gate 3'. Given after the packet at PR head 70ca414800936bae662c5b21f02ea99c6a696ca9; bound to implementation subject cc7513ce04d4ecaf7c1964393e6791a77acebb6f and implementation-tree digest 01caa5dffefe1ee6b4292bf5ce9731f5e4766d6d47920cb8f57dfd2d216addf7 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-27T11:24:44+07:00"
-  updated_at: "2026-10-27T11:24:44+07:00"
+  updated_at: "2026-10-27T11:40:33+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-095 (Treasury S4b-2) at subject cc7513ce04d4ecaf7c1964393e6791a77acebb6f (Gate 2 Option A). TreasuryRouteService::createContractPaymentRoute traces part or all of a paid contract payment of the project to an expected destination wallet (v17 4.1 Case A, B2-T): no financial document, linked_contract_payment_id + expected_destination_wallet_id, allocation SUM(non-cancelled routes) <= payment amount read under a lock of the contract_payments row (class 1). Legs, leg reversal and cancel reuse S4b-1 with branches for a route without a document: a leg locks the payment (class 1, after the class-0 wallet lock) and requires status paid with paid_at (v17 4.2a); a leg reversal locks it without the paid check; completion uses the expected destination; cancel refused once completed. Reminder list contractPayments(): paid payments of the project and any payment with routes, with traced / arrived / remaining and flags not_fully_traced, no_longer_paid, over_traced. Option A duplicate warning both ways: declareFunding (and S4b-1 funding routes, through guardDuplicate) warn when a paid contract payment of the project has the same amount and paid_at date; tracing warns when a posted or in-transit funding / owner contribution has the same amount and transaction date; both confirmable. TreasuryDuplicateSuspected now carries a document or a contract payment. Summary line contract_payments_arrived (completed contract-payment routes). API: GET contract-payments, POST contract-payments/{payment}/routes. Operator: 'Thanh toán hợp đồng' card with flags and a Truy vết form, summary line, Case A routes on the route page. ContractPayment, its controller, contract pages and reports unchanged; no schema change; no new permission. Tests: TreasuryContractPaymentRouteTest 11, API 2, web 2; real-MySQL race (two traces of one payment past its amount) whose class-1 lock-removal mutation goes red. Local: tests/Feature/Treasury 153 OK; Api 806, Web 50, Zena, Architecture, Deployment OK; Unit OK except the known root-only GrandfatherLoaderTest; Treasury MySQL concurrency job 6/6; PHPStan no errors; php-cs-fixer 0 files; SSOT lint, route guard, governance and docs lints pass. Exact-head CI at cc7513ce: 35/35 green."
@@ -37,12 +37,15 @@ technical_evidence:
   verified_at: "2026-10-27T11:24:44+07:00"
 owner_decision_binding:
   implementation_tree_digest: "01caa5dffefe1ee6b4292bf5ce9731f5e4766d6d47920cb8f57dfd2d216addf7"
-  decision_recorded_at: null
+  decision_recorded_at: "2026-10-27T11:40:33+07:00"
 ---
 
 # GAP-095 — Gate 3 release decision (Treasury S4b-2 contract-payment traceability)
 
-## OWNER GATE 3: AWAITING OWNER
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-27 ("APPROVE GAP-095 Gate 3"), bound to implementation subject
+`cc7513ce04d4ecaf7c1964393e6791a77acebb6f` and implementation-tree digest `01caa5dffefe1ee6b4292bf5ce9731f5e4766d6d47920cb8f57dfd2d216addf7`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

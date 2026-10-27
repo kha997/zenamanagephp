@@ -25,16 +25,16 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-27T18:32:22+07:00"
-  updated_at: "2026-10-27T18:32:22+07:00"
+  updated_at: "2026-10-27T18:35:01+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "GAP-097 (Treasury S6) at subject 05fdcb297152bf73374d1f59509eb9e3b985de4c (Gate 2 Option A). Read-only. New TreasuryDashboardService: cards (investor funding, funding via completed routes, contract payments arrived, owner contribution, posted expenses and the self-approved part, held total, unreconciled funding, pending approvals count and amount, outstanding advances), wallet table (custodian, balance, reconciled / unreconciled, outstanding advances paid from the wallet, last ledger activity) and alerts with the Owner's fixed thresholds: funding / owner contribution posted_unreconciled more than 30 days after its transaction date, submitted expenses and advances, open settlement requests, advances in the S5 over_90 bucket (90 days inclusive), negative wallets, planned or partial routes; overview rows per visible project. New TreasuryReportService: register query with filters (date from / to, type, status, wallet, party, creator, approver, self-approved, reconciled), 50 per page, CSV of the filtered register; ten reports as headers + rows (cashflow by month of transaction date with legs by leg date, internal moves excluded and reversals netted into the original's month; wallets; custodians; advance ageing; expenses by category from net cost allocations; expenses by party, direct or via advance; self-approved expenses, advances and settlements; unreconciled ledger entries with age; open routes with money held on the way; reversals and adjustments); CSV with UTF-8 BOM and formula-injection escaping. New TreasuryTimelineService: one sentence per document, route leg and advance settlement of a month, oldest first, linked to route or advance. API api.zena.treasury.reports.* (overview, dashboard, register, timeline, reports/{report}); operator: dashboard section on the project page, register filters + pagination + CSV, report page, timeline page, overview columns on the Treasury index. View with treasury.view and project scope, CSV with treasury.export. No schema change, no permission change, no existing test changed. Tests: TreasuryReportServiceTest 7 (dashboard, alerts at 30/31 and 89/90 days, cashflow equals held total, reports, register filters, timeline, overview, other tenant never shown), TreasuryReportWebTest 4 (pages, CSV and export permission, overview, API)."
+mandatory_technical_gate_summary: "GAP-097 (Treasury S6) at subject 10e538febe86ebe9673b390cd64b11a0e29953ff (Gate 2 Option A). Read-only. New TreasuryDashboardService: cards (investor funding, funding via completed routes, contract payments arrived, owner contribution, posted expenses and the self-approved part, held total, unreconciled funding, pending approvals count and amount, outstanding advances), wallet table (custodian, balance, reconciled / unreconciled, outstanding advances paid from the wallet, last ledger activity) and alerts with the Owner's fixed thresholds: funding / owner contribution posted_unreconciled more than 30 days after its transaction date, submitted expenses and advances, open settlement requests, advances in the S5 over_90 bucket (90 days inclusive), negative wallets, planned or partial routes; overview rows per visible project. New TreasuryReportService: register query with filters (date from / to, type, status, wallet, party, creator, approver, self-approved, reconciled), 50 per page, CSV of the filtered register; ten reports as headers + rows (cashflow by month of transaction date with legs by leg date, internal moves excluded and reversals netted into the original's month; wallets; custodians; advance ageing; expenses by category from net cost allocations; expenses by party, direct or via advance; self-approved expenses, advances and settlements; unreconciled ledger entries with age; open routes with money held on the way; reversals and adjustments); CSV with UTF-8 BOM and formula-injection escaping. New TreasuryTimelineService: one sentence per document, route leg and advance settlement of a month, oldest first, linked to route or advance. API api.zena.treasury.reports.* (overview, dashboard, register, timeline, reports/{report}); operator: dashboard section on the project page, register filters + pagination + CSV, report page, timeline page, overview columns on the Treasury index. View with treasury.view and project scope, CSV with treasury.export. Register filter parsing lives in TreasuryReportService (deptrac: API controllers must not depend on web controllers; first CI run at 05fdcb29 failed on that). No schema change, no permission change, no existing test changed. Tests: TreasuryReportServiceTest 7 (dashboard, alerts at 30/31 and 89/90 days, cashflow equals held total, reports, register filters, timeline, overview, other tenant never shown), TreasuryReportWebTest 4 (pages, CSV and export permission, overview, API)."
 technical_evidence:
   base_sha: "129f3f390704a23447229a72cf5d057c9d0174c6"
-  subject_sha: "05fdcb297152bf73374d1f59509eb9e3b985de4c"
-  implementation_tree_digest: "16c0cc95bff291336029aef62fb2078069b4f750deda92e6692ac9c8f96d71e0"
-  verified_pr_head_sha: "05fdcb297152bf73374d1f59509eb9e3b985de4c"
-  verified_at: "2026-10-27T18:32:22+07:00"
+  subject_sha: "10e538febe86ebe9673b390cd64b11a0e29953ff"
+  implementation_tree_digest: "dc87a81f44def6f02c61b66b4422cbd35c24981bffeb0139fe46ab48840db76e"
+  verified_pr_head_sha: "10e538febe86ebe9673b390cd64b11a0e29953ff"
+  verified_at: "2026-10-27T18:35:01+07:00"
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null
@@ -47,7 +47,7 @@ owner_decision_binding:
 **1. Vấn đề là gì?** Dữ liệu tiền S1–S5 đã đủ nhưng chưa có chỗ xem tổng quan, sổ giao dịch chỉ 100 dòng mới nhất,
 không xuất được số liệu (Gate 1).
 
-**2. Sau thay đổi (Gate 2 Phương án A)** — subject `05fdcb29`, chỉ đọc:
+**2. Sau thay đổi (Gate 2 Phương án A)** — subject `10e538fe`, chỉ đọc:
 - **Trang ngân quỹ dự án**, phần "Tổng quan ngân quỹ" ở đầu trang:
   - Cảnh báo: tiền nhận chưa đối soát quá 30 ngày, khoản chờ duyệt, đề nghị quyết toán chờ duyệt, tạm ứng còn nợ từ
     90 ngày, ví âm, tuyến chưa về đủ.
@@ -60,8 +60,8 @@ không xuất được số liệu (Gate 1).
 - **Trang Ngân quỹ chung:** mỗi dự án thêm đang giữ, chi phí, chưa đối soát, tạm ứng còn nợ, số cảnh báo.
 - Không đổi cơ sở dữ liệu, không đổi quyền, không đổi cách ghi sổ.
 
-**3. Bằng chứng** — base `129f3f39`; subject `05fdcb297152bf73374d1f59509eb9e3b985de4c`;
-digest `16c0cc95bff291336029aef62fb2078069b4f750deda92e6692ac9c8f96d71e0`.
+**3. Bằng chứng** — base `129f3f39`; subject `10e538febe86ebe9673b390cd64b11a0e29953ff`;
+digest `dc87a81f44def6f02c61b66b4422cbd35c24981bffeb0139fe46ab48840db76e`.
 - Test mới: 7 service (tổng dòng tiền bằng tiền đang giữ; ngưỡng 30/31 và 89/90 ngày; mỗi bộ lọc; dữ liệu doanh nghiệp
   khác không lọt vào), 4 web / API (CSV, quyền xuất, bảng tổng).
 - Trên máy: 207 test Treasury + Architecture; Api, Web, Zena, Deployment, Unit qua (trừ `GrandfatherLoaderTest` chỉ
@@ -78,6 +78,8 @@ digest `16c0cc95bff291336029aef62fb2078069b4f750deda92e6692ac9c8f96d71e0`.
 - Kế hoạch ghi một file test cho mỗi service / API; thực tế gộp vào 2 file (`TreasuryReportServiceTest`,
   `TreasuryReportWebTest`), cùng phạm vi kiểm tra.
 - Không sửa test hiện có; mô tả trang Ngân quỹ chung đổi chữ.
+- CI lần đầu (subject `05fdcb29`) đỏ ở `code-quality`: deptrac cấm controller API phụ thuộc controller web (hàm đọc bộ
+  lọc sổ giao dịch). Đã chuyển hàm đó vào `TreasuryReportService` (cùng file trong allowlist), hành vi không đổi.
 
 **5. Ngoài phạm vi** — Chứng từ đính kèm, BOQ / ngân sách, chuỗi quỹ, công nợ theo hợp đồng, ngưỡng cấu hình, Excel,
 biểu đồ, deploy.

@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-07T08:56:01+07:00"
-  updated_at: "2026-10-07T08:56:01+07:00"
+  updated_at: "2026-10-27T23:20:38+07:00"
 generated_by: agent
 ---
 
@@ -49,6 +49,10 @@ xanh giả khi chạy chọn lọc, đổi thứ tự hoặc thêm test đếm s
 production. Lệnh `production:bootstrap` đúng, nó chỉ là nạn nhân.
 
 ## Bằng chứng
+
+Kiểm tra lại ngày 2026-10-27 trên main `2b336bce`: vẫn đỏ đúng 3 test như cũ (xem mục "Re-check on current main"
+trong file bằng chứng).
+
 
 `docs/audits/2026-10-07-gap-065-architecture-test-db-leak-evidence.md` gồm:
 lệnh tái hiện và kết quả, bảng chia đôi theo file và theo method, cơ chế

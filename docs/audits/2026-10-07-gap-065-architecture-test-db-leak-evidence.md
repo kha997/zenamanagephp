@@ -156,3 +156,12 @@ defects.
 
 Recommendation: Option 1 or 2 under GAP-065. Track Options 3 and 4 as
 follow-ups.
+
+## Re-check on current main (2026-10-27)
+
+The same reproduction command was re-run on `main` at `2b336bced728c5bc0c77ec185ac946e8a10964bf`. The result is
+unchanged: 35 tests, 1 error and 2 failures, all in `ProductionBootstrapCommandTest`
+(`test_never_creates_fixed_or_default_password`, `test_bootstraps_real_tenant_and_admin_on_empty_database`,
+`test_second_bootstrap_fails_closed_idempotent`). `DebugRouteBoundaryInvariantTest` still has neither
+`RefreshDatabase` nor `DatabaseTransactions`. Its last change was the repo-wide style pass (GAP-080), so the finding
+stands as recorded.

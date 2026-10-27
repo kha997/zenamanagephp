@@ -155,6 +155,34 @@ class TreasuryReportWebTest extends TestCase
         $this->getJson(route('api.zena.treasury.reports.dashboard', ['project' => (string) $other->id], false), $headers)->assertForbidden();
     }
 
+    public function test_timeline_month_label_matches_the_chosen_month_late_in_a_month(): void
+    {
+        // Codex P2 / Owner amendment 1: on the 31st, February must not read as March.
+        Carbon::setTestNow(Carbon::parse('2026-10-31 09:00'));
+        $this->actingAs($this->engineer)->get($this->url('operator.treasury.projects.timeline') . '?month=2026-02', $this->headers)->assertOk()
+            ->assertSee('<span class="text-sm font-semibold" data-testid="treasury-timeline-month">02/2026</span>', false)
+            ->assertSee('trong tháng 02/2026')
+            ->assertDontSee('03/2026');
+    }
+
+    public function test_api_overview_is_paginated_so_every_project_is_reachable(): void
+    {
+        // Codex P2 / Owner amendment 1: no silent cut-off.
+        $headers = [
+            'Accept' => 'application/json', 'X-Tenant-ID' => (string) $this->tenant->id,
+            'Authorization' => 'Bearer ' . $this->accountant->createToken('treasury-overview-test')->plainTextToken,
+        ];
+        $this->projectFor($this->tenant);
+        $this->projectFor($this->tenant);
+        $url = route('api.zena.treasury.reports.overview', [], false);
+
+        $this->getJson($url . '?per_page=2', $headers)->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('meta.pagination.total', 3)
+            ->assertJsonPath('meta.pagination.last_page', 2);
+        $this->getJson($url . '?per_page=2&page=2', $headers)->assertOk()->assertJsonCount(1, 'data');
+    }
+
     /**
      * @param array<string, string> $params
      */

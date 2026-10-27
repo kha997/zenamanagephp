@@ -82,7 +82,8 @@ class TreasuryReportController extends BaseApiController
         return $this->successResponse(['key' => $report] + $this->reports->report($model, $report), 'Treasury report retrieved successfully');
     }
 
-    public function overview(): JsonResponse
+    /** Codex P2 / Owner amendment 1: paginated, so every visible project is reachable. */
+    public function overview(Request $request): JsonResponse
     {
         $user = $this->user();
         $query = Project::query()->where('tenant_id', (string) $user->tenant_id)->orderBy('name');
@@ -90,10 +91,12 @@ class TreasuryReportController extends BaseApiController
             $query->whereIn('id', UserRoleProject::query()->where('user_id', (string) $user->id)->whereNull('deleted_at')->pluck('project_id'));
         }
 
+        $page = $query->paginate(min(max(1, (int) $request->query('per_page', '30')), 100));
         /** @var \Illuminate\Database\Eloquent\Collection<int, Project> $projects */
-        $projects = $query->limit(100)->get();
+        $projects = $page->getCollection();
+        $page->setCollection(collect($this->dashboard->overview($projects)));
 
-        return $this->successResponse($this->dashboard->overview($projects), 'Treasury overview retrieved successfully');
+        return $this->listSuccessResponse($page, 'Treasury overview retrieved successfully');
     }
 
     private function findProject(string $id): ?Project

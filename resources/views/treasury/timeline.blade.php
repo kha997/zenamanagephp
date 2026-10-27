@@ -14,7 +14,7 @@
 
     <x-ui.page-header
         title="Dòng thời gian tài chính — {{ $project->name }}"
-        description="Mọi khoản tiền của dự án trong tháng {{ \Illuminate\Support\Carbon::createFromFormat('Y-m', $month)->format('m/Y') }}, theo thứ tự thời gian."
+        description="Mọi khoản tiền của dự án trong tháng {{ $monthLabel }}, theo thứ tự thời gian."
     >
         <x-ui.button-link :href="route('operator.treasury.projects.show', $project->id)" variant="secondary">Quay lại ngân quỹ</x-ui.button-link>
     </x-ui.page-header>
@@ -22,7 +22,7 @@
     <x-ui.card>
         <div class="flex flex-wrap items-center gap-2 p-4" data-testid="treasury-timeline-nav">
             <a href="{{ route('operator.treasury.projects.timeline', [$project->id, 'month' => $previousMonth]) }}" class="operator-button operator-button-inline">← Tháng trước</a>
-            <span class="text-sm font-semibold">{{ \Illuminate\Support\Carbon::createFromFormat('Y-m', $month)->format('m/Y') }}</span>
+            <span class="text-sm font-semibold" data-testid="treasury-timeline-month">{{ $monthLabel }}</span>
             <a href="{{ route('operator.treasury.projects.timeline', [$project->id, 'month' => $nextMonth]) }}" class="operator-button operator-button-inline">Tháng sau →</a>
         </div>
         @if ($events === [])

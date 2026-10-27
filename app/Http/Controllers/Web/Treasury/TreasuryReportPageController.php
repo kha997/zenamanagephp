@@ -52,6 +52,8 @@ class TreasuryReportPageController extends Controller
         return view('treasury.timeline', [
             'project' => $model,
             'month' => $month,
+            // Codex P2 / Owner amendment 1: label from the first day, never today's day-of-month.
+            'monthLabel' => $start->format('m/Y'),
             'previousMonth' => $start->copy()->subMonthNoOverflow()->format('Y-m'),
             'nextMonth' => $start->copy()->addMonthNoOverflow()->format('Y-m'),
             'events' => $this->timeline->month($model, $month),

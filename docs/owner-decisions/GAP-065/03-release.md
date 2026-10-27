@@ -28,7 +28,7 @@ timestamps:
   updated_at: "2026-10-27T23:29:19+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "GAP-065 at subject 70030d89cb035f7c36f83308d07c380b7b5cf859 (Gate 2 Option A). tests/Architecture/DebugRouteBoundaryInvariantTest.php now uses RefreshDatabase (import, trait use and a one-line comment naming GAP-065); no test body, assertion or name changed; no application code changed. Red before on this branch: VendorApiTest + tests/Architecture + ProductionBootstrapCommandTest = 35 tests, 1 error, 2 failures (all ProductionBootstrapCommandTest). Green after: the same command 35/35 OK; the class alone 11/11 OK. Local: Architecture, Feature/Api, Web, Zena, Deployment, Treasury and Unit suites 2318 passed, only the known root-only GrandfatherLoaderTest failing; PHPStan no errors; php-cs-fixer 0 files; SSOT test lint, governance and docs lints pass."
+mandatory_technical_gate_summary: "GAP-065 at subject 70030d89cb035f7c36f83308d07c380b7b5cf859 (Gate 2 Option A). tests/Architecture/DebugRouteBoundaryInvariantTest.php now uses RefreshDatabase (import, trait use and a one-line comment naming GAP-065); no test body, assertion or name changed; no application code changed. Red before on this branch: VendorApiTest + tests/Architecture + ProductionBootstrapCommandTest = 35 tests, 1 error, 2 failures (all ProductionBootstrapCommandTest). Green after: the same command 35/35 OK; the class alone 11/11 OK. Local: Architecture, Feature/Api, Web, Zena, Deployment, Treasury and Unit suites 2318 passed, only the known root-only GrandfatherLoaderTest failing; PHPStan no errors; php-cs-fixer 0 files; SSOT test lint, governance and docs lints pass. Exact-head CI at d410c6e9 (70030d89 plus this packet only): 35/35 green."
 technical_evidence:
   base_sha: "2b336bced728c5bc0c77ec185ac946e8a10964bf"
   subject_sha: "70030d89cb035f7c36f83308d07c380b7b5cf859"
@@ -56,7 +56,7 @@ digest `39e823c9e14c39f45f0d7261c96556d7f2e9381d112492ae616037c6dd96224c`.
 - **Xanh sau:** cùng lệnh 35/35; lớp test chạy riêng 11/11.
 - Trên máy: Architecture, Api, Web, Zena, Deployment, Treasury, Unit qua 2318 test (trừ `GrandfatherLoaderTest` chỉ
   hỏng khi chạy bằng root); PHPStan, php-cs-fixer, SSOT lint sạch.
-- CI chạy đúng trên subject: đang chờ.
+- CI trên PR head `d410c6e9` (= `70030d89` + riêng file hồ sơ này): **35/35 xanh**.
 
 **4. Công khai** — Ngoài 2 dòng của thiết kế, có thêm 1 dòng chú thích ghi GAP-065 cạnh `use RefreshDatabase;`.
 

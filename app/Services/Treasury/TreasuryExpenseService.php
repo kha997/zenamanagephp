@@ -381,7 +381,7 @@ class TreasuryExpenseService
         return [$wallet, $party, ['allocations' => $allocations, 'new_contract_expense' => $new]];
     }
 
-    private function requireCostSourceOf(Project $project, string $type, string $id): void
+    public function requireCostSourceOf(Project $project, string $type, string $id): void
     {
         $exists = match ($type) {
             self::COST_CONTRACT_EXPENSE => DB::table('contract_expenses')
@@ -405,7 +405,7 @@ class TreasuryExpenseService
     /**
      * @param array<string, mixed> $plan
      */
-    private function lockCostSources(array $plan): void
+    public function lockCostSources(array $plan): void
     {
         $byType = [self::COST_CONTRACT_EXPENSE => [], self::COST_MATERIAL_LINE => []];
         foreach ((array) ($plan['allocations'] ?? []) as $line) {
@@ -453,7 +453,7 @@ class TreasuryExpenseService
     /**
      * @param array<string, mixed> $context
      */
-    private function transition(User $actor, Document $expense, string $event, string $from, string $to, ?string $note = null, array $context = []): void
+    public function transition(User $actor, Document $expense, string $event, string $from, string $to, ?string $note = null, array $context = []): void
     {
         Approval::query()->create([
             'tenant_id' => (string) $expense->tenant_id,

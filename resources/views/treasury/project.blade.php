@@ -16,6 +16,7 @@
         $typeLabels = [
             'funding' => 'Tiền nhận', 'owner_contribution' => 'Góp vốn chủ', 'internal_transfer' => 'Chuyển ví',
             'adjustment' => 'Điều chỉnh', 'reversal' => 'Bút toán đảo', 'expense' => 'Chi phí',
+            'advance' => 'Tạm ứng', 'advance_return' => 'Nộp lại tạm ứng',
         ];
         $statusLabels = [
             'posted_unreconciled' => 'Đã ghi sổ — chưa đối soát', 'posted_reconciled' => 'Đã đối soát', 'reversed' => 'Đã đảo',
@@ -419,6 +420,8 @@
         @endif
     </x-ui.card>
 
+    @include('treasury._advances-card')
+
     <x-ui.card title="Sổ giao dịch">
         <form method="GET" action="{{ route('operator.treasury.projects.show', $project->id) }}" class="flex items-end gap-2 p-4" data-testid="treasury-register-filter">
             <div class="operator-field">
@@ -439,7 +442,7 @@
                 @foreach ($documents as $doc)
                     <tr data-testid="treasury-document-row">
                         <td class="text-sm">{{ $doc->transaction_date?->format('d/m/Y') ?? '—' }}</td>
-                        <td class="text-sm font-medium">{{ $typeLabels[$doc->document_type] ?? $doc->document_type }}@if (isset($routeByDocument[(string) $doc->id])) <a href="{{ route('operator.treasury.projects.routes.show', [$project->id, $routeByDocument[(string) $doc->id]]) }}" class="ml-1 inline-flex rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-800" data-testid="via-route-badge">Qua trung gian</a>@endif @if (in_array((string) $doc->id, $selfApprovedIds, true)) <span class="ml-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800" data-testid="self-approved-badge">Tự duyệt</span>@endif</td>
+                        <td class="text-sm font-medium">{{ $typeLabels[$doc->document_type] ?? $doc->document_type }}@if ($doc->document_type === 'advance') <a href="{{ route('operator.treasury.projects.advances.show', [$project->id, $doc->id]) }}" class="ml-1 inline-flex rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-800">Mở tạm ứng</a>@endif @if (isset($routeByDocument[(string) $doc->id])) <a href="{{ route('operator.treasury.projects.routes.show', [$project->id, $routeByDocument[(string) $doc->id]]) }}" class="ml-1 inline-flex rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-800" data-testid="via-route-badge">Qua trung gian</a>@endif @if (in_array((string) $doc->id, $selfApprovedIds, true)) <span class="ml-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800" data-testid="self-approved-badge">Tự duyệt</span>@endif</td>
                         <td class="text-sm text-slate-600">{{ $endpoint($doc->sourceWallet, $doc->sourceParty) }}</td>
                         <td class="text-sm text-slate-600">{{ $endpoint($doc->destinationWallet, $doc->destinationParty) }}</td>
                         <td class="text-sm font-semibold">{{ $money($doc->amount) }}</td>

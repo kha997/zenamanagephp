@@ -8,6 +8,8 @@ use App\Models\AuditLog;
 use App\Models\Contract;
 use App\Models\ContractPayment;
 use App\Models\Project;
+use App\Models\Treasury\TreasuryAdvance as Advance;
+use App\Models\Treasury\TreasuryAdvanceSettlement as Settlement;
 use App\Models\Treasury\TreasuryCostSettlementAllocation as Allocation;
 use App\Models\Treasury\TreasuryFinancialDocument as Document;
 use App\Models\Treasury\TreasuryFinancialParty;
@@ -20,7 +22,8 @@ use Illuminate\Support\Facades\Gate;
 
 /**
  * GAP-064 — Treasury S2 ledger engine (direct posting path; GAP-094 adds the
- * reversal of completed via-route documents).
+ * reversal of completed via-route documents; GAP-096 the reversal of advances
+ * and advance returns).
  *
  * Restates GAP-037 v17: closed status graph (§2.1a), direct posting matrix
  * (§5a), immutable ledger entries with a unique original_posting_key (§5),
@@ -39,6 +42,9 @@ class TreasuryPostingService
         Document::TYPE_INTERNAL_TRANSFER,
         Document::TYPE_ADJUSTMENT,
         Document::TYPE_EXPENSE,
+        // GAP-096 S5: v17 §2.2d / §2.2b.
+        Document::TYPE_ADVANCE,
+        Document::TYPE_ADVANCE_RETURN,
     ];
 
     /** The closed graph a directly posted document walks in one transaction (§2.1a). */
@@ -186,6 +192,8 @@ class TreasuryPostingService
             $activeApplies = $original->document_type === Document::TYPE_EXPENSE
                 ? $this->lockActiveAppliesOf($original)
                 : collect();
+            // GAP-096: the advance row (class 3) before the documents (class 5).
+            $advance = $this->lockAdvanceOf($original);
 
             /** @var Document $locked */
             $locked = Document::query()->whereKey($original->id)->lockForUpdate()->firstOrFail();
@@ -252,7 +260,27 @@ class TreasuryPostingService
                     ];
                 }
             }
+            if (in_array($locked->document_type, [Document::TYPE_ADVANCE, Document::TYPE_ADVANCE_RETURN], true) && $advance === null) {
+                throw new TreasuryRuleViolation('Không tìm thấy khoản tạm ứng của chứng từ này.');
+            }
+            if ($locked->document_type === Document::TYPE_ADVANCE && $this->settlementNetCents((string) data_get($advance, 'id')) !== 0) {
+                // v17 §2.2d: settlements are undone first, re-checked here.
+                throw new TreasuryRuleViolation('Chỉ đảo được tạm ứng khi đã gỡ hết quyết toán và hoàn tiền.');
+            }
             $this->postEntries($reversal, $legs);
+            if ($locked->document_type === Document::TYPE_ADVANCE_RETURN) {
+                // v17 §2.2b / §7.7: the cash_return/reverse is coupled to this reversal.
+                $apply = Settlement::query()->where('financial_document_id', (string) $locked->id)->firstOrFail();
+                Settlement::query()->create([
+                    'tenant_id' => (string) $reversal->tenant_id,
+                    'advance_id' => (string) data_get($advance, 'id'),
+                    'settlement_type' => Settlement::SETTLEMENT_TYPE_CASH_RETURN,
+                    'direction' => Settlement::DIRECTION_REVERSE,
+                    'amount' => (string) $apply->amount,
+                    'financial_document_id' => (string) $reversal->id,
+                    'reverses_settlement_id' => (string) $apply->id,
+                ]);
+            }
 
             // v17 §2.2b: every active apply gets its compensating reverse row,
             // linked to the reversal document, in this same transaction.
@@ -423,6 +451,37 @@ class TreasuryPostingService
         }
 
         return $applies;
+    }
+
+    /**
+     * GAP-096: the advance row behind an advance or advance_return document,
+     * locked (v17 §11 class 3); null for other types.
+     */
+    private function lockAdvanceOf(Document $document): ?Advance
+    {
+        $advanceId = match ($document->document_type) {
+            Document::TYPE_ADVANCE => Advance::query()->where('originating_financial_document_id', (string) $document->id)->value('id'),
+            Document::TYPE_ADVANCE_RETURN => Settlement::query()->where('financial_document_id', (string) $document->id)->value('advance_id'),
+            default => null,
+        };
+        if ($advanceId === null) {
+            return null;
+        }
+
+        /** @var Advance|null */
+        return Advance::query()->whereKey((string) $advanceId)->lockForUpdate()->first();
+    }
+
+    /** Σapply − Σreverse over an advance's settlements, read with a shared lock. */
+    private function settlementNetCents(string $advanceId): int
+    {
+        $cents = 0;
+        foreach (Settlement::query()->where('advance_id', $advanceId)->sharedLock()->get(['direction', 'amount']) as $row) {
+            $amount = TreasuryBalanceService::toCents((string) data_get($row, 'amount'));
+            $cents += data_get($row, 'direction') === Settlement::DIRECTION_APPLY ? $amount : -$amount;
+        }
+
+        return $cents;
     }
 
     /**

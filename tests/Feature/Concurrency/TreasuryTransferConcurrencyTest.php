@@ -11,6 +11,7 @@ use App\Models\Permission;
 use App\Models\Project;
 use App\Models\Role;
 use App\Models\Tenant;
+use App\Models\Treasury\TreasuryAdvance;
 use App\Models\Treasury\TreasuryFinancialDocument;
 use App\Models\Treasury\TreasuryFinancialParty;
 use App\Models\Treasury\TreasuryLedgerEntry;
@@ -19,6 +20,7 @@ use App\Models\Treasury\TreasuryPaymentRouteLeg;
 use App\Models\Treasury\TreasuryReconciliationEntry;
 use App\Models\Treasury\TreasuryWallet;
 use App\Models\User;
+use App\Services\Treasury\TreasuryAdvanceService;
 use App\Services\Treasury\TreasuryBalanceService;
 use App\Services\Treasury\TreasuryExpenseService;
 use App\Services\Treasury\TreasuryPostingService;
@@ -59,7 +61,7 @@ class TreasuryTransferConcurrencyTest extends TestCase
     {
         try {
             if (DB::connection('mysql')->getPdo()) {
-                foreach (['audit_logs', 'treasury_reconciliation_entries', 'treasury_reconciliations', 'treasury_cost_settlement_allocations', 'treasury_expense_approvals', 'treasury_ledger_entries',
+                foreach (['audit_logs', 'treasury_reconciliation_entries', 'treasury_reconciliations', 'treasury_cost_settlement_allocations', 'treasury_advance_settlements', 'treasury_advances', 'treasury_expense_approvals', 'treasury_ledger_entries',
                     'treasury_payment_route_legs', 'treasury_payment_routes', 'treasury_financial_documents', 'contract_expenses', 'contract_payments', 'contracts', 'treasury_wallets',
                     'treasury_financial_parties', 'projects', 'user_roles', 'role_permissions', 'users', 'tenants'] as $table) {
                     DB::connection('mysql')->table($table)->delete();
@@ -332,6 +334,128 @@ class TreasuryTransferConcurrencyTest extends TestCase
         sort($exitCodes);
         $this->assertSame([0, 1], $exitCodes, 'Exactly one trace may be created. ' . $output);
         $this->assertSame(1, TreasuryPaymentRoute::on('mysql')->where('linked_contract_payment_id', $payment->id)->count(), $output);
+    }
+
+    /**
+     * GAP-096 — a settlement approval and a cash return race on one advance
+     * of 100 (70 each). Only one may reduce the outstanding amount; it must
+     * end at 30, never below 0 (v17 §6.5, class-3 advance lock).
+     *
+     * @group stress
+     */
+    public function test_settlement_and_return_cannot_overdraw_one_advance(): void
+    {
+        [$project, $creator, $approver, $walletB, $cost, $advanceDoc] = $this->advanceFixture();
+        app(TreasuryAdvanceService::class)->requestSettlement($project, $creator, $advanceDoc, [
+            'amount' => '70', 'allocations' => [['cost_source_type' => 'contract_expense', 'cost_source_id' => (string) $cost->id, 'amount' => '70']],
+        ]);
+
+        $php = (new PhpExecutableFinder())->find();
+        $base = [$php, 'artisan', 'treasury:concurrency-test-advance'];
+        $procA = new Process([...$base, 'return', (string) $project->id, (string) $approver->id, (string) $advanceDoc->id, (string) $walletB->id, '70', '--hold=3'], base_path(), ['DB_CONNECTION' => 'mysql']);
+        $procB = new Process([...$base, 'settle', (string) $project->id, (string) $approver->id, (string) $advanceDoc->id], base_path(), ['DB_CONNECTION' => 'mysql']);
+        $procA->start();
+        usleep(1_500_000);
+        $procB->start();
+        $procA->wait();
+        $procB->wait();
+
+        $output = 'A: ' . $procA->getOutput() . $procA->getErrorOutput() . ' B: ' . $procB->getOutput() . $procB->getErrorOutput();
+        $exitCodes = [$procA->getExitCode(), $procB->getExitCode()];
+        sort($exitCodes);
+        $this->assertSame([0, 1], $exitCodes, 'Exactly one may reduce the advance. ' . $output);
+        $advance = TreasuryAdvance::on('mysql')->where('originating_financial_document_id', $advanceDoc->id)->firstOrFail();
+        $this->assertSame(3000, app(TreasuryAdvanceService::class)->outstandingCents($advance), $output);
+    }
+
+    /**
+     * GAP-096 — a settlement approval and an S3 expense approval race on one
+     * cost of 100 (70 each). Only one may be allocated (v17 §6.3, class 2).
+     *
+     * @group stress
+     */
+    public function test_settlement_and_expense_cannot_overpay_one_cost(): void
+    {
+        [$project, $creator, $approver, $walletB, $cost, $advanceDoc, $payee] = $this->advanceFixture();
+        app(TreasuryAdvanceService::class)->requestSettlement($project, $creator, $advanceDoc, [
+            'amount' => '70', 'allocations' => [['cost_source_type' => 'contract_expense', 'cost_source_id' => (string) $cost->id, 'amount' => '70']],
+        ]);
+        $expenses = app(TreasuryExpenseService::class);
+        $draft = $expenses->createDraft($project, $creator, [
+            'source_wallet_id' => (string) $walletB->id, 'destination_party_id' => (string) $payee->id,
+            'amount' => '70', 'transaction_date' => '2026-10-02',
+            'allocations' => [['cost_source_type' => 'contract_expense', 'cost_source_id' => (string) $cost->id, 'amount' => '70']],
+        ]);
+        $expenses->submit($project, $creator, $draft);
+
+        $php = (new PhpExecutableFinder())->find();
+        $procA = new Process([$php, 'artisan', 'treasury:concurrency-test-approve-expense', (string) $project->id, (string) $approver->id, (string) $draft->id, '--hold=3'], base_path(), ['DB_CONNECTION' => 'mysql']);
+        $procB = new Process([$php, 'artisan', 'treasury:concurrency-test-advance', 'settle', (string) $project->id, (string) $approver->id, (string) $advanceDoc->id], base_path(), ['DB_CONNECTION' => 'mysql']);
+        $procA->start();
+        usleep(1_500_000);
+        $procB->start();
+        $procA->wait();
+        $procB->wait();
+
+        $output = 'A: ' . $procA->getOutput() . $procA->getErrorOutput() . ' B: ' . $procB->getOutput() . $procB->getErrorOutput();
+        $exitCodes = [$procA->getExitCode(), $procB->getExitCode()];
+        sort($exitCodes);
+        $this->assertSame([0, 1], $exitCodes, 'Exactly one allocation may be made. ' . $output);
+        $this->assertSame(7000, $expenses->netAllocationCents('contract_expense', (string) $cost->id), $output);
+    }
+
+    /**
+     * A posted advance of 100 paid from wallet A to the creator's party, a
+     * second funded wallet B, and a contract cost of 100.
+     *
+     * @return array{0: Project, 1: User, 2: User, 3: TreasuryWallet, 4: ContractExpense, 5: TreasuryFinancialDocument, 6: TreasuryFinancialParty}
+     */
+    private function advanceFixture(): array
+    {
+        $this->skipUnlessMysqlAvailable();
+        $this->originalDefaultConnection = DB::getDefaultConnection();
+        DB::setDefaultConnection('mysql');
+
+        $tenant = Tenant::on('mysql')->create(Tenant::factory()->raw());
+        $creator = User::on('mysql')->create(User::factory()->raw(['tenant_id' => $tenant->id]));
+        $approver = User::on('mysql')->create(User::factory()->raw(['tenant_id' => $tenant->id]));
+        $project = Project::on('mysql')->create(Project::factory()->raw([
+            'tenant_id' => $tenant->id, 'pm_id' => $creator->id, 'created_by' => $creator->id,
+        ]));
+        $investor = TreasuryFinancialParty::on('mysql')->create(['tenant_id' => $tenant->id, 'party_type' => 'investor', 'name' => 'A']);
+        $holder = TreasuryFinancialParty::on('mysql')->create([
+            'tenant_id' => $tenant->id, 'party_type' => 'employee', 'name' => 'Z', 'linked_user_id' => $creator->id,
+        ]);
+        $payee = TreasuryFinancialParty::on('mysql')->create(['tenant_id' => $tenant->id, 'party_type' => 'labour', 'name' => 'D']);
+        $wallets = [];
+        foreach (['A', 'B'] as $name) {
+            $wallets[] = TreasuryWallet::on('mysql')->create([
+                'tenant_id' => $tenant->id, 'project_id' => $project->id, 'wallet_type' => 'employee_cash', 'name' => $name, 'custodian_party_id' => $holder->id,
+            ]);
+        }
+        $posting = app(TreasuryPostingService::class);
+        foreach ($wallets as $wallet) {
+            $posting->declareFunding($project, $creator, [
+                'document_type' => 'funding', 'source_party_id' => (string) $investor->id,
+                'destination_wallet_id' => (string) $wallet->id, 'amount' => '100', 'transaction_date' => '2026-10-01',
+            ], true);
+        }
+        $contract = Contract::on('mysql')->create(Contract::factory()->raw([
+            'tenant_id' => $tenant->id, 'project_id' => $project->id, 'created_by' => $creator->id,
+        ]));
+        $cost = ContractExpense::on('mysql')->create([
+            'tenant_id' => $tenant->id, 'contract_id' => $contract->id, 'expense_date' => '2026-10-01',
+            'amount' => '100', 'category' => 'labor', 'description' => 'Cost',
+        ]);
+        $advances = app(TreasuryAdvanceService::class);
+        $draft = $advances->createDraft($project, $creator, [
+            'source_wallet_id' => (string) $wallets[0]->id, 'destination_party_id' => (string) $holder->id,
+            'amount' => '100', 'transaction_date' => '2026-10-02',
+        ]);
+        $advances->submit($project, $creator, $draft);
+        $advanceDoc = $advances->approve($project, $approver, $draft->refresh());
+
+        return [$project, $creator, $approver, $wallets[1], $cost, $advanceDoc, $payee];
     }
 
     /**

@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-10-27-gap-097-treasury-s6-dashboard-reports-readiness.md
   plan: null
   branch: docs/GAP-097-treasury-s6-dashboard-reports
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/376
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

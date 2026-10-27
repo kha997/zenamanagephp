@@ -1,32 +1,38 @@
 ---
 work_id: GAP-065
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-07-gap-065-architecture-test-db-leak-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-10-27-gap-065-architecture-test-db-leak.md
   branch: docs/GAP-065-architecture-test-db-leak
   pr: https://github.com/kha997/zenamanagephp/pull/338
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-27T23:22:54+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-27, verbatim: 'APPROVE GAP-065 Gate 2 Option A'. Reviewed design head: 692b33d22f9bb2dd8d80a4918d64a7c21c045f8b. Approves Option A and its exact allowlist (add RefreshDatabase to tests/Architecture/DebugRouteBoundaryInvariantTest.php only, plan, packets); no application code, no other test file, no CI change; not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-27T23:21:37+07:00"
-  updated_at: "2026-10-27T23:21:37+07:00"
+  updated_at: "2026-10-27T23:22:54+07:00"
 generated_by: agent
 ---
 
 # GAP-065 — Architecture test DB leak: Gate 2 design
+
+## OWNER GATE 2: APPROVED — OPTION A
+
+Owner approved Option A in-session on 2026-10-27 against reviewed design head
+`692b33d22f9bb2dd8d80a4918d64a7c21c045f8b`. This authorizes only the bounded implementation defined by this packet; it
+does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

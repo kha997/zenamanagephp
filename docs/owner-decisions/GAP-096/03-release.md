@@ -1,14 +1,14 @@
 ---
 work_id: GAP-096
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-27-gap-096-treasury-s5-advances-readiness.md
   plan: docs/superpowers/plans/2026-10-27-gap-096-treasury-s5-advances.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-27T14:06:17+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-27, verbatim: 'APPROVE GAP-096 Gate 3'. Given on the packet at PR head 8ce9b2ce00dbe8a8ad5ec30b9dde2c79bf2c3ee9; bound to implementation subject 629862b13018835d3e7cc35a9c3588aa62facb6b and implementation-tree digest 234e157841bc86b90d2ea0a5ae76cb810144bee2c0007c26b7bf4871ecf39578 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-27T13:31:36+07:00"
-  updated_at: "2026-10-27T13:31:36+07:00"
+  updated_at: "2026-10-27T14:06:17+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-096 (Treasury S5) at subject 629862b13018835d3e7cc35a9c3588aa62facb6b (Gate 2 Option A). New TreasuryAdvanceService: advance documents (wallet -> party, direct) follow the S3 draft / submit / approve / reject / copy flow with the S3 self-approval and wallet-holder rules; approval locks the wallet (class 0), re-checks the balance, locks the document (5), posts the debit and inserts the treasury_advances row in one transaction (v17 7.5); the approval event is advance_approved so S3's self-approved expense total stays expense-only. Outstanding = amount - sum(apply) + sum(reverse), 0 once the advance is reversed (6.5/6.6). Option A: a settlement request is an append-only settlement_requested event (amount + allocations in context) on the advance document's treasury_expense_approvals log, closed by settlement_withdrawn (filer only), settlement_rejected (note required) or settlement_approved; one open request per advance. Approval locks cost sources (2), the advance (3) and the document (5), re-checks amount <= outstanding and each cost's remaining (shared S3 net allocation, locking read), then writes one approved_expense/apply settlement and its allocations (advance_settlement_id); no ledger entry. Removal (treasury.reverse, reason required) writes an approved_expense/reverse settlement and one reverse allocation per apply. Advance return (treasury.reverse, direct only): wallet (0) -> advance (3), amount <= outstanding, advance_return document + credit + cash_return/apply in one write. TreasuryPostingService::reverse now accepts advance (advance locked first, refused unless settlement net is 0, 2.2d) and advance_return (coupled cash_return/reverse, 2.2b). Ageing list: posted advances still owed, days since posting, buckets under_30 / 30_60 / 60_90 / over_90 (lower bound inclusive). API api.zena.treasury.advances.* (15 routes); operator: Tam ung card on the project page, advance page, register labels. No schema change, no new permission. Tests: TreasuryAdvanceServiceTest 12, API 2, web 2; real-MySQL races (settlement vs return on one advance; settlement vs S3 expense on one cost). Exact-head CI at 73632733 (629862b1 plus this packet only): 35/35 green."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "629862b13018835d3e7cc35a9c3588aa62facb6b"
   verified_at: "2026-10-27T13:31:36+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "234e157841bc86b90d2ea0a5ae76cb810144bee2c0007c26b7bf4871ecf39578"
+  decision_recorded_at: "2026-10-27T14:06:17+07:00"
 ---
 
 # GAP-096 — Gate 3 release decision (Treasury S5 advances and settlements)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-27 ("APPROVE GAP-096 Gate 3"), bound to implementation subject
+`629862b13018835d3e7cc35a9c3588aa62facb6b` and implementation-tree digest `234e157841bc86b90d2ea0a5ae76cb810144bee2c0007c26b7bf4871ecf39578`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

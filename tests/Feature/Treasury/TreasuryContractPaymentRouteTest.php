@@ -179,6 +179,7 @@ class TreasuryContractPaymentRouteTest extends TestCase
             $this->assertSame((string) $this->payment->id, (string) $e->existing->getKey());
         }
         $this->expectException(TreasuryDuplicateSuspected::class);
+
         try {
             $this->routes->createRoute($this->project, $this->owner, $data);
         } finally {

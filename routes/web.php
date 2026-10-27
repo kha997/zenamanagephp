@@ -702,6 +702,7 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/projects/{project}/treasury/routes/{treasuryRoute}/legs', [App\Http\Controllers\Web\Treasury\TreasuryRoutePageController::class, 'storeLeg'])->middleware('rbac:treasury.view')->name('treasury.projects.routes.legs.store');
     Route::post('/projects/{project}/treasury/routes/{treasuryRoute}/cancel', [App\Http\Controllers\Web\Treasury\TreasuryRoutePageController::class, 'cancel'])->middleware('rbac:treasury.manage_routes')->name('treasury.projects.routes.cancel');
     Route::post('/projects/{project}/treasury/route-legs/{treasuryRouteLeg}/reverse', [App\Http\Controllers\Web\Treasury\TreasuryRoutePageController::class, 'reverseLeg'])->middleware('rbac:treasury.manage_routes')->name('treasury.projects.route-legs.reverse');
+    Route::post('/projects/{project}/treasury/contract-payments/{contractPayment}/routes', [App\Http\Controllers\Web\Treasury\TreasuryRoutePageController::class, 'storeContractPaymentRoute'])->middleware('rbac:treasury.manage_routes')->name('treasury.projects.contract-payments.routes.store');
 
     Route::get('/contracts', [App\Http\Controllers\Web\ContractPageController::class, 'index'])->middleware('rbac:contract.view')->name('contracts.index');
     Route::get('/contracts/create', [App\Http\Controllers\Web\ContractPageController::class, 'create'])->middleware('rbac:contract.create')->name('contracts.create');

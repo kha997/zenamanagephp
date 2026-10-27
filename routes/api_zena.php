@@ -369,6 +369,9 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::post('/routes/{treasuryRoute}/legs', [\App\Http\Controllers\Api\Treasury\TreasuryRouteController::class, 'storeLeg'])->middleware('rbac:treasury.view')->name('legs.store');
             Route::post('/routes/{treasuryRoute}/cancel', [\App\Http\Controllers\Api\Treasury\TreasuryRouteController::class, 'cancel'])->middleware('rbac:treasury.manage_routes')->name('cancel');
             Route::post('/route-legs/{treasuryRouteLeg}/reverse', [\App\Http\Controllers\Api\Treasury\TreasuryRouteController::class, 'reverseLeg'])->middleware('rbac:treasury.manage_routes')->name('legs.reverse');
+            // GAP-095 S4b-2: paid contract payments and their tracing routes.
+            Route::get('/contract-payments', [\App\Http\Controllers\Api\Treasury\TreasuryRouteController::class, 'contractPayments'])->middleware('rbac:treasury.view')->name('contract-payments.index');
+            Route::post('/contract-payments/{contractPayment}/routes', [\App\Http\Controllers\Api\Treasury\TreasuryRouteController::class, 'storeContractPaymentRoute'])->middleware('rbac:treasury.manage_routes')->name('contract-payments.routes.store');
         });
 
         Route::group(['prefix' => 'vendors'], function () {

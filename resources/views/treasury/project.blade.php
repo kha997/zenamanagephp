@@ -42,6 +42,7 @@
             <x-ui.field-value label="Vốn chủ góp" :value="$money($summary['owner_contribution'])" />
             <x-ui.field-value label="Đã chi (chi phí)" :value="$money($summary['expenses'])" />
             <x-ui.field-value label="Trong đó tự duyệt" :value="$money($summary['self_approved_expenses'])" />
+            <x-ui.field-value label="Tiền thanh toán hợp đồng đã về ví" :value="$money($summary['contract_payments_arrived'])" />
         </div>
     </x-ui.card>
 
@@ -140,6 +141,50 @@
         </x-ui.card>
     @endif
 
+    {{-- GAP-095 S4b-2: paid contract payments and where their money went (optional). --}}
+    @php
+        $paymentFlagLabels = ['not_fully_traced' => 'Chưa truy vết đủ', 'no_longer_paid' => 'Đợt không còn "đã thanh toán"', 'over_traced' => 'Đã truy vết vượt số tiền'];
+    @endphp
+    <x-ui.card title="Thanh toán hợp đồng (truy vết tiền về ví)">
+        @if ($contractPayments === [])
+            <x-ui.empty-state title="Chưa có đợt thanh toán hợp đồng đã thanh toán" description="Đợt thanh toán đánh dấu &quot;đã thanh toán&quot; ở trang hợp đồng sẽ hiện ở đây để truy vết (tùy chọn)." />
+        @else
+            <x-ui.data-table :headers="['Hợp đồng', 'Đợt', 'Ngày trả', 'Số tiền', 'Đã truy vết', 'Đã về ví đích', 'Ghi chú', 'Truy vết']">
+                @foreach ($contractPayments as $payment)
+                    <tr data-testid="treasury-contract-payment-row">
+                        <td class="text-sm">{{ $payment['contract_code'] ?? '—' }}</td>
+                        <td class="text-sm font-medium">{{ $payment['name'] }}</td>
+                        <td class="text-sm">{{ $payment['paid_at'] ? \Illuminate\Support\Carbon::parse($payment['paid_at'])->format('d/m/Y') : '—' }}</td>
+                        <td class="text-sm font-semibold">{{ $money($payment['amount']) }}</td>
+                        <td class="text-sm">{{ $money($payment['traced_amount']) }}</td>
+                        <td class="text-sm text-emerald-700">{{ $money($payment['arrived_amount']) }}</td>
+                        <td class="text-sm text-amber-700" data-testid="treasury-contract-payment-flags">{{ collect($payment['flags'])->map(fn ($flag) => $paymentFlagLabels[$flag] ?? $flag)->implode(', ') ?: '—' }}</td>
+                        <td class="text-sm">
+                            @if ($can['manageRoutes'] && (float) $payment['remaining_amount'] > 0 && $payment['status'] === 'paid' && $wallets->isNotEmpty())
+                                <details>
+                                    <summary class="operator-button operator-button-inline">Truy vết</summary>
+                                    <form method="POST" action="{{ route('operator.treasury.projects.contract-payments.routes.store', [$project->id, $payment['id']]) }}" class="mt-2 space-y-2" data-testid="treasury-contract-payment-route-form">
+                                        @csrf
+                                        <select name="expected_destination_wallet_id" class="operator-input" required aria-label="Ví đích">
+                                            @foreach ($wallets as $wallet)
+                                                <option value="{{ $wallet->id }}">{{ $wallet->name }}</option>
+                                            @endforeach
+                                        </select>
+                                        <input type="number" name="amount" min="0.01" step="0.01" class="operator-input" value="{{ $payment['remaining_amount'] }}" required aria-label="Số tiền">
+                                        <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="confirm_duplicate" value="1"> Vẫn ghi nếu hệ thống cảnh báo trùng</label>
+                                        <button type="submit" class="operator-button operator-button-primary">Tạo tuyến</button>
+                                    </form>
+                                </details>
+                            @else
+                                —
+                            @endif
+                        </td>
+                    </tr>
+                @endforeach
+            </x-ui.data-table>
+        @endif
+    </x-ui.card>
+
     {{-- GAP-094 S4b-1: money that travels through transit wallets. --}}
     <x-ui.card title="Tuyến tiền (qua trung gian)">
         @if ($routes === [])
@@ -149,7 +194,7 @@
                 @foreach ($routes as $row)
                     <tr data-testid="treasury-route-row">
                         <td class="text-sm">{{ $row['transaction_date'] ? \Illuminate\Support\Carbon::parse($row['transaction_date'])->format('d/m/Y') : '—' }}</td>
-                        <td class="text-sm font-medium">{{ $typeLabels[$row['document_type']] ?? $row['document_type'] }}</td>
+                        <td class="text-sm font-medium">{{ $row['contract_payment_id'] !== null ? 'Thanh toán HĐ: ' . $row['contract_payment_name'] : ($typeLabels[$row['document_type']] ?? $row['document_type']) }}</td>
                         <td class="text-sm font-semibold">{{ $money($row['total_amount']) }}</td>
                         <td class="text-sm text-emerald-700">{{ $money($row['arrived_amount']) }}</td>
                         <td class="text-sm text-amber-700">{{ $money($row['remaining_amount']) }}</td>

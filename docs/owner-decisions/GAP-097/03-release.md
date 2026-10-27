@@ -1,14 +1,14 @@
 ---
 work_id: GAP-097
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-27-gap-097-treasury-s6-dashboard-reports-readiness.md
   plan: docs/superpowers/plans/2026-10-27-gap-097-treasury-s6-dashboard-reports.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-27T19:51:53+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-27, verbatim: 'APPROVE GAP-097 Gate 3'. Given on the packet at PR head b3e9277858f47275cbcfad4d0990c6310e4d89fe; bound to implementation subject 10e538febe86ebe9673b390cd64b11a0e29953ff and implementation-tree digest dc87a81f44def6f02c61b66b4422cbd35c24981bffeb0139fe46ab48840db76e (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-27T18:32:22+07:00"
-  updated_at: "2026-10-27T18:35:01+07:00"
+  updated_at: "2026-10-27T19:51:53+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-097 (Treasury S6) at subject 10e538febe86ebe9673b390cd64b11a0e29953ff (Gate 2 Option A). Read-only. New TreasuryDashboardService: cards (investor funding, funding via completed routes, contract payments arrived, owner contribution, posted expenses and the self-approved part, held total, unreconciled funding, pending approvals count and amount, outstanding advances), wallet table (custodian, balance, reconciled / unreconciled, outstanding advances paid from the wallet, last ledger activity) and alerts with the Owner's fixed thresholds: funding / owner contribution posted_unreconciled more than 30 days after its transaction date, submitted expenses and advances, open settlement requests, advances in the S5 over_90 bucket (90 days inclusive), negative wallets, planned or partial routes; overview rows per visible project. New TreasuryReportService: register query with filters (date from / to, type, status, wallet, party, creator, approver, self-approved, reconciled), 50 per page, CSV of the filtered register; ten reports as headers + rows (cashflow by month of transaction date with legs by leg date, internal moves excluded and reversals netted into the original's month; wallets; custodians; advance ageing; expenses by category from net cost allocations; expenses by party, direct or via advance; self-approved expenses, advances and settlements; unreconciled ledger entries with age; open routes with money held on the way; reversals and adjustments); CSV with UTF-8 BOM and formula-injection escaping. New TreasuryTimelineService: one sentence per document, route leg and advance settlement of a month, oldest first, linked to route or advance. API api.zena.treasury.reports.* (overview, dashboard, register, timeline, reports/{report}); operator: dashboard section on the project page, register filters + pagination + CSV, report page, timeline page, overview columns on the Treasury index. View with treasury.view and project scope, CSV with treasury.export. Register filter parsing lives in TreasuryReportService (deptrac: API controllers must not depend on web controllers; first CI run at 05fdcb29 failed on that). No schema change, no permission change, no existing test changed. Exact-head CI at 21548a79 (10e538fe plus this packet only): 35/35 green. Tests: TreasuryReportServiceTest 7 (dashboard, alerts at 30/31 and 89/90 days, cashflow equals held total, reports, register filters, timeline, overview, other tenant never shown), TreasuryReportWebTest 4 (pages, CSV and export permission, overview, API)."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "10e538febe86ebe9673b390cd64b11a0e29953ff"
   verified_at: "2026-10-27T18:35:01+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "dc87a81f44def6f02c61b66b4422cbd35c24981bffeb0139fe46ab48840db76e"
+  decision_recorded_at: "2026-10-27T19:51:53+07:00"
 ---
 
 # GAP-097 — Gate 3 release decision (Treasury S6 dashboard and reports)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-27 ("APPROVE GAP-097 Gate 3"), bound to implementation subject
+`10e538febe86ebe9673b390cd64b11a0e29953ff` and implementation-tree digest `dc87a81f44def6f02c61b66b4422cbd35c24981bffeb0139fe46ab48840db76e`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

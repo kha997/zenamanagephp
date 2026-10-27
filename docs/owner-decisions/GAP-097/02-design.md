@@ -130,6 +130,18 @@ and combine; self-approved filter; timeline sentences and order; CSV headers, ro
 isolation (another project's or tenant's data never appears); permissions (engineer views but cannot export;
 overview scope); API + web.
 
+## Owner amendment 1
+
+After the Gate-3 approval at digest `dc87a81f…`, Codex (two P2 findings, PR #376 review on `4d25560e`) reported: the
+timeline page parsed the month with `createFromFormat('Y-m')`, which keeps today's day, so late in a month (e.g. on the
+31st) a shorter month was labelled as the next one while its events were right; and the overview API returned at most
+100 projects with no way to reach the rest. The fixes change the tree, so the Owner was asked via AskUserQuestion and
+chose, verbatim: "Sửa cả hai trong PR này (Recommended)". Change (`48d949fa`): the timeline label comes from the
+month's first day; the overview API is paginated with the standard list envelope (`per_page`, default 30, at most
+100). New web tests `test_timeline_month_label_matches_the_chosen_month_late_in_a_month` and
+`test_api_overview_is_paginated_so_every_project_is_reachable` (red before the fix). The earlier Gate-3 approval is
+superseded; Gate 3 is re-presented.
+
 ## Verification required at Gate 3
 
 All Treasury tests green locally and exact-head CI; PHPStan, php-cs-fixer, SSOT lint clean.

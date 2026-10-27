@@ -703,6 +703,10 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/projects/{project}/treasury/routes/{treasuryRoute}/cancel', [App\Http\Controllers\Web\Treasury\TreasuryRoutePageController::class, 'cancel'])->middleware('rbac:treasury.manage_routes')->name('treasury.projects.routes.cancel');
     Route::post('/projects/{project}/treasury/route-legs/{treasuryRouteLeg}/reverse', [App\Http\Controllers\Web\Treasury\TreasuryRoutePageController::class, 'reverseLeg'])->middleware('rbac:treasury.manage_routes')->name('treasury.projects.route-legs.reverse');
     Route::post('/projects/{project}/treasury/contract-payments/{contractPayment}/routes', [App\Http\Controllers\Web\Treasury\TreasuryRoutePageController::class, 'storeContractPaymentRoute'])->middleware('rbac:treasury.manage_routes')->name('treasury.projects.contract-payments.routes.store');
+    // Project Treasury S6 (GAP-097): reports, timeline and CSV exports
+    Route::get('/projects/{project}/treasury/reports', [App\Http\Controllers\Web\Treasury\TreasuryReportPageController::class, 'index'])->middleware('rbac:treasury.view')->name('treasury.projects.reports.index');
+    Route::get('/projects/{project}/treasury/reports/{report}/export', [App\Http\Controllers\Web\Treasury\TreasuryReportPageController::class, 'export'])->middleware('rbac:treasury.export')->name('treasury.projects.reports.export');
+    Route::get('/projects/{project}/treasury/timeline', [App\Http\Controllers\Web\Treasury\TreasuryReportPageController::class, 'timeline'])->middleware('rbac:treasury.view')->name('treasury.projects.timeline');
     // Project Treasury S5 (GAP-096): advances and settlements
     Route::post('/projects/{project}/treasury/advances', [App\Http\Controllers\Web\Treasury\TreasuryAdvancePageController::class, 'store'])->middleware('rbac:treasury.create_expense')->name('treasury.projects.advances.store');
     Route::get('/projects/{project}/treasury/advances/{treasuryAdvance}', [App\Http\Controllers\Web\Treasury\TreasuryAdvancePageController::class, 'show'])->middleware('rbac:treasury.view')->name('treasury.projects.advances.show');

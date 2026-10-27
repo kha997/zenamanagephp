@@ -6,12 +6,12 @@ namespace Tests\Feature\Concurrency;
 
 use App\Models\Contract;
 use App\Models\ContractExpense;
+use App\Models\Permission;
 use App\Models\Project;
+use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\Treasury\TreasuryFinancialDocument;
 use App\Models\Treasury\TreasuryFinancialParty;
-use App\Models\Permission;
-use App\Models\Role;
 use App\Models\Treasury\TreasuryLedgerEntry;
 use App\Models\Treasury\TreasuryPaymentRoute;
 use App\Models\Treasury\TreasuryPaymentRouteLeg;

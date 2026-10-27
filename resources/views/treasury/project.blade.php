@@ -36,6 +36,8 @@
     @endif
     @include('treasury._errors')
 
+    @include('treasury._dashboard')
+
     <x-ui.card title="Số dư">
         <div class="operator-form-grid p-4" data-testid="treasury-balances">
             <x-ui.field-value label="Tổng tiền dự án đang giữ" :value="$money($summary['held_total'])" />
@@ -423,17 +425,78 @@
     @include('treasury._advances-card')
 
     <x-ui.card title="Sổ giao dịch">
-        <form method="GET" action="{{ route('operator.treasury.projects.show', $project->id) }}" class="flex items-end gap-2 p-4" data-testid="treasury-register-filter">
-            <div class="operator-field">
-                <label for="register_status">Trạng thái</label>
-                <select id="register_status" name="status" class="operator-input">
-                    <option value="">Tất cả</option>
-                    <option value="posted_reconciled" @selected($statusFilter === 'posted_reconciled')>Đã đối soát</option>
-                    <option value="posted_unreconciled" @selected($statusFilter === 'posted_unreconciled')>Chưa đối soát</option>
-                    <option value="reversed" @selected($statusFilter === 'reversed')>Đã đảo</option>
-                </select>
+        <form method="GET" action="{{ route('operator.treasury.projects.show', $project->id) }}" class="space-y-3 p-4" data-testid="treasury-register-filter">
+            <div class="operator-form-grid">
+                <div class="operator-field">
+                    <label for="register_date_from">Từ ngày</label>
+                    <input id="register_date_from" name="date_from" type="date" class="operator-input" value="{{ $registerFilters['date_from'] }}">
+                </div>
+                <div class="operator-field">
+                    <label for="register_date_to">Đến ngày</label>
+                    <input id="register_date_to" name="date_to" type="date" class="operator-input" value="{{ $registerFilters['date_to'] }}">
+                </div>
+                <div class="operator-field">
+                    <label for="register_type">Loại</label>
+                    <select id="register_type" name="type" class="operator-input">
+                        <option value="">Tất cả</option>
+                        @foreach (\App\Services\Treasury\TreasuryReportService::TYPE_LABELS as $value => $label)
+                            <option value="{{ $value }}" @selected($registerFilters['type'] === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="operator-field">
+                    <label for="register_status">Trạng thái</label>
+                    <select id="register_status" name="status" class="operator-input">
+                        <option value="">Tất cả</option>
+                        <option value="posted_reconciled" @selected($statusFilter === 'posted_reconciled')>Đã đối soát</option>
+                        <option value="posted_unreconciled" @selected($statusFilter === 'posted_unreconciled')>Chưa đối soát</option>
+                        <option value="reversed" @selected($statusFilter === 'reversed')>Đã đảo</option>
+                    </select>
+                </div>
+                <div class="operator-field">
+                    <label for="register_wallet">Ví</label>
+                    <select id="register_wallet" name="wallet_id" class="operator-input">
+                        <option value="">Tất cả</option>
+                        @foreach ($wallets as $wallet)
+                            <option value="{{ $wallet->id }}" @selected($registerFilters['wallet_id'] === (string) $wallet->id)>{{ $wallet->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="operator-field">
+                    <label for="register_party">Đối tác</label>
+                    <select id="register_party" name="party_id" class="operator-input">
+                        <option value="">Tất cả</option>
+                        @foreach ($parties as $party)
+                            <option value="{{ $party->id }}" @selected($registerFilters['party_id'] === (string) $party->id)>{{ $party->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="operator-field">
+                    <label for="register_created_by">Người lập</label>
+                    <select id="register_created_by" name="created_by" class="operator-input">
+                        <option value="">Tất cả</option>
+                        @foreach ($registerUsers as $userId => $userName)
+                            <option value="{{ $userId }}" @selected($registerFilters['created_by'] === (string) $userId)>{{ $userName }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="operator-field">
+                    <label for="register_approved_by">Người duyệt</label>
+                    <select id="register_approved_by" name="approved_by" class="operator-input">
+                        <option value="">Tất cả</option>
+                        @foreach ($registerUsers as $userId => $userName)
+                            <option value="{{ $userId }}" @selected($registerFilters['approved_by'] === (string) $userId)>{{ $userName }}</option>
+                        @endforeach
+                    </select>
+                </div>
             </div>
-            <button type="submit" class="operator-button operator-button-inline">Lọc</button>
+            <div class="flex flex-wrap items-center gap-3">
+                <label class="text-sm"><input type="checkbox" name="self_approved" value="1" @checked($registerFilters['self_approved'] === '1')> Chỉ khoản tự duyệt</label>
+                <button type="submit" class="operator-button operator-button-inline">Lọc</button>
+                @if ($can['export'])
+                    <a href="{{ route('operator.treasury.projects.reports.export', [$project->id, 'register']) . '?' . http_build_query(array_filter($registerFilters, static fn ($v) => $v !== null && $v !== '')) }}" class="operator-button operator-button-secondary" data-testid="treasury-register-export">Xuất CSV</a>
+                @endif
+            </div>
         </form>
         @if ($documents->isEmpty())
             <x-ui.empty-state title="Chưa có giao dịch" description="Các khoản tiền nhận, chuyển ví, điều chỉnh sẽ hiện ở đây." />
@@ -479,6 +542,9 @@
                     </tr>
                 @endforeach
             </x-ui.data-table>
+            @if ($register->hasPages())
+                <div class="border-t border-gray-200 p-4" data-testid="treasury-register-pages">{{ $register->links() }}</div>
+            @endif
         @endif
     </x-ui.card>
 

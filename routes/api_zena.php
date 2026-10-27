@@ -352,6 +352,15 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::post('/expenses/{treasuryExpense}/copy', [\App\Http\Controllers\Api\Treasury\TreasuryExpenseController::class, 'copy'])->middleware('rbac:treasury.create_expense')->name('copy');
         });
 
+        // GAP-097 S6: dashboard, register, timeline, reports (Gate 2 Option A).
+        Route::group(['as' => 'treasury.reports.'], function () {
+            Route::get('/treasury/overview', [\App\Http\Controllers\Api\Treasury\TreasuryReportController::class, 'overview'])->middleware('rbac:treasury.view')->name('overview');
+            Route::get('/projects/{project}/treasury/dashboard', [\App\Http\Controllers\Api\Treasury\TreasuryReportController::class, 'dashboard'])->middleware('rbac:treasury.view')->name('dashboard');
+            Route::get('/projects/{project}/treasury/register', [\App\Http\Controllers\Api\Treasury\TreasuryReportController::class, 'register'])->middleware('rbac:treasury.view')->name('register');
+            Route::get('/projects/{project}/treasury/timeline', [\App\Http\Controllers\Api\Treasury\TreasuryReportController::class, 'timeline'])->middleware('rbac:treasury.view')->name('timeline');
+            Route::get('/projects/{project}/treasury/reports/{report}', [\App\Http\Controllers\Api\Treasury\TreasuryReportController::class, 'report'])->middleware('rbac:treasury.view')->name('show');
+        });
+
         // GAP-096 S5: advances and settlements (Gate 2 Option A).
         Route::group(['prefix' => 'projects/{project}/treasury', 'as' => 'treasury.advances.'], function () {
             Route::get('/advances', [\App\Http\Controllers\Api\Treasury\TreasuryAdvanceController::class, 'index'])->middleware('rbac:treasury.view')->name('index');

@@ -13,10 +13,12 @@ use App\Models\Treasury\TreasuryWallet;
 use App\Models\User;
 use App\Models\UserRoleProject;
 use App\Services\Treasury\TreasuryBalanceService;
+use App\Services\Treasury\TreasuryDashboardService;
 use App\Services\Treasury\TreasuryDuplicateSuspected;
 use App\Services\Treasury\TreasuryExpenseService;
 use App\Services\Treasury\TreasuryPostingService;
 use App\Services\Treasury\TreasuryReconciliationService;
+use App\Services\Treasury\TreasuryReportService;
 use App\Services\Treasury\TreasuryRouteService;
 use App\Services\Treasury\TreasuryRuleViolation;
 use App\Services\Treasury\TreasurySetupService;
@@ -42,6 +44,8 @@ class TreasuryPageController extends Controller
         private readonly TreasuryExpenseService $expenses,
         private readonly TreasuryReconciliationService $reconciliation,
         private readonly TreasuryRouteService $routes,
+        private readonly TreasuryDashboardService $dashboard,
+        private readonly TreasuryReportService $reports,
     ) {
     }
 
@@ -58,7 +62,13 @@ class TreasuryPageController extends Controller
             $query->whereIn('id', $memberProjectIds);
         }
 
-        return view('treasury.index', ['projects' => $query->paginate(30)]);
+        $projects = $query->paginate(30);
+
+        return view('treasury.index', [
+            'projects' => $projects,
+            // GAP-097 S6: all-projects overview (Owner answer 4).
+            'overview' => collect($this->dashboard->overview($projects->getCollection()))->keyBy('project_id')->all(),
+        ]);
     }
 
     public function parties(): View
@@ -128,9 +138,10 @@ class TreasuryPageController extends Controller
             ->with('custodianParty')
             ->orderBy('name')
             ->get();
-        // GAP-067 S4a: register status filter (ledger facts only).
-        $ledgerStatuses = [TreasuryFinancialDocument::STATUS_POSTED_UNRECONCILED, TreasuryFinancialDocument::STATUS_POSTED_RECONCILED, TreasuryFinancialDocument::STATUS_REVERSED];
-        $statusFilter = in_array((string) $request->query('status'), $ledgerStatuses, true) ? (string) $request->query('status') : null;
+        // GAP-067 S4a: register status filter (ledger facts only); GAP-097 S6: the other register filters.
+        $statusFilter = in_array((string) $request->query('status'), TreasuryReportService::LEDGER_STATUSES, true) ? (string) $request->query('status') : null;
+        $registerFilters = TreasuryReportService::registerFilters($request->query()) + ['status' => $statusFilter];
+        $register = $this->reports->register($model, $registerFilters);
 
         return view('treasury.project', [
             'project' => $model,
@@ -143,16 +154,13 @@ class TreasuryPageController extends Controller
                 (string) $model->tenant_id
             ),
             'statusFilter' => $statusFilter,
-            'documents' => TreasuryFinancialDocument::query()
-                ->with(['sourceWallet', 'destinationWallet', 'sourceParty', 'destinationParty'])
-                ->where('tenant_id', (string) $model->tenant_id)
-                ->where('project_id', (string) $model->id)
-                // GAP-066: drafts / submitted / rejected expenses are not ledger facts.
-                ->whereIn('status', $statusFilter === null ? $ledgerStatuses : [$statusFilter])
-                ->orderByDesc('transaction_date')
-                ->orderByDesc('created_at')
-                ->limit(100)
-                ->get(),
+            // GAP-066: drafts / submitted / rejected expenses are not ledger facts.
+            'documents' => $register->getCollection(),
+            'register' => $register,
+            'registerFilters' => $registerFilters,
+            'registerUsers' => User::query()->where('tenant_id', (string) $model->tenant_id)->orderBy('name')->pluck('name', 'id')->all(),
+            // GAP-097 S6: cards, wallet table and alerts.
+            'dashboard' => $this->dashboard->dashboard($model),
             // GAP-066 S3: expenses, approval queue, payables.
             'payables' => $this->expenses->payables($model),
             'contracts' => \App\Models\Contract::query()
@@ -185,6 +193,7 @@ class TreasuryPageController extends Controller
                 'reverse' => Gate::forUser($user)->allows('treasury.reverse', $model),
                 'reconcile' => Gate::forUser($user)->allows('treasury.reconcile', $model),
                 'manageRoutes' => Gate::forUser($user)->allows('treasury.manage-routes', $model),
+                'export' => $user->hasPermission('treasury.export'),
             ],
             // GAP-094 S4b-1: via-route payments, open ones first.
             'routes' => $this->routes->routes($model),

@@ -1,32 +1,38 @@
 ---
 work_id: GAP-096
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-27-gap-096-treasury-s5-advances-readiness.md
-  plan: null
+  plan: docs/superpowers/plans/2026-10-27-gap-096-treasury-s5-advances.md
   branch: docs/GAP-096-treasury-s5-advances
   pr: https://github.com/kha997/zenamanagephp/pull/375
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-27T13:05:07+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-27, verbatim: 'APPROVE GAP-096 Gate 2 Option A'. Reviewed design head: 02c900d0ffa26810ee761649ccfa4fa7fbaa02f5. Approves Option A and its exact allowlist (advance documents with the S3 draft/submit/approve flow and atomic treasury_advances row, settlement requests stored in the advance document's approval log and applied on approval with outstanding and §6.3 caps, settlement removal, direct advance return, reversal of advance and advance_return per §2.2b/§2.2d, ageing list 30/60/90, API and web, real-MySQL races, docs); no schema change, no new permission, no change to S3 behaviour, S4 routes or reports; not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-27T13:01:07+07:00"
-  updated_at: "2026-10-27T13:01:07+07:00"
+  updated_at: "2026-10-27T13:05:07+07:00"
 generated_by: agent
 ---
 
 # GAP-096 — Treasury S5 advances and settlements: Gate 2 design
+
+## OWNER GATE 2: APPROVED — OPTION A
+
+Owner approved Option A in-session on 2026-10-27 against reviewed design head
+`02c900d0ffa26810ee761649ccfa4fa7fbaa02f5`. This authorizes only the bounded implementation defined by this packet; it
+does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

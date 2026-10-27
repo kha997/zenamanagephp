@@ -130,6 +130,16 @@ created and funding totals are unchanged; reminder list figures and flags; dupli
 ghi"); reconciliation of Case A leg entries; permissions; API + web; **real MySQL**: two routes racing past the payment
 amount — the class-1 lock removal mutation must go red.
 
+## Owner amendment 1
+
+After the Gate-3 approval at digest `01caa5df…`, Codex (P2, PR #374 review on `c0452e89`) reported that after a
+duplicate warning the "Truy vết" form reloaded with the full remaining amount and the first wallet, so confirming with
+"Vẫn ghi" could silently trace a different amount into a different wallet. The fix changes the tree, so the Owner was
+asked via AskUserQuestion and chose, verbatim: "Sửa trong PR này (Recommended)". Change: the form carries the payment
+id; on a retry for that payment it reopens with the entered amount and destination; new web test
+`test_a_retry_after_a_duplicate_warning_keeps_the_entered_amount_and_wallet` (red before the fix). The earlier Gate-3
+approval is superseded; Gate 3 is re-presented.
+
 ## Verification required at Gate 3
 
 All Treasury tests green locally and exact-head CI (incl. the MySQL concurrency job); mutation run red; PHPStan,

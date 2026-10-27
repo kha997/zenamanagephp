@@ -89,6 +89,30 @@ class TreasuryContractPaymentRouteWebTest extends TestCase
             ->assertDontSee('treasury-contract-payment-route-form', false);
     }
 
+    public function test_a_retry_after_a_duplicate_warning_keeps_the_entered_amount_and_wallet(): void
+    {
+        // Codex P2 / Owner amendment 1: confirming must not silently change the allocation.
+        $second = TreasuryWallet::factory()->create(['project_id' => $this->project->id, 'name' => 'Ví thứ hai']);
+        $investor = \App\Models\Treasury\TreasuryFinancialParty::factory()->create(['tenant_id' => $this->tenant->id, 'party_type' => 'investor']);
+        app(\App\Services\Treasury\TreasuryPostingService::class)->declareFunding($this->project, $this->accountant->fresh() ?? $this->accountant, [
+            'document_type' => 'funding', 'source_party_id' => (string) $investor->id,
+            'destination_wallet_id' => (string) $this->siteCash->id, 'amount' => '1500000', 'transaction_date' => '2026-10-05',
+        ], confirmDuplicate: true);
+        $projectPage = $this->url('operator.treasury.projects.show');
+        $this->actingAs($this->accountant)->get($projectPage, $this->headers)->assertOk();
+
+        $this->actingAs($this->accountant)->from($projectPage)->post($this->url('operator.treasury.projects.contract-payments.routes.store', ['contractPayment' => (string) $this->payment->id]), [
+            'trace_payment_id' => (string) $this->payment->id,
+            'expected_destination_wallet_id' => (string) $second->id, 'amount' => '400000',
+        ], $this->headers)->assertRedirect($projectPage)->assertSessionHas('treasury_duplicate');
+        $this->assertSame(0, Route::query()->count());
+
+        $html = $this->actingAs($this->accountant)->get($projectPage, $this->headers)->assertOk()->getContent();
+        $this->assertStringContainsString('value="400000"', (string) $html);
+        $this->assertMatchesRegularExpression('/<option value="' . preg_quote((string) $second->id, '/') . '"\s+selected/', (string) $html);
+        $this->assertStringContainsString('<details  open', (string) $html);
+    }
+
     public function test_engineer_sees_the_list_but_cannot_trace(): void
     {
         $this->actingAs($this->engineer)->get($this->url('operator.treasury.projects.show'), $this->headers)->assertOk()

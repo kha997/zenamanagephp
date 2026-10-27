@@ -161,16 +161,19 @@
                         <td class="text-sm text-amber-700" data-testid="treasury-contract-payment-flags">{{ collect($payment['flags'])->map(fn ($flag) => $paymentFlagLabels[$flag] ?? $flag)->implode(', ') ?: '—' }}</td>
                         <td class="text-sm">
                             @if ($can['manageRoutes'] && (float) $payment['remaining_amount'] > 0 && $payment['status'] === 'paid' && $wallets->isNotEmpty())
-                                <details>
+                                {{-- GAP-095 amendment 1: a retry after a warning keeps what was entered for this payment. --}}
+                                @php $retrying = old('trace_payment_id') === $payment['id']; @endphp
+                                <details @if ($retrying) open @endif>
                                     <summary class="operator-button operator-button-inline">Truy vết</summary>
                                     <form method="POST" action="{{ route('operator.treasury.projects.contract-payments.routes.store', [$project->id, $payment['id']]) }}" class="mt-2 space-y-2" data-testid="treasury-contract-payment-route-form">
                                         @csrf
+                                        <input type="hidden" name="trace_payment_id" value="{{ $payment['id'] }}">
                                         <select name="expected_destination_wallet_id" class="operator-input" required aria-label="Ví đích">
                                             @foreach ($wallets as $wallet)
-                                                <option value="{{ $wallet->id }}">{{ $wallet->name }}</option>
+                                                <option value="{{ $wallet->id }}" @selected($retrying && old('expected_destination_wallet_id') === $wallet->id)>{{ $wallet->name }}</option>
                                             @endforeach
                                         </select>
-                                        <input type="number" name="amount" min="0.01" step="0.01" class="operator-input" value="{{ $payment['remaining_amount'] }}" required aria-label="Số tiền">
+                                        <input type="number" name="amount" min="0.01" step="0.01" class="operator-input" value="{{ $retrying ? old('amount') : $payment['remaining_amount'] }}" required aria-label="Số tiền">
                                         <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="confirm_duplicate" value="1"> Vẫn ghi nếu hệ thống cảnh báo trùng</label>
                                         <button type="submit" class="operator-button operator-button-primary">Tạo tuyến</button>
                                     </form>

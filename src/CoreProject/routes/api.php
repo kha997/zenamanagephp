@@ -15,8 +15,8 @@ Route::prefix('v1')
         Route::get('projects', [ProjectController::class, 'index'])->middleware('rbac:project.view');
         Route::post('projects', [ProjectController::class, 'store'])->middleware('rbac:project.create');
         Route::get('projects/{project}', [ProjectController::class, 'show'])->middleware('rbac:project.view');
-        Route::put('projects/{project}', [ProjectController::class, 'update'])->middleware('rbac:project.edit');
-        Route::patch('projects/{project}', [ProjectController::class, 'update'])->middleware('rbac:project.edit');
+        Route::put('projects/{project}', [ProjectController::class, 'update'])->middleware('rbac:project.update');
+        Route::patch('projects/{project}', [ProjectController::class, 'update'])->middleware('rbac:project.update');
         Route::delete('projects/{project}', [ProjectController::class, 'destroy'])->middleware('rbac:project.delete');
         
         // Project-specific component routes theo yêu cầu
@@ -29,12 +29,12 @@ Route::prefix('v1')
 
                 // GET /projects/{projectId}/components/tree
                 Route::get('components/tree', [ComponentController::class, 'tree'])
-                    ->middleware('rbac:component.view')
+                    ->middleware('rbac:component.read')
                     ->name('api.v1.projects.components.tree');
 
                 // GET /projects/{projectId}/components (list components)
                 Route::get('components', [ComponentController::class, 'index'])
-                    ->middleware('rbac:component.view')
+                    ->middleware('rbac:component.read')
                     ->name('api.v1.projects.components.index');
                 
                 // Baseline routes cho project
@@ -60,10 +60,10 @@ Route::prefix('v1')
         // Component routes không phụ thuộc project
         // PATCH /components/{id}
         Route::patch('components/{id}', [ComponentController::class, 'update'])
-            ->middleware('rbac:component.edit')
+            ->middleware('rbac:component.update')
             ->name('api.v1.components.update');
         Route::get('components/{id}', [ComponentController::class, 'show'])
-            ->middleware('rbac:component.view')
+            ->middleware('rbac:component.read')
             ->name('api.v1.components.show');
         Route::delete('components/{id}', [ComponentController::class, 'destroy'])
             ->middleware('rbac:component.delete')

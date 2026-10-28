@@ -19,7 +19,7 @@ Route::prefix('change-requests')->group(function () {
         
         // Change Request CRUD routes
         Route::get('/', [ChangeRequestController::class, 'index'])
-            ->middleware('rbac:change_request.view')
+            ->middleware('rbac:change_request.read')
             ->name('change-requests.index');
             
         Route::post('/', [ChangeRequestController::class, 'store'])
@@ -27,12 +27,12 @@ Route::prefix('change-requests')->group(function () {
             ->name('change-requests.store');
             
         Route::get('/{id}', [ChangeRequestController::class, 'show'])
-            ->middleware('rbac:change_request.view')
+            ->middleware('rbac:change_request.read')
             ->name('change-requests.show')
             ->where('id', '[0-9]+');
             
         Route::put('/{id}', [ChangeRequestController::class, 'update'])
-            ->middleware('rbac:change_request.edit')
+            ->middleware('rbac:change_request.update')
             ->name('change-requests.update')
             ->where('id', '[0-9]+');
             
@@ -59,12 +59,12 @@ Route::prefix('change-requests')->group(function () {
         
         // Statistics and reporting routes
         Route::get('/statistics/{projectId}', [ChangeRequestController::class, 'getStatistics'])
-            ->middleware('rbac:change_request.stats')
+            ->middleware('rbac:change_request.read')
             ->name('change-requests.statistics')
             ->where('projectId', '[0-9]+');
             
         Route::get('/project/{projectId}', [ChangeRequestController::class, 'getByProject'])
-            ->middleware('rbac:change_request.view')
+            ->middleware('rbac:change_request.read')
             ->name('change-requests.by-project')
             ->where('projectId', '[0-9]+');
             

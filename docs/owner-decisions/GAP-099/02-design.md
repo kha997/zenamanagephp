@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-28T22:04:43+07:00"
-  updated_at: "2026-10-28T22:06:07+07:00"
+  updated_at: "2026-10-28T22:08:19+07:00"
 generated_by: agent
 ---
 
@@ -100,3 +100,15 @@ Owner chọn: `APPROVE GAP-099 Gate 2 Option A` (khuyến nghị) / Option B / O
 ## What the owner is NOT being asked to decide
 
 Chưa duyệt Gate 3, merge, phát hành; không xoá controller / service change request v1.
+
+## Owner amendment 1 (2026-10-28)
+
+After the one-line request fix, `PATCH /api/v1/projects/{id}` worked for plain field changes but still returned 500 when
+`status`, `progress` or `actual_cost` changed, and `DELETE /api/v1/projects/{id}` returned 500: the v1
+`ProjectController` dispatched `Src\CoreProject\Events\ProjectUpdated` with a `Src\CoreProject\Models\Project` where the
+event requires `App\Models\Project`, passed the changed-field list as the `?User` argument, and in `destroy()` used an
+undefined `$oldData`. The event has no listener. Owner answer in-session on 2026-10-28 (AskUserQuestion), verbatim:
+"Sửa 2 chỗ phát event (Recommended)". The allowlist gains: in `src/CoreProject/Controllers/ProjectController.php`
+`update()` and `destroy()`, dispatch the event with the `App\Models\Project` built from the same row's attributes and
+without the wrong third argument, and capture `$oldData` before deleting; the new test also covers a status change and a
+v1 delete.

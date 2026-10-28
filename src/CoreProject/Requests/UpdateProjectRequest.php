@@ -51,7 +51,7 @@ class UpdateProjectRequest extends BaseApiRequest
                 'sometimes',
                 'required',
                 'string',
-                'in:' . implode(',', array_keys(Project::STATUSES))
+                'in:' . implode(',', Project::VALID_STATUSES)
             ],
             'progress' => [
                 'nullable',

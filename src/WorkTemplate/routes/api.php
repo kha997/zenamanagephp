@@ -76,11 +76,11 @@ Route::prefix('v1/work-template')->middleware(['auth:api', 'tenant.isolation'])-
             // CRUD operations
             Route::get('conditional', [ProjectTaskController::class, 'conditionalTasks'])->middleware('rbac:task.view');
             Route::get('{taskId}', [ProjectTaskController::class, 'show'])->middleware('rbac:task.view');
-            Route::put('{taskId}', [ProjectTaskController::class, 'update'])->middleware('rbac:task.edit');
+            Route::put('{taskId}', [ProjectTaskController::class, 'update'])->middleware('rbac:task.update');
             
             // Task specific actions
-            Route::put('{taskId}/progress', [ProjectTaskController::class, 'updateProgress'])->middleware('rbac:task.edit');
-            Route::post('{taskId}/toggle-conditional', [ProjectTaskController::class, 'toggleConditional'])->middleware('rbac:task.edit');
+            Route::put('{taskId}/progress', [ProjectTaskController::class, 'updateProgress'])->middleware('rbac:task.update');
+            Route::post('{taskId}/toggle-conditional', [ProjectTaskController::class, 'toggleConditional'])->middleware('rbac:task.update');
         });
     });
     

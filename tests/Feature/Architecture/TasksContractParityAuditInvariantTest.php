@@ -73,8 +73,8 @@ class TasksContractParityAuditInvariantTest extends TestCase
 
         $this->assertContains('auth:api', $v1Index->middleware());
         $this->assertContains('rbac:task.view', $v1Index->middleware());
-        $this->assertNotContains('input.sanitization', $v1Index->middleware());
-        $this->assertNotContains('error.envelope', $v1Index->middleware());
+        $this->assertContains('input.sanitization', $v1Index->middleware());
+        $this->assertContains('error.envelope', $v1Index->middleware());
     }
 
     public function test_v1_task_controller_signatures_stay_mounted_and_reconciled_in_source(): void

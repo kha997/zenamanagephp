@@ -1,11 +1,11 @@
 ---
 work_id: GAP-098
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-28-gap-098-unseeded-v1-permissions-evidence.md
   plan: null
@@ -15,20 +15,24 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-28T20:55:52+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-28, verbatim: 'APPROVE GAP-098 Gate 2 Option A'. Reviewed design head: 4dfe6fc0ab49f9e7b599025ab66ebb5e3656d272. Approves Option A and its exact allowlist (rename 5 codes on 7 routes in src/CoreProject/routes/api.php and src/ChangeRequest/routes/api.php; new V1PermissionGapSeeder creating 27 codes with the stated default role grants, one line in DatabaseSeeder; new RouteRbacCodesSeededTest and V1PermissionGapTest; plan and packets); no controller, migration, environment data, rbac:admin, zena/operator route or GAP-042 test change; not Gate 3, merge, seeding any environment, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-28T20:54:25+07:00"
-  updated_at: "2026-10-28T20:54:25+07:00"
+  updated_at: "2026-10-28T20:55:52+07:00"
 generated_by: agent
 ---
 
 # GAP-098 — Unseeded `/api/v1` permission codes: Gate 2 design
 
-## OWNER GATE 2: AWAITING OWNER
+## OWNER GATE 2: APPROVED — OPTION A
+
+Owner approved Option A in-session on 2026-10-28 against reviewed design head
+`4dfe6fc0ab49f9e7b599025ab66ebb5e3656d272`. This authorizes only the bounded implementation defined by this packet; it
+does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

@@ -90,12 +90,15 @@ Route::prefix('v1')
         Route::get('baselines/{id1}/compare/{id2}', [BaselineController::class, 'compare'])->middleware('rbac:baseline.view');
         
         // Task routes với RBAC permissions
-        Route::get('tasks', [TaskController::class, 'index'])->middleware('rbac:task.view');
-        Route::post('tasks', [TaskController::class, 'store'])->middleware('rbac:task.create');
-        Route::get('tasks/{task}', [TaskController::class, 'show'])->middleware('rbac:task.view');
-        Route::put('tasks/{task}', [TaskController::class, 'update'])->middleware('rbac:task.edit');
-        Route::patch('tasks/{task}', [TaskController::class, 'update'])->middleware('rbac:task.edit');
-        Route::delete('tasks/{task}', [TaskController::class, 'destroy'])->middleware('rbac:task.delete');
+        // GAP-021: same input guards as /api/zena/tasks; edits use the seeded task.update permission.
+        Route::middleware(['input.sanitization', 'error.envelope'])->group(function () {
+            Route::get('tasks', [TaskController::class, 'index'])->middleware('rbac:task.view');
+            Route::post('tasks', [TaskController::class, 'store'])->middleware('rbac:task.create');
+            Route::get('tasks/{task}', [TaskController::class, 'show'])->middleware('rbac:task.view');
+            Route::put('tasks/{task}', [TaskController::class, 'update'])->middleware('rbac:task.update');
+            Route::patch('tasks/{task}', [TaskController::class, 'update'])->middleware('rbac:task.update');
+            Route::delete('tasks/{task}', [TaskController::class, 'destroy'])->middleware('rbac:task.delete');
+        });
         
         // Work template routes với RBAC permissions
         Route::get('work-templates', [WorkTemplateController::class, 'index'])->middleware('rbac:template.view');

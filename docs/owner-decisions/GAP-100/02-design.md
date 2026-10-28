@@ -1,32 +1,38 @@
 ---
 work_id: GAP-100
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-29-gap-100-test-db-leak-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-10-29-gap-100-test-db-leak.md
   branch: docs/GAP-100-test-db-leak
   pr: https://github.com/kha997/zenamanagephp/pull/383
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-29T06:46:15+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-29, verbatim: 'APPROVE GAP-100 Gate 2 Option A'. Reviewed design head: 52c1710f7e1ff8ea40d2e8955f52b81a9ce23fc8. Approves Option A and its exact allowlist (RefreshDatabase on tests/Feature/ProjectManagementTest.php and tests/Feature/Deployment/DeployMigrateCommandTest.php; SQLite-only leak guard hooked into tests/TestCase.php setUp/tearDown; new tests/Support/DatabaseLeakGuard.php and tests/Unit/Support/DatabaseLeakGuardTest.php; plan and packets); no application code, phpunit config, CI workflow, test order, Dusk or MySQL-only test change; not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-29T02:22:55+07:00"
-  updated_at: "2026-10-29T02:22:55+07:00"
+  updated_at: "2026-10-29T06:46:15+07:00"
 generated_by: agent
 ---
 
 # GAP-100 — Test classes that leak DB rows: Gate 2 design
+
+## OWNER GATE 2: APPROVED — OPTION A
+
+Owner approved Option A in-session on 2026-10-29 against reviewed design head
+`52c1710f7e1ff8ea40d2e8955f52b81a9ce23fc8`. This authorizes only the bounded implementation defined by this packet; it
+does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

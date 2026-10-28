@@ -1,14 +1,14 @@
 ---
 work_id: GAP-099
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-28-gap-099-broken-v1-project-and-change-request-evidence.md
   plan: docs/superpowers/plans/2026-10-28-gap-099-broken-v1-routes.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-28T23:04:14+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-28, verbatim: 'APPROVE GAP-099 Gate 3'. Given on the packet at PR head 0728560bbce0fb72d7454243098cc89a880325a0; bound to implementation subject 3e2bef6495f535b0f8d7e74e4cd32ba5723154a6 and implementation-tree digest 7354a216c1fc2fc0030eaf62ebda4c4588ede8070dc9ecd997fb237527356a0b (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-28T22:19:25+07:00"
-  updated_at: "2026-10-28T22:19:25+07:00"
+  updated_at: "2026-10-28T23:04:14+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-099 at subject 3e2bef6495f535b0f8d7e74e4cd32ba5723154a6 (Gate 2 Option A + Owner amendment 1). UpdateProjectRequest status rule uses Project::VALID_STATUSES; v1 ProjectController update()/destroy() dispatch ProjectUpdated with the App\\Models\\Project built from the same row and capture $oldData before deleting; src/ChangeRequest/routes/api.php keeps only POST / (10 never-working routes retired). New V1ProjectAndChangeRequestRoutesTest: red before 3 of 4 (500, 500, retired route names present), green after 4/4. Full Feature + Unit 3594 tests, 5 failures identical to the GAP-021/098 baseline (2 root-only, 3 suite-order leaks); PHPStan clean, php-cs-fixer 0, composer ssot:lint (incl. orphan routes) passes, route guard OK, deptrac 0. Exact-head CI at 3e2bef64: all green except browser-tests still running at packet time."
@@ -36,13 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "3e2bef6495f535b0f8d7e74e4cd32ba5723154a6"
   verified_at: "2026-10-28T22:19:25+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "7354a216c1fc2fc0030eaf62ebda4c4588ede8070dc9ecd997fb237527356a0b"
+  decision_recorded_at: "2026-10-28T23:04:14+07:00"
 ---
 
 # GAP-099 — Gate 3 release decision (broken `/api/v1` project update and change-request routes)
 
-## OWNER GATE 3: AWAITING OWNER
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-28 ("APPROVE GAP-099 Gate 3"), bound to implementation subject
+`3e2bef6495f535b0f8d7e74e4cd32ba5723154a6` and implementation-tree digest `7354a216c1fc2fc0030eaf62ebda4c4588ede8070dc9ecd997fb237527356a0b`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

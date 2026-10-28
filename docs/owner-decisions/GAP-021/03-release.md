@@ -1,14 +1,14 @@
 ---
 work_id: GAP-021
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-28-gap-021-tasks-api-parity-evidence.md
   plan: docs/superpowers/plans/2026-10-28-gap-021-tasks-api-parity.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-28T19:59:20+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-28, verbatim: 'APPROVE GAP-021 Gate 3'. Given on the packet at PR head 5e207a4a8c99ce893967e68063c58b87edb3aa6a; bound to implementation subject 072336afd22ce8e2d3258912b67c860bf6058e55 and implementation-tree digest fa9cb97abbf20b5c996c854e7f44c83369510b27477c155359c00ff9192b16f3 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-28T19:38:20+07:00"
-  updated_at: "2026-10-28T19:38:20+07:00"
+  updated_at: "2026-10-28T19:59:20+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-021 at subject 072336afd22ce8e2d3258912b67c860bf6058e55 (Gate 2 Option A). PUT|PATCH /api/v1/tasks/{task} and the three work-template task routes now require rbac:task.update; the six /api/v1/tasks* routes carry input.sanitization and error.envelope. New V1TaskUpdatePermissionTest (non-super-admin users): red before on unchanged routes (3 of 4 failing: 403, 403, 201 instead of 400), green after (4/4). TasksContractParityAuditInvariantTest's two v1 assertNotContains lines flipped to assertContains. New OPEN register row GAP-098 (32 unseeded permission codes on 69 /api/v1 routes). Local: Feature/Api + Architecture + ProjectTask + TaskTest 905 OK; full Feature + Unit 3587 tests with 5 failures, all reproduced identically with the main routes restored (2 root-only, 3 pass alone: suite-order leaks); PHPStan clean, php-cs-fixer 0, composer ssot:lint passes, route guard OK, deptrac 0 violations."
@@ -36,13 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "072336afd22ce8e2d3258912b67c860bf6058e55"
   verified_at: "2026-10-28T19:38:20+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "fa9cb97abbf20b5c996c854e7f44c83369510b27477c155359c00ff9192b16f3"
+  decision_recorded_at: "2026-10-28T19:59:20+07:00"
 ---
 
 # GAP-021 — Gate 3 release decision (tasks API permission and middleware drift)
 
-## OWNER GATE 3: AWAITING OWNER
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-28 ("APPROVE GAP-021 Gate 3"), bound to implementation subject
+`072336afd22ce8e2d3258912b67c860bf6058e55` and implementation-tree digest `fa9cb97abbf20b5c996c854e7f44c83369510b27477c155359c00ff9192b16f3`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

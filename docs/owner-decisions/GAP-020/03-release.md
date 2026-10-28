@@ -1,14 +1,14 @@
 ---
 work_id: GAP-020
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-29-gap-020-orphan-admin-views-evidence.md
   plan: docs/superpowers/plans/2026-10-29-gap-020-orphan-admin-views.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-29T01:13:40+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-29, verbatim: 'APPROVE GAP-020 Gate 3'. Given on the packet at PR head 554842029ce3a26a0ca5110acfbf5b24d51014ee; bound to implementation subject 06e23307c8d9f0aa4556a3a0c98320e931f8c31d and implementation-tree digest b19c6573077bfe9c71c403a9f8932b22b85b215b1f1b2fb4823273afa35e14a8 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-29T00:57:10+07:00"
-  updated_at: "2026-10-29T00:57:10+07:00"
+  updated_at: "2026-10-29T01:13:40+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-020 at subject 06e23307c8d9f0aa4556a3a0c98320e931f8c31d (Gate 2 Option A). Deleted resources/views/admin/users/index.blade.php and admin/tenants/index.blade.php (1,042 lines). New OrphanAdminViewsRemovedTest: red before (admin.users.index exists), green after (orphans absent, live admin.users and admin.tenants present). php artisan view:cache succeeds. Full Feature + Unit 3596 tests, 5 failures identical to the earlier baseline (2 root-only, 3 suite-order leaks); composer ssot:lint, route guard, governance and docs lints pass. Exact-head CI at 06e23307: all green except browser-tests, Feature Tests and test still running at packet time."
@@ -36,13 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "06e23307c8d9f0aa4556a3a0c98320e931f8c31d"
   verified_at: "2026-10-29T00:57:10+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "b19c6573077bfe9c71c403a9f8932b22b85b215b1f1b2fb4823273afa35e14a8"
+  decision_recorded_at: "2026-10-29T01:13:40+07:00"
 ---
 
 # GAP-020 — Gate 3 release decision (orphan admin views)
 
-## OWNER GATE 3: AWAITING OWNER
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-29 ("APPROVE GAP-020 Gate 3"), bound to implementation subject
+`06e23307c8d9f0aa4556a3a0c98320e931f8c31d` and implementation-tree digest `b19c6573077bfe9c71c403a9f8932b22b85b215b1f1b2fb4823273afa35e14a8`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

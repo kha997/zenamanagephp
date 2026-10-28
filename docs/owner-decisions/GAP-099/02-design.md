@@ -1,0 +1,98 @@
+---
+work_id: GAP-099
+gate: 2
+gate_status: awaiting_owner
+owner_decision:
+  value: none
+  authority: human_owner
+decision_requested: approve_or_changes_or_decline
+references:
+  spec: docs/audits/2026-10-28-gap-099-broken-v1-project-and-change-request-evidence.md
+  plan: null
+  branch: docs/GAP-099-broken-v1-project-and-change-request
+  pr: https://github.com/kha997/zenamanagephp/pull/380
+  release: null
+decision_provenance:
+  trust_level: claimed_repo_record
+  recorded_by: agent
+  recorded_at: null
+  owner_response_reference: null
+  reconciliation_required: false
+supersedes: null
+superseded_by: null
+timestamps:
+  created_at: "2026-10-28T22:04:43+07:00"
+  updated_at: "2026-10-28T22:04:43+07:00"
+generated_by: agent
+---
+
+# GAP-099 — Broken `/api/v1` project update and change-request routes: Gate 2 design
+
+## OWNER GATE 2: AWAITING OWNER
+
+## Owner Summary
+
+Đề xuất **Phương án A**:
+
+1. **Sửa dự án v1**: sửa 1 dòng để dùng đúng danh sách trạng thái `VALID_STATUSES` → `PUT/PATCH /api/v1/projects/{id}` chạy
+   được.
+2. **Change request v1**: **gỡ 10 route chưa từng chạy được** (danh sách, xem, sửa, xoá, nộp, duyệt, từ chối, thống kê, theo
+   dự án, chờ duyệt) — sau khi gỡ, gọi vào sẽ nhận 404 thay vì lỗi 500. **Giữ route tạo mới** (`POST /api/v1/change-requests`)
+   vì đang chạy và có test dùng. Quản lý change request tiếp tục qua API chuẩn `/api/zena/change-requests`.
+
+Không ai đang dùng được 10 route này hôm nay (chúng chỉ trả 500 hoặc không khớp bản ghi thật nào).
+
+## So sánh phương án
+
+| Phương án | Nội dung | Kết luận |
+|---|---|---|
+| **A. Sửa project update + gỡ 10 route CR v1 hỏng** | như trên | **Đề xuất** — nhỏ, không nuôi API thứ hai cho change request (roadmap: hạn chế phát triển thêm trên `/api/v1`) |
+| B. Sửa project update + sửa cả 10 route CR v1 | Thêm 3 method, đổi chữ ký 4 method, đổi kiểu id ở service, nới ràng buộc id cho ULID | Lớn, nhân đôi chức năng `/api/zena/change-requests` đang chạy tốt |
+| C. Chỉ sửa project update | CR v1 để nguyên (vẫn 500) | Để lại 10 route trả 500 |
+
+## Thiết kế: Phương án A
+
+### 1. Project update
+
+`src/CoreProject/Requests/UpdateProjectRequest.php:54`: `array_keys(Project::STATUSES)` → `Project::VALID_STATUSES` (giống
+`StoreProjectRequest.php:61`).
+
+### 2. Change request v1
+
+`src/ChangeRequest/routes/api.php`: xoá khai báo 10 route; giữ `POST /` (`change-requests.store`). Controller và service
+**không đổi** (các method không còn route gọi tới được để nguyên; dọn dẹp code chết là việc riêng nếu Owner muốn).
+
+### 3. Test (đỏ trước / xanh sau)
+
+`tests/Feature/Api/V1ProjectAndChangeRequestRoutesTest.php`:
+
+- `PATCH /api/v1/projects/{id}` với tên mới → 200 và DB đổi (trước: 500).
+- 10 route CR v1 đã gỡ không còn trong bảng route (trước: có).
+- `POST /api/v1/change-requests` vẫn 201.
+
+Các test hiện có dùng `api/v1/change-requests` (`IntegrationTest`, `RouteHygieneTest`, `ModuleOwnership*InvariantTest`) chỉ dựa
+vào route tạo mới / URI — vẫn đúng.
+
+### 4. Files (allowlist)
+
+`src/CoreProject/Requests/UpdateProjectRequest.php` (1 dòng); `src/ChangeRequest/routes/api.php` (xoá 10 khai báo); test mới;
+plan `docs/superpowers/plans/2026-10-28-gap-099-broken-v1-routes.md`; packet và evidence GAP-099.
+
+**Không đổi:** controller, service, model, migration, `/api/zena/*`, các nhóm v1 khác, kiểm tra vai trò `rbac` không tham số.
+
+## Verification required at Gate 3
+
+Đỏ trước / xanh sau cho test mới; Feature/Api, Architecture, IntegrationTest, RouteHygieneTest, change request và project
+suites; PHPStan, php-cs-fixer, SSOT lint (gồm orphan-route), route guard, deptrac; exact-head CI xanh.
+
+## Rollback
+
+Revert squash commit (các route quay lại, vẫn hỏng như trước).
+
+## Decision Needed
+
+Owner chọn: `APPROVE GAP-099 Gate 2 Option A` (khuyến nghị) / Option B / Option C / Request changes / Decline.
+
+## What the owner is NOT being asked to decide
+
+Chưa duyệt Gate 3, merge, phát hành; không xoá controller / service change request v1.

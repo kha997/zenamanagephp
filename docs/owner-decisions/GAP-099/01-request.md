@@ -1,11 +1,11 @@
 ---
 work_id: GAP-099
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-28-gap-099-broken-v1-project-and-change-request-evidence.md
   plan: null
@@ -15,18 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-28T22:04:27+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-28, verbatim: 'APPROVE GAP-099 Gate 1'. Bound to reviewed Draft PR #380 head a2954811f35ce4a3870cf05fa26e2e2999f637da, canonical base 8dd80a8422a9cc6da945c5fa0db5b0bec3850482. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-28T21:57:35+07:00"
-  updated_at: "2026-10-28T21:57:35+07:00"
+  updated_at: "2026-10-28T22:04:27+07:00"
 generated_by: agent
 ---
 
-## OWNER GATE 1: AWAITING OWNER
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-099 Gate 1 in-session on 2026-10-28 against Draft PR #380 head
+`a2954811f35ce4a3870cf05fa26e2e2999f637da`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

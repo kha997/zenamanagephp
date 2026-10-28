@@ -1,6 +1,6 @@
 # ZenaManage Canonical Roadmap
 
-Last updated: 2026-03-19
+Last updated: 2026-10-28 (status section below; sections after it describe the 2026-03-19 baseline)
 Role: execution sequencing SSOT
 Companion docs:
 
@@ -9,6 +9,40 @@ Companion docs:
 - `docs/roadmap/backlog.yaml` = backlog and governance SSOT
 - `docs/agent-ssot-rules.md` = evidence/verification law
 - `docs/engineering/testing-matrix.md` = verify-order SSOT
+
+## Status as of 2026-10-28
+
+Added by OWN-2026-020. `OPERATIONAL_GAP_REGISTER.md` is the source of truth for open and released work; the sections
+after this one are the 2026-03-19 baseline, kept as history. `docs/roadmap/backlog.yaml` has 29/29 items `done`, so new
+work is tracked by Work ID in the register.
+
+### Released to `main` since 2026-03-19 (not deployed)
+
+- **Project Treasury S1–S6:** GAP-037 (design, schema v17), GAP-038 (tables with native CHECK constraints), GAP-063
+  (wallets, parties, permissions), GAP-064 (ledger), GAP-066 (expenses, approvals), GAP-067/068/069 (reconciliation),
+  GAP-094/095 (via-route payments, contract-payment traceability), GAP-096 (advances, settlements), GAP-097 (dashboard,
+  reports, timeline).
+- **Notifications:** GAP-012 (change request applied), GAP-013 (submittals), GAP-014b (NCR).
+- **CRM Service Lines:** GAP-046 (foundation), GAP-048 (classification UX and gates).
+- **Security and dependencies:** GAP-011 (debug routes), GAP-070, 072, 082, 083, 084, 086.
+- **Dead routes and views:** GAP-016, 017, 029, 077, 078.
+- **Build, deploy and CI:** GAP-035, 039, 049, 050, 062, 065, 071, 073–076, 079–081, 085, 087–093.
+- **Owner governance:** GAP-047 and the OWN-2026-0xx reconciliations.
+
+### Open work, proposed order
+
+1. GAP-021 (`/api/v1/tasks*` vs `/api/zena/tasks*` differences), GAP-018 (smart-tools wrong API prefix), GAP-020 (orphan
+   admin views).
+2. The ten test files with the same DB-leak shape as GAP-065 (its evidence Finding 5), and a suite-wide leak guard — no
+   Work ID yet.
+3. GAP-014c (durable NCR ↔ CAPA task link).
+4. GAP-015 (WorkTemplate authoring UI owner), GAP-019 (universal-frame shell owner), GAP-030 (RFI escalation resolve
+   permission), GAP-026 (blocked: Slack channel owner outside the repository).
+5. Treasury extensions left out of S1–S6 (attachments, BOQ link, fund chains, investor receivable, per-advance deadline,
+   configurable thresholds, period lock, bank import), or Project OPPM / One-Page (issue #248, draft PR #257) — each needs
+   its own Gate 1.
+
+The order is a proposal; the Owner chooses the next Work ID.
 
 ## North Star
 

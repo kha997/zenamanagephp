@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-10-28-gap-098-unseeded-v1-permissions-evidence.md
   plan: null
   branch: docs/GAP-098-unseeded-v1-permissions
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/379
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

@@ -8,10 +8,13 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class ProjectManagementTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_user_can_create_project_in_their_tenant()
     {
         $tenant = Tenant::factory()->create();

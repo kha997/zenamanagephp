@@ -4,6 +4,7 @@ namespace Tests;
 
 use App\Models\User;
 use Illuminate\Auth\AuthManager;
+use Illuminate\Database\Connection;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\RefreshDatabaseState;
@@ -13,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Testing\TestResponse;
 use Tests\Concerns\InteractsWithSanctumBearerTokens;
+use Tests\Support\DatabaseLeakGuard;
 use Tests\Support\RefreshDatabaseSelfHealingGuard;
 
 abstract class TestCase extends BaseTestCase
@@ -28,6 +30,11 @@ abstract class TestCase extends BaseTestCase
      * @var bool
      */
     protected bool $autoAppendCsrfToken = true;
+
+    /** @var array<string, int>|null */
+    private ?array $leakGuardSnapshot = null;
+
+    private ?Connection $leakGuardConnection = null;
 
     /**
      * Override the base call to inject CSRF tokens into supported requests.
@@ -142,6 +149,50 @@ abstract class TestCase extends BaseTestCase
         $this->ensureInteractionLogsTable();
         $this->ensureProjectPhasesTable();
         $this->ensureProjectTasksTable();
+        $this->snapshotForLeakGuard();
+    }
+
+    protected function tearDown(): void
+    {
+        try {
+            $this->assertNoLeakedRows();
+        } finally {
+            parent::tearDown();
+        }
+    }
+
+    /**
+     * GAP-100: classes without database isolation must not leave rows in the shared test database. The connection
+     * object is kept so a test that later mocks the DB facade does not affect the comparison.
+     */
+    private function snapshotForLeakGuard(): void
+    {
+        if (!DatabaseLeakGuard::applies(static::class)) {
+            return;
+        }
+
+        $this->leakGuardConnection = DB::connection();
+        $this->leakGuardSnapshot = DatabaseLeakGuard::snapshot($this->leakGuardConnection);
+    }
+
+    private function assertNoLeakedRows(): void
+    {
+        if ($this->leakGuardSnapshot === null || $this->leakGuardConnection === null) {
+            return;
+        }
+
+        $leaks = DatabaseLeakGuard::leaks($this->leakGuardSnapshot, DatabaseLeakGuard::snapshot($this->leakGuardConnection) ?? []);
+        $this->leakGuardSnapshot = null;
+        $this->leakGuardConnection = null;
+
+        if ($leaks !== []) {
+            $this->fail(sprintf(
+                'GAP-100: %s::%s left rows in the shared test database (use RefreshDatabase or clean up): %s',
+                static::class,
+                $this->name(),
+                implode(', ', $leaks)
+            ));
+        }
     }
 
     /**

@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace Tests\Feature\Deployment;
 
 use App\Services\Deployment\MigrationClassificationService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
 class DeployMigrateCommandTest extends TestCase
 {
+    use RefreshDatabase;
+
     private string $fixtureDir;
 
     private string $manifestPath;

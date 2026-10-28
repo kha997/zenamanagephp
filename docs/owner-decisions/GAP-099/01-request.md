@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-10-28-gap-099-broken-v1-project-and-change-request-evidence.md
   plan: null
   branch: docs/GAP-099-broken-v1-project-and-change-request
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/380
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

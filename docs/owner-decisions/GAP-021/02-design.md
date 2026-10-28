@@ -1,11 +1,11 @@
 ---
 work_id: GAP-021
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-28-gap-021-tasks-api-parity-evidence.md
   plan: null
@@ -15,20 +15,24 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-28T19:25:11+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-28, verbatim: 'APPROVE GAP-021 Gate 2 Option A'. Reviewed design head: 2d832b644ca1a0a5ae64a3ee416b0fe6a440b911. Approves Option A and its exact allowlist (rbac:task.edit -> rbac:task.update on 2 /api/v1/tasks routes and 3 work-template task routes; input.sanitization + error.envelope on the 6 /api/v1/tasks* routes; new V1TaskUpdatePermissionTest; 2 assertions in TasksContractParityAuditInvariantTest; new OPEN register row GAP-098; plan and packets); no controller, seeder, migration or permission-data change; not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-28T19:31:40+07:00"
-  updated_at: "2026-10-28T19:31:40+07:00"
+  updated_at: "2026-10-28T19:25:11+07:00"
 generated_by: agent
 ---
 
 # GAP-021 — Tasks API permission and middleware drift: Gate 2 design
 
-## OWNER GATE 2: AWAITING OWNER
+## OWNER GATE 2: APPROVED — OPTION A
+
+Owner approved Option A in-session on 2026-10-28 against reviewed design head
+`2d832b644ca1a0a5ae64a3ee416b0fe6a440b911`. This authorizes only the bounded implementation defined by this packet; it
+does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

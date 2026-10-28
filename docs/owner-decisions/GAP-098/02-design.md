@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-28T20:54:25+07:00"
-  updated_at: "2026-10-28T20:55:52+07:00"
+  updated_at: "2026-10-28T20:57:21+07:00"
 generated_by: agent
 ---
 
@@ -123,3 +123,12 @@ Owner chọn: `APPROVE GAP-098 Gate 2 Option A` (khuyến nghị) / Option B / O
 ## What the owner is NOT being asked to decide
 
 Chưa duyệt Gate 3, merge, chạy seeder trên môi trường thật hay deploy; không đụng nhóm `rbac:admin`.
+
+## Owner amendment 1 (2026-10-28)
+
+During implementation the new guard test (seeding exactly the RBAC block of `DatabaseSeeder`) reported one more unseeded
+code than the evidence: `component.view`, used by `GET api/v1/components/{id}`, `GET api/v1/projects/{projectId}/components`
+and `.../components/tree`. The evidence scan had counted it as seeded because `TestDatabaseSeeder` (test-only) creates it.
+Owner answer in-session on 2026-10-28 (AskUserQuestion), verbatim: "Đổi sang component.read (Recommended)". The allowlist
+gains: those 3 routes in `src/CoreProject/routes/api.php` change `rbac:component.view` to `rbac:component.read` (seeded by
+`PermissionSeeder`). Totals become 6 renamed codes on 10 routes and 27 seeded codes on 62 routes (33 codes, 72 routes).

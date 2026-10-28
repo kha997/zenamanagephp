@@ -197,10 +197,10 @@ class ProjectController extends Controller // Thêm extends Controller
             // Dispatch event nếu có thay đổi về progress hoặc cost
             $changedFields = array_keys($request->validated());
             if (array_intersect($changedFields, ['progress', 'actual_cost', 'status'])) {
+                // GAP-099: the event takes the App model; build it from the same row.
                 event(new \Src\CoreProject\Events\ProjectUpdated(
-                    $project,
-                    $oldData,
-                    $changedFields
+                    (new \App\Models\Project())->newFromBuilder($project->getAttributes()),
+                    $oldData
                 ));
             }
 
@@ -242,10 +242,14 @@ class ProjectController extends Controller // Thêm extends Controller
                 );
             }
 
+            $oldData = $project->toArray();
             $project->delete();
 
-            // Dispatch event
-            event(new \Src\CoreProject\Events\ProjectUpdated($project, $oldData, ['deleted']));
+            // Dispatch event (GAP-099: App model built from the same row)
+            event(new \Src\CoreProject\Events\ProjectUpdated(
+                (new \App\Models\Project())->newFromBuilder($project->getAttributes()),
+                $oldData
+            ));
 
             return JSendResponse::success([
                 'message' => 'Dự án đã được xóa thành công.'

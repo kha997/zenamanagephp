@@ -1,14 +1,14 @@
 ---
 work_id: OWN-2026-020
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-28-own-2026-020-register-roadmap-reconciliation.md
   plan: null
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-28T17:08:24+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-28, verbatim: 'APPROVE OWN-2026-020 Gate 3'. Given on the packet at PR head 665196b3c07931e9cb536023005690733f7858e3; bound to implementation subject 54c4a05205415f355459695eb62c7e7405da1060 and implementation-tree digest cfbcfc31633312099ad66d58a3f028f6b97d25647725c2b1a6c2ddd2fee42c5e (recomputed at recording time, zero drift). Merge and the Gate-2-approved closing of issue #244 and draft PR #245 are covered by the Owner's standing in-session instruction of 2026-09-28 and Gate 2 Option A; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-28T16:26:17+07:00"
-  updated_at: "2026-10-28T16:26:17+07:00"
+  updated_at: "2026-10-28T17:08:24+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "OWN-2026-020 at subject 54c4a05205415f355459695eb62c7e7405da1060 (Gate 2 Option A), docs only. OPERATIONAL_GAP_REGISTER.md: 13 retroactive RESOLVED rows (GAP-035, 037, 038, 039, 046-050, 094-097) placed by tier; GAP-012, 013, 014b, 065 resolved in place with their PR, squash SHA, subject and digest; notes on GAP-014 (only 014c open) and GAP-031 (PR #238 Owner approval and squash SHA, packet left as the legacy-exempt example); header line naming this reconciliation. docs/roadmap/canonical-roadmap.md: 'Status as of 2026-10-28' section and Last updated line. New docs/audits/2026-10-28-own-2026-020-reconciliation-record.md. Every squash SHA is an ancestor of origin/main; every subject and digest is copied from the packet's technical_evidence; SHA-256 of all 18 historical 03-release files equal on main and branch. Diff against main is exactly the allowlist. Governance lint (with gate ordering) and docs lint pass; tests/Unit/OwnerGovernance 195 tests, only the known root-only GrandfatherLoaderTest failing."
@@ -36,13 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "54c4a05205415f355459695eb62c7e7405da1060"
   verified_at: "2026-10-28T16:26:17+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "cfbcfc31633312099ad66d58a3f028f6b97d25647725c2b1a6c2ddd2fee42c5e"
+  decision_recorded_at: "2026-10-28T17:08:24+07:00"
 ---
 
 # OWN-2026-020 — Gate 3 release decision (register and roadmap reconciliation)
 
-## OWNER GATE 3: AWAITING OWNER
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-28 ("APPROVE OWN-2026-020 Gate 3"), bound to implementation subject
+`54c4a05205415f355459695eb62c7e7405da1060` and implementation-tree digest `cfbcfc31633312099ad66d58a3f028f6b97d25647725c2b1a6c2ddd2fee42c5e`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

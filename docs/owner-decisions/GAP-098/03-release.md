@@ -1,14 +1,14 @@
 ---
 work_id: GAP-098
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-28-gap-098-unseeded-v1-permissions-evidence.md
   plan: docs/superpowers/plans/2026-10-28-gap-098-v1-permission-gap.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-28T21:15:36+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-28, verbatim: 'APPROVE GAP-098 Gate 3'. Given on the packet at PR head 82f9e9b853c92ce20f43d99fe5aed736ff6fe467; bound to implementation subject 2d478c15e5ce83f9f636aabe58715bdfee8453c0 and implementation-tree digest ceff94aace46fbc3cfcd0d6070a83852b2e6f00b7022133284204af3354b0e72 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment, environment seeding or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-28T21:10:20+07:00"
-  updated_at: "2026-10-28T21:10:20+07:00"
+  updated_at: "2026-10-28T21:15:36+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-098 at subject 2d478c15e5ce83f9f636aabe58715bdfee8453c0 (Gate 2 Option A + Owner amendment 1). Routes: project.edit->project.update (2), component.edit->component.update (1), component.view->component.read (3, amendment 1), change_request.view|stats->change_request.read (4), change_request.edit->change_request.update (1). New V1PermissionGapSeeder creates 27 codes with additive default grants (Admin all; PM 11; accountant 2; viewer 2) and is registered in DatabaseSeeder. New RouteRbacCodesSeededTest (seeds DatabaseSeeder's RBAC block, every dotted rbac code on a route must exist): red before listing 33 codes, green after. New V1PermissionGapTest (seeded non-super-admin roles): red before 2 of 3 (403, 403), green after 3/3. Full Feature + Unit 3590 tests, 5 failures identical to the GAP-021 baseline (2 root-only, 3 suite-order leaks); PHPStan clean, php-cs-fixer 0, composer ssot:lint passes, route guard OK, deptrac 0. Exact-head CI at 2d478c15: all checks green except browser-tests still running at packet time."
@@ -36,13 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "2d478c15e5ce83f9f636aabe58715bdfee8453c0"
   verified_at: "2026-10-28T21:10:20+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "ceff94aace46fbc3cfcd0d6070a83852b2e6f00b7022133284204af3354b0e72"
+  decision_recorded_at: "2026-10-28T21:15:36+07:00"
 ---
 
 # GAP-098 — Gate 3 release decision (unseeded `/api/v1` permission codes)
 
-## OWNER GATE 3: AWAITING OWNER
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-28 ("APPROVE GAP-098 Gate 3"), bound to implementation subject
+`2d478c15e5ce83f9f636aabe58715bdfee8453c0` and implementation-tree digest `ceff94aace46fbc3cfcd0d6070a83852b2e6f00b7022133284204af3354b0e72`. No deployment, environment seeding or release is authorized.
 
 ## Gói quyết định phát hành
 

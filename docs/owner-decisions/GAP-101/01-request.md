@@ -1,30 +1,35 @@
 ---
 work_id: GAP-101
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-29-gap-101-symfony-mime-cve-evidence.md
   plan: null
   branch: docs/GAP-101-symfony-mime-cve
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/384
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-29T07:01:45+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-29, verbatim: 'APPROVE GAP-101 Gate 1'. Bound to reviewed Draft PR #384 head 7e9ebe401ecba5165585a8c669f4c08a9307ac33, canonical base 01595a7f2df94e2a9eb26d4c97824a306bbb30f8. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-29T06:53:28+07:00"
-  updated_at: "2026-10-29T06:53:28+07:00"
+  updated_at: "2026-10-29T07:01:45+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-101 Gate 1 in-session on 2026-10-29 against Draft PR #384 head
+`7e9ebe401ecba5165585a8c669f4c08a9307ac33`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

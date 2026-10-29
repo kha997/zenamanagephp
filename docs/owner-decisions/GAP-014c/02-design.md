@@ -1,32 +1,38 @@
 ---
 work_id: GAP-014c
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-29-gap-014c-ncr-capa-link-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-10-29-gap-014c-ncr-capa-link.md
   branch: docs/GAP-014c-ncr-capa-link
   pr: https://github.com/kha997/zenamanagephp/pull/385
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-29T09:53:22+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-29, verbatim: 'APPROVE GAP-014c Gate 2 Option B'. Reviewed design head: 3bf3b293b94ff269422df69e849f3533617a4b4c. Approves Option B and its exact allowlist (one new migration adding nullable tasks.ncr_id with index and FK to ncrs set null; Task/Ncr relations; InspectionController create-CAPA-task action, capa_tasks and ncr_id in task_handoff; TaskController accepts/validates ncr_id on store and returns it; InspectionPageController and ncr-show view button and list; one route each in routes/api_zena.php and routes/web.php; new NcrCapaTaskLinkTest; plan and packets); no NCR close blocking, no backfill, no escalation/dashboard/notification change; not Gate 3, merge, release, deployment or running migrations on any environment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-29T09:51:02+07:00"
-  updated_at: "2026-10-29T09:51:02+07:00"
+  updated_at: "2026-10-29T09:53:22+07:00"
 generated_by: agent
 ---
 
 # GAP-014c — Durable NCR ↔ CAPA task link: Gate 2 design
+
+## OWNER GATE 2: APPROVED — OPTION B
+
+Owner approved Option B in-session on 2026-10-29 against reviewed design head
+`3bf3b293b94ff269422df69e849f3533617a4b4c`. This authorizes only the bounded implementation defined by this packet; it
+does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

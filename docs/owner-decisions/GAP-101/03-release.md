@@ -1,14 +1,14 @@
 ---
 work_id: GAP-101
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-29-gap-101-symfony-mime-cve-evidence.md
   plan: docs/superpowers/plans/2026-10-29-gap-101-symfony-mime-cve.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-29T07:14:22+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-29, verbatim: 'APPROVE GAP-101 Gate 3'. Given on the packet at PR head c7e5549e9e538faba80bed1e63cd6c007e55b7ab; bound to implementation subject cb4e02209438eb07b50b4c005004c2093010e607 and implementation-tree digest f236f0633bdbb1c083f6f315a7192051e131b3782c9c0f5e48a59beefee1658d (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-29T07:11:15+07:00"
-  updated_at: "2026-10-29T07:11:15+07:00"
+  updated_at: "2026-10-29T07:14:22+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-101 at subject cb4e02209438eb07b50b4c005004c2093010e607 (Gate 2 Option A). composer update symfony/mime only: v7.4.19 -> v7.4.22; composer.lock diff touches only the symfony/mime entry (version, reference, dist/source URL, time). composer audit --locked: red before (CVE-2026-45070), no advisories after. Unit + Feature + Integration 2830 tests, 2 failures (both root-only, known); tests/Feature/Api 823/823 green. Exact-head CI at cb4e0220: all green including Security Vulnerability Scan, except browser-tests and test still running at packet time."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "cb4e02209438eb07b50b4c005004c2093010e607"
   verified_at: "2026-10-29T07:11:15+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "f236f0633bdbb1c083f6f315a7192051e131b3782c9c0f5e48a59beefee1658d"
+  decision_recorded_at: "2026-10-29T07:14:22+07:00"
 ---
 
 # GAP-101 — Gate 3 release decision (symfony/mime CVE-2026-45070)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-29 ("APPROVE GAP-101 Gate 3"), bound to implementation subject
+`cb4e02209438eb07b50b4c005004c2093010e607` and implementation-tree digest `f236f0633bdbb1c083f6f315a7192051e131b3782c9c0f5e48a59beefee1658d`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

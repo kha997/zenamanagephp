@@ -222,13 +222,18 @@ class WorkInstancePageController extends Controller
             $storedText = $stored === null ? '' : (string) ($stored->value_string
                 ?? ($stored->value_number !== null ? (string) $stored->value_number : null)
                 ?? $stored->value_date?->format('Y-m-d'));
-            $submittedText = is_scalar($value) ? str_replace("\r\n", "\n", (string) $value) : null;
+            // ConvertEmptyStringsToNull turns a blank input into null; the API would store that as the text "null".
+            $value ??= '';
+            if (!is_scalar($value)) {
+                continue;
+            }
+            $submittedText = str_replace("\r\n", "\n", (string) $value);
 
-            if ($submittedText !== null && $submittedText === str_replace("\r\n", "\n", $storedText)) {
+            if ($submittedText === str_replace("\r\n", "\n", $storedText)) {
                 continue;
             }
 
-            $changed[(string) $fieldKey] = is_string($value) ? str_replace("\r\n", "\n", $value) : $value;
+            $changed[(string) $fieldKey] = $submittedText;
         }
 
         return $changed;

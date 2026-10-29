@@ -248,6 +248,27 @@ class WorkInstancePagesTest extends TestCase
         $this->assertSame('in_progress', $this->step->refresh()->status);
     }
 
+    public function test_blank_field_values_are_not_stored_as_null_text(): void
+    {
+        $this->step->update(['snapshot_fields_json' => [
+            ['field_key' => 'remark', 'label' => 'Remark', 'type' => 'string'],
+            ['field_key' => 'note', 'label' => 'Note', 'type' => 'string'],
+        ]]);
+        $this->actingAs($this->user)->get($this->route('show'), $this->headers)->assertOk();
+
+        // An untouched blank field posts '' (null after ConvertEmptyStringsToNull): nothing is written for it.
+        $this->actingAs($this->user)
+            ->post($this->route('steps.update'), ['status' => 'in_progress', 'field_values' => ['remark' => 'Needs a second look', 'note' => '']], $this->headers)
+            ->assertRedirect($this->route('show'));
+        $this->assertDatabaseMissing('work_instance_field_values', ['work_instance_step_id' => (string) $this->step->id, 'field_key' => 'note']);
+
+        // Clearing a populated field stores an empty value, not the text "null".
+        $this->actingAs($this->user)
+            ->post($this->route('steps.update'), ['field_values' => ['remark' => '']], $this->headers)
+            ->assertRedirect($this->route('show'));
+        $this->assertSame('', WorkInstanceFieldValue::query()->where('work_instance_step_id', (string) $this->step->id)->where('field_key', 'remark')->value('value_string'));
+    }
+
     public function test_approving_a_step_records_the_approval(): void
     {
         $this->actingAs($this->user)->get($this->route('show'), $this->headers);

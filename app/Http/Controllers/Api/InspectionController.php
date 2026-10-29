@@ -1062,7 +1062,8 @@ class InspectionController extends ApiBaseController
     private function transformNcr(Ncr $ncr): array
     {
         $projectId = (string) ($ncr->project_id ?? $ncr->inspection?->project_id ?? '');
-        $title = sprintf('CAPA %s %s', (string) $ncr->ncr_number, (string) $ncr->title);
+        // GAP-014c: fit the generated CAPA task fields within the task API limits (name/title 255, description 2000).
+        $title = mb_substr(sprintf('CAPA %s %s', (string) $ncr->ncr_number, (string) $ncr->title), 0, 255);
 
         return [
             'id' => (string) $ncr->id,
@@ -1102,14 +1103,14 @@ class InspectionController extends ApiBaseController
                     'project_id' => $projectId,
                     'name' => $title,
                     'title' => $title,
-                    'description' => trim(implode("\n\n", array_filter([
+                    'description' => mb_substr(trim(implode("\n\n", array_filter([
                         'Corrective action handoff from inspection-owned NCR.',
                         'NCR: ' . (string) $ncr->ncr_number,
                         'Inspection: ' . (string) ($ncr->inspection?->title ?? ''),
                         (string) $ncr->description,
                         $ncr->corrective_action ? 'Corrective action: ' . $ncr->corrective_action : null,
                         $ncr->preventive_action ? 'Preventive action: ' . $ncr->preventive_action : null,
-                    ]))),
+                    ]))), 0, 2000),
                     'status' => 'pending',
                     'priority' => $this->mapNcrSeverityToTaskPriority((string) $ncr->severity),
                     'tags' => ['inspection-ncr-capa'],

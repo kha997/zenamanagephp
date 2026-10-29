@@ -83,6 +83,21 @@ class NcrCapaTaskLinkTest extends TestCase
             ->assertJsonPath('data.ncr_id', (string) $ncr->id);
     }
 
+    public function test_capa_task_fits_task_limits_for_a_long_ncr(): void
+    {
+        $ncr = $this->ncr([
+            'title' => str_repeat('T', 255),
+            'description' => str_repeat('D', 3000),
+            'corrective_action' => str_repeat('C', 500),
+        ]);
+
+        $response = $this->withHeaders($this->headers)->postJson($this->capaRoute($ncr));
+
+        $response->assertCreated()->assertJsonPath('data.ncr_id', (string) $ncr->id);
+        $this->assertSame(255, mb_strlen((string) $response->json('data.name')));
+        $this->assertSame(2000, mb_strlen((string) $response->json('data.description')));
+    }
+
     public function test_task_store_accepts_ncr_id_from_the_handoff_payload(): void
     {
         $ncr = $this->ncr();

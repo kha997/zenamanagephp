@@ -1,14 +1,14 @@
 ---
 work_id: GAP-100
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-29-gap-100-test-db-leak-evidence.md
   plan: docs/superpowers/plans/2026-10-29-gap-100-test-db-leak.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-29T08:35:59+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-29, verbatim: 'APPROVE GAP-100 Gate 3'. Given on the packet at PR head 241e5091df2be5be7e9de734dab45cbf154f92e4; bound to implementation subject 984d9abdd327de002e946e69eb799e1dd3316e44 and implementation-tree digest a8a2eb3bdb9aa771c63d0dc92efd27b19bd37b6dd3a2dea4bac163bb367e169f (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-29T07:50:45+07:00"
-  updated_at: "2026-10-29T07:50:45+07:00"
+  updated_at: "2026-10-29T08:35:59+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-100 at subject 984d9abdd327de002e946e69eb799e1dd3316e44 (Gate 2 Option A; implementation commit 30da9e66 plus a merge of main bringing the GAP-101 symfony/mime fix). RefreshDatabase on ProjectManagementTest and DeployMigrateCommandTest; new Tests\\Support\\DatabaseLeakGuard hooked into Tests\\TestCase (SQLite only, classes without database isolation): fails the test with table and count changes. DatabaseLeakGuardTest red before (class missing), green after 6/6. With the guard and before the 2 fixes, exactly the 3 known leaking tests failed with the GAP-100 message; after, green. Gate-1 reproduction (VendorApiTest + ProjectManagementTest + ProductionBootstrapCommandTest) red 3 before, OK 10/10 after. Unit + Feature + Integration 2836 tests, 2 failures (both root-only, known), 348 s vs 366 s measured without the guard; tests/Feature/Api 823/823. php-cs-fixer 0, lint_tests and composer ssot:lint pass, governance and docs lints pass. Exact-head CI at 984d9abd: all green including Security Vulnerability Scan, except browser-tests, Feature Tests and test still running at packet time."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "984d9abdd327de002e946e69eb799e1dd3316e44"
   verified_at: "2026-10-29T07:50:45+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "a8a2eb3bdb9aa771c63d0dc92efd27b19bd37b6dd3a2dea4bac163bb367e169f"
+  decision_recorded_at: "2026-10-29T08:35:59+07:00"
 ---
 
 # GAP-100 — Gate 3 release decision (test classes that leak DB rows)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-29 ("APPROVE GAP-100 Gate 3"), bound to implementation subject
+`984d9abdd327de002e946e69eb799e1dd3316e44` and implementation-tree digest `a8a2eb3bdb9aa771c63d0dc92efd27b19bd37b6dd3a2dea4bac163bb367e169f`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

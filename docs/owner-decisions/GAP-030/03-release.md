@@ -71,8 +71,9 @@ digest `8ab4ed924a03d7fbd5fdb2c22b2c0a403e3f2a3ae6b9d56a999db8cea3a20bf3`.
 **4. Công khai**
 - Người chỉ có `rfi.escalate` (không có quyền mới) **không còn** xử lý leo thang được — đúng thiết kế; với seed mặc định,
   mọi role có `rfi.escalate` cũng có quyền mới.
-- Môi trường đã có dữ liệu cần chạy lại `ZenaPermissionsSeeder` và `ZenaProjectManagerRolePermissionSeeder` (chỉ thêm
-  quyền); PR này không chạy.
+- Môi trường đã có dữ liệu cần chạy lại, theo thứ tự: `ZenaPermissionsSeeder`, **`ZenaAdminRolePermissionSeeder`** (cấp
+  quyền mới cho role admin — thiếu bước này thì admin không phải super_admin sẽ mất quyền xử lý leo thang; Codex chỉ ra),
+  rồi `ZenaProjectManagerRolePermissionSeeder` (đều chỉ thêm quyền); PR này không chạy.
 
 **5. Ngoài phạm vi** — đổi luật xử lý; giao diện web; role khác; deploy / seed môi trường thật.
 

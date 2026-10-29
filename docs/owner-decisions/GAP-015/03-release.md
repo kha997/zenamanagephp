@@ -69,7 +69,7 @@ digest `b466c1025c8b72c730690591fad81e5eba5b735d5d37f13ca2f8507b3a890b6e`.
 - **Đỏ trước:** `WorkInstancePagesTest` hỏng toàn bộ (route chưa có); test người thực hiện hỏng trước khi thêm trường này.
   **Xanh sau:** 19/19 (danh sách, chi tiết, link trên trang dự án, cập nhật bước, người thực hiện chỉ trong tenant, duyệt,
   tệp đính kèm, xuất báo cáo, thiếu quyền duyệt, 404 tenant / dự án khác, chưa đăng nhập). Test seeder xanh.
-- Toàn bộ Unit + Feature + Integration tại `af5b3f11` (trước sửa lần 5–6, chỉ khác phần lọc trường trong controller trang): 2.862 test, chỉ 2 test hỏng sẵn do chạy bằng root; `tests/Feature/Api` 824/824. Tại subject cuối `7c9ef6ce`: `tests/Feature/Api` + `tests/Feature/Zena` + seeder 1.134 test xanh.
+- Toàn bộ Unit + Feature + Integration tại `af5b3f11` (trước sửa lần 5–6, chỉ khác phần lọc trường trong controller trang): 2.862 test, chỉ 2 test hỏng sẵn do chạy bằng root; `tests/Feature/Api` 824/824. Tại subject cuối `3940e6d5`: `tests/Feature/Api` + `tests/Feature/Zena` + seeder 1.135 test xanh.
 - PHPStan 0 lỗi, php-cs-fixer, SSOT lint, owner-governance lint, docs lint, route guard, deptrac sạch.
 - CI trên `47c8e13c`: xanh. CI trên `3940e6d5` đang chạy lúc lập hồ sơ.
 

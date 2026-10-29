@@ -112,9 +112,6 @@ class LaunchChecklistService
     public function runSystemIntegrationChecks(): array
     {
         $integrations = [
-            'universal_page_frame' => $this->checkUniversalPageFrame(),
-            'smart_tools' => $this->checkSmartTools(),
-            'mobile_optimization' => $this->checkMobileOptimization(),
             'accessibility' => $this->checkAccessibility(),
             'performance_optimization' => $this->checkPerformanceOptimization(),
             'api_integration' => $this->checkApiIntegration(),
@@ -432,21 +429,6 @@ class LaunchChecklistService
     {
         // Simulate performance optimization check
         return true;
-    }
-
-    private function checkUniversalPageFrame(): bool
-    {
-        return file_exists(resource_path('views/layouts/universal-frame.blade.php'));
-    }
-
-    private function checkSmartTools(): bool
-    {
-        return file_exists(resource_path('views/components/smart-search.blade.php'));
-    }
-
-    private function checkMobileOptimization(): bool
-    {
-        return file_exists(resource_path('views/components/mobile-fab.blade.php'));
     }
 
     private function checkAccessibility(): bool

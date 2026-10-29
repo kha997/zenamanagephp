@@ -1,14 +1,14 @@
 ---
 work_id: GAP-030
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-29-gap-030-rfi-resolve-escalation-evidence.md
   plan: docs/superpowers/plans/2026-10-29-gap-030-rfi-resolve-escalation.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-29T16:17:08+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-29, verbatim: 'APPROVE GAP-030 Gate 3'. Given on the packet at PR head 2ec9994f7a9b925fed857280c0dad65e0a66af5c; bound to implementation subject c73fcf717c2b83e83d3b8abc6d865fe29e128bf8 and implementation-tree digest 8ab4ed924a03d7fbd5fdb2c22b2c0a403e3f2a3ae6b9d56a999db8cea3a20bf3 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment, environment seeding or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-29T15:09:19+07:00"
-  updated_at: "2026-10-29T15:09:19+07:00"
+  updated_at: "2026-10-29T16:17:08+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-030 at subject c73fcf717c2b83e83d3b8abc6d865fe29e128bf8 (Gate 2 Option A). rfis.resolve-escalation uses rbac:rfi.resolve-escalation (escalate keeps rbac:rfi.escalate); RfiController unchanged. ZenaPermissionsSeeder adds rfi.resolve-escalation (System Admin via canonical list). ZenaProjectManagerRolePermissionSeeder matches project_manager or 'Project Manager', grants PM rfi.escalate/cancel/resolve-escalation and Project Member rfi.resolve-escalation. Red before 3 (target resolve 403, escalate-only test, seeded role-name test), green after; scratch DatabaseSeeder run: System Admin all RFI codes incl. resolve-escalation, Project Manager escalate/resolve-escalation/cancel, Project Member resolve-escalation. RouteRbacCodesSeededTest and route-security invariants green. Unit + Feature + Integration 2845 tests, 2 known root-only failures; tests/Feature/Api 824/824. PHPStan clean, php-cs-fixer 0, composer ssot:lint and lint_tests pass, route guard OK. Exact-head CI at c73fcf71: all green except test and browser-tests still running at packet time."
@@ -36,11 +36,17 @@ technical_evidence:
   verified_pr_head_sha: "c73fcf717c2b83e83d3b8abc6d865fe29e128bf8"
   verified_at: "2026-10-29T15:09:19+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "8ab4ed924a03d7fbd5fdb2c22b2c0a403e3f2a3ae6b9d56a999db8cea3a20bf3"
+  decision_recorded_at: "2026-10-29T16:17:08+07:00"
 ---
 
 # GAP-030 — Gate 3 release decision (RFI escalation resolve permission)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-29 ("APPROVE GAP-030 Gate 3"), bound to implementation subject
+`c73fcf717c2b83e83d3b8abc6d865fe29e128bf8` and implementation-tree digest `8ab4ed924a03d7fbd5fdb2c22b2c0a403e3f2a3ae6b9d56a999db8cea3a20bf3`. No deployment, environment seeding or
+release is authorized.
 
 ## Gói quyết định phát hành
 

@@ -13,23 +13,41 @@ class ZenaProjectManagerRolePermissionSeeder extends Seeder
     public const PROJECT_MANAGER_PERMISSION_CODES = [
         'rfi.escalate',
         'rfi.cancel',
+        'rfi.resolve-escalation',
+    ];
+
+    /**
+     * GAP-030: any tenant user can be chosen as an escalation target, so project members may resolve; the controller
+     * still limits resolving to the target, the project manager or an admin.
+     */
+    public const PROJECT_MEMBER_PERMISSION_CODES = [
+        'rfi.resolve-escalation',
     ];
 
     public function run(): void
     {
-        /** @var Role|null $role */
-        $role = Role::query()->whereRaw('LOWER(name) = ?', ['project_manager'])->first();
+        // GAP-030: RoleSeeder names the role "Project Manager"; older environments may use "project_manager".
+        $this->grant(['project_manager', 'project manager'], self::PROJECT_MANAGER_PERMISSION_CODES);
+        $this->grant(['project_member', 'project member'], self::PROJECT_MEMBER_PERMISSION_CODES);
+    }
 
-        if (!$role) {
-            return;
-        }
-
-        $permissionIds = Permission::query()->whereIn('code', self::PROJECT_MANAGER_PERMISSION_CODES)->pluck('id')->all();
+    /**
+     * @param list<string> $lowercaseRoleNames
+     * @param list<string> $permissionCodes
+     */
+    private function grant(array $lowercaseRoleNames, array $permissionCodes): void
+    {
+        $permissionIds = Permission::query()->whereIn('code', $permissionCodes)->pluck('id')->all();
 
         if (empty($permissionIds)) {
             return;
         }
 
-        $role->permissions()->syncWithoutDetaching($permissionIds);
+        foreach ($lowercaseRoleNames as $lowercaseRoleName) {
+            /** @var Role|null $role */
+            $role = Role::query()->whereRaw('LOWER(name) = ?', [$lowercaseRoleName])->first();
+
+            $role?->permissions()->syncWithoutDetaching($permissionIds);
+        }
     }
 }

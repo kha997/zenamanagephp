@@ -1,11 +1,11 @@
 ---
 work_id: GAP-019
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-29-gap-019-universal-frame-evidence.md
   plan: docs/superpowers/plans/2026-10-29-gap-019-universal-frame-removal.md
@@ -15,20 +15,24 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-10-29T23:04:11+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-10-29T23:05:26+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-29, verbatim: 'APPROVE GAP-019 Gate 2 Option A'. Reviewed design head: 82ee20577ed21e7d6e09f9be666d367e464887f6. Approves Option A and its exact allowlist (delete layouts/universal-frame, test-universal-frame, 8 components and 4 navigation sub-components (14 views); LaunchChecklistService drops universal_page_frame, smart_tools, mobile_optimization and their three private checks; new UniversalFrameShellRemovedTest; plan and packets); /api/v1/universal-frame/*, layouts.operator and other checklist items unchanged; not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-29T23:04:11+07:00"
-  updated_at: "2026-10-29T23:04:11+07:00"
+  updated_at: "2026-10-29T23:05:26+07:00"
 generated_by: agent
 ---
 
 # GAP-019 — Universal-frame shell with no route owner: Gate 2 design
 
-## OWNER GATE 2: AWAITING OWNER
+## OWNER GATE 2: APPROVED — OPTION A
+
+Owner approved Option A in-session on 2026-10-29 against reviewed design head
+`82ee20577ed21e7d6e09f9be666d367e464887f6`. This authorizes only the bounded implementation defined by this packet; it
+does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

@@ -212,36 +212,61 @@ class WorkInstancePageController extends Controller
      */
     private function changedFieldValues(WorkInstance $instance, string $step, array $submitted): array
     {
+        $stepModel = WorkInstanceStep::query()
+            ->where('tenant_id', $this->tenantId())
+            ->where('work_instance_id', (string) $instance->getKey())
+            ->whereKey($step)
+            ->first();
+        if ($stepModel === null) {
+            return [];
+        }
+
+        $fieldTypes = [];
+        $snapshotFields = $stepModel->getAttribute('snapshot_fields_json');
+        foreach (is_array($snapshotFields) ? $snapshotFields : [] as $field) {
+            if (is_array($field) && isset($field['field_key'])) {
+                $fieldTypes[(string) $field['field_key']] = (string) ($field['type'] ?? 'string');
+            }
+        }
         $current = WorkInstanceFieldValue::query()
             ->where('tenant_id', $this->tenantId())
-            ->whereIn('work_instance_step_id', WorkInstanceStep::query()
-                ->where('work_instance_id', (string) $instance->getKey())
-                ->whereKey($step)
-                ->select('id'))
+            ->where('work_instance_step_id', (string) $stepModel->getKey())
             ->get()
             ->keyBy('field_key');
 
         $changed = [];
         foreach ($submitted as $fieldKey => $value) {
-            $stored = $current->get((string) $fieldKey);
-            $storedText = $stored === null ? '' : (string) ($stored->value_string
-                ?? ($stored->value_number !== null ? (string) $stored->value_number : null)
-                ?? $stored->value_date?->format('Y-m-d'));
-            // ConvertEmptyStringsToNull turns a blank input into null; the API would store that as the text "null".
-            $value ??= '';
-            if (!is_scalar($value)) {
+            $type = $fieldTypes[(string) $fieldKey] ?? null;
+            // Only fields the form can edit; json / datetime values are read-only on this page.
+            if ($type === null || in_array($type, ['json', 'object', 'array', 'datetime'], true) || !(is_scalar($value) || $value === null)) {
                 continue;
             }
+
+            $stored = $current->get((string) $fieldKey);
+            $storedText = $stored instanceof WorkInstanceFieldValue ? $this->storedFieldText($stored) : '';
+            // ConvertEmptyStringsToNull turns a blank input into null.
             $submittedText = str_replace("\r\n", "\n", (string) $value);
 
             if ($submittedText === str_replace("\r\n", "\n", $storedText)) {
                 continue;
             }
 
-            $changed[(string) $fieldKey] = $submittedText;
+            // A cleared text field is stored as '' (the API would write null as the text "null"); a cleared number or
+            // date must stay null (an empty string is not a valid DATE in strict MySQL).
+            $changed[(string) $fieldKey] = ($submittedText === '' && in_array($type, ['number', 'date'], true)) ? null : $submittedText;
         }
 
         return $changed;
+    }
+
+    private function storedFieldText(WorkInstanceFieldValue $stored): string
+    {
+        $number = $stored->getAttribute('value_number');
+        $date = $stored->getAttribute('value_date');
+
+        return (string) ($stored->getAttribute('value_string')
+            ?? (is_numeric($number) ? (string) $number : null)
+            ?? ($date instanceof \DateTimeInterface ? $date->format('Y-m-d') : null));
     }
 
     private function projectForTenant(string $project): Project

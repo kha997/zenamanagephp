@@ -269,6 +269,35 @@ class WorkInstancePagesTest extends TestCase
         $this->assertSame('', WorkInstanceFieldValue::query()->where('work_instance_step_id', (string) $this->step->id)->where('field_key', 'remark')->value('value_string'));
     }
 
+    public function test_clearing_a_date_or_number_field_stores_null(): void
+    {
+        $this->step->update(['snapshot_fields_json' => [
+            ['field_key' => 'poured_on', 'label' => 'Poured on', 'type' => 'date'],
+            ['field_key' => 'slump', 'label' => 'Slump', 'type' => 'number'],
+        ]]);
+        foreach ([['poured_on', ['value_date' => '2026-10-20']], ['slump', ['value_number' => 7.5]]] as [$key, $value]) {
+            WorkInstanceFieldValue::factory()->create(array_merge([
+                'tenant_id' => (string) $this->tenant->id,
+                'work_instance_step_id' => (string) $this->step->id,
+                'field_key' => $key,
+            ], $value));
+        }
+        $this->actingAs($this->user)->get($this->route('show'), $this->headers)->assertOk();
+
+        $this->actingAs($this->user)
+            ->post($this->route('steps.update'), ['status' => 'in_progress', 'field_values' => ['poured_on' => '', 'slump' => '']], $this->headers)
+            ->assertRedirect($this->route('show'))
+            ->assertSessionHas('success');
+
+        $rows = \Illuminate\Support\Facades\DB::table('work_instance_field_values')
+            ->where('work_instance_step_id', (string) $this->step->id)
+            ->whereIn('field_key', ['poured_on', 'slump'])
+            ->get()->keyBy('field_key');
+        $this->assertNull($rows['poured_on']->value_date);
+        $this->assertNull($rows['slump']->value_number);
+        $this->assertSame('in_progress', $this->step->refresh()->status);
+    }
+
     public function test_clearing_the_deadline_removes_it(): void
     {
         $this->step->update(['deadline_at' => '2026-11-30 16:30:00']);

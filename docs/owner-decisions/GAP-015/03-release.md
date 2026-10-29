@@ -18,23 +18,23 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-10-29T20:44:29+07:00"
+  recorded_at: "2026-10-29T20:48:35+07:00"
   owner_response_reference: null
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-29T20:22:19+07:00"
-  updated_at: "2026-10-29T20:44:29+07:00"
+  updated_at: "2026-10-29T20:48:35+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "GAP-015 at subject c2ed72b4e19efd300183835a752857f0a8d7ccce (Gate 2 Option A plus approved allowlist supplement and Owner amendments 1-2). New WorkInstancePageController with 7 web routes app.projects.work-instances.* (rbac work.view / work.update / work.approve / work.export): project-scoped list with progress, detail with steps, field values and attachments, step update (status, tenant-scoped assignee, deadline, field values), approve/reject, attachment upload/delete and deliverable export, all delegating to the existing work-instance API; other tenant or project instance 404. Project page link gated on work.view. ZenaProjectManagerRolePermissionSeeder grants PM work.view/update/approve/export and Project Member work.view/update. Amendment 1: two @param PHPDoc lines on DelegatesToApiControllers. WorkInstancePagesTest 15 tests red before (routes missing; assignee test and the Codex-fix tests red before their fixes), green after; Codex round 1: status select defaults to keep-current, json/datetime fields read-only and not submitted; Codex round 2: amendment 2 API updateStep 403 for approved/rejected without work.approve, deadline datetime-local keeps time, numeric inputs step=any; seeder test green. Unit + Feature + Integration 2855 tests, 2 known root-only failures; tests/Feature/Api 824/824. PHPStan 0 errors, php-cs-fixer 0, composer ssot:lint and lint_tests pass, owner-governance and docs lint pass, route guard OK, deptrac 0. Exact-head CI: all green at 47c8e13c; fix head pending at packet time. Full suite rerun on the fix head pending at packet time; tests/Feature/Api + tests/Feature/Zena + seeders 1131 green."
+mandatory_technical_gate_summary: "GAP-015 at subject adea88159420aec376e38ff84015180159afc25b (Gate 2 Option A plus approved allowlist supplement and Owner amendments 1-2). New WorkInstancePageController with 7 web routes app.projects.work-instances.* (rbac work.view / work.update / work.approve / work.export): project-scoped list with progress, detail with steps, field values and attachments, step update (status, tenant-scoped assignee, deadline, field values), approve/reject, attachment upload/delete and deliverable export, all delegating to the existing work-instance API; other tenant or project instance 404. Project page link gated on work.view. ZenaProjectManagerRolePermissionSeeder grants PM work.view/update/approve/export and Project Member work.view/update. Amendment 1: two @param PHPDoc lines on DelegatesToApiControllers. WorkInstancePagesTest 16 tests red before (routes missing; assignee test and the Codex-fix tests red before their fixes), green after; Codex round 1: status select defaults to keep-current, json/datetime fields read-only and not submitted; Codex round 2: amendment 2 API updateStep 403 for approved/rejected without work.approve, deadline datetime-local keeps time, numeric inputs step=any; Codex round 3: string fields use a textarea and the page forwards only changed field values; seeder test green. Unit + Feature + Integration 2855 tests, 2 known root-only failures; tests/Feature/Api 824/824. PHPStan 0 errors, php-cs-fixer 0, composer ssot:lint and lint_tests pass, owner-governance and docs lint pass, route guard OK, deptrac 0. Exact-head CI: all green at 47c8e13c; fix head pending at packet time. Full suite rerun on the fix head pending at packet time; tests/Feature/Api + tests/Feature/Zena + seeders 1131 green."
 technical_evidence:
   base_sha: "2e3ba4b860f1525aa5712fd477614189c9a101f0"
-  subject_sha: "c2ed72b4e19efd300183835a752857f0a8d7ccce"
-  implementation_tree_digest: "1282e900a662df9f0dbde5a23e9d75c877087816b2c1c8746325709fa600fded"
-  verified_pr_head_sha: "c2ed72b4e19efd300183835a752857f0a8d7ccce"
-  verified_at: "2026-10-29T20:44:29+07:00"
+  subject_sha: "adea88159420aec376e38ff84015180159afc25b"
+  implementation_tree_digest: "2940afbf13a5cba1532a89c25ca8968f3e34a11c829013403d0c14ed1b4b58bb"
+  verified_pr_head_sha: "adea88159420aec376e38ff84015180159afc25b"
+  verified_at: "2026-10-29T20:48:35+07:00"
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null
@@ -42,18 +42,18 @@ owner_decision_binding:
 
 # GAP-015 — Gate 3 release decision (WorkInstance execution screens)
 
-## OWNER GATE 3: AWAITING OWNER (re-presented, round 3)
+## OWNER GATE 3: AWAITING OWNER (re-presented, round 4)
 
 Earlier approvals ("APPROVE GAP-015 Gate 3" on subject `47c8e13c` / digest `6678bb7f…`, then on subject `9e125e01bffce51a5fd04fbc58d9094d85c0d4e7` /
 digest `7c04fb4491d4629d7cf5d1cc87ec404251d4ad38514f7001075d5689f32c0bf8`) are superseded: Codex found more real issues after each and the fixes changed the implementation tree.
-A new decision is needed for subject `c2ed72b4e19efd300183835a752857f0a8d7ccce`.
+A new decision is needed for subject `adea88159420aec376e38ff84015180159afc25b`.
 
 ## Gói quyết định phát hành
 
 **1. Vấn đề là gì?** Áp dụng mẫu công việc vào dự án tạo ra "công việc theo mẫu" (WorkInstance), nhưng trên web không có
 màn hình nào để làm tiếp: xem bước, cập nhật, duyệt, đính kèm, xuất báo cáo — chỉ có API (Gate 1).
 
-**2. Sau thay đổi (Gate 2 Phương án A)** — subject `c2ed72b4`:
+**2. Sau thay đổi (Gate 2 Phương án A)** — subject `adea8815`:
 - Trang dự án có nút **"Công việc theo mẫu"** (cần quyền `work.view`).
 - **Danh sách** công việc theo mẫu của dự án, kèm tiến độ (số bước xong / tổng).
 - **Chi tiết**: từng bước với trạng thái, người thực hiện, hạn, giá trị trường; form cập nhật (trạng thái chờ / đang làm /
@@ -64,14 +64,14 @@ màn hình nào để làm tiếp: xem bước, cập nhật, duyệt, đính k�
 - Seed mặc định: **Project Manager** có `work.view`, `work.update`, `work.approve`, `work.export`; **Project Member** có
   `work.view`, `work.update`.
 
-**3. Bằng chứng** — base `2e3ba4b8`; subject `c2ed72b4e19efd300183835a752857f0a8d7ccce`;
-digest `1282e900a662df9f0dbde5a23e9d75c877087816b2c1c8746325709fa600fded`.
+**3. Bằng chứng** — base `2e3ba4b8`; subject `adea88159420aec376e38ff84015180159afc25b`;
+digest `2940afbf13a5cba1532a89c25ca8968f3e34a11c829013403d0c14ed1b4b58bb`.
 - **Đỏ trước:** `WorkInstancePagesTest` hỏng toàn bộ (route chưa có); test người thực hiện hỏng trước khi thêm trường này.
-  **Xanh sau:** 15/15 (danh sách, chi tiết, link trên trang dự án, cập nhật bước, người thực hiện chỉ trong tenant, duyệt,
+  **Xanh sau:** 16/16 (danh sách, chi tiết, link trên trang dự án, cập nhật bước, người thực hiện chỉ trong tenant, duyệt,
   tệp đính kèm, xuất báo cáo, thiếu quyền duyệt, 404 tenant / dự án khác, chưa đăng nhập). Test seeder xanh.
 - Toàn bộ Unit + Feature + Integration (tại `47c8e13c`): 2.855 test, chỉ 2 test hỏng sẵn do chạy bằng root; `tests/Feature/Api` 824/824. Sau sửa lần 2: `tests/Feature/Api` + `tests/Feature/Zena` + seeder 1.131 test xanh; toàn bộ suite đang chạy lại.
 - PHPStan 0 lỗi, php-cs-fixer, SSOT lint, owner-governance lint, docs lint, route guard, deptrac sạch.
-- CI trên `47c8e13c`: xanh. CI trên `c2ed72b4` đang chạy lúc lập hồ sơ.
+- CI trên `47c8e13c`: xanh. CI trên `adea8815` đang chạy lúc lập hồ sơ.
 
 **3b. Sửa theo Codex (sau lần duyệt trước)** — 2 lỗi thật, mỗi lỗi có test đỏ trước / xanh sau:
 - Bước đã duyệt / bị từ chối: ô trạng thái trước đây tự chọn "chờ xử lý", nên lưu hạn / người thực hiện sẽ đưa bước về
@@ -85,6 +85,10 @@ digest `1282e900a662df9f0dbde5a23e9d75c877087816b2c1c8746325709fa600fded`.
   trả 403 cho 2 trạng thái này nếu thiếu `work.approve`; người có quyền duyệt dùng như cũ.
 - **Hạn có giờ:** ô hạn trước đây chỉ có ngày, lưu bước bất kỳ làm mất giờ (16:30 → 00:00). Nay là ô ngày-giờ.
 - **Số thập phân:** ô số trước đây chặn giá trị như 1,25 và chặn cả form. Nay cho nhập số thập phân.
+
+**3d. Sửa theo Codex lần 3** — test đỏ trước / xanh sau:
+- **Văn bản nhiều dòng:** ô một dòng làm mất xuống dòng, và lưu bước bất kỳ ghi đè giá trị đó. Nay trường chữ là ô nhiều
+  dòng, và trang **chỉ gửi những trường người dùng thực sự sửa** — trường không đổi được giữ nguyên như đã lưu.
 
 **4. Công khai (khác so với bản thiết kế, đã ghi ở 02-design)**
 - **Owner amendment 2:** chặn duyệt / từ chối qua API cập nhật bước khi thiếu `work.approve` (sửa API, ngoài allowlist

@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-29T18:20:19+07:00"
-  updated_at: "2026-10-29T18:21:44+07:00"
+  updated_at: "2026-10-29T18:40:07+07:00"
 generated_by: agent
 ---
 
@@ -122,6 +122,7 @@ Member receive the listed `work.*` codes.
 
 APIs, step / approval rules, template authoring, other roles, existing data.
 
-### Decision Needed (supplement)
+### Supplement decision: APPROVED
 
-Owner chọn: `APPROVE GAP-015 Gate 2 supplement` / Request changes.
+Owner confirmed in-session on 2026-10-29, verbatim: "APPROVE GAP-015 Gate 2 supplement" (recorded 2026-10-29T18:40:07+07:00), against
+reviewed head `e8b198fd1a6350a289e556fe89c38bfacc7d28cb`. This authorizes implementation within exactly this allowlist.

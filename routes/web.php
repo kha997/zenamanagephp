@@ -362,6 +362,15 @@ Route::prefix('app')->name('app.')->middleware(['auth', 'tenant.isolation'])->gr
     Route::post('/projects/{project}/work-templates/preview', [App\Http\Controllers\Web\WorkTemplateApplyController::class, 'preview'])->middleware('rbac:template.apply')->name('projects.work-templates.preview');
     Route::post('/projects/{project}/work-templates/apply', [App\Http\Controllers\Web\WorkTemplateApplyController::class, 'apply'])->middleware('rbac:template.apply')->name('projects.work-templates.apply');
 
+    // GAP-015: work instances created from a WorkTemplate, worked from the project.
+    Route::get('/projects/{project}/work-instances', [App\Http\Controllers\Web\WorkInstancePageController::class, 'index'])->middleware('rbac:work.view')->name('projects.work-instances.index');
+    Route::get('/projects/{project}/work-instances/{instance}', [App\Http\Controllers\Web\WorkInstancePageController::class, 'show'])->middleware('rbac:work.view')->name('projects.work-instances.show');
+    Route::post('/projects/{project}/work-instances/{instance}/steps/{step}', [App\Http\Controllers\Web\WorkInstancePageController::class, 'updateStep'])->middleware('rbac:work.update')->name('projects.work-instances.steps.update');
+    Route::post('/projects/{project}/work-instances/{instance}/steps/{step}/approve', [App\Http\Controllers\Web\WorkInstancePageController::class, 'approveStep'])->middleware('rbac:work.approve')->name('projects.work-instances.steps.approve');
+    Route::post('/projects/{project}/work-instances/{instance}/steps/{step}/attachments', [App\Http\Controllers\Web\WorkInstancePageController::class, 'storeAttachment'])->middleware('rbac:work.update')->name('projects.work-instances.steps.attachments.store');
+    Route::post('/projects/{project}/work-instances/{instance}/steps/{step}/attachments/{attachment}/delete', [App\Http\Controllers\Web\WorkInstancePageController::class, 'destroyAttachment'])->middleware('rbac:work.update')->name('projects.work-instances.steps.attachments.destroy');
+    Route::post('/projects/{project}/work-instances/{instance}/export', [App\Http\Controllers\Web\WorkInstancePageController::class, 'export'])->middleware('rbac:work.export')->name('projects.work-instances.export');
+
     // Project sub-resources
     // (route projects.documents + projects.history đã gỡ 21/07: method controller
     // bị xoá từ commit cleanup cũ → 500, view đích là mock demo chết)

@@ -126,3 +126,23 @@ APIs, step / approval rules, template authoring, other roles, existing data.
 
 Owner confirmed in-session on 2026-10-29, verbatim: "APPROVE GAP-015 Gate 2 supplement" (recorded 2026-10-29T18:40:07+07:00), against
 reviewed head `e8b198fd1a6350a289e556fe89c38bfacc7d28cb`. This authorizes implementation within exactly this allowlist.
+
+## Owner amendment 1 (2026-10-29)
+
+PHPStan reported two new errors because the new page controller uses `DelegatesToApiControllers`, whose
+`buildApiRequest()` lacks array value types (existing debt, baselined for every other controller that uses the trait);
+adding baseline entries is not allowed and the trait file was not in the allowlist. Owner answer in-session on 2026-10-29
+(AskUserQuestion), verbatim: "Thêm @param vào trait (Recommended)". The allowlist gains exactly two PHPDoc `@param`
+lines (`array<string, mixed> $payload`, `array<string, mixed> $files`) in
+`app/Http/Controllers/Web/Concerns/DelegatesToApiControllers.php`; no logic change.
+
+## Implementation notes (disclosed for Gate 3, within the approved allowlist)
+
+- **Route names:** the routes sit in the existing project route group of `routes/web.php`
+  (`Route::prefix('app')->name('app.')`, next to `app.projects.work-templates.*`), so their names carry the `app.` prefix
+  (`app.projects.work-instances.*`), not `operator.` as the supplement table says. Paths, permissions and handlers are as
+  approved.
+- **Missing permission on a web action:** the existing `rbac` middleware answers a browser form post by redirecting back
+  with an error message instead of a bare 403, so the test asserts that redirect, the error and the unchanged step.
+- **Assignee:** the step form offers users of the current tenant only; the page rejects any other `assignee_id` (the API
+  only checks that the user exists).

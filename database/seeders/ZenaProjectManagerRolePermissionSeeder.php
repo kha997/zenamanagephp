@@ -14,6 +14,11 @@ class ZenaProjectManagerRolePermissionSeeder extends Seeder
         'rfi.escalate',
         'rfi.cancel',
         'rfi.resolve-escalation',
+        // GAP-015: work through template-based work instances on the project screens.
+        'work.view',
+        'work.update',
+        'work.approve',
+        'work.export',
     ];
 
     /**
@@ -22,6 +27,8 @@ class ZenaProjectManagerRolePermissionSeeder extends Seeder
      */
     public const PROJECT_MEMBER_PERMISSION_CODES = [
         'rfi.resolve-escalation',
+        'work.view',
+        'work.update',
     ];
 
     public function run(): void

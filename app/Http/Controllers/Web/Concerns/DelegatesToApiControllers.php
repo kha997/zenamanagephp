@@ -10,6 +10,10 @@ use Illuminate\Http\Request;
 
 trait DelegatesToApiControllers
 {
+    /**
+     * @param array<string, mixed> $payload
+     * @param array<string, mixed> $files
+     */
     private function buildApiRequest(Request $request, array $payload = [], array $files = []): Request
     {
         $apiRequest = Request::create(

@@ -199,6 +199,7 @@ class TaskTest extends TestCase
             'work_instance_id',
             'work_instance_step_id',
             'phase_id',
+            'ncr_id',
             'name',
             'title',
             'description',

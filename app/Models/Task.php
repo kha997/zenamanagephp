@@ -57,6 +57,7 @@ class Task extends Model
         'work_instance_id',
         'work_instance_step_id',
         'phase_id',
+        'ncr_id',
         'name',
         'title',
         'description',
@@ -188,6 +189,16 @@ class Task extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    /**
+     * GAP-014c: the NCR this CAPA task corrects.
+     *
+     * @return BelongsTo<Ncr, $this>
+     */
+    public function ncr(): BelongsTo
+    {
+        return $this->belongsTo(Ncr::class);
     }
 
     public function workInstance(): BelongsTo

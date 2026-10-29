@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Api\InspectionController as ApiInspectionController;
+use App\Http\Controllers\Api\TaskController as ApiTaskController;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Web\Concerns\DelegatesToApiControllers;
 use App\Models\Ncr;
@@ -149,13 +150,30 @@ class InspectionPageController extends Controller
         $ncrModel = Ncr::query()
             ->where('tenant_id', $tenantId)
             ->where('inspection_id', $inspection)
-            ->with(['creator:id,name', 'assignee:id,name', 'inspection:id,title'])
+            ->with(['creator:id,name', 'assignee:id,name', 'inspection:id,title', 'capaTasks:id,ncr_id,name,title,status,end_date'])
             ->findOrFail($ncr);
 
         return view('inspections.ncr-show', [
             'ncr' => $ncrModel,
             'inspectionId' => $inspection,
         ]);
+    }
+
+    public function storeNcrCapaTask(Request $request, string $inspection, string $ncr, ApiInspectionController $apiController, ApiTaskController $taskController): RedirectResponse
+    {
+        try {
+            $response = $apiController->storeNcrCapaTask($this->buildApiRequest($request), $inspection, $ncr, $taskController);
+        } catch (AuthorizationException) {
+            return back()->with('error', 'Bạn không có quyền thực hiện thao tác này.');
+        } catch (Throwable) {
+            return back()->with('error', 'Không thể tạo task CAPA.');
+        }
+
+        return $this->handleMutationResponse(
+            $response,
+            route('operator.inspections.ncrs.show', ['inspection' => $inspection, 'ncr' => $ncr]),
+            'Đã tạo task CAPA'
+        );
     }
 
     public function updateNcrStatus(Request $request, string $inspection, string $ncr, ApiInspectionController $apiController): RedirectResponse

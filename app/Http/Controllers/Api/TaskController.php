@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Models\EventRecord;
+use App\Models\Ncr;
 use App\Models\Notification;
 use App\Models\Task;
 use App\Models\TaskAssignment;
@@ -305,7 +306,25 @@ class TaskController extends BaseApiController
                 'is_hidden' => ['nullable', 'boolean'],
                 'visibility' => ['nullable', 'string', 'in:public,private,team'],
                 'client_approved' => ['nullable', 'boolean'],
+                'ncr_id' => ['nullable', 'string'],
             ]);
+
+            // GAP-014c: a CAPA task may only link an NCR of the same tenant and project.
+            if ($request->filled('ncr_id')) {
+                $ncrMatches = Ncr::query()
+                    ->where('tenant_id', (string) data_get($user, 'tenant_id'))
+                    ->where('project_id', (string) $request->input('project_id'))
+                    ->whereKey((string) $request->input('ncr_id'))
+                    ->exists();
+
+                if (!$ncrMatches) {
+                    return $this->failResponse(
+                        ['ncr_id' => ['The NCR must belong to the same tenant and project as the task.']],
+                        'Validation failed',
+                        422
+                    );
+                }
+            }
 
             // Check for circular dependency
             $dependencies = $request->input('dependencies', []);
@@ -341,6 +360,7 @@ class TaskController extends BaseApiController
                 'is_hidden' => $request->input('is_hidden', false),
                 'visibility' => $request->input('visibility', 'team'),
                 'client_approved' => $request->input('client_approved', false),
+                'ncr_id' => $request->input('ncr_id'),
                 'created_by' => $user->id,
                 'updated_by' => $user->id,
             ]);

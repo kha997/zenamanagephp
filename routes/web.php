@@ -755,6 +755,7 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/inspections/{inspection}/ncrs', [App\Http\Controllers\Web\InspectionPageController::class, 'storeNcr'])->middleware('rbac:inspection.create')->name('inspections.ncrs.store');
     Route::get('/inspections/{inspection}/ncrs/{ncr}', [App\Http\Controllers\Web\InspectionPageController::class, 'showNcr'])->middleware('rbac:inspection.view')->name('inspections.ncrs.show');
     Route::post('/inspections/{inspection}/ncrs/{ncr}/status', [App\Http\Controllers\Web\InspectionPageController::class, 'updateNcrStatus'])->middleware('rbac:inspection.edit')->name('inspections.ncrs.update-status');
+    Route::post('/inspections/{inspection}/ncrs/{ncr}/capa-tasks', [App\Http\Controllers\Web\InspectionPageController::class, 'storeNcrCapaTask'])->middleware(['rbac:inspection.edit', 'rbac:task.create'])->name('inspections.ncrs.capa-tasks.store');
 
     // Materials
     Route::get('/materials', [App\Http\Controllers\Web\MaterialPageController::class, 'index'])->middleware('rbac:material.view')->name('materials.index');

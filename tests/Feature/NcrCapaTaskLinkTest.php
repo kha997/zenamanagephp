@@ -81,6 +81,12 @@ class NcrCapaTaskLinkTest extends TestCase
         $this->withHeaders($this->headers)->getJson(route('api.zena.tasks.show', ['id' => $taskId], false))
             ->assertOk()
             ->assertJsonPath('data.ncr_id', (string) $ncr->id);
+
+        Task::query()->whereKey($taskId)->update(['assigned_to' => (string) $this->actor->id]);
+
+        $this->withHeaders($this->headers)->getJson($this->ncrShowRoute($ncr))
+            ->assertOk()
+            ->assertJsonPath('data.capa_tasks.0.assignee_id', (string) $this->actor->id);
     }
 
     public function test_capa_task_fits_task_limits_for_a_long_ncr(): void

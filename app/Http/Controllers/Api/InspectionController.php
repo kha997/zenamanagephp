@@ -79,7 +79,7 @@ class InspectionController extends ApiBaseController
                 'creator:id,name,email',
                 'assignee:id,name,email',
                 'inspection:id,qc_plan_id,title,status,inspection_date',
-                'capaTasks:id,ncr_id,name,title,status,end_date,assignee_id',
+                'capaTasks:id,ncr_id,name,title,status,end_date,assigned_to',
             ])
             ->where('tenant_id', $this->tenantId())
             ->where('inspection_id', (string) $inspection->id);
@@ -1138,7 +1138,7 @@ class InspectionController extends ApiBaseController
     private function capaTasksFor(Ncr $ncr): EloquentCollection
     {
         if (!$ncr->relationLoaded('capaTasks')) {
-            $ncr->load('capaTasks:id,ncr_id,name,title,status,end_date,assignee_id');
+            $ncr->load('capaTasks:id,ncr_id,name,title,status,end_date,assigned_to');
         }
 
         $tasks = $ncr->getRelation('capaTasks');

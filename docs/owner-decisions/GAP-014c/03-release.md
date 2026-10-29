@@ -1,14 +1,14 @@
 ---
 work_id: GAP-014c
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-29-gap-014c-ncr-capa-link-evidence.md
   plan: docs/superpowers/plans/2026-10-29-gap-014c-ncr-capa-link.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-10-29T14:04:12+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-29, verbatim: 'APPROVE GAP-014c Gate 3'. Given on the re-presented packet at PR head ab7a335ef84533b3209b28f567a490270c4e9cca (Codex re-review: no findings; CI green); bound to implementation subject 7581d465bda59cfd45b8769560b1cf71cf7d87e9 and implementation-tree digest b23105c8da1a93c7b6f31ec48aebd358260b56f400279b1f262f71935ba17ffc (recomputed at recording time, zero drift). Supersedes the earlier approvals bound to 9a8439f1 and 46a516c6. Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment, migration run or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-29T12:40:29+07:00"
-  updated_at: "2026-10-29T13:36:54+07:00"
+  updated_at: "2026-10-29T14:04:12+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-014c at subject 7581d465bda59cfd45b8769560b1cf71cf7d87e9 (Gate 2 Option B + Owner amendments 1 and 2). Migration adds nullable tasks.ncr_id (ULID, index, FK to ncrs on delete set null), classified expand; Task::ncr(), Ncr::capaTasks(); POST /api/zena/inspections/{inspection}/ncrs/{ncr}/capa-tasks (rbac inspection.edit + task.create) and the web 'Tạo task CAPA' button create the CAPA task from the NCR handoff through TaskController::store, linked to the NCR, refused for a closed NCR; POST /api/zena/tasks accepts ncr_id only for an NCR of the same tenant and project; NCR API lists capa_tasks and the handoff payload carries ncr_id; NCR page lists CAPA tasks. New NcrCapaTaskLinkTest red 7/7 before, green 8/8 after (incl. migration down/up). Related NCR/inspection/escalation/dashboard/architecture suites green. Unit + Feature + Integration 2843 tests with only the 2 known root-only failures after amendment 2 (TaskTest fillable list); tests/Feature/Api 823/823. PHPStan clean, php-cs-fixer 0, composer ssot:lint and lint_tests pass, route guard OK, deptrac 0. Exact-head CI at 9a8439f1: all green including the MySQL jobs; at 46a516c6 running at packet time. Post-approval fix 46a516c6 (Codex finding) caps generated CAPA name/title at 255 and description at 2000; new length test 422 before, 201 after. Codex fix 2 (7581d465): capa_tasks projection selects assigned_to (Task::assignee_id reads it), test asserts the assignee (null before, user id after); CI at 7581d465 running at packet time."
@@ -36,11 +36,17 @@ technical_evidence:
   verified_pr_head_sha: "7581d465bda59cfd45b8769560b1cf71cf7d87e9"
   verified_at: "2026-10-29T13:36:54+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "b23105c8da1a93c7b6f31ec48aebd358260b56f400279b1f262f71935ba17ffc"
+  decision_recorded_at: "2026-10-29T14:04:12+07:00"
 ---
 
 # GAP-014c — Gate 3 release decision (durable NCR ↔ CAPA task link)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-29 ("APPROVE GAP-014c Gate 3") on the re-presented packet, bound to
+implementation subject `7581d465bda59cfd45b8769560b1cf71cf7d87e9` and implementation-tree digest `b23105c8da1a93c7b6f31ec48aebd358260b56f400279b1f262f71935ba17ffc`. No deployment,
+migration run or release is authorized.
 
 ## Re-presented after post-approval fixes
 

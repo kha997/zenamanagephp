@@ -143,3 +143,10 @@ migrations listed against `database/migrations/classifications.json`, which was 
 answer in-session on 2026-10-29 (AskUserQuestion), verbatim: "Thêm dòng \"expand\" (Recommended)". The allowlist gains
 exactly one entry in `database/migrations/classifications.json`:
 `"2026_10_29_000000_add_ncr_id_to_tasks_table": "expand"`.
+
+## Owner amendment 2 (2026-10-29)
+
+CI "Unit Tests" failed: `tests/Unit/Models/TaskTest.php::it_has_fillable_attributes` asserts the exact `Task::$fillable`
+list, which the approved design extends with `ncr_id`; the file was not in the allowlist. Owner answer in-session on
+2026-10-29 (AskUserQuestion), verbatim: "Thêm ncr_id vào test (Recommended)". The allowlist gains exactly one added line,
+`'ncr_id',`, in that test's expected fillable list.

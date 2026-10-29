@@ -21,7 +21,7 @@ decision_provenance:
 supersedes: null
 superseded_by: null
 timestamps:
-  created_at: "2026-10-29T22:20:00+07:00"
+  created_at: "2026-10-29T22:17:42+07:00"
   updated_at: "2026-10-29T22:18:12+07:00"
 generated_by: agent
 ---

@@ -1,30 +1,35 @@
 ---
 work_id: GAP-014c
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-29-gap-014c-ncr-capa-link-evidence.md
   plan: null
   branch: docs/GAP-014c-ncr-capa-link
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/385
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-29T09:50:31+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-29, verbatim: 'APPROVE GAP-014c Gate 1'. Bound to reviewed Draft PR #385 head b0beb2775752334a05d0431f961d993a4bf7ed92, canonical base 170b7eea44a35e9d2be5fe15e50159f1fc3f14d1. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-29T09:35:41+07:00"
-  updated_at: "2026-10-29T09:35:41+07:00"
+  updated_at: "2026-10-29T09:50:31+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-014c Gate 1 in-session on 2026-10-29 against Draft PR #385 head
+`b0beb2775752334a05d0431f961d993a4bf7ed92`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

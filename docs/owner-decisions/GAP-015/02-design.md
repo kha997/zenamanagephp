@@ -1,32 +1,38 @@
 ---
 work_id: GAP-015
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-10-29-gap-015-worktemplate-ui-owner-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-10-29-gap-015-work-instance-screens.md
   branch: docs/GAP-015-worktemplate-ui-owner
   pr: https://github.com/kha997/zenamanagephp/pull/387
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-29T18:21:44+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-29, verbatim: 'APPROVE GAP-015 Gate 2 Option A'. Reviewed design head: d322a0e6da8e9d4e6e83fa6987f3fbf29d6a637c. Approves Option A scope (WorkInstance execution web screens using the existing APIs; work.* default grants for Project Manager and Project Member; no API, business-rule or authoring change). Per the packet, the exact file allowlist and tests are added as a supplement for Owner confirmation before any code; not Gate 3, merge, release, deployment or environment seeding."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-29T18:20:19+07:00"
-  updated_at: "2026-10-29T18:20:19+07:00"
+  updated_at: "2026-10-29T18:21:44+07:00"
 generated_by: agent
 ---
 
 # GAP-015 — WorkTemplate / WorkInstance screens: Gate 2 design (scope choice)
+
+## OWNER GATE 2: APPROVED — OPTION A (scope)
+
+Owner approved Option A in-session on 2026-10-29 against reviewed design head
+`d322a0e6da8e9d4e6e83fa6987f3fbf29d6a637c`. As the packet states, the exact allowlist and tests follow in the supplement
+below and need Owner confirmation before implementation; this does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 
@@ -73,3 +79,49 @@ sung); nếu chọn D, tôi cập nhật register / roadmap và đóng GAP-015.
 ## What the owner is NOT being asked to decide
 
 Chưa duyệt code, Gate 3, merge, phát hành hay seed môi trường thật.
+
+## Supplement — exact allowlist and tests for Option A (needs Owner confirmation before code)
+
+### Web routes (`routes/web.php`, operator group, 7 routes)
+
+| Method + path (under `/projects/{project}/work-instances`) | Name (`operator.` prefix) | Permission | Calls |
+|---|---|---|---|
+| `GET /` | `projects.work-instances.index` | `work.view` | read-only list (tenant + project scoped) |
+| `GET /{instance}` | `projects.work-instances.show` | `work.view` | read-only detail: steps, field values, attachments |
+| `POST /{instance}/steps/{step}` | `projects.work-instances.steps.update` | `work.update` | `WorkInstanceController::updateStep` |
+| `POST /{instance}/steps/{step}/approve` | `projects.work-instances.steps.approve` | `work.approve` | `WorkInstanceController::approveStep` |
+| `POST /{instance}/steps/{step}/attachments` | `projects.work-instances.steps.attachments.store` | `work.update` | `WorkInstanceController::uploadStepAttachment` |
+| `POST /{instance}/steps/{step}/attachments/{attachment}/delete` | `projects.work-instances.steps.attachments.destroy` | `work.update` | `WorkInstanceController::deleteStepAttachment` |
+| `POST /{instance}/export` | `projects.work-instances.export` | `work.export` | `WorkInstanceController::exportDeliverable` |
+
+Mutations delegate to the existing API controller through `DelegatesToApiControllers` (same pattern as the inspection and
+submittal pages); the instance must belong to the route's project and tenant (404 otherwise). The step form offers only the
+statuses `pending`, `in_progress`, `completed`, `blocked`; approve / reject goes through the approve button (`work.approve`).
+
+### Files
+
+- New `app/Http/Controllers/Web/WorkInstancePageController.php`.
+- New `resources/views/work-instances/index.blade.php`, `resources/views/work-instances/show.blade.php`.
+- `resources/views/projects/show.blade.php`: one link "Công việc theo mẫu" (shown with `work.view`).
+- `routes/web.php`: the 7 routes above.
+- `database/seeders/ZenaProjectManagerRolePermissionSeeder.php`: PM gains `work.view`, `work.update`, `work.approve`,
+  `work.export`; Project Member gains `work.view`, `work.update`.
+- New `tests/Feature/Zena/WorkInstancePagesTest.php`; update `tests/Unit/Seeders/ZenaProjectManagerRolePermissionSeederTest.php`
+  (expected grant lists).
+- Plan `docs/superpowers/plans/2026-10-29-gap-015-work-instance-screens.md`; GAP-015 packets and evidence.
+
+### Tests (red before / green after)
+
+`WorkInstancePagesTest`: list shows the project's instances with progress; detail shows steps and field values; updating a
+step (status, assignee, deadline, a field value) persists; approve records an approval and sets the step status;
+attachment upload then delete; export returns a file; a user without `work.approve` gets 403 on approve; another tenant's
+instance or an instance of another project returns 404; unauthenticated redirects to login. Seeder test: PM and Project
+Member receive the listed `work.*` codes.
+
+### Not changed
+
+APIs, step / approval rules, template authoring, other roles, existing data.
+
+### Decision Needed (supplement)
+
+Owner chọn: `APPROVE GAP-015 Gate 2 supplement` / Request changes.

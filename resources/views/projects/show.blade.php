@@ -13,6 +13,9 @@
         @can('treasury.view-project', $project)
             <x-ui.button-link :href="route('operator.treasury.projects.show', $project->id)" variant="secondary">Ngân quỹ</x-ui.button-link>
         @endcan
+        @if (auth()->user()?->hasPermission('work.view'))
+            <x-ui.button-link :href="route('app.projects.work-instances.index', $project->id)" variant="secondary">Công việc theo mẫu</x-ui.button-link>
+        @endif
         <x-ui.template-dropdown :links="$projectTemplates->map(fn ($tpl) => [
             'label' => $tpl->name,
             'href' => route('app.projects.documents.render', [$project->id, $tpl->id]),

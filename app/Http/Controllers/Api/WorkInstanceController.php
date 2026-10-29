@@ -8,6 +8,7 @@ use App\Exceptions\DeliverablePdfExportUnavailableException;
 use App\Models\Approval;
 use App\Models\DeliverableTemplateVersion;
 use App\Models\Project;
+use App\Models\User;
 use App\Models\WorkInstance;
 use App\Models\WorkInstanceFieldValue;
 use App\Models\WorkInstanceStep;
@@ -109,6 +110,13 @@ class WorkInstanceController extends BaseApiController
 
         if ($validator->fails()) {
             return $this->validationError($validator->errors());
+        }
+
+        // GAP-015: approving or rejecting a step is work.approve's decision, not a plain step update.
+        $user = $request->user();
+        if (in_array($request->input('status'), ['approved', 'rejected'], true)
+            && !($user instanceof User && $user->hasPermission('work.approve'))) {
+            return $this->errorResponse('Approving or rejecting a step requires the work.approve permission', 403);
         }
 
         try {

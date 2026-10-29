@@ -6,7 +6,7 @@ technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: null
+  value: none
   authority: human_owner
 decision_requested: approve_or_correction_or_defer
 references:
@@ -35,6 +35,9 @@ technical_evidence:
   implementation_tree_digest: "6678bb7fc91075921b5652d587f86f1b02a7b7a6c48586d454fc21c0ea4ac4bd"
   verified_pr_head_sha: "47c8e13cb177a7653f78f31776b5e7c3b68f5874"
   verified_at: "2026-10-29T20:22:19+07:00"
+owner_decision_binding:
+  implementation_tree_digest: null
+  decision_recorded_at: null
 ---
 
 # GAP-015 — Gate 3 release decision (WorkInstance execution screens)

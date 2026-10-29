@@ -21,6 +21,7 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'rfi.respond', 'module' => 'rfi', 'action' => 'respond', 'description' => 'Respond to an RFI'],
         ['code' => 'rfi.close', 'module' => 'rfi', 'action' => 'close', 'description' => 'Close an RFI thread'],
         ['code' => 'rfi.escalate', 'module' => 'rfi', 'action' => 'escalate', 'description' => 'Escalate an RFI to another user'],
+        ['code' => 'rfi.resolve-escalation', 'module' => 'rfi', 'action' => 'resolve-escalation', 'description' => 'Resolve an RFI escalation (target, project manager or admin)'],
         ['code' => 'rfi.cancel', 'module' => 'rfi', 'action' => 'cancel', 'description' => 'Cancel an RFI'],
 
         // Submittals

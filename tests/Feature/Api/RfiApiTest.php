@@ -502,14 +502,13 @@ class RfiApiTest extends TestCase
         $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
         $memberRole = \App\Models\Role::firstOrCreate(['name' => 'member'], ['scope' => 'system', 'description' => 'Member', 'is_active' => true]);
         \App\Models\UserRoleProject::firstOrCreate(['project_id' => $this->project->id, 'user_id' => $target->id], ['role_id' => $memberRole->id]);
-        // The `rbac:rfi.escalate` route middleware checks system-level role
-        // attachment (User::roles()/user_roles pivot) + Permission::name, which is
-        // independent of the project-scoped UserRoleProject check above. Both must
-        // be satisfied for the target's resolve request to pass the middleware.
+        // GAP-030: the resolve route checks `rbac:rfi.resolve-escalation` (system-level
+        // role attachment + permission), independent of the project-scoped
+        // UserRoleProject check above; the target does not need `rfi.escalate`.
         $target->roles()->attach($memberRole->id);
         $permission = \App\Models\Permission::firstOrCreate(
-            ['code' => 'rfi.escalate'],
-            ['name' => 'rfi.escalate', 'module' => 'rfi', 'action' => 'escalate', 'description' => 'Escalate an RFI to another user'],
+            ['code' => 'rfi.resolve-escalation'],
+            ['name' => 'rfi.resolve-escalation', 'module' => 'rfi', 'action' => 'resolve-escalation', 'description' => 'Resolve an RFI escalation'],
         );
         $memberRole->permissions()->syncWithoutDetaching([$permission->id]);
 
@@ -544,8 +543,8 @@ class RfiApiTest extends TestCase
         $unrelated = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
         $unrelated->roles()->attach($memberRole->id);
         $permission = \App\Models\Permission::firstOrCreate(
-            ['code' => 'rfi.escalate'],
-            ['name' => 'rfi.escalate', 'module' => 'rfi', 'action' => 'escalate', 'description' => 'Escalate an RFI to another user'],
+            ['code' => 'rfi.resolve-escalation'],
+            ['name' => 'rfi.resolve-escalation', 'module' => 'rfi', 'action' => 'resolve-escalation', 'description' => 'Resolve an RFI escalation'],
         );
         $memberRole->permissions()->syncWithoutDetaching([$permission->id]);
 
@@ -558,6 +557,33 @@ class RfiApiTest extends TestCase
             ->postJson($this->zena('rfis.resolve-escalation', ['id' => $rfi->id]), ['resolution' => 'Trying to resolve an escalation that is not mine']);
 
         $response->assertStatus(403);
+    }
+
+    public function test_escalate_permission_alone_no_longer_resolves(): void
+    {
+        $rfi = Rfi::factory()->create([
+            'project_id' => $this->project->id, 'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id, 'status' => 'open',
+        ]);
+        $target = User::factory()->create(['tenant_id' => $this->apiFeatureTenant->id, 'is_active' => true]);
+        $memberRole = \App\Models\Role::firstOrCreate(['name' => 'member'], ['scope' => 'system', 'description' => 'Member', 'is_active' => true]);
+        \App\Models\UserRoleProject::firstOrCreate(['project_id' => $this->project->id, 'user_id' => $target->id], ['role_id' => $memberRole->id]);
+        $target->roles()->attach($memberRole->id);
+        $permission = \App\Models\Permission::firstOrCreate(
+            ['code' => 'rfi.escalate'],
+            ['name' => 'rfi.escalate', 'module' => 'rfi', 'action' => 'escalate', 'description' => 'Escalate an RFI to another user'],
+        );
+        $memberRole->permissions()->syncWithoutDetaching([$permission->id]);
+
+        $this->apiPost($this->zena('rfis.escalate', ['id' => $rfi->id]), ['escalation_reason' => 'Urgent', 'escalated_to' => $target->id])->assertStatus(200);
+
+        $token = $this->apiLoginToken($target, $this->apiFeatureTenant);
+        app('auth')->forgetGuards();
+        $this->withHeaders($this->authHeadersForUser($target, $token))
+            ->postJson($this->zena('rfis.resolve-escalation', ['id' => $rfi->id]), ['resolution' => 'Escalate permission only'])
+            ->assertStatus(403);
+
+        $this->assertNotNull($rfi->refresh()->current_escalation_id);
     }
 
     public function test_resolve_escalation_twice_returns_conflict(): void

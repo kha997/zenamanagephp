@@ -1,14 +1,14 @@
 ---
 work_id: OWN-2026-021
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-29-own-2026-021-register-reconciliation.md
   plan: null
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-10-29T22:20:27+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-10-29T22:21:32+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-29, verbatim: 'APPROVE OWN-2026-021 Gate 3'. Given on the packet at PR head 88806d8ea231720692ebc5f9c726b7690784b64b; bound to implementation subject 220f9d0d81a48b0e882165da8e7c3fbe63d4e6f4 and implementation-tree digest 20024f5181202c805cd1ae053eec286f3ae17aa0f774c06a0b28379f680b8410 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-29T22:20:27+07:00"
-  updated_at: "2026-10-29T22:20:27+07:00"
+  updated_at: "2026-10-29T22:21:32+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "OWN-2026-021 at subject 220f9d0d81a48b0e882165da8e7c3fbe63d4e6f4 (Gate 2 Option A), docs only. OPERATIONAL_GAP_REGISTER.md: GAP-021, 098, 018, 020, 014c, 030 resolved in place and GAP-015 partially resolved in place, each with PR, squash SHA, subject and digest and the earlier status kept in the notes; GAP-014 parent resolved; new RESOLVED rows GAP-099 and GAP-101 (tier 2) and GAP-100 (tier 7); deploy notes for GAP-014c, 030, 098, 015; header line naming this reconciliation. docs/roadmap/canonical-roadmap.md: status section dated 2026-10-29, released list extended, open work now GAP-019, GAP-026 (blocked) and optional follow-ups. New docs/audits/2026-10-29-own-2026-021-reconciliation-record.md. Every squash SHA is an ancestor of origin/main; every subject and digest is copied from the packet; SHA-256 of all 10 GAP 03-release files equal on main and branch. Diff against main is exactly the allowlist. Governance lint (with gate ordering), docs lint and ssot:lint pass; tests/Unit/OwnerGovernance 195 tests, only the known root-only GrandfatherLoaderTest failing."
@@ -36,13 +36,17 @@ technical_evidence:
   verified_pr_head_sha: "220f9d0d81a48b0e882165da8e7c3fbe63d4e6f4"
   verified_at: "2026-10-29T22:20:27+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "20024f5181202c805cd1ae053eec286f3ae17aa0f774c06a0b28379f680b8410"
+  decision_recorded_at: "2026-10-29T22:21:32+07:00"
 ---
 
 # OWN-2026-021 — Gate 3 release decision (register and roadmap reconciliation)
 
-## OWNER GATE 3: AWAITING OWNER
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-29 ("APPROVE OWN-2026-021 Gate 3"), bound to implementation subject
+`220f9d0d81a48b0e882165da8e7c3fbe63d4e6f4` and implementation-tree digest `20024f5181202c805cd1ae053eec286f3ae17aa0f774c06a0b28379f680b8410`. No deployment or release is
+authorized.
 
 ## Gói quyết định phát hành
 
@@ -63,7 +67,7 @@ digest `20024f5181202c805cd1ae053eec286f3ae17aa0f774c06a0b28379f680b8410`.
 - Diff so với `main` đúng allowlist.
 - Governance lint (gồm gate ordering), docs lint, `ssot:lint` sạch; `tests/Unit/OwnerGovernance` 195 test, chỉ 1 test
   hỏng sẵn do chạy bằng root.
-- CI trên đúng head: đang chạy lúc lập hồ sơ.
+- CI trên đúng head: đang chạy lúc lập hồ sơ; lần Owner Governance Lint trên `220f9d0d` hỏng do push kế tiếp đổi số file giữa hai lần đếm (không phải lỗi nội dung).
 
 **4. Ngoài phạm vi** — code, test, CI; hồ sơ GAP-*; GAP-019, GAP-026; `backlog.yaml`; GitHub issue / PR; deploy.
 

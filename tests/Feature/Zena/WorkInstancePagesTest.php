@@ -182,6 +182,50 @@ class WorkInstancePagesTest extends TestCase
         $this->assertSame('Updated', $values['remark']->value_string);
     }
 
+    public function test_api_step_update_cannot_set_an_approval_status_without_work_approve(): void
+    {
+        $member = $this->createTenantUser($this->tenant, [], ['member'], ['work.view', 'work.update']);
+        $url = route('api.zena.work-instances.steps.update', ['id' => (string) $this->instance->id, 'stepId' => (string) $this->step->id], false);
+        $headers = [
+            'Accept' => 'application/json',
+            'X-Tenant-ID' => (string) $this->tenant->id,
+            'Authorization' => 'Bearer ' . $member->createToken('test-token')->plainTextToken,
+        ];
+
+        foreach (['approved', 'rejected'] as $status) {
+            $this->patchJson($url, ['status' => $status], $headers)->assertForbidden();
+        }
+        $this->assertSame('pending', $this->step->refresh()->status);
+
+        $this->patchJson($url, ['status' => 'in_progress'], $headers)->assertOk();
+        $this->assertSame('in_progress', $this->step->refresh()->status);
+
+        $approverHeaders = array_merge($headers, ['Authorization' => 'Bearer ' . $this->user->createToken('test-token')->plainTextToken]);
+        $this->patchJson($url, ['status' => 'approved'], $approverHeaders)->assertOk();
+        $this->assertSame('approved', $this->step->refresh()->status);
+    }
+
+    public function test_step_form_keeps_deadline_time_and_allows_fractional_numbers(): void
+    {
+        $this->step->update([
+            'deadline_at' => '2026-11-30 16:30:00',
+            'snapshot_fields_json' => [['field_key' => 'slump', 'label' => 'Slump', 'type' => 'number']],
+        ]);
+
+        $this->actingAs($this->user)->get($this->route('show'), $this->headers)
+            ->assertOk()
+            ->assertSee('type="datetime-local"', false)
+            ->assertSee('value="2026-11-30T16:30"', false)
+            ->assertSee('step="any"', false);
+
+        $this->actingAs($this->user)
+            ->post($this->route('steps.update'), ['deadline_at' => '2026-11-30T16:30', 'field_values' => ['slump' => '1.25']], $this->headers)
+            ->assertRedirect($this->route('show'));
+
+        $this->assertSame('2026-11-30 16:30', $this->step->refresh()->deadline_at?->format('Y-m-d H:i'));
+        $this->assertDatabaseHas('work_instance_field_values', ['work_instance_step_id' => (string) $this->step->id, 'field_key' => 'slump', 'value_number' => 1.25]);
+    }
+
     public function test_approving_a_step_records_the_approval(): void
     {
         $this->actingAs($this->user)->get($this->route('show'), $this->headers);

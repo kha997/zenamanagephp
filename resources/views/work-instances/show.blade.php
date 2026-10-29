@@ -54,7 +54,7 @@
                 <div class="space-y-4">
                     <x-ui.field-value label="Trạng thái" :value="$statusLabels[$step->status] ?? $step->status" />
                     <x-ui.field-value label="Người thực hiện" :value="$assignees->firstWhere('id', $step->assignee_id)?->name ?? '—'" />
-                    <x-ui.field-value label="Hạn" :value="optional($step->deadline_at)->format('d/m/Y') ?? '—'" />
+                    <x-ui.field-value label="Hạn" :value="optional($step->deadline_at)->format('d/m/Y H:i') ?? '—'" />
 
                     @foreach ($fields as $field)
                         @php
@@ -91,7 +91,7 @@
                         </div>
                         <div class="operator-field">
                             <label for="deadline-{{ $step->id }}">Hạn</label>
-                            <input id="deadline-{{ $step->id }}" name="deadline_at" type="date" class="operator-input" value="{{ optional($step->deadline_at)->format('Y-m-d') }}">
+                            <input id="deadline-{{ $step->id }}" name="deadline_at" type="datetime-local" class="operator-input" value="{{ optional($step->deadline_at)->format('Y-m-d\TH:i') }}">
                         </div>
                         @foreach ($editableFields as $field)
                             @php $value = $valuesByKey->get($field['field_key']); @endphp
@@ -102,6 +102,7 @@
                                     name="field_values[{{ $field['field_key'] }}]"
                                     type="{{ match ($field['type'] ?? 'string') { 'number' => 'number', 'date' => 'date', default => 'text' } }}"
                                     class="operator-input"
+                                    @if (($field['type'] ?? 'string') === 'number') step="any" @endif
                                     value="{{ $value?->value_string ?? $value?->value_number ?? optional($value?->value_date)->format('Y-m-d') }}"
                                 >
                             </div>

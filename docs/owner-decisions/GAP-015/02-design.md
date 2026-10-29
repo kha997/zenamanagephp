@@ -146,3 +146,13 @@ lines (`array<string, mixed> $payload`, `array<string, mixed> $files`) in
   with an error message instead of a bare 403, so the test asserts that redirect, the error and the unchanged step.
 - **Assignee:** the step form offers users of the current tenant only; the page rejects any other `assignee_id` (the API
   only checks that the user exists).
+
+## Owner amendment 2 (2026-10-29)
+
+Codex (P1, security) on PR #387: the existing `PATCH /api/zena/work-instances/{id}/steps/{stepId}` needs only
+`work.update` yet accepts `approved` / `rejected` without checking `work.approve` or recording an approval; this design
+grants `work.update` to Project Member, who could then "approve" steps through the API. The API controller was not in the
+allowlist ("APIs not changed"). Owner answer in-session on 2026-10-29 (AskUserQuestion), verbatim: "Chặn trong API
+(Recommended)". The allowlist gains: in `app/Http/Controllers/Api/WorkInstanceController.php::updateStep`, a request
+setting `status` to `approved` or `rejected` returns 403 unless the user has `work.approve` (users with `work.approve`
+behave as before), plus the `User` import; covered by a new test in `WorkInstancePagesTest`. Member keeps `work.update`.

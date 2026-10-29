@@ -1,6 +1,6 @@
 # ZenaManage Canonical Roadmap
 
-Last updated: 2026-10-28 (status section below; sections after it describe the 2026-03-19 baseline)
+Last updated: 2026-10-29 (status section below; sections after it describe the 2026-03-19 baseline)
 Role: execution sequencing SSOT
 Companion docs:
 
@@ -10,11 +10,11 @@ Companion docs:
 - `docs/agent-ssot-rules.md` = evidence/verification law
 - `docs/engineering/testing-matrix.md` = verify-order SSOT
 
-## Status as of 2026-10-28
+## Status as of 2026-10-29
 
-Added by OWN-2026-020. `OPERATIONAL_GAP_REGISTER.md` is the source of truth for open and released work; the sections
-after this one are the 2026-03-19 baseline, kept as history. `docs/roadmap/backlog.yaml` has 29/29 items `done`, so new
-work is tracked by Work ID in the register.
+Added by OWN-2026-020, updated by OWN-2026-021. `OPERATIONAL_GAP_REGISTER.md` is the source of truth for open and
+released work; the sections after this one are the 2026-03-19 baseline, kept as history. `docs/roadmap/backlog.yaml` has
+29/29 items `done`, so new work is tracked by Work ID in the register.
 
 ### Released to `main` since 2026-03-19 (not deployed)
 
@@ -28,19 +28,19 @@ work is tracked by Work ID in the register.
 - **Dead routes and views:** GAP-016, 017, 029, 077, 078.
 - **Build, deploy and CI:** GAP-035, 039, 049, 050, 062, 065, 071, 073–076, 079–081, 085, 087–093.
 - **Owner governance:** GAP-047 and the OWN-2026-0xx reconciliations.
+- **API, permissions and cleanup (2026-10-28 … 29):** GAP-021 (v1/zena task parity), GAP-098 (unseeded v1 permission
+  codes), GAP-099 (v1 project update/delete), GAP-018 (smart-tools), GAP-020 (orphan admin views), GAP-030 (RFI
+  escalation resolve permission).
+- **Quality, security and workflow (2026-10-29):** GAP-100 (test DB-leak guard), GAP-101 (symfony/mime CVE), GAP-014c
+  (NCR ↔ CAPA task link), GAP-015 Option A (WorkInstance execution screens).
 
 ### Open work, proposed order
 
-1. GAP-021 (`/api/v1/tasks*` vs `/api/zena/tasks*` differences), GAP-018 (smart-tools wrong API prefix), GAP-020 (orphan
-   admin views).
-2. The ten test files with the same DB-leak shape as GAP-065 (its evidence Finding 5), and a suite-wide leak guard — no
-   Work ID yet.
-3. GAP-014c (durable NCR ↔ CAPA task link).
-4. GAP-015 (WorkTemplate authoring UI owner), GAP-019 (universal-frame shell owner), GAP-030 (RFI escalation resolve
-   permission), GAP-026 (blocked: Slack channel owner outside the repository).
-5. Treasury extensions left out of S1–S6 (attachments, BOQ link, fund chains, investor receivable, per-advance deadline,
-   configurable thresholds, period lock, bank import), or Project OPPM / One-Page (issue #248, draft PR #257) — each needs
-   its own Gate 1.
+1. GAP-019 (`universal-frame` layout that no route uses).
+2. GAP-026 (blocked: Slack channel owner outside the repository).
+3. Optional, each needs its own Gate 1: WorkTemplate authoring screens (the rest of GAP-015); Treasury extensions left
+   out of S1–S6 (attachments, BOQ link, fund chains, investor receivable, per-advance deadline, configurable thresholds,
+   period lock, bank import); Project OPPM / One-Page (issue #248, draft PR #257).
 
 The order is a proposal; the Owner chooses the next Work ID.
 

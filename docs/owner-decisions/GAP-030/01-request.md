@@ -1,30 +1,35 @@
 ---
 work_id: GAP-030
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-29-gap-030-rfi-resolve-escalation-evidence.md
   plan: null
   branch: docs/GAP-030-rfi-resolve-escalation
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/386
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-29T14:47:40+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-29, verbatim: 'APPROVE GAP-030 Gate 1'. Bound to reviewed Draft PR #386 head f2c1d5f6966c9e8930a453edb99547107476e82c, canonical base 23a909459b8161c613bdceabc6d52029b33d440c. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-29T14:45:06+07:00"
-  updated_at: "2026-10-29T14:45:06+07:00"
+  updated_at: "2026-10-29T14:47:40+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-030 Gate 1 in-session on 2026-10-29 against Draft PR #386 head
+`f2c1d5f6966c9e8930a453edb99547107476e82c`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

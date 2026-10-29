@@ -131,6 +131,57 @@ class WorkInstancePagesTest extends TestCase
         $this->assertSame((string) $colleague->id, (string) $this->step->refresh()->assignee_id);
     }
 
+    public function test_saving_other_fields_keeps_an_approved_status(): void
+    {
+        $this->step->update(['status' => 'approved']);
+        $this->actingAs($this->user)->get($this->route('show'), $this->headers)
+            ->assertSee('<option value="" selected>', false);
+
+        $this->actingAs($this->user)
+            ->post($this->route('steps.update'), ['status' => '', 'deadline_at' => '2026-12-01'], $this->headers)
+            ->assertRedirect($this->route('show'));
+
+        $this->step->refresh();
+        $this->assertSame('approved', $this->step->status);
+        $this->assertSame('2026-12-01', $this->step->deadline_at?->toDateString());
+    }
+
+    public function test_json_and_datetime_values_are_not_submitted_or_overwritten(): void
+    {
+        $this->step->update(['snapshot_fields_json' => [
+            ['field_key' => 'remark', 'label' => 'Remark', 'type' => 'string'],
+            ['field_key' => 'checklist', 'label' => 'Checklist', 'type' => 'json'],
+            ['field_key' => 'checked_at', 'label' => 'Checked at', 'type' => 'datetime'],
+        ]]);
+        WorkInstanceFieldValue::factory()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'work_instance_step_id' => (string) $this->step->id,
+            'field_key' => 'checklist',
+            'value_json' => ['rebar' => true],
+        ]);
+        WorkInstanceFieldValue::factory()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'work_instance_step_id' => (string) $this->step->id,
+            'field_key' => 'checked_at',
+            'value_datetime' => '2026-10-20 08:30:00',
+        ]);
+
+        $page = $this->actingAs($this->user)->get($this->route('show'), $this->headers)->assertOk();
+        $page->assertSee('name="field_values[remark]"', false)
+            ->assertDontSee('name="field_values[checklist]"', false)
+            ->assertDontSee('name="field_values[checked_at]"', false)
+            ->assertSee('20/10/2026 08:30');
+
+        $this->actingAs($this->user)
+            ->post($this->route('steps.update'), ['field_values' => ['remark' => 'Updated']], $this->headers)
+            ->assertRedirect($this->route('show'));
+
+        $values = WorkInstanceFieldValue::query()->where('work_instance_step_id', (string) $this->step->id)->get()->keyBy('field_key');
+        $this->assertSame(['rebar' => true], $values['checklist']->value_json);
+        $this->assertSame('2026-10-20 08:30:00', $values['checked_at']->value_datetime?->format('Y-m-d H:i:s'));
+        $this->assertSame('Updated', $values['remark']->value_string);
+    }
+
     public function test_approving_a_step_records_the_approval(): void
     {
         $this->actingAs($this->user)->get($this->route('show'), $this->headers);

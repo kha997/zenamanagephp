@@ -44,6 +44,9 @@
                 $fields = collect($step->snapshot_fields_json ?? [])
                     ->filter(static fn ($field) => is_array($field) && isset($field['field_key']))
                     ->values();
+                // Only these types round-trip through a plain input; json / datetime values stay read-only so a save
+                // cannot overwrite them.
+                $editableFields = $fields->filter(static fn ($field) => ! in_array($field['type'] ?? 'string', ['json', 'object', 'array', 'datetime'], true));
                 $stepRouteParams = ['project' => $project->id, 'instance' => $instance->id, 'step' => $step->id];
             @endphp
 
@@ -59,6 +62,7 @@
                             $display = $value?->value_string
                                 ?? ($value?->value_number !== null ? (string) $value->value_number : null)
                                 ?? optional($value?->value_date)->format('d/m/Y')
+                                ?? optional($value?->value_datetime)->format('d/m/Y H:i')
                                 ?? ($value?->value_json !== null ? json_encode($value->value_json, JSON_UNESCAPED_UNICODE) : null);
                         @endphp
                         <x-ui.field-value :label="$field['label'] ?? $field['field_key']" :value="$display ?? '—'" />
@@ -70,8 +74,9 @@
                         <div class="operator-field">
                             <label for="status-{{ $step->id }}">Cập nhật trạng thái</label>
                             <select id="status-{{ $step->id }}" name="status" class="operator-select">
+                                <option value="" selected>— Giữ nguyên ({{ $statusLabels[$step->status] ?? $step->status }}) —</option>
                                 @foreach ($editableStatuses as $status)
-                                    <option value="{{ $status }}" @selected($step->status === $status)>{{ $statusLabels[$status] }}</option>
+                                    <option value="{{ $status }}">{{ $statusLabels[$status] }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -88,7 +93,7 @@
                             <label for="deadline-{{ $step->id }}">Hạn</label>
                             <input id="deadline-{{ $step->id }}" name="deadline_at" type="date" class="operator-input" value="{{ optional($step->deadline_at)->format('Y-m-d') }}">
                         </div>
-                        @foreach ($fields as $field)
+                        @foreach ($editableFields as $field)
                             @php $value = $valuesByKey->get($field['field_key']); @endphp
                             <div class="operator-field">
                                 <label for="field-{{ $step->id }}-{{ $field['field_key'] }}">{{ $field['label'] ?? $field['field_key'] }}</label>

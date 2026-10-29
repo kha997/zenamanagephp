@@ -90,6 +90,26 @@
                     </form>
                 </x-ui.card>
             @endif
+
+            <x-ui.card title="Task CAPA">
+                <div class="space-y-4">
+                    @forelse ($ncr->capaTasks as $capaTask)
+                        <x-ui.field-value
+                            :label="$capaTask->title ?? $capaTask->name"
+                            :value="match($capaTask->status) { 'pending' => 'Chờ xử lý', 'in_progress' => 'Đang làm', 'completed' => 'Hoàn thành', 'on_hold' => 'Tạm dừng', 'cancelled' => 'Đã huỷ', default => $capaTask->status } . ($capaTask->end_date ? ' — hạn ' . $capaTask->end_date->format('d/m/Y') : '')"
+                        />
+                    @empty
+                        <p class="text-sm text-slate-600">Chưa có task CAPA cho NCR này.</p>
+                    @endforelse
+
+                    @if ($ncr->status !== 'closed')
+                        <form method="POST" action="{{ route('operator.inspections.ncrs.capa-tasks.store', ['inspection' => $inspectionId, 'ncr' => $ncr->id]) }}">
+                            @csrf
+                            <button type="submit" class="operator-button operator-button-secondary">Tạo task CAPA</button>
+                        </form>
+                    @endif
+                </div>
+            </x-ui.card>
         </div>
 
         <div class="space-y-6">

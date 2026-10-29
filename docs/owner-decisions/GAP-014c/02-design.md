@@ -135,3 +135,11 @@ Owner chọn: `APPROVE GAP-014c Gate 2 Option B` (khuyến nghị) / Option A / 
 ## What the owner is NOT being asked to decide
 
 Chưa duyệt Gate 3, merge, phát hành, chạy migration trên môi trường thật; không gắn task CAPA cũ.
+
+## Owner amendment 1 (2026-10-29)
+
+The new migration must be classified for the GAP-049 deploy gate: `deploy:migrate` refuses unclassified pending
+migrations listed against `database/migrations/classifications.json`, which was not in the approved allowlist. Owner
+answer in-session on 2026-10-29 (AskUserQuestion), verbatim: "Thêm dòng \"expand\" (Recommended)". The allowlist gains
+exactly one entry in `database/migrations/classifications.json`:
+`"2026_10_29_000000_add_ncr_id_to_tasks_table": "expand"`.

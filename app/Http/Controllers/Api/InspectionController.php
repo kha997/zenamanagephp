@@ -9,10 +9,12 @@ use App\Models\Ncr;
 use App\Models\Notification;
 use App\Models\QcInspection;
 use App\Models\QcPlan;
+use App\Models\Task;
 use App\Models\WorkInstanceFieldValue;
 use App\Models\WorkInstanceStep;
 use App\Services\ZenaAuditLogger;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,6 +23,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\InputBag;
 
 class InspectionController extends ApiBaseController
 {
@@ -76,6 +79,7 @@ class InspectionController extends ApiBaseController
                 'creator:id,name,email',
                 'assignee:id,name,email',
                 'inspection:id,qc_plan_id,title,status,inspection_date',
+                'capaTasks:id,ncr_id,name,title,status,end_date,assignee_id',
             ])
             ->where('tenant_id', $this->tenantId())
             ->where('inspection_id', (string) $inspection->id);
@@ -717,6 +721,43 @@ class InspectionController extends ApiBaseController
         }
     }
 
+    /**
+     * GAP-014c: create the CAPA task for an NCR from its task handoff and link it to the NCR.
+     */
+    public function storeNcrCapaTask(Request $request, string $inspection, string $ncr, TaskController $taskController): JsonResponse
+    {
+        try {
+            if (!Auth::user()) {
+                return $this->unauthorized('Authentication required');
+            }
+
+            $inspectionModel = $this->inspectionForTenant($inspection, ['qcPlan:id,project_id,title']);
+            $ncrModel = $this->ncrForInspection($inspectionModel, $ncr);
+
+            if ($ncrModel->getAttribute('status') === 'closed') {
+                return $this->errorResponse('A closed NCR cannot get a new CAPA task', 422, [
+                    'current_status' => 'closed',
+                ]);
+            }
+
+            $payload = $this->transformNcr($ncrModel)['task_handoff']['payload'];
+
+            $taskRequest = Request::create($request->getUri(), 'POST', $payload, $request->cookies->all(), [], $request->server->all());
+            $taskRequest->headers->replace($request->headers->all());
+            $taskRequest->setJson(new InputBag($payload));
+            foreach ($request->attributes->all() as $key => $value) {
+                $taskRequest->attributes->set($key, $value);
+            }
+            $taskRequest->setUserResolver($request->getUserResolver());
+
+            return $taskController->store($taskRequest);
+        } catch (ModelNotFoundException $e) {
+            return $this->notFound('Inspection NCR not found');
+        } catch (\Exception $e) {
+            return $this->serverError('Failed to create CAPA task: ' . $e->getMessage());
+        }
+    }
+
     public function updateNcrStatus(Request $request, string $inspection, string $ncr): JsonResponse
     {
         try {
@@ -1072,11 +1113,36 @@ class InspectionController extends ApiBaseController
                     'status' => 'pending',
                     'priority' => $this->mapNcrSeverityToTaskPriority((string) $ncr->severity),
                     'tags' => ['inspection-ncr-capa'],
+                    'ncr_id' => (string) $ncr->getKey(),
                 ],
             ],
+            'capa_tasks' => $this->capaTasksFor($ncr)
+                ->map(static fn (Task $task): array => [
+                    'id' => (string) $task->id,
+                    'name' => (string) ($task->title ?? $task->name),
+                    'status' => (string) $task->status,
+                    'end_date' => $task->end_date?->toDateString(),
+                    'assignee_id' => $task->getAttribute('assignee_id') ? (string) $task->getAttribute('assignee_id') : null,
+                ])
+                ->values()
+                ->all(),
             'created_at' => optional($ncr->created_at)->toISOString(),
             'updated_at' => optional($ncr->updated_at)->toISOString(),
         ];
+    }
+
+    /**
+     * @return EloquentCollection<int, Task>
+     */
+    private function capaTasksFor(Ncr $ncr): EloquentCollection
+    {
+        if (!$ncr->relationLoaded('capaTasks')) {
+            $ncr->load('capaTasks:id,ncr_id,name,title,status,end_date,assignee_id');
+        }
+
+        $tasks = $ncr->getRelation('capaTasks');
+
+        return $tasks instanceof EloquentCollection ? $tasks : new EloquentCollection();
     }
 
     private function nextNcrNumber(QcInspection $inspection): string

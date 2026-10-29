@@ -534,6 +534,7 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::post('/{inspection}/ncrs', [\App\Http\Controllers\Api\InspectionController::class, 'storeNcr'])->middleware('rbac:inspection.create')->name('inspections.ncrs.store');
             Route::get('/{inspection}/ncrs/{ncr}', [\App\Http\Controllers\Api\InspectionController::class, 'showNcr'])->middleware('rbac:inspection.view')->name('inspections.ncrs.show');
             Route::patch('/{inspection}/ncrs/{ncr}/status', [\App\Http\Controllers\Api\InspectionController::class, 'updateNcrStatus'])->middleware('rbac:inspection.edit')->name('inspections.ncrs.update-status');
+            Route::post('/{inspection}/ncrs/{ncr}/capa-tasks', [\App\Http\Controllers\Api\InspectionController::class, 'storeNcrCapaTask'])->middleware(['rbac:inspection.edit', 'rbac:task.create'])->name('inspections.ncrs.capa-tasks.store');
         });
 
         // Safety Incidents routes - DISABLED (Controller not implemented)

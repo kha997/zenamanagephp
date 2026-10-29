@@ -1,30 +1,35 @@
 ---
 work_id: GAP-015
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-29-gap-015-worktemplate-ui-owner-evidence.md
   plan: null
   branch: docs/GAP-015-worktemplate-ui-owner
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/387
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-10-29T18:20:19+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-10-29, verbatim: 'APPROVE GAP-015 Gate 1'. Bound to reviewed Draft PR #387 head 206db03d42131931af912c3bb63b7499adb99d91, canonical base 2e3ba4b860f1525aa5712fd477614189c9a101f0. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-29T17:07:05+07:00"
-  updated_at: "2026-10-29T17:07:05+07:00"
+  updated_at: "2026-10-29T18:20:19+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-015 Gate 1 in-session on 2026-10-29 against Draft PR #387 head
+`206db03d42131931af912c3bb63b7499adb99d91`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

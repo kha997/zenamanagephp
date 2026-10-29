@@ -1,14 +1,14 @@
 ---
 work_id: GAP-015
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-10-29-gap-015-worktemplate-ui-owner-evidence.md
   plan: docs/superpowers/plans/2026-10-29-gap-015-work-instance-screens.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-10-29T20:22:19+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-10-29T20:29:59+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-10-29, verbatim: 'APPROVE GAP-015 Gate 3'. Given on the packet at PR head 3e2d80ab13ece2c483883ee3acb5e6fdd1d41870; bound to implementation subject 47c8e13cb177a7653f78f31776b5e7c3b68f5874 and implementation-tree digest 6678bb7fc91075921b5652d587f86f1b02a7b7a6c48586d454fc21c0ea4ac4bd (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment, environment seeding or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-10-29T20:22:19+07:00"
-  updated_at: "2026-10-29T20:22:19+07:00"
+  updated_at: "2026-10-29T20:29:59+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-015 at subject 47c8e13cb177a7653f78f31776b5e7c3b68f5874 (Gate 2 Option A plus approved allowlist supplement and Owner amendment 1). New WorkInstancePageController with 7 web routes app.projects.work-instances.* (rbac work.view / work.update / work.approve / work.export): project-scoped list with progress, detail with steps, field values and attachments, step update (status, tenant-scoped assignee, deadline, field values), approve/reject, attachment upload/delete and deliverable export, all delegating to the existing work-instance API; other tenant or project instance 404. Project page link gated on work.view. ZenaProjectManagerRolePermissionSeeder grants PM work.view/update/approve/export and Project Member work.view/update. Amendment 1: two @param PHPDoc lines on DelegatesToApiControllers. WorkInstancePagesTest 11 tests red before (routes missing; assignee test red before its implementation), green after; seeder test green. Unit + Feature + Integration 2855 tests, 2 known root-only failures; tests/Feature/Api 824/824. PHPStan 0 errors, php-cs-fixer 0, composer ssot:lint and lint_tests pass, owner-governance and docs lint pass, route guard OK, deptrac 0. Exact-head CI at 47c8e13c: all green except test and browser-tests still running at packet time."
@@ -36,13 +36,17 @@ technical_evidence:
   verified_pr_head_sha: "47c8e13cb177a7653f78f31776b5e7c3b68f5874"
   verified_at: "2026-10-29T20:22:19+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "6678bb7fc91075921b5652d587f86f1b02a7b7a6c48586d454fc21c0ea4ac4bd"
+  decision_recorded_at: "2026-10-29T20:29:59+07:00"
 ---
 
 # GAP-015 — Gate 3 release decision (WorkInstance execution screens)
 
-## OWNER GATE 3: AWAITING OWNER
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-10-29 ("APPROVE GAP-015 Gate 3"), bound to implementation subject
+`47c8e13cb177a7653f78f31776b5e7c3b68f5874` and implementation-tree digest `6678bb7fc91075921b5652d587f86f1b02a7b7a6c48586d454fc21c0ea4ac4bd`. No deployment, environment seeding or
+release is authorized.
 
 ## Gói quyết định phát hành
 

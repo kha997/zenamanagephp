@@ -94,17 +94,22 @@
                             <input id="deadline-{{ $step->id }}" name="deadline_at" type="datetime-local" class="operator-input" value="{{ optional($step->deadline_at)->format('Y-m-d\TH:i') }}">
                         </div>
                         @foreach ($editableFields as $field)
-                            @php $value = $valuesByKey->get($field['field_key']); @endphp
+                            @php
+                                $value = $valuesByKey->get($field['field_key']);
+                                $fieldType = $field['type'] ?? 'string';
+                                $inputId = 'field-' . $step->id . '-' . $field['field_key'];
+                                $inputName = 'field_values[' . $field['field_key'] . ']';
+                            @endphp
                             <div class="operator-field">
-                                <label for="field-{{ $step->id }}-{{ $field['field_key'] }}">{{ $field['label'] ?? $field['field_key'] }}</label>
-                                <input
-                                    id="field-{{ $step->id }}-{{ $field['field_key'] }}"
-                                    name="field_values[{{ $field['field_key'] }}]"
-                                    type="{{ match ($field['type'] ?? 'string') { 'number' => 'number', 'date' => 'date', default => 'text' } }}"
-                                    class="operator-input"
-                                    @if (($field['type'] ?? 'string') === 'number') step="any" @endif
-                                    value="{{ $value?->value_string ?? $value?->value_number ?? optional($value?->value_date)->format('Y-m-d') }}"
-                                >
+                                <label for="{{ $inputId }}">{{ $field['label'] ?? $field['field_key'] }}</label>
+                                @if ($fieldType === 'number')
+                                    <input id="{{ $inputId }}" name="{{ $inputName }}" type="number" step="any" class="operator-input" value="{{ $value?->value_number }}">
+                                @elseif ($fieldType === 'date')
+                                    <input id="{{ $inputId }}" name="{{ $inputName }}" type="date" class="operator-input" value="{{ optional($value?->value_date)->format('Y-m-d') }}">
+                                @else
+                                    {{-- A textarea keeps multiline text intact; a text input would drop its line breaks. --}}
+                                    <textarea id="{{ $inputId }}" name="{{ $inputName }}" rows="2" class="operator-input">{{ $value?->value_string }}</textarea>
+                                @endif
                             </div>
                         @endforeach
                         <button type="submit" class="operator-button operator-button-primary">Lưu bước</button>

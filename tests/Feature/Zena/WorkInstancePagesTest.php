@@ -226,6 +226,28 @@ class WorkInstancePagesTest extends TestCase
         $this->assertDatabaseHas('work_instance_field_values', ['work_instance_step_id' => (string) $this->step->id, 'field_key' => 'slump', 'value_number' => 1.25]);
     }
 
+    public function test_multiline_text_survives_and_unchanged_fields_are_not_rewritten(): void
+    {
+        WorkInstanceFieldValue::query()->where('work_instance_step_id', (string) $this->step->id)->update(['value_string' => "Line one\nLine two"]);
+        $before = WorkInstanceFieldValue::query()->where('work_instance_step_id', (string) $this->step->id)->firstOrFail();
+
+        $this->actingAs($this->user)->get($this->route('show'), $this->headers)
+            ->assertSee('<textarea', false)
+            ->assertSee("Line one\nLine two", false);
+
+        $this->travel(5)->minutes();
+
+        // A browser posts the textarea back with CRLF line endings.
+        $this->actingAs($this->user)
+            ->post($this->route('steps.update'), ['status' => 'in_progress', 'field_values' => ['remark' => "Line one\r\nLine two"]], $this->headers)
+            ->assertRedirect($this->route('show'));
+
+        $after = $before->fresh();
+        $this->assertSame("Line one\nLine two", $after?->value_string);
+        $this->assertTrue($before->updated_at?->equalTo($after?->updated_at));
+        $this->assertSame('in_progress', $this->step->refresh()->status);
+    }
+
     public function test_approving_a_step_records_the_approval(): void
     {
         $this->actingAs($this->user)->get($this->route('show'), $this->headers);

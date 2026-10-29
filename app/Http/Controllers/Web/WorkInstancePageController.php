@@ -11,6 +11,8 @@ use App\Models\DeliverableTemplateVersion;
 use App\Models\Project;
 use App\Models\User;
 use App\Models\WorkInstance;
+use App\Models\WorkInstanceFieldValue;
+use App\Models\WorkInstanceStep;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -96,6 +98,9 @@ class WorkInstancePageController extends Controller
             'deadline_at' => ['nullable', 'date'],
             'field_values' => ['nullable', 'array'],
         ]);
+        if (isset($validated['field_values'])) {
+            $validated['field_values'] = $this->changedFieldValues($instanceModel, $step, $validated['field_values']);
+        }
         $payload = array_filter($validated, static fn ($value) => $value !== null && $value !== '' && $value !== []);
 
         return $this->delegate(
@@ -190,6 +195,43 @@ class WorkInstancePageController extends Controller
             route('app.projects.work-instances.show', ['project' => $project, 'instance' => $instance]),
             $successMessage
         );
+    }
+
+    /**
+     * The form posts every editable field, but the API rewrites each submitted value; forward only fields the user
+     * actually changed so untouched values (and their line endings) are kept as stored.
+     *
+     * @param array<array-key, mixed> $submitted
+     *
+     * @return array<string, mixed>
+     */
+    private function changedFieldValues(WorkInstance $instance, string $step, array $submitted): array
+    {
+        $current = WorkInstanceFieldValue::query()
+            ->where('tenant_id', $this->tenantId())
+            ->whereIn('work_instance_step_id', WorkInstanceStep::query()
+                ->where('work_instance_id', (string) $instance->getKey())
+                ->whereKey($step)
+                ->select('id'))
+            ->get()
+            ->keyBy('field_key');
+
+        $changed = [];
+        foreach ($submitted as $fieldKey => $value) {
+            $stored = $current->get((string) $fieldKey);
+            $storedText = $stored === null ? '' : (string) ($stored->value_string
+                ?? ($stored->value_number !== null ? (string) $stored->value_number : null)
+                ?? $stored->value_date?->format('Y-m-d'));
+            $submittedText = is_scalar($value) ? str_replace("\r\n", "\n", (string) $value) : null;
+
+            if ($submittedText !== null && $submittedText === str_replace("\r\n", "\n", $storedText)) {
+                continue;
+            }
+
+            $changed[(string) $fieldKey] = is_string($value) ? str_replace("\r\n", "\n", $value) : $value;
+        }
+
+        return $changed;
     }
 
     private function projectForTenant(string $project): Project

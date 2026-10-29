@@ -269,6 +269,19 @@ class WorkInstancePagesTest extends TestCase
         $this->assertSame('', WorkInstanceFieldValue::query()->where('work_instance_step_id', (string) $this->step->id)->where('field_key', 'remark')->value('value_string'));
     }
 
+    public function test_clearing_the_deadline_removes_it(): void
+    {
+        $this->step->update(['deadline_at' => '2026-11-30 16:30:00']);
+        $this->actingAs($this->user)->get($this->route('show'), $this->headers)->assertOk();
+
+        $this->actingAs($this->user)
+            ->post($this->route('steps.update'), ['status' => '', 'deadline_at' => ''], $this->headers)
+            ->assertRedirect($this->route('show'))
+            ->assertSessionHas('success');
+
+        $this->assertNull($this->step->refresh()->deadline_at);
+    }
+
     public function test_approving_a_step_records_the_approval(): void
     {
         $this->actingAs($this->user)->get($this->route('show'), $this->headers);

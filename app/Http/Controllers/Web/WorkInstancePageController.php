@@ -102,6 +102,11 @@ class WorkInstancePageController extends Controller
             $validated['field_values'] = $this->changedFieldValues($instanceModel, $step, $validated['field_values']);
         }
         $payload = array_filter($validated, static fn ($value) => $value !== null && $value !== '' && $value !== []);
+        // A blank deadline (null after ConvertEmptyStringsToNull) means "remove it"; the API clears it only when the key
+        // is present.
+        if ($request->exists('deadline_at') && $request->input('deadline_at') === null) {
+            $payload['deadline_at'] = null;
+        }
 
         return $this->delegate(
             fn (): JsonResponse => $api->updateStep($this->buildApiRequest($request, $payload), (string) $instanceModel->getKey(), $step),

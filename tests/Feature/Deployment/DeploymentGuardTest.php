@@ -113,6 +113,34 @@ class DeploymentGuardTest extends TestCase
         $this->assertStringNotContainsString('migrate:rollback', $content);
     }
 
+    /**
+     * GAP-026: a step's own `env:` is not available when its `if:` is evaluated, so a Slack step guarded by
+     * `env.SLACK_WEBHOOK_URL != ''` only runs when the variable comes from the workflow or job `env:`.
+     */
+    public function test_production_slack_steps_read_the_webhook_from_workflow_or_job_env(): void
+    {
+        $yaml = Yaml::parseFile(base_path('.github/workflows/production.yml'));
+        $guarded = 0;
+
+        foreach ($yaml['jobs'] ?? [] as $jobName => $job) {
+            foreach ($job['steps'] ?? [] as $step) {
+                if (!str_contains((string) ($step['if'] ?? ''), 'env.SLACK_WEBHOOK_URL')) {
+                    continue;
+                }
+
+                $guarded++;
+                $declared = $job['env']['SLACK_WEBHOOK_URL'] ?? $yaml['env']['SLACK_WEBHOOK_URL'] ?? null;
+                $this->assertSame(
+                    '${{ secrets.SLACK_WEBHOOK_URL }}',
+                    $declared,
+                    "Job {$jobName}: step '" . ($step['name'] ?? '?') . "' is guarded by env.SLACK_WEBHOOK_URL, which must be set in the job or workflow env."
+                );
+            }
+        }
+
+        $this->assertSame(2, $guarded, 'Expected the deployment-state and breaking-migration Slack steps.');
+    }
+
     public function test_production_workflow_has_serialization_concurrency_guard(): void
     {
         $yaml = Yaml::parseFile(base_path('.github/workflows/production.yml'));

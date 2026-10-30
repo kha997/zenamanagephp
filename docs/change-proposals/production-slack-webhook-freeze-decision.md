@@ -64,3 +64,12 @@ Reason: the repository does not prove which Slack channel currently receives pro
 - No remap to `SLACK_WEBHOOK_DEPLOYMENTS`, `SLACK_WEBHOOK_RELEASES`, or a new secret in this round.
 - No changes to domain logic, RBAC, tenant isolation, or route contracts.
 - No attempt to invent or infer Slack channel identity where evidence is missing.
+
+## Resolved (GAP-026, 2026-10-30)
+
+- The Owner confirmed in-session (2026-10-30) that `secrets.SLACK_WEBHOOK_URL` targets the Zena Slack channel
+  (`C0BBAL5SZM4`, workspace `T0BBEHJE17T`) and that production keeps this secret and destination. The freeze ends; no remap.
+- GAP-026 also found that both production Slack steps were skipped on every run: their `if:` read
+  `env.SLACK_WEBHOOK_URL`, which was set only in the step's own `env:`. The variable now lives in the `deploy` and `notify`
+  job `env:` (Gate 2 Option A, `SLACK_WEBHOOK_URL` is a repository secret), guarded by `DeploymentGuardTest`.
+- Record: `docs/owner-decisions/GAP-026/`.

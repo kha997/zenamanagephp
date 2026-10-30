@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-10-30-gap-026-production-slack-evidence.md
   plan: null
   branch: docs/GAP-026-production-slack
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/390
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

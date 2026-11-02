@@ -8,7 +8,7 @@ owner_decision:
 decision_requested: approve_or_changes_or_decline
 references:
   spec: docs/audits/2026-11-02-gap-102-follow-redirects-cve-evidence.md
-  plan: docs/superpowers/plans/2026-11-02-gap-102-follow-redirects-cve.md
+  plan: null
   branch: docs/GAP-102-follow-redirects-cve
   pr: https://github.com/kha997/zenamanagephp/pull/391
   release: null
@@ -60,7 +60,7 @@ sinh ra). Không dòng nào khác.
 
 ### 3. Files (allowlist)
 
-`package-lock.json` (3 dòng trên); plan `docs/superpowers/plans/2026-11-02-gap-102-follow-redirects-cve.md`; packet và
+`package-lock.json` (3 dòng trên); plan (added after Gate 2 approval) `docs/superpowers/plans/2026-11-02-gap-102-follow-redirects-cve.md`; packet và
 evidence GAP-102.
 
 ## Rollback

@@ -1,34 +1,38 @@
 ---
 work_id: GAP-102
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-11-02-gap-102-follow-redirects-cve-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-11-02-gap-102-follow-redirects-cve.md
   branch: docs/GAP-102-follow-redirects-cve
   pr: https://github.com/kha997/zenamanagephp/pull/391
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-11-02T22:58:39+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-11-02T23:01:15+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-02, verbatim: 'APPROVE GAP-102 Gate 2 Option A'. Reviewed design head: 466223c9e5eb5744a94ac2da02a8868f7ce12dad. Approves Option A and its exact allowlist (package-lock.json: only the node_modules/follow-redirects version, resolved and integrity lines, 1.16.1 -> 1.16.2, npm-generated; plan and packets); package.json, other packages and application code unchanged; not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-02T22:58:39+07:00"
-  updated_at: "2026-11-02T22:58:39+07:00"
+  updated_at: "2026-11-02T23:01:15+07:00"
 generated_by: agent
 ---
 
 # GAP-102 — follow-redirects GHSA-mrwp-f3q8-3g9p: Gate 2 design
 
-## OWNER GATE 2: AWAITING OWNER
+## OWNER GATE 2: APPROVED — OPTION A
+
+Owner approved Option A in-session on 2026-11-02 against reviewed design head
+`466223c9e5eb5744a94ac2da02a8868f7ce12dad`. This authorizes only the bounded implementation defined by this packet; it
+does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

@@ -1,11 +1,11 @@
 ---
 work_id: GAP-102
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-11-02-gap-102-follow-redirects-cve-evidence.md
   plan: null
@@ -15,18 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-11-02T22:40:13+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-11-02T22:58:39+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-02, verbatim: 'APPROVE GAP-102 Gate 1'. Bound to reviewed Draft PR #391 head 846dbdb9566ced9a0da059aad5606f3c216e106e, canonical base c8938b6e6ef7b9c4cf5cd0ba509df0a278ef9ad7. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-02T22:40:13+07:00"
-  updated_at: "2026-11-02T22:40:13+07:00"
+  updated_at: "2026-11-02T22:58:39+07:00"
 generated_by: agent
 ---
 
-## OWNER GATE 1: AWAITING OWNER
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-102 Gate 1 in-session on 2026-11-02 against Draft PR #391 head
+`846dbdb9566ced9a0da059aad5606f3c216e106e`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

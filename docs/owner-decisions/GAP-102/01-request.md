@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-11-02-gap-102-follow-redirects-cve-evidence.md
   plan: null
   branch: docs/GAP-102-follow-redirects-cve
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/391
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

@@ -117,6 +117,9 @@ jobs:
     needs: [verify-sha, build]
     runs-on: ubuntu-latest
     environment: production
+    env:
+      # GAP-026: job-level so the Slack step's `if` can see it (a step's own env is not available to its `if`).
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     outputs:
       deploy_state: ${{ steps.set-state.outputs.state }}
     steps:
@@ -376,8 +379,6 @@ jobs:
         if: ${{ always() && steps.recovery.outcome == 'success' && github.event.inputs.allow_breaking_migrations == 'true' && env.SLACK_WEBHOOK_URL != '' }}
         continue-on-error: true
         uses: slackapi/slack-github-action@v4.0.0
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           webhook-type: incoming-webhook
@@ -404,13 +405,14 @@ jobs:
     needs: deploy
     runs-on: ubuntu-latest
     if: always()
+    env:
+      # GAP-026: job-level so the Slack step's `if` can see it (a step's own env is not available to its `if`).
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     steps:
       - name: Notify truthful deployment state (never a generic "success" for a skipped/unverified deploy)
         if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
         continue-on-error: true
         uses: slackapi/slack-github-action@v4.0.0
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           webhook-type: incoming-webhook

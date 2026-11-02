@@ -51,8 +51,14 @@ Because the target channel is `UNKNOWN`, the repo-only conclusion is to keep the
 - If the current mapping is legacy, what exact destination should replace it for `production.yml`?
 - Should production notifications remain on the current channel after the rest of the repo's channel-specific webhook migration?
 
+## Update — GAP-026 (2026-10-30)
+
+- Destination: the Zena Slack channel (`C0BBAL5SZM4`), per Owner confirmation; production keeps `SLACK_WEBHOOK_URL`.
+- The two production Slack steps were never running (step-level `env` is not visible to the step's own `if`); fixed by
+  declaring `SLACK_WEBHOOK_URL` in the `deploy` and `notify` job `env`. The decision status below is historical.
+
 ## Decision status
 
-- Status: `FROZEN`
+- Status: `FROZEN` (historical — resolved by GAP-026)
 - Current action: Keep `.github/workflows/production.yml` unchanged and continue using `SLACK_WEBHOOK_URL`.
 - Blocker to unfreeze: External confirmation of the actual Slack channel bound to `secrets.SLACK_WEBHOOK_URL` and explicit operator approval for any remap.

@@ -1,32 +1,38 @@
 ---
 work_id: GAP-105
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-11-03-gap-105-treasury-boq-fund-chains-receivable-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-11-03-gap-105-treasury-boq-fund-chains-receivable.md
   branch: docs/GAP-105-treasury-boq-fund-chains-receivable
   pr: https://github.com/kha997/zenamanagephp/pull/395
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-03T23:09:52+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-03, verbatim: 'APPROVE GAP-105 Gate 2 R-1 B-1 F-1 P-1'. Reviewed design head: b4e6a7b884e990675b2c9f292df210ac57699e1a. Approves R-1 (investor receivable per contract from ContractPayment paid; Treasury arrivals informational; unlinked funding shown separately, never subtracted), B-1 (nullable boq_line_item_id on treasury_financial_documents, one BOQ line per expense, set while draft, same-project check, restrict delete), F-1 (manual fund chains, members are posted documents or routes of the same project, metadata only with audit, permission treasury.manage_routes to edit and treasury.view to read), P-1 (one PR, one Gate 3), with the exact allowlist in this packet; one additive migration; no new permission; no change to ContractPayment or posting; not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-03T22:55:00+07:00"
-  updated_at: "2026-11-03T22:55:00+07:00"
+  updated_at: "2026-11-03T23:09:52+07:00"
 generated_by: agent
 ---
 
 # GAP-105 — Treasury: BOQ link, fund chains, investor receivable — Gate 2 design
+
+## OWNER GATE 2: APPROVED — R-1, B-1, F-1, P-1
+
+Owner approved R-1, B-1, F-1 and P-1 in-session on 2026-11-03 against reviewed design head
+`b4e6a7b884e990675b2c9f292df210ac57699e1a`. This authorizes only the bounded implementation defined by this packet; it
+does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

@@ -1,11 +1,11 @@
 ---
 work_id: GAP-103
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-11-03-gap-103-project-health-read-model-evidence.md
   plan: null
@@ -15,18 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-11-03T16:19:28+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-11-03T16:23:16+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-03, verbatim: 'APPROVE GAP-103 Gate 1'. Bound to reviewed Draft PR #393 head 72896981c4241286b9118642902a908e179abff4, canonical base aefd55fd2dca9750d2eba51a2390ddb4a163df7a. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-03T16:19:28+07:00"
-  updated_at: "2026-11-03T16:19:28+07:00"
+  updated_at: "2026-11-03T16:23:16+07:00"
 generated_by: agent
 ---
 
-## OWNER GATE 1: AWAITING OWNER
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-103 Gate 1 in-session on 2026-11-03 against Draft PR #393 head
+`72896981c4241286b9118642902a908e179abff4`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

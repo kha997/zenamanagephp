@@ -28,6 +28,7 @@ class ProjectHealthReadService
     public const AVAILABLE = 'available';
     public const NO_DATA = 'no_data';
     public const NOT_APPLICABLE = 'not_applicable';
+    public const NOT_REQUESTED = 'not_requested';
 
     public const BASIS_COMPONENT_COST_WEIGHTED = 'component_cost_weighted';
     public const BASIS_TASK_AVERAGE = 'task_average';
@@ -43,7 +44,7 @@ class ProjectHealthReadService
     /**
      * @return array{progress: array<string, mixed>, schedule: array<string, mixed>, attention: array<string, mixed>, finance: array<string, mixed>}
      */
-    public function forProject(Project $project): array
+    public function forProject(Project $project, bool $includeTreasuryAlerts = true): array
     {
         // One clock for every section: ProjectDelayStatus reads Carbon::now() itself, so no caller-supplied date here.
         $today = Carbon::now()->startOfDay();
@@ -56,7 +57,7 @@ class ProjectHealthReadService
         return [
             'progress' => $this->progress($project),
             'schedule' => $schedule,
-            'attention' => $this->attention($project, $today, $schedule, $hasTreasury),
+            'attention' => $this->attention($project, $today, $schedule, $hasTreasury, $includeTreasuryAlerts),
             'finance' => $this->finance($project, $hasTreasury),
         ];
     }
@@ -143,7 +144,7 @@ class ProjectHealthReadService
      * @param array{delay: array{state: string}, milestones: array{overdue: int}} $schedule
      * @return array<string, mixed>
      */
-    private function attention(Project $project, Carbon $today, array $schedule, bool $hasTreasury): array
+    private function attention(Project $project, Carbon $today, array $schedule, bool $hasTreasury, bool $includeTreasuryAlerts): array
     {
         $tasks = $this->tasks($project)
             ->whereNotIn('status', self::CLOSED_TASK_STATUSES)
@@ -161,7 +162,10 @@ class ProjectHealthReadService
             ->count();
 
         $treasuryAlerts = ['availability' => self::NOT_APPLICABLE, 'count' => null];
-        if ($hasTreasury) {
+        if ($hasTreasury && !$includeTreasuryAlerts) {
+            // GAP-104 T-1: the alert count reuses TreasuryDashboardService, whose cost grows with posted advances.
+            $treasuryAlerts = ['availability' => self::NOT_REQUESTED, 'count' => null];
+        } elseif ($hasTreasury) {
             $treasuryAlerts = ['availability' => self::AVAILABLE, 'count' => count($this->treasuryDashboard->dashboard($project, $today)['alerts'])];
         }
 

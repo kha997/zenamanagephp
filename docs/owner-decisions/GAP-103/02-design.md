@@ -1,34 +1,38 @@
 ---
 work_id: GAP-103
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-11-03-gap-103-project-health-read-model-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-11-03-gap-103-project-health-read-model.md
   branch: docs/GAP-103-project-health-read-model
   pr: https://github.com/kha997/zenamanagephp/pull/393
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-11-03T16:24:10+07:00"
-  owner_response_reference: null
+  recorded_at: "2026-11-03T16:25:22+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-03, verbatim: 'APPROVE GAP-103 Gate 2 P-A C-1 X-1'. Reviewed design head: 7c795e2a36ef4d822b1805c5638c6637def57872. Approves progress definition P-A (component planned-cost weighted via App\\Models\\Component, fallback active-task average with limited reliability, else no_data), consumer C-1 (project page Tien do field uses the read model), and X-1 (ProjectAnalyticsService left for a separate Work ID), with the exact allowlist (new ProjectHealthReadService, Web ProjectController show and projects/show.blade.php progress field, new ProjectHealthReadServiceTest, plan and packets); no migration, no projects.progress change; not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-03T16:24:10+07:00"
-  updated_at: "2026-11-03T16:24:10+07:00"
+  updated_at: "2026-11-03T16:25:22+07:00"
 generated_by: agent
 ---
 
 # GAP-103 — Shared Project Health Read Model: Gate 2 design
 
-## OWNER GATE 2: AWAITING OWNER
+## OWNER GATE 2: APPROVED — P-A, C-1, X-1
+
+Owner approved P-A, C-1 and X-1 in-session on 2026-11-03 against reviewed design head
+`7c795e2a36ef4d822b1805c5638c6637def57872`. This authorizes only the bounded implementation defined by this packet; it
+does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

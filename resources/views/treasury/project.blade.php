@@ -306,6 +306,16 @@
                         </select>
                     </div>
                     @include('treasury._money-fields', ['prefix' => 'e'])
+                    {{-- GAP-105 B-1: optional BOQ line of this project. --}}
+                    <div class="operator-field">
+                        <label for="e_boq_line">Dòng BOQ</label>
+                        <select id="e_boq_line" name="boq_line_item_id" class="operator-input" data-testid="treasury-expense-boq-line">
+                            <option value="">Không gắn BOQ</option>
+                            @foreach ($boqLines as $line)
+                                <option value="{{ $line['id'] }}" @selected(old('boq_line_item_id') === $line['id'])>{{ $line['label'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                 </div>
                 <p class="text-sm text-slate-600">Gắn khoản chi vào chi phí (tổng phải bằng số tiền chi):</p>
                 @for ($i = 0; $i < 3; $i++)
@@ -477,6 +487,15 @@
                         <option value="">Tất cả</option>
                         @foreach ($fundChains as $chain)
                             <option value="{{ $chain['id'] }}" @selected($registerFilters['fund_chain_id'] === $chain['id'])>{{ $chain['chain_reference'] }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="operator-field">
+                    <label for="register_boq_line">Dòng BOQ</label>
+                    <select id="register_boq_line" name="boq_line_item_id" class="operator-input">
+                        <option value="">Tất cả</option>
+                        @foreach ($boqLines as $line)
+                            <option value="{{ $line['id'] }}" @selected($registerFilters['boq_line_item_id'] === $line['id'])>{{ $line['label'] }}</option>
                         @endforeach
                     </select>
                 </div>

@@ -29,6 +29,7 @@ class TreasuryDashboardService
     public const ALERT_OVERDUE_ADVANCES = 'overdue_advances';
     public const ALERT_NEGATIVE_WALLETS = 'negative_wallets';
     public const ALERT_OPEN_ROUTES = 'open_routes';
+    public const ALERT_BOQ_OVERRUN = 'boq_overrun';
 
     private const POSTED = [Document::STATUS_POSTED_UNRECONCILED, Document::STATUS_POSTED_RECONCILED];
 
@@ -94,8 +95,65 @@ class TreasuryDashboardService
         $add(self::ALERT_OVERDUE_ADVANCES, count($overdue), self::rowsCents($overdue, 'outstanding'));
         $add(self::ALERT_NEGATIVE_WALLETS, count($negative), self::rowsCents($negative, 'balance'));
         $add(self::ALERT_OPEN_ROUTES, $openRoutes->count(), TreasuryBalanceService::toCents(self::sum($openRoutes, 'total_allocated_amount')));
+        // GAP-105 B-1: only lines with a known budget (unit price set) can overrun.
+        $overrun = array_values(array_filter($this->boqSpending($project)['lines'], static fn (array $line): bool => $line['variance_cents'] !== null && $line['variance_cents'] < 0));
+        $add(self::ALERT_BOQ_OVERRUN, count($overrun), (int) -array_sum(array_column($overrun, 'variance_cents')));
 
         return ['cards' => $cards, 'wallets' => $wallets, 'alerts' => $alerts];
+    }
+
+    /**
+     * GAP-105 B-1 — posted expenses (not reversed) per BOQ line of the project. Budget = quantity × unit price only when
+     * the unit price is set; otherwise budget and variance are null (no data), never zero.
+     *
+     * @return array{lines: list<array{id: string, boq_code: string, code: string, name: string, spent_cents: int, budget_cents: int|null, variance_cents: int|null}>, unlinked_cents: int}
+     */
+    public function boqSpending(Project $project): array
+    {
+        $lines = \Illuminate\Support\Facades\DB::table('boq_line_items')
+            ->join('boqs', 'boqs.id', '=', 'boq_line_items.boq_id')
+            ->where('boqs.tenant_id', (string) $project->tenant_id)
+            ->where('boqs.project_id', (string) $project->id)
+            ->orderBy('boqs.code')->orderBy('boq_line_items.code')->orderBy('boq_line_items.name')
+            ->get(['boq_line_items.id', 'boq_line_items.code', 'boq_line_items.name', 'boq_line_items.quantity', 'boq_line_items.unit_price', 'boqs.code as boq_code']);
+        $spent = \Illuminate\Support\Facades\DB::table('treasury_financial_documents')
+            ->where('tenant_id', (string) $project->tenant_id)
+            ->where('project_id', (string) $project->id)
+            ->where('document_type', Document::TYPE_EXPENSE)
+            ->whereIn('status', self::POSTED)
+            ->groupBy('boq_line_item_id')
+            ->selectRaw('boq_line_item_id, ROUND(COALESCE(SUM(amount), 0) * 100) AS cents')
+            ->get();
+        $byLine = [];
+        $unlinked = 0;
+        foreach ($spent as $row) {
+            $cents = (int) round((float) data_get($row, 'cents', 0));
+            $lineId = data_get($row, 'boq_line_item_id');
+            if ($lineId === null) {
+                $unlinked += $cents;
+            } else {
+                $byLine[(string) $lineId] = $cents;
+            }
+        }
+
+        $rows = [];
+        foreach ($lines as $line) {
+            $id = (string) data_get($line, 'id');
+            $unitPrice = data_get($line, 'unit_price');
+            $budget = $unitPrice === null ? null : (int) round((float) data_get($line, 'quantity', 0) * (float) $unitPrice * 100);
+            $spentCents = $byLine[$id] ?? 0;
+            $rows[] = [
+                'id' => $id,
+                'boq_code' => (string) data_get($line, 'boq_code'),
+                'code' => (string) data_get($line, 'code'),
+                'name' => (string) data_get($line, 'name'),
+                'spent_cents' => $spentCents,
+                'budget_cents' => $budget,
+                'variance_cents' => $budget === null ? null : $budget - $spentCents,
+            ];
+        }
+
+        return ['lines' => $rows, 'unlinked_cents' => $unlinked];
     }
 
     /**

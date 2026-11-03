@@ -44,8 +44,9 @@ class TreasuryExpenseService
     public function createDraft(Project $project, User $actor, array $data): Document
     {
         [$wallet, $party, $plan] = $this->validateDraft($project, $actor, $data);
+        $boqLineId = $this->boqLineOf($project, $data);
 
-        return DB::transaction(function () use ($project, $actor, $data, $wallet, $party, $plan): Document {
+        return DB::transaction(function () use ($project, $actor, $data, $wallet, $party, $plan, $boqLineId): Document {
             $document = Document::query()->create([
                 'tenant_id' => (string) $project->tenant_id,
                 'project_id' => (string) $project->id,
@@ -55,6 +56,7 @@ class TreasuryExpenseService
                 'source_wallet_id' => (string) $wallet->id,
                 'destination_party_id' => (string) $party->id,
                 'expense_plan' => $plan,
+                'boq_line_item_id' => $boqLineId,
                 'created_by' => (string) $actor->id,
             ] + $this->commonFields($data));
             $this->posting->audit($actor, $document, 'treasury.expense.drafted', ['status_path' => null, 'expense_plan' => $plan]);
@@ -76,13 +78,15 @@ class TreasuryExpenseService
             throw new TreasuryRuleViolation('Chỉ người tạo mới sửa được nháp này.');
         }
         [$wallet, $party, $plan] = $this->validateDraft($project, $actor, $data);
+        $boqLineId = $this->boqLineOf($project, $data);
 
-        return DB::transaction(function () use ($actor, $expense, $data, $wallet, $party, $plan): Document {
+        return DB::transaction(function () use ($actor, $expense, $data, $wallet, $party, $plan, $boqLineId): Document {
             $expense->fill([
                 'amount' => TreasuryBalanceService::fromCents(TreasuryBalanceService::toCents((string) $data['amount'])),
                 'source_wallet_id' => (string) $wallet->id,
                 'destination_party_id' => (string) $party->id,
                 'expense_plan' => $plan,
+                'boq_line_item_id' => $boqLineId,
             ] + $this->commonFields($data));
             $expense->save();
             $this->posting->audit($actor, $expense, 'treasury.expense.updated', ['status_path' => null, 'expense_plan' => $plan]);
@@ -222,6 +226,7 @@ class TreasuryExpenseService
             'transaction_date' => $rejected->transaction_date?->toDateString() ?? now()->toDateString(),
             'reference' => $rejected->reference,
             'description' => $rejected->description,
+            'boq_line_item_id' => $rejected->boq_line_item_id,
         ] + (array) ($rejected->expense_plan ?? []));
     }
 
@@ -474,6 +479,31 @@ class TreasuryExpenseService
             || (string) $expense->tenant_id !== (string) $project->tenant_id) {
             throw new TreasuryRuleViolation('Khoản chi không thuộc dự án này.');
         }
+    }
+
+    /**
+     * GAP-105 B-1: the optional BOQ line must belong to a BOQ of the same tenant and project.
+     *
+     * @param array<string, mixed> $data
+     */
+    private function boqLineOf(Project $project, array $data): ?string
+    {
+        $id = trim((string) ($data['boq_line_item_id'] ?? ''));
+        if ($id === '') {
+            return null;
+        }
+        $belongs = DB::table('boq_line_items')
+            ->join('boqs', 'boqs.id', '=', 'boq_line_items.boq_id')
+            ->where('boq_line_items.id', $id)
+            ->where('boq_line_items.tenant_id', (string) $project->tenant_id)
+            ->where('boqs.tenant_id', (string) $project->tenant_id)
+            ->where('boqs.project_id', (string) $project->id)
+            ->exists();
+        if (!$belongs) {
+            throw new TreasuryRuleViolation('Dòng BOQ không thuộc dự án này.', 'boq_line_item_id');
+        }
+
+        return $id;
     }
 
     /**

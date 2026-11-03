@@ -7,6 +7,7 @@
         'overdue_advances' => 'Tạm ứng còn nợ trên 90 ngày',
         'negative_wallets' => 'Ví đang âm',
         'open_routes' => 'Tuyến trung gian chưa về đủ',
+        'boq_overrun' => 'Dòng BOQ chi vượt ngân sách',
     ];
     $cards = $dashboard['cards'];
 @endphp

@@ -44,6 +44,7 @@ class TreasuryReportService
         'corrections' => 'Đảo và điều chỉnh',
         'investor_receivable' => 'Phải thu nhà đầu tư',
         'fund_chain_trace' => 'Truy vết chuỗi quỹ',
+        'expense_by_boq' => 'Chi theo BOQ',
     ];
 
     public const TYPE_LABELS = [
@@ -91,7 +92,7 @@ class TreasuryReportService
     public static function registerFilters(array $input): array
     {
         $filters = [];
-        foreach (['date_from', 'date_to', 'type', 'wallet_id', 'party_id', 'created_by', 'approved_by', 'self_approved', 'reconciled', 'fund_chain_id'] as $key) {
+        foreach (['date_from', 'date_to', 'type', 'wallet_id', 'party_id', 'created_by', 'approved_by', 'self_approved', 'reconciled', 'fund_chain_id', 'boq_line_item_id'] as $key) {
             $value = is_scalar($input[$key] ?? null) ? trim((string) $input[$key]) : '';
             if ($key === 'date_from' || $key === 'date_to') {
                 $value = preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1 ? $value : '';
@@ -146,6 +147,10 @@ class TreasuryReportService
         }
         if (filter_var($filters['self_approved'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
             $query->whereIn('id', Approval::query()->whereIn('event', self::SELF_APPROVAL_EVENTS)->where('context->approval_mode', 'self_approval')->select('financial_document_id'));
+        }
+        if ($value('boq_line_item_id') !== '') {
+            // GAP-105 B-1.
+            $query->where('boq_line_item_id', $value('boq_line_item_id'));
         }
         if ($value('fund_chain_id') !== '') {
             // GAP-105 F-1: documents of one fund chain (directly, or as the document a member route carries).
@@ -228,6 +233,7 @@ class TreasuryReportService
             'corrections' => $this->corrections($project),
             'investor_receivable' => $this->investorReceivable($project),
             'fund_chain_trace' => $this->fundChainTrace($project),
+            'expense_by_boq' => $this->expenseByBoq($project),
             default => throw new \InvalidArgumentException('Unknown treasury report ' . $key),
         };
 
@@ -340,6 +346,27 @@ class TreasuryReportService
         $rows[] = ['Tiền nhận khác vào Ngân quỹ (không gắn hợp đồng, không trừ vào phải thu)', '', '', $receivable['unlinked_funding'], '', ''];
 
         return [['Hợp đồng', 'Tên', 'Giá trị', 'Đã thu (đợt thanh toán)', 'Trong đó về ví Ngân quỹ', 'Còn phải thu'], $rows];
+    }
+
+    /**
+     * GAP-105 B-1: posted expenses per BOQ line; budget only with a unit price, otherwise "Chưa có dữ liệu".
+     *
+     * @return array{0: list<string>, 1: list<list<string|int>>}
+     */
+    private function expenseByBoq(Project $project): array
+    {
+        $spending = $this->dashboard->boqSpending($project);
+        $rows = [];
+        foreach ($spending['lines'] as $line) {
+            $rows[] = [
+                $line['boq_code'], $line['code'], $line['name'], TreasuryBalanceService::fromCents($line['spent_cents']),
+                $line['budget_cents'] === null ? 'Chưa có dữ liệu' : TreasuryBalanceService::fromCents($line['budget_cents']),
+                $line['variance_cents'] === null ? '' : TreasuryBalanceService::fromCents($line['variance_cents']),
+            ];
+        }
+        $rows[] = ['Chưa gắn BOQ', '', '', TreasuryBalanceService::fromCents($spending['unlinked_cents']), '', ''];
+
+        return [['BOQ', 'Mã dòng', 'Hạng mục', 'Đã chi (ghi sổ)', 'Ngân sách (KL × đơn giá)', 'Còn lại (âm = vượt)'], $rows];
     }
 
     /**

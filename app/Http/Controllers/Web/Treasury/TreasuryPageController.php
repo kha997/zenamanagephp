@@ -165,6 +165,17 @@ class TreasuryPageController extends Controller
             'dashboard' => $this->dashboard->dashboard($model),
             // GAP-066 S3: expenses, approval queue, payables.
             'payables' => $this->expenses->payables($model),
+            // GAP-105 B-1: BOQ lines of this project for the expense form.
+            'boqLines' => \Illuminate\Support\Facades\DB::table('boq_line_items')
+                ->join('boqs', 'boqs.id', '=', 'boq_line_items.boq_id')
+                ->where('boqs.tenant_id', (string) $model->tenant_id)
+                ->where('boqs.project_id', (string) $model->id)
+                ->orderBy('boqs.code')->orderBy('boq_line_items.code')
+                ->get(['boq_line_items.id', 'boq_line_items.code', 'boq_line_items.name', 'boqs.code as boq_code'])
+                ->map(static fn ($line): array => [
+                    'id' => (string) data_get($line, 'id'),
+                    'label' => data_get($line, 'boq_code') . ' / ' . (data_get($line, 'code') ? data_get($line, 'code') . ' — ' : '') . data_get($line, 'name'),
+                ])->all(),
             'contracts' => \App\Models\Contract::query()
                 ->where('tenant_id', (string) $model->tenant_id)
                 ->where('project_id', (string) $model->id)
@@ -317,6 +328,7 @@ class TreasuryPageController extends Controller
             'new_category' => ['nullable', 'string'],
             'new_amount' => ['nullable', 'numeric', 'decimal:0,2'],
             'new_description' => ['nullable', 'string', 'max:1000'],
+            'boq_line_item_id' => ['nullable', 'string'],
         ]);
 
         $allocations = [];

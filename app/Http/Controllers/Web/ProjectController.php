@@ -206,7 +206,7 @@ class ProjectController extends Controller // Thêm extends Controller
                 ->first();
             $delay = \App\Services\ProjectDelayStatus::evaluate($project, $latestBaseline);
             // GAP-103 (C-1): the "Tiến độ" field reads the shared project health model.
-            $health = app(\App\Services\ProjectHealth\ProjectHealthReadService::class)->forProject($project);
+            $health = ['progress' => app(\App\Services\ProjectHealth\ProjectHealthReadService::class)->progress($project)];
 
             return view('projects.show', [
                 'project' => $project,

@@ -43,9 +43,10 @@ class ProjectHealthReadService
     /**
      * @return array{progress: array<string, mixed>, schedule: array<string, mixed>, attention: array<string, mixed>, finance: array<string, mixed>}
      */
-    public function forProject(Project $project, ?Carbon $today = null): array
+    public function forProject(Project $project): array
     {
-        $today = ($today ?? Carbon::now())->copy()->startOfDay();
+        // One clock for every section: ProjectDelayStatus reads Carbon::now() itself, so no caller-supplied date here.
+        $today = Carbon::now()->startOfDay();
         $hasTreasury = TreasuryWallet::query()->withoutGlobalScopes()
             ->where('tenant_id', $this->tenantId($project))
             ->where('project_id', $this->projectId($project))
@@ -62,10 +63,11 @@ class ProjectHealthReadService
 
     /**
      * Gate 2 P-A: root components weighted by planned cost; otherwise the average of active tasks (limited reliability).
+     * Public so a progress-only consumer (the project page, C-1) does not pay for the Treasury alert read.
      *
      * @return array{value: float|null, availability: string, basis: string|null, reliability: string|null}
      */
-    private function progress(Project $project): array
+    public function progress(Project $project): array
     {
         $components = DB::table('components')
             ->where('tenant_id', $this->tenantId($project))

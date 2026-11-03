@@ -18,6 +18,7 @@ use App\Models\Treasury\TreasuryWallet;
 use App\Models\User;
 use App\Services\ProjectDelayStatus;
 use App\Services\ProjectHealth\ProjectHealthReadService;
+use App\Services\Treasury\TreasuryDashboardService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -224,6 +225,19 @@ class ProjectHealthReadServiceTest extends TestCase
             ->get(route('app.projects.show', (string) $this->project->id), ['X-Tenant-ID' => (string) $this->tenant->id])
             ->assertOk()
             ->assertSeeInOrder(['Tiến độ', '40% (theo công việc)', 'Quản lý dự án']);
+    }
+
+    public function test_project_page_reads_progress_without_the_treasury_dashboard(): void
+    {
+        TreasuryWallet::factory()->create(['project_id' => (string) $this->project->id]);
+        $this->mock(TreasuryDashboardService::class, function ($mock): void {
+            $mock->shouldNotReceive('dashboard');
+        });
+
+        $this->actingAs($this->user)
+            ->get(route('app.projects.show', (string) $this->project->id), ['X-Tenant-ID' => (string) $this->tenant->id])
+            ->assertOk()
+            ->assertSeeInOrder(['Tiến độ', 'Chưa có dữ liệu', 'Quản lý dự án']);
     }
 
     /**

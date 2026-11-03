@@ -227,6 +227,19 @@ class ProjectHealthReadServiceTest extends TestCase
             ->assertSeeInOrder(['Tiến độ', '40% (theo công việc)', 'Quản lý dự án']);
     }
 
+    public function test_treasury_alerts_can_be_skipped_without_building_the_dashboard(): void
+    {
+        TreasuryWallet::factory()->create(['project_id' => (string) $this->project->id]);
+        $this->mock(TreasuryDashboardService::class, function ($mock): void {
+            $mock->shouldNotReceive('dashboard');
+        });
+
+        $health = $this->app->make(ProjectHealthReadService::class)->forProject($this->project->fresh(), includeTreasuryAlerts: false);
+
+        $this->assertSame(['availability' => 'not_requested', 'count' => null], $health['attention']['treasury_alerts']);
+        $this->assertSame('available', $health['finance']['treasury']['availability']);
+    }
+
     public function test_project_page_reads_progress_without_the_treasury_dashboard(): void
     {
         TreasuryWallet::factory()->create(['project_id' => (string) $this->project->id]);

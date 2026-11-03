@@ -356,6 +356,8 @@ Route::prefix('app')->name('app.')->middleware(['auth', 'tenant.isolation'])->gr
     Route::get('/projects/{project}/edit', [App\Http\Controllers\Web\ProjectController::class, 'edit'])->name('projects.edit');
     Route::put('/projects/{project}', [App\Http\Controllers\Web\ProjectController::class, 'update'])->middleware('rbac:project.update')->name('projects.update');
     Route::post('/projects/{project}/baseline', [App\Http\Controllers\Web\ProjectController::class, 'storeBaseline'])->middleware('rbac:project.update')->name('projects.baseline.store');
+    // GAP-104: read-only one-page OPPM (Gate 2 V-1, R-1).
+    Route::get('/projects/{project}/oppm', [App\Http\Controllers\Web\ProjectOppmController::class, 'show'])->middleware('rbac:project.view')->name('projects.oppm');
     // DELETE /projects/{project} - MOVED TO API: /api/v1/projects/{project}
 
     Route::get('/projects/{project}/work-templates', [App\Http\Controllers\Web\WorkTemplateApplyController::class, 'templates'])->middleware('rbac:template.view')->name('projects.work-templates.index');

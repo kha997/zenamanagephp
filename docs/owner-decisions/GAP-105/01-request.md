@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-11-03-gap-105-treasury-boq-fund-chains-receivable-evidence.md
   plan: null
   branch: docs/GAP-105-treasury-boq-fund-chains-receivable
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/395
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

@@ -205,6 +205,8 @@ class ProjectController extends Controller // Thêm extends Controller
                 ->orderByDesc('created_at')
                 ->first();
             $delay = \App\Services\ProjectDelayStatus::evaluate($project, $latestBaseline);
+            // GAP-103 (C-1): the "Tiến độ" field reads the shared project health model.
+            $health = app(\App\Services\ProjectHealth\ProjectHealthReadService::class)->forProject($project);
 
             return view('projects.show', [
                 'project' => $project,
@@ -215,6 +217,7 @@ class ProjectController extends Controller // Thêm extends Controller
                 'contracts' => $contracts,
                 'projectTemplates' => $projectTemplates,
                 'delay' => $delay,
+                'health' => $health,
             ]);
         } catch (\Throwable $e) {
             abort(404, 'Dự án không tồn tại.');

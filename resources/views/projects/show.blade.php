@@ -28,7 +28,20 @@
             <x-ui.field-value label="Trạng thái">
                 <x-ui.status-badge :status="$project->status" />
             </x-ui.field-value>
-            <x-ui.field-value label="Tiến độ" :value="((int) $project->progress) . '%'" />
+            @php
+                // GAP-103: shared project health model — "no data" is shown as such, never as 0%.
+                $progress = $health['progress'];
+                $progressBasis = [
+                    \App\Services\ProjectHealth\ProjectHealthReadService::BASIS_COMPONENT_COST_WEIGHTED => 'theo chi phí hạng mục',
+                    \App\Services\ProjectHealth\ProjectHealthReadService::BASIS_TASK_AVERAGE => 'theo công việc',
+                ];
+            @endphp
+            <x-ui.field-value
+                label="Tiến độ"
+                :value="$progress['availability'] === \App\Services\ProjectHealth\ProjectHealthReadService::AVAILABLE
+                    ? ((int) round((float) $progress['value'])) . '% (' . ($progressBasis[$progress['basis']] ?? '') . ')'
+                    : 'Chưa có dữ liệu'"
+            />
             <x-ui.field-value label="Quản lý dự án" :value="$project->manager?->name ?? '—'" />
             <x-ui.field-value label="Khách hàng" :value="$project->client?->name ?? '—'" />
             <x-ui.field-value label="Bắt đầu" :value="$project->start_date ? \Illuminate\Support\Carbon::parse($project->start_date)->format('d/m/Y') : '—'" />

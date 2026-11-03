@@ -1,6 +1,6 @@
 # ZenaManage Canonical Roadmap
 
-Last updated: 2026-10-29 (status section below; sections after it describe the 2026-03-19 baseline)
+Last updated: 2026-11-03 (status section below; sections after it describe the 2026-03-19 baseline)
 Role: execution sequencing SSOT
 Companion docs:
 
@@ -10,9 +10,9 @@ Companion docs:
 - `docs/agent-ssot-rules.md` = evidence/verification law
 - `docs/engineering/testing-matrix.md` = verify-order SSOT
 
-## Status as of 2026-10-29
+## Status as of 2026-11-03
 
-Added by OWN-2026-020, updated by OWN-2026-021. `OPERATIONAL_GAP_REGISTER.md` is the source of truth for open and
+Added by OWN-2026-020, updated by OWN-2026-021 and OWN-2026-022. `OPERATIONAL_GAP_REGISTER.md` is the source of truth for open and
 released work; the sections after this one are the 2026-03-19 baseline, kept as history. `docs/roadmap/backlog.yaml` has
 29/29 items `done`, so new work is tracked by Work ID in the register.
 
@@ -33,14 +33,18 @@ released work; the sections after this one are the 2026-03-19 baseline, kept as 
   escalation resolve permission).
 - **Quality, security and workflow (2026-10-29):** GAP-100 (test DB-leak guard), GAP-101 (symfony/mime CVE), GAP-014c
   (NCR ↔ CAPA task link), GAP-015 Option A (WorkInstance execution screens).
+- **Cleanup, alerts and security (2026-10-29 … 11-02):** GAP-019 (universal-frame demo shell removed), GAP-026 (production
+  Slack notifications now run, to the Zena channel), GAP-102 (follow-redirects GHSA-mrwp-f3q8-3g9p).
 
 ### Open work, proposed order
 
-1. GAP-019 (`universal-frame` layout that no route uses).
-2. GAP-026 (blocked: Slack channel owner outside the repository).
-3. Optional, each needs its own Gate 1: WorkTemplate authoring screens (the rest of GAP-015); Treasury extensions left
-   out of S1–S6 (attachments, BOQ link, fund chains, investor receivable, per-advance deadline, configurable thresholds,
-   period lock, bank import); Project OPPM / One-Page (issue #248, draft PR #257).
+No register row is OPEN or BLOCKED. Optional follow-ups, each needs its own Gate 1:
+
+1. Business notifications to Slack (CR, submittal, NCR, overdue tasks to the internal channel).
+2. Zalo OA / ZNS integration (OA messages into leads or projects; ZNS customer notifications).
+3. WorkTemplate authoring screens (the rest of GAP-015).
+4. Treasury extensions left out of S1–S6 (attachments, BOQ link, fund chains, investor receivable, per-advance deadline,
+   configurable thresholds, period lock, bank import); Project OPPM / One-Page (issue #248, draft PR #257).
 
 The order is a proposal; the Owner chooses the next Work ID.
 

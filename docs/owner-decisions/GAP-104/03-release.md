@@ -1,14 +1,14 @@
 ---
 work_id: GAP-104
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-11-03-gap-104-project-oppm-phase1-evidence.md
   plan: docs/superpowers/plans/2026-11-03-gap-104-project-oppm-phase1.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-03T21:04:29+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-11-03, verbatim: 'APPROVE GAP-104 Gate 3'. Given on the packet at PR head f2d8d973047d46a8a6299284bae84164d561ac27; bound to implementation subject 08ddfb9efe206e4adb502ba536badc2805d2829a and implementation-tree digest 76dd5c6e538a22c0178333e498b60eff2f9dca5195ecb6176e0167a22caf7c5d (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-03T21:03:19+07:00"
-  updated_at: "2026-11-03T21:03:19+07:00"
+  updated_at: "2026-11-03T21:04:29+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-104 at subject 08ddfb9efe206e4adb502ba536badc2805d2829a (Gate 2 V-1, W-A, T-1, R-1; exact allowlist). New read-only page GET /app/projects/{project}/oppm (rbac:project.view, project loaded inside the user's tenant, 404 otherwise) via Web\\ProjectOppmController and App\\Services\\ProjectOppm\\ProjectOppmReadService: header with Service Lines (unclassified when none, unconfirmed marked); KPIs from ProjectHealthReadService (progress with basis, delay, milestones, attention) called with the new includeTreasuryAlerts=false flag so the Treasury dashboard is never built; work groups = root components ordered by start date, max 12, descendant-component tasks rolled up in memory, CSS timeline relative to project dates; task-status summary when there are no components; blocked tasks / overdue tasks / blocked design items capped at 10 with totals; finance block with budget, contract value, cash received, cost recorded labelled not cash paid, no profit figure; Treasury held/posted expenses only with treasury.view-project; A4 landscape @media print layout; 'OPPM mot trang' button on the project page. Fixed query count independent of task/component count; no migration, no new permission, no writes. Components have no owner column, so the work-group table has no owner column. A user without project.view is redirected back with an error by the existing rbac middleware (web behavior), not shown a 403 page. New ProjectOppmPageTest (12 tests) and one new ProjectHealthReadServiceTest case: red before (13 errors: route and flag missing), green after. Unit + Feature + Integration 2890 tests with only the 2 known root-only failures; Feature/Api 824 green. PHPStan, php-cs-fixer, SSOT test lint, ssot:lint, route guard, deptrac pass. Exact-head CI pending at packet time."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "08ddfb9efe206e4adb502ba536badc2805d2829a"
   verified_at: "2026-11-03T21:03:19+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "76dd5c6e538a22c0178333e498b60eff2f9dca5195ecb6176e0167a22caf7c5d"
+  decision_recorded_at: "2026-11-03T21:04:29+07:00"
 ---
 
 # GAP-104 — Gate 3 release decision (Project OPPM Phase 1, read-only)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-11-03 ("APPROVE GAP-104 Gate 3"), bound to implementation subject
+`08ddfb9efe206e4adb502ba536badc2805d2829a` and implementation-tree digest `76dd5c6e538a22c0178333e498b60eff2f9dca5195ecb6176e0167a22caf7c5d`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

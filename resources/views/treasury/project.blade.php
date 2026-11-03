@@ -472,6 +472,15 @@
                     </select>
                 </div>
                 <div class="operator-field">
+                    <label for="register_fund_chain">Chuỗi quỹ</label>
+                    <select id="register_fund_chain" name="fund_chain_id" class="operator-input">
+                        <option value="">Tất cả</option>
+                        @foreach ($fundChains as $chain)
+                            <option value="{{ $chain['id'] }}" @selected($registerFilters['fund_chain_id'] === $chain['id'])>{{ $chain['chain_reference'] }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="operator-field">
                     <label for="register_created_by">Người lập</label>
                     <select id="register_created_by" name="created_by" class="operator-input">
                         <option value="">Tất cả</option>

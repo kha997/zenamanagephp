@@ -158,6 +158,8 @@ class TreasuryPageController extends Controller
             'documents' => $register->getCollection(),
             'register' => $register,
             'registerFilters' => $registerFilters,
+            // GAP-105 F-1: register filter by fund chain.
+            'fundChains' => app(\App\Services\Treasury\TreasuryFundChainService::class)->chains($model),
             'registerUsers' => User::query()->where('tenant_id', (string) $model->tenant_id)->orderBy('name')->pluck('name', 'id')->all(),
             // GAP-097 S6: cards, wallet table and alerts.
             'dashboard' => $this->dashboard->dashboard($model),

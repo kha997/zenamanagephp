@@ -16,6 +16,7 @@
         <div class="flex flex-wrap gap-2">
             <a href="{{ route('operator.treasury.projects.reports.index', $project->id) }}" class="operator-button operator-button-secondary" data-testid="treasury-reports-link">Báo cáo ngân quỹ</a>
             <a href="{{ route('operator.treasury.projects.timeline', $project->id) }}" class="operator-button operator-button-secondary" data-testid="treasury-timeline-link">Dòng thời gian</a>
+            <a href="{{ route('operator.treasury.projects.fund-chains.index', $project->id) }}" class="operator-button operator-button-secondary" data-testid="treasury-fund-chains-link">Chuỗi quỹ</a>
         </div>
 
         @if ($dashboard['alerts'] === [])

@@ -12,6 +12,7 @@ use App\Models\Treasury\TreasuryCostSettlementAllocation as Allocation;
 use App\Models\Treasury\TreasuryExpenseApproval as Approval;
 use App\Models\Treasury\TreasuryFinancialDocument as Document;
 use App\Models\Treasury\TreasuryFinancialParty;
+use App\Models\Treasury\TreasuryFundChainMember as FundChainMember;
 use App\Models\Treasury\TreasuryLedgerEntry as Entry;
 use App\Models\Treasury\TreasuryPaymentRoute as Route;
 use App\Models\Treasury\TreasuryPaymentRouteLeg as Leg;
@@ -42,6 +43,7 @@ class TreasuryReportService
         'routes' => 'Tiền đang qua trung gian',
         'corrections' => 'Đảo và điều chỉnh',
         'investor_receivable' => 'Phải thu nhà đầu tư',
+        'fund_chain_trace' => 'Truy vết chuỗi quỹ',
     ];
 
     public const TYPE_LABELS = [
@@ -76,6 +78,7 @@ class TreasuryReportService
         private readonly TreasuryAdvanceService $advances,
         private readonly TreasuryRouteService $routes,
         private readonly TreasuryReceivableService $receivables,
+        private readonly TreasuryFundChainService $fundChains,
     ) {
     }
 
@@ -88,7 +91,7 @@ class TreasuryReportService
     public static function registerFilters(array $input): array
     {
         $filters = [];
-        foreach (['date_from', 'date_to', 'type', 'wallet_id', 'party_id', 'created_by', 'approved_by', 'self_approved', 'reconciled'] as $key) {
+        foreach (['date_from', 'date_to', 'type', 'wallet_id', 'party_id', 'created_by', 'approved_by', 'self_approved', 'reconciled', 'fund_chain_id'] as $key) {
             $value = is_scalar($input[$key] ?? null) ? trim((string) $input[$key]) : '';
             if ($key === 'date_from' || $key === 'date_to') {
                 $value = preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1 ? $value : '';
@@ -143,6 +146,14 @@ class TreasuryReportService
         }
         if (filter_var($filters['self_approved'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
             $query->whereIn('id', Approval::query()->whereIn('event', self::SELF_APPROVAL_EVENTS)->where('context->approval_mode', 'self_approval')->select('financial_document_id'));
+        }
+        if ($value('fund_chain_id') !== '') {
+            // GAP-105 F-1: documents of one fund chain (directly, or as the document a member route carries).
+            $chain = $value('fund_chain_id');
+            $members = FundChainMember::query()->withoutGlobalScopes()->where('tenant_id', (string) $project->tenant_id)->where('fund_chain_id', $chain);
+            $query->where(static fn ($q) => $q
+                ->whereIn('id', (clone $members)->whereNotNull('member_financial_document_id')->select('member_financial_document_id'))
+                ->orWhereIn('id', Route::query()->withoutGlobalScopes()->whereIn('id', (clone $members)->whereNotNull('member_payment_route_id')->select('member_payment_route_id'))->whereNotNull('linked_financial_document_id')->select('linked_financial_document_id')));
         }
         if ($value('reconciled') === 'yes') {
             $query->where('status', Document::STATUS_POSTED_RECONCILED);
@@ -216,6 +227,7 @@ class TreasuryReportService
             'routes' => $this->openRoutes($project),
             'corrections' => $this->corrections($project),
             'investor_receivable' => $this->investorReceivable($project),
+            'fund_chain_trace' => $this->fundChainTrace($project),
             default => throw new \InvalidArgumentException('Unknown treasury report ' . $key),
         };
 
@@ -328,6 +340,27 @@ class TreasuryReportService
         $rows[] = ['Tiền nhận khác vào Ngân quỹ (không gắn hợp đồng, không trừ vào phải thu)', '', '', $receivable['unlinked_funding'], '', ''];
 
         return [['Hợp đồng', 'Tên', 'Giá trị', 'Đã thu (đợt thanh toán)', 'Trong đó về ví Ngân quỹ', 'Còn phải thu'], $rows];
+    }
+
+    /**
+     * GAP-105 F-1: every chain of the project with its members in date order.
+     *
+     * @return array{0: list<string>, 1: list<list<string|int>>}
+     */
+    private function fundChainTrace(Project $project): array
+    {
+        $rows = [];
+        foreach ($this->fundChains->chains($project) as $chain) {
+            $model = $this->fundChains->projectChain($project, $chain['id']);
+            if ($model === null) {
+                continue;
+            }
+            foreach ($this->fundChains->trace($project, $model) as $member) {
+                $rows[] = [$chain['chain_reference'], (string) $member['date'], (string) $member['label'], (string) $member['status'], (string) $member['amount'], (string) ($member['reference'] ?? '')];
+            }
+        }
+
+        return [['Chuỗi quỹ', 'Ngày', 'Loại', 'Trạng thái', 'Số tiền', 'Tham chiếu'], $rows];
     }
 
     /**

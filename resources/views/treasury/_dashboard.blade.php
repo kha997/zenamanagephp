@@ -40,6 +40,9 @@
             <x-ui.field-value label="Tiền nhận chưa đối soát" :value="$money($cards['unreconciled_funding'])" />
             <x-ui.field-value label="Đang chờ duyệt" :value="$cards['pending_approvals_count'] . ' khoản — ' . $money($cards['pending_approvals_amount'])" />
             <x-ui.field-value label="Tạm ứng còn nợ" :value="$money($cards['outstanding_advances'])" />
+            {{-- GAP-105 R-1: from contracts and paid contract instalments; no contracts → no data. --}}
+            <x-ui.field-value label="Giá trị hợp đồng" :value="$cards['contract_value'] === null ? 'Chưa có dữ liệu' : $money($cards['contract_value'])" />
+            <x-ui.field-value label="Còn phải thu (theo đợt thanh toán hợp đồng)" :value="$cards['receivable_outstanding'] === null ? 'Chưa có dữ liệu' : $money($cards['receivable_outstanding'])" />
         </div>
 
         <x-ui.data-table :headers="['Ví', 'Người giữ', 'Số dư', 'Chưa đối soát', 'Tạm ứng còn nợ', 'Phát sinh cuối']">

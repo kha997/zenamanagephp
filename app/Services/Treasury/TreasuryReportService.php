@@ -41,6 +41,7 @@ class TreasuryReportService
         'unreconciled' => 'Giao dịch chưa đối soát',
         'routes' => 'Tiền đang qua trung gian',
         'corrections' => 'Đảo và điều chỉnh',
+        'investor_receivable' => 'Phải thu nhà đầu tư',
     ];
 
     public const TYPE_LABELS = [
@@ -74,6 +75,7 @@ class TreasuryReportService
         private readonly TreasuryReconciliationService $reconciliation,
         private readonly TreasuryAdvanceService $advances,
         private readonly TreasuryRouteService $routes,
+        private readonly TreasuryReceivableService $receivables,
     ) {
     }
 
@@ -213,6 +215,7 @@ class TreasuryReportService
             'unreconciled' => $this->unreconciled($project, $today),
             'routes' => $this->openRoutes($project),
             'corrections' => $this->corrections($project),
+            'investor_receivable' => $this->investorReceivable($project),
             default => throw new \InvalidArgumentException('Unknown treasury report ' . $key),
         };
 
@@ -298,6 +301,33 @@ class TreasuryReportService
         }
 
         return [['Tháng', ...array_values(self::CASHFLOW_COLUMNS), 'Tăng/giảm tiền giữ'], $rows];
+    }
+
+    /**
+     * GAP-105 R-1: per contract, received = paid ContractPayment; Treasury arrivals informational; unlinked Treasury
+     * funding on its own line, never subtracted.
+     *
+     * @return array{0: list<string>, 1: list<list<string|int>>}
+     */
+    private function investorReceivable(Project $project): array
+    {
+        $receivable = $this->receivables->forProject($project);
+        $rows = [];
+        foreach ($receivable['contracts'] as $contract) {
+            $rows[] = [
+                $contract['code'], $contract['title'], $contract['value'], $contract['paid'], $contract['arrived_in_treasury'],
+                $contract['outstanding'] . ($contract['overpaid'] ? ' (thu vượt)' : ''),
+            ];
+        }
+        if ($receivable['availability'] === 'available') {
+            $totals = $receivable['totals'];
+            $rows[] = ['Tổng', '', (string) $totals['value'], (string) $totals['paid'], (string) $totals['arrived_in_treasury'], (string) $totals['outstanding']];
+        } else {
+            $rows[] = ['Chưa có hợp đồng', '', '', '', '', 'Chưa có dữ liệu'];
+        }
+        $rows[] = ['Tiền nhận khác vào Ngân quỹ (không gắn hợp đồng, không trừ vào phải thu)', '', '', $receivable['unlinked_funding'], '', ''];
+
+        return [['Hợp đồng', 'Tên', 'Giá trị', 'Đã thu (đợt thanh toán)', 'Trong đó về ví Ngân quỹ', 'Còn phải thu'], $rows];
     }
 
     /**

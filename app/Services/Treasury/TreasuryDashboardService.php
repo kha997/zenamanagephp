@@ -38,11 +38,12 @@ class TreasuryDashboardService
         private readonly TreasuryBalanceService $balances,
         private readonly TreasuryReconciliationService $reconciliation,
         private readonly TreasuryAdvanceService $advances,
+        private readonly TreasuryReceivableService $receivables,
     ) {
     }
 
     /**
-     * @return array{cards: array<string, string|int>, wallets: list<array<string, mixed>>, alerts: list<array{code: string, count: int, amount: string}>}
+     * @return array{cards: array<string, string|int|null>, wallets: list<array<string, mixed>>, alerts: list<array{code: string, count: int, amount: string}>}
      */
     public function dashboard(Project $project, ?Carbon $today = null): array
     {
@@ -69,6 +70,10 @@ class TreasuryDashboardService
             'pending_approvals_amount' => self::sum($pending),
             'outstanding_advances' => TreasuryBalanceService::fromCents((int) array_sum(array_map([TreasuryBalanceService::class, 'toCents'], $ageing['totals']))),
         ];
+        // GAP-105 R-1: contract value and receivable from the contract lifecycle; null (no data) without contracts.
+        $receivable = $this->receivables->forProject($project);
+        $cards['contract_value'] = $receivable['totals']['value'];
+        $cards['receivable_outstanding'] = $receivable['totals']['outstanding'];
 
         $wallets = $this->walletRows($project, $summary['wallets'], $ageing['rows']);
         $overdue = array_values(array_filter($ageing['rows'], static fn (array $row): bool => $row['bucket'] === TreasuryAdvanceService::BUCKET_OVER_90));

@@ -1,14 +1,14 @@
 ---
 work_id: GAP-105
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-11-03-gap-105-treasury-boq-fund-chains-receivable-evidence.md
   plan: docs/superpowers/plans/2026-11-03-gap-105-treasury-boq-fund-chains-receivable.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-04T03:32:35+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-11-04, verbatim: 'APPROVE GAP-105 Gate 3'. Given on the packet at PR head 073a51cd99f8632340392b201c59a717f3e638fe; bound to implementation subject 386af8e59c7e90a7342c9168ea05e30540aae4ca and implementation-tree digest b0ec9eecaf98e755dc967355df64b26cb48e704a757fa931e427231ea5fc7511 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-03T23:35:22+07:00"
-  updated_at: "2026-11-03T23:35:22+07:00"
+  updated_at: "2026-11-04T03:32:35+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-105 at subject 386af8e59c7e90a7342c9168ea05e30540aae4ca (Gate 2 R-1, B-1, F-1, P-1; exact allowlist; one PR, three commits). R-1: TreasuryReceivableService - per non-cancelled contract value, paid (ContractPayment paid), Treasury arrivals via completed contract-payment routes (informational) and outstanding (negative marked overpaid); unlinked posted Treasury funding reported apart, never subtracted; no contracts = no data; dashboard cards contract_value / receivable_outstanding (null without contracts); report investor_receivable. F-1: TreasuryFundChainService - create chain (unique reference per project), add posted funding/owner_contribution/internal_transfer/expense/advance/advance_return documents or non-cancelled routes of the same project, remove members; one chain per member (existing unique indexes, concurrent duplicate caught); metadata only, wallet balances unchanged; every change audited (entity_type treasury_fund_chain); pages under /app/projects/{project}/treasury/fund-chains (view: rbac treasury.view + treasury.view-project; edit: rbac treasury.manage_routes + treasury.manage-routes policy); report fund_chain_trace; register filter by fund chain. B-1: migration 2026_11_03_120000 adds nullable treasury_financial_documents.boq_line_item_id, indexed, FK to boq_line_items ON DELETE RESTRICT (SQLite: column-level REFERENCES via ALTER TABLE ADD COLUMN so GAP-038 CHECK constraints are not lost to a table rebuild); TreasuryExpenseService sets it only on draft create/update (and copy-to-draft) after checking the line belongs to a BOQ of the same tenant and project; expense form selector; report expense_by_boq (posted, non-reversed expenses per line; budget = quantity x unit price only when the price is set, else no data; unlinked row); dashboard alert boq_overrun; register filter by BOQ line. No new permission; ContractPayment, receivables aging and posting unchanged. Tests: TreasuryReceivableTest 7, TreasuryFundChainTest 5, TreasuryBoqLinkTest 5 - each red against the code before its slice, green after; the 17 also pass with DB_CONNECTION=mysql on MySQL 8; migration up, down, up verified on MySQL 8 with the FK and all CHECK constraints present. Treasury feature suite 200 green. Unit + Feature + Integration 2907 tests with only the 2 known root-only failures; Feature/Api 824 green. PHPStan, php-cs-fixer, SSOT test lint, ssot:lint, route guard, deptrac pass. Exact-head CI pending at packet time."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "386af8e59c7e90a7342c9168ea05e30540aae4ca"
   verified_at: "2026-11-03T23:35:22+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "b0ec9eecaf98e755dc967355df64b26cb48e704a757fa931e427231ea5fc7511"
+  decision_recorded_at: "2026-11-04T03:32:35+07:00"
 ---
 
 # GAP-105 — Gate 3 release decision (Treasury: BOQ link, fund chains, investor receivable)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session ("APPROVE GAP-105 Gate 3"), bound to implementation subject
+`386af8e59c7e90a7342c9168ea05e30540aae4ca` and implementation-tree digest `b0ec9eecaf98e755dc967355df64b26cb48e704a757fa931e427231ea5fc7511`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

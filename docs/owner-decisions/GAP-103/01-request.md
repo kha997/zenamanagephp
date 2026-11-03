@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-11-03-gap-103-project-health-read-model-evidence.md
   plan: null
   branch: docs/GAP-103-project-health-read-model
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/393
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

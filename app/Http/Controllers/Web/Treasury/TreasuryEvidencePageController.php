@@ -33,16 +33,16 @@ class TreasuryEvidencePageController extends Controller
     {
         $model = $this->findProject($project);
         $this->authorize('treasury.view-project', $model);
-        $document = $this->findDocument($model, $treasuryDocument);
+        $moneyDocument = $this->findDocument($model, $treasuryDocument);
         $user = $this->user();
 
         return view('treasury.evidence', [
             'project' => $model,
-            'document' => $document,
-            'typeLabel' => TreasuryReportService::TYPE_LABELS[$document->document_type] ?? $document->document_type,
-            'attachments' => $this->evidence->attachments($model, $document),
-            'canAttach' => $document->document_type !== TreasuryFinancialDocument::TYPE_REVERSAL && $this->evidence->canAttach($user, $model, $document),
-            'canRemove' => fn (TreasuryDocumentAttachment $attachment): bool => $this->evidence->canRemove($user, $document, $attachment),
+            'document' => $moneyDocument,
+            'typeLabel' => TreasuryReportService::TYPE_LABELS[$moneyDocument->document_type] ?? $moneyDocument->document_type,
+            'attachments' => $this->evidence->attachments($model, $moneyDocument),
+            'canAttach' => $moneyDocument->document_type !== TreasuryFinancialDocument::TYPE_REVERSAL && $this->evidence->canAttach($user, $model, $moneyDocument),
+            'canRemove' => fn (TreasuryDocumentAttachment $attachment): bool => $this->evidence->canRemove($user, $moneyDocument, $attachment),
             'uploaders' => User::query()->where('tenant_id', (string) $model->tenant_id)->pluck('name', 'id')->all(),
         ]);
     }
@@ -51,7 +51,7 @@ class TreasuryEvidencePageController extends Controller
     {
         $model = $this->findProject($project);
         $this->authorize('treasury.view-project', $model);
-        $document = $this->findDocument($model, $treasuryDocument);
+        $moneyDocument = $this->findDocument($model, $treasuryDocument);
         $data = $request->validate([
             'file' => ['required', 'file', 'max:' . TreasuryEvidenceService::MAX_KILOBYTES, 'mimes:' . implode(',', TreasuryEvidenceService::ALLOWED_EXTENSIONS)],
             'evidence_type' => ['required', 'string'],
@@ -61,20 +61,20 @@ class TreasuryEvidencePageController extends Controller
         try {
             /** @var \Illuminate\Http\UploadedFile $file */
             $file = $request->file('file');
-            $this->evidence->attach($model, $this->user(), $document, $file, (string) $data['evidence_type'], $data['note'] ?? null);
+            $this->evidence->attach($model, $this->user(), $moneyDocument, $file, (string) $data['evidence_type'], $data['note'] ?? null);
         } catch (TreasuryRuleViolation $e) {
             return back()->withInput()->withErrors([$e->field ?? 'file' => $e->getMessage()]);
         }
 
-        return redirect()->route('operator.treasury.projects.evidence.show', [$model->id, $document->id])->with('success', 'Đã đính chứng từ.');
+        return redirect()->route('operator.treasury.projects.evidence.show', [$model->id, $moneyDocument->id])->with('success', 'Đã đính chứng từ.');
     }
 
     public function download(string $project, string $treasuryDocument, string $attachment): StreamedResponse
     {
         $model = $this->findProject($project);
         $this->authorize('treasury.view-project', $model);
-        $document = $this->findDocument($model, $treasuryDocument);
-        $file = $this->evidence->attachmentOf($model, $document, $attachment);
+        $moneyDocument = $this->findDocument($model, $treasuryDocument);
+        $file = $this->evidence->attachmentOf($model, $moneyDocument, $attachment);
         abort_if($file === null, 404);
         /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
         $disk = Storage::disk($this->evidence->disk());
@@ -92,17 +92,17 @@ class TreasuryEvidencePageController extends Controller
     {
         $model = $this->findProject($project);
         $this->authorize('treasury.view-project', $model);
-        $document = $this->findDocument($model, $treasuryDocument);
-        $file = $this->evidence->attachmentOf($model, $document, $attachment);
+        $moneyDocument = $this->findDocument($model, $treasuryDocument);
+        $file = $this->evidence->attachmentOf($model, $moneyDocument, $attachment);
         abort_if($file === null, 404);
 
         try {
-            $this->evidence->remove($model, $this->user(), $document, $file);
+            $this->evidence->remove($model, $this->user(), $moneyDocument, $file);
         } catch (TreasuryRuleViolation $e) {
             return back()->withErrors([$e->field ?? 'file' => $e->getMessage()]);
         }
 
-        return redirect()->route('operator.treasury.projects.evidence.show', [$model->id, $document->id])->with('success', 'Đã gỡ chứng từ.');
+        return redirect()->route('operator.treasury.projects.evidence.show', [$model->id, $moneyDocument->id])->with('success', 'Đã gỡ chứng từ.');
     }
 
     public function updatePolicy(Request $request): RedirectResponse
@@ -131,14 +131,14 @@ class TreasuryEvidencePageController extends Controller
 
     private function findDocument(Project $project, string $id): TreasuryFinancialDocument
     {
-        /** @var TreasuryFinancialDocument $document */
-        $document = TreasuryFinancialDocument::query()
+        /** @var TreasuryFinancialDocument $moneyDocument */
+        $moneyDocument = TreasuryFinancialDocument::query()
             ->where('tenant_id', (string) $project->tenant_id)
             ->where('project_id', (string) $project->id)
             ->whereKey($id)
             ->firstOrFail();
 
-        return $document;
+        return $moneyDocument;
     }
 
     private function user(): User

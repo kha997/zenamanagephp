@@ -1,11 +1,11 @@
 ---
 work_id: GAP-107
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-11-04-gap-107-treasury-period-lock-bank-import-evidence.md
   plan: null
@@ -15,16 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-04T11:09:07+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-04, verbatim: 'APPROVE GAP-107 Gate 1'. Bound to reviewed Draft PR #397 head 498b5b458794e4231306864532e5e4a3925b4557, canonical base 249c8b7194400552aae88a65055c14d1df200d3c. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-04T11:00:00+07:00"
-  updated_at: "2026-11-04T11:00:00+07:00"
+  updated_at: "2026-11-04T11:09:07+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-107 Gate 1 in-session on 2026-11-04 against Draft PR #397 head
+`498b5b458794e4231306864532e5e4a3925b4557`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

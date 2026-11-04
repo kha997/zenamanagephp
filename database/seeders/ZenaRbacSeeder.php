@@ -31,6 +31,7 @@ class ZenaRbacSeeder extends Seeder
         $this->createUsers();
         $this->assignRolePermissions();
         $this->call(TreasuryRolePermissionSeeder::class);
+        $this->call(PayrollRolePermissionSeeder::class);
 
         if (env('ZENA_RBAC_SEED_SAMPLE_DATA', false)) {
             try {
@@ -112,6 +113,9 @@ class ZenaRbacSeeder extends Seeder
             'treasury.view_audit',
             'treasury.export',
             'treasury.manage_period_lock',
+            // Staff register and payroll (GAP-109)
+            'payroll.manage',
+            'payroll.close',
         ];
 
         foreach ($codes as $code) {

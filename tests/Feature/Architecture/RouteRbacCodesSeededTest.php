@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Architecture;
 
 use App\Models\Permission;
+use Database\Seeders\PayrollRolePermissionSeeder;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RoleSeeder;
 use Database\Seeders\TreasuryRolePermissionSeeder;
@@ -32,6 +33,7 @@ class RouteRbacCodesSeededTest extends TestCase
         ZenaPermissionsSeeder::class,
         ZenaAdminRolePermissionSeeder::class,
         TreasuryRolePermissionSeeder::class,
+        PayrollRolePermissionSeeder::class,
         ZenaProjectManagerRolePermissionSeeder::class,
         V1PermissionGapSeeder::class,
     ];

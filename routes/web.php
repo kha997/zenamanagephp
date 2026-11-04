@@ -711,6 +711,20 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/treasury/settings/evidence', [App\Http\Controllers\Web\Treasury\TreasuryEvidencePageController::class, 'updatePolicy'])->middleware('rbac:treasury.self_approve_expense')->name('treasury.settings.evidence');
     // GAP-108 N-1 / S-1: tenant-wide Treasury thresholds, owner-level only.
     Route::post('/treasury/settings/thresholds', [App\Http\Controllers\Web\Treasury\TreasurySettingsPageController::class, 'updateThresholds'])->middleware('rbac:treasury.self_approve_expense')->name('treasury.settings.thresholds');
+    // GAP-109 Q-1: staff register and monthly payroll (payroll.manage; close / reopen payroll.close).
+    Route::get('/payroll', [App\Http\Controllers\Web\Payroll\PayrollPageController::class, 'index'])->middleware('rbac:payroll.manage')->name('payroll.index');
+    Route::post('/payroll/periods', [App\Http\Controllers\Web\Payroll\PayrollPageController::class, 'store'])->middleware('rbac:payroll.manage')->name('payroll.periods.store');
+    Route::get('/payroll/periods/{period}', [App\Http\Controllers\Web\Payroll\PayrollPageController::class, 'show'])->middleware('rbac:payroll.manage')->name('payroll.periods.show');
+    Route::post('/payroll/periods/{period}/settings', [App\Http\Controllers\Web\Payroll\PayrollPageController::class, 'updateSettings'])->middleware('rbac:payroll.manage')->name('payroll.periods.settings');
+    Route::get('/payroll/periods/{period}/export', [App\Http\Controllers\Web\Payroll\PayrollPageController::class, 'export'])->middleware('rbac:payroll.manage')->name('payroll.periods.export');
+    Route::post('/payroll/periods/{period}/close', [App\Http\Controllers\Web\Payroll\PayrollPageController::class, 'close'])->middleware('rbac:payroll.close')->name('payroll.periods.close');
+    Route::post('/payroll/periods/{period}/reopen', [App\Http\Controllers\Web\Payroll\PayrollPageController::class, 'reopen'])->middleware('rbac:payroll.close')->name('payroll.periods.reopen');
+    Route::post('/payroll/lines/{line}', [App\Http\Controllers\Web\Payroll\PayrollPageController::class, 'updateLine'])->middleware('rbac:payroll.manage')->name('payroll.lines.update');
+    Route::post('/payroll/lines/{line}/paid', [App\Http\Controllers\Web\Payroll\PayrollPageController::class, 'markPaid'])->middleware('rbac:payroll.manage')->name('payroll.lines.paid');
+    Route::get('/payroll/staff', [App\Http\Controllers\Web\Payroll\StaffPageController::class, 'index'])->middleware('rbac:payroll.manage')->name('payroll.staff.index');
+    Route::post('/payroll/staff', [App\Http\Controllers\Web\Payroll\StaffPageController::class, 'store'])->middleware('rbac:payroll.manage')->name('payroll.staff.store');
+    Route::get('/payroll/staff/{staff}/edit', [App\Http\Controllers\Web\Payroll\StaffPageController::class, 'edit'])->middleware('rbac:payroll.manage')->name('payroll.staff.edit');
+    Route::post('/payroll/staff/{staff}', [App\Http\Controllers\Web\Payroll\StaffPageController::class, 'update'])->middleware('rbac:payroll.manage')->name('payroll.staff.update');
     Route::post('/projects/{project}/treasury/documents/{treasuryDocument}/reverse', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'reverseDocument'])->middleware('rbac:treasury.reverse')->name('treasury.projects.documents.reverse');
     Route::post('/projects/{project}/treasury/documents/{treasuryDocument}/replacement', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'linkReplacement'])->middleware('rbac:treasury.reverse')->name('treasury.projects.documents.replacement');
     Route::post('/projects/{project}/treasury/expenses', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'storeExpense'])->middleware('rbac:treasury.create_expense')->name('treasury.projects.expenses.store');

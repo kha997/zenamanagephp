@@ -156,6 +156,13 @@ Trên trang Ngân quỹ:
 
 Không quyền mới, không đổi cách ghi sổ, không sửa module tài liệu chung.
 
+## Owner amendment 1 (2026-11-04)
+
+Owner answered in-session (AskUserQuestion), verbatim choice: "Cho sửa 3 → 4 (Recommended)". The new `missing_evidence`
+alert raises the existing S6 fixture's alert count, so the allowlist adds exactly one assertion line in
+`tests/Feature/Treasury/TreasuryReportServiceTest.php` (`test_overview_has_one_row_per_project`: 3 → 4, with a GAP-106
+comment). Nothing else in that file changes.
+
 ## Ngoài phạm vi
 
 OCR; import sao kê; khoá kỳ; ngưỡng / hạn tạm ứng; xem trước ảnh trong trang; đính kèm qua API; deploy.

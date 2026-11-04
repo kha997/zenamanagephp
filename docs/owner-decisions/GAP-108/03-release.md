@@ -1,14 +1,14 @@
 ---
 work_id: GAP-108
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-11-04-gap-108-treasury-thresholds-advance-deadline-evidence.md
   plan: docs/superpowers/plans/2026-11-04-gap-108-treasury-thresholds-advance-deadline.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-04T16:26:57+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-11-04, verbatim: 'APPROVE GAP-108 Gate 3'. Given on the packet at PR head 1bdd5e9a48d3cc0f202873df89ea3ad6f3521039; bound to implementation subject 7464feaacc67cbd77fd89d3c32932a26c038d1ab and implementation-tree digest 7b51f7fda1d937d2c99046ce0344bf8ceca9010ff47abd4b991f911553bf9462 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-04T16:06:20+07:00"
-  updated_at: "2026-11-04T16:06:20+07:00"
+  updated_at: "2026-11-04T16:26:57+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-108 at subject 7464feaacc67cbd77fd89d3c32932a26c038d1ab (Gate 2 N-1, S-1, H-1, Q-1, P-1; exact allowlist; one PR, two implementation commits). Thresholds: TreasurySettingsService keeps two tenant-wide values in tenants.settings (treasury_unreconciled_funding_days default 30, treasury_advance_default_term_days default 90), integers 1-365, changed only by treasury.self_approve_expense holders under a tenant row lock with an AuditLog treasury.thresholds.changed (old / new); missing or invalid values fall back to the defaults; form on the company Treasury page (rbac:treasury.self_approve_expense); TreasuryDashboardService reads the funding threshold, returns the thresholds and counts overdue advances by the ageing row flag; alert labels follow the threshold. Due date: one additive migration adds nullable due_date to treasury_financial_documents and treasury_advances (SQLite ALTER TABLE ADD COLUMN, CHECK constraints kept; down() drops both); the advance request takes an optional due date (web and API), not before the request date, copied on rejected-copy and to the advance row at posting; changeDueDate sets / moves / clears it for a posted advance still owed, approver policy, mandatory reason, class-3 lock, AuditLog treasury.advance.due_date_changed; not a posting, so the period lock does not block it and no amount or balance changes. Overdue rule: own due date passed with money owed; without one the advance is due on the last day of the tenant term (default 90 keeps the S6 day-90 rule); ageing rows carry due_date, effective_due_date, overdue, overdue_days; buckets unchanged; the advance table, advance page (due-date form for approvers), ageing report (two new columns) and overdue alert use it; web route and API PUT due-date under rbac:treasury.approve_expense. No new permission, no new dependency. Tests: TreasuryThresholdsTest 4 and TreasuryAdvanceDueDateTest 4, each red before its commit and green after; the 8 also green with DB_CONNECTION=mysql on MySQL 8; migration up, down, up on MySQL 8. Treasury feature + architecture suites 253 green. Unit + Feature + Integration 2934 tests with only the 2 known root-only failures; Feature/Api 824 green. PHPStan, php-cs-fixer, SSOT test lint, ssot:lint, route guard, deptrac pass. Exact-head CI pending at packet time."
@@ -35,10 +35,17 @@ technical_evidence:
   implementation_tree_digest: "7b51f7fda1d937d2c99046ce0344bf8ceca9010ff47abd4b991f911553bf9462"
   verified_pr_head_sha: "7464feaacc67cbd77fd89d3c32932a26c038d1ab"
   verified_at: "2026-11-04T16:06:20+07:00"
-owner_decision_binding: null
+owner_decision_binding:
+  implementation_tree_digest: "7b51f7fda1d937d2c99046ce0344bf8ceca9010ff47abd4b991f911553bf9462"
+  decision_recorded_at: "2026-11-04T16:26:57+07:00"
 ---
 
 # GAP-108 — Gate 3 release decision (Treasury configurable thresholds and per-advance due date)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-11-04 ("APPROVE GAP-108 Gate 3"), bound to implementation subject
+`7464feaacc67cbd77fd89d3c32932a26c038d1ab` and implementation-tree digest `7b51f7fda1d937d2c99046ce0344bf8ceca9010ff47abd4b991f911553bf9462`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

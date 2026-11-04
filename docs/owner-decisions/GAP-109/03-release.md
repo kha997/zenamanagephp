@@ -1,14 +1,14 @@
 ---
 work_id: GAP-109
 gate: 3
-gate_status: approved
+gate_status: awaiting_owner
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: approved
+  value: none
   authority: human_owner
-decision_requested: null
+decision_requested: "approve_or_correction_or_defer"
 references:
   spec: docs/audits/2026-11-04-gap-109-staff-payroll-evidence.md
   plan: docs/superpowers/plans/2026-11-05-gap-109-staff-payroll.md
@@ -18,40 +18,39 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-11-05T00:15:45+07:00"
-  owner_response_reference: "Owner Gate-3 decision in-session on 2026-11-04, verbatim: 'APPROVE GAP-109 Gate 3'. Given on the packet at PR head 247da4902ba197c5cbc65725c2d12e7dfd17a8cc; bound to implementation subject 4960e6c0a642456653c266b04a9bbd3ab9f28fab and implementation-tree digest 9eba6a01b8ff6c278e059973e6460e248369d442023f20f7087167f1a35f6d37 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment, release or production seeding authorized."
+  recorded_at: null
+  owner_response_reference: null
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-04T22:30:02+07:00"
-  updated_at: "2026-11-05T00:15:45+07:00"
+  updated_at: "2026-11-05T00:19:41+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "GAP-109 at subject 4960e6c0a642456653c266b04a9bbd3ab9f28fab (Gate 2 C-1, B-1, H-1, L-1, P-1, Q-1, R-1; exact allowlist; one PR, one implementation commit). One migration creates staff_members (unique tenant + code; FKs to tenants, users, treasury_financial_parties), payroll_periods (unique tenant + period) and payroll_lines (unique period + staff; FKs to tenants, periods, staff); no existing table changes. StaffService: payroll.manage only; code and name required, unique code per tenant; type employee / collaborator; login and Treasury party must belong to the tenant; end date not before start; part-time standard hours 0-744; annual bonus estimate not negative; audited create / update with old and new values. PayrollService: createPeriod (YYYY-MM, 1-31 working days, hours per day 0-24, one per tenant and month) with a line for every person working in the month and bonus accrual = annual estimate / 12; updateLine in draft only (entered items 0 to 9,999,999,999,999.99; missing keeps, empty means zero); net pay = salary + allowance + overtime + bonus paid - employee insurance - PIT - advance - other deductions; company cost = salary + allowance + overtime + employer insurance + other company cost + bonus accrual; standard hours = working days x hours per day or the person's own hours; hourly cost = company cost / standard hours rounded half up to the cent, recomputed on period settings change and frozen at close; close (payroll.close) and reopen with a mandatory reason; markPaid after close only (date, reference); every write in a transaction on the locked period row and audited; integer-cent arithmetic; CSV export with formula-injection guard. Web pages under rbac:payroll.manage (close / reopen rbac:payroll.close) with tenant-scoped lookups (404 across tenants); menu item 'Nhân sự & lương' shown only to payroll.manage holders. Permissions payroll.manage (Admin / owner roles, Finance) and payroll.close (Admin / owner roles) seeded by ZenaPermissionsSeeder, ZenaRbacSeeder and the new PayrollRolePermissionSeeder (DatabaseSeeder). No API, no Treasury posting, no new dependency. Tests: StaffRegisterTest 3 and PayrollPeriodTest 4, red before the code (missing classes) and green after; the 7 also green with DB_CONNECTION=mysql on MySQL 8; migration up, down, up on MySQL 8. Architecture, navigation and Treasury seeder tests 82 green. Unit + Feature + Integration 2941 tests with only the 2 known root-only failures; Feature/Api 824 green (run before a test-only change that inlined the two tests' helpers; the 7 payroll tests re-run green on SQLite and MySQL after it). PHPStan, php-cs-fixer, SSOT test lint, ssot:lint, route guard, deptrac pass. Exact-head CI pending at packet time."
+mandatory_technical_gate_summary: "GAP-109 at subject 96693395e9ebaff727ad0204a9e22262f72626e5 (Gate 2 C-1, B-1, H-1, L-1, P-1, Q-1, R-1; exact allowlist; one PR, two implementation commits: 4960e6c0 then 96693395 fixing two Codex review findings — updateLine now computes with the period row returned by the lock so a concurrent calendar change is not overwritten, and the line form accepts two-decimal amounts (step 0.01) so a fractional bonus accrual no longer blocks saving). One migration creates staff_members (unique tenant + code; FKs to tenants, users, treasury_financial_parties), payroll_periods (unique tenant + period) and payroll_lines (unique period + staff; FKs to tenants, periods, staff); no existing table changes. StaffService: payroll.manage only; code and name required, unique code per tenant; type employee / collaborator; login and Treasury party must belong to the tenant; end date not before start; part-time standard hours 0-744; annual bonus estimate not negative; audited create / update with old and new values. PayrollService: createPeriod (YYYY-MM, 1-31 working days, hours per day 0-24, one per tenant and month) with a line for every person working in the month and bonus accrual = annual estimate / 12; updateLine in draft only (entered items 0 to 9,999,999,999,999.99; missing keeps, empty means zero); net pay = salary + allowance + overtime + bonus paid - employee insurance - PIT - advance - other deductions; company cost = salary + allowance + overtime + employer insurance + other company cost + bonus accrual; standard hours = working days x hours per day or the person's own hours; hourly cost = company cost / standard hours rounded half up to the cent, recomputed on period settings change and frozen at close; close (payroll.close) and reopen with a mandatory reason; markPaid after close only (date, reference); every write in a transaction on the locked period row and audited; integer-cent arithmetic; CSV export with formula-injection guard. Web pages under rbac:payroll.manage (close / reopen rbac:payroll.close) with tenant-scoped lookups (404 across tenants); menu item 'Nhân sự & lương' shown only to payroll.manage holders. Permissions payroll.manage (Admin / owner roles, Finance) and payroll.close (Admin / owner roles) seeded by ZenaPermissionsSeeder, ZenaRbacSeeder and the new PayrollRolePermissionSeeder (DatabaseSeeder). No API, no Treasury posting, no new dependency. Tests: StaffRegisterTest 3 and PayrollPeriodTest 4, red before the code (missing classes) and green after; the 7 also green with DB_CONNECTION=mysql on MySQL 8; migration up, down, up on MySQL 8. Architecture, navigation and Treasury seeder tests 82 green. Unit + Feature + Integration 2941 tests with only the 2 known root-only failures; Feature/Api 824 green (run before a test-only change that inlined the two tests' helpers; the 7 payroll tests re-run green on SQLite and MySQL after it). PHPStan, php-cs-fixer, SSOT test lint, ssot:lint, route guard, deptrac pass. After the fix the 7 payroll tests (115 assertions, one new: the form step) are green on SQLite and MySQL 8, the form-step assertion fails without the view fix; PHPStan and php-cs-fixer clean. The Owner approved Gate 3 at 4960e6c0 (digest 9eba6a01...6d37); that approval no longer binds because the code changed, so Gate 3 is re-presented. Exact-head CI pending at packet time."
 technical_evidence:
   base_sha: "f0fad9ccce66e620829870f9998705b1ca23fedf"
-  subject_sha: "4960e6c0a642456653c266b04a9bbd3ab9f28fab"
-  implementation_tree_digest: "9eba6a01b8ff6c278e059973e6460e248369d442023f20f7087167f1a35f6d37"
-  verified_pr_head_sha: "4960e6c0a642456653c266b04a9bbd3ab9f28fab"
-  verified_at: "2026-11-04T22:30:02+07:00"
-owner_decision_binding:
-  implementation_tree_digest: "9eba6a01b8ff6c278e059973e6460e248369d442023f20f7087167f1a35f6d37"
-  decision_recorded_at: "2026-11-05T00:15:45+07:00"
+  subject_sha: "96693395e9ebaff727ad0204a9e22262f72626e5"
+  implementation_tree_digest: "a9ebb66e347c95642bb26b2156894307524743b9e4ab04967fd03de491762d3a"
+  verified_pr_head_sha: "96693395e9ebaff727ad0204a9e22262f72626e5"
+  verified_at: "2026-11-05T00:19:41+07:00"
+owner_decision_binding: null
 ---
 
 # GAP-109 — Gate 3 release decision (staff register and monthly payroll cost)
 
-## OWNER GATE 3: APPROVED
+## Gate 3 trình lại sau review Codex
 
-Owner approved Gate 3 in-session on 2026-11-04 ("APPROVE GAP-109 Gate 3"), bound to implementation subject
-`4960e6c0a642456653c266b04a9bbd3ab9f28fab` and implementation-tree digest `9eba6a01b8ff6c278e059973e6460e248369d442023f20f7087167f1a35f6d37`. No deployment, release or production seeding is authorized.
+Owner đã duyệt Gate 3 ("APPROVE GAP-109 Gate 3") ở subject `4960e6c0`, digest `9eba6a01…6d37`. Sau đó Codex review
+PR và chỉ ra 2 lỗi thật; mã đã sửa ở `96693395`, digest đổi thành `a9ebb66e…2d3a`, nên duyệt cũ không còn áp dụng và
+Gate 3 được trình lại.
 
 ## Gói quyết định phát hành
 
 **1. Vấn đề là gì?** Chưa có số chi phí thật của từng người theo tháng nên chưa tính được nhân công cho công trình.
 
-**2. Sau thay đổi (Gate 2 C-1, B-1, H-1, L-1, P-1, Q-1, R-1)** — subject `4960e6c0`:
+**2. Sau thay đổi (Gate 2 C-1, B-1, H-1, L-1, P-1, Q-1, R-1)** — subject `96693395`:
 
 **Menu mới "Nhân sự & lương"** (mục Tài chính). Chỉ người có quyền lương mới thấy.
 
@@ -89,8 +88,14 @@ Owner approved Gate 3 in-session on 2026-11-04 ("APPROVE GAP-109 Gate 3"), bound
 
 Không đổi bảng cũ, không ghi vào Ngân quỹ, không thêm API hay thư viện. Có 1 migration tạo 3 bảng mới.
 
-**3. Đã kiểm thử** — base `f0fad9cc`; subject `4960e6c0a642456653c266b04a9bbd3ab9f28fab`;
-digest `9eba6a01b8ff6c278e059973e6460e248369d442023f20f7087167f1a35f6d37`.
+**3. Đã kiểm thử** — base `f0fad9cc`; subject `96693395e9ebaff727ad0204a9e22262f72626e5`;
+digest `a9ebb66e347c95642bb26b2156894307524743b9e4ab04967fd03de491762d3a`.
+- **Sửa theo Codex (commit `96693395`):**
+  - lưu dòng lương dùng đúng bản ghi tháng đã khoá, nên đổi số ngày công cùng lúc không bị ghi đè bằng số cũ;
+  - ô nhập tiền nhận số lẻ đến 0,01, nên thưởng phân bổ kiểu 833.333,33 không chặn việc lưu.
+
+  Thêm 1 kiểm tra cho ô nhập: hỏng khi chưa sửa, xanh khi đã sửa. 7 test lương xanh trên SQLite và MySQL 8. Lỗi khoá cùng
+  lúc là tình huống tranh chấp nên không có test tự động; đã sửa theo đúng cách các thao tác khác trong cùng service.
 - **7 test mới** (3 nhân sự, 4 bảng lương), hỏng khi chưa có mã, xanh khi có mã. Kiểm tra:
   - nhân sự: thêm / sửa, mã trùng, loại sai, ngày sai, giờ chuẩn sai, thưởng âm, liên kết khác công ty, quyền, nhật ký,
     menu, cách ly công ty;

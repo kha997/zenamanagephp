@@ -1,11 +1,11 @@
 ---
 work_id: GAP-110
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-11-05-gap-110-oppm-phase-2-3-evidence.md
   plan: null
@@ -15,16 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-05T06:47:12+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-05, verbatim: 'APPROVE GAP-110 Gate 1'. Bound to reviewed Draft PR #400 head 4cdf8dd029ee15fb8dc9e5a73cd7604e77f28f0d, canonical base bdf1b5fb27e3487ce25bd0fe61d9c63ee8b986eb. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-05T01:30:00+07:00"
-  updated_at: "2026-11-05T01:30:00+07:00"
+  updated_at: "2026-11-05T06:47:12+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-110 Gate 1 in-session on 2026-11-05 against Draft PR #400 head
+`4cdf8dd029ee15fb8dc9e5a73cd7604e77f28f0d`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

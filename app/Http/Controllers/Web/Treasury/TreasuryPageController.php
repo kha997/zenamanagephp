@@ -176,6 +176,18 @@ class TreasuryPageController extends Controller
             'registerUsers' => User::query()->where('tenant_id', (string) $model->tenant_id)->orderBy('name')->pluck('name', 'id')->all(),
             // GAP-097 S6: cards, wallet table and alerts.
             'dashboard' => $this->dashboard->dashboard($model),
+            // GAP-107 L-1 / U-1: period lock status, forms (lock managers only) and history.
+            'periodLock' => (function () use ($model, $user): array {
+                $locks = app(\App\Services\Treasury\TreasuryPeriodLockService::class);
+                $canManage = $locks->canManage($user);
+
+                return [
+                    'locked_through' => $locks->lockedThrough($model),
+                    'can_manage' => $canManage,
+                    'history' => $canManage ? $locks->history($model) : [],
+                    'users' => $canManage ? User::query()->where('tenant_id', (string) $model->tenant_id)->pluck('name', 'id')->all() : [],
+                ];
+            })(),
             // GAP-066 S3: expenses, approval queue, payables.
             'payables' => $this->expenses->payables($model),
             // GAP-105 B-1: BOQ lines of this project for the expense form.

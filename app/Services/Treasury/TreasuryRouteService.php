@@ -299,7 +299,9 @@ class TreasuryRouteService
             throw new TreasuryRuleViolation('Số tiền phải lớn hơn 0.', 'amount');
         }
 
-        return DB::transaction(function () use ($actor, $route, $document, $from, $to, $amount, $occurredAt): Leg {
+        return DB::transaction(function () use ($actor, $route, $document, $from, $to, $amount, $occurredAt, $project): Leg {
+            // GAP-107 L-1: no posting dated inside a locked period (project row locked first).
+            app(TreasuryPeriodLockService::class)->requireOpen($project, $occurredAt);
             if ($from !== null) {
                 $this->posting->lockWallet($from);
             }
@@ -373,7 +375,9 @@ class TreasuryRouteService
         $document = $this->documentOf($route);
         $to = $this->posting->projectWallet($project, (string) $leg->to_wallet_id, 'leg');
 
-        return DB::transaction(function () use ($actor, $leg, $route, $document, $to, $reason): Leg {
+        return DB::transaction(function () use ($actor, $leg, $route, $document, $to, $reason, $project): Leg {
+            // GAP-107 L-1: no posting dated inside a locked period (project row locked first).
+            app(TreasuryPeriodLockService::class)->requireOpen($project, \Illuminate\Support\Carbon::today());
             $this->posting->lockWallet($to);
             if ($route->linked_contract_payment_id !== null) {
                 // Class 1 before 4, as every Case A write (a reversal is a correction: no paid check).

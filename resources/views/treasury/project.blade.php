@@ -37,6 +37,7 @@
     @include('treasury._errors')
 
     @include('treasury._dashboard')
+    @include('treasury._period-lock')
 
     <x-ui.card title="Số dư">
         <div class="operator-form-grid p-4" data-testid="treasury-balances">
@@ -66,6 +67,10 @@
                         <td class="text-sm text-amber-700" data-testid="treasury-wallet-unreconciled">{{ $money($reconciliationSummary[$wallet->id]['unreconciled'] ?? '0.00') }}</td>
                         <td class="flex gap-2">
                             <a href="{{ route('operator.treasury.projects.wallets.reconcile', [$project->id, $wallet->id]) }}" class="operator-button operator-button-inline" data-testid="treasury-wallet-reconcile-link">Đối soát</a>
+                            @if (in_array($wallet->wallet_type, \App\Services\Treasury\TreasuryBankImportService::BANK_WALLET_TYPES, true))
+                                {{-- GAP-107 I-1: bank statement import for bank wallets. --}}
+                                <a href="{{ route('operator.treasury.projects.wallets.bank-import', [$project->id, $wallet->id]) }}" class="operator-button operator-button-inline" data-testid="treasury-wallet-bank-import-link">Import sao kê</a>
+                            @endif
                             @if ($canManageWallets)
                                 <a href="{{ route('operator.treasury.projects.wallets.edit', [$project->id, $wallet->id]) }}" class="operator-button operator-button-inline">Sửa</a>
                                 <form method="POST" action="{{ route('operator.treasury.projects.wallets.destroy', [$project->id, $wallet->id]) }}" onsubmit="return confirm('Xoá ví này?')">

@@ -133,6 +133,8 @@ class TreasuryExpenseService
         $plan = (array) ($expense->expense_plan ?? []);
 
         return DB::transaction(function () use ($project, $actor, $expense, $note, $selfApproval, $wallet, $plan): Document {
+            // GAP-107 L-1: no posting dated inside a locked period (project row locked first).
+            app(TreasuryPeriodLockService::class)->requireOpen($project, $expense->transaction_date);
             // Class 0 → class 2 → class 4 → class 5.
             $this->posting->lockWallet($wallet);
             $this->lockCostSources($plan);

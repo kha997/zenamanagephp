@@ -143,6 +143,8 @@ class TreasuryReconciliationService
             }
 
             $reverses = $this->writeReverses($actor, collect([$active]));
+            // GAP-107: a bank statement line matched to this entry is open again.
+            app(TreasuryBankImportService::class)->reopenForEntries((string) $project->tenant_id, [$ledgerEntryId]);
             $moved = $this->settleDocuments($this->documentIdsOf($locked, [$ledgerEntryId]));
             $this->audit($actor, $project, $reconciliation, 'treasury.reconciliation.undone', [
                 'wallet_id' => (string) $reconciliation->wallet_id,
@@ -192,6 +194,8 @@ class TreasuryReconciliationService
 
             $reverses = $this->writeReverses($actor, $active);
             $undoneEntryIds = $active->pluck('ledger_entry_id')->map(static fn ($id): string => (string) $id)->all();
+            // GAP-107: bank statement lines matched to these entries are open again.
+            app(TreasuryBankImportService::class)->reopenForEntries((string) $project->tenant_id, $undoneEntryIds);
             $moved = $this->settleDocuments($this->documentIdsOf($locked, $undoneEntryIds));
             $this->audit($actor, $project, $reconciliation, 'treasury.reconciliation.undone', [
                 'wallet_id' => (string) $reconciliation->wallet_id,

@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-11-04-gap-107-treasury-period-lock-bank-import-evidence.md
   plan: null
   branch: docs/GAP-107-treasury-period-lock-bank-import
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/397
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

@@ -1,14 +1,14 @@
 ---
 work_id: GAP-107
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-11-04-gap-107-treasury-period-lock-bank-import-evidence.md
   plan: docs/superpowers/plans/2026-11-04-gap-107-treasury-period-lock-bank-import.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-04T15:07:19+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-11-04, verbatim: 'APPROVE GAP-107 Gate 3'. Given on the packet at PR head 866981d6ae79231a363dd0a8767f3e6ccf5369b6; bound to implementation subject 38b3f79ae8899c5a85e668546bbc8324f0de64a9 and implementation-tree digest 3aed1260da129be6cd98d907ecd63683c281b938b4922eee71d6fa9891f616b5 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-04T15:05:44+07:00"
-  updated_at: "2026-11-04T15:05:44+07:00"
+  updated_at: "2026-11-04T15:07:19+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-107 at subject 38b3f79ae8899c5a85e668546bbc8324f0de64a9 (Gate 2 L-1, U-1, R-1, I-1, P-1; exact allowlist; one PR, two commits). One migration creates treasury_period_locks, treasury_bank_statement_imports (composite FK to the wallet, unique wallet + sha256) and treasury_bank_statement_lines (composite FKs to import, ledger entry, reconciliation); no existing table changes. Period lock: TreasuryPeriodLockService lock forward only and not in the future, unlock / move back with a mandatory reason, history rows and audit, only treasury.manage_period_lock holders; requireOpen runs first in the posting transactions of funding / owner contribution, transfer, adjustment, reversal, expense approval, advance approval, advance return, settlement approve / remove, route leg record / reverse, and locks the project row FOR UPDATE so a covering lock and a posting serialize; reversing an old document dated after the lock works; reconciliation stays allowed (R-1); lock panel on the project Treasury page. Bank import: TreasuryBankImportService for bank wallets (company_bank, owner_personal, employee_bank): CSV only (comma / semicolon / tab, UTF-8 or Windows-1258/1252, signed amount or debit + credit, VN / EN number formats, dd/mm/yyyy or yyyy-mm-dd, 2 MB, 5,000 lines, errors by line), duplicate file refused, lines seen in an earlier import marked duplicate, suggestions (same direction and amount, date within 3 days, nearest first, one ledger entry each), confirmation through TreasuryReconciliationService::reconcile (bank_statement, statement reference, today), ignore with a reason; undoing a reconciliation line or a whole reconciliation reopens its statement lines; no Treasury document is ever created from a bank line; pages read under the Treasury project policy and write under treasury.reconcile. No new permission, no new dependency. Tests: TreasuryPeriodLockTest 6 and TreasuryBankImportTest 5, each red before its commit and green after; the 11 also green with DB_CONNECTION=mysql on MySQL 8; migration up, down, up on MySQL 8; a two-process MySQL race showed a lock request waiting about 2.6 s for an open posting transaction to commit (manual script, not a CI test). Treasury feature + architecture suites green. Unit + Feature + Integration 2926 tests with only the 2 known root-only failures; Feature/Api 824 green. PHPStan, php-cs-fixer, SSOT test lint, ssot:lint, route guard, deptrac pass. Exact-head CI pending at packet time."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "38b3f79ae8899c5a85e668546bbc8324f0de64a9"
   verified_at: "2026-11-04T15:05:44+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "3aed1260da129be6cd98d907ecd63683c281b938b4922eee71d6fa9891f616b5"
+  decision_recorded_at: "2026-11-04T15:07:19+07:00"
 ---
 
 # GAP-107 — Gate 3 release decision (Treasury period lock and bank statement import)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-11-04 ("APPROVE GAP-107 Gate 3"), bound to implementation subject
+`38b3f79ae8899c5a85e668546bbc8324f0de64a9` and implementation-tree digest `3aed1260da129be6cd98d907ecd63683c281b938b4922eee71d6fa9891f616b5`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

@@ -1,32 +1,38 @@
 ---
 work_id: GAP-108
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-11-04-gap-108-treasury-thresholds-advance-deadline-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-11-04-gap-108-treasury-thresholds-advance-deadline.md
   branch: docs/GAP-108-treasury-thresholds-advance-deadline
   pr: https://github.com/kha997/zenamanagephp/pull/398
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-04T15:58:00+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-04, verbatim: 'APPROVE GAP-108 Gate 2 N-1 S-1 H-1 Q-1 P-1'. Reviewed design head: 73f9ae9da2b53058c63bd3420d0ea4af87eaf683. Approves N-1 (two configurable thresholds, 1-365 days, defaults 30 / 90; ageing buckets stay fixed), S-1 (tenant-wide in tenants.settings, changed only by treasury.self_approve_expense holders, audited), H-1 (optional due date on the advance request, copied at posting, changeable after posting by approvers with a reason and audit), Q-1 (due date passed with money owed is overdue; no due date falls back to the configurable term, unchanged at 90), P-1 (one PR, one Gate 3), with the exact allowlist in this packet; one additive migration (two nullable columns); no new permission; not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-04T15:55:00+07:00"
-  updated_at: "2026-11-04T15:55:00+07:00"
+  updated_at: "2026-11-04T15:58:00+07:00"
 generated_by: agent
 ---
 
 # GAP-108 — Treasury configurable thresholds and per-advance deadline: Gate 2 design
+
+## OWNER GATE 2: APPROVED — N-1, S-1, H-1, Q-1, P-1
+
+Owner approved N-1, S-1, H-1, Q-1 and P-1 in-session on 2026-11-04 against reviewed design head
+`73f9ae9da2b53058c63bd3420d0ea4af87eaf683`. This authorizes only the bounded implementation defined by this packet; it
+does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

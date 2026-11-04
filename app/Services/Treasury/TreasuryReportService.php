@@ -12,6 +12,7 @@ use App\Models\Treasury\TreasuryCostSettlementAllocation as Allocation;
 use App\Models\Treasury\TreasuryExpenseApproval as Approval;
 use App\Models\Treasury\TreasuryFinancialDocument as Document;
 use App\Models\Treasury\TreasuryFinancialParty;
+use App\Models\Treasury\TreasuryFundChainMember as FundChainMember;
 use App\Models\Treasury\TreasuryLedgerEntry as Entry;
 use App\Models\Treasury\TreasuryPaymentRoute as Route;
 use App\Models\Treasury\TreasuryPaymentRouteLeg as Leg;
@@ -41,6 +42,9 @@ class TreasuryReportService
         'unreconciled' => 'Giao dịch chưa đối soát',
         'routes' => 'Tiền đang qua trung gian',
         'corrections' => 'Đảo và điều chỉnh',
+        'investor_receivable' => 'Phải thu nhà đầu tư',
+        'fund_chain_trace' => 'Truy vết chuỗi quỹ',
+        'expense_by_boq' => 'Chi theo BOQ',
     ];
 
     public const TYPE_LABELS = [
@@ -74,6 +78,8 @@ class TreasuryReportService
         private readonly TreasuryReconciliationService $reconciliation,
         private readonly TreasuryAdvanceService $advances,
         private readonly TreasuryRouteService $routes,
+        private readonly TreasuryReceivableService $receivables,
+        private readonly TreasuryFundChainService $fundChains,
     ) {
     }
 
@@ -86,7 +92,7 @@ class TreasuryReportService
     public static function registerFilters(array $input): array
     {
         $filters = [];
-        foreach (['date_from', 'date_to', 'type', 'wallet_id', 'party_id', 'created_by', 'approved_by', 'self_approved', 'reconciled'] as $key) {
+        foreach (['date_from', 'date_to', 'type', 'wallet_id', 'party_id', 'created_by', 'approved_by', 'self_approved', 'reconciled', 'fund_chain_id', 'boq_line_item_id'] as $key) {
             $value = is_scalar($input[$key] ?? null) ? trim((string) $input[$key]) : '';
             if ($key === 'date_from' || $key === 'date_to') {
                 $value = preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1 ? $value : '';
@@ -141,6 +147,18 @@ class TreasuryReportService
         }
         if (filter_var($filters['self_approved'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
             $query->whereIn('id', Approval::query()->whereIn('event', self::SELF_APPROVAL_EVENTS)->where('context->approval_mode', 'self_approval')->select('financial_document_id'));
+        }
+        if ($value('boq_line_item_id') !== '') {
+            // GAP-105 B-1.
+            $query->where('boq_line_item_id', $value('boq_line_item_id'));
+        }
+        if ($value('fund_chain_id') !== '') {
+            // GAP-105 F-1: documents of one fund chain (directly, or as the document a member route carries).
+            $chain = $value('fund_chain_id');
+            $members = FundChainMember::query()->withoutGlobalScopes()->where('tenant_id', (string) $project->tenant_id)->where('fund_chain_id', $chain);
+            $query->where(static fn ($q) => $q
+                ->whereIn('id', (clone $members)->whereNotNull('member_financial_document_id')->select('member_financial_document_id'))
+                ->orWhereIn('id', Route::query()->withoutGlobalScopes()->whereIn('id', (clone $members)->whereNotNull('member_payment_route_id')->select('member_payment_route_id'))->whereNotNull('linked_financial_document_id')->select('linked_financial_document_id')));
         }
         if ($value('reconciled') === 'yes') {
             $query->where('status', Document::STATUS_POSTED_RECONCILED);
@@ -213,6 +231,9 @@ class TreasuryReportService
             'unreconciled' => $this->unreconciled($project, $today),
             'routes' => $this->openRoutes($project),
             'corrections' => $this->corrections($project),
+            'investor_receivable' => $this->investorReceivable($project),
+            'fund_chain_trace' => $this->fundChainTrace($project),
+            'expense_by_boq' => $this->expenseByBoq($project),
             default => throw new \InvalidArgumentException('Unknown treasury report ' . $key),
         };
 
@@ -298,6 +319,75 @@ class TreasuryReportService
         }
 
         return [['Tháng', ...array_values(self::CASHFLOW_COLUMNS), 'Tăng/giảm tiền giữ'], $rows];
+    }
+
+    /**
+     * GAP-105 R-1: per contract, received = paid ContractPayment; Treasury arrivals informational; unlinked Treasury
+     * funding on its own line, never subtracted.
+     *
+     * @return array{0: list<string>, 1: list<list<string|int>>}
+     */
+    private function investorReceivable(Project $project): array
+    {
+        $receivable = $this->receivables->forProject($project);
+        $rows = [];
+        foreach ($receivable['contracts'] as $contract) {
+            $rows[] = [
+                $contract['code'], $contract['title'], $contract['value'], $contract['paid'], $contract['arrived_in_treasury'],
+                $contract['outstanding'] . ($contract['overpaid'] ? ' (thu vượt)' : ''),
+            ];
+        }
+        if ($receivable['availability'] === 'available') {
+            $totals = $receivable['totals'];
+            $rows[] = ['Tổng', '', (string) $totals['value'], (string) $totals['paid'], (string) $totals['arrived_in_treasury'], (string) $totals['outstanding']];
+        } else {
+            $rows[] = ['Chưa có hợp đồng', '', '', '', '', 'Chưa có dữ liệu'];
+        }
+        $rows[] = ['Tiền nhận khác vào Ngân quỹ (không gắn hợp đồng, không trừ vào phải thu)', '', '', $receivable['unlinked_funding'], '', ''];
+
+        return [['Hợp đồng', 'Tên', 'Giá trị', 'Đã thu (đợt thanh toán)', 'Trong đó về ví Ngân quỹ', 'Còn phải thu'], $rows];
+    }
+
+    /**
+     * GAP-105 B-1: posted expenses per BOQ line; budget only with a unit price, otherwise "Chưa có dữ liệu".
+     *
+     * @return array{0: list<string>, 1: list<list<string|int>>}
+     */
+    private function expenseByBoq(Project $project): array
+    {
+        $spending = $this->dashboard->boqSpending($project);
+        $rows = [];
+        foreach ($spending['lines'] as $line) {
+            $rows[] = [
+                $line['boq_code'], $line['code'], $line['name'], TreasuryBalanceService::fromCents($line['spent_cents']),
+                $line['budget_cents'] === null ? 'Chưa có dữ liệu' : TreasuryBalanceService::fromCents($line['budget_cents']),
+                $line['variance_cents'] === null ? '' : TreasuryBalanceService::fromCents($line['variance_cents']),
+            ];
+        }
+        $rows[] = ['Chưa gắn BOQ', '', '', TreasuryBalanceService::fromCents($spending['unlinked_cents']), '', ''];
+
+        return [['BOQ', 'Mã dòng', 'Hạng mục', 'Đã chi (ghi sổ)', 'Ngân sách (KL × đơn giá)', 'Còn lại (âm = vượt)'], $rows];
+    }
+
+    /**
+     * GAP-105 F-1: every chain of the project with its members in date order.
+     *
+     * @return array{0: list<string>, 1: list<list<string|int>>}
+     */
+    private function fundChainTrace(Project $project): array
+    {
+        $rows = [];
+        foreach ($this->fundChains->chains($project) as $chain) {
+            $model = $this->fundChains->projectChain($project, $chain['id']);
+            if ($model === null) {
+                continue;
+            }
+            foreach ($this->fundChains->trace($project, $model) as $member) {
+                $rows[] = [$chain['chain_reference'], (string) $member['date'], (string) $member['label'], (string) $member['status'], (string) $member['amount'], (string) ($member['reference'] ?? '')];
+            }
+        }
+
+        return [['Chuỗi quỹ', 'Ngày', 'Loại', 'Trạng thái', 'Số tiền', 'Tham chiếu'], $rows];
     }
 
     /**

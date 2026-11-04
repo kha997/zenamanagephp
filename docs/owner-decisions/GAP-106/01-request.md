@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-11-04-gap-106-treasury-evidence-attachments-evidence.md
   plan: null
   branch: docs/GAP-106-treasury-evidence-attachments
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/396
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

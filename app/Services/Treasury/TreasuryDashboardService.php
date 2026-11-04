@@ -30,6 +30,7 @@ class TreasuryDashboardService
     public const ALERT_NEGATIVE_WALLETS = 'negative_wallets';
     public const ALERT_OPEN_ROUTES = 'open_routes';
     public const ALERT_BOQ_OVERRUN = 'boq_overrun';
+    public const ALERT_MISSING_EVIDENCE = 'missing_evidence';
 
     private const POSTED = [Document::STATUS_POSTED_UNRECONCILED, Document::STATUS_POSTED_RECONCILED];
 
@@ -40,6 +41,7 @@ class TreasuryDashboardService
         private readonly TreasuryReconciliationService $reconciliation,
         private readonly TreasuryAdvanceService $advances,
         private readonly TreasuryReceivableService $receivables,
+        private readonly TreasuryEvidenceService $evidence,
     ) {
     }
 
@@ -75,6 +77,12 @@ class TreasuryDashboardService
         $receivable = $this->receivables->forProject($project);
         $cards['contract_value'] = $receivable['totals']['value'];
         $cards['receivable_outstanding'] = $receivable['totals']['outstanding'];
+        // GAP-106 E-1: posted, non-reversed expenses without evidence.
+        $missing = $this->evidence->missingEvidenceQuery($project)->selectRaw('COUNT(*) AS doc_count, ROUND(COALESCE(SUM(amount), 0) * 100) AS cents')->first();
+        $missingCount = (int) data_get($missing, 'doc_count', 0);
+        $missingCents = (int) round((float) data_get($missing, 'cents', 0));
+        $cards['missing_evidence_count'] = $missingCount;
+        $cards['missing_evidence_amount'] = TreasuryBalanceService::fromCents($missingCents);
 
         $wallets = $this->walletRows($project, $summary['wallets'], $ageing['rows']);
         $overdue = array_values(array_filter($ageing['rows'], static fn (array $row): bool => $row['bucket'] === TreasuryAdvanceService::BUCKET_OVER_90));
@@ -95,6 +103,7 @@ class TreasuryDashboardService
         $add(self::ALERT_OVERDUE_ADVANCES, count($overdue), self::rowsCents($overdue, 'outstanding'));
         $add(self::ALERT_NEGATIVE_WALLETS, count($negative), self::rowsCents($negative, 'balance'));
         $add(self::ALERT_OPEN_ROUTES, $openRoutes->count(), TreasuryBalanceService::toCents(self::sum($openRoutes, 'total_allocated_amount')));
+        $add(self::ALERT_MISSING_EVIDENCE, $missingCount, $missingCents);
         // GAP-105 B-1: only lines with a known budget (unit price set) can overrun.
         $overrun = array_values(array_filter($this->boqSpending($project)['lines'], static fn (array $line): bool => $line['variance_cents'] !== null && $line['variance_cents'] < 0));
         $add(self::ALERT_BOQ_OVERRUN, count($overrun), (int) -array_sum(array_column($overrun, 'variance_cents')));

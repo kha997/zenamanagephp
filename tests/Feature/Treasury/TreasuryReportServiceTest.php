@@ -303,7 +303,8 @@ class TreasuryReportServiceTest extends TestCase
 
         $this->assertCount(1, $rows);
         $this->assertSame(app(TreasuryBalanceService::class)->projectSummary($this->project)['held_total'], $rows[0]['held_total']);
-        $this->assertSame(3, $rows[0]['alert_count']);
+        // GAP-106 (Owner amendment 1): the fixture's posted expenses carry no evidence, so missing_evidence is a 4th alert.
+        $this->assertSame(4, $rows[0]['alert_count']);
     }
 
     /**

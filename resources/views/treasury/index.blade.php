@@ -13,6 +13,21 @@
         @endcan
     </x-ui.page-header>
 
+    @if (session('success'))
+        <p class="mb-2 text-sm text-emerald-700">{{ session('success') }}</p>
+    @endif
+    @if ($canChangeEvidencePolicy)
+        {{-- GAP-106 M-1: tenant switch, owner-level only. --}}
+        <x-ui.card title="Quy định chứng từ">
+            <form method="POST" action="{{ route('operator.treasury.settings.evidence') }}" class="flex flex-wrap items-center gap-3 p-4" data-testid="treasury-evidence-policy-form">
+                @csrf
+                <input type="hidden" name="evidence_required" value="0">
+                <label class="text-sm"><input type="checkbox" name="evidence_required" value="1" @checked($evidenceRequired)> Khoản chi phải có ít nhất một chứng từ mới gửi duyệt được</label>
+                <button type="submit" class="operator-button operator-button-secondary">Lưu</button>
+            </form>
+        </x-ui.card>
+    @endif
+
     <x-ui.card>
         @if ($projects->isEmpty())
             <x-ui.empty-state

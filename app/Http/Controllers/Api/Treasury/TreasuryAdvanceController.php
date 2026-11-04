@@ -105,6 +105,23 @@ class TreasuryAdvanceController extends BaseApiController
         return $this->withAdvance($project, $treasuryAdvance, 'treasury.create-expense', fn (Project $p, TreasuryFinancialDocument $d) => $this->advances->copyToDraft($p, $this->user(), $d), 201);
     }
 
+    /** GAP-108 H-1: set, move or clear the due date of a posted advance (approvers, reason required). */
+    public function changeDueDate(Request $request, string $project, string $treasuryAdvance): JsonResponse
+    {
+        return $this->withAdvance($project, $treasuryAdvance, 'treasury.approve-expense', function (Project $p, TreasuryFinancialDocument $d) use ($request) {
+            $validator = Validator::make($request->all(), [
+                'due_date' => ['nullable', 'date_format:Y-m-d'],
+                'reason' => ['required', 'string', 'max:500'],
+            ]);
+            if ($validator->fails()) {
+                return $this->validationError($validator->errors());
+            }
+            $this->advances->changeDueDate($p, $this->user(), $d, $request->input('due_date'), (string) $request->input('reason'));
+
+            return $d;
+        });
+    }
+
     public function requestSettlement(Request $request, string $project, string $treasuryAdvance): JsonResponse
     {
         return $this->withAdvance($project, $treasuryAdvance, 'treasury.submit-expense', function (Project $p, TreasuryFinancialDocument $d) use ($request) {
@@ -254,6 +271,7 @@ class TreasuryAdvanceController extends BaseApiController
             'destination_party_id' => ['required', 'string'],
             'amount' => ['required', 'numeric', 'gt:0', 'max:9999999999999.99', 'decimal:0,2'],
             'transaction_date' => ['required', 'date_format:Y-m-d'],
+            'due_date' => ['nullable', 'date_format:Y-m-d'],
             'reference' => ['nullable', 'string', 'max:100'],
             'description' => ['nullable', 'string', 'max:2000'],
         ]);

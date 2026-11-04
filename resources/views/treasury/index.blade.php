@@ -26,6 +26,22 @@
                 <button type="submit" class="operator-button operator-button-secondary">Lưu</button>
             </form>
         </x-ui.card>
+        {{-- GAP-108 N-1 / S-1: tenant thresholds, owner-level only. --}}
+        <x-ui.card title="Ngưỡng cảnh báo">
+            <form method="POST" action="{{ route('operator.treasury.settings.thresholds') }}" class="flex flex-wrap items-end gap-4 p-4" data-testid="treasury-thresholds-form">
+                @csrf
+                <label class="text-sm">Tiền nhận chưa đối soát quá (ngày)
+                    <input type="number" name="unreconciled_funding_days" min="1" max="365" required class="operator-input mt-1 w-28" value="{{ old('unreconciled_funding_days', $thresholds['unreconciled_funding_days']) }}">
+                </label>
+                <label class="text-sm">Tạm ứng không có hạn quá hạn sau (ngày)
+                    <input type="number" name="advance_default_term_days" min="1" max="365" required class="operator-input mt-1 w-28" value="{{ old('advance_default_term_days', $thresholds['advance_default_term_days']) }}">
+                </label>
+                <button type="submit" class="operator-button operator-button-secondary">Lưu</button>
+                @foreach (['unreconciled_funding_days', 'advance_default_term_days'] as $field)
+                    @error($field)<p class="w-full text-sm text-red-700">{{ $message }}</p>@enderror
+                @endforeach
+            </form>
+        </x-ui.card>
     @endif
 
     <x-ui.card>

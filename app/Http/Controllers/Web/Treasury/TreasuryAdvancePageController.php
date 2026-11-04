@@ -72,6 +72,7 @@ class TreasuryAdvancePageController extends Controller
             'destination_party_id' => ['required', 'string'],
             'amount' => self::AMOUNT_RULES,
             'transaction_date' => ['required', 'date_format:Y-m-d'],
+            'due_date' => ['nullable', 'date_format:Y-m-d'],
             'reference' => ['nullable', 'string', 'max:100'],
             'description' => ['nullable', 'string', 'max:2000'],
         ]);
@@ -117,6 +118,26 @@ class TreasuryAdvancePageController extends Controller
         }
 
         return redirect()->route('operator.treasury.projects.show', $model->id)->with('success', $messages[$action]);
+    }
+
+    /** GAP-108 H-1: set, move or clear the due date of a posted advance (approvers, reason required). */
+    public function changeDueDate(Request $request, string $project, string $treasuryAdvance): RedirectResponse
+    {
+        $model = $this->findProject($project);
+        $this->authorize('treasury.approve-expense', $model);
+        $advanceDoc = $this->findAdvance($model, $treasuryAdvance);
+        $data = $request->validate([
+            'due_date' => ['nullable', 'date_format:Y-m-d'],
+            'reason' => ['required', 'string', 'max:500'],
+        ]);
+
+        try {
+            $this->advances->changeDueDate($model, $this->user(), $advanceDoc, $data['due_date'] ?? null, (string) $data['reason']);
+        } catch (TreasuryRuleViolation $e) {
+            return back()->withInput()->withErrors([$e->field ?? 'due_date' => $e->getMessage()]);
+        }
+
+        return redirect()->route('operator.treasury.projects.advances.show', [$model->id, $advanceDoc->id])->with('success', 'Đã cập nhật hạn hoàn ứng.');
     }
 
     public function requestSettlement(Request $request, string $project, string $treasuryAdvance): RedirectResponse

@@ -485,10 +485,12 @@ class TreasuryReportService
             $rows[] = [
                 $row['posted_on'], $row['party_name'], $row['wallet_name'], $row['amount'], $row['settled'], $row['returned'], $row['outstanding'],
                 $row['days'], $labels[$row['bucket']],
+                // GAP-108 Q-1: own due date (blank when none) and days overdue.
+                $row['due_date'] ?? '', $row['overdue_days'],
             ];
         }
 
-        return [['Ngày chi', 'Người nhận', 'Chi từ ví', 'Tạm ứng', 'Đã quyết toán', 'Đã nộp lại', 'Còn nợ', 'Số ngày', 'Tuổi nợ'], $rows];
+        return [['Ngày chi', 'Người nhận', 'Chi từ ví', 'Tạm ứng', 'Đã quyết toán', 'Đã nộp lại', 'Còn nợ', 'Số ngày', 'Tuổi nợ', 'Hạn', 'Quá hạn (ngày)'], $rows];
     }
 
     /**

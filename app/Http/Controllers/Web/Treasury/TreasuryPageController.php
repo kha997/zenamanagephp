@@ -71,6 +71,8 @@ class TreasuryPageController extends Controller
             // GAP-106 M-1: tenant switch, shown to owner-level users only.
             'evidenceRequired' => $evidence->evidenceRequired((string) $user->tenant_id),
             'canChangeEvidencePolicy' => $evidence->canChangePolicy($user),
+            // GAP-108 N-1 / S-1: tenant thresholds form (owner-level only).
+            'thresholds' => app(\App\Services\Treasury\TreasurySettingsService::class)->thresholds((string) $user->tenant_id),
             // GAP-097 S6: all-projects overview (Owner answer 4).
             'overview' => collect($this->dashboard->overview($projects->getCollection()))->keyBy('project_id')->all(),
         ]);

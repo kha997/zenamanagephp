@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Treasury;
 
+use App\Models\AuditLog;
 use App\Models\Project;
 use App\Models\Treasury\TreasuryAdvance as Advance;
 use App\Models\Treasury\TreasuryAdvanceSettlement as Settlement;
@@ -177,12 +178,59 @@ class TreasuryAdvanceService
                 'financial_party_id' => (string) $locked->destination_party_id,
                 'originating_financial_document_id' => (string) $locked->id,
                 'amount' => (string) $locked->amount,
+                // GAP-108 H-1: the requested due date becomes the advance's due date.
+                'due_date' => $locked->due_date?->toDateString(),
             ]);
 
             $this->expenses->transition($actor, $locked, 'posted', Document::STATUS_APPROVED, Document::STATUS_POSTED_UNRECONCILED);
             $this->posting->audit($actor, $locked, 'treasury.advance.posted', [
                 'status_path' => [Document::STATUS_SUBMITTED, Document::STATUS_APPROVED, Document::STATUS_POSTED_UNRECONCILED],
                 'approval_mode' => $mode,
+            ]);
+
+            return $locked;
+        });
+    }
+
+    /**
+     * GAP-108 H-1 — set, move or clear the due date of a posted advance still owed. Approvers only, reason required,
+     * audited. Not a posting: amounts and balances are untouched, so a locked period does not block it.
+     */
+    public function changeDueDate(Project $project, User $actor, Document $advanceDoc, ?string $dueDate, string $reason): Advance
+    {
+        $this->requireAdvanceOf($project, $advanceDoc);
+        if (!Gate::forUser($actor)->allows('treasury.approve-expense', $project)) {
+            throw new TreasuryRuleViolation('Bạn không có quyền đổi hạn hoàn ứng.', 'due_date');
+        }
+        $reason = trim($reason);
+        if ($reason === '') {
+            throw new TreasuryRuleViolation('Đổi hạn hoàn ứng bắt buộc ghi lý do.', 'reason');
+        }
+        $dueDate = $dueDate === null || trim($dueDate) === '' ? null : trim($dueDate);
+        if ($dueDate !== null) {
+            self::requireDueDateFrom($dueDate, (string) $advanceDoc->transaction_date?->toDateString());
+        }
+        $advance = $this->advanceOf($project, $advanceDoc);
+
+        return DB::transaction(function () use ($actor, $advanceDoc, $advance, $dueDate, $reason): Advance {
+            $this->lockAdvance($advance);
+            /** @var Advance $locked */
+            $locked = Advance::query()->whereKey($advance->id)->firstOrFail();
+            if ($this->outstandingCents($locked, true) <= 0) {
+                throw new TreasuryRuleViolation('Chỉ đổi hạn được khi tạm ứng còn nợ.', 'due_date');
+            }
+            $before = $locked->due_date?->toDateString();
+            $locked->due_date = $dueDate === null ? null : Carbon::parse($dueDate);
+            $locked->save();
+            AuditLog::query()->create([
+                'user_id' => (string) $actor->id,
+                'tenant_id' => (string) $locked->tenant_id,
+                'project_id' => (string) $locked->project_id,
+                'action' => 'treasury.advance.due_date_changed',
+                'entity_type' => 'treasury_financial_document',
+                'entity_id' => (string) $advanceDoc->id,
+                'old_data' => ['due_date' => $before],
+                'new_data' => ['due_date' => $dueDate, 'reason' => $reason, 'advance_id' => (string) $locked->id],
             ]);
 
             return $locked;
@@ -225,6 +273,7 @@ class TreasuryAdvanceService
             'transaction_date' => $rejected->transaction_date?->toDateString() ?? now()->toDateString(),
             'reference' => $rejected->reference,
             'description' => $rejected->description,
+            'due_date' => $rejected->due_date?->toDateString(),
         ]);
     }
 
@@ -528,6 +577,7 @@ class TreasuryAdvanceService
     public function ageing(Project $project, ?Carbon $today = null): array
     {
         $today = ($today ?? Carbon::now())->copy()->startOfDay();
+        $term = $this->advanceTerm($project);
         $rows = [];
         $totals = array_fill_keys(self::BUCKETS, 0);
         /** @var \Illuminate\Database\Eloquent\Collection<int, Document> $documents */
@@ -540,7 +590,7 @@ class TreasuryAdvanceService
             ->orderBy('id')
             ->get();
         foreach ($documents as $document) {
-            $row = $this->summaryRow($document, $today);
+            $row = $this->summaryRow($document, $today, $term);
             if ($row === null || TreasuryBalanceService::toCents((string) $row['outstanding']) <= 0) {
                 continue;
             }
@@ -574,7 +624,7 @@ class TreasuryAdvanceService
     public function detail(Document $document): array
     {
         $row = $this->projectDocument($document);
-        $row['advance'] = $this->summaryRow($document, Carbon::now()->startOfDay());
+        $row['advance'] = $this->summaryRow($document, Carbon::now()->startOfDay(), $this->advanceTerm($document));
         $advance = $this->advanceRow($document);
         $settlements = [];
         if ($advance !== null) {
@@ -640,6 +690,7 @@ class TreasuryAdvanceService
             'source_party_id' => $document->source_party_id,
             'destination_party_id' => $document->destination_party_id,
             'transaction_date' => $document->transaction_date?->toDateString(),
+            'due_date' => $document->due_date?->toDateString(),
             'reference' => $document->reference,
             'description' => $document->description,
             'created_by' => (string) $document->created_by,
@@ -673,7 +724,7 @@ class TreasuryAdvanceService
     /**
      * @return array<string, mixed>|null
      */
-    private function summaryRow(Document $document, Carbon $today): ?array
+    private function summaryRow(Document $document, Carbon $today, int $term): ?array
     {
         $advance = $this->advanceRow($document);
         if ($advance === null) {
@@ -683,6 +734,13 @@ class TreasuryAdvanceService
         $wallet = TreasuryWallet::query()->whereKey($document->source_wallet_id)->first();
         $postedOn = ($document->posted_at ?? $document->created_at)->copy()->startOfDay();
         $days = (int) $postedOn->diffInDays($today, false);
+        // GAP-108 Q-1: an explicit due date wins; without one the advance is due on the last day of the configured
+        // term, so with the default 90 it is overdue from day 90 after payment, as in S6.
+        $dueDate = data_get($advance, 'due_date');
+        $dueDate = $dueDate === null ? null : Carbon::parse($dueDate)->startOfDay();
+        $effectiveDue = $dueDate ?? $postedOn->copy()->addDays($term - 1);
+        $outstandingCents = $this->outstandingCents($advance);
+        $overdueDays = $outstandingCents > 0 ? max(0, (int) $effectiveDue->diffInDays($today, false)) : 0;
 
         return [
             'id' => (string) $document->id,
@@ -695,7 +753,7 @@ class TreasuryAdvanceService
             'amount' => self::money((string) $advance->amount),
             'settled' => TreasuryBalanceService::fromCents($this->settledCents($advance, Settlement::SETTLEMENT_TYPE_APPROVED_EXPENSE)),
             'returned' => TreasuryBalanceService::fromCents($this->settledCents($advance, Settlement::SETTLEMENT_TYPE_CASH_RETURN)),
-            'outstanding' => TreasuryBalanceService::fromCents($this->outstandingCents($advance)),
+            'outstanding' => TreasuryBalanceService::fromCents($outstandingCents),
             'posted_on' => $postedOn->toDateString(),
             'days' => $days,
             'bucket' => match (true) {
@@ -705,7 +763,17 @@ class TreasuryAdvanceService
                 default => self::BUCKET_OVER_90,
             },
             'open_request' => $this->openRequest($document) !== null,
+            'due_date' => $dueDate?->toDateString(),
+            'effective_due_date' => $effectiveDue->toDateString(),
+            'overdue' => $overdueDays > 0,
+            'overdue_days' => $overdueDays,
         ];
+    }
+
+    /** GAP-108 N-1: tenant term after which an advance without a due date is overdue. */
+    private function advanceTerm(Project|Document $scope): int
+    {
+        return app(TreasurySettingsService::class)->thresholds((string) $scope->tenant_id)['advance_default_term_days'];
     }
 
     private function settledCents(Advance $advance, ?string $type = null, bool $locking = false): int
@@ -771,6 +839,10 @@ class TreasuryAdvanceService
         $party = $this->posting->tenantParty($project, (string) ($data['destination_party_id'] ?? ''), 'destination_party_id');
         if (TreasuryBalanceService::toCents((string) ($data['amount'] ?? '0')) <= 0) {
             throw new TreasuryRuleViolation('Số tiền tạm ứng phải lớn hơn 0.', 'amount');
+        }
+        $dueDate = trim((string) ($data['due_date'] ?? ''));
+        if ($dueDate !== '') {
+            self::requireDueDateFrom($dueDate, (string) ($data['transaction_date'] ?? now()->toDateString()));
         }
 
         return [$wallet, $party];
@@ -852,12 +924,25 @@ class TreasuryAdvanceService
     {
         $reference = trim((string) ($data['reference'] ?? ''));
         $description = trim((string) ($data['description'] ?? ''));
+        $dueDate = trim((string) ($data['due_date'] ?? ''));
 
         return [
             'transaction_date' => (string) ($data['transaction_date'] ?? now()->toDateString()),
+            'due_date' => $dueDate === '' ? null : $dueDate,
             'reference' => $reference === '' ? null : $reference,
             'description' => $description === '' ? null : $description,
         ];
+    }
+
+    private static function requireDueDateFrom(string $dueDate, string $requestDate): void
+    {
+        $parsed = \DateTimeImmutable::createFromFormat('!Y-m-d', $dueDate);
+        if ($parsed === false || $parsed->format('Y-m-d') !== $dueDate) {
+            throw new TreasuryRuleViolation('Hạn hoàn ứng không hợp lệ.', 'due_date');
+        }
+        if ($dueDate < substr($requestDate, 0, 10)) {
+            throw new TreasuryRuleViolation('Hạn hoàn ứng phải từ ngày đề nghị trở đi.', 'due_date');
+        }
     }
 
     private static function money(string $amount): string

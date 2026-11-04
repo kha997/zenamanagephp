@@ -32,6 +32,12 @@
                             </select>
                         </div>
                         @include('treasury._money-fields', ['prefix' => 'adv'])
+                        {{-- GAP-108 H-1: optional due date, not before the request date. --}}
+                        <div class="operator-field">
+                            <label for="adv_due_date">Hạn hoàn ứng</label>
+                            <input id="adv_due_date" type="date" name="due_date" class="operator-input" value="{{ old('due_date') }}">
+                            @error('due_date')<p class="text-sm text-red-700">{{ $message }}</p>@enderror
+                        </div>
                     </div>
                     <div class="flex gap-2">
                         <button type="submit" name="action" value="draft" class="operator-button operator-button-secondary">Lưu nháp</button>
@@ -85,7 +91,7 @@
         @if ($advanceAgeing['rows'] === [])
             <x-ui.empty-state title="Không có tạm ứng nào còn nợ" description="Tạm ứng đã chi và chưa quyết toán hết hiện ở đây, theo tuổi nợ." />
         @else
-            <x-ui.data-table :headers="['Ngày chi', 'Người nhận', 'Tạm ứng', 'Đã quyết toán', 'Đã nộp lại', 'Còn nợ', 'Tuổi nợ', '']">
+            <x-ui.data-table :headers="['Ngày chi', 'Người nhận', 'Tạm ứng', 'Đã quyết toán', 'Đã nộp lại', 'Còn nợ', 'Tuổi nợ', 'Hạn', '']">
                 @foreach ($advanceAgeing['rows'] as $row)
                     <tr data-testid="treasury-advance-ageing-row">
                         <td class="text-sm">{{ \Illuminate\Support\Carbon::parse($row['posted_on'])->format('d/m/Y') }}</td>
@@ -95,6 +101,7 @@
                         <td class="text-sm">{{ $money($row['returned']) }}</td>
                         <td class="text-sm font-semibold">{{ $money($row['outstanding']) }}</td>
                         <td class="text-sm">{{ $row['days'] }} ngày — {{ $bucketLabels[$row['bucket']] }}@if ($row['open_request']) <span class="ml-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">Chờ duyệt quyết toán</span>@endif</td>
+                        <td class="text-sm" data-testid="treasury-advance-due">{{ $row['due_date'] !== null ? \Illuminate\Support\Carbon::parse($row['due_date'])->format('d/m/Y') : '—' }}@if ($row['overdue']) <span class="ml-1 inline-flex rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-800">Quá hạn {{ $row['overdue_days'] }} ngày</span>@endif</td>
                         <td class="text-sm"><a href="{{ route('operator.treasury.projects.advances.show', [$project->id, $row['id']]) }}" class="operator-button operator-button-inline">Mở</a></td>
                     </tr>
                 @endforeach

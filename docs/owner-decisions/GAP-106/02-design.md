@@ -1,32 +1,38 @@
 ---
 work_id: GAP-106
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-11-04-gap-106-treasury-evidence-attachments-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-11-04-gap-106-treasury-evidence-attachments.md
   branch: docs/GAP-106-treasury-evidence-attachments
   pr: https://github.com/kha997/zenamanagephp/pull/396
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-04T09:15:25+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-04, verbatim: 'APPROVE GAP-106 Gate 2 S-2 E-1 M-1 D-1'. Reviewed design head: 12ff3ab1cb31c0546eab096146e04c77d663cff7. Approves S-2 (Treasury-only attachment table on the existing private disk, read/download only under the Treasury project policy, never in the general documents list), E-1 (evidence on every Treasury money document; missing evidence counted for posted, non-reversed expenses), M-1 (tenant switch in tenants.settings, default off, blocks expense submit without evidence when on, changed only by treasury.self_approve_expense holders, audited), D-1 (uploader may remove only before posting), with the exact allowlist in this packet; one additive migration; no new permission; no change to posting or the general document module; not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-04T09:45:00+07:00"
-  updated_at: "2026-11-04T09:45:00+07:00"
+  updated_at: "2026-11-04T09:15:25+07:00"
 generated_by: agent
 ---
 
 # GAP-106 — Treasury evidence attachments: Gate 2 design
+
+## OWNER GATE 2: APPROVED — S-2, E-1, M-1, D-1
+
+Owner approved S-2, E-1, M-1 and D-1 in-session on 2026-11-04 against reviewed design head
+`12ff3ab1cb31c0546eab096146e04c77d663cff7`. This authorizes only the bounded implementation defined by this packet; it
+does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

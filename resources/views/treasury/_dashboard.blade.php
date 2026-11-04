@@ -1,10 +1,10 @@
 {{-- GAP-097 S6: project dashboard — alerts, cards, wallet table. --}}
 @php
     $alertLabels = [
-        'unreconciled_funding' => 'Tiền nhận chưa đối soát quá 30 ngày',
+        'unreconciled_funding' => 'Tiền nhận chưa đối soát quá ' . $dashboard['thresholds']['unreconciled_funding_days'] . ' ngày',
         'pending_approvals' => 'Chi phí / tạm ứng đang chờ duyệt',
         'pending_settlements' => 'Đề nghị quyết toán tạm ứng chờ duyệt',
-        'overdue_advances' => 'Tạm ứng còn nợ trên 90 ngày',
+        'overdue_advances' => 'Tạm ứng quá hạn',
         'negative_wallets' => 'Ví đang âm',
         'open_routes' => 'Tuyến trung gian chưa về đủ',
         'boq_overrun' => 'Dòng BOQ chi vượt ngân sách',

@@ -15,14 +15,13 @@ use Illuminate\Support\Carbon;
  * GAP-097 — Treasury S6 project dashboard (approved Gate 2 Option A).
  *
  * Read-only: every figure restates the ledger through the S2–S5 services.
- * Owner Gate 1 answers: fixed thresholds — funding unreconciled for more than
- * 30 days, an advance overdue once in the S5 over-90-days bucket; per-project
- * dashboard plus an all-projects overview.
+ * Owner Gate 1 answers: funding unreconciled for more than 30 days, an advance
+ * overdue from day 90; per-project dashboard plus an all-projects overview.
+ * GAP-108 N-1 / Q-1: both thresholds come from the tenant settings (defaults
+ * 30 / 90) and an advance with its own due date is overdue after that date.
  */
 class TreasuryDashboardService
 {
-    public const UNRECONCILED_FUNDING_DAYS = 30;
-
     public const ALERT_UNRECONCILED_FUNDING = 'unreconciled_funding';
     public const ALERT_PENDING_APPROVALS = 'pending_approvals';
     public const ALERT_PENDING_SETTLEMENTS = 'pending_settlements';
@@ -42,22 +41,24 @@ class TreasuryDashboardService
         private readonly TreasuryAdvanceService $advances,
         private readonly TreasuryReceivableService $receivables,
         private readonly TreasuryEvidenceService $evidence,
+        private readonly TreasurySettingsService $settings,
     ) {
     }
 
     /**
-     * @return array{cards: array<string, string|int|null>, wallets: list<array<string, mixed>>, alerts: list<array{code: string, count: int, amount: string}>}
+     * @return array{cards: array<string, string|int|null>, wallets: list<array<string, mixed>>, alerts: list<array{code: string, count: int, amount: string}>, thresholds: array{unreconciled_funding_days: int, advance_default_term_days: int}}
      */
     public function dashboard(Project $project, ?Carbon $today = null): array
     {
         $today = ($today ?? Carbon::now())->copy()->startOfDay();
+        $thresholds = $this->settings->thresholds((string) $project->tenant_id);
         $summary = $this->balances->projectSummary($project);
         $ageing = $this->advances->ageing($project, $today);
         $pending = $this->documents($project)->whereIn('document_type', [Document::TYPE_EXPENSE, Document::TYPE_ADVANCE])
             ->where('status', Document::STATUS_SUBMITTED)->get(['amount']);
         $unreconciledFunding = $this->documents($project)->whereIn('document_type', self::FUNDING_TYPES)
             ->where('status', Document::STATUS_POSTED_UNRECONCILED)->get(['amount', 'transaction_date']);
-        $staleFunding = $unreconciledFunding->filter(fn ($doc): bool => $this->daysSince(data_get($doc, 'transaction_date'), $today) > self::UNRECONCILED_FUNDING_DAYS);
+        $staleFunding = $unreconciledFunding->filter(fn ($doc): bool => $this->daysSince(data_get($doc, 'transaction_date'), $today) > $thresholds['unreconciled_funding_days']);
 
         $cards = [
             'investor_funding' => $summary['investor_funding'],
@@ -85,7 +86,7 @@ class TreasuryDashboardService
         $cards['missing_evidence_amount'] = TreasuryBalanceService::fromCents($missingCents);
 
         $wallets = $this->walletRows($project, $summary['wallets'], $ageing['rows']);
-        $overdue = array_values(array_filter($ageing['rows'], static fn (array $row): bool => $row['bucket'] === TreasuryAdvanceService::BUCKET_OVER_90));
+        $overdue = array_values(array_filter($ageing['rows'], static fn (array $row): bool => (bool) $row['overdue']));
         $openRoutes = Route::query()->withoutGlobalScopes()->where('tenant_id', (string) $project->tenant_id)->where('project_id', (string) $project->id)
             ->whereIn('status', [Route::STATUS_PLANNED, Route::STATUS_PARTIAL])->get(['total_allocated_amount']);
         $negative = array_values(array_filter($wallets, static fn (array $row): bool => TreasuryBalanceService::toCents((string) $row['balance']) < 0));
@@ -108,7 +109,7 @@ class TreasuryDashboardService
         $overrun = array_values(array_filter($this->boqSpending($project)['lines'], static fn (array $line): bool => $line['variance_cents'] !== null && $line['variance_cents'] < 0));
         $add(self::ALERT_BOQ_OVERRUN, count($overrun), (int) -array_sum(array_column($overrun, 'variance_cents')));
 
-        return ['cards' => $cards, 'wallets' => $wallets, 'alerts' => $alerts];
+        return ['cards' => $cards, 'wallets' => $wallets, 'alerts' => $alerts, 'thresholds' => $thresholds];
     }
 
     /**

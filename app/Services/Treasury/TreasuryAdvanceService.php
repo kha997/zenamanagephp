@@ -528,6 +528,7 @@ class TreasuryAdvanceService
     public function ageing(Project $project, ?Carbon $today = null): array
     {
         $today = ($today ?? Carbon::now())->copy()->startOfDay();
+        $term = $this->advanceTerm($project);
         $rows = [];
         $totals = array_fill_keys(self::BUCKETS, 0);
         /** @var \Illuminate\Database\Eloquent\Collection<int, Document> $documents */
@@ -540,7 +541,7 @@ class TreasuryAdvanceService
             ->orderBy('id')
             ->get();
         foreach ($documents as $document) {
-            $row = $this->summaryRow($document, $today);
+            $row = $this->summaryRow($document, $today, $term);
             if ($row === null || TreasuryBalanceService::toCents((string) $row['outstanding']) <= 0) {
                 continue;
             }
@@ -574,7 +575,7 @@ class TreasuryAdvanceService
     public function detail(Document $document): array
     {
         $row = $this->projectDocument($document);
-        $row['advance'] = $this->summaryRow($document, Carbon::now()->startOfDay());
+        $row['advance'] = $this->summaryRow($document, Carbon::now()->startOfDay(), $this->advanceTerm($document));
         $advance = $this->advanceRow($document);
         $settlements = [];
         if ($advance !== null) {
@@ -673,7 +674,7 @@ class TreasuryAdvanceService
     /**
      * @return array<string, mixed>|null
      */
-    private function summaryRow(Document $document, Carbon $today): ?array
+    private function summaryRow(Document $document, Carbon $today, int $term): ?array
     {
         $advance = $this->advanceRow($document);
         if ($advance === null) {
@@ -683,6 +684,13 @@ class TreasuryAdvanceService
         $wallet = TreasuryWallet::query()->whereKey($document->source_wallet_id)->first();
         $postedOn = ($document->posted_at ?? $document->created_at)->copy()->startOfDay();
         $days = (int) $postedOn->diffInDays($today, false);
+        // GAP-108 Q-1: an explicit due date wins; without one the advance is due on the last day of the configured
+        // term, so with the default 90 it is overdue from day 90 after payment, as in S6.
+        $dueDate = data_get($advance, 'due_date');
+        $dueDate = $dueDate === null ? null : Carbon::parse($dueDate)->startOfDay();
+        $effectiveDue = $dueDate ?? $postedOn->copy()->addDays($term - 1);
+        $outstandingCents = $this->outstandingCents($advance);
+        $overdueDays = $outstandingCents > 0 ? max(0, (int) $effectiveDue->diffInDays($today, false)) : 0;
 
         return [
             'id' => (string) $document->id,
@@ -695,7 +703,7 @@ class TreasuryAdvanceService
             'amount' => self::money((string) $advance->amount),
             'settled' => TreasuryBalanceService::fromCents($this->settledCents($advance, Settlement::SETTLEMENT_TYPE_APPROVED_EXPENSE)),
             'returned' => TreasuryBalanceService::fromCents($this->settledCents($advance, Settlement::SETTLEMENT_TYPE_CASH_RETURN)),
-            'outstanding' => TreasuryBalanceService::fromCents($this->outstandingCents($advance)),
+            'outstanding' => TreasuryBalanceService::fromCents($outstandingCents),
             'posted_on' => $postedOn->toDateString(),
             'days' => $days,
             'bucket' => match (true) {
@@ -705,7 +713,17 @@ class TreasuryAdvanceService
                 default => self::BUCKET_OVER_90,
             },
             'open_request' => $this->openRequest($document) !== null,
+            'due_date' => $dueDate?->toDateString(),
+            'effective_due_date' => $effectiveDue->toDateString(),
+            'overdue' => $overdueDays > 0,
+            'overdue_days' => $overdueDays,
         ];
+    }
+
+    /** GAP-108 N-1: tenant term after which an advance without a due date is overdue. */
+    private function advanceTerm(Project|Document $scope): int
+    {
+        return app(TreasurySettingsService::class)->thresholds((string) $scope->tenant_id)['advance_default_term_days'];
     }
 
     private function settledCents(Advance $advance, ?string $type = null, bool $locking = false): int

@@ -276,6 +276,9 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'treasury.view_audit', 'module' => 'treasury', 'action' => 'view_audit', 'description' => 'View treasury audit trail'],
         ['code' => 'treasury.export', 'module' => 'treasury', 'action' => 'export', 'description' => 'Export treasury reports'],
         ['code' => 'treasury.manage_period_lock', 'module' => 'treasury', 'action' => 'manage_period_lock', 'description' => 'Manage treasury period locks'],
+        // GAP-109 Q-1: staff register and monthly payroll.
+        ['code' => 'payroll.manage', 'module' => 'payroll', 'action' => 'manage', 'description' => 'Manage staff register and draft payroll'],
+        ['code' => 'payroll.close', 'module' => 'payroll', 'action' => 'close', 'description' => 'Close and reopen a payroll month'],
     ];
 
     private const PERMISSION_TABLE = 'permissions';

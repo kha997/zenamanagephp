@@ -32,6 +32,7 @@ class DatabaseSeeder extends Seeder
             ZenaPermissionsSeeder::class,
             ZenaAdminRolePermissionSeeder::class,
             TreasuryRolePermissionSeeder::class,
+            PayrollRolePermissionSeeder::class,
             ZenaProjectManagerRolePermissionSeeder::class,
             V1PermissionGapSeeder::class,
             UserRoleSeeder::class,

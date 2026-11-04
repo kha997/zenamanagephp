@@ -1,11 +1,11 @@
 ---
 work_id: GAP-108
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-11-04-gap-108-treasury-thresholds-advance-deadline-evidence.md
   plan: null
@@ -15,16 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-04T15:42:30+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-04, verbatim: 'APPROVE GAP-108 Gate 1'. Bound to reviewed Draft PR #398 head fc48819c5adfddc11593a4760e058fc80ec1b452, canonical base 08788500cae7107b878f5af061b10f646f1bd556. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-04T15:40:00+07:00"
-  updated_at: "2026-11-04T15:40:00+07:00"
+  updated_at: "2026-11-04T15:42:30+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-108 Gate 1 in-session on 2026-11-04 against Draft PR #398 head
+`fc48819c5adfddc11593a4760e058fc80ec1b452`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

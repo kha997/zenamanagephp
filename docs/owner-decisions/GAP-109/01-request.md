@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-11-04-gap-109-staff-payroll-evidence.md
   plan: null
   branch: docs/GAP-109-staff-payroll
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/399
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

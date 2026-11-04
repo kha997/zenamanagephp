@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-11-05-gap-110-oppm-phase-2-3-evidence.md
   plan: null
   branch: docs/GAP-110-oppm-phase-2-3
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/400
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

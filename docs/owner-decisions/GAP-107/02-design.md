@@ -1,32 +1,38 @@
 ---
 work_id: GAP-107
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-11-04-gap-107-treasury-period-lock-bank-import-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-11-04-gap-107-treasury-period-lock-bank-import.md
   branch: docs/GAP-107-treasury-period-lock-bank-import
   pr: https://github.com/kha997/zenamanagephp/pull/397
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-04T14:44:29+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-04, verbatim: 'APPROVE GAP-107 Gate 2 L-1 U-1 R-1 I-1 P-1'. Reviewed design head: 9e13faaa87a766c34e34e65247586778c3acbdb8. Approves L-1 (per-project lock through date D blocking every new posting dated on or before D; reversals of old documents allowed when dated after D), U-1 (manage_period_lock holders may move the date back or clear it with a reason; history and audit), R-1 (reconciliation and its undo stay allowed in a locked period), I-1 (CSV only with a column-mapping step remembered per wallet; no new dependency), P-1 (one PR, one Gate 3), with the exact allowlist in this packet; one additive migration (three new tables); no new permission; bank lines never create documents; not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-04T11:20:00+07:00"
-  updated_at: "2026-11-04T11:20:00+07:00"
+  updated_at: "2026-11-04T14:44:29+07:00"
 generated_by: agent
 ---
 
 # GAP-107 — Treasury period lock and bank statement import: Gate 2 design
+
+## OWNER GATE 2: APPROVED — L-1, U-1, R-1, I-1, P-1
+
+Owner approved L-1, U-1, R-1, I-1 and P-1 in-session on 2026-11-04 against reviewed design head
+`9e13faaa87a766c34e34e65247586778c3acbdb8`. This authorizes only the bounded implementation defined by this packet; it
+does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

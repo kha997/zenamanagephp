@@ -1,14 +1,14 @@
 ---
 work_id: GAP-106
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-11-04-gap-106-treasury-evidence-attachments-evidence.md
   plan: docs/superpowers/plans/2026-11-04-gap-106-treasury-evidence-attachments.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-04T09:38:35+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-11-04, verbatim: 'APPROVE GAP-106 Gate 3'. Given on the packet at PR head d2ac739e8a4e87cf8754438de5d78909b7c8b018; bound to implementation subject b3f088090d773a1cdb364212a5ef12e7438d521c and implementation-tree digest ba2dbfc8b855dfb98643872404a2ed6271a4569db8e0b1a5feb56c45f5bdd611 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-04T09:31:00+07:00"
-  updated_at: "2026-11-04T09:31:00+07:00"
+  updated_at: "2026-11-04T09:38:35+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-106 at subject b3f088090d773a1cdb364212a5ef12e7438d521c (Gate 2 S-2, E-1, M-1, D-1; allowlist plus Owner amendment 1). New table treasury_document_attachments (composite FK (tenant_id, financial_document_id) to treasury_financial_documents, unique (financial_document_id, file_hash)); files on the existing private default disk under treasury/{tenant}/{project}/{document}/, read and downloaded only through Treasury routes guarded by rbac treasury.view plus the treasury.view-project policy, downloads as attachment with X-Content-Type-Options nosniff; Treasury files never appear in /app/documents (test). TreasuryEvidenceService: attach (nine evidence types; pdf/jpg/jpeg/png/webp/xlsx/xls/docx/doc checked on client and detected extension; max 10 MB; adder = document creator, treasury.approve-expense or treasury.reconcile holder; duplicate sha256 refused, concurrent duplicate caught on the unique index; not on reversal documents), remove (uploader only, while draft/submitted/rejected), counts per document in one query, missing evidence = posted non-reversed expenses without a file; tenant switch tenants.settings.treasury_evidence_required_for_expenses (default off; only treasury.self_approve_expense holders; audited). TreasuryExpenseService::submit refuses an expense without evidence when the switch is on. UI: evidence page per Treasury document (GET .../treasury/documents/{doc}/evidence) with list, attach form, download and remove; 'Chung tu (n)' links on register and pending-expense rows; switch on the Treasury index; dashboard card and alert missing_evidence; report missing_evidence; register filter. Every attach/remove/switch change audited. No new permission; posting and the general document module unchanged. Owner amendment 1: TreasuryReportServiceTest overview alert count 3 -> 4. Architecture inventory (DocumentMutationOwnershipTest) passes after renaming the controller's Treasury document variable. TreasuryEvidenceTest 8 tests: red before (8 failing), green after; also green with DB_CONNECTION=mysql; migration up, down, up verified on MySQL 8 with both FKs and the unique index. Treasury feature suite 208 green; tests/Architecture green. Unit + Feature + Integration 2915 tests at 414ceb86 with the 2 known root-only failures plus the architecture failure fixed in b3f08809; Feature/Api 824 green. PHPStan, php-cs-fixer, SSOT test lint, ssot:lint, route guard, deptrac pass. Exact-head CI pending at packet time."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "b3f088090d773a1cdb364212a5ef12e7438d521c"
   verified_at: "2026-11-04T09:31:00+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "ba2dbfc8b855dfb98643872404a2ed6271a4569db8e0b1a5feb56c45f5bdd611"
+  decision_recorded_at: "2026-11-04T09:38:35+07:00"
 ---
 
 # GAP-106 — Gate 3 release decision (Treasury evidence attachments)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-11-04 ("APPROVE GAP-106 Gate 3"), bound to implementation subject
+`b3f088090d773a1cdb364212a5ef12e7438d521c` and implementation-tree digest `ba2dbfc8b855dfb98643872404a2ed6271a4569db8e0b1a5feb56c45f5bdd611`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

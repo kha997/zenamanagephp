@@ -169,7 +169,9 @@ class PayrollPeriodTest extends TestCase
             ->assertRedirect($page);
         $this->actingAs($this->accountant)->get($page)->assertOk()
             ->assertSee('Kỹ sư A')->assertSee('9.400.000')->assertSee('50.000')
-            ->assertSee('payroll-line-form', false)->assertDontSee('payroll-close-form', false);
+            ->assertSee('payroll-line-form', false)->assertDontSee('payroll-close-form', false)
+            // Two-decimal amounts (e.g. a 1/12 bonus accrual of 833,333.33) must pass browser validation.
+            ->assertSee('step="0.01" name="bonus_accrual"', false);
         $this->actingAs($this->owner)->get($page)->assertOk()->assertSee('payroll-close-form', false);
 
         $this->actingAs($this->accountant)->post(route('operator.payroll.periods.close', $period->id))->assertRedirect();

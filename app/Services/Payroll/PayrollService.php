@@ -138,7 +138,8 @@ class PayrollService
         return DB::transaction(function () use ($actor, $line, $values, $note, $data): PayrollLine {
             /** @var PayrollPeriod $period */
             $period = PayrollPeriod::query()->withoutGlobalScopes()->whereKey($line->payroll_period_id)->firstOrFail();
-            $this->lockDraft($period);
+            // Compute with the locked row: a concurrent calendar change may have committed while we waited.
+            $period = $this->lockDraft($period);
             /** @var PayrollLine $locked */
             $locked = PayrollLine::query()->withoutGlobalScopes()->with('staffMember')->whereKey($line->id)->lockForUpdate()->firstOrFail();
             $before = $this->snapshot($locked);

@@ -81,7 +81,7 @@
                                     <form method="POST" action="{{ route('operator.payroll.lines.update', $line->id) }}" class="mt-2 grid grid-cols-2 gap-2" data-testid="payroll-line-form">
                                         @csrf
                                         @foreach ($labels as $column => $label)
-                                            <label class="text-xs">{{ $label }}<input type="number" min="0" step="1" name="{{ $column }}" class="operator-input mt-1" value="{{ (float) $line->{$column} }}"></label>
+                                            <label class="text-xs">{{ $label }}<input type="number" min="0" step="0.01" name="{{ $column }}" class="operator-input mt-1" value="{{ (float) $line->{$column} }}"></label>
                                         @endforeach
                                         <label class="col-span-2 text-xs">Ghi chú<input type="text" name="note" maxlength="500" class="operator-input mt-1" value="{{ $line->note }}"></label>
                                         <button type="submit" class="operator-button operator-button-primary col-span-2">Lưu</button>

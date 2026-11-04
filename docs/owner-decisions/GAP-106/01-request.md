@@ -1,11 +1,11 @@
 ---
 work_id: GAP-106
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-11-04-gap-106-treasury-evidence-attachments-evidence.md
   plan: null
@@ -15,16 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-04T09:10:26+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-04, verbatim: 'APPROVE GAP-106 Gate 1'. Bound to reviewed Draft PR #396 head a7d67f242e3bfb237776b2815ad16bda3c1360ef, canonical base 71bc0c946c3b1338723658a24adae6e55572905c. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-04T09:20:00+07:00"
-  updated_at: "2026-11-04T09:20:00+07:00"
+  updated_at: "2026-11-04T09:10:26+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-106 Gate 1 in-session on 2026-11-04 against Draft PR #396 head
+`a7d67f242e3bfb237776b2815ad16bda3c1360ef`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

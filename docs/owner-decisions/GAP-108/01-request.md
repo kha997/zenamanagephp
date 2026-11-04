@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-11-04-gap-108-treasury-thresholds-advance-deadline-evidence.md
   plan: null
   branch: docs/GAP-108-treasury-thresholds-advance-deadline
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/398
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

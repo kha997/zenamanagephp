@@ -42,6 +42,10 @@
                 <x-ui.field-value label="Đã nộp lại" :value="$money($row['returned'])" />
                 <x-ui.field-value label="Còn nợ" :value="$money($row['outstanding'])" />
                 <x-ui.field-value label="Tuổi nợ" :value="$row['days'] . ' ngày (' . $bucketLabels[$row['bucket']] . ')'" />
+                {{-- GAP-108 Q-1: own due date, or the tenant term when none is set. --}}
+                <x-ui.field-value label="Hạn hoàn ứng" :value="($row['due_date'] !== null ? \Illuminate\Support\Carbon::parse($row['due_date'])->format('d/m/Y') : 'Chưa đặt (tính theo ngưỡng chung: ' . \Illuminate\Support\Carbon::parse($row['effective_due_date'])->format('d/m/Y') . ')') . ($row['overdue'] ? ' — Quá hạn ' . $row['overdue_days'] . ' ngày' : '')" />
+            @elseif ($advance['due_date'] !== null)
+                <x-ui.field-value label="Hạn hoàn ứng" :value="\Illuminate\Support\Carbon::parse($advance['due_date'])->format('d/m/Y')" />
             @endif
             <x-ui.field-value label="Ghi chú" :value="$advance['description'] ?? '—'" />
         </div>
@@ -51,6 +55,25 @@
             <p class="px-4 pb-4 text-sm text-amber-700" data-testid="treasury-advance-reverse-hint">Muốn đảo tạm ứng này: gỡ hết quyết toán và đảo các lần nộp lại trước.</p>
         @endif
     </x-ui.card>
+
+    @if ($row !== null && $can['approve'] && (float) $row['outstanding'] > 0)
+        {{-- GAP-108 H-1: approvers set, move or clear the due date; reason required. --}}
+        <x-ui.card title="Đổi hạn hoàn ứng">
+            <form method="POST" action="{{ route('operator.treasury.projects.advances.due-date', [$project->id, $advance['id']]) }}" class="flex flex-wrap items-end gap-3 p-4" data-testid="treasury-advance-due-date-form">
+                @csrf
+                <label class="text-sm">Hạn mới (để trống = bỏ hạn)
+                    <input type="date" name="due_date" class="operator-input mt-1" value="{{ old('due_date', $row['due_date']) }}">
+                </label>
+                <label class="text-sm">Lý do <span class="text-rose-600">*</span>
+                    <input type="text" name="reason" maxlength="500" required class="operator-input mt-1 w-72" value="{{ old('reason') }}">
+                </label>
+                <button type="submit" class="operator-button operator-button-secondary">Lưu hạn</button>
+                @foreach (['due_date', 'reason'] as $field)
+                    @error($field)<p class="w-full text-sm text-red-700">{{ $message }}</p>@enderror
+                @endforeach
+            </form>
+        </x-ui.card>
+    @endif
 
     @if ($request !== null)
         <x-ui.card title="Đề nghị quyết toán đang chờ duyệt">

@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $financial_party_id
  * @property string $originating_financial_document_id
  * @property string $amount
+ * @property \Illuminate\Support\Carbon|null $due_date
  * @property \Illuminate\Support\Carbon $created_at
  * @property \Illuminate\Support\Carbon $updated_at
  */
@@ -31,7 +32,12 @@ class TreasuryAdvance extends Model
 
     protected $fillable = [
         'tenant_id', 'project_id', 'financial_party_id',
-        'originating_financial_document_id', 'amount',
+        'originating_financial_document_id', 'amount', 'due_date',
+    ];
+
+    /** @var array<string,string> */
+    protected $casts = [
+        'due_date' => 'date',
     ];
 
     /** @var list<string> */

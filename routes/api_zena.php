@@ -376,6 +376,7 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::post('/advances/{treasuryAdvance}/settlement-request/withdraw', [\App\Http\Controllers\Api\Treasury\TreasuryAdvanceController::class, 'withdrawSettlement'])->middleware('rbac:treasury.submit_expense')->name('settlement-request.withdraw');
             Route::post('/advances/{treasuryAdvance}/settlement-request/approve', [\App\Http\Controllers\Api\Treasury\TreasuryAdvanceController::class, 'approveSettlement'])->middleware('rbac:treasury.approve_expense')->name('settlement-request.approve');
             Route::post('/advances/{treasuryAdvance}/settlement-request/reject', [\App\Http\Controllers\Api\Treasury\TreasuryAdvanceController::class, 'rejectSettlement'])->middleware('rbac:treasury.approve_expense')->name('settlement-request.reject');
+            Route::put('/advances/{treasuryAdvance}/due-date', [\App\Http\Controllers\Api\Treasury\TreasuryAdvanceController::class, 'changeDueDate'])->middleware('rbac:treasury.approve_expense')->name('due-date');
             Route::post('/advances/{treasuryAdvance}/returns', [\App\Http\Controllers\Api\Treasury\TreasuryAdvanceController::class, 'storeReturn'])->middleware('rbac:treasury.reverse')->name('returns.store');
             Route::post('/advance-settlements/{treasuryAdvanceSettlement}/remove', [\App\Http\Controllers\Api\Treasury\TreasuryAdvanceController::class, 'removeSettlement'])->middleware('rbac:treasury.reverse')->name('settlements.remove');
         });

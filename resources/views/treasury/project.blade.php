@@ -37,6 +37,7 @@
     @include('treasury._errors')
 
     @include('treasury._dashboard')
+    @include('treasury._period-lock')
 
     <x-ui.card title="Số dư">
         <div class="operator-form-grid p-4" data-testid="treasury-balances">

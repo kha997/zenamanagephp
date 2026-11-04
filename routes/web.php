@@ -694,6 +694,9 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/projects/{project}/treasury/funding', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'storeFunding'])->middleware('rbac:treasury.declare_funding')->name('treasury.projects.funding.store');
     Route::post('/projects/{project}/treasury/transfers', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'storeTransfer'])->middleware('rbac:treasury.create_transfer')->name('treasury.projects.transfers.store');
     Route::post('/projects/{project}/treasury/adjustments', [App\Http\Controllers\Web\Treasury\TreasuryPageController::class, 'storeAdjustment'])->middleware('rbac:treasury.adjust')->name('treasury.projects.adjustments.store');
+    // GAP-107 L-1 / U-1: period lock.
+    Route::post('/projects/{project}/treasury/period/lock', [App\Http\Controllers\Web\Treasury\TreasuryPeriodPageController::class, 'lock'])->middleware('rbac:treasury.manage_period_lock')->name('treasury.projects.period.lock');
+    Route::post('/projects/{project}/treasury/period/unlock', [App\Http\Controllers\Web\Treasury\TreasuryPeriodPageController::class, 'unlock'])->middleware('rbac:treasury.manage_period_lock')->name('treasury.projects.period.unlock');
     // GAP-106: evidence files of a Treasury money document (Treasury project policy on every read) and the tenant switch.
     Route::get('/projects/{project}/treasury/documents/{treasuryDocument}/evidence', [App\Http\Controllers\Web\Treasury\TreasuryEvidencePageController::class, 'show'])->middleware('rbac:treasury.view')->name('treasury.projects.evidence.show');
     Route::post('/projects/{project}/treasury/documents/{treasuryDocument}/attachments', [App\Http\Controllers\Web\Treasury\TreasuryEvidencePageController::class, 'store'])->middleware('rbac:treasury.view')->name('treasury.projects.evidence.store');

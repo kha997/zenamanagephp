@@ -146,7 +146,9 @@ class TreasuryAdvanceService
         /** @var TreasuryWallet $wallet */
         $wallet = TreasuryWallet::query()->whereKey($advance->source_wallet_id)->firstOrFail();
 
-        return DB::transaction(function () use ($actor, $advance, $note, $selfApproval, $wallet): Document {
+        return DB::transaction(function () use ($actor, $advance, $note, $selfApproval, $wallet, $project): Document {
+            // GAP-107 L-1: no posting dated inside a locked period (project row locked first).
+            app(TreasuryPeriodLockService::class)->requireOpen($project, $advance->transaction_date);
             // Class 0 → class 4 (balance) → class 5; the advance row (class 3)
             // is inserted, never read, so no earlier lock is needed.
             $this->posting->lockWallet($wallet);
@@ -331,7 +333,9 @@ class TreasuryAdvanceService
         }
         $plan = ['allocations' => (array) data_get($pending->context, 'allocations', [])];
 
-        return DB::transaction(function () use ($actor, $advance, $pending, $plan, $note, $selfApproval): Settlement {
+        return DB::transaction(function () use ($actor, $advance, $pending, $plan, $note, $selfApproval, $project): Settlement {
+            // GAP-107 L-1: no posting dated inside a locked period (project row locked first).
+            app(TreasuryPeriodLockService::class)->requireOpen($project, \Illuminate\Support\Carbon::today());
             $this->expenses->lockCostSources($plan);
             $this->lockAdvance($advance);
             $locked = $this->lockDocument($advance);
@@ -412,7 +416,9 @@ class TreasuryAdvanceService
             throw new TreasuryRuleViolation('Gỡ quyết toán bắt buộc ghi lý do.', 'reason');
         }
 
-        return DB::transaction(function () use ($actor, $advance, $settlement, $reason): Settlement {
+        return DB::transaction(function () use ($actor, $advance, $settlement, $reason, $project): Settlement {
+            // GAP-107 L-1: no posting dated inside a locked period (project row locked first).
+            app(TreasuryPeriodLockService::class)->requireOpen($project, \Illuminate\Support\Carbon::today());
             $applies = Allocation::query()
                 ->where('advance_settlement_id', (string) $settlement->id)
                 ->where('direction', Allocation::DIRECTION_APPLY)
@@ -476,6 +482,8 @@ class TreasuryAdvanceService
         }
 
         return DB::transaction(function () use ($project, $actor, $advance, $wallet, $data, $amountCents): Document {
+            // GAP-107 L-1: no posting dated inside a locked period (project row locked first).
+            app(TreasuryPeriodLockService::class)->requireOpen($project, $data['transaction_date']);
             $this->posting->lockWallet($wallet);
             $this->lockAdvance($advance);
             $outstanding = $this->outstandingCents($advance, locking: true);

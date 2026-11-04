@@ -82,6 +82,8 @@ class TreasuryPostingService
         }
 
         return DB::transaction(function () use ($project, $actor, $data, $type, $party, $wallet): Document {
+            // GAP-107 L-1: no posting dated inside a locked period (project row locked first).
+            app(TreasuryPeriodLockService::class)->requireOpen($project, $data['transaction_date']);
             $document = $this->createDocument($project, $actor, [
                 'document_type' => $type,
                 'amount' => $data['amount'],
@@ -113,6 +115,8 @@ class TreasuryPostingService
         }
 
         return DB::transaction(function () use ($project, $actor, $data, $source, $destination): Document {
+            // GAP-107 L-1: no posting dated inside a locked period (project row locked first).
+            app(TreasuryPeriodLockService::class)->requireOpen($project, $data['transaction_date']);
             $this->lockAndRequireBalance($source, (string) $data['amount'], 'source_wallet_id');
 
             $document = $this->createDocument($project, $actor, [
@@ -149,6 +153,8 @@ class TreasuryPostingService
         }
 
         return DB::transaction(function () use ($project, $actor, $data, $wallet, $increase): Document {
+            // GAP-107 L-1: no posting dated inside a locked period (project row locked first).
+            app(TreasuryPeriodLockService::class)->requireOpen($project, $data['transaction_date']);
             if (!$increase) {
                 $this->lockAndRequireBalance($wallet, (string) $data['amount'], 'amount');
             }
@@ -187,6 +193,8 @@ class TreasuryPostingService
         }
 
         return DB::transaction(function () use ($project, $actor, $original, $data): Document {
+            // GAP-107 L-1: no posting dated inside a locked period (project row locked first).
+            app(TreasuryPeriodLockService::class)->requireOpen($project, $data['transaction_date']);
             // GAP-066 / v17 §11: an expense's cost-source rows (class 2) are
             // locked before the document rows (class 5).
             $activeApplies = $original->document_type === Document::TYPE_EXPENSE

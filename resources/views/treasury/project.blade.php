@@ -391,6 +391,7 @@
                         <td class="text-sm">{{ $statusLabels[$expense->status] ?? $expense->status }}</td>
                         <td class="text-sm">
                             @php $action = fn ($a) => route('operator.treasury.projects.expenses.action', [$project->id, $expense->id, $a]); @endphp
+                            <a href="{{ route('operator.treasury.projects.evidence.show', [$project->id, $expense->id]) }}" class="operator-button operator-button-inline" data-testid="treasury-expense-evidence-link">Chứng từ ({{ $evidenceCounts[(string) $expense->id] ?? 0 }})</a>
                             @if ($expense->status === 'draft' && $can['submitExpense'] && (string) $expense->created_by === (string) auth()->id())
                                 <form method="POST" action="{{ $action('submit') }}">@csrf<button type="submit" class="operator-button operator-button-inline">Gửi duyệt</button></form>
                             @elseif ($expense->status === 'submitted' && $can['approveExpense'])
@@ -520,6 +521,7 @@
             </div>
             <div class="flex flex-wrap items-center gap-3">
                 <label class="text-sm"><input type="checkbox" name="self_approved" value="1" @checked($registerFilters['self_approved'] === '1')> Chỉ khoản tự duyệt</label>
+                <label class="text-sm"><input type="checkbox" name="missing_evidence" value="1" @checked($registerFilters['missing_evidence'] === '1')> Chỉ khoản chi thiếu chứng từ</label>
                 <button type="submit" class="operator-button operator-button-inline">Lọc</button>
                 @if ($can['export'])
                     <a href="{{ route('operator.treasury.projects.reports.export', [$project->id, 'register']) . '?' . http_build_query(array_filter($registerFilters, static fn ($v) => $v !== null && $v !== '')) }}" class="operator-button operator-button-secondary" data-testid="treasury-register-export">Xuất CSV</a>
@@ -540,6 +542,10 @@
                         <td class="text-sm text-slate-600">{{ $doc->reference ?? '—' }}</td>
                         <td class="text-sm">{{ $statusLabels[$doc->status] ?? $doc->status }}</td>
                         <td class="text-sm">
+                            @if ($doc->document_type !== 'reversal')
+                                {{-- GAP-106: evidence files of this document. --}}
+                                <a href="{{ route('operator.treasury.projects.evidence.show', [$project->id, $doc->id]) }}" class="operator-button operator-button-inline" data-testid="treasury-evidence-link">Chứng từ ({{ $evidenceCounts[(string) $doc->id] ?? 0 }})</a>
+                            @endif
                             @if ($can['reverse'] && in_array($doc->status, ['posted_unreconciled', 'posted_reconciled'], true) && $doc->document_type !== 'reversal')
                                 <details>
                                     <summary class="operator-button operator-button-inline">Đảo</summary>

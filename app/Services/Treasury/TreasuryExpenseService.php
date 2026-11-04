@@ -104,6 +104,8 @@ class TreasuryExpenseService
         if ((string) $expense->created_by !== (string) $actor->id) {
             throw new TreasuryRuleViolation('Chỉ người tạo mới gửi duyệt được khoản chi này.');
         }
+        // GAP-106 M-1: when the tenant requires evidence, an expense needs at least one file before submit.
+        app(TreasuryEvidenceService::class)->requireEvidenceForSubmit($project, $expense);
 
         return DB::transaction(function () use ($actor, $expense): Document {
             $this->transition($actor, $expense, 'submitted', Document::STATUS_DRAFT, Document::STATUS_SUBMITTED);

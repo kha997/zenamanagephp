@@ -45,6 +45,7 @@ class TreasuryReportService
         'investor_receivable' => 'Phải thu nhà đầu tư',
         'fund_chain_trace' => 'Truy vết chuỗi quỹ',
         'expense_by_boq' => 'Chi theo BOQ',
+        'missing_evidence' => 'Thiếu chứng từ',
     ];
 
     public const TYPE_LABELS = [
@@ -80,6 +81,7 @@ class TreasuryReportService
         private readonly TreasuryRouteService $routes,
         private readonly TreasuryReceivableService $receivables,
         private readonly TreasuryFundChainService $fundChains,
+        private readonly TreasuryEvidenceService $evidence,
     ) {
     }
 
@@ -92,7 +94,7 @@ class TreasuryReportService
     public static function registerFilters(array $input): array
     {
         $filters = [];
-        foreach (['date_from', 'date_to', 'type', 'wallet_id', 'party_id', 'created_by', 'approved_by', 'self_approved', 'reconciled', 'fund_chain_id', 'boq_line_item_id'] as $key) {
+        foreach (['date_from', 'date_to', 'type', 'wallet_id', 'party_id', 'created_by', 'approved_by', 'self_approved', 'reconciled', 'fund_chain_id', 'boq_line_item_id', 'missing_evidence'] as $key) {
             $value = is_scalar($input[$key] ?? null) ? trim((string) $input[$key]) : '';
             if ($key === 'date_from' || $key === 'date_to') {
                 $value = preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1 ? $value : '';
@@ -147,6 +149,10 @@ class TreasuryReportService
         }
         if (filter_var($filters['self_approved'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
             $query->whereIn('id', Approval::query()->whereIn('event', self::SELF_APPROVAL_EVENTS)->where('context->approval_mode', 'self_approval')->select('financial_document_id'));
+        }
+        if (filter_var($filters['missing_evidence'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+            // GAP-106 E-1: posted, non-reversed expenses with no evidence file.
+            $query->whereIn('id', $this->evidence->missingEvidenceQuery($project)->select('id'));
         }
         if ($value('boq_line_item_id') !== '') {
             // GAP-105 B-1.
@@ -234,6 +240,7 @@ class TreasuryReportService
             'investor_receivable' => $this->investorReceivable($project),
             'fund_chain_trace' => $this->fundChainTrace($project),
             'expense_by_boq' => $this->expenseByBoq($project),
+            'missing_evidence' => $this->missingEvidence($project),
             default => throw new \InvalidArgumentException('Unknown treasury report ' . $key),
         };
 
@@ -346,6 +353,28 @@ class TreasuryReportService
         $rows[] = ['Tiền nhận khác vào Ngân quỹ (không gắn hợp đồng, không trừ vào phải thu)', '', '', $receivable['unlinked_funding'], '', ''];
 
         return [['Hợp đồng', 'Tên', 'Giá trị', 'Đã thu (đợt thanh toán)', 'Trong đó về ví Ngân quỹ', 'Còn phải thu'], $rows];
+    }
+
+    /**
+     * GAP-106 E-1: posted, non-reversed expenses without any evidence file.
+     *
+     * @return array{0: list<string>, 1: list<list<string|int>>}
+     */
+    private function missingEvidence(Project $project): array
+    {
+        $rows = [];
+        $parties = TreasuryFinancialParty::query()->withoutGlobalScopes()->where('tenant_id', (string) $project->tenant_id)->pluck('name', 'id');
+        foreach ($this->evidence->missingEvidenceQuery($project)->orderBy('transaction_date')->orderBy('id')->get(['transaction_date', 'destination_party_id', 'amount', 'reference', 'description']) as $doc) {
+            $rows[] = [
+                substr((string) data_get($doc, 'transaction_date'), 0, 10),
+                (string) ($parties[(string) data_get($doc, 'destination_party_id')] ?? ''),
+                TreasuryBalanceService::fromCents(TreasuryBalanceService::toCents((string) data_get($doc, 'amount'))),
+                (string) (data_get($doc, 'reference') ?? ''),
+                (string) (data_get($doc, 'description') ?? ''),
+            ];
+        }
+
+        return [['Ngày', 'Trả cho', 'Số tiền', 'Tham chiếu', 'Diễn giải'], $rows];
     }
 
     /**

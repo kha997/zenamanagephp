@@ -64,8 +64,13 @@ class TreasuryPageController extends Controller
 
         $projects = $query->paginate(30);
 
+        $evidence = app(\App\Services\Treasury\TreasuryEvidenceService::class);
+
         return view('treasury.index', [
             'projects' => $projects,
+            // GAP-106 M-1: tenant switch, shown to owner-level users only.
+            'evidenceRequired' => $evidence->evidenceRequired((string) $user->tenant_id),
+            'canChangeEvidencePolicy' => $evidence->canChangePolicy($user),
             // GAP-097 S6: all-projects overview (Owner answer 4).
             'overview' => collect($this->dashboard->overview($projects->getCollection()))->keyBy('project_id')->all(),
         ]);
@@ -158,6 +163,14 @@ class TreasuryPageController extends Controller
             'documents' => $register->getCollection(),
             'register' => $register,
             'registerFilters' => $registerFilters,
+            // GAP-106: evidence count per document on this page (register + pending expenses), one query.
+            'evidenceCounts' => app(\App\Services\Treasury\TreasuryEvidenceService::class)->counts($model, array_values(array_unique(array_merge(
+                $register->getCollection()->map(static fn ($doc): string => (string) data_get($doc, 'id'))->all(),
+                TreasuryFinancialDocument::query()->where('tenant_id', (string) $model->tenant_id)->where('project_id', (string) $model->id)
+                    ->where('document_type', TreasuryFinancialDocument::TYPE_EXPENSE)
+                    ->whereIn('status', [TreasuryFinancialDocument::STATUS_DRAFT, TreasuryFinancialDocument::STATUS_SUBMITTED, TreasuryFinancialDocument::STATUS_REJECTED])
+                    ->pluck('id')->map(static fn ($id): string => (string) $id)->all()
+            )))),
             // GAP-105 F-1: register filter by fund chain.
             'fundChains' => app(\App\Services\Treasury\TreasuryFundChainService::class)->chains($model),
             'registerUsers' => User::query()->where('tenant_id', (string) $model->tenant_id)->orderBy('name')->pluck('name', 'id')->all(),

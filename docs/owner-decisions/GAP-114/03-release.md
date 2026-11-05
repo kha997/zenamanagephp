@@ -1,14 +1,14 @@
 ---
 work_id: GAP-114
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-11-05-gap-114-overhead-project-pnl-evidence.md
   plan: docs/superpowers/plans/2026-11-05-gap-114-overhead-project-pnl.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-05T23:48:18+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-05, verbatim: 'APPROVE GAP-114 Gate 3'. Given on the packet at PR head debb448f3533a42759d8b3f67302b339ee3a629a; bound to implementation subject 8943eebb6ac90831da9e40aecf6ae018890ccb8f and implementation-tree digest a94c6d5d7aa9df54bf6b7acbf8a330851d7507299e04b8471532181996d5741a (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-05T23:33:15+07:00"
-  updated_at: "2026-11-05T23:33:15+07:00"
+  updated_at: "2026-11-05T23:48:18+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-114 at subject 8943eebb6ac90831da9e40aecf6ae018890ccb8f (Gate 2 N-1, C-1, P-1, A-1, R-1, D-1, V-1; exact allowlist; one PR, one implementation commit). One migration creates overhead_periods (tenant + period unique, draft / closed), overhead_cost_lines (period, category, description, amount) and overhead_allocations (period, nullable project, minutes, amount; unique period + project); no existing table changes. OverheadService: payroll.manage adds / edits / deletes lines of a draft month (fixed categories, amount > 0 with two decimals, description required) under a lock on the month row, audited; close by payroll.close locks the payroll month row then the overhead row, requires the payroll month closed, computes pool = lines + GAP-113 labour outside projects (stored rows of the closed payroll month), splits it by approved project minutes from GAP-113 in whole dong by largest remainder (cents, or the whole pool when no project minutes, in the row without project), stores the rows and audits pool / lines / labour outside / unallocated; reopen needs a reason and removes the rows. PayrollService::reopen refuses while that month's overhead is closed (shared lock on the overhead row). ProjectPnlService: per project revenue = paid contract payments by paid date (R-1), direct cost = posted Treasury expense documents by transaction date or posting date (reversed documents excluded) (D-1), contract expenses for reference only, labour (GAP-113), overhead; profit, margin; month() from stored rows when the overhead month is closed and as preview otherwise; cumulative() over closed overhead months with live contract value and projected profit; company totals incl. unallocated overhead; CSV with formula guard; fixed query count. Web: overhead page and P&L page (rbac:payroll.manage; close / reopen rbac:payroll.close; tenant-scoped lookups, 404 across tenants), links from the payroll list; OPPM shows the closed P&L summary to payroll.manage holders and the project's PM only (V-1). No new permission, dependency or menu item. Tests: OverheadTest 3, ProjectPnlTest 3, red before (classes / routes missing) and green after; payroll, OPPM and time tracking suites 58 green; payroll + time tracking 35 green with DB_CONNECTION=mysql on MySQL 8; migration up, down, up on MySQL 8. PHPStan, php-cs-fixer, SSOT test lint, ssot:lint, deptrac pass. Unit + Feature + Integration 2980 tests with only the 2 known root-only failures; Feature/Api 824 green. Exact-head CI recorded in the body."
@@ -35,10 +35,17 @@ technical_evidence:
   implementation_tree_digest: "a94c6d5d7aa9df54bf6b7acbf8a330851d7507299e04b8471532181996d5741a"
   verified_pr_head_sha: "8943eebb6ac90831da9e40aecf6ae018890ccb8f"
   verified_at: "2026-11-05T23:33:15+07:00"
-owner_decision_binding: null
+owner_decision_binding:
+  implementation_tree_digest: "a94c6d5d7aa9df54bf6b7acbf8a330851d7507299e04b8471532181996d5741a"
+  decision_recorded_at: "2026-11-05T23:48:18+07:00"
 ---
 
 # GAP-114 — Gate 3 release decision (overhead allocation and project P&L)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-11-05 ("APPROVE GAP-114 Gate 3"), bound to implementation subject
+`8943eebb6ac90831da9e40aecf6ae018890ccb8f` and implementation-tree digest `a94c6d5d7aa9df54bf6b7acbf8a330851d7507299e04b8471532181996d5741a`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

@@ -49,6 +49,26 @@ class ProductionRbacCommandTest extends TestCase
         $this->assertSame($grants, DB::table('role_permissions')->count());
     }
 
+    /**
+     * Codex P1/P2: PermissionSeeder sync()s Project Manager / Project Member, so grants added before it must survive, and
+     * every staff role needs the pages the go-live runbook relies on (time logging / review, project pages).
+     */
+    public function test_operational_roles_keep_their_grants_and_reach_time_and_project_pages(): void
+    {
+        $this->artisan('production:rbac')->assertExitCode(0);
+        foreach (['template.view', 'template.apply', 'task.view', 'project.view'] as $code) {
+            $this->assertTrue($this->roleHas('Project Manager', $code), "Project Manager {$code}");
+        }
+        foreach (['Finance', 'site_engineer', 'Project Member'] as $role) {
+            $this->assertTrue($this->roleHas($role, 'task.view'), "{$role} task.view");
+        }
+        foreach (['site_engineer', 'Project Member'] as $role) {
+            $this->assertTrue($this->roleHas($role, 'project.view'), "{$role} project.view");
+        }
+        $this->artisan('production:rbac')->assertExitCode(0);
+        $this->assertTrue($this->roleHas('Project Manager', 'template.apply'));
+    }
+
     public function test_dry_run_writes_nothing(): void
     {
         $this->artisan('production:rbac', ['--dry-run' => true])

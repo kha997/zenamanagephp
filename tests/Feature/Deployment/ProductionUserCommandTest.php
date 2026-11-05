@@ -41,6 +41,23 @@ class ProductionUserCommandTest extends TestCase
         $this->assertSame(1, AuditLog::query()->where('action', 'production.user.created')->count());
     }
 
+    /** Codex P2: accounts created for the runbook roles reach the time pages (log hours; PM reviews). */
+    public function test_staff_accounts_reach_time_pages(): void
+    {
+        $this->bootstrapCompany();
+        $this->createUser(['--email' => 'pm@zena-build.example', '--name' => 'PM', '--role' => 'Project Manager']);
+        $this->createUser(['--email' => 'kysu@zena-build.example', '--name' => 'Kỹ sư', '--role' => 'site_engineer']);
+        $this->createUser(['--email' => 'ketoan@zena-build.example', '--name' => 'Kế toán', '--role' => 'Finance']);
+        foreach (['pm', 'kysu', 'ketoan'] as $who) {
+            /** @var User $user */
+            $user = User::query()->where('email', "{$who}@zena-build.example")->firstOrFail();
+            $this->actingAs($user)->get(route('app.time.index'))->assertOk();
+        }
+        /** @var User $pm */
+        $pm = User::query()->where('email', 'pm@zena-build.example')->firstOrFail();
+        $this->actingAs($pm)->get(route('app.time.review'))->assertOk();
+    }
+
     public function test_refusals(): void
     {
         $this->artisan('production:user', ['--email' => 'a@b.example', '--name' => 'A', '--role' => 'Finance'])->assertExitCode(1);

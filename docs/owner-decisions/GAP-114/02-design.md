@@ -1,32 +1,38 @@
 ---
 work_id: GAP-114
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-11-05-gap-114-overhead-project-pnl-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-11-05-gap-114-overhead-project-pnl.md
   branch: docs/GAP-114-overhead-project-pnl
   pr: https://github.com/kha997/zenamanagephp/pull/404
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-05T23:23:31+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-05, verbatim: 'APPROVE GAP-114 Gate 2 N-1 C-1 P-1 A-1 R-1 D-1 V-1'. Reviewed design head: 015478958690b5414e440e3ac8af6377b9a9e6e2. Approves N-1 (monthly overhead cost lines on a new page, fixed categories, payroll.manage), C-1 (separate monthly overhead close by payroll.close after the payroll month is closed; allocation stored; reopen with reason clears it; payroll reopen refused while overhead is closed), P-1 (pool = entered lines + GAP-113 labour outside projects), A-1 (allocation by approved project minutes; whole-dong rounding with totals matching; no project hours = not allocated), R-1 (monthly revenue = contract payments paid by paid date; cumulative also shows projected P&L on live contract value), D-1 (direct cost = posted Treasury expenses net of reversals by document date; contract expenses shown for reference only), V-1 (P&L page payroll.manage only; OPPM closed P&L line for payroll.manage and the project's pm_id; no new permission), one PR / one Gate 3, with the exact allowlist in this packet; one additive migration (three new tables); not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-05T23:20:00+07:00"
-  updated_at: "2026-11-05T23:20:00+07:00"
+  updated_at: "2026-11-05T23:23:31+07:00"
 generated_by: agent
 ---
 
 # GAP-114 — Overhead allocation and project P&L: Gate 2 design
+
+## OWNER GATE 2: APPROVED — N-1, C-1, P-1, A-1, R-1, D-1, V-1
+
+Owner approved N-1, C-1, P-1, A-1, R-1, D-1 and V-1 in-session on 2026-11-05 against reviewed design head
+`015478958690b5414e440e3ac8af6377b9a9e6e2`. This authorizes only the bounded implementation defined by this packet; it does not authorize Gate 3, merge,
+release, or deployment.
 
 ## Owner Summary
 

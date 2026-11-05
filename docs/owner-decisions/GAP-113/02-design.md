@@ -1,32 +1,38 @@
 ---
 work_id: GAP-113
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-11-05-gap-113-project-labour-cost-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-11-05-gap-113-project-labour-cost.md
   branch: docs/GAP-113-project-labour-cost
   pr: https://github.com/kha997/zenamanagephp/pull/403
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-05T18:32:52+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-05, verbatim: 'APPROVE GAP-113 Gate 2 S-1 H-1 R-1 O-1 D-1 V-1'. Reviewed design head: 4a90ab996eca59d4067176ceec900e3fb84aeb5d. Approves S-1 (allocation computed and stored at payroll close, cleared on reopen, recomputed on re-close; draft months shown as preview only), H-1 (payroll close blocked while the month has running or submitted time entries), R-1 (project amount = company cost x approved project hours / max(total approved hours, standard hours); remainder to not-in-project; whole-unit rounding with totals matching), O-1 (is_overhead staff: whole cost to not-in-project), D-1 (labour cost page linked from payroll pages, CSV; closed-month cumulative line on the project OPPM page; no new menu item), V-1 (report payroll.manage only; OPPM line for payroll.manage and the project's pm_id, total only; no new permission), one PR / one Gate 3, with the exact allowlist in this packet; one additive migration (one new table); not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-05T18:00:00+07:00"
-  updated_at: "2026-11-05T18:00:00+07:00"
+  updated_at: "2026-11-05T18:32:52+07:00"
 generated_by: agent
 ---
 
 # GAP-113 — Labour cost per project: Gate 2 design
+
+## OWNER GATE 2: APPROVED — S-1, H-1, R-1, O-1, D-1, V-1
+
+Owner approved S-1, H-1, R-1, O-1, D-1 and V-1 in-session on 2026-11-05 against reviewed design head
+`4a90ab996eca59d4067176ceec900e3fb84aeb5d`. This authorizes only the bounded implementation defined by this packet; it does not authorize Gate 3, merge,
+release, or deployment.
 
 ## Owner Summary
 

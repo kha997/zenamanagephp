@@ -33,8 +33,11 @@ class ProjectOppmReadService
         ServiceLine::INSPECTION => 'Kiểm định',
     ];
 
-    public function __construct(private readonly ProjectHealthReadService $health)
-    {
+    public function __construct(
+        private readonly ProjectHealthReadService $health,
+        private readonly OppmOverlayService $overlay,
+        private readonly OppmDecisionService $decisions,
+    ) {
     }
 
     /**
@@ -44,7 +47,11 @@ class ProjectOppmReadService
     {
         $today = Carbon::now()->startOfDay();
         $health = $this->health->forProject($project, includeTreasuryAlerts: false);
-        $workstreams = $this->workstreams($project, $today);
+        // GAP-110 A-1 / W-1: overlay rows join the work groups by component id; display order wins over start date
+        // when set; weights are only shown (with their total), never used for progress.
+        $overlay = $this->overlay->overlayFor($project);
+        $workstreams = $this->ordered($this->workstreams($project, $today), $overlay['workstreams']);
+        $weights = array_filter(array_map(static fn (array $note): ?float => $note['weight'], $overlay['workstreams']), static fn (?float $w): bool => $w !== null);
 
         return [
             'health' => $health,
@@ -64,8 +71,62 @@ class ProjectOppmReadService
                 'rows' => $this->blockedDesignItems($project),
                 'total' => (int) $health['attention']['blocked_design_items'],
             ],
+            'overlay' => [
+                'project' => $overlay['project'],
+                'weight_total' => $weights === [] ? null : round(array_sum($weights), 2),
+            ],
+            'decisions' => $this->decisions->forPage($project, $today),
             'generated_at' => Carbon::now(),
         ];
+    }
+
+    /**
+     * GAP-110 K-1 — the header fields the page shows, as plain values, so a snapshot renders without the live model.
+     *
+     * @return array<string, mixed>
+     */
+    public function header(Project $project): array
+    {
+        $project->loadMissing(['manager', 'client']);
+        $start = $this->day($project->getAttribute('start_date'));
+        $end = $this->day($project->getAttribute('end_date'));
+
+        return [
+            'id' => $this->projectId($project),
+            'name' => (string) $project->getAttribute('name'),
+            'code' => $project->getAttribute('code'),
+            'status' => (string) $project->getAttribute('status'),
+            'client' => data_get($project, 'client.name'),
+            'manager' => data_get($project, 'manager.name'),
+            'start_date' => $start?->toDateString(),
+            'end_date' => $end?->toDateString(),
+            'description' => $project->getAttribute('description'),
+        ];
+    }
+
+    /**
+     * @param list<array<string, mixed>> $workstreams
+     * @param array<string, array<string, mixed>> $notes
+     * @return list<array<string, mixed>>
+     */
+    private function ordered(array $workstreams, array $notes): array
+    {
+        foreach ($workstreams as $index => $group) {
+            $workstreams[$index]['overlay'] = $notes[$group['id']] ?? null;
+            $workstreams[$index]['position'] = $index;
+        }
+        usort($workstreams, static function (array $a, array $b): int {
+            $oa = $a['overlay']['display_order'] ?? null;
+            $ob = $b['overlay']['display_order'] ?? null;
+
+            return [$oa === null, $oa, $a['position']] <=> [$ob === null, $ob, $b['position']];
+        });
+
+        return array_map(static function (array $group): array {
+            unset($group['position']);
+
+            return $group;
+        }, $workstreams);
     }
 
     /**

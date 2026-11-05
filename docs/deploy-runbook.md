@@ -1,5 +1,8 @@
 # Deploy Runbook (Ops)
 
+> First go-live, step by step: `docs/runbooks/go-live.md` (GAP-115). This page keeps the environment / queue / cron /
+> backup reference.
+
 ## Required Production Environment
 - `APP_ENV=production`
 - `APP_DEBUG=false`

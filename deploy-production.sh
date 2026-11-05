@@ -1,4 +1,5 @@
 #!/bin/bash
+# ĐÃ CŨ — KHÔNG DÙNG (GAP-115). Production chỉ deploy qua .github/workflows/production.yml; xem docs/runbooks/go-live.md.
 
 # Production Deployment Script
 # Dashboard System - Production Deployment

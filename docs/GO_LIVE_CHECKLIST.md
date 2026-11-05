@@ -1,3 +1,6 @@
+> **ĐÃ CŨ — KHÔNG DÙNG (GAP-115).** Lần lên chạy thật làm theo `docs/runbooks/go-live.md`; production chỉ deploy qua
+> `.github/workflows/production.yml`. Tài liệu này giữ lại để tham khảo.
+
 # Z.E.N.A Project Management - Go-Live Checklist
 
 > **Cập nhật 2026-07-19** — phần này thay thế vai trò "checklist sống" của tài liệu; danh sách generic phía dưới giữ nguyên để tham khảo. Nguồn: tổng rà production-readiness 19/07 (đối chiếu code thật trên `main`).

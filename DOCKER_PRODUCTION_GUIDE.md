@@ -1,3 +1,6 @@
+> **ĐÃ CŨ — KHÔNG DÙNG (GAP-115).** Lần lên chạy thật làm theo `docs/runbooks/go-live.md`; production chỉ deploy qua
+> `.github/workflows/production.yml`. Tài liệu này giữ lại để tham khảo.
+
 # Docker Production Setup Guide
 # ZenaManage Dashboard System
 

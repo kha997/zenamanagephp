@@ -68,6 +68,37 @@ class DeployMigrateCommandTest extends TestCase
         );
     }
 
+    /**
+     * GAP-115 amendment 1: on a brand-new database the `migrations` table does not exist yet. Every migration file is
+     * then pending, and the migrator creates the table instead of crashing the first deploy.
+     */
+    public function test_service_treats_a_missing_migrations_table_as_nothing_ran(): void
+    {
+        $this->writeMigrationFixture('2026_01_01_000000_first');
+        $this->writeMigrationFixture('2026_01_02_000000_second');
+        \Illuminate\Support\Facades\Schema::drop('migrations');
+
+        $service = new MigrationClassificationService($this->manifestPath, $this->fixtureDir);
+
+        $this->assertSame(['2026_01_01_000000_first', '2026_01_02_000000_second'], $service->pendingMigrationFiles());
+    }
+
+    /**
+     * GAP-115 amendment 2: on a fresh install (no migration has ever run) a breaking classification protects nothing, so
+     * deploy:migrate runs the whole history instead of demanding maintenance mode on a release that does not exist.
+     */
+    public function test_fresh_install_runs_breaking_migrations_without_maintenance_mode(): void
+    {
+        $this->writeMigrationFixture('2026_01_01_000000_old_breaking');
+        File::put($this->manifestPath, json_encode(['2026_01_01_000000_old_breaking' => 'breaking']));
+        \Illuminate\Support\Facades\Schema::drop('migrations');
+
+        $this->artisan('deploy:migrate', ['--manifest' => $this->manifestPath, '--migrations-path' => $this->fixtureDir])
+            ->expectsOutputToContain('Fresh install')
+            ->assertExitCode(0);
+        $this->assertTrue(\Illuminate\Support\Facades\DB::table('migrations')->where('migration', '2026_01_01_000000_old_breaking')->exists());
+    }
+
     public function test_service_reports_unclassified_migration(): void
     {
         $this->writeMigrationFixture('2026_09_03_000001_add_expand_column');

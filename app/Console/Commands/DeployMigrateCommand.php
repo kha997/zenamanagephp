@@ -48,6 +48,12 @@ class DeployMigrateCommand extends Command
         }
 
         $hasBreaking = $service->hasBreaking($pending);
+        // GAP-115: on a first install nothing runs against the old schema and there is no data to protect, and no
+        // release exists to put in maintenance mode — the breaking gate applies only to databases with history.
+        if ($hasBreaking && $service->isFreshDatabase()) {
+            $this->warn('Fresh install (no migration has run yet): breaking classifications do not apply; running the full history.');
+            $hasBreaking = false;
+        }
 
         if ($hasBreaking && !$this->option('allow-breaking')) {
             $this->error('Breaking migration(s) present in this deploy — refusing to run as an ordinary pre-cutover migration.');

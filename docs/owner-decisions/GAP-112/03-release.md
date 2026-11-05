@@ -1,14 +1,14 @@
 ---
 work_id: GAP-112
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-11-05-gap-112-time-logging-evidence.md
   plan: docs/superpowers/plans/2026-11-05-gap-112-time-logging.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-05T16:53:39+07:00"
+  owner_response_reference: "Owner Gate-3 re-decision in-session on 2026-11-05, verbatim: 'APPROVE GAP-112 Gate 3' (an earlier truncated message 'APPROVE GAP-112 Gate' was not recorded). Given on the re-presented packet at PR head 7e99d4fd4df0d9301f9bf08033213be8181a4010 after the Codex review fixes; bound to implementation subject 99354086790b8b6259d8090b126d1ec44f19596a and implementation-tree digest 4e33e1cad6951d23cb97425917b92edcb5c8ab16012e22c1f2d9f7d19d0a819e (recomputed at recording time, zero drift). Supersedes the earlier approval bound to d4e31530 / 567afb6a. Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-05T15:15:45+07:00"
-  updated_at: "2026-11-05T15:56:21+07:00"
+  updated_at: "2026-11-05T16:53:39+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-112 at subject 99354086790b8b6259d8090b126d1ec44f19596a (Gate 2 T-1, M-1, C-1, R-1, L-1, A-1, P-1; exact allowlist; one PR, two implementation commits: d4e31530 then 99354086 fixing three Codex findings — timer finalization now clips at the next timed entry of the day and at the 24 h day limit (flagged); a timer left running into a payroll month closed meanwhile is voided (rejected, 0 minutes, audited) instead of changing the closed month; the timesheet pickers list the whole P-1 scope, completed tasks included). One migration creates time_entries (tenant, user, nullable project / task / category, work_date, started / ended, minutes, source, auto_stopped, note, status, review fields; FKs tenant, user, project; indexes user + date, project + date + status, user + status); no existing table changes; task hour fields untouched (A-1). TimeEntryService: start / stop under a lock on the user row, one running timer per person, starting another activity stops the running one, cap at the earlier of start + 10 h and 23:59 of the start day with auto_stopped flag (also applied lazily when the person next opens a page); manual entries need a reason, start / end (HH:MM, end after start) or minutes, not in the future, no overlap with timed entries of the day, day total within 24 h; fixed categories (C-1, 'other' needs a note); scope P-1 (task assignee, task_assignments user, project PM or project member via project_user_roles, same tenant); edit / delete own non-approved, non-running entries (a correction goes back to review); L-1 refuses any change dated in a closed payroll month; every change audited. TimeReviewService: queue per week within scope (project entries: project PM or project.update; non-project: payroll.manage; own entries only with payroll.close), approve / reject several entries in one locked transaction, rejection needs a reason, only submitted entries, L-1 lock, audit. TimeReportService: hours by project x person and person x project / category, approved vs pending, scope (payroll.manage whole company incl. non-project; project.update all projects; PM own projects), one grouped query each, CSV with formula guard. Pages: My work (start per task, running banner with Stop), timesheet (week, day totals, timer, manual form, edit / delete), review, report (+CSV); menu 'Bảng giờ'; review / report links shown only within scope. Routes under rbac:task.view; tenant-scoped lookups (404 across tenants); review / report 403 outside scope. No new permission, no new dependency, no money. Tests: TimeEntryTest 4, TimeReviewTest 3, TimeReportTest 2, red before (classes missing) and green after; the 9 also green with DB_CONNECTION=mysql on MySQL 8; migration up, down, up on MySQL 8; report query count constant with more entries. Navigation / architecture tests green. Unit + Feature + Integration 2961 tests with only the 2 known root-only failures; Feature/Api 824 green. PHPStan, php-cs-fixer, SSOT test lint, ssot:lint, route guard, deptrac pass. After the fix: 11 time-tracking tests (two new, failing before the fix) green on SQLite and MySQL 8; Unit + Feature + Integration 2963 tests with only the 2 known root-only failures; PHPStan, php-cs-fixer, SSOT test lint clean. The Owner approved Gate 3 at d4e31530 (digest 567afb6a...7028); that approval no longer binds because the code changed, so Gate 3 is re-presented. Exact-head CI pending at packet time."
@@ -35,10 +35,17 @@ technical_evidence:
   implementation_tree_digest: "4e33e1cad6951d23cb97425917b92edcb5c8ab16012e22c1f2d9f7d19d0a819e"
   verified_pr_head_sha: "99354086790b8b6259d8090b126d1ec44f19596a"
   verified_at: "2026-11-05T15:56:21+07:00"
-owner_decision_binding: null
+owner_decision_binding:
+  implementation_tree_digest: "4e33e1cad6951d23cb97425917b92edcb5c8ab16012e22c1f2d9f7d19d0a819e"
+  decision_recorded_at: "2026-11-05T16:53:39+07:00"
 ---
 
 # GAP-112 — Gate 3 release decision (time logging per task)
+
+## OWNER GATE 3: APPROVED
+
+Owner re-approved Gate 3 in-session on 2026-11-05 ("APPROVE GAP-112 Gate 3") on the re-presented packet, bound to
+implementation subject `99354086790b8b6259d8090b126d1ec44f19596a` and implementation-tree digest `4e33e1cad6951d23cb97425917b92edcb5c8ab16012e22c1f2d9f7d19d0a819e`. No deployment or release is authorized.
 
 ## Gate 3 trình lại sau review Codex
 

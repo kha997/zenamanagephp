@@ -1,14 +1,14 @@
 ---
 work_id: GAP-113
 gate: 3
-gate_status: approved
+gate_status: awaiting_owner
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: approved
+  value: none
   authority: human_owner
-decision_requested: null
+decision_requested: "approve_or_correction_or_defer"
 references:
   spec: docs/audits/2026-11-05-gap-113-project-labour-cost-evidence.md
   plan: docs/superpowers/plans/2026-11-05-gap-113-project-labour-cost.md
@@ -18,41 +18,40 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-11-05T20:22:59+07:00"
-  owner_response_reference: "Owner decision in-session on 2026-11-05, verbatim: 'APPROVE GAP-113 Gate 3'. Given on the packet at PR head 9fc751cfbe3eb16cd001a5993f2ab5e2759c392c; bound to implementation subject ed18bad4bdf12643c0d663d8421958d51d88ef1f and implementation-tree digest c035f00da04cb9cfde51f01e16596b62da9affc0de1b1ce36e4af27ffa9e305b (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
+  recorded_at: null
+  owner_response_reference: null
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-05T18:43:29+07:00"
-  updated_at: "2026-11-05T20:22:59+07:00"
+  updated_at: "2026-11-05T20:49:16+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "GAP-113 at subject ed18bad4bdf12643c0d663d8421958d51d88ef1f (Gate 2 S-1, H-1, R-1, O-1, D-1, V-1; exact allowlist; one PR, one implementation commit). One migration creates labour_cost_allocations (tenant, payroll period, staff member, nullable project, minutes, amount; FKs tenant / period / staff / project with cascade; unique period + staff + project; index tenant + project); no existing table changes. LabourCostService: compute() from the period's payroll lines (company cost, standard hours) and approved time entries of the month grouped by user and project (three queries); R-1 project amount = company cost x approved project minutes / max(total approved minutes, standard minutes), in 1/5-minute units; project total rounded half up to whole dong and never above the cost floored to whole dong, split across projects by largest remainder; the rest (non-project hours, idle time, cents) is the row without project; O-1 is_overhead staff, staff without a login or without project hours put the whole cost outside projects; a login linked to two staff records counts once (first by code); approved hours of a login without a payroll line in the month are returned as unpriced. allocate() replaces the stored rows and audits labour_cost.allocated (project and outside totals); clear() deletes them and audits labour_cost.cleared. PayrollService: close() refuses while the month has running or submitted time entries (H-1), then recomputes lines and calls allocate() in the same transaction on the locked period row (S-1); reopen() calls clear(). LabourCostReportService: month() from stored rows when closed, computed preview when draft, per project and per person, outside total, unpriced hours; cumulative() and projectTotal() over closed months only; pendingByPerson() for the payroll page; CSV with formula guard; fixed query count. Web: labour cost page (rbac:payroll.manage, tenant-scoped period lookup, 404 across tenants), CSV export, links from payroll list and month pages; month page lists running / waiting hours per person with a link to time review and hides the close button; OPPM page shows the closed-month labour cost total to payroll.manage holders and the project's PM only (V-1), snapshots do not carry it. No new permission, no new dependency, no menu item. Tests: LabourCostAllocationTest 5, LabourCostReportTest 5, red before (classes / routes missing) and green after; payroll, OPPM and time tracking suites 51 green; the payroll suite (17) also green with DB_CONNECTION=mysql on MySQL 8; migration up, down, up on MySQL 8. PHPStan, php-cs-fixer, SSOT test lint, ssot:lint, deptrac pass. Unit + Feature + Integration 2973 tests with only the 2 known root-only failures; Feature/Api 824 green. Exact-head CI recorded in the body."
+mandatory_technical_gate_summary: "GAP-113 at subject dd4086e548ed4be57ad709949876345fafe6782a (Gate 2 S-1, H-1, R-1, O-1, D-1, V-1 plus Owner amendment 1; exact allowlist; one PR, two implementation commits: ed18bad4, then dd4086e5 fixing the Codex P2 finding — TimeEntryService now checks the payroll month inside each write transaction (start, manual add, update, delete; review already did) and reads the month row with a shared lock, so a write or review waits for a close holding the row for update and then sees it closed; verified with two MySQL 8 sessions and a test asserting the in-transaction check on every write path, with the lock clause asserted on MySQL). One migration creates labour_cost_allocations (tenant, payroll period, staff member, nullable project, minutes, amount; FKs tenant / period / staff / project with cascade; unique period + staff + project; index tenant + project); no existing table changes. LabourCostService: compute() from the period's payroll lines (company cost, standard hours) and approved time entries of the month grouped by user and project (three queries); R-1 project amount = company cost x approved project minutes / max(total approved minutes, standard minutes), in 1/5-minute units; project total rounded half up to whole dong and never above the cost floored to whole dong, split across projects by largest remainder; the rest (non-project hours, idle time, cents) is the row without project; O-1 is_overhead staff, staff without a login or without project hours put the whole cost outside projects; a login linked to two staff records counts once (first by code); approved hours of a login without a payroll line in the month are returned as unpriced. allocate() replaces the stored rows and audits labour_cost.allocated (project and outside totals); clear() deletes them and audits labour_cost.cleared. PayrollService: close() refuses while the month has running or submitted time entries (H-1), then recomputes lines and calls allocate() in the same transaction on the locked period row (S-1); reopen() calls clear(). LabourCostReportService: month() from stored rows when closed, computed preview when draft, per project and per person, outside total, unpriced hours; cumulative() and projectTotal() over closed months only; pendingByPerson() for the payroll page; CSV with formula guard; fixed query count. Web: labour cost page (rbac:payroll.manage, tenant-scoped period lookup, 404 across tenants), CSV export, links from payroll list and month pages; month page lists running / waiting hours per person with a link to time review and hides the close button; OPPM page shows the closed-month labour cost total to payroll.manage holders and the project's PM only (V-1), snapshots do not carry it. No new permission, no new dependency, no menu item. Tests: LabourCostAllocationTest 5, LabourCostReportTest 5, red before (classes / routes missing) and green after; payroll, OPPM and time tracking suites 51 green; the payroll suite (17) also green with DB_CONNECTION=mysql on MySQL 8; migration up, down, up on MySQL 8. PHPStan, php-cs-fixer, SSOT test lint, ssot:lint, deptrac pass. Unit + Feature + Integration 2973 tests with only the 2 known root-only failures; Feature/Api 824 green. Exact-head CI recorded in the body."
 technical_evidence:
   base_sha: "da686ca5faf42f8a02d4daeab7ccb3d81d956089"
-  subject_sha: "ed18bad4bdf12643c0d663d8421958d51d88ef1f"
-  implementation_tree_digest: "c035f00da04cb9cfde51f01e16596b62da9affc0de1b1ce36e4af27ffa9e305b"
-  verified_pr_head_sha: "ed18bad4bdf12643c0d663d8421958d51d88ef1f"
-  verified_at: "2026-11-05T18:43:29+07:00"
-owner_decision_binding:
-  implementation_tree_digest: "c035f00da04cb9cfde51f01e16596b62da9affc0de1b1ce36e4af27ffa9e305b"
-  decision_recorded_at: "2026-11-05T20:22:59+07:00"
+  subject_sha: "dd4086e548ed4be57ad709949876345fafe6782a"
+  implementation_tree_digest: "7179286fb1f5bec0075705e0bc6a1e210bcb4ab9b1e21f4adb44c226d1d3e277"
+  verified_pr_head_sha: "dd4086e548ed4be57ad709949876345fafe6782a"
+  verified_at: "2026-11-05T20:49:16+07:00"
+owner_decision_binding: null
 ---
 
 # GAP-113 — Gate 3 release decision (labour cost per project)
 
-## OWNER GATE 3: APPROVED
+## Gate 3 trình lại sau review Codex
 
-Owner approved Gate 3 in-session on 2026-11-05 ("APPROVE GAP-113 Gate 3"), bound to implementation subject
-`ed18bad4bdf12643c0d663d8421958d51d88ef1f` and implementation-tree digest `c035f00da04cb9cfde51f01e16596b62da9affc0de1b1ce36e4af27ffa9e305b`. No deployment or release is authorized.
+Owner đã duyệt Gate 3 ("APPROVE GAP-113 Gate 3") ở subject `ed18bad4`, digest `c035f00d…305b`. Codex review PR và
+chỉ ra 1 lỗi thật (P2). Owner chọn sửa ngay và mở rộng allowlist (amendment 1 trong `02-design.md`). Mã đã sửa ở
+`dd4086e5`, digest đổi thành `7179286f…e277`, nên lần duyệt cũ không còn áp dụng và Gate 3 được trình lại.
 
 ## Gói quyết định phát hành
 
 **1. Vấn đề là gì?** Đã có lương (GAP-109) và giờ làm (GAP-112) nhưng chưa biết mỗi công trình tốn bao nhiêu tiền nhân
 công.
 
-**2. Sau thay đổi (Gate 2 S-1, H-1, R-1, O-1, D-1, V-1)** — subject `ed18bad4`:
+**2. Sau thay đổi (Gate 2 S-1, H-1, R-1, O-1, D-1, V-1)** — subject `dd4086e5`:
 
 **Chốt lương**
 - **Không cho chốt** khi trong tháng còn giờ đang chạy hoặc chờ duyệt. Trang bảng lương liệt kê theo người, có link sang
@@ -86,8 +85,14 @@ công.
 Không thêm quyền, thư viện hay mục menu. Không đổi cách tính lương hay bảng giờ. Có 1 migration tạo bảng
 `labour_cost_allocations`.
 
-**3. Đã kiểm thử** — base `da686ca5`; subject `ed18bad4bdf12643c0d663d8421958d51d88ef1f`; digest
-`c035f00da04cb9cfde51f01e16596b62da9affc0de1b1ce36e4af27ffa9e305b`.
+**3. Đã kiểm thử** — base `da686ca5`; subject `dd4086e548ed4be57ad709949876345fafe6782a`; digest
+`7179286fb1f5bec0075705e0bc6a1e210bcb4ab9b1e21f4adb44c226d1d3e277`.
+- **Sửa theo Codex (commit `dd4086e5`):**
+  - ghi giờ (bắt đầu, nhập tay, sửa, xoá) và duyệt giờ kiểm tra tháng lương **bên trong** giao dịch ghi;
+  - đọc dòng tháng lương có khoá chia sẻ, nên phải chờ nếu Owner đang chốt; chốt xong thì thấy "đã chốt" và từ chối;
+  - kiểm chứng trên MySQL 8 bằng 2 phiên đồng thời: phiên đọc phải chờ phiên chốt, và thấy trạng thái "đã chốt";
+  - 1 test mới: hỏng khi chưa sửa, xanh khi đã sửa (trên MySQL còn kiểm tra có khoá);
+  - 29 test lương + ghi giờ xanh trên MySQL 8.
 - **10 test mới**, hỏng khi chưa có mã, xanh khi có mã.
 - **Phân bổ (5):**
   - ít / nhiều hơn giờ chuẩn;
@@ -127,8 +132,7 @@ Không thêm quyền, thư viện hay mục menu. Không đổi cách tính lư�
 **6. Rủi ro còn lại** — Thấp.
 - Chỉ thêm bảng và trang mới.
 - Chốt lương thêm điều kiện chặn (H-1) và bước tính.
-- Còn một khe hở có sẵn từ GAP-112: kiểm tra khoá tháng khi duyệt giờ không khoá dòng. Nếu ai đó duyệt giờ đúng lúc Owner
-  bấm chốt, dòng giờ đó có thể không vào số đã chốt. Mở lại rồi chốt lại sẽ tính đúng.
+- Khe hở "duyệt / ghi giờ đúng lúc chốt lương" (Codex chỉ ra) đã được đóng ở `dd4086e5`.
 
 **7. Hoàn tác**
 - Revert PR.
@@ -136,14 +140,7 @@ Không thêm quyền, thư viện hay mục menu. Không đổi cách tính lư�
 
 **8. Đề xuất** — Phát hành (merge).
 
-**9. Kết quả chạy toàn bộ**
-- **Unit + Feature + Integration:** 2.973 test. Chỉ có 2 lỗi có sẵn, do chạy bằng root
-  (`GrandfatherLoaderTest`, `BackupStorageLocationTest`).
-- **Feature/Api:** 824 test xanh.
-- **CI trên đúng head:**
-  - đã xong và xanh: Unit, Integration, API, Security, các job MySQL thật, route guardrails, code-quality, build Docker;
-  - "Owner Governance Lint" đỏ: đúng như dự kiến khi hồ sơ đang chờ Owner;
-  - các job còn lại đang chạy.
+**9. Kết quả chạy toàn bộ** (sau khi sửa) — RESULTS_PENDING
 
 ## Decision Needed
 

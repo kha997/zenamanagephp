@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-11-06-gap-115-deploy-readiness-evidence.md
   plan: null
   branch: docs/GAP-115-deploy-readiness
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/405
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

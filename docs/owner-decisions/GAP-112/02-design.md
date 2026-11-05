@@ -1,32 +1,38 @@
 ---
 work_id: GAP-112
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-11-05-gap-112-time-logging-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-11-05-gap-112-time-logging.md
   branch: docs/GAP-112-time-logging
   pr: https://github.com/kha997/zenamanagephp/pull/402
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-05T14:58:33+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-05, verbatim: 'APPROVE GAP-112 Gate 2 T-1 M-1 C-1 R-1 L-1 A-1 P-1'. Reviewed design head: d44e9cae6012036521bf90c887beddc37a49dd69. Approves T-1 (one running timer per person, auto-stop at the earlier of start + 10 h and 23:59, flagged), M-1 (manual entries with reason, no overlap, max 24 h per day, edit / delete before approval), C-1 (fixed non-project categories), R-1 (weekly per-person review by project PM or project.update holders; non-project by payroll.manage; reject with reason; no self-approval except payroll.close), L-1 (lock by closed payroll month), A-1 (task hour fields untouched), P-1 (no new permission; scope rules as stated), one PR / one Gate 3, with the exact allowlist in this packet; one additive migration (one new table); no money; not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-05T15:05:00+07:00"
-  updated_at: "2026-11-05T15:05:00+07:00"
+  updated_at: "2026-11-05T14:58:33+07:00"
 generated_by: agent
 ---
 
 # GAP-112 — Time logging per task: Gate 2 design
+
+## OWNER GATE 2: APPROVED — T-1, M-1, C-1, R-1, L-1, A-1, P-1
+
+Owner approved T-1, M-1, C-1, R-1, L-1, A-1 and P-1 in-session on 2026-11-05 against reviewed design head
+`d44e9cae6012036521bf90c887beddc37a49dd69`. This authorizes only the bounded implementation defined by this packet; it does not authorize Gate 3, merge,
+release, or deployment.
 
 ## Owner Summary
 

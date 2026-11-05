@@ -1,14 +1,14 @@
 ---
 work_id: GAP-114
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-11-05-gap-114-overhead-project-pnl-evidence.md
   plan: docs/superpowers/plans/2026-11-05-gap-114-overhead-project-pnl.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-06T00:35:10+07:00"
+  owner_response_reference: "Owner Gate-3 re-decision in-session on 2026-11-05, verbatim: 'APPROVE GAP-114 Gate 3'. Given on the re-presented packet at PR head 95c07a624ad763e6917f23b0064ef7b1fa008e86 after the Codex fixes; bound to implementation subject fbc34c1c2de07ad219cd2d1ae0ff8633c4fca6d1 and implementation-tree digest 546e68e539e5a5536c998e099c418e94c674fc5d3576baeb22ca2958e89fb160 (recomputed at recording time, zero drift). Supersedes the earlier approval bound to 8943eebb / a94c6d5d. Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-05T23:33:15+07:00"
-  updated_at: "2026-11-05T23:52:16+07:00"
+  updated_at: "2026-11-06T00:35:10+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-114 at subject fbc34c1c2de07ad219cd2d1ae0ff8633c4fca6d1 (Gate 2 N-1, C-1, P-1, A-1, R-1, D-1, V-1; exact allowlist; one PR, two implementation commits: 8943eebb, then fbc34c1c fixing three Codex P2 findings — a month with no cost line can be closed (OverheadService::closeMonth, route payroll.overhead.close-month, close form shown without a sheet); the P&L page shows company totals when no project has activity; cumulative P&L and the project summary include contract-only projects; two new tests failing before the fix). One migration creates overhead_periods (tenant + period unique, draft / closed), overhead_cost_lines (period, category, description, amount) and overhead_allocations (period, nullable project, minutes, amount; unique period + project); no existing table changes. OverheadService: payroll.manage adds / edits / deletes lines of a draft month (fixed categories, amount > 0 with two decimals, description required) under a lock on the month row, audited; close by payroll.close locks the payroll month row then the overhead row, requires the payroll month closed, computes pool = lines + GAP-113 labour outside projects (stored rows of the closed payroll month), splits it by approved project minutes from GAP-113 in whole dong by largest remainder (cents, or the whole pool when no project minutes, in the row without project), stores the rows and audits pool / lines / labour outside / unallocated; reopen needs a reason and removes the rows. PayrollService::reopen refuses while that month's overhead is closed (shared lock on the overhead row). ProjectPnlService: per project revenue = paid contract payments by paid date (R-1), direct cost = posted Treasury expense documents by transaction date or posting date (reversed documents excluded) (D-1), contract expenses for reference only, labour (GAP-113), overhead; profit, margin; month() from stored rows when the overhead month is closed and as preview otherwise; cumulative() over closed overhead months with live contract value and projected profit; company totals incl. unallocated overhead; CSV with formula guard; fixed query count. Web: overhead page and P&L page (rbac:payroll.manage; close / reopen rbac:payroll.close; tenant-scoped lookups, 404 across tenants), links from the payroll list; OPPM shows the closed P&L summary to payroll.manage holders and the project's PM only (V-1). No new permission, dependency or menu item. Tests: OverheadTest 3, ProjectPnlTest 3, red before (classes / routes missing) and green after; payroll, OPPM and time tracking suites 58 green; payroll + time tracking 35 green with DB_CONNECTION=mysql on MySQL 8; migration up, down, up on MySQL 8. PHPStan, php-cs-fixer, SSOT test lint, ssot:lint, deptrac pass. Unit + Feature + Integration 2980 tests with only the 2 known root-only failures; Feature/Api 824 green. After the Codex fixes: Unit + Feature + Integration 2982 tests with only the 2 known root-only failures; Feature/Api 824 green; payroll + time tracking 37 green on MySQL 8. Exact-head CI recorded in the body."
@@ -35,10 +35,17 @@ technical_evidence:
   implementation_tree_digest: "546e68e539e5a5536c998e099c418e94c674fc5d3576baeb22ca2958e89fb160"
   verified_pr_head_sha: "fbc34c1c2de07ad219cd2d1ae0ff8633c4fca6d1"
   verified_at: "2026-11-05T23:52:16+07:00"
-owner_decision_binding: null
+owner_decision_binding:
+  implementation_tree_digest: "546e68e539e5a5536c998e099c418e94c674fc5d3576baeb22ca2958e89fb160"
+  decision_recorded_at: "2026-11-06T00:35:10+07:00"
 ---
 
 # GAP-114 — Gate 3 release decision (overhead allocation and project P&L)
+
+## OWNER GATE 3: APPROVED
+
+Owner re-approved Gate 3 in-session on 2026-11-05 ("APPROVE GAP-114 Gate 3") on the re-presented packet, bound to
+implementation subject `fbc34c1c2de07ad219cd2d1ae0ff8633c4fca6d1` and implementation-tree digest `546e68e539e5a5536c998e099c418e94c674fc5d3576baeb22ca2958e89fb160`. No deployment or release is authorized.
 
 ## Gate 3 trình lại sau review Codex
 

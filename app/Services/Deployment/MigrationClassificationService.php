@@ -27,9 +27,23 @@ class MigrationClassificationService
         $names = array_map(static fn (string $f): string => basename($f, '.php'), $files);
         sort($names);
 
-        $ran = \Illuminate\Support\Facades\DB::table('migrations')->pluck('migration')->all();
+        // GAP-115: a brand-new database has no migrations table yet — nothing has run, so every file is pending (the
+        // migrator creates the table itself).
+        $ran = \Illuminate\Support\Facades\Schema::hasTable('migrations')
+            ? \Illuminate\Support\Facades\DB::table('migrations')->pluck('migration')->all()
+            : [];
 
         return array_values(array_diff($names, $ran));
+    }
+
+    /**
+     * GAP-115: true when no migration has ever run on this database (no migrations table, or an empty one) — a first
+     * install, where no running release or data depends on the existing schema.
+     */
+    public function isFreshDatabase(): bool
+    {
+        return !\Illuminate\Support\Facades\Schema::hasTable('migrations')
+            || !\Illuminate\Support\Facades\DB::table('migrations')->exists();
     }
 
     /**

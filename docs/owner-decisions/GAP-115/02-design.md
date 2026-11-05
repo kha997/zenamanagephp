@@ -146,6 +146,32 @@ Anh/chị cần chọn **5 điểm**:
 
 Không migration mới, không phụ thuộc mới, không quyền mới, không đổi seeder hiện có.
 
+## Owner amendment 1 — 2026-11-06 (first deploy on an empty database)
+
+Owner answer via AskUserQuestion on 2026-11-06T05:02:42+07:00, verbatim: "Fix now, amend allowlist (Recommended)".
+
+Rehearsing the go-live runbook on a real empty MySQL 8 database showed that `php artisan deploy:migrate` crashes:
+`MigrationClassificationService::pendingMigrationFiles()` reads the `migrations` table before it exists. The first
+production deploy would therefore fail at the migration step. Fix: when the `migrations` table does not exist, treat every
+migration as pending. Laravel's migrator then creates the table, and the classification check covers all files.
+
+Allowlist addition:
+- `app/Services/Deployment/MigrationClassificationService.php`;
+- `tests/Feature/Deployment/DeployMigrateCommandTest.php` (a red / green test for the empty-database case).
+
+## Owner amendment 2 — 2026-11-06 (breaking gate on a fresh install)
+
+Owner answer via AskUserQuestion on 2026-11-06T05:05:13+07:00, verbatim: "Fix now, amend allowlist (Recommended)".
+
+After amendment 1, the empty-database rehearsal stopped again. `deploy:migrate` exits 2 because the migration history
+holds 6 old migrations classified `breaking`. Those require maintenance mode on a running release, and a first install
+has neither a running release nor data to protect. Fix: when no migration has ever run (no `migrations` table, or an
+empty one), `deploy:migrate` prints "fresh install" and skips the breaking gate. A database with migration history keeps
+exits 2 / 3 unchanged.
+
+Allowlist addition: `app/Console/Commands/DeployMigrateCommand.php` (tests in the already-added
+`tests/Feature/Deployment/DeployMigrateCommandTest.php`).
+
 ## Ngoài phạm vi
 
 - Cài máy chủ, đặt secrets, deploy, chạy lệnh trên database thật (Owner làm theo runbook).

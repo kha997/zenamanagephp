@@ -53,3 +53,14 @@ environments) and the code on `main`. Method: static reading; no host, secret or
 
 Provisioning a real host, setting GitHub secrets, running a deploy, running seeders or bootstrap on a real database.
 These stay Owner actions, per the standing rule (no deploy, no production seeding by the agent).
+
+## 5. Corrections found during implementation
+
+- **§2.4:** `release-management.yml`'s `deploy-release`, `rollback-release` and `cleanup-release` were already disabled
+  with `if: false` by GAP-049. They were dead code, not "inert only while secrets are missing". W-1 removed them, so the
+  file can no longer be re-enabled by mistake.
+- **New, found by the empty-database rehearsal (Owner amendments 1 and 2):**
+  - `deploy:migrate` crashed when the `migrations` table did not exist;
+  - it then refused the 6 historical `breaking` migrations on a fresh install.
+
+  Either would have stopped the very first production deploy.

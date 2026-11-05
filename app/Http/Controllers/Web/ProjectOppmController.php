@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Project;
 use App\Models\User;
 use App\Services\Payroll\LabourCostReportService;
+use App\Services\Payroll\ProjectPnlService;
 use App\Services\ProjectOppm\OppmOverlayService;
 use App\Services\ProjectOppm\OppmSnapshotService;
 use App\Services\ProjectOppm\ProjectOppmReadService;
@@ -20,7 +21,8 @@ use Illuminate\Support\Facades\Gate;
  * loaded inside the user's tenant (404 otherwise); the Treasury block shows only with treasury.view-project.
  * GAP-110 (A-1, E-1, K-1): editors (OppmOverlayService::canEdit) see the overlay / decision / close forms; a closed
  * snapshot renders through the same body from its stored payload, read-only. GAP-113 V-1: the live page adds the
- * closed-month labour cost total for payroll.manage holders and the project's PM; snapshots do not carry it.
+ * closed-month labour cost total for payroll.manage holders and the project's PM; snapshots do not carry it. GAP-114
+ * V-1: the same audience sees the closed-month P&L summary.
  */
 class ProjectOppmController extends Controller
 {
@@ -29,6 +31,7 @@ class ProjectOppmController extends Controller
         private readonly OppmOverlayService $overlay,
         private readonly OppmSnapshotService $snapshots,
         private readonly LabourCostReportService $labour,
+        private readonly ProjectPnlService $pnl,
     ) {
     }
 
@@ -37,6 +40,7 @@ class ProjectOppmController extends Controller
         $user = $this->user();
         $project = $this->project($projectId);
         $canEdit = $this->overlay->canEdit($user, $project);
+        $canSeeMoney = $user->hasPermission('payroll.manage') || (string) $project->getAttribute('pm_id') === (string) $user->id;
 
         return view('projects.oppm', [
             'project' => $project,
@@ -47,8 +51,9 @@ class ProjectOppmController extends Controller
             'canEdit' => $canEdit,
             'users' => $canEdit ? User::query()->where('tenant_id', (string) $project->tenant_id)->orderBy('name')->pluck('name', 'id')->all() : [],
             // GAP-113 V-1: closed-month labour cost total for payroll.manage and the project's PM only.
-            'labourCost' => $user->hasPermission('payroll.manage') || (string) $project->getAttribute('pm_id') === (string) $user->id
-                ? $this->labour->projectTotal($project) : null,
+            'labourCost' => $canSeeMoney ? $this->labour->projectTotal($project) : null,
+            // GAP-114 V-1: closed-month P&L summary for the same audience.
+            'pnl' => $canSeeMoney ? $this->pnl->projectSummary($project) : null,
         ]);
     }
 
@@ -68,6 +73,7 @@ class ProjectOppmController extends Controller
             'canEdit' => false,
             'users' => [],
             'labourCost' => null,
+            'pnl' => null,
         ]);
     }
 

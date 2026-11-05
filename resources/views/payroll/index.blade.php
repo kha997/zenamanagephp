@@ -8,6 +8,8 @@
     <x-ui.page-header title="Nhân sự & lương" description="Bảng lương từng tháng: chi phí công ty thực chịu và đơn giá giờ của từng người.">
         <x-ui.button-link :href="route('operator.payroll.staff.index')" variant="secondary">Danh sách nhân sự</x-ui.button-link>
         <x-ui.button-link :href="route('operator.payroll.labour-cost')" variant="secondary">Chi phí nhân công</x-ui.button-link>
+        <x-ui.button-link :href="route('operator.payroll.overhead')" variant="secondary">Chi phí chung</x-ui.button-link>
+        <x-ui.button-link :href="route('operator.payroll.pnl')" variant="secondary">Lời lỗ công trình</x-ui.button-link>
     </x-ui.page-header>
 
     @if (session('success'))

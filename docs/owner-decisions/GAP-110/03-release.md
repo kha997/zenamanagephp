@@ -1,14 +1,14 @@
 ---
 work_id: GAP-110
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-11-05-gap-110-oppm-phase-2-3-evidence.md
   plan: docs/superpowers/plans/2026-11-05-gap-110-oppm-phase-2-3.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-05T12:10:00+07:00"
+  owner_response_reference: "Owner Gate-3 decision in-session on 2026-11-05, verbatim: 'APPROVE GAP-110 Gate 3'. Given on the packet at PR head 5d1262cb4ba7ff98dafbcb537da23c5bb969018d; bound to implementation subject 1bc7fea895721db52c1105b1ef59c7895838d99b and implementation-tree digest c70bc70bafe8f18f517ac2f184fbf01ac228ac79219ec8723389e75c238a7c10 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-05T07:10:13+07:00"
-  updated_at: "2026-11-05T07:10:13+07:00"
+  updated_at: "2026-11-05T12:10:00+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-110 at subject 1bc7fea895721db52c1105b1ef59c7895838d99b (Gate 2 S-1, A-1, W-1, E-1, D-1, K-1, P-1, Q-1; exact allowlist; one PR). Deviation from S-1 wording: the three parts (overlay, decisions, snapshots) landed in one implementation commit instead of three, because they share the read service, page body, controller and routes; scope and files are exactly the approved ones. One migration creates oppm_workstream_notes (unique project + component; FKs tenant, project, component, owner), oppm_project_notes (unique project), oppm_decisions (index project + status + due) and oppm_snapshots (payload as exact JSON text plus sha256); every row carries tenant_id and project_id; no existing table changes. OppmOverlayService: canEdit = same tenant and (project pm_id or project.update); per root component of the same project only (child or foreign components refused), outcome 500, weight 0-100 display only, next action with same-tenant owner and due date, note 1000, display order 0-999; project-level summary 2000 and next action; row lock, AuditLog with old / new values; overlayFor reads in two queries. ProjectOppmReadService adds overlay (per work group, display order before start-date order, weight total) and decisions; progress, delay and attention are untouched (W-1). OppmDecisionService: create / update while open, decide needs an outcome, cancel needs a reason (kept as outcome), row lock, audit created / updated / decided / cancelled; page block shows five open decisions, overdue first, with the open total. OppmSnapshotService: close needs canEdit and a label; payload = header + full OPPM data normalized through the same JSON encoding as the model cast, sha256 stored; model refuses update and delete; history; previous snapshot by created_at then id; compare subtracts stored numbers only (progress, delay, attention counts, open decisions, finance measures, per work group progress). Pages: OPPM page (summary and decision blocks, inline edit forms and close form for editors, history link), decisions page, history, snapshot view through the shared body with a 'Bản chốt' banner and the existing print layout, compare page. Routes under rbac:project.view with tenant-scoped project lookup (404 across tenants or projects); writes 403 without canEdit. No new permission, no new dependency, no server-side PDF. Tests: ProjectOppmOverlayTest 4, ProjectOppmDecisionTest 3, ProjectOppmSnapshotTest 4, red before (11 errors) and green after; the 12 GAP-104 page tests unchanged and green; all 23 OPPM tests green with DB_CONNECTION=mysql on MySQL 8; migration up, down, up on MySQL 8; OPPM page query count stays constant with 1 vs 11 overlay rows. Unit + Feature + Integration 2952 tests with only the 2 known root-only failures; Feature/Api 824 green. PHPStan, php-cs-fixer, SSOT test lint, ssot:lint, route guard, deptrac pass. Exact-head CI pending at packet time."
@@ -35,10 +35,17 @@ technical_evidence:
   implementation_tree_digest: "c70bc70bafe8f18f517ac2f184fbf01ac228ac79219ec8723389e75c238a7c10"
   verified_pr_head_sha: "1bc7fea895721db52c1105b1ef59c7895838d99b"
   verified_at: "2026-11-05T07:10:13+07:00"
-owner_decision_binding: null
+owner_decision_binding:
+  implementation_tree_digest: "c70bc70bafe8f18f517ac2f184fbf01ac228ac79219ec8723389e75c238a7c10"
+  decision_recorded_at: "2026-11-05T12:10:00+07:00"
 ---
 
 # GAP-110 — Gate 3 release decision (OPPM Phase 2 overlay, Phase 3 snapshots and decisions)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-11-05 ("APPROVE GAP-110 Gate 3"), bound to implementation subject
+`1bc7fea895721db52c1105b1ef59c7895838d99b` and implementation-tree digest `c70bc70bafe8f18f517ac2f184fbf01ac228ac79219ec8723389e75c238a7c10`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

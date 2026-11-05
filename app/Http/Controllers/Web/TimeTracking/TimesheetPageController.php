@@ -38,13 +38,8 @@ class TimesheetPageController extends Controller
             $date = $week->copy()->addDays($offset)->toDateString();
             $days[$date] = (int) $rows->filter(static fn (TimeEntry $e): bool => $e->work_date->toDateString() === $date)->sum('minutes');
         }
-        $tasks = Task::query()->withoutGlobalScopes()->with('project:id,name')
-            ->where('tenant_id', (string) $user->tenant_id)
-            ->where('assigned_to', (string) $user->id)
-            ->whereNotIn('status', [Task::STATUS_COMPLETED, Task::STATUS_CANCELLED])
-            ->orderBy('name')
-            ->limit(200)
-            ->get(['id', 'name', 'title', 'project_id']);
+        // Every task the person may log on (P-1), not only directly assigned ones; completed tasks stay for past time.
+        $tasks = $this->entries->loggableTasks($user);
 
         return view('time.timesheet', [
             'week' => $week,

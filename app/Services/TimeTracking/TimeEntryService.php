@@ -205,6 +205,34 @@ class TimeEntryService
         return DB::table('project_user_roles')->where('project_id', $projectId)->where('user_id', $userId)->exists();
     }
 
+    /**
+     * P-1 scope as a query, for the task pickers: assigned, task-assigned, PM project or member project; cancelled
+     * tasks excluded, completed ones kept so past time can still be entered.
+     *
+     * @return \Illuminate\Support\Collection<int, Task>
+     */
+    public function loggableTasks(User $user, int $limit = 300): Collection
+    {
+        $userId = (string) $user->id;
+        /** @var Collection<int, Task> $tasks */
+        $tasks = Task::query()->withoutGlobalScopes()->with('project:id,name')
+            ->where('tenant_id', (string) $user->tenant_id)
+            ->whereNull('deleted_at')
+            ->where('status', '!=', Task::STATUS_CANCELLED)
+            ->where(static function ($q) use ($userId): void {
+                $q->where('assigned_to', $userId)
+                    ->orWhereIn('id', static fn ($sub) => $sub->select('task_id')->from('task_assignments')->where('user_id', $userId))
+                    ->orWhereIn('project_id', static fn ($sub) => $sub->select('id')->from('projects')->where('pm_id', $userId))
+                    ->orWhereIn('project_id', static fn ($sub) => $sub->select('project_id')->from('project_user_roles')->where('user_id', $userId));
+            })
+            ->orderByRaw("CASE WHEN status = 'completed' THEN 1 ELSE 0 END")
+            ->orderBy('name')
+            ->limit($limit)
+            ->get(['id', 'name', 'title', 'project_id', 'status']);
+
+        return $tasks;
+    }
+
     public function isLocked(string $tenantId, Carbon|string $date): bool
     {
         $period = substr($date instanceof Carbon ? $date->toDateString() : $date, 0, 7);
@@ -364,14 +392,55 @@ class TimeEntryService
         if ($entry === null || $entry->started_at === null) {
             return null;
         }
+        $start = $entry->started_at->copy();
+        // L-1: a timer left running into a payroll month that was closed meanwhile never counts. It is closed as
+        // rejected with no minutes, so the closed month's counted time does not change and the person can carry on.
+        if ($this->isLocked((string) $user->tenant_id, $entry->work_date)) {
+            $entry->ended_at = $start;
+            $entry->minutes = 0;
+            $entry->auto_stopped = true;
+            $entry->status = TimeEntry::STATUS_REJECTED;
+            $entry->review_note = 'Tháng đã chốt lương trước khi dừng đồng hồ; dòng này không được tính.';
+            $entry->save();
+            $this->audit($user, $entry, 'time.entry.voided_closed_month', null);
+
+            return $entry;
+        }
+
         $cap = $this->cap($entry);
-        $end = $now->greaterThan($cap) ? $cap : $now;
+        $end = $now->greaterThan($cap) ? $cap->copy() : $now->copy();
+        $clipped = $now->greaterThan($cap);
+        // M-1 also for timers: no overlap with the day's other timed entries, and the day stays within 24 h.
+        $others = TimeEntry::query()->withoutGlobalScopes()
+            ->where('user_id', (string) $user->id)
+            ->whereDate('work_date', $entry->work_date->toDateString())
+            ->where('id', '!=', (string) $entry->id)
+            ->get(['id', 'started_at', 'ended_at', 'minutes']);
+        foreach ($others as $other) {
+            if ($other->started_at === null || $other->ended_at === null) {
+                continue;
+            }
+            if ($other->started_at->lessThanOrEqualTo($start) && $other->ended_at->greaterThan($start)) {
+                $end = $start->copy();
+                $clipped = true;
+            } elseif ($other->started_at->greaterThan($start) && $other->started_at->lessThan($end)) {
+                $end = $other->started_at->copy();
+                $clipped = true;
+            }
+        }
+        $minutes = max(0, (int) $start->diffInMinutes($end));
+        $room = max(0, self::MAX_DAY_MINUTES - (int) $others->sum('minutes'));
+        if ($minutes > $room) {
+            $minutes = $room;
+            $end = $start->copy()->addMinutes($room);
+            $clipped = true;
+        }
         $entry->ended_at = $end;
-        $entry->minutes = max(0, (int) $entry->started_at->diffInMinutes($end));
-        $entry->auto_stopped = $now->greaterThan($cap);
+        $entry->minutes = $minutes;
+        $entry->auto_stopped = $clipped;
         $entry->status = TimeEntry::STATUS_SUBMITTED;
         $entry->save();
-        $this->audit($user, $entry, $entry->auto_stopped ? 'time.entry.auto_stopped' : 'time.entry.stopped', null);
+        $this->audit($user, $entry, $clipped ? 'time.entry.auto_stopped' : 'time.entry.stopped', null);
 
         return $entry;
     }

@@ -165,6 +165,55 @@ class TimeEntryTest extends TestCase
         $this->assertNotNull($service->addManual($this->worker, ['task_id' => (string) $this->task->id, 'work_date' => '2026-11-03', 'minutes' => '60', 'note' => 'Bổ sung']));
     }
 
+    public function test_timer_respects_overlap_daily_limit_and_closed_month(): void
+    {
+        $service = app(TimeEntryService::class);
+        // A later manual interval clips the timer at its start.
+        $service->addManual($this->worker, ['task_id' => (string) $this->task->id, 'work_date' => '2026-11-05', 'start_time' => '10:00', 'end_time' => '11:00', 'note' => 'Họp khách']);
+        Carbon::setTestNow('2026-11-05 09:30:00');
+        $timer = $service->start($this->worker, $this->task);
+        Carbon::setTestNow('2026-11-05 12:00:00');
+        $service->stop($this->worker);
+        $this->assertSame(30, $timer->fresh()->minutes);
+        $this->assertSame('2026-11-05 10:00:00', $timer->fresh()->ended_at?->format('Y-m-d H:i:s'));
+        $this->assertTrue($timer->fresh()->auto_stopped);
+
+        // The day already holds 24 h: a timer adds nothing.
+        $service->addManual($this->worker, ['category' => TimeEntry::CATEGORY_ADMIN, 'work_date' => '2026-11-04', 'minutes' => '1440', 'note' => 'Cả ngày']);
+        Carbon::setTestNow('2026-11-04 13:00:00');
+        $full = $service->start($this->worker, $this->task);
+        Carbon::setTestNow('2026-11-04 15:00:00');
+        $service->stop($this->worker);
+        $this->assertSame(0, $full->fresh()->minutes);
+        $this->assertSame(1440, (int) TimeEntry::query()->whereDate('work_date', '2026-11-04')->sum('minutes'));
+
+        // A timer left running into a month that is then closed is voided, never counted, and does not block new work.
+        Carbon::setTestNow('2026-10-31 22:00:00');
+        $late = $service->start($this->worker, $this->task);
+        $this->closeMonth('2026-10');
+        Carbon::setTestNow('2026-11-05 13:00:00');
+        $this->assertNull($service->running($this->worker));
+        $late = $late->fresh();
+        $this->assertSame(TimeEntry::STATUS_REJECTED, $late->status);
+        $this->assertSame(0, $late->minutes);
+        $this->assertSame(1, AuditLog::query()->where('action', 'time.entry.voided_closed_month')->count());
+        $this->assertSame(TimeEntry::STATUS_RUNNING, $service->start($this->worker, $this->task)->status);
+    }
+
+    public function test_task_pickers_offer_the_whole_permitted_scope(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+        $unassigned = $this->makeTask($this->project, ['name' => 'Việc PM chưa giao']);
+        $done = $this->makeTask($this->project, ['name' => 'Việc đã xong', 'assigned_to' => (string) $this->worker->id, 'status' => Task::STATUS_COMPLETED]);
+        $foreign = $this->makeTask($this->otherProject, ['name' => 'Việc dự án khác']);
+
+        $this->actingAs($this->pm)->get(route('app.time.index'), $headers)->assertOk()->assertSee('Việc PM chưa giao')->assertDontSee('Việc dự án khác');
+        $this->actingAs($this->worker)->get(route('app.time.index'), $headers)->assertOk()->assertSee('Việc đã xong')->assertDontSee('Việc PM chưa giao');
+        $this->assertNotNull($unassigned->id);
+        $this->assertNotNull($done->id);
+        $this->assertNotNull($foreign->id);
+    }
+
     public function test_pages_timer_buttons_and_permissions(): void
     {
         $headers = ['X-Tenant-ID' => (string) $this->tenant->id];

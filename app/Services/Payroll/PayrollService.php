@@ -20,7 +20,8 @@ use Illuminate\Support\Facades\DB;
  * annual bonus estimate; the bonus actually paid only reaches net pay. H-1: standard hours = working days × hours per
  * day, or the person's own monthly hours; hourly cost = company cost ÷ standard hours, frozen when the month is closed.
  * L-1: payroll.manage edits drafts, payroll.close closes and reopens (reason required). P-1: lines are marked paid after
- * close; no Treasury posting. Every write runs in a transaction on the locked period row and is audited.
+ * close; no Treasury posting. GAP-113 H-1 / S-1: close is refused while the month has running or waiting hours, and
+ * stores the labour cost per project (LabourCostService); reopen removes it. Every write runs in a transaction on the locked period row and is audited.
  */
 class PayrollService
 {
@@ -29,6 +30,10 @@ class PayrollService
     private const DEDUCTIONS = ['employee_insurance', 'personal_income_tax', 'advance_deduction', 'other_deduction'];
 
     private const COMPANY_COST = ['base_salary', 'allowance', 'overtime', 'employer_insurance', 'other_company_cost', 'bonus_accrual'];
+
+    public function __construct(private readonly LabourCostService $labour)
+    {
+    }
 
     public function canManage(User $actor): bool
     {
@@ -162,10 +167,17 @@ class PayrollService
 
         return DB::transaction(function () use ($actor, $period): PayrollPeriod {
             $locked = $this->lockDraft($period);
+            // GAP-113 H-1: hours still running or waiting would be locked out of the labour cost for good.
+            $pending = array_sum($this->labour->pendingEntries($locked));
+            if ($pending > 0) {
+                throw new PayrollRuleViolation('Còn ' . $pending . ' dòng giờ đang chạy / chờ duyệt trong tháng; duyệt hoặc từ chối trước khi chốt.', 'period');
+            }
             foreach ($this->linesOf($locked) as $line) {
                 $this->compute($line, $locked, $line->staffMember);
                 $line->save();
             }
+            // GAP-113 S-1: labour cost per project is frozen with the month.
+            $this->labour->allocate($actor, $locked);
             $locked->status = PayrollPeriod::STATUS_CLOSED;
             $locked->closed_at = \Illuminate\Support\Carbon::now();
             $locked->closed_by = (string) $actor->id;
@@ -193,6 +205,7 @@ class PayrollService
             if (!$locked->isClosed()) {
                 throw new PayrollRuleViolation('Bảng lương chưa chốt.', 'reason');
             }
+            $this->labour->clear($actor, $locked);
             $locked->status = PayrollPeriod::STATUS_DRAFT;
             $locked->closed_at = null;
             $locked->closed_by = null;

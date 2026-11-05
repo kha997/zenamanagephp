@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Payroll\PayrollLine;
 use App\Models\Payroll\PayrollPeriod;
 use App\Models\User;
+use App\Services\Payroll\LabourCostReportService;
 use App\Services\Payroll\PayrollRuleViolation;
 use App\Services\Payroll\PayrollService;
 use Illuminate\Contracts\View\View;
@@ -18,12 +19,15 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * GAP-109 (Gate 2 C-1, B-1, H-1, L-1, P-1, Q-1) — monthly payroll pages: list and create months, enter lines, close /
- * reopen (payroll.close), mark paid, CSV export. Rules live in PayrollService.
+ * reopen (payroll.close), mark paid, CSV export. Rules live in PayrollService. GAP-113 H-1: the month page lists hours
+ * still running / waiting and hides the close button while there are any.
  */
 class PayrollPageController extends Controller
 {
-    public function __construct(private readonly PayrollService $payroll)
-    {
+    public function __construct(
+        private readonly PayrollService $payroll,
+        private readonly LabourCostReportService $labour,
+    ) {
     }
 
     public function index(): View
@@ -71,6 +75,8 @@ class PayrollPageController extends Controller
             'lines' => $this->payroll->linesOf($model),
             'totals' => $this->payroll->totals($model),
             'canClose' => $this->payroll->canClose($this->user()),
+            // GAP-113 H-1: running / waiting hours block the close.
+            'pendingHours' => $model->isClosed() ? [] : $this->labour->pendingByPerson($model),
         ]);
     }
 

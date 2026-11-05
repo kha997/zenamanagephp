@@ -17,6 +17,7 @@
     <x-ui.page-header :title="'Bảng lương tháng ' . $period->period" :description="($closed ? 'Đã chốt' : 'Nháp') . ' — ' . $period->working_days . ' ngày công × ' . (float) $period->hours_per_day . ' giờ.'">
         <x-ui.button-link :href="route('operator.payroll.index')" variant="secondary">Tất cả tháng</x-ui.button-link>
         <x-ui.button-link :href="route('operator.payroll.periods.export', $period->id)" variant="secondary">Xuất CSV</x-ui.button-link>
+        <x-ui.button-link :href="route('operator.payroll.labour-cost', ['period' => $period->id])" variant="secondary">Chi phí nhân công</x-ui.button-link>
     </x-ui.page-header>
 
     @if (session('success'))
@@ -26,6 +27,19 @@
         <ul class="mb-3 space-y-1 text-sm text-red-700" data-testid="payroll-errors">
             @foreach ($errors->all() as $message)<li>{{ $message }}</li>@endforeach
         </ul>
+    @endif
+
+    @if ($pendingHours !== [])
+        {{-- GAP-113 H-1: hours still running / waiting must be approved or rejected before the close. --}}
+        <x-ui.card title="Giờ làm chưa duyệt xong">
+            <div class="p-4 text-sm" data-testid="payroll-pending-hours">
+                <p class="mb-2 text-amber-700">Chưa chốt được: còn giờ đang chạy hoặc chờ duyệt trong tháng. Sau khi chốt, giờ của tháng bị khoá và sẽ không được tính vào chi phí công trình.</p>
+                <ul class="mb-2 list-disc pl-5">
+                    @foreach ($pendingHours as $person => $count)<li>{{ $person }}: {{ $count }} dòng</li>@endforeach
+                </ul>
+                <a href="{{ route('app.time.review') }}" class="operator-button operator-button-inline">Mở trang duyệt giờ</a>
+            </div>
+        </x-ui.card>
     @endif
 
     <x-ui.card title="Tổng tháng">
@@ -45,12 +59,12 @@
                 </form>
             @endif
             @if ($canClose)
-                @if (!$closed)
+                @if (!$closed && $pendingHours === [])
                     <form method="POST" action="{{ route('operator.payroll.periods.close', $period->id) }}" data-testid="payroll-close-form" onsubmit="return confirm('Chốt bảng lương tháng này?')">
                         @csrf
                         <button type="submit" class="operator-button operator-button-primary">Chốt bảng lương</button>
                     </form>
-                @else
+                @elseif ($closed)
                     <form method="POST" action="{{ route('operator.payroll.periods.reopen', $period->id) }}" class="flex items-end gap-2" data-testid="payroll-reopen-form">
                         @csrf
                         <label class="text-sm">Lý do mở lại <input type="text" name="reason" maxlength="500" required class="operator-input mt-1 w-64"></label>

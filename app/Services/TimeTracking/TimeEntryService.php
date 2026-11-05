@@ -37,6 +37,7 @@ class TimeEntryService
 
         return DB::transaction(function () use ($user, $projectId, $taskId, $category, $note, $now): TimeEntry {
             $this->lockUser($user);
+            $this->requireOpenMonth($user, $now);
             $this->closeRunning($user, $now);
             $entry = TimeEntry::query()->create([
                 'tenant_id' => (string) $user->tenant_id,
@@ -107,6 +108,7 @@ class TimeEntryService
 
         return DB::transaction(function () use ($user, $values): TimeEntry {
             $this->lockUser($user);
+            $this->requireOpenMonth($user, (string) $values['work_date']);
             $this->requireFits($user, $values, null);
             $entry = TimeEntry::query()->create($values + [
                 'tenant_id' => (string) $user->tenant_id,
@@ -133,6 +135,7 @@ class TimeEntryService
             /** @var TimeEntry $locked */
             $locked = TimeEntry::query()->withoutGlobalScopes()->whereKey($entry->id)->lockForUpdate()->firstOrFail();
             $this->requireEditable($user, $locked);
+            $this->requireOpenMonth($user, (string) $values['work_date']);
             $this->requireFits($user, $values, $locked);
             $before = $this->snapshot($locked);
             // A corrected entry (rejected or not) goes back to review; the review fields are cleared.
@@ -237,7 +240,13 @@ class TimeEntryService
     {
         $period = substr($date instanceof Carbon ? $date->toDateString() : $date, 0, 7);
 
-        return DB::table('payroll_periods')->where('tenant_id', $tenantId)->where('period', $period)->where('status', 'closed')->exists();
+        // GAP-113 amendment 1: inside a write transaction the shared lock makes this wait for a payroll close holding the
+        // month row (PayrollService::close locks it for update), so no entry is written or reviewed into a month that
+        // is being closed. Status is read from the row, not filtered, so the lock lands on the month row whether open or
+        // closed (and on its index gap when the month does not exist yet).
+        $status = DB::table('payroll_periods')->where('tenant_id', $tenantId)->where('period', $period)->sharedLock()->value('status');
+
+        return $status === 'closed';
     }
 
     public function requireOpenMonth(User $user, Carbon|string $date): void

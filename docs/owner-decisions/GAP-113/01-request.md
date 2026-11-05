@@ -1,11 +1,11 @@
 ---
 work_id: GAP-113
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-11-05-gap-113-project-labour-cost-evidence.md
   plan: null
@@ -15,16 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-05T17:52:38+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-05, verbatim: 'APPROVE GAP-113 Gate 1'. Bound to reviewed Draft PR #403 head a94e7f4f89bf1f95a0e67faa9bbb66867062aa4b, canonical base da686ca5faf42f8a02d4daeab7ccb3d81d956089. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-05T16:30:00+07:00"
-  updated_at: "2026-11-05T16:30:00+07:00"
+  updated_at: "2026-11-05T17:52:38+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-113 Gate 1 in-session on 2026-11-05 against Draft PR #403 head
+`a94e7f4f89bf1f95a0e67faa9bbb66867062aa4b`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

@@ -358,6 +358,18 @@ Route::prefix('app')->name('app.')->middleware(['auth', 'tenant.isolation'])->gr
     Route::post('/projects/{project}/baseline', [App\Http\Controllers\Web\ProjectController::class, 'storeBaseline'])->middleware('rbac:project.update')->name('projects.baseline.store');
     // GAP-104: read-only one-page OPPM (Gate 2 V-1, R-1).
     Route::get('/projects/{project}/oppm', [App\Http\Controllers\Web\ProjectOppmController::class, 'show'])->middleware('rbac:project.view')->name('projects.oppm');
+    // GAP-110: OPPM overlay, decisions and period snapshots (read: project.view; writes also need the project PM or project.update).
+    Route::post('/projects/{project}/oppm/workstreams/{component}', [App\Http\Controllers\Web\ProjectOppmManageController::class, 'saveWorkstream'])->middleware('rbac:project.view')->name('projects.oppm.workstreams.save');
+    Route::post('/projects/{project}/oppm/summary', [App\Http\Controllers\Web\ProjectOppmManageController::class, 'saveSummary'])->middleware('rbac:project.view')->name('projects.oppm.summary.save');
+    Route::get('/projects/{project}/oppm/decisions', [App\Http\Controllers\Web\ProjectOppmManageController::class, 'decisions'])->middleware('rbac:project.view')->name('projects.oppm.decisions');
+    Route::post('/projects/{project}/oppm/decisions', [App\Http\Controllers\Web\ProjectOppmManageController::class, 'storeDecision'])->middleware('rbac:project.view')->name('projects.oppm.decisions.store');
+    Route::post('/projects/{project}/oppm/decisions/{decision}', [App\Http\Controllers\Web\ProjectOppmManageController::class, 'updateDecision'])->middleware('rbac:project.view')->name('projects.oppm.decisions.update');
+    Route::post('/projects/{project}/oppm/decisions/{decision}/decide', [App\Http\Controllers\Web\ProjectOppmManageController::class, 'decide'])->middleware('rbac:project.view')->name('projects.oppm.decisions.decide');
+    Route::post('/projects/{project}/oppm/decisions/{decision}/cancel', [App\Http\Controllers\Web\ProjectOppmManageController::class, 'cancelDecision'])->middleware('rbac:project.view')->name('projects.oppm.decisions.cancel');
+    Route::get('/projects/{project}/oppm/snapshots', [App\Http\Controllers\Web\ProjectOppmManageController::class, 'history'])->middleware('rbac:project.view')->name('projects.oppm.snapshots');
+    Route::post('/projects/{project}/oppm/snapshots', [App\Http\Controllers\Web\ProjectOppmManageController::class, 'closeSnapshot'])->middleware('rbac:project.view')->name('projects.oppm.snapshots.store');
+    Route::get('/projects/{project}/oppm/snapshots/{snapshot}', [App\Http\Controllers\Web\ProjectOppmController::class, 'snapshot'])->middleware('rbac:project.view')->name('projects.oppm.snapshots.show');
+    Route::get('/projects/{project}/oppm/snapshots/{snapshot}/compare', [App\Http\Controllers\Web\ProjectOppmManageController::class, 'compare'])->middleware('rbac:project.view')->name('projects.oppm.snapshots.compare');
     // DELETE /projects/{project} - MOVED TO API: /api/v1/projects/{project}
 
     Route::get('/projects/{project}/work-templates', [App\Http\Controllers\Web\WorkTemplateApplyController::class, 'templates'])->middleware('rbac:template.view')->name('projects.work-templates.index');

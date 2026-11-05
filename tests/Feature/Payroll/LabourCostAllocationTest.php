@@ -183,6 +183,43 @@ class LabourCostAllocationTest extends TestCase
         $this->assertSame('0.50', (string) $rows->whereNull('project_id')->sole()->amount);
     }
 
+    /**
+     * Owner amendment 1 (Codex P2): every time-entry write / review checks the payroll month inside its own
+     * transaction, with a shared lock on the month row on MySQL, so it serializes with a close holding that row.
+     */
+    public function test_time_writes_check_the_payroll_month_inside_their_transaction(): void
+    {
+        app(PayrollService::class)->createPeriod($this->owner, '2026-11', 26);
+        $entries = app(\App\Services\TimeTracking\TimeEntryService::class);
+        $checks = [];
+        // RefreshDatabase already holds a transaction: count only queries run in a deeper (the service's own) one.
+        $base = \Illuminate\Support\Facades\DB::transactionLevel();
+        \Illuminate\Support\Facades\DB::listen(static function ($query) use (&$checks, $base): void {
+            if (str_contains($query->sql, 'payroll_periods') && str_contains($query->sql, 'status')) {
+                $checks[] = ['in_transaction' => \Illuminate\Support\Facades\DB::transactionLevel() > $base, 'sql' => $query->sql];
+            }
+        });
+        $assertChecked = function (string $step, callable $action) use (&$checks): void {
+            $checks = [];
+            $action();
+            $inside = array_values(array_filter($checks, static fn (array $c): bool => $c['in_transaction']));
+            $this->assertNotEmpty($inside, $step . ': the payroll month must be checked inside the write transaction.');
+            if (\Illuminate\Support\Facades\DB::getDriverName() === 'mysql') {
+                $this->assertMatchesRegularExpression('/lock in share mode|for share/i', $inside[0]['sql'], $step . ': shared lock on the month row.');
+            }
+        };
+
+        $manual = null;
+        $assertChecked('addManual', function () use ($entries, &$manual): void {
+            $manual = $entries->addManual($this->workerA, ['category' => TimeEntry::CATEGORY_MEETING, 'work_date' => '2026-11-04', 'minutes' => '60', 'note' => 'Họp']);
+        });
+        $assertChecked('update', fn () => $entries->update($this->workerA, $manual, ['category' => TimeEntry::CATEGORY_MEETING, 'work_date' => '2026-11-04', 'minutes' => '90', 'note' => 'Họp lâu']));
+        $assertChecked('start', fn () => $entries->start($this->workerA, null, TimeEntry::CATEGORY_MEETING, 'Họp'));
+        $assertChecked('review', fn () => app(\App\Services\TimeTracking\TimeReviewService::class)->approve($this->owner, [(string) $manual->id]));
+        $other = $entries->addManual($this->workerA, ['category' => TimeEntry::CATEGORY_MEETING, 'work_date' => '2026-11-03', 'minutes' => '30', 'note' => 'Họp']);
+        $assertChecked('delete', fn () => $entries->delete($this->workerA, $other));
+    }
+
     public function test_tenant_isolation(): void
     {
         $period = $this->october(['NV01' => '10400000']);

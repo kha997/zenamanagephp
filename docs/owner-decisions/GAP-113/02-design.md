@@ -183,6 +183,21 @@ xanh.
 
 Không phụ thuộc mới, không quyền mới, không đổi bảng cũ, không đổi cách tính lương hay bảng giờ.
 
+## Owner amendment 1 — 2026-11-05 (Codex finding on PR #403)
+
+Owner answer via AskUserQuestion on 2026-11-05T20:46:11+07:00, verbatim: "Fix now, amend allowlist (Recommended)".
+
+Codex (P2) found that a time entry written or reviewed at the same moment as a payroll close could slip past the H-1
+check: the open-month check in `TimeEntryService` runs outside the write transaction and takes no lock on the payroll
+month. Fix: time-entry writes and reviews check the month inside their transaction with a shared lock on the payroll
+month row; close already holds that row exclusively, so the two serialize.
+
+Allowlist addition:
+- `app/Services/TimeTracking/TimeEntryService.php` (month check inside the transactions, shared lock on the month row);
+- tests in the already-allowed `tests/Feature/Payroll/LabourCostAllocationTest.php`.
+
+Gate 3 must be re-presented after this change.
+
 ## Ngoài phạm vi
 
 - Phân bổ chi phí chung, lời lỗ công trình (phần 4).

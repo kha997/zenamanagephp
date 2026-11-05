@@ -78,6 +78,8 @@ class WorkloadPageController extends Controller
             'open_count' => $items->count(),
             'overdue_count' => $items->where('isOverdue', true)->count(),
             'blocked_count' => $items->where('isBlocked', true)->count(),
+            // GAP-112 T-1: start / stop a timer from "my work".
+            'running' => ($me = Auth::user()) instanceof User ? app(\App\Services\TimeTracking\TimeEntryService::class)->running($me) : null,
         ]);
     }
 }

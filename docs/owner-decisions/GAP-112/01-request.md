@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-11-05-gap-112-time-logging-evidence.md
   plan: null
   branch: docs/GAP-112-time-logging
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/402
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

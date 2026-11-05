@@ -257,6 +257,13 @@
                 <x-ui.field-value label="Chi phí nhân công (đã chốt)" :value="number_format((float) $labourCost['amount'], 0, ',', '.') . ' ₫ — ' . rtrim(rtrim(number_format($labourCost['minutes'] / 60, 2, ',', '.'), '0'), ',') . ' giờ, ' . $labourCost['months'] . ' tháng'" />
             </div>
         @endif
+        @if (!empty($pnl) && $pnl['months'] > 0)
+            {{-- GAP-114 V-1: closed overhead months only. --}}
+            <div class="mt-3 operator-form-grid" data-testid="oppm-pnl">
+                <x-ui.field-value label="Lời lỗ (đã chốt)" :value="number_format((float) $pnl['profit'], 0, ',', '.') . ' ₫ — thu ' . number_format((float) $pnl['revenue'], 0, ',', '.') . ', chi ' . number_format((float) $pnl['total_cost'], 0, ',', '.') . ' (' . $pnl['months'] . ' tháng)'" />
+                <x-ui.field-value label="Lời lỗ dự kiến theo hợp đồng" :value="number_format((float) $pnl['projected_profit'], 0, ',', '.') . ' ₫'" />
+            </div>
+        @endif
         @if ($canViewTreasury && $finance['treasury']['availability'] === Health::AVAILABLE)
             <div class="mt-3 operator-form-grid">
                 <x-ui.field-value label="Ngân quỹ dự án — đang giữ" :value="number_format((float) $finance['treasury']['held_total'], 0, ',', '.')" />

@@ -1,0 +1,169 @@
+---
+work_id: GAP-114
+gate: 3
+gate_status: approved
+technical_readiness:
+  value: ready
+  generated_by: engineering_evidence
+owner_decision:
+  value: approved
+  authority: human_owner
+decision_requested: null
+references:
+  spec: docs/audits/2026-11-05-gap-114-overhead-project-pnl-evidence.md
+  plan: docs/superpowers/plans/2026-11-05-gap-114-overhead-project-pnl.md
+  branch: docs/GAP-114-overhead-project-pnl
+  pr: https://github.com/kha997/zenamanagephp/pull/404
+  release: null
+decision_provenance:
+  trust_level: claimed_repo_record
+  recorded_by: agent
+  recorded_at: "2026-11-06T00:35:10+07:00"
+  owner_response_reference: "Owner Gate-3 re-decision in-session on 2026-11-05, verbatim: 'APPROVE GAP-114 Gate 3'. Given on the re-presented packet at PR head 95c07a624ad763e6917f23b0064ef7b1fa008e86 after the Codex fixes; bound to implementation subject fbc34c1c2de07ad219cd2d1ae0ff8633c4fca6d1 and implementation-tree digest 546e68e539e5a5536c998e099c418e94c674fc5d3576baeb22ca2958e89fb160 (recomputed at recording time, zero drift). Supersedes the earlier approval bound to 8943eebb / a94c6d5d. Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
+  reconciliation_required: false
+supersedes: null
+superseded_by: null
+timestamps:
+  created_at: "2026-11-05T23:33:15+07:00"
+  updated_at: "2026-11-06T00:35:10+07:00"
+generated_by: agent
+residual_risk_rating: low
+mandatory_technical_gate_summary: "GAP-114 at subject fbc34c1c2de07ad219cd2d1ae0ff8633c4fca6d1 (Gate 2 N-1, C-1, P-1, A-1, R-1, D-1, V-1; exact allowlist; one PR, two implementation commits: 8943eebb, then fbc34c1c fixing three Codex P2 findings — a month with no cost line can be closed (OverheadService::closeMonth, route payroll.overhead.close-month, close form shown without a sheet); the P&L page shows company totals when no project has activity; cumulative P&L and the project summary include contract-only projects; two new tests failing before the fix). One migration creates overhead_periods (tenant + period unique, draft / closed), overhead_cost_lines (period, category, description, amount) and overhead_allocations (period, nullable project, minutes, amount; unique period + project); no existing table changes. OverheadService: payroll.manage adds / edits / deletes lines of a draft month (fixed categories, amount > 0 with two decimals, description required) under a lock on the month row, audited; close by payroll.close locks the payroll month row then the overhead row, requires the payroll month closed, computes pool = lines + GAP-113 labour outside projects (stored rows of the closed payroll month), splits it by approved project minutes from GAP-113 in whole dong by largest remainder (cents, or the whole pool when no project minutes, in the row without project), stores the rows and audits pool / lines / labour outside / unallocated; reopen needs a reason and removes the rows. PayrollService::reopen refuses while that month's overhead is closed (shared lock on the overhead row). ProjectPnlService: per project revenue = paid contract payments by paid date (R-1), direct cost = posted Treasury expense documents by transaction date or posting date (reversed documents excluded) (D-1), contract expenses for reference only, labour (GAP-113), overhead; profit, margin; month() from stored rows when the overhead month is closed and as preview otherwise; cumulative() over closed overhead months with live contract value and projected profit; company totals incl. unallocated overhead; CSV with formula guard; fixed query count. Web: overhead page and P&L page (rbac:payroll.manage; close / reopen rbac:payroll.close; tenant-scoped lookups, 404 across tenants), links from the payroll list; OPPM shows the closed P&L summary to payroll.manage holders and the project's PM only (V-1). No new permission, dependency or menu item. Tests: OverheadTest 3, ProjectPnlTest 3, red before (classes / routes missing) and green after; payroll, OPPM and time tracking suites 58 green; payroll + time tracking 35 green with DB_CONNECTION=mysql on MySQL 8; migration up, down, up on MySQL 8. PHPStan, php-cs-fixer, SSOT test lint, ssot:lint, deptrac pass. Unit + Feature + Integration 2980 tests with only the 2 known root-only failures; Feature/Api 824 green. After the Codex fixes: Unit + Feature + Integration 2982 tests with only the 2 known root-only failures; Feature/Api 824 green; payroll + time tracking 37 green on MySQL 8. Exact-head CI recorded in the body."
+technical_evidence:
+  base_sha: "b4a9174f104a84be8e1af30c3d8dd2fbb4eb263a"
+  subject_sha: "fbc34c1c2de07ad219cd2d1ae0ff8633c4fca6d1"
+  implementation_tree_digest: "546e68e539e5a5536c998e099c418e94c674fc5d3576baeb22ca2958e89fb160"
+  verified_pr_head_sha: "fbc34c1c2de07ad219cd2d1ae0ff8633c4fca6d1"
+  verified_at: "2026-11-05T23:52:16+07:00"
+owner_decision_binding:
+  implementation_tree_digest: "546e68e539e5a5536c998e099c418e94c674fc5d3576baeb22ca2958e89fb160"
+  decision_recorded_at: "2026-11-06T00:35:10+07:00"
+---
+
+# GAP-114 — Gate 3 release decision (overhead allocation and project P&L)
+
+## OWNER GATE 3: APPROVED
+
+Owner re-approved Gate 3 in-session on 2026-11-05 ("APPROVE GAP-114 Gate 3") on the re-presented packet, bound to
+implementation subject `fbc34c1c2de07ad219cd2d1ae0ff8633c4fca6d1` and implementation-tree digest `546e68e539e5a5536c998e099c418e94c674fc5d3576baeb22ca2958e89fb160`. No deployment or release is authorized.
+
+## Gate 3 trình lại sau review Codex
+
+Owner đã duyệt Gate 3 ("APPROVE GAP-114 Gate 3") ở subject `8943eebb`, digest `a94c6d5d…741a`. Codex review PR và chỉ
+ra 3 lỗi thật (P2). Mã đã sửa ở `fbc34c1c` (trong allowlist), digest đổi thành `546e68e5…b160`, nên lần duyệt cũ không còn
+áp dụng và Gate 3 được trình lại.
+
+## Gói quyết định phát hành
+
+**1. Vấn đề là gì?** Đã có chi phí nhân công từng công trình nhưng chưa tính chi phí chung và chưa ra lời lỗ thật.
+
+**2. Sau thay đổi (Gate 2 N-1, C-1, P-1, A-1, R-1, D-1, V-1)** — subject `fbc34c1c`:
+
+**Trang "Chi phí chung"** (mở từ trang Nhân sự & lương)
+- Chọn tháng, nhập từng khoản:
+  - loại: thuê văn phòng, điện nước, internet / điện thoại, phần mềm, văn phòng phẩm, khấu hao, khác;
+  - mô tả và số tiền.
+- Sửa / xoá được khi tháng chưa chốt. Có nhật ký.
+- Trang hiện:
+  - tổng các khoản đã nhập;
+  - lương chưa vào công trình (GAP-113);
+  - tổng chi phí chung;
+  - bảng tạm tính chia cho từng công trình.
+- **Chốt chi phí chung** (Owner): chỉ chốt được sau khi đã chốt lương tháng đó. Lúc chốt, hệ thống chia theo tỷ lệ giờ đã
+  duyệt và lưu cố định.
+  - Làm tròn đồng; tổng khớp.
+  - Tháng không có giờ công trình thì để "chưa phân bổ".
+- Mở lại: cần lý do, xoá số đã chia. **Không mở lại được lương** khi chi phí chung tháng đó đã chốt; phải mở lại chi phí
+  chung trước.
+
+**Trang "Lời lỗ công trình"** (chỉ Owner / kế toán)
+- Theo tháng, từng công trình:
+  - doanh thu đã thu (các đợt thanh toán đã thu, theo ngày thu);
+  - chi qua Ngân quỹ (đã ghi sổ, không tính khoản đã đảo);
+  - nhân công;
+  - chi phí chung;
+  - lời / lỗ, tỷ suất;
+  - chi phí ghi nhận theo hợp đồng (chỉ để đối chiếu).
+- Dòng tổng toàn công ty, gồm chi phí chung chưa phân bổ.
+- Tháng chưa chốt chi phí chung ghi **"Tạm tính"**.
+- **Luỹ kế** các tháng đã chốt: lời lỗ theo tiền đã thu, giá trị hợp đồng, **lời lỗ dự kiến**.
+- Xuất CSV.
+
+**Trang OPPM:** dòng **"Lời lỗ (đã chốt)"** và **"Lời lỗ dự kiến theo hợp đồng"**. Chỉ Owner / kế toán và PM của công trình
+đó thấy.
+
+Không thêm quyền, thư viện hay mục menu. Không đổi Ngân quỹ, bảng giờ hay cách tính lương; chỉ thêm điều kiện chặn mở lại
+lương. Có 1 migration tạo 3 bảng mới.
+
+**3. Đã kiểm thử** — base `b4a9174f`; subject `fbc34c1c2de07ad219cd2d1ae0ff8633c4fca6d1`; digest
+`546e68e539e5a5536c998e099c418e94c674fc5d3576baeb22ca2958e89fb160`.
+- **Sửa theo Codex (commit `fbc34c1c`):**
+  - tháng **không nhập khoản chi phí nào** vẫn chốt được; khi đó chi phí chung chỉ gồm lương chưa vào công trình;
+  - trang lời lỗ hiện **dòng tổng công ty** cả khi không công trình nào có số trong tháng, để không giấu khoản lỗ;
+  - luỹ kế và dòng OPPM có cả **công trình mới chỉ có hợp đồng**, kèm giá trị hợp đồng và lời lỗ dự kiến;
+  - 2 test mới cho các lỗi này: hỏng khi chưa sửa, xanh khi đã sửa;
+  - 37 test lương + ghi giờ xanh trên MySQL 8.
+- **6 test mới**, hỏng khi chưa có mã, xanh khi có mã.
+- **Chi phí chung (3):**
+  - nhập / sửa / xoá; khoá khi đã chốt;
+  - chưa chốt lương thì không chốt được;
+  - chia theo giờ, gộp lương chưa vào công trình, làm tròn khớp tổng;
+  - không mở lại lương khi đã chốt;
+  - mở lại xoá số, chốt lại chia lại;
+  - tháng không có giờ công trình;
+  - kiểm tra dữ liệu nhập, quyền, trang, cách ly công ty.
+- **Lời lỗ (3):**
+  - doanh thu theo ngày thu;
+  - chi Ngân quỹ không tính khoản đã đảo và khoản tháng khác;
+  - nhân công, chi phí chung;
+  - lời lỗ tháng, tổng công ty, luỹ kế, dự kiến;
+  - tạm tính trước khi chốt;
+  - quyền trang và dòng OPPM, CSV;
+  - số truy vấn không tăng theo số công trình.
+- Bộ test lương, OPPM, ghi giờ: 58 test xanh.
+- **MySQL 8 thật:**
+  - migration lên / gỡ / lên được;
+  - 35 test lương + ghi giờ (gồm 6 test mới) xanh trên MySQL.
+- PHPStan, php-cs-fixer, SSOT lint, deptrac sạch.
+- Unit + Feature + Integration, Feature/Api và CI trên đúng head: xem mục 9.
+
+**4. Lưu ý vận hành**
+- Thứ tự hằng tháng:
+  1. duyệt hết giờ;
+  2. chốt lương;
+  3. nhập đủ chi phí chung;
+  4. chốt chi phí chung.
+- Lời lỗ dựa trên **tiền đã chi qua Ngân quỹ**. Không trả lương qua Ngân quỹ, nếu không sẽ bị tính hai lần với nhân công.
+- Doanh thu tính theo đợt thanh toán đã đánh dấu "đã thu" kèm ngày thu.
+
+**5. Ngoài phạm vi**
+- Bút toán kế toán, thuế / VAT.
+- Ngân sách, dự báo.
+- Chứng từ Ngân quỹ cấp công ty.
+- Deploy.
+
+**6. Rủi ro còn lại** — Thấp.
+- Chỉ thêm bảng và trang mới.
+- Chặn mở lại lương chỉ có hiệu lực khi chi phí chung đã chốt.
+- Hai người cùng nhập khoản đầu tiên của một tháng mới đúng cùng lúc: một người có thể gặp lỗi và phải nhập lại.
+
+**7. Hoàn tác**
+- Revert PR.
+- Migration `down()` xoá 3 bảng mới. Mất chi phí chung đã nhập và số đã chia; lương, giờ, Ngân quỹ không đổi.
+
+**8. Đề xuất** — Phát hành (merge).
+
+**9. Kết quả chạy toàn bộ** (sau khi sửa, subject `fbc34c1c`)
+- **Unit + Feature + Integration:** 2.982 test. Chỉ có 2 lỗi có sẵn do chạy bằng root (`GrandfatherLoaderTest`,
+  `BackupStorageLocationTest`).
+- **Feature/Api:** 824 test xanh.
+- **CI trên đúng head:** "Owner Governance Lint" đỏ đúng như dự kiến khi hồ sơ đang chờ Owner. Các job khác ghi nhận
+  trước khi merge.
+
+## Decision Needed
+
+Owner chọn: `APPROVE GAP-114 Gate 3` / Correction / Defer.
+
+## What the owner is NOT being asked to decide
+
+Deploy, phát hành production.

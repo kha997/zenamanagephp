@@ -21,7 +21,8 @@ use Illuminate\Support\Facades\DB;
  * day, or the person's own monthly hours; hourly cost = company cost ÷ standard hours, frozen when the month is closed.
  * L-1: payroll.manage edits drafts, payroll.close closes and reopens (reason required). P-1: lines are marked paid after
  * close; no Treasury posting. GAP-113 H-1 / S-1: close is refused while the month has running or waiting hours, and
- * stores the labour cost per project (LabourCostService); reopen removes it. Every write runs in a transaction on the locked period row and is audited.
+ * stores the labour cost per project (LabourCostService); reopen removes it. GAP-114 C-1: reopen is refused while the
+ * month's overhead is closed. Every write runs in a transaction on the locked period row and is audited.
  */
 class PayrollService
 {
@@ -204,6 +205,11 @@ class PayrollService
             $locked = PayrollPeriod::query()->withoutGlobalScopes()->whereKey($period->id)->lockForUpdate()->firstOrFail();
             if (!$locked->isClosed()) {
                 throw new PayrollRuleViolation('Bảng lương chưa chốt.', 'reason');
+            }
+            // GAP-114 C-1: the overhead split of this month rests on its labour figures; reopen that first.
+            $overhead = DB::table('overhead_periods')->where('tenant_id', (string) $locked->tenant_id)->where('period', $locked->period)->sharedLock()->value('status');
+            if ($overhead === 'closed') {
+                throw new PayrollRuleViolation('Chi phí chung tháng ' . $locked->period . ' đã chốt; mở lại chi phí chung trước khi mở lại lương.', 'reason');
             }
             $this->labour->clear($actor, $locked);
             $locked->status = PayrollPeriod::STATUS_DRAFT;

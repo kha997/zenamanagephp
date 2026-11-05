@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-11-05-gap-111-symfony-security-update-evidence.md
   plan: null
   branch: docs/GAP-111-symfony-security-update
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/401
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

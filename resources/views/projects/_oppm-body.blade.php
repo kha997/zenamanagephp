@@ -251,6 +251,12 @@
             <x-ui.field-value label="Đã thu" :value="$money($finance['cash_received'])" />
             <x-ui.field-value label="Chi phí ghi nhận (không phải tiền đã chi)" :value="$money($finance['cost_incurred'])" />
         </div>
+        @if (!empty($labourCost))
+            {{-- GAP-113 V-1: closed payroll months only; total without per-person detail. --}}
+            <div class="mt-3 operator-form-grid" data-testid="oppm-labour-cost">
+                <x-ui.field-value label="Chi phí nhân công (đã chốt)" :value="number_format((float) $labourCost['amount'], 0, ',', '.') . ' ₫ — ' . rtrim(rtrim(number_format($labourCost['minutes'] / 60, 2, ',', '.'), '0'), ',') . ' giờ, ' . $labourCost['months'] . ' tháng'" />
+            </div>
+        @endif
         @if ($canViewTreasury && $finance['treasury']['availability'] === Health::AVAILABLE)
             <div class="mt-3 operator-form-grid">
                 <x-ui.field-value label="Ngân quỹ dự án — đang giữ" :value="number_format((float) $finance['treasury']['held_total'], 0, ',', '.')" />

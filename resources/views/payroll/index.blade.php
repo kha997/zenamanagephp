@@ -7,6 +7,7 @@
     {{-- GAP-109: monthly payroll list, payroll.manage only. --}}
     <x-ui.page-header title="Nhân sự & lương" description="Bảng lương từng tháng: chi phí công ty thực chịu và đơn giá giờ của từng người.">
         <x-ui.button-link :href="route('operator.payroll.staff.index')" variant="secondary">Danh sách nhân sự</x-ui.button-link>
+        <x-ui.button-link :href="route('operator.payroll.labour-cost')" variant="secondary">Chi phí nhân công</x-ui.button-link>
     </x-ui.page-header>
 
     @if (session('success'))
@@ -46,7 +47,10 @@
                         <td class="text-sm">{{ $row->isClosed() ? 'Đã chốt' : 'Nháp' }}</td>
                         <td class="text-sm">{{ $money($totals[$row->id]['net_pay']) }}</td>
                         <td class="text-sm font-semibold">{{ $money($totals[$row->id]['company_cost']) }}</td>
-                        <td><a href="{{ route('operator.payroll.periods.show', $row->id) }}" class="operator-button operator-button-inline">Mở</a></td>
+                        <td>
+                            <a href="{{ route('operator.payroll.periods.show', $row->id) }}" class="operator-button operator-button-inline">Mở</a>
+                            <a href="{{ route('operator.payroll.labour-cost', ['period' => $row->id]) }}" class="operator-button operator-button-inline">Chi phí nhân công</a>
+                        </td>
                     </tr>
                 @endforeach
             </x-ui.data-table>

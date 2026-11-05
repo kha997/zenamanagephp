@@ -743,6 +743,9 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/payroll/periods/{period}/reopen', [App\Http\Controllers\Web\Payroll\PayrollPageController::class, 'reopen'])->middleware('rbac:payroll.close')->name('payroll.periods.reopen');
     Route::post('/payroll/lines/{line}', [App\Http\Controllers\Web\Payroll\PayrollPageController::class, 'updateLine'])->middleware('rbac:payroll.manage')->name('payroll.lines.update');
     Route::post('/payroll/lines/{line}/paid', [App\Http\Controllers\Web\Payroll\PayrollPageController::class, 'markPaid'])->middleware('rbac:payroll.manage')->name('payroll.lines.paid');
+    // GAP-113 D-1 / V-1: labour cost per project (payroll.manage).
+    Route::get('/payroll/labour-cost', [App\Http\Controllers\Web\Payroll\LabourCostPageController::class, 'index'])->middleware('rbac:payroll.manage')->name('payroll.labour-cost');
+    Route::get('/payroll/labour-cost/{period}/export', [App\Http\Controllers\Web\Payroll\LabourCostPageController::class, 'export'])->middleware('rbac:payroll.manage')->name('payroll.labour-cost.export');
     Route::get('/payroll/staff', [App\Http\Controllers\Web\Payroll\StaffPageController::class, 'index'])->middleware('rbac:payroll.manage')->name('payroll.staff.index');
     Route::post('/payroll/staff', [App\Http\Controllers\Web\Payroll\StaffPageController::class, 'store'])->middleware('rbac:payroll.manage')->name('payroll.staff.store');
     Route::get('/payroll/staff/{staff}/edit', [App\Http\Controllers\Web\Payroll\StaffPageController::class, 'edit'])->middleware('rbac:payroll.manage')->name('payroll.staff.edit');

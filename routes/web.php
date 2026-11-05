@@ -403,6 +403,16 @@ Route::prefix('app')->name('app.')->middleware(['auth', 'tenant.isolation'])->gr
     Route::get('/tasks', [App\Http\Controllers\Web\AppController::class, 'tasks'])->name('tasks');
     Route::get('/workload', [App\Http\Controllers\Web\WorkloadPageController::class, 'index'])->middleware('rbac:task.view')->name('workload.index');
     Route::get('/my-work', [App\Http\Controllers\Web\WorkloadPageController::class, 'myWork'])->middleware('rbac:task.view')->name('my-work.index');
+    // GAP-112: time logging per task (own entries; review / report scope checked in the services).
+    Route::get('/time', [App\Http\Controllers\Web\TimeTracking\TimesheetPageController::class, 'index'])->middleware('rbac:task.view')->name('time.index');
+    Route::post('/time/start', [App\Http\Controllers\Web\TimeTracking\TimesheetPageController::class, 'start'])->middleware('rbac:task.view')->name('time.start');
+    Route::post('/time/stop', [App\Http\Controllers\Web\TimeTracking\TimesheetPageController::class, 'stop'])->middleware('rbac:task.view')->name('time.stop');
+    Route::post('/time/entries', [App\Http\Controllers\Web\TimeTracking\TimesheetPageController::class, 'store'])->middleware('rbac:task.view')->name('time.entries.store');
+    Route::post('/time/entries/{entry}', [App\Http\Controllers\Web\TimeTracking\TimesheetPageController::class, 'update'])->middleware('rbac:task.view')->name('time.entries.update');
+    Route::post('/time/entries/{entry}/delete', [App\Http\Controllers\Web\TimeTracking\TimesheetPageController::class, 'destroy'])->middleware('rbac:task.view')->name('time.entries.delete');
+    Route::get('/time/review', [App\Http\Controllers\Web\TimeTracking\TimeReviewPageController::class, 'index'])->middleware('rbac:task.view')->name('time.review');
+    Route::post('/time/review', [App\Http\Controllers\Web\TimeTracking\TimeReviewPageController::class, 'act'])->middleware('rbac:task.view')->name('time.review.act');
+    Route::get('/time/report', [App\Http\Controllers\Web\TimeTracking\TimeReportPageController::class, 'index'])->middleware('rbac:task.view')->name('time.report');
     Route::get('/today', [App\Http\Controllers\Web\TodayController::class, 'index'])->middleware('rbac:task.view')->name('today');
     Route::get('/tasks/create', [App\Http\Controllers\Web\TaskController::class, 'create'])->name('tasks.create');
     // Web store/update delegate sang Api\TaskController (business logic ở API)

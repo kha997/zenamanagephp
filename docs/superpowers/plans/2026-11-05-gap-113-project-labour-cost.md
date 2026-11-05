@@ -1,3 +1,9 @@
+---
+work_id: GAP-113
+owner_governance_version: 1
+owner_gate_2_record: docs/owner-decisions/GAP-113/02-design.md
+---
+
 # GAP-113 — Labour cost per project: implementation plan
 
 Owner Gate 2 approval: S-1, H-1, R-1, O-1, D-1, V-1 (`docs/owner-decisions/GAP-113/02-design.md`). Allowlist as in that

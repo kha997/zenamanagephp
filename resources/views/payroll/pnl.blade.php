@@ -29,7 +29,7 @@
     </x-ui.card>
 
     <x-ui.card title="Tháng {{ $month }}">
-        @if ($data['rows'] === [])
+        @if ($data['rows'] === [] && (float) $data['totals']['total_cost'] === 0.0 && (float) $data['totals']['revenue'] === 0.0)
             <x-ui.empty-state title="Chưa có số liệu" description="Chưa có doanh thu, chi phí hay giờ công trình trong tháng." />
         @else
             <x-ui.data-table :headers="['Công trình', 'Doanh thu đã thu', 'Chi Ngân quỹ', 'Nhân công', 'Chi phí chung', 'Lời / lỗ', 'Tỷ suất', 'Chi phí HĐ (đối chiếu)']">

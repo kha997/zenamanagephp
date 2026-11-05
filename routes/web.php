@@ -748,6 +748,7 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/payroll/overhead/lines', [App\Http\Controllers\Web\Payroll\OverheadPageController::class, 'storeLine'])->middleware('rbac:payroll.manage')->name('payroll.overhead.lines.store');
     Route::post('/payroll/overhead/lines/{line}', [App\Http\Controllers\Web\Payroll\OverheadPageController::class, 'updateLine'])->middleware('rbac:payroll.manage')->name('payroll.overhead.lines.update');
     Route::post('/payroll/overhead/lines/{line}/delete', [App\Http\Controllers\Web\Payroll\OverheadPageController::class, 'deleteLine'])->middleware('rbac:payroll.manage')->name('payroll.overhead.lines.delete');
+    Route::post('/payroll/overhead/months/{month}/close', [App\Http\Controllers\Web\Payroll\OverheadPageController::class, 'closeMonth'])->middleware('rbac:payroll.close')->name('payroll.overhead.close-month');
     Route::post('/payroll/overhead/{period}/close', [App\Http\Controllers\Web\Payroll\OverheadPageController::class, 'close'])->middleware('rbac:payroll.close')->name('payroll.overhead.close');
     Route::post('/payroll/overhead/{period}/reopen', [App\Http\Controllers\Web\Payroll\OverheadPageController::class, 'reopen'])->middleware('rbac:payroll.close')->name('payroll.overhead.reopen');
     Route::get('/payroll/pnl', [App\Http\Controllers\Web\Payroll\ProjectPnlPageController::class, 'index'])->middleware('rbac:payroll.manage')->name('payroll.pnl');

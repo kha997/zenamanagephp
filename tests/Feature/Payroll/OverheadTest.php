@@ -143,6 +143,25 @@ class OverheadTest extends TestCase
         $this->assertSame(['-' => ['1500000.50', 0]], $this->allocations($period));
     }
 
+    /** Codex P2: a month with labour outside projects but no entered cost line can still be closed. */
+    public function test_month_without_cost_lines_can_be_closed(): void
+    {
+        $payroll = $this->october(['NV01' => '1000000', 'VP01' => '0']);
+        $this->entry($this->worker, $this->p1, '2026-10-05', 600);
+        $this->entry($this->worker, null, '2026-10-06', 600);
+        app(PayrollService::class)->close($this->owner, $payroll);
+        $page = route('operator.payroll.overhead', ['month' => '2026-10']);
+        $this->actingAs($this->owner)->get($page)->assertOk()->assertSee('overhead-close-form', false);
+        $this->actingAs($this->accountant)->post(route('operator.payroll.overhead.close-month', '2026-10'))->assertRedirect();
+        $this->assertSame(0, OverheadPeriod::query()->withoutGlobalScopes()->count());
+        $this->actingAs($this->owner)->post(route('operator.payroll.overhead.close-month', '2026-10'))->assertRedirect($page);
+        $period = OverheadPeriod::query()->withoutGlobalScopes()->sole();
+        $this->assertTrue($period->isClosed());
+        // NV01 1 M: 10 h of standard 208 h is 48,077 on P1 as labour; the other 951,923 is labour outside projects, the
+        // whole overhead pool, and P1 has all the project minutes.
+        $this->assertSame(['951923.00', 600], $this->allocations($period)[(string) $this->p1->id]);
+    }
+
     public function test_validation_permissions_pages_and_tenant_isolation(): void
     {
         $overhead = app(OverheadService::class);

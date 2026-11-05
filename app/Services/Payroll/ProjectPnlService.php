@@ -165,7 +165,7 @@ class ProjectPnlService
     private function rows(string $tenantId, array $revenue, array $direct, array $reference, array $labour, array $overhead, array $contractValue): array
     {
         $ids = array_values(array_unique(array_map('strval', array_filter(
-            [...array_keys($revenue), ...array_keys($direct), ...array_keys($reference), ...array_keys($labour), ...array_keys($overhead)],
+            [...array_keys($revenue), ...array_keys($direct), ...array_keys($reference), ...array_keys($labour), ...array_keys($overhead), ...array_keys($contractValue)],
             static fn ($id): bool => $id !== '',
         ))));
         $names = $ids === [] ? [] : DB::table('projects')->where('tenant_id', $tenantId)->whereIn('id', $ids)->pluck('name', 'id')->all();

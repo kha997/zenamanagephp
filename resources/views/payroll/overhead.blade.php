@@ -96,10 +96,10 @@
                 @endforeach
             </x-ui.data-table>
         @endif
-        @if ($canClose && $period !== null)
+        @if ($canClose)
             <div class="px-4 pb-4">
                 @if (!$closed)
-                    <form method="POST" action="{{ route('operator.payroll.overhead.close', $period->id) }}" data-testid="overhead-close-form" onsubmit="return confirm('Chốt chi phí chung tháng này?')">
+                    <form method="POST" action="{{ $period === null ? route('operator.payroll.overhead.close-month', $month) : route('operator.payroll.overhead.close', $period->id) }}" data-testid="overhead-close-form" onsubmit="return confirm('Chốt chi phí chung tháng này?')">
                         @csrf
                         <button type="submit" class="operator-button operator-button-primary">Chốt chi phí chung</button>
                         <span class="ml-2 text-xs text-slate-500">Cần chốt lương tháng này trước.</span>

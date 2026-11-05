@@ -139,6 +139,22 @@ class OverheadService
         });
     }
 
+    /**
+     * Closes a month that has no sheet yet (no cost line entered): the pool is then the labour outside projects only.
+     */
+    public function closeMonth(User $actor, string $month): OverheadPeriod
+    {
+        $this->requireClose($actor);
+        self::requireMonth($month);
+        /** @var OverheadPeriod $period */
+        $period = OverheadPeriod::query()->withoutGlobalScopes()->firstOrCreate(
+            ['tenant_id' => (string) $actor->tenant_id, 'period' => $month],
+            ['status' => OverheadPeriod::STATUS_DRAFT],
+        );
+
+        return $this->close($actor, $period);
+    }
+
     public function reopen(User $actor, OverheadPeriod $period, string $reason): OverheadPeriod
     {
         $this->requireClose($actor);

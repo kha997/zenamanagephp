@@ -90,6 +90,13 @@ class OverheadPageController extends Controller
         return $this->attempt($model->period, fn () => $this->overhead->close($this->user(), $model), 'Đã chốt chi phí chung.');
     }
 
+    public function closeMonth(string $month): RedirectResponse
+    {
+        abort_unless($this->overhead->canClose($this->user()), 403);
+
+        return $this->attempt($month, fn () => $this->overhead->closeMonth($this->user(), $month), 'Đã chốt chi phí chung.');
+    }
+
     public function reopen(Request $request, string $period): RedirectResponse
     {
         abort_unless($this->overhead->canClose($this->user()), 403);

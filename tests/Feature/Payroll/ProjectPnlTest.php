@@ -155,6 +155,29 @@ class ProjectPnlTest extends TestCase
         $this->actingAs($stranger)->get($page)->assertOk()->assertDontSee('Nhà phố Q7');
     }
 
+    /** Codex P2: a contract-only project appears in the cumulative P&L; company totals show without project rows. */
+    public function test_contract_only_project_and_company_totals_without_project_rows(): void
+    {
+        $this->scenario();
+        $p3 = Project::factory()->create(['tenant_id' => (string) $this->tenant->id, 'name' => 'Kho xưởng Bình Dương']);
+        $this->contract($p3, '30000000');
+        $this->closeOverhead();
+        $pnl = app(ProjectPnlService::class);
+        $row = collect($pnl->cumulative((string) $this->tenant->id)['rows'])->firstWhere('project_id', (string) $p3->id);
+        $this->assertIsArray($row);
+        $this->assertSame('30000000.00', $row['contract_value']);
+        $this->assertSame('30000000.00', $row['projected_profit']);
+        $this->assertSame('30000000.00', $pnl->projectSummary($p3)['contract_value']);
+
+        // A month with only unallocated overhead: no project rows, but the company loss is shown.
+        app(OverheadService::class)->addLine($this->accountant, '2026-09', ['category' => 'rent', 'description' => 'Thuê T9', 'amount' => '7000000']);
+        $month = $pnl->month((string) $this->tenant->id, '2026-09');
+        $this->assertSame([], $month['rows']);
+        $this->assertSame('-7000000.00', $month['totals']['profit']);
+        $this->actingAs($this->accountant)->get(route('operator.payroll.pnl', ['month' => '2026-09']))->assertOk()
+            ->assertSee('pnl-total-row', false)->assertSee('-7.000.000');
+    }
+
     public function test_query_count_does_not_grow_with_projects(): void
     {
         $this->scenario();

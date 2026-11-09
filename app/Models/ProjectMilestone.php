@@ -105,7 +105,10 @@ class ProjectMilestone extends Model
 
     public function scopeOverdue($query)
     {
-        return $query->where('status', self::STATUS_OVERDUE);
+        // GAP-117 O-1: live — pending (or a legacy stored "overdue") with the target day before today.
+        return $query->whereIn('status', [self::STATUS_PENDING, self::STATUS_OVERDUE])
+            ->whereNotNull('target_date')
+            ->whereDate('target_date', '<', now()->toDateString());
     }
 
     public function scopeByProject($query, string $projectId)
@@ -253,8 +256,9 @@ class ProjectMilestone extends Model
         return [
             'total' => $milestones->count(),
             'completed' => $milestones->where('status', self::STATUS_COMPLETED)->count(),
-            'pending' => $milestones->where('status', self::STATUS_PENDING)->count(),
-            'overdue' => $milestones->where('status', self::STATUS_OVERDUE)->count(),
+            // GAP-117 O-1: overdue is live; pending excludes the overdue ones.
+            'pending' => $milestones->filter(fn (self $m) => in_array($m->status, [self::STATUS_PENDING, self::STATUS_OVERDUE], true) && !$m->isOverdue())->count(),
+            'overdue' => $milestones->filter(fn (self $m) => $m->isOverdue())->count(),
             'cancelled' => $milestones->where('status', self::STATUS_CANCELLED)->count(),
             'completion_rate' => $milestones->count() > 0
                 ? round(($milestones->where('status', self::STATUS_COMPLETED)->count() / $milestones->count()) * 100, 2)

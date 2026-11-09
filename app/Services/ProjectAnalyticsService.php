@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Project;
+use App\Models\ProjectMilestone;
 
 /**
  * ProjectAnalyticsService - Advanced analytics for projects.
@@ -213,8 +214,9 @@ class ProjectAnalyticsService
         return [
             'total_milestones' => $milestones->count(),
             'completed_milestones' => $milestones->where('status', 'completed')->count(),
-            'pending_milestones' => $milestones->where('status', 'pending')->count(),
-            'overdue_milestones' => $milestones->where('status', 'overdue')->count(),
+            // GAP-117 O-1: overdue is computed live from the target day; pending excludes the overdue ones.
+            'pending_milestones' => $milestones->filter(fn (ProjectMilestone $m) => in_array($m->status, [ProjectMilestone::STATUS_PENDING, ProjectMilestone::STATUS_OVERDUE], true) && !$m->isOverdue())->count(),
+            'overdue_milestones' => $milestones->filter(fn (ProjectMilestone $m) => $m->isOverdue())->count(),
             'completion_rate' => $milestones->count() > 0
                 ? round(($milestones->where('status', 'completed')->count() / $milestones->count()) * 100, 2)
                 : 0,

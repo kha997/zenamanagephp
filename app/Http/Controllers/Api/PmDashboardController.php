@@ -267,8 +267,9 @@ class PmDashboardController extends Controller
 
         $total = $milestones->count();
         $completed = $milestones->where('status', ProjectMilestone::STATUS_COMPLETED)->count();
-        $pending = $milestones->where('status', ProjectMilestone::STATUS_PENDING)->count();
-        $overdue = $milestones->where('status', ProjectMilestone::STATUS_OVERDUE)->count();
+        // GAP-117 O-1: overdue is computed live from the target day; pending excludes the overdue ones.
+        $overdue = $milestones->filter(fn (ProjectMilestone $m) => $m->isOverdue())->count();
+        $pending = $milestones->filter(fn (ProjectMilestone $m) => in_array($m->status, [ProjectMilestone::STATUS_PENDING, ProjectMilestone::STATUS_OVERDUE], true) && !$m->isOverdue())->count();
 
         $upcoming = $milestones
             ->whereNotIn('status', [ProjectMilestone::STATUS_COMPLETED])

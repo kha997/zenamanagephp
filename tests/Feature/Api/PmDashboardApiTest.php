@@ -273,6 +273,38 @@ class PmDashboardApiTest extends TestCase
             ->assertJsonPath('data.timeline_progress_meta.label', 'Tỷ lệ thời gian kế hoạch đã trôi qua');
     }
 
+    public function test_pm_progress_counts_overdue_milestones_live_from_target_date(): void
+    {
+        // GAP-117 O-1 (Owner amendment 1): "overdue" is not stored any more; a pending milestone past its target day
+        // counts as overdue, and one moved to a later day stops counting.
+        $project = $this->createAssignedProject('PM live overdue project', Project::STATUS_ACTIVE);
+        ProjectMilestone::query()->create([
+            'project_id' => (string) $project->id,
+            'name' => 'Late pending',
+            'status' => ProjectMilestone::STATUS_PENDING,
+            'target_date' => now()->subDays(2)->toDateString(),
+        ]);
+        ProjectMilestone::query()->create([
+            'project_id' => (string) $project->id,
+            'name' => 'Due today',
+            'status' => ProjectMilestone::STATUS_PENDING,
+            'target_date' => now()->toDateString(),
+        ]);
+        ProjectMilestone::query()->create([
+            'project_id' => (string) $project->id,
+            'name' => 'Cancelled late',
+            'status' => ProjectMilestone::STATUS_CANCELLED,
+            'target_date' => now()->subDays(3)->toDateString(),
+        ]);
+
+        $this->withHeaders($this->headers)
+            ->getJson(route('api.zena.pm.progress', ['project_id' => (string) $project->id], false))
+            ->assertOk()
+            ->assertJsonPath('data.milestone_progress.total_milestones', 3)
+            ->assertJsonPath('data.milestone_progress.pending_milestones', 1)
+            ->assertJsonPath('data.milestone_progress.overdue_milestones', 1);
+    }
+
     public function test_timeline_progress_meta_is_not_applicable_when_dates_missing(): void
     {
         $project = $this->createAssignedProject('No dates project', Project::STATUS_ACTIVE, [

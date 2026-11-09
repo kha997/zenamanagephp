@@ -181,6 +181,27 @@ class ProjectMilestoneServiceTest extends TestCase
         $this->assertFalse($m->refresh()->isOverdue());
     }
 
+    public function test_statistics_and_analytics_count_overdue_live(): void
+    {
+        // GAP-117 O-1 (Owner amendment 1): readers that used the stored "overdue" status now compute it live.
+        $late = $this->service->create($this->project, $this->editor, ['name' => 'Trễ', 'target_date' => '2026-11-01']);
+        $this->service->create($this->project, $this->editor, ['name' => 'Hôm nay', 'target_date' => '2026-11-10']);
+        $this->service->create($this->project, $this->editor, ['name' => 'Sau', 'target_date' => '2026-12-01']);
+        $done = $this->service->create($this->project, $this->editor, ['name' => 'Xong', 'target_date' => '2026-10-01']);
+        $this->service->complete($this->project, $this->editor, (string) $done->id, '2026-10-02');
+
+        $stats = ProjectMilestone::getProjectStatistics((string) $this->project->id);
+        $this->assertSame(4, $stats['total']);
+        $this->assertSame(1, $stats['completed']);
+        $this->assertSame(2, $stats['pending']);
+        $this->assertSame(1, $stats['overdue']);
+        $this->assertSame([(string) $late->id], ProjectMilestone::query()->overdue()->pluck('id')->map(fn ($id) => (string) $id)->all());
+
+        // ProjectAnalyticsService uses the same live rule, but cannot run end to end yet (pre-existing defects: missing
+        // Project::isOverdue(), wrong Collection import — backlog item "ProjectAnalyticsService X-1"), so it is not
+        // exercised here.
+    }
+
     public function test_migration_backfills_tenant_and_normalizes_stored_overdue(): void
     {
         $id = (string) Str::ulid();

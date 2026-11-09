@@ -1,14 +1,14 @@
 ---
 work_id: GAP-116
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-11-09-gap-116-project-factory-dates-evidence.md
   plan: docs/superpowers/plans/2026-11-09-gap-116-project-factory-dates.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-10T00:00:22+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-09, verbatim: 'APPROVE GAP-116 Gate 3.'. Given on the packet at PR head 4e81cdbc42124caaa35cb0bc7da3806927c93bcd; bound to implementation subject f1e43f9007fac1b30e3bc472d83d1012d0b303f8 and implementation-tree digest 068fda261fe7d63984375b0f95e941d04490cf9aa66d8f56c4120a9b8d8fd462 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-10T00:30:00+07:00"
-  updated_at: "2026-11-10T00:30:00+07:00"
+  updated_at: "2026-11-10T00:00:22+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-116 at subject f1e43f9007fac1b30e3bc472d83d1012d0b303f8 (Gate 2 F-1, G-1; exact allowlist; one PR, one implementation commit; test-support code only, no runtime change, no migration). F-1: database/factories/ProjectFactory.php default start_date -1 month..+3 weeks and end_date +5 weeks..+6 months (two weeks apart, previously both met at +1 month); completed() and overdue() now also set start_date -6..-2 months so their past end ranges stay after the start. G-1: tests/Unit/Factories/ProjectFactoryDatesTest.php — a recording Faker bound in the container captures the dateTimeBetween ranges per state (default, completed, overdue) and asserts the latest possible start is on an earlier calendar day than the earliest possible end, overdue end before today (deterministic); plus 200 make()-built projects per state with end day after start day. Red before (default: latest start 2026-12-09 = earliest end 2026-12-09; completed / overdue samples with end before start), green after, and red again with the factory change stashed. ProjectApiTest test_can_update_project passed 50 consecutive runs. php-cs-fixer, SSOT test lint, ssot:lint pass. Local Unit + Feature + Integration 2998 tests: the 2 known root-only failures plus 3 PDF-export failures, and Feature/Api 824 with 1 PDF-export failure — all 4 PDF failures reproduce identically on main in this container (no Node/Playwright PDF runtime installed), unrelated to this change. Exact-head CI recorded in the body."
@@ -35,10 +35,17 @@ technical_evidence:
   implementation_tree_digest: "068fda261fe7d63984375b0f95e941d04490cf9aa66d8f56c4120a9b8d8fd462"
   verified_pr_head_sha: "f1e43f9007fac1b30e3bc472d83d1012d0b303f8"
   verified_at: "2026-11-10T00:30:00+07:00"
-owner_decision_binding: null
+owner_decision_binding:
+  implementation_tree_digest: "068fda261fe7d63984375b0f95e941d04490cf9aa66d8f56c4120a9b8d8fd462"
+  decision_recorded_at: "2026-11-10T00:00:22+07:00"
 ---
 
 # GAP-116 — Gate 3 release decision (flaky ProjectApiTest, project factory dates)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-11-09 ("APPROVE GAP-116 Gate 3."), bound to implementation subject
+`f1e43f9007fac1b30e3bc472d83d1012d0b303f8` and implementation-tree digest `068fda261fe7d63984375b0f95e941d04490cf9aa66d8f56c4120a9b8d8fd462`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

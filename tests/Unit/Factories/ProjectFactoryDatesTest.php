@@ -18,22 +18,11 @@ use Tests\TestCase;
  *   possible start must fall on an earlier calendar day than the earliest possible end. This is deterministic and
  *   fails on the overlapping ranges.
  * - Sample check: 200 made projects per state, end day after start day; overdue ends before today.
+ * - No frozen clock: Faker resolves relative dates against the real clock, so the assertions use it too.
  */
 class ProjectFactoryDatesTest extends TestCase
 {
     private const NO_RELATIONS = ['tenant_id' => 'tenant', 'pm_id' => null, 'created_by' => null];
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-        Carbon::setTestNow('2026-11-09 12:00:00');
-    }
-
-    protected function tearDown(): void
-    {
-        Carbon::setTestNow();
-        parent::tearDown();
-    }
 
     public function test_date_ranges_never_overlap_for_any_state(): void
     {

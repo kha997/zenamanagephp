@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-11-09-gap-116-project-factory-dates-evidence.md
   plan: null
   branch: docs/GAP-116-project-factory-dates
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/406
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

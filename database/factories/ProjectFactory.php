@@ -33,8 +33,10 @@ class ProjectFactory extends Factory
             'client_id' => null,
             'pm_id' => User::factory(),
             'created_by' => User::factory(),
-            'start_date' => $this->faker->dateTimeBetween('-1 month', '+1 month'),
-            'end_date' => $this->faker->dateTimeBetween('+1 month', '+6 months'),
+            // GAP-116: the ranges are two weeks apart so the end is always after the start (requests validate
+            // end_date after:start_date; overlapping ranges made API tests that resubmit a project flaky).
+            'start_date' => $this->faker->dateTimeBetween('-1 month', '+3 weeks'),
+            'end_date' => $this->faker->dateTimeBetween('+5 weeks', '+6 months'),
             'status' => $this->faker->randomElement(['planning', 'active', 'in_progress', 'on_hold', 'completed', 'cancelled']),
             'progress' => $this->faker->randomFloat(2, 0, 100),
             'budget_planned' => $this->faker->randomFloat(2, 10000, 1000000),
@@ -68,6 +70,7 @@ class ProjectFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'status' => 'completed',
             'progress' => 100,
+            'start_date' => $this->faker->dateTimeBetween('-6 months', '-2 months'),
             'end_date' => $this->faker->dateTimeBetween('-1 month', 'now'),
         ]);
     }
@@ -79,6 +82,7 @@ class ProjectFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => 'in_progress',
+            'start_date' => $this->faker->dateTimeBetween('-6 months', '-2 months'),
             'end_date' => $this->faker->dateTimeBetween('-1 month', '-1 day'),
         ]);
     }

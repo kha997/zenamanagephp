@@ -1,32 +1,38 @@
 ---
 work_id: GAP-117
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-11-10-gap-117-project-milestones-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-11-10-gap-117-project-milestones.md
   branch: docs/GAP-117-project-milestones
   pr: https://github.com/kha997/zenamanagephp/pull/407
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-10T02:34:34+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-09, verbatim: 'APPROVE GAP-117 Gate 2 L-1 E-1 A-1 T-1 O-1 C-2'. Reviewed design head: c51fa160a6c4c0e7a4e22302a2c42690da09429d. Approves L-1 (separate per-project milestones page linked from the project page and the OPPM milestone block), E-1 (view with project.view in the same tenant; edit by the project's pm_id or project.update, as OPPM; no new permission), A-1 (create, edit, complete with a completion date not in the future, reopen, cancel with a reason, ordering; no hard delete; every action audited with before/after), T-1 (nullable tenant_id column with index, backfilled from the project, filled on create, TenantScope), O-1 (stop storing overdue; computed live; existing overdue rows normalized to pending), C-2 (leave the broken ProjectMilestoneCompleted event, LogProjectActivity and Project::calculateProgress untouched), one PR / one Gate 3, with the exact allowlist in this packet; one expand migration; not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
-  created_at: "2026-11-10T02:45:00+07:00"
-  updated_at: "2026-11-10T02:45:00+07:00"
+  created_at: "2026-11-10T02:33:00+07:00"
+  updated_at: "2026-11-10T02:34:34+07:00"
 generated_by: agent
 ---
 
 # GAP-117 — Project milestones (mốc tiến độ): Gate 2 design
+
+## OWNER GATE 2: APPROVED — L-1, E-1, A-1, T-1, O-1, C-2
+
+Owner approved L-1, E-1, A-1, T-1, O-1 and C-2 in-session on 2026-11-09 against reviewed design head
+`c51fa160a6c4c0e7a4e22302a2c42690da09429d`. This authorizes only the bounded implementation defined by this packet; it does not authorize Gate 3,
+merge, release, or deployment.
 
 ## Owner Summary
 

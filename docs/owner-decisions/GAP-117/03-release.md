@@ -1,14 +1,14 @@
 ---
 work_id: GAP-117
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-11-10-gap-117-project-milestones-evidence.md
   plan: docs/superpowers/plans/2026-11-10-gap-117-project-milestones.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-10T03:56:07+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-09, verbatim: 'APPROVE GAP-117 Gate 3'. Re-approval after the Codex fix (Owner amendment 1), given on the packet at PR head c1414d2db64c9db6be316b300b7f1356217631b4; bound to implementation subject 0fa7c54bb9ebcb80e91547c6e2577a7f1eb819a7 and implementation-tree digest c233d174eeee262f58cbb1e8e443986da79c09a577900b480bfb1613286518ab (recomputed at recording time, zero drift). Supersedes the earlier approval bound to 1f16e9c2 / a75cc959. Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-10T02:47:31+07:00"
-  updated_at: "2026-11-10T03:41:52+07:00"
+  updated_at: "2026-11-10T03:56:07+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-117 at subject 0fa7c54bb9ebcb80e91547c6e2577a7f1eb819a7 (re-presented after the Codex review: Owner amendment 1 — PmDashboardController::computeMilestoneMetrics, ProjectAnalyticsService::getMilestoneAnalytics, ProjectMilestone::getProjectStatistics and scopeOverdue count overdue live, pending excludes overdue; new PmDashboardApiTest and model-statistics tests red before / green after; ProjectAnalyticsService still cannot run end to end because of pre-existing defects and is not exercised. Gate 2 L-1, E-1, A-1, T-1, O-1, C-2; allowlist plus amendment 1; one PR, implementation commits 1f16e9c2 and 2571f020). T-1/O-1: expand migration 2026_11_10_100000_add_tenant_id_to_project_milestones adds a nullable tenant_id with (tenant_id, project_id) index, backfills it from projects and normalizes stored overdue rows to pending (up() re-runnable; classified expand); ProjectMilestone uses TenantScope, fills tenant_id from the project on create, no longer stores overdue, isOverdue() is live (pending and target day before today), markCompleted() stores a date. A-1/E-1: ProjectMilestoneService create / update / complete (date not in the future) / reopen / cancel (reason required), no hard delete, cancelled must be reopened before editing; edits by the project pm_id or project.update in the same tenant (AuthorizationException / 403), milestone must belong to the project and tenant (404), row lock, AuditLog milestone.* with before / after. L-1: ProjectMilestonePageController and six routes app.projects.milestones.* (rbac:project.view, tenant-scoped project lookup), view projects/milestones with live badges, buttons on the project page and a link in the OPPM milestone block. C-2: the broken ProjectMilestoneCompleted event, LogProjectActivity and Project::calculateProgress are untouched. Tests: ProjectMilestoneServiceTest (6) and ProjectMilestonePageTest (3) new, AudTenantScopeCoverageTest gains ProjectMilestone; red before, green after; on MySQL 33 milestone-related tests green and the migration runs up / down / up. Existing milestone readers (OPPM / health, Today, analytics, PM dashboard, architecture guards) 197 tests green. PHPStan, php-cs-fixer, ssot:lint, deptrac, governance lint pass. Local Unit + Feature + Integration 3009 tests: the 2 known root-only failures plus 3 PDF-export failures; Feature/Api 825 with 1 PDF-export failure — the same 4 PDF failures as on main in this container (no Node/Playwright PDF runtime). Exact-head CI recorded in the body."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "0fa7c54bb9ebcb80e91547c6e2577a7f1eb819a7"
   verified_at: "2026-11-10T03:41:52+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "c233d174eeee262f58cbb1e8e443986da79c09a577900b480bfb1613286518ab"
+  decision_recorded_at: "2026-11-10T03:56:07+07:00"
 ---
 
 # GAP-117 — Gate 3 release decision (project milestones)
+
+## OWNER GATE 3: APPROVED
+
+Owner re-approved Gate 3 in-session on 2026-11-09 ("APPROVE GAP-117 Gate 3") after the Codex fix, bound to
+implementation subject `0fa7c54bb9ebcb80e91547c6e2577a7f1eb819a7` and implementation-tree digest `c233d174eeee262f58cbb1e8e443986da79c09a577900b480bfb1613286518ab`. No deployment or release is authorized.
 
 ## Gate 3 trình lại sau review Codex
 

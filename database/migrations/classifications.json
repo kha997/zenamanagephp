@@ -211,5 +211,14 @@
     "2026_10_07_000000_add_transaction_date_and_reference_to_treasury_financial_documents": "expand",
     "2026_10_07_100000_add_expense_plan_to_treasury_financial_documents": "expand",
     "2026_10_14_000000_backfill_null_permission_names": "expand",
-    "2026_10_29_000000_add_ncr_id_to_tasks_table": "expand"
+    "2026_10_29_000000_add_ncr_id_to_tasks_table": "expand",
+    "2026_11_03_120000_add_boq_line_item_id_to_treasury_financial_documents": "expand",
+    "2026_11_04_100000_create_treasury_document_attachments_table": "expand",
+    "2026_11_04_120000_create_treasury_period_lock_and_bank_import_tables": "expand",
+    "2026_11_04_160000_add_due_date_to_treasury_advances": "expand",
+    "2026_11_05_100000_create_staff_and_payroll_tables": "expand",
+    "2026_11_05_120000_create_oppm_overlay_decision_snapshot_tables": "expand",
+    "2026_11_05_150000_create_time_entries_table": "expand",
+    "2026_11_05_170000_create_labour_cost_allocations_table": "expand",
+    "2026_11_05_190000_create_overhead_tables": "expand"
 }

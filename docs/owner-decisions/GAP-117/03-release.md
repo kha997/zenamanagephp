@@ -1,14 +1,14 @@
 ---
 work_id: GAP-117
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-11-10-gap-117-project-milestones-evidence.md
   plan: docs/superpowers/plans/2026-11-10-gap-117-project-milestones.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-10T02:48:49+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-09, verbatim: 'APPROVE GAP-117 Gate 3'. Given on the packet at PR head 7379ad416aab0670f7978bd16333b628abade89d; bound to implementation subject 1f16e9c24fa6a87420afaeec7036db23be97b96c and implementation-tree digest a75cc959f5a961c9fdd2cc2c662b389c919cd7b5668ab324660be4c0f9d3dd69 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-10T02:47:31+07:00"
-  updated_at: "2026-11-10T02:47:31+07:00"
+  updated_at: "2026-11-10T02:48:49+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-117 at subject 1f16e9c24fa6a87420afaeec7036db23be97b96c (Gate 2 L-1, E-1, A-1, T-1, O-1, C-2; exact allowlist, no amendment; one PR, one implementation commit). T-1/O-1: expand migration 2026_11_10_100000_add_tenant_id_to_project_milestones adds a nullable tenant_id with (tenant_id, project_id) index, backfills it from projects and normalizes stored overdue rows to pending (up() re-runnable; classified expand); ProjectMilestone uses TenantScope, fills tenant_id from the project on create, no longer stores overdue, isOverdue() is live (pending and target day before today), markCompleted() stores a date. A-1/E-1: ProjectMilestoneService create / update / complete (date not in the future) / reopen / cancel (reason required), no hard delete, cancelled must be reopened before editing; edits by the project pm_id or project.update in the same tenant (AuthorizationException / 403), milestone must belong to the project and tenant (404), row lock, AuditLog milestone.* with before / after. L-1: ProjectMilestonePageController and six routes app.projects.milestones.* (rbac:project.view, tenant-scoped project lookup), view projects/milestones with live badges, buttons on the project page and a link in the OPPM milestone block. C-2: the broken ProjectMilestoneCompleted event, LogProjectActivity and Project::calculateProgress are untouched. Tests: ProjectMilestoneServiceTest (6) and ProjectMilestonePageTest (3) new, AudTenantScopeCoverageTest gains ProjectMilestone; red before, green after; on MySQL 33 milestone-related tests green and the migration runs up / down / up. Existing milestone readers (OPPM / health, Today, analytics, PM dashboard, architecture guards) 197 tests green. PHPStan, php-cs-fixer, ssot:lint, deptrac, governance lint pass. Local Unit + Feature + Integration 3008 tests: the 2 known root-only failures plus 3 PDF-export failures; Feature/Api 824 with 1 PDF-export failure — the same 4 PDF failures as on main in this container (no Node/Playwright PDF runtime). Exact-head CI recorded in the body."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "1f16e9c24fa6a87420afaeec7036db23be97b96c"
   verified_at: "2026-11-10T02:47:31+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "a75cc959f5a961c9fdd2cc2c662b389c919cd7b5668ab324660be4c0f9d3dd69"
+  decision_recorded_at: "2026-11-10T02:48:49+07:00"
 ---
 
 # GAP-117 — Gate 3 release decision (project milestones)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-11-09 ("APPROVE GAP-117 Gate 3"), bound to implementation subject
+`1f16e9c24fa6a87420afaeec7036db23be97b96c` and implementation-tree digest `a75cc959f5a961c9fdd2cc2c662b389c919cd7b5668ab324660be4c0f9d3dd69`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

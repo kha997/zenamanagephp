@@ -220,5 +220,6 @@
     "2026_11_05_120000_create_oppm_overlay_decision_snapshot_tables": "expand",
     "2026_11_05_150000_create_time_entries_table": "expand",
     "2026_11_05_170000_create_labour_cost_allocations_table": "expand",
-    "2026_11_05_190000_create_overhead_tables": "expand"
+    "2026_11_05_190000_create_overhead_tables": "expand",
+    "2026_11_10_100000_add_tenant_id_to_project_milestones": "expand"
 }

@@ -13,6 +13,10 @@
         @if (auth()->user()?->hasPermission('project.view'))
             <x-ui.button-link :href="route('app.projects.oppm', $project->id)" variant="secondary">OPPM một trang</x-ui.button-link>
         @endif
+        @if (auth()->user()?->hasPermission('project.view'))
+            {{-- GAP-117 L-1 --}}
+            <x-ui.button-link :href="route('app.projects.milestones.index', $project->id)" variant="secondary">Mốc tiến độ</x-ui.button-link>
+        @endif
         @can('treasury.view-project', $project)
             <x-ui.button-link :href="route('operator.treasury.projects.show', $project->id)" variant="secondary">Ngân quỹ</x-ui.button-link>
         @endcan

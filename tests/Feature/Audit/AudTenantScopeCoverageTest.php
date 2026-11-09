@@ -6,6 +6,7 @@ namespace Tests\Feature\Audit;
 
 use App\Models\Ncr;
 use App\Models\Project;
+use App\Models\ProjectMilestone;
 use App\Models\QcPlan;
 use App\Models\SiteDiary;
 use App\Models\Task;
@@ -42,6 +43,8 @@ class AudTenantScopeCoverageTest extends TestCase
             'SiteDiary' => SiteDiary::class,
             'TaskDependency' => TaskDependency::class,
             'TaskAssignment' => TaskAssignment::class,
+            // GAP-117 T-1: tenant_id column added and backfilled from the project.
+            'ProjectMilestone' => ProjectMilestone::class,
         ];
     }
 
@@ -88,6 +91,25 @@ class AudTenantScopeCoverageTest extends TestCase
 
         $this->assertContains('Tenant A plan', $visible);
         $this->assertNotContains('Tenant B plan', $visible, 'TenantScope should hide the other tenant\'s QcPlan row.');
+    }
+
+    public function test_project_milestone_tenant_is_filled_from_project_and_leak_is_closed(): void
+    {
+        $tenantA = Tenant::factory()->create();
+        $tenantB = Tenant::factory()->create();
+        $projectA = Project::factory()->create(['tenant_id' => $tenantA->id]);
+        $projectB = Project::factory()->create(['tenant_id' => $tenantB->id]);
+
+        // GAP-117 T-1: no tenant_id passed explicitly; it comes from the project.
+        $milestoneA = ProjectMilestone::create(['project_id' => $projectA->id, 'name' => 'Tenant A milestone', 'target_date' => '2026-12-01']);
+        ProjectMilestone::create(['project_id' => $projectB->id, 'name' => 'Tenant B milestone', 'target_date' => '2026-12-01']);
+        $this->assertSame((string) $tenantA->id, (string) $milestoneA->tenant_id);
+
+        app()->instance('current_tenant_id', $tenantA->id);
+
+        $visible = ProjectMilestone::all()->pluck('name')->all();
+        $this->assertContains('Tenant A milestone', $visible);
+        $this->assertNotContains('Tenant B milestone', $visible, 'TenantScope should hide the other tenant\'s milestone row.');
     }
 
     public function test_task_dependency_cross_tenant_leak_is_closed(): void

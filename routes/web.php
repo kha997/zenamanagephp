@@ -370,6 +370,13 @@ Route::prefix('app')->name('app.')->middleware(['auth', 'tenant.isolation'])->gr
     Route::post('/projects/{project}/oppm/snapshots', [App\Http\Controllers\Web\ProjectOppmManageController::class, 'closeSnapshot'])->middleware('rbac:project.view')->name('projects.oppm.snapshots.store');
     Route::get('/projects/{project}/oppm/snapshots/{snapshot}', [App\Http\Controllers\Web\ProjectOppmController::class, 'snapshot'])->middleware('rbac:project.view')->name('projects.oppm.snapshots.show');
     Route::get('/projects/{project}/oppm/snapshots/{snapshot}/compare', [App\Http\Controllers\Web\ProjectOppmManageController::class, 'compare'])->middleware('rbac:project.view')->name('projects.oppm.snapshots.compare');
+    // GAP-117 (Gate 2 L-1, E-1, A-1): per-project milestones page; writes also need the project PM or project.update.
+    Route::get('/projects/{project}/milestones', [App\Http\Controllers\Web\ProjectMilestonePageController::class, 'index'])->middleware('rbac:project.view')->name('projects.milestones.index');
+    Route::post('/projects/{project}/milestones', [App\Http\Controllers\Web\ProjectMilestonePageController::class, 'store'])->middleware('rbac:project.view')->name('projects.milestones.store');
+    Route::post('/projects/{project}/milestones/{milestone}', [App\Http\Controllers\Web\ProjectMilestonePageController::class, 'update'])->middleware('rbac:project.view')->name('projects.milestones.update');
+    Route::post('/projects/{project}/milestones/{milestone}/complete', [App\Http\Controllers\Web\ProjectMilestonePageController::class, 'complete'])->middleware('rbac:project.view')->name('projects.milestones.complete');
+    Route::post('/projects/{project}/milestones/{milestone}/reopen', [App\Http\Controllers\Web\ProjectMilestonePageController::class, 'reopen'])->middleware('rbac:project.view')->name('projects.milestones.reopen');
+    Route::post('/projects/{project}/milestones/{milestone}/cancel', [App\Http\Controllers\Web\ProjectMilestonePageController::class, 'cancel'])->middleware('rbac:project.view')->name('projects.milestones.cancel');
     // DELETE /projects/{project} - MOVED TO API: /api/v1/projects/{project}
 
     Route::get('/projects/{project}/work-templates', [App\Http\Controllers\Web\WorkTemplateApplyController::class, 'templates'])->middleware('rbac:template.view')->name('projects.work-templates.index');

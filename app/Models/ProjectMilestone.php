@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * ProjectMilestone Model - Project milestones management.
  *
  * @property string $id ULID primary key
+ * @property string|null $tenant_id ID công ty (GAP-117 T-1, điền từ dự án)
  * @property string $project_id ID dự án
  * @property string $name Tên milestone
  * @property string|null $description Mô tả
@@ -27,6 +29,7 @@ class ProjectMilestone extends Model
 {
     use HasUlids;
     use HasFactory;
+    use TenantScope;
 
     protected $table = 'project_milestones';
 
@@ -35,6 +38,7 @@ class ProjectMilestone extends Model
     public $incrementing = false;
 
     protected $fillable = [
+        'tenant_id',
         'project_id',
         'name',
         'description',
@@ -115,18 +119,16 @@ class ProjectMilestone extends Model
     }
 
     /**
-     * Boot method để tự động update status.
+     * GAP-117 T-1 / O-1: tenant_id comes from the project when not given. "Overdue" is no longer stored; it is computed
+     * live by isOverdue() and the readers.
      */
     protected static function boot()
     {
         parent::boot();
 
-        static::saving(function ($milestone) {
-            // Auto-update status based on dates
-            if ($milestone->target_date && $milestone->status === self::STATUS_PENDING) {
-                if ($milestone->target_date->isPast() && !$milestone->completed_date) {
-                    $milestone->status = self::STATUS_OVERDUE;
-                }
+        static::creating(function (self $milestone): void {
+            if (($milestone->tenant_id ?? null) === null && $milestone->project_id) {
+                $milestone->tenant_id = Project::query()->withoutGlobalScopes()->whereKey($milestone->project_id)->value('tenant_id');
             }
         });
     }
@@ -142,7 +144,7 @@ class ProjectMilestone extends Model
 
         $this->update([
             'status' => self::STATUS_COMPLETED,
-            'completed_date' => now(),
+            'completed_date' => now()->toDateString(),
         ]);
 
         // Audit logging disabled for testing
@@ -175,9 +177,10 @@ class ProjectMilestone extends Model
      */
     public function isOverdue(): bool
     {
-        return $this->target_date &&
-               $this->target_date->isPast() &&
-               $this->status === self::STATUS_PENDING;
+        // GAP-117 O-1: pending (or a legacy stored "overdue") and the target day is before today.
+        return $this->target_date !== null
+            && in_array($this->status, [self::STATUS_PENDING, self::STATUS_OVERDUE], true)
+            && $this->target_date->copy()->startOfDay()->lt(now()->startOfDay());
     }
 
     /**

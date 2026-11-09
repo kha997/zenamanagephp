@@ -75,12 +75,13 @@
                     @include('projects._delay-badge', ['delay' => $health['schedule']['delay']])
                 @endif
             </x-ui.field-value>
-            <x-ui.field-value
-                label="Mốc"
-                :value="$milestones['availability'] === Health::AVAILABLE
+            <x-ui.field-value label="Mốc">
+                {{ $milestones['availability'] === Health::AVAILABLE
                     ? $milestones['completed'] . '/' . $milestones['total'] . ' hoàn thành · ' . $milestones['overdue'] . ' quá hạn'
-                    : 'Chưa có dữ liệu'"
-            />
+                    : 'Chưa có dữ liệu' }}
+                {{-- GAP-117 L-1 --}}
+                <a href="{{ route('app.projects.milestones.index', $header['id']) }}" class="oppm-no-print operator-link ml-1 text-xs">Quản lý mốc</a>
+            </x-ui.field-value>
             <x-ui.field-value
                 label="Cần chú ý"
                 :value="$attention['blocked_tasks'] . ' việc bị chặn · ' . $attention['overdue_tasks'] . ' việc quá hạn · ' . $attention['blocked_design_items'] . ' hạng mục thiết kế bị chặn'"

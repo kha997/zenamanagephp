@@ -1,14 +1,14 @@
 ---
 work_id: GAP-115
 gate: 3
-gate_status: approved
+gate_status: awaiting_owner
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: approved
+  value: none
   authority: human_owner
-decision_requested: null
+decision_requested: "approve_or_correction_or_defer"
 references:
   spec: docs/audits/2026-11-06-gap-115-deploy-readiness-evidence.md
   plan: docs/superpowers/plans/2026-11-06-gap-115-deploy-readiness.md
@@ -18,41 +18,40 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-11-06T05:26:19+07:00"
-  owner_response_reference: "Owner decision in-session on 2026-11-06, verbatim: 'APPROVE GAP-115 Gate 3.'. Given on the packet at PR head cca7135e2ee515c9a9194aa2aee6a1da634fcbba; bound to implementation subject 13d8d199c8c79ddb874c46bcf679dbf39c702375 and implementation-tree digest 09331b4d693c6320a9f612a7d873eb64ddab871dd6026a45befa2d1f95098d62 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
+  recorded_at: null
+  owner_response_reference: null
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-06T03:10:00+07:00"
-  updated_at: "2026-11-06T05:26:19+07:00"
+  updated_at: "2026-11-09T22:57:57+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "GAP-115 at subject 13d8d199c8c79ddb874c46bcf679dbf39c702375 (Gate 2 M-1, R-1, U-1, W-1, D-1 plus Owner amendments 1 and 2; exact allowlist; one PR, one implementation commit; no migration). M-1: the 9 GAP-106..114 migrations (7 create-table, 2 nullable add-column; read individually) are classified expand in database/migrations/classifications.json (append-only edit); MigrationClassificationCoverageTest fails if any migration file lacks a classification. R-1: production:rbac {--dry-run} creates the canonical roles super_admin, Finance, Project Manager, site_engineer, Project Member (firstOrCreate) and runs only ZenaPermissionsSeeder, PermissionSeeder (ordered after the catalogue so the first run converges), ZenaAdminRolePermissionSeeder, TreasuryRolePermissionSeeder, PayrollRolePermissionSeeder, ZenaProjectManagerRolePermissionSeeder, V1PermissionGapSeeder in one transaction, plus WorkTemplateBaselineSeeder once a tenant exists; refuses before migrations; prints role -> permission counts; never references DatabaseSeeder / user / tenant / demo seeders or db:seed (asserted). U-1: production:user --email --name --role [--tenant] [--reset-password] creates an active user in the single (or named) tenant with a canonical, already-loaded role and a Str::password(20) shown once (console-escaped), refuses invalid / duplicate email, unknown or unloaded role, missing tenant or ambiguity, and audits production.user.created / password_reset. W-1: release-management.yml loses its deploy-release / rollback-release / cleanup-release jobs (already if: false since GAP-049) with a pointer comment; YAML parses; ReleaseWorkflowNoProductionDeployTest asserts no production host / SSH key / git pull / production environment remain; the existing DeploymentGuardTest stays green. D-1: docs/runbooks/go-live.md (host, shared/.env, secrets, first deploy by SHA, production:rbac, production:bootstrap, production:user, checks, monthly order, later deploys / rollback); outdated banners on DEPLOYMENT_GUIDE.md, DOCKER_PRODUCTION_GUIDE.md, docs/GO_LIVE_CHECKLIST.md, the three legacy deploy scripts (bash -n clean), pointer in docs/deploy-runbook.md. Amendment 1: MigrationClassificationService treats a missing migrations table as nothing ran. Amendment 2: on a fresh database (no or empty migrations table) deploy:migrate prints 'Fresh install' and skips the breaking gate; databases with history keep exits 2 / 3. Tests: 4 new Deployment test files (10 tests) plus 2 new DeployMigrateCommandTest cases, red before and green after; Deployment suite 69 green on SQLite and on MySQL 8. Empty-MySQL 8 rehearsal in runbook order: deploy:migrate (full history, exit 0; second run 'No pending migrations') -> production:rbac --dry-run (writes nothing) -> production:rbac (super_admin 220, Finance 14, Project Manager 54, site_engineer 16, Project Member 31 permissions) -> production:bootstrap -> production:rbac (3 baseline work templates) -> production:user Finance: 2 users, no admin@zena.local. PHPStan, php-cs-fixer, docs-lint, SSOT test lint, ssot:lint, deptrac pass. Unit + Feature + Integration 2994 tests with only the 2 known root-only failures; Feature/Api 824 green. Exact-head CI recorded in the body."
+mandatory_technical_gate_summary: "GAP-115 at subject a9415774f16f71faefebe39d5e3e2b7ac6b62c9b (Gate 2 M-1, R-1, U-1, W-1, D-1 plus Owner amendments 1 and 2; exact allowlist; one PR, two implementation commits: 13d8d199, then a9415774 fixing two Codex findings — P1: PermissionSeeder sync()s Project Manager / Project Member, so production:rbac now re-runs ZenaPermissionsSeeder right after it and PM keeps template.view / template.apply / change-request.*; P2: additive baseline grants after the seeders (task.view for Finance, Project Manager, site_engineer, Project Member; project.view for the three project roles) so production:user accounts reach time logging / review; two new tests failing before; empty-MySQL 8 rehearsal role counts stable across runs: super_admin 220, Finance 15, Project Manager 62, site_engineer 18, Project Member 32; no migration). M-1: the 9 GAP-106..114 migrations (7 create-table, 2 nullable add-column; read individually) are classified expand in database/migrations/classifications.json (append-only edit); MigrationClassificationCoverageTest fails if any migration file lacks a classification. R-1: production:rbac {--dry-run} creates the canonical roles super_admin, Finance, Project Manager, site_engineer, Project Member (firstOrCreate) and runs only ZenaPermissionsSeeder, PermissionSeeder (ordered after the catalogue so the first run converges), ZenaAdminRolePermissionSeeder, TreasuryRolePermissionSeeder, PayrollRolePermissionSeeder, ZenaProjectManagerRolePermissionSeeder, V1PermissionGapSeeder in one transaction, plus WorkTemplateBaselineSeeder once a tenant exists; refuses before migrations; prints role -> permission counts; never references DatabaseSeeder / user / tenant / demo seeders or db:seed (asserted). U-1: production:user --email --name --role [--tenant] [--reset-password] creates an active user in the single (or named) tenant with a canonical, already-loaded role and a Str::password(20) shown once (console-escaped), refuses invalid / duplicate email, unknown or unloaded role, missing tenant or ambiguity, and audits production.user.created / password_reset. W-1: release-management.yml loses its deploy-release / rollback-release / cleanup-release jobs (already if: false since GAP-049) with a pointer comment; YAML parses; ReleaseWorkflowNoProductionDeployTest asserts no production host / SSH key / git pull / production environment remain; the existing DeploymentGuardTest stays green. D-1: docs/runbooks/go-live.md (host, shared/.env, secrets, first deploy by SHA, production:rbac, production:bootstrap, production:user, checks, monthly order, later deploys / rollback); outdated banners on DEPLOYMENT_GUIDE.md, DOCKER_PRODUCTION_GUIDE.md, docs/GO_LIVE_CHECKLIST.md, the three legacy deploy scripts (bash -n clean), pointer in docs/deploy-runbook.md. Amendment 1: MigrationClassificationService treats a missing migrations table as nothing ran. Amendment 2: on a fresh database (no or empty migrations table) deploy:migrate prints 'Fresh install' and skips the breaking gate; databases with history keep exits 2 / 3. Tests: 4 new Deployment test files (10 tests) plus 2 new DeployMigrateCommandTest cases, red before and green after; Deployment suite 69 green on SQLite and on MySQL 8. Empty-MySQL 8 rehearsal in runbook order: deploy:migrate (full history, exit 0; second run 'No pending migrations') -> production:rbac --dry-run (writes nothing) -> production:rbac (super_admin 220, Finance 14, Project Manager 54, site_engineer 16, Project Member 31 permissions) -> production:bootstrap -> production:rbac (3 baseline work templates) -> production:user Finance: 2 users, no admin@zena.local. PHPStan, php-cs-fixer, docs-lint, SSOT test lint, ssot:lint, deptrac pass. Unit + Feature + Integration 2994 tests with only the 2 known root-only failures; Feature/Api 824 green. Exact-head CI recorded in the body."
 technical_evidence:
   base_sha: "a9ff611acb4b033ac96a5cd14426b2dccd4d4c38"
-  subject_sha: "13d8d199c8c79ddb874c46bcf679dbf39c702375"
-  implementation_tree_digest: "09331b4d693c6320a9f612a7d873eb64ddab871dd6026a45befa2d1f95098d62"
-  verified_pr_head_sha: "13d8d199c8c79ddb874c46bcf679dbf39c702375"
-  verified_at: "2026-11-06T03:10:00+07:00"
-owner_decision_binding:
-  implementation_tree_digest: "09331b4d693c6320a9f612a7d873eb64ddab871dd6026a45befa2d1f95098d62"
-  decision_recorded_at: "2026-11-06T05:26:19+07:00"
+  subject_sha: "a9415774f16f71faefebe39d5e3e2b7ac6b62c9b"
+  implementation_tree_digest: "02e648f4e71b7586c5a5849e5c5a844a3494502ca29c4004ce35a16a13dc126f"
+  verified_pr_head_sha: "a9415774f16f71faefebe39d5e3e2b7ac6b62c9b"
+  verified_at: "2026-11-09T22:57:57+07:00"
+owner_decision_binding: null
 ---
 
 # GAP-115 — Gate 3 release decision (deploy readiness and production RBAC bootstrap)
 
-## OWNER GATE 3: APPROVED
+## Gate 3 trình lại sau review Codex
 
-Owner approved Gate 3 in-session on 2026-11-06 ("APPROVE GAP-115 Gate 3."), bound to implementation subject
-`13d8d199c8c79ddb874c46bcf679dbf39c702375` and implementation-tree digest `09331b4d693c6320a9f612a7d873eb64ddab871dd6026a45befa2d1f95098d62`. No deployment or release is authorized.
+Owner đã duyệt Gate 3 ("APPROVE GAP-115 Gate 3.") ở subject `13d8d199`, digest `09331b4d…8d62`. Codex review PR và chỉ
+ra 2 lỗi thật về quyền (P1, P2). Mã đã sửa ở `a9415774` (trong allowlist), digest đổi thành `02e648f4…126f`, nên lần duyệt
+cũ không còn áp dụng và Gate 3 được trình lại.
 
 ## Gói quyết định phát hành
 
 **1. Vấn đề là gì?** Chưa đưa được phần mềm lên máy chủ thật một cách an toàn, và chưa có cách cấp quyền trên môi trường
 thật.
 
-**2. Sau thay đổi (Gate 2 M-1, R-1, U-1, W-1, D-1 + 2 bổ sung của Owner)** — subject `13d8d199`:
+**2. Sau thay đổi (Gate 2 M-1, R-1, U-1, W-1, D-1 + 2 bổ sung của Owner)** — subject `a9415774`:
 
 **Deploy**
 - 9 migration mới được phân loại `expand`.
@@ -82,8 +81,19 @@ lại bản cũ. Các tài liệu và script cũ được gắn dòng "đã cũ,
 
 Không có migration mới, không thêm thư viện, không thêm quyền mới. Seeder hiện có không đổi.
 
-**3. Đã kiểm thử** — base `a9ff611a`; subject `13d8d199c8c79ddb874c46bcf679dbf39c702375`; digest
-`09331b4d693c6320a9f612a7d873eb64ddab871dd6026a45befa2d1f95098d62`.
+**3. Đã kiểm thử** — base `a9ff611a`; subject `a9415774f16f71faefebe39d5e3e2b7ac6b62c9b`; digest
+`02e648f4e71b7586c5a5849e5c5a844a3494502ca29c4004ce35a16a13dc126f`.
+- **Sửa theo Codex (commit `a9415774`):**
+  - **P1:** seeder cũ ghi đè (`sync`) quyền PM nên PM mất quyền mẫu công việc / yêu cầu thay đổi. Nay nạp lại ngay sau
+    bước đó.
+  - **P2:** PM, kỹ sư, kế toán chưa có quyền vào Bảng giờ. Nay lệnh **thêm** (không xoá gì):
+    - quyền Bảng giờ cho mọi nhân viên;
+    - quyền xem dự án cho PM / kỹ sư / thành viên.
+  - 2 test mới: hỏng khi chưa sửa, xanh khi đã sửa. Một test dùng tài khoản tạo bằng `production:user` mở trang Bảng giờ
+    và Duyệt giờ.
+  - Chạy thử MySQL 8 database trống: số quyền ổn định giữa 2 lần chạy (Owner 220, kế toán 15, PM 62, kỹ sư 18, thành viên
+    32); tạo được PM, kỹ sư, kế toán; không có tài khoản mẫu.
+  - Bộ test Deployment 71 test xanh.
 - **12 test mới, đều hỏng khi chưa có mã, xanh khi có mã:**
   - mọi migration đều được phân loại;
   - workflow phát hành không còn chạm production;
@@ -136,15 +146,15 @@ Không có migration mới, không thêm thư viện, không thêm quyền mới
 **8. Đề xuất** — Phát hành (merge).
 
 **9. Kết quả chạy toàn bộ**
-- **Unit + Feature + Integration:** 2.994 test. Chỉ có 2 lỗi có sẵn do chạy bằng root (`GrandfatherLoaderTest`,
-  `BackupStorageLocationTest`).
-- **Feature/Api:** 824 test xanh.
-- **CI trên commit mã `13d8d199`:** job "Feature Tests" đỏ 1 test, `ProjectApiTest > can update project`.
-  - Lỗi **không do PR này**: lỗi ngẫu nhiên có sẵn trong factory dự án. Ngày bắt đầu và ngày kết thúc ngẫu nhiên có thể
-    trùng nhau ở mốc +1 tháng.
-  - Đã ghi rõ trên PR, kèm bản sửa đề xuất ngoài phạm vi.
-  - Các job khác ghi nhận trước khi merge.
-- **"Owner Governance Lint":** đỏ đúng như dự kiến khi hồ sơ đang chờ Owner.
+- **Trước khi sửa Codex (subject `13d8d199`):**
+  - Unit + Feature + Integration 2.994 test, chỉ 2 lỗi có sẵn do chạy bằng root;
+  - Feature/Api 824 test xanh.
+- **Sau khi sửa (subject `a9415774f16f71faefebe39d5e3e2b7ac6b62c9b`):**
+  - CI trên đúng head xanh 34/35: Unit, Feature, Integration, API nhanh / chậm, các job MySQL thật, bảo mật, build Docker…;
+  - `ProjectApiTest` cũng xanh lần này (lỗi ngẫu nhiên trước đó không lặp lại);
+  - "Owner Governance Lint" đỏ đúng như dự kiến khi hồ sơ đang chờ Owner.
+  - Máy làm việc khởi động lại giữa chừng nên bộ test đầy đủ ở máy cục bộ chưa chạy lại. Thay vào đó dùng kết quả CI trên
+    đúng commit, cùng bộ test Deployment 71 test chạy lại tại máy.
 
 ## Decision Needed
 

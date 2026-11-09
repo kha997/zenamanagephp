@@ -28,7 +28,7 @@ timestamps:
   updated_at: "2026-11-10T00:30:00+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "GAP-116 at subject f1e43f9007fac1b30e3bc472d83d1012d0b303f8 (Gate 2 F-1, G-1; exact allowlist; one PR, one implementation commit; test-support code only, no runtime change, no migration). F-1: database/factories/ProjectFactory.php default start_date -1 month..+3 weeks and end_date +5 weeks..+6 months (two weeks apart, previously both met at +1 month); completed() and overdue() now also set start_date -6..-2 months so their past end ranges stay after the start. G-1: tests/Unit/Factories/ProjectFactoryDatesTest.php — a recording Faker bound in the container captures the dateTimeBetween ranges per state (default, completed, overdue) and asserts the latest possible start is on an earlier calendar day than the earliest possible end, overdue end before today (deterministic); plus 200 make()-built projects per state with end day after start day. Red before (default: latest start 2026-12-09 = earliest end 2026-12-09; completed / overdue samples with end before start), green after, and red again with the factory change stashed. ProjectApiTest test_can_update_project passed 50 consecutive runs. php-cs-fixer, SSOT test lint, ssot:lint pass. Full-suite and exact-head CI results are recorded in the body."
+mandatory_technical_gate_summary: "GAP-116 at subject f1e43f9007fac1b30e3bc472d83d1012d0b303f8 (Gate 2 F-1, G-1; exact allowlist; one PR, one implementation commit; test-support code only, no runtime change, no migration). F-1: database/factories/ProjectFactory.php default start_date -1 month..+3 weeks and end_date +5 weeks..+6 months (two weeks apart, previously both met at +1 month); completed() and overdue() now also set start_date -6..-2 months so their past end ranges stay after the start. G-1: tests/Unit/Factories/ProjectFactoryDatesTest.php — a recording Faker bound in the container captures the dateTimeBetween ranges per state (default, completed, overdue) and asserts the latest possible start is on an earlier calendar day than the earliest possible end, overdue end before today (deterministic); plus 200 make()-built projects per state with end day after start day. Red before (default: latest start 2026-12-09 = earliest end 2026-12-09; completed / overdue samples with end before start), green after, and red again with the factory change stashed. ProjectApiTest test_can_update_project passed 50 consecutive runs. php-cs-fixer, SSOT test lint, ssot:lint pass. Local Unit + Feature + Integration 2998 tests: the 2 known root-only failures plus 3 PDF-export failures, and Feature/Api 824 with 1 PDF-export failure — all 4 PDF failures reproduce identically on main in this container (no Node/Playwright PDF runtime installed), unrelated to this change. Exact-head CI recorded in the body."
 technical_evidence:
   base_sha: "9a23ac6abea7a27f8890bc3fbcfa6407b4117813"
   subject_sha: "f1e43f9007fac1b30e3bc472d83d1012d0b303f8"
@@ -78,7 +78,19 @@ Chỉ đổi dữ liệu mẫu cho test, **không đổi phần mềm chạy th�
 
 **8. Đề xuất** — Phát hành (merge).
 
-**9. Kết quả chạy toàn bộ** — RESULTS_PENDING
+**9. Kết quả chạy toàn bộ**
+- **Unit + Feature + Integration:** 2.998 test, có 5 lỗi:
+  - 2 lỗi có sẵn do chạy bằng root (`GrandfatherLoaderTest`, `BackupStorageLocationTest`);
+  - 3 lỗi xuất PDF trong `DocumentTemplateRenderTest`.
+- **Feature/Api:** 824 test, có 1 lỗi xuất PDF trong `WorkInstanceEndToEndSmokeFlowTest`.
+- **4 lỗi PDF do môi trường, không do PR này:**
+  - máy làm việc mới khởi động lại chưa cài bộ dựng PDF (Node / Playwright);
+  - chạy đúng các test đó trên `main` cũng hỏng y hệt;
+  - PR này không đụng phần xuất PDF;
+  - CI có cài bộ dựng PDF.
+- **CI trên đúng head:**
+  - "Owner Governance Lint" đỏ đúng như dự kiến khi hồ sơ đang chờ Owner;
+  - các job khác ghi nhận trước khi merge.
 
 ## Decision Needed
 

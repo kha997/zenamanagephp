@@ -1,32 +1,37 @@
 ---
 work_id: GAP-116
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-11-09-gap-116-project-factory-dates-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-11-09-gap-116-project-factory-dates.md
   branch: docs/GAP-116-project-factory-dates
   pr: https://github.com/kha997/zenamanagephp/pull/406
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-09T23:38:09+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-09, verbatim: 'APPROVE GAP-116 Gate 2 F-1 G-1'. Reviewed design head: ea5bba0a7f911b5dc41f21150da0cf5157a5eb55. Approves F-1 (ProjectFactory default start -1 month..+3 weeks, end +5 weeks..+6 months; completed() and overdue() start -6..-2 months with their past end ranges), G-1 (guard test building 200 projects per state with make() asserting end after start, overdue end before today), one PR / one Gate 3, with the exact allowlist in this packet; no runtime code change; not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-09T23:50:00+07:00"
-  updated_at: "2026-11-09T23:50:00+07:00"
+  updated_at: "2026-11-09T23:38:09+07:00"
 generated_by: agent
 ---
 
 # GAP-116 — Flaky ProjectApiTest (project factory dates): Gate 2 design
+
+## OWNER GATE 2: APPROVED — F-1, G-1
+
+Owner approved F-1 and G-1 in-session on 2026-11-09 against reviewed design head `ea5bba0a7f911b5dc41f21150da0cf5157a5eb55`. This authorizes only the
+bounded implementation defined by this packet; it does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

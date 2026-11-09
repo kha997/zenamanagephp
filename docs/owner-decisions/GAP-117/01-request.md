@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-11-10-gap-117-project-milestones-evidence.md
   plan: null
   branch: docs/GAP-117-project-milestones
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/407
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

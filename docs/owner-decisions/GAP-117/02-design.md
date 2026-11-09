@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-10T02:33:00+07:00"
-  updated_at: "2026-11-10T02:34:34+07:00"
+  updated_at: "2026-11-10T03:03:04+07:00"
 generated_by: agent
 ---
 
@@ -167,6 +167,28 @@ Các test sẵn có về mốc (OPPM, Hôm nay, thống kê, PM dashboard) phả
   `docs/superpowers/plans/2026-11-10-gap-117-project-milestones.md`
 
 File nào khác cần đổi sẽ hỏi Owner trước và ghi thành bổ sung (amendment) trong hồ sơ này.
+
+## Owner amendment 1 (2026-11-10, sau review Codex)
+
+**Vấn đề:** Codex chỉ ra rằng sau O-1, API tiến độ của PM và phần thống kê dự án vẫn chỉ đếm mốc có trạng thái lưu
+"overdue". Vì vậy hai nơi này luôn báo 0 mốc quá hạn, lệch với trang mốc và OPPM.
+
+**Owner chọn (AskUserQuestion, 2026-11-10):** "Sửa ngay, bổ sung allowlist (Recommended)".
+
+**Thay đổi:** các nơi dưới đây đếm "quá hạn" theo ngày thực tế, giống `isOverdue()`: đang chờ (hoặc "overdue" cũ) và ngày
+mục tiêu trước hôm nay. "Đang chờ" không tính các mốc quá hạn.
+- `PmDashboardController::computeMilestoneMetrics`;
+- `ProjectAnalyticsService::getMilestoneAnalytics`;
+- `ProjectMilestone::getProjectStatistics` và `scopeOverdue` (model đã nằm trong allowlist).
+
+**File thêm vào allowlist:**
+- `app/Http/Controllers/Api/PmDashboardController.php`
+- `app/Services/ProjectAnalyticsService.php`
+- `tests/Feature/Api/PmDashboardApiTest.php`
+
+**Lưu ý:** `ProjectAnalyticsService` hiện chưa chạy trọn được vì lỗi có sẵn (thiếu `Project::isOverdue()`, import
+`Collection` sai — mục tồn "ProjectAnalyticsService X-1"). Phần đếm mốc trong đó được sửa cùng quy tắc, nhưng không có test
+chạy hết hàm. Phần model và API PM có test (đỏ trước, xanh sau).
 
 ## Ngoài phạm vi
 

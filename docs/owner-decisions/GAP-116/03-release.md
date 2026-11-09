@@ -1,14 +1,14 @@
 ---
 work_id: GAP-116
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-11-09-gap-116-project-factory-dates-evidence.md
   plan: docs/superpowers/plans/2026-11-09-gap-116-project-factory-dates.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-10T00:51:17+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-09, verbatim: 'APPROVE GAP-116 Gate 3'. Re-approval after the Codex fix, given on the packet at PR head 6f66afc65957ab4e0f294d0cabee24b2644e6d76 (CI green on all 35 checks); bound to implementation subject 06d0b72c187d5a6d1adfa23734e45535a57fcede and implementation-tree digest 26f72f55be12e81b19e616c3a9eca903480b2e866635efd91382eda333c7f251 (recomputed at recording time, zero drift). Supersedes the earlier approval bound to f1e43f90 / 068fda26. Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-10T00:30:00+07:00"
-  updated_at: "2026-11-10T00:05:00+07:00"
+  updated_at: "2026-11-10T00:51:17+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-116 at subject 06d0b72c187d5a6d1adfa23734e45535a57fcede (re-presented after Codex review: the guard test no longer freezes the Carbon clock, so Faker and the overdue assertions use the same real clock; Gate 2 F-1, G-1; exact allowlist; one PR, one implementation commit; test-support code only, no runtime change, no migration). F-1: database/factories/ProjectFactory.php default start_date -1 month..+3 weeks and end_date +5 weeks..+6 months (two weeks apart, previously both met at +1 month); completed() and overdue() now also set start_date -6..-2 months so their past end ranges stay after the start. G-1: tests/Unit/Factories/ProjectFactoryDatesTest.php — a recording Faker bound in the container captures the dateTimeBetween ranges per state (default, completed, overdue) and asserts the latest possible start is on an earlier calendar day than the earliest possible end, overdue end before today (deterministic); plus 200 make()-built projects per state with end day after start day. Red before (default: latest start 2026-12-09 = earliest end 2026-12-09; completed / overdue samples with end before start), green after, and red again with the factory change stashed. ProjectApiTest test_can_update_project passed 50 consecutive runs. php-cs-fixer, SSOT test lint, ssot:lint pass. Local Unit + Feature + Integration 2998 tests: the 2 known root-only failures plus 3 PDF-export failures, and Feature/Api 824 with 1 PDF-export failure — all 4 PDF failures reproduce identically on main in this container (no Node/Playwright PDF runtime installed), unrelated to this change. Exact-head CI recorded in the body."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "06d0b72c187d5a6d1adfa23734e45535a57fcede"
   verified_at: "2026-11-10T00:05:00+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "26f72f55be12e81b19e616c3a9eca903480b2e866635efd91382eda333c7f251"
+  decision_recorded_at: "2026-11-10T00:51:17+07:00"
 ---
 
 # GAP-116 — Gate 3 release decision (flaky ProjectApiTest, project factory dates)
+
+## OWNER GATE 3: APPROVED
+
+Owner re-approved Gate 3 in-session on 2026-11-09 ("APPROVE GAP-116 Gate 3") after the Codex fix, bound to
+implementation subject `06d0b72c187d5a6d1adfa23734e45535a57fcede` and implementation-tree digest `26f72f55be12e81b19e616c3a9eca903480b2e866635efd91382eda333c7f251`. No deployment or release is authorized.
 
 ## Gate 3 trình lại sau review Codex
 
@@ -102,8 +107,7 @@ Chỉ đổi dữ liệu mẫu cho test, **không đổi phần mềm chạy th�
   - PR này không đụng phần xuất PDF;
   - CI có cài bộ dựng PDF.
 - **CI trên đúng head:**
-  - "Owner Governance Lint" đỏ đúng như dự kiến khi hồ sơ đang chờ Owner;
-  - các job khác ghi nhận trước khi merge.
+  - head `6f66afc6` (subject `06d0b72c`): cả 35 check xanh.
 
 ## Decision Needed
 

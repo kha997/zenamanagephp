@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-10T14:17:27+07:00"
-  updated_at: "2026-11-10T14:18:55+07:00"
+  updated_at: "2026-11-10T14:40:36+07:00"
 generated_by: agent
 ---
 
@@ -147,6 +147,18 @@ Trước khi ghi, bỏ qua nếu đã có thông báo cùng `user_id` + `event_k
   `docs/superpowers/plans/2026-11-10-gap-120-month-end-reminders.md`
 
 File nào khác cần đổi sẽ hỏi Owner trước và ghi thành bổ sung (amendment) trong hồ sơ này.
+
+## Owner amendment 1 (2026-11-10, CI trên commit mã)
+
+**Vấn đề:** CI "Feature Tests" đỏ. `tests/Feature/Console/ScheduleContractTest::test_approved_workloads_remain_scheduled`
+giữ một danh sách cố định các việc chạy định kỳ đã được duyệt. Lịch `reminders:month-end` mới (R-1) chưa có trong danh sách
+nên test báo lệch. Lỗi tái hiện được trên máy.
+
+**Owner chọn (AskUserQuestion, 2026-11-10):** "Bổ sung allowlist, sửa test (Recommended)".
+
+**Thay đổi:** thêm `'reminders:month-end'` vào danh sách việc định kỳ đã duyệt trong test đó. Không đổi gì khác.
+
+**File thêm vào allowlist:** `tests/Feature/Console/ScheduleContractTest.php`.
 
 ## Ngoài phạm vi
 

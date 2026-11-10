@@ -300,6 +300,26 @@ body {
 .operator-item-card .operator-button { white-space: nowrap; }
 .operator-running-bar-spacer { display: none; height: 4.5rem; }
 
+/* GAP-122 — "Duyệt giờ" phone cards grouped by person (L-1, A-1) and the one-line week bar (N-1). */
+.operator-review-group { display: flex; flex-direction: column; gap: 0.5rem; }
+.operator-review-group + .operator-review-group { margin-top: 0.75rem; }
+.operator-review-group-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0 0.25rem;
+}
+.operator-review-group-head > :last-child { flex-shrink: 0; white-space: nowrap; }
+.operator-review-minutes { font-size: 1.125rem; font-weight: 700; color: #0f172a; white-space: nowrap; }
+.operator-review-actions { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.5rem; margin-top: 0.25rem; }
+.operator-review-reject { flex: 1 1 auto; }
+.operator-review-reject > summary { list-style: none; cursor: pointer; }
+.operator-review-reject > summary::-webkit-details-marker { display: none; }
+.operator-review-reject[open] { flex-basis: 100%; }
+.operator-review-week-bar { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+.operator-review-week-bar .operator-button { flex: 1 1 0; justify-content: center; white-space: nowrap; padding-left: 0.5rem; padding-right: 0.5rem; }
+
 @media (max-width: 767px) {
     .operator-phone-only { display: block; }
     .operator-wide-only { display: none !important; }

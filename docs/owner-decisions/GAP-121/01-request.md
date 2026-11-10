@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-11-10-gap-121-month-close-mysql-concurrency-evidence.md
   plan: null
   branch: docs/GAP-121-month-close-mysql-concurrency
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/411
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

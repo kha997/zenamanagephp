@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-11-10-gap-118-mobile-my-work-timesheet-evidence.md
   plan: null
   branch: docs/GAP-118-mobile-my-work-timesheet
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/408
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

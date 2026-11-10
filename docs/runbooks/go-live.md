@@ -43,6 +43,7 @@ DB_PASSWORD=<mật khẩu>
 QUEUE_CONNECTION=redis    # không được dùng sync
 CACHE_DRIVER=redis
 SESSION_DRIVER=redis
+ENABLE_SCHEDULER=true     # bật các việc định kỳ (sao lưu, nhắc việc cuối tháng…); mặc định là false
 ```
 
 Các mục còn lại (mail, sao lưu, log) xem `docs/deploy-runbook.md`.
@@ -127,6 +128,18 @@ php artisan production:user --email=kysu@<miền> --name="Tên kỹ sư" --role=
 3. Kế toán nhập **Chi phí chung** của tháng.
 4. Owner **chốt chi phí chung**.
 5. Xem **Lời lỗ công trình**.
+
+### Nhắc việc cuối tháng (GAP-120)
+
+Lệnh `reminders:month-end` tự chạy lúc 08:00 (giờ Việt Nam) mỗi ngày, nhưng **chỉ khi** `ENABLE_SCHEDULER=true` và cron
+`php artisan schedule:run` đã chạy (mục 1). Nó ghi thông báo vào mục "Cập nhật chưa đọc" trên trang "Hôm nay":
+
+- **Giờ chờ duyệt:** gửi cho PM của công trình; giờ của chính PM, hoặc công trình chưa có PM, gửi cho người chốt lương; giờ
+  không thuộc công trình gửi cho kế toán. Nhắc từ 3 ngày cuối tháng đến ngày 5 tháng sau.
+- **Chưa chốt lương / chưa chốt chi phí chung** tháng trước: gửi người chốt lương, mỗi ngày cho tới khi chốt.
+
+Muốn xem trước mà không gửi: `php artisan reminders:month-end --dry-run`. Chạy thử cho một ngày khác:
+`php artisan reminders:month-end --dry-run --date=2026-11-30`.
 
 ## 10. Deploy các lần sau và quay lại bản cũ
 

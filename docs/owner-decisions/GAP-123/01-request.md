@@ -1,11 +1,11 @@
 ---
 work_id: GAP-123
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-11-11-gap-123-work-template-authoring-evidence.md
   plan: null
@@ -15,16 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-11T01:43:34+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-11, verbatim: 'APPROVE GAP-123 Gate' (gate number missing), confirmed via AskUserQuestion: 'Đúng, duyệt Gate 1 (Recommended)'. Bound to reviewed Draft PR #413 head 74965207b7b1f0fa38ff437dcf0dea8c854f1922, canonical base 9f98b2082e2f229c7d7f82761ae6b4538369e9b1. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-11T01:41:51+07:00"
-  updated_at: "2026-11-11T01:41:51+07:00"
+  updated_at: "2026-11-11T01:43:34+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-123 Gate 1 in-session on 2026-11-11 against Draft PR #413 head
+`74965207b7b1f0fa38ff437dcf0dea8c854f1922`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

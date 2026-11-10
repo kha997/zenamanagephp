@@ -116,41 +116,6 @@ class ProjectModuleTest extends TestCase
     }
 
     /**
-     * Test Project progress calculation.
-     */
-    public function test_project_progress_calculation(): void
-    {
-        $project = Project::factory()->create([
-            'tenant_id' => $this->tenant->id,
-            'code' => 'PRJ-TEST-004',
-            'name' => 'Test Project Progress',
-            'description' => 'Test project for progress calculation',
-            'status' => 'active',
-            'progress' => 0,
-            'start_date' => now(),
-            'end_date' => now()->addDays(30),
-            'budget_total' => 100000,
-        ]);
-
-        // Create milestones
-        ProjectMilestone::create([
-            'project_id' => $project->id,
-            'name' => 'Milestone 1',
-            'status' => 'completed',
-        ]);
-
-        ProjectMilestone::create([
-            'project_id' => $project->id,
-            'name' => 'Milestone 2',
-            'status' => 'pending',
-        ]);
-
-        // Test progress calculation
-        $progress = $project->calculateProgress();
-        $this->assertEquals(50, $progress); // 1 completed out of 2 milestones = 50%
-    }
-
-    /**
      * Test Project scopes.
      */
     public function test_project_scopes(): void

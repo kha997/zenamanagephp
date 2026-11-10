@@ -1,32 +1,38 @@
 ---
 work_id: GAP-119
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-11-10-gap-119-project-analytics-cleanup-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-11-10-gap-119-project-analytics-cleanup.md
   branch: docs/GAP-119-project-analytics-cleanup
   pr: https://github.com/kha997/zenamanagephp/pull/409
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-10T13:00:47+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-10, verbatim: 'APPROVE GAP-119 Gate 2 A-1 E-1 P-1'. Reviewed design head: 9855a898c337f3e2781c0cb2feaabb8fc8e4308e. Approves A-1 (remove the four api/analytics routes of ProjectAnalyticsController, the controller and ProjectAnalyticsService; api/analytics/dashboard and AnalyticsController untouched; guard test), E-1 (remove ProjectMilestoneCompleted, ProjectTaskUpdated, ProjectTeamMemberJoined, Listeners\\LogProjectActivity, RealTimeNotificationService and ProjectActivity::logMilestoneCompleted / logTaskUpdated / logTeamMemberJoined; ProjectActivity otherwise kept; guard test), P-1 (remove Project::calculateProgress and its dedicated ProjectModuleTest case; recalculateProgress kept), one PR / one Gate 3, with the exact allowlist in this packet; no migration; not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-10T12:52:26+07:00"
-  updated_at: "2026-11-10T12:52:26+07:00"
+  updated_at: "2026-11-10T13:00:47+07:00"
 generated_by: agent
 ---
 
 # GAP-119 — Broken project analytics API and dead event code: Gate 2 design
+
+## OWNER GATE 2: APPROVED — A-1, E-1, P-1
+
+Owner approved A-1, E-1 and P-1 in-session on 2026-11-10 against reviewed design head
+`9855a898c337f3e2781c0cb2feaabb8fc8e4308e`. This authorizes only the bounded implementation defined by this packet; it does not authorize Gate 3,
+merge, release, or deployment.
 
 ## Owner Summary
 

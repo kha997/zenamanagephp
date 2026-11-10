@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-11-10-gap-120-month-end-reminders-evidence.md
   plan: null
   branch: docs/GAP-120-month-end-reminders
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/410
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

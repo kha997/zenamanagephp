@@ -383,6 +383,16 @@ Route::prefix('app')->name('app.')->middleware(['auth', 'tenant.isolation'])->gr
     Route::post('/projects/{project}/work-templates/preview', [App\Http\Controllers\Web\WorkTemplateApplyController::class, 'preview'])->middleware('rbac:template.apply')->name('projects.work-templates.preview');
     Route::post('/projects/{project}/work-templates/apply', [App\Http\Controllers\Web\WorkTemplateApplyController::class, 'apply'])->middleware('rbac:template.apply')->name('projects.work-templates.apply');
 
+    // GAP-123: author work templates (list for template.view; create / edit draft / duplicate for template.edit_draft;
+    // publish for template.publish). Writes go through WorkTemplateCrudService, scoped to the user's company.
+    Route::get('/work-templates', [App\Http\Controllers\Web\WorkTemplatePageController::class, 'index'])->middleware('rbac:template.view')->name('work-templates.index');
+    Route::get('/work-templates/create', [App\Http\Controllers\Web\WorkTemplatePageController::class, 'create'])->middleware('rbac:template.edit_draft')->name('work-templates.create');
+    Route::post('/work-templates', [App\Http\Controllers\Web\WorkTemplatePageController::class, 'store'])->middleware('rbac:template.edit_draft')->name('work-templates.store');
+    Route::get('/work-templates/{id}/edit', [App\Http\Controllers\Web\WorkTemplatePageController::class, 'edit'])->middleware('rbac:template.edit_draft')->name('work-templates.edit');
+    Route::post('/work-templates/{id}', [App\Http\Controllers\Web\WorkTemplatePageController::class, 'update'])->middleware('rbac:template.edit_draft')->name('work-templates.update');
+    Route::post('/work-templates/{id}/publish', [App\Http\Controllers\Web\WorkTemplatePageController::class, 'publish'])->middleware('rbac:template.publish')->name('work-templates.publish');
+    Route::post('/work-templates/{id}/duplicate', [App\Http\Controllers\Web\WorkTemplatePageController::class, 'duplicate'])->middleware('rbac:template.edit_draft')->name('work-templates.duplicate');
+
     // GAP-015: work instances created from a WorkTemplate, worked from the project.
     Route::get('/projects/{project}/work-instances', [App\Http\Controllers\Web\WorkInstancePageController::class, 'index'])->middleware('rbac:work.view')->name('projects.work-instances.index');
     Route::get('/projects/{project}/work-instances/{instance}', [App\Http\Controllers\Web\WorkInstancePageController::class, 'show'])->middleware('rbac:work.view')->name('projects.work-instances.show');

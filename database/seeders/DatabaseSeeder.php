@@ -37,6 +37,7 @@ class DatabaseSeeder extends Seeder
             V1PermissionGapSeeder::class,
             UserRoleSeeder::class,
             WorkTemplateBaselineSeeder::class,
+            WorkTemplateVietnameseBaselineSeeder::class,
 
             // Sidebar Configuration
             // SidebarConfigSeeder::class, // Commented out - table doesn't exist yet

@@ -1,11 +1,11 @@
 ---
 work_id: GAP-121
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-11-10-gap-121-month-close-mysql-concurrency-evidence.md
   plan: null
@@ -15,16 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-10T22:13:50+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-10, verbatim: 'APPROVE GAP-121 Gate 1'. Bound to reviewed Draft PR #411 head 0388ae50fd539f1d18272434311f5ef33944da44, canonical base 503f92edbdc0e8da334ffc48ed22b17727d78947. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-10T22:11:04+07:00"
-  updated_at: "2026-11-10T22:11:04+07:00"
+  updated_at: "2026-11-10T22:13:50+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-121 Gate 1 in-session on 2026-11-10 against Draft PR #411 head
+`0388ae50fd539f1d18272434311f5ef33944da44`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

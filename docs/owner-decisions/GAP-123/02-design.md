@@ -1,32 +1,38 @@
 ---
 work_id: GAP-123
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-11-11-gap-123-work-template-authoring-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-11-11-gap-123-work-template-authoring.md
   branch: docs/GAP-123-work-template-authoring
   pr: https://github.com/kha997/zenamanagephp/pull/413
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-11T01:45:39+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-11, verbatim: 'APPROVE GAP-123 Gate 2 E-1 P-1 S-1'. Reviewed design head: 3f9bb8479e6331c2fe56cd49a1b67bcf742366cb. Approves E-1 (web editor for the step subset that drives apply; existing custom fields preserved), P-1 (Owner / super_admin only, no permission change) and S-1 (blank template, Duplicate, and three published Vietnamese baseline templates seeded by production:rbac alongside the English ones), one PR / one Gate 3, with the exact allowlist in this packet; no change to how templates are applied; not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-11T01:45:01+07:00"
-  updated_at: "2026-11-11T01:45:01+07:00"
+  updated_at: "2026-11-11T01:45:39+07:00"
 generated_by: agent
 ---
 
 # GAP-123 — Authoring work templates in the web app: Gate 2 design
+
+## OWNER GATE 2: APPROVED — E-1, P-1, S-1
+
+Owner approved E-1, P-1 and S-1 in-session on 2026-11-11 against reviewed design head
+`3f9bb8479e6331c2fe56cd49a1b67bcf742366cb`. This authorizes only the bounded implementation defined by this packet; it does not authorize Gate 3,
+merge, release, or deployment.
 
 ## Owner Summary
 

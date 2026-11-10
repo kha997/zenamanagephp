@@ -1764,305 +1764,55 @@ parameters:
 			count: 2
 			path: app/Events/ProjectCreated.php
 
-		-
-			message: '#^Access to property \$code on an unknown class App\\Events\\Project\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectMilestoneCompleted.php
 
-		-
-			message: '#^Access to property \$completed_date on an unknown class App\\Events\\ProjectMilestone\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectMilestoneCompleted.php
 
-		-
-			message: '#^Access to property \$description on an unknown class App\\Events\\ProjectMilestone\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectMilestoneCompleted.php
 
-		-
-			message: '#^Access to property \$id on an unknown class App\\Events\\Project\.$#'
-			identifier: class.notFound
-			count: 2
-			path: app/Events/ProjectMilestoneCompleted.php
 
-		-
-			message: '#^Access to property \$id on an unknown class App\\Events\\ProjectMilestone\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectMilestoneCompleted.php
 
-		-
-			message: '#^Access to property \$name on an unknown class App\\Events\\Project\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectMilestoneCompleted.php
 
-		-
-			message: '#^Access to property \$name on an unknown class App\\Events\\ProjectMilestone\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectMilestoneCompleted.php
 
-		-
-			message: '#^Access to property \$order on an unknown class App\\Events\\ProjectMilestone\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectMilestoneCompleted.php
 
-		-
-			message: '#^Access to property \$progress on an unknown class App\\Events\\Project\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectMilestoneCompleted.php
 
-		-
-			message: '#^Access to property \$project on an unknown class App\\Events\\ProjectMilestone\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectMilestoneCompleted.php
 
-		-
-			message: '#^Access to property \$status on an unknown class App\\Events\\ProjectMilestone\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectMilestoneCompleted.php
 
-		-
-			message: '#^Access to property \$target_date on an unknown class App\\Events\\ProjectMilestone\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectMilestoneCompleted.php
 
-		-
-			message: '#^Access to property \$tenant_id on an unknown class App\\Events\\Project\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectMilestoneCompleted.php
 
-		-
-			message: '#^Method App\\Events\\ProjectMilestoneCompleted\:\:broadcastWith\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Events/ProjectMilestoneCompleted.php
 
-		-
-			message: '#^Parameter \$milestone of method App\\Events\\ProjectMilestoneCompleted\:\:__construct\(\) has invalid type App\\Events\\ProjectMilestone\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectMilestoneCompleted.php
 
-		-
-			message: '#^Property App\\Events\\ProjectMilestoneCompleted\:\:\$milestone has unknown class App\\Events\\ProjectMilestone as its type\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectMilestoneCompleted.php
 
-		-
-			message: '#^Property App\\Events\\ProjectMilestoneCompleted\:\:\$project has unknown class App\\Events\\Project as its type\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectMilestoneCompleted.php
 
-		-
-			message: '#^Access to property \$assigned_to on an unknown class App\\Events\\Task\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectTaskUpdated.php
 
-		-
-			message: '#^Access to property \$code on an unknown class App\\Events\\Project\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectTaskUpdated.php
 
-		-
-			message: '#^Access to property \$description on an unknown class App\\Events\\Task\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectTaskUpdated.php
 
-		-
-			message: '#^Access to property \$due_date on an unknown class App\\Events\\Task\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectTaskUpdated.php
 
-		-
-			message: '#^Access to property \$id on an unknown class App\\Events\\Project\.$#'
-			identifier: class.notFound
-			count: 2
-			path: app/Events/ProjectTaskUpdated.php
 
-		-
-			message: '#^Access to property \$id on an unknown class App\\Events\\Task\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectTaskUpdated.php
 
-		-
-			message: '#^Access to property \$name on an unknown class App\\Events\\Project\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectTaskUpdated.php
 
-		-
-			message: '#^Access to property \$name on an unknown class App\\Events\\Task\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectTaskUpdated.php
 
-		-
-			message: '#^Access to property \$priority on an unknown class App\\Events\\Task\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectTaskUpdated.php
 
-		-
-			message: '#^Access to property \$progress on an unknown class App\\Events\\Project\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectTaskUpdated.php
 
-		-
-			message: '#^Access to property \$progress on an unknown class App\\Events\\Task\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectTaskUpdated.php
 
-		-
-			message: '#^Access to property \$project on an unknown class App\\Events\\Task\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectTaskUpdated.php
 
-		-
-			message: '#^Access to property \$status on an unknown class App\\Events\\Task\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectTaskUpdated.php
 
-		-
-			message: '#^Access to property \$tenant_id on an unknown class App\\Events\\Project\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectTaskUpdated.php
 
-		-
-			message: '#^Method App\\Events\\ProjectTaskUpdated\:\:__construct\(\) has parameter \$changes with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Events/ProjectTaskUpdated.php
 
-		-
-			message: '#^Method App\\Events\\ProjectTaskUpdated\:\:broadcastWith\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Events/ProjectTaskUpdated.php
 
-		-
-			message: '#^Parameter \$task of method App\\Events\\ProjectTaskUpdated\:\:__construct\(\) has invalid type App\\Events\\Task\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectTaskUpdated.php
 
-		-
-			message: '#^Property App\\Events\\ProjectTaskUpdated\:\:\$changes type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Events/ProjectTaskUpdated.php
 
-		-
-			message: '#^Property App\\Events\\ProjectTaskUpdated\:\:\$project has unknown class App\\Events\\Project as its type\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectTaskUpdated.php
 
-		-
-			message: '#^Property App\\Events\\ProjectTaskUpdated\:\:\$task has unknown class App\\Events\\Task as its type\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectTaskUpdated.php
 
-		-
-			message: '#^Access to property \$avatar on an unknown class App\\Events\\User\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectTeamMemberJoined.php
 
-		-
-			message: '#^Access to property \$code on an unknown class App\\Events\\Project\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectTeamMemberJoined.php
 
-		-
-			message: '#^Access to property \$email on an unknown class App\\Events\\User\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectTeamMemberJoined.php
 
-		-
-			message: '#^Access to property \$id on an unknown class App\\Events\\Project\.$#'
-			identifier: class.notFound
-			count: 2
-			path: app/Events/ProjectTeamMemberJoined.php
 
-		-
-			message: '#^Access to property \$id on an unknown class App\\Events\\User\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectTeamMemberJoined.php
 
-		-
-			message: '#^Access to property \$name on an unknown class App\\Events\\Project\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectTeamMemberJoined.php
 
-		-
-			message: '#^Access to property \$name on an unknown class App\\Events\\User\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectTeamMemberJoined.php
 
-		-
-			message: '#^Access to property \$tenant_id on an unknown class App\\Events\\Project\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectTeamMemberJoined.php
 
-		-
-			message: '#^Method App\\Events\\ProjectTeamMemberJoined\:\:broadcastWith\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Events/ProjectTeamMemberJoined.php
 
-		-
-			message: '#^Parameter \$project of method App\\Events\\ProjectTeamMemberJoined\:\:__construct\(\) has invalid type App\\Events\\Project\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectTeamMemberJoined.php
 
-		-
-			message: '#^Parameter \$user of method App\\Events\\ProjectTeamMemberJoined\:\:__construct\(\) has invalid type App\\Events\\User\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectTeamMemberJoined.php
 
-		-
-			message: '#^Property App\\Events\\ProjectTeamMemberJoined\:\:\$project has unknown class App\\Events\\Project as its type\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectTeamMemberJoined.php
 
-		-
-			message: '#^Property App\\Events\\ProjectTeamMemberJoined\:\:\$user has unknown class App\\Events\\User as its type\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Events/ProjectTeamMemberJoined.php
 
 		-
 			message: '#^Method App\\Events\\ProjectUpdated\:\:broadcastWith\(\) return type has no value type specified in iterable type array\.$#'
@@ -6768,59 +6518,14 @@ parameters:
 			count: 1
 			path: app/Http/Controllers/Api/PmDashboardController.php
 
-		-
-			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$tenant_id\.$#'
-			identifier: property.notFound
-			count: 4
-			path: app/Http/Controllers/Api/ProjectAnalyticsController.php
 
-		-
-			message: '#^Call to an undefined static method App\\Models\\Project\:\:forTenant\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 23
-			path: app/Http/Controllers/Api/ProjectAnalyticsController.php
 
-		-
-			message: '#^Call to an undefined static method App\\Models\\ProjectMilestone\:\:whereHas\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 3
-			path: app/Http/Controllers/Api/ProjectAnalyticsController.php
 
-		-
-			message: '#^Call to method input\(\) on an unknown class App\\Http\\Controllers\\Api\\Request\.$#'
-			identifier: class.notFound
-			count: 3
-			path: app/Http/Controllers/Api/ProjectAnalyticsController.php
 
-		-
-			message: '#^Parameter \$request of method App\\Http\\Controllers\\Api\\ProjectAnalyticsController\:\:getMetrics\(\) has invalid type App\\Http\\Controllers\\Api\\Request\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Http/Controllers/Api/ProjectAnalyticsController.php
 
-		-
-			message: '#^Parameter \$request of method App\\Http\\Controllers\\Api\\ProjectAnalyticsController\:\:getPerformance\(\) has invalid type App\\Http\\Controllers\\Api\\Request\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Http/Controllers/Api/ProjectAnalyticsController.php
 
-		-
-			message: '#^Parameter \$request of method App\\Http\\Controllers\\Api\\ProjectAnalyticsController\:\:getRiskAnalysis\(\) has invalid type App\\Http\\Controllers\\Api\\Request\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Http/Controllers/Api/ProjectAnalyticsController.php
 
-		-
-			message: '#^Parameter \$request of method App\\Http\\Controllers\\Api\\ProjectAnalyticsController\:\:getTrends\(\) has invalid type App\\Http\\Controllers\\Api\\Request\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Http/Controllers/Api/ProjectAnalyticsController.php
 
-		-
-			message: '#^Undefined variable\: \$tenantId$#'
-			identifier: variable.undefined
-			count: 1
-			path: app/Http/Controllers/Api/ProjectAnalyticsController.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$id\.$#'
@@ -18744,83 +18449,18 @@ parameters:
 			count: 1
 			path: app/Listeners/InvitationEventListener.php
 
-		-
-			message: '#^Access to property \$addedBy on an unknown class App\\Listeners\\ProjectTeamMemberJoined\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Listeners/LogProjectActivity.php
 
-		-
-			message: '#^Access to property \$changes on an unknown class App\\Listeners\\ProjectTaskUpdated\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Listeners/LogProjectActivity.php
 
-		-
-			message: '#^Access to property \$completedBy on an unknown class App\\Listeners\\ProjectMilestoneCompleted\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Listeners/LogProjectActivity.php
 
-		-
-			message: '#^Access to property \$milestone on an unknown class App\\Listeners\\ProjectMilestoneCompleted\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Listeners/LogProjectActivity.php
 
-		-
-			message: '#^Access to property \$project on an unknown class App\\Listeners\\ProjectTeamMemberJoined\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Listeners/LogProjectActivity.php
 
-		-
-			message: '#^Access to property \$role on an unknown class App\\Listeners\\ProjectTeamMemberJoined\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Listeners/LogProjectActivity.php
 
-		-
-			message: '#^Access to property \$task on an unknown class App\\Listeners\\ProjectTaskUpdated\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Listeners/LogProjectActivity.php
 
-		-
-			message: '#^Access to property \$updatedBy on an unknown class App\\Listeners\\ProjectTaskUpdated\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Listeners/LogProjectActivity.php
 
-		-
-			message: '#^Access to property \$user on an unknown class App\\Listeners\\ProjectTeamMemberJoined\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Listeners/LogProjectActivity.php
 
-		-
-			message: '#^Class App\\Listeners\\ProjectMilestoneCompleted not found\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Listeners/LogProjectActivity.php
 
-		-
-			message: '#^Class App\\Listeners\\ProjectTaskUpdated not found\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Listeners/LogProjectActivity.php
 
-		-
-			message: '#^Class App\\Listeners\\ProjectTeamMemberJoined not found\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Listeners/LogProjectActivity.php
 
-		-
-			message: '#^Method App\\Listeners\\LogProjectActivity\:\:handle\(\) has parameter \$event with no type specified\.$#'
-			identifier: missingType.parameter
-			count: 1
-			path: app/Listeners/LogProjectActivity.php
 
 		-
 			message: '#^Access to property \$changes on an unknown class App\\Listeners\\TaskUpdated\.$#'
@@ -39516,281 +39156,51 @@ parameters:
 			count: 1
 			path: app/Services/PresetService.php
 
-		-
-			message: '#^Access to an undefined property App\\Models\\Project\:\:\$budget_actual\.$#'
-			identifier: property.notFound
-			count: 6
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Access to an undefined property App\\Models\\Project\:\:\$budget_planned\.$#'
-			identifier: property.notFound
-			count: 5
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Access to an undefined property App\\Models\\Project\:\:\$duration\.$#'
-			identifier: property.notFound
-			count: 3
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Access to an undefined property App\\Models\\Project\:\:\$milestones\.$#'
-			identifier: property.notFound
-			count: 5
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Access to an undefined property App\\Models\\Project\:\:\$priority\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Access to an undefined property App\\Models\\Project\:\:\$tasks\.$#'
-			identifier: property.notFound
-			count: 9
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Access to an undefined property App\\Models\\Project\:\:\$teamMembers\.$#'
-			identifier: property.notFound
-			count: 6
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$completed_date\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$target_date\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Call to an undefined method App\\Models\\Project\:\:getBudgetUtilization\(\)\.$#'
-			identifier: method.notFound
-			count: 4
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Call to an undefined method App\\Models\\Project\:\:getDaysRemaining\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Call to an undefined method App\\Models\\Project\:\:isOverdue\(\)\.$#'
-			identifier: method.notFound
-			count: 3
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Call to method count\(\) on an unknown class App\\Services\\Collection\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Call to method groupBy\(\) on an unknown class App\\Services\\Collection\.$#'
-			identifier: class.notFound
-			count: 4
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Call to method sortBy\(\) on an unknown class App\\Services\\Collection\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Call to method where\(\) on an unknown class App\\Services\\Collection\.$#'
-			identifier: class.notFound
-			count: 7
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Method App\\Services\\ProjectAnalyticsService\:\:calculateElapsedTime\(\) should return int but returns float\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Method App\\Services\\ProjectAnalyticsService\:\:calculateRiskScore\(\) has parameter \$risks with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Method App\\Services\\ProjectAnalyticsService\:\:calculateWorkloadDistribution\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Method App\\Services\\ProjectAnalyticsService\:\:getBudgetAnalytics\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Method App\\Services\\ProjectAnalyticsService\:\:getBudgetTrend\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Method App\\Services\\ProjectAnalyticsService\:\:getMilestoneAnalytics\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Method App\\Services\\ProjectAnalyticsService\:\:getMilestoneTimeline\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Method App\\Services\\ProjectAnalyticsService\:\:getMilestoneTrend\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Method App\\Services\\ProjectAnalyticsService\:\:getProjectAnalytics\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Method App\\Services\\ProjectAnalyticsService\:\:getProjectOverview\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Method App\\Services\\ProjectAnalyticsService\:\:getProjectPerformance\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Method App\\Services\\ProjectAnalyticsService\:\:getRiskAssessment\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Method App\\Services\\ProjectAnalyticsService\:\:getTaskAnalytics\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Method App\\Services\\ProjectAnalyticsService\:\:getTaskDistribution\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Method App\\Services\\ProjectAnalyticsService\:\:getTaskTrend\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Method App\\Services\\ProjectAnalyticsService\:\:getTeamAnalytics\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Method App\\Services\\ProjectAnalyticsService\:\:getTimelineAnalytics\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Method App\\Services\\ProjectAnalyticsService\:\:getUpcomingMilestones\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Method App\\Services\\ProjectAnalyticsService\:\:identifyCriticalPath\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Parameter \$milestones of method App\\Services\\ProjectAnalyticsService\:\:calculateAverageMilestoneDelay\(\) has invalid type App\\Services\\Collection\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Parameter \$milestones of method App\\Services\\ProjectAnalyticsService\:\:getMilestoneTimeline\(\) has invalid type App\\Services\\Collection\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Parameter \$milestones of method App\\Services\\ProjectAnalyticsService\:\:getMilestoneTrend\(\) has invalid type App\\Services\\Collection\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Parameter \$milestones of method App\\Services\\ProjectAnalyticsService\:\:getUpcomingMilestones\(\) has invalid type App\\Services\\Collection\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Parameter \$tasks of method App\\Services\\ProjectAnalyticsService\:\:calculateAverageTaskDuration\(\) has invalid type App\\Services\\Collection\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Parameter \$tasks of method App\\Services\\ProjectAnalyticsService\:\:calculateWorkloadDistribution\(\) has invalid type App\\Services\\Collection\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Parameter \$tasks of method App\\Services\\ProjectAnalyticsService\:\:getTaskDistribution\(\) has invalid type App\\Services\\Collection\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Parameter \$tasks of method App\\Services\\ProjectAnalyticsService\:\:getTaskTrend\(\) has invalid type App\\Services\\Collection\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Parameter \$tasks of method App\\Services\\ProjectAnalyticsService\:\:identifyCriticalPath\(\) has invalid type App\\Services\\Collection\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Parameter \$teamMembers of method App\\Services\\ProjectAnalyticsService\:\:calculateSkillUtilization\(\) has invalid type App\\Services\\Collection\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
-		-
-			message: '#^Strict comparison using \=\=\= between ''high''\|''medium'' and ''low'' will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Services/ProjectAnalyticsService.php
 
 		-
 			message: '#^Call to an undefined static method App\\Models\\Project\:\:create\(\)\.$#'
@@ -40800,215 +40210,40 @@ parameters:
 			count: 1
 			path: app/Services/RealTimeDashboardService.php
 
-		-
-			message: '#^Access to an undefined property App\\Models\\Document\:\:\$document_type\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Access to an undefined property App\\Models\\Document\:\:\$file_name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Access to an undefined property App\\Models\\Document\:\:\$file_size\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Access to an undefined property App\\Models\\Document\:\:\$project\.$#'
-			identifier: property.notFound
-			count: 3
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Access to an undefined property App\\Models\\ProjectMilestone\:\:\$project\.$#'
-			identifier: property.notFound
-			count: 3
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Access to an undefined property App\\Models\\Task\:\:\$assigned_to\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Access to an undefined property App\\Models\\Task\:\:\$due_date\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Access to an undefined property App\\Models\\Task\:\:\$project\.$#'
-			identifier: property.notFound
-			count: 3
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$avatar\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Access to property \$code on an unknown class App\\Services\\Project\.$#'
-			identifier: class.notFound
-			count: 3
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Access to property \$id on an unknown class App\\Services\\Project\.$#'
-			identifier: class.notFound
-			count: 10
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Access to property \$name on an unknown class App\\Services\\Project\.$#'
-			identifier: class.notFound
-			count: 3
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Access to property \$progress on an unknown class App\\Services\\Project\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Access to property \$status on an unknown class App\\Services\\Project\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Call to an undefined static method App\\Models\\ProjectActivity\:\:byProject\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 1
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Call to an undefined static method App\\Models\\User\:\:find\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 2
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Call to method teamMembers\(\) on an unknown class App\\Services\\Project\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Method App\\Services\\RealTimeNotificationService\:\:broadcastToProject\(\) has parameter \$data with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Method App\\Services\\RealTimeNotificationService\:\:broadcastToTenant\(\) has parameter \$data with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Method App\\Services\\RealTimeNotificationService\:\:broadcastToTenant\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Method App\\Services\\RealTimeNotificationService\:\:broadcastToUser\(\) has parameter \$data with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Method App\\Services\\RealTimeNotificationService\:\:getNotificationHistory\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Method App\\Services\\RealTimeNotificationService\:\:getUserNotificationPreferences\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Method App\\Services\\RealTimeNotificationService\:\:sendBulkNotificationToTeam\(\) has parameter \$data with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Method App\\Services\\RealTimeNotificationService\:\:sendBulkNotificationToTeam\(\) has parameter \$excludeUserIds with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Method App\\Services\\RealTimeNotificationService\:\:sendCustomNotification\(\) has parameter \$data with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Method App\\Services\\RealTimeNotificationService\:\:sendProjectUpdate\(\) has parameter \$changes with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Method App\\Services\\RealTimeNotificationService\:\:sendTaskUpdate\(\) has parameter \$changes with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Method App\\Services\\RealTimeNotificationService\:\:updateUserNotificationPreferences\(\) has parameter \$preferences with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Parameter \#1 \$project of static method App\\Models\\ProjectActivity\:\:logProjectUpdated\(\) expects App\\Models\\Project, App\\Services\\Project given\.$#'
-			identifier: argument.type
-			count: 2
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Parameter \#1 \$project of static method App\\Models\\ProjectActivity\:\:logTeamMemberJoined\(\) expects App\\Models\\Project, App\\Services\\Project given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Parameter \$project of method App\\Services\\RealTimeNotificationService\:\:sendBulkNotificationToTeam\(\) has invalid type App\\Services\\Project\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Parameter \$project of method App\\Services\\RealTimeNotificationService\:\:sendProjectStatusChange\(\) has invalid type App\\Services\\Project\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Parameter \$project of method App\\Services\\RealTimeNotificationService\:\:sendProjectUpdate\(\) has invalid type App\\Services\\Project\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Services/RealTimeNotificationService.php
 
-		-
-			message: '#^Parameter \$project of method App\\Services\\RealTimeNotificationService\:\:sendTeamMemberJoined\(\) has invalid type App\\Services\\Project\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Services/RealTimeNotificationService.php
 
 		-
 			message: '#^Anonymous function has an unused use \$filters\.$#'

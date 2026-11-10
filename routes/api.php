@@ -278,14 +278,9 @@ Route::group([], function () {
             // và Api\ProjectTemplateController đều chưa từng hoạt động đúng — xem
             // docs/superpowers/specs/2026-07-22-dead-milestone-template-api-removal-design.md)
 
-            // Project Analytics Routes
-            Route::prefix('analytics')->group(function () {
-                Route::get('dashboard', [\App\Http\Controllers\Api\ProjectAnalyticsController::class, 'dashboardAnalytics']);
-                Route::get('projects/{project}', [\App\Http\Controllers\Api\ProjectAnalyticsController::class, 'projectAnalytics']);
-                Route::post('search', [\App\Http\Controllers\Api\ProjectAnalyticsController::class, 'advancedSearch']);
-                Route::get('search-suggestions', [\App\Http\Controllers\Api\ProjectAnalyticsController::class, 'searchSuggestions']);
-                Route::get('filter-options', [\App\Http\Controllers\Api\ProjectAnalyticsController::class, 'filterOptions']);
-            });
+            // (Project analytics routes removed by GAP-119: Api\ProjectAnalyticsController never had the routed methods and
+            // ProjectAnalyticsService was never called — see docs/owner-decisions/GAP-119/02-design.md. Project health is
+            // served by ProjectHealthReadService; api/analytics/dashboard belongs to Api\AnalyticsController.)
 
             // Real-time Collaboration Routes
             Route::prefix('realtime')->group(function () {

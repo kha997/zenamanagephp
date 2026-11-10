@@ -197,9 +197,7 @@ class ProjectMilestoneServiceTest extends TestCase
         $this->assertSame(1, $stats['overdue']);
         $this->assertSame([(string) $late->id], ProjectMilestone::query()->overdue()->pluck('id')->map(fn ($id) => (string) $id)->all());
 
-        // ProjectAnalyticsService uses the same live rule, but cannot run end to end yet (pre-existing defects: missing
-        // Project::isOverdue(), wrong Collection import — backlog item "ProjectAnalyticsService X-1"), so it is not
-        // exercised here.
+        // (ProjectAnalyticsService, which never ran end to end, was removed by GAP-119.)
     }
 
     public function test_migration_backfills_tenant_and_normalizes_stored_overdue(): void

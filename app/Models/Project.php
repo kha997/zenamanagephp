@@ -415,24 +415,6 @@ class Project extends Model
     }
 
     /**
-     * Tính toán tiến độ dựa trên milestones.
-     */
-    public function calculateProgress(): int
-    {
-        $totalMilestones = $this->milestones()->count();
-
-        if ($totalMilestones === 0) {
-            return 0;
-        }
-
-        $completedMilestones = $this->milestones()
-            ->where('status', 'completed')
-            ->count();
-
-        return (int) round(($completedMilestones / $totalMilestones) * 100);
-    }
-
-    /**
      * Tính toán lại chi phí thực tế từ components.
      */
     public function recalculateActualCost(): void

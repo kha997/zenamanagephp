@@ -1,14 +1,14 @@
 ---
 work_id: GAP-120
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-11-10-gap-120-month-end-reminders-evidence.md
   plan: docs/superpowers/plans/2026-11-10-gap-120-month-end-reminders.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-10T21:00:22+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-10, verbatim: 'APPROVE GAP-120 Gate 3'. Given on the packet at PR head 3be43945e7ae6a28b6a45fb1c05a2be3678c4952 (CI green); bound to implementation subject 670bb384488ca017fc49f813f09fb8d7d4e0c6ef and implementation-tree digest eb4a0941d4c34490f34deb8cb5f9a8feb21537bdc205baa9f5cd4b18a21b03e4 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment, release, or enabling of the scheduler on the server authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-10T14:41:15+07:00"
-  updated_at: "2026-11-10T14:41:15+07:00"
+  updated_at: "2026-11-10T21:00:22+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-120 at subject 670bb384488ca017fc49f813f09fb8d7d4e0c6ef (Gate 2 W-1, T-1, C-1, R-1 plus Owner amendment 1; one PR, implementation commits d8d0deb0 and 5a38cffa; no migration). New App\\Services\\Reminders\\MonthEndReminderService: plan() read-only, send() writes in-app notifications (type month_end.time_review / payroll_close / overhead_close, channel inapp, priority normal, link_url, event_key '<type>:<month>:<date>' so at most one per person, kind and month per day). Time review: submitted entries dated from the start of last month to today; project entries to the project PM, own-PM and PM-less to payroll.close holders, non-project to payroll.manage holders other than the author (fallback payroll.close); only from three days before month end to day 5. Payroll / overhead close for last month to payroll.close holders, every day from day 1 until closed, only for tenants with staff records; links to the payroll period page, the payroll index, or the overhead page. New command reminders:month-end {--dry-run} {--date=}; Console\\Kernel schedules it daily 08:00 Asia/Ho_Chi_Minh behind ENABLE_SCHEDULER. Go-live runbook documents ENABLE_SCHEDULER=true and the dry run. Amendment 1: ScheduleContractTest's approved workload list gains reminders:month-end (CI caught the contract, reproduced locally, fixed). Tests: MonthEndRemindersTest (8) red before, green after on SQLite and MySQL; dry run and real run on sample data (PM received 'Còn 1 dòng giờ chờ bạn duyệt, cũ nhất 24/11', a second run the same day wrote nothing). PHPStan, php-cs-fixer, ssot:lint, deptrac, governance lint pass. Local Unit + Feature + Integration 3023 tests: the 2 known root-only failures plus the schedule contract (since fixed; tests/Feature/Console re-run green apart from the root-only one); Feature/Api 825 green. Exact-head CI recorded in the body."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "670bb384488ca017fc49f813f09fb8d7d4e0c6ef"
   verified_at: "2026-11-10T14:41:15+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "eb4a0941d4c34490f34deb8cb5f9a8feb21537bdc205baa9f5cd4b18a21b03e4"
+  decision_recorded_at: "2026-11-10T21:00:22+07:00"
 ---
 
 # GAP-120 — Gate 3 release decision (month-end reminders)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-11-10 ("APPROVE GAP-120 Gate 3"), bound to implementation subject
+`670bb384488ca017fc49f813f09fb8d7d4e0c6ef` and implementation-tree digest `eb4a0941d4c34490f34deb8cb5f9a8feb21537bdc205baa9f5cd4b18a21b03e4`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 
@@ -112,7 +117,7 @@ Các bước này đã ghi trong `docs/runbooks/go-live.md`. Không migration.
   - Lỗi test lịch định kỳ: đã sửa theo bổ sung 1. Chạy lại `tests/Feature/Console` và test nhắc việc thì xanh, trừ lỗi do
     chạy bằng root.
 - **Feature/Api:** 825 test, tất cả xanh.
-- **CI trên đúng head:** ghi nhận trước khi merge.
+- **CI trên đúng head:** subject `670bb384` và head `3be43945` đều xanh.
 
 ## Decision Needed
 

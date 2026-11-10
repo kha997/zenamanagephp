@@ -1,32 +1,38 @@
 ---
 work_id: GAP-121
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-11-10-gap-121-month-close-mysql-concurrency-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-11-10-gap-121-month-close-mysql-concurrency.md
   branch: docs/GAP-121-month-close-mysql-concurrency
   pr: https://github.com/kha997/zenamanagephp/pull/411
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-10T22:21:42+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-10, verbatim: 'APPROVE GAP-121 Gate 2 S-1 J-1'. Reviewed design head: c8316f504e796a2cdcfacbd1c83a336519b60eb2. Approves S-1 (four races on real MySQL: payroll close vs manual time entry in both orders, two payroll closes, overhead close vs payroll reopen in both orders, two overhead closes) and J-1 (new CI job Month Close Concurrency (real MySQL) modeled on the Treasury job, failing on a skip while MySQL is reachable), one PR / one Gate 3, with the exact allowlist in this packet; no change to close rules or locks (a real race found is reported as an amendment); not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-10T22:13:57+07:00"
-  updated_at: "2026-11-10T22:13:57+07:00"
+  updated_at: "2026-11-10T22:21:42+07:00"
 generated_by: agent
 ---
 
 # GAP-121 — Real-MySQL concurrency tests for the month close: Gate 2 design
+
+## OWNER GATE 2: APPROVED — S-1, J-1
+
+Owner approved S-1 and J-1 in-session on 2026-11-10 against reviewed design head
+`c8316f504e796a2cdcfacbd1c83a336519b60eb2`. This authorizes only the bounded implementation defined by this packet; it does not authorize Gate 3,
+merge, release, or deployment.
 
 ## Owner Summary
 

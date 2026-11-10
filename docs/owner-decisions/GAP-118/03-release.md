@@ -1,14 +1,14 @@
 ---
 work_id: GAP-118
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-11-10-gap-118-mobile-my-work-timesheet-evidence.md
   plan: docs/superpowers/plans/2026-11-10-gap-118-mobile-my-work-timesheet.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-10T11:40:29+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-10, verbatim: 'APPROVE GAP-118 Gate 3'. Given on the packet at PR head f94b8d0d9604d28c39abe95ee1ac73eddbae9bdb (CI green); bound to implementation subject 6518078a88cb8d2f1018972ccc9f19ba82c67d00 and implementation-tree digest 259a575fc42e9738cc3c68890309e1647f67e4ba71524a11dd367e3f2610a17e (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-10T09:10:11+07:00"
-  updated_at: "2026-11-10T09:10:11+07:00"
+  updated_at: "2026-11-10T11:40:29+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-118 at subject 6518078a88cb8d2f1018972ccc9f19ba82c67d00 (Gate 2 N-1, H-1, C-1, T-1, R-2, V-1; exact allowlist, no amendment; one PR, one implementation commit; views, CSS and one test file only, no PHP runtime code, no migration). N-1/H-1: layouts/operator.blade.php adds a native <details class=operator-mobile-nav> '☰ Menu' in the top bar (same OperatorNavigationComposer navigation, search, full name, logout) and the user's initials; operator.css hides the sidebar and the long top-bar parts at ≤1024px and hides the mobile menu above; a small vanilla script closes the menu on link click; header.operator-topbar class kept. C-1/T-1: new partials app/_workload-items-cards (task / design-item cards, Start form on tasks) and time/_running-bar (fixed bottom bar with Stop, ≤1024px); my-work and timesheet show cards below 768px and the unchanged tables from 768px; the desktop running banner and 'Ghi giờ' card stay on wide screens. Tests: tests/Feature/Mobile/OperatorMobileLayoutTest (4) red before, green after; MyWorkPageTest, TimeTracking and the Alpine guard green. Playwright (iPhone 13, 390px): content starts at 96px (was 1,050px), top bar 64px, no horizontal scroll, no overflowing table, cards visible, Start / Stop buttons 47px. Desktop 1440px: screenshots of both pages pixel-identical before and after. npm run build, php-cs-fixer, ssot:lint, governance lint pass. Local Unit + Feature + Integration 3013 tests: only the 2 known root-only failures; Feature/Api 825 green (the PDF-export tests pass in this container now that node_modules is installed). Exact-head CI recorded in the body."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "6518078a88cb8d2f1018972ccc9f19ba82c67d00"
   verified_at: "2026-11-10T09:10:11+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "259a575fc42e9738cc3c68890309e1647f67e4ba71524a11dd367e3f2610a17e"
+  decision_recorded_at: "2026-11-10T11:40:29+07:00"
 ---
 
 # GAP-118 — Gate 3 release decision (phone layout for My Work and Timesheet)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-11-10 ("APPROVE GAP-118 Gate 3"), bound to implementation subject
+`6518078a88cb8d2f1018972ccc9f19ba82c67d00` and implementation-tree digest `259a575fc42e9738cc3c68890309e1647f67e4ba71524a11dd367e3f2610a17e`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 
@@ -105,7 +110,7 @@ Trang "Duyệt giờ" của PM để sau (R-2), nhưng vẫn có menu và thanh 
   `BackupStorageLocationTest`).
 - **Feature/Api:** 825 test, tất cả xanh.
 - Lần này máy đã cài bộ dựng giao diện (node_modules) nên các test xuất PDF cũng xanh.
-- **CI trên đúng head:** ghi nhận trước khi merge.
+- **CI trên đúng head:** commit mã `6518078a` và head `f94b8d0d` đều xanh.
 
 ## Decision Needed
 

@@ -11,7 +11,7 @@
 
     {{-- GAP-112 T-1: timer on own tasks. --}}
     @if ($running)
-        <div class="mb-3 flex flex-wrap items-center gap-3 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm">
+        <div class="operator-desktop-only mb-3 flex flex-wrap items-center gap-3 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm">
             <span>Đang ghi giờ: <strong>{{ $running->label() }}</strong> từ {{ $running->started_at?->format('H:i') }}</span>
             <form method="POST" action="{{ route('app.time.stop') }}" data-testid="time-stop-form">@csrf<button type="submit" class="operator-button operator-button-primary">Dừng</button></form>
             <a href="{{ route('app.time.index') }}" class="operator-link">Bảng giờ của tôi</a>
@@ -30,12 +30,16 @@
         @if ($items->isEmpty())
             <p class="text-sm text-slate-500">Bạn chưa có việc nào đang mở.</p>
         @else
-            @include('app._workload-items-table', ['items' => $items])
+            {{-- GAP-118 C-1: table from 768px, cards below. --}}
+            <div class="operator-wide-only">@include('app._workload-items-table', ['items' => $items])</div>
+            <div class="operator-phone-only">@include('app._workload-items-cards', ['items' => $items])</div>
         @endif
     </x-ui.card>
 
     @php $timedTasks = $items->where('sourceType', 'task'); @endphp
     @if ($timedTasks->isNotEmpty())
+        {{-- GAP-118 T-1: on phones the Start buttons sit on each card instead. --}}
+        <div class="operator-wide-only">
         <x-ui.card title="Ghi giờ">
             <div class="space-y-1 p-4">
                 @foreach ($timedTasks as $item)
@@ -48,5 +52,8 @@
                 @endforeach
             </div>
         </x-ui.card>
+        </div>
     @endif
+
+    @include('time._running-bar', ['running' => $running])
 @endsection

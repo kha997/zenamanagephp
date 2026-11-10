@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-10T22:13:57+07:00"
-  updated_at: "2026-11-10T22:21:42+07:00"
+  updated_at: "2026-11-10T22:46:38+07:00"
 generated_by: agent
 ---
 
@@ -104,6 +104,20 @@ Các lệnh:
   `docs/superpowers/plans/2026-11-10-gap-121-month-close-mysql-concurrency.md`
 
 File nào khác cần đổi sẽ hỏi Owner trước và ghi thành bổ sung (amendment) trong hồ sơ này.
+
+## Owner amendment 1 (2026-11-10, SSOT lint)
+
+**Vấn đề:** `composer ssot:lint` giữ danh sách cố định các test có thể bị bỏ qua (skip), ở
+`scripts/ssot/baselines/skipped_tests_baseline.txt`.
+- Test mới bỏ qua khi không có MySQL, giống 4 test đồng thời sẵn có. Các test đó đều đã có dòng của mình trong danh sách.
+- Test mới chưa có dòng, nên lint báo lỗi.
+
+**Owner chọn (AskUserQuestion, 2026-11-10):** "Bổ sung allowlist, thêm 1 dòng (Recommended)".
+
+**Thay đổi:** thêm đúng một dòng `MonthCloseConcurrencyTest::skipUnlessMysqlAvailable|group=stress|reason=dependency:`,
+giữ thứ tự sắp xếp. Job CI riêng vẫn báo đỏ nếu test bị bỏ qua khi MySQL đang chạy.
+
+**File thêm vào allowlist:** `scripts/ssot/baselines/skipped_tests_baseline.txt`.
 
 ## Ngoài phạm vi
 

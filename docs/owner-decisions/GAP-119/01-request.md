@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-11-10-gap-119-project-analytics-cleanup-evidence.md
   plan: null
   branch: docs/GAP-119-project-analytics-cleanup
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/409
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

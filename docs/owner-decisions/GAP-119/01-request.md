@@ -1,11 +1,11 @@
 ---
 work_id: GAP-119
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-11-10-gap-119-project-analytics-cleanup-evidence.md
   plan: null
@@ -15,16 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-10T12:51:29+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-10, verbatim: 'APPROVE GAP-119 Gate 1'. Bound to reviewed Draft PR #409 head 2629336664bd55ffb76eec4aee4cc652c417e39a, canonical base 7352fc46f3dd3f7c55484767d399f3c60b7fc8ab. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-10T12:43:40+07:00"
-  updated_at: "2026-11-10T12:43:40+07:00"
+  updated_at: "2026-11-10T12:51:29+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-119 Gate 1 in-session on 2026-11-10 against Draft PR #409 head
+`2629336664bd55ffb76eec4aee4cc652c417e39a`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

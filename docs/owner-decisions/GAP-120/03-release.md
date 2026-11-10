@@ -1,14 +1,14 @@
 ---
 work_id: GAP-120
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-11-10-gap-120-month-end-reminders-evidence.md
   plan: docs/superpowers/plans/2026-11-10-gap-120-month-end-reminders.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-10T21:14:22+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-10, verbatim: 'APPROVE GAP-120 Gate 3'. Re-approval after the Codex fix (Owner amendment 2), given on the packet at PR head 048e39a8d63e728023b44539221a90941bef377a; bound to implementation subject 36be8b96828dd8f0108c928fd7591f1095659d91 and implementation-tree digest ba001ccc8d9656c1769f06fd6e1d93a839d65cb73a38cc339f3f05e707b4ab6d (recomputed at recording time, zero drift). Supersedes the earlier approval bound to 670bb384 / eb4a0941. Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment, release, or enabling of the scheduler on the server authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-10T14:41:15+07:00"
-  updated_at: "2026-11-10T21:09:36+07:00"
+  updated_at: "2026-11-10T21:14:22+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-120 at subject 36be8b96828dd8f0108c928fd7591f1095659d91 (re-presented after the Codex review — Owner amendment 2: time-review reminder recipients now mirror TimeReviewService::canReview: project entries to the PM when allowed, otherwise project.update holders; non-project entries to payroll.manage holders; nobody reminded of their own entries unless holding payroll.close; new test proves each recipient can review and sees the reminded entries in the linked queue and every waiting entry reaches a reviewer, red on the old code, green on SQLite and MySQL. Gate 2 W-1, T-1, C-1, R-1 plus Owner amendments 1 and 2; one PR, implementation commits d8d0deb0, 5a38cffa and d17d9607; no migration). New App\\Services\\Reminders\\MonthEndReminderService: plan() read-only, send() writes in-app notifications (type month_end.time_review / payroll_close / overhead_close, channel inapp, priority normal, link_url, event_key '<type>:<month>:<date>' so at most one per person, kind and month per day). Time review: submitted entries dated from the start of last month to today, recipients per amendment 2; only from three days before month end to day 5. Payroll / overhead close for last month to payroll.close holders, every day from day 1 until closed, only for tenants with staff records; links to the payroll period page, the payroll index, or the overhead page. New command reminders:month-end {--dry-run} {--date=}; Console\\Kernel schedules it daily 08:00 Asia/Ho_Chi_Minh behind ENABLE_SCHEDULER. Go-live runbook documents ENABLE_SCHEDULER=true and the dry run. Amendment 1: ScheduleContractTest's approved workload list gains reminders:month-end (CI caught the contract, reproduced locally, fixed). Tests: MonthEndRemindersTest (9) red before, green after on SQLite and MySQL; dry run and real run on sample data (PM received 'Còn 1 dòng giờ chờ bạn duyệt, cũ nhất 24/11', a second run the same day wrote nothing). PHPStan, php-cs-fixer, ssot:lint, deptrac, governance lint pass. Local Unit + Feature + Integration 3023 tests: the 2 known root-only failures plus the schedule contract (since fixed; tests/Feature/Console re-run green apart from the root-only one); Feature/Api 825 green. Exact-head CI recorded in the body."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "36be8b96828dd8f0108c928fd7591f1095659d91"
   verified_at: "2026-11-10T21:09:36+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "ba001ccc8d9656c1769f06fd6e1d93a839d65cb73a38cc339f3f05e707b4ab6d"
+  decision_recorded_at: "2026-11-10T21:14:22+07:00"
 ---
 
 # GAP-120 — Gate 3 release decision (month-end reminders)
+
+## OWNER GATE 3: APPROVED
+
+Owner re-approved Gate 3 in-session on 2026-11-10 ("APPROVE GAP-120 Gate 3") after the Codex fix, bound to
+implementation subject `36be8b96828dd8f0108c928fd7591f1095659d91` and implementation-tree digest `ba001ccc8d9656c1769f06fd6e1d93a839d65cb73a38cc339f3f05e707b4ab6d`. No deployment or release is authorized.
 
 ## Gate 3 trình lại sau review Codex
 

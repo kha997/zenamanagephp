@@ -38,10 +38,15 @@ class OverheadConcurrencyTestClose extends Command
             DB::beginTransaction();
         }
 
+        // Timestamps let the test prove B reached the contested call while A still held its locks.
+        $this->line('START ' . sprintf('%.6f', microtime(true)));
+
         try {
             $result = (string) $overhead->close($actor, $period)->id;
             if ($hold > 0) {
+                $this->line('LOCKED');
                 usleep((int) ($hold * 1_000_000));
+                $this->line('RELEASE ' . sprintf('%.6f', microtime(true)));
                 DB::commit();
             }
             $this->line('OK ' . $result);

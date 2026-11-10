@@ -23,7 +23,7 @@ use Tests\Traits\TenantUserFactoryTrait;
 /**
  * GAP-121 (Gate 2 S-1) — the month close holds under real concurrency. Two independent OS processes / MySQL
  * connections race on the same month; process A holds its transaction (and locks) open for a few seconds, B starts
- * while A holds. Sequential sqlite calls cannot prove this, so the test skips without MySQL (the CI job
+ * once A reports it holds them, and the test checks B reached its call before A released. Sequential sqlite calls cannot prove this, so the test skips without MySQL (the CI job
  * scripts/ci/month-close-concurrency-mysql fails on a skip).
  *
  * - 1a payroll close vs a time entry added into the month: the entry waits, then is refused (month closed).
@@ -205,7 +205,9 @@ class MonthCloseConcurrencyTest extends TestCase
     }
 
     /**
-     * Starts A with --hold=3, then B 1.5 s later, and waits for both.
+     * Starts A with --hold, waits until A reports it holds its locks ("LOCKED"), then starts B and waits for both.
+     * Asserts B reached the contested call ("START <t>") before A released ("RELEASE <t>"), so a slow runner cannot turn
+     * the race into two sequential runs that pass without any lock contention.
      *
      * @param list<string> $a
      * @param list<string> $b
@@ -215,18 +217,40 @@ class MonthCloseConcurrencyTest extends TestCase
     private function race(array $a, array $b): array
     {
         $php = (new PhpExecutableFinder())->find();
-        $procA = new Process([$php, 'artisan', ...$a, '--hold=3'], base_path(), ['DB_CONNECTION' => 'mysql']);
+        $procA = new Process([$php, 'artisan', ...$a, '--hold=5'], base_path(), ['DB_CONNECTION' => 'mysql']);
         $procB = new Process([$php, 'artisan', ...$b, '--hold=0'], base_path(), ['DB_CONNECTION' => 'mysql']);
         $procA->setTimeout(60);
         $procB->setTimeout(60);
 
         $procA->start();
-        usleep(1_500_000);
+        $deadline = microtime(true) + 30;
+        while (!str_contains($procA->getOutput(), 'LOCKED')) {
+            if (!$procA->isRunning() || microtime(true) > $deadline) {
+                $procA->stop();
+                $this->fail('A never reported holding its locks: ' . $procA->getOutput() . $procA->getErrorOutput());
+            }
+            usleep(20_000);
+        }
         $procB->start();
         $procA->wait();
         $procB->wait();
 
+        $bStart = $this->stamp($procB, 'START');
+        $aRelease = $this->stamp($procA, 'RELEASE');
+        $this->assertLessThan(
+            $aRelease,
+            $bStart,
+            'B must reach the contested call while A still holds its locks. A: ' . $procA->getOutput() . ' | B: ' . $procB->getOutput()
+        );
+
         return [$procA, $procB];
+    }
+
+    private function stamp(Process $process, string $marker): float
+    {
+        $this->assertSame(1, preg_match('/^' . $marker . ' (\d+\.\d+)$/m', $process->getOutput(), $m), $marker . ' missing: ' . $process->getOutput() . $process->getErrorOutput());
+
+        return (float) $m[1];
     }
 
     /**

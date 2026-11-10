@@ -171,6 +171,44 @@ class WorkTemplateAuthoringPageTest extends TestCase
         $this->assertSame(3, WorkTemplateField::query()->where('work_template_step_id', $copySteps->firstWhere('step_key', 'design-intake')?->id)->count());
     }
 
+    public function test_unchanged_days_keep_the_exact_hours_of_existing_steps(): void
+    {
+        // Codex review: the baselines have 12-hour steps; showing them as 1 day must not turn them into 24 h on save.
+        $this->seed(WorkTemplateBaselineSeeder::class);
+        /** @var WorkTemplate $design */
+        $design = WorkTemplate::query()->where('tenant_id', (string) $this->tenant->id)->where('code', 'WT-BL-DESIGN')->firstOrFail();
+        $rows = $this->rowsFromVersion($this->latestVersion($design));
+        $rows[0]['name'] = 'Thu thập đầu vào thiết kế';
+        $this->saveSteps($design, $rows);
+
+        $hours = WorkTemplateStep::query()->where('work_template_version_id', $this->latestVersion($design)->id)->pluck('sla_hours', 'step_key')->all();
+        $this->assertSame(['design-intake' => 24, 'design-coordination' => 72, 'design-review' => 24, 'issue-design-package' => 12], array_map('intval', $hours));
+
+        // Changing the day value does change the duration.
+        $rows[3]['days'] = 2;
+        $this->saveSteps($design, $rows);
+        $this->assertSame(48, (int) WorkTemplateStep::query()->where('work_template_version_id', $this->latestVersion($design)->id)->where('step_key', 'issue-design-package')->value('sla_hours'));
+    }
+
+    public function test_the_step_limit_counts_kept_steps_not_the_blank_form_rows(): void
+    {
+        // Codex review: the page always adds blank rows, so a 100-step template posts more than 100 rows.
+        $template = $this->createTemplate('WT-DAI', 'Mẫu dài');
+        $rows = [];
+        for ($i = 1; $i <= 100; $i++) {
+            $rows[] = ['order' => $i, 'name' => 'Bước ' . $i, 'type' => 'task', 'days' => 1];
+        }
+        $blank = ['order' => 101, 'name' => '', 'type' => 'task', 'days' => 1, 'phase' => '', 'checklist' => '', 'docs' => ''];
+        $this->saveSteps($template, array_merge($rows, [$blank, $blank, $blank]));
+        $this->assertSame(100, WorkTemplateStep::query()->where('work_template_version_id', $this->latestVersion($template)->id)->count());
+
+        $rows[] = ['order' => 101, 'name' => 'Bước 101', 'type' => 'task', 'days' => 1];
+        $this->actingAs($this->owner)->from(route('app.work-templates.edit', $template->id))
+            ->post(route('app.work-templates.update', $template->id), ['name' => 'Mẫu dài', 'steps' => array_merge($rows, [$blank, $blank, $blank])])
+            ->assertSessionHasErrors('steps');
+        $this->assertSame(100, WorkTemplateStep::query()->where('work_template_version_id', $this->latestVersion($template)->id)->count());
+    }
+
     public function test_validation_rejects_missing_names_duplicates_cycles_and_bad_days(): void
     {
         $template = $this->createTemplate('WT-LOI', 'Lỗi');

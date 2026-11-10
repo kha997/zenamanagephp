@@ -36,6 +36,8 @@ class WorkTemplateEditorService
 
     public const MAX_DAYS = 365;
 
+    public const MAX_STEPS = 100;
+
     /**
      * The version the editor shows: the open draft, else the latest published version, else the latest one.
      */
@@ -204,6 +206,10 @@ class WorkTemplateEditorService
             $above[$item['key']] = true;
         }
 
+        if (count($kept) > self::MAX_STEPS) {
+            $errors['steps'] = 'Một mẫu có tối đa ' . self::MAX_STEPS . ' bước.';
+        }
+
         if ($errors !== []) {
             throw ValidationException::withMessages($errors);
         }
@@ -235,7 +241,10 @@ class WorkTemplateEditorService
                 'order' => $position + 1,
                 'depends_on' => $item['after'],
                 'assignee_rule' => $base['assignee_rule'] ?? ['role' => 'project_manager'],
-                'sla_hours' => $item['days'] * 24,
+                // Days are shown rounded up; an unchanged day value keeps the exact stored hours (e.g. 12 h steps).
+                'sla_hours' => isset($base['sla_hours']) && is_numeric($base['sla_hours']) && (int) ceil(((int) $base['sla_hours']) / 24) === $item['days']
+                    ? (int) $base['sla_hours']
+                    : $item['days'] * 24,
                 'config' => $config,
                 'fields' => $base['fields'] ?? [],
             ]);

@@ -100,7 +100,8 @@ class WorkTemplatePageController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
-            'steps' => ['nullable', 'array', 'max:100'],
+            // Form rows, including the blank rows the page adds; the step limit is checked on the kept steps (editor service).
+            'steps' => ['nullable', 'array', 'max:' . (WorkTemplateEditorService::MAX_STEPS + 20)],
         ]);
         $source = $this->editor->editableVersion($template);
         abort_unless($this->editor->isEditable($source), 422, 'Mẫu này chỉ sửa được qua API.');

@@ -1,14 +1,14 @@
 ---
 work_id: GAP-122
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-11-11-gap-122-mobile-time-review-evidence.md
   plan: docs/superpowers/plans/2026-11-11-gap-122-mobile-time-review.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-11T00:25:32+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-11, verbatim: 'APPROVE GAP-122 Gate 3'. Given on the packet at PR head d6d80e397f1f8ed99408dbab4a99d9e8a050a229; bound to implementation subject 66eca693556038ca0c841ccbd90330e2645ec864 and implementation-tree digest d60a6ee105a54f429c281afaae8f277e1df5c1f43367ba5c510eaf135d955982 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28, after exact-head CI is green; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-11T00:22:14+07:00"
-  updated_at: "2026-11-11T00:22:14+07:00"
+  updated_at: "2026-11-11T00:25:32+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-122 at subject 66eca693556038ca0c841ccbd90330e2645ec864 (Gate 2 L-1, A-1, N-1; one PR, implementation commit 66eca693; views, CSS and one test only, no controller, service, route or migration change). Below 768px 'Duyệt giờ' renders new partial time/_review-cards: cards grouped by person (name, entry count, total time), each card with date, task, project, duration in large type, note, 'Tự dừng' / 'Nhập tay' badges, an approve form and a reject form inside <details> with a required reason (max 500); a person with more than one entry gets an 'Duyệt cả N dòng của <tên>' form (a person with one entry already has the card's own button). All forms post to the existing app.time.review.act with exactly their ids[], action and week, sit outside the desktop table's form and carry no tick boxes. The desktop table and its bulk form are wrapped in operator-wide-only; the header week buttons are wide-only and a one-line phone week bar ('‹ Tuần trước', 'Tuần sau ›', 'Giờ của tôi') replaces them below 768px. New CSS classes operator-review-*. Tests: TimeReviewMobileLayoutTest (5) — the 3 layout tests red before, green after; the 2 behaviour guards (one entry approved per card form, reject without reason refused) green; TimeReviewTest green. Playwright on the demo app: iPhone 13 — no table rendered, no horizontal scroll, every action button 47 px tall (group button 68 px, two lines), approve and reject-with-reason clicked for real (one entry each, reason stored, reject without reason blocked by the browser); desktop 1440 px — screenshot pixel-identical to the pre-change one. php-cs-fixer, ssot:lint, docs-lint, governance lint pass. Local Unit + Feature + Integration 3035 tests: only the 2 known root-only failures; Feature/Api 825 green. Exact-head CI recorded in the body."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "66eca693556038ca0c841ccbd90330e2645ec864"
   verified_at: "2026-11-11T00:22:14+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "d60a6ee105a54f429c281afaae8f277e1df5c1f43367ba5c510eaf135d955982"
+  decision_recorded_at: "2026-11-11T00:25:32+07:00"
 ---
 
 # GAP-122 — Gate 3 release decision (phone layout for "Duyệt giờ")
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-11-11 ("APPROVE GAP-122 Gate 3"), bound to implementation subject
+`66eca693556038ca0c841ccbd90330e2645ec864` and implementation-tree digest `d60a6ee105a54f429c281afaae8f277e1df5c1f43367ba5c510eaf135d955982`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

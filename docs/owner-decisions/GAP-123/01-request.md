@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-11-11-gap-123-work-template-authoring-evidence.md
   plan: null
   branch: docs/GAP-123-work-template-authoring
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/413
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

@@ -1,14 +1,14 @@
 ---
 work_id: GAP-120
 gate: 3
-gate_status: approved
+gate_status: awaiting_owner
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: approved
+  value: none
   authority: human_owner
-decision_requested: null
+decision_requested: "approve_or_correction_or_defer"
 references:
   spec: docs/audits/2026-11-10-gap-120-month-end-reminders-evidence.md
   plan: docs/superpowers/plans/2026-11-10-gap-120-month-end-reminders.md
@@ -18,50 +18,60 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-11-10T21:00:22+07:00"
-  owner_response_reference: "Owner decision in-session on 2026-11-10, verbatim: 'APPROVE GAP-120 Gate 3'. Given on the packet at PR head 3be43945e7ae6a28b6a45fb1c05a2be3678c4952 (CI green); bound to implementation subject 670bb384488ca017fc49f813f09fb8d7d4e0c6ef and implementation-tree digest eb4a0941d4c34490f34deb8cb5f9a8feb21537bdc205baa9f5cd4b18a21b03e4 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment, release, or enabling of the scheduler on the server authorized."
+  recorded_at: null
+  owner_response_reference: null
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-10T14:41:15+07:00"
-  updated_at: "2026-11-10T21:00:22+07:00"
+  updated_at: "2026-11-10T21:09:36+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "GAP-120 at subject 670bb384488ca017fc49f813f09fb8d7d4e0c6ef (Gate 2 W-1, T-1, C-1, R-1 plus Owner amendment 1; one PR, implementation commits d8d0deb0 and 5a38cffa; no migration). New App\\Services\\Reminders\\MonthEndReminderService: plan() read-only, send() writes in-app notifications (type month_end.time_review / payroll_close / overhead_close, channel inapp, priority normal, link_url, event_key '<type>:<month>:<date>' so at most one per person, kind and month per day). Time review: submitted entries dated from the start of last month to today; project entries to the project PM, own-PM and PM-less to payroll.close holders, non-project to payroll.manage holders other than the author (fallback payroll.close); only from three days before month end to day 5. Payroll / overhead close for last month to payroll.close holders, every day from day 1 until closed, only for tenants with staff records; links to the payroll period page, the payroll index, or the overhead page. New command reminders:month-end {--dry-run} {--date=}; Console\\Kernel schedules it daily 08:00 Asia/Ho_Chi_Minh behind ENABLE_SCHEDULER. Go-live runbook documents ENABLE_SCHEDULER=true and the dry run. Amendment 1: ScheduleContractTest's approved workload list gains reminders:month-end (CI caught the contract, reproduced locally, fixed). Tests: MonthEndRemindersTest (8) red before, green after on SQLite and MySQL; dry run and real run on sample data (PM received 'Còn 1 dòng giờ chờ bạn duyệt, cũ nhất 24/11', a second run the same day wrote nothing). PHPStan, php-cs-fixer, ssot:lint, deptrac, governance lint pass. Local Unit + Feature + Integration 3023 tests: the 2 known root-only failures plus the schedule contract (since fixed; tests/Feature/Console re-run green apart from the root-only one); Feature/Api 825 green. Exact-head CI recorded in the body."
+mandatory_technical_gate_summary: "GAP-120 at subject 36be8b96828dd8f0108c928fd7591f1095659d91 (re-presented after the Codex review — Owner amendment 2: time-review reminder recipients now mirror TimeReviewService::canReview: project entries to the PM when allowed, otherwise project.update holders; non-project entries to payroll.manage holders; nobody reminded of their own entries unless holding payroll.close; new test proves each recipient can review and sees the reminded entries in the linked queue and every waiting entry reaches a reviewer, red on the old code, green on SQLite and MySQL. Gate 2 W-1, T-1, C-1, R-1 plus Owner amendments 1 and 2; one PR, implementation commits d8d0deb0, 5a38cffa and d17d9609; no migration). New App\\Services\\Reminders\\MonthEndReminderService: plan() read-only, send() writes in-app notifications (type month_end.time_review / payroll_close / overhead_close, channel inapp, priority normal, link_url, event_key '<type>:<month>:<date>' so at most one per person, kind and month per day). Time review: submitted entries dated from the start of last month to today, recipients per amendment 2; only from three days before month end to day 5. Payroll / overhead close for last month to payroll.close holders, every day from day 1 until closed, only for tenants with staff records; links to the payroll period page, the payroll index, or the overhead page. New command reminders:month-end {--dry-run} {--date=}; Console\\Kernel schedules it daily 08:00 Asia/Ho_Chi_Minh behind ENABLE_SCHEDULER. Go-live runbook documents ENABLE_SCHEDULER=true and the dry run. Amendment 1: ScheduleContractTest's approved workload list gains reminders:month-end (CI caught the contract, reproduced locally, fixed). Tests: MonthEndRemindersTest (9) red before, green after on SQLite and MySQL; dry run and real run on sample data (PM received 'Còn 1 dòng giờ chờ bạn duyệt, cũ nhất 24/11', a second run the same day wrote nothing). PHPStan, php-cs-fixer, ssot:lint, deptrac, governance lint pass. Local Unit + Feature + Integration 3023 tests: the 2 known root-only failures plus the schedule contract (since fixed; tests/Feature/Console re-run green apart from the root-only one); Feature/Api 825 green. Exact-head CI recorded in the body."
 technical_evidence:
   base_sha: "5ff8671a4b9efeead2e496420baf512880842364"
-  subject_sha: "670bb384488ca017fc49f813f09fb8d7d4e0c6ef"
-  implementation_tree_digest: "eb4a0941d4c34490f34deb8cb5f9a8feb21537bdc205baa9f5cd4b18a21b03e4"
-  verified_pr_head_sha: "670bb384488ca017fc49f813f09fb8d7d4e0c6ef"
-  verified_at: "2026-11-10T14:41:15+07:00"
+  subject_sha: "36be8b96828dd8f0108c928fd7591f1095659d91"
+  implementation_tree_digest: "ba001ccc8d9656c1769f06fd6e1d93a839d65cb73a38cc339f3f05e707b4ab6d"
+  verified_pr_head_sha: "36be8b96828dd8f0108c928fd7591f1095659d91"
+  verified_at: "2026-11-10T21:09:36+07:00"
 owner_decision_binding:
-  implementation_tree_digest: "eb4a0941d4c34490f34deb8cb5f9a8feb21537bdc205baa9f5cd4b18a21b03e4"
-  decision_recorded_at: "2026-11-10T21:00:22+07:00"
+  implementation_tree_digest: null
+  decision_recorded_at: null
 ---
 
 # GAP-120 — Gate 3 release decision (month-end reminders)
 
-## OWNER GATE 3: APPROVED
+## Gate 3 trình lại sau review Codex
 
-Owner approved Gate 3 in-session on 2026-11-10 ("APPROVE GAP-120 Gate 3"), bound to implementation subject
-`670bb384488ca017fc49f813f09fb8d7d4e0c6ef` and implementation-tree digest `eb4a0941d4c34490f34deb8cb5f9a8feb21537bdc205baa9f5cd4b18a21b03e4`. No deployment or release is authorized.
+Owner đã duyệt Gate 3 ("APPROVE GAP-120 Gate 3") trên subject `670bb384` (digest `eb4a0941…03e4`). Codex sau đó tìm ra một
+lỗi thật trong cách chọn người nhận lời nhắc "giờ chờ duyệt":
+- giờ của chính PM, hoặc giờ ở công trình chưa có PM, được nhắc cho người chốt lương;
+- người chốt lương chưa chắc có quyền duyệt giờ công trình;
+- vì vậy họ mở trang Duyệt giờ mà không thấy các dòng được nhắc.
+
+Owner chọn "nhắc đúng người duyệt được" (bổ sung 2). Đã sửa ở commit `d17d9609`:
+- người nhận khớp đúng quyền duyệt của trang Duyệt giờ;
+- có test mới chứng minh mỗi người nhận đều thấy và duyệt được các dòng được nhắc.
+
+Vì mã đổi nên subject và digest mới cần Owner duyệt lại.
 
 ## Gói quyết định phát hành
 
 **1. Vấn đề là gì?** Không có gì nhắc PM duyệt giờ, và không có gì nhắc Owner / kế toán chốt lương và chi phí chung cuối
 tháng.
 
-**2. Sau thay đổi (Gate 2 W-1, T-1, C-1, R-1 + bổ sung 1)** — subject `670bb384`.
+**2. Sau thay đổi (Gate 2 W-1, T-1, C-1, R-1 + bổ sung 1, 2)** — subject `36be8b96`.
 
 **Mỗi sáng 8:00 (giờ Việt Nam)**, hệ thống ghi thông báo vào mục "Cập nhật chưa đọc" trên trang **"Hôm nay"**. Bấm vào là tới
 đúng trang cần làm. Có 3 loại thông báo:
 
 - **Giờ chờ duyệt**:
   - người nhận:
-    - giờ thuộc công trình → PM của công trình;
-    - giờ của chính PM, hoặc công trình chưa có PM → người chốt lương;
+    - giờ thuộc công trình → PM của công trình, nếu PM duyệt được; nếu không (giờ của chính PM, công trình chưa có PM) →
+      người có quyền sửa dự án;
     - giờ không thuộc công trình → kế toán;
+    - không ai được nhắc về giờ của chính mình, trừ người chốt lương (bổ sung 2);
   - nội dung: "Còn N dòng giờ chờ bạn duyệt, cũ nhất dd/mm";
   - thời gian: từ 3 ngày cuối tháng đến ngày 5 tháng sau.
 - **Chưa chốt lương tháng trước** → người chốt lương, mỗi ngày từ ngày 1 cho tới khi chốt.
@@ -75,9 +85,9 @@ tháng.
 **Bổ sung 1:** CI có test giữ danh sách cố định các việc chạy định kỳ đã duyệt. Đã thêm việc nhắc cuối tháng vào danh sách đó
 theo lựa chọn của Owner.
 
-**3. Đã kiểm thử** — base `5ff8671a`; subject `670bb384488ca017fc49f813f09fb8d7d4e0c6ef`; digest
-`eb4a0941d4c34490f34deb8cb5f9a8feb21537bdc205baa9f5cd4b18a21b03e4`.
-- **8 test mới**, đỏ trước, xanh sau, chạy cả SQLite lẫn **MySQL**. Kiểm tra:
+**3. Đã kiểm thử** — base `5ff8671a`; subject `36be8b96828dd8f0108c928fd7591f1095659d91`; digest
+`ba001ccc8d9656c1769f06fd6e1d93a839d65cb73a38cc339f3f05e707b4ab6d`.
+- **9 test mới** (gồm test bổ sung 2: mỗi người nhận đều thấy và duyệt được các dòng được nhắc), đỏ trước, xanh sau, chạy cả SQLite lẫn **MySQL**. Kiểm tra:
   - nhắc đúng người, đúng khoảng ngày;
   - không trùng;
   - cách ly công ty;
@@ -117,7 +127,8 @@ Các bước này đã ghi trong `docs/runbooks/go-live.md`. Không migration.
   - Lỗi test lịch định kỳ: đã sửa theo bổ sung 1. Chạy lại `tests/Feature/Console` và test nhắc việc thì xanh, trừ lỗi do
     chạy bằng root.
 - **Feature/Api:** 825 test, tất cả xanh.
-- **CI trên đúng head:** subject `670bb384` và head `3be43945` đều xanh.
+- Sau bổ sung 2: các test Console, nhắc việc, chấm công, lương chạy lại xanh (trừ lỗi do chạy bằng root).
+- **CI trên đúng head:** ghi nhận trước khi merge.
 
 ## Decision Needed
 

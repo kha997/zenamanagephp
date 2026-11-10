@@ -45,6 +45,8 @@ class MonthEndRemindersTest extends TestCase
 
     private User $owner;
 
+    private User $director;
+
     private Project $project;
 
     protected function setUp(): void
@@ -55,6 +57,7 @@ class MonthEndRemindersTest extends TestCase
         $this->worker = $this->createTenantUser($this->tenant, ['name' => 'Kỹ sư Bình'], ['me_worker'], ['task.view']);
         $this->accountant = $this->createTenantUser($this->tenant, ['name' => 'Kế toán Chi'], ['me_accountant'], ['task.view', 'payroll.manage']);
         $this->owner = $this->createTenantUser($this->tenant, ['name' => 'Chủ Dũng'], ['me_owner'], ['task.view', 'payroll.manage', 'payroll.close']);
+        $this->director = $this->createTenantUser($this->tenant, ['name' => 'Giám đốc Em'], ['me_director'], ['task.view', 'project.update']);
         $this->project = Project::factory()->create(['tenant_id' => (string) $this->tenant->id, 'name' => 'Nhà phố Q7', 'pm_id' => (string) $this->pm->id]);
     }
 
@@ -68,10 +71,10 @@ class MonthEndRemindersTest extends TestCase
     {
         $this->entry($this->worker, $this->project, '2026-11-20');
         $this->entry($this->worker, $this->project, '2026-11-24');
-        $this->entry($this->pm, $this->project, '2026-11-25');            // PM's own → payroll.close
+        $this->entry($this->pm, $this->project, '2026-11-25');            // PM's own → project.update holders
         $noPm = Project::factory()->create(['tenant_id' => (string) $this->tenant->id, 'pm_id' => null]);
-        $this->entry($this->worker, $noPm, '2026-11-26');                 // no PM → payroll.close
-        $this->entry($this->worker, null, '2026-11-27');                   // non-project → payroll.manage
+        $this->entry($this->worker, $noPm, '2026-11-26');                 // no PM → project.update holders
+        $this->entry($this->worker, null, '2026-11-27');                   // non-project → payroll.manage holders
         $this->entry($this->worker, $this->project, '2026-11-21', TimeEntry::STATUS_APPROVED); // not waiting
 
         $sent = $this->send('2026-11-28');
@@ -82,16 +85,52 @@ class MonthEndRemindersTest extends TestCase
         $this->assertSame(route('app.time.review', ['week' => '2026-11-16']), $pmNote->link_url);
         $this->assertSame('inapp', $pmNote->channel);
 
-        // Owner: the PM's own entry and the PM-less project (payroll.close) plus the non-project entry (they also hold
-        // payroll.manage) — one combined reminder.
-        $ownerNote = $this->sole($this->owner, 'month_end.time_review');
-        $this->assertStringContainsString('3 dòng giờ', $ownerNote->body);
-        $this->assertStringContainsString('25/11', $ownerNote->body);
+        // Amendment 2: the PM's own entry and the PM-less project go to project.update holders (who can review them),
+        // not to payroll.close holders without project.update.
+        $directorNote = $this->sole($this->director, 'month_end.time_review');
+        $this->assertStringContainsString('2 dòng giờ', $directorNote->body);
+        $this->assertStringContainsString('25/11', $directorNote->body);
 
-        // Non-project entries go to payroll.manage holders.
+        // Non-project entries go to payroll.manage holders (accountant and owner).
         $this->assertStringContainsString('1 dòng giờ', $this->sole($this->accountant, 'month_end.time_review')->body);
+        $this->assertStringContainsString('1 dòng giờ', $this->sole($this->owner, 'month_end.time_review')->body);
         $this->assertSame(0, $this->notesFor($this->worker));
-        $this->assertSame(3, $sent);
+        $this->assertSame(4, $sent);
+    }
+
+    public function test_every_recipient_can_see_and_review_the_entries_they_are_reminded_of(): void
+    {
+        $noPm = Project::factory()->create(['tenant_id' => (string) $this->tenant->id, 'pm_id' => null]);
+        $entries = [
+            $this->entry($this->worker, $this->project, '2026-11-24'),
+            $this->entry($this->pm, $this->project, '2026-11-25'),
+            $this->entry($this->worker, $noPm, '2026-11-26'),
+            $this->entry($this->worker, null, '2026-11-27'),
+            $this->entry($this->accountant, null, '2026-11-26'),
+        ];
+
+        $plan = app(MonthEndReminderService::class)->plan(Carbon::parse('2026-11-28'));
+        $review = app(\App\Services\TimeTracking\TimeReviewService::class);
+        $reminded = 0;
+        foreach ($plan as $reminder) {
+            $user = User::query()->findOrFail($reminder['user_id']);
+            preg_match('/Còn (\d+) dòng giờ/', $reminder['body'], $m);
+            $reviewable = array_values(array_filter($entries, static fn (TimeEntry $e): bool => $review->canReview($user, $e)));
+            // Everything the reminder counts is reviewable by this person (a project.update holder may review more,
+            // e.g. entries their PM is reminded of), and the linked queue shows those entries.
+            $this->assertGreaterThanOrEqual((int) $m[1], count($reviewable), $user->name);
+            $this->assertGreaterThan(0, count($reviewable), $user->name);
+            $queued = $review->queue($user, Carbon::parse('2026-11-23'))->pluck('id')->map(fn ($id) => (string) $id)->all();
+            foreach ($reviewable as $entry) {
+                $this->assertContains((string) $entry->id, $queued, $user->name);
+            }
+            $reminded += (int) $m[1];
+        }
+        // Every waiting entry reaches at least one person who can review it.
+        foreach ($entries as $entry) {
+            $this->assertTrue(collect($plan)->contains(fn (array $r): bool => $review->canReview(User::query()->findOrFail($r['user_id']), $entry)));
+        }
+        $this->assertGreaterThan(0, $reminded);
     }
 
     public function test_time_review_window_and_nothing_when_nothing_waits(): void

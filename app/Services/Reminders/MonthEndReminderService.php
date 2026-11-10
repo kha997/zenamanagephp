@@ -15,9 +15,11 @@ use Illuminate\Support\Facades\DB;
 /**
  * GAP-120 (Gate 2 W-1, T-1, C-1) — month-end reminders written as in-app notifications (shown on the Today page).
  *
- * - time_review: submitted time (work date from the start of last month to today) waiting for review. Project entries
- *   go to the project PM; the PM's own entries and PM-less projects to payroll.close holders. Non-project entries go to
- *   payroll.manage holders other than their author. Only from three days before month end to day 5 of the next month.
+ * - time_review: submitted time (work date from the start of last month to today) waiting for review, sent only to
+ *   people who can review it (TimeReviewService::canReview, amendment 2): project entries to the project PM when the PM
+ *   may review them, otherwise to project.update holders; non-project entries to payroll.manage holders; nobody is
+ *   reminded of their own entries unless they hold payroll.close. Only from three days before month end to day 5 of
+ *   the next month.
  * - payroll_close / overhead_close: last month's payroll not closed, or closed with overhead still open. To
  *   payroll.close holders, every day from day 1 until closed, only for tenants with staff records (they use payroll).
  * - One notification per person, kind and month per day: event_key "<type>:<month>:<date>"; running twice a day is safe.
@@ -106,16 +108,19 @@ class MonthEndReminderService
             $holders[$tenantId] ??= [
                 'close' => $this->holders($tenantId, 'payroll.close'),
                 'manage' => $this->holders($tenantId, 'payroll.manage'),
+                'update' => $this->holders($tenantId, 'project.update'),
             ];
             $author = (string) $row->user_id;
+            $closers = $holders[$tenantId]['close'];
+            // Mirrors TimeReviewService::canReview(): nobody reviews their own entries except payroll.close holders.
+            $mayReview = static fn (string $id): bool => $id !== $author || isset($closers[$id]);
             if ($row->project_id !== null) {
                 $pm = $row->pm_id !== null && (string) $row->project_tenant_id === $tenantId ? (string) $row->pm_id : null;
-                $recipients = $pm !== null && $pm !== $author && $this->isActiveMember($tenantId, $pm) ? [$pm] : array_keys($holders[$tenantId]['close']);
+                $recipients = $pm !== null && $mayReview($pm) && $this->isActiveMember($tenantId, $pm)
+                    ? [$pm]
+                    : array_values(array_filter(array_keys($holders[$tenantId]['update']), $mayReview));
             } else {
-                $recipients = array_values(array_filter(array_keys($holders[$tenantId]['manage']), static fn (string $id): bool => $id !== $author));
-                if ($recipients === []) {
-                    $recipients = array_keys($holders[$tenantId]['close']);
-                }
+                $recipients = array_values(array_filter(array_keys($holders[$tenantId]['manage']), $mayReview));
             }
             $date = substr((string) $row->work_date, 0, 10);
             foreach ($recipients as $recipient) {

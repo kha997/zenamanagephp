@@ -1,14 +1,14 @@
 ---
 work_id: GAP-118
 gate: 3
-gate_status: approved
+gate_status: awaiting_owner
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: approved
+  value: none
   authority: human_owner
-decision_requested: null
+decision_requested: "approve_or_correction_or_defer"
 references:
   spec: docs/audits/2026-11-10-gap-118-mobile-my-work-timesheet-evidence.md
   plan: docs/superpowers/plans/2026-11-10-gap-118-mobile-my-work-timesheet.md
@@ -18,34 +18,44 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-11-10T11:40:29+07:00"
-  owner_response_reference: "Owner decision in-session on 2026-11-10, verbatim: 'APPROVE GAP-118 Gate 3'. Given on the packet at PR head f94b8d0d9604d28c39abe95ee1ac73eddbae9bdb (CI green); bound to implementation subject 6518078a88cb8d2f1018972ccc9f19ba82c67d00 and implementation-tree digest 259a575fc42e9738cc3c68890309e1647f67e4ba71524a11dd367e3f2610a17e (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
+  recorded_at: null
+  owner_response_reference: null
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-10T09:10:11+07:00"
-  updated_at: "2026-11-10T11:40:29+07:00"
+  updated_at: "2026-11-10T11:45:10+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "GAP-118 at subject 6518078a88cb8d2f1018972ccc9f19ba82c67d00 (Gate 2 N-1, H-1, C-1, T-1, R-2, V-1; exact allowlist, no amendment; one PR, one implementation commit; views, CSS and one test file only, no PHP runtime code, no migration). N-1/H-1: layouts/operator.blade.php adds a native <details class=operator-mobile-nav> '☰ Menu' in the top bar (same OperatorNavigationComposer navigation, search, full name, logout) and the user's initials; operator.css hides the sidebar and the long top-bar parts at ≤1024px and hides the mobile menu above; a small vanilla script closes the menu on link click; header.operator-topbar class kept. C-1/T-1: new partials app/_workload-items-cards (task / design-item cards, Start form on tasks) and time/_running-bar (fixed bottom bar with Stop, ≤1024px); my-work and timesheet show cards below 768px and the unchanged tables from 768px; the desktop running banner and 'Ghi giờ' card stay on wide screens. Tests: tests/Feature/Mobile/OperatorMobileLayoutTest (4) red before, green after; MyWorkPageTest, TimeTracking and the Alpine guard green. Playwright (iPhone 13, 390px): content starts at 96px (was 1,050px), top bar 64px, no horizontal scroll, no overflowing table, cards visible, Start / Stop buttons 47px. Desktop 1440px: screenshots of both pages pixel-identical before and after. npm run build, php-cs-fixer, ssot:lint, governance lint pass. Local Unit + Feature + Integration 3013 tests: only the 2 known root-only failures; Feature/Api 825 green (the PDF-export tests pass in this container now that node_modules is installed). Exact-head CI recorded in the body."
+mandatory_technical_gate_summary: "GAP-118 at subject 173425e4b8b7b89f04807674223ee1b47ae1c376 (re-presented after the Codex review: at ≤1024px the top bar now sits at z-index 40 above the running-timer bar (30), so the open phone menu is never covered; Playwright on an iPhone SE viewport with a timer running: last menu link covered before, tappable after; phone measurements and the pixel-identical desktop comparison unchanged. Gate 2 N-1, H-1, C-1, T-1, R-2, V-1; exact allowlist, no amendment; one PR, implementation commits 6518078a and 173425e4; views, CSS and one test file only, no PHP runtime code, no migration). N-1/H-1: layouts/operator.blade.php adds a native <details class=operator-mobile-nav> '☰ Menu' in the top bar (same OperatorNavigationComposer navigation, search, full name, logout) and the user's initials; operator.css hides the sidebar and the long top-bar parts at ≤1024px and hides the mobile menu above; a small vanilla script closes the menu on link click; header.operator-topbar class kept. C-1/T-1: new partials app/_workload-items-cards (task / design-item cards, Start form on tasks) and time/_running-bar (fixed bottom bar with Stop, ≤1024px); my-work and timesheet show cards below 768px and the unchanged tables from 768px; the desktop running banner and 'Ghi giờ' card stay on wide screens. Tests: tests/Feature/Mobile/OperatorMobileLayoutTest (4) red before, green after; MyWorkPageTest, TimeTracking and the Alpine guard green. Playwright (iPhone 13, 390px): content starts at 96px (was 1,050px), top bar 64px, no horizontal scroll, no overflowing table, cards visible, Start / Stop buttons 47px. Desktop 1440px: screenshots of both pages pixel-identical before and after. npm run build, php-cs-fixer, ssot:lint, governance lint pass. Local Unit + Feature + Integration 3013 tests: only the 2 known root-only failures; Feature/Api 825 green (the PDF-export tests pass in this container now that node_modules is installed). Exact-head CI recorded in the body."
 technical_evidence:
   base_sha: "153709a8ebf451e49c9b3283739ac91c31be222b"
-  subject_sha: "6518078a88cb8d2f1018972ccc9f19ba82c67d00"
-  implementation_tree_digest: "259a575fc42e9738cc3c68890309e1647f67e4ba71524a11dd367e3f2610a17e"
-  verified_pr_head_sha: "6518078a88cb8d2f1018972ccc9f19ba82c67d00"
-  verified_at: "2026-11-10T09:10:11+07:00"
+  subject_sha: "173425e4b8b7b89f04807674223ee1b47ae1c376"
+  implementation_tree_digest: "d144d81a062e46b41eb33f0c10ca09ea0603031c4531dccd00e22affe773b58a"
+  verified_pr_head_sha: "173425e4b8b7b89f04807674223ee1b47ae1c376"
+  verified_at: "2026-11-10T11:45:10+07:00"
 owner_decision_binding:
-  implementation_tree_digest: "259a575fc42e9738cc3c68890309e1647f67e4ba71524a11dd367e3f2610a17e"
-  decision_recorded_at: "2026-11-10T11:40:29+07:00"
+  implementation_tree_digest: null
+  decision_recorded_at: null
 ---
 
 # GAP-118 — Gate 3 release decision (phone layout for My Work and Timesheet)
 
-## OWNER GATE 3: APPROVED
+## Gate 3 trình lại sau review Codex
 
-Owner approved Gate 3 in-session on 2026-11-10 ("APPROVE GAP-118 Gate 3"), bound to implementation subject
-`6518078a88cb8d2f1018972ccc9f19ba82c67d00` and implementation-tree digest `259a575fc42e9738cc3c68890309e1647f67e4ba71524a11dd367e3f2610a17e`. No deployment or release is authorized.
+Owner đã duyệt Gate 3 ("APPROVE GAP-118 Gate 3") trên subject `6518078a` (digest `259a575f…a17e`). Codex sau đó tìm ra một
+lỗi thật:
+- khi đồng hồ đang chạy và mở menu trên điện thoại, thanh "Đang ghi giờ" ở đáy che mất các mục cuối của menu;
+- ví dụ mục "API Tokens" không bấm được.
+
+Đã sửa ở commit `173425e4`: trên màn hình hẹp, thanh trên cùng (chứa menu) nằm trên thanh đồng hồ. Đã kiểm tra lại bằng
+trình duyệt:
+- trước khi sửa, mục cuối bị che;
+- sau khi sửa, mục cuối bấm được;
+- số đo điện thoại không đổi; giao diện máy tính vẫn giống hệt.
+
+Vì mã đổi nên subject và digest mới cần Owner duyệt lại.
 
 ## Gói quyết định phát hành
 
@@ -54,7 +64,7 @@ Owner approved Gate 3 in-session on 2026-11-10 ("APPROVE GAP-118 Gate 3"), bound
 - Bảng giờ bị cắt cột.
 - Nút bấm giờ nằm tận cuối trang.
 
-**2. Sau thay đổi (Gate 2 N-1, H-1, C-1, T-1, R-2, V-1)** — subject `6518078a`.
+**2. Sau thay đổi (Gate 2 N-1, H-1, C-1, T-1, R-2, V-1)** — subject `173425e4`.
 
 Trên màn hình hẹp:
 - **Menu:** thu vào nút **"☰ Menu"**. Bấm mở ra đầy đủ menu, kèm ô tìm kiếm, tên người dùng và "Đăng xuất".
@@ -67,8 +77,8 @@ Trên màn hình hẹp:
 
 Trang "Duyệt giờ" của PM để sau (R-2), nhưng vẫn có menu và thanh trên cùng mới.
 
-**3. Đã kiểm thử** — base `153709a8`; subject `6518078a88cb8d2f1018972ccc9f19ba82c67d00`; digest
-`259a575fc42e9738cc3c68890309e1647f67e4ba71524a11dd367e3f2610a17e`.
+**3. Đã kiểm thử** — base `153709a8`; subject `173425e4b8b7b89f04807674223ee1b47ae1c376`; digest
+`d144d81a062e46b41eb33f0c10ca09ea0603031c4531dccd00e22affe773b58a`.
 - 4 test mới **đỏ** trước, **xanh** sau.
 - Test có sẵn của hai trang và guard "không Alpine" vẫn xanh.
 - **Đo trên trình duyệt giả lập iPhone 13 (390 px):**
@@ -82,6 +92,7 @@ Trang "Duyệt giờ" của PM để sau (R-2), nhưng vẫn có menu và thanh 
 | Nút Bắt đầu / Dừng | nút nhỏ cuối trang | **47 px**, trên từng thẻ / ở đáy |
 
 - **Máy tính (1440 px):** ảnh hai trang trước và sau **giống hệt**.
+- Sau review Codex: mở menu khi đồng hồ đang chạy, mục cuối cùng bấm được (trước khi sửa bị thanh đồng hồ che).
 - `npm run build`, php-cs-fixer, SSOT lint, governance lint sạch.
 
 **4. Lưu ý vận hành**
@@ -110,7 +121,7 @@ Trang "Duyệt giờ" của PM để sau (R-2), nhưng vẫn có menu và thanh 
   `BackupStorageLocationTest`).
 - **Feature/Api:** 825 test, tất cả xanh.
 - Lần này máy đã cài bộ dựng giao diện (node_modules) nên các test xuất PDF cũng xanh.
-- **CI trên đúng head:** commit mã `6518078a` và head `f94b8d0d` đều xanh.
+- **CI trên đúng head:** ghi nhận trước khi merge (commit mã đầu `6518078a` đã xanh).
 
 ## Decision Needed
 

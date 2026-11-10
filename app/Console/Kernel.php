@@ -58,6 +58,12 @@ class Kernel extends ConsoleKernel
             ->hourly()
             ->withoutOverlapping();
 
+        // GAP-120 R-1: month-end reminders (time review, payroll / overhead close) as in-app notifications.
+        $schedule->command('reminders:month-end')
+            ->dailyAt('08:00')
+            ->timezone('Asia/Ho_Chi_Minh')
+            ->withoutOverlapping();
+
         // Compiled config/route/view caches are built by the deploy step
         // (.github/workflows/production.yml), never on a schedule. The
         // application cache store is never flushed on a schedule: it holds

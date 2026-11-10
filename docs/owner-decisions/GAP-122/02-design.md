@@ -1,32 +1,38 @@
 ---
 work_id: GAP-122
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-11-11-gap-122-mobile-time-review-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-11-11-gap-122-mobile-time-review.md
   branch: docs/GAP-122-mobile-time-review
   pr: https://github.com/kha997/zenamanagephp/pull/412
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-11T00:11:10+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-11, verbatim: 'APPROVE GAP-122 Gate 2 L-1 A-1 N-1'. Reviewed design head: 6f10de5fefaf73f371362495448b0b55892f7235. Approves L-1 (phone cards grouped by person with a total per person), A-1 (per-card approve and reject-with-reason forms plus an approve-all-for-this-person form, posting to the existing review action; no pre-ticked boxes on the phone) and N-1 (one-line week navigation on the phone), one PR / one Gate 3, with the exact allowlist in this packet; no change to review rules, permissions, the month lock or the desktop table; not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
-  created_at: "2026-11-11T00:12:00+07:00"
-  updated_at: "2026-11-11T00:12:00+07:00"
+  created_at: "2026-11-11T00:09:40+07:00"
+  updated_at: "2026-11-11T00:11:10+07:00"
 generated_by: agent
 ---
 
 # GAP-122 — Phone layout for "Duyệt giờ": Gate 2 design
+
+## OWNER GATE 2: APPROVED — L-1, A-1, N-1
+
+Owner approved L-1, A-1 and N-1 in-session on 2026-11-11 against reviewed design head
+`6f10de5fefaf73f371362495448b0b55892f7235`. This authorizes only the bounded implementation defined by this packet; it does not authorize Gate 3,
+merge, release, or deployment.
 
 ## Owner Summary
 

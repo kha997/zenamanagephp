@@ -63,6 +63,8 @@ class ScheduleContractTest extends TestCase
             'backup:run --type=all',
             'backup:run --type=database',
             'queue:restart',
+            // GAP-120 R-1 (Owner amendment 1): month-end reminders, daily 08:00 Asia/Ho_Chi_Minh.
+            'reminders:month-end',
         ], $this->scheduledCommands());
     }
 

@@ -1,14 +1,14 @@
 ---
 work_id: GAP-118
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-11-10-gap-118-mobile-my-work-timesheet-evidence.md
   plan: docs/superpowers/plans/2026-11-10-gap-118-mobile-my-work-timesheet.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-10T11:50:56+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-10, verbatim: 'APPROVE GAP-118 Gate 3'. Re-approval after the Codex fix, given on the packet at PR head 2065b5a7f97659d6ce0880ebda4a1b9488800f65; bound to implementation subject 173425e4b8b7b89f04807674223ee1b47ae1c376 and implementation-tree digest d144d81a062e46b41eb33f0c10ca09ea0603031c4531dccd00e22affe773b58a (recomputed at recording time, zero drift). Supersedes the earlier approval bound to 6518078a / 259a575f. Merge is covered by the Owner's standing in-session instruction of 2026-09-28; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-10T09:10:11+07:00"
-  updated_at: "2026-11-10T11:45:10+07:00"
+  updated_at: "2026-11-10T11:50:56+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-118 at subject 173425e4b8b7b89f04807674223ee1b47ae1c376 (re-presented after the Codex review: at ≤1024px the top bar now sits at z-index 40 above the running-timer bar (30), so the open phone menu is never covered; Playwright on an iPhone SE viewport with a timer running: last menu link covered before, tappable after; phone measurements and the pixel-identical desktop comparison unchanged. Gate 2 N-1, H-1, C-1, T-1, R-2, V-1; exact allowlist, no amendment; one PR, implementation commits 6518078a and 173425e4; views, CSS and one test file only, no PHP runtime code, no migration). N-1/H-1: layouts/operator.blade.php adds a native <details class=operator-mobile-nav> '☰ Menu' in the top bar (same OperatorNavigationComposer navigation, search, full name, logout) and the user's initials; operator.css hides the sidebar and the long top-bar parts at ≤1024px and hides the mobile menu above; a small vanilla script closes the menu on link click; header.operator-topbar class kept. C-1/T-1: new partials app/_workload-items-cards (task / design-item cards, Start form on tasks) and time/_running-bar (fixed bottom bar with Stop, ≤1024px); my-work and timesheet show cards below 768px and the unchanged tables from 768px; the desktop running banner and 'Ghi giờ' card stay on wide screens. Tests: tests/Feature/Mobile/OperatorMobileLayoutTest (4) red before, green after; MyWorkPageTest, TimeTracking and the Alpine guard green. Playwright (iPhone 13, 390px): content starts at 96px (was 1,050px), top bar 64px, no horizontal scroll, no overflowing table, cards visible, Start / Stop buttons 47px. Desktop 1440px: screenshots of both pages pixel-identical before and after. npm run build, php-cs-fixer, ssot:lint, governance lint pass. Local Unit + Feature + Integration 3013 tests: only the 2 known root-only failures; Feature/Api 825 green (the PDF-export tests pass in this container now that node_modules is installed). Exact-head CI recorded in the body."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "173425e4b8b7b89f04807674223ee1b47ae1c376"
   verified_at: "2026-11-10T11:45:10+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "d144d81a062e46b41eb33f0c10ca09ea0603031c4531dccd00e22affe773b58a"
+  decision_recorded_at: "2026-11-10T11:50:56+07:00"
 ---
 
 # GAP-118 — Gate 3 release decision (phone layout for My Work and Timesheet)
+
+## OWNER GATE 3: APPROVED
+
+Owner re-approved Gate 3 in-session on 2026-11-10 ("APPROVE GAP-118 Gate 3") after the Codex fix, bound to
+implementation subject `173425e4b8b7b89f04807674223ee1b47ae1c376` and implementation-tree digest `d144d81a062e46b41eb33f0c10ca09ea0603031c4531dccd00e22affe773b58a`. No deployment or release is authorized.
 
 ## Gate 3 trình lại sau review Codex
 

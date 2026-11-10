@@ -1,14 +1,14 @@
 ---
 work_id: GAP-121
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-11-10-gap-121-month-close-mysql-concurrency-evidence.md
   plan: docs/superpowers/plans/2026-11-10-gap-121-month-close-mysql-concurrency.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-10T22:54:13+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-10, verbatim: 'APPROVE GAP-121 Gate 3'. Given on the packet at PR head 599508e0f6931c79b149d967cb51d505f023402a; bound to implementation subject cb4a7836cc76df17da15f913da61bd4ce5c5a50d and implementation-tree digest 4ecabc8097b89eaa8fe2a17ecf0d97fa760ed0f63d77faf3a4163b41ff59776d (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28, after exact-head CI including the new Month Close Concurrency job is green; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-10T22:52:43+07:00"
-  updated_at: "2026-11-10T22:52:43+07:00"
+  updated_at: "2026-11-10T22:54:13+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-121 at subject cb4a7836cc76df17da15f913da61bd4ce5c5a50d (Gate 2 S-1, J-1 plus Owner amendment 1; one PR, implementation commit 910db3f2; tests, test-support commands and CI only, no change to close rules or locks, no migration). tests/Feature/Concurrency/MonthCloseConcurrencyTest (group stress, skips without MySQL) races two OS processes / MySQL connections on one month with process A holding its transaction 3 s: 1a payroll close then manual time entry (entry refused 'đã chốt', labour allocated from the 600 approved minutes), 1b entry then close (close refused 'chờ duyệt', month open), 2 two payroll closes (one succeeds, labour allocated once, one audit), 3a overhead close then payroll reopen (reopen refused, both closed), 3b reopen then overhead close (overhead refused, both draft, no allocations), 4 two overhead closes (one succeeds, one allocation set). Hidden commands payroll:concurrency-test-close / -reopen, overhead:concurrency-test-close, time:concurrency-test-add; only the holding process opens an outer transaction (an outer transaction in the racing process took its snapshot before the lock wait and produced a false pass for 1b — harness issue, not app code; noted: the close relies on not running inside an outer transaction). New CI job 'Month Close Concurrency (real MySQL)' and scripts/ci/month-close-concurrency-mysql (fails on a skip while MySQL is reachable). Amendment 1: one line in scripts/ssot/baselines/skipped_tests_baseline.txt. Evidence: 6/6 green on local MySQL 8, also through the CI script; mutation runs (local, not committed) — no shared lock in TimeEntryService::isLocked fails 1a and 1b, no FOR UPDATE in PayrollService::lockDraft fails 1b and 2, no payroll row lock in OverheadService::close fails 3b; code restored. PHPStan, php-cs-fixer, ssot:lint, docs-lint, governance lint pass. Local Unit + Feature + Integration 3030 tests: only the 2 known root-only failures (the new test skips on sqlite). Exact-head CI, including the new job, recorded in the body."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "cb4a7836cc76df17da15f913da61bd4ce5c5a50d"
   verified_at: "2026-11-10T22:52:43+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "4ecabc8097b89eaa8fe2a17ecf0d97fa760ed0f63d77faf3a4163b41ff59776d"
+  decision_recorded_at: "2026-11-10T22:54:13+07:00"
 ---
 
 # GAP-121 — Gate 3 release decision (real-MySQL month-close concurrency tests)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-11-10 ("APPROVE GAP-121 Gate 3"), bound to implementation subject
+`cb4a7836cc76df17da15f913da61bd4ce5c5a50d` and implementation-tree digest `4ecabc8097b89eaa8fe2a17ecf0d97fa760ed0f63d77faf3a4163b41ff59776d`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

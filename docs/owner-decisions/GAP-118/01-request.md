@@ -1,11 +1,11 @@
 ---
 work_id: GAP-118
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-11-10-gap-118-mobile-my-work-timesheet-evidence.md
   plan: null
@@ -15,16 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-10T08:54:46+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-10, verbatim: 'APPROVE GAP-118 Gate 1'. Bound to reviewed Draft PR #408 head 338edcb93db61b51f0317be5439d72843c862a19, canonical base 153709a8ebf451e49c9b3283739ac91c31be222b. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-10T08:46:43+07:00"
-  updated_at: "2026-11-10T08:46:43+07:00"
+  updated_at: "2026-11-10T08:54:46+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-118 Gate 1 in-session on 2026-11-10 against Draft PR #408 head
+`338edcb93db61b51f0317be5439d72843c862a19`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

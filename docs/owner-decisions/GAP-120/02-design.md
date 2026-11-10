@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-10T14:17:27+07:00"
-  updated_at: "2026-11-10T14:40:36+07:00"
+  updated_at: "2026-11-10T21:08:23+07:00"
 generated_by: agent
 ---
 
@@ -159,6 +159,24 @@ nên test báo lệch. Lỗi tái hiện được trên máy.
 **Thay đổi:** thêm `'reminders:month-end'` vào danh sách việc định kỳ đã duyệt trong test đó. Không đổi gì khác.
 
 **File thêm vào allowlist:** `tests/Feature/Console/ScheduleContractTest.php`.
+
+## Owner amendment 2 (2026-11-10, sau review Codex)
+
+**Vấn đề:** Codex chỉ ra lỗi trong cách chọn người nhận lời nhắc "giờ chờ duyệt".
+- Theo W-1, khi PM tự nộp giờ hoặc công trình chưa có PM, lời nhắc gửi cho người có `payroll.close`.
+- Nhưng `TimeReviewService::canReview` chỉ cho `project.update` hoặc PM duyệt giờ thuộc công trình.
+- Vì vậy người nhận có thể mở trang Duyệt giờ mà không thấy các dòng được nhắc.
+
+**Owner chọn (AskUserQuestion, 2026-11-10):** "Nhắc đúng người duyệt được (Recommended)".
+
+**Thay đổi:** người nhận khớp đúng quy tắc của `canReview`.
+- Giờ thuộc công trình → PM nếu PM duyệt được; nếu không → người có `project.update`.
+- Giờ không thuộc công trình → người có `payroll.manage`.
+- Không ai được nhắc về giờ của chính mình, trừ người có `payroll.close`.
+- Không có ai duyệt được → không gửi.
+
+**Test mới:** mỗi người nhận đều duyệt được và thấy trong hàng chờ các dòng được nhắc; mọi dòng chờ đều tới ít nhất một người
+duyệt được. Test đỏ trên mã cũ, xanh sau khi sửa. File nằm trong allowlist sẵn có, không thêm file.
 
 ## Ngoài phạm vi
 

@@ -1,14 +1,14 @@
 ---
 work_id: GAP-121
 gate: 3
-gate_status: approved
+gate_status: awaiting_owner
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: approved
+  value: none
   authority: human_owner
-decision_requested: null
+decision_requested: "approve_or_correction_or_defer"
 references:
   spec: docs/audits/2026-11-10-gap-121-month-close-mysql-concurrency-evidence.md
   plan: docs/superpowers/plans/2026-11-10-gap-121-month-close-mysql-concurrency.md
@@ -18,41 +18,50 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-11-10T22:54:13+07:00"
-  owner_response_reference: "Owner decision in-session on 2026-11-10, verbatim: 'APPROVE GAP-121 Gate 3'. Given on the packet at PR head 599508e0f6931c79b149d967cb51d505f023402a; bound to implementation subject cb4a7836cc76df17da15f913da61bd4ce5c5a50d and implementation-tree digest 4ecabc8097b89eaa8fe2a17ecf0d97fa760ed0f63d77faf3a4163b41ff59776d (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28, after exact-head CI including the new Month Close Concurrency job is green; no deployment or release authorized."
+  recorded_at: null
+  owner_response_reference: null
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-10T22:52:43+07:00"
-  updated_at: "2026-11-10T22:54:13+07:00"
+  updated_at: "2026-11-10T22:59:40+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "GAP-121 at subject cb4a7836cc76df17da15f913da61bd4ce5c5a50d (Gate 2 S-1, J-1 plus Owner amendment 1; one PR, implementation commit 910db3f2; tests, test-support commands and CI only, no change to close rules or locks, no migration). tests/Feature/Concurrency/MonthCloseConcurrencyTest (group stress, skips without MySQL) races two OS processes / MySQL connections on one month with process A holding its transaction 3 s: 1a payroll close then manual time entry (entry refused 'đã chốt', labour allocated from the 600 approved minutes), 1b entry then close (close refused 'chờ duyệt', month open), 2 two payroll closes (one succeeds, labour allocated once, one audit), 3a overhead close then payroll reopen (reopen refused, both closed), 3b reopen then overhead close (overhead refused, both draft, no allocations), 4 two overhead closes (one succeeds, one allocation set). Hidden commands payroll:concurrency-test-close / -reopen, overhead:concurrency-test-close, time:concurrency-test-add; only the holding process opens an outer transaction (an outer transaction in the racing process took its snapshot before the lock wait and produced a false pass for 1b — harness issue, not app code; noted: the close relies on not running inside an outer transaction). New CI job 'Month Close Concurrency (real MySQL)' and scripts/ci/month-close-concurrency-mysql (fails on a skip while MySQL is reachable). Amendment 1: one line in scripts/ssot/baselines/skipped_tests_baseline.txt. Evidence: 6/6 green on local MySQL 8, also through the CI script; mutation runs (local, not committed) — no shared lock in TimeEntryService::isLocked fails 1a and 1b, no FOR UPDATE in PayrollService::lockDraft fails 1b and 2, no payroll row lock in OverheadService::close fails 3b; code restored. PHPStan, php-cs-fixer, ssot:lint, docs-lint, governance lint pass. Local Unit + Feature + Integration 3030 tests: only the 2 known root-only failures (the new test skips on sqlite). Exact-head CI, including the new job, recorded in the body."
+mandatory_technical_gate_summary: "GAP-121 at subject 7ca3e69cc30d8039f9ebb613e0388fe2f6d4e34b (re-presented after the Codex review: the race no longer relies on a fixed 1.5 s start delay — A prints LOCKED once it holds its locks, B starts only then, and each race asserts B's START timestamp precedes A's RELEASE timestamp, so a slow runner cannot turn it into two sequential runs; hold raised to 5 s; 6/6 green again through the CI script, and removing the FOR UPDATE in PayrollService::lockDraft still fails 1b and 2. Gate 2 S-1, J-1 plus Owner amendment 1; one PR, implementation commits 910db3f2 and 7ca3e69c; tests, test-support commands and CI only, no change to close rules or locks, no migration). tests/Feature/Concurrency/MonthCloseConcurrencyTest (group stress, skips without MySQL) races two OS processes / MySQL connections on one month with process A holding its transaction 5 s: 1a payroll close then manual time entry (entry refused 'đã chốt', labour allocated from the 600 approved minutes), 1b entry then close (close refused 'chờ duyệt', month open), 2 two payroll closes (one succeeds, labour allocated once, one audit), 3a overhead close then payroll reopen (reopen refused, both closed), 3b reopen then overhead close (overhead refused, both draft, no allocations), 4 two overhead closes (one succeeds, one allocation set). Hidden commands payroll:concurrency-test-close / -reopen, overhead:concurrency-test-close, time:concurrency-test-add; only the holding process opens an outer transaction (an outer transaction in the racing process took its snapshot before the lock wait and produced a false pass for 1b — harness issue, not app code; noted: the close relies on not running inside an outer transaction). New CI job 'Month Close Concurrency (real MySQL)' and scripts/ci/month-close-concurrency-mysql (fails on a skip while MySQL is reachable). Amendment 1: one line in scripts/ssot/baselines/skipped_tests_baseline.txt. Evidence: 6/6 green on local MySQL 8, also through the CI script; mutation runs (local, not committed) — no shared lock in TimeEntryService::isLocked fails 1a and 1b, no FOR UPDATE in PayrollService::lockDraft fails 1b and 2, no payroll row lock in OverheadService::close fails 3b; code restored. PHPStan, php-cs-fixer, ssot:lint, docs-lint, governance lint pass. Local Unit + Feature + Integration 3030 tests: only the 2 known root-only failures (the new test skips on sqlite). Exact-head CI, including the new job, recorded in the body."
 technical_evidence:
   base_sha: "503f92edbdc0e8da334ffc48ed22b17727d78947"
-  subject_sha: "cb4a7836cc76df17da15f913da61bd4ce5c5a50d"
-  implementation_tree_digest: "4ecabc8097b89eaa8fe2a17ecf0d97fa760ed0f63d77faf3a4163b41ff59776d"
-  verified_pr_head_sha: "cb4a7836cc76df17da15f913da61bd4ce5c5a50d"
-  verified_at: "2026-11-10T22:52:43+07:00"
+  subject_sha: "7ca3e69cc30d8039f9ebb613e0388fe2f6d4e34b"
+  implementation_tree_digest: "f94e9e92c0581398a907b09f9d6eda5ea2b7db850809c567e388380a41c86767"
+  verified_pr_head_sha: "7ca3e69cc30d8039f9ebb613e0388fe2f6d4e34b"
+  verified_at: "2026-11-10T22:59:40+07:00"
 owner_decision_binding:
-  implementation_tree_digest: "4ecabc8097b89eaa8fe2a17ecf0d97fa760ed0f63d77faf3a4163b41ff59776d"
-  decision_recorded_at: "2026-11-10T22:54:13+07:00"
+  implementation_tree_digest: null
+  decision_recorded_at: null
 ---
 
 # GAP-121 — Gate 3 release decision (real-MySQL month-close concurrency tests)
 
-## OWNER GATE 3: APPROVED
+## Trình lại sau góp ý của Codex
 
-Owner approved Gate 3 in-session on 2026-11-10 ("APPROVE GAP-121 Gate 3"), bound to implementation subject
-`cb4a7836cc76df17da15f913da61bd4ce5c5a50d` and implementation-tree digest `4ecabc8097b89eaa8fe2a17ecf0d97fa760ed0f63d77faf3a4163b41ff59776d`. No deployment or release is authorized.
+Lần duyệt trước (gắn với subject `cb4a7836`) không còn hiệu lực vì mã test đã đổi.
+
+**Codex góp ý (đúng):** test cho tiến trình B chạy sau A một khoảng cố định 1,5 giây. Trên máy CI chậm, B có thể khởi động
+xong khi A đã nhả khoá. Khi đó hai thao tác chạy lần lượt, test vẫn xanh mà không thực sự kiểm khoá.
+
+**Đã sửa (commit `7ca3e69c`, chỉ trong các file đã duyệt):**
+- A báo "đã giữ khoá" rồi mới cho B chạy.
+- Mỗi tình huống kiểm thêm: B phải bắt đầu thao tác **trước khi** A nhả khoá. Nếu không, test báo đỏ thay vì xanh giả.
+- Thời gian giữ khoá tăng từ 3 lên 5 giây.
+
+**Kiểm lại:** 6/6 xanh qua đúng script CI. Tạm bỏ khoá chốt lương thì test 1b và 2 vẫn đỏ, mã đã trả lại nguyên trạng.
 
 ## Gói quyết định phát hành
 
 **1. Vấn đề là gì?** Phần chốt tháng có khoá dữ liệu chống thao tác đồng thời, nhưng mới được kiểm bằng tay. Chưa có test tự
 động nào chạy hai thao tác cùng lúc trên MySQL thật.
 
-**2. Sau thay đổi (Gate 2 S-1, J-1 + bổ sung 1)** — subject `cb4a7836`.
+**2. Sau thay đổi (Gate 2 S-1, J-1 + bổ sung 1)** — subject `7ca3e69c`.
 
 **6 test** chạy **hai tiến trình song song trên MySQL thật**, cho cùng một tháng:
 
@@ -72,8 +81,8 @@ chạy.
 
 **Bổ sung 1:** thêm một dòng vào danh sách test được phép bỏ qua của SSOT lint, giống 4 test đồng thời sẵn có.
 
-**3. Đã kiểm thử** — base `503f92ed`; subject `cb4a7836cc76df17da15f913da61bd4ce5c5a50d`; digest
-`4ecabc8097b89eaa8fe2a17ecf0d97fa760ed0f63d77faf3a4163b41ff59776d`.
+**3. Đã kiểm thử** — base `503f92ed`; subject `7ca3e69cc30d8039f9ebb613e0388fe2f6d4e34b`; digest
+`f94e9e92c0581398a907b09f9d6eda5ea2b7db850809c567e388380a41c86767`.
 - **6/6 xanh trên MySQL 8**, chạy cả qua đúng script CI.
 - **Chứng minh test bắt được lỗi thật.** Tạm bỏ từng khoá (chỉ trên máy, không commit), test tương ứng đều **đỏ**:
 

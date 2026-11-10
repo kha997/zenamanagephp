@@ -1,32 +1,38 @@
 ---
 work_id: GAP-120
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-11-10-gap-120-month-end-reminders-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-11-10-gap-120-month-end-reminders.md
   branch: docs/GAP-120-month-end-reminders
   pr: https://github.com/kha997/zenamanagephp/pull/410
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-10T14:18:55+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-10, verbatim: 'APPROVE GAP-120 Gate 2 W-1 T-1 C-1 R-1'. Reviewed design head: e1d9bccaeb58fbcfe41b71e415d7af61a26a4d1b. Approves W-1 (time-review reminder to the project PM, own-PM entries and PM-less projects to payroll.close holders, non-project entries to payroll.manage holders; payroll-not-closed and overhead-not-closed reminders for the previous month to payroll.close holders, only for tenants using payroll), T-1 (daily 08:00 Asia/Ho_Chi_Minh; review reminders from three days before month end to day 5 of the next month; close reminders from day 1 until closed; at most one per person, kind and month per day via event_key), C-1 (in-app notifications on the Today page with links), R-1 (reminders:month-end command with --dry-run and --date, scheduled in Console\\Kernel behind ENABLE_SCHEDULER, go-live runbook step), one PR / one Gate 3, with the exact allowlist in this packet; no migration; not Gate 3, merge, release, deployment, or enabling the scheduler on the server."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-10T14:17:27+07:00"
-  updated_at: "2026-11-10T14:17:27+07:00"
+  updated_at: "2026-11-10T14:18:55+07:00"
 generated_by: agent
 ---
 
 # GAP-120 — Month-end reminders: Gate 2 design
+
+## OWNER GATE 2: APPROVED — W-1, T-1, C-1, R-1
+
+Owner approved W-1, T-1, C-1 and R-1 in-session on 2026-11-10 against reviewed design head
+`e1d9bccaeb58fbcfe41b71e415d7af61a26a4d1b`. This authorizes only the bounded implementation defined by this packet; it does not authorize Gate 3,
+merge, release, or deployment.
 
 ## Owner Summary
 

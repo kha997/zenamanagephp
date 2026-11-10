@@ -1,14 +1,14 @@
 ---
 work_id: GAP-121
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-11-10-gap-121-month-close-mysql-concurrency-evidence.md
   plan: docs/superpowers/plans/2026-11-10-gap-121-month-close-mysql-concurrency.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-10T23:00:32+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-10, verbatim: 'APPROVE GAP-121 Gate 3'. Re-approval after the Codex fix, given on the packet at PR head ff30ef40a61948a74184630b159d44a8db92dc2f; bound to implementation subject 7ca3e69cc30d8039f9ebb613e0388fe2f6d4e34b and implementation-tree digest f94e9e92c0581398a907b09f9d6eda5ea2b7db850809c567e388380a41c86767 (recomputed at recording time, zero drift). Supersedes the earlier approval bound to cb4a7836 / 4ecabc80. Merge is covered by the Owner's standing in-session instruction of 2026-09-28, after exact-head CI including the new Month Close Concurrency job is green; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-10T22:52:43+07:00"
-  updated_at: "2026-11-10T22:59:40+07:00"
+  updated_at: "2026-11-10T23:00:32+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-121 at subject 7ca3e69cc30d8039f9ebb613e0388fe2f6d4e34b (re-presented after the Codex review: the race no longer relies on a fixed 1.5 s start delay — A prints LOCKED once it holds its locks, B starts only then, and each race asserts B's START timestamp precedes A's RELEASE timestamp, so a slow runner cannot turn it into two sequential runs; hold raised to 5 s; 6/6 green again through the CI script, and removing the FOR UPDATE in PayrollService::lockDraft still fails 1b and 2. Gate 2 S-1, J-1 plus Owner amendment 1; one PR, implementation commits 910db3f2 and 7ca3e69c; tests, test-support commands and CI only, no change to close rules or locks, no migration). tests/Feature/Concurrency/MonthCloseConcurrencyTest (group stress, skips without MySQL) races two OS processes / MySQL connections on one month with process A holding its transaction 5 s: 1a payroll close then manual time entry (entry refused 'đã chốt', labour allocated from the 600 approved minutes), 1b entry then close (close refused 'chờ duyệt', month open), 2 two payroll closes (one succeeds, labour allocated once, one audit), 3a overhead close then payroll reopen (reopen refused, both closed), 3b reopen then overhead close (overhead refused, both draft, no allocations), 4 two overhead closes (one succeeds, one allocation set). Hidden commands payroll:concurrency-test-close / -reopen, overhead:concurrency-test-close, time:concurrency-test-add; only the holding process opens an outer transaction (an outer transaction in the racing process took its snapshot before the lock wait and produced a false pass for 1b — harness issue, not app code; noted: the close relies on not running inside an outer transaction). New CI job 'Month Close Concurrency (real MySQL)' and scripts/ci/month-close-concurrency-mysql (fails on a skip while MySQL is reachable). Amendment 1: one line in scripts/ssot/baselines/skipped_tests_baseline.txt. Evidence: 6/6 green on local MySQL 8, also through the CI script; mutation runs (local, not committed) — no shared lock in TimeEntryService::isLocked fails 1a and 1b, no FOR UPDATE in PayrollService::lockDraft fails 1b and 2, no payroll row lock in OverheadService::close fails 3b; code restored. PHPStan, php-cs-fixer, ssot:lint, docs-lint, governance lint pass. Local Unit + Feature + Integration 3030 tests: only the 2 known root-only failures (the new test skips on sqlite). Exact-head CI, including the new job, recorded in the body."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "7ca3e69cc30d8039f9ebb613e0388fe2f6d4e34b"
   verified_at: "2026-11-10T22:59:40+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "f94e9e92c0581398a907b09f9d6eda5ea2b7db850809c567e388380a41c86767"
+  decision_recorded_at: "2026-11-10T23:00:32+07:00"
 ---
 
 # GAP-121 — Gate 3 release decision (real-MySQL month-close concurrency tests)
+
+## OWNER GATE 3: APPROVED
+
+Owner re-approved Gate 3 in-session on 2026-11-10 ("APPROVE GAP-121 Gate 3") after the Codex fix, bound to implementation subject
+`7ca3e69cc30d8039f9ebb613e0388fe2f6d4e34b` and implementation-tree digest `f94e9e92c0581398a907b09f9d6eda5ea2b7db850809c567e388380a41c86767`. No deployment or release is authorized.
 
 ## Trình lại sau góp ý của Codex
 

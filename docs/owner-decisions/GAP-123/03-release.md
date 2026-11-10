@@ -1,14 +1,14 @@
 ---
 work_id: GAP-123
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-11-11-gap-123-work-template-authoring-evidence.md
   plan: docs/superpowers/plans/2026-11-11-gap-123-work-template-authoring.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-11T06:40:10+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-11, verbatim: 'APPROVE GAP-123 Gate 3'. Given on the packet at PR head 7072f8209fdeaea28fe619137f1afbebe0aacb69; bound to implementation subject 186e5e2914fb946f7335a7940fb0f7748004b704 and implementation-tree digest 8d57e3f4d94bae7fa2f1b1f902f6b740a8aa78d4479e6ccf05b3ca5cef7df9d6 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28, after exact-head CI is green; no deployment, release, or production:rbac run on a server authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-11T06:32:35+07:00"
-  updated_at: "2026-11-11T06:32:35+07:00"
+  updated_at: "2026-11-11T06:40:10+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-123 at subject 186e5e2914fb946f7335a7940fb0f7748004b704 (Gate 2 E-1, P-1, S-1; one PR, implementation commit 186e5e29; no migration, no change to how templates are applied). New Web\\WorkTemplatePageController with routes app.work-templates.index (template.view), create / store / edit / update / duplicate (template.edit_draft) and publish (template.publish), scoped to the user's company (404 for another company's template). New WorkTemplates\\WorkTemplateEditorService turns editor rows (name, type task / approval / deliverable / inspection, the steps it follows — only steps above it, so no cycles — days 0-365 stored as sla_hours = days x 24, description, priority, phase, checklist and required documents one per line with '*' for required) into the API steps[] payload and back; custom fields, assignee rule, assignment rules, required document types, other config keys and unchanged checklist / document keys of existing steps are carried over; new steps go to the project manager. Writes go through the existing WorkTemplateCrudService (draft, draft-from-published, publish, versioning) and are audited with the API action names. The edit page previews the tasks apply would create with day offsets matching the apply timeline. Schema v2 templates are shown as API-only. Menu item 'Mẫu công việc'. New WorkTemplateVietnameseBaselineSeeder: WT-VN-THIETKE, WT-VN-THICONG, WT-VN-NGHIEMTHU, published, same step keys / order / dependencies / durations / types / field keys as the English baselines, Vietnamese text, run by production:rbac (when a company exists) and DatabaseSeeder, idempotent. Tests: WorkTemplateAuthoringPageTest (8) red before, green after — end to end create, save, preview, publish, appear in the project apply list, apply creates the tasks with names, dates, dependencies and PM assignee; editing a published template opens a new draft and an applied project keeps its version; custom fields kept and duplicate copies them; validation; PM sees the list but every write is refused and nothing changes; company isolation; menu; Vietnamese seeder. ProjectWorkTemplateApplyTest green. Demo app: created, saved, previewed ('Ngày 3 – 7'), published and applied a 3-step template from the screen; the project received the 3 tasks with the right order, dependencies and dates. PHPStan (no errors, no baseline entries), php-cs-fixer, ssot:lint, deptrac, route guard, docs-lint, governance lint pass. Local Unit + Feature + Integration 3043 tests: only the 2 known root-only failures; Feature/Api 825 green. Exact-head CI recorded in the body."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "186e5e2914fb946f7335a7940fb0f7748004b704"
   verified_at: "2026-11-11T06:32:35+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "8d57e3f4d94bae7fa2f1b1f902f6b740a8aa78d4479e6ccf05b3ca5cef7df9d6"
+  decision_recorded_at: "2026-11-11T06:40:10+07:00"
 ---
 
 # GAP-123 — Gate 3 release decision (authoring work templates)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-11-11 ("APPROVE GAP-123 Gate 3"), bound to implementation subject
+`186e5e2914fb946f7335a7940fb0f7748004b704` and implementation-tree digest `8d57e3f4d94bae7fa2f1b1f902f6b740a8aa78d4479e6ccf05b3ca5cef7df9d6`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

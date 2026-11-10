@@ -1,32 +1,38 @@
 ---
 work_id: GAP-118
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-11-10-gap-118-mobile-my-work-timesheet-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-11-10-gap-118-mobile-my-work-timesheet.md
   branch: docs/GAP-118-mobile-my-work-timesheet
   pr: https://github.com/kha997/zenamanagephp/pull/408
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-10T08:56:48+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-10, verbatim: 'APPROVE GAP-118 Gate 2 N-1 H-1 C-1 T-1 R-2 V-1'. Reviewed design head: 4f7ef7af7eefb2a8eae926cef9c06ddf9dfc0e41. Approves N-1 (≤1024px: sidebar hidden, '☰ Menu' details toggle in the top bar with the same navigation; desktop unchanged), H-1 (phone top bar one line: Menu, page title, user initials; search, full name and logout inside the menu), C-1 (<768px: card lists for My Work items and time entries, tables kept ≥768px; new partial, shared workload table untouched), T-1 (Start button ≥44px on each task card; fixed bottom running-timer bar with Stop on both pages; no change to time rules), R-2 (time review page deferred), V-1 (PHPUnit markup tests in CI plus Playwright measurements and screenshots at 390px and 1440px recorded at Gate 3), one PR / one Gate 3, with the exact allowlist in this packet; no migration; not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-10T08:55:56+07:00"
-  updated_at: "2026-11-10T08:55:56+07:00"
+  updated_at: "2026-11-10T08:56:48+07:00"
 generated_by: agent
 ---
 
 # GAP-118 — Phone layout for "Việc của tôi" and "Bảng giờ": Gate 2 design
+
+## OWNER GATE 2: APPROVED — N-1, H-1, C-1, T-1, R-2, V-1
+
+Owner approved N-1, H-1, C-1, T-1, R-2 and V-1 in-session on 2026-11-10 against reviewed design head
+`4f7ef7af7eefb2a8eae926cef9c06ddf9dfc0e41`. This authorizes only the bounded implementation defined by this packet; it does not authorize Gate 3,
+merge, release, or deployment.
 
 ## Owner Summary
 

@@ -1,14 +1,14 @@
 ---
 work_id: GAP-125
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-11-11-gap-125-mobile-field-pages-evidence.md
   plan: docs/superpowers/plans/2026-11-11-gap-125-mobile-field-pages.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-11T17:42:59+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-11, verbatim: 'APPROVE GAP-125 Gate 3'. Given on the packet at PR head d79af9a8f5accd3674ce8413a4e8ccf7bba2ffbb (re-presented after main, carrying GAP-124, was merged into the branch); bound to implementation subject 13ce580ca2856166cceaa10751d6cafff6b874a5 and implementation-tree digest fc4808395e34e5ce82a5b403fb761eb7fb48385b7845e7a261963184bb7f3ff1 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28, after exact-head CI is green; no deployment or release authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-11T14:10:11+07:00"
-  updated_at: "2026-11-11T16:52:00+07:00"
+  updated_at: "2026-11-11T17:42:59+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-125 at subject 13ce580ca2856166cceaa10751d6cafff6b874a5 (main merged in after GAP-124 to satisfy the up-to-date branch rule; resources/css/operator.css auto-merged with additions only on both sides; GAP-125 views and tests byte-identical to implementation commit 3515689c; npm build OK; Mobile, Notifications and RouteOwnership tests 30/30 green) — implementation commit 3515689c15ddc7291f44fe982fb6c185ae25fdda (Gate 2 C-1, D-1; one PR, implementation commit 3515689c; views, CSS and one test only). C-1: below 768px new partials site-diaries/_cards (date linking to the diary, status badge, project and code, work summary, workers, author, and the same submit / approve POST forms as the table by status), inspections/_cards (title linking to the inspection, status, QC plan, inspector, date) and inspections/_ncr-cards (whole card links to the NCR; number, title, severity, status, assignee); the tables are wrapped in operator-wide-only. D-1: on inspections/show the 'Thông tin' column gets operator-phone-first (order -1 below 768px); description, results, the conduct / complete form and the new-NCR form sit in <details open data-phone-collapse> with a phone-only summary; an inline script closes them below 768px (without JS they stay open); when the page returns with validation errors both forms render without data-phone-collapse and stay open. Tests: FieldPagesMobileLayoutTest (4) red before, green after. Playwright on the demo app: iPhone 13 — no table overflows on the three pages (diary table was 900 / 308 px, inspection table 515 / 308 px, NCR table 607 / 308 px), inspection detail 3,082 → 1,736 px with 'Thông tin' at the top, card buttons 47 px, section toggles 44 px; desktop 1440 px — the three pages are pixel-identical before and after. php-cs-fixer, ssot:lint, button inventory (no orphans), docs-lint, governance lint pass. Local Unit + Feature + Integration 3049 tests: only the 2 known root-only failures. Exact-head CI recorded in the body."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "13ce580ca2856166cceaa10751d6cafff6b874a5"
   verified_at: "2026-11-11T16:52:00+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "fc4808395e34e5ce82a5b403fb761eb7fb48385b7845e7a261963184bb7f3ff1"
+  decision_recorded_at: "2026-11-11T17:42:59+07:00"
 ---
 
 # GAP-125 — Gate 3 release decision (phone layout for the field pages)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-11-11 ("APPROVE GAP-125 Gate 3"), bound to implementation subject `13ce580ca2856166cceaa10751d6cafff6b874a5` and
+implementation-tree digest `fc4808395e34e5ce82a5b403fb761eb7fb48385b7845e7a261963184bb7f3ff1`. No deployment or release is authorized.
 
 ## Trình lại: đã đưa main (GAP-124) vào nhánh
 

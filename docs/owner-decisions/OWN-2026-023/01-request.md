@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-11-11-own-2026-023-register-reconciliation.md
   plan: null
   branch: docs/OWN-2026-023-register-reconciliation
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/414
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

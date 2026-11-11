@@ -1,32 +1,38 @@
 ---
 work_id: GAP-125
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-11-11-gap-125-mobile-field-pages-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-11-11-gap-125-mobile-field-pages.md
   branch: docs/GAP-125-mobile-field-pages
   pr: https://github.com/kha997/zenamanagephp/pull/416
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-11T14:00:19+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-11, verbatim: 'APPROVE GAP-125 Gate 2 C-1 D-1'. Reviewed design head: a7bd9896cc46b477520c59d69b455879aaee651d. Approves C-1 (phone cards for the site-diary list, the inspection list and the NCR table on the inspection detail) and D-1 (inspection detail on the phone: Thông tin first, long texts and the completion / new-NCR forms collapsed), one PR / one Gate 3, with the exact allowlist in this packet; desktop unchanged; not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-11T13:28:22+07:00"
-  updated_at: "2026-11-11T13:28:22+07:00"
+  updated_at: "2026-11-11T14:00:19+07:00"
 generated_by: agent
 ---
 
 # GAP-125 — Phone layout for the field pages: Gate 2 design
+
+## OWNER GATE 2: APPROVED — C-1, D-1
+
+Owner approved C-1 and D-1 in-session on 2026-11-11 against reviewed design head
+`a7bd9896cc46b477520c59d69b455879aaee651d`. This authorizes only the bounded implementation defined by this packet; it does not authorize Gate 3,
+merge, release, or deployment.
 
 ## Owner Summary
 

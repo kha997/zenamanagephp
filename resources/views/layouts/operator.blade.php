@@ -94,6 +94,22 @@
                     <input type="search" name="q" value="{{ $operatorSearchValue }}"
                            class="operator-input" placeholder="Tìm kiếm dự án, RFI, hợp đồng, vật tư..." aria-label="Tìm kiếm toàn hệ thống">
                 </form>
+                {{-- GAP-124 B-1: notification bell with the unread count (desktop and phone). --}}
+                @php
+                    $operatorBellUser = auth()->user();
+                    $operatorUnreadCount = $operatorBellUser
+                        ? \App\Models\Notification::query()->where('tenant_id', (string) $operatorBellUser->tenant_id)->where('user_id', (string) $operatorBellUser->id)->whereNull('read_at')->count()
+                        : 0;
+                @endphp
+                @if ($operatorBellUser)
+                    <a href="{{ route('app.notifications.index') }}" class="operator-bell" data-testid="notification-bell"
+                       aria-label="Thông báo{{ $operatorUnreadCount > 0 ? ' (' . $operatorUnreadCount . ' chưa đọc)' : '' }}">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                        @if ($operatorUnreadCount > 0)
+                            <span class="operator-bell-count" data-testid="notification-unread-count">{{ $operatorUnreadCount > 99 ? '99+' : $operatorUnreadCount }}</span>
+                        @endif
+                    </a>
+                @endif
                 <div class="operator-topbar-user operator-desktop-only" style="display:flex;align-items:center;gap:0.75rem;">
                     <span>{{ $operatorUserName }}</span>
                     <form method="POST" action="{{ route('logout.post') }}">

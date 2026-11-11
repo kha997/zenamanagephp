@@ -493,9 +493,15 @@ Route::prefix('app')->name('app.')->middleware(['auth', 'tenant.isolation'])->gr
     Route::get('/settings/security', function () {
         return redirect()->route('app.settings');
     })->name('settings.security');
-    Route::get('/settings/notifications', function () {
-        return redirect()->route('app.settings');
-    })->name('settings.notifications');
+    // GAP-124 S-1: the company's Slack channel for business notifications.
+    Route::get('/settings/notifications', [App\Http\Controllers\Web\NotificationSettingsPageController::class, 'show'])->middleware('rbac:notification.channel.manage')->name('settings.notifications');
+    Route::post('/settings/notifications', [App\Http\Controllers\Web\NotificationSettingsPageController::class, 'update'])->middleware('rbac:notification.channel.manage')->name('settings.notifications.update');
+    Route::post('/settings/notifications/test', [App\Http\Controllers\Web\NotificationSettingsPageController::class, 'test'])->middleware('rbac:notification.channel.manage')->name('settings.notifications.test');
+
+    // GAP-124 B-1: the signed-in user's notifications (always their own, in their company).
+    Route::get('/notifications', [App\Http\Controllers\Web\NotificationPageController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/read-all', [App\Http\Controllers\Web\NotificationPageController::class, 'readAll'])->name('notifications.read-all');
+    Route::get('/notifications/{id}/open', [App\Http\Controllers\Web\NotificationPageController::class, 'open'])->name('notifications.open');
 
     // Profile Routes
     Route::get('/profile', function () {

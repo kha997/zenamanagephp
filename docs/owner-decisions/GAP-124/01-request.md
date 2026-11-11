@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-11-11-gap-124-business-notifications-evidence.md
   plan: null
   branch: docs/GAP-124-business-notifications
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/415
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

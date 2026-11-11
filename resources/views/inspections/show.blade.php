@@ -19,12 +19,17 @@
         <div class="lg:col-span-2 space-y-6">
             @if ($inspection->description)
                 <x-ui.card title="Mô tả">
-                    <div class="whitespace-pre-line text-slate-800">{{ $inspection->description }}</div>
+                    <details class="operator-phone-collapse" open data-phone-collapse>
+                        <summary class="operator-phone-collapse-summary">Xem mô tả</summary>
+                        <div class="whitespace-pre-line text-slate-800">{{ $inspection->description }}</div>
+                    </details>
                 </x-ui.card>
             @endif
 
             @if ($inspection->findings || $inspection->recommendations)
                 <x-ui.card title="Kết quả kiểm định">
+                    <details class="operator-phone-collapse" open data-phone-collapse>
+                    <summary class="operator-phone-collapse-summary">Xem kết quả</summary>
                     @if ($inspection->findings)
                         <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Phát hiện</div>
                         <div class="mt-1 whitespace-pre-line text-slate-800">{{ $inspection->findings }}</div>
@@ -33,6 +38,7 @@
                         <div class="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">Khuyến nghị</div>
                         <div class="mt-1 whitespace-pre-line text-slate-800">{{ $inspection->recommendations }}</div>
                     @endif
+                    </details>
                 </x-ui.card>
             @endif
 
@@ -48,6 +54,9 @@
                         </div>
                     @endif
 
+                    {{-- Stays open on the phone when the form came back with errors. --}}
+                    <details class="operator-phone-collapse" open @if (! $errors->any()) data-phone-collapse @endif>
+                    <summary class="operator-phone-collapse-summary">Mở form</summary>
                     <form method="POST"
                           action="{{ $inspection->status === 'scheduled' ? route('operator.inspections.conduct', $inspection->id) : route('operator.inspections.complete', $inspection->id) }}"
                           class="space-y-4">
@@ -64,11 +73,13 @@
                             {{ $inspection->status === 'scheduled' ? 'Ghi nhận kiểm định' : 'Hoàn tất kiểm định' }}
                         </button>
                     </form>
+                    </details>
                 </x-ui.card>
             @endif
         </div>
 
-        <div class="space-y-6">
+        {{-- GAP-125 D-1: first on the phone. --}}
+        <div class="space-y-6 operator-phone-first">
             <x-ui.card title="Thông tin">
                 <div class="space-y-4">
                     <x-ui.field-value label="Trạng thái" :value="match($inspection->status) { 'scheduled' => 'Đã lên lịch', 'in_progress' => 'Đang thực hiện', 'completed' => 'Hoàn tất', default => $inspection->status }" />
@@ -86,6 +97,11 @@
             @if ($ncrs->isEmpty())
                 <div class="py-4 text-center text-sm text-slate-500">Chưa ghi nhận NCR nào cho phiên kiểm định này.</div>
             @else
+                {{-- GAP-125 C-1: cards below 768px, the table from 768px. --}}
+                <div class="operator-phone-only">
+                    @include('inspections._ncr-cards')
+                </div>
+                <div class="operator-wide-only">
                 <x-ui.data-table :headers="['Số NCR', 'Tiêu đề', 'Mức độ', 'Trạng thái', 'Giao cho', 'Thao tác']">
                     @foreach ($ncrs as $ncr)
                         <tr>
@@ -127,10 +143,13 @@
                         </tr>
                     @endforeach
                 </x-ui.data-table>
+                </div>
             @endif
         </x-ui.card>
 
         <x-ui.card title="Ghi nhận NCR mới">
+            <details class="operator-phone-collapse" open @if (! $errors->any()) data-phone-collapse @endif>
+            <summary class="operator-phone-collapse-summary">Mở form ghi nhận NCR</summary>
             <form method="POST" action="{{ route('operator.inspections.ncrs.store', $inspection->id) }}" class="space-y-5">
                 @csrf
 
@@ -168,6 +187,21 @@
 
                 <button type="submit" class="operator-button operator-button-primary">Ghi nhận NCR</button>
             </form>
+            </details>
         </x-ui.card>
     </div>
+    {{-- GAP-125 D-1: below 768px the long sections and the forms start closed (tap the title to open). Without JS they stay open. --}}
+    <script data-phone-collapse-script>
+        (function () {
+            if (!window.matchMedia) return;
+            var phone = window.matchMedia('(max-width: 767px)');
+            var sections = document.querySelectorAll('details[data-phone-collapse]');
+            // Closed on the phone; always open above the breakpoint, where the summaries are hidden (e.g. after rotating).
+            function sync() {
+                sections.forEach(function (d) { if (phone.matches) { d.removeAttribute('open'); } else { d.setAttribute('open', ''); } });
+            }
+            sync();
+            if (phone.addEventListener) { phone.addEventListener('change', sync); } else if (phone.addListener) { phone.addListener(sync); }
+        })();
+    </script>
 @endsection

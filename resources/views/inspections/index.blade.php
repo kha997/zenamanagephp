@@ -40,6 +40,11 @@
                 <x-ui.button-link :href="route('operator.inspections.create')">Tạo phiên kiểm định</x-ui.button-link>
             </x-ui.empty-state>
         @else
+            {{-- GAP-125 C-1: cards below 768px, the table from 768px. --}}
+            <div class="operator-phone-only">
+                @include('inspections._cards')
+            </div>
+            <div class="operator-wide-only">
             <x-ui.data-table :headers="['Tiêu đề', 'Kế hoạch QC', 'Người kiểm định', 'Ngày kiểm định', 'Trạng thái', 'Thao tác']">
                 @foreach ($inspections as $inspection)
                     <tr>
@@ -70,6 +75,7 @@
                     </tr>
                 @endforeach
             </x-ui.data-table>
+            </div>
 
             @if ($inspections->hasPages())
                 <div class="p-4 border-t border-gray-200">{{ $inspections->links() }}</div>

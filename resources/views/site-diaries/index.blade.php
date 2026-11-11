@@ -48,7 +48,11 @@
             <x-ui.button-link :href="route('operator.site-diaries.create')">Tạo nhật ký</x-ui.button-link>
         </x-ui.empty-state>
     @else
-        <x-ui.card>
+        {{-- GAP-125 C-1: cards below 768px, the table from 768px. --}}
+        <div class="operator-phone-only">
+            @include('site-diaries._cards')
+        </div>
+        <x-ui.card class="operator-wide-only">
             <x-ui.data-table :headers="['Ngày', 'Dự án', 'Công việc', 'Nhân lực', 'Trạng thái', 'Người lập', 'Thao tác']">
                 @foreach ($siteDiaries as $siteDiary)
                     <tr>

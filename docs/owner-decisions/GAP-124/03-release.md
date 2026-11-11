@@ -1,14 +1,14 @@
 ---
 work_id: GAP-124
 gate: 3
-gate_status: approved
+gate_status: awaiting_owner
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: approved
+  value: none
   authority: human_owner
-decision_requested: null
+decision_requested: "approve_or_correction_or_defer"
 references:
   spec: docs/audits/2026-11-11-gap-124-business-notifications-evidence.md
   plan: docs/superpowers/plans/2026-11-11-gap-124-business-notifications.md
@@ -18,34 +18,50 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-11-11T09:44:58+07:00"
-  owner_response_reference: "Owner decision in-session on 2026-11-11, verbatim: 'APPROVE GAP-124 Gate 3'. Given on the packet at PR head 5f4a9c065f53fa806c3044b67bda120d7ef38901; bound to implementation subject b58693edb5f5e1e5893b8f9cb3723ec04e7a2d15 and implementation-tree digest b8b3732c97dcb8f2b8c71cd179121c1d319bd2a9797c44757c082ae3b5ebf9a2 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28, after exact-head CI is green; no deployment, release, server command or Slack webhook creation authorized."
+  recorded_at: null
+  owner_response_reference: null
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-11T08:48:14+07:00"
-  updated_at: "2026-11-11T09:44:58+07:00"
+  updated_at: "2026-11-11T11:20:59+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "GAP-124 at subject b58693edb5f5e1e5893b8f9cb3723ec04e7a2d15 (Gate 2 B-1, S-1, E-1, O-1 plus Owner amendments 1 and 2; one PR, implementation commit b58693ed; no migration). B-1: bell with unread count in layouts/operator (desktop and phone) and Web\\NotificationPageController (app.notifications.index / open / read-all; own notifications in own company only; open marks read and follows in-app paths only, '//' and absolute URLs go to the list). S-1: Web\\NotificationSettingsPageController at /app/settings/notifications (rbac notification.channel.manage, new canonical permission in ZenaPermissionsSeeder so admin roles get it); Notifications\\SlackChannelService keeps the incoming-webhook URL encrypted (Crypt) in tenants.settings, accepts only https://hooks.slack.com/services/…, shows the last 6 characters, keeps the URL when switched off, removes it on request, posts with a 10 s timeout and never throws; test send; audit notification.channel.slack.updated. E-1: NotificationSlackObserver (Observers → Jobs only, deptrac clean) dispatches the queued SendSlackMessage job after commit for change_request.implemented, submittal.submitted / resubmitted / approved / rejected, ncr.assigned, payment_certificate.approved and month_end.*; the job checks the company channel, de-duplicates (company + event + link + title for 10 minutes; month-end once per key), posts one message, retries twice on failure and never throws; CRM / design-item / other events stay in-app. O-1: Reminders\\OverdueTaskDigestService + reminders:overdue-tasks (--dry-run, --date), scheduled daily 08:00 Asia/Ho_Chi_Minh behind ENABLE_SCHEDULER: open tasks (pending / in progress / on hold) with end date before today, one in-app notification per project to its active PM per day (event_key tasks.overdue_digest:<project>:<date>), one Slack summary per company per day. Go-live runbook documents the Slack step, the queue requirement and the digest. Amendment 1: the page view is notifications/inbox.blade.php (an older orphan notifications/index.blade.php is untouched). Amendment 2: RouteOwnershipReconciliationTest now expects the RBAC redirect for /app/settings/notifications. Tests: BusinessNotificationsTest (7) red before, green after; ScheduleContractTest and RouteOwnershipReconciliationTest green. Demo app: bell 5 → 4 after opening one, notifications page, overdue digest wrote 1 notification (4 tasks), Slack URL saved and shown masked, a non-Slack URL refused, the test send to the fake URL reported a clear error. PHPStan (no errors, no baseline entries), php-cs-fixer, ssot:lint, deptrac (0 violations), route guard, docs-lint, governance lint pass. Local Unit + Feature + Integration 3052 tests: only the 2 known root-only failures; Feature/Api 825 green. Exact-head CI recorded in the body."
+mandatory_technical_gate_summary: "GAP-124 at subject 2af1325401a2de2281202447620c3686e1dda77e (re-presented after the Codex review, Owner amendment 3, commit 2af13254: submittal submitted / resubmitted / approved / rejected and payment certificate approved are posted from EventRecord by the new EventRecordSlackObserver, once per record; NotificationSlackObserver keeps change request implemented, NCR assigned and month-end, keyed by change request id, NCR id and month-end key; SendSlackMessage takes tenant, event identity and message; Vietnamese messages with number and link; tests drive the real submittal service, change-request apply API, NCR API and certificate approval page, the four new ones red on the previous code. Gate 2 B-1, S-1, E-1, O-1 plus Owner amendments 1, 2 and 3; one PR, implementation commits b58693ed and 2af13254; no migration). B-1: bell with unread count in layouts/operator (desktop and phone) and Web\\NotificationPageController (app.notifications.index / open / read-all; own notifications in own company only; open marks read and follows in-app paths only, '//' and absolute URLs go to the list). S-1: Web\\NotificationSettingsPageController at /app/settings/notifications (rbac notification.channel.manage, new canonical permission in ZenaPermissionsSeeder so admin roles get it); Notifications\\SlackChannelService keeps the incoming-webhook URL encrypted (Crypt) in tenants.settings, accepts only https://hooks.slack.com/services/…, shows the last 6 characters, keeps the URL when switched off, removes it on request, posts with a 10 s timeout and never throws; test send; audit notification.channel.slack.updated. E-1: NotificationSlackObserver (Observers → Jobs only, deptrac clean) dispatches the queued SendSlackMessage job after commit for change_request.implemented, submittal.submitted / resubmitted / approved / rejected, ncr.assigned, payment_certificate.approved and month_end.*; the job checks the company channel, de-duplicates (company + event + link + title for 10 minutes; month-end once per key), posts one message, retries twice on failure and never throws; CRM / design-item / other events stay in-app. O-1: Reminders\\OverdueTaskDigestService + reminders:overdue-tasks (--dry-run, --date), scheduled daily 08:00 Asia/Ho_Chi_Minh behind ENABLE_SCHEDULER: open tasks (pending / in progress / on hold) with end date before today, one in-app notification per project to its active PM per day (event_key tasks.overdue_digest:<project>:<date>), one Slack summary per company per day. Go-live runbook documents the Slack step, the queue requirement and the digest. Amendment 1: the page view is notifications/inbox.blade.php (an older orphan notifications/index.blade.php is untouched). Amendment 2: RouteOwnershipReconciliationTest now expects the RBAC redirect for /app/settings/notifications. Tests: BusinessNotificationsTest (11) red before, green after; ScheduleContractTest and RouteOwnershipReconciliationTest green. Demo app: bell 5 → 4 after opening one, notifications page, overdue digest wrote 1 notification (4 tasks), Slack URL saved and shown masked, a non-Slack URL refused, the test send to the fake URL reported a clear error. PHPStan (no errors, no baseline entries), php-cs-fixer, ssot:lint, deptrac (0 violations), route guard, docs-lint, governance lint pass. Local Unit + Feature + Integration 3056 tests: only the 2 known root-only failures; Feature/Api 825 green. Exact-head CI recorded in the body."
 technical_evidence:
   base_sha: "f3066c548211932b7dd29d65e93abbb0dd2dfddd"
-  subject_sha: "b58693edb5f5e1e5893b8f9cb3723ec04e7a2d15"
-  implementation_tree_digest: "b8b3732c97dcb8f2b8c71cd179121c1d319bd2a9797c44757c082ae3b5ebf9a2"
-  verified_pr_head_sha: "b58693edb5f5e1e5893b8f9cb3723ec04e7a2d15"
-  verified_at: "2026-11-11T08:48:14+07:00"
+  subject_sha: "2af1325401a2de2281202447620c3686e1dda77e"
+  implementation_tree_digest: "99c483d15887447b320473fb283663332838b8618457a7921e5d12f15dd6fe87"
+  verified_pr_head_sha: "2af1325401a2de2281202447620c3686e1dda77e"
+  verified_at: "2026-11-11T11:20:59+07:00"
 owner_decision_binding:
-  implementation_tree_digest: "b8b3732c97dcb8f2b8c71cd179121c1d319bd2a9797c44757c082ae3b5ebf9a2"
-  decision_recorded_at: "2026-11-11T09:44:58+07:00"
+  implementation_tree_digest: null
+  decision_recorded_at: null
 ---
 
 # GAP-124 — Gate 3 release decision (business notifications)
 
-## OWNER GATE 3: APPROVED
+## Trình lại sau góp ý của Codex (bổ sung 3)
 
-Owner approved Gate 3 in-session on 2026-11-11 ("APPROVE GAP-124 Gate 3"), bound to implementation subject
-`b58693edb5f5e1e5893b8f9cb3723ec04e7a2d15` and implementation-tree digest `b8b3732c97dcb8f2b8c71cd179121c1d319bd2a9797c44757c082ae3b5ebf9a2`. No deployment or release is authorized.
+Lần duyệt trước (gắn với subject `b58693ed`) không còn hiệu lực vì mã đã đổi. Codex chỉ ra 2 lỗi thật, đã sửa trong commit
+`2af13254`:
+
+1. **Hồ sơ trình duyệt và chứng chỉ thanh toán sẽ không bao giờ tới Slack.**
+   - Hai việc này chỉ ghi vào nhật ký sự kiện, không tạo thông báo có mã sự kiện.
+   - Nay có observer riêng (file mới, bổ sung 3) gửi Slack từ nhật ký sự kiện. Mỗi lần nộp / nộp lại / duyệt / từ chối, mỗi
+     chứng chỉ được duyệt là một tin.
+2. **Chống trùng không ổn định.**
+   - Một yêu cầu thay đổi có thể gửi 2 tin; hai yêu cầu khác nhau có thể chặn nhầm nhau.
+   - Nay chống trùng theo mã của chính sự kiện: mã yêu cầu thay đổi, mã NCR, mã nhắc việc, mã dòng nhật ký.
+
+Tin Slack nay bằng tiếng Việt, có số hiệu và link tới đúng trang. Test mới chạy **đúng thao tác thật**:
+- nộp, từ chối, nộp lại, duyệt hồ sơ;
+- áp dụng 2 yêu cầu thay đổi;
+- tạo NCR;
+- duyệt chứng chỉ thanh toán trên trang hợp đồng.
+
+4 test này đỏ trên mã cũ, xanh sau khi sửa.
 
 ## Gói quyết định phát hành
 
@@ -54,7 +70,7 @@ Owner approved Gate 3 in-session on 2026-11-11 ("APPROVE GAP-124 Gate 3"), bound
 - Không có gì gửi ra ngoài.
 - Việc quá hạn không ai được báo.
 
-**2. Sau thay đổi (Gate 2 B-1, S-1, E-1, O-1 + bổ sung 1, 2)** — subject `b58693ed`.
+**2. Sau thay đổi (Gate 2 B-1, S-1, E-1, O-1 + bổ sung 1, 2, 3)** — subject `2af13254`.
 
 **Chuông báo (B-1)**
 - Chuông có số chưa đọc trên thanh trên cùng, cả máy tính và điện thoại.
@@ -96,8 +112,8 @@ Owner approved Gate 3 in-session on 2026-11-11 ("APPROVE GAP-124 Gate 3"), bound
 - Nội dung các thông báo hiện có.
 - Mục "Cập nhật chưa đọc" ở "Hôm nay".
 
-**3. Đã kiểm thử** — base `f3066c54`; subject `b58693edb5f5e1e5893b8f9cb3723ec04e7a2d15`; digest
-`b8b3732c97dcb8f2b8c71cd179121c1d319bd2a9797c44757c082ae3b5ebf9a2`.
+**3. Đã kiểm thử** — base `f3066c54`; subject `2af1325401a2de2281202447620c3686e1dda77e`; digest
+`99c483d15887447b320473fb283663332838b8618457a7921e5d12f15dd6fe87`.
 
 **Trên app demo**
 - Chuông hiện 5; mở một thông báo thì vào đúng dự án và còn 4.
@@ -106,16 +122,16 @@ Owner approved Gate 3 in-session on 2026-11-11 ("APPROVE GAP-124 Gate 3"), bound
 - Link không phải Slack: bị từ chối.
 - Gửi thử với link giả: báo lỗi rõ ràng, không vỡ trang.
 
-**Test tự động mới (7), đỏ trước, xanh sau**
+**Test tự động mới (11), đỏ trước, xanh sau**
 - chuông và trang thông báo;
 - chỉ thấy thông báo của mình;
 - chặn link ra ngoài;
 - quyền cài đặt Slack, kiểm tra link, mã hoá, gửi thử;
-- mỗi sự kiện đúng 1 tin dù 3 người nhận, CRM không gửi, Slack lỗi không ảnh hưởng, công ty khác không bị gửi;
+- sự kiện thật: hồ sơ (4 lần đổi trạng thái → 4 tin), 2 yêu cầu thay đổi (mỗi cái 2 người nhận → 2 tin), NCR (1 tin, có người được giao), chứng chỉ thanh toán (1 tin); CRM không gửi; Slack lỗi không ảnh hưởng; công ty khác không bị gửi;
 - tóm tắt quá hạn: đúng việc, không trùng, `--dry-run` không ghi.
 
 **Kiểm tra khác**
-- Toàn bộ 3.052 test: chỉ còn 2 lỗi có sẵn do chạy bằng root. API 825 test xanh.
+- Toàn bộ 3.056 test: chỉ còn 2 lỗi có sẵn do chạy bằng root. API 825 test xanh.
 - PHPStan sạch, không thêm ngoại lệ. php-cs-fixer, SSOT lint, deptrac (0 vi phạm), kiểm tra route, lint đều sạch.
 
 **4. Lưu ý vận hành** (đã ghi trong runbook go-live)

@@ -170,6 +170,34 @@ Anh/chị chọn **4 điểm**:
 Các danh mục / test kiểm tra quyền và route hiện có (ví dụ danh sách quyền chuẩn, SSOT lint) có thể cần thêm dòng. File
 khác cần đổi sẽ hỏi Owner trước và ghi thành bổ sung.
 
+## Owner amendment 1 (2026-11-11, tên file trang thông báo)
+
+**Vấn đề:** allowlist ghi trang danh sách là file mới `resources/views/notifications/index.blade.php`. File đó **đã có
+sẵn**: một trang cũ khoảng 920 dòng, dùng khung giao diện cũ (`layouts.app`), không route nào trỏ tới.
+
+**Owner chọn (AskUserQuestion, 2026-11-11):** "File mới tên khác (Recommended)".
+
+**Thay đổi:**
+- Trang danh sách dùng file mới `resources/views/notifications/inbox.blade.php`.
+- File cũ `notifications/index.blade.php` giữ nguyên, không sửa.
+
+**File thêm vào allowlist:** `resources/views/notifications/inbox.blade.php`, thay cho `resources/views/notifications/index.blade.php`.
+
+## Owner amendment 2 (2026-11-11, test chuyển hướng cũ)
+
+**Vấn đề:**
+- `tests/Feature/RouteOwnershipReconciliationTest.php` khẳng định `/app/settings/notifications` chuyển về
+  `/app/settings`.
+- Thiết kế S-1 đặt trang "Cài đặt thông báo" đúng ở địa chỉ này, nên test đỏ.
+
+**Owner chọn (AskUserQuestion, 2026-11-11):** "Sửa test, thêm allowlist (Recommended)".
+
+**Thay đổi:**
+- Sửa đúng một dòng của test: người không có quyền `notification.channel.manage` bị chuyển đi kèm thông báo lỗi.
+- Hai địa chỉ `general` và `security` giữ nguyên.
+
+**File thêm vào allowlist:** `tests/Feature/RouteOwnershipReconciliationTest.php`.
+
 ## Ngoài phạm vi
 
 - Email.

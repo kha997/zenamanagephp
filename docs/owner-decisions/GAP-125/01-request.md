@@ -1,11 +1,11 @@
 ---
 work_id: GAP-125
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-11-11-gap-125-mobile-field-pages-evidence.md
   plan: null
@@ -15,16 +15,21 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-11T13:27:43+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-11, verbatim: 'APPROVE GAP-125 Gate 1'. Bound to reviewed Draft PR #416 head e68b48ee7e84d172a37389a9ae0ec95d6c42a7af, canonical base c47261e36ad8e8f832a47521f2ac63618aa5877c. Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-11T09:46:37+07:00"
-  updated_at: "2026-11-11T09:46:37+07:00"
+  updated_at: "2026-11-11T13:27:43+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved GAP-125 Gate 1 in-session on 2026-11-11 against Draft PR #416 head
+`e68b48ee7e84d172a37389a9ae0ec95d6c42a7af`. This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

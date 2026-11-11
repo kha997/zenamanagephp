@@ -1,14 +1,14 @@
 ---
 work_id: GAP-124
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-11-11-gap-124-business-notifications-evidence.md
   plan: docs/superpowers/plans/2026-11-11-gap-124-business-notifications.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-11T09:44:58+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-11, verbatim: 'APPROVE GAP-124 Gate 3'. Given on the packet at PR head 5f4a9c065f53fa806c3044b67bda120d7ef38901; bound to implementation subject b58693edb5f5e1e5893b8f9cb3723ec04e7a2d15 and implementation-tree digest b8b3732c97dcb8f2b8c71cd179121c1d319bd2a9797c44757c082ae3b5ebf9a2 (recomputed at recording time, zero drift). Merge is covered by the Owner's standing in-session instruction of 2026-09-28, after exact-head CI is green; no deployment, release, server command or Slack webhook creation authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-11T08:48:14+07:00"
-  updated_at: "2026-11-11T08:48:14+07:00"
+  updated_at: "2026-11-11T09:44:58+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-124 at subject b58693edb5f5e1e5893b8f9cb3723ec04e7a2d15 (Gate 2 B-1, S-1, E-1, O-1 plus Owner amendments 1 and 2; one PR, implementation commit b58693ed; no migration). B-1: bell with unread count in layouts/operator (desktop and phone) and Web\\NotificationPageController (app.notifications.index / open / read-all; own notifications in own company only; open marks read and follows in-app paths only, '//' and absolute URLs go to the list). S-1: Web\\NotificationSettingsPageController at /app/settings/notifications (rbac notification.channel.manage, new canonical permission in ZenaPermissionsSeeder so admin roles get it); Notifications\\SlackChannelService keeps the incoming-webhook URL encrypted (Crypt) in tenants.settings, accepts only https://hooks.slack.com/services/…, shows the last 6 characters, keeps the URL when switched off, removes it on request, posts with a 10 s timeout and never throws; test send; audit notification.channel.slack.updated. E-1: NotificationSlackObserver (Observers → Jobs only, deptrac clean) dispatches the queued SendSlackMessage job after commit for change_request.implemented, submittal.submitted / resubmitted / approved / rejected, ncr.assigned, payment_certificate.approved and month_end.*; the job checks the company channel, de-duplicates (company + event + link + title for 10 minutes; month-end once per key), posts one message, retries twice on failure and never throws; CRM / design-item / other events stay in-app. O-1: Reminders\\OverdueTaskDigestService + reminders:overdue-tasks (--dry-run, --date), scheduled daily 08:00 Asia/Ho_Chi_Minh behind ENABLE_SCHEDULER: open tasks (pending / in progress / on hold) with end date before today, one in-app notification per project to its active PM per day (event_key tasks.overdue_digest:<project>:<date>), one Slack summary per company per day. Go-live runbook documents the Slack step, the queue requirement and the digest. Amendment 1: the page view is notifications/inbox.blade.php (an older orphan notifications/index.blade.php is untouched). Amendment 2: RouteOwnershipReconciliationTest now expects the RBAC redirect for /app/settings/notifications. Tests: BusinessNotificationsTest (7) red before, green after; ScheduleContractTest and RouteOwnershipReconciliationTest green. Demo app: bell 5 → 4 after opening one, notifications page, overdue digest wrote 1 notification (4 tasks), Slack URL saved and shown masked, a non-Slack URL refused, the test send to the fake URL reported a clear error. PHPStan (no errors, no baseline entries), php-cs-fixer, ssot:lint, deptrac (0 violations), route guard, docs-lint, governance lint pass. Local Unit + Feature + Integration 3052 tests: only the 2 known root-only failures; Feature/Api 825 green. Exact-head CI recorded in the body."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "b58693edb5f5e1e5893b8f9cb3723ec04e7a2d15"
   verified_at: "2026-11-11T08:48:14+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "b8b3732c97dcb8f2b8c71cd179121c1d319bd2a9797c44757c082ae3b5ebf9a2"
+  decision_recorded_at: "2026-11-11T09:44:58+07:00"
 ---
 
 # GAP-124 — Gate 3 release decision (business notifications)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-11-11 ("APPROVE GAP-124 Gate 3"), bound to implementation subject
+`b58693edb5f5e1e5893b8f9cb3723ec04e7a2d15` and implementation-tree digest `b8b3732c97dcb8f2b8c71cd179121c1d319bd2a9797c44757c082ae3b5ebf9a2`. No deployment or release is authorized.
 
 ## Gói quyết định phát hành
 

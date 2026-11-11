@@ -1,32 +1,38 @@
 ---
 work_id: GAP-124
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-11-11-gap-124-business-notifications-evidence.md
-  plan: null
+  plan: docs/superpowers/plans/2026-11-11-gap-124-business-notifications.md
   branch: docs/GAP-124-business-notifications
   pr: https://github.com/kha997/zenamanagephp/pull/415
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-11T08:12:21+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-11, verbatim: 'APPROVE GAP-124 Gate 2 B-1 S-1 E-1 O-1'. Reviewed design head: 12bb3520d2869be7ac399edf7ea36c79689429b4. Approves B-1 (bell with unread count and notifications page), S-1 (per-company Slack incoming-webhook URL, encrypted, hooks.slack.com only, test button, new permission notification.channel.manage), E-1 (selected events, one Slack message per event; CRM excluded) and O-1 (daily 08:00 overdue digest to each PM in-app and to the company Slack channel, behind ENABLE_SCHEDULER), one PR / one Gate 3, with the exact allowlist in this packet; no email, Zalo or push; not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-11T08:09:23+07:00"
-  updated_at: "2026-11-11T08:09:23+07:00"
+  updated_at: "2026-11-11T08:12:21+07:00"
 generated_by: agent
 ---
 
 # GAP-124 — Business notifications (Slack and in-app): Gate 2 design
+
+## OWNER GATE 2: APPROVED — B-1, S-1, E-1, O-1
+
+Owner approved B-1, S-1, E-1 and O-1 in-session on 2026-11-11 against reviewed design head
+`12bb3520d2869be7ac399edf7ea36c79689429b4`. This authorizes only the bounded implementation defined by this packet; it does not authorize Gate 3,
+merge, release, or deployment.
 
 ## Owner Summary
 

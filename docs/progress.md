@@ -1,5 +1,9 @@
 # Progress
 
+> **Historical record (OWN-2026-023, Gate 2 P-1).** This file stops at Round 25 (2026-07-08) and is no longer updated.
+> Current state: released and open work by Work ID in `OPERATIONAL_GAP_REGISTER.md`; sequencing and open follow-ups in
+> `docs/roadmap/canonical-roadmap.md`; decisions in `docs/owner-decisions/`.
+
 ## 1. Project Header
 
 - Project: Build zena webapp / zenamanage-golden

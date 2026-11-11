@@ -33,6 +33,7 @@ final class OperatorNavigationDefinition
             new OperatorNavItem('Việc của tôi', 'app.my-work.index', 'Dự án', 'my-work'),
             new OperatorNavItem('Bảng giờ', 'app.time.index', 'Dự án', 'calendar'),
             new OperatorNavItem('Công việc thiết kế', 'operator.design-items.index', 'Dự án', 'design-items'),
+            new OperatorNavItem('Mẫu công việc', 'app.work-templates.index', 'Dự án', 'tasks'),
             new OperatorNavItem('Lịch', 'app.calendar', 'Dự án', 'calendar'),
             new OperatorNavItem('Nhóm', 'app.team.index', 'Dự án', 'team'),
             new OperatorNavItem('Nhật ký công trường', 'operator.site-diaries.index', 'Công trường', 'site-diaries'),

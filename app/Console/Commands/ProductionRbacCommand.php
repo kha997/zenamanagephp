@@ -12,6 +12,7 @@ use Database\Seeders\PermissionSeeder;
 use Database\Seeders\TreasuryRolePermissionSeeder;
 use Database\Seeders\V1PermissionGapSeeder;
 use Database\Seeders\WorkTemplateBaselineSeeder;
+use Database\Seeders\WorkTemplateVietnameseBaselineSeeder;
 use Database\Seeders\ZenaAdminRolePermissionSeeder;
 use Database\Seeders\ZenaPermissionsSeeder;
 use Database\Seeders\ZenaProjectManagerRolePermissionSeeder;
@@ -110,6 +111,8 @@ class ProductionRbacCommand extends Command
             }
             if ($withTemplates) {
                 $this->runSeeder(WorkTemplateBaselineSeeder::class);
+                // GAP-123 S-1: the three Vietnamese work templates next to the English baselines.
+                $this->runSeeder(WorkTemplateVietnameseBaselineSeeder::class);
             }
         });
 

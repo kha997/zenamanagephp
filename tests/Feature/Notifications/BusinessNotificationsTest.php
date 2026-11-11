@@ -112,6 +112,13 @@ class BusinessNotificationsTest extends TestCase
         $this->actingAs($this->worker)->get(route('app.notifications.open', $outside->id))->assertRedirect(route('app.notifications.index'));
         $this->assertNotNull($outside->fresh()?->read_at);
 
+        // Codex review: producers that store route() output (month-end reminders) give absolute URLs on the app's own
+        // origin; those are followed as paths. Lookalike or foreign hosts are not.
+        $sameOrigin = $this->notify($this->worker, 'month_end.time_review:2026-11:2026-11-11', 'Nhắc duyệt giờ', route('app.time.review', ['week' => '2026-11-09']));
+        $this->actingAs($this->worker)->get(route('app.notifications.open', $sameOrigin->id))->assertRedirect('/app/time/review?week=2026-11-09');
+        $lookalike = $this->notify($this->worker, 'submittal.submitted', 'Giả', rtrim((string) config('app.url'), '/') . '.evil.example/app');
+        $this->actingAs($this->worker)->get(route('app.notifications.open', $lookalike->id))->assertRedirect(route('app.notifications.index'));
+
         $this->actingAs($this->worker)->get(route('app.notifications.open', $other->id))->assertNotFound();
         $this->assertNull($other->fresh()?->read_at);
     }

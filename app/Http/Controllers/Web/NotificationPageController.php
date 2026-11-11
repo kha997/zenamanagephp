@@ -34,18 +34,38 @@ class NotificationPageController extends Controller
         ]);
     }
 
-    public function open(string $id): RedirectResponse
+    public function open(Request $request, string $id): RedirectResponse
     {
         $notification = $this->mine()->whereKey($id)->firstOrFail();
         if ($notification->getAttribute('read_at') === null) {
             $notification->forceFill(['read_at' => now()])->save();
         }
-        $link = (string) $notification->getAttribute('link_url');
+        $path = $this->localPath((string) $notification->getAttribute('link_url'), $request->getSchemeAndHttpHost());
 
-        // Only paths inside the app ("/…", not "//host") are followed.
-        return str_starts_with($link, '/') && !str_starts_with($link, '//')
-            ? redirect($link)
-            : redirect()->route('app.notifications.index');
+        return $path !== null ? redirect($path) : redirect()->route('app.notifications.index');
+    }
+
+    /**
+     * Only destinations inside the app are followed: a path ("/…", not "//host"), or an absolute URL on this app's own
+     * scheme and host (some producers, e.g. the month-end reminders, store route() output), reduced to its path and query.
+     */
+    private function localPath(string $link, string $origin): ?string
+    {
+        if (str_starts_with($link, '/') && !str_starts_with($link, '//')) {
+            return $link;
+        }
+        $parts = parse_url($link);
+        if (!is_array($parts) || !isset($parts['scheme'], $parts['host']) || isset($parts['user']) || isset($parts['pass'])) {
+            return null;
+        }
+        $linkOrigin = strtolower($parts['scheme'] . '://' . $parts['host'] . (isset($parts['port']) ? ':' . $parts['port'] : ''));
+        $appOrigins = [strtolower($origin), strtolower(rtrim((string) config('app.url'), '/'))];
+        if (!in_array($linkOrigin, $appOrigins, true)) {
+            return null;
+        }
+        $path = ($parts['path'] ?? '') !== '' ? (string) $parts['path'] : '/';
+
+        return $path . (isset($parts['query']) ? '?' . $parts['query'] : '');
     }
 
     public function readAll(): RedirectResponse

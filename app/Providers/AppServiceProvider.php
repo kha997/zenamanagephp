@@ -69,6 +69,8 @@ class AppServiceProvider extends ServiceProvider
         }
 
         EventRecord::observe(EventRecordObserver::class);
+        // GAP-124 E-1: selected business notifications also go to the company's Slack channel.
+        \App\Models\Notification::observe(\App\Observers\NotificationSlackObserver::class);
 
         Auth::resolved(function ($auth) {
             $auth->extend('sanctum', function ($app, $name, array $config) use ($auth) {

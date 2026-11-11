@@ -65,6 +65,8 @@ class ScheduleContractTest extends TestCase
             'queue:restart',
             // GAP-120 R-1 (Owner amendment 1): month-end reminders, daily 08:00 Asia/Ho_Chi_Minh.
             'reminders:month-end',
+            // GAP-124 O-1: overdue-task digest, daily 08:00 Asia/Ho_Chi_Minh.
+            'reminders:overdue-tasks',
         ], $this->scheduledCommands());
     }
 

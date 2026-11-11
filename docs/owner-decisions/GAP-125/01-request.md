@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-11-11-gap-125-mobile-field-pages-evidence.md
   plan: null
   branch: docs/GAP-125-mobile-field-pages
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/416
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

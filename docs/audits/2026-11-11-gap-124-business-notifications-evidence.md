@@ -13,12 +13,12 @@ Date: 2026-11-11. Base: `main` at `f3066c548211932b7dd29d65e93abbb0dd2dfddd` (af
 | Area | `event_key` examples | Created in |
 |---|---|---|
 | Change requests | change request applied (GAP-012) | `Api\ChangeRequestController` |
-| Submittals | `submittal.submitted` / `resubmitted` / decision / `revision_started` / `content_updated` (GAP-013) | `SubmittalLifecycleService` |
+| Submittals | in-app notifications **without** `event_key`; the keys `submittal.submitted` / `resubmitted` / `approved` / `rejected` / `revision_started` / `content_updated` are on `EventRecord` rows (GAP-013) — corrected after the Codex review, see Owner amendment 3 | `SubmittalLifecycleService` |
 | Inspections / NCR | NCR events (GAP-014b) | `Api\InspectionController` |
 | CAPA | `zena.task.overdue_escalated` — **only when someone calls** `POST /api/zena/tasks/{id}/escalate-overdue` | `Api\TaskController` |
 | Design items | `design_item.status_changed` | `DesignItemStatusService` |
 | CRM | `crm.lead.*`, `crm.opportunity.stage_changed`, appointments, `quote.sent` / `accepted` / `rejected` | CRM services and controllers |
-| Contracts | `payment_certificate.approved` | `Web\ContractPageController` |
+| Contracts | `payment_certificate.approved` is an `EventRecord` only, no in-app notification (corrected after the Codex review) | `Web\ContractPageController` |
 | Month end | `month_end.time_review` / `payroll_close` / `overhead_close` (GAP-120) | `MonthEndReminderService` |
 
 ## 2. Gaps

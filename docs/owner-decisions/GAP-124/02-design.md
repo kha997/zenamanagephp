@@ -198,6 +198,41 @@ sẵn**: một trang cũ khoảng 920 dòng, dùng khung giao diện cũ (`layou
 
 **File thêm vào allowlist:** `tests/Feature/RouteOwnershipReconciliationTest.php`.
 
+## Owner amendment 3 (2026-11-11, nguồn sự kiện gửi Slack — góp ý Codex)
+
+**Vấn đề:** Codex chỉ ra hai lỗi trong bản Gate 3 đầu, cả hai đều đúng.
+
+- **(P1) Sai nguồn sự kiện.** Hồ sơ trình duyệt (`SubmittalLifecycleService`) và chứng chỉ thanh toán
+  (`ContractPageController::approveCertificate`) chỉ ghi `EventRecord`; thông báo trong app của hồ sơ không có
+  `event_key`. Vì vậy hai sự kiện này không bao giờ tới Slack. Test cũ tự tạo thông báo có sẵn mã sự kiện nên không phát
+  hiện ra.
+- **(P2) Chống trùng không ổn định.** Chống trùng theo tiêu đề và link thì:
+  - một yêu cầu thay đổi có thể gửi 2 tin (tiêu đề khác nhau cho người yêu cầu và PM);
+  - hai yêu cầu khác nhau có thể chặn nhầm nhau (link rỗng).
+
+**Owner chọn (AskUserQuestion, 2026-11-11):** "Sửa đúng nguồn, thêm 1 file (Recommended)".
+
+**Thay đổi:**
+- **Observer mới `EventRecordSlackObserver`:**
+  - gửi Slack cho `submittal.submitted` / `resubmitted` / `approved` / `rejected` và `payment_certificate.approved`;
+  - mỗi dòng nhật ký là một sự kiện.
+- **`NotificationSlackObserver`** chỉ còn yêu cầu thay đổi đã áp dụng, NCR được giao và nhắc việc cuối tháng.
+- **Chống trùng theo mã của sự kiện**, không theo người nhận:
+  - mã yêu cầu thay đổi;
+  - mã NCR;
+  - mã nhắc việc cuối tháng;
+  - mã dòng nhật ký sự kiện.
+- **Nội dung tin:** tiếng Việt, kèm số hiệu và link tới đúng trang hồ sơ / NCR / hợp đồng / yêu cầu thay đổi.
+- **Test chạy đúng thao tác thật:**
+  - nộp, từ chối, nộp lại, duyệt hồ sơ qua service;
+  - áp dụng yêu cầu thay đổi qua API;
+  - tạo NCR qua API;
+  - duyệt chứng chỉ thanh toán qua trang hợp đồng.
+
+  4 test này đỏ trên mã cũ, xanh sau khi sửa.
+
+**File thêm vào allowlist:** `app/Observers/EventRecordSlackObserver.php`.
+
 ## Ngoài phạm vi
 
 - Email.

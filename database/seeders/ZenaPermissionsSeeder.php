@@ -96,6 +96,9 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'template.apply', 'module' => 'template', 'action' => 'apply', 'description' => 'Apply a published template version to a project'],
         ['code' => 'template.delete', 'module' => 'template', 'action' => 'delete', 'description' => 'Delete work templates'],
 
+        // Business notifications (GAP-124): the company's Slack channel.
+        ['code' => 'notification.channel.manage', 'module' => 'notification', 'action' => 'channel.manage', 'description' => "Manage the company's notification channels (Slack)"],
+
         // Document templates (thư viện biểu mẫu)
         ['code' => 'document_template.view', 'module' => 'document_template', 'action' => 'view', 'description' => 'View document templates'],
         ['code' => 'document_template.manage', 'module' => 'document_template', 'action' => 'manage', 'description' => 'Create, edit, publish document templates'],

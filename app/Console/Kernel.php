@@ -64,6 +64,12 @@ class Kernel extends ConsoleKernel
             ->timezone('Asia/Ho_Chi_Minh')
             ->withoutOverlapping();
 
+        // GAP-124 O-1: overdue-task digest (in-app to each project PM, one summary to the company's Slack channel).
+        $schedule->command('reminders:overdue-tasks')
+            ->dailyAt('08:00')
+            ->timezone('Asia/Ho_Chi_Minh')
+            ->withoutOverlapping();
+
         // Compiled config/route/view caches are built by the deploy step
         // (.github/workflows/production.yml), never on a schedule. The
         // application cache store is never flushed on a schedule: it holds

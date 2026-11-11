@@ -300,6 +300,44 @@ body {
 .operator-item-card .operator-button { white-space: nowrap; }
 .operator-running-bar-spacer { display: none; height: 4.5rem; }
 
+/* GAP-124 — notification bell and notifications page (B-1). */
+.operator-bell {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 999px;
+    color: #334155;
+    flex-shrink: 0;
+}
+.operator-bell:hover { background: #f1f5f9; }
+.operator-bell-count {
+    position: absolute;
+    top: 0.1rem;
+    right: 0.05rem;
+    min-width: 1.15rem;
+    height: 1.15rem;
+    padding: 0 0.3rem;
+    border-radius: 999px;
+    background: #dc2626;
+    color: #ffffff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1.15rem;
+    text-align: center;
+}
+.operator-notification-list { list-style: none; margin: 0; padding: 0; }
+.operator-notification-item + .operator-notification-item { border-top: 1px solid var(--operator-border); }
+.operator-notification-link { display: flex; flex-direction: column; gap: 0.2rem; padding: 0.85rem 1rem; color: inherit; text-decoration: none; }
+.operator-notification-link:hover { background: #f8fafc; }
+.operator-notification-title { font-weight: 500; color: #334155; }
+.operator-notification-item.is-unread .operator-notification-title { font-weight: 700; color: #0f172a; }
+.operator-notification-item.is-unread { border-left: 3px solid #0f766e; }
+.operator-notification-body { font-size: 0.85rem; color: var(--operator-muted); white-space: pre-line; }
+.operator-notification-time { font-size: 0.75rem; color: var(--operator-muted); }
+
 /* GAP-122 — "Duyệt giờ" phone cards grouped by person (L-1, A-1) and the one-line week bar (N-1). */
 .operator-review-group { display: flex; flex-direction: column; gap: 0.5rem; }
 .operator-review-group + .operator-review-group { margin-top: 0.75rem; }

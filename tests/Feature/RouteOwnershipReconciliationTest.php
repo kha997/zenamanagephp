@@ -94,7 +94,9 @@ class RouteOwnershipReconciliationTest extends TestCase
 
         $this->actingAs($user)->get('/app/settings/general')->assertRedirect('/app/settings');
         $this->actingAs($user)->get('/app/settings/security')->assertRedirect('/app/settings');
-        $this->actingAs($user)->get('/app/settings/notifications')->assertRedirect('/app/settings');
+        // GAP-124 S-1 (Owner amendment 2): /app/settings/notifications is now the company's notification settings page
+        // (notification.channel.manage); without the permission the RBAC middleware sends the browser back with an error.
+        $this->actingAs($user)->get('/app/settings/notifications')->assertRedirect()->assertSessionHas('error');
     }
 
     public function test_app_task_show_renders_canonical_project_and_task_links(): void

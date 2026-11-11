@@ -141,6 +141,16 @@ Lệnh `reminders:month-end` tự chạy lúc 08:00 (giờ Việt Nam) mỗi ng�
 Muốn xem trước mà không gửi: `php artisan reminders:month-end --dry-run`. Chạy thử cho một ngày khác:
 `php artisan reminders:month-end --dry-run --date=2026-11-30`.
 
+### Thông báo nghiệp vụ và Slack (GAP-124)
+
+- **Chuông báo** trên thanh trên cùng hiện số thông báo chưa đọc; trang **Thông báo** liệt kê tất cả.
+- **Kênh Slack của công ty:** Owner vào **Cài đặt thông báo** (`/app/settings/notifications`), dán link Incoming Webhook của
+  Slack (`https://hooks.slack.com/services/…`), bật, bấm **Gửi thử**. Chưa dán link thì không gửi gì ra ngoài. Cần
+  `QUEUE_CONNECTION=redis` và dịch vụ `zena-queue-worker` đang chạy (mục 1), vì tin Slack được gửi qua hàng đợi.
+- **Tóm tắt việc quá hạn** (`reminders:overdue-tasks`) chạy 08:00 mỗi ngày khi `ENABLE_SCHEDULER=true`: PM nhận một thông
+  báo cho mỗi dự án có việc quá hạn, kênh Slack nhận một tin tóm tắt. Xem trước: `php artisan reminders:overdue-tasks
+  --dry-run`.
+
 ## 10. Deploy các lần sau và quay lại bản cũ
 
 - **Deploy bản mới:** lặp lại bước 4 với SHA mới. Migration mới phải được phân loại trong

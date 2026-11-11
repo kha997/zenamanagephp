@@ -5,12 +5,21 @@ declare(strict_types=1);
 namespace Tests\Feature\Notifications;
 
 use App\Http\Middleware\VerifyCsrfToken;
+use App\Models\Boq;
+use App\Models\BoqLineItem;
+use App\Models\ChangeRequest;
+use App\Models\Contract;
 use App\Models\Notification;
+use App\Models\PaymentCertificate;
 use App\Models\Project;
+use App\Models\QcInspection;
+use App\Models\QcPlan;
+use App\Models\Submittal;
 use App\Models\Task;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Notifications\SlackChannelService;
+use App\Services\SubmittalLifecycleService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Support\Carbon;
@@ -18,7 +27,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
-use Tests\Traits\TenantUserFactoryTrait;
+use Tests\Traits\AuthenticationTestTrait;
 
 /**
  * GAP-124 (Gate 2 B-1, S-1, E-1, O-1) — business notifications.
@@ -34,7 +43,7 @@ use Tests\Traits\TenantUserFactoryTrait;
 class BusinessNotificationsTest extends TestCase
 {
     use RefreshDatabase;
-    use TenantUserFactoryTrait;
+    use AuthenticationTestTrait;
 
     private const SLACK_URL = 'https://hooks.slack.com/services/T000/B000/abcdefSECRET';
 
@@ -160,48 +169,141 @@ class BusinessNotificationsTest extends TestCase
 
     // ---- E-1: events to Slack ----
 
-    public function test_selected_events_post_one_slack_message_per_event_and_crm_events_none(): void
+    public function test_submittal_lifecycle_posts_one_message_per_transition(): void
+    {
+        // Codex review (amendment 3): submittal events come from EventRecord, driven here through the real service.
+        $this->enableSlack();
+        $service = app(SubmittalLifecycleService::class);
+        $submittal = Submittal::factory()->create([
+            'tenant_id' => (string) $this->tenant->id, 'project_id' => (string) $this->project->id,
+            'status' => Submittal::STATUS_DRAFT, 'title' => 'Bản vẽ kết cấu móng', 'submittal_number' => 'HS-007',
+        ]);
+        $context = ['actor_user_id' => (string) $this->pm->id];
+
+        $service->updateContent($submittal, ['title' => 'Bản vẽ kết cấu móng'], $context);
+        Http::assertNothingSent();
+
+        $submittal = $service->submit($submittal->fresh(), $context);
+        $submittal = $service->reject($submittal, $context + ['comments' => 'Thiếu mặt cắt']);
+        $submittal = $service->startRevision($submittal, $context);
+        $submittal = $service->submit($submittal, $context);
+        $service->approve($submittal, $context);
+
+        $texts = $this->slackTexts();
+        $this->assertCount(4, $texts);
+        $this->assertStringContainsString('Hồ sơ trình duyệt HS-007 – Bản vẽ kết cấu móng đã nộp', $texts[0]);
+        $this->assertStringContainsString('bị từ chối', $texts[1]);
+        $this->assertStringContainsString('đã nộp lại', $texts[2]);
+        $this->assertStringContainsString('được duyệt', $texts[3]);
+        $this->assertStringContainsString(route('operator.submittals.show', $submittal->id), $texts[0]);
+    }
+
+    public function test_change_request_apply_posts_once_per_change_request_even_with_two_recipients(): void
+    {
+        // Codex review (amendment 3): one message per change request, not per recipient; a second change request is
+        // its own event.
+        $this->enableSlack();
+        $applier = $this->createTenantUser($this->tenant, [], ['bn_cr_applier'], ['change-request.view', 'change-request.apply']);
+        $headers = $this->authHeadersForUser($applier, $this->apiLoginToken($applier, $this->tenant));
+        $first = $this->approvedChangeRequest('CR-101', 'Đổi gạch lát sàn tầng 1');
+        $second = $this->approvedChangeRequest('CR-102', 'Thêm ổ cắm phòng khách');
+
+        $this->withHeaders($headers)->postJson(route('api.zena.change-requests.apply', ['id' => (string) $first->id], false))->assertOk();
+        $this->assertSame(2, Notification::query()->withoutGlobalScopes()->where('event_key', 'change_request.implemented')->count());
+        $this->withHeaders($headers)->postJson(route('api.zena.change-requests.apply', ['id' => (string) $second->id], false))->assertOk();
+
+        $texts = $this->slackTexts();
+        $this->assertCount(2, $texts);
+        $this->assertStringContainsString('Yêu cầu thay đổi đã áp dụng: CR-101 – Đổi gạch lát sàn tầng 1', $texts[0]);
+        $this->assertStringContainsString(route('operator.change-requests.show', $first->id), $texts[0]);
+        $this->assertStringContainsString('CR-102', $texts[1]);
+    }
+
+    public function test_ncr_assigned_posts_once_with_the_assignee(): void
     {
         $this->enableSlack();
-        $link = '/app/projects/' . $this->project->id;
-        foreach ([$this->owner, $this->pm, $this->worker] as $user) {
-            $this->notify($user, 'submittal.submitted', 'Hồ sơ HS-02 đã nộp', $link);
-        }
+        $inspector = $this->createTenantUser($this->tenant, [], ['bn_inspector'], ['inspection.view', 'inspection.create', 'inspection.edit']);
+        $headers = $this->authHeadersForUser($inspector, $this->apiLoginToken($inspector, $this->tenant));
+        $plan = QcPlan::factory()->create(['tenant_id' => (string) $this->tenant->id, 'project_id' => (string) $this->project->id, 'created_by' => (string) $inspector->id]);
+        $inspection = QcInspection::factory()->create([
+            'tenant_id' => (string) $this->tenant->id, 'qc_plan_id' => (string) $plan->id, 'inspector_id' => (string) $inspector->id,
+            'status' => 'failed', 'title' => 'Nghiệm thu cốt thép sàn tầng 2',
+        ]);
+
+        $ncrId = (string) $this->withHeaders($headers)->postJson(
+            route('api.zena.inspections.ncrs.store', ['inspection' => (string) $inspection->id], false),
+            ['title' => 'Thép chờ cột C3 thiếu chiều dài neo', 'description' => 'Thiếu 20 cm.', 'assigned_to' => (string) $this->worker->id],
+        )->assertStatus(201)->json('data.id');
+
+        $texts = $this->slackTexts();
+        $this->assertCount(1, $texts);
+        $this->assertStringContainsString('NCR mới:', $texts[0]);
+        $this->assertStringContainsString('Thép chờ cột C3 thiếu chiều dài neo', $texts[0]);
+        $this->assertStringContainsString('Giao cho: Kỹ sư Bình', $texts[0]);
+        $this->assertStringContainsString(route('operator.inspections.ncrs.show', [$inspection->id, $ncrId]), $texts[0]);
+    }
+
+    public function test_payment_certificate_approval_posts_one_message(): void
+    {
+        $this->enableSlack();
+        $accountant = $this->createTenantUser($this->tenant, [], ['bn_accountant'], [
+            'contract.view', 'contract.update', 'payment_certificate.view', 'payment_certificate.create', 'payment_certificate.approve',
+        ]);
+        $contract = Contract::query()->create([
+            'tenant_id' => (string) $this->tenant->id, 'project_id' => (string) $this->project->id, 'code' => 'HD-01',
+            'title' => 'HĐ thi công phần thô', 'contract_type' => Contract::TYPE_CONSTRUCTION, 'created_by' => (string) $accountant->id,
+        ]);
+        $boq = Boq::query()->create(['tenant_id' => (string) $this->tenant->id, 'project_id' => (string) $this->project->id, 'contract_id' => (string) $contract->id, 'code' => 'BOQ-HD-01', 'name' => 'BOQ HĐ-01']);
+        $line = BoqLineItem::query()->create(['tenant_id' => (string) $this->tenant->id, 'boq_id' => (string) $boq->id, 'code' => 'L001', 'name' => 'Bê tông', 'quantity' => 50, 'unit' => 'm3', 'unit_price' => 1000000]);
+        $h = ['X-Tenant-ID' => (string) $this->tenant->id];
+        $this->actingAs($accountant)->post(route('operator.contracts.certificates.store', $contract->id), ['period_from' => '2026-10-01', 'period_to' => '2026-10-31'], $h)->assertRedirect();
+        /** @var PaymentCertificate $cert */
+        $cert = PaymentCertificate::query()->withoutGlobalScopes()->where('contract_id', (string) $contract->id)->firstOrFail();
+        $this->actingAs($accountant)->post(route('operator.contracts.certificates.lines.save', [$contract->id, $cert->id]), ['lines' => [(string) $line->id => 10]], $h)->assertRedirect();
+        $this->actingAs($accountant)->post(route('operator.contracts.certificates.submit', [$contract->id, $cert->id]), [], $h)->assertRedirect();
+        Http::assertNothingSent();
+
+        $this->actingAs($accountant)->post(route('operator.contracts.certificates.approve', [$contract->id, $cert->id]), [], $h)->assertRedirect()->assertSessionHasNoErrors();
+
+        $texts = $this->slackTexts();
+        $this->assertCount(1, $texts);
+        $this->assertStringContainsString('Chứng chỉ thanh toán kỳ 1 đã duyệt', $texts[0]);
+        $this->assertStringContainsString('Thực trả:', $texts[0]);
+        $this->assertStringContainsString(route('operator.contracts.show', $contract->id), $texts[0]);
+    }
+
+    public function test_crm_events_stay_in_app_and_month_end_posts_once_per_key(): void
+    {
+        $this->enableSlack();
         $this->notify($this->pm, 'crm.lead.captured', 'Khách hàng mới', '/app/crm');
-        $this->notify($this->pm, 'design_item.status_changed', 'Bản vẽ đổi trạng thái', $link);
+        $this->notify($this->pm, 'design_item.status_changed', 'Bản vẽ đổi trạng thái', '/app');
+        Http::assertNothingSent();
 
-        Http::assertSentCount(1);
-        Http::assertSent(fn (HttpRequest $r): bool => $r->url() === self::SLACK_URL
-            && str_contains((string) $r['text'], 'Hồ sơ HS-02 đã nộp')
-            && str_contains((string) $r['text'], $link));
-
-        // Each E-1 key goes out.
-        foreach (['change_request.implemented', 'submittal.resubmitted', 'submittal.approved', 'submittal.rejected', 'ncr.assigned', 'payment_certificate.approved'] as $key) {
-            $this->notify($this->pm, $key, 'Sự kiện ' . $key, $link);
-        }
-        Http::assertSentCount(7);
-
-        // Month-end reminders: one message per company and day, even with different links per person.
         $this->notify($this->pm, 'month_end.time_review:2026-11:2026-11-11', 'Còn giờ chờ duyệt', '/app/time/review?week=2026-11-09');
         $this->notify($this->owner, 'month_end.time_review:2026-11:2026-11-11', 'Còn giờ chờ duyệt', '/app/time/review?week=2026-11-02');
-        Http::assertSentCount(8);
+        $this->assertCount(1, $this->slackTexts());
     }
 
     public function test_slack_failures_never_break_the_action_and_other_companies_are_untouched(): void
     {
         $this->enableSlack();
         Http::fake(['hooks.slack.com/*' => Http::response('invalid_token', 403)]);
-
-        $notification = $this->notify($this->pm, 'ncr.assigned', 'NCR mới', '/app');
-        $this->assertTrue($notification->exists);
-
-        $other = Tenant::factory()->create();
-        $otherUser = $this->createTenantUser($other, [], ['bn_other'], ['task.view']);
-        Http::fake(['hooks.slack.com/*' => Http::response('ok', 200)]);
-        Notification::query()->withoutGlobalScopes()->create([
-            'tenant_id' => (string) $other->id, 'user_id' => (string) $otherUser->id, 'type' => 'ncr', 'priority' => 'normal',
-            'title' => 'NCR công ty khác', 'body' => 'x', 'link_url' => '/app', 'channel' => 'inapp', 'event_key' => 'ncr.assigned',
+        $submittal = Submittal::factory()->create([
+            'tenant_id' => (string) $this->tenant->id, 'project_id' => (string) $this->project->id,
+            'status' => Submittal::STATUS_DRAFT, 'title' => 'Hồ sơ A', 'submittal_number' => 'HS-900',
         ]);
+        $submitted = app(SubmittalLifecycleService::class)->submit($submittal, ['actor_user_id' => (string) $this->pm->id]);
+        $this->assertSame(Submittal::STATUS_SUBMITTED, $submitted->status);
+
+        // Another company without a Slack channel: nothing is posted.
+        $other = Tenant::factory()->create();
+        $otherProject = Project::factory()->create(['tenant_id' => (string) $other->id]);
+        Http::fake(['hooks.slack.com/*' => Http::response('ok', 200)]);
+        $foreign = Submittal::factory()->create([
+            'tenant_id' => (string) $other->id, 'project_id' => (string) $otherProject->id,
+            'status' => Submittal::STATUS_DRAFT, 'title' => 'Hồ sơ công ty khác', 'submittal_number' => 'HS-X',
+        ]);
+        app(SubmittalLifecycleService::class)->submit($foreign, ['actor_user_id' => (string) $this->pm->id]);
         Http::assertNothingSent();
     }
 
@@ -242,6 +344,31 @@ class BusinessNotificationsTest extends TestCase
         Artisan::call('reminders:overdue-tasks');
         $this->assertSame(2, $this->digests());
         Http::assertSentCount(1);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function slackTexts(): array
+    {
+        return array_values(array_map(
+            static fn (array $pair): string => (string) $pair[0]['text'],
+            Http::recorded(fn (HttpRequest $r): bool => str_starts_with($r->url(), 'https://hooks.slack.com/'))->all(),
+        ));
+    }
+
+    private function approvedChangeRequest(string $number, string $title): ChangeRequest
+    {
+        /** @var ChangeRequest $cr */
+        $cr = ChangeRequest::query()->create([
+            'tenant_id' => (string) $this->tenant->id, 'project_id' => (string) $this->project->id, 'title' => $title,
+            'description' => 'Theo yêu cầu chủ nhà.', 'change_type' => 'scope', 'priority' => 'medium',
+            'status' => ChangeRequest::STATUS_APPROVED, 'requested_by' => (string) $this->worker->id,
+            'assigned_to' => (string) $this->owner->id, 'approved_by' => (string) $this->owner->id,
+            'change_number' => $number, 'requested_at' => now(),
+        ]);
+
+        return $cr;
     }
 
     private function enableSlack(): void

@@ -1,14 +1,14 @@
 ---
 work_id: GAP-123
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: "approve_or_correction_or_defer"
+decision_requested: null
 references:
   spec: docs/audits/2026-11-11-gap-123-work-template-authoring-evidence.md
   plan: docs/superpowers/plans/2026-11-11-gap-123-work-template-authoring.md
@@ -18,14 +18,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: null
-  owner_response_reference: null
+  recorded_at: "2026-11-11T07:06:28+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-11, verbatim: 'APPROVE GAP-123 Gate 3'. Re-approval after the Codex fixes, given on the packet at PR head bb9da56c732600b9150b67c00639c640e24ff3dc; bound to implementation subject a3eb6d2f1d4978e7c6d7023321a6436b0ca3e455 and implementation-tree digest fe8424d7c1f526b85382d117ae1934682b072784606f3a06316a3fe9d5f9b52d (recomputed at recording time, zero drift). Supersedes the earlier approval bound to 186e5e29 / 8d57e3f4. Merge is covered by the Owner's standing in-session instruction of 2026-09-28, after exact-head CI is green; no deployment, release, or production:rbac run on a server authorized."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-11T06:32:35+07:00"
-  updated_at: "2026-11-11T06:48:23+07:00"
+  updated_at: "2026-11-11T07:06:28+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-123 at subject a3eb6d2f1d4978e7c6d7023321a6436b0ca3e455 (re-presented after the Codex review, commit a3eb6d2f: an unchanged day value keeps the stored step hours, so the 12-hour baseline steps are no longer rounded to 24 h on save; the 100-step limit counts the kept steps, not the blank form rows; two new tests red before, green after. Gate 2 E-1, P-1, S-1; one PR, implementation commits 186e5e29 and a3eb6d2f; no migration, no change to how templates are applied). New Web\\WorkTemplatePageController with routes app.work-templates.index (template.view), create / store / edit / update / duplicate (template.edit_draft) and publish (template.publish), scoped to the user's company (404 for another company's template). New WorkTemplates\\WorkTemplateEditorService turns editor rows (name, type task / approval / deliverable / inspection, the steps it follows — only steps above it, so no cycles — days 0-365 stored as sla_hours = days x 24, description, priority, phase, checklist and required documents one per line with '*' for required) into the API steps[] payload and back; custom fields, assignee rule, assignment rules, required document types, other config keys and unchanged checklist / document keys of existing steps are carried over; new steps go to the project manager. Writes go through the existing WorkTemplateCrudService (draft, draft-from-published, publish, versioning) and are audited with the API action names. The edit page previews the tasks apply would create with day offsets matching the apply timeline. Schema v2 templates are shown as API-only. Menu item 'Mẫu công việc'. New WorkTemplateVietnameseBaselineSeeder: WT-VN-THIETKE, WT-VN-THICONG, WT-VN-NGHIEMTHU, published, same step keys / order / dependencies / durations / types / field keys as the English baselines, Vietnamese text, run by production:rbac (when a company exists) and DatabaseSeeder, idempotent. Tests: WorkTemplateAuthoringPageTest (10) red before, green after — end to end create, save, preview, publish, appear in the project apply list, apply creates the tasks with names, dates, dependencies and PM assignee; editing a published template opens a new draft and an applied project keeps its version; custom fields kept and duplicate copies them; validation; PM sees the list but every write is refused and nothing changes; company isolation; menu; Vietnamese seeder. ProjectWorkTemplateApplyTest green. Demo app: created, saved, previewed ('Ngày 3 – 7'), published and applied a 3-step template from the screen; the project received the 3 tasks with the right order, dependencies and dates. PHPStan (no errors, no baseline entries), php-cs-fixer, ssot:lint, deptrac, route guard, docs-lint, governance lint pass. Local Unit + Feature + Integration 3045 tests: only the 2 known root-only failures; Feature/Api 825 green. Exact-head CI recorded in the body."
@@ -36,11 +36,16 @@ technical_evidence:
   verified_pr_head_sha: "a3eb6d2f1d4978e7c6d7023321a6436b0ca3e455"
   verified_at: "2026-11-11T06:48:23+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "fe8424d7c1f526b85382d117ae1934682b072784606f3a06316a3fe9d5f9b52d"
+  decision_recorded_at: "2026-11-11T07:06:28+07:00"
 ---
 
 # GAP-123 — Gate 3 release decision (authoring work templates)
+
+## OWNER GATE 3: APPROVED
+
+Owner re-approved Gate 3 in-session on 2026-11-11 ("APPROVE GAP-123 Gate 3") after the Codex fixes, bound to implementation subject
+`a3eb6d2f1d4978e7c6d7023321a6436b0ca3e455` and implementation-tree digest `fe8424d7c1f526b85382d117ae1934682b072784606f3a06316a3fe9d5f9b52d`. No deployment or release is authorized.
 
 ## Trình lại sau góp ý của Codex
 

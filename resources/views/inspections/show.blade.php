@@ -193,8 +193,15 @@
     {{-- GAP-125 D-1: below 768px the long sections and the forms start closed (tap the title to open). Without JS they stay open. --}}
     <script data-phone-collapse-script>
         (function () {
-            if (!window.matchMedia || !window.matchMedia('(max-width: 767px)').matches) return;
-            document.querySelectorAll('details[data-phone-collapse]').forEach(function (d) { d.removeAttribute('open'); });
+            if (!window.matchMedia) return;
+            var phone = window.matchMedia('(max-width: 767px)');
+            var sections = document.querySelectorAll('details[data-phone-collapse]');
+            // Closed on the phone; always open above the breakpoint, where the summaries are hidden (e.g. after rotating).
+            function sync() {
+                sections.forEach(function (d) { if (phone.matches) { d.removeAttribute('open'); } else { d.setAttribute('open', ''); } });
+            }
+            sync();
+            if (phone.addEventListener) { phone.addEventListener('change', sync); } else if (phone.addListener) { phone.addListener(sync); }
         })();
     </script>
 @endsection

@@ -23,7 +23,7 @@ use Tests\Traits\TenantUserFactoryTrait;
  * - C-1: cards below 768px for the site-diary list (with the submit / approve forms by status), the inspection list and
  *   the NCR table on the inspection detail; the desktop tables are still rendered (visibility per width is CSS).
  * - D-1: on the inspection detail "Thông tin" is marked to come first on the phone, and the description, results and the
- *   two forms are collapsible sections (open by default, closed on the phone by a small script).
+ *   two forms are collapsible sections (open by default, closed on the phone by a small script, reopened when the viewport leaves the phone breakpoint).
  */
 class FieldPagesMobileLayoutTest extends TestCase
 {
@@ -105,7 +105,11 @@ class FieldPagesMobileLayoutTest extends TestCase
         }
         $this->assertCount(1, $this->all($dom, 'details[data-phone-collapse] form textarea[name="findings"]'));
         $this->assertCount(1, $this->all($dom, 'details[data-phone-collapse] form input[name="title"]'));
-        $this->assertStringContainsString('data-phone-collapse', (string) $dom->document->saveHTML($this->only($dom, 'script[data-phone-collapse-script]')));
+        $script = (string) $dom->document->saveHTML($this->only($dom, 'script[data-phone-collapse-script]'));
+        $this->assertStringContainsString('data-phone-collapse', $script);
+        // Codex review: leaving the phone breakpoint (rotation) must reopen the sections, whose summaries are hidden there.
+        $this->assertStringContainsString("addEventListener('change'", $script);
+        $this->assertStringContainsString("setAttribute('open'", $script);
 
         // C-1: NCR card.
         $card = $this->only($dom, '[data-testid="ncr-card"]');

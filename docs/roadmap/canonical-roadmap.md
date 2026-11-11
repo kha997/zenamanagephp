@@ -1,6 +1,6 @@
 # ZenaManage Canonical Roadmap
 
-Last updated: 2026-11-03 (status section below; sections after it describe the 2026-03-19 baseline)
+Last updated: 2026-11-11 (status section below; sections after it describe the 2026-03-19 baseline)
 Role: execution sequencing SSOT
 Companion docs:
 
@@ -10,9 +10,9 @@ Companion docs:
 - `docs/agent-ssot-rules.md` = evidence/verification law
 - `docs/engineering/testing-matrix.md` = verify-order SSOT
 
-## Status as of 2026-11-03
+## Status as of 2026-11-11
 
-Added by OWN-2026-020, updated by OWN-2026-021 and OWN-2026-022. `OPERATIONAL_GAP_REGISTER.md` is the source of truth for open and
+Added by OWN-2026-020, updated by OWN-2026-021, OWN-2026-022 and OWN-2026-023. `OPERATIONAL_GAP_REGISTER.md` is the source of truth for open and
 released work; the sections after this one are the 2026-03-19 baseline, kept as history. `docs/roadmap/backlog.yaml` has
 29/29 items `done`, so new work is tracked by Work ID in the register.
 
@@ -35,6 +35,18 @@ released work; the sections after this one are the 2026-03-19 baseline, kept as 
   (NCR ↔ CAPA task link), GAP-015 Option A (WorkInstance execution screens).
 - **Cleanup, alerts and security (2026-10-29 … 11-02):** GAP-019 (universal-frame demo shell removed), GAP-026 (production
   Slack notifications now run, to the Zena channel), GAP-102 (follow-redirects GHSA-mrwp-f3q8-3g9p).
+- **Projects and progress (2026-11-03 … 11):** GAP-103 (shared project health read model), GAP-104 / GAP-110 (one-page
+  Project OPPM: Phase 1 read-only, Phase 2 overlay, Phase 3 snapshots and decisions), GAP-117 (project milestones),
+  GAP-120 (month-end reminders), GAP-123 (WorkTemplate authoring screens, the rest of GAP-015, plus three Vietnamese
+  baseline templates).
+- **Treasury extensions:** GAP-105 (BOQ link, fund chains, investor receivable), GAP-106 (evidence attachments), GAP-107
+  (period lock, CSV bank statement import), GAP-108 (configurable thresholds, per-advance due date).
+- **Staff cost and project P&L:** GAP-109 (staff register, monthly payroll), GAP-112 (time logging per task), GAP-113
+  (labour cost per project), GAP-114 (overhead allocation, project P&L).
+- **Phone layout:** GAP-118 (My Work, Timesheet), GAP-122 (time review).
+- **Security, cleanup and quality:** GAP-111 (Symfony 7.4 advisories), GAP-119 (broken project analytics API and dead
+  event code removed), GAP-115 (deploy readiness, `production:rbac`), GAP-116 (flaky project factory dates), GAP-121
+  (real-MySQL month-close concurrency tests in CI).
 
 ### Open work, proposed order
 
@@ -42,11 +54,18 @@ No register row is OPEN or BLOCKED. Optional follow-ups, each needs its own Gate
 
 1. Business notifications to Slack (CR, submittal, NCR, overdue tasks to the internal channel).
 2. Zalo OA / ZNS integration (OA messages into leads or projects; ZNS customer notifications).
-3. WorkTemplate authoring screens (the rest of GAP-015).
-4. Treasury extensions left out of S1–S6 (attachments, BOQ link, fund chains, investor receivable, per-advance deadline,
-   configurable thresholds, period lock, bank import); Project OPPM / One-Page (issue #248, draft PR #257).
 
-The order is a proposal; the Owner chooses the next Work ID.
+The order is a proposal; the Owner chooses the next Work ID. The WorkTemplate authoring screens (GAP-123), the Treasury
+extensions (GAP-105 … 108) and Project OPPM (GAP-104, GAP-110) are released.
+
+### Go-live operations (on the server, by the Owner)
+
+Nothing above is deployed yet. The first production deploy follows `docs/runbooks/go-live.md`; after it:
+
+- run `php artisan production:rbac` (roles and permissions; also loads the work templates, including the three
+  Vietnamese ones from GAP-123, for existing companies);
+- set `ENABLE_SCHEDULER=true` and the cron entry (GAP-054 scheduler; GAP-120 month-end reminders);
+- watch the first Slack delivery to the Zena channel (GAP-026).
 
 ## North Star
 

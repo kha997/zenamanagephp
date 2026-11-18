@@ -227,6 +227,9 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'settings.general.read', 'module' => 'settings', 'action' => 'general.read', 'description' => 'View general settings'],
         ['code' => 'settings.general.update', 'module' => 'settings', 'action' => 'general.update', 'description' => 'Update general settings'],
         ['code' => 'settings.security.read', 'module' => 'settings', 'action' => 'security.read', 'description' => 'View security settings'],
+        // GAP-129 amendment 1: Owner-only company administration (accounts, roles, company). Only the admin roles receive it
+        // (ZenaAdminRolePermissionSeeder); Project Manager's user.* / settings.* codes must not open these pages.
+        ['code' => 'admin.company.manage', 'module' => 'admin', 'action' => 'company.manage', 'description' => 'Manage company accounts, roles and details'],
         ['code' => 'settings.security.update', 'module' => 'settings', 'action' => 'security.update', 'description' => 'Update security settings'],
 
         // User sidebar preferences

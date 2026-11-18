@@ -45,6 +45,9 @@ final class OperatorNavigationDefinition
             new OperatorNavItem('Xuất báo cáo', 'operator.reports.index', 'Hệ thống', 'reports'),
             new OperatorNavItem('Webhooks', 'operator.webhooks.index', 'Hệ thống', 'webhooks'),
             new OperatorNavItem('API Tokens', 'operator.api-tokens.index', 'Hệ thống', 'api-tokens'),
+            new OperatorNavItem('Tài khoản', 'app.admin.users', 'Quản trị', 'team'),
+            new OperatorNavItem('Vai trò', 'app.admin.roles', 'Quản trị', 'api-tokens'),
+            new OperatorNavItem('Công ty', 'app.admin.company', 'Quản trị', 'dashboard'),
         ];
     }
 }

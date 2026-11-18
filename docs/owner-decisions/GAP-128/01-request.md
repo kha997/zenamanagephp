@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-11-18-gap-128-websocket-server-evidence.md
   plan: null
   branch: docs/GAP-128-websocket-server
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/418
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

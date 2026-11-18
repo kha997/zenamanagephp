@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-11-18-gap-126-production-web-login-evidence.md
   plan: null
   branch: docs/GAP-126-production-web-login
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/417
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

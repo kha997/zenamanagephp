@@ -31,8 +31,9 @@ class AuthController extends Controller
                 ->setStatusCode(429);
         }
 
-        // Try to authenticate using Laravel's built-in auth
-        if (Auth::attempt($credentials)) {
+        // Try to authenticate using Laravel's built-in auth. GAP-126 B-1: a
+        // deactivated account gets the same failure as a wrong password.
+        if (Auth::attempt($credentials + ['is_active' => true])) {
             $request->session()->regenerate();
             RateLimiter::clear($throttleKey);
 

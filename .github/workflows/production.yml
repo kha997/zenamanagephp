@@ -90,11 +90,14 @@ jobs:
         id: package
         run: |
           ARTIFACT="release-${{ needs.verify-sha.outputs.verified_sha }}.tar.gz"
-          tar -czf "$ARTIFACT" \
+          # GAP-126 amendment 1: write the archive outside the tree being archived,
+          # otherwise tar exits 1 with "file changed as we read it".
+          tar -czf "${RUNNER_TEMP}/${ARTIFACT}" \
             --exclude='.git' \
             --exclude='node_modules' \
             --exclude='tests' \
             .
+          mv "${RUNNER_TEMP}/${ARTIFACT}" "$ARTIFACT"
           echo "artifact=${ARTIFACT}" >> "$GITHUB_OUTPUT"
 
       - name: Compute and verify artifact checksum

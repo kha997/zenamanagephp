@@ -53,7 +53,23 @@ Route::middleware(['legacy.gone', 'legacy.redirect', 'legacy.route'])->group(fun
 //     return response()->file(public_path('api-demo.html'));
 // })->name('api.demo');
 
-// Simple Authentication Routes (available in local/testing environments only)
+// Web sign-in (GAP-126): registered in every environment. Before GAP-126 these
+// sat inside the local/testing block below, so production had no `login` route.
+Route::get('/login', function () {
+    return view('auth.login');
+})->name('login');
+
+Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+
+Route::get('/password/reset', function () {
+    return redirect('/login')->with('info', 'Enter your email to reset the password.');
+})->name('password.reset');
+
+Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
+
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout.post');
+
+// Password-less dev sign-in: local/testing ONLY — it logs in as any tenant user.
 if (app()->environment(['local', 'testing'])) {
     Route::get('/local/dev-login/operator', function (Illuminate\Http\Request $request) {
         $email = $request->query('email', '');
@@ -67,20 +83,6 @@ if (app()->environment(['local', 'testing'])) {
 
         return redirect()->route('operator.dashboard');
     })->name('local.dev-login.operator');
-
-    Route::get('/login', function () {
-        return view('auth.login');
-    })->name('login');
-
-    Route::post('/login', [AuthController::class, 'login'])->name('login.post');
-
-    Route::get('/password/reset', function () {
-        return redirect('/login')->with('info', 'Enter your email to reset the password.');
-    })->name('password.reset');
-
-    Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
-
-    Route::post('/logout', [AuthController::class, 'logout'])->name('logout.post');
 }
 
 // MOVED: All test routes moved to /_debug namespace with debug.gate middleware

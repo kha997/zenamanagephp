@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-11-18-gap-129-admin-ui-evidence.md
   plan: null
   branch: docs/GAP-129-admin-ui
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/420
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

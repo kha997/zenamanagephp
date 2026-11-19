@@ -1,11 +1,11 @@
 ---
 work_id: GAP-128
 gate: 1
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_more_info_or_decline_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-11-18-gap-128-websocket-server-evidence.md
   plan: null
@@ -14,17 +14,22 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-11-20T04:48:09+07:00"
+  owner_response_reference: "Owner decision on 2026-11-20, verbatim: 'duyệt gate 1 của GAP-127 và GAP-128' (given in the coordinating session local_7fe0ace7 and relayed to this session). Confirmed by the Owner directly in this session on 2026-11-20, verbatim: 'Yes, record it' (answer to 'Should I record your GAP-128 Gate 1 approval in the packet and commit the Gate 2 draft?'). Authorizes opening GAP-128 and preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-18T16:43:19+07:00"
-  updated_at: "2026-11-18T16:43:19+07:00"
+  updated_at: "2026-11-20T04:48:09+07:00"
 generated_by: agent
 ---
+
+## OWNER GATE 1: APPROVED
+
+Owner approved Gate 1 on 2026-11-20 ("duyệt gate 1 của GAP-127 và GAP-128", relayed through the coordinating session) and
+confirmed it directly in this session ("Yes, record it"). This authorizes preparation of Gate 2 only.
 
 ## Owner Summary
 

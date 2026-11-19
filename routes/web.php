@@ -56,6 +56,11 @@ Route::middleware(['legacy.gone', 'legacy.redirect', 'legacy.route'])->group(fun
 // Web sign-in (GAP-126): registered in every environment. Before GAP-126 these
 // sat inside the local/testing block below, so production had no `login` route.
 Route::get('/login', function () {
+    // GAP-130: a signed-in user reopening the login page goes to the app instead of a form whose submit would be stale.
+    if (Auth::guard('web')->check()) {
+        return redirect('/app/today');
+    }
+
     return view('auth.login');
 })->name('login');
 

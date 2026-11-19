@@ -4,14 +4,11 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
-use App\Models\AuditLog;
 use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\Admin\StaffAccountService;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Symfony\Component\Console\Formatter\OutputFormatter;
 
 /**
@@ -76,20 +73,8 @@ class ProductionUserCommand extends Command
             return 1;
         }
 
-        $password = Str::password(20, symbols: true);
-        $user = DB::transaction(function () use ($tenant, $email, $name, $password, $role): User {
-            $user = User::query()->create([
-                'tenant_id' => (string) $tenant->id,
-                'name' => $name,
-                'email' => $email,
-                'password' => Hash::make($password),
-                'is_active' => true,
-            ]);
-            $user->roles()->syncWithoutDetaching([$role->id]);
-            $this->audit($user, 'production.user.created', ['email' => $email, 'role' => $role->name, 'source' => 'cli']);
-
-            return $user;
-        });
+        // GAP-129: the account itself is created by the service shared with the admin pages (same audit row).
+        [$user, $password] = app(StaffAccountService::class)->create($tenant, $email, $name, $role->name, null, 'cli');
 
         $this->info('Account created.');
         $this->line('Company: ' . $tenant->name . ' (' . $tenant->slug . ')');
@@ -108,12 +93,7 @@ class ProductionUserCommand extends Command
 
             return 1;
         }
-        $password = Str::password(20, symbols: true);
-        DB::transaction(function () use ($user, $password, $email): void {
-            $user->password = Hash::make($password);
-            $user->save();
-            $this->audit($user, 'production.user.password_reset', ['email' => $email, 'source' => 'cli']);
-        });
+        $password = app(StaffAccountService::class)->resetPassword($user, null, 'cli');
 
         $this->info('Password reset.');
         $this->printPassword($password);
@@ -154,21 +134,5 @@ class ProductionUserCommand extends Command
     private function printPassword(string $password): void
     {
         $this->line('Generated password (record this now, it will not be shown again): ' . OutputFormatter::escape($password));
-    }
-
-    /**
-     * @param array<string, mixed> $data
-     */
-    private function audit(User $user, string $action, array $data): void
-    {
-        AuditLog::query()->create([
-            'user_id' => (string) $user->id,
-            'tenant_id' => (string) $user->tenant_id,
-            'action' => $action,
-            'entity_type' => 'user',
-            'entity_id' => (string) $user->id,
-            'old_data' => null,
-            'new_data' => $data,
-        ]);
     }
 }

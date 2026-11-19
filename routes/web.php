@@ -56,6 +56,11 @@ Route::middleware(['legacy.gone', 'legacy.redirect', 'legacy.route'])->group(fun
 // Web sign-in (GAP-126): registered in every environment. Before GAP-126 these
 // sat inside the local/testing block below, so production had no `login` route.
 Route::get('/login', function () {
+    // GAP-130: a signed-in user reopening the login page goes to the app instead of a form whose submit would be stale.
+    if (Auth::guard('web')->check()) {
+        return redirect('/app/today');
+    }
+
     return view('auth.login');
 })->name('login');
 
@@ -238,12 +243,9 @@ Route::prefix('admin')->name('admin-')->middleware(['auth', 'tenant.isolation', 
     Route::get('/dashboard', function () {
         return view('admin.dashboard');
     })->name('dashboard.page');
-    Route::get('/users', function () {
-        return view('admin.users');
-    })->name('users');
-    Route::get('/tenants', function () {
-        return view('admin.tenants');
-    })->name('tenants');
+    // GAP-129 L-1: these were mock-data pages; the real ones live under /app/admin.
+    Route::get('/users', fn () => redirect()->route('app.admin.users'))->name('users');
+    Route::get('/tenants', fn () => redirect()->route('app.admin.company'))->name('tenants');
     Route::get('/security', function () {
         return '<h1>Security</h1><p>Security settings here.</p>';
     })->name('security');
@@ -496,6 +498,19 @@ Route::prefix('app')->name('app.')->middleware(['auth', 'tenant.isolation'])->gr
         return redirect()->route('app.settings');
     })->name('settings.security');
     // GAP-124 S-1: the company's Slack channel for business notifications.
+    // GAP-129 — company administration (accounts, roles, company), scoped to the signed-in user's company. Gated by
+    // admin.company.manage (Owner only, amendment 1): Project Manager also holds user.read / user.manage_roles /
+    // settings.general.update.
+    Route::get('/admin/users', [App\Http\Controllers\Web\Admin\UserAdminController::class, 'index'])->middleware('rbac:admin.company.manage')->name('admin.users');
+    Route::post('/admin/users', [App\Http\Controllers\Web\Admin\UserAdminController::class, 'store'])->middleware('rbac:admin.company.manage')->name('admin.users.store');
+    Route::post('/admin/users/{user}/role', [App\Http\Controllers\Web\Admin\UserAdminController::class, 'updateRole'])->middleware('rbac:admin.company.manage')->name('admin.users.role');
+    Route::post('/admin/users/{user}/deactivate', [App\Http\Controllers\Web\Admin\UserAdminController::class, 'deactivate'])->middleware('rbac:admin.company.manage')->name('admin.users.deactivate');
+    Route::post('/admin/users/{user}/reactivate', [App\Http\Controllers\Web\Admin\UserAdminController::class, 'reactivate'])->middleware('rbac:admin.company.manage')->name('admin.users.reactivate');
+    Route::post('/admin/users/{user}/reset-password', [App\Http\Controllers\Web\Admin\UserAdminController::class, 'resetPassword'])->middleware('rbac:admin.company.manage')->name('admin.users.reset-password');
+    Route::get('/admin/roles', [App\Http\Controllers\Web\Admin\RoleAdminController::class, 'index'])->middleware('rbac:admin.company.manage')->name('admin.roles');
+    Route::get('/admin/company', [App\Http\Controllers\Web\Admin\CompanyAdminController::class, 'show'])->middleware('rbac:admin.company.manage')->name('admin.company');
+    Route::post('/admin/company', [App\Http\Controllers\Web\Admin\CompanyAdminController::class, 'update'])->middleware('rbac:admin.company.manage')->name('admin.company.update');
+
     Route::get('/settings/notifications', [App\Http\Controllers\Web\NotificationSettingsPageController::class, 'show'])->middleware('rbac:notification.channel.manage')->name('settings.notifications');
     Route::post('/settings/notifications', [App\Http\Controllers\Web\NotificationSettingsPageController::class, 'update'])->middleware('rbac:notification.channel.manage')->name('settings.notifications.update');
     Route::post('/settings/notifications/test', [App\Http\Controllers\Web\NotificationSettingsPageController::class, 'test'])->middleware('rbac:notification.channel.manage')->name('settings.notifications.test');

@@ -250,6 +250,8 @@ class AccessibilityTest extends TestCase
      */
     public function test_login_page_accessibility()
     {
+        // GAP-130: a signed-in user is redirected away from /login, so check the page as a guest.
+        $this->app['auth']->guard('web')->logout();
         $response = $this->get('/login');
 
         $response->assertStatus(200);

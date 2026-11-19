@@ -13,6 +13,3 @@ parameters:
 
   tmpDir: storage/app/phpstan
   reportUnmatchedIgnoredErrors: false
-
-  excludePaths:
-    - app/WebSocket

@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-20T04:48:19+07:00"
-  updated_at: "2026-11-20T04:52:41+07:00"
+  updated_at: "2026-11-20T05:32:15+07:00"
 generated_by: agent
 ---
 
@@ -99,6 +99,19 @@ Test phải đỏ trước khi sửa, xanh sau. `DeploymentGuardTest` hiện kh�
   `docs/superpowers/plans/2026-11-20-gap-128-websocket-server.md`
 
 File khác cần đổi sẽ hỏi Owner trước và ghi thành bổ sung. Tài liệu lịch sử (`docs/archive/**`, `docs/DEVELOPER_DOCUMENTATION.md`, plan GAP-049 cũ) không sửa.
+
+## Owner amendment 1 (approved 2026-11-20)
+
+Owner decision in-session on 2026-11-20, verbatim: 'APPROVE amendment 1' (answer to 'Approve GAP-128 amendment 1 (add
+phpstan.neon to the file list)?').
+
+Exact-head CI on `6292d506` failed PHPStan (Security Tests, and Code Quality Analysis which stops at the same step):
+`phpstan.neon` excludes `app/WebSocket`, which this change deletes, and PHPStan rejects a missing exclude path. Added to
+the allowlist, only to remove that entry (and the then-empty `excludePaths:` key):
+
+- `phpstan.neon`
+
+Local PHPStan with the change: exit 0.
 
 ## Ngoài phạm vi
 

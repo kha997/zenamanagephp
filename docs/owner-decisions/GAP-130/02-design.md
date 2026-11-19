@@ -10,7 +10,7 @@ references:
   spec: docs/audits/2026-11-20-gap-130-login-419-evidence.md
   plan: null
   branch: docs/GAP-130-login-419
-  pr: null
+  pr: https://github.com/kha997/zenamanagephp/pull/421
   release: null
 decision_provenance:
   trust_level: claimed_repo_record

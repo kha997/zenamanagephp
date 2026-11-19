@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-20T09:45:00+07:00"
-  updated_at: "2026-11-20T10:05:00+07:00"
+  updated_at: "2026-11-20T10:40:00+07:00"
 generated_by: agent
 ---
 
@@ -83,6 +83,17 @@ hoặc theo vite) và xoá dòng này. Việc theo dõi đó **không** nằm tr
   `docs/superpowers/plans/2026-11-20-gap-127-dependency-advisories.md`
 
 Không đổi code sản phẩm, test, hay workflow CI. File khác cần đổi sẽ hỏi Owner trước và ghi thành bổ sung.
+
+## Owner amendment 1 (approved 2026-11-20): P-1 dropped
+
+Owner decision in-session on 2026-11-20, verbatim: 'Drop P-1'. Answer to the agent's question
+'Amend Gate 2 to drop P-1 (no .npm-audit-ignore), since the advisory was withdrawn?'.
+
+Reason: GitHub withdrew GHSA-fc5q-39xc-vjpf on 2026-11-18 15:38 UTC (`withdrawn_at` on the advisory).
+`npm audit --package-lock-only` on this branch reports 0 vulnerabilities, and the latest `main` run
+(44601911747, 2026-11-19) fails only on `composer audit`.
+
+Effect: `.npm-audit-ignore` is **not** created; it is removed from the allowlist. L-1 is unchanged.
 
 ## Ngoài phạm vi
 

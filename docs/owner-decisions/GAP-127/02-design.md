@@ -22,7 +22,7 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-20T09:45:00+07:00"
-  updated_at: "2026-11-20T10:40:00+07:00"
+  updated_at: "2026-11-20T12:00:00+07:00"
 generated_by: agent
 ---
 
@@ -94,6 +94,26 @@ Reason: GitHub withdrew GHSA-fc5q-39xc-vjpf on 2026-11-18 15:38 UTC (`withdrawn_
 (44601911747, 2026-11-19) fails only on `composer audit`.
 
 Effect: `.npm-audit-ignore` is **not** created; it is removed from the allowlist. L-1 is unchanged.
+
+## Owner amendment 2 (approved 2026-11-20): option 2-A, test mocks
+
+Owner decision in-session on 2026-11-20, verbatim: 'Approve 2-A (fix mocks)'. Answer to the agent's question
+'Amendment 2: which option for the 5 tests that break on Laravel 12.73.0?', where 2-A was "stay on 12.73.0 and add
+`DB::shouldReceive('getConnections')->andReturn([])` to the 4 test files; no assertion removed or loosened, no product
+code change" and 2-B was "lock 12.72.0, no test change".
+
+Reason: Laravel 12.73.0 (not 12.71.0 or 12.72.0) adds a teardown step in
+`Foundation/Testing/Concerns/InteractsWithTestCaseLifecycle.php` that calls `getConnections()` on the `db` instance.
+Tests that replace it with a strict Mockery mock via `DB::shouldReceive(...)` then fail with
+`BadMethodCallException: ... getConnections(), but no expectations were specified`. Exactly 5 tests went from pass to
+error (local full-suite comparison, and Unit / Feature / `test` jobs on PR head a7eb64d9).
+
+Added to the allowlist, only to add that expectation where `DB` is mocked:
+
+- `tests/Unit/Dashboard/DashboardServiceTest.php`
+- `tests/Unit/Services/ServicesTest.php`
+- `tests/Feature/Dashboard/DashboardApiTest.php`
+- `tests/Feature/Deployment/ProductionReadinessEndpointTest.php`
 
 ## Ngoài phạm vi
 

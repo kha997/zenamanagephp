@@ -1,11 +1,11 @@
 ---
 work_id: GAP-128
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-11-18-gap-128-websocket-server-evidence.md
   plan: null
@@ -14,19 +14,24 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-11-20T04:52:41+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-20, verbatim: 'APPROVE A S-1 H-1' (answer to 'Approve GAP-128 Gate 2 as recommended (A, S-1, H-1)?'). Approves A (remove websocket:serve, its handler and start script, and the zena-websocket restarts/sudo entry from production.yml and the provisioning runbook), S-1 (only the server; other dead realtime code untouched) and H-1 (deploy first, then root removes the placeholder unit and sudo line), one PR / one Gate 3, with the allowlist in this packet; not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-20T04:48:19+07:00"
-  updated_at: "2026-11-20T04:48:19+07:00"
+  updated_at: "2026-11-20T04:52:41+07:00"
 generated_by: agent
 ---
 
 # GAP-128 — Websocket server cannot start: Gate 2 design
+
+## OWNER GATE 2: APPROVED — A, S-1, H-1
+
+Owner approved A, S-1 and H-1 in-session on 2026-11-20. This authorizes only the bounded implementation defined by this
+packet; it does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

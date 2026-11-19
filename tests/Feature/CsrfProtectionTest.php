@@ -37,7 +37,11 @@ class CsrfProtectionTest extends TestCase
             'password' => 'password123',
         ]);
 
-        $response->assertStatus(419); // CSRF token mismatch
+        // GAP-130 S-1: a bad token on the login form returns to /login with a message instead of the 419 page, and the
+        // login controller never runs — nobody is signed in.
+        $response->assertRedirect('/login');
+        $response->assertSessionHasErrors('email');
+        $this->assertGuest();
     }
 
     /**

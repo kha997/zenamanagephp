@@ -157,11 +157,11 @@
             </div>
         @endif
 
-        <form method="POST" action="/login">
+        <form method="POST" action="/login" data-single-submit>
             @csrf
             <div class="form-group">
                 <label for="email">Email</label>
-                <input type="email" id="email" name="email" required>
+                <input type="email" id="email" name="email" value="{{ old('email') }}" required>
             </div>
             
             <div class="form-group">
@@ -176,6 +176,23 @@
             
             <button type="submit" class="btn">Login</button>
         </form>
+        <script>
+            // GAP-130: a second submit would carry the CSRF token the first sign-in just regenerated (HTTP 419).
+            document.querySelectorAll('form[data-single-submit]').forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    if (form.dataset.submitted === '1') {
+                        event.preventDefault();
+                        return;
+                    }
+                    form.dataset.submitted = '1';
+                    var button = form.querySelector('button[type="submit"]');
+                    if (button) {
+                        button.disabled = true;
+                        button.textContent = 'Đang đăng nhập…';
+                    }
+                });
+            });
+        </script>
         
         {{-- Chỉ hiện ở local/testing/development (DebugGateMiddleware) — khớp UserSeeder thật, mật khẩu chung "password" --}}
         @if(app()->environment(['local', 'testing', 'development']))

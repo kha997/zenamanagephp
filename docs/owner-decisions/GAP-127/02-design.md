@@ -1,11 +1,11 @@
 ---
 work_id: GAP-127
 gate: 2
-gate_status: awaiting_owner
+gate_status: approved
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_changes_or_decline
+decision_requested: null
 references:
   spec: docs/audits/2026-11-18-gap-127-dependency-advisories-evidence.md
   plan: null
@@ -14,21 +14,24 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-11-20T10:05:00+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-20, verbatim: 'APPROVE GAP-127 Gate 2 L-1 P-1'. Typed directly by the Owner in this agent session. Reviewed design head: 27edc8ae5eb0240f0ab138a8643d277637d8f64c. Approves L-1 (laravel/framework ^12.71.0, lock updates laravel/framework only, 12.69.3 -> 12.73.0) and P-1 (new .npm-audit-ignore with the single reasoned GHSA-fc5q-39xc-vjpf line), one PR / one Gate 3, with the exact allowlist in this packet; not Gate 3, merge, release, or deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-20T09:45:00+07:00"
-  updated_at: "2026-11-20T09:45:00+07:00"
+  updated_at: "2026-11-20T10:05:00+07:00"
 generated_by: agent
 ---
 
 # GAP-127 — Security Vulnerability Scan green again: Gate 2 design
 
-## OWNER GATE 2: AWAITING OWNER
+## OWNER GATE 2: APPROVED — L-1, P-1
+
+Owner approved L-1 and P-1 in-session on 2026-11-20. This authorizes only the bounded implementation defined by this packet;
+it does not authorize Gate 3, merge, release, or deployment.
 
 ## Owner Summary
 

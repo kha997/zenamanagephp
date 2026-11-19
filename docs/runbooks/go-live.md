@@ -24,6 +24,7 @@ Làm theo `docs/runbooks/gap-049-host-provisioning.md`:
 - user deploy;
 - thư mục `/var/www/zena/{releases,shared}`;
 - dịch vụ `zena-queue-worker`;
+- (máy dựng trước GAP-128) gỡ dịch vụ `zena-websocket` cũ theo mục "Retiring the old zena-websocket unit" — chỉ sau khi đã deploy bản có GAP-128;
 - cron chạy `php artisan schedule:run` mỗi phút.
 
 ## 2. Tạo `shared/.env` trên máy chủ

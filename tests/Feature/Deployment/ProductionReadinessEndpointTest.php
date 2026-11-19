@@ -35,6 +35,8 @@ class ProductionReadinessEndpointTest extends TestCase
         DB::shouldReceive('select')
             ->with('SELECT 1')
             ->andThrow(new \RuntimeException('connection refused'));
+        // GAP-127: Laravel 12.73 teardown calls getConnections() on the mocked DB manager.
+        DB::shouldReceive('getConnections')->andReturn([]);
 
         $controller = new \App\Http\Controllers\Api\ProductionReadinessController();
         $response = $controller->check();

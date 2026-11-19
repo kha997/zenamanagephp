@@ -466,6 +466,8 @@ class DashboardServiceTest extends TestCase
         DB::shouldReceive('beginTransaction')->once();
         DB::shouldReceive('commit')->once();
         DB::shouldReceive('rollBack')->never();
+        // GAP-127: Laravel 12.73 teardown calls getConnections() on the mocked DB manager.
+        DB::shouldReceive('getConnections')->andReturn([]);
 
         $widget = DashboardWidget::where('code', 'project_overview')->first();
         $result = $this->dashboardService->addWidget($this->user, $widget->id);
@@ -483,6 +485,8 @@ class DashboardServiceTest extends TestCase
         // Mock database to throw exception
         DB::shouldReceive('beginTransaction')->once();
         DB::shouldReceive('rollBack')->once();
+        // GAP-127: Laravel 12.73 teardown calls getConnections() on the mocked DB manager.
+        DB::shouldReceive('getConnections')->andReturn([]);
 
         // Mock UserDashboard to throw exception
         UserDashboard::shouldReceive('where')->andThrow(new \Exception('Database error'));

@@ -15,14 +15,14 @@ references:
 decision_provenance:
   trust_level: claimed_repo_record
   recorded_by: agent
-  recorded_at: "2026-11-20T09:30:00+07:00"
+  recorded_at: "2026-11-20T04:46:32+07:00"
   owner_response_reference: "Owner decision in-session on 2026-11-20, verbatim: 'APPROVE GAP-127 Gate 1'. Typed directly by the Owner in this agent session. Bound to Draft PR #419 head 8915bf7f9 (after merging main 7256ff8db into the branch). Authorizes preparing Gate 2 only."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
-  created_at: "2026-11-18T17:10:00+07:00"
-  updated_at: "2026-11-20T09:30:00+07:00"
+  created_at: "2026-11-18T16:44:29+07:00"
+  updated_at: "2026-11-20T04:46:32+07:00"
 generated_by: agent
 ---
 

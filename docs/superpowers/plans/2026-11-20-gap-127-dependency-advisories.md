@@ -1,3 +1,9 @@
+---
+work_id: GAP-127
+owner_governance_version: 1
+owner_gate_2_record: docs/owner-decisions/GAP-127/02-design.md
+---
+
 # GAP-127 — Security Vulnerability Scan green again: implementation plan
 
 Gate 2: `docs/owner-decisions/GAP-127/02-design.md` (approved 2026-11-20, L-1 and P-1).

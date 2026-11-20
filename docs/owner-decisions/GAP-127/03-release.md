@@ -1,14 +1,14 @@
 ---
 work_id: GAP-127
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-11-18-gap-127-dependency-advisories-evidence.md
   plan: docs/superpowers/plans/2026-11-20-gap-127-dependency-advisories.md
@@ -17,15 +17,15 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-11-20T08:50:33+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-20, verbatim: 'APPROVE GAP-127 Gate 3'. Typed directly by the Owner in this agent session, answer to the Gate 3 question on PR #419 after exact-head CI 36/36 green on a61378c7d71724b04fa33a2ea0aac14749076081. Bound to implementation subject 29f72f8647364ed1cd3028293016a214e7b9fa8a and implementation-tree digest 8908e7aa9e7df54e43423bc5addfd007774d9c1b2051dde2637894bb04417419. Authorizes merge and deployment of the merged SHA via Production Deployment."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-20T05:55:00+07:00"
-  updated_at: "2026-11-20T08:50:00+07:00"
+  updated_at: "2026-11-20T08:50:33+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-127 at subject 29f72f8647364ed1cd3028293016a214e7b9fa8a (Gate 2 L-1, amendment 1 dropped P-1, amendment 2 option 2-A). L-1: composer.json laravel/framework ^12.71.0; composer.lock changes only laravel/framework v12.69.3 -> v12.73.0 (GHSA-63hm-g96r-2m2q / CVE-2026-128083 fixed in 12.71.0); composer audit --locked exits 0. P-1 dropped: GHSA-fc5q-39xc-vjpf was withdrawn 2026-11-18 15:38 UTC and npm audit reports 0 vulnerabilities, so no .npm-audit-ignore. Amendment 2: Laravel 12.73.0 teardown calls getConnections() on the db instance; 5 tests that mock DB with DB::shouldReceive errored, fixed by adding DB::shouldReceive('getConnections')->andReturn([]) in 4 test files, no assertion removed. Local Unit + Feature + Integration, 3083 tests, compared per test with the 12.69.3 baseline: 0 pass->fail, 1 fail->pass (GateOrderingFrontmatterGrandfatherTest, repo snapshot now complete); the 690 local errors are MissingAppKeyException (worktree has no APP_KEY) and identical in both runs. CI on b2cd780554d6c5e4184307a9fe303878fad5359b (same implementation; the subject only corrects packet timestamps): 36/36 checks green, including Security Vulnerability Scan. Exact-head CI on PR head a61378c7d71724b04fa33a2ea0aac14749076081 (subject plus this packet only; same digest): 36/36 checks green, including Security Vulnerability Scan, Owner Governance Lint, Unit, Feature, Integration, test and browser-tests."
@@ -36,13 +36,17 @@ technical_evidence:
   verified_pr_head_sha: "a61378c7d71724b04fa33a2ea0aac14749076081"
   verified_at: "2026-11-20T08:49:43+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "8908e7aa9e7df54e43423bc5addfd007774d9c1b2051dde2637894bb04417419"
+  decision_recorded_at: "2026-11-20T08:50:33+07:00"
 ---
 
 # GAP-127 — Gate 3 release decision (Security Vulnerability Scan green again)
 
-## OWNER GATE 3: AWAITING OWNER
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-11-20 ("APPROVE GAP-127 Gate 3"), bound to implementation subject
+`29f72f8647364ed1cd3028293016a214e7b9fa8a` and implementation-tree digest `8908e7aa9e7df54e43423bc5addfd007774d9c1b2051dde2637894bb04417419`.
+Merge and deployment of the merged SHA via Production Deployment are authorized.
 
 ## Gói quyết định phát hành
 

@@ -1,14 +1,14 @@
 ---
 work_id: GAP-127
 gate: 3
-gate_status: preparing
+gate_status: awaiting_owner
 technical_readiness:
-  value: not_checked
+  value: ready
   generated_by: engineering_evidence
 owner_decision:
   value: none
   authority: human_owner
-decision_requested: null
+decision_requested: approve_or_correction_or_defer
 references:
   spec: docs/audits/2026-11-18-gap-127-dependency-advisories-evidence.md
   plan: docs/superpowers/plans/2026-11-20-gap-127-dependency-advisories.md
@@ -25,16 +25,16 @@ supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-20T05:55:00+07:00"
-  updated_at: "2026-11-20T05:55:00+07:00"
+  updated_at: "2026-11-20T08:50:00+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "GAP-127 at subject 29f72f8647364ed1cd3028293016a214e7b9fa8a (Gate 2 L-1, amendment 1 dropped P-1, amendment 2 option 2-A). L-1: composer.json laravel/framework ^12.71.0; composer.lock changes only laravel/framework v12.69.3 -> v12.73.0 (GHSA-63hm-g96r-2m2q / CVE-2026-128083 fixed in 12.71.0); composer audit --locked exits 0. P-1 dropped: GHSA-fc5q-39xc-vjpf was withdrawn 2026-11-18 15:38 UTC and npm audit reports 0 vulnerabilities, so no .npm-audit-ignore. Amendment 2: Laravel 12.73.0 teardown calls getConnections() on the db instance; 5 tests that mock DB with DB::shouldReceive errored, fixed by adding DB::shouldReceive('getConnections')->andReturn([]) in 4 test files, no assertion removed. Local Unit + Feature + Integration, 3083 tests, compared per test with the 12.69.3 baseline: 0 pass->fail, 1 fail->pass (GateOrderingFrontmatterGrandfatherTest, repo snapshot now complete); the 690 local errors are MissingAppKeyException (worktree has no APP_KEY) and identical in both runs. CI on b2cd780554d6c5e4184307a9fe303878fad5359b (same implementation; the subject only corrects packet timestamps): 36/36 checks green, including Security Vulnerability Scan. Exact-head CI on the subject to be recorded before awaiting_owner."
+mandatory_technical_gate_summary: "GAP-127 at subject 29f72f8647364ed1cd3028293016a214e7b9fa8a (Gate 2 L-1, amendment 1 dropped P-1, amendment 2 option 2-A). L-1: composer.json laravel/framework ^12.71.0; composer.lock changes only laravel/framework v12.69.3 -> v12.73.0 (GHSA-63hm-g96r-2m2q / CVE-2026-128083 fixed in 12.71.0); composer audit --locked exits 0. P-1 dropped: GHSA-fc5q-39xc-vjpf was withdrawn 2026-11-18 15:38 UTC and npm audit reports 0 vulnerabilities, so no .npm-audit-ignore. Amendment 2: Laravel 12.73.0 teardown calls getConnections() on the db instance; 5 tests that mock DB with DB::shouldReceive errored, fixed by adding DB::shouldReceive('getConnections')->andReturn([]) in 4 test files, no assertion removed. Local Unit + Feature + Integration, 3083 tests, compared per test with the 12.69.3 baseline: 0 pass->fail, 1 fail->pass (GateOrderingFrontmatterGrandfatherTest, repo snapshot now complete); the 690 local errors are MissingAppKeyException (worktree has no APP_KEY) and identical in both runs. CI on b2cd780554d6c5e4184307a9fe303878fad5359b (same implementation; the subject only corrects packet timestamps): 36/36 checks green, including Security Vulnerability Scan. Exact-head CI on PR head a61378c7d71724b04fa33a2ea0aac14749076081 (subject plus this packet only; same digest): 36/36 checks green, including Security Vulnerability Scan, Owner Governance Lint, Unit, Feature, Integration, test and browser-tests."
 technical_evidence:
   base_sha: "7256ff8db344fd3315d9dab6415d84d75cd59bf9"
   subject_sha: "29f72f8647364ed1cd3028293016a214e7b9fa8a"
   implementation_tree_digest: "8908e7aa9e7df54e43423bc5addfd007774d9c1b2051dde2637894bb04417419"
-  verified_pr_head_sha: null
-  verified_at: null
+  verified_pr_head_sha: "a61378c7d71724b04fa33a2ea0aac14749076081"
+  verified_at: "2026-11-20T08:49:43+07:00"
 owner_decision_binding:
   implementation_tree_digest: null
   decision_recorded_at: null
@@ -42,7 +42,7 @@ owner_decision_binding:
 
 # GAP-127 — Gate 3 release decision (Security Vulnerability Scan green again)
 
-## OWNER GATE 3: PREPARING — waiting for exact-head CI
+## OWNER GATE 3: AWAITING OWNER
 
 ## Gói quyết định phát hành
 
@@ -64,6 +64,8 @@ owner_decision_binding:
 - CI trên `b2cd7805` (cùng nội dung code, subject chỉ sửa giờ ghi trong gói quyết định): **36/36 xanh**, gồm Security
   Vulnerability Scan.
 
+- CI trên đúng head `a61378c7`: **36/36 xanh**.
+
 **4. Lưu ý vận hành**
 - Sau khi merge, deploy SHA mới qua **Production Deployment** theo `docs/runbooks/go-live.md`.
 - Không có migration, không đổi cấu hình máy chủ.
@@ -78,4 +80,8 @@ owner_decision_binding:
 
 ## Decision Needed
 
-Chưa có — chờ CI trên đúng head.
+Owner chọn: `APPROVE GAP-127 Gate 3` (merge, rồi deploy SHA đã merge qua Production Deployment) / Correction / Defer.
+
+## What the owner is NOT being asked to decide
+
+Laravel 13; nâng các thư viện khác.

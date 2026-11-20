@@ -1,14 +1,14 @@
 ---
 work_id: GAP-128
 gate: 3
-gate_status: awaiting_owner
+gate_status: approved
 technical_readiness:
   value: ready
   generated_by: engineering_evidence
 owner_decision:
-  value: none
+  value: approved
   authority: human_owner
-decision_requested: approve_or_correction_or_defer
+decision_requested: null
 references:
   spec: docs/audits/2026-11-18-gap-128-websocket-server-evidence.md
   plan: docs/superpowers/plans/2026-11-20-gap-128-websocket-server.md
@@ -17,15 +17,15 @@ references:
   release: null
 decision_provenance:
   trust_level: claimed_repo_record
-  recorded_by: null
-  recorded_at: null
-  owner_response_reference: null
+  recorded_by: agent
+  recorded_at: "2026-11-20T08:48:18+07:00"
+  owner_response_reference: "Owner decision in-session on 2026-11-20, verbatim: 'APPROVE GAP-128 Gate 3' (answer to 'Approve GAP-128 Gate 3 (merge despite the existing scan failure, then deploy)?'). Given on PR #418 head a6b075941b3c434885cf579c21ba2125772b2bbc after exact-head CI: 34 checks green; Security Vulnerability Scan red with the composer advisories already red on main (GAP-127, PR #419), PR touches no dependency file; Owner Governance Lint red only through its live check of that scan. Bound to implementation subject 719750d737bdf7daa9f2295ae6785071e2ef8df4 and implementation-tree digest 0db6c6b7425d782f32dcc869dbaaa465149fe62da35977182e6ae51fa78655c7. Authorizes merge and deployment of the merged SHA via Production Deployment; host cleanup (H-1) follows health_verified, by whoever holds root."
   reconciliation_required: false
 supersedes: null
 superseded_by: null
 timestamps:
   created_at: "2026-11-20T04:57:04+07:00"
-  updated_at: "2026-11-20T05:52:55+07:00"
+  updated_at: "2026-11-20T08:48:18+07:00"
 generated_by: agent
 residual_risk_rating: low
 mandatory_technical_gate_summary: "GAP-128 at subject 719750d737bdf7daa9f2295ae6785071e2ef8df4 (Gate 2 A, S-1, H-1 + amendment 1), base 7256ff8d. Removed websocket:serve (WebSocketServerCommand), DashboardWebSocketHandler, scripts/start-websocket-server.sh and their 9 phpstan-baseline entries; phpstan.neon drops the deleted app/WebSocket exclude (amendment 1); production.yml no longer restarts zena-websocket at cutover or auto-rollback; gap-049-host-provisioning.md drops the websocket unit and its sudo line and adds the retirement procedure (root, only after a GAP-128 deploy reaches health_verified); go-live.md points to it. New WebSocketServerRetiredTest (3): red before (3 failures), green after. Local: tests/Feature/Deployment green except 2 ProductionUserCommandTest errors from the worktree having no APP_KEY; PHPStan exit 0; php-cs-fixer clean; owner-governance-lint PASS. Exact-head CI on a5c7b40e (03-release.md-only commit after the subject, same digest): 35 checks green incl. Unit, Feature, Integration, API, PHPStan (Security Tests, Code Quality Analysis), MySQL concurrency suites, browser-tests, staging-smoke, Build Dockerfile; Security Vulnerability Scan red with the composer advisories already red on main (GAP-127, PR #419 open); this PR touches no dependency file."
@@ -36,11 +36,19 @@ technical_evidence:
   verified_pr_head_sha: "a5c7b40ea40dba395cbd3d0b32b566cfa54116de"
   verified_at: "2026-11-20T05:52:55+07:00"
 owner_decision_binding:
-  implementation_tree_digest: null
-  decision_recorded_at: null
+  implementation_tree_digest: "0db6c6b7425d782f32dcc869dbaaa465149fe62da35977182e6ae51fa78655c7"
+  decision_recorded_at: "2026-11-20T08:48:18+07:00"
 ---
 
 # GAP-128 — Gate 3 release decision (retire the websocket server)
+
+## OWNER GATE 3: APPROVED
+
+Owner approved Gate 3 in-session on 2026-11-20 ("APPROVE GAP-128 Gate 3"), bound to implementation subject
+`719750d737bdf7daa9f2295ae6785071e2ef8df4` and implementation-tree digest `0db6c6b7425d782f32dcc869dbaaa465149fe62da35977182e6ae51fa78655c7`.
+Merge with the pre-existing red Security Vulnerability Scan (same failure on main, GAP-127 / PR #419; no dependency file
+in this PR) and deployment of the merged SHA via Production Deployment are authorized. Host cleanup follows H-1: only
+after that deploy reaches `health_verified`, whoever holds root removes the placeholder unit and its sudo line.
 
 ## Gói quyết định phát hành
 

@@ -28,11 +28,11 @@ timestamps:
   updated_at: "2026-11-20T11:49:16+07:00"
 generated_by: agent
 residual_risk_rating: low
-mandatory_technical_gate_summary: "Implementation content is byte-identical to the v1-approved GAP-127 change (v1 digest 8908e7aa9e7df54e43423bc5addfd007774d9c1b2051dde2637894bb04417419 at subject 29f72f8647364ed1cd3028293016a214e7b9fa8a). The only new change is a conflict-free merge of origin/main 6835fc20d288e98f497a75a29dd663c59b71405c (GAP-128, PR #418: websocket server retired), required by strict branch protection. git patch-id --stable of the GAP-127 diff (excluding docs/owner-decisions/GAP-127) is 17605c66 both against the old base 7256ff8d and against the new base 6835fc20; the diff against main touches only the Gate 2 allowlist. Canonical digest recomputed at the new subject 61232a09904161221fd0f3cd982473030cc283ac; the same tool reproduces the v1 digest at 29f72f86. Exact-head CI on the subject to be recorded before awaiting_owner."
+mandatory_technical_gate_summary: "Implementation content is byte-identical to the v1-approved GAP-127 change (v1 digest 8908e7aa9e7df54e43423bc5addfd007774d9c1b2051dde2637894bb04417419 at subject 29f72f8647364ed1cd3028293016a214e7b9fa8a). The only new change is a conflict-free merge of origin/main 6835fc20d288e98f497a75a29dd663c59b71405c (GAP-128, PR #418: websocket server retired), required by strict branch protection. git patch-id --stable of the GAP-127 diff (excluding docs/owner-decisions/GAP-127) is 17605c66 both against the old base 7256ff8d and against the new base 6835fc20; the diff against main touches only the Gate 2 allowlist. Canonical digest recomputed at the new subject bf007204efc70f47535e8c0d35cdb27afaeb2e6e (merge 61232a09 plus this packet and the v1 superseded_by link); the same tool reproduces the v1 digest at 29f72f86. Exact-head CI on the subject to be recorded before awaiting_owner."
 technical_evidence:
   base_sha: "6835fc20d288e98f497a75a29dd663c59b71405c"
-  subject_sha: "61232a09904161221fd0f3cd982473030cc283ac"
-  implementation_tree_digest: "ee083e7f6b3377812cd2a07bddf4c162f302d8b540a3c1dc3367d4459dff6285"
+  subject_sha: "bf007204efc70f47535e8c0d35cdb27afaeb2e6e"
+  implementation_tree_digest: "a41d92c301b3a538963fa559ecdc410b000b551a4f6c42da08b1378bf871cda1"
   verified_pr_head_sha: null
   verified_at: null
 owner_decision_binding:
@@ -52,7 +52,7 @@ phải mới nhất trước khi merge. Việc cập nhật làm đổi "dấu v
 duyệt lại.
 
 - Phần thay đổi của GAP-127 so với `main` giống hệt từng byte (cùng patch-id `17605c66`).
-- Dấu vân tay mới: `ee083e7f6b3377812cd2a07bddf4c162f302d8b540a3c1dc3367d4459dff6285` tại `61232a09`.
+- Dấu vân tay mới: `a41d92c301b3a538963fa559ecdc410b000b551a4f6c42da08b1378bf871cda1` tại `bf007204`.
 - Nội dung, rủi ro, hoàn tác, lưu ý vận hành: như v1 (`03-release.md`).
 
 ## Decision Needed

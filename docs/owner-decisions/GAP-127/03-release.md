@@ -22,7 +22,7 @@ decision_provenance:
   owner_response_reference: "Owner decision in-session on 2026-11-20, verbatim: 'APPROVE GAP-127 Gate 3'. Typed directly by the Owner in this agent session, answer to the Gate 3 question on PR #419 after exact-head CI 36/36 green on a61378c7d71724b04fa33a2ea0aac14749076081. Bound to implementation subject 29f72f8647364ed1cd3028293016a214e7b9fa8a and implementation-tree digest 8908e7aa9e7df54e43423bc5addfd007774d9c1b2051dde2637894bb04417419. Authorizes merge and deployment of the merged SHA via Production Deployment."
   reconciliation_required: false
 supersedes: null
-superseded_by: null
+superseded_by: "docs/owner-decisions/GAP-127/03-release-v2.md"
 timestamps:
   created_at: "2026-11-20T05:55:00+07:00"
   updated_at: "2026-11-20T08:50:33+07:00"

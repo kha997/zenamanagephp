@@ -244,7 +244,6 @@ jobs:
             php artisan queue:restart
             sudo systemctl reload nginx
             sudo systemctl restart zena-queue-worker
-            sudo systemctl restart zena-websocket
 
             echo "cutover complete — state: deployed_unverified"
 
@@ -357,7 +356,6 @@ jobs:
             php artisan queue:restart
             sudo systemctl reload nginx
             sudo systemctl restart zena-queue-worker
-            sudo systemctl restart zena-websocket
 
             echo "RECOVERY_MODE=rolled_back_to_${PREV_SHA}"
 

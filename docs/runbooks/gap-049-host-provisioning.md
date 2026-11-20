@@ -46,9 +46,6 @@ sudo chmod 600 /var/www/zena/shared/.env
 - **queue-worker systemd unit** (currently absent per Gate-1 finding) — one
   unit running `php artisan queue:work <connection> --sleep=3 --tries=3`
   against `current/artisan`, `Restart=always`.
-- **websocket systemd unit** (currently assumed but never provisioned per
-  Gate-1 finding) — one unit running whatever websocket server command this
-  application uses in production, `Restart=always`.
 - nginx vhost pointing its document root at `current/public`.
 
 ## Deployment user and sudo scope
@@ -59,13 +56,33 @@ Create a dedicated, non-root `deploy` user. Grant it, via `visudo -f
 ```
 deploy ALL=(root) NOPASSWD: /bin/systemctl reload nginx
 deploy ALL=(root) NOPASSWD: /bin/systemctl restart zena-queue-worker
-deploy ALL=(root) NOPASSWD: /bin/systemctl restart zena-websocket
 ```
 
 Nothing broader (per Gate-2 design A-7/A-10). The `deploy` user owns
 `releases/*` and `shared/storage` (read/write); it needs only read access to
 `shared/.env`. The web server user (e.g. `www-data`) needs read access to
 `current` and read/write access to `shared/storage`.
+
+## Retiring the old zena-websocket unit (GAP-128)
+
+There is no websocket server. `websocket:serve` could never start (its library,
+`cboden/ratchet`, is not installed) and no page connects to it, so GAP-128
+removed it. Hosts provisioned before GAP-128 may still have a `zena-websocket`
+unit (on `app.zena.com.vn` a oneshot `/bin/true` placeholder) and a sudo line
+for it. Remove them as root, **only after** a Production Deployment of a SHA
+that contains GAP-128 has reached `health_verified` — older `production.yml`
+versions still run `systemctl restart zena-websocket` and fail if the unit is
+gone:
+
+```
+sudo systemctl disable --now zena-websocket
+sudo rm /etc/systemd/system/zena-websocket.service
+sudo systemctl daemon-reload
+sudo visudo -f /etc/sudoers.d/zena-deploy   # delete the 'restart zena-websocket' line
+```
+
+Rollback to a pre-GAP-128 release: recreate the placeholder unit and the sudo
+line first, then deploy.
 
 ## SSH / host-key verification
 

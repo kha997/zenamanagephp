@@ -1177,6 +1177,8 @@ class DashboardApiTest extends TestCase
     {
         // Mock database error
         \DB::shouldReceive('beginTransaction')->andThrow(new \Exception('Database error'));
+        // GAP-127: Laravel 12.73 teardown calls getConnections() on the mocked DB manager.
+        \DB::shouldReceive('getConnections')->andReturn([]);
 
         $widget = DashboardWidget::where('code', 'project_overview')->first();
 

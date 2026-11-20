@@ -267,6 +267,8 @@ class ServicesTest extends TestCase
     {
         // Mock database connection to throw exception
         DB::shouldReceive('connection')->andThrow(new \Exception('Database connection failed'));
+        // GAP-127: Laravel 12.73 teardown calls getConnections() on the mocked DB manager.
+        DB::shouldReceive('getConnections')->andReturn([]);
 
         $service = new DatabaseOptimizationService();
 

@@ -7,6 +7,7 @@ namespace Database\Seeders;
 use App\Models\Permission;
 use App\Models\Role;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class ZenaPermissionsSeeder extends Seeder
@@ -287,6 +288,19 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'payroll.close', 'module' => 'payroll', 'action' => 'close', 'description' => 'Close and reopen a payroll month'],
     ];
 
+
+    /**
+     * UAT-RECOVERY-01 (S1, reduced on integration): permissions granted to the exact global system role "System Admin"
+     * ONLY, additively (syncWithoutDetaching) — never via the ADMIN_ROLE_NAMES alias list.
+     *
+     * The original S1 "catalog-only" set (role.*, permission.*, audit.view, baseline.*, compensation.*) and role.assign were
+     * superseded by upstream GAP-098 (V1PermissionGapSeeder, merged before this PR), which defines AND grants them under its own
+     * Owner gate; they are therefore intentionally NOT redefined here. This list starts empty and is only extended by
+     * Owner-approved decisions (see docs/audits/UAT-RECOVERY-01/OWNER-DECISION-REGISTER.md).
+     */
+    public const SYSTEM_ADMIN_ONLY_PERMISSIONS = [
+    ];
+
     private const PERMISSION_TABLE = 'permissions';
 
     public function run(): void
@@ -322,8 +336,66 @@ class ZenaPermissionsSeeder extends Seeder
             Permission::updateOrCreate([$lookupColumn => $permissionKey], $attributes);
         }
 
+        foreach (self::SYSTEM_ADMIN_ONLY_PERMISSIONS as $definition) {
+            $attributes = [
+                'module' => $definition['module'],
+                'action' => $definition['action'],
+                'description' => $definition['description'],
+            ];
+            if ($hasCodeColumn) {
+                $attributes['code'] = $definition['code'];
+            }
+            if ($hasNameColumn) {
+                $attributes['name'] = $definition['code'];
+            }
+            Permission::updateOrCreate([$lookupColumn => $definition['code']], $attributes);
+        }
+
+        $this->repairNullPermissionNames();
+        $this->grantSystemAdminOnlyPermissions();
         $this->grantTemplateApplyToProjectManager();
         $this->grantChangeRequestPermissionsToProjectManager();
+    }
+
+    /**
+     * Metadata repair only (identity = id + code unchanged): rows created by RoleSeeder without `name`
+     * (e.g. project.read, user.manage) are invisible to User::hasPermission(), which matches on `name`.
+     * Skips a row when another row already owns that name.
+     */
+    private function repairNullPermissionNames(): void
+    {
+        if (!Schema::hasColumn(self::PERMISSION_TABLE, 'name') || !Schema::hasColumn(self::PERMISSION_TABLE, 'code')) {
+            return;
+        }
+
+        $rows = DB::table(self::PERMISSION_TABLE)->whereNull('name')->whereNotNull('code')->get(['id', 'code']);
+        foreach ($rows as $row) {
+            if (DB::table(self::PERMISSION_TABLE)->where('name', $row->code)->exists()) {
+                continue;
+            }
+            DB::table(self::PERMISSION_TABLE)->where('id', $row->id)->update(['name' => $row->code]);
+        }
+    }
+
+    /**
+     * Grants SYSTEM_ADMIN_ONLY_PERMISSIONS to the exact global system role "System Admin" only.
+     * Additive (never detaches); fail-closed if the role is missing or not a genuine global system role.
+     */
+    private function grantSystemAdminOnlyPermissions(): void
+    {
+        $role = Role::where('name', 'System Admin')
+            ->where('scope', Role::SCOPE_SYSTEM)
+            ->whereNull('tenant_id')
+            ->first();
+
+        if (!$role) {
+            return;
+        }
+
+        $ids = Permission::whereIn('code', array_column(self::SYSTEM_ADMIN_ONLY_PERMISSIONS, 'code'))->pluck('id')->all();
+        if ($ids !== []) {
+            $role->permissions()->syncWithoutDetaching($ids);
+        }
     }
 
     /**

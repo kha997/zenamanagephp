@@ -28,8 +28,9 @@ class DocumentPolicy
             return false;
         }
 
-        // Check role-based access
-        return $user->hasRole(['super_admin', 'admin', 'pm', 'designer', 'engineer']);
+        // S3: canonical DB permission (same code the route gate already requires), OR the unchanged legacy path.
+        return $user->hasPermission('document.view')
+            || $user->hasRole(['super_admin', 'admin', 'pm', 'designer', 'engineer']);
     }
 
     /**
@@ -50,8 +51,10 @@ class DocumentPolicy
             return false;
         }
 
-        // Check role-based access
-        return $user->hasRole(['super_admin', 'admin', 'pm', 'designer']);
+        // S3: canonical DB permission (the route gate rbac:document.update already requires it), OR the
+        // unchanged legacy path. Purely additive for permission holders; no legacy decision is removed.
+        return $user->hasPermission('document.update')
+            || $user->hasRole(['super_admin', 'admin', 'pm', 'designer']);
     }
 
     /**
@@ -104,7 +107,9 @@ class DocumentPolicy
             return false;
         }
 
-        return $user->hasRole(['super_admin', 'admin', 'pm', 'designer', 'engineer']);
+        // S3: same canonical permission the download route gate requires (document.view), OR the legacy path.
+        return $user->hasPermission('document.view')
+            || $user->hasRole(['super_admin', 'admin', 'pm', 'designer', 'engineer']);
     }
 
     /**

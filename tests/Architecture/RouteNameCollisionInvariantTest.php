@@ -75,10 +75,16 @@ final class RouteNameCollisionInvariantTest extends TestCase
      * @var array<string, list<string>>
      */
     private const EXPECTED_MIDDLEWARE = [
-        'projects.store' => ['api', 'auth:sanctum', 'tenant.isolation', 'rbac'],
+        // O-9 (UAT-RECOVERY-03b): parameterless gate excluded via withoutMiddleware('rbac') and replaced by the permission
+        // the controller already enforces; gatherMiddleware() still lists the raw group entry.
+        'projects.store' => ['api', 'auth:sanctum', 'tenant.isolation', 'rbac', 'rbac:project.create'],
         'projects.show' => ['api', 'auth:sanctum', 'tenant.isolation', 'rbac'],
-        'projects.update' => ['api', 'auth:sanctum', 'tenant.isolation', 'rbac'],
-        'projects.destroy' => ['api', 'auth:sanctum', 'tenant.isolation', 'rbac'],
+        // O-9 (UAT-RECOVERY-03b): parameterless gate excluded via withoutMiddleware('rbac') and replaced by the permission
+        // the controller already enforces; gatherMiddleware() still lists the raw group entry.
+        'projects.update' => ['api', 'auth:sanctum', 'tenant.isolation', 'rbac', 'rbac:project.update'],
+        // O-9 (UAT-RECOVERY-03b): parameterless gate excluded via withoutMiddleware('rbac') and replaced by the permission
+        // the controller already enforces; gatherMiddleware() still lists the raw group entry.
+        'projects.destroy' => ['api', 'auth:sanctum', 'tenant.isolation', 'rbac', 'rbac:project.delete'],
         'tasks.store' => ['api', 'auth:sanctum', 'tenant.isolation', 'rbac'],
         'web.projects.store' => ['web', 'auth', 'tenant.isolation'],
         'web.projects.show' => ['web', 'auth', 'tenant.isolation', 'rbac:project.view'],

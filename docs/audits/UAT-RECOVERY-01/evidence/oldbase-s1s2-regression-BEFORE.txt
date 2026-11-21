@@ -1,0 +1,22 @@
+tests/Feature/Recovery/UatRecovery01IdentityRbacTest.php :: FAILURES! Tests: 15, Assertions: 46, Failures: 9. 
+tests/Feature/GAP042Gate3Round1CorrectionsTest.php :: OK (20 tests, 34 assertions) 
+tests/Feature/GAP042Gate3Round2CorrectionsTest.php :: OK (7 tests, 31 assertions) 
+tests/Feature/GAP042RbacProductionFidelityTest.php :: OK (18 tests, 79 assertions) 
+tests/Feature/RbacApiTest.php :: OK (9 tests, 138 assertions) 
+tests/Feature/Zena :: OK, but there were issues! Tests: 290, Assertions: 2459, PHPUnit Deprecations: 23, Skipped: 2. 
+tests/Feature/Treasury/TreasuryRolePermissionSeederTest.php :: OK (19 tests, 37 assertions) 
+tests/Feature/Seeders :: OK (1 test, 3 assertions) 
+tests/Unit/Seeders :: OK (1 test, 2 assertions) 
+tests/Feature/Unit/Policies/TeamPolicyTest.php :: OK (7 tests, 7 assertions) 
+tests/Feature/Web/ProjectStoreRbacTest.php :: OK (4 tests, 9 assertions) 
+tests/Feature/Web/ProjectWorkTemplateApplyTest.php :: OK (5 tests, 23 assertions) 
+tests/Feature/Api/WorkTemplateBaselineSeederTest.php :: OK (3 tests, 486 assertions) 
+tests/Feature/Api/InspectionTemplateRuntimeTest.php :: OK (3 tests, 32 assertions) 
+tests/Feature/Deployment/ProductionBootstrapCommandTest.php :: OK (6 tests, 25 assertions) 
+tests/Feature/Audit :: OK (13 tests, 25 assertions) 
+tests/Feature/Documents :: OK, but there were issues! Tests: 29, Assertions: 121, PHPUnit Deprecations: 3, Skipped: 2. 
+tests/Feature/RfiWorkflowTest.php :: OK (10 tests, 27 assertions) 
+tests/Feature/ChangeRequestApiTest.php :: OK (24 tests, 130 assertions) 
+tests/Feature/ChangeRequestWorkflowTest.php :: OK (6 tests, 34 assertions) 
+tests/Feature/Api/SecurityTest.php :: OK (15 tests, 51 assertions) 
+tests/Feature/UlidModelsTest.php :: OK (8 tests, 29 assertions) 

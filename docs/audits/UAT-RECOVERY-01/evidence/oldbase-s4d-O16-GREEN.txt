@@ -1,0 +1,42 @@
+PHP Warning:  PHP Startup: Unable to load dynamic library '/usr/local/opt/imagick@8.2/imagick.so' (tried: /usr/local/opt/imagick@8.2/imagick.so (dlopen(/usr/local/opt/imagick@8.2/imagick.so, 0x0009): Library not loaded: /usr/local/opt/libomp/lib/libomp.dylib
+  Referenced from: <C3685741-B85F-355C-A2B1-A067060B63EB> /usr/local/Cellar/imagick@8.2/3.8.0_1/imagick.so
+  Reason: tried: '/usr/local/opt/libomp/lib/libomp.dylib' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/opt/libomp/lib/libomp.dylib' (no such file), '/usr/local/opt/libomp/lib/libomp.dylib' (no such file)), /usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so (dlopen(/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so, 0x0009): tried: '/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file), '/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file))) in Unknown on line 0
+PHP Warning:  PHP Startup: Unable to load dynamic library '/usr/local/opt/memcached@8.2/memcached.so' (tried: /usr/local/opt/memcached@8.2/memcached.so (dlopen(/usr/local/opt/memcached@8.2/memcached.so, 0x0009): Library not loaded: /usr/local/opt/zlib/lib/libz.1.dylib
+  Referenced from: <FB55DFA4-3EA6-3471-87E9-DD2066B88A75> /usr/local/Cellar/memcached@8.2/3.4.0/memcached.so
+  Reason: tried: '/usr/local/opt/zlib/lib/libz.1.dylib' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/opt/zlib/lib/libz.1.dylib' (no such file), '/usr/local/opt/zlib/lib/libz.1.dylib' (no such file)), /usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so (dlopen(/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so, 0x0009): tried: '/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file), '/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file))) in Unknown on line 0
+
+Warning: PHP Startup: Unable to load dynamic library '/usr/local/opt/imagick@8.2/imagick.so' (tried: /usr/local/opt/imagick@8.2/imagick.so (dlopen(/usr/local/opt/imagick@8.2/imagick.so, 0x0009): Library not loaded: /usr/local/opt/libomp/lib/libomp.dylib
+  Referenced from: <C3685741-B85F-355C-A2B1-A067060B63EB> /usr/local/Cellar/imagick@8.2/3.8.0_1/imagick.so
+  Reason: tried: '/usr/local/opt/libomp/lib/libomp.dylib' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/opt/libomp/lib/libomp.dylib' (no such file), '/usr/local/opt/libomp/lib/libomp.dylib' (no such file)), /usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so (dlopen(/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so, 0x0009): tried: '/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file), '/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file))) in Unknown on line 0
+
+Warning: PHP Startup: Unable to load dynamic library '/usr/local/opt/memcached@8.2/memcached.so' (tried: /usr/local/opt/memcached@8.2/memcached.so (dlopen(/usr/local/opt/memcached@8.2/memcached.so, 0x0009): Library not loaded: /usr/local/opt/zlib/lib/libz.1.dylib
+  Referenced from: <FB55DFA4-3EA6-3471-87E9-DD2066B88A75> /usr/local/Cellar/memcached@8.2/3.4.0/memcached.so
+  Reason: tried: '/usr/local/opt/zlib/lib/libz.1.dylib' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/opt/zlib/lib/libz.1.dylib' (no such file), '/usr/local/opt/zlib/lib/libz.1.dylib' (no such file)), /usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so (dlopen(/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so, 0x0009): tried: '/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file), '/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file))) in Unknown on line 0
+PHPUnit 11.5.56 by Sebastian Bergmann and contributors.
+
+Runtime:       PHP 8.2.32
+Configuration: <repo>/phpunit.xml
+
+................                                                  16 / 16 (100%)
+
+Time: 00:15.260, Memory: 89.00 MB
+
+Uat Recovery04d Pm Assignment (Tests\Feature\Recovery\UatRecovery04dPmAssignment)
+ ✔ O16 the permission is granted to exactly the canonical system admin role and nobody else
+ ✔ O16 seeding the grant is idempotent and never spreads to other roles
+ ✔ O16 system admin can appoint a pm to a pm less project in its tenant and it is audited
+ ✔ O16 a holder cannot self appoint as pm but can appoint someone else
+ ✔ O16 system admin has no cross tenant reach and pm member remain denied
+ ✔ A holder of project assign manager can appoint for a pm less project and it is audited
+ ✔ The holder can replace and clear a managed projects pm
+ ✔ The permission alone is not enough project update is still required
+ ✔ Holders are tenant bound in both directions
+ ✔ O16 system admin can appoint through the bulk path and it is audited
+ ✔ Non holders cannot appoint on any path and nothing is audited
+ ✔ The current pm can hand over or clear and it is audited with before and after
+ ✔ Metadata edits without a pm change need no extra authority and write no pm audit
+ ✔ The creator names the first pm at creation and it is audited cross tenant pm rejected
+ ✔ The edit form shows the pm selector only to actors who may change it
+ ✔ The pm less report is read only and never assigns anyone
+
+OK (16 tests, 78 assertions)

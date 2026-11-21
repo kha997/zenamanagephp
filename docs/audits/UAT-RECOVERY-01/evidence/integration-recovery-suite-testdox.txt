@@ -1,0 +1,182 @@
+PHP Warning:  PHP Startup: Unable to load dynamic library '/usr/local/opt/imagick@8.2/imagick.so' (tried: /usr/local/opt/imagick@8.2/imagick.so (dlopen(/usr/local/opt/imagick@8.2/imagick.so, 0x0009): Library not loaded: /usr/local/opt/libomp/lib/libomp.dylib
+  Referenced from: <C3685741-B85F-355C-A2B1-A067060B63EB> /usr/local/Cellar/imagick@8.2/3.8.0_1/imagick.so
+  Reason: tried: '/usr/local/opt/libomp/lib/libomp.dylib' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/opt/libomp/lib/libomp.dylib' (no such file), '/usr/local/opt/libomp/lib/libomp.dylib' (no such file)), /usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so (dlopen(/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so, 0x0009): tried: '/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file), '/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file))) in Unknown on line 0
+PHP Warning:  PHP Startup: Unable to load dynamic library '/usr/local/opt/memcached@8.2/memcached.so' (tried: /usr/local/opt/memcached@8.2/memcached.so (dlopen(/usr/local/opt/memcached@8.2/memcached.so, 0x0009): Library not loaded: /usr/local/opt/zlib/lib/libz.1.dylib
+  Referenced from: <FB55DFA4-3EA6-3471-87E9-DD2066B88A75> /usr/local/Cellar/memcached@8.2/3.4.0/memcached.so
+  Reason: tried: '/usr/local/opt/zlib/lib/libz.1.dylib' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/opt/zlib/lib/libz.1.dylib' (no such file), '/usr/local/opt/zlib/lib/libz.1.dylib' (no such file)), /usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so (dlopen(/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so, 0x0009): tried: '/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file), '/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file))) in Unknown on line 0
+
+Warning: PHP Startup: Unable to load dynamic library '/usr/local/opt/imagick@8.2/imagick.so' (tried: /usr/local/opt/imagick@8.2/imagick.so (dlopen(/usr/local/opt/imagick@8.2/imagick.so, 0x0009): Library not loaded: /usr/local/opt/libomp/lib/libomp.dylib
+  Referenced from: <C3685741-B85F-355C-A2B1-A067060B63EB> /usr/local/Cellar/imagick@8.2/3.8.0_1/imagick.so
+  Reason: tried: '/usr/local/opt/libomp/lib/libomp.dylib' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/opt/libomp/lib/libomp.dylib' (no such file), '/usr/local/opt/libomp/lib/libomp.dylib' (no such file)), /usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so (dlopen(/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so, 0x0009): tried: '/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file), '/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file))) in Unknown on line 0
+
+Warning: PHP Startup: Unable to load dynamic library '/usr/local/opt/memcached@8.2/memcached.so' (tried: /usr/local/opt/memcached@8.2/memcached.so (dlopen(/usr/local/opt/memcached@8.2/memcached.so, 0x0009): Library not loaded: /usr/local/opt/zlib/lib/libz.1.dylib
+  Referenced from: <FB55DFA4-3EA6-3471-87E9-DD2066B88A75> /usr/local/Cellar/memcached@8.2/3.4.0/memcached.so
+  Reason: tried: '/usr/local/opt/zlib/lib/libz.1.dylib' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/opt/zlib/lib/libz.1.dylib' (no such file), '/usr/local/opt/zlib/lib/libz.1.dylib' (no such file)), /usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so (dlopen(/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so, 0x0009): tried: '/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file), '/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file))) in Unknown on line 0
+PHPUnit 11.5.57 by Sebastian Bergmann and contributors.
+
+Runtime:       PHP 8.2.32
+Configuration: <repo>/phpunit.xml
+
+...............................................................  63 / 134 ( 47%)
+............................................................... 126 / 134 ( 94%)
+........                                                        134 / 134 (100%)
+
+Time: 01:47.306, Memory: 129.50 MB
+
+Uat Recovery01Identity Rbac (Tests\Feature\Recovery\UatRecovery01IdentityRbac)
+ ✔ D1 seed contains role assign permission
+ ✔ D1 system admin can assign a seeded role via api
+ ✔ D3 every rbac route permission exists in canonical seed
+ ✔ D2 seeded project manager can submit a draft document
+ ✔ TASK OWNERSHIP non assignee member cannot change task status
+ ✔ D1b role assigned through api takes effect for permission checks
+ ✔ CONTROL D1 role assign grant is what enables assignment
+ ✔ CONTROL D2 only legacy users role blocks pm api gate and document submit
+ ✔ CHAR same tenant non member can read project and task list
+ ✔ GUARD cross tenant reads and writes are denied without mutation
+ ✔ GUARD project member cannot approve document
+ ✔ CHAR project manager cannot create rfi under current seed
+
+Uat Recovery01Quarantine Guard (Tests\Feature\Recovery\UatRecovery01QuarantineGuard)
+ ✔ The quarantine contains exactly the three documented tests
+ ✔ The quarantine is a group level exclusion and is documented
+ ✔ Quarantined test methods still exist with their assertions
+
+Uat Recovery02Rbac Foundation (Tests\Feature\Recovery\UatRecovery02RbacFoundation)
+ ✔ S1 role assign is held only by system admin
+ ✔ S1 no wildcard or super admin bypass was introduced
+ ✔ S1 reseeding does not duplicate definitions or widen system admin
+ ✔ S1 null permission names are repaired without changing identity
+ ✔ CHAR member grants depend on seeder ordering pre existing
+ ✔ INT system admin assigns role and it takes effect in both stores
+ ✔ INT revocation removes effective access and both rows
+ ✔ INT project manager and member cannot assign system roles and nothing is written
+ ✔ INT cross tenant assignment is denied without mutation
+ ✔ INT non system or tenant bound role cannot be assigned
+ ✔ INT revoke never deletes an independent user roles row
+ ✔ INT bulk assignment route uses the same aligned path
+ ✔ BACKFILL empty database is a noop
+ ✔ BACKFILL inserts ledger only rows is idempotent and reversible
+ ✔ BACKFILL conflicts fail closed and privileged roles need explicit approval
+
+Uat Recovery03Document Policy Alignment (Tests\Feature\Recovery\UatRecovery03DocumentPolicyAlignment)
+ ✔ Policy matrix matches the canonical permission boundary with data set "System Admin (DB role only, users.role NULL)"
+ ✔ Policy matrix matches the canonical permission boundary with data set "Project Manager (DB role only)"
+ ✔ Policy matrix matches the canonical permission boundary with data set "Project Member (DB role only)"
+ ✔ Policy matrix matches the canonical permission boundary with data set "No role at all"
+ ✔ Policy matrix matches the canonical permission boundary with data set "Legacy admin value, no DB role"
+ ✔ Policy matrix matches the canonical permission boundary with data set "Legacy designer value, no DB role"
+ ✔ Policy matrix matches the canonical permission boundary with data set "Cross-tenant System Admin"
+ ✔ Policy matrix matches the canonical permission boundary with data set "Cross-tenant Project Manager"
+ ✔ Assign approver rule is unchanged
+ ✔ Creator authorization is unchanged
+ ✔ Project manager with only the seeded role can submit publish and reopen
+ ✔ Project manager can reopen a rejected document
+ ✔ System admin with only the seeded role can submit
+ ✔ System admin with only the seeded role can read through the zena api
+ ✔ Unauthorized actors are denied everywhere with zero mutation
+ ✔ Member cannot approve even with a matching legacy value
+ ✔ State machine guards remain mandatory for authorized actors
+ ✔ Documents simple update does not widen to members
+ ✔ Documents simple update reaches permission holders only
+ ✔ OWNER DECISION publish does not require prior approval today
+ ✔ Decision history is recorded and unchanged by denied attempts
+ ✔ Parameterless gate semantics are unchanged
+ ✔ OWNER DECISION widening the parameterless gate would expand member access
+ ✔ OWNER DECISION self approval and designated approver are not enforced
+ ✔ OWNER DECISION no review permission or entity exists
+
+Uat Recovery03b Project Write Route Gate (Tests\Feature\Recovery\UatRecovery03bProjectWriteRouteGate)
+ ✔ Route table exactly matches the approved mapping
+ ✔ Route names and every other parameterless route are unchanged
+ ✔ Seeded system admin reaches every write route
+ ✔ Seeded project manager can create update but not delete
+ ✔ Actors without the permission are denied with zero mutation with data set "store"
+ ✔ Actors without the permission are denied with zero mutation with data set "update PUT"
+ ✔ Actors without the permission are denied with zero mutation with data set "update PATCH"
+ ✔ Actors without the permission are denied with zero mutation with data set "destroy"
+ ✔ Actors without the permission are denied with zero mutation with data set "status"
+ ✔ Actors without the permission are denied with zero mutation with data set "recalculate-progress"
+ ✔ Actors without the permission are denied with zero mutation with data set "recalculate-actual-cost"
+ ✔ Users who already worked still work
+ ✔ Cross tenant write is denied even for a permission holder
+ ✔ Read routes keep the parameterless gate semantics
+
+Uat Recovery04Task Ownership (Tests\Feature\Recovery\UatRecovery04TaskOwnership)
+ ✔ Unassigned member cannot change status or complete anyone elses task on any endpoint
+ ✔ Observer and other project pm cannot mutate
+ ✔ Legacy role strings cannot elevate a member
+ ✔ Legacy generic gate task endpoint is also guarded
+ ✔ Assignees still update their own task
+ ✔ Project pm and explicitly related system admin can manage inside their scope
+ ✔ Cross tenant actors never mutate even with every privilege
+ ✔ Role less user and unauthorised delete are denied
+ ✔ Denials are clean 403 and never server errors
+ ✔ OWNER DECISION lifecycle has no transition or completion guards today
+ ✔ OWNER DECISION unassigned task in a project without pm is unmanageable until a pm is set
+
+Uat Recovery04b Task Surface (Tests\Feature\Recovery\UatRecovery04bTaskSurface)
+ ✔ O10 task delete holder cannot update assign status or manage dependencies without a relation
+ ✔ O10 independent delete authority is preserved
+ ✔ System admin acts only where explicitly related and never across tenants
+ ✔ Unauthorised actors cannot assign reassign or unassign on any surface
+ ✔ Owning project pm is authorised on the assignment surfaces
+ ✔ Assignment does not grant rbac permissions or ownership of other tasks
+ ✔ Coreproject assignment accepts ulid identifiers
+ ✔ Bulk status endpoint enforces the same boundary per task
+ ✔ Defining the task edit alias cannot bypass ownership on coreproject routes
+ ✔ Alias activation still lets the legitimate actors through authorization
+ ✔ S4 surfaces remain protected and legitimate workflows work
+ ✔ Project creation persists an authorised pm id through api and web
+ ✔ Creator pm can then manage tasks of the project and another pm cannot
+ ✔ Cross tenant pm id is rejected on create and update
+ ✔ Update without pm id does not erase it and the current pm may transfer
+ ✔ Pm authority cannot be taken by editing pm id
+ ✔ Unmanaged project pm cannot be claimed by a project update holder and customer priority are untouched
+
+Uat Recovery04c O15Gate (Tests\Feature\Recovery\UatRecovery04cO15Gate)
+ ✔ A system admin cannot self claim an unassigned project
+ ✔ A pm of another project cannot self claim an unassigned project
+ ✔ A pm change is auditable with previous and new manager
+ ✔ Project metadata can still be edited without touching the pm
+ ✔ Nothing assigns existing pm less projects automatically
+ ✔ Cross tenant and third party appointments stay denied
+
+Uat Recovery04c Surface And Pm (Tests\Feature\Recovery\UatRecovery04cSurfaceAndPm)
+ ✔ Creating a task never assigns it so creation is not an assignment bypass
+ ✔ OWNER DECISION task creation has no project ownership constraint today
+ ✔ A legacy valued member cannot create or assign tasks on the generic gate route
+ ✔ Both models address the same physical row and the bridge fails closed
+ ✔ Bridge rejects nonexistent forged cross tenant and project mismatched ids without mutation
+ ✔ O15 a project update holder can no longer acquire pm authority by claiming an unmanaged project
+ ✔ O15 system admin cannot reacquire task authority by claiming unmanaged projects
+ ✔ O15 no pm can lock out another by claiming a pm less project
+ ✔ O15 PROPOSED a plain project update holder cannot appoint themselves pm
+ ✔ O15 guards hold today other actors and scenarios
+
+Uat Recovery04c Task Create Verification (Tests\Feature\Recovery\UatRecovery04cTaskCreateVerification)
+ ✔ Authorised creator succeeds on the legacy gate route
+ ✔ Legacy role only creators are denied and no task is created
+ ✔ The guard holds on every registered creation endpoint
+ ✔ A task cannot be created inside another tenants project
+ ✔ The patch grants no permission
+
+Uat Recovery04d Pm Assignment (Tests\Feature\Recovery\UatRecovery04dPmAssignment)
+ ✔ O16 the permission is granted to exactly the canonical system admin role and nobody else
+ ✔ O16 seeding the grant is idempotent and never spreads to other roles
+ ✔ O16 system admin can appoint a pm to a pm less project in its tenant and it is audited
+ ✔ O16 a holder cannot self appoint as pm but can appoint someone else
+ ✔ O16 system admin has no cross tenant reach and pm member remain denied
+ ✔ A holder of project assign manager can appoint for a pm less project and it is audited
+ ✔ The holder can replace and clear a managed projects pm
+ ✔ The permission alone is not enough project update is still required
+ ✔ Holders are tenant bound in both directions
+ ✔ O16 system admin can appoint through the bulk path and it is audited
+ ✔ Non holders cannot appoint on any path and nothing is audited
+ ✔ The current pm can hand over or clear and it is audited with before and after
+ ✔ Metadata edits without a pm change need no extra authority and write no pm audit
+ ✔ The creator names the first pm at creation and it is audited cross tenant pm rejected
+ ✔ The edit form shows the pm selector only to actors who may change it
+ ✔ The pm less report is read only and never assigns anyone
+
+OK (134 tests, 874 assertions)

@@ -1,0 +1,122 @@
+PHP Warning:  PHP Startup: Unable to load dynamic library '/usr/local/opt/imagick@8.2/imagick.so' (tried: /usr/local/opt/imagick@8.2/imagick.so (dlopen(/usr/local/opt/imagick@8.2/imagick.so, 0x0009): Library not loaded: /usr/local/opt/libomp/lib/libomp.dylib
+  Referenced from: <C3685741-B85F-355C-A2B1-A067060B63EB> /usr/local/Cellar/imagick@8.2/3.8.0_1/imagick.so
+  Reason: tried: '/usr/local/opt/libomp/lib/libomp.dylib' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/opt/libomp/lib/libomp.dylib' (no such file), '/usr/local/opt/libomp/lib/libomp.dylib' (no such file)), /usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so (dlopen(/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so, 0x0009): tried: '/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file), '/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file))) in Unknown on line 0
+PHP Warning:  PHP Startup: Unable to load dynamic library '/usr/local/opt/memcached@8.2/memcached.so' (tried: /usr/local/opt/memcached@8.2/memcached.so (dlopen(/usr/local/opt/memcached@8.2/memcached.so, 0x0009): Library not loaded: /usr/local/opt/zlib/lib/libz.1.dylib
+  Referenced from: <FB55DFA4-3EA6-3471-87E9-DD2066B88A75> /usr/local/Cellar/memcached@8.2/3.4.0/memcached.so
+  Reason: tried: '/usr/local/opt/zlib/lib/libz.1.dylib' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/opt/zlib/lib/libz.1.dylib' (no such file), '/usr/local/opt/zlib/lib/libz.1.dylib' (no such file)), /usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so (dlopen(/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so, 0x0009): tried: '/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file), '/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file))) in Unknown on line 0
+
+Warning: PHP Startup: Unable to load dynamic library '/usr/local/opt/imagick@8.2/imagick.so' (tried: /usr/local/opt/imagick@8.2/imagick.so (dlopen(/usr/local/opt/imagick@8.2/imagick.so, 0x0009): Library not loaded: /usr/local/opt/libomp/lib/libomp.dylib
+  Referenced from: <C3685741-B85F-355C-A2B1-A067060B63EB> /usr/local/Cellar/imagick@8.2/3.8.0_1/imagick.so
+  Reason: tried: '/usr/local/opt/libomp/lib/libomp.dylib' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/opt/libomp/lib/libomp.dylib' (no such file), '/usr/local/opt/libomp/lib/libomp.dylib' (no such file)), /usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so (dlopen(/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so, 0x0009): tried: '/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file), '/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file))) in Unknown on line 0
+
+Warning: PHP Startup: Unable to load dynamic library '/usr/local/opt/memcached@8.2/memcached.so' (tried: /usr/local/opt/memcached@8.2/memcached.so (dlopen(/usr/local/opt/memcached@8.2/memcached.so, 0x0009): Library not loaded: /usr/local/opt/zlib/lib/libz.1.dylib
+  Referenced from: <FB55DFA4-3EA6-3471-87E9-DD2066B88A75> /usr/local/Cellar/memcached@8.2/3.4.0/memcached.so
+  Reason: tried: '/usr/local/opt/zlib/lib/libz.1.dylib' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/opt/zlib/lib/libz.1.dylib' (no such file), '/usr/local/opt/zlib/lib/libz.1.dylib' (no such file)), /usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so (dlopen(/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so, 0x0009): tried: '/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file), '/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file))) in Unknown on line 0
+PHPUnit 11.5.56 by Sebastian Bergmann and contributors.
+
+Runtime:       PHP 8.2.32
+Configuration: <repo>/phpunit.xml
+
+..FFFFFF..........................                                34 / 34 (100%)
+
+Time: 00:25.297, Memory: 107.50 MB
+
+Uat Recovery01Identity Rbac (Tests\Feature\Recovery\UatRecovery01IdentityRbac)
+ ✔ D1 seed contains role assign permission
+ ✔ D1 system admin can assign a seeded role via api
+ ✘ D3 every rbac route permission exists in canonical seed
+   │
+   │ Fail-closed gate: unseeded permissions make routes unreachable for every non-super_admin user
+   │ Failed asserting that two arrays are identical.
+   │ --- Expected
+   │ +++ Actual
+   │ @@ @@
+   │ -Array &0 []
+   │ +Array &0 [
+   │ +    0 => 'change_request.delete',
+   │ +    1 => 'change_request.edit',
+   │ +    2 => 'change_request.stats',
+   │ +    3 => 'change_request.submit',
+   │ +    4 => 'change_request.view',
+   │ +    5 => 'component.edit',
+   │ +    6 => 'component.view',
+   │ +    7 => 'project.edit',
+   │ +    8 => 'task.edit',
+   │ +    9 => 'template.create',
+   │ +    10 => 'template.edit',
+   │ +    11 => 'user.view',
+   │ +]
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery01IdentityRbacTest.php:145
+   │
+ ✘ D2 user with only seeded project manager role passes api gate
+   │
+   │ seeded Project Manager role must pass the generic rbac gate
+   │ Failed asserting that 403 is identical to 200.
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery01IdentityRbacTest.php:155
+   │
+ ✘ D2 seeded project manager can submit a draft document
+   │
+   │ PM submit was rejected by DocumentPolicy::update legacy role names
+   │ Failed asserting that two strings are not identical.
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery01IdentityRbacTest.php:174
+   │
+ ✘ D3 project member can open my work
+   │
+   │ route needs task.view; seeded Project Member holds task.read
+   │ Failed asserting that 302 is identical to 200.
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery01IdentityRbacTest.php:183
+   │
+ ✘ TASK OWNERSHIP non assignee member cannot change task status
+   │
+   │ TaskPolicy::update (assignee / project PM / admin) exists but is not invoked by Web/Api TaskController::update
+   │ Failed asserting that two strings are identical.
+   │ --- Expected
+   │ +++ Actual
+   │ @@ @@
+   │ -'pending'
+   │ +'in_progress'
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery01IdentityRbacTest.php:196
+   │
+ ✘ D2 no seeded user can create users through canonical api
+   │
+   │ seeded tenant admin has users.role=admin but no DB role → user.create denied
+   │ Failed asserting that 403 is identical to 201.
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery01IdentityRbacTest.php:213
+   │
+ ✔ D1b role assigned through api takes effect for permission checks
+ ✔ CONTROL D1 role assign grant is what enables assignment
+ ✔ CONTROL D2 only legacy users role blocks pm api gate and document submit
+ ✔ CHAR same tenant non member can read project and task list
+ ✔ GUARD cross tenant reads and writes are denied without mutation
+ ✔ GUARD project member cannot approve document
+ ✔ CHAR project manager cannot create rfi under current seed
+
+Uat Recovery02Rbac Foundation (Tests\Feature\Recovery\UatRecovery02RbacFoundation)
+ ✔ S1 catalog is complete except the recorded owner decision aliases
+ ✔ S1 owner decision aliases were not created as duplicates
+ ✔ S1 role assign is held only by system admin
+ ✔ S1 catalog only permissions exist but are granted to no role
+ ✔ S1 project manager and member gained no new grants
+ ✔ S1 no wildcard or super admin bypass was introduced
+ ✔ S1 reseeding does not duplicate definitions or widen system admin
+ ✔ S1 null permission names are repaired without changing identity
+ ✔ CHAR member grants depend on seeder ordering pre existing
+ ✔ INT system admin assigns role and it takes effect in both stores
+ ✔ INT revocation removes effective access and both rows
+ ✔ INT project manager and member cannot assign system roles and nothing is written
+ ✔ INT cross tenant assignment is denied without mutation
+ ✔ INT non system or tenant bound role cannot be assigned
+ ✔ INT revoke never deletes an independent user roles row
+ ✔ INT bulk assignment route uses the same aligned path
+ ✔ BACKFILL empty database is a noop
+ ✔ BACKFILL inserts ledger only rows is idempotent and reversible
+ ✔ BACKFILL conflicts fail closed and privileged roles need explicit approval
+
+FAILURES!
+Tests: 34, Assertions: 191, Failures: 6.

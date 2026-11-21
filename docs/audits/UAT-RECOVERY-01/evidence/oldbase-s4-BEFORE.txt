@@ -1,0 +1,118 @@
+PHP Warning:  PHP Startup: Unable to load dynamic library '/usr/local/opt/imagick@8.2/imagick.so' (tried: /usr/local/opt/imagick@8.2/imagick.so (dlopen(/usr/local/opt/imagick@8.2/imagick.so, 0x0009): Library not loaded: /usr/local/opt/libomp/lib/libomp.dylib
+  Referenced from: <C3685741-B85F-355C-A2B1-A067060B63EB> /usr/local/Cellar/imagick@8.2/3.8.0_1/imagick.so
+  Reason: tried: '/usr/local/opt/libomp/lib/libomp.dylib' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/opt/libomp/lib/libomp.dylib' (no such file), '/usr/local/opt/libomp/lib/libomp.dylib' (no such file)), /usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so (dlopen(/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so, 0x0009): tried: '/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file), '/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file))) in Unknown on line 0
+PHP Warning:  PHP Startup: Unable to load dynamic library '/usr/local/opt/memcached@8.2/memcached.so' (tried: /usr/local/opt/memcached@8.2/memcached.so (dlopen(/usr/local/opt/memcached@8.2/memcached.so, 0x0009): Library not loaded: /usr/local/opt/zlib/lib/libz.1.dylib
+  Referenced from: <FB55DFA4-3EA6-3471-87E9-DD2066B88A75> /usr/local/Cellar/memcached@8.2/3.4.0/memcached.so
+  Reason: tried: '/usr/local/opt/zlib/lib/libz.1.dylib' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/opt/zlib/lib/libz.1.dylib' (no such file), '/usr/local/opt/zlib/lib/libz.1.dylib' (no such file)), /usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so (dlopen(/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so, 0x0009): tried: '/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file), '/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file))) in Unknown on line 0
+
+Warning: PHP Startup: Unable to load dynamic library '/usr/local/opt/imagick@8.2/imagick.so' (tried: /usr/local/opt/imagick@8.2/imagick.so (dlopen(/usr/local/opt/imagick@8.2/imagick.so, 0x0009): Library not loaded: /usr/local/opt/libomp/lib/libomp.dylib
+  Referenced from: <C3685741-B85F-355C-A2B1-A067060B63EB> /usr/local/Cellar/imagick@8.2/3.8.0_1/imagick.so
+  Reason: tried: '/usr/local/opt/libomp/lib/libomp.dylib' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/opt/libomp/lib/libomp.dylib' (no such file), '/usr/local/opt/libomp/lib/libomp.dylib' (no such file)), /usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so (dlopen(/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so, 0x0009): tried: '/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file), '/usr/local/lib/php/pecl/20220829//usr/local/opt/imagick@8.2/imagick.so.so' (no such file))) in Unknown on line 0
+
+Warning: PHP Startup: Unable to load dynamic library '/usr/local/opt/memcached@8.2/memcached.so' (tried: /usr/local/opt/memcached@8.2/memcached.so (dlopen(/usr/local/opt/memcached@8.2/memcached.so, 0x0009): Library not loaded: /usr/local/opt/zlib/lib/libz.1.dylib
+  Referenced from: <FB55DFA4-3EA6-3471-87E9-DD2066B88A75> /usr/local/Cellar/memcached@8.2/3.4.0/memcached.so
+  Reason: tried: '/usr/local/opt/zlib/lib/libz.1.dylib' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/opt/zlib/lib/libz.1.dylib' (no such file), '/usr/local/opt/zlib/lib/libz.1.dylib' (no such file)), /usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so (dlopen(/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so, 0x0009): tried: '/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file), '/System/Volumes/Preboot/Cryptexes/OS/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file), '/usr/local/lib/php/pecl/20220829//usr/local/opt/memcached@8.2/memcached.so.so' (no such file))) in Unknown on line 0
+PHPUnit 11.5.56 by Sebastian Bergmann and contributors.
+
+Runtime:       PHP 8.2.32
+Configuration: <repo>/phpunit.xml
+
+FFFF.....F                                                        10 / 10 (100%)
+
+Time: 00:21.441, Memory: 87.00 MB
+
+Uat Recovery04Task Ownership (Tests\Feature\Recovery\UatRecovery04TaskOwnership)
+ ✘ Unassigned member cannot change status or complete anyone elses task on any endpoint
+   │
+   │ web PUT app/tasks: Member B must not mutate Member A's task
+   │ Failed asserting that two arrays are identical.
+   │ --- Expected
+   │ +++ Actual
+   │ @@ @@
+   │  Array &0 [
+   │      0 => 'Velit recusandae autem ut et blanditiis.',
+   │ -    1 => 'pending',
+   │ -    2 => 0,
+   │ +    1 => 'in_progress',
+   │ +    2 => 40,
+   │      3 => 'unblocked',
+   │      4 => 'live',
+   │  ]
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery04TaskOwnershipTest.php:142
+   │
+ ✘ Observer and other project pm cannot mutate
+   │
+   │ web PUT app/tasks: 01M7XF3M1NYMDJ8TAVAWP8WES0
+   │ Failed asserting that two arrays are identical.
+   │ --- Expected
+   │ +++ Actual
+   │ @@ @@
+   │  Array &0 [
+   │      0 => 'Velit totam qui.',
+   │ -    1 => 'pending',
+   │ -    2 => 0,
+   │ +    1 => 'in_progress',
+   │ +    2 => 40,
+   │      3 => 'unblocked',
+   │      4 => 'live',
+   │  ]
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery04TaskOwnershipTest.php:156
+   │
+ ✘ Legacy role strings cannot elevate a member
+   │
+   │ web PUT app/tasks: users.role=admin Member
+   │ Failed asserting that two arrays are identical.
+   │ --- Expected
+   │ +++ Actual
+   │ @@ @@
+   │  Array &0 [
+   │      0 => 'Molestias omnis molestiae quia velit expedita.',
+   │ -    1 => 'pending',
+   │ -    2 => 0,
+   │ +    1 => 'in_progress',
+   │ +    2 => 40,
+   │      3 => 'unblocked',
+   │      4 => 'live',
+   │  ]
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery04TaskOwnershipTest.php:169
+   │
+ ✘ Legacy generic gate task endpoint is also guarded
+   │
+   │ Failed asserting that two arrays are identical.
+   │ --- Expected
+   │ +++ Actual
+   │ @@ @@
+   │  Array &0 [
+   │ -    0 => 'Consequuntur aut laudantium.',
+   │ -    1 => 'pending',
+   │ -    2 => 0,
+   │ -    3 => 'unblocked',
+   │ -    4 => 'live',
+   │ +    0 => 'gone',
+   │  ]
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery04TaskOwnershipTest.php:184
+   │
+ ✔ Assignees still update their own task
+ ✔ Project pm and system admin can manage inside their scope
+ ✔ Cross tenant actors never mutate even with every privilege
+ ✔ Role less user and unauthorised delete are denied
+ ✔ OWNER DECISION lifecycle has no transition or completion guards today
+ ✘ OWNER DECISION unassigned task in a project without pm is admin only
+   │
+   │ a PM who is not the project PM cannot manage it (pm_id is not set by project creation — UAT D6)
+   │ Failed asserting that two strings are identical.
+   │ --- Expected
+   │ +++ Actual
+   │ @@ @@
+   │ -'pending'
+   │ +'in_progress'
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery04TaskOwnershipTest.php:269
+   │
+
+FAILURES!
+Tests: 10, Assertions: 28, Failures: 5.

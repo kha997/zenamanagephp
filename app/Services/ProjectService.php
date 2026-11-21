@@ -43,6 +43,9 @@ class ProjectService
             'budget_total' => $data['budget_total'] ?? ($data['budget_planned'] ?? 0),
             'start_date' => $data['start_date'] ?? null,
             'end_date' => $data['end_date'] ?? null,
+            // UAT-RECOVERY-04b (O-11): persist the project manager chosen at creation (same-tenant user only).
+            // client_id / priority intentionally remain unmapped (separate gap).
+            'pm_id' => $this->resolvePmId($data['pm_id'] ?? null, $tenantId),
             'user_id' => $userId,
             'tenant_id' => $tenantId,
         ]);
@@ -183,6 +186,20 @@ class ProjectService
     /**
      * Validate project creation.
      */
+    private function resolvePmId(mixed $pmId, string|int $tenantId): ?string
+    {
+        if ($pmId === null || $pmId === '') {
+            return null;
+        }
+
+        $valid = \App\Models\User::query()->whereKey((string) $pmId)->where('tenant_id', $tenantId)->exists();
+        if (!$valid) {
+            throw new \InvalidArgumentException('Project manager must belong to the same tenant');
+        }
+
+        return (string) $pmId;
+    }
+
     private function validateProjectCreation(array $data, string|int $userId, string|int $tenantId): void
     {
         if (empty($data['name'])) {

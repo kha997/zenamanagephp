@@ -33,7 +33,8 @@ class ProjectFormRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
             'client_id' => ['nullable', 'string', 'exists:users,id'],
-            'pm_id' => ['nullable', 'string', 'exists:users,id'],
+            // UAT-RECOVERY-04b (O-11): the project manager must be a user of the caller's own tenant.
+            'pm_id' => ['nullable', 'string', \Illuminate\Validation\Rule::exists('users', 'id')->where(fn ($q) => $q->where('tenant_id', $this->user()?->tenant_id))],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after:start_date'],
             'status' => ['sometimes', Rule::in(\App\Models\Project::VALID_STATUSES)],

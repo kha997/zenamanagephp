@@ -13,6 +13,7 @@ use Src\CoreProject\Resources\TaskAssignmentResource;
 use Src\CoreProject\Requests\StoreTaskAssignmentRequest;
 use Src\CoreProject\Requests\UpdateTaskAssignmentRequest;
 use Src\RBAC\Middleware\RBACMiddleware;
+use Illuminate\Support\Facades\Auth;
 use Src\Foundation\Utils\JSendResponse;
 
 /**
@@ -29,6 +30,18 @@ class TaskAssignmentController
     {
         // Xóa middleware khỏi constructor - sẽ áp dụng trong routes
         // $this->middleware(RBACMiddleware::class);
+    }
+
+    /**
+     * UAT-RECOVERY-04b (O-13): the CoreProject models have no registered policy, so decide on the canonical
+     * App\Models\Task row (TaskPolicy::assign: owning-project PM holding task.assign). Fail-closed.
+     */
+    private function actorCanAssign(string $taskId): bool
+    {
+        $actor = Auth::guard('api')->user() ?? Auth::user();
+        $canonical = \App\Models\Task::query()->whereKey($taskId)->first();
+
+        return $actor !== null && $canonical !== null && $actor->can('assign', $canonical);
     }
 
     /**
@@ -66,7 +79,15 @@ class TaskAssignmentController
         try {
             $assignmentData = $request->validated();
             $taskId = (string) $assignmentData['task_id'];
-            $this->findTaskOrFail($taskId);
+            $task = $this->findTaskOrFail($taskId);
+
+            // UAT-RECOVERY-04b (O-13): owning-project PM only; assignee must belong to the task's tenant.
+            if (!$this->actorCanAssign((string) $task->id)) {
+                return JSendResponse::error('Forbidden', 403);
+            }
+            if (!\App\Models\User::query()->whereKey($assignmentData['user_id'])->where('tenant_id', $task->tenant_id)->exists()) {
+                return JSendResponse::error('User không thuộc tenant của task.', 422);
+            }
 
             // Kiểm tra tổng split_percent không vượt quá 100%
             $currentTotal = TaskAssignment::where('task_id', $taskId)->sum('split_percent');
@@ -90,6 +111,8 @@ class TaskAssignmentController
                 'assignment' => new TaskAssignmentResource($assignment),
                 'message' => 'Task assignment đã được tạo thành công.'
             ], 201);
+        } catch (ModelNotFoundException $e) {
+            return JSendResponse::error('Task không tồn tại.', 404);
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể tạo task assignment: ' . $e->getMessage(), 500);
         }
@@ -121,6 +144,11 @@ class TaskAssignmentController
     {
         try {
             $assignment = $this->findAssignmentOrFail($taskAssignment);
+
+            // UAT-RECOVERY-04b (O-13): reassignment uses the same boundary.
+            if (!$this->actorCanAssign((string) $assignment->task_id)) {
+                return JSendResponse::error('Forbidden', 403);
+            }
 
             $assignmentData = $request->validated();
             $taskId = (string) $assignment->task_id;
@@ -166,6 +194,11 @@ class TaskAssignmentController
     {
         try {
             $assignment = $this->findAssignmentOrFail($taskAssignment);
+
+            // UAT-RECOVERY-04b (O-13): unassignment uses the same boundary.
+            if (!$this->actorCanAssign((string) $assignment->task_id)) {
+                return JSendResponse::error('Forbidden', 403);
+            }
 
             $assignment->delete();
 

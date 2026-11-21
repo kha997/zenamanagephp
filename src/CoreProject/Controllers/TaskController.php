@@ -13,6 +13,7 @@ use Src\CoreProject\Requests\UpdateTaskRequest;
 use Src\CoreProject\Services\TaskService;
 use Src\CoreProject\Services\ConditionalTagService;
 use Src\RBAC\Middleware\RBACMiddleware;
+use Illuminate\Support\Facades\Auth;
 use Src\Foundation\Utils\JSendResponse;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Validation\Rule;
@@ -39,6 +40,19 @@ class TaskController
         // $this->middleware(RBACMiddleware::class);
         $this->taskService = $taskService;
         $this->conditionalTagService = $conditionalTagService;
+    }
+
+    /**
+     * UAT-RECOVERY-04b (O-13): authorise against the CANONICAL task policy. This controller works on
+     * Src\CoreProject\Models\Task, which has no registered policy (Gate would deny everyone), so the decision
+     * is taken on the App\Models\Task row for the same id. Fail-closed when the row/actor is missing.
+     */
+    private function actorCan(string $ability, string $taskId): bool
+    {
+        $actor = Auth::guard('api')->user() ?? Auth::user();
+        $canonical = \App\Models\Task::query()->whereKey($taskId)->first();
+
+        return $actor !== null && $canonical !== null && $actor->can($ability, $canonical);
     }
 
     /**
@@ -199,6 +213,11 @@ class TaskController
                 ->where('id', $task)
                 ->firstOrFail();
 
+            // UAT-RECOVERY-04b (O-13): same object-level boundary as the app/web task controllers.
+            if (!$this->actorCan('update', (string) $taskModel->id)) {
+                return JSendResponse::error('Forbidden', 403);
+            }
+
             $data = $request->validated();
 
             // Sử dụng TaskService để update với validation dependencies
@@ -232,6 +251,10 @@ class TaskController
             $task = Task::where('tenant_id', $this->currentTenantId())
                 ->where('id', $task)
                 ->firstOrFail();
+
+            if (!$this->actorCan('delete', (string) $task->id)) {
+                return JSendResponse::error('Forbidden', 403);
+            }
 
             // Kiểm tra assignments
             if ($task->assignments()->exists()) {

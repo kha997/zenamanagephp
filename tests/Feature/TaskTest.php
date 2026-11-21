@@ -187,6 +187,7 @@ class TaskTest extends TestCase
     public function test_update_task(): void
     {
         $task = Task::factory()->create([
+            'assignee_id' => $this->user->id, // S4b/O-10,O-13: acting user is the task's assignee (legitimate ownership relation),
             'project_id' => $this->project->id,
             'tenant_id' => $this->tenant->id,
         ]);

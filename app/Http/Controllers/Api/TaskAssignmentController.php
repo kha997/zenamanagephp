@@ -80,6 +80,16 @@ class TaskAssignmentController extends BaseApiController
             return $this->errorResponse('Task not found', 404);
         }
 
+        // UAT-RECOVERY-04b (O-13): assignment is an operation-specific, owning-project-PM action.
+        if (!$user->can('assign', $task)) {
+            return $this->errorResponse('Forbidden', 403);
+        }
+
+        // The assignee must belong to the task's tenant (no cross-tenant assignment; no implicit user/membership creation).
+        if (!\App\Models\User::query()->whereKey($request->input('user_id'))->where('tenant_id', $task->tenant_id)->exists()) {
+            return $this->errorResponse('User not found in this tenant', 422);
+        }
+
         // Check if user is already assigned to this task
         $existingAssignment = TaskAssignment::where('task_id', $taskId)
             ->where('user_id', $request->input('user_id'))
@@ -158,6 +168,12 @@ class TaskAssignmentController extends BaseApiController
             return $this->errorResponse('Assignment not found', 404);
         }
 
+        // UAT-RECOVERY-04b (O-13): reassignment / unassignment use the same boundary as assignment.
+        $assignedTask = Task::find($assignment->task_id);
+        if (!$assignedTask || !$user->can('assign', $assignedTask)) {
+            return $this->errorResponse('Forbidden', 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'role' => 'sometimes|required|in:assignee,reviewer,observer',
             'split_percent' => 'nullable|numeric|min:0|max:100',
@@ -211,6 +227,12 @@ class TaskAssignmentController extends BaseApiController
 
         if (!$assignment) {
             return $this->errorResponse('Assignment not found', 404);
+        }
+
+        // UAT-RECOVERY-04b (O-13): reassignment / unassignment use the same boundary as assignment.
+        $assignedTask = Task::find($assignment->task_id);
+        if (!$assignedTask || !$user->can('assign', $assignedTask)) {
+            return $this->errorResponse('Forbidden', 403);
         }
 
         try {

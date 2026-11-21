@@ -39,10 +39,11 @@ class StoreTaskRequest extends BaseApiRequest
         }
 
         return [
+            // UAT-RECOVERY-04c: the project must belong to the caller's tenant (a global `exists` let a task be attached to another tenant's project).
             'project_id' => [
                 'required',
                 'string',
-                'exists:projects,id'
+                Rule::exists('projects', 'id')->where(fn ($q) => $q->where('tenant_id', ($this->user('api') ?? $this->user())?->tenant_id))
             ],
             'tenant_id' => [
                 'prohibited'

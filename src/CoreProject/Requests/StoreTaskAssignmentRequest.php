@@ -22,14 +22,15 @@ class StoreTaskAssignmentRequest extends BaseApiRequest
     public function rules(): array
     {
         return [
+            // UAT-RECOVERY-04b: primary keys are ULID strings (the former `integer` rule rejected every real id).
             'task_id' => [
                 'required',
-                'integer',
+                'string',
                 'exists:tasks,id'
             ],
             'user_id' => [
                 'required',
-                'integer',
+                'string',
                 'exists:users,id'
             ],
             'split_percent' => [

@@ -34,7 +34,7 @@ class IntegrationTest extends TestCase
     {
         parent::setUp();
 
-        $this->apiActingAsTenantAdmin();
+        $this->apiActingAsTenantAdmin([], null, ['task.create']); // S4c fixture: task creation requires the canonical task.create permission (the route gate is stubbed in this suite)
         $this->user = $this->apiFeatureUser;
         $this->grantAdditionalPermissions($this->user, [
             'submittal.create', 'submittal.view', 'submittal.submit', 'submittal.approve', 'submittal.reject',
@@ -322,6 +322,7 @@ class IntegrationTest extends TestCase
             'tenant_id' => $this->user->tenant_id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
+            'assignee_id' => $this->user->id, // S4/O-14: acting user is the task's assignee (legitimate ownership relation)
             'status' => 'pending',
         ]);
 
@@ -329,6 +330,7 @@ class IntegrationTest extends TestCase
             'tenant_id' => $this->user->tenant_id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
+            'assignee_id' => $this->user->id, // S4/O-14: acting user is the task's assignee (legitimate ownership relation)
             'status' => 'pending',
         ]);
 

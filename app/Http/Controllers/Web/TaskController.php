@@ -283,6 +283,8 @@ class TaskController extends Controller
             ->where('tenant_id', (string) Auth::user()?->tenant_id)
             ->findOrFail($taskId);
 
+        $this->authorize('update', $task); // UAT-RECOVERY-04 (S4)
+
         $task->forceFill([
             'blocked_at' => now(),
             'blocker_note' => (string) $request->string('blocker_note'),
@@ -297,6 +299,8 @@ class TaskController extends Controller
         $task = \App\Models\Task::query()
             ->where('tenant_id', (string) Auth::user()?->tenant_id)
             ->findOrFail($taskId);
+
+        $this->authorize('update', $task); // UAT-RECOVERY-04 (S4)
 
         $task->forceFill(['blocked_at' => null, 'blocker_note' => null, 'blocked_by' => null])->save();
 

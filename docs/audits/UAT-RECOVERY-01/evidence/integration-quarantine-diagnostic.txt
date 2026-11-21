@@ -1,0 +1,33 @@
+UAT-RECOVERY-01 quarantine diagnostic — 2026-11-21T09:16:08Z — 653cd4f30
+Command: ./vendor/bin/phpunit --group uat-recovery-01-quarantine --testdox
+------------------------------------------------------------
+PHPUnit 11.5.57 by Sebastian Bergmann and contributors.
+Runtime:       PHP 8.2.32
+Configuration: <repo>/phpunit.xml
+FFF                                                                 3 / 3 (100%)
+Time: 00:07.034, Memory: 151.50 MB
+Uat Recovery01Identity Rbac (Tests\Feature\Recovery\UatRecovery01IdentityRbac)
+ ✘ D2 user with only seeded project manager role passes api gate
+   │
+   │ seeded Project Manager role must pass the generic rbac gate
+   │ Failed asserting that 403 is identical to 200.
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery01IdentityRbacTest.php:159
+   │
+ ✘ D3 project member can open my work
+   │
+   │ route needs task.view; seeded Project Member holds task.read
+   │ Failed asserting that 302 is identical to 200.
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery01IdentityRbacTest.php:190
+   │
+ ✘ D2 no seeded user can create users through canonical api
+   │
+   │ seeded tenant admin has users.role=admin but no DB role → user.create denied
+   │ Failed asserting that 403 is identical to 201.
+   │
+   │ <repo>/tests/Feature/Recovery/UatRecovery01IdentityRbacTest.php:223
+   │
+FAILURES!
+Tests: 3, Assertions: 5, Failures: 3, PHPUnit Deprecations: 518.
+------------------------------------------------------------

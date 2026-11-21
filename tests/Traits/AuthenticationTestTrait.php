@@ -251,14 +251,14 @@ trait AuthenticationTestTrait
      * @param Tenant|null $tenant
      * @return User
      */
-    protected function apiActingAsTenantAdmin(array $attributes = [], ?Tenant $tenant = null): User
+    protected function apiActingAsTenantAdmin(array $attributes = [], ?Tenant $tenant = null, array $extraPermissions = []): User
     {
         $tenant ??= Tenant::factory()->create();
         // Persona "tenant admin": cấp thêm các mã project.* canonical
         // (ZenaPermissionsSeeder taxonomy) bên cạnh default legacy của trait.
-        $user = $this->createTenantUser($tenant, $attributes, null, [
+        $user = $this->createTenantUser($tenant, $attributes, null, array_merge([
             'project.view', 'project.create', 'project.update', 'project.delete',
-        ]);
+        ], $extraPermissions));
 
         $token = $this->apiLoginToken($user, $tenant);
 

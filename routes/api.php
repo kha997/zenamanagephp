@@ -267,11 +267,24 @@ Route::group([], function () {
             |--------------------------------------------------------------------------
             */
             // Unified Project Management Routes
-            Route::apiResource('projects', \App\Http\Controllers\Api\ProjectController::class);
+            Route::apiResource('projects', \App\Http\Controllers\Api\ProjectController::class)->only(['index', 'show']);
             Route::prefix('projects')->group(function () {
-                Route::post('{project}/status', [\App\Http\Controllers\Api\ProjectController::class, 'updateStatus']);
                 Route::get('statistics', [\App\Http\Controllers\Api\ProjectController::class, 'statistics']);
                 Route::get('dropdown', [\App\Http\Controllers\Api\ProjectController::class, 'dropdown']);
+            });
+
+            // UAT-RECOVERY-03b (S3b): project WRITE routes. The controller already enforces exactly these permissions
+            // (Api\ProjectController::store/update/destroy/updateStatus/recalculate*), so the parameterless `rbac` gate
+            // is replaced by the same permission at route level. Authentication + tenant isolation stay in force.
+            // Route names are preserved. Read routes above keep the parameterless gate (Owner decision O-8).
+            Route::withoutMiddleware(['rbac'])->group(function () {
+                $projects = \App\Http\Controllers\Api\ProjectController::class;
+                Route::post('projects', [$projects, 'store'])->middleware('rbac:project.create')->name('projects.store');
+                Route::match(['put', 'patch'], 'projects/{project}', [$projects, 'update'])->middleware('rbac:project.update')->name('projects.update');
+                Route::delete('projects/{project}', [$projects, 'destroy'])->middleware('rbac:project.delete')->name('projects.destroy');
+                Route::post('projects/{project}/status', [$projects, 'updateStatus'])->middleware('rbac:project.update');
+                Route::post('projects/{projectId}/recalculate-progress', [$projects, 'recalculateProgress'])->middleware('rbac:project.update');
+                Route::post('projects/{projectId}/recalculate-actual-cost', [$projects, 'recalculateActualCost'])->middleware('rbac:project.update');
             });
 
             // (Route milestones + project-templates đã gỡ 22/07: Api\ProjectMilestoneController
@@ -444,8 +457,6 @@ Route::group([], function () {
 
             Route::prefix('projects/{projectId}')->group(function () {
                 Route::get('tasks', [TaskController::class, 'index']);
-                Route::post('recalculate-progress', [ProjectController::class, 'recalculateProgress']);
-                Route::post('recalculate-actual-cost', [ProjectController::class, 'recalculateActualCost']);
 
                 // Project-specific baselines
                 Route::apiResource('baselines', BaselineController::class)

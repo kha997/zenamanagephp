@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Models\Project;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -353,15 +354,39 @@ class RBACManager
         }
 
         // Thay thế firstOrCreate() bằng exists() check và create() riêng biệt
-        $exists = UserRoleSystem::where('user_id', $userId)
-            ->where('role_id', $roleId)
-            ->exists();
+        // UAT-RECOVERY-01 S2: `system_user_roles` stays the GAP-042 assignment ledger, but authorization
+        // (User::hasPermission → rbac: gate) reads `user_roles`. Both rows are written in ONE transaction
+        // (all-or-nothing, idempotent) so a successful assignment is always visible to authorization.
+        try {
+            DB::transaction(function () use ($userId, $roleId): void {
+                $exists = UserRoleSystem::where('user_id', $userId)
+                    ->where('role_id', $roleId)
+                    ->exists();
 
-        if (!$exists) {
-            UserRoleSystem::create([
-                'user_id' => $userId,
-                'role_id' => $roleId
-            ]);
+                if (!$exists) {
+                    UserRoleSystem::create([
+                        'user_id' => $userId,
+                        'role_id' => $roleId
+                    ]);
+                }
+
+                DB::table('user_roles')->insertOrIgnore([
+                    'user_id' => $userId,
+                    'role_id' => $roleId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                // MySQL's INSERT IGNORE downgrades FK/other errors to warnings: never trust the insert,
+                // verify the row, and roll BOTH writes back if the projection is not really there.
+                if (!DB::table('user_roles')->where('user_id', $userId)->where('role_id', $roleId)->exists()) {
+                    throw new \RuntimeException('user_roles projection was not persisted');
+                }
+            });
+        } catch (\RuntimeException $e) {
+            Log::warning('rbac.assignSystemRole.rolled_back', ['user_id' => $userId, 'role_id' => $roleId, 'reason' => $e->getMessage()]);
+
+            return false;
         }
 
         // Xóa cache
@@ -506,9 +531,23 @@ class RBACManager
 
         switch ($scope) {
             case 'system':
-                $deleted = UserRoleSystem::where('user_id', $userId)
-                    ->where('role_id', $roleId)
-                    ->delete() > 0;
+                // UAT-RECOVERY-01 S2: remove the ledger row and its authorization projection together.
+                // `user_roles` is touched ONLY when a ledger row was actually revoked here, so an
+                // independently-sourced user_roles row (no ledger row) is never deleted by this path.
+                $deleted = DB::transaction(function () use ($userId, $roleId): bool {
+                    $removed = UserRoleSystem::where('user_id', $userId)
+                        ->where('role_id', $roleId)
+                        ->delete() > 0;
+
+                    if ($removed) {
+                        DB::table('user_roles')
+                            ->where('user_id', $userId)
+                            ->where('role_id', $roleId)
+                            ->delete();
+                    }
+
+                    return $removed;
+                });
                 break;
 
             case 'custom':

@@ -1,0 +1,37 @@
+Integration verification — base origin/main cb958ad48 vs branch integration/uat-recovery-s1-s4d (5b6ba8536 at run time)
+Backup classes excluded (never run against real storage/backups). SQLite/PHPUnit only; MySQL NOT_VERIFIED.
+
+## feature
+baseline: Tests: 2081, Assertions: 20942, Failures: 7, PHPUnit Deprecations: 134, Skipped: 33. 
+branch:   Tests: 2215, Assertions: 21809, Failures: 7, PHPUnit Deprecations: 134, Skipped: 33. 
+baseline failing identities:
+  Tests\Feature\Dashboard\DashboardApiTest::it_can_add_widget_via_customization
+  Tests\Feature\Dashboard\DashboardApiTest::it_can_apply_layout_template
+  Tests\Feature\Dashboard\DashboardApiTest::it_can_import_dashboard
+  Tests\Feature\Dashboard\DashboardApiTest::it_can_remove_widget_via_customization
+  Tests\Feature\Dashboard\DashboardApiTest::it_can_reset_dashboard_via_customization
+  Tests\Feature\Dashboard\DashboardApiTest::it_can_update_layout_via_customization
+  Tests\Feature\Dashboard\DashboardApiTest::it_can_update_widget_config_via_customization
+NEW in branch (not failing on baseline):
+(end)
+
+## api
+baseline: OK, but there were issues! Tests: 825, Assertions: 5284, PHPUnit Deprecations: 101. 
+branch:   OK, but there were issues! Tests: 825, Assertions: 5284, PHPUnit Deprecations: 101. 
+baseline failing identities:
+NEW in branch (not failing on baseline):
+(end)
+
+## unit
+baseline: Tests: 960, Assertions: 3694, Failures: 7, PHPUnit Deprecations: 335, Skipped: 27. 
+branch:   Tests: 960, Assertions: 3695, Failures: 7, PHPUnit Deprecations: 335, Skipped: 27. 
+baseline failing identities:
+  Tests\Unit\OwnerGovernance\EvidenceFreshnessLiveCheckTest::test_a_cancelled_check_counts_as_failed
+  Tests\Unit\OwnerGovernance\EvidenceFreshnessLiveCheckTest::test_fails_after_the_last_poll_when_checks_are_still_pending
+  Tests\Unit\OwnerGovernance\EvidenceFreshnessLiveCheckTest::test_fails_on_the_first_poll_when_a_check_has_failed
+  Tests\Unit\OwnerGovernance\EvidenceFreshnessLiveCheckTest::test_its_own_check_is_ignored
+  Tests\Unit\OwnerGovernance\EvidenceFreshnessLiveCheckTest::test_waits_while_pending_then_passes_when_all_checks_pass
+  Tests\Unit\ZenaInvariantsDiscoveryTest::test_discovers_both_doc_comment_and_attribute_declared_groups
+  Tests\Unit\ZenaInvariantsDiscoveryTest::test_returns_nothing_for_a_group_with_zero_matches
+NEW in branch (not failing on baseline):
+(end)

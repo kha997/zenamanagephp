@@ -392,8 +392,9 @@ class ProjectApiTest extends TestCase
         ]);
 
         $response->assertForbidden()
-            ->assertJsonPath('error.code', 'RBAC_ACCESS_DENIED')
-            ->assertJsonPath('error.message', 'You do not have sufficient RBAC assignments to access this resource');
+            // O-9 (UAT-RECOVERY-03b): denial now comes from the route's own rbac:project.update gate.
+            ->assertJsonPath('error.code', 'E403.AUTHORIZATION')
+            ->assertJsonPath('error.message', 'You do not have permission to access this resource');
 
         $this->assertDatabaseHas('projects', [
             'id' => $project->id,
@@ -462,8 +463,9 @@ class ProjectApiTest extends TestCase
         $response = $this->postJson("/api/projects/{$project->id}/recalculate-progress");
 
         $response->assertForbidden()
-            ->assertJsonPath('error.code', 'RBAC_ACCESS_DENIED')
-            ->assertJsonPath('error.message', 'You do not have sufficient RBAC assignments to access this resource');
+            // O-9 (UAT-RECOVERY-03b): denial now comes from the route's own rbac:project.update gate.
+            ->assertJsonPath('error.code', 'E403.AUTHORIZATION')
+            ->assertJsonPath('error.message', 'You do not have permission to access this resource');
 
         $this->assertSame(15.0, (float) $project->fresh()->getAttribute('progress'));
     }
@@ -533,8 +535,9 @@ class ProjectApiTest extends TestCase
         $response = $this->postJson("/api/projects/{$project->id}/recalculate-actual-cost");
 
         $response->assertForbidden()
-            ->assertJsonPath('error.code', 'RBAC_ACCESS_DENIED')
-            ->assertJsonPath('error.message', 'You do not have sufficient RBAC assignments to access this resource');
+            // O-9 (UAT-RECOVERY-03b): denial now comes from the route's own rbac:project.update gate.
+            ->assertJsonPath('error.code', 'E403.AUTHORIZATION')
+            ->assertJsonPath('error.message', 'You do not have permission to access this resource');
 
         $this->assertSame(75.0, (float) $project->fresh()->getAttribute('budget_actual'));
     }

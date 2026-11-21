@@ -282,8 +282,16 @@ class TaskController extends BaseApiController
                 return $this->error('Unauthorized', 401);
             }
 
+            // UAT-RECOVERY-04c: creation requires the canonical task.create permission on EVERY route that reaches this action
+            // (api/zena, app, v1 already gate on it; the parameterless-gate route api/tasks did not).
+            if (!$user->hasPermission('task.create')) {
+                return $this->error('Forbidden', 403);
+            }
+
             $request->validate([
-                'project_id' => ['required', 'string', 'exists:projects,id'],
+                // UAT-RECOVERY-04c: the project must belong to the caller's own tenant (was a global `exists`, which let a task be
+                // attached to — and revealed the existence of — another tenant's project).
+                'project_id' => ['required', 'string', \Illuminate\Validation\Rule::exists('projects', 'id')->where(fn ($q) => $q->where('tenant_id', $user->tenant_id))],
                 'name' => ['required', 'string', 'max:255'],
                 'title' => ['nullable', 'string', 'max:255'],
                 'description' => ['nullable', 'string', 'max:2000'],
@@ -535,6 +543,11 @@ class TaskController extends BaseApiController
             return $this->error('Task not found', 404);
         }
 
+        // UAT-RECOVERY-04 (S4): object-level authorization (assignee / project PM / full task authority).
+        if (!$user->can('update', $task)) {
+            return $this->error('Forbidden', 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
@@ -614,6 +627,10 @@ class TaskController extends BaseApiController
             return $this->error('Task not found', 404);
         }
 
+        if (!$user->can('delete', $task)) {
+            return $this->error('Forbidden', 403);
+        }
+
         try {
             $task->delete();
 
@@ -654,6 +671,10 @@ class TaskController extends BaseApiController
 
         if (!$task) {
             return $this->error('Task not found', 404);
+        }
+
+        if (!$user->can('update', $task)) {
+            return $this->error('Forbidden', 403);
         }
 
         try {
@@ -727,6 +748,11 @@ class TaskController extends BaseApiController
 
             if (!$task) {
                 return $this->error('Task not found', 404);
+            }
+
+            // UAT-RECOVERY-04b (O-13): same object-level boundary as every other task mutation.
+            if (!$user->can('assign', $task)) {
+                return $this->error('Forbidden', 403);
             }
 
             // Check if user is already assigned
@@ -1085,6 +1111,11 @@ class TaskController extends BaseApiController
             if (!$task) {
                 return $this->error('Task not found', 404);
             }
+
+            // UAT-RECOVERY-04b (O-13): same object-level boundary as every other task mutation.
+            if (!$user->can('update', $task)) {
+                return $this->error('Forbidden', 403);
+            }
             $dependencyId = $request->input('dependency_id');
 
             $dependencyTask = Task::query()
@@ -1151,6 +1182,11 @@ class TaskController extends BaseApiController
                 ->first();
             if (!$task) {
                 return $this->error('Task not found', 404);
+            }
+
+            // UAT-RECOVERY-04b (O-13): same object-level boundary as every other task mutation.
+            if (!$user->can('update', $task)) {
+                return $this->error('Forbidden', 403);
             }
             $dependencyId = $request->input('dependency_id') ?? $request->route('dependencyId');
 

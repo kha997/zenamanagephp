@@ -358,7 +358,15 @@ class BulkOperationsService
                         $project = Project::findOrFail($update['id']);
                         $oldData = $project->toArray();
 
+                        // UAT-RECOVERY-04b (O-11): pm_id is PM authority; bulk edits obey the same rule as the project update endpoint.
+                        $actor = Auth::user() ?? Auth::guard('api')->user();
+                        if (array_key_exists('pm_id', $update['data'] ?? []) && !\App\Support\ProjectPmAssignment::allows($actor, $project, $update['data']['pm_id'])) {
+                            throw new \RuntimeException('Forbidden: pm_id change not permitted');
+                        }
+
+                        $oldPm = $project->pm_id === null ? null : (string) $project->pm_id;
                         $project->update($update['data']);
+                        \App\Support\ProjectPmAssignment::audit($actor, $project, $oldPm, $project->pm_id === null ? null : (string) $project->pm_id, 'bulk.project.update');
                         $results['updated_projects'][] = $project;
                         $results['success']++;
 
@@ -482,6 +490,14 @@ class BulkOperationsService
 
                 foreach ($tasks as $task) {
                     try {
+                        // UAT-RECOVERY-04b (O-13): per-task object authorization, tenant-bound; denied tasks are reported, not changed.
+                        $actor = Auth::user() ?? Auth::guard('api')->user();
+                        if (!$actor || !$actor->can('update', $task)) {
+                            $results['failed']++;
+                            $results['errors'][] = ['task_id' => $task->id, 'error' => 'Forbidden'];
+                            continue;
+                        }
+
                         $oldData = $task->toArray();
                         $task->update(['status' => $status]);
 

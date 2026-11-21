@@ -299,6 +299,7 @@ class BulkOperationsTest extends TestCase
     public function test_can_bulk_update_task_status(): void
     {
         // Tạo tasks để update
+        $this->actingAs($this->user); // S4b/O-13 fixture: bulk status is authorised per task
         $tasks = [];
         for ($i = 1; $i <= 3; $i++) {
             $tasks[] = Task::create([
@@ -309,6 +310,7 @@ class BulkOperationsTest extends TestCase
                 'tenant_id' => $this->tenant->id,
                 'project_id' => $this->project->id,
                 'assigned_to' => $this->user->id,
+                'assignee_id' => $this->user->id, // S4b/O-13 fixture: acting user is the assignee
                 'created_by' => $this->user->id,
             ]);
         }

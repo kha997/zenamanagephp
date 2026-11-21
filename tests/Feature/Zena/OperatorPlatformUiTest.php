@@ -53,6 +53,7 @@ class OperatorPlatformUiTest extends TestCase
 
         $this->project = Project::factory()->create([
             'tenant_id' => (string) $this->tenant->id,
+            'pm_id' => (string) $this->user->id, // S4b/O-10,O-13 fixture: the schedule operator is the project PM
             'name' => 'Platform Project',
             'code' => 'PRJ-PL-001',
         ]);

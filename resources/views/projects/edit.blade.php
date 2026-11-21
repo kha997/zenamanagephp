@@ -58,12 +58,17 @@
 
                 <div class="operator-field">
                     <label for="pm_id">Quản lý dự án</label>
-                    <select id="pm_id" name="pm_id" class="operator-select">
-                        <option value="">Không chọn</option>
-                        @foreach ($users as $member)
-                            <option value="{{ $member->id }}" @selected(old('pm_id', (string) $projectData->pm_id) === (string) $member->id)>{{ $member->name }}</option>
-                        @endforeach
-                    </select>
+                    @if ($canAssignManager ?? false)
+                        <select id="pm_id" name="pm_id" class="operator-select">
+                            <option value="">Không chọn</option>
+                            @foreach ($users as $member)
+                                <option value="{{ $member->id }}" @selected(old('pm_id', (string) $projectData->pm_id) === (string) $member->id)>{{ $member->name }}</option>
+                            @endforeach
+                        </select>
+                    @else
+                        {{-- O-15: changing the PM needs the current PM or project.assign_manager; the field is omitted so the PM stays unchanged. --}}
+                        <p class="operator-muted">{{ optional($users->firstWhere('id', $projectData->pm_id))->name ?? 'Chưa có quản lý dự án' }}</p>
+                    @endif
                 </div>
 
                 <div class="operator-field">

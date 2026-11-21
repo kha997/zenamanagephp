@@ -295,10 +295,13 @@ class ZenaPermissionsSeeder extends Seeder
      *
      * The original S1 "catalog-only" set (role.*, permission.*, audit.view, baseline.*, compensation.*) and role.assign were
      * superseded by upstream GAP-098 (V1PermissionGapSeeder, merged before this PR), which defines AND grants them under its own
-     * Owner gate; they are therefore intentionally NOT redefined here. This list starts empty and is only extended by
-     * Owner-approved decisions (see docs/audits/UAT-RECOVERY-01/OWNER-DECISION-REGISTER.md).
+     * Owner gate; they are therefore intentionally NOT redefined here. This list holds only explicitly Owner-approved entries
+     * (currently project.assign_manager, decision O-16) (see docs/audits/UAT-RECOVERY-01/OWNER-DECISION-REGISTER.md).
      */
     public const SYSTEM_ADMIN_ONLY_PERMISSIONS = [
+        // UAT-RECOVERY-04d / Owner decision O-16 (OPTION 1): independent authority to appoint / replace / clear a project's PM,
+        // granted to the canonical global System Admin role ONLY. Still requires project.update + tenant match (ProjectPmAssignment); no bypass.
+        ['code' => 'project.assign_manager', 'module' => 'project', 'action' => 'assign_manager', 'description' => 'Appoint, replace or clear a project manager (independent of project.update)'],
     ];
 
     private const PERMISSION_TABLE = 'permissions';

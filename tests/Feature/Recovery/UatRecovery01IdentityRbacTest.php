@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Recovery;
 
@@ -37,6 +39,7 @@ class UatRecovery01IdentityRbacTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenantA;
+
     private Tenant $tenantB;
 
     protected function setUp(): void
@@ -219,12 +222,10 @@ class UatRecovery01IdentityRbacTest extends TestCase
         $this->assertSame(201, $res->getStatusCode(), 'seeded tenant admin has users.role=admin but no DB role → user.create denied');
     }
 
-
-
     /**
      * assignSystemRole() writes the system_user_roles ledger while User::hasPermission()/roles() read
      * user_roles. S2 makes both rows land in one transaction. (Before S1/S2 this needed an injected
-     * role.assign row just to reach the code path; S1 now seeds it, so no injection remains.)
+     * role.assign row just to reach the code path; S1 now seeds it, so no injection remains.).
      */
     #[Group('uat-recovery-01-red')]
     public function test_D1b_role_assigned_through_api_takes_effect_for_permission_checks(): void

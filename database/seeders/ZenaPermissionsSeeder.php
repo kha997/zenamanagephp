@@ -288,7 +288,6 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'payroll.close', 'module' => 'payroll', 'action' => 'close', 'description' => 'Close and reopen a payroll month'],
     ];
 
-
     /**
      * UAT-RECOVERY-01 (S1, reduced on integration): permissions granted to the exact global system role "System Admin"
      * ONLY, additively (syncWithoutDetaching) — never via the ADMIN_ROLE_NAMES alias list.
@@ -351,7 +350,7 @@ class ZenaPermissionsSeeder extends Seeder
             if ($hasNameColumn) {
                 $attributes['name'] = $definition['code'];
             }
-            Permission::updateOrCreate([$lookupColumn => $definition['code']], $attributes);
+            Permission::query()->updateOrCreate([$lookupColumn => $definition['code']], $attributes);
         }
 
         $this->repairNullPermissionNames();
@@ -386,7 +385,8 @@ class ZenaPermissionsSeeder extends Seeder
      */
     private function grantSystemAdminOnlyPermissions(): void
     {
-        $role = Role::where('name', 'System Admin')
+        /** @var Role|null $role */
+        $role = Role::query()->where('name', 'System Admin')
             ->where('scope', Role::SCOPE_SYSTEM)
             ->whereNull('tenant_id')
             ->first();
@@ -395,7 +395,7 @@ class ZenaPermissionsSeeder extends Seeder
             return;
         }
 
-        $ids = Permission::whereIn('code', array_column(self::SYSTEM_ADMIN_ONLY_PERMISSIONS, 'code'))->pluck('id')->all();
+        $ids = Permission::query()->whereIn('code', array_column(self::SYSTEM_ADMIN_ONLY_PERMISSIONS, 'code'))->pluck('id')->all();
         if ($ids !== []) {
             $role->permissions()->syncWithoutDetaching($ids);
         }

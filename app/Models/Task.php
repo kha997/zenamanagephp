@@ -21,6 +21,11 @@ use Src\Foundation\Helpers\AuthHelper;
  * Model Task - Quản lý công việc.
  *
  * @property string $id ULID của task (primary key)
+ * @property string $tenant_id ID công ty (ULID)
+ * @property string|null $assignee_id ID người được giao chính (ULID)
+ * @property string|null $visibility Mức hiển thị (internal/client)
+ * @property-read mixed $project Quan hệ dự án (dynamic relation; policy reads it)
+ * @property-read mixed $watchers Quan hệ người theo dõi (dynamic relation)
  * @property string $project_id ID dự án (ULID)
  * @property string|null $component_id ID component (ULID)
  * @property string|null $phase_id ID phase (ULID)

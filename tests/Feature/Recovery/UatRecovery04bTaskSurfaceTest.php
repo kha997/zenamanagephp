@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Recovery;
 
@@ -30,15 +32,25 @@ class UatRecovery04bTaskSurfaceTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenantA;
+
     private Tenant $tenantB;
+
     private Project $project;       // PM = $pm
+
     private Project $otherProject;  // PM = $otherPm
+
     private User $pm;
+
     private User $otherPm;
+
     private User $memberA;          // assignee of $task
+
     private User $memberB;          // unrelated Member
+
     private User $observer;
+
     private User $admin;           // seeded System Admin (holds task.delete, task.assign, task.update, ...), NOT pm/assignee
+
     private Task $task;
 
     protected function setUp(): void
@@ -113,7 +125,7 @@ class UatRecovery04bTaskSurfaceTest extends TestCase
     private function api(User $u, string $m, string $uri, array $d = [])
     {
         Sanctum::actingAs($u);
-        if (str_starts_with($uri, '/api/v1/')) {
+        if (str_contains($uri, '/v1/')) {
             $this->actingAs($u, 'api'); // v1 routes authenticate with the `api` guard (Authenticate:api)
         }
 
@@ -130,8 +142,6 @@ class UatRecovery04bTaskSurfaceTest extends TestCase
 
         return $u;
     }
-
-
 
     // ============================================================ O-10: task.delete implies nothing
 
@@ -193,9 +203,9 @@ class UatRecovery04bTaskSurfaceTest extends TestCase
     private function assignmentCalls(Task $t, User $target, ?string $assignmentId): array
     {
         return [
-            'dashboard store'   => fn (User $u) => $this->api($u, 'POST', "/api/dashboard/tasks/{$t->id}/assignments", ['user_id' => $target->id, 'role' => 'assignee', 'split_percent' => 100]),
+            'dashboard store' => fn (User $u) => $this->api($u, 'POST', "/api/dashboard/tasks/{$t->id}/assignments", ['user_id' => $target->id, 'role' => 'assignee', 'split_percent' => 100]),
             'task-assignments store' => fn (User $u) => $this->api($u, 'POST', '/api/task-assignments', ['task_id' => $t->id, 'user_id' => $target->id, 'role' => 'assignee', 'split_percent' => 100]),
-            'dashboard update'  => fn (User $u) => $this->api($u, 'PUT', "/api/dashboard/assignments/{$assignmentId}", ['role' => 'reviewer']),
+            'dashboard update' => fn (User $u) => $this->api($u, 'PUT', "/api/dashboard/assignments/{$assignmentId}", ['role' => 'reviewer']),
             'task-assignments update' => fn (User $u) => $this->api($u, 'PUT', "/api/task-assignments/{$assignmentId}", ['role' => 'reviewer']),
             'dashboard destroy' => fn (User $u) => $this->api($u, 'DELETE', "/api/dashboard/assignments/{$assignmentId}"),
             'v1 CoreProject store' => fn (User $u) => $this->api($u, 'POST', '/api/v1/task-assignments', ['task_id' => $t->id, 'user_id' => $target->id, 'role' => 'assignee', 'split_percent' => 100]),
@@ -211,11 +221,11 @@ class UatRecovery04bTaskSurfaceTest extends TestCase
         $rowId = $this->assignRow($t, $this->memberA, 'assignee');
         $denied = [
             'Member B (legacy team_member)' => $this->actor('Project Member', 'team_member'),
-            'assignee Member A (legacy)'    => $this->actor('Project Member', 'team_member'),
-            'observer (legacy)'             => $this->actor('Project Member', 'team_member'),
-            'other-project PM'              => $this->gated('Project Manager', 'project_manager'),
-            'System Admin, no relation'     => $this->gated('System Admin', 'admin'),
-            'cross-tenant PM'               => $this->gated('Project Manager', 'project_manager', $this->tenantB),
+            'assignee Member A (legacy)' => $this->actor('Project Member', 'team_member'),
+            'observer (legacy)' => $this->actor('Project Member', 'team_member'),
+            'other-project PM' => $this->gated('Project Manager', 'project_manager'),
+            'System Admin, no relation' => $this->gated('System Admin', 'admin'),
+            'cross-tenant PM' => $this->gated('Project Manager', 'project_manager', $this->tenantB),
         ];
         // make the "assignee"/"observer" legacy twins genuinely related to the task
         $t->forceFill(['assignee_id' => $denied['assignee Member A (legacy)']->id])->save();

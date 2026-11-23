@@ -491,6 +491,7 @@ class BulkOperationsService
                 foreach ($tasks as $task) {
                     try {
                         // UAT-RECOVERY-04b (O-13): per-task object authorization, tenant-bound; denied tasks are reported, not changed.
+                        /** @var \App\Models\User|null $actor */
                         $actor = Auth::user() ?? Auth::guard('api')->user();
                         if (!$actor || !$actor->can('update', $task)) {
                             $results['failed']++;

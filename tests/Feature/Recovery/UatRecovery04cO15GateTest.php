@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Recovery;
 
@@ -27,11 +29,17 @@ class UatRecovery04cO15GateTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenant;
+
     private User $pm;       // seeded PM, PM of $managed
+
     private User $other;    // seeded PM of nothing (holds project.update)
+
     private User $admin;    // seeded System Admin
+
     private User $member;
+
     private Project $managed;
+
     private Project $unmanaged;
 
     protected function setUp(): void

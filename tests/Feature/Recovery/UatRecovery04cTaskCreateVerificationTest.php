@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Recovery;
 
@@ -22,8 +24,11 @@ class UatRecovery04cTaskCreateVerificationTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenantA;
+
     private Tenant $tenantB;
+
     private Project $project;
+
     private Project $foreignProject;
 
     protected function setUp(): void
@@ -78,9 +83,9 @@ class UatRecovery04cTaskCreateVerificationTest extends TestCase
     {
         $denied = [
             'Member with legacy team_member' => $this->actor('Project Member', 'team_member'),
-            'legacy admin, no DB role'       => $this->actor(null, 'admin'),
+            'legacy admin, no DB role' => $this->actor(null, 'admin'),
             'legacy project_manager, no DB role' => $this->actor(null, 'project_manager'),
-            'legacy designer, no DB role'    => $this->actor(null, 'designer'),
+            'legacy designer, no DB role' => $this->actor(null, 'designer'),
         ];
         foreach ($denied as $who => $user) {
             $this->assertFalse($user->hasPermission('task.create'), $who);
@@ -116,7 +121,7 @@ class UatRecovery04cTaskCreateVerificationTest extends TestCase
         $pm = $this->actor('Project Manager', 'project_manager'); // tenant A
 
         foreach (['/api/tasks', '/api/zena/tasks', '/api/v1/tasks'] as $uri) {
-            if (str_starts_with($uri, '/api/v1/')) {
+            if (str_contains($uri, '/v1/')) {
                 $this->actingAs($pm, 'api');
             }
             $res = $this->postAs($pm, $uri, $this->payload($this->foreignProject, 'cross-tenant ' . $uri));

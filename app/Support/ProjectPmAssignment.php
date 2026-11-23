@@ -1,9 +1,12 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Support;
 
-use Illuminate\Database\Eloquent\Model;
 use App\Models\User;
+use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -25,9 +28,9 @@ final class ProjectPmAssignment
     public const AUDIT_ACTION = 'project.manager.changed';
 
     /** May this actor change (appoint/replace/clear) the PM of this project at all? */
-    public static function canChange(?User $actor, Model $project): bool
+    public static function canChange(?Authenticatable $actor, Model $project): bool
     {
-        if ($actor === null || (string) $actor->tenant_id !== (string) $project->tenant_id) {
+        if (!$actor instanceof User || (string) $actor->tenant_id !== (string) $project->getAttribute('tenant_id')) {
             return false;
         }
 
@@ -35,19 +38,19 @@ final class ProjectPmAssignment
             return false;
         }
 
-        $current = $project->pm_id === null ? null : (string) $project->pm_id;
+        $current = $project->getAttribute('pm_id') === null ? null : (string) $project->getAttribute('pm_id');
 
         return ($current !== null && $current === (string) $actor->id) || $actor->hasPermission(self::PERMISSION);
     }
 
-    public static function allows(?User $actor, Model $project, mixed $newPmId): bool
+    public static function allows(?Authenticatable $actor, Model $project, mixed $newPmId): bool
     {
-        if ($actor === null || (string) $actor->tenant_id !== (string) $project->tenant_id) {
+        if (!$actor instanceof User || (string) $actor->tenant_id !== (string) $project->getAttribute('tenant_id')) {
             return false;
         }
 
         $new = $newPmId === null || $newPmId === '' ? null : (string) $newPmId;
-        $current = $project->pm_id === null ? null : (string) $project->pm_id;
+        $current = $project->getAttribute('pm_id') === null ? null : (string) $project->getAttribute('pm_id');
 
         if ($current === $new) {
             return true;
@@ -65,32 +68,34 @@ final class ProjectPmAssignment
         }
 
         return $new === null
-            || User::query()->whereKey($new)->where('tenant_id', $project->tenant_id)->exists();
+            || User::query()->whereKey($new)->where('tenant_id', $project->getAttribute('tenant_id'))->exists();
     }
 
     /**
      * Writes the before/after audit record. Call INSIDE the same DB transaction as the change so a failed audit aborts it.
      */
-    public static function audit(?User $actor, Model $project, ?string $oldPm, ?string $newPm, string $source): void
+    public static function audit(?Authenticatable $actor, Model $project, ?string $oldPm, ?string $newPm, string $source): void
     {
         if ($oldPm === $newPm) {
             return;
         }
 
+        $actorId = $actor instanceof User ? $actor->id : null;
+
         DB::table('audit_logs')->insert([
-            'user_id' => (string) ($actor?->id ?? $project->created_by ?? $newPm ?? $oldPm),
+            'user_id' => (string) ($actorId ?? $project->getAttribute('created_by') ?? $newPm ?? $oldPm),
             'action' => self::AUDIT_ACTION,
             'entity_type' => 'project',
-            'entity_id' => (string) $project->id,
-            'project_id' => (string) $project->id,
-            'tenant_id' => (string) $project->tenant_id,
+            'entity_id' => (string) $project->getAttribute('id'),
+            'project_id' => (string) $project->getAttribute('id'),
+            'tenant_id' => (string) $project->getAttribute('tenant_id'),
             'old_data' => json_encode(['pm_id' => $oldPm]),
             'new_data' => json_encode(['pm_id' => $newPm]),
-            'ip_address' => request()?->ip(),
-            'user_agent' => request()?->userAgent(),
-            'route' => request()?->path(),
-            'method' => request()?->method(),
-            'meta' => json_encode(['source' => $source, 'actor_id' => $actor?->id]),
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'route' => request()->path(),
+            'method' => request()->method(),
+            'meta' => json_encode(['source' => $source, 'actor_id' => $actorId]),
             'created_at' => now(),
             'updated_at' => now(),
         ]);

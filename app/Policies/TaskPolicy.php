@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Models\Task;
 use App\Models\User;
-use Illuminate\Auth\Access\HandlesAuthorization;
 
 class TaskPolicy
 {
@@ -120,7 +119,7 @@ class TaskPolicy
 
     private function sameTenant(User $user, Task $task): bool
     {
-        return $user->tenant_id !== null && (string) $user->tenant_id === (string) $task->tenant_id;
+        return $user->getAttribute('tenant_id') !== null && (string) $user->getAttribute('tenant_id') === (string) $task->getAttribute('tenant_id');
     }
 
     private function isAssignee(User $user, Task $task): bool

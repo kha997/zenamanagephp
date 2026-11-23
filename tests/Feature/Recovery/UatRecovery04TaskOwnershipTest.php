@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Recovery;
 
@@ -31,15 +33,25 @@ class UatRecovery04TaskOwnershipTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenantA;
+
     private Tenant $tenantB;
+
     private Project $project;
+
     private User $pm;          // seeded Project Manager, pm_id of $project
+
     private User $otherPm;     // seeded Project Manager of ANOTHER project
+
     private User $memberA;     // assignee via tasks.assignee_id
+
     private User $memberA2;    // assignee via task_assignments(role=assignee)
+
     private User $memberB;     // ordinary Project Member, not assigned
+
     private User $observer;    // Project Member with task_assignments(role=observer)
+
     private User $admin;       // seeded System Admin, DB role only (users.role NULL)
+
     private Task $task;
 
     protected function setUp(): void
@@ -125,10 +137,10 @@ class UatRecovery04TaskOwnershipTest extends TestCase
         $n = $t->name;
 
         return [
-            'web PUT app/tasks'              => fn (User $u) => $this->web($u, 'PUT', "/app/tasks/{$t->id}", ['name' => $n, 'status' => 'in_progress', 'progress_percent' => 40]),
-            'web block'                      => fn (User $u) => $this->web($u, 'POST', "/app/tasks/{$t->id}/block", ['blocker_note' => 'x']),
-            'api/zena PUT'                   => fn (User $u) => $this->api($u, 'PUT', "/api/zena/tasks/{$t->id}", ['name' => $n, 'status' => 'in_progress', 'progress_percent' => 40]),
-            'schedule POST'                  => fn (User $u) => $this->web($u, 'POST', "/operator/schedule/tasks/{$t->id}", ['project_id' => $t->project_id, 'name' => $n, 'status' => 'in_progress']),
+            'web PUT app/tasks' => fn (User $u) => $this->web($u, 'PUT', "/app/tasks/{$t->id}", ['name' => $n, 'status' => 'in_progress', 'progress_percent' => 40]),
+            'web block' => fn (User $u) => $this->web($u, 'POST', "/app/tasks/{$t->id}/block", ['blocker_note' => 'x']),
+            'zena PUT' => fn (User $u) => $this->api($u, 'PUT', "/api/zena/tasks/{$t->id}", ['name' => $n, 'status' => 'in_progress', 'progress_percent' => 40]),
+            'schedule POST' => fn (User $u) => $this->web($u, 'POST', "/operator/schedule/tasks/{$t->id}", ['project_id' => $t->project_id, 'name' => $n, 'status' => 'in_progress']),
         ];
     }
 

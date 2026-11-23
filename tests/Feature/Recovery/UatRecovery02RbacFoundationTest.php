@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Recovery;
 
@@ -8,7 +10,6 @@ use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\ZenaPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Route;
 use Laravel\Sanctum\Sanctum;
 use PHPUnit\Framework\Attributes\Group;
 use Src\RBAC\Services\SystemRolePivotBackfill;
@@ -23,6 +24,7 @@ class UatRecovery02RbacFoundationTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenantA;
+
     private Tenant $tenantB;
 
     protected function setUp(): void

@@ -49,7 +49,7 @@ class ProjectService
             'user_id' => $userId,
             'tenant_id' => $tenantId,
         ]);
-        
+
         // UAT-RECOVERY-04d: naming the first PM at creation is an auditable appointment.
         if ($project->pm_id !== null) {
             \App\Support\ProjectPmAssignment::audit(\Illuminate\Support\Facades\Auth::user(), $project, null, (string) $project->pm_id, 'project.create');

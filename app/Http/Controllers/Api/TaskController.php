@@ -205,6 +205,7 @@ class TaskController extends BaseApiController
     public function index(Request $request, ?string $projectId = null): JsonResponse
     {
         try {
+            /** @var \App\Models\User|null $user */
             $user = Auth::user();
 
             if (!$user) {
@@ -276,6 +277,7 @@ class TaskController extends BaseApiController
     public function store(Request $request): JsonResponse
     {
         try {
+            /** @var \App\Models\User|null $user */
             $user = Auth::user();
 
             if (!$user) {
@@ -523,6 +525,7 @@ class TaskController extends BaseApiController
      */
     public function update(Request $request, string $id): JsonResponse
     {
+        /** @var \App\Models\User|null $user */
         $user = Auth::user();
 
         if (!$user) {
@@ -607,6 +610,7 @@ class TaskController extends BaseApiController
      */
     public function destroy(Request $request, string $id): JsonResponse
     {
+        /** @var \App\Models\User|null $user */
         $user = Auth::user();
 
         if (!$user) {
@@ -645,6 +649,7 @@ class TaskController extends BaseApiController
      */
     public function updateStatus(Request $request, string $id): JsonResponse
     {
+        /** @var \App\Models\User|null $user */
         $user = Auth::user();
 
         if (!$user) {
@@ -723,6 +728,7 @@ class TaskController extends BaseApiController
     public function assignUser(Request $request, string $id): JsonResponse
     {
         try {
+            /** @var \App\Models\User|null $user */
             $user = Auth::user();
 
             if (!$user) {
@@ -1037,6 +1043,7 @@ class TaskController extends BaseApiController
     public function statistics(Request $request): JsonResponse
     {
         try {
+            /** @var \App\Models\User|null $user */
             $user = Auth::user();
 
             if (!$user) {
@@ -1089,6 +1096,7 @@ class TaskController extends BaseApiController
     public function addDependency(Request $request, string $id): JsonResponse
     {
         try {
+            /** @var \App\Models\User|null $user */
             $user = Auth::user();
 
             if (!$user) {
@@ -1161,6 +1169,7 @@ class TaskController extends BaseApiController
     public function removeDependency(Request $request, string $id): JsonResponse
     {
         try {
+            /** @var \App\Models\User|null $user */
             $user = Auth::user();
 
             if (!$user) {

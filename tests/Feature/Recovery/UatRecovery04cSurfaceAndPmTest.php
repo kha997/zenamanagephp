@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Recovery;
 
@@ -24,14 +26,23 @@ class UatRecovery04cSurfaceAndPmTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenantA;
+
     private Tenant $tenantB;
+
     protected User $pm1;       // PM of $projectX
+
     protected User $pm2;       // PM of $projectY (holds project.update, task.update, task.assign, task.create via the seeded PM role)
+
     private User $memberA;
+
     protected User $memberB;
+
     private User $admin;     // seeded System Admin, no relation to any project
+
     protected Project $projectX;
+
     private Project $projectY;
+
     private Project $unmanaged; // pm_id NULL — the state of EVERY project created before the D6 fix
 
     protected function setUp(): void
@@ -85,7 +96,7 @@ class UatRecovery04cSurfaceAndPmTest extends TestCase
     protected function api(User $u, string $m, string $uri, array $d = [])
     {
         Sanctum::actingAs($u);
-        if (str_starts_with($uri, '/api/v1/')) {
+        if (str_contains($uri, '/v1/')) {
             $this->actingAs($u, 'api');
         }
 

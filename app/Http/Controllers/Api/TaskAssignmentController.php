@@ -54,6 +54,7 @@ class TaskAssignmentController extends BaseApiController
      */
     public function store(Request $request, string $taskId): JsonResponse
     {
+        /** @var \App\Models\User|null $user */
         $user = Auth::user();
 
         if (!$user) {
@@ -156,6 +157,7 @@ class TaskAssignmentController extends BaseApiController
      */
     public function update(Request $request, string $assignmentId): JsonResponse
     {
+        /** @var \App\Models\User|null $user */
         $user = Auth::user();
 
         if (!$user) {
@@ -169,7 +171,7 @@ class TaskAssignmentController extends BaseApiController
         }
 
         // UAT-RECOVERY-04b (O-13): reassignment / unassignment use the same boundary as assignment.
-        $assignedTask = Task::find($assignment->task_id);
+        $assignedTask = Task::query()->find($assignment->task_id);
         if (!$assignedTask || !$user->can('assign', $assignedTask)) {
             return $this->errorResponse('Forbidden', 403);
         }
@@ -217,6 +219,7 @@ class TaskAssignmentController extends BaseApiController
      */
     public function destroy(string $assignmentId): JsonResponse
     {
+        /** @var \App\Models\User|null $user */
         $user = Auth::user();
 
         if (!$user) {
@@ -230,7 +233,7 @@ class TaskAssignmentController extends BaseApiController
         }
 
         // UAT-RECOVERY-04b (O-13): reassignment / unassignment use the same boundary as assignment.
-        $assignedTask = Task::find($assignment->task_id);
+        $assignedTask = Task::query()->find($assignment->task_id);
         if (!$assignedTask || !$user->can('assign', $assignedTask)) {
             return $this->errorResponse('Forbidden', 403);
         }

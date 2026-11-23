@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Recovery;
 
@@ -31,7 +33,9 @@ class UatRecovery03DocumentPolicyAlignmentTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenantA;
+
     private Tenant $tenantB;
+
     private Project $project;
 
     protected function setUp(): void
@@ -115,13 +119,13 @@ class UatRecovery03DocumentPolicyAlignmentTest extends TestCase
         // Abilities not listed are asserted DENY by omission only where stated in the case name.
         return [
             'System Admin (DB role only, users.role NULL)' => [['System Admin', null, 'A'], ['view' => true, 'download' => true, 'update' => true, 'approve' => true, 'assignApprover' => false, 'delete' => false]],
-            'Project Manager (DB role only)'               => [['Project Manager', null, 'A'], ['view' => false, 'download' => false, 'update' => true, 'approve' => true, 'assignApprover' => false, 'delete' => false]],
-            'Project Member (DB role only)'                => [['Project Member', null, 'A'], ['view' => false, 'download' => false, 'update' => false, 'approve' => false, 'assignApprover' => false, 'delete' => false]],
-            'No role at all'                               => [[null, null, 'A'], ['view' => false, 'download' => false, 'update' => false, 'approve' => false, 'assignApprover' => false, 'delete' => false]],
-            'Legacy admin value, no DB role'               => [[null, 'admin', 'A'], ['view' => true, 'download' => true, 'update' => true, 'approve' => false, 'assignApprover' => true, 'delete' => true]],
-            'Legacy designer value, no DB role'            => [[null, 'designer', 'A'], ['view' => true, 'download' => true, 'update' => true, 'approve' => false, 'assignApprover' => false, 'delete' => false]],
-            'Cross-tenant System Admin'                    => [['System Admin', 'admin', 'B'], ['view' => false, 'download' => false, 'update' => false, 'approve' => false, 'assignApprover' => false, 'delete' => false]],
-            'Cross-tenant Project Manager'                 => [['Project Manager', 'pm', 'B'], ['view' => false, 'download' => false, 'update' => false, 'approve' => false, 'assignApprover' => false, 'delete' => false]],
+            'Project Manager (DB role only)' => [['Project Manager', null, 'A'], ['view' => false, 'download' => false, 'update' => true, 'approve' => true, 'assignApprover' => false, 'delete' => false]],
+            'Project Member (DB role only)' => [['Project Member', null, 'A'], ['view' => false, 'download' => false, 'update' => false, 'approve' => false, 'assignApprover' => false, 'delete' => false]],
+            'No role at all' => [[null, null, 'A'], ['view' => false, 'download' => false, 'update' => false, 'approve' => false, 'assignApprover' => false, 'delete' => false]],
+            'Legacy admin value, no DB role' => [[null, 'admin', 'A'], ['view' => true, 'download' => true, 'update' => true, 'approve' => false, 'assignApprover' => true, 'delete' => true]],
+            'Legacy designer value, no DB role' => [[null, 'designer', 'A'], ['view' => true, 'download' => true, 'update' => true, 'approve' => false, 'assignApprover' => false, 'delete' => false]],
+            'Cross-tenant System Admin' => [['System Admin', 'admin', 'B'], ['view' => false, 'download' => false, 'update' => false, 'approve' => false, 'assignApprover' => false, 'delete' => false]],
+            'Cross-tenant Project Manager' => [['Project Manager', 'pm', 'B'], ['view' => false, 'download' => false, 'update' => false, 'approve' => false, 'assignApprover' => false, 'delete' => false]],
         ];
     }
 
@@ -238,9 +242,8 @@ class UatRecovery03DocumentPolicyAlignmentTest extends TestCase
                 $this->web($who, 'POST', "/app/documents/{$doc->id}/{$op}", ['decision_note' => 'x']);
             }
             $headers = $this->api($who);
-            foreach (['submit', 'publish'] as $op) {
-                $this->withHeaders($headers)->postJson("/api/zena/documents/{$doc->id}/{$op}");
-            }
+            $this->withHeaders($headers)->postJson("/api/zena/documents/{$doc->id}/submit");
+            $this->withHeaders($headers)->postJson("/api/zena/documents/{$doc->id}/publish");
         }
 
         $this->assertSame($state, $this->state($doc), 'no actor in this set may change the document');
@@ -342,13 +345,13 @@ class UatRecovery03DocumentPolicyAlignmentTest extends TestCase
     public function test_parameterless_gate_semantics_are_unchanged(): void
     {
         $cases = [
-            'DB System Admin only'      => [$this->actor('System Admin'), 403],
-            'DB Project Manager only'   => [$this->actor('Project Manager'), 403],
-            'DB Project Member only'    => [$this->actor('Project Member'), 403],
-            'no role'                   => [$this->actor(null), 403],
-            'legacy admin, no DB role'  => [$this->actor(null, 'admin'), 200],
-            'legacy project_manager'    => [$this->actor('Project Manager', 'project_manager'), 200],
-            'legacy team_member'        => [$this->actor('Project Member', 'team_member'), 200],
+            'DB System Admin only' => [$this->actor('System Admin'), 403],
+            'DB Project Manager only' => [$this->actor('Project Manager'), 403],
+            'DB Project Member only' => [$this->actor('Project Member'), 403],
+            'no role' => [$this->actor(null), 403],
+            'legacy admin, no DB role' => [$this->actor(null, 'admin'), 200],
+            'legacy project_manager' => [$this->actor('Project Manager', 'project_manager'), 200],
+            'legacy team_member' => [$this->actor('Project Member', 'team_member'), 200],
         ];
         foreach ($cases as $label => [$user, $expected]) {
             $headers = $this->api($user);

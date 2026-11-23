@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Recovery;
 
@@ -24,12 +26,19 @@ class UatRecovery04dPmAssignmentTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenant;
+
     private Tenant $foreignTenant;
+
     private User $pm;          // seeded PM, current PM of $managed
+
     private User $other;       // seeded PM of nothing
+
     private User $admin;       // seeded System Admin
+
     private User $member;
+
     private Project $managed;
+
     private Project $pmLess;
 
     protected function setUp(): void

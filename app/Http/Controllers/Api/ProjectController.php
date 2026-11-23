@@ -220,18 +220,18 @@ class ProjectController extends Controller
             if (array_key_exists('pm_id', $data) && !\App\Support\ProjectPmAssignment::allows($user, $project, $data['pm_id'])) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'You are not allowed to change the project manager of this project'
+                    'message' => 'You are not allowed to change the project manager of this project',
                 ], 403);
             }
 
-            $oldPm = $project->pm_id === null ? null : (string) $project->pm_id;
+            $oldPm = $project->getAttribute('pm_id') === null ? null : (string) $project->getAttribute('pm_id');
             $project = \Illuminate\Support\Facades\DB::transaction(function () use ($project, $data, $user, $oldPm) {
                 $updated = $this->projectService->updateProject($project, $data, $user->id);
-                \App\Support\ProjectPmAssignment::audit($user, $updated, $oldPm, $updated->pm_id === null ? null : (string) $updated->pm_id, 'project.update');
+                \App\Support\ProjectPmAssignment::audit($user, $updated, $oldPm, $updated->getAttribute('pm_id') === null ? null : (string) $updated->getAttribute('pm_id'), 'project.update');
 
                 return $updated;
             });
-            
+
             return $this->zenaSuccessResponse(
                 $project->load(['client', 'projectManager', 'teamMembers']),
                 'Project updated successfully'

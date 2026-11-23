@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Console\Commands;
 
@@ -27,6 +29,7 @@ class RbacBackfillUserRoles extends Command
         if ($manifest = $this->option('rollback')) {
             if (!is_file((string) $manifest)) {
                 $this->error('Manifest not found.');
+
                 return self::FAILURE;
             }
             $data = json_decode((string) file_get_contents((string) $manifest), true);

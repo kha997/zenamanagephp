@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Recovery;
 
@@ -39,6 +41,7 @@ class UatRecovery03bProjectWriteRouteGateTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenantA;
+
     private Tenant $tenantB;
 
     protected function setUp(): void
@@ -88,11 +91,11 @@ class UatRecovery03bProjectWriteRouteGateTest extends TestCase
     public static function writeRoutes(): array
     {
         return [
-            'store'              => ['POST', 'api/projects', 'project.create'],
-            'update PUT'         => ['PUT', 'api/projects/{p}', 'project.update'],
-            'update PATCH'       => ['PATCH', 'api/projects/{p}', 'project.update'],
-            'destroy'            => ['DELETE', 'api/projects/{p}', 'project.delete'],
-            'status'             => ['POST', 'api/projects/{p}/status', 'project.update'],
+            'store' => ['POST', 'api/projects', 'project.create'],
+            'update PUT' => ['PUT', 'api/projects/{p}', 'project.update'],
+            'update PATCH' => ['PATCH', 'api/projects/{p}', 'project.update'],
+            'destroy' => ['DELETE', 'api/projects/{p}', 'project.delete'],
+            'status' => ['POST', 'api/projects/{p}/status', 'project.update'],
             'recalculate-progress' => ['POST', 'api/projects/{p}/recalculate-progress', 'project.update'],
             'recalculate-actual-cost' => ['POST', 'api/projects/{p}/recalculate-actual-cost', 'project.update'],
         ];
@@ -179,12 +182,12 @@ class UatRecovery03bProjectWriteRouteGateTest extends TestCase
     public function test_actors_without_the_permission_are_denied_with_zero_mutation(string $method, string $uri, string $perm): void
     {
         $denied = [
-            'DB-only Project Member'            => $this->actor('Project Member'),
-            'legacy team_member Member'         => $this->actor('Project Member', 'team_member'),
-            'legacy admin, no DB role'          => $this->actor(null, 'admin'),
+            'DB-only Project Member' => $this->actor('Project Member'),
+            'legacy team_member Member' => $this->actor('Project Member', 'team_member'),
+            'legacy admin, no DB role' => $this->actor(null, 'admin'),
             'legacy project_manager, no DB role' => $this->actor(null, 'project_manager'),
-            'no role at all'                    => $this->actor(null),
-            'cross-tenant System Admin'         => $this->actor('System Admin', 'admin', $this->tenantB),
+            'no role at all' => $this->actor(null),
+            'cross-tenant System Admin' => $this->actor('System Admin', 'admin', $this->tenantB),
         ];
         // PM lacks project.delete → also denied on destroy only.
         $denied['seeded PM (delete only)'] = $this->actor('Project Manager');

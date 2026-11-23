@@ -1,0 +1,64 @@
+// O-18 runtime probe output (isolated in-memory/file SQLite via RefreshDatabase; scratch test, not committed). 302 on web routes = RBAC deny redirect (friendly web error), 403 = deny, 200 = allowed.
+[
+    {
+        "label": "after seed #1",
+        "member_grants": 20,
+        "GET operator/crm": 302,
+        "GET operator/crm/opportunities/{other}": 302,
+        "GET api/zena/crm/opportunities": 403,
+        "POST operator/crm/opportunities/{id}/ai-summary": 302,
+        "GET api/zena/projects/{nonParticipant}/contracts": 403,
+        "GET operator/contracts/{id}": 302,
+        "GET api/zena/vendors": 403,
+        "GET api/zena/boqs": 403,
+        "GET app/my-work": 302,
+        "GET app/time": 302,
+        "GET app/time/report": 302,
+        "GET app/time/report?export=csv": 302,
+        "GET app/time/review": 302
+    }
+]
+[
+    {
+        "label": "after seed #2",
+        "member_grants": 31,
+        "GET operator/crm": 200,
+        "GET operator/crm/opportunities/{other}": 200,
+        "GET api/zena/crm/opportunities": 200,
+        "POST operator/crm/opportunities/{id}/ai-summary": 302,
+        "GET api/zena/projects/{nonParticipant}/contracts": 200,
+        "GET operator/contracts/{id}": 200,
+        "GET api/zena/vendors": 200,
+        "GET api/zena/boqs": 200,
+        "GET app/my-work": 200,
+        "GET app/time": 200,
+        "GET app/time/report": 403,
+        "GET app/time/report?export=csv": 403,
+        "GET app/time/review": 403
+    },
+    {
+        "label": "cross-user timesheet (seed #2)",
+        "POST app/time/entries/{B} (edit)": 302,
+        "edit session errors": [
+            "Ch\u1ec9 s\u1eeda / xo\u00e1 \u0111\u01b0\u1ee3c gi\u1edd c\u1ee7a m\u00ecnh."
+        ],
+        "POST app/time/entries/{B}/delete": 302,
+        "delete session errors": [
+            "Ch\u1ec9 s\u1eeda / xo\u00e1 \u0111\u01b0\u1ee3c gi\u1edd c\u1ee7a m\u00ecnh."
+        ],
+        "POST app/time/review approve {B}": 403,
+        "B entry unchanged": true,
+        "A entries count": 0
+    }
+]
+// Related finding P-1 probe:
+{
+    "label": "seeded Project Manager (owns a project), seed #1",
+    "results": {
+        "\/app\/my-work": 302,
+        "\/app\/today": 302,
+        "\/app\/time": 302,
+        "\/operator\/schedule": 302,
+        "\/operator\/crm": 302
+    }
+}

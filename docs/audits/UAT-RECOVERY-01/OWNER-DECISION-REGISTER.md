@@ -22,7 +22,7 @@ Single index of Owner decision IDs for the UAT-RECOVERY-01 program (S1–S4d). E
 | **O-16** | **Recipients of `project.assign_manager`: System Admin only (Option 1)** | **Approved + applied** | 60 report (O-16 section) |
 | **O-16a** | **Self-appointment: System Admin (and any actor) may NOT appoint itself as PM; may appoint another eligible same-tenant user** | **Approved (Owner final decision) — enforced in `ProjectPmAssignment::allows()`; tests unchanged** | 60 report, `UatRecovery04dPmAssignmentTest` |
 | **O-17** | **Task creation authority limited to the owning PM / any `task.create`/`template.apply` holder in any tenant project** | **OPEN — OWNER_DECISION_REQUIRED** | 50 report §D |
-| **O-18** | **Seeder-order non-determinism: `DatabaseSeeder` grants Project Member 11 `*.view` codes only from the 2nd run on (15 → 26); first-seed (fresh install) state differs from twice-seeded environments** | **OPEN — OWNER_DECISION_REQUIRED** (pre-existing at HEAD; not caused by S1–S4d; nothing changed) | 70 integration-precheck report §A; `80-o18-permission-impact-matrix.md` — **unresolved pre-merge security / deployment-readiness obligation**; not declared acceptable; needs a separate Owner Gate |
+| **O-18** | **Seeder-order non-determinism: `DatabaseSeeder` grants Project Member 11 `*.view` codes only from the 2nd run on (15 → 26); first-seed (fresh install) state differs from twice-seeded environments** | **DECIDED 2026-11-24 — Option D (26-code deterministic Member set) + Project Manager included; LOCAL PATCH VERIFIED, uncommitted** (`97-o18-implementation-report.md`); existing environments not converged | 70 integration-precheck report §A; `80-o18-permission-impact-matrix.md`; `95-o18-decision-package.md` (corrected seed counts on this base: 20 → 31) |
 | **O-19** | **S1 catalog superseded by upstream GAP-098/GAP-079/GAP-030 during integration:** S1's catalog-only set and `role.assign` grant were NOT carried into the PR (zero permission delta vs `main`); 5 falsified S1/CHAR assertions retired | **Technical reconciliation recorded for Owner review** (no grant/revoke) | `85-retired-assertions.md`, PR description |
 
 ## Erratum — O-16 identifier collision
@@ -33,7 +33,34 @@ Single index of Owner decision IDs for the UAT-RECOVERY-01 program (S1–S4d). E
 ## Decision record — O-16a (2026-11-21)
 Owner: "KEEP SYSTEM ADMIN SELF-APPOINTMENT PROHIBITED." (1) System Admin may appoint another eligible user as PM within the authorised tenant; (2) System Admin must not appoint itself; (3) existing O-15/O-16 security tests are preserved unmodified; (4) no escalation through `users.role`, `project.update` or an administrator bypass.
 Implementation status: already in the working tree (self-appointment guard in `app/Support/ProjectPmAssignment.php::allows()`); verified by `UatRecovery04dPmAssignmentTest::test_O16_a_holder_cannot_self_appoint_as_pm_but_can_appoint_someone_else` plus the unchanged 04b/04c tests (`test_pm_authority_cannot_be_taken_by_editing_pm_id`, `test_O15_system_admin_cannot_reacquire_task_authority_by_claiming_unmanaged_projects`, `test_a_system_admin_cannot_self_claim_an_unassigned_project`).
+## Decision record — O-18 (2026-11-24)
+Owner, in chat: "Option D (26 codes)". The decision is the one proposed in `95-o18-decision-package.md` §5.
 
+**The approved Project Member set** has 26 codes and must be the same on every seed run:
+- The 20 codes a first seed grants today.
+- Plus `task.view`, `site_diary.view`, `design-item.view`, `material.read`, `material-receipt.view` and `material.view`.
+
+**Withheld from Project Member:**
+- `crm.view`, `contract.view`, `boq.view` and `vendor.view`, which are commercially sensitive.
+- `event-record.view`, until the activity feed is filtered by module permission.
+
+**Status:**
+- Decision recorded only. No seeder, permission, grant/revoke, seed-order or test change has been made.
+- Implementation must go in a separate governed PR, meeting implementation criteria I-1..I-5 and regression criteria R-1..R-8 in `95-o18-decision-package.md` §8. That needs its own Owner authorization, including the seed-order change I-1.
+
+**P-1 decided (2026-11-24).** Owner: "YES — INCLUDE PROJECT MANAGER". Project Manager gets the same six codes and keeps its other grants. The local patch implementing this was verified the same day; see `97-o18-implementation-report.md`.
+
+Following the Owner's instruction, re-seeding is now additive: grants an administrator added by hand are never deleted.
+
+**Still open within O-18:**
+- The convergence approach for existing environments (§7). Re-running the seeder or `production:rbac` does **not** remove the five withheld codes from an environment that already holds them.
+  - Production is likely in that state, because `production:rbac` granted them to Members on its first run before this patch.
+- Read-only access to the production grant inventory.
+- Whether S-1 and S-2 get their own Work IDs.
+
+**Effect on existing environments:**
+- Environments seeded more than once currently hold 31 codes. They keep them until an approved convergence step revokes the 5 withheld codes, with a dry run and audit.
+- Nothing is revoked automatically.
 
 ## Integration note (PR)
 Numbered reports 00–70 were produced on local base `a0381f5e3`. The PR was re-based onto `main` `cb958ad48` (83 newer commits) and re-verified there; see `90-integration-verification.md`. Raw UAT drivers (`docs/uat/`) are intentionally not part of the PR; the original files remain in the source worktree.

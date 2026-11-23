@@ -38,10 +38,15 @@ class ZenaProjectManagerRolePermissionSeederTest extends TestCase
 
         $codes = static fn (Role $role): array => $role->fresh()->permissions->pluck('code')->sort()->values()->all();
 
-        $this->assertSame(
-            ['rfi.cancel', 'rfi.escalate', 'rfi.resolve-escalation', 'work.approve', 'work.export', 'work.update', 'work.view'],
-            $codes($pmRole)
-        );
-        $this->assertSame(['rfi.resolve-escalation', 'work.update', 'work.view'], $codes($memberRole));
+        // O-18 (Owner decision 2026-11-24, Option D incl. Project Manager): both roles also receive the six
+        // operational codes in O18_OPERATIONAL_PERMISSION_CODES; nothing else was added.
+        $o18 = ['design-item.view', 'material-receipt.view', 'material.read', 'material.view', 'site_diary.view', 'task.view'];
+        $expectedPm = array_merge(['rfi.cancel', 'rfi.escalate', 'rfi.resolve-escalation', 'work.approve', 'work.export', 'work.update', 'work.view'], $o18);
+        $expectedMember = array_merge(['rfi.resolve-escalation', 'work.update', 'work.view'], $o18);
+        sort($expectedPm);
+        sort($expectedMember);
+
+        $this->assertSame($expectedPm, $codes($pmRole));
+        $this->assertSame($expectedMember, $codes($memberRole));
     }
 }

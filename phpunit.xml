@@ -20,7 +20,7 @@
     <exclude>
       <group>performance</group>
       <group>mysql-parity</group>
-      <!-- UAT-RECOVERY-01: exactly three named tests (a fourth was released on integration) that FAIL today and document open Owner decisions (O-2/O-8/O-18).
+      <!-- UAT-RECOVERY-01: exactly two named tests (two others were released: one on integration, one when O-18 was decided) that FAIL today and document open Owner decisions (O-2/O-8).
            Group-level quarantine only; see tests/Feature/Recovery/QUARANTINE.md. Guarded by UatRecovery01QuarantineGuardTest. -->
       <group>uat-recovery-01-quarantine</group>
     </exclude>

@@ -1,0 +1,27 @@
+# O-18 effective permission differences — before = branch head b4440a3d2, after = local O-18 patch (uncommitted). Isolated databases only.
+
+## DatabaseSeeder (SQLite file DBs)
+System Admin: BEFORE seed1=249 seed2=249 | AFTER seed1/2/3=249/249/249
+  after vs before-seed1: +[] -[]
+  after vs before-seed2: +[] -[]
+  after seed1==seed2==seed3: yes
+Project Manager: BEFORE seed1=60 seed2=60 | AFTER seed1/2/3=66/66/66
+  after vs before-seed1: +[design-item.view, material-receipt.view, material.read, material.view, site_diary.view, task.view] -[]
+  after vs before-seed2: +[design-item.view, material-receipt.view, material.read, material.view, site_diary.view, task.view] -[]
+  after seed1==seed2==seed3: yes
+Project Member: BEFORE seed1=20 seed2=31 | AFTER seed1/2/3=26/26/26
+  after vs before-seed1: +[design-item.view, material-receipt.view, material.read, material.view, site_diary.view, task.view] -[]
+  after vs before-seed2: +[] -[boq.view, contract.view, crm.view, event-record.view, vendor.view]
+  after seed1==seed2==seed3: yes
+
+## DatabaseSeeder (isolated MariaDB 10.4.28, scratch datadir, port 33077)
+System Admin: seed1/2/3=249/249/249; set-equal to SQLite: yes
+Project Manager: seed1/2/3=66/66/66; set-equal to SQLite: yes
+Project Member: seed1/2/3=26/26/26; set-equal to SQLite: yes
+
+## production:rbac (GAP-115 provisioning command; SQLite file DB, two runs each)
+Project Manager: BEFORE=62 AFTER=67  +[design-item.view, material-receipt.view, material.read, material.view, site_diary.view] -[]
+Project Member: BEFORE=32 AFTER=27  +[] -[boq.view, contract.view, crm.view, event-record.view, vendor.view]
+
+Project Member AFTER (DatabaseSeeder, 26): baseline.view, change_request.create, change_request.read, compensation.view, component.read, design-item.view, document.create, document.read, interaction_log.create, interaction_log.read, material-receipt.view, material.read, material.view, notification.read, project.read, rfi.resolve-escalation, settings.general.read, settings.security.read, site_diary.view, task.read, task.update, task.view, treasury.view, user-preferences.read, work.update, work.view
+Project Member AFTER (production:rbac, 27 = 26 + project.view from its GAP-115 BASELINE_GRANTS): baseline.view, change_request.create, change_request.read, compensation.view, component.read, design-item.view, document.create, document.read, interaction_log.create, interaction_log.read, material-receipt.view, material.read, material.view, notification.read, project.read, project.view, rfi.resolve-escalation, settings.general.read, settings.security.read, site_diary.view, task.read, task.update, task.view, treasury.view, user-preferences.read, work.update, work.view

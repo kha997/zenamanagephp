@@ -178,9 +178,8 @@ class UatRecovery01IdentityRbacTest extends TestCase
     }
 
     #[Group('uat-recovery-01-red')]
-    // QUARANTINED (OWNER-DECISION-REGISTER: O-18 (Member task.view is seed-order dependent)). Assertions intentionally unchanged: this test FAILS today and documents an open Owner decision.
-    // Excluded from ordinary CI by group only; see tests/Feature/Recovery/QUARANTINE.md for the removal conditions.
-    #[Group('uat-recovery-01-quarantine')]
+    // Released from quarantine 2026-11-24: O-18 decided (Option D) and a single seed run now yields task.view for
+    // Project Member (QUARANTINE.md removal condition). Assertion unchanged.
     public function test_D3_project_member_can_open_my_work(): void
     {
         $member = $this->staff('Project Member');

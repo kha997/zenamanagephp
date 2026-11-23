@@ -141,16 +141,22 @@ class UatRecovery02RbacFoundationTest extends TestCase
         $this->assertSame('project.read', DB::table('permissions')->where('code', 'project.read')->value('name'));
     }
 
-    /** Characterization of PRE-EXISTING drift (not introduced here): see decision package finding S1-F1. */
+    /**
+     * Formerly test_CHAR_member_grants_depend_on_seeder_ordering_pre_existing, which characterised the drift
+     * (task.view missing after a fresh seed, present after a second PermissionSeeder pass). O-18 (Owner decision
+     * 2026-11-24, Option D) fixed that drift, so the characterisation was inverted into a regression guard; the
+     * original text is kept in docs/audits/UAT-RECOVERY-01/97-o18-implementation-report.md.
+     */
     #[Group('uat-recovery-02-char')]
-    public function test_CHAR_member_grants_depend_on_seeder_ordering_pre_existing(): void
+    public function test_O18_member_grants_no_longer_depend_on_seeder_ordering(): void
     {
         $first = $this->grantedCodes('Project Member');
-        (new \Database\Seeders\PermissionSeeder())->run(); // second pass: codes created later by ZenaPermissionsSeeder now exist
+        (new \Database\Seeders\PermissionSeeder())->run(); // a second pass must change nothing
         $second = $this->grantedCodes('Project Member');
 
-        $this->assertContains('task.view', $second, 'PermissionSeeder intends to grant task.view to Project Member');
-        $this->assertNotContains('task.view', $first, 'but a fresh DatabaseSeeder run drops it (ordering) — OWNER_DECISION_REQUIRED, not changed in this slice');
+        $this->assertContains('task.view', $first, 'a single fresh DatabaseSeeder run grants task.view to Project Member (O-18)');
+        $this->assertEqualsCanonicalizing($first, $second, 'a second PermissionSeeder pass must not change Project Member grants');
+        $this->assertNotContains('crm.view', $second, 'O-18: crm.view is withheld from Project Member');
     }
 
     // ===================================================================== S2 + integrated

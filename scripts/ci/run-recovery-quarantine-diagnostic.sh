@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# UAT-RECOVERY-01 — NON-BLOCKING diagnostic for the three quarantined tests.
+# UAT-RECOVERY-01 — NON-BLOCKING diagnostic for the two quarantined tests.
 # Runs ONLY the group `uat-recovery-01-quarantine` (a CLI --group overrides the phpunit.xml exclusion), prints the
 # CURRENT failures and writes a report. It always exits 0 so it can never gate a pipeline; the report states whether the
 # quarantined tests still fail (expected) or have started to pass (quarantine can then be removed — see QUARANTINE.md).
@@ -15,5 +15,5 @@ mkdir -p "$(dirname "$OUT")"
   ./vendor/bin/phpunit --group uat-recovery-01-quarantine --testdox 2>&1 | grep -vE 'Warning|Referenced from|Reason:|^$'
   echo "------------------------------------------------------------"
 } | tee "$OUT"
-echo "Expected today: 3 tests, 3 failures (open Owner decisions O-2/O-8/O-18). Report: $OUT"
+echo "Expected today: 2 tests, 2 failures (open Owner decisions O-2/O-8). Report: $OUT"
 exit 0

@@ -10,7 +10,7 @@ use ReflectionClass;
 use ReflectionMethod;
 
 /**
- * Keeps the UAT-RECOVERY-01 quarantine honest: it must contain EXACTLY the three documented tests, be excluded by group
+ * Keeps the UAT-RECOVERY-01 quarantine honest: it must contain EXACTLY the two documented tests, be excluded by group
  * (never by a broad selection), and stay documented. Runs in ordinary CI. See tests/Feature/Recovery/QUARANTINE.md.
  */
 class UatRecovery01QuarantineGuardTest extends TestCase
@@ -19,12 +19,11 @@ class UatRecovery01QuarantineGuardTest extends TestCase
 
     private const EXPECTED = [
         'test_D2_user_with_only_seeded_project_manager_role_passes_api_gate',
-        'test_D3_project_member_can_open_my_work',
         'test_D2_no_seeded_user_can_create_users_through_canonical_api',
     ];
 
     #[Group('uat-recovery-quarantine-guard')]
-    public function test_the_quarantine_contains_exactly_the_three_documented_tests(): void
+    public function test_the_quarantine_contains_exactly_the_two_documented_tests(): void
     {
         $found = [];
         foreach (glob(__DIR__ . '/*Test.php') ?: [] as $file) {
@@ -44,7 +43,7 @@ class UatRecovery01QuarantineGuardTest extends TestCase
         $expected = array_map(fn (string $n) => UatRecovery01IdentityRbacTest::class . '::' . $n, self::EXPECTED);
         sort($expected);
 
-        $this->assertSame($expected, $found, 'The quarantine must be exactly the three documented tests — no more, no fewer.');
+        $this->assertSame($expected, $found, 'The quarantine must be exactly the two documented tests — no more, no fewer.');
     }
 
     #[Group('uat-recovery-quarantine-guard')]

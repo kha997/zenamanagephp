@@ -43,9 +43,10 @@ class ProductionRbacCommand extends Command
 
     /**
      * Permission catalogue and role grants only — no seeder here creates companies, users or demo data. Order matters:
-     * the canonical catalogue first, because PermissionSeeder grants Project Member codes only it creates; PermissionSeeder
-     * sync()s Project Manager / Project Member, so ZenaPermissionsSeeder runs again right after to restore the grants it
-     * adds (templates, change requests); the additive grant seeders follow.
+     * the canonical catalogue first; ZenaPermissionsSeeder runs again after PermissionSeeder; the additive grant seeders
+     * follow. O-18 (2026-11-24): PermissionSeeder grants Project Manager / Project Member additively (no longer sync()),
+     * and Project Member no longer receives crm.view / contract.view / boq.view / vendor.view / event-record.view from
+     * it. Re-running this command never revokes grants an environment already holds.
      */
     private const SEEDERS = [
         ZenaPermissionsSeeder::class,

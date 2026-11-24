@@ -22,7 +22,7 @@ Single index of Owner decision IDs for the UAT-RECOVERY-01 program (S1–S4d). E
 | **O-16** | **Recipients of `project.assign_manager`: System Admin only (Option 1)** | **Approved + applied** | 60 report (O-16 section) |
 | **O-16a** | **Self-appointment: System Admin (and any actor) may NOT appoint itself as PM; may appoint another eligible same-tenant user** | **Approved (Owner final decision) — enforced in `ProjectPmAssignment::allows()`; tests unchanged** | 60 report, `UatRecovery04dPmAssignmentTest` |
 | **O-17** | **Task creation authority limited to the owning PM / any `task.create`/`template.apply` holder in any tenant project** | **OPEN — OWNER_DECISION_REQUIRED** | 50 report §D |
-| **O-18** | **Seeder-order non-determinism: `DatabaseSeeder` grants Project Member 11 `*.view` codes only from the 2nd run on (15 → 26); first-seed (fresh install) state differs from twice-seeded environments** | **DECIDED 2026-11-24 — Option D (26-code deterministic Member set) + Project Manager included; LOCAL PATCH VERIFIED, uncommitted** (`97-o18-implementation-report.md`); existing environments not converged | 70 integration-precheck report §A; `80-o18-permission-impact-matrix.md`; `95-o18-decision-package.md` (corrected seed counts on this base: 20 → 31) |
+| **O-18** | **Seeder-order non-determinism: `DatabaseSeeder` grants Project Member 11 `*.view` codes only from the 2nd run on (15 → 26); first-seed (fresh install) state differs from twice-seeded environments** | **DECIDED 2026-11-24 — Option D (26-code deterministic Member set) + Project Manager included; IMPLEMENTED in commit `103bc5c19` (PR #422, Draft), CI 35/35 green** (`97-o18-implementation-report.md`); still open: existing environments not converged | 70 integration-precheck report §A; `80-o18-permission-impact-matrix.md`; `95-o18-decision-package.md` (corrected seed counts on this base: 20 → 31) |
 | **O-19** | **S1 catalog superseded by upstream GAP-098/GAP-079/GAP-030 during integration:** S1's catalog-only set and `role.assign` grant were NOT carried into the PR (zero permission delta vs `main`); 5 falsified S1/CHAR assertions retired | **Technical reconciliation recorded for Owner review** (no grant/revoke) | `85-retired-assertions.md`, PR description |
 
 ## Erratum — O-16 identifier collision
@@ -44,11 +44,18 @@ Owner, in chat: "Option D (26 codes)". The decision is the one proposed in `95-o
 - `crm.view`, `contract.view`, `boq.view` and `vendor.view`, which are commercially sensitive.
 - `event-record.view`, until the activity feed is filtered by module permission.
 
-**Status:**
-- Decision recorded only. No seeder, permission, grant/revoke, seed-order or test change has been made.
-- Implementation must go in a separate governed PR, meeting implementation criteria I-1..I-5 and regression criteria R-1..R-8 in `95-o18-decision-package.md` §8. That needs its own Owner authorization, including the seed-order change I-1.
+**Status (as first recorded, superseded below):**
+- Decision recorded only. No seeder, permission, grant/revoke, seed-order or test change had been made.
+- Implementation was to meet implementation criteria I-1..I-5 and regression criteria R-1..R-8 in `95-o18-decision-package.md` §8, under its own Owner authorization.
 
-**P-1 decided (2026-11-24).** Owner: "YES — INCLUDE PROJECT MANAGER". Project Manager gets the same six codes and keeps its other grants. The local patch implementing this was verified the same day; see `97-o18-implementation-report.md`.
+**Status update (2026-11-24):**
+- The Owner authorized local implementation ("Implement O-18 Option D locally") and then "Commit and push".
+- Implemented in commit `103bc5c19` on `integration/uat-recovery-s1-s4d` (PR #422, still Draft). Seed order is unchanged; the six codes are granted by `ZenaProjectManagerRolePermissionSeeder`.
+- CI on `103bc5c19`: 35 of 35 checks pass.
+- Not merged, not deployed. No staging or production permissions were read or changed.
+- PR #422 stays MERGE_NO_GO for the open items below and the other PR merge blockers.
+
+**P-1 decided (2026-11-24).** Owner: "YES — INCLUDE PROJECT MANAGER". Project Manager gets the same six codes and keeps its other grants. The patch implementing this was verified locally the same day and committed as `103bc5c19`; see `97-o18-implementation-report.md`.
 
 Following the Owner's instruction, re-seeding is now additive: grants an administrator added by hand are never deleted.
 

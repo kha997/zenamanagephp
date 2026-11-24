@@ -1,6 +1,6 @@
 # O-18 — Local implementation report (Option D, including Project Manager)
 
-**Status: see the final decision line below.** This is a local patch in the integration worktree on top of PR #422 head `b4440a3d2`. It is **not committed or pushed**. No staging or production permissions were read or changed.
+**Status: see the final decision line and the status update below.** The patch was built and verified locally on top of PR #422 head `b4440a3d2`. It was then committed as `103bc5c19` on the Owner's instruction "Commit and push". No staging or production permissions were read or changed.
 
 **Owner decisions (2026-11-24):**
 - "Option D (26 codes)".
@@ -104,7 +104,12 @@ Evidence: `evidence/o18-local-verification.txt`. In every run below, the 4 Backu
 - **The quarantine still holds two tests** (O-2/O-8).
 
 ## Decision
-**O18_LOCAL_PATCH_VERIFIED.** This applies to the local patch only, verified on SQLite and on MariaDB-level storage. It is not committed, not pushed and not deployed.
+**O18_LOCAL_PATCH_VERIFIED.** This applied to the local patch, verified on SQLite and on MariaDB-level storage.
+
+**Status update (2026-11-24):**
+- Committed as `103bc5c19` and pushed fast-forward to `integration/uat-recovery-s1-s4d`, with no force.
+- CI on `103bc5c19`: 35 of 35 checks pass. CI runs real MySQL 8, which was not available locally (§4).
+- PR #422 is still a Draft and MERGE_NO_GO. Nothing is merged or deployed.
 
 **Before any deploy:**
 - A read-only inventory of what each environment currently grants.

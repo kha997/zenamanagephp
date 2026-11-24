@@ -11,6 +11,7 @@ use App\Models\Notification;
 use App\Models\Task;
 use App\Models\TaskAssignment;
 use App\Services\ZenaAuditLogger;
+use App\Support\TaskCreationAuthority;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -145,16 +146,7 @@ class TaskController extends BaseApiController
     private function emitTaskCreatedPipeline(Request $request, Task $task, string $actorUserId): void
     {
         try {
-            $this->auditLogger->log(
-                $request,
-                'zena.task.created',
-                'task',
-                (string) $task->id,
-                201,
-                $task->project_id ? (string) $task->project_id : null,
-                (string) $task->tenant_id,
-            );
-
+            // The `zena.task.created` audit row is written inside the creating transaction (TaskCreationAuthority::audit).
             $assigneeId = $task->assigned_to ? (string) $task->assigned_to : null;
             if ($assigneeId !== null) {
                 Notification::create([
@@ -294,23 +286,55 @@ class TaskController extends BaseApiController
                 // UAT-RECOVERY-04c: the project must belong to the caller's own tenant (was a global `exists`, which let a task be
                 // attached to — and revealed the existence of — another tenant's project).
                 'project_id' => ['required', 'string', \Illuminate\Validation\Rule::exists('projects', 'id')->where(fn ($q) => $q->where('tenant_id', $user->tenant_id))],
+            ]);
+
+            // O-17 Option B: decided BEFORE any other field is validated, so an actor without authority over this project
+            // learns nothing about the ids it references.
+            $project = \App\Models\Project::query()
+                ->where('tenant_id', (string) $user->tenant_id)
+                ->whereKey((string) $request->input('project_id'))
+                ->first();
+            if ($project === null) { // e.g. soft-deleted between the exists rule and this lookup; no transaction is open yet
+                return $this->failResponse(['project_id' => ['The selected project id is invalid.']], 'Validation failed', 422);
+            }
+            $denial = TaskCreationAuthority::denialReason($user, $project);
+            if ($denial !== null) {
+                TaskCreationAuthority::logDenial($user, $project, $denial, 'api.tasks.store');
+
+                return $this->error('Forbidden', 403);
+            }
+
+            $eligibleUser = function (string $attribute, mixed $value, \Closure $fail) use ($project): void {
+                if (!TaskCreationAuthority::eligibleAssignee($project, $value)) {
+                    $fail("The {$attribute} must be the project manager or an active participant of this project.");
+                }
+            };
+            $taskOfProject = function (string $attribute, mixed $value, \Closure $fail) use ($project): void {
+                if (!TaskCreationAuthority::taskOfProject($project, $value)) {
+                    $fail("The {$attribute} must be a task of the same project.");
+                }
+            };
+
+            $request->validate([
+                'project_id' => ['required', 'string'],
                 'name' => ['required', 'string', 'max:255'],
                 'title' => ['nullable', 'string', 'max:255'],
                 'description' => ['nullable', 'string', 'max:2000'],
                 'status' => ['sometimes', Rule::in(Task::VALID_STATUSES)],
                 'priority' => ['sometimes', Rule::in(Task::VALID_PRIORITIES)],
-                'assignee_id' => ['nullable', 'string', 'exists:users,id'],
+                // O-17d / Gate 5: references are tenant- AND project-checked (were global `exists`).
+                'assignee_id' => ['nullable', 'string', $eligibleUser],
                 'start_date' => ['nullable', 'date'],
                 'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
                 'estimated_hours' => ['nullable', 'numeric', 'min:0'],
                 'actual_hours' => ['nullable', 'numeric', 'min:0'],
                 'spent_hours' => ['nullable', 'numeric', 'min:0'],
-                'parent_id' => ['nullable', 'string', 'exists:tasks,id'],
+                'parent_id' => ['nullable', 'string', $taskOfProject],
                 'order' => ['nullable', 'integer', 'min:0'],
                 'dependencies' => ['nullable', 'array'],
-                'dependencies.*' => ['string', 'exists:tasks,id'],
+                'dependencies.*' => ['string', $taskOfProject],
                 'watchers' => ['nullable', 'array'],
-                'watchers.*' => ['string', 'exists:users,id'],
+                'watchers.*' => ['string', $eligibleUser],
                 'tags' => ['nullable', 'array'],
                 'tags.*' => ['string', 'max:50'],
                 'is_hidden' => ['nullable', 'boolean'],
@@ -384,6 +408,9 @@ class TaskController extends BaseApiController
             if ($request->filled('dependencies')) {
                 $task->dependencies()->sync($request->input('dependencies'));
             }
+
+            // O-17 Gate 6: the creation audit row is part of the same transaction (was best-effort after commit).
+            TaskCreationAuthority::audit($user, $task, 'api.tasks.store');
 
             DB::commit();
 

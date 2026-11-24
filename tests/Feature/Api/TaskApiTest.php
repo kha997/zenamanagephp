@@ -79,6 +79,7 @@ class TaskApiTest extends TestCase
     {
         $project = Project::factory()->create([
             'tenant_id' => $this->tenantId,
+            'pm_id' => $this->apiFeatureUser->id, // O-17 fixture (UAT-RECOVERY 06): the creator is the project's PM
         ]);
 
         // Tạo prerequisite tasks

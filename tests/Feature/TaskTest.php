@@ -40,7 +40,7 @@ class TaskTest extends TestCase
             ['admin'],
             ['task.view', 'task.create', 'task.edit', 'task.delete']
         );
-        $this->project = Project::factory()->create(['tenant_id' => $this->tenant->id]);
+        $this->project = Project::factory()->create(['tenant_id' => $this->tenant->id, 'pm_id' => $this->user->id]); // O-17 fixture (UAT-RECOVERY 06)
         $this->apiAs($this->user, $this->tenant);
         $this->token = $this->user->createToken('test-token')->plainTextToken;
     }

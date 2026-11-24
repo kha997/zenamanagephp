@@ -103,7 +103,7 @@ class ProjectWorkTemplateApplyTest extends TestCase
     public function test_preview_returns_summary_without_writing_database(): void
     {
         $tenant = Tenant::factory()->create();
-        $user = $this->makeProjectManager($tenant, ['template.view', 'template.apply']);
+        $user = $this->makeProjectManager($tenant, ['template.view', 'template.apply', 'task.create']); // O-17 fixture (UAT-RECOVERY 06)
         [$template] = $this->publishedTemplate($tenant, $user, 'WT-PREVIEW-1');
 
         $project = Project::factory()->create([
@@ -133,7 +133,7 @@ class ProjectWorkTemplateApplyTest extends TestCase
     public function test_apply_creates_real_task_and_second_apply_is_duplicate(): void
     {
         $tenant = Tenant::factory()->create();
-        $user = $this->makeProjectManager($tenant, ['template.view', 'template.apply']);
+        $user = $this->makeProjectManager($tenant, ['template.view', 'template.apply', 'task.create']); // O-17 fixture (UAT-RECOVERY 06)
         [$template] = $this->publishedTemplate($tenant, $user, 'WT-APPLY-1');
 
         $project = Project::factory()->create([

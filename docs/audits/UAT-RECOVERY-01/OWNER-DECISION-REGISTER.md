@@ -21,7 +21,9 @@ Single index of Owner decision IDs for the UAT-RECOVERY-01 program (S1–S4d). E
 | O-15 | PM appointment: independent authority (A-minimal) | Approved ("Duyệt A-minimal") + applied (S4d) | 50 §G, 60 report |
 | **O-16** | **Recipients of `project.assign_manager`: System Admin only (Option 1)** | **Approved + applied** | 60 report (O-16 section) |
 | **O-16a** | **Self-appointment: System Admin (and any actor) may NOT appoint itself as PM; may appoint another eligible same-tenant user** | **Approved (Owner final decision) — enforced in `ProjectPmAssignment::allows()`; tests unchanged** | 60 report, `UatRecovery04dPmAssignmentTest` |
-| **O-17** | **Task creation authority limited to the owning PM / any `task.create`/`template.apply` holder in any tenant project** | **OPEN — OWNER_DECISION_REQUIRED** | 50 report §D |
+| **O-17** | **Task creation authority (was: any `task.create`/`template.apply` holder in any tenant project)** | **DECIDED 2026-11-24 — Option B ("APPROVED_FOR_BOUNDED_LOCAL_IMPLEMENTATION"); local patch O17_LOCAL_PATCH_VERIFIED; commit and push authorized under the pre-push gate (O-17i decided there); open: O-17h, O-17j, O-17k** | 50 report §E; `98-o17-task-creation-decision-package.md`; `99-o17-implementation-report.md` |
+| **CB-3** | **Bulk task creation trusted request `tenant_id` and an unvalidated `project_id` (cross-tenant write, no audit)** | **Fix approved with O-17 (O-17e); fixed in the local patch, uncommitted** | 98 §2; 99 §4 |
+| **CB-4** | **Role named `super_admin` passed every `rbac:` gate with zero permissions; creation routes without in-controller checks created tasks** | **Fixed for every task-creation entry point (local patch, uncommitted); middleware itself unchanged (O-17h open)** | 98 §2; 99 §4 |
 | **O-18** | **Seeder-order non-determinism: `DatabaseSeeder` grants Project Member 11 `*.view` codes only from the 2nd run on (15 → 26); first-seed (fresh install) state differs from twice-seeded environments** | **DECIDED 2026-11-24 — Option D (26-code deterministic Member set) + Project Manager included; IMPLEMENTED in commit `103bc5c19` (PR #422, Draft), CI 35/35 green** (`97-o18-implementation-report.md`); still open: existing environments not converged | 70 integration-precheck report §A; `80-o18-permission-impact-matrix.md`; `95-o18-decision-package.md` (corrected seed counts on this base: 20 → 31) |
 | **O-19** | **S1 catalog superseded by upstream GAP-098/GAP-079/GAP-030 during integration:** S1's catalog-only set and `role.assign` grant were NOT carried into the PR (zero permission delta vs `main`); 5 falsified S1/CHAR assertions retired | **Technical reconciliation recorded for Owner review** (no grant/revoke) | `85-retired-assertions.md`, PR description |
 
@@ -29,10 +31,24 @@ Single index of Owner decision IDs for the UAT-RECOVERY-01 program (S1–S4d). E
 - The 50-recovery-04c report (§D, §M) used **O-16** for the task-creation authorization question (created by any `task.create`/`template.apply` holder in any project of the tenant). Later, the Owner issued decision **"O-16" = grant `project.assign_manager` to System Admin only**, implemented in S4d (code comments, tests, 60 report).
 - Resolution (no renumbering of established evidence): the **grant decision keeps O-16** (it is the identifier the Owner issued and that code/tests/report already cite). The **task-creation issue is re-identified as O-17**. Wherever the 50 report says "O-16" about task creation, read **O-17**. The 50 report is intentionally left byte-identical.
 - O-17 remains open; no runtime change exists for it. `task.create` enforcement and tenant-scoped project binding (S4c CB-1/CB-2) are unaffected.
+- *(Superseded 2026-11-24: O-17 decided — see "Decision record — O-17" below.)*
 
 ## Decision record — O-16a (2026-11-21)
 Owner: "KEEP SYSTEM ADMIN SELF-APPOINTMENT PROHIBITED." (1) System Admin may appoint another eligible user as PM within the authorised tenant; (2) System Admin must not appoint itself; (3) existing O-15/O-16 security tests are preserved unmodified; (4) no escalation through `users.role`, `project.update` or an administrator bypass.
 Implementation status: already in the working tree (self-appointment guard in `app/Support/ProjectPmAssignment.php::allows()`); verified by `UatRecovery04dPmAssignmentTest::test_O16_a_holder_cannot_self_appoint_as_pm_but_can_appoint_someone_else` plus the unchanged 04b/04c tests (`test_pm_authority_cannot_be_taken_by_editing_pm_id`, `test_O15_system_admin_cannot_reacquire_task_authority_by_claiming_unmanaged_projects`, `test_a_system_admin_cannot_self_claim_an_unassigned_project`).
+## Decision record — O-17 (2026-11-24)
+Owner, in chat: "DECISION: APPROVED_FOR_BOUNDED_LOCAL_IMPLEMENTATION" for O-17 Option B together with CB-3/CB-4. Contract: task creation requires (1) the same tenant as the project, (2) canonical `task.create` (template application: also canonical `template.apply`) through real RBAC grants, and (3) the project's current PM (`pm_id`) or an active `project_user_roles` participant. "No implicit System Admin or super_admin bypass." "No authority derived only from users.role." O-17g: keep the System Admin membership API; PM-managed participation deferred to S5. Limits: no commit/push/merge/deploy, no grants/revocations, no migration, no middleware rewrite, no O-18 or split_percent change.
+
+Implementation status: local patch, uncommitted, verified on SQLite and isolated MariaDB 10.4 (`99-o17-implementation-report.md`); MySQL 8 not verified. Sub-decisions still requiring the Owner: O-17h (middleware `super_admin` short-circuit for non-creation routes), O-17i (relationship rule for change-request apply), O-17j (`task.assign` for an assignee named at creation), O-17k (project creators must name themselves PM or be added as participants), and the O-17d template-assignee deviation (99 §9).
+
+**Pre-push gate (2026-11-24).** Owner, in chat: "O17_APPROVED_FOR_CONDITIONAL_COMMIT_AND_PUSH".
+- **O-17i decided.** Change-request apply creates a task, so the actor must hold `change-request.apply` and `task.create`, belong to the project's tenant, and be the project's PM or an active participant.
+- **RED.** The gate's case (a non-participant holding `change-request.apply`, on another project in the same tenant) was allowed by the pre-gate patch.
+- **Fix.** The full contract is now enforced through `TaskCreationAuthority`, with no new exception.
+- **Template-assignee 422 confirmed.** The Owner listed "Template assignee outside project: 422" as approved behaviour.
+- **Still not approved for this commit:** O-17h, O-17j and O-17k.
+- See 99 §11.
+
 ## Decision record — O-18 (2026-11-24)
 Owner, in chat: "Option D (26 codes)". The decision is the one proposed in `95-o18-decision-package.md` §5.
 

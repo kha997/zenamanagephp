@@ -119,6 +119,16 @@ class AuthSensitiveRoutesProtectionTest extends TestCase
     public function test_protected_endpoints_return_200_with_valid_auth_tenant_and_permission(array $case): void
     {
         $user = $this->createUserWithPermission($this->tenant, $case['permission']);
+        if ($case['task_creation'] ?? false) {
+            // O-17 / CB-3 fixture (UAT-RECOVERY 06): bulk task creation now also needs the canonical task.create grant and a
+            // project relationship, in a real project of the caller's tenant. The route-gate assertion itself is unchanged.
+            $taskCreate = Permission::firstOrCreate(
+                ['code' => 'task.create'],
+                ['name' => 'task.create', 'module' => 'task', 'action' => 'create', 'description' => 'task.create']
+            );
+            $user->roles()->where('name', 'admin')->firstOrFail()->permissions()->syncWithoutDetaching([$taskCreate->id]);
+            $this->project->forceFill(['pm_id' => $user->id])->save();
+        }
         $response = $this->dispatch($case, $user, (string) $this->tenant->id);
         $response->assertStatus(200);
     }
@@ -205,7 +215,8 @@ class AuthSensitiveRoutesProtectionTest extends TestCase
                 'method' => 'POST',
                 'uri' => '/api/auth/bulk/tasks/create',
                 'permission' => 'auth.bulk.manage',
-                'json' => ['tasks' => [['title' => 'T', 'description' => 'D']], 'project_id' => 'p1'],
+                'json' => ['tasks' => [['title' => 'T', 'description' => 'D']], 'project_id' => '__PROJECT__'],
+                'task_creation' => true,
             ]],
             'bulk.tasks.update-status' => [[
                 'method' => 'POST',
@@ -250,7 +261,8 @@ class AuthSensitiveRoutesProtectionTest extends TestCase
                 'method' => 'POST',
                 'uri' => '/api/auth/bulk/import/tasks',
                 'permission' => 'auth.bulk.manage',
-                'multipart' => ['file' => $importFile, 'project_id' => 'p1'],
+                'multipart' => ['file' => $importFile, 'project_id' => '__PROJECT__'],
+                'task_creation' => true,
             ]],
             'bulk.template' => [[
                 'method' => 'GET',
@@ -336,6 +348,11 @@ class AuthSensitiveRoutesProtectionTest extends TestCase
 
         $request = $this->withHeaders($headers);
         $method = strtoupper($case['method']);
+        array_walk_recursive($case, function (mixed &$value): void {
+            if ($value === '__PROJECT__') {
+                $value = (string) $this->project->id; // a real project of the test tenant (was the nonexistent id 'p1')
+            }
+        });
 
         if (isset($case['multipart'])) {
             return $request->post($case['uri'], $case['multipart']);

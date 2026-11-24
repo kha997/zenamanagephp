@@ -63,6 +63,8 @@ class TaskService
         return DB::transaction(function () use ($data, $project) {
             // Tạo task
             $task = Task::create([
+                // O-17 / tenant boundary: the task belongs to its project's tenant (was written with no tenant_id).
+                'tenant_id' => $project->tenant_id,
                 'project_id' => $data['project_id'],
                 'component_id' => $data['component_id'] ?? null,
                 'phase_id' => $data['phase_id'] ?? null,

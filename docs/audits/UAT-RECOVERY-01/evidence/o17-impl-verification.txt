@@ -1,0 +1,58 @@
+# O-17 Option B + CB-3/CB-4 local patch verification (uncommitted, on top of 004a5774d), 2026-11-24.
+# Backup classes that write to the real storage/backups were excluded from every run
+# (BackupCommandTest, BackupContentsSafetyTest, BackupStorageLocationTest, BackupRetentionTest; Unit: BackupConfigTest, LaunchChecklistServiceBackupTest).
+
+## New class UatRecovery06O17TaskCreationAuthorityTest
+RED  (unpatched controllers, SQLite, 22 tests): Tests: 22, Assertions: 111, Failures: 20   (see o17-impl-red-run.txt)
+GREEN (SQLite, 22 tests):                       OK (22 tests, 459 assertions)
+GREEN (isolated MariaDB 10.4.28, 22 tests):     OK (22 tests, 459 assertions)
+GREEN (SQLite, 23 tests incl. change-request):  OK (23 tests, 469 assertions)
+
+## Recovery suite (tests/Feature/Recovery)
+SQLite:                       OK (167 tests, 1427 assertions)
+isolated MariaDB 10.4.28:     OK (167 tests, 1427 assertions)
+  (run before the two final PHPStan type fixes and the CR/pipeline/Api fixture changes; those code edits are
+   semantically equivalent type guards and were re-verified on SQLite only)
+  note: in this scratch-server run the two 04b split_percent tests that failed on MariaDB in the O-18 run
+  (o18-local-verification.txt) passed. split_percent was not touched or investigated (out of scope);
+  this is NOT a claim that the defect is fixed.
+
+## Feature + Architecture (SQLite)
+first patched run (before fixture adaptations): Tests: 2247, Errors: 1, Failures: 13
+  = the fixture-adapted tests listed in 99 §6 + 1 transient DocumentMutationOwnershipTest failure
+    (file read mid-edit; passes on rerun: OK (3 tests, 1892 assertions))
+final run (after all adaptations): OK — Tests: 2248, Assertions: 22381, Skipped: 33, 0 failures
+  (includes tests/Feature/Recovery, i.e. the new class with 23 tests, and tests/Architecture)
+
+## tests/Feature/Api (excluded from the Feature testsuite by phpunit.xml; run separately, as for O-18)
+first run: Tests: 825, Failures: 17 (all creation-authority 403s on fixtures; adapted, see 99 §6)
+final run: OK — Tests: 825, Assertions: 5284, 0 failures
+
+## Unit (SQLite)
+Tests: 948, Assertions: 3678, Failures: 7, Skipped: 27 — the same 7 pre-existing failures as origin/main and the O-18 run
+  (EvidenceFreshnessLiveCheckTest x5, ZenaInvariantsDiscoveryTest x2)
+
+## Static
+PHPStan (project config: app, routes, database): first run 1 error, second run 2 errors (TaskCreationAuthority route name; ChangeRequestController Authenticatable::hasPermission) -> fixed without suppression; final: [OK] No errors
+php-cs-fixer (changed files): clean
+
+## MySQL 8
+MYSQL_NOT_VERIFIED: no MySQL 8 server locally, Docker not running. CI (MySQL 8) not run: nothing pushed.
+
+## Pre-push security gate (2026-11-24, Owner: O17_APPROVED_FOR_CONDITIONAL_COMMIT_AND_PUSH) — see 99 §11
+Remote integration/uat-recovery-s1-s4d before commit: 004a5774d31977a4ea55b4f25621a02269c47bac (as expected); PR #422 Draft.
+RED  (pre-gate patch, SQLite): test_change_request_apply_requires_the_full_task_creation_contract FAILED —
+     "nonparticipant System Admin on another project": HTTP 200, change request implemented with a delta task.
+GREEN (after enforcing TaskCreationAuthority in ChangeRequestController::apply, SQLite):
+  UatRecovery06O17TaskCreationAuthorityTest:    OK (24 tests, 496 assertions)
+  ChangeRequestApiTest (Feature + Api):          OK (37 tests, 253 assertions)
+  Recovery suite:                                OK (168 tests, 1454 assertions)
+  Feature + Architecture (final):                OK — Tests: 2249, Assertions: 22409, Skipped: 33, 0 failures
+  tests/Feature/Api (final):                     OK — Tests: 825, Assertions: 5284, 0 failures
+  Unit:                                          Tests: 948, Failures: 7 — the same 7 pre-existing (EvidenceFreshnessLiveCheckTest x5, ZenaInvariantsDiscoveryTest x2)
+  PHPStan:                                       [OK] No errors
+  composer ssot:lint:                            passed (after rewording two assertion messages the orphan-route scanner read as routes;
+                                                 run with display_startup_errors=0 because local PHP extension warnings corrupt the route dump)
+  owner-governance-lint:                         PASS (435 files, 0 violations)
+  php-cs-fixer (changed app/ and tests/ files):  0 fixable
+MariaDB 10.4 was not re-run for the gate changes (scratch server deleted). MySQL 8: MYSQL_NOT_VERIFIED; no CI job runs Recovery on MySQL 8 (99 §11).

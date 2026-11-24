@@ -27,7 +27,9 @@ class IntegrationTest extends TestCase
     {
         parent::setUp();
 
-        $this->apiActingAsTenantAdmin();
+        // O-17 / CB-4 fixture (UAT-RECOVERY 06): the default persona's `super_admin` role no longer bypasses task creation;
+        // grant the canonical task.create permission explicitly.
+        $this->apiActingAsTenantAdmin([], null, ['task.create']);
         $this->user = $this->apiFeatureUser;
         $this->tenantId = $this->apiFeatureTenant->id;
     }
@@ -48,6 +50,8 @@ class IntegrationTest extends TestCase
         ]);
         $projectResponse->assertStatus(201);
         $projectId = $projectResponse->json('data.project.id');
+        // O-17 fixture (UAT-RECOVERY 06): creating tasks needs PM or participation; the creator becomes the project's PM.
+        \Illuminate\Support\Facades\DB::table('projects')->where('id', $projectId)->update(['pm_id' => $this->user->id]);
 
         // 4. Create tasks
         $taskResponse = $this->apiPost('/api/v1/tasks', [

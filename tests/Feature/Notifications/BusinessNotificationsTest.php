@@ -210,7 +210,17 @@ class BusinessNotificationsTest extends TestCase
         // Codex review (amendment 3): one message per change request, not per recipient; a second change request is
         // its own event.
         $this->enableSlack();
-        $applier = $this->createTenantUser($this->tenant, [], ['bn_cr_applier'], ['change-request.view', 'change-request.apply']);
+        // O-17i fixture (UAT-RECOVERY 06): apply creates a task, so the applier also needs task.create and an active
+        // participation in the project (kept as a participant, not PM, so the PM stays the second recipient).
+        $applier = $this->createTenantUser($this->tenant, [], ['bn_cr_applier'], ['change-request.view', 'change-request.apply', 'task.create']);
+        \Illuminate\Support\Facades\DB::table('project_user_roles')->insert([
+            'id' => (string) \Illuminate\Support\Str::ulid(),
+            'project_id' => (string) $this->project->id,
+            'user_id' => (string) $applier->id,
+            'role_id' => (string) \Illuminate\Support\Facades\DB::table('roles')->where('name', 'bn_cr_applier')->value('id'),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
         $headers = $this->authHeadersForUser($applier, $this->apiLoginToken($applier, $this->tenant));
         $first = $this->approvedChangeRequest('CR-101', 'Đổi gạch lát sàn tầng 1');
         $second = $this->approvedChangeRequest('CR-102', 'Thêm ổ cắm phòng khách');

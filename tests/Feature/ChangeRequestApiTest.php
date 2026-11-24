@@ -46,9 +46,13 @@ class ChangeRequestApiTest extends TestCase
         $this->tenant = Tenant::factory()->create();
         $this->project = Project::factory()->for($this->tenant)->create();
 
+        // O-17 / CB-4 fixture (UAT-RECOVERY 06): apply creates a task, so it checks the canonical change-request.apply and
+        // task.create grants in-controller and requires the project relationship (O-17i); the persona's `super_admin` role and
+        // the system_user_roles grant below are not canonical, so grant both explicitly and make the persona the project's PM.
         $this->user = $this->apiActingAsTenantAdmin([
             'tenant_id' => $this->tenant->id,
-        ], $this->tenant);
+        ], $this->tenant, ['change-request.apply', 'task.create']);
+        $this->project->forceFill(['pm_id' => $this->user->id])->save();
 
         $this->token = $this->apiFeatureToken;
         $this->headers = $this->apiHeaders;

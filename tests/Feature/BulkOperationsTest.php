@@ -273,6 +273,9 @@ class BulkOperationsTest extends TestCase
             ],
         ];
 
+        // O-17 / CB-3 fixture (UAT-RECOVERY 06): bulk creation now requires an authenticated actor holding the canonical
+        // task.create grant who is the project's PM (or an active participant). Assertions below are unchanged.
+        $this->grantTaskCreateAsProjectManager();
         $results = $this->bulkService->bulkCreateTasks($taskData, $this->project->id, $this->tenant->id);
 
         $this->assertEquals(3, $results['success']);
@@ -569,5 +572,21 @@ class BulkOperationsTest extends TestCase
         $error = $results['errors'][0];
         $this->assertArrayHasKey('index', $error);
         $this->assertArrayHasKey('error', $error);
+    }
+
+    /** O-17 fixture: acting user holds task.create (test-owned role) and is pm_id of the test project. */
+    private function grantTaskCreateAsProjectManager(): void
+    {
+        $permissionId = \Illuminate\Support\Facades\DB::table('permissions')->where('code', 'task.create')->value('id');
+        if ($permissionId === null) {
+            $permissionId = (string) \Illuminate\Support\Str::ulid();
+            \Illuminate\Support\Facades\DB::table('permissions')->insert(['id' => $permissionId, 'code' => 'task.create', 'name' => 'task.create', 'module' => 'task', 'action' => 'create', 'created_at' => now(), 'updated_at' => now()]);
+        }
+        $roleId = (string) \Illuminate\Support\Str::ulid();
+        \Illuminate\Support\Facades\DB::table('roles')->insert(['id' => $roleId, 'name' => 'O17 bulk fixture ' . $roleId, 'scope' => 'system', 'allow_override' => 0, 'is_active' => 1, 'created_at' => now(), 'updated_at' => now()]);
+        \Illuminate\Support\Facades\DB::table('role_permissions')->insert(['role_id' => $roleId, 'permission_id' => $permissionId, 'created_at' => now(), 'updated_at' => now()]);
+        \Illuminate\Support\Facades\DB::table('user_roles')->insert(['user_id' => $this->user->id, 'role_id' => $roleId, 'created_at' => now(), 'updated_at' => now()]);
+        $this->project->forceFill(['pm_id' => $this->user->id])->save();
+        $this->actingAs($this->user);
     }
 }

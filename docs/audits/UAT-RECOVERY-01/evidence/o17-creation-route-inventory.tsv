@@ -1,0 +1,19 @@
+method	uri	action	middleware
+POST	api/auth/bulk/import/tasks	App\Http\Controllers\Api\BulkOperationsController@importTasks	Authenticate:sanctum | TenantIsolationMiddleware | RoleBasedAccessControlMiddleware | RoleBasedAccessControlMiddleware:auth.bulk.manage
+POST	api/auth/bulk/tasks/create	App\Http\Controllers\Api\BulkOperationsController@bulkCreateTasks	Authenticate:sanctum | TenantIsolationMiddleware | RoleBasedAccessControlMiddleware | RoleBasedAccessControlMiddleware:auth.bulk.manage
+POST	api/tasks	App\Http\Controllers\Api\TaskController@store	Authenticate:sanctum | TenantIsolationMiddleware | RoleBasedAccessControlMiddleware
+POST	api/templates/apply	App\Http\Controllers\ProjectTemplateController@apply	Authenticate:sanctum | TenantIsolationMiddleware | RoleBasedAccessControlMiddleware
+POST	api/templates/{id}/apply	Src\WorkTemplate\Controllers\TemplateController@apply	Authenticate:sanctum | TenantIsolationMiddleware | RoleBasedAccessControlMiddleware
+POST	api/v1/tasks	Src\CoreProject\Controllers\TaskController@store	Authenticate:api | TenantIsolationMiddleware | RoleBasedAccessControlMiddleware:task.create
+POST	api/v1/work-template/templates/{templateId}/apply	Src\WorkTemplate\Controllers\TemplateController@applyToProject	Authenticate:api | TenantIsolationMiddleware | RoleBasedAccessControlMiddleware:template.apply
+POST	api/work-templates/{templateId}/apply	Src\CoreProject\Controllers\WorkTemplateController@applyToProject	Authenticate:sanctum | TenantIsolationMiddleware | RoleBasedAccessControlMiddleware
+POST	api/zena/change-requests/{id}/apply	App\Http\Controllers\Api\ChangeRequestController@apply	Authenticate:sanctum | TenantIsolationMiddleware | RoleBasedAccessControlMiddleware:change-request.apply
+POST	api/zena/components/{id}/apply-template	App\Http\Controllers\Api\WorkTemplateController@applyToComponent	Authenticate:sanctum | TenantIsolationMiddleware | RoleBasedAccessControlMiddleware:template.apply
+POST	api/zena/inspections/{inspection}/ncrs/{ncr}/capa-tasks	App\Http\Controllers\Api\InspectionController@storeNcrCapaTask	Authenticate:sanctum | TenantIsolationMiddleware | RoleBasedAccessControlMiddleware:inspection.edit | RoleBasedAccessControlMiddleware:task.create
+POST	api/zena/projects/{id}/apply-template	App\Http\Controllers\Api\WorkTemplateController@applyToProject	Authenticate:sanctum | TenantIsolationMiddleware | RoleBasedAccessControlMiddleware:template.apply
+POST	api/zena/tasks	App\Http\Controllers\Api\TaskController@store	Authenticate:sanctum | TenantIsolationMiddleware | RoleBasedAccessControlMiddleware:task.create
+POST	app/projects/{project}/work-templates/apply	App\Http\Controllers\Web\WorkTemplateApplyController@apply	Authenticate | TenantIsolationMiddleware | RoleBasedAccessControlMiddleware:template.apply
+POST	app/tasks	App\Http\Controllers\Web\TaskController@store	Authenticate | TenantIsolationMiddleware | RoleBasedAccessControlMiddleware:task.create
+POST	operator/inspections/{inspection}/ncrs/{ncr}/capa-tasks	App\Http\Controllers\Web\InspectionPageController@storeNcrCapaTask	Authenticate | TenantIsolationMiddleware | RoleBasedAccessControlMiddleware:inspection.edit | RoleBasedAccessControlMiddleware:task.create
+POST	operator/schedule/tasks	App\Http\Controllers\Web\SchedulePageController@storeTask	Authenticate | TenantIsolationMiddleware | RoleBasedAccessControlMiddleware:task.create
+POST	tasks	App\Http\Controllers\Web\TaskController@store	Authenticate | TenantIsolationMiddleware | RoleBasedAccessControlMiddleware:task.create

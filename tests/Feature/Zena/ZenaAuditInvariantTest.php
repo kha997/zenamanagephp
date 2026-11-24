@@ -146,9 +146,11 @@ class ZenaAuditInvariantTest extends TestCase
         $project = Project::factory()->create(['tenant_id' => $tenant->id]);
         $token = $this->loginAndReturnToken($tenant, $user->email, $password);
 
-        foreach (['change-request.submit', 'change-request.approve', 'change-request.reject', 'change-request.apply'] as $permission) {
+        // O-17i fixture (UAT-RECOVERY 06): apply creates a task, so the actor also needs task.create and the PM relationship.
+        foreach (['change-request.submit', 'change-request.approve', 'change-request.reject', 'change-request.apply', 'task.create'] as $permission) {
             $this->grantPermissionToUser($user, $permission);
         }
+        $project->forceFill(['pm_id' => $user->id])->save();
 
         $submitted = \App\Models\ChangeRequest::factory()->create([
             'tenant_id' => $tenant->id,

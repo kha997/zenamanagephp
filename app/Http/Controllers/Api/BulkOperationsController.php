@@ -3,10 +3,16 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Project;
+use App\Models\User;
 use App\Services\BulkOperationsService;
 use App\Services\ImportExportService;
+use App\Support\TaskCreationAuthority;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 /**
  * Bulk Operations Controller.
@@ -193,19 +199,31 @@ class BulkOperationsController extends Controller
      */
     public function bulkCreateTasks(Request $request): JsonResponse
     {
-        try {
-            $request->validate([
-                'tasks' => 'required|array|max:1000',
-                'tasks.*.title' => 'required|string|max:255',
-                'tasks.*.description' => 'required|string',
-                'project_id' => 'required|string',
-                'tenant_id' => 'nullable|string',
-            ]);
+        // CB-3 + O-17: tenant from the authenticated user only; project tenant-scoped; creation authority before anything else.
+        $project = $this->authoriseTaskCreation($request, $request->input('tenant_id'), 'api.auth.bulk.tasks.create');
+        if ($project instanceof JsonResponse) {
+            return $project;
+        }
 
+        $validator = Validator::make($request->all(), [
+            'tasks' => 'required|array|max:1000',
+            'tasks.*.title' => 'required|string|max:255',
+            'tasks.*.description' => 'required|string',
+            'tasks.*.assignee_id' => ['nullable', 'string', function (string $attribute, mixed $value, \Closure $fail) use ($project): void {
+                if (!TaskCreationAuthority::eligibleAssignee($project, $value)) {
+                    $fail("The {$attribute} must be the project manager or an active participant of this project.");
+                }
+            }],
+        ]);
+        if ($validator->fails()) {
+            return $this->taskCreationValidationError($validator->errors()->toArray());
+        }
+
+        try {
             $results = $this->bulkOperationsService->bulkCreateTasks(
                 $request->tasks,
-                $request->project_id,
-                $request->tenant_id
+                (string) $project->id,
+                (string) $project->tenant_id
             );
 
             return response()->json([
@@ -458,6 +476,12 @@ class BulkOperationsController extends Controller
      */
     public function importTasks(Request $request): JsonResponse
     {
+        // CB-3 + O-17: the request's options.tenant_id is never authority; project tenant-scoped; creation authority first.
+        $project = $this->authoriseTaskCreation($request, data_get($request->input('options'), 'tenant_id'), 'api.auth.bulk.import.tasks');
+        if ($project instanceof JsonResponse) {
+            return $project;
+        }
+
         try {
             $request->validate([
                 'file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
@@ -465,14 +489,17 @@ class BulkOperationsController extends Controller
                 'options' => 'nullable|array',
             ]);
 
+            $options = $request->options ?? [];
+            $options['tenant_id'] = (string) $project->tenant_id;
+
             $file = $request->file('file');
             $filepath = $file->store('imports');
             $fullPath = storage_path('app/' . $filepath);
 
             $results = $this->importExportService->importTasks(
                 $fullPath,
-                $request->project_id,
-                $request->options ?? []
+                (string) $project->id,
+                $options
             );
 
             // Clean up uploaded file
@@ -593,5 +620,56 @@ class BulkOperationsController extends Controller
                 'message' => 'Failed to queue operation: ' . $e->getMessage(),
             ], 400);
         }
+    }
+
+    /**
+     * CB-3 / O-17 gate shared by both bulk task-creation routes. Returns the authorised project, or the error response:
+     *   - a tenant_id in the request that differs from the authenticated user's tenant -> 422 (never used as authority);
+     *   - project_id missing, malformed, unknown or of another tenant                   -> 422;
+     *   - TaskCreationAuthority denial (no task.create, not PM / participant)           -> 403.
+     */
+    private function authoriseTaskCreation(Request $request, mixed $requestedTenantId, string $source): Project|JsonResponse
+    {
+        $user = Auth::user();
+        if (!$user instanceof User) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthenticated'], 401);
+        }
+
+        // No canonical task.create: refuse before anything about the tenant or project is evaluated (CB-4: the route's
+        // middleware lets a role named `super_admin` through without the permission).
+        if (!$user->hasPermission(TaskCreationAuthority::PERMISSION)) {
+            TaskCreationAuthority::logDenial($user, null, TaskCreationAuthority::DENY_PERMISSION, $source);
+
+            return response()->json(['status' => 'error', 'message' => 'Bạn không có quyền thực hiện thao tác này.'], 403);
+        }
+
+        $tenantId = (string) $user->tenant_id;
+        $validator = Validator::make(
+            ['project_id' => $request->input('project_id'), 'tenant_id' => $requestedTenantId],
+            [
+                'project_id' => ['required', 'string', Rule::exists('projects', 'id')->where(fn ($q) => $q->where('tenant_id', $tenantId))],
+                'tenant_id' => ['nullable', 'string', Rule::in([$tenantId])],
+            ],
+            ['tenant_id.in' => 'The tenant_id does not match the authenticated tenant.']
+        );
+        if ($validator->fails()) {
+            return $this->taskCreationValidationError($validator->errors()->toArray());
+        }
+
+        $project = Project::query()->where('tenant_id', $tenantId)->whereKey((string) $request->input('project_id'))->firstOrFail();
+        $denial = TaskCreationAuthority::denialReason($user, $project);
+        if ($denial !== null) {
+            TaskCreationAuthority::logDenial($user, $project, $denial, $source);
+
+            return response()->json(['status' => 'error', 'message' => 'Bạn không có quyền thực hiện thao tác này.'], 403);
+        }
+
+        return $project;
+    }
+
+    /** @param array<string, array<int, string>> $errors */
+    private function taskCreationValidationError(array $errors): JsonResponse
+    {
+        return response()->json(['status' => 'error', 'message' => 'Validation failed', 'errors' => $errors], 422);
     }
 }

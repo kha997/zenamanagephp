@@ -21,6 +21,7 @@ use App\Models\WorkTemplateVersion;
 use App\Services\WorkTemplateCrudService;
 use App\Services\WorkTemplatePackageService;
 use App\Services\ZenaAuditLogger;
+use App\Support\TaskCreationAuthority;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
@@ -454,6 +455,15 @@ class WorkTemplateController extends BaseApiController
         string $scopeId,
         ?Component $component
     ): JsonResponse {
+        // O-17 Option B: applying a template creates tasks, so it needs template.apply AND the task-creation authority
+        // (task.create + PM / active participant of this project). Checked before preview or apply, independent of middleware.
+        $denial = TaskCreationAuthority::denialReason(Auth::user(), $project, true);
+        if ($denial !== null) {
+            TaskCreationAuthority::logDenial(Auth::user(), $project, $denial, 'work-template.apply');
+
+            return $this->errorResponse('Bạn không có quyền thực hiện thao tác này.', 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'work_template_id' => 'nullable|string|required_without:work_template_version_id',
             'work_template_version_id' => 'nullable|string|required_without:work_template_id',
@@ -590,6 +600,18 @@ class WorkTemplateController extends BaseApiController
 
                     if ($taskRows !== []) {
                         DB::table('tasks')->insert($taskRows);
+                    }
+
+                    // O-17 Gate 6: one strict audit row per created task, inside this transaction.
+                    foreach ($taskRows as $taskRow) {
+                        TaskCreationAuthority::auditIds(
+                            Auth::user(),
+                            (string) $taskRow['id'],
+                            (string) $project->id,
+                            $tenantId,
+                            'work-template.apply',
+                            $userId
+                        );
                     }
 
                     if ($plan['persist']['assignments'] !== []) {
@@ -1575,12 +1597,10 @@ class WorkTemplateController extends BaseApiController
         }
 
         if (is_string($selector['user_id'] ?? null)) {
-            $exists = User::query()
-                ->where('tenant_id', $tenantId)
-                ->whereKey($selector['user_id'])
-                ->exists();
-
-            return $exists ? [(string) $selector['user_id']] : [];
+            // O-17d: a named template assignee must be the project's PM or an active participant (was: any tenant user).
+            return TaskCreationAuthority::eligibleAssignee($project, $selector['user_id']) && (string) $project->tenant_id === $tenantId
+                ? [(string) $selector['user_id']]
+                : [];
         }
 
         return [];

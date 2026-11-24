@@ -1,0 +1,1174 @@
+{
+    "grants_after_DatabaseSeeder": {
+        "System Admin": [
+            "task.create",
+            "template.apply",
+            "template.view",
+            "auth.bulk.manage",
+            "inspection.edit",
+            "change-request.apply",
+            "task.assign",
+            "role.assign",
+            "project.assign_manager"
+        ],
+        "Project Manager": [
+            "task.create",
+            "template.apply",
+            "template.view",
+            "task.assign"
+        ],
+        "Project Member": [],
+        "super_admin": "ROLE_ABSENT"
+    },
+    "rows": [
+        {
+            "scenario": "A own project",
+            "actor": "PM1 (pm_id of P1)",
+            "uri": "/api/zena/tasks",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"success\":true,\"status\":\"success\",\"status_text\":\"success\",\"data\":{\"status\":\"pending\",\"priority\":\"medium\",\"is_hidden\":false,\"estimated_hours\":null,\"actual_hours\":null,\"estimated_cost\":0,\"actual_cost\":0,\"progress_percent\":0,\"visibility\":\"team\",\"client_approved\":false,\"tenant_id\":\"01M85PV473122JX3GMD3"
+        },
+        {
+            "scenario": "A own project",
+            "actor": "PM1 (pm_id of P1)",
+            "uri": "/api/tasks",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"success\":true,\"status\":\"success\",\"status_text\":\"success\",\"data\":{\"status\":\"pending\",\"priority\":\"medium\",\"is_hidden\":false,\"estimated_hours\":null,\"actual_hours\":null,\"estimated_cost\":0,\"actual_cost\":0,\"progress_percent\":0,\"visibility\":\"team\",\"client_approved\":false,\"tenant_id\":\"01M85PV473122JX3GMD3"
+        },
+        {
+            "scenario": "A own project",
+            "actor": "PM1 (pm_id of P1)",
+            "uri": "/api/v1/tasks",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"status\":\"success\",\"data\":{\"task\":{\"id\":\"01m85pv4axbjasq70f0hxas9zr\",\"ulid\":null,\"project_id\":\"01M85PV47QSXK3C7M23WZQ5S2E\",\"component_id\":null,\"name\":\"probe task 3\",\"description\":null,\"start_date\":\"2026-12-01\",\"end_date\":\"2026-12-05\",\"status\":\"pending\",\"status_label\":\"pending\",\"priority\":\"medium\",\""
+        },
+        {
+            "scenario": "A own project",
+            "actor": "PM1 (pm_id of P1)",
+            "uri": "/app/tasks",
+            "status": 302,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "location=http://localhost/app/tasks flash=\u0110\u00e3 t\u1ea1o c\u00f4ng vi\u1ec7c"
+        },
+        {
+            "scenario": "A own project",
+            "actor": "PM1 (pm_id of P1)",
+            "uri": "/operator/schedule/tasks",
+            "status": 302,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "location=http://localhost/operator/schedule?project_id=01M85PV47QSXK3C7M23WZQ5S2E flash=\u0110\u00e3 th\u00eam c\u00f4ng vi\u1ec7c"
+        },
+        {
+            "scenario": "B other PM project",
+            "actor": "PM1",
+            "uri": "/api/zena/tasks",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"success\":true,\"status\":\"success\",\"status_text\":\"success\",\"data\":{\"status\":\"pending\",\"priority\":\"medium\",\"is_hidden\":false,\"estimated_hours\":null,\"actual_hours\":null,\"estimated_cost\":0,\"actual_cost\":0,\"progress_percent\":0,\"visibility\":\"team\",\"client_approved\":false,\"tenant_id\":\"01M85PV473122JX3GMD3"
+        },
+        {
+            "scenario": "B other PM project",
+            "actor": "PM1",
+            "uri": "/api/tasks",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"success\":true,\"status\":\"success\",\"status_text\":\"success\",\"data\":{\"status\":\"pending\",\"priority\":\"medium\",\"is_hidden\":false,\"estimated_hours\":null,\"actual_hours\":null,\"estimated_cost\":0,\"actual_cost\":0,\"progress_percent\":0,\"visibility\":\"team\",\"client_approved\":false,\"tenant_id\":\"01M85PV473122JX3GMD3"
+        },
+        {
+            "scenario": "B other PM project",
+            "actor": "PM1",
+            "uri": "/api/v1/tasks",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"status\":\"success\",\"data\":{\"task\":{\"id\":\"01m85pv4dn1605hkq4yjszb00t\",\"ulid\":null,\"project_id\":\"01M85PV47VCPVCJ2GFRXFWMAA7\",\"component_id\":null,\"name\":\"probe task 8\",\"description\":null,\"start_date\":\"2026-12-01\",\"end_date\":\"2026-12-05\",\"status\":\"pending\",\"status_label\":\"pending\",\"priority\":\"medium\",\""
+        },
+        {
+            "scenario": "B other PM project",
+            "actor": "PM1",
+            "uri": "/app/tasks",
+            "status": 302,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "location=http://localhost/app/tasks flash=\u0110\u00e3 t\u1ea1o c\u00f4ng vi\u1ec7c"
+        },
+        {
+            "scenario": "B other PM project",
+            "actor": "PM1",
+            "uri": "/operator/schedule/tasks",
+            "status": 302,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "location=http://localhost/operator/schedule?project_id=01M85PV47VCPVCJ2GFRXFWMAA7 flash=\u0110\u00e3 th\u00eam c\u00f4ng vi\u1ec7c"
+        },
+        {
+            "scenario": "B2 unmanaged project (pm_id NULL)",
+            "actor": "PM1",
+            "uri": "/api/zena/tasks",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"success\":true,\"status\":\"success\",\"status_text\":\"success\",\"data\":{\"status\":\"pending\",\"priority\":\"medium\",\"is_hidden\":false,\"estimated_hours\":null,\"actual_hours\":null,\"estimated_cost\":0,\"actual_cost\":0,\"progress_percent\":0,\"visibility\":\"team\",\"client_approved\":false,\"tenant_id\":\"01M85PV473122JX3GMD3"
+        },
+        {
+            "scenario": "B2 unmanaged project (pm_id NULL)",
+            "actor": "PM1",
+            "uri": "/api/tasks",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"success\":true,\"status\":\"success\",\"status_text\":\"success\",\"data\":{\"status\":\"pending\",\"priority\":\"medium\",\"is_hidden\":false,\"estimated_hours\":null,\"actual_hours\":null,\"estimated_cost\":0,\"actual_cost\":0,\"progress_percent\":0,\"visibility\":\"team\",\"client_approved\":false,\"tenant_id\":\"01M85PV473122JX3GMD3"
+        },
+        {
+            "scenario": "B2 unmanaged project (pm_id NULL)",
+            "actor": "PM1",
+            "uri": "/api/v1/tasks",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"status\":\"success\",\"data\":{\"task\":{\"id\":\"01m85pv4ftd0nyqts7n2afhkmz\",\"ulid\":null,\"project_id\":\"01M85PV47YZC5Z7Y9RTRYB21P2\",\"component_id\":null,\"name\":\"probe task 13\",\"description\":null,\"start_date\":\"2026-12-01\",\"end_date\":\"2026-12-05\",\"status\":\"pending\",\"status_label\":\"pending\",\"priority\":\"medium\","
+        },
+        {
+            "scenario": "B2 unmanaged project (pm_id NULL)",
+            "actor": "PM1",
+            "uri": "/app/tasks",
+            "status": 302,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "location=http://localhost/app/tasks flash=\u0110\u00e3 t\u1ea1o c\u00f4ng vi\u1ec7c"
+        },
+        {
+            "scenario": "B2 unmanaged project (pm_id NULL)",
+            "actor": "PM1",
+            "uri": "/operator/schedule/tasks",
+            "status": 302,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "location=http://localhost/operator/schedule?project_id=01M85PV47YZC5Z7Y9RTRYB21P2 flash=\u0110\u00e3 th\u00eam c\u00f4ng vi\u1ec7c"
+        },
+        {
+            "scenario": "C task.create + participant of P1",
+            "actor": "Creator",
+            "uri": "/api/zena/tasks",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"success\":true,\"status\":\"success\",\"status_text\":\"success\",\"data\":{\"status\":\"pending\",\"priority\":\"medium\",\"is_hidden\":false,\"estimated_hours\":null,\"actual_hours\":null,\"estimated_cost\":0,\"actual_cost\":0,\"progress_percent\":0,\"visibility\":\"team\",\"client_approved\":false,\"tenant_id\":\"01M85PV473122JX3GMD3"
+        },
+        {
+            "scenario": "C task.create + participant of P1",
+            "actor": "Creator",
+            "uri": "/api/tasks",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"success\":true,\"status\":\"success\",\"status_text\":\"success\",\"data\":{\"status\":\"pending\",\"priority\":\"medium\",\"is_hidden\":false,\"estimated_hours\":null,\"actual_hours\":null,\"estimated_cost\":0,\"actual_cost\":0,\"progress_percent\":0,\"visibility\":\"team\",\"client_approved\":false,\"tenant_id\":\"01M85PV473122JX3GMD3"
+        },
+        {
+            "scenario": "C task.create + participant of P1",
+            "actor": "Creator",
+            "uri": "/api/v1/tasks",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"status\":\"success\",\"data\":{\"task\":{\"id\":\"01m85pv4hzh3d0wxwfxggm8pwe\",\"ulid\":null,\"project_id\":\"01M85PV47QSXK3C7M23WZQ5S2E\",\"component_id\":null,\"name\":\"probe task 18\",\"description\":null,\"start_date\":\"2026-12-01\",\"end_date\":\"2026-12-05\",\"status\":\"pending\",\"status_label\":\"pending\",\"priority\":\"medium\","
+        },
+        {
+            "scenario": "C task.create + participant of P1",
+            "actor": "Creator",
+            "uri": "/app/tasks",
+            "status": 302,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "location=http://localhost/app/tasks flash=\u0110\u00e3 t\u1ea1o c\u00f4ng vi\u1ec7c"
+        },
+        {
+            "scenario": "C task.create + participant of P1",
+            "actor": "Creator",
+            "uri": "/operator/schedule/tasks",
+            "status": 302,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "location=http://localhost/operator/schedule?project_id=01M85PV47QSXK3C7M23WZQ5S2E flash=\u0110\u00e3 th\u00eam c\u00f4ng vi\u1ec7c"
+        },
+        {
+            "scenario": "D task.create, not participant of P2",
+            "actor": "Creator",
+            "uri": "/api/zena/tasks",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"success\":true,\"status\":\"success\",\"status_text\":\"success\",\"data\":{\"status\":\"pending\",\"priority\":\"medium\",\"is_hidden\":false,\"estimated_hours\":null,\"actual_hours\":null,\"estimated_cost\":0,\"actual_cost\":0,\"progress_percent\":0,\"visibility\":\"team\",\"client_approved\":false,\"tenant_id\":\"01M85PV473122JX3GMD3"
+        },
+        {
+            "scenario": "D task.create, not participant of P2",
+            "actor": "Creator",
+            "uri": "/api/tasks",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"success\":true,\"status\":\"success\",\"status_text\":\"success\",\"data\":{\"status\":\"pending\",\"priority\":\"medium\",\"is_hidden\":false,\"estimated_hours\":null,\"actual_hours\":null,\"estimated_cost\":0,\"actual_cost\":0,\"progress_percent\":0,\"visibility\":\"team\",\"client_approved\":false,\"tenant_id\":\"01M85PV473122JX3GMD3"
+        },
+        {
+            "scenario": "D task.create, not participant of P2",
+            "actor": "Creator",
+            "uri": "/api/v1/tasks",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"status\":\"success\",\"data\":{\"task\":{\"id\":\"01m85pv4m64e68tmsf4372hmay\",\"ulid\":null,\"project_id\":\"01M85PV47VCPVCJ2GFRXFWMAA7\",\"component_id\":null,\"name\":\"probe task 23\",\"description\":null,\"start_date\":\"2026-12-01\",\"end_date\":\"2026-12-05\",\"status\":\"pending\",\"status_label\":\"pending\",\"priority\":\"medium\","
+        },
+        {
+            "scenario": "D task.create, not participant of P2",
+            "actor": "Creator",
+            "uri": "/app/tasks",
+            "status": 302,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "location=http://localhost/app/tasks flash=\u0110\u00e3 t\u1ea1o c\u00f4ng vi\u1ec7c"
+        },
+        {
+            "scenario": "D task.create, not participant of P2",
+            "actor": "Creator",
+            "uri": "/operator/schedule/tasks",
+            "status": 302,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "location=http://localhost/operator/schedule?project_id=01M85PV47VCPVCJ2GFRXFWMAA7 flash=\u0110\u00e3 th\u00eam c\u00f4ng vi\u1ec7c"
+        },
+        {
+            "scenario": "E task.create, no membership anywhere",
+            "actor": "Lonely",
+            "uri": "/api/zena/tasks",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"success\":true,\"status\":\"success\",\"status_text\":\"success\",\"data\":{\"status\":\"pending\",\"priority\":\"medium\",\"is_hidden\":false,\"estimated_hours\":null,\"actual_hours\":null,\"estimated_cost\":0,\"actual_cost\":0,\"progress_percent\":0,\"visibility\":\"team\",\"client_approved\":false,\"tenant_id\":\"01M85PV473122JX3GMD3"
+        },
+        {
+            "scenario": "E task.create, no membership anywhere",
+            "actor": "Lonely",
+            "uri": "/api/tasks",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"success\":true,\"status\":\"success\",\"status_text\":\"success\",\"data\":{\"status\":\"pending\",\"priority\":\"medium\",\"is_hidden\":false,\"estimated_hours\":null,\"actual_hours\":null,\"estimated_cost\":0,\"actual_cost\":0,\"progress_percent\":0,\"visibility\":\"team\",\"client_approved\":false,\"tenant_id\":\"01M85PV473122JX3GMD3"
+        },
+        {
+            "scenario": "E task.create, no membership anywhere",
+            "actor": "Lonely",
+            "uri": "/api/v1/tasks",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"status\":\"success\",\"data\":{\"task\":{\"id\":\"01m85pv4ptacj772eaksffej54\",\"ulid\":null,\"project_id\":\"01M85PV47QSXK3C7M23WZQ5S2E\",\"component_id\":null,\"name\":\"probe task 28\",\"description\":null,\"start_date\":\"2026-12-01\",\"end_date\":\"2026-12-05\",\"status\":\"pending\",\"status_label\":\"pending\",\"priority\":\"medium\","
+        },
+        {
+            "scenario": "E task.create, no membership anywhere",
+            "actor": "Lonely",
+            "uri": "/app/tasks",
+            "status": 302,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "location=http://localhost/app/tasks flash=\u0110\u00e3 t\u1ea1o c\u00f4ng vi\u1ec7c"
+        },
+        {
+            "scenario": "E task.create, no membership anywhere",
+            "actor": "Lonely",
+            "uri": "/operator/schedule/tasks",
+            "status": 302,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "location=http://localhost/operator/schedule?project_id=01M85PV47QSXK3C7M23WZQ5S2E flash=\u0110\u00e3 th\u00eam c\u00f4ng vi\u1ec7c"
+        },
+        {
+            "scenario": "F System Admin, not PM/participant",
+            "actor": "SystemAdmin",
+            "uri": "/api/zena/tasks",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"success\":true,\"status\":\"success\",\"status_text\":\"success\",\"data\":{\"status\":\"pending\",\"priority\":\"medium\",\"is_hidden\":false,\"estimated_hours\":null,\"actual_hours\":null,\"estimated_cost\":0,\"actual_cost\":0,\"progress_percent\":0,\"visibility\":\"team\",\"client_approved\":false,\"tenant_id\":\"01M85PV473122JX3GMD3"
+        },
+        {
+            "scenario": "F System Admin, not PM/participant",
+            "actor": "SystemAdmin",
+            "uri": "/api/tasks",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"success\":true,\"status\":\"success\",\"status_text\":\"success\",\"data\":{\"status\":\"pending\",\"priority\":\"medium\",\"is_hidden\":false,\"estimated_hours\":null,\"actual_hours\":null,\"estimated_cost\":0,\"actual_cost\":0,\"progress_percent\":0,\"visibility\":\"team\",\"client_approved\":false,\"tenant_id\":\"01M85PV473122JX3GMD3"
+        },
+        {
+            "scenario": "F System Admin, not PM/participant",
+            "actor": "SystemAdmin",
+            "uri": "/api/v1/tasks",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"status\":\"success\",\"data\":{\"task\":{\"id\":\"01m85pv4rx7hs3z2thdhszwg35\",\"ulid\":null,\"project_id\":\"01M85PV47QSXK3C7M23WZQ5S2E\",\"component_id\":null,\"name\":\"probe task 33\",\"description\":null,\"start_date\":\"2026-12-01\",\"end_date\":\"2026-12-05\",\"status\":\"pending\",\"status_label\":\"pending\",\"priority\":\"medium\","
+        },
+        {
+            "scenario": "F System Admin, not PM/participant",
+            "actor": "SystemAdmin",
+            "uri": "/app/tasks",
+            "status": 302,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "location=http://localhost/app/tasks flash=\u0110\u00e3 t\u1ea1o c\u00f4ng vi\u1ec7c"
+        },
+        {
+            "scenario": "F System Admin, not PM/participant",
+            "actor": "SystemAdmin",
+            "uri": "/operator/schedule/tasks",
+            "status": 302,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "location=http://localhost/operator/schedule?project_id=01M85PV47QSXK3C7M23WZQ5S2E flash=\u0110\u00e3 th\u00eam c\u00f4ng vi\u1ec7c"
+        },
+        {
+            "scenario": "C0 seeded Project Member (no task.create)",
+            "actor": "Member",
+            "uri": "/api/zena/tasks",
+            "status": 403,
+            "delta": {
+                "tasks": 0,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"status\":\"error\",\"success\":false,\"message\":\"You do not have permission to access this resource\",\"error\":{\"id\":\"req_9yilHhPP\",\"code\":\"E403.AUTHORIZATION\",\"message\":\"You do not have permission to access this resource\",\"details\":[]}}"
+        },
+        {
+            "scenario": "C0 seeded Project Member (no task.create)",
+            "actor": "Member",
+            "uri": "/api/tasks",
+            "status": 403,
+            "delta": {
+                "tasks": 0,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"status\":\"error\",\"success\":false,\"message\":\"Forbidden\",\"error\":{\"id\":\"req_kWHKXwdA\",\"code\":\"E403.AUTHORIZATION\",\"message\":\"Forbidden\",\"details\":[]}}"
+        },
+        {
+            "scenario": "C0 seeded Project Member (no task.create)",
+            "actor": "Member",
+            "uri": "/api/v1/tasks",
+            "status": 403,
+            "delta": {
+                "tasks": 0,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"status\":\"error\",\"success\":false,\"message\":\"You do not have permission to access this resource\",\"error\":{\"id\":\"req_JsQpnuVC\",\"code\":\"E403.AUTHORIZATION\",\"message\":\"You do not have permission to access this resource\",\"details\":[]}}"
+        },
+        {
+            "scenario": "C0 seeded Project Member (no task.create)",
+            "actor": "Member",
+            "uri": "/app/tasks",
+            "status": 302,
+            "delta": {
+                "tasks": 0,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "location=http://localhost flash=B\u1ea1n kh\u00f4ng c\u00f3 quy\u1ec1n th\u1ef1c hi\u1ec7n thao t\u00e1c n\u00e0y."
+        },
+        {
+            "scenario": "C0 seeded Project Member (no task.create)",
+            "actor": "Member",
+            "uri": "/operator/schedule/tasks",
+            "status": 302,
+            "delta": {
+                "tasks": 0,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "location=http://localhost flash=B\u1ea1n kh\u00f4ng c\u00f3 quy\u1ec1n th\u1ef1c hi\u1ec7n thao t\u00e1c n\u00e0y."
+        },
+        {
+            "scenario": "G cross-tenant project",
+            "actor": "PM1",
+            "uri": "/api/zena/tasks",
+            "status": 422,
+            "delta": {
+                "tasks": 0,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"status\":\"error\",\"success\":false,\"message\":\"Validation failed\",\"error\":{\"id\":\"req_dJpAzz3F\",\"code\":\"E422.VALIDATION\",\"message\":\"Validation failed\",\"details\":{\"data\":{\"project_id\":[\"The selected project id is invalid.\"]}}}}"
+        },
+        {
+            "scenario": "G cross-tenant project",
+            "actor": "PM1",
+            "uri": "/api/tasks",
+            "status": 422,
+            "delta": {
+                "tasks": 0,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"status\":\"error\",\"success\":false,\"message\":\"Validation failed\",\"error\":{\"id\":\"req_ILOMEUsL\",\"code\":\"E422.VALIDATION\",\"message\":\"Validation failed\",\"details\":{\"data\":{\"project_id\":[\"The selected project id is invalid.\"]}}}}"
+        },
+        {
+            "scenario": "G cross-tenant project",
+            "actor": "PM1",
+            "uri": "/api/v1/tasks",
+            "status": 422,
+            "delta": {
+                "tasks": 0,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"status\":\"error\",\"success\":false,\"message\":\"D\\u1eef li\\u1ec7u kh\\u00f4ng h\\u1ee3p l\\u1ec7\",\"error\":{\"id\":\"req_DwJrSAfu\",\"code\":\"E422.VALIDATION\",\"message\":\"D\\u1eef li\\u1ec7u kh\\u00f4ng h\\u1ee3p l\\u1ec7\",\"details\":{\"data\":{\"validation_errors\":{\"project_id\":[\"Tr\\u01b0\\u1eddng project id kh\\u00f4ng t\\"
+        },
+        {
+            "scenario": "G cross-tenant project",
+            "actor": "PM1",
+            "uri": "/app/tasks",
+            "status": 302,
+            "delta": {
+                "tasks": 0,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "location=http://localhost flash={\"project_id\":[\"The selected project id is invalid.\"]}"
+        },
+        {
+            "scenario": "G cross-tenant project",
+            "actor": "PM1",
+            "uri": "/operator/schedule/tasks",
+            "status": 302,
+            "delta": {
+                "tasks": 0,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "location=http://localhost flash={\"project_id\":[\"The selected project id is invalid.\"]}"
+        },
+        {
+            "scenario": "F2 super_admin DB role (as granted by probe/seed)",
+            "actor": "SuperAdminRole",
+            "uri": "/api/zena/tasks",
+            "status": 403,
+            "delta": {
+                "tasks": 0,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"status\":\"error\",\"success\":false,\"message\":\"Forbidden\",\"error\":{\"id\":\"req_RoQpKM73\",\"code\":\"E403.AUTHORIZATION\",\"message\":\"Forbidden\",\"details\":[]}}"
+        },
+        {
+            "scenario": "F2 super_admin DB role (as granted by probe/seed)",
+            "actor": "SuperAdminRole",
+            "uri": "/api/tasks",
+            "status": 403,
+            "delta": {
+                "tasks": 0,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"status\":\"error\",\"success\":false,\"message\":\"Forbidden\",\"error\":{\"id\":\"req_RfQVm9xo\",\"code\":\"E403.AUTHORIZATION\",\"message\":\"Forbidden\",\"details\":[]}}"
+        },
+        {
+            "scenario": "F2 super_admin DB role (as granted by probe/seed)",
+            "actor": "SuperAdminRole",
+            "uri": "/api/v1/tasks",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"status\":\"success\",\"data\":{\"task\":{\"id\":\"01m85pv4wmh4ywbc3q7dd05pzj\",\"ulid\":null,\"project_id\":\"01M85PV47QSXK3C7M23WZQ5S2E\",\"component_id\":null,\"name\":\"probe task 48\",\"description\":null,\"start_date\":\"2026-12-01\",\"end_date\":\"2026-12-05\",\"status\":\"pending\",\"status_label\":\"pending\",\"priority\":\"medium\","
+        },
+        {
+            "scenario": "F2 super_admin DB role (as granted by probe/seed)",
+            "actor": "SuperAdminRole",
+            "uri": "/app/tasks",
+            "status": 302,
+            "delta": {
+                "tasks": 0,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "location=http://localhost flash=Forbidden"
+        },
+        {
+            "scenario": "F2 super_admin DB role (as granted by probe/seed)",
+            "actor": "SuperAdminRole",
+            "uri": "/operator/schedule/tasks",
+            "status": 302,
+            "delta": {
+                "tasks": 0,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "location=http://localhost flash=Forbidden"
+        },
+        {
+            "scenario": "I1 assignee_id = other-tenant user",
+            "actor": "PM1",
+            "uri": "/api/zena/tasks",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"success\":true,\"status\":\"success\",\"status_text\":\"success\",\"data\":{\"status\":\"pending\",\"priority\":\"medium\",\"is_hidden\":false,\"estimated_hours\":null,\"actual_hours\":null,\"estimated_cost\":0,\"actual_cost\":0,\"progress_percent\":0,\"visibility\":\"team\",\"client_approved\":false,\"tenant_id\":\"01M85PV473122JX3GMD3"
+        },
+        {
+            "scenario": "I1 persisted",
+            "assignee_id_on_row": null,
+            "expected_userB": "01M85PV47ME7G5M8G8WGYX01VX",
+            "task_tenant": "01M85PV473122JX3GMD3TSPY5G"
+        },
+        {
+            "scenario": "I2 assignee_id = same-tenant non-participant",
+            "actor": "PM1",
+            "uri": "/api/zena/tasks",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"success\":true,\"status\":\"success\",\"status_text\":\"success\",\"data\":{\"status\":\"pending\",\"priority\":\"medium\",\"is_hidden\":false,\"estimated_hours\":null,\"actual_hours\":null,\"estimated_cost\":0,\"actual_cost\":0,\"progress_percent\":0,\"visibility\":\"team\",\"client_approved\":false,\"tenant_id\":\"01M85PV473122JX3GMD3"
+        },
+        {
+            "scenario": "I2 persisted",
+            "assignee_id_on_row": null
+        },
+        {
+            "scenario": "I3 watchers = other-tenant user",
+            "actor": "PM1",
+            "uri": "/api/zena/tasks",
+            "status": 500,
+            "delta": {
+                "tasks": 0,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"status\":\"error\",\"success\":false,\"message\":\"Failed to create task\",\"error\":{\"id\":\"req_IelPsrnq\",\"code\":\"E500.SERVER_ERROR\",\"message\":\"Failed to create task\",\"details\":[]}}"
+        },
+        {
+            "scenario": "I3 persisted",
+            "watcher_rows_for_userB": 0
+        },
+        {
+            "scenario": "I4 v1 assignments[].user_id = other-tenant user",
+            "actor": "PM1",
+            "uri": "/api/v1/tasks",
+            "status": 500,
+            "delta": {
+                "tasks": 0,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"status\":\"error\",\"success\":false,\"message\":\"Kh\\u00f4ng th\\u1ec3 t\\u1ea1o task: SQLSTATE[HY000]: General error: 1 table task_assignments has no column named split_percent (Connection: sqlite, Database: <repo>"
+        },
+        {
+            "scenario": "I4 persisted",
+            "task_tenant": "01M85PV473122JX3GMD3TSPY5G",
+            "assignment_rows_for_userB": 0
+        },
+        {
+            "scenario": "I5 parent_id = other-tenant task",
+            "actor": "PM1",
+            "uri": "/api/zena/tasks",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "no tenant-B task exists unless created above",
+            "body": "{\"success\":true,\"status\":\"success\",\"status_text\":\"success\",\"data\":{\"status\":\"pending\",\"priority\":\"medium\",\"is_hidden\":false,\"estimated_hours\":null,\"actual_hours\":null,\"estimated_cost\":0,\"actual_cost\":0,\"progress_percent\":0,\"visibility\":\"team\",\"client_approved\":false,\"tenant_id\":\"01M85PV473122JX3GMD3"
+        },
+        {
+            "scenario": "K1 bulk create, tenant_id + project of tenant B",
+            "actor": "SystemAdmin",
+            "uri": "/api/auth/bulk/tasks/create",
+            "status": 200,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"status\":\"success\",\"message\":\"Bulk task creation completed\",\"data\":{\"success\":1,\"failed\":0,\"created\":1,\"errors\":[],\"created_tasks\":[\"01m85pv4zvhttvj2kxzar6y0va\"]}}"
+        },
+        {
+            "scenario": "K1 persisted",
+            "actor": "SystemAdmin",
+            "row_tenant": "01M85PV473122JX3GMD3TSPY5J",
+            "row_project": "01M85PV481XFXW2609AM4ECGQX",
+            "tenantB": "01M85PV473122JX3GMD3TSPY5J"
+        },
+        {
+            "scenario": "K2 bulk create into another PM project (same tenant)",
+            "actor": "SystemAdmin",
+            "uri": "/api/auth/bulk/tasks/create",
+            "status": 200,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"status\":\"success\",\"message\":\"Bulk task creation completed\",\"data\":{\"success\":1,\"failed\":0,\"created\":1,\"errors\":[],\"created_tasks\":[\"01m85pv503bz1fpac5kv725mdb\"]}}"
+        },
+        {
+            "scenario": "K1 bulk create, tenant_id + project of tenant B",
+            "actor": "PM1",
+            "uri": "/api/auth/bulk/tasks/create",
+            "status": 403,
+            "delta": {
+                "tasks": 0,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"status\":\"error\",\"success\":false,\"message\":\"You do not have permission to access this resource\",\"error\":{\"id\":\"req_oov6t9Si\",\"code\":\"E403.AUTHORIZATION\",\"message\":\"You do not have permission to access this resource\",\"details\":[]}}"
+        },
+        {
+            "scenario": "K1 persisted",
+            "actor": "PM1",
+            "row_tenant": null,
+            "row_project": null,
+            "tenantB": "01M85PV473122JX3GMD3TSPY5J"
+        },
+        {
+            "scenario": "K2 bulk create into another PM project (same tenant)",
+            "actor": "PM1",
+            "uri": "/api/auth/bulk/tasks/create",
+            "status": 403,
+            "delta": {
+                "tasks": 0,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"status\":\"error\",\"success\":false,\"message\":\"You do not have permission to access this resource\",\"error\":{\"id\":\"req_Vea716U0\",\"code\":\"E403.AUTHORIZATION\",\"message\":\"You do not have permission to access this resource\",\"details\":[]}}"
+        },
+        {
+            "scenario": "H1 template.apply WITHOUT task.create, web apply",
+            "actor": "TemplateApplier",
+            "uri": "/app/projects/01M85PV47QSXK3C7M23WZQ5S2E/work-templates/apply",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 1,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 1
+            },
+            "note": "",
+            "body": "{\"success\":true,\"status\":\"success\",\"data\":{\"id\":\"01m85pv519an52gdcpgzgvkf1e\",\"scope_type\":\"project\",\"scope_id\":\"01M85PV47QSXK3C7M23WZQ5S2E\",\"project_id\":\"01M85PV47QSXK3C7M23WZQ5S2E\",\"work_template_version_id\":\"01m85pv50jc6txn1xzsw65kc79\",\"status\":\"pending\",\"duplicate\":false,\"tasks_created\":1,\"assign"
+        },
+        {
+            "scenario": "H2 template.apply WITHOUT task.create, api/zena apply, other PM project",
+            "actor": "TemplateApplier",
+            "uri": "/api/zena/projects/01M85PV47VCPVCJ2GFRXFWMAA7/apply-template",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 1,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 1
+            },
+            "note": "",
+            "body": "{\"success\":true,\"status\":\"success\",\"data\":{\"id\":\"01m85pv51qh0e8217v33eswp07\",\"scope_type\":\"project\",\"scope_id\":\"01M85PV47VCPVCJ2GFRXFWMAA7\",\"project_id\":\"01M85PV47VCPVCJ2GFRXFWMAA7\",\"work_template_version_id\":\"01m85pv50jc6txn1xzsw65kc79\",\"status\":\"pending\",\"duplicate\":false,\"tasks_created\":1,\"assign"
+        },
+        {
+            "scenario": "H3 PM1 applies template to PM2 project",
+            "actor": "PM1",
+            "uri": "/api/zena/projects/01M85PV47VCPVCJ2GFRXFWMAA7/apply-template",
+            "status": 200,
+            "delta": {
+                "tasks": 0,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"success\":true,\"status\":\"success\",\"data\":{\"id\":\"01m85pv51qh0e8217v33eswp07\",\"scope_type\":\"project\",\"scope_id\":\"01M85PV47VCPVCJ2GFRXFWMAA7\",\"project_id\":\"01M85PV47VCPVCJ2GFRXFWMAA7\",\"work_template_version_id\":\"01m85pv50jc6txn1xzsw65kc79\",\"status\":\"pending\",\"duplicate\":true,\"tasks_created\":0,\"assignm"
+        },
+        {
+            "scenario": "H4 Creator (task.create, no template.apply) applies",
+            "actor": "Creator",
+            "uri": "/api/zena/projects/01M85PV47QSXK3C7M23WZQ5S2E/apply-template",
+            "status": 403,
+            "delta": {
+                "tasks": 0,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"status\":\"error\",\"success\":false,\"message\":\"You do not have permission to access this resource\",\"error\":{\"id\":\"req_EuVGquxh\",\"code\":\"E403.AUTHORIZATION\",\"message\":\"You do not have permission to access this resource\",\"details\":[]}}"
+        },
+        {
+            "scenario": "H5 CoreProject api/work-templates/{id}/apply, tenant-B project, legacy-role-only user",
+            "actor": "Member",
+            "uri": "/api/work-templates/01m85pv50hyfk08yxvn4pzqqne/apply",
+            "status": 422,
+            "delta": {
+                "tasks": 0,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"status\":\"error\",\"success\":false,\"message\":\"D\\u1eef li\\u1ec7u kh\\u00f4ng h\\u1ee3p l\\u1ec7: Template kh\\u00f4ng active, kh\\u00f4ng th\\u1ec3 \\u00e1p d\\u1ee5ng.\",\"error\":{\"id\":\"req_3GmVvyzX\",\"code\":\"E422.VALIDATION\",\"message\":\"D\\u1eef li\\u1ec7u kh\\u00f4ng h\\u1ee3p l\\u1ec7: Template kh\\u00f4ng active, "
+        },
+        {
+            "scenario": "H6 ProjectTemplateController api/templates/apply (integer project_id rule)",
+            "actor": "Member",
+            "uri": "/api/templates/apply",
+            "status": 500,
+            "delta": {
+                "tasks": 0,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"status\":\"error\",\"success\":false,\"message\":\"Server Error\",\"error\":{\"id\":\"req_Bt7yJ42r\",\"code\":\"E500.SERVER_ERROR\",\"message\":\"Server Error\",\"details\":[]}}"
+        },
+        {
+            "scenario": "H7 Src WorkTemplate api/templates/{id}/apply",
+            "actor": "Member",
+            "uri": "/api/templates/01m85pv50hyfk08yxvn4pzqqne/apply",
+            "status": 404,
+            "delta": {
+                "tasks": 0,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"status\":\"error\",\"success\":false,\"message\":\"Template kh\\u00f4ng t\\u1ed3n t\\u1ea1i\",\"error\":{\"id\":\"req_3BNhkzFJ\",\"code\":\"E404.NOT_FOUND\",\"message\":\"Template kh\\u00f4ng t\\u1ed3n t\\u1ea1i\",\"details\":[]}}"
+        },
+        {
+            "scenario": "H1/H2 assignment created by template apply",
+            "assignment_user": "01M85PV474FK97A5EKXC997WWJ",
+            "pm1": "01M85PV474FK97A5EKXC997WWJ",
+            "pm2": "01M85PV4774ER7QXD2N4KFZ4TF",
+            "applier": "01M85PV47HWFCMV94M8BKB1TP8",
+            "task_project": "01M85PV47QSXK3C7M23WZQ5S2E",
+            "p2": "01M85PV47VCPVCJ2GFRXFWMAA7"
+        },
+        {
+            "scenario": "H3b PM1 applies template to fresh PM2 project",
+            "actor": "PM1",
+            "uri": "/api/zena/projects/01M85PV538R5EQASC4J37TEQ1T/apply-template",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 1,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 1
+            },
+            "note": "",
+            "body": "{\"success\":true,\"status\":\"success\",\"data\":{\"id\":\"01m85pv53kaxr4g0h3m1tba17d\",\"scope_type\":\"project\",\"scope_id\":\"01M85PV538R5EQASC4J37TEQ1T\",\"project_id\":\"01M85PV538R5EQASC4J37TEQ1T\",\"work_template_version_id\":\"01m85pv50jc6txn1xzsw65kc79\",\"status\":\"pending\",\"duplicate\":false,\"tasks_created\":1,\"assign"
+        },
+        {
+            "scenario": "I5b parent_id = other-tenant task",
+            "actor": "PM1",
+            "uri": "/api/zena/tasks",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"success\":true,\"status\":\"success\",\"status_text\":\"success\",\"data\":{\"status\":\"pending\",\"priority\":\"medium\",\"is_hidden\":false,\"estimated_hours\":null,\"actual_hours\":null,\"estimated_cost\":0,\"actual_cost\":0,\"progress_percent\":0,\"visibility\":\"team\",\"client_approved\":false,\"tenant_id\":\"01M85PV473122JX3GMD3"
+        },
+        {
+            "scenario": "I5b persisted",
+            "parent_id_on_row": null,
+            "bTask": "UfqcvGHEFp8VDrF8QedJKfDeTa"
+        },
+        {
+            "scenario": "I6 dependencies = other-tenant task",
+            "actor": "PM1",
+            "uri": "/api/zena/tasks",
+            "status": 201,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 1,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"success\":true,\"status\":\"success\",\"status_text\":\"success\",\"data\":{\"status\":\"pending\",\"priority\":\"medium\",\"is_hidden\":false,\"estimated_hours\":null,\"actual_hours\":null,\"estimated_cost\":0,\"actual_cost\":0,\"progress_percent\":0,\"visibility\":\"team\",\"client_approved\":false,\"tenant_id\":\"01M85PV473122JX3GMD3"
+        },
+        {
+            "scenario": "I6 persisted",
+            "dependency_rows_to_bTask": 0
+        },
+        {
+            "scenario": "H5 schema check: work_templates columns used by Src\\CoreProject\\Models\\WorkTemplate",
+            "has_is_active": false,
+            "has_template_data": false
+        },
+        {
+            "scenario": "F3 super_admin (zero permissions) bulk create into tenant B",
+            "actor": "SuperAdminRole",
+            "uri": "/api/auth/bulk/tasks/create",
+            "status": 200,
+            "delta": {
+                "tasks": 1,
+                "task_assignments": 0,
+                "audit_logs": 0,
+                "task_watchers": 0,
+                "work_instances": 0
+            },
+            "note": "",
+            "body": "{\"status\":\"success\",\"message\":\"Bulk task creation completed\",\"data\":{\"success\":1,\"failed\":0,\"created\":1,\"errors\":[],\"created_tasks\":[\"01m85pv552jk1bw9h80vpxz0g7\"]}}"
+        },
+        {
+            "scenario": "super_admin role permissions in probe DB",
+            "count": 0
+        },
+        {
+            "scenario": "ALL assignments created by template applies",
+            "ids": {
+                "pm1": "01M85PV474FK97A5EKXC997WWJ",
+                "pm2": "01M85PV4774ER7QXD2N4KFZ4TF",
+                "applier": "01M85PV47HWFCMV94M8BKB1TP8",
+                "p1": "01M85PV47QSXK3C7M23WZQ5S2E",
+                "p2": "01M85PV47VCPVCJ2GFRXFWMAA7",
+                "p4": "01M85PV538R5EQASC4J37TEQ1T"
+            },
+            "rows": [
+                {
+                    "user_id": "01M85PV474FK97A5EKXC997WWJ",
+                    "role": "assignee",
+                    "project_id": "01M85PV47QSXK3C7M23WZQ5S2E",
+                    "name": "Submit Drawings",
+                    "created_by": "01M85PV47HWFCMV94M8BKB1TP8"
+                },
+                {
+                    "user_id": "01M85PV4774ER7QXD2N4KFZ4TF",
+                    "role": "assignee",
+                    "project_id": "01M85PV47VCPVCJ2GFRXFWMAA7",
+                    "name": "Submit Drawings",
+                    "created_by": "01M85PV47HWFCMV94M8BKB1TP8"
+                },
+                {
+                    "user_id": "01M85PV4774ER7QXD2N4KFZ4TF",
+                    "role": "assignee",
+                    "project_id": "01M85PV538R5EQASC4J37TEQ1T",
+                    "name": "Submit Drawings",
+                    "created_by": "01M85PV474FK97A5EKXC997WWJ"
+                }
+            ]
+        },
+        {
+            "scenario": "audit rows for bulk",
+            "audit_logs_bulk": 0,
+            "interaction_logs": 0
+        }
+    ]
+}

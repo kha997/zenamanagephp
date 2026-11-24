@@ -86,6 +86,7 @@ class TaskCreatedPipelineTest extends TestCase
     public function test_task_create_with_assignee_sends_inapp_notification(): void
     {
         $assignee = $this->createTenantUser($this->tenant, [], ['member'], ['task.view']);
+        $this->makeParticipant($assignee); // O-17d fixture (UAT-RECOVERY 06): an assignee must be the PM or a participant
 
         $response = $this->withHeaders($this->headers)
             ->postJson(route('api.zena.tasks.store', [], false), [
@@ -123,6 +124,7 @@ class TaskCreatedPipelineTest extends TestCase
     public function test_full_pipeline_end_to_end(): void
     {
         $assignee = $this->createTenantUser($this->tenant, [], ['member'], ['task.view']);
+        $this->makeParticipant($assignee); // O-17d fixture (UAT-RECOVERY 06): an assignee must be the PM or a participant
 
         $countAuditBefore = AuditLog::count();
         $countEventBefore = EventRecord::count();
@@ -147,5 +149,13 @@ class TaskCreatedPipelineTest extends TestCase
         $this->assertSame('zena.task.created', $eventRecord->event_key);
         $this->assertSame($taskId, $eventRecord->payload['task']['id']);
         $this->assertSame((string) $assignee->id, $eventRecord->payload['task']['assigned_to']);
+    }
+
+    /** O-17d fixture: an active project_user_roles row for the test project (test-owned project-scope role). */
+    private function makeParticipant(User $user): void
+    {
+        $roleId = (string) \Illuminate\Support\Str::ulid();
+        \Illuminate\Support\Facades\DB::table('roles')->insert(['id' => $roleId, 'name' => 'O17 participant ' . $roleId, 'scope' => 'project', 'allow_override' => 0, 'is_active' => 1, 'created_at' => now(), 'updated_at' => now()]);
+        \Illuminate\Support\Facades\DB::table('project_user_roles')->insert(['id' => (string) \Illuminate\Support\Str::ulid(), 'project_id' => (string) $this->project->id, 'user_id' => (string) $user->id, 'role_id' => $roleId, 'created_at' => now(), 'updated_at' => now()]);
     }
 }

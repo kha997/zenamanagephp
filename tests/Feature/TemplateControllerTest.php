@@ -39,7 +39,7 @@ class TemplateControllerTest extends TestCase
             $this->tenant,
             [],
             ['admin'],
-            ['template.view', 'template.create', 'template.edit', 'template.update', 'template.delete', 'template.apply', 'project.update']
+            ['template.view', 'template.create', 'template.edit', 'template.update', 'template.delete', 'template.apply', 'project.update', 'task.create'] // O-17 fixture (UAT-RECOVERY 06)
         );
         $this->token = $this->apiLoginToken($this->user, $this->tenant);
     }
@@ -312,7 +312,7 @@ class TemplateControllerTest extends TestCase
     public function test_can_apply_template_to_project(): void
     {
         $template = Template::factory()->withComplexStructure()->create();
-        $project = Project::factory()->create(['tenant_id' => $this->tenant->id]);
+        $project = Project::factory()->create(['tenant_id' => $this->tenant->id, 'pm_id' => $this->user->id]); // O-17 fixture (UAT-RECOVERY 06)
 
         $applyData = [
             'project_id' => $project->id,
@@ -354,7 +354,7 @@ class TemplateControllerTest extends TestCase
     public function test_apply_template_to_project_with_existing_template(): void
     {
         $template = Template::factory()->create();
-        $project = Project::factory()->create(['tenant_id' => $this->tenant->id]);
+        $project = Project::factory()->create(['tenant_id' => $this->tenant->id, 'pm_id' => $this->user->id]); // O-17 fixture (UAT-RECOVERY 06)
 
         // Tạo phases và tasks từ template khác trước đó
         ProjectPhase::factory()->create([

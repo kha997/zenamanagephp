@@ -2,6 +2,7 @@
 
 namespace Src\CoreProject\Controllers;
 
+use App\Support\TaskCreationAuthority;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Database\QueryException;
@@ -158,8 +159,14 @@ class TaskController
             $data = $request->validated();
             $data['project_id'] = $projectId;
 
-            // Sử dụng TaskService để tạo task với validation đầy đủ
-            $task = $this->taskService->createTask($data);
+            // Sử dụng TaskService để tạo task với validation đầy đủ.
+            // O-17 Gate 6: creation and its audit row commit or roll back together (authority: StoreTaskRequest::authorize()).
+            $task = DB::transaction(function () use ($data, $request) {
+                $task = $this->taskService->createTask($data);
+                TaskCreationAuthority::audit($request->user('api') ?? $request->user(), $task, 'api.v1.tasks.store');
+
+                return $task;
+            });
 
             // Load relationships
             $task->load(['component', 'assignments.user', 'project']);

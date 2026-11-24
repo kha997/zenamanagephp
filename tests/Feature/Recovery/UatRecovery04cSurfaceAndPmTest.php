@@ -123,22 +123,27 @@ class UatRecovery04cSurfaceAndPmTest extends TestCase
     #[Group('uat-recovery-04c-surface')]
     public function test_creating_a_task_never_assigns_it_so_creation_is_not_an_assignment_bypass(): void
     {
-        foreach ([$this->pm1, $this->pm2] as $who) {
-            $this->api($who, 'POST', '/api/zena/tasks', ['project_id' => $this->projectX->id, 'name' => 'created-by-' . $who->id, 'assignee_id' => $this->memberB->id]);
-            $row = DB::table('tasks')->where('name', 'created-by-' . $who->id)->first();
-            $this->assertNotNull($row);
-            $this->assertNull($row->assignee_id, 'assignee_id is not honoured at creation');
-            $this->assertSame(0, DB::table('task_assignments')->where('task_id', $row->id)->count());
+        // O-17 (Owner-approved Option B, UAT-RECOVERY 06): memberB is neither PM nor participant of projectX, so naming them
+        // at creation is rejected (pm1, the owning PM: 422) and pm2 may not create in projectX at all (403). Creation can
+        // therefore not be used to assign an ineligible user; nothing is persisted. Original body: 99-o17 report §6.
+        foreach ([[$this->pm1, 422], [$this->pm2, 403]] as [$who, $status]) {
+            $before = DB::table('task_assignments')->count();
+            $this->api($who, 'POST', '/api/zena/tasks', ['project_id' => $this->projectX->id, 'name' => 'created-by-' . $who->id, 'assignee_id' => $this->memberB->id])
+                ->assertStatus($status);
+            $this->assertNull(DB::table('tasks')->where('name', 'created-by-' . $who->id)->first());
+            $this->assertSame($before, DB::table('task_assignments')->count());
         }
     }
 
-    /** OWNER_DECISION_REQUIRED: task CREATION has no project constraint (any task.create holder, any project of the tenant; O-3 tenant-visible). */
+    /** O-17 DECIDED (Option B, 2026-11-24): task creation needs PM or active participation of the project. Inverted from the
+     * characterisation test_OWNER_DECISION_task_creation_has_no_project_ownership_constraint_today (original: 99-o17 report §6). */
     #[Group('uat-recovery-04c-o15')]
-    public function test_OWNER_DECISION_task_creation_has_no_project_ownership_constraint_today(): void
+    public function test_O17_task_creation_requires_a_project_relationship(): void
     {
-        $this->api($this->pm2, 'POST', '/api/zena/tasks', ['project_id' => $this->projectX->id, 'name' => 'foreign-project-create']);
+        $this->api($this->pm2, 'POST', '/api/zena/tasks', ['project_id' => $this->projectX->id, 'name' => 'foreign-project-create'])
+            ->assertStatus(403);
 
-        $this->assertSame($this->projectX->id, DB::table('tasks')->where('name', 'foreign-project-create')->value('project_id'));
+        $this->assertNull(DB::table('tasks')->where('name', 'foreign-project-create')->value('project_id'));
     }
 
     #[Group('uat-recovery-04c-surface')]

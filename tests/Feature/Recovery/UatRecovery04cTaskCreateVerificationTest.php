@@ -68,6 +68,7 @@ class UatRecovery04cTaskCreateVerificationTest extends TestCase
     {
         $pm = $this->actor('Project Manager', 'project_manager'); // seeded PM holds task.create; legacy value only passes the parameterless gate
         $this->assertTrue($pm->hasPermission('task.create'));
+        $this->project->forceFill(['pm_id' => $pm->id])->save(); // O-17 fixture: the creator is the project's PM (UAT-RECOVERY 06)
 
         $res = $this->postAs($pm, '/api/tasks', $this->payload($this->project, 'created by PM'));
 

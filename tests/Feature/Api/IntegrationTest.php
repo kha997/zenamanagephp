@@ -34,7 +34,7 @@ class IntegrationTest extends TestCase
     {
         parent::setUp();
 
-        $this->apiActingAsTenantAdmin([], null, ['task.create']); // S4c fixture: task creation requires the canonical task.create permission (the route gate is stubbed in this suite)
+        $this->apiActingAsTenantAdmin([], null, ['task.create', 'change-request.apply']); // O-17/CB-4 fixture (UAT-RECOVERY 06): canonical change-request.apply; S4c fixture: task creation requires the canonical task.create permission (the route gate is stubbed in this suite)
         $this->user = $this->apiFeatureUser;
         $this->grantAdditionalPermissions($this->user, [
             'submittal.create', 'submittal.view', 'submittal.submit', 'submittal.approve', 'submittal.reject',
@@ -73,6 +73,8 @@ class IntegrationTest extends TestCase
 
         $response->assertStatus(201);
         $project = $response->json('data');
+        // O-17 fixture (UAT-RECOVERY 06): creating tasks needs PM or participation; the creator becomes the project's PM.
+        \Illuminate\Support\Facades\DB::table('projects')->where('id', $project['id'])->update(['pm_id' => $this->user->id]);
 
         // 2. Create tasks
         $taskData = [
@@ -270,6 +272,9 @@ class IntegrationTest extends TestCase
      */
     public function test_change_request_workflow_integration()
     {
+        // O-17i fixture (UAT-RECOVERY 06): apply creates a task, so the applier must be the project's PM or a participant.
+        $this->project->forceFill(['pm_id' => $this->user->id])->save();
+
         // Create Change Request
         $changeRequest = ChangeRequest::factory()->create([
             'tenant_id' => $this->user->tenant_id,

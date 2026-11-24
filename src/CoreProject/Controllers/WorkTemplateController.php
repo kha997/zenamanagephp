@@ -2,8 +2,10 @@
 
 namespace Src\CoreProject\Controllers;
 
+use App\Support\TaskCreationAuthority;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Src\CoreProject\Models\WorkTemplate;
 use Src\CoreProject\Resources\WorkTemplateResource;
 use Src\CoreProject\Requests\StoreWorkTemplateRequest;
@@ -242,16 +244,34 @@ class WorkTemplateController
     public function applyToProject(Request $request, string $templateId): JsonResponse
     {
         try {
+            // O-17 / CB-3 (latent path, parameterless `rbac` gate only): the project is looked up ONLY in the caller's tenant and
+            // the task-creation authority (task.create + template.apply + PM / active participant) is decided before any other
+            // field is validated. References are project-scoped (were global `exists`).
+            $actor = $request->user();
+            $tenantId = (string) ($actor?->tenant_id ?? '');
             $request->validate([
-                'project_id' => 'required|exists:projects,id',
-                'component_id' => 'nullable|exists:components,id',
-                'default_assignee_id' => 'nullable|exists:users,id',
+                'project_id' => ['required', 'string', Rule::exists('projects', 'id')->where(fn ($q) => $q->where('tenant_id', $tenantId))],
+            ]);
+            $project = \Src\CoreProject\Models\Project::query()->where('tenant_id', $tenantId)->whereKey((string) $request->project_id)->firstOrFail();
+            $denial = TaskCreationAuthority::denialReason($actor, $project, true);
+            if ($denial !== null) {
+                TaskCreationAuthority::logDenial($actor, $project, $denial, 'api.work-templates.apply');
+
+                return JSendResponse::error('Bạn không có quyền thực hiện thao tác này.', 403);
+            }
+
+            $request->validate([
+                'component_id' => ['nullable', 'string', Rule::exists('components', 'id')->where('project_id', (string) $project->id)],
+                'default_assignee_id' => ['nullable', 'string', function (string $attribute, mixed $value, \Closure $fail) use ($project): void {
+                    if (!TaskCreationAuthority::eligibleAssignee($project, $value)) {
+                        $fail("The {$attribute} must be the project manager or an active participant of this project.");
+                    }
+                }],
                 'base_start_date' => 'nullable|date',
                 'preview_only' => 'nullable|boolean'
             ]);
             
             $template = WorkTemplate::findOrFail($templateId);
-            $project = \Src\CoreProject\Models\Project::findOrFail($request->project_id);
             $component = $request->component_id ? 
                 \Src\CoreProject\Models\Component::findOrFail($request->component_id) : null;
             

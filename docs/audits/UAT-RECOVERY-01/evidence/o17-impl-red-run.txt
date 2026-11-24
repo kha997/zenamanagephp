@@ -1,0 +1,44 @@
+# O-17 RED run: UatRecovery06O17TaskCreationAuthorityTest against UNPATCHED controllers (22 tests at that time), SQLite, 2026-11-24
+There were 20 failures:
+1) Tests\Feature\Recovery\UatRecovery06O17TaskCreationAuthorityTest::test_owning_pm_is_authorised_on_every_direct_creation_route_and_each_creation_is_audited
+Failed asserting that two strings are identical.
+2) Tests\Feature\Recovery\UatRecovery06O17TaskCreationAuthorityTest::test_active_participant_holding_task_create_is_authorised
+Failed asserting that two strings are identical.
+3) Tests\Feature\Recovery\UatRecovery06O17TaskCreationAuthorityTest::test_pm_of_another_project_is_denied
+Failed asserting that 201 is identical to 403.
+4) Tests\Feature\Recovery\UatRecovery06O17TaskCreationAuthorityTest::test_same_tenant_task_create_holder_without_relationship_is_denied
+Failed asserting that 201 is identical to 403.
+5) Tests\Feature\Recovery\UatRecovery06O17TaskCreationAuthorityTest::test_system_admin_satisfies_the_same_contract_no_bypass
+Failed asserting that 201 is identical to 403.
+6) Tests\Feature\Recovery\UatRecovery06O17TaskCreationAuthorityTest::test_super_admin_role_without_canonical_grant_is_denied_on_every_creation_path
+Failed asserting that 201 is identical to 403.
+7) Tests\Feature\Recovery\UatRecovery06O17TaskCreationAuthorityTest::test_inactive_or_foreign_participation_gives_no_authority
+Failed asserting that 201 is identical to 403.
+8) Tests\Feature\Recovery\UatRecovery06O17TaskCreationAuthorityTest::test_project_without_pm_accepts_only_participants
+Failed asserting that 201 is identical to 403.
+9) Tests\Feature\Recovery\UatRecovery06O17TaskCreationAuthorityTest::test_unauthorised_actor_cannot_probe_reference_validation
+Expected response status code [403] but received 201.
+Failed asserting that 201 is identical to 403.
+10) Tests\Feature\Recovery\UatRecovery06O17TaskCreationAuthorityTest::test_foreign_or_ineligible_assignee_watcher_parent_and_dependency_are_rejected_with_422
+Failed asserting that 201 is identical to 422.
+11) Tests\Feature\Recovery\UatRecovery06O17TaskCreationAuthorityTest::test_eligible_watcher_and_same_project_parent_are_accepted
+Failed asserting that 500 is identical to 201.
+12) Tests\Feature\Recovery\UatRecovery06O17TaskCreationAuthorityTest::test_bulk_create_never_trusts_request_tenant_and_rejects_foreign_malformed_or_missing_projects
+Failed asserting that 200 is identical to 422.
+13) Tests\Feature\Recovery\UatRecovery06O17TaskCreationAuthorityTest::test_bulk_create_for_authorised_actor_writes_only_into_the_authorised_project_and_audits_each_task
+Failed asserting that actual size 0 matches expected size 1.
+14) Tests\Feature\Recovery\UatRecovery06O17TaskCreationAuthorityTest::test_bulk_import_never_trusts_request_tenant_and_enforces_project_authority
+Failed asserting that 500 is identical to 422.
+15) Tests\Feature\Recovery\UatRecovery06O17TaskCreationAuthorityTest::test_template_apply_alone_is_not_creation_authority
+Failed asserting that 201 is identical to 403.
+16) Tests\Feature\Recovery\UatRecovery06O17TaskCreationAuthorityTest::test_template_apply_requires_the_same_project_relationship
+Failed asserting that 201 is identical to 403.
+17) Tests\Feature\Recovery\UatRecovery06O17TaskCreationAuthorityTest::test_owning_pm_template_apply_is_authorised_and_every_created_task_is_audited_atomically
+Failed asserting that actual size 0 matches expected size 1.
+18) Tests\Feature\Recovery\UatRecovery06O17TaskCreationAuthorityTest::test_template_user_selector_must_name_an_eligible_assignee
+Failed asserting that 201 is identical to 422.
+19) Tests\Feature\Recovery\UatRecovery06O17TaskCreationAuthorityTest::test_a_failed_audit_write_rolls_the_creation_back_on_every_path
+Failed asserting that an array does not contain 201.
+20) Tests\Feature\Recovery\UatRecovery06O17TaskCreationAuthorityTest::test_latent_core_project_template_apply_route_is_tenant_scoped_and_authority_checked
+Failed asserting that an array contains 422.
+Tests: 22, Assertions: 111, Failures: 20.
